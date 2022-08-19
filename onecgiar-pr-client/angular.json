@@ -28,7 +28,10 @@
               "src/assets"
             ],
             "styles": [
-              "src/styles.scss"
+              "src/styles.scss",
+              "src/styles/fonts.scss",
+              "src/styles/colors.scss",
+              "src/styles/routing.scss"
             ],
             "scripts": []
           },
