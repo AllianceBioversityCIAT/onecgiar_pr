@@ -1,0 +1,23 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+
+import { ResultDetailComponent } from './result-detail.component';
+
+describe('ResultDetailComponent', () => {
+  let component: ResultDetailComponent;
+  let fixture: ComponentFixture<ResultDetailComponent>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [ ResultDetailComponent ]
+    })
+    .compileComponents();
+
+    fixture = TestBed.createComponent(ResultDetailComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+});
