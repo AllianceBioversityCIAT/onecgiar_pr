@@ -1,0 +1,8 @@
+<div class="panel_menu shadow-1">
+    <div class="segment" *ngFor="let menuItem of menu">
+        <div class="name">{{menuItem.segmentName}}</div>
+        <div class="sections">
+            <a *ngFor="let section of menuItem.sections" routerLink="" routerLinkActive="section_active">{{section.name}}</a>
+        </div>
+    </div>
+</div>

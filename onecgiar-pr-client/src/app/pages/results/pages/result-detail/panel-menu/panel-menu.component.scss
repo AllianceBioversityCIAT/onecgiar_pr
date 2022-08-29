@@ -1,0 +1,26 @@
+.panel_menu{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border-radius: 10px;
+    padding: 10px 25px;
+    height: 100%;
+    box-sizing: border-box;
+    background-color: white;
+    .segment{
+        .name{
+            color: var(--pr-color-medium);
+            margin-bottom: 10px;
+            margin-top: 10px;
+        }
+        .sections{
+            display: flex;
+            flex-direction: column;
+            padding-left: 25px;
+            gap: 10px;
+            a{
+                text-decoration: none;
+            }
+        }
+    }
+}
