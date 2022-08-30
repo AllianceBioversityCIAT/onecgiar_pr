@@ -6,6 +6,7 @@ import { AppComponent } from './app.component';
 import { NavigationBarComponent } from './shared/components/navigation-bar/navigation-bar.component';
 import { FooterComponent } from './shared/components/footer/footer.component';
 import { HeaderPanelComponent } from './shared/components/header-panel/header-panel.component';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 
 @NgModule({
   declarations: [
@@ -16,7 +17,8 @@ import { HeaderPanelComponent } from './shared/components/header-panel/header-pa
   ],
   imports: [
     BrowserModule,
-    AppRoutingModule
+    AppRoutingModule,
+    BrowserAnimationsModule
   ],
   providers: [],
   bootstrap: [AppComponent]
