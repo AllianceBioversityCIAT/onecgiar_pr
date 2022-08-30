@@ -36,7 +36,8 @@
               "src/styles/colors.scss",
               "src/styles/routing.scss",
               "src/styles/transitions.scss",
-              "src/styles/shadows.scss"
+              "src/styles/shadows.scss",
+              "src/styles/primeng-custom-styles.scss"
             ],
             "scripts": []
           },
