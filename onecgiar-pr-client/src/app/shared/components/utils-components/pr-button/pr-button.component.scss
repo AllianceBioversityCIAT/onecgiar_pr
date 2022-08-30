@@ -1,0 +1,11 @@
+.pr_button{
+    background-color: var(--pr-color-primary);
+    padding: 10px 15px;
+    width: max-content;
+    border-radius: 5px;
+    margin: 10px 0px;
+    cursor: pointer;
+    .text{
+        color: white;
+    }
+}
