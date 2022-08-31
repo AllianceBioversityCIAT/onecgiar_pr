@@ -7,6 +7,8 @@ import { Component, Input, OnInit } from '@angular/core';
 })
 export class PrButtonComponent implements OnInit {
   @Input() text: string;
+  @Input() icon: string;
+  @Input() reverse: boolean = false;
   constructor() { }
 
   ngOnInit(): void {

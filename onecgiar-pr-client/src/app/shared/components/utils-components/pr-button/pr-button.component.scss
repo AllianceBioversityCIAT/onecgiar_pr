@@ -1,11 +1,49 @@
-.pr_button{
+.pr_button {
     background-color: var(--pr-color-primary);
-    padding: 10px 15px;
+    padding: 8px 12px;
     width: max-content;
     border-radius: 5px;
     margin: 10px 0px;
+    display: flex;
+    gap: 10px;
     cursor: pointer;
-    .text{
-        color: white;
+    position: relative;
+    overflow: hidden;
+    &::after{
+        content: '';
+        background: #5569DD;
+        background: linear-gradient(80deg, #3549bb 0%, #5569DD 80%);
+        position: absolute;
+        left: -60%;
+        top: 0px;
+        height: 100%;
+        width: 100%;
+        transition: all ease-in-out .3s;
+        z-index: 0;
+        // rotate: 15deg;
+        transform: translateX(-50%);
+        box-sizing: border-box;
     }
+    &:active{
+        background-color: aqua;
+    }
+    &:hover{
+        &::after{
+            left: 50%;
+        }
+    }
+    .text {
+        color: white;
+        z-index: 1;
+    }
+
+    i {
+        color: white;
+        z-index: 1;
+    }
+
+}
+
+.reverse {
+    flex-direction: row-reverse;
 }
