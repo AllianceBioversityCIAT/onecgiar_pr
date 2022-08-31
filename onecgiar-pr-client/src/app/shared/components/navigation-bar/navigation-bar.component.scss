@@ -7,11 +7,12 @@
     .section_active{
         background-color: white;
         font-weight: 700;
+        color: var(--pr-color-tertiary);
     }
     a{
         text-decoration: none;
         color: white;
-        padding: 5px 10px;
+        padding: 8px 15px;
         border-radius: 7px;
         font-weight: 300;
     }
@@ -22,6 +23,7 @@
     position: fixed;
     top: 0;
     left: 0;
+    z-index: 4;
 }
 
 .block{
