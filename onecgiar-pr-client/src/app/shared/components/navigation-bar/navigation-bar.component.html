@@ -1,9 +1,9 @@
-<div class="navigation_bar" [ngClass]="{'navbar_fixed': this.navbar_fixed}">
+<div class="navigation_bar" [ngClass]="{'navbar_fixed': this._navigationBarService.navbar_fixed}">
     <a routerLink="home" routerLinkActive="section_active transition-all">home</a>
     <a routerLink="results" routerLinkActive="section_active transition-all">results</a>
     <a routerLink="type-one-report" routerLinkActive="section_active transition-all">type-one-report</a>
 </div>
 
-<div class="block" *ngIf="this.navbar_fixed">
+<div class="block" *ngIf="this._navigationBarService.navbar_fixed">
 
 </div>
