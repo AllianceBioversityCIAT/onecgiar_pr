@@ -7,6 +7,7 @@ import { NavigationBarComponent } from './shared/components/navigation-bar/navig
 import { FooterComponent } from './shared/components/footer/footer.component';
 import { HeaderPanelComponent } from './shared/components/header-panel/header-panel.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { UtilsComponentsModule } from './shared/components/utils-components/utils-components.module';
 
 @NgModule({
   declarations: [
@@ -18,7 +19,8 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
   imports: [
     BrowserModule,
     AppRoutingModule,
-    BrowserAnimationsModule
+    BrowserAnimationsModule,
+    UtilsComponentsModule
   ],
   providers: [],
   bootstrap: [AppComponent]
