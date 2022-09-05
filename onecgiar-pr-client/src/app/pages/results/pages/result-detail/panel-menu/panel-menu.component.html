@@ -1,8 +1,11 @@
 <div class="panel_menu shadow-1">
-    <div class="segment" *ngFor="let menuItem of menu">
-        <div class="name">{{menuItem.segmentName}}</div>
+    <div class="back_button">
+        <div routerLink="general-information"><pr-button text="Back to results" icon="arrow_back" [reverse]="true" [showBackground]="false"></pr-button></div>
+    </div>
+    <div class="segment">
+        <div class="name">{{menu.segmentName}}</div>
         <div class="sections">
-            <a *ngFor="let section of menuItem.sections" routerLink="" routerLinkActive="section_active">{{section.name}}</a>
+            <a *ngFor="let section of menu.sections" routerLink="" routerLinkActive="section_active">{{section.name}}</a>
         </div>
     </div>
 </div>

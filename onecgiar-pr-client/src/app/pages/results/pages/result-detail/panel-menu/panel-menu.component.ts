@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { menu } from './menu-data';
 
 @Component({
   selector: 'app-panel-menu',
@@ -6,36 +7,7 @@ import { Component, OnInit } from '@angular/core';
   styleUrls: ['./panel-menu.component.scss']
 })
 export class PanelMenuComponent implements OnInit {
-  menu=[
-    {
-      segmentName:'General info',
-      sections:[
-        {
-          name:'Section A'
-        },
-        {
-          name:'Section B'
-        },
-        {
-          name:'Section C'
-        }
-      ]
-    },
-    {
-      segmentName:'Example',
-      sections:[
-        {
-          name:'Section A'
-        },
-        {
-          name:'Section B'
-        },
-        {
-          name:'Section C'
-        }
-      ]
-    }
-  ]
+  menu = menu;
   constructor() { }
 
   ngOnInit(): void {
