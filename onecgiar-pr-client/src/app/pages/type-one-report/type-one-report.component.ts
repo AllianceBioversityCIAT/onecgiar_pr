@@ -12,8 +12,4 @@ export class TypeOneReportComponent implements OnInit {
   ngOnInit(): void {
   }
 
-  ngOnDestroy(): void {
-    console.log("ngOnDestroy TypeOneReportComponent")
-  }
-
 }

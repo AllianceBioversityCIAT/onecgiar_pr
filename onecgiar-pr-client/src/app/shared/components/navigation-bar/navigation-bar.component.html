@@ -1,7 +1,5 @@
 <div class="navigation_bar" [ngClass]="{'navbar_fixed': this._navigationBarService.navbar_fixed}">
-    <a routerLink="home" routerLinkActive="section_active transition-all">home</a>
-    <a routerLink="result" routerLinkActive="section_active transition-all">results</a>
-    <a routerLink="type-one-report" routerLinkActive="section_active transition-all">type-one-report</a>
+    <a *ngFor="let navOption of navigationOptions" [routerLink]="navOption.path" routerLinkActive="section_active transition-all">{{navOption.prName}}</a>
 </div>
 
 <div class="block" *ngIf="this._navigationBarService.navbar_fixed">

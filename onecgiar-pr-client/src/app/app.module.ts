@@ -8,13 +8,15 @@ import { FooterComponent } from './shared/components/footer/footer.component';
 import { HeaderPanelComponent } from './shared/components/header-panel/header-panel.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { UtilsComponentsModule } from './shared/components/utils-components/utils-components.module';
+import { ExternalToolsComponent } from './shared/components/external-tools/external-tools.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     NavigationBarComponent,
     FooterComponent,
-    HeaderPanelComponent
+    HeaderPanelComponent,
+    ExternalToolsComponent
   ],
   imports: [
     BrowserModule,

@@ -124,8 +124,4 @@ export class ResultsListComponent implements OnInit {
     this.items 
   }
 
-  ngOnDestroy(): void {
-    console.log("ngOnDestroy ResultsListComponent")
-  }
-
 }

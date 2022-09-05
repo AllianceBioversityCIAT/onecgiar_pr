@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { NavigationBarService } from './navigation-bar.service';
+import { PrRoute, routingApp } from '../../data/routing-data';
 
 @Component({
   selector: 'app-navigation-bar',
@@ -7,6 +8,7 @@ import { NavigationBarService } from './navigation-bar.service';
   styleUrls: ['./navigation-bar.component.scss']
 })
 export class NavigationBarComponent implements OnInit {
+  navigationOptions:PrRoute[] = routingApp;
   constructor(public _navigationBarService:NavigationBarService) { }
 
   ngOnInit(): void {

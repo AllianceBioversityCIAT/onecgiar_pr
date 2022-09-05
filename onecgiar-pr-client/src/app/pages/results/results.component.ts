@@ -12,8 +12,4 @@ export class ResultsComponent implements OnInit {
   ngOnInit(): void {
   }
 
-  ngOnDestroy(): void {
-    console.log("ngOnDestroy ResultsComponent")
-  }
-
 }

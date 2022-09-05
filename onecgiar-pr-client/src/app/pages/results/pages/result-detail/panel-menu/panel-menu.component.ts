@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { menu } from './menu-data';
+import { PrRoute, resultDetailRouting } from '../../../../../shared/data/routing-data';
 
 @Component({
   selector: 'app-panel-menu',
@@ -7,7 +7,8 @@ import { menu } from './menu-data';
   styleUrls: ['./panel-menu.component.scss']
 })
 export class PanelMenuComponent implements OnInit {
-  menu = menu;
+  navigationOptions:PrRoute[] = resultDetailRouting;
+
   constructor() { }
 
   ngOnInit(): void {

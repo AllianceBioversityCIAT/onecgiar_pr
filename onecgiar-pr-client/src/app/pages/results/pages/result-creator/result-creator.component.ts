@@ -11,9 +11,5 @@ export class ResultCreatorComponent implements OnInit {
 
   ngOnInit(): void {
   }
-
-  ngOnDestroy(): void {
-    console.log("ngOnDestroy ResultCreatorComponent")
-  }
-
+  
 }

@@ -14,7 +14,6 @@ export class PrButtonComponent implements OnInit {
   constructor() { }
 
   ngOnInit(): void {
-    console.log(this.colorType);
   }
 
 }
