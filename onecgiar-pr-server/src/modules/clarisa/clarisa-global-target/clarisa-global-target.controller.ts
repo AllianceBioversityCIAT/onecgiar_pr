@@ -3,7 +3,7 @@ import { ClarisaGlobalTargetService } from './clarisa-global-target.service';
 import { CreateClarisaGlobalTargetDto } from './dto/create-clarisa-global-target.dto';
 import { UpdateClarisaGlobalTargetDto } from './dto/update-clarisa-global-target.dto';
 
-@Controller('clarisa-global-target')
+@Controller()
 export class ClarisaGlobalTargetController {
   constructor(private readonly clarisaGlobalTargetService: ClarisaGlobalTargetService) {}
 

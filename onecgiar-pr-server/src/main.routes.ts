@@ -3,8 +3,9 @@ import { AuthModule } from './auth/auth.module';
 import { HomeModule } from './modules/home/home.module';
 import { ResultsModule } from './modules/results/results.module';
 import { TypeOneReportModule } from './modules/type-one-report/type-one-report.module';
+import { ClarisaRoutes } from './modules/clarisa/clarisa.routes';
 
-export const MainRoutes: Routes = [
+const ApiMainRoutes: Routes = [
     {
         path: 'auth',
         module: AuthModule
@@ -20,5 +21,16 @@ export const MainRoutes: Routes = [
     {
         path: 'type-one-report',
         module: TypeOneReportModule
+    },
+    {
+        path:'clarisa',
+        children: ClarisaRoutes
     }
 ];
+
+export const MainRoutes: Routes = [
+    {
+        path: 'api',
+        children: ApiMainRoutes
+    }
+]

@@ -3,7 +3,7 @@ import { ClarisaImpactAreaIndicatorsService } from './clarisa-impact-area-indica
 import { CreateClarisaImpactAreaIndicatorDto } from './dto/create-clarisa-impact-area-indicator.dto';
 import { UpdateClarisaImpactAreaIndicatorDto } from './dto/update-clarisa-impact-area-indicator.dto';
 
-@Controller('clarisa-impact-area-indicators')
+@Controller()
 export class ClarisaImpactAreaIndicatorsController {
   constructor(private readonly clarisaImpactAreaIndicatorsService: ClarisaImpactAreaIndicatorsService) {}
 

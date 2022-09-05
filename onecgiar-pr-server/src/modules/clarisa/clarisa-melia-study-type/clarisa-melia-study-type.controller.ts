@@ -3,7 +3,7 @@ import { ClarisaMeliaStudyTypeService } from './clarisa-melia-study-type.service
 import { CreateClarisaMeliaStudyTypeDto } from './dto/create-clarisa-melia-study-type.dto';
 import { UpdateClarisaMeliaStudyTypeDto } from './dto/update-clarisa-melia-study-type.dto';
 
-@Controller('clarisa-melia-study-type')
+@Controller()
 export class ClarisaMeliaStudyTypeController {
   constructor(private readonly clarisaMeliaStudyTypeService: ClarisaMeliaStudyTypeService) {}
 

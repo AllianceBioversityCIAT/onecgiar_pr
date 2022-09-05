@@ -50,8 +50,3 @@ export class JwtMiddleware implements NestMiddleware {
   }
 }
 
-interface verifyResults{
-  userName: string;
-  firstName: string;
-  lastName: string;
-}

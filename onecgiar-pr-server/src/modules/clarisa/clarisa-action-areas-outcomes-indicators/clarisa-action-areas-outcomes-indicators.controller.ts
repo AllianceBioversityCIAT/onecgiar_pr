@@ -3,7 +3,7 @@ import { ClarisaActionAreasOutcomesIndicatorsService } from './clarisa-action-ar
 import { CreateClarisaActionAreasOutcomesIndicatorDto } from './dto/create-clarisa-action-areas-outcomes-indicator.dto';
 import { UpdateClarisaActionAreasOutcomesIndicatorDto } from './dto/update-clarisa-action-areas-outcomes-indicator.dto';
 
-@Controller('clarisa-action-areas-outcomes-indicators')
+@Controller()
 export class ClarisaActionAreasOutcomesIndicatorsController {
   constructor(private readonly clarisaActionAreasOutcomesIndicatorsService: ClarisaActionAreasOutcomesIndicatorsService) {}
 

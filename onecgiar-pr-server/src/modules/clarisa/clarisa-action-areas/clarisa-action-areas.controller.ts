@@ -3,7 +3,7 @@ import { ClarisaActionAreasService } from './clarisa-action-areas.service';
 import { CreateClarisaActionAreaDto } from './dto/create-clarisa-action-area.dto';
 import { UpdateClarisaActionAreaDto } from './dto/update-clarisa-action-area.dto';
 
-@Controller('clarisa-action-areas')
+@Controller()
 export class ClarisaActionAreasController {
   constructor(private readonly clarisaActionAreasService: ClarisaActionAreasService) {}
 

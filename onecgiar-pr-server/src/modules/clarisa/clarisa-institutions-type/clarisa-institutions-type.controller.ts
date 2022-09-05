@@ -3,7 +3,7 @@ import { ClarisaInstitutionsTypeService } from './clarisa-institutions-type.serv
 import { CreateClarisaInstitutionsTypeDto } from './dto/create-clarisa-institutions-type.dto';
 import { UpdateClarisaInstitutionsTypeDto } from './dto/update-clarisa-institutions-type.dto';
 
-@Controller('clarisa-institutions-type')
+@Controller()
 export class ClarisaInstitutionsTypeController {
   constructor(private readonly clarisaInstitutionsTypeService: ClarisaInstitutionsTypeService) {}
 

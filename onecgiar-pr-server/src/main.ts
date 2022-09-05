@@ -8,7 +8,7 @@ import { dataSource } from './config/orm.config';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const port = env.PORT || 3000;
-  console.log(dataSource.options);
+
   await dataSource
     .initialize()
     .then(() => {

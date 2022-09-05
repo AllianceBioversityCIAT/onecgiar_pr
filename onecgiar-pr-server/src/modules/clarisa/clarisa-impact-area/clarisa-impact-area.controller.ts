@@ -3,7 +3,7 @@ import { ClarisaImpactAreaService } from './clarisa-impact-area.service';
 import { CreateClarisaImpactAreaDto } from './dto/create-clarisa-impact-area.dto';
 import { UpdateClarisaImpactAreaDto } from './dto/update-clarisa-impact-area.dto';
 
-@Controller('clarisa-impact-area')
+@Controller()
 export class ClarisaImpactAreaController {
   constructor(private readonly clarisaImpactAreaService: ClarisaImpactAreaService) {}
 
