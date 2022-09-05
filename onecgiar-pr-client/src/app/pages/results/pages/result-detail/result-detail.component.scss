@@ -1,8 +1,16 @@
 .local_grid{
     display: grid;
     grid-template-columns: 300px 1fr;
-    grid-template-rows: 1fr;
+    grid-template-rows: minmax(calc(100vh - 180px),1fr);
     padding: 25px 15px;
     height: 100%;
     box-sizing: border-box;
+    .panel_menu{
+        position: fixed;
+        height: calc(100vh - 180px);
+        width: 300px;
+    }
+    .local_container{
+        padding: 10px 50px;
+    }
 }
