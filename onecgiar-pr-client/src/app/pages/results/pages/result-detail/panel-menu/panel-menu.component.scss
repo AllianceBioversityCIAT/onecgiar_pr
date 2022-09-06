@@ -7,6 +7,9 @@
     height: 100%;
     box-sizing: border-box;
     background-color: white;
+    display: flex;
+    justify-content: space-between;
+    flex-direction: column;
 
     .back_button {
         display: flex;
@@ -46,5 +49,13 @@
                 }
             }
         }
+    }
+
+    .submit_button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        scale: 1.2;
+        margin-bottom: 20px;
     }
 }
