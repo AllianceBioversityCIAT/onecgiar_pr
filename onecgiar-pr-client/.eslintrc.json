@@ -14,12 +14,6 @@
         "plugin:prettier/recommended"
       ],
       "rules": {
-        "@angular-eslint/component-class-suffix": [
-          "error",
-          {
-            "suffixes": ["Page", "Component"]
-          }
-        ],
         "@angular-eslint/component-selector": [
           "error",
           {
@@ -35,12 +29,7 @@
             "prefix": "app",
             "style": "camelCase"
           }
-        ],
-        "@angular-eslint/use-lifecycle-interface": [
-          "error"
-        ],
-        "@typescript-eslint/member-ordering": 0,
-        "@typescript-eslint/naming-convention": 0
+        ]
       }
     },
     {
