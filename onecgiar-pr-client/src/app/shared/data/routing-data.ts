@@ -24,7 +24,8 @@ export const resultDetailRouting: PrRoute[] = [
   { prName: 'Partners', path: 'partners', loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-partners/rd-partners.module').then(m => m.RdPartnersModule) },
   { prName: 'Geographic location', path: 'geographic-location', loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-geographic-location/rd-geographic-location.module').then(m => m.RdGeographicLocationModule) },
   { prName: 'Evidences', path: 'evidences', loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-evidences/rd-evidences.module').then(m => m.RdEvidencesModule) },
-  { prName: 'Links to results', path: 'links-to-results', loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-links-to-results/rd-links-to-results.module').then(m => m.RdLinksToResultsModule) }
+  { prName: 'Links to results', path: 'links-to-results', loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-links-to-results/rd-links-to-results.module').then(m => m.RdLinksToResultsModule) },
+  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'general-information' }
 ];
 
 export interface PrRoute extends Route {
