@@ -4,14 +4,8 @@ import { CommonModule } from '@angular/common';
 import { RdLinksToResultsRoutingModule } from './rd-links-to-results-routing.module';
 import { RdLinksToResultsComponent } from '../rd-links-to-results/rd-links-to-results.component';
 
-
 @NgModule({
-  declarations: [
-    RdLinksToResultsComponent
-  ],
-  imports: [
-    CommonModule,
-    RdLinksToResultsRoutingModule
-  ]
+  declarations: [RdLinksToResultsComponent],
+  imports: [CommonModule, RdLinksToResultsRoutingModule]
 })
-export class RdLinksToResultsModule { }
+export class RdLinksToResultsModule {}

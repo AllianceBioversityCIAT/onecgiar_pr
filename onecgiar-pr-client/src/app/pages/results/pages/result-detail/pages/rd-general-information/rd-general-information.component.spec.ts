@@ -8,9 +8,8 @@ describe('RdGeneralInformationComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ RdGeneralInformationComponent ]
-    })
-    .compileComponents();
+      declarations: [RdGeneralInformationComponent]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(RdGeneralInformationComponent);
     component = fixture.componentInstance;
