@@ -5,7 +5,7 @@
   <div class="segment">
     <div class="name">Sections</div>
     <div class="sections">
-      <a *ngFor="let navOption of navigationOptions" routerLink="/result/result-detail/2/general-information" routerLinkActive="section_active">{{ navOption.prName }}</a>
+      <a *ngFor="let navOption of navigationOptions" [routerLink]="'/result/result-detail/2/' + navOption.path" routerLinkActive="section_active">{{ navOption.prName }}</a>
     </div>
   </div>
 </div>
