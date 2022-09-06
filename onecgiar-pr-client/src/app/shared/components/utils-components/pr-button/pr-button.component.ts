@@ -11,9 +11,7 @@ export class PrButtonComponent implements OnInit {
   @Input() reverse: boolean = false;
   @Input() showBackground: boolean = true;
   @Input() colorType = 'primary';
-  constructor() { }
+  constructor() {}
 
-  ngOnInit(): void {
-  }
-
+  ngOnInit(): void {}
 }

@@ -8,4 +8,4 @@ const routes: Routes = routingApp;
   imports: [RouterModule.forRoot(routes)],
   exports: [RouterModule]
 })
-export class AppRoutingModule { }
+export class AppRoutingModule {}

@@ -8,22 +8,21 @@ import { PrRoute, routingApp } from '../../data/routing-data';
   styleUrls: ['./navigation-bar.component.scss']
 })
 export class NavigationBarComponent implements OnInit {
-  navigationOptions:PrRoute[] = routingApp;
-  constructor(public _navigationBarService:NavigationBarService) { }
+  navigationOptions: PrRoute[] = routingApp;
+  constructor(public _navigationBarService: NavigationBarService) {}
 
   ngOnInit(): void {
-    window.addEventListener('scroll', (e)=> {
-      console.log("scroll");
+    window.addEventListener('scroll', e => {
+      console.log('scroll');
       // console.log(e);
-      let scrollTopValue:any = window.pageYOffset || ((document.documentElement || document.body.parentNode || document.body)as any).scrollTop;
+      let scrollTopValue: any = window.pageYOffset || ((document.documentElement || document.body.parentNode || document.body) as any).scrollTop;
       console.log(scrollTopValue);
       if (scrollTopValue > 70) {
         this._navigationBarService.navbar_fixed = true;
-      }else{
+      } else {
         this._navigationBarService.navbar_fixed = false;
       }
       // console.log(document.getElementById('sdsdsdsd')?.getBoundingClientRect().top);
-    })
+    });
   }
-
 }

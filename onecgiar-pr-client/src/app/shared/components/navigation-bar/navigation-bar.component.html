@@ -1,7 +1,5 @@
-<div class="navigation_bar" [ngClass]="{'navbar_fixed': this._navigationBarService.navbar_fixed}">
-    <a *ngFor="let navOption of navigationOptions" [routerLink]="navOption.path" routerLinkActive="section_active transition-all">{{navOption.prName}}</a>
+<div class="navigation_bar" [ngClass]="{ navbar_fixed: this._navigationBarService.navbar_fixed }">
+  <a *ngFor="let navOption of navigationOptions" [routerLink]="navOption.path" routerLinkActive="section_active transition-all">{{ navOption.prName }}</a>
 </div>
 
-<div class="block" *ngIf="this._navigationBarService.navbar_fixed">
-
-</div>
+<div class="block" *ngIf="this._navigationBarService.navbar_fixed"></div>

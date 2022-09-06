@@ -4,14 +4,8 @@ import { CommonModule } from '@angular/common';
 import { ResultsRoutingModule } from './results-routing.module';
 import { ResultsComponent } from './results.component';
 
-
 @NgModule({
-  declarations: [
-    ResultsComponent
-  ],
-  imports: [
-    CommonModule,
-    ResultsRoutingModule
-  ]
+  declarations: [ResultsComponent],
+  imports: [CommonModule, ResultsRoutingModule]
 })
-export class ResultsModule { }
+export class ResultsModule {}

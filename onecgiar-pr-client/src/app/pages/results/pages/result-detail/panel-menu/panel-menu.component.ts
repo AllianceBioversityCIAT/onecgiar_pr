@@ -7,11 +7,9 @@ import { PrRoute, resultDetailRouting } from '../../../../../shared/data/routing
   styleUrls: ['./panel-menu.component.scss']
 })
 export class PanelMenuComponent implements OnInit {
-  navigationOptions:PrRoute[] = resultDetailRouting;
+  navigationOptions: PrRoute[] = resultDetailRouting;
 
-  constructor() { }
+  constructor() {}
 
-  ngOnInit(): void {
-  }
-
+  ngOnInit(): void {}
 }

@@ -1,11 +1,11 @@
 <div class="panel_menu shadow-1">
-    <div class="back_button">
-        <div routerLink="general-information"><pr-button text="Back to results" icon="arrow_back" [reverse]="true" [showBackground]="false"></pr-button></div>
+  <div class="back_button">
+    <div routerLink="general-information"><pr-button text="Back to results" icon="arrow_back" [reverse]="true" [showBackground]="false"></pr-button></div>
+  </div>
+  <div class="segment">
+    <div class="name">Sections</div>
+    <div class="sections">
+      <a *ngFor="let navOption of navigationOptions" routerLink="/result/result-detail/2/general-information" routerLinkActive="section_active">{{ navOption.prName }}</a>
     </div>
-    <div class="segment">
-        <div class="name">Sections</div>
-        <div class="sections">
-            <a *ngFor="let navOption of navigationOptions" routerLink="/result/result-detail/2/general-information" routerLinkActive="section_active">{{navOption.prName}}</a>
-        </div>
-    </div>
+  </div>
 </div>

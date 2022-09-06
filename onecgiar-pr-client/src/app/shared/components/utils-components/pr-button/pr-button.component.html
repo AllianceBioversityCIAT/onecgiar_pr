@@ -1,5 +1,5 @@
-<div class="pr_button" [ngClass]="{'reverse': this.reverse,'show_background': this.showBackground}" [ngStyle]="this.showBackground ?{'background-color': 'var(--pr-color-'+this.colorType+')'}:{}">
-    <div class="text">{{this.text}}</div>
-    <i class="material-icons-round">{{this.icon}}</i>
-    <div class="filter" [ngStyle]="this.showBackground ? {'background': 'linear-gradient(20deg, #ffffff4d 0%, '+'var(--pr-color-'+this.colorType+')'+' 85%)'} : {}"></div>
+<div class="pr_button" [ngClass]="{ reverse: this.reverse, show_background: this.showBackground }" [ngStyle]="this.showBackground ? { 'background-color': 'var(--pr-color-' + this.colorType + ')' } : {}">
+  <div class="text">{{ this.text }}</div>
+  <i class="material-icons-round">{{ this.icon }}</i>
+  <div class="filter" [ngStyle]="this.showBackground ? { background: 'linear-gradient(20deg, #ffffff4d 0%, ' + 'var(--pr-color-' + this.colorType + ')' + ' 85%)' } : {}"></div>
 </div>

@@ -5,12 +5,9 @@ import { Injectable } from '@angular/core';
 })
 export class NavigationBarService {
   navbar_fixed = false;
-  constructor() { }
+  constructor() {}
 
   ngOnInit(): void {
-    console.log(" ngOnInit scroll");
-
-
+    console.log(' ngOnInit scroll');
   }
-
 }

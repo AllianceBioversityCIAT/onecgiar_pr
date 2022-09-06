@@ -8,9 +8,8 @@ describe('TheoryOfChangeComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ TheoryOfChangeComponent ]
-    })
-    .compileComponents();
+      declarations: [TheoryOfChangeComponent]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(TheoryOfChangeComponent);
     component = fixture.componentInstance;
