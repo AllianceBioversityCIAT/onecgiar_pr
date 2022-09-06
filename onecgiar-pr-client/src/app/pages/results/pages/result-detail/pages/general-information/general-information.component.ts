@@ -1,12 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 
 @Component({
   selector: 'app-general-information',
   templateUrl: './general-information.component.html',
   styleUrls: ['./general-information.component.scss']
 })
-export class GeneralInformationComponent implements OnInit {
+export class GeneralInformationComponent {
   constructor() {}
-
-  ngOnInit(): void {}
 }

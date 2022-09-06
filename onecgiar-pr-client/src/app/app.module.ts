@@ -11,20 +11,9 @@ import { UtilsComponentsModule } from './shared/components/utils-components/util
 import { ExternalToolsComponent } from './shared/components/external-tools/external-tools.component';
 
 @NgModule({
-  declarations: [
-    AppComponent,
-    NavigationBarComponent,
-    FooterComponent,
-    HeaderPanelComponent,
-    ExternalToolsComponent
-  ],
-  imports: [
-    BrowserModule,
-    AppRoutingModule,
-    BrowserAnimationsModule,
-    UtilsComponentsModule
-  ],
+  declarations: [AppComponent, NavigationBarComponent, FooterComponent, HeaderPanelComponent, ExternalToolsComponent],
+  imports: [BrowserModule, AppRoutingModule, BrowserAnimationsModule, UtilsComponentsModule],
   providers: [],
   bootstrap: [AppComponent]
 })
-export class AppModule { }
+export class AppModule {}

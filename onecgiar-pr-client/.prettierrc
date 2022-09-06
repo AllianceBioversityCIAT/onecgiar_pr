@@ -8,5 +8,6 @@
   "trailingComma": "none",
   "bracketSameLine": true,
   "printWidth": 1000,
-  "bracketLine": true
+  "bracketLine": true,
+  "endOfLine": "auto"
 }
