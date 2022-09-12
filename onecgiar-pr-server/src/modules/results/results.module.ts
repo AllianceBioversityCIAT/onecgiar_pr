@@ -6,9 +6,7 @@ import { resultsRoutes } from './results.routes';
 
 @Module({
   controllers: [ResultsController],
-  imports:[
-    RouterModule.register(resultsRoutes)
-  ],
-  providers: [ResultsService]
+  imports: [RouterModule.register(resultsRoutes)],
+  providers: [ResultsService],
 })
 export class ResultsModule {}

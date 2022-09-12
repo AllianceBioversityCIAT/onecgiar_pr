@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { TypeOneReportService } from './type-one-report.service';
 import { CreateTypeOneReportDto } from './dto/create-type-one-report.dto';
 import { UpdateTypeOneReportDto } from './dto/update-type-one-report.dto';
@@ -23,7 +31,10 @@ export class TypeOneReportController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateTypeOneReportDto: UpdateTypeOneReportDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateTypeOneReportDto: UpdateTypeOneReportDto,
+  ) {
     return this.typeOneReportService.update(+id, updateTypeOneReportDto);
   }
 

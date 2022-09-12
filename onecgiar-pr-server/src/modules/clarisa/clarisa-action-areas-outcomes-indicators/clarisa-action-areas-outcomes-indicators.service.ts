@@ -4,7 +4,9 @@ import { UpdateClarisaActionAreasOutcomesIndicatorDto } from './dto/update-clari
 
 @Injectable()
 export class ClarisaActionAreasOutcomesIndicatorsService {
-  create(createClarisaActionAreasOutcomesIndicatorDto: CreateClarisaActionAreasOutcomesIndicatorDto) {
+  create(
+    createClarisaActionAreasOutcomesIndicatorDto: CreateClarisaActionAreasOutcomesIndicatorDto,
+  ) {
     return 'This action adds a new clarisaActionAreasOutcomesIndicator';
   }
 
@@ -16,7 +18,10 @@ export class ClarisaActionAreasOutcomesIndicatorsService {
     return `This action returns a #${id} clarisaActionAreasOutcomesIndicator`;
   }
 
-  update(id: number, updateClarisaActionAreasOutcomesIndicatorDto: UpdateClarisaActionAreasOutcomesIndicatorDto) {
+  update(
+    id: number,
+    updateClarisaActionAreasOutcomesIndicatorDto: UpdateClarisaActionAreasOutcomesIndicatorDto,
+  ) {
     return `This action updates a #${id} clarisaActionAreasOutcomesIndicator`;
   }
 

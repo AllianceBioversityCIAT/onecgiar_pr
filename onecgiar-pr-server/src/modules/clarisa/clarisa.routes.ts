@@ -9,36 +9,36 @@ import { ClarisaInstitutionsTypeModule } from './clarisa-institutions-type/clari
 import { ClarisaMeliaStudyTypeModule } from './clarisa-melia-study-type/clarisa-melia-study-type.module';
 
 export const ClarisaRoutes: Routes = [
-    {
-        path:'action-areas',
-        module: ClarisaActionAreasModule
-    },
-    {
-        path: 'action-areas-outcomes-indicators',
-        module: ClarisaActionAreasOutcomesIndicatorsModule
-    },
-    {
-        path:'global-target',
-        module: ClarisaGlobalTargetModule
-    },
-    {
-        path: 'impact-area',
-        module: ClarisaImpactAreaModule
-    },
-    {
-        path: 'impact-area-indicators',
-        module: ClarisaImpactAreaIndicatorsModule
-    },
-    {
-        path: 'institutions',
-        module: ClarisaInstitutionsModule
-    },
-    {
-        path: 'institutions-type',
-        module: ClarisaInstitutionsTypeModule
-    },
-    {
-        path: 'melia-study-type',
-        module: ClarisaMeliaStudyTypeModule
-    }
+  {
+    path: 'action-areas',
+    module: ClarisaActionAreasModule,
+  },
+  {
+    path: 'action-areas-outcomes-indicators',
+    module: ClarisaActionAreasOutcomesIndicatorsModule,
+  },
+  {
+    path: 'global-target',
+    module: ClarisaGlobalTargetModule,
+  },
+  {
+    path: 'impact-area',
+    module: ClarisaImpactAreaModule,
+  },
+  {
+    path: 'impact-area-indicators',
+    module: ClarisaImpactAreaIndicatorsModule,
+  },
+  {
+    path: 'institutions',
+    module: ClarisaInstitutionsModule,
+  },
+  {
+    path: 'institutions-type',
+    module: ClarisaInstitutionsTypeModule,
+  },
+  {
+    path: 'melia-study-type',
+    module: ClarisaMeliaStudyTypeModule,
+  },
 ];

@@ -16,7 +16,10 @@ export class ClarisaMeliaStudyTypeService {
     return `This action returns a #${id} clarisaMeliaStudyType`;
   }
 
-  update(id: number, updateClarisaMeliaStudyTypeDto: UpdateClarisaMeliaStudyTypeDto) {
+  update(
+    id: number,
+    updateClarisaMeliaStudyTypeDto: UpdateClarisaMeliaStudyTypeDto,
+  ) {
     return `This action updates a #${id} clarisaMeliaStudyType`;
   }
 

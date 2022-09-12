@@ -1,7 +1,19 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Res,
+  Req,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { UpdateAuthDto } from './dto/update-auth.dto';
+import { UserLoginDto } from './dto/login-user.dto';
+import { Response, Request } from 'express';
 
 @Controller()
 export class AuthController {
@@ -15,6 +27,27 @@ export class AuthController {
   @Get()
   findAll() {
     return this.authService.findAll();
+  }
+
+  @Get('/singin')
+  async singIn(@Body() userLogin: UserLoginDto, @Res() res: Response) {
+    const { code, token, validate, user } = await this.authService.singIn(
+      userLogin,
+    );
+    res
+      .setHeader('auth',token)
+      .json({
+        validate,
+        token,
+        user: validate
+          ? {
+              id: user.id,
+              user_name: `${user.first_name} ${user.last_name}`,
+              email: user.email,
+            }
+          : null,
+      })
+      .status(code);
   }
 
   @Get(':id')
@@ -31,4 +64,5 @@ export class AuthController {
   remove(@Param('id') id: string) {
     return this.authService.remove(+id);
   }
+
 }

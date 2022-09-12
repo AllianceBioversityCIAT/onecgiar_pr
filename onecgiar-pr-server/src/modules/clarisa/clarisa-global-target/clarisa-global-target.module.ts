@@ -7,8 +7,6 @@ import { ClarisaGlobalTargetRoutes } from './clarisaGlobalTarget.routes';
 @Module({
   controllers: [ClarisaGlobalTargetController],
   providers: [ClarisaGlobalTargetService],
-  imports: [
-    RouterModule.register(ClarisaGlobalTargetRoutes)
-  ]
+  imports: [RouterModule.register(ClarisaGlobalTargetRoutes)],
 })
 export class ClarisaGlobalTargetModule {}

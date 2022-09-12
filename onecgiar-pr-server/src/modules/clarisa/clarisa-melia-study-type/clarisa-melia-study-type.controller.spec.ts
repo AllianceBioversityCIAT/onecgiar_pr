@@ -11,7 +11,9 @@ describe('ClarisaMeliaStudyTypeController', () => {
       providers: [ClarisaMeliaStudyTypeService],
     }).compile();
 
-    controller = module.get<ClarisaMeliaStudyTypeController>(ClarisaMeliaStudyTypeController);
+    controller = module.get<ClarisaMeliaStudyTypeController>(
+      ClarisaMeliaStudyTypeController,
+    );
   });
 
   it('should be defined', () => {

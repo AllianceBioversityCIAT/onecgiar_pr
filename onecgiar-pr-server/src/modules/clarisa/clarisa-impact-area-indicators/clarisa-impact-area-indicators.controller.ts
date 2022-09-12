@@ -1,15 +1,30 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { ClarisaImpactAreaIndicatorsService } from './clarisa-impact-area-indicators.service';
 import { CreateClarisaImpactAreaIndicatorDto } from './dto/create-clarisa-impact-area-indicator.dto';
 import { UpdateClarisaImpactAreaIndicatorDto } from './dto/update-clarisa-impact-area-indicator.dto';
 
 @Controller()
 export class ClarisaImpactAreaIndicatorsController {
-  constructor(private readonly clarisaImpactAreaIndicatorsService: ClarisaImpactAreaIndicatorsService) {}
+  constructor(
+    private readonly clarisaImpactAreaIndicatorsService: ClarisaImpactAreaIndicatorsService,
+  ) {}
 
   @Post()
-  create(@Body() createClarisaImpactAreaIndicatorDto: CreateClarisaImpactAreaIndicatorDto) {
-    return this.clarisaImpactAreaIndicatorsService.create(createClarisaImpactAreaIndicatorDto);
+  create(
+    @Body()
+    createClarisaImpactAreaIndicatorDto: CreateClarisaImpactAreaIndicatorDto,
+  ) {
+    return this.clarisaImpactAreaIndicatorsService.create(
+      createClarisaImpactAreaIndicatorDto,
+    );
   }
 
   @Get()
@@ -23,8 +38,15 @@ export class ClarisaImpactAreaIndicatorsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateClarisaImpactAreaIndicatorDto: UpdateClarisaImpactAreaIndicatorDto) {
-    return this.clarisaImpactAreaIndicatorsService.update(+id, updateClarisaImpactAreaIndicatorDto);
+  update(
+    @Param('id') id: string,
+    @Body()
+    updateClarisaImpactAreaIndicatorDto: UpdateClarisaImpactAreaIndicatorDto,
+  ) {
+    return this.clarisaImpactAreaIndicatorsService.update(
+      +id,
+      updateClarisaImpactAreaIndicatorDto,
+    );
   }
 
   @Delete(':id')

@@ -16,7 +16,10 @@ export class ClarisaInstitutionsTypeService {
     return `This action returns a #${id} clarisaInstitutionsType`;
   }
 
-  update(id: number, updateClarisaInstitutionsTypeDto: UpdateClarisaInstitutionsTypeDto) {
+  update(
+    id: number,
+    updateClarisaInstitutionsTypeDto: UpdateClarisaInstitutionsTypeDto,
+  ) {
     return `This action updates a #${id} clarisaInstitutionsType`;
   }
 

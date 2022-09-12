@@ -16,7 +16,10 @@ export class ClarisaGlobalTargetService {
     return `This action returns a #${id} clarisaGlobalTarget`;
   }
 
-  update(id: number, updateClarisaGlobalTargetDto: UpdateClarisaGlobalTargetDto) {
+  update(
+    id: number,
+    updateClarisaGlobalTargetDto: UpdateClarisaGlobalTargetDto,
+  ) {
     return `This action updates a #${id} clarisaGlobalTarget`;
   }
 

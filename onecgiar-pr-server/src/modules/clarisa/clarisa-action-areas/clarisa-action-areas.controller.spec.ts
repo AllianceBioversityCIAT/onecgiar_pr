@@ -11,7 +11,9 @@ describe('ClarisaActionAreasController', () => {
       providers: [ClarisaActionAreasService],
     }).compile();
 
-    controller = module.get<ClarisaActionAreasController>(ClarisaActionAreasController);
+    controller = module.get<ClarisaActionAreasController>(
+      ClarisaActionAreasController,
+    );
   });
 
   it('should be defined', () => {

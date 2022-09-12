@@ -6,9 +6,7 @@ import { typeOneReportRoutes } from './type-one-report.routes';
 
 @Module({
   controllers: [TypeOneReportController],
-  imports:[
-    RouterModule.register(typeOneReportRoutes)
-  ],
-  providers: [TypeOneReportService]
+  imports: [RouterModule.register(typeOneReportRoutes)],
+  providers: [TypeOneReportService],
 })
 export class TypeOneReportModule {}

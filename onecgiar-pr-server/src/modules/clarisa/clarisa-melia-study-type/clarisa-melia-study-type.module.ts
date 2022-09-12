@@ -7,8 +7,6 @@ import { ClarisaMeliaStudyTypeRoutes } from './clarisaMeliaStudyType.routes';
 @Module({
   controllers: [ClarisaMeliaStudyTypeController],
   providers: [ClarisaMeliaStudyTypeService],
-  imports: [
-    RouterModule.register(ClarisaMeliaStudyTypeRoutes)
-  ]
+  imports: [RouterModule.register(ClarisaMeliaStudyTypeRoutes)],
 })
 export class ClarisaMeliaStudyTypeModule {}

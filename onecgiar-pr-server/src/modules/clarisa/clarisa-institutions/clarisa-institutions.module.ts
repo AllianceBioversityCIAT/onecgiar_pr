@@ -7,8 +7,6 @@ import { ClarisaInstitutionsRoutes } from './clarisaInstitutions.routes';
 @Module({
   controllers: [ClarisaInstitutionsController],
   providers: [ClarisaInstitutionsService],
-  imports: [
-    RouterModule.register(ClarisaInstitutionsRoutes)
-  ]
+  imports: [RouterModule.register(ClarisaInstitutionsRoutes)],
 })
 export class ClarisaInstitutionsModule {}

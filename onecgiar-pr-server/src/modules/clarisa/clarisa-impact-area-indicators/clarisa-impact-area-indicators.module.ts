@@ -7,8 +7,6 @@ import { ClarisaImpactAreaIndicatorsRoutes } from './clarisaImpactAreaIndicators
 @Module({
   controllers: [ClarisaImpactAreaIndicatorsController],
   providers: [ClarisaImpactAreaIndicatorsService],
-  imports: [
-    RouterModule.register(ClarisaImpactAreaIndicatorsRoutes)
-  ]
+  imports: [RouterModule.register(ClarisaImpactAreaIndicatorsRoutes)],
 })
 export class ClarisaImpactAreaIndicatorsModule {}

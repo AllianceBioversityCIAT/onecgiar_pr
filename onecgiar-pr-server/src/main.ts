@@ -18,6 +18,8 @@ async function bootstrap() {
       console.log(error);
     });
   await app.listen(port);
-  console.log(`The server is running on port ${port} - http://localhost:${port}/`);
+  console.log(
+    `The server is running on port ${port} - http://localhost:${port}/`,
+  );
 }
 bootstrap();

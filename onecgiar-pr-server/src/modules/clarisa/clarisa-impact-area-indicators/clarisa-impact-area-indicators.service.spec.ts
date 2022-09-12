@@ -9,7 +9,9 @@ describe('ClarisaImpactAreaIndicatorsService', () => {
       providers: [ClarisaImpactAreaIndicatorsService],
     }).compile();
 
-    service = module.get<ClarisaImpactAreaIndicatorsService>(ClarisaImpactAreaIndicatorsService);
+    service = module.get<ClarisaImpactAreaIndicatorsService>(
+      ClarisaImpactAreaIndicatorsService,
+    );
   });
 
   it('should be defined', () => {

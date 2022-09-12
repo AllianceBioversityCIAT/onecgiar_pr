@@ -1,11 +1,21 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { ClarisaActionAreasService } from './clarisa-action-areas.service';
 import { CreateClarisaActionAreaDto } from './dto/create-clarisa-action-area.dto';
 import { UpdateClarisaActionAreaDto } from './dto/update-clarisa-action-area.dto';
 
 @Controller()
 export class ClarisaActionAreasController {
-  constructor(private readonly clarisaActionAreasService: ClarisaActionAreasService) {}
+  constructor(
+    private readonly clarisaActionAreasService: ClarisaActionAreasService,
+  ) {}
 
   @Post()
   create(@Body() createClarisaActionAreaDto: CreateClarisaActionAreaDto) {
@@ -23,8 +33,14 @@ export class ClarisaActionAreasController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateClarisaActionAreaDto: UpdateClarisaActionAreaDto) {
-    return this.clarisaActionAreasService.update(+id, updateClarisaActionAreaDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateClarisaActionAreaDto: UpdateClarisaActionAreaDto,
+  ) {
+    return this.clarisaActionAreasService.update(
+      +id,
+      updateClarisaActionAreaDto,
+    );
   }
 
   @Delete(':id')

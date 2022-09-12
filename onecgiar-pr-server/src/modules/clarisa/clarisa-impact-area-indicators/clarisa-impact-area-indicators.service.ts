@@ -4,7 +4,9 @@ import { UpdateClarisaImpactAreaIndicatorDto } from './dto/update-clarisa-impact
 
 @Injectable()
 export class ClarisaImpactAreaIndicatorsService {
-  create(createClarisaImpactAreaIndicatorDto: CreateClarisaImpactAreaIndicatorDto) {
+  create(
+    createClarisaImpactAreaIndicatorDto: CreateClarisaImpactAreaIndicatorDto,
+  ) {
     return 'This action adds a new clarisaImpactAreaIndicator';
   }
 
@@ -16,7 +18,10 @@ export class ClarisaImpactAreaIndicatorsService {
     return `This action returns a #${id} clarisaImpactAreaIndicator`;
   }
 
-  update(id: number, updateClarisaImpactAreaIndicatorDto: UpdateClarisaImpactAreaIndicatorDto) {
+  update(
+    id: number,
+    updateClarisaImpactAreaIndicatorDto: UpdateClarisaImpactAreaIndicatorDto,
+  ) {
     return `This action updates a #${id} clarisaImpactAreaIndicator`;
   }
 

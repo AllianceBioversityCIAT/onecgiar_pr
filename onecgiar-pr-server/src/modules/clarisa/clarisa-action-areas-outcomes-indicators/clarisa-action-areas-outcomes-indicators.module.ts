@@ -7,8 +7,6 @@ import { ClarisaActionAreasOutcomesIndicatorsRoutes } from './clarisaActionAreaO
 @Module({
   controllers: [ClarisaActionAreasOutcomesIndicatorsController],
   providers: [ClarisaActionAreasOutcomesIndicatorsService],
-  imports: [
-    RouterModule.register(ClarisaActionAreasOutcomesIndicatorsRoutes)
-  ]
+  imports: [RouterModule.register(ClarisaActionAreasOutcomesIndicatorsRoutes)],
 })
 export class ClarisaActionAreasOutcomesIndicatorsModule {}

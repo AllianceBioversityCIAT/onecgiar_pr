@@ -9,7 +9,9 @@ describe('ClarisaGlobalTargetService', () => {
       providers: [ClarisaGlobalTargetService],
     }).compile();
 
-    service = module.get<ClarisaGlobalTargetService>(ClarisaGlobalTargetService);
+    service = module.get<ClarisaGlobalTargetService>(
+      ClarisaGlobalTargetService,
+    );
   });
 
   it('should be defined', () => {

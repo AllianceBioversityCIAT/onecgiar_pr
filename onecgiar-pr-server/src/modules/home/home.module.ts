@@ -6,9 +6,7 @@ import { homeRoutes } from './home.routes';
 
 @Module({
   controllers: [HomeController],
-  imports:[
-    RouterModule.register(homeRoutes)
-  ],
-  providers: [HomeService]
+  imports: [RouterModule.register(homeRoutes)],
+  providers: [HomeService],
 })
 export class HomeModule {}

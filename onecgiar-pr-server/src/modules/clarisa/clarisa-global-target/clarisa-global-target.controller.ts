@@ -1,11 +1,21 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { ClarisaGlobalTargetService } from './clarisa-global-target.service';
 import { CreateClarisaGlobalTargetDto } from './dto/create-clarisa-global-target.dto';
 import { UpdateClarisaGlobalTargetDto } from './dto/update-clarisa-global-target.dto';
 
 @Controller()
 export class ClarisaGlobalTargetController {
-  constructor(private readonly clarisaGlobalTargetService: ClarisaGlobalTargetService) {}
+  constructor(
+    private readonly clarisaGlobalTargetService: ClarisaGlobalTargetService,
+  ) {}
 
   @Post()
   create(@Body() createClarisaGlobalTargetDto: CreateClarisaGlobalTargetDto) {
@@ -23,8 +33,14 @@ export class ClarisaGlobalTargetController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateClarisaGlobalTargetDto: UpdateClarisaGlobalTargetDto) {
-    return this.clarisaGlobalTargetService.update(+id, updateClarisaGlobalTargetDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateClarisaGlobalTargetDto: UpdateClarisaGlobalTargetDto,
+  ) {
+    return this.clarisaGlobalTargetService.update(
+      +id,
+      updateClarisaGlobalTargetDto,
+    );
   }
 
   @Delete(':id')

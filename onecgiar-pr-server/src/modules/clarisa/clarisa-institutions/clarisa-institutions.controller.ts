@@ -1,11 +1,21 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { ClarisaInstitutionsService } from './clarisa-institutions.service';
 import { CreateClarisaInstitutionDto } from './dto/create-clarisa-institution.dto';
 import { UpdateClarisaInstitutionDto } from './dto/update-clarisa-institution.dto';
 
 @Controller()
 export class ClarisaInstitutionsController {
-  constructor(private readonly clarisaInstitutionsService: ClarisaInstitutionsService) {}
+  constructor(
+    private readonly clarisaInstitutionsService: ClarisaInstitutionsService,
+  ) {}
 
   @Post()
   create(@Body() createClarisaInstitutionDto: CreateClarisaInstitutionDto) {
@@ -23,8 +33,14 @@ export class ClarisaInstitutionsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateClarisaInstitutionDto: UpdateClarisaInstitutionDto) {
-    return this.clarisaInstitutionsService.update(+id, updateClarisaInstitutionDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateClarisaInstitutionDto: UpdateClarisaInstitutionDto,
+  ) {
+    return this.clarisaInstitutionsService.update(
+      +id,
+      updateClarisaInstitutionDto,
+    );
   }
 
   @Delete(':id')
