@@ -35,7 +35,7 @@ export class AuthController {
       userLogin,
     );
     res
-      .setHeader('auth',token)
+      .setHeader('auth', token)
       .json({
         validate,
         token,
@@ -64,5 +64,4 @@ export class AuthController {
   remove(@Param('id') id: string) {
     return this.authService.remove(+id);
   }
-
 }

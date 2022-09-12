@@ -1,5 +1,4 @@
 export class CreateRoleDto {
-    description: string;
-    scope: string;
-
+  description: string;
+  scope: string;
 }
