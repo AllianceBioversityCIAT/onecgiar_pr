@@ -36,6 +36,7 @@ import { RoleService } from './auth/modules/role/role.service';
 import { Repository } from 'typeorm';
 import { RolesUserByAplicationService } from './auth/modules/roles-user-by-aplication/roles-user-by-aplication.service';
 
+
 @Module({
   imports: [
     AuthModule,
@@ -60,19 +61,19 @@ import { RolesUserByAplicationService } from './auth/modules/roles-user-by-aplic
     ComplementaryDataUserModule,
     RoleModule,
     RolesUserByAplicationModule,
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User])
   ],
   controllers: [AppController],
   providers: [
-    AppService,
-    AuthService,
-    JwtService,
-    UserService,
-    JwtMiddleware,
+    AppService, 
+    AuthService, 
+    JwtService, 
+    UserService, 
+    JwtMiddleware, 
     UserRepository,
     RoleService,
     Repository,
-    RolesUserByAplicationService,
+    RolesUserByAplicationService
   ],
 })
 export class AppModule implements NestModule {

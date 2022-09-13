@@ -34,7 +34,7 @@ export class ComplementaryDataUserService {
         );
       return newComplementaryData;
     } catch (error) {
-      console.log(error);
+      console.log(error)
       this._userRepository.delete(createComplementaryDataUserDto.user.id);
       return new HttpException(
         'Error when creating supplementary data',

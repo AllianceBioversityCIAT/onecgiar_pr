@@ -27,7 +27,7 @@ export class Role {
   @Column({
     name: 'active',
     type: 'boolean',
-    default: true,
+    default: true
   })
   active: boolean;
 

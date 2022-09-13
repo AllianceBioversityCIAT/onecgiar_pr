@@ -20,7 +20,7 @@ export class UserService {
     @InjectRepository(User)
     private readonly _userRepository: Repository<User>,
     private readonly _complementaryDataUserService: ComplementaryDataUserService,
-    private readonly _roleByAplicationService: RolesUserByAplicationService,
+    private readonly _roleByAplicationService: RolesUserByAplicationService
   ) {}
 
   create(createUserDto: CreateUserDto) {
@@ -42,20 +42,17 @@ export class UserService {
         );
       }
 
-      if (!createFullUserDto.is_cgiar) {
-        if (!('password' in createFullUserDto)) {
-          console.log(1, !createFullUserDto.password);
-          if (!createFullUserDto.password) {
-            throw new HttpException(
-              'No password provider',
-              HttpStatus.BAD_REQUEST,
-            );
+      if(!createFullUserDto.is_cgiar){
+        if(!('password' in createFullUserDto)){
+          console.log(1,!createFullUserDto.password)
+          if(!createFullUserDto.password){
+            throw new HttpException('No password provider', HttpStatus.BAD_REQUEST);
           }
         }
       }
 
       const newUser: User = await this._userRepository.save(createUserDto);
-      //const newRole = await this._roleByAplicationService.create({role_id: role, user_id: newUser.id, active: true});
+      const newRole = await this._roleByAplicationService.create({role_id: role, user_id: newUser.id, active: true});
       createFullUserDto.user = newUser;
       const newFullUser: any = await this._complementaryDataUserService.create(
         createFullUserDto,

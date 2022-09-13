@@ -22,9 +22,11 @@ import { RolesUserByAplicationService } from '../roles-user-by-aplication/roles-
     UserRepository,
     RoleService,
     Repository,
-    RolesUserByAplicationService,
+    RolesUserByAplicationService
   ],
-  imports: [TypeOrmModule.forFeature([User, Role, ComplementaryDataUser])],
+  imports: [
+    TypeOrmModule.forFeature([User, Role, ComplementaryDataUser]),
+  ],
   exports: [UserRepository],
 })
 export class UserModule {}

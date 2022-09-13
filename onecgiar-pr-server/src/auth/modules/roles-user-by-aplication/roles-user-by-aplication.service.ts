@@ -6,20 +6,19 @@ import { RolesUserByAplication } from './entities/roles-user-by-aplication.entit
 
 @Injectable()
 export class RolesUserByAplicationService {
+
   constructor(
-    private readonly _roleByAplicationRepository: Repository<RolesUserByAplication>,
-  ) {}
+    private readonly _roleByAplicationRepository: Repository<RolesUserByAplication>
+  ){}
 
   async create(createRolesUserByAplicationDto: CreateRolesUserByAplicationDto) {
-    console.log(createRolesUserByAplicationDto);
+    console.log(createRolesUserByAplicationDto)
     try {
-      const newRole = await this._roleByAplicationRepository.save(
-        createRolesUserByAplicationDto,
-      );
-      console.log(newRole);
+      const newRole = await this._roleByAplicationRepository.save(createRolesUserByAplicationDto);
+      console.log(newRole)
       return newRole;
     } catch (error) {
-      console.log(error);
+      console.log(error)
     }
   }
 

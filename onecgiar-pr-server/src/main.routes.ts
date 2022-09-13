@@ -10,7 +10,7 @@ const ApiMainRoutes: Routes = [
   {
     path: 'auth',
     module: AuthModule,
-    children: AuthModulesRoutes,
+    children: AuthModulesRoutes
   },
   {
     path: 'home',
@@ -27,7 +27,7 @@ const ApiMainRoutes: Routes = [
   {
     path: 'clarisa',
     children: ClarisaRoutes,
-  },
+  }
 ];
 
 export const MainRoutes: Routes = [

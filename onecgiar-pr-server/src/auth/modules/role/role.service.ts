@@ -6,12 +6,17 @@ import { Role } from './entities/role.entity';
 
 @Injectable()
 export class RoleService {
-  constructor(private readonly _roleRepository: Repository<Role>) {}
+
+  constructor(
+    private readonly _roleRepository: Repository<Role>
+  ){}
 
   create(createRoleDto: CreateRoleDto) {
-    try {
+    try{
       this._roleRepository.create();
-    } catch (error) {}
+    }catch(error){
+
+    }
   }
 
   findAll() {
