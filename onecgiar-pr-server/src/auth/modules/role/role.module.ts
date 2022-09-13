@@ -7,12 +7,7 @@ import { Repository } from 'typeorm';
 
 @Module({
   controllers: [RoleController],
-  providers: [
-    RoleService,
-    Repository
-  ],
-  imports:[
-    TypeOrmModule.forFeature([Role])
-  ]
+  providers: [RoleService, Repository],
+  imports: [TypeOrmModule.forFeature([Role])],
 })
 export class RoleModule {}

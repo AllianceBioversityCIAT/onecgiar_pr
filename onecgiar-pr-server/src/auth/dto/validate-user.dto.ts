@@ -1,4 +1,4 @@
 export class UserLoginDto {
-    response: string;
-    password: string;
+  response: string;
+  password: string;
 }

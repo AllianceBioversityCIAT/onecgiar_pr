@@ -40,11 +40,8 @@ import { RolesUserByAplicationService } from './modules/roles-user-by-aplication
     JwtMiddleware,
     RoleService,
     Repository,
-    RolesUserByAplicationService
+    RolesUserByAplicationService,
   ],
-  exports: [
-    BcryptPasswordEncoder,
-    JwtMiddleware
-  ],
+  exports: [BcryptPasswordEncoder, JwtMiddleware],
 })
 export class AuthModule {}

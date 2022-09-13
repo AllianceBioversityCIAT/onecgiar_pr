@@ -18,13 +18,13 @@ export class RolesUserByAplication {
   user: User;
 
   @ManyToOne(() => Role, (role) => role.rolesUserByAplication)
-  @JoinColumn({name: 'role_id'})
+  @JoinColumn({ name: 'role_id' })
   role: Role;
 
   @Column({
     name: 'active',
     type: 'boolean',
-    default: true
+    default: true,
   })
-  active: Boolean;
+  active: boolean;
 }
