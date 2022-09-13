@@ -3,23 +3,36 @@ import { CreateRolesUserByAplicationDto } from './dto/create-roles-user-by-aplic
 import { UpdateRolesUserByAplicationDto } from './dto/update-roles-user-by-aplication.dto';
 import { Repository } from 'typeorm';
 import { RolesUserByAplication } from './entities/roles-user-by-aplication.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Role } from '../role/entities/role.entity';
 
 @Injectable()
 export class RolesUserByAplicationService {
   constructor(
+    @InjectRepository(RolesUserByAplication)
     private readonly _roleByAplicationRepository: Repository<RolesUserByAplication>,
+    @InjectRepository(Role)
+    private readonly _roleRepository: Repository<Role>,
   ) {}
 
-  async create(createRolesUserByAplicationDto: CreateRolesUserByAplicationDto) {
+  async createAplicationRol(
+    createRolesUserByAplicationDto: CreateRolesUserByAplicationDto,
+  ) {
     console.log(createRolesUserByAplicationDto);
+
     try {
-      const newRole = await this._roleByAplicationRepository.save(
-        createRolesUserByAplicationDto,
-      );
+      const seRole = await this._roleRepository.findOne({
+        where: { id: createRolesUserByAplicationDto.role_id },
+      });
+      const newRole = await this._roleByAplicationRepository.save({
+        user: createRolesUserByAplicationDto.user_id,
+        role: seRole,
+      });
       console.log(newRole);
       return newRole;
     } catch (error) {
       console.log(error);
+      return 'error';
     }
   }
 

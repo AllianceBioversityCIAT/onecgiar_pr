@@ -9,5 +9,6 @@ import { Repository } from 'typeorm';
   controllers: [RoleController],
   providers: [RoleService, Repository],
   imports: [TypeOrmModule.forFeature([Role])],
+  exports: [TypeOrmModule.forFeature([Role]), RoleService],
 })
 export class RoleModule {}

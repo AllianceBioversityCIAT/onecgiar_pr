@@ -10,19 +10,19 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { MainRoutes } from './main.routes';
-import { ResultsModule } from './modules/results/results.module';
-import { HomeModule } from './modules/home/home.module';
-import { TypeOneReportModule } from './modules/type-one-report/type-one-report.module';
+import { ResultsModule } from './api/results/results.module';
+import { HomeModule } from './api/home/home.module';
+import { TypeOneReportModule } from './api/type-one-report/type-one-report.module';
 import { dataSource } from './config/orm.config';
 import { JwtMiddleware } from './auth/Middlewares/jwt.middleware';
-import { ClarisaActionAreasModule } from './modules/clarisa/clarisa-action-areas/clarisa-action-areas.module';
-import { ClarisaActionAreasOutcomesIndicatorsModule } from './modules/clarisa/clarisa-action-areas-outcomes-indicators/clarisa-action-areas-outcomes-indicators.module';
-import { ClarisaGlobalTargetModule } from './modules/clarisa/clarisa-global-target/clarisa-global-target.module';
-import { ClarisaImpactAreaModule } from './modules/clarisa/clarisa-impact-area/clarisa-impact-area.module';
-import { ClarisaImpactAreaIndicatorsModule } from './modules/clarisa/clarisa-impact-area-indicators/clarisa-impact-area-indicators.module';
-import { ClarisaInstitutionsModule } from './modules/clarisa/clarisa-institutions/clarisa-institutions.module';
-import { ClarisaInstitutionsTypeModule } from './modules/clarisa/clarisa-institutions-type/clarisa-institutions-type.module';
-import { ClarisaMeliaStudyTypeModule } from './modules/clarisa/clarisa-melia-study-type/clarisa-melia-study-type.module';
+import { ClarisaActionAreasModule } from './api/clarisa/clarisa-action-areas/clarisa-action-areas.module';
+import { ClarisaActionAreasOutcomesIndicatorsModule } from './api/clarisa/clarisa-action-areas-outcomes-indicators/clarisa-action-areas-outcomes-indicators.module';
+import { ClarisaGlobalTargetModule } from './api/clarisa/clarisa-global-target/clarisa-global-target.module';
+import { ClarisaImpactAreaModule } from './api/clarisa/clarisa-impact-area/clarisa-impact-area.module';
+import { ClarisaImpactAreaIndicatorsModule } from './api/clarisa/clarisa-impact-area-indicators/clarisa-impact-area-indicators.module';
+import { ClarisaInstitutionsModule } from './api/clarisa/clarisa-institutions/clarisa-institutions.module';
+import { ClarisaInstitutionsTypeModule } from './api/clarisa/clarisa-institutions-type/clarisa-institutions-type.module';
+import { ClarisaMeliaStudyTypeModule } from './api/clarisa/clarisa-melia-study-type/clarisa-melia-study-type.module';
 import { UserModule } from './auth/modules/user/user.module';
 import { ComplementaryDataUserModule } from './auth/modules/complementary-data-user/complementary-data-user.module';
 import { RoleModule } from './auth/modules/role/role.module';
@@ -35,6 +35,7 @@ import { User } from './auth/modules/user/entities/user.entity';
 import { RoleService } from './auth/modules/role/role.service';
 import { Repository } from 'typeorm';
 import { RolesUserByAplicationService } from './auth/modules/roles-user-by-aplication/roles-user-by-aplication.service';
+import { RolesUserByAplication } from './auth/modules/roles-user-by-aplication/entities/roles-user-by-aplication.entity';
 
 @Module({
   imports: [
@@ -60,20 +61,10 @@ import { RolesUserByAplicationService } from './auth/modules/roles-user-by-aplic
     ComplementaryDataUserModule,
     RoleModule,
     RolesUserByAplicationModule,
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, RolesUserByAplication]),
   ],
   controllers: [AppController],
-  providers: [
-    AppService,
-    AuthService,
-    JwtService,
-    UserService,
-    JwtMiddleware,
-    UserRepository,
-    RoleService,
-    Repository,
-    RolesUserByAplicationService,
-  ],
+  providers: [AppService, JwtService, JwtMiddleware, Repository],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

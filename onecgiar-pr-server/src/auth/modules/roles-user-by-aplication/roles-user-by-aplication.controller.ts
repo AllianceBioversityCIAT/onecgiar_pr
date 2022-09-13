@@ -21,9 +21,7 @@ export class RolesUserByAplicationController {
   create(
     @Body() createRolesUserByAplicationDto: CreateRolesUserByAplicationDto,
   ) {
-    return this.rolesUserByAplicationService.create(
-      createRolesUserByAplicationDto,
-    );
+    return 1;
   }
 
   @Get()

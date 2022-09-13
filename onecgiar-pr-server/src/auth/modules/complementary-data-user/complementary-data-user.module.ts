@@ -6,6 +6,7 @@ import { ComplementaryDataUser } from './entities/complementary-data-user.entity
 import { User } from '../user/entities/user.entity';
 import { UserRepository } from '../user/repositories/user.repository';
 import { BcryptPasswordEncoder } from 'src/auth/utils/bcrypt.util';
+import { UserModule } from '../user/user.module';
 
 @Module({
   controllers: [ComplementaryDataUserController],
@@ -14,7 +15,10 @@ import { BcryptPasswordEncoder } from 'src/auth/utils/bcrypt.util';
     BcryptPasswordEncoder,
     UserRepository,
   ],
-  exports: [ComplementaryDataUserService],
-  imports: [TypeOrmModule.forFeature([User, ComplementaryDataUser])],
+  exports: [
+    ComplementaryDataUserService,
+    TypeOrmModule.forFeature([ComplementaryDataUser]),
+  ],
+  imports: [TypeOrmModule.forFeature([ComplementaryDataUser, User])],
 })
 export class ComplementaryDataUserModule {}

@@ -18,30 +18,38 @@ import { JwtMiddleware } from './Middlewares/jwt.middleware';
 import { RoleService } from './modules/role/role.service';
 import { Repository } from 'typeorm';
 import { RolesUserByAplicationService } from './modules/roles-user-by-aplication/roles-user-by-aplication.service';
+import { RolesUserByAplication } from './modules/roles-user-by-aplication/entities/roles-user-by-aplication.entity';
+import { RoleModule } from './modules/role/role.module';
+import { RolesUserByAplicationModule } from './modules/roles-user-by-aplication/roles-user-by-aplication.module';
+import { UserModule } from './modules/user/user.module';
+import { ComplementaryDataUserModule } from './modules/complementary-data-user/complementary-data-user.module';
 
 @Module({
   controllers: [AuthController],
   imports: [
     PassportModule,
+    RoleModule,
+    RolesUserByAplicationModule,
+    UserModule,
+    ComplementaryDataUserModule,
     JwtModule.register({
       secret: env.JWT_SKEY,
       signOptions: { expiresIn: env.JWT_EXPIRES },
     }),
-    TypeOrmModule.forFeature([User, ComplementaryDataUser]),
+    TypeOrmModule.forFeature([
+      User,
+      ComplementaryDataUser,
+      RolesUserByAplication,
+    ]),
   ],
   providers: [
+    AuthService,
     JwtStrategy,
     JwtService,
     BcryptPasswordEncoder,
-    UserService,
-    ComplementaryDataUserService,
-    UserRepository,
-    AuthService,
     JwtMiddleware,
-    RoleService,
     Repository,
-    RolesUserByAplicationService,
   ],
-  exports: [BcryptPasswordEncoder, JwtMiddleware],
+  exports: [BcryptPasswordEncoder, JwtMiddleware, AuthService],
 })
 export class AuthModule {}

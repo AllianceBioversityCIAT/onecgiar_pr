@@ -14,7 +14,6 @@ import { RolesUserByAplicationService } from '../roles-user-by-aplication/roles-
 @Injectable()
 export class UserService {
   private readonly cgiarRegex: RegExp = /cgiar\.org/g;
-  private readonly emailRegex: RegExp = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g;
 
   constructor(
     @InjectRepository(User)
@@ -55,7 +54,11 @@ export class UserService {
       }
 
       const newUser: User = await this._userRepository.save(createUserDto);
-      //const newRole = await this._roleByAplicationService.create({role_id: role, user_id: newUser.id, active: true});
+      const newRole = await this._roleByAplicationService.createAplicationRol({
+        role_id: role,
+        user_id: newUser,
+        active: true,
+      });
       createFullUserDto.user = newUser;
       const newFullUser: any = await this._complementaryDataUserService.create(
         createFullUserDto,
