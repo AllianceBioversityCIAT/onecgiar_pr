@@ -10,6 +10,7 @@ import { ComplementaryDataUser } from '../complementary-data-user/entities/compl
 import { Role } from '../role/entities/role.entity';
 import { RoleService } from '../role/role.service';
 import { RolesUserByAplicationService } from '../roles-user-by-aplication/roles-user-by-aplication.service';
+import { retunrFormatUser } from './dto/return-create-user.dto';
 
 @Injectable()
 export class UserService {
@@ -30,25 +31,27 @@ export class UserService {
     createUserDto: CreateUserDto,
     createFullUserDto: CreateComplementaryDataUserDto,
     role: number,
-  ) {
+  ): Promise<retunrFormatUser> {
     try {
       createFullUserDto.is_cgiar = this.cgiarRegex.test(createUserDto.email);
       const user = await this.findOneByEmail(createUserDto.email);
       if (user) {
-        throw new HttpException(
-          'Duplicates have been found in the data',
-          HttpStatus.BAD_REQUEST,
-        );
+        throw {
+            response: {},
+            message: 'Duplicates have been found in the data',
+            status: HttpStatus.BAD_REQUEST
+          }
       }
 
       if (!createFullUserDto.is_cgiar) {
         if (!('password' in createFullUserDto)) {
           console.log(1, !createFullUserDto.password);
           if (!createFullUserDto.password) {
-            throw new HttpException(
-              'No password provider',
-              HttpStatus.BAD_REQUEST,
-            );
+            throw {
+              response: {},
+              message: 'No password provider',
+              status: HttpStatus.BAD_REQUEST
+            }
           }
         }
       }
@@ -56,10 +59,10 @@ export class UserService {
       const newUser: User = await this._userRepository.save(createUserDto);
       const newRole = await this._roleByAplicationService.createAplicationRol({
         role_id: role,
-        user_id: newUser,
+        user_id: newUser.id,
         active: true,
       });
-      createFullUserDto.user = newUser;
+      createFullUserDto.user_id = newUser.id;
       const newFullUser: any = await this._complementaryDataUserService.create(
         createFullUserDto,
       );
@@ -68,7 +71,11 @@ export class UserService {
         result = newFullUser;
       }
 
-      return result;
+      return {
+        response: result,
+        message: 'User successfully created',
+        status: HttpStatus.CREATED
+      }
     } catch (error) {
       return error;
     }

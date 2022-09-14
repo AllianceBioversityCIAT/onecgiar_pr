@@ -13,13 +13,13 @@ export class RolesUserByAplication {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => User, (user) => user.rolesUserByAplication)
+  @ManyToOne(() => User, (user) => user.id)
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user_id: number;
 
-  @ManyToOne(() => Role, (role) => role.rolesUserByAplication)
+  @ManyToOne(() => Role, (role) => role.id)
   @JoinColumn({ name: 'role_id' })
-  role: Role;
+  role_id: number;
 
   @Column({
     name: 'active',

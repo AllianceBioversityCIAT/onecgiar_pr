@@ -12,9 +12,9 @@ export class ComplementaryDataUser {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @OneToOne(() => User)
+  @OneToOne(() => User, (user) => user.id)
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user_id: number;
 
   @Column({
     name: 'is_cgiar',

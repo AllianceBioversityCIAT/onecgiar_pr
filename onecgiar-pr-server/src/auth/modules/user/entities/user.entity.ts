@@ -22,6 +22,6 @@ export class User {
   })
   active: boolean;
 
-  @OneToMany(() => RolesUserByAplication, (ruba) => ruba.user)
-  rolesUserByAplication: RolesUserByAplication[];
+  @OneToMany(() => RolesUserByAplication, (ruba) => ruba.id)
+  rolesUserByAplication: number[];
 }

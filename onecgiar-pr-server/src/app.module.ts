@@ -4,7 +4,7 @@ import {
   NestModule,
   RequestMethod,
 } from '@nestjs/common';
-import { RouterModule } from '@nestjs/core';
+import { APP_FILTER, RouterModule } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -36,6 +36,7 @@ import { RoleService } from './auth/modules/role/role.service';
 import { Repository } from 'typeorm';
 import { RolesUserByAplicationService } from './auth/modules/roles-user-by-aplication/roles-user-by-aplication.service';
 import { RolesUserByAplication } from './auth/modules/roles-user-by-aplication/entities/roles-user-by-aplication.entity';
+import { HttpExceptionFilter } from './handlers/error.exception';
 
 @Module({
   imports: [
@@ -64,7 +65,16 @@ import { RolesUserByAplication } from './auth/modules/roles-user-by-aplication/e
     TypeOrmModule.forFeature([User, RolesUserByAplication]),
   ],
   controllers: [AppController],
-  providers: [AppService, JwtService, JwtMiddleware, Repository],
+  providers: [
+    AppService, 
+    JwtService, 
+    JwtMiddleware, 
+    Repository,
+    {
+      provide: APP_FILTER,
+      useClass: HttpExceptionFilter,
+    },
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

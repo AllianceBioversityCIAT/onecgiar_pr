@@ -29,13 +29,13 @@ export class ComplementaryDataUserService {
               createComplementaryDataUserDto.password.toString(),
             );
       const newComplementaryData: ComplementaryDataUser =
-        await this._complementaryDataUserRepository.save(
-          createComplementaryDataUserDto,
+      await this._complementaryDataUserRepository.save(
+        createComplementaryDataUserDto,
         );
-      return newComplementaryData;
+        return newComplementaryData;
     } catch (error) {
       console.log(error);
-      this._userRepository.delete(createComplementaryDataUserDto.user.id);
+      this._userRepository.delete(createComplementaryDataUserDto.user_id);
       return new HttpException(
         'Error when creating supplementary data',
         HttpStatus.BAD_REQUEST,

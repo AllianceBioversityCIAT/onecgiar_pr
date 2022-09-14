@@ -21,12 +21,9 @@ export class RolesUserByAplicationService {
     console.log(createRolesUserByAplicationDto);
 
     try {
-      const seRole = await this._roleRepository.findOne({
-        where: { id: createRolesUserByAplicationDto.role_id },
-      });
       const newRole = await this._roleByAplicationRepository.save({
-        user: createRolesUserByAplicationDto.user_id,
-        role: seRole,
+        role_id: createRolesUserByAplicationDto.role_id,
+        user_id: createRolesUserByAplicationDto.user_id
       });
       console.log(newRole);
       return newRole;

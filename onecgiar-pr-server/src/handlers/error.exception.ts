@@ -1,11 +1,29 @@
-/*
-https://docs.nestjs.com/exception-filters#custom-exceptions
-*/
+import { ExceptionFilter, Catch, ArgumentsHost, HttpException } from '@nestjs/common';
+import { Request, Response } from 'express';
+import { Interface } from 'readline';
 
-import { HttpException, HttpStatus } from '@nestjs/common';
+@Catch(HttpException)
+export class HttpExceptionFilter implements ExceptionFilter {
+  catch(exception: HttpException, host: ArgumentsHost) {
+    const ctx = host.switchToHttp();
+    const response = ctx.getResponse<Response>();
+    const request = ctx.getRequest<Request>();
+    const status = exception.getStatus();
+    const result: any | string = exception.getResponse();
 
-export class ErrorException extends HttpException {
-  constructor() {
-    super('Error', HttpStatus.I_AM_A_TEAPOT);
+    response
+      .status(status)
+      .json({
+        response: result?.response? result.response: {},
+        statusCode: status,
+        message: result?.message? result.message : 'Unknown error',
+        timestamp: new Date().toISOString(),
+        path: request.url,
+      });
   }
+}
+
+export class ExceptionFormat{
+  responses: object;
+  message: string;
 }
