@@ -9,6 +9,7 @@ import config from '../config/const.config';
 import { UserService } from './modules/user/user.service';
 import { UserRepository } from './modules/user/repositories/user.repository';
 import { FullUserRequestDto } from './modules/user/dto/full-user-request.dto';
+import { returnFormatSingin } from './dto/return-fromat-singin.dto';
 
 @Injectable()
 export class AuthService {
@@ -38,13 +39,16 @@ export class AuthService {
     return `This action removes a #${id} auth`;
   }
 
-  async singIn(userLogin: UserLoginDto): Promise<velidUserInterface> {
+  async singIn(userLogin: UserLoginDto): Promise<returnFormatSingin> {
     try {
       if (!(userLogin.email && userLogin.password)) {
-        throw new HttpException(
-          'Missing required fields: email or password.',
-          HttpStatus.BAD_REQUEST,
-        );
+        throw {
+            message:'Missing required fields: email or password.',
+            response:{
+              valid: false
+            },
+            status: HttpStatus.BAD_REQUEST
+        }
       }
       userLogin.email = userLogin.email.trim().toLowerCase();
       const user: any = await this._customUserRepository.completeDataByEmail(
@@ -66,25 +70,23 @@ export class AuthService {
 
         if (valid == true) {
           return {
-            validate: valid,
-            token: this._jwtService.sign(
-              { email, first_name, last_name },
-              { secret: env.JWT_SKEY, expiresIn: env.JWT_EXPIRES },
-            ),
-            user: user,
-            code: HttpStatus.ACCEPTED,
-          };
+            message: 'Successful login',
+            response: {
+              valid: true,
+              token: this._jwtService.sign(
+                { email, first_name, last_name },
+                { secret: env.JWT_SKEY, expiresIn: env.JWT_EXPIRES },
+              ),
+              user: user
+            },
+            status: HttpStatus.ACCEPTED
+          }
         } else {
           throw 'Invalid credentials';
         }
       }
     } catch (error) {
-      return {
-        validate: false,
-        token: null,
-        user: null,
-        code: HttpStatus.BAD_REQUEST,
-      };
+      return error
     }
   }
 

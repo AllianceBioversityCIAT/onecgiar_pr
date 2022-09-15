@@ -66,9 +66,9 @@ import { HttpExceptionFilter } from './handlers/error.exception';
   ],
   controllers: [AppController],
   providers: [
-    AppService, 
-    JwtService, 
-    JwtMiddleware, 
+    AppService,
+    JwtService,
+    JwtMiddleware,
     Repository,
     {
       provide: APP_FILTER,
@@ -80,7 +80,7 @@ export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer.apply(JwtMiddleware).forRoutes(
       {
-        path: 'api/results',
+        path: 'api/',
         method: RequestMethod.ALL,
       },
       {

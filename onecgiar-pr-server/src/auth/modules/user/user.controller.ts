@@ -29,7 +29,7 @@ export class UserController {
     return this.userService.create(createUserDto);
   }
 
-  @Post('full')
+  @Post('create')
   async creteFull(@Body() createFullUserDto: CreateFullUserDto, @Res() res: Response, @Req() req: Request) {
     const createUser: CreateUserDto = createFullUserDto.userData;
     const createComplementaryData: CreateComplementaryDataUserDto =
@@ -42,17 +42,31 @@ export class UserController {
       role,
     );
 
-    throw new HttpException({message,response}, status)
+    throw new HttpException({message,response}, status);
   }
 
-  @Get()
-  findAll() {
-    return this.userService.findAll();
+  @Get('all')
+  async findAll() {
+    const {message, response, status} = await this.userService.findAll();
+    throw new HttpException({message,response}, status);
+  }
+
+  @Get('all/full')
+  async findAllFull() {
+    const {message, response, status} = await this.userService.findAllFull();
+    throw new HttpException({message,response}, status);
+  }
+
+  @Get('all/:email')
+  async findByEmail(@Param('email') email: string) {
+    const {message, response, status} = await this.userService.findOneByEmail(email);
+    throw new HttpException({message,response}, status);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.userService.findOne(+id);
+  async findOne(@Param('id') id: string) {
+    const {message, response, status} = await this.userService.findOne(+id);
+    throw new HttpException({message,response}, status);
   }
 
   @Patch(':id')

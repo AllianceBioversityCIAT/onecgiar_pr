@@ -20,8 +20,8 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --verbose false --config ./test/jest-e2e.json --detectOpenHandles",
     "typeorm": "ts-node ./node_modules/typeorm/cli.js",
-    "migration:empty": "npm run typeorm migration:create ./migrations/TestMigration",
-    "migration:generate": "npm run typeorm migration:generate -- ./src/migrations/TestMigration -d ./src/config/orm.config.ts",
+    "migration:empty": "cross-var npm run typeorm migration:create ./src/migrations/$npm_config_name",
+    "migration:generate": "cross-var npm run typeorm migration:generate -- ./src/migrations/$npm_config_name -d ./src/config/orm.config.ts",
     "migration:revert": "npm run typeorm migration:revert -- -d ./src/config/orm.config.ts",
     "migration:run": "npm run typeorm migration:run -- -d ./src/config/orm.config.ts"
   },
@@ -37,6 +37,7 @@
     "bcryptjs": "^2.4.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.13.2",
+    "cross-var": "^1.1.0",
     "dotenv": "^16.0.1",
     "jsonwebtoken": "^8.5.1",
     "mysql2": "^2.3.3",

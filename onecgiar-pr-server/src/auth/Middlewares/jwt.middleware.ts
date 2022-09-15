@@ -16,6 +16,8 @@ import { verify, sign } from 'jsonwebtoken';
 import { AuthService } from '../auth.service';
 import { UserLoginDto } from 'src/auth/dto/login-user.dto';
 import { JwtService } from '@nestjs/jwt';
+import { returnJwtMiddlewareDto } from './middlewareDTOs/jwt.dto';
+import { returnFormatSingin } from '../dto/return-fromat-singin.dto';
 
 @Injectable()
 export class JwtMiddleware implements NestMiddleware {
@@ -28,7 +30,7 @@ export class JwtMiddleware implements NestMiddleware {
     @Req() req: Request,
     @Res() res: Response,
     @Next() next: NextFunction,
-  ) {
+  ): Promise<void> {
     const authBasic: string = req.headers.authorization;
     const credentials: string | null = authBasic
       ? authBasic.split('Basic ')[1]
@@ -47,11 +49,11 @@ export class JwtMiddleware implements NestMiddleware {
           password: cre.split(':')[1],
         };
 
-        const dataAuth: velidUserInterface = await this._authService.singIn(
+        const dataAuth: returnFormatSingin = await this._authService.singIn(
           userLogin,
         );
         // get token
-        token_ = dataAuth.token;
+        token_ = dataAuth.response.token;
       } else {
         // get SBT authorization token
         token_ = <string>req.headers['auth'];
@@ -65,12 +67,13 @@ export class JwtMiddleware implements NestMiddleware {
         { jwtPayload },
         { secret: env.JWT_SKEY, expiresIn: '7h' },
       );
-      res.setHeader('token', newToken);
+      res.setHeader('auth', newToken);
       next();
     } catch (error) {
-      return res
-        .status(401)
-        .json(new HttpException(`Invalid token`, HttpStatus.UNAUTHORIZED));
+      throw new HttpException({
+        message: 'Invalid token',
+        response: {}
+      }, HttpStatus.UNAUTHORIZED)
     }
   }
 }

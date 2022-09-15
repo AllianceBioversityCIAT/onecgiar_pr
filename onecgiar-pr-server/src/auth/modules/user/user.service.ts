@@ -11,6 +11,8 @@ import { Role } from '../role/entities/role.entity';
 import { RoleService } from '../role/role.service';
 import { RolesUserByAplicationService } from '../roles-user-by-aplication/roles-user-by-aplication.service';
 import { retunrFormatUser } from './dto/return-create-user.dto';
+import { UserRepository } from './repositories/user.repository';
+import { FullUserRequestDto } from './dto/full-user-request.dto';
 
 @Injectable()
 export class UserService {
@@ -19,6 +21,7 @@ export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly _userRepository: Repository<User>,
+    private readonly _customUserRespository: UserRepository,
     private readonly _complementaryDataUserService: ComplementaryDataUserService,
     private readonly _roleByAplicationService: RolesUserByAplicationService,
   ) {}
@@ -35,7 +38,7 @@ export class UserService {
     try {
       createFullUserDto.is_cgiar = this.cgiarRegex.test(createUserDto.email);
       const user = await this.findOneByEmail(createUserDto.email);
-      if (user) {
+      if (user.response) {
         throw {
             response: {},
             message: 'Duplicates have been found in the data',
@@ -81,29 +84,75 @@ export class UserService {
     }
   }
 
-  findAll() {
-    return `This action returns all user`;
+  async findAll():Promise<retunrFormatUser>  {
+    try {
+      const user: User[] = await this._userRepository.find();
+      return {
+        response: user,
+        message: 'Successful response',
+        status: HttpStatus.OK
+      };
+    } catch (error) {
+      return {
+        response: {},
+        message: 'User not found',
+        status: HttpStatus.NOT_FOUND
+      };
+    }
   }
 
-  async findOne(id: number) {
+  async findAllFull():Promise<retunrFormatUser>  {
+    try {
+      const user: FullUserRequestDto[] = await this._customUserRespository.completeAllData()
+      return {
+        response: user,
+        message: 'Successful response',
+        status: HttpStatus.OK
+      };
+    } catch (error) {
+      return {
+        response: {},
+        message: 'User not found',
+        status: HttpStatus.NOT_FOUND
+      };
+    }
+  }
+
+  async findOne(id: number):Promise<retunrFormatUser> {
     try {
       const user: User = await this._userRepository.findOne({
         where: { id: id },
       });
-      return user;
+      return {
+        response: user,
+        message: 'Successful response',
+        status: HttpStatus.OK
+      };
     } catch (error) {
-      return 'error';
+      return {
+        response: {},
+        message: 'User not found',
+        status: HttpStatus.NOT_FOUND
+      };
     }
   }
 
-  async findOneByEmail(email: string) {
+  async findOneByEmail(email: string):Promise<retunrFormatUser> {
     try {
       const user: User = await this._userRepository.findOne({
         where: { email: email },
       });
-      return user;
+      return {
+        response: user,
+        message: 'Successful response',
+        status: HttpStatus.OK
+      };
     } catch (error) {
-      return error;
+      return {
+        response: {},
+        message: 'User not found',
+        status: HttpStatus.NOT_FOUND
+      };
     }
   }
 
