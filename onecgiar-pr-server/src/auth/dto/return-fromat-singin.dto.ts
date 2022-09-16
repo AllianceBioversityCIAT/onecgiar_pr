@@ -1,4 +1,4 @@
-import { retunFormatService } from "src/extendsGlobalDTO/retunServices.dto";
+import { retunFormatService } from "src/shared/extendsGlobalDTO/retunServices.dto";
 
 export class returnFormatSingin extends retunFormatService{
     public response: retunrFormatSinginInterface;

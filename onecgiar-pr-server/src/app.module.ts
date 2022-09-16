@@ -1,3 +1,4 @@
+import { ClarisaModule } from './clarisa/clarisa.module';
 import {
   MiddlewareConsumer,
   Module,
@@ -15,14 +16,6 @@ import { HomeModule } from './api/home/home.module';
 import { TypeOneReportModule } from './api/type-one-report/type-one-report.module';
 import { dataSource } from './config/orm.config';
 import { JwtMiddleware } from './auth/Middlewares/jwt.middleware';
-import { ClarisaActionAreasModule } from './api/clarisa/clarisa-action-areas/clarisa-action-areas.module';
-import { ClarisaActionAreasOutcomesIndicatorsModule } from './api/clarisa/clarisa-action-areas-outcomes-indicators/clarisa-action-areas-outcomes-indicators.module';
-import { ClarisaGlobalTargetModule } from './api/clarisa/clarisa-global-target/clarisa-global-target.module';
-import { ClarisaImpactAreaModule } from './api/clarisa/clarisa-impact-area/clarisa-impact-area.module';
-import { ClarisaImpactAreaIndicatorsModule } from './api/clarisa/clarisa-impact-area-indicators/clarisa-impact-area-indicators.module';
-import { ClarisaInstitutionsModule } from './api/clarisa/clarisa-institutions/clarisa-institutions.module';
-import { ClarisaInstitutionsTypeModule } from './api/clarisa/clarisa-institutions-type/clarisa-institutions-type.module';
-import { ClarisaMeliaStudyTypeModule } from './api/clarisa/clarisa-melia-study-type/clarisa-melia-study-type.module';
 import { UserModule } from './auth/modules/user/user.module';
 import { ComplementaryDataUserModule } from './auth/modules/complementary-data-user/complementary-data-user.module';
 import { RoleModule } from './auth/modules/role/role.module';
@@ -36,10 +29,12 @@ import { RoleService } from './auth/modules/role/role.service';
 import { Repository } from 'typeorm';
 import { RolesUserByAplicationService } from './auth/modules/roles-user-by-aplication/roles-user-by-aplication.service';
 import { RolesUserByAplication } from './auth/modules/roles-user-by-aplication/entities/roles-user-by-aplication.entity';
-import { HttpExceptionFilter } from './handlers/error.exception';
+import { HttpExceptionFilter } from './shared/handlers/error.exception';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
+    ClarisaModule,
     AuthModule,
     HomeModule,
     ResultsModule,
@@ -50,19 +45,13 @@ import { HttpExceptionFilter } from './handlers/error.exception';
       autoLoadEntities: true,
     }),
     RouterModule.register(MainRoutes),
-    ClarisaActionAreasModule,
-    ClarisaActionAreasOutcomesIndicatorsModule,
-    ClarisaGlobalTargetModule,
-    ClarisaImpactAreaModule,
-    ClarisaImpactAreaIndicatorsModule,
-    ClarisaInstitutionsModule,
-    ClarisaInstitutionsTypeModule,
-    ClarisaMeliaStudyTypeModule,
+    ClarisaModule,
     UserModule,
     ComplementaryDataUserModule,
     RoleModule,
     RolesUserByAplicationModule,
     TypeOrmModule.forFeature([User, RolesUserByAplication]),
+    ScheduleModule.forRoot()
   ],
   controllers: [AppController],
   providers: [

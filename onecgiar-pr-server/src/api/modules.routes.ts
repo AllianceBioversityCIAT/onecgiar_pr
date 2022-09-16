@@ -1,5 +1,4 @@
 import { Routes } from '@nestjs/core';
-import { ClarisaRoutes } from './clarisa/clarisa.routes';
 import { HomeModule } from './home/home.module';
 import { ResultsModule } from './results/results.module';
 import { TypeOneReportModule } from './type-one-report/type-one-report.module';
@@ -16,9 +15,5 @@ export const ModulesRoutes: Routes = [
   {
     path: 'type-one-report',
     module: TypeOneReportModule,
-  },
-  {
-    path: 'clarisa',
-    children: ClarisaRoutes,
-  },
+  }
 ];
