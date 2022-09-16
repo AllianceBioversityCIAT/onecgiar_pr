@@ -1,8 +1,9 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { RolesUserByAplication } from '../../roles-user-by-aplication/entities/roles-user-by-aplication.entity';
+import { Auditable } from '../../../../shared/entities/auditableEntity';
 
 @Entity('users')
-export class User {
+export class User extends Auditable{
   @PrimaryGeneratedColumn()
   id: number;
 

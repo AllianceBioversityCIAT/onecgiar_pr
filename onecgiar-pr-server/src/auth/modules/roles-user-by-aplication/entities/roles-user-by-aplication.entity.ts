@@ -7,9 +7,10 @@ import {
 } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { Role } from '../../role/entities/role.entity';
+import { Auditable } from '../../../../shared/entities/auditableEntity';
 
 @Entity('roles_user_by_aplication')
-export class RolesUserByAplication {
+export class RolesUserByAplication extends Auditable{
   @PrimaryGeneratedColumn()
   id: number;
 

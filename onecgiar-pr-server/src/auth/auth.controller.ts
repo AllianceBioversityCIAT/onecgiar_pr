@@ -33,7 +33,7 @@ export class AuthController {
     return this.authService.findAll();
   }
 
-  @Get('/singin')
+  @Post('/singin')
   async singIn(@Body() userLogin: UserLoginDto, @Res() res: Response) {
     const { message, response, status } = await this.authService.singIn(
       userLogin,

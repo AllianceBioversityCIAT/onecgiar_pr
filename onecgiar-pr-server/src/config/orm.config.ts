@@ -10,8 +10,8 @@ export const dataSource: DataSource = new DataSource({
   password: env.DB_USER_PASS,
   database: env.DB_NAME,
   entities: [
-    `${__dirname}/../modules/**/*.entity{.ts,.js}`,
-    `${__dirname}/../auth/**/*.entity{.ts,.js}`,
+    `${__dirname}/../api/**/*.entity{.ts,.js}`,
+    `${__dirname}/../auth/**/*.entity{.ts,.js}`
   ],
   synchronize: false,
   migrationsRun: false,

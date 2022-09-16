@@ -6,9 +6,10 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
+import { Auditable } from '../../../../shared/entities/auditableEntity';
 
 @Entity('complementary_data_users')
-export class ComplementaryDataUser {
+export class ComplementaryDataUser extends Auditable{
   @PrimaryGeneratedColumn()
   id: number;
 
