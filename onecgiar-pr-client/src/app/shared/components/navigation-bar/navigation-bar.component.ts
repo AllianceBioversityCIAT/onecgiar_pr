@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
-import { NavigationBarService } from './navigation-bar.service';
 import { PrRoute, routingApp } from '../../data/routing-data';
+import { NavigationBarService } from '../../services/navigation-bar.service';
 
 @Component({
   selector: 'app-navigation-bar',
