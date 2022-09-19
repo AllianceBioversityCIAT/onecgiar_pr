@@ -6,6 +6,7 @@ export const routingApp: PrRoute[] = [
   { prName: 'Home', path: 'home', loadChildren: () => import('../../pages/home/home.module').then(m => m.HomeModule) },
   { prName: 'Results', path: 'result', loadChildren: () => import('../../pages/results/results.module').then(m => m.ResultsModule) },
   { prName: 'Type one report', path: 'type-one-report', loadChildren: () => import('../../pages/type-one-report/type-one-report.module').then(m => m.TypeOneReportModule) },
+  { prName: 'login', prHide: true, path: 'login', loadChildren: () => import('../../pages/login/login.module').then(m => m.LoginModule) },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'home' }
 ];
 
@@ -30,4 +31,5 @@ export const resultDetailRouting: PrRoute[] = [
 
 export interface PrRoute extends Route {
   prName: string;
+  prHide?: boolean;
 }
