@@ -4,16 +4,16 @@ import { Column, CreateDateColumn, JoinColumn, OneToMany, UpdateDateColumn } fro
 export abstract class Auditable{
     
     @CreateDateColumn({
-        name:'create_at',
+        name:'created_at',
         nullable: false
     })
-    create_at: Date;
+    created_at: Date;
 
     @UpdateDateColumn({
-        name: 'update_at',
+        name: 'updated_at',
         nullable: true
     })
-    update_at!: Date;
+    updated_at!: Date;
 
     @Column({
         name: 'updated_by',
