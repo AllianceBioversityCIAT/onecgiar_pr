@@ -54,7 +54,7 @@ export class AuthService {
       const user: any = await this._customUserRepository.completeDataByEmail(
         userLogin.email,
       );
-      let valid;
+      let valid: boolean | any = false;
       if (user) {
         const { email, first_name, last_name, is_cgiar } = <FullUserRequestDto>(
           user
@@ -82,8 +82,22 @@ export class AuthService {
             status: HttpStatus.ACCEPTED
           }
         } else {
-          throw 'Invalid credentials';
+          throw {
+            message: 'INVALID_CREDENTIALS',
+            response: {
+              valid: false
+            },
+            status: HttpStatus.BAD_REQUEST
+          };
         }
+      }else{
+        throw {
+          message: 'INVALID_CREDENTIALS',
+          response: {
+            valid: false
+          },
+          status: HttpStatus.BAD_REQUEST
+        };
       }
     } catch (error) {
       return error
@@ -113,7 +127,13 @@ export class AuthService {
               notFound.description = 'Server not found';
             }
 
-            return reject(notFound);
+            return {
+              message: notFound.name,
+              response: {
+                valid: false
+              },
+              status: HttpStatus.BAD_REQUEST
+            };
           } else {
             console.log('Authentication failed!');
             const err = {
@@ -123,9 +143,23 @@ export class AuthService {
             };
 
             console.log('ERROR: ' + JSON.stringify(err));
-            return reject(err);
+            return {
+              message: 'INVALID_CREDENTIALS',
+              response: {
+                valid: false
+              },
+              status: HttpStatus.BAD_REQUEST
+            };
           }
-        } catch (error) {}
+        } catch (error) {
+          return {
+            message: 'INVALID_CREDENTIALS',
+            response: {
+              valid: false
+            },
+            status: HttpStatus.BAD_REQUEST
+          };
+        }
       });
     });
   }

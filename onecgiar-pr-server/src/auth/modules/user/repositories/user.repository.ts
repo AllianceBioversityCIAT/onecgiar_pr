@@ -29,7 +29,11 @@ export class UserRepository extends Repository<User> {
       ]);
       return completeUser[0];
     } catch (error) {
-      return 'error';
+      throw {
+        message: `[${UserRepository.name}] => completeDataByEmail error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR
+      };
     }
   }
 
@@ -49,11 +53,11 @@ export class UserRepository extends Repository<User> {
       const completeUser: FullUserRequestDto[] = await this.query(queryData);
       return completeUser;
     } catch (error) {
-      throw new HttpException(
-        {message: `completeAllData error: ${error}`,
-        response: {}},
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
+      throw {
+        message: `[${UserRepository.name}] => completeAllData error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR
+      };
     }
   }
 }
