@@ -5,7 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ComplementaryDataUser } from './entities/complementary-data-user.entity';
 import { User } from '../user/entities/user.entity';
 import { UserRepository } from '../user/repositories/user.repository';
-import { BcryptPasswordEncoder } from 'src/auth/utils/bcrypt.util';
+import { BcryptPasswordEncoder } from '../../../auth/utils/bcrypt.util';
 import { UserModule } from '../user/user.module';
 
 @Module({

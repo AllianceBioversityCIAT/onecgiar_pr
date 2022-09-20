@@ -7,7 +7,7 @@ import { UpdateComplementaryDataUserDto } from './dto/update-complementary-data-
 import { ComplementaryDataUser } from './entities/complementary-data-user.entity';
 import { UserRepository } from '../user/repositories/user.repository';
 import { FullUserRequestDto } from '../user/dto/full-user-request.dto';
-import { BcryptPasswordEncoder } from 'src/auth/utils/bcrypt.util';
+import { BcryptPasswordEncoder } from '../../utils/bcrypt.util';
 
 @Injectable()
 export class ComplementaryDataUserService {

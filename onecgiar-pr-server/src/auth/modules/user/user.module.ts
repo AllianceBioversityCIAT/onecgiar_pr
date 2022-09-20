@@ -7,7 +7,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { ComplementaryDataUser } from '../complementary-data-user/entities/complementary-data-user.entity';
 import { UserRepository } from './repositories/user.repository';
-import { BcryptPasswordEncoder } from 'src/auth/utils/bcrypt.util';
+import { BcryptPasswordEncoder } from '../../../auth/utils/bcrypt.util';
 import { RoleService } from '../role/role.service';
 import { Role } from '../role/entities/role.entity';
 import { Repository } from 'typeorm';
@@ -16,7 +16,7 @@ import { RolesUserByAplication } from '../roles-user-by-aplication/entities/role
 import { RoleModule } from '../role/role.module';
 import { RolesUserByAplicationModule } from '../roles-user-by-aplication/roles-user-by-aplication.module';
 import { ComplementaryDataUserModule } from '../complementary-data-user/complementary-data-user.module';
-import { JwtMiddleware } from 'src/auth/Middlewares/jwt.middleware';
+import { JwtMiddleware } from '../../../auth/Middlewares/jwt.middleware';
 import { AuthModule } from '../../auth.module';
 import { AuthService } from '../../auth.service';
 import { JwtModule } from '@nestjs/jwt';
