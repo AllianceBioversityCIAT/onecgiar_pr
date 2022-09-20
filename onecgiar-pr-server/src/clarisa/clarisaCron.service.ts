@@ -2,8 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 
 @Injectable()
-export class ClarisaTasksService {
-    private readonly _logger:Logger = new Logger(ClarisaTasksService.name);
+export class ClarisaCronsService {
+    private readonly _logger:Logger = new Logger(ClarisaCronsService.name);
 
     @Cron(CronExpression.EVERY_8_HOURS)
     handleCron() {

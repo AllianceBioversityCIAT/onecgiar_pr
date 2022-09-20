@@ -6,15 +6,16 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { ClarisaImpactArea } from '../../clarisa-impact-area/entities/clarisa-impact-area.entity';
+import { Auditable } from '../../../shared/entities/auditableEntity';
 
 @Entity('clarisa_global_targets')
-export class ClarisaGlobalTarget {
+export class ClarisaGlobalTarget extends Auditable{
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => ClarisaImpactArea, (cia) => cia.globalTarget)
+  @ManyToOne(() => ClarisaImpactArea, (cia) => cia.id)
   @JoinColumn({ name: 'impact_area_id' })
-  impactArea: ClarisaImpactArea;
+  impact_area_id: number;
 
   @Column({ name: 'target', type: 'text' })
   target: number;

@@ -11,7 +11,8 @@ export const dataSource: DataSource = new DataSource({
   database: env.DB_NAME,
   entities: [
     `${__dirname}/../api/**/*.entity{.ts,.js}`,
-    `${__dirname}/../auth/**/*.entity{.ts,.js}`
+    `${__dirname}/../auth/**/*.entity{.ts,.js}`,
+    `${__dirname}/../clarisa/**/*.entity{.ts,.js}`,
   ],
   synchronize: false,
   migrationsRun: false,
