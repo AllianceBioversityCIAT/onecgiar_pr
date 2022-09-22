@@ -4,7 +4,7 @@ import { ClarisaCountry } from '../../clarisa-countries/entities/clarisa-country
 import { ClarisaRegion } from '../../clarisa-regions/entities/clarisa-region.entity';
 
 @Entity('clarisa_countries_regions')
-export class ClarisaCountriesRegion extends Auditable{
+export class ClarisaCountriesRegion {
 
     @PrimaryGeneratedColumn()
     id: number;

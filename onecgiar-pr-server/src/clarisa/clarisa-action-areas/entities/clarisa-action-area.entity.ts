@@ -3,7 +3,7 @@ import { ClarisaActionAreasOutcomesIndicator } from '../../clarisa-action-areas-
 import { Auditable } from '../../../shared/entities/auditableEntity';
 
 @Entity('clarisa_action_area')
-export class ClarisaActionArea extends Auditable{
+export class ClarisaActionArea {
   @PrimaryGeneratedColumn()
   id: number;
 

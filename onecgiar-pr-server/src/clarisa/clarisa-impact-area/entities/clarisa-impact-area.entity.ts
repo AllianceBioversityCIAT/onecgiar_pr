@@ -4,7 +4,7 @@ import { ClarisaImpactAreaIndicator } from '../../clarisa-impact-area-indicators
 import { Auditable } from '../../../shared/entities/auditableEntity';
 
 @Entity('clarisa_impact_areas')
-export class ClarisaImpactArea extends Auditable{
+export class ClarisaImpactArea {
   @PrimaryGeneratedColumn()
   id: number;
 

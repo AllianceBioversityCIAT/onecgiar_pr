@@ -2,13 +2,9 @@ import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
 import { Auditable } from '../../../shared/entities/auditableEntity';
 
 @Entity('clarisa_countries')
-export class ClarisaCountry extends Auditable {
+export class ClarisaCountry {
 
-    @Column({
-        name: 'id',
-        type: 'int',
-        primary: true
-    })
+    @PrimaryGeneratedColumn()
     id: number;
 
     @Column({

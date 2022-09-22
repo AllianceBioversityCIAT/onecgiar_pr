@@ -2,7 +2,7 @@ import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 import { Auditable } from '../../../shared/entities/auditableEntity';
 
 @Entity('institution_types')
-export class ClarisaInstitutionsType extends Auditable{
+export class ClarisaInstitutionsType {
 
     @PrimaryGeneratedColumn()
     id: number;

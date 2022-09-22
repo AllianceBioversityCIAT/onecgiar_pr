@@ -1,8 +1,7 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
-import { Auditable } from '../../../shared/entities/auditableEntity';
 
 @Entity('clarisa_regions_types')
-export class ClarisaRegionType extends Auditable {
+export class ClarisaRegionType {
 
     @PrimaryGeneratedColumn()
     id: number;
@@ -20,10 +19,4 @@ export class ClarisaRegionType extends Auditable {
     })
     description!: string;
 
-    @Column({
-        name: 'active',
-        type: 'boolean',
-        default: true
-    })
-    active: boolean;
 }

@@ -1,9 +1,8 @@
 import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
-import { Auditable } from '../../../shared/entities/auditableEntity';
 import { ClarisaRegionType } from '../../region-types/entities/clarisa-region-type.entity';
 
 @Entity('clarisa_regions')
-export class ClarisaRegion extends Auditable {
+export class ClarisaRegion {
 
     @PrimaryGeneratedColumn()
     id: number;

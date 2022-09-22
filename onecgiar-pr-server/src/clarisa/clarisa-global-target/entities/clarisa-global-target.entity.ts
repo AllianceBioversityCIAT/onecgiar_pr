@@ -9,7 +9,7 @@ import { ClarisaImpactArea } from '../../clarisa-impact-area/entities/clarisa-im
 import { Auditable } from '../../../shared/entities/auditableEntity';
 
 @Entity('clarisa_global_targets')
-export class ClarisaGlobalTarget extends Auditable{
+export class ClarisaGlobalTarget {
   @PrimaryGeneratedColumn()
   id: number;
 

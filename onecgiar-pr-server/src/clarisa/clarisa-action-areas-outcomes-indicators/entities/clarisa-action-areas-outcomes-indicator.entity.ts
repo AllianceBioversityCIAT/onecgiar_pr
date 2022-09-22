@@ -10,7 +10,7 @@ import { ClarisaOutcomeIndicator } from '../../clarisa-outcome-indicators/entiti
 import { Auditable } from '../../../shared/entities/auditableEntity';
 
 @Entity('clarisa_action_areas_outcomes_indicators')
-export class ClarisaActionAreasOutcomesIndicator extends Auditable {
+export class ClarisaActionAreasOutcomesIndicator {
   @PrimaryGeneratedColumn()
   id: number;
 

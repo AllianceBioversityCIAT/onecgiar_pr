@@ -2,7 +2,7 @@ import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
 import { Auditable } from '../../../shared/entities/auditableEntity';
 
 @Entity('clarisa_outcome_indicators')
-export class ClarisaOutcomeIndicator extends Auditable{
+export class ClarisaOutcomeIndicator {
 
     @PrimaryGeneratedColumn()
     id: number;
@@ -19,5 +19,5 @@ export class ClarisaOutcomeIndicator extends Auditable{
         type: 'text',
         nullable: true
     })
-    outcome_indicator_statement: string;
+    outcome_indicator_statement!: string;
 }

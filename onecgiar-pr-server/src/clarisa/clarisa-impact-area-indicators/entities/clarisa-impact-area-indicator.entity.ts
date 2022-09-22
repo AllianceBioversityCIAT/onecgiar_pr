@@ -45,4 +45,10 @@ export class ClarisaImpactAreaIndicator {
     type: 'boolean'
     })
     is_aplicable_projected_benefits: boolean;
+
+  @Column({
+    name: 'name',
+    type: 'text'
+  })
+  name: string;
 }

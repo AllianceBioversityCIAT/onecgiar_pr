@@ -10,7 +10,7 @@ export class ClarisaCronsService {
       private readonly _clarisaTaskService: ClarisaTaskService
     ){}
 
-    @Cron(CronExpression.EVERY_10_SECONDS)
+    @Cron(CronExpression.EVERY_8_HOURS)
     handleCron() {
         
       this._clarisaTaskService.clarisaBootstrap();
