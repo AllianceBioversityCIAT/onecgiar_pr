@@ -16,7 +16,7 @@ export const dataSource: DataSource = new DataSource({
   ],
   synchronize: false,
   migrationsRun: false,
-  logging: true,
+  logging: false,
   migrations: [`${__dirname}/../migrations/**/*{.ts,.js}`],
   migrationsTableName: 'migrations',
   metadataTableName: 'orm_metadata',

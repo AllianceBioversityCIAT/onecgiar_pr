@@ -13,11 +13,4 @@ export class ClarisaActionArea extends Auditable{
   @Column({ name: 'description', type: 'text' })
   description: string;
 
-  //RELATIONS
-
-  @OneToMany(
-    () => ClarisaActionAreasOutcomesIndicator,
-    (caaoi) => caaoi.id,
-  )
-  actionAreasOutcomesIndicators: number[];
 }

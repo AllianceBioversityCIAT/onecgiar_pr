@@ -8,10 +8,4 @@ export class ClarisaMeliaStudyType extends Auditable{
 
   @Column({ name: 'name', type: 'text' })
   name: string;
-
-  @Column({
-    name: 'active',
-    type: 'int'
-  })
-  active: boolean;
 }

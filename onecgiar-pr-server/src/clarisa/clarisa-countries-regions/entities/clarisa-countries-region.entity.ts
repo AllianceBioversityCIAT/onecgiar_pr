@@ -20,11 +20,4 @@ export class ClarisaCountriesRegion extends Auditable{
         name: 'region_id'
     })
     region_id: number;
-
-    @Column({
-        name: 'active',
-        type: 'boolean',
-        default: true
-    })
-    active: boolean;
 }

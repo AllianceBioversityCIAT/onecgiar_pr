@@ -23,6 +23,8 @@ import { RoleModule } from './modules/role/role.module';
 import { RolesUserByAplicationModule } from './modules/roles-user-by-aplication/roles-user-by-aplication.module';
 import { UserModule } from './modules/user/user.module';
 import { ComplementaryDataUserModule } from './modules/complementary-data-user/complementary-data-user.module';
+import { ActionsModule } from './modules/actions/actions.module';
+import { PermissionByRoleModule } from './modules/permission-by-role/permission-by-role.module';
 
 @Module({
   controllers: [AuthController],
@@ -41,6 +43,8 @@ import { ComplementaryDataUserModule } from './modules/complementary-data-user/c
       ComplementaryDataUser,
       RolesUserByAplication,
     ]),
+    ActionsModule,
+    PermissionByRoleModule,
   ],
   providers: [
     AuthService,

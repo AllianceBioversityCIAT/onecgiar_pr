@@ -44,5 +44,5 @@ export class ClarisaImpactAreaIndicator {
     name: 'is_aplicable_projected_benefits', 
     type: 'boolean'
     })
-  isAplicableProjectedBenefits: boolean;
+    is_aplicable_projected_benefits: boolean;
 }

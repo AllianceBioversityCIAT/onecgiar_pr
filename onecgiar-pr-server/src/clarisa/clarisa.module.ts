@@ -18,6 +18,8 @@ import { ClarisaCountriesRegionsModule } from './clarisa-countries-regions/clari
 import { ClarisaOutcomeIndicatorsModule } from './clarisa-outcome-indicators/clarisa-outcome-indicators.module';
 import { ClarisaRegionTypesModule } from './region-types/clarisa-region-types.module';
 import { ClarisaTaskService } from './clarisatask.service';
+import { ClarisaMeliaStudyTypeRepository } from './clarisa-melia-study-type/ClariasaMeliasStudyType.repository';
+import { ClarisaInitiativesModule } from './clarisa-initiatives/clarisa-initiatives.module';
 
 @Module({
     imports: [
@@ -33,7 +35,8 @@ import { ClarisaTaskService } from './clarisatask.service';
         ClarisaRegionsModule,
         ClarisaCountriesRegionsModule,
         ClarisaOutcomeIndicatorsModule,
-        ClarisaRegionTypesModule
+        ClarisaRegionTypesModule,
+        ClarisaInitiativesModule
     ],
     controllers: [],
     providers: [
