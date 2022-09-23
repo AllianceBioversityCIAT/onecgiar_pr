@@ -1,6 +1,6 @@
 export class UserAuth {
-  public email: string = 'yecksin@gmail.com';
-  public password: string = '88888888';
+  public email: string = '';
+  public password: string = '';
 }
 
 export interface UserCreate {
