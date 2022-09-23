@@ -123,6 +123,8 @@ export class UserService {
       const user: User = await this._userRepository.findOne({
         where: { id: id },
       });
+      console.log(user);
+      
       return {
         response: user,
         message: 'Successful response',

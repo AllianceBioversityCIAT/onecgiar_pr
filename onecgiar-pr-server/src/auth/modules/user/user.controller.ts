@@ -16,7 +16,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { CreateFullUserDto } from './dto/create-full-user.dto';
 import { CreateComplementaryDataUserDto } from '../complementary-data-user/dto/create-complementary-data-user.dto';
-import { HttpExceptionFilter } from 'src/shared/handlers/error.exception';
+import { HttpExceptionFilter } from '../../../shared/handlers/error.exception';
 import { HttpException, HttpStatus } from '@nestjs/common';
 
 @Controller()

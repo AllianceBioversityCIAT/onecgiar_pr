@@ -16,7 +16,7 @@ import { CreateAuthDto } from './dto/create-auth.dto';
 import { UpdateAuthDto } from './dto/update-auth.dto';
 import { UserLoginDto } from './dto/login-user.dto';
 import { Response, Request } from 'express';
-import { HttpExceptionFilter } from 'src/shared/handlers/error.exception';
+import { HttpExceptionFilter } from '../shared/handlers/error.exception';
 
 @Controller()
 @UseFilters(new HttpExceptionFilter())
