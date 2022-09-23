@@ -11,6 +11,7 @@ import { Router } from '@angular/router';
 })
 export class LoginComponent implements OnDestroy {
   userLoginData = new UserAuth();
+  successLogin = false;
   constructor(private authService: AuthService, private customAlertService: CustomAlertService, private router: Router) {
     this.authService.inLogin = true;
   }
@@ -18,8 +19,15 @@ export class LoginComponent implements OnDestroy {
   onLogin() {
     this.authService.userAuth(this.userLoginData).subscribe(
       resp => {
-        console.log(resp);
-        this.router.navigate(['/']);
+        console.log(resp.response.token);
+        console.log(resp.response.user);
+        const { token, user } = resp?.response;
+        this.authService.localStorageToken = token;
+        this.authService.localStorageUser = user;
+        this.successLogin = true;
+        setTimeout(() => {
+          this.router.navigate(['/']);
+        }, 1500);
       },
       err => {
         this.customAlertService.show({ id: 'loginAlert', title: 'Ups!', description: err.error.message, status: 'error' });

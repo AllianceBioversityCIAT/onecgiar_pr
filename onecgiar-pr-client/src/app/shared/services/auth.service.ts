@@ -12,4 +12,20 @@ export class AuthService {
   userAuth(body: UserAuth) {
     return this.http.post<any>(`${environment.apiBaseUrl}auth/singin`, body);
   }
+
+  set localStorageToken(token: string) {
+    localStorage.setItem('token', token);
+  }
+
+  get localStorageToken() {
+    return localStorage.getItem('token');
+  }
+
+  set localStorageUser(user: {}) {
+    localStorage.setItem('user', JSON.stringify(user));
+  }
+
+  get localStorageUser() {
+    return JSON.parse(localStorage.getItem('token'));
+  }
 }
