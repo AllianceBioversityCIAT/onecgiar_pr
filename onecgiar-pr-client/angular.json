@@ -34,10 +34,11 @@
               "src/styles.scss",
               "src/styles/fonts.scss",
               "src/styles/colors.scss",
-              "src/styles/routing.scss",
               "src/styles/transitions.scss",
-              "src/styles/shadows.scss",
-              "src/styles/primeng-custom-styles.scss"
+              "src/styles/primeng-custom-styles.scss",
+              "src/styles/containers.scss",
+              "src/app/custom-fields/custom-fields.scss",
+              "src/styles/custom-alert.scss"
             ],
             "scripts": []
           },

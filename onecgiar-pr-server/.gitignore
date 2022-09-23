@@ -35,3 +35,10 @@ lerna-debug.log*
 !.vscode/extensions.json
 
 .env
+
+#Lambda
+.build
+.serverless
+
+#aws_secret_access_key
+.aws

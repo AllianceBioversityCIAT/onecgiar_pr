@@ -1,36 +1,24 @@
-import { Routes } from "@nestjs/core";
+import { Routes } from '@nestjs/core';
 import { AuthModule } from './auth/auth.module';
-import { HomeModule } from './modules/home/home.module';
-import { ResultsModule } from './modules/results/results.module';
-import { TypeOneReportModule } from './modules/type-one-report/type-one-report.module';
-import { ClarisaRoutes } from './modules/clarisa/clarisa.routes';
-
-const ApiMainRoutes: Routes = [
-    {
-        path: 'auth',
-        module: AuthModule
-    },
-    {
-        path: 'home',
-        module: HomeModule
-    },
-    {
-        path: 'results',
-        module: ResultsModule
-    },
-    {
-        path: 'type-one-report',
-        module: TypeOneReportModule
-    },
-    {
-        path:'clarisa',
-        children: ClarisaRoutes
-    }
-];
+import { HomeModule } from './api/home/home.module';
+import { ResultsModule } from './api/results/results.module';
+import { TypeOneReportModule } from './api/type-one-report/type-one-report.module';
+import { ClarisaRoutes } from './clarisa/clarisa.routes';
+import { AuthModulesRoutes } from './auth/modules/auth-modules.routes';
+import { ModulesRoutes } from './api/modules.routes';
 
 export const MainRoutes: Routes = [
-    {
-        path: 'api',
-        children: ApiMainRoutes
-    }
-]
+  {
+    path: 'api',
+    children: ModulesRoutes,
+  },
+  {
+    path: 'auth',
+    module: AuthModule,
+    children: AuthModulesRoutes,
+  },
+  {
+    path: 'clarisa',
+    children: ClarisaRoutes
+  }
+];

@@ -6,16 +6,8 @@ import { ResultDetailComponent } from './result-detail.component';
 import { PanelMenuComponent } from './panel-menu/panel-menu.component';
 import { UtilsComponentsModule } from '../../../../shared/components/utils-components/utils-components.module';
 
-
 @NgModule({
-  declarations: [
-    ResultDetailComponent,
-    PanelMenuComponent
-  ],
-  imports: [
-    CommonModule,
-    ResultDetailRoutingModule,
-    UtilsComponentsModule
-  ]
+  declarations: [ResultDetailComponent, PanelMenuComponent],
+  imports: [CommonModule, ResultDetailRoutingModule, UtilsComponentsModule]
 })
-export class ResultDetailModule { }
+export class ResultDetailModule {}

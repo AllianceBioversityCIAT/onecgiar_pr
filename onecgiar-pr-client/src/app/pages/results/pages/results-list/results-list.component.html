@@ -1,37 +1,57 @@
-<div class="local_container fadeIn">
+<div class="local_container section_container">
+  <p-table [value]="results" responsiveLayout="scroll" styleClass="p-datatable-gridlines p-datatable-sm" selectionMode="single">
+    <ng-template pTemplate="header">
+      <tr>
+        <th>ID</th>
+        <th>Title</th>
+        <th>Planned Year</th>
+        <th>Result type</th>
+        <th>Owner</th>
+        <th>Contributes to</th>
+        <th>Creation date</th>
+        <th>Action</th>
+      </tr>
+    </ng-template>
+    <ng-template pTemplate="body" let-result>
+      <tr>
+        <td>
+          <a [routerLink]="'/result/result-detail/' + result.id">{{ result.id }}</a>
+          <div class="transparent_text">{{ result.id }}</div>
+        </td>
+        <td>
+          <a [routerLink]="'/result/result-detail/' + result.id">{{ result.title }}</a>
+          <div class="transparent_text">{{ result.title }}</div>
+        </td>
+        <td>
+          <a [routerLink]="'/result/result-detail/' + result.id">{{ result.planned_year }}</a>
+          <div class="transparent_text">{{ result.planned_year }}</div>
+        </td>
+        <td>
+          <a [routerLink]="'/result/result-detail/' + result.id">{{ result.result_type }}</a>
+          <div class="transparent_text">{{ result.result_type }}</div>
+        </td>
+        <td>
+          <a [routerLink]="'/result/result-detail/' + result.id">{{ result.owner }}</a>
+          <div class="transparent_text">{{ result.owner }}</div>
+        </td>
+        <td>
+          <a [routerLink]="'/result/result-detail/' + result.id">{{ result.contributes_to }}</a>
+          <div class="transparent_text">{{ result.contributes_to }}</div>
+        </td>
+        <td>
+          <a [routerLink]="'/result/result-detail/' + result.id">{{ result.creation_date }}</a>
+          <div class="transparent_text">{{ result.creation_date }}</div>
+        </td>
+        <td>
+          <div class="icon_container"><i class="pi pi-ellipsis-v" (click)="menu.toggle($event)"></i></div>
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
 
-    <p-table [value]="results" responsiveLayout="scroll" styleClass="p-datatable-gridlines p-datatable-sm" selectionMode="single">
-        <ng-template pTemplate="header">
-            <tr>
-                <th>ID</th>
-                <th>Title</th>
-                <th>Planned Year</th>
-                <th>Result type</th>
-                <th>Owner</th>
-                <th>Contributes to</th>
-                <th>Creation date</th>
-                <th>Action</th>
-            </tr>
-        </ng-template>
-        <ng-template pTemplate="body" let-result>
-            <tr>
-                <td><a [routerLink]="'/result/result-detail/'+result.id">{{result.id}}</a><div class="transparent_text">{{result.id}}</div></td>
-                <td><a [routerLink]="'/result/result-detail/'+result.id">{{result.title}}</a><div class="transparent_text">{{result.title}}</div></td>
-                <td><a [routerLink]="'/result/result-detail/'+result.id">{{result.planned_year}}</a><div class="transparent_text">{{result.planned_year}}</div></td>
-                <td><a [routerLink]="'/result/result-detail/'+result.id">{{result.result_type}}</a><div class="transparent_text">{{result.result_type}}</div></td>
-                <td><a [routerLink]="'/result/result-detail/'+result.id">{{result.owner}}</a><div class="transparent_text">{{result.owner}}</div></td>
-                <td><a [routerLink]="'/result/result-detail/'+result.id">{{result.contributes_to}}</a><div class="transparent_text">{{result.contributes_to}}</div></td>
-                <td><a [routerLink]="'/result/result-detail/'+result.id">{{result.creation_date}}</a><div class="transparent_text">{{result.creation_date}}</div></td>
-                <td><div class="icon_container"><i class="pi pi-ellipsis-v" (click)="menu.toggle($event)"></i></div></td>
-            </tr>
-        </ng-template>
-    </p-table>
-  
-    <div class="new_result_button">
-        <div routerLink="/result/result-creator"><pr-button text="Report new result" icon="note_add" [reverse]="true"></pr-button></div>
-    </div> 
-
+  <div class="new_result_button">
+    <div routerLink="/result/result-creator"><app-pr-button text="Report new result" icon="note_add" [reverse]="true"></app-pr-button></div>
+  </div>
 </div>
 
 <p-menu #menu [popup]="true" [model]="items"></p-menu>
-

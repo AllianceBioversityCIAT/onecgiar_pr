@@ -6,7 +6,7 @@ import { env } from 'process';
 import { dataSource } from './config/orm.config';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {cors: true});
   const port = env.PORT || 3000;
 
   await dataSource
@@ -18,6 +18,8 @@ async function bootstrap() {
       console.log(error);
     });
   await app.listen(port);
-  console.log(`The server is running on port ${port} - http://localhost:${port}/`);
+  console.log(
+    `The server is running on port ${port} - http://localhost:${port}/`,
+  );
 }
 bootstrap();

@@ -9,17 +9,7 @@ import { MenuModule } from 'primeng/menu';
 import { RouterModule } from '@angular/router';
 import { UtilsComponentsModule } from '../../../../shared/components/utils-components/utils-components.module';
 @NgModule({
-  declarations: [
-    ResultsListComponent
-  ],
-  imports: [
-    CommonModule,
-    ResultsListRoutingModule,
-    TableModule,
-    ButtonModule,
-    MenuModule,
-    RouterModule,
-    UtilsComponentsModule
-  ]
+  declarations: [ResultsListComponent],
+  imports: [CommonModule, ResultsListRoutingModule, TableModule, ButtonModule, MenuModule, RouterModule, UtilsComponentsModule]
 })
-export class ResultsListModule { }
+export class ResultsListModule {}

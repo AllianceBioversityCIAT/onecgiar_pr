@@ -8,9 +8,8 @@ describe('ExternalToolsComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ ExternalToolsComponent ]
-    })
-    .compileComponents();
+      declarations: [ExternalToolsComponent]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(ExternalToolsComponent);
     component = fixture.componentInstance;

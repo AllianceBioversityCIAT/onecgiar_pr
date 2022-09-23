@@ -1,9 +1,25 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Res,
+  Req,
+  HttpException,
+  UseFilters,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { UpdateAuthDto } from './dto/update-auth.dto';
+import { UserLoginDto } from './dto/login-user.dto';
+import { Response, Request } from 'express';
+import { HttpExceptionFilter } from '../shared/handlers/error.exception';
 
 @Controller()
+@UseFilters(new HttpExceptionFilter())
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
@@ -17,9 +33,12 @@ export class AuthController {
     return this.authService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.authService.findOne(+id);
+  @Post('/singin')
+  async singIn(@Body() userLogin: UserLoginDto, @Res() res: Response) {
+    const { message, response, status } = await this.authService.singIn(
+      userLogin,
+    );
+    throw new HttpException({message,response}, status);
   }
 
   @Patch(':id')

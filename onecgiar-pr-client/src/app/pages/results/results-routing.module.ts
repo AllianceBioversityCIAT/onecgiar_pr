@@ -5,7 +5,9 @@ import { ResultsComponent } from './results.component';
 
 const routes: Routes = [
   {
-    path: '', component: ResultsComponent, children: resultRouting
+    path: '',
+    component: ResultsComponent,
+    children: resultRouting
   }
 ];
 
@@ -13,4 +15,4 @@ const routes: Routes = [
   imports: [RouterModule.forChild(routes)],
   exports: [RouterModule]
 })
-export class ResultsRoutingModule { }
+export class ResultsRoutingModule {}

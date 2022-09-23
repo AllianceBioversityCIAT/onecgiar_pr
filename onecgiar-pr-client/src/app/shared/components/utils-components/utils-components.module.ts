@@ -7,8 +7,6 @@ const componentsList = [PrButtonComponent];
 @NgModule({
   declarations: [PrButtonComponent],
   exports: [PrButtonComponent],
-  imports: [
-    CommonModule
-  ]
+  imports: [CommonModule]
 })
-export class UtilsComponentsModule { }
+export class UtilsComponentsModule {}

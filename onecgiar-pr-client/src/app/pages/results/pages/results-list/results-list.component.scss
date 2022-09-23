@@ -1,17 +1,20 @@
-.local_container{
+.local_container {
     margin-top: 30px;
-    padding: 0px 100px;
-    
-    tr{
-        th{
+
+    tr {
+        th {
             text-align: center;
         }
-        td{
+
+        td {
             position: relative;
-            .transparent_text{
+
+            .transparent_text {
                 color: transparent;
             }
-            a,.icon_container{
+
+            a,
+            .icon_container {
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -23,13 +26,14 @@
                 text-decoration: none;
                 color: var(--color-primary) !important;
             }
-            i{
+
+            i {
                 cursor: pointer;
             }
         }
-    }  
-    
-    .new_result_button{
+    }
+
+    .new_result_button {
         display: flex;
         justify-content: flex-end;
     }
