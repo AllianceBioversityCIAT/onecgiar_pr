@@ -3,7 +3,7 @@ import { ResultsByInititiativesService } from './results_by_inititiatives.servic
 import { CreateResultsByInititiativeDto } from './dto/create-results_by_inititiative.dto';
 import { UpdateResultsByInititiativeDto } from './dto/update-results_by_inititiative.dto';
 
-@Controller('results-by-inititiatives')
+@Controller('/')
 export class ResultsByInititiativesController {
   constructor(private readonly resultsByInititiativesService: ResultsByInititiativesService) {}
 
@@ -12,7 +12,7 @@ export class ResultsByInititiativesController {
     return this.resultsByInititiativesService.create(createResultsByInititiativeDto);
   }
 
-  @Get()
+  @Get('all')
   findAll() {
     return this.resultsByInititiativesService.findAll();
   }

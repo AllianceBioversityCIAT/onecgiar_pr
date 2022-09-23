@@ -3,7 +3,7 @@ import { GenderTagLevelsService } from './gender_tag_levels.service';
 import { CreateGenderTagLevelDto } from './dto/create-gender_tag_level.dto';
 import { UpdateGenderTagLevelDto } from './dto/update-gender_tag_level.dto';
 
-@Controller('gender-tag-levels')
+@Controller('/')
 export class GenderTagLevelsController {
   constructor(private readonly genderTagLevelsService: GenderTagLevelsService) {}
 
@@ -12,7 +12,7 @@ export class GenderTagLevelsController {
     return this.genderTagLevelsService.create(createGenderTagLevelDto);
   }
 
-  @Get()
+  @Get('all')
   findAll() {
     return this.genderTagLevelsService.findAll();
   }

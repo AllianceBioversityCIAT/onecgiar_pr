@@ -1,1 +1,3 @@
-export class CreateGenderTagLevelDto {}
+export class CreateGenderTagLevelDto {
+    
+}

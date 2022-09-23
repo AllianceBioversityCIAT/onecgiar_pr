@@ -1,9 +1,49 @@
 import { Routes } from '@nestjs/core';
-import { ResultsModule } from './results.module';
+import { GenderTagLevelsModule } from './gender_tag_levels/gender_tag_levels.module';
+import { InstitutionRolesModule } from './institution_roles/institution_roles.module';
+import { ResultsByInititiativesModule } from './results_by_inititiatives/results_by_inititiatives.module';
+import { ResultsByInstitutionsModule } from './results_by_institutions/results_by_institutions.module';
+import { ResultsByInstitutionTypesModule } from './results_by_institution_types/results_by_institution_types.module';
+import { ResultLevelsModule } from './result_levels/result_levels.module';
+import { ResultTypesModule } from './result_types/result_types.module';
+import { UsersModule } from './users/users.module';
+import { VersionsModule } from './versions/versions.module';
 
-export const resultsRoutes: Routes = [
+export const ResultsRoutes: Routes = [
   {
-    path: '',
-    module: ResultsModule,
+    path: 'gender-tag-levels',
+    module: GenderTagLevelsModule,
+  },
+  {
+    path: 'institution-roles',
+    module: InstitutionRolesModule,
+  },
+  {
+    path: 'result-levels',
+    module: ResultLevelsModule,
+  },
+  {
+    path: 'result-types',
+    module: ResultTypesModule,
+  },
+  {
+    path: 'results-by-initiatives',
+    module: ResultsByInititiativesModule,
+  },
+  {
+    path: 'results-by-institution-types',
+    module: ResultsByInstitutionTypesModule,
+  },
+  {
+    path: 'results-by-institutions',
+    module: ResultsByInstitutionsModule,
+  },
+  {
+    path: 'users',
+    module: UsersModule,
+  },
+  {
+    path: 'versions',
+    module: VersionsModule,
   },
 ];

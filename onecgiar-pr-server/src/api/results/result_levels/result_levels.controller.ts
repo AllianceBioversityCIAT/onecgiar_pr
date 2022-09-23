@@ -3,7 +3,7 @@ import { ResultLevelsService } from './result_levels.service';
 import { CreateResultLevelDto } from './dto/create-result_level.dto';
 import { UpdateResultLevelDto } from './dto/update-result_level.dto';
 
-@Controller('result-levels')
+@Controller('/')
 export class ResultLevelsController {
   constructor(private readonly resultLevelsService: ResultLevelsService) {}
 
@@ -12,7 +12,7 @@ export class ResultLevelsController {
     return this.resultLevelsService.create(createResultLevelDto);
   }
 
-  @Get()
+  @Get('all')
   findAll() {
     return this.resultLevelsService.findAll();
   }

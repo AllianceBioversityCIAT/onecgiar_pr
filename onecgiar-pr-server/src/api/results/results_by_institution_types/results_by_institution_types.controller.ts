@@ -3,7 +3,7 @@ import { ResultsByInstitutionTypesService } from './results_by_institution_types
 import { CreateResultsByInstitutionTypeDto } from './dto/create-results_by_institution_type.dto';
 import { UpdateResultsByInstitutionTypeDto } from './dto/update-results_by_institution_type.dto';
 
-@Controller('results-by-institution-types')
+@Controller('/')
 export class ResultsByInstitutionTypesController {
   constructor(private readonly resultsByInstitutionTypesService: ResultsByInstitutionTypesService) {}
 
@@ -12,7 +12,7 @@ export class ResultsByInstitutionTypesController {
     return this.resultsByInstitutionTypesService.create(createResultsByInstitutionTypeDto);
   }
 
-  @Get()
+  @Get('all')
   findAll() {
     return this.resultsByInstitutionTypesService.findAll();
   }

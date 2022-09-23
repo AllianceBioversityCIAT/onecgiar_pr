@@ -3,7 +3,7 @@ import { VersionsService } from './versions.service';
 import { CreateVersionDto } from './dto/create-version.dto';
 import { UpdateVersionDto } from './dto/update-version.dto';
 
-@Controller('versions')
+@Controller('/')
 export class VersionsController {
   constructor(private readonly versionsService: VersionsService) {}
 
@@ -12,7 +12,7 @@ export class VersionsController {
     return this.versionsService.create(createVersionDto);
   }
 
-  @Get()
+  @Get('all')
   findAll() {
     return this.versionsService.findAll();
   }

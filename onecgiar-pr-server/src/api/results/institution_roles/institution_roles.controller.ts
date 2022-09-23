@@ -3,7 +3,7 @@ import { InstitutionRolesService } from './institution_roles.service';
 import { CreateInstitutionRoleDto } from './dto/create-institution_role.dto';
 import { UpdateInstitutionRoleDto } from './dto/update-institution_role.dto';
 
-@Controller('institution-roles')
+@Controller('/')
 export class InstitutionRolesController {
   constructor(private readonly institutionRolesService: InstitutionRolesService) {}
 
@@ -12,7 +12,7 @@ export class InstitutionRolesController {
     return this.institutionRolesService.create(createInstitutionRoleDto);
   }
 
-  @Get()
+  @Get('all')
   findAll() {
     return this.institutionRolesService.findAll();
   }

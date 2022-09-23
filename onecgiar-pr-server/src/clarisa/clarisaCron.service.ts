@@ -4,15 +4,14 @@ import { ClarisaTaskService } from './clarisatask.service';
 
 @Injectable()
 export class ClarisaCronsService {
-    private readonly _logger:Logger = new Logger(ClarisaCronsService.name);
+    private readonly _logger: Logger = new Logger(ClarisaCronsService.name);
 
     constructor(
-      private readonly _clarisaTaskService: ClarisaTaskService
-    ){}
+        private readonly _clarisaTaskService: ClarisaTaskService
+    ) { }
 
     @Cron(CronExpression.EVERY_8_HOURS)
     handleCron() {
-        
-      this._clarisaTaskService.clarisaBootstrap();
-      }
+        this._clarisaTaskService.clarisaBootstrap();
+    }
 }

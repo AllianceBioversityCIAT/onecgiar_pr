@@ -3,7 +3,7 @@ import { ResultTypesService } from './result_types.service';
 import { CreateResultTypeDto } from './dto/create-result_type.dto';
 import { UpdateResultTypeDto } from './dto/update-result_type.dto';
 
-@Controller('result-types')
+@Controller('')
 export class ResultTypesController {
   constructor(private readonly resultTypesService: ResultTypesService) {}
 
@@ -12,7 +12,7 @@ export class ResultTypesController {
     return this.resultTypesService.create(createResultTypeDto);
   }
 
-  @Get()
+  @Get('all')
   findAll() {
     return this.resultTypesService.findAll();
   }

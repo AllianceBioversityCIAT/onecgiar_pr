@@ -1,6 +1,5 @@
 import { Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from "typeorm";
 import { Result } from "../../entities/result.entity";
-import { Inititiative } from "../../inititiatives/entities/inititiative.entity";
 import { User } from "../../users/entities/user.entity";
 import { Version } from "../../versions/entities/version.entity";
 
@@ -10,8 +9,11 @@ export class ResultsByInititiative {
     @PrimaryColumn({ name: 'result_id', type: 'bigint' })
     resultId: number;
     
-    @ManyToOne(() => Inititiative, i => i.id)
-    @PrimaryColumn({ name: 'inititiative_id', type: 'bigint' })
+    // @ManyToOne(() => Inititiative, i => i.id)
+    // @PrimaryColumn({ name: 'inititiative_id', type: 'bigint' })
+    // inititiative_id: number;
+
+    @Column({ name: 'inititiative_id', type: 'bigint' })
     inititiative_id: number;
 
     @Column({ name: 'role', type: 'bigint' })
