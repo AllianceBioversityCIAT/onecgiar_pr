@@ -11,7 +11,15 @@ import { ClarisaImpactAreaModule } from './clarisa-impact-area/clarisa-impact-ar
 import { ClarisaInstitutionsTypeModule } from './clarisa-institutions-type/clarisa-institutions-type.module';
 import { ClarisaInstitutionsModule } from './clarisa-institutions/clarisa-institutions.module';
 import { ClarisaMeliaStudyTypeModule } from './clarisa-melia-study-type/clarisa-melia-study-type.module';
-import { ClarisaTasksService } from './clarisatasks.service';
+import { ClarisaCronsService } from './clarisaCron.service';
+import { ClarisaCountriesModule } from './clarisa-countries/clarisa-countries.module';
+import { ClarisaRegionsModule } from './clarisa-regions/clarisa-regions.module';
+import { ClarisaCountriesRegionsModule } from './clarisa-countries-regions/clarisa-countries-regions.module';
+import { ClarisaOutcomeIndicatorsModule } from './clarisa-outcome-indicators/clarisa-outcome-indicators.module';
+import { ClarisaRegionTypesModule } from './region-types/clarisa-region-types.module';
+import { ClarisaTaskService } from './clarisatask.service';
+import { ClarisaMeliaStudyTypeRepository } from './clarisa-melia-study-type/ClariasaMeliasStudyType.repository';
+import { ClarisaInitiativesModule } from './clarisa-initiatives/clarisa-initiatives.module';
 
 @Module({
     imports: [
@@ -22,11 +30,18 @@ import { ClarisaTasksService } from './clarisatasks.service';
         ClarisaImpactAreaIndicatorsModule,
         ClarisaInstitutionsModule,
         ClarisaInstitutionsTypeModule,
-        ClarisaMeliaStudyTypeModule
+        ClarisaMeliaStudyTypeModule,
+        ClarisaCountriesModule,
+        ClarisaRegionsModule,
+        ClarisaCountriesRegionsModule,
+        ClarisaOutcomeIndicatorsModule,
+        ClarisaRegionTypesModule,
+        ClarisaInitiativesModule
     ],
     controllers: [],
     providers: [
-        ClarisaTasksService
+        ClarisaCronsService,
+        ClarisaTaskService
     ],
     exports: [
         ClarisaActionAreasModule,
@@ -37,7 +52,8 @@ import { ClarisaTasksService } from './clarisatasks.service';
         ClarisaInstitutionsModule,
         ClarisaInstitutionsTypeModule,
         ClarisaMeliaStudyTypeModule,
-        ClarisaTasksService
+        ClarisaCronsService,
+        ClarisaTaskService
     ]
 })
 export class ClarisaModule {}

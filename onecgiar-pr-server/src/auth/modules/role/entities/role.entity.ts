@@ -3,7 +3,7 @@ import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { RolesUserByAplication } from '../../roles-user-by-aplication/entities/roles-user-by-aplication.entity';
 
 @Entity('role')
-export class Role extends Auditable{
+export class Role extends Auditable {
   @PrimaryGeneratedColumn()
   id: number;
 

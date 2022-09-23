@@ -51,7 +51,7 @@ export class AuthService {
         }
       }
       userLogin.email = userLogin.email.trim().toLowerCase();
-      const user: any = await this._customUserRepository.completeDataByEmail(
+      const user: FullUserRequestDto = await this._customUserRepository.completeDataByEmail(
         userLogin.email,
       );
       let valid: boolean | any = false;
@@ -77,7 +77,7 @@ export class AuthService {
                 { email, first_name, last_name },
                 { secret: env.JWT_SKEY, expiresIn: env.JWT_EXPIRES },
               ),
-              user: user
+              user: {id:user.id, user_name:`${user.first_name} ${user.last_name}`, email:user.email}
             },
             status: HttpStatus.ACCEPTED
           }
