@@ -1,33 +1,43 @@
-import { truncate } from "fs";
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
-import { InstitutionRole } from "../../institution_roles/entities/institution_role.entity";
+import { Result } from "../../entities/result.entity";
+import { Evidence } from "../../evidences/entities/evidence.entity";
+import { EvidenceType } from "../../evidence_types/entities/evidence_type.entity";
 import { User } from "../../users/entities/user.entity";
 import { Version } from "../../versions/entities/version.entity";
 
-@Entity()
-export class ResultsByInstitutionType {
+@Entity('results_by_evidence')
+export class ResultsByEvidence {
     @PrimaryGeneratedColumn({
-        name: 'results_id',
+        name: 'id',
         type: 'bigint'
     })
-    results_id: number;
+    id: number;
 
-    @Column({ name: 'institution_types_id', type: 'bigint', nullable: false })
-    institution_types_id: number;
-
-    @ManyToOne(() => InstitutionRole, ir => ir.id, { nullable: false })
+    @ManyToOne(() => Result, r => r.id, { nullable: false })
     @JoinColumn({
-        name: 'institution_roles_id'
+        name: 'results_id'
     })
-    institution_roles_id: number;
+    results_id: string;
 
+    @ManyToOne(() => Evidence, e => e.id, { nullable: false })
+    @JoinColumn({
+        name: 'evidences_id'
+    })
+    evidences_id: string;
+
+    @ManyToOne(() => EvidenceType, et => et.id, { nullable: false })
+    @JoinColumn({
+        name: 'evidence_types_id'
+    })
+    evidence_types_id: string;
+    
     @Column({
         name: 'is_active',
         type: 'tinyint',
         nullable: false
     })
     is_active: number;
-
+    
     @ManyToOne(() => Version, v => v.id, { nullable: false })
     @JoinColumn({
         name: 'version_id'

@@ -1,7 +1,7 @@
 import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
 
-@Entity()
-export class GenderTagLevel {
+@Entity('evidence_types')
+export class EvidenceType {
     @PrimaryGeneratedColumn({
         name: 'id',
         type: 'bigint'
@@ -9,17 +9,16 @@ export class GenderTagLevel {
     id: number;
 
     @Column({
-        name: 'title',
+        name: 'name',
         type: 'varchar',
-        length: 45,
+        length: 100,
         nullable: true
     })
-    title!: string;
+    name!: string;
 
     @Column({
         name: 'description',
-        type: 'varchar',
-        length: 500,
+        type: 'text',
         nullable: true
     })
     description!: string;

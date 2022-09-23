@@ -1,25 +1,29 @@
-import { truncate } from "fs";
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
-import { InstitutionRole } from "../../institution_roles/entities/institution_role.entity";
 import { User } from "../../users/entities/user.entity";
 import { Version } from "../../versions/entities/version.entity";
 
-@Entity()
-export class ResultsByInstitutionType {
+@Entity('evidence')
+export class Evidence {
     @PrimaryGeneratedColumn({
-        name: 'results_id',
+        name: 'id',
         type: 'bigint'
     })
-    results_id: number;
+    id: number;
 
-    @Column({ name: 'institution_types_id', type: 'bigint', nullable: false })
-    institution_types_id: number;
-
-    @ManyToOne(() => InstitutionRole, ir => ir.id, { nullable: false })
-    @JoinColumn({
-        name: 'institution_roles_id'
+    @Column({ 
+        name: 'link', 
+        type: 'varchar', 
+        length: 100,
+        nullable: false 
     })
-    institution_roles_id: number;
+    link: number;
+
+    @Column({
+        name: 'description',
+        type: 'text',
+        nullable: true
+    })
+    description!: string;
 
     @Column({
         name: 'is_active',
@@ -50,7 +54,7 @@ export class ResultsByInstitutionType {
     @JoinColumn({
         name: 'last_updated_by'
     })
-    last_updated_by!: number;
+    last_updated_by: number;
 
     @UpdateDateColumn({
         name: 'last_updated_date',
