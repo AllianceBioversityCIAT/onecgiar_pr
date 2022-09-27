@@ -10,6 +10,7 @@ import { UserService } from './modules/user/user.service';
 import { UserRepository } from './modules/user/repositories/user.repository';
 import { FullUserRequestDto } from './modules/user/dto/full-user-request.dto';
 import { returnFormatSingin } from './dto/return-fromat-singin.dto';
+import { User } from './modules/user/entities/user.entity';
 
 @Injectable()
 export class AuthService {
@@ -51,12 +52,10 @@ export class AuthService {
         }
       }
       userLogin.email = userLogin.email.trim().toLowerCase();
-      const user: FullUserRequestDto = await this._customUserRepository.completeDataByEmail(
-        userLogin.email,
-      );
+      const user: User = await this._customUserRepository.findOne({where: {email: userLogin.email}});
       let valid: boolean | any = false;
       if (user) {
-        const { email, first_name, last_name, is_cgiar } = <FullUserRequestDto>(
+        const { email, first_name, last_name, is_cgiar, id } = <FullUserRequestDto>(
           user
         );
         if (is_cgiar) {
@@ -74,7 +73,7 @@ export class AuthService {
             response: {
               valid: true,
               token: this._jwtService.sign(
-                { email, first_name, last_name },
+                { id, email, first_name, last_name},
                 { secret: env.JWT_SKEY, expiresIn: env.JWT_EXPIRES },
               ),
               user: {id:user.id, user_name:`${user.first_name} ${user.last_name}`, email:user.email}

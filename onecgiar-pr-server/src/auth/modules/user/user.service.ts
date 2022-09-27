@@ -1,18 +1,18 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { ComplementaryDataUserService } from '../complementary-data-user/complementary-data-user.service';
 import { Repository, JoinColumn } from 'typeorm';
 import { User } from './entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { CreateComplementaryDataUserDto } from '../complementary-data-user/dto/create-complementary-data-user.dto';
-import { ComplementaryDataUser } from '../complementary-data-user/entities/complementary-data-user.entity';
 import { Role } from '../role/entities/role.entity';
 import { RoleService } from '../role/role.service';
-import { RolesUserByAplicationService } from '../roles-user-by-aplication/roles-user-by-aplication.service';
 import { retunrFormatUser } from './dto/return-create-user.dto';
 import { UserRepository } from './repositories/user.repository';
 import { FullUserRequestDto } from './dto/full-user-request.dto';
+import { BcryptPasswordEncoder } from '../../utils/bcrypt.util'
+import { RoleByUserRepository } from '../role-by-user/RoleByUser.repository';
+import { RoleByUser } from '../role-by-user/entities/role-by-user.entity';
+import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 
 @Injectable()
 export class UserService {
@@ -22,8 +22,8 @@ export class UserService {
     @InjectRepository(User)
     private readonly _userRepository: Repository<User>,
     private readonly _customUserRespository: UserRepository,
-    private readonly _complementaryDataUserService: ComplementaryDataUserService,
-    private readonly _roleByAplicationService: RolesUserByAplicationService,
+    private readonly _roleByUserRepository: RoleByUserRepository,
+    private readonly _bcryptPasswordEncoder: BcryptPasswordEncoder,
   ) {}
 
   create(createUserDto: CreateUserDto) {
@@ -32,11 +32,11 @@ export class UserService {
 
   async createFull(
     createUserDto: CreateUserDto,
-    createFullUserDto: CreateComplementaryDataUserDto,
     role: number,
+    token: TokenDto
   ): Promise<retunrFormatUser> {
     try {
-      createFullUserDto.is_cgiar = this.cgiarRegex.test(createUserDto.email);
+      createUserDto.is_cgiar = this.cgiarRegex.test(createUserDto.email);
       const user = await this.findOneByEmail(createUserDto.email);
       if (user.response) {
         throw {
@@ -46,10 +46,9 @@ export class UserService {
           }
       }
 
-      if (!createFullUserDto.is_cgiar) {
-        if (!('password' in createFullUserDto)) {
-          console.log(1, !createFullUserDto.password);
-          if (!createFullUserDto.password) {
+      if (!createUserDto.is_cgiar) {
+        if (!('password' in createUserDto)) {
+          if (!createUserDto.password) {
             throw {
               response: {},
               message: 'No password provider',
@@ -59,23 +58,30 @@ export class UserService {
         }
       }
 
+      createUserDto.password =
+      createUserDto.is_cgiar
+          ? null
+          : this._bcryptPasswordEncoder.encode(
+            createUserDto.password.toString(),
+            );
+
+      createUserDto.created_by = token.id;
+      createUserDto.last_updated_by = token.id;
+      
       const newUser: User = await this._userRepository.save(createUserDto);
-      const newRole = await this._roleByAplicationService.createAplicationRol({
-        role_id: role,
-        user_id: newUser.id,
-        active: true,
-      });
-      createFullUserDto.user_id = newUser.id;
-      const newFullUser: any = await this._complementaryDataUserService.create(
-        createFullUserDto,
-      );
-      let result = newUser;
-      if (newFullUser?.status) {
-        result = newFullUser;
-      }
+      const newRole: RoleByUser = await this._roleByUserRepository.save({
+        role: role,
+        user: newUser.id,
+        created_by: token.id,
+        last_updated_by: token.id
+      })
 
       return {
-        response: result,
+        response: {
+          id: newUser.id,
+          first_name: newUser.first_name,
+          last_name: newUser.last_name
+        },
         message: 'User successfully created',
         status: HttpStatus.CREATED
       }
@@ -95,7 +101,7 @@ export class UserService {
     } catch (error) {
       return {
         response: {},
-        message: 'User not found',
+        message: 'Users not found',
         status: HttpStatus.NOT_FOUND
       };
     }
@@ -103,7 +109,7 @@ export class UserService {
 
   async findAllFull():Promise<retunrFormatUser>  {
     try {
-      const user: FullUserRequestDto[] = await this._customUserRespository.completeAllData()
+      const user: FullUserRequestDto[] = await this._customUserRespository.AllUsers()
       return {
         response: user,
         message: 'Successful response',
@@ -112,7 +118,7 @@ export class UserService {
     } catch (error) {
       return {
         response: {},
-        message: 'User not found',
+        message: 'Users not found',
         status: HttpStatus.NOT_FOUND
       };
     }

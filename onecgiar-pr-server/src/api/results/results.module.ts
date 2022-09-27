@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/common';
 import { ResultsService } from './results.service';
 import { ResultsController } from './results.controller';
 import { RouterModule } from '@nestjs/core';
@@ -16,10 +16,48 @@ import { EvidencesModule } from './evidences/evidences.module';
 import { ResultsByEvidencesModule } from './results_by_evidences/results_by_evidences.module';
 import { EvidenceTypesModule } from './evidence_types/evidence_types.module';
 import { InitiativeRolesModule } from './initiative_roles/initiative_roles.module';
+import { AuthModule } from '../../auth/auth.module';
+import { JwtMiddleware } from 'src/auth/Middlewares/jwt.middleware';
 
 @Module({
   controllers: [ResultsController],
-  imports: [RouterModule.register(ResultsRoutes), ResultLevelsModule, ResultTypesModule, GenderTagLevelsModule, UsersModule, VersionsModule, InstitutionRolesModule, ResultsByInititiativesModule, ResultsByInstitutionsModule, ResultsByInstitutionTypesModule, EvidencesModule, ResultsByEvidencesModule, EvidenceTypesModule, InitiativeRolesModule],
-  providers: [ResultsService],
+  imports: [
+    RouterModule.register(ResultsRoutes), 
+    ResultLevelsModule, 
+    ResultTypesModule, 
+    GenderTagLevelsModule, 
+    UsersModule, 
+    VersionsModule, 
+    InstitutionRolesModule, 
+    ResultsByInititiativesModule, 
+    ResultsByInstitutionsModule, 
+    ResultsByInstitutionTypesModule, 
+    EvidencesModule, 
+    ResultsByEvidencesModule, 
+    EvidenceTypesModule, 
+    InitiativeRolesModule,
+    AuthModule
+  ],
+  providers: [
+    ResultsService,
+    JwtMiddleware
+  ],
 })
-export class ResultsModule {}
+export class ResultsModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(JwtMiddleware).forRoutes(
+      {
+        path: '/api/results/get/initiatives/:userId',
+        method: RequestMethod.GET,
+      },
+      {
+        path: '/auth/user/all/full',
+        method: RequestMethod.GET,
+      },
+      {
+        path: '/auth/user/create',
+        method: RequestMethod.POST,
+      }
+    );
+  }
+}

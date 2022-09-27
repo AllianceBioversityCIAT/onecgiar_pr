@@ -9,7 +9,7 @@ export class UserRepository extends Repository<User> {
     super(User, dataSource.createEntityManager());
   }
 
-  async completeDataByEmail(email: string) {
+  async AllUsersByEmail(email: string) {
     const queryData = `
     SELECT  u.id,
             u.first_name, 
@@ -18,8 +18,7 @@ export class UserRepository extends Repository<User> {
             cdu.password, 
             cdu.is_cgiar , 
             u.active  
-    FROM users u 
-	    INNER JOIN complementary_data_users cdu ON cdu.user_id = u.id 
+    FROM users u
     WHERE u.active > 0
 	    AND u.email = ?
     `;
@@ -37,16 +36,15 @@ export class UserRepository extends Repository<User> {
     }
   }
 
-  async completeAllData() {
+  async AllUsers() {
     const queryData = `
     SELECT  u.id,
             u.first_name, 
             u.last_name ,
             u.email, 
-            cdu.is_cgiar , 
+            u.is_cgiar , 
             u.active  
-    FROM users u 
-	    INNER JOIN complementary_data_users cdu ON cdu.user_id = u.id 
+    FROM users u
     WHERE u.active > 0
     `;
     try {

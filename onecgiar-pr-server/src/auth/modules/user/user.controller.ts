@@ -9,15 +9,17 @@ import {
   Res,
   Req,
   UseFilters,
+  Headers
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { CreateFullUserDto } from './dto/create-full-user.dto';
-import { CreateComplementaryDataUserDto } from '../complementary-data-user/dto/create-complementary-data-user.dto';
 import { HttpExceptionFilter } from '../../../shared/handlers/error.exception';
 import { HttpException, HttpStatus } from '@nestjs/common';
+import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
+import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 
 @Controller()
 @UseFilters(new HttpExceptionFilter())
@@ -30,16 +32,15 @@ export class UserController {
   }
 
   @Post('create')
-  async creteFull(@Body() createFullUserDto: CreateFullUserDto, @Res() res: Response, @Req() req: Request) {
+  async creteFull(@Body() createFullUserDto: CreateFullUserDto, @Headers() auth: HeadersDto , @Res() res: Response, @Req() req: Request) {
     const createUser: CreateUserDto = createFullUserDto.userData;
-    const createComplementaryData: CreateComplementaryDataUserDto =
-      createFullUserDto.complementData;
     const role: number = createFullUserDto.role;
-
+    const token: TokenDto = <TokenDto>JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString());
+    
     const {message, response, status} = await this.userService.createFull(
       createUser,
-      createComplementaryData,
       role,
+      token
     );
 
     throw new HttpException({message,response}, status);

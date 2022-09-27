@@ -25,6 +25,11 @@ export class ResultsController {
     return this.resultsService.findAll();
   }
 
+  @Get('get/initiatives/:userId')
+  findInitiativesByUser(@Param('userId') userId: number){
+    return `aja ${userId}`;
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.resultsService.findOne(+id);

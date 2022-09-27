@@ -17,9 +17,7 @@ import { TypeOneReportModule } from './api/type-one-report/type-one-report.modul
 import { dataSource } from './config/orm.config';
 import { JwtMiddleware } from './auth/Middlewares/jwt.middleware';
 import { UserModule } from './auth/modules/user/user.module';
-import { ComplementaryDataUserModule } from './auth/modules/complementary-data-user/complementary-data-user.module';
 import { RoleModule } from './auth/modules/role/role.module';
-import { RolesUserByAplicationModule } from './auth/modules/roles-user-by-aplication/roles-user-by-aplication.module';
 import { AuthService } from './auth/auth.service';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from './auth/modules/user/user.service';
@@ -27,8 +25,6 @@ import { UserRepository } from './auth/modules/user/repositories/user.repository
 import { User } from './auth/modules/user/entities/user.entity';
 import { RoleService } from './auth/modules/role/role.service';
 import { Repository } from 'typeorm';
-import { RolesUserByAplicationService } from './auth/modules/roles-user-by-aplication/roles-user-by-aplication.service';
-import { RolesUserByAplication } from './auth/modules/roles-user-by-aplication/entities/roles-user-by-aplication.entity';
 import { HttpExceptionFilter } from './shared/handlers/error.exception';
 import { ScheduleModule } from '@nestjs/schedule';
 
@@ -47,10 +43,8 @@ import { ScheduleModule } from '@nestjs/schedule';
     RouterModule.register(MainRoutes),
     ClarisaModule,
     UserModule,
-    ComplementaryDataUserModule,
     RoleModule,
-    RolesUserByAplicationModule,
-    TypeOrmModule.forFeature([User, RolesUserByAplication]),
+    TypeOrmModule.forFeature([User]),
     ScheduleModule.forRoot()
   ],
   controllers: [AppController],

@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
+import request from 'supertest';
 import { AppModule } from '../../../src/app.module';
 import { testModule, usePipes } from '../../test.module';
 
@@ -16,24 +16,29 @@ describe('UserController (e2e)', () => {
   });
 
   // Deberia retornar un status 200 y como minimo deberia email al enviar un id de tipo number
-  it('/api/auth/user/:id', () => {
+  it('/auth/user/:id', () => {
     return request(app.getHttpServer())
-      .get('/api/auth/user/' + 1)
+      .get('/auth/user/' + 30)
       .expect(200)
       .expect((res) => {
         const data = res.body;
-        expect(data).toHaveProperty('email');
+        expect(data).toHaveProperty('message');
+        expect(data).toHaveProperty('response');
+        expect(data).toHaveProperty('statusCode');
+        const response = data.response;
+        expect(response).toHaveProperty('email');
       });
   });
 
   // Deberia retornar un status 404 si el id es de tipo string o deberia retornar un mensaje de error
-  it('/api/auth/user/:id', () => {
+  it('/auth/user/:id', () => {
     return request(app.getHttpServer())
-      .get('/api/auth/user/' + 0)
+      .get('/auth/user/' + 0)
       .expect(200)
-      .expect((res) => {
-        const data = res.body;
-      });
+      .expect(res => {
+        const data = res.body
+        expect(data.response).toEqual({});
+      })
   });
 
   afterAll(async () => {

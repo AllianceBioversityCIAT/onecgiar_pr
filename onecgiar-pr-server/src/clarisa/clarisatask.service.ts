@@ -9,12 +9,12 @@ import { ClarisaInitiativesRepository } from './clarisa-initiatives/ClarisaIniti
 import { ClarisaImpactAreaRepository } from './clarisa-impact-area/ClarisaImpactArea.repository';
 import { ClarisaImpactAreaInticatorsRepository } from './clarisa-impact-area-indicators/ClarisaImpactAreaIndicators.repository';
 import { ClarisaImpactAreaIndicator } from './clarisa-impact-area-indicators/entities/clarisa-impact-area-indicator.entity';
-import { ClarisaCountriesRepository } from './clarisa-countries/ClarisaCountries.repository';
 import { ClarisaCountry } from './clarisa-countries/entities/clarisa-country.entity';
 import { ClarisaOutcomeIndicatorsRepository } from './clarisa-outcome-indicators/ClariasaOutcomeIndicators.repository';
 import { ClarisaOutcomeIndicator } from './clarisa-outcome-indicators/entities/clarisa-outcome-indicator.entity';
 import { ClarisaRegionsTypesRepository } from './clarisa-regions/ClariasaRegionsTypes.repository';
 import { ClarisaRegionType } from './region-types/entities/clarisa-region-type.entity';
+import { ClarisaCountriesRepository } from './clarisa-countries/ClarisaCountries.repository';
 
 @Injectable()
 export class ClarisaTaskService {

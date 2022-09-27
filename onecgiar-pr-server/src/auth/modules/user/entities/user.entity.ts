@@ -1,9 +1,8 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { RolesUserByAplication } from '../../roles-user-by-aplication/entities/roles-user-by-aplication.entity';
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import { Auditable } from '../../../../shared/entities/auditableEntity';
 
 @Entity('users')
-export class User extends Auditable{
+export class User{
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -17,12 +16,52 @@ export class User extends Auditable{
   email: string;
 
   @Column({
+    name: 'is_cgiar',
+    type: 'boolean'
+  })
+  is_cgiar: boolean;
+
+  @Column({
+    name: 'password',
+    type: 'text',
+    nullable: true
+  })
+  password!: string;
+
+  @Column({
+    name: 'last_login',
+    type: 'timestamp',
+    nullable: true
+  })
+  last_login!: Date;
+
+  @Column({
     name: 'active',
     type: 'boolean',
     default: true,
   })
   active: boolean;
 
-  @OneToMany(() => RolesUserByAplication, (ruba) => ruba.id)
-  rolesUserByAplication: number[];
+  @ManyToOne(() => User, u => u.id, { nullable: true })
+  @JoinColumn({
+      name: 'created_by'
+  })
+  created_by: number;
+
+  @CreateDateColumn({
+      name: 'created_date'
+  })
+  created_date: Date;
+  @ManyToOne(() => User, u => u.id, { nullable: true })
+  @JoinColumn({
+      name: 'last_updated_by'
+  })
+  
+  last_updated_by!: number;
+  @UpdateDateColumn({
+      name: 'last_updated_date',
+      nullable: true
+  })
+  last_updated_date!: Date;
+
 }

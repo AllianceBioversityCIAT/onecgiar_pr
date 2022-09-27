@@ -1,6 +1,6 @@
 import { Auditable } from '../../../../shared/entities/auditableEntity';
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { RolesUserByAplication } from '../../roles-user-by-aplication/entities/roles-user-by-aplication.entity';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { RoleLevel } from '../../role-levels/entities/role-level.entity';
 
 @Entity('role')
 export class Role extends Auditable {
@@ -13,17 +13,11 @@ export class Role extends Auditable {
   })
   description: string;
 
-  @Column({
-    name: 'scope',
-    type: 'text',
+  @ManyToOne(() => RoleLevel, (rl) => rl.id)
+  @JoinColumn({
+    name: 'role_level_id'
   })
-  scope: string;
-
-  @Column({
-    name: 'scope_id',
-    type: 'int',
-  })
-  scope_id: number;
+  role_level: number;
 
   @Column({
     name: 'active',
@@ -32,6 +26,4 @@ export class Role extends Auditable {
   })
   active: boolean;
 
-  @OneToMany(() => RolesUserByAplication, (ruba) => ruba.id)
-  rolesUserByAplication: number[];
 }
