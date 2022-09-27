@@ -58,4 +58,27 @@ export class UserRepository extends Repository<User> {
       };
     }
   }
+
+  async InitiativeByUser(userId: number) {
+    const queryData = `
+    select 
+    	ci.id,
+    	ci.official_code,
+    	ci.name as initiative_name
+    from role_by_user rbu 
+    	inner join clarisa_initiatives ci on ci.id = rbu.initiative_id 
+    									and ci.active > 0
+    where rbu.\`user\` = ?;
+    `;
+    try {
+      const completeUser: any[] = await this.query(queryData, [userId]);
+      return completeUser;
+    } catch (error) {
+      throw {
+        message: `[${UserRepository.name}] => completeAllData error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR
+      };
+    }
+  }
 }

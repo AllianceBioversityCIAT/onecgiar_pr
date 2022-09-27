@@ -1,10 +1,8 @@
 import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
 
-@Entity()
+@Entity('result_level')
 export class ResultLevel {
-    @PrimaryGeneratedColumn({
-        type: 'bigint'
-    })
+    @PrimaryGeneratedColumn()
     id: number;
 
     @Column({

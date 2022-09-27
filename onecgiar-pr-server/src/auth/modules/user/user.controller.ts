@@ -46,21 +46,27 @@ export class UserController {
     throw new HttpException({message,response}, status);
   }
 
-  @Get('all')
+  @Get('get/all')
   async findAll() {
     const {message, response, status} = await this.userService.findAll();
     throw new HttpException({message,response}, status);
   }
 
-  @Get('all/full')
+  @Get('get/all/full')
   async findAllFull() {
     const {message, response, status} = await this.userService.findAllFull();
     throw new HttpException({message,response}, status);
   }
 
-  @Get('all/:email')
+  @Get('get/all/:email')
   async findByEmail(@Param('email') email: string) {
     const {message, response, status} = await this.userService.findOneByEmail(email);
+    throw new HttpException({message,response}, status);
+  }
+
+  @Get('get/initiative/:userId')
+  async findInitiativeByUserId(@Param('userId') userId: number) {
+    const {message, response, status} = await this.userService.findInitiativeByUserId(userId);
     throw new HttpException({message,response}, status);
   }
 

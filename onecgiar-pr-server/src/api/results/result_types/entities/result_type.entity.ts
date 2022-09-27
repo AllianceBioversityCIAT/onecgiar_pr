@@ -1,9 +1,9 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 import { ResultLevel } from "../../result_levels/entities/result_level.entity";
 
 @Entity()
 export class ResultType {
-    @PrimaryGeneratedColumn({ type: 'bigint' })
+    @PrimaryGeneratedColumn()
     id: number;
 
     @Column({
@@ -23,7 +23,7 @@ export class ResultType {
     description!: string;
 
     @ManyToOne(() => ResultLevel, rl => rl.id, { nullable: false })
-    @Column({
+    @JoinColumn({
         name: 'result_level_id'
     })
     result_level_id: number;

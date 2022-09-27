@@ -164,6 +164,23 @@ export class UserService {
     }
   }
 
+  async findInitiativeByUserId(userId: number){
+    try {
+      const initiativeByUser = await this._customUserRespository.InitiativeByUser(userId);
+      return {
+        response: initiativeByUser,
+        message: 'Successful response',
+        status: HttpStatus.OK
+      };
+    } catch (error) {
+      return {
+        response: {},
+        message: 'User not found',
+        status: HttpStatus.NOT_FOUND
+      };
+    }
+  }
+
   update(id: number, updateUserDto: UpdateUserDto) {
     return `This action updates a #${id} user`;
   }

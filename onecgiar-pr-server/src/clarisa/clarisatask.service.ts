@@ -42,7 +42,7 @@ export class ClarisaTaskService {
         let count: number = 1;
         count = await this.cloneClarisaCountries(count, true);
         count = await this.cloneClarisaMeliaStudyTypes(count, true);
-        count = await this.cloneClarisaInitiatives(count, true);
+        //count = await this.cloneClarisaInitiatives(count, true);
         count = await this.cloneClarisaActionArea(count, true);
         count = await this.cloneClarisaImpactAreaIndicators(count, true);
         count = await this.cloneClarisaImpactArea(count, true);
