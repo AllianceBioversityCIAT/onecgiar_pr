@@ -46,7 +46,7 @@ export class User{
   @JoinColumn({
       name: 'created_by'
   })
-  created_by: number;
+  created_by!: number;
 
   @CreateDateColumn({
       name: 'created_date'

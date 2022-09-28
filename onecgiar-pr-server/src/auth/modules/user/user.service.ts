@@ -58,22 +58,30 @@ export class UserService {
         }
       }
 
+      if (!role) {
+        throw {
+          response: {},
+          message: 'No role provider',
+          status: HttpStatus.BAD_REQUEST
+        }
+      }
+
       createUserDto.password =
       createUserDto.is_cgiar
           ? null
           : this._bcryptPasswordEncoder.encode(
             createUserDto.password.toString(),
             );
-
-      createUserDto.created_by = token.id;
-      createUserDto.last_updated_by = token.id;
+      const createdBy: User = await this._userRepository.findOne({where:{id: token.id}});
+      createUserDto.created_by = createdBy?createdBy.id:null;
+      createUserDto.last_updated_by = createdBy?createdBy.id:null;
       
       const newUser: User = await this._userRepository.save(createUserDto);
       const newRole: RoleByUser = await this._roleByUserRepository.save({
         role: role,
         user: newUser.id,
-        created_by: token.id,
-        last_updated_by: token.id
+        created_by: createdBy?createdBy.id:null,
+        last_updated_by: createdBy?createdBy.id:null
       })
 
       return {
@@ -86,7 +94,11 @@ export class UserService {
         status: HttpStatus.CREATED
       }
     } catch (error) {
-      return error;
+      return  {
+        response: error?.response? error.response: {error: true},
+        message: error?.message?error.message:'INTERNAL_SERVER_ERROR',
+        status: error?.status?error.status: HttpStatus.INTERNAL_SERVER_ERROR
+      }
     }
   }
 
