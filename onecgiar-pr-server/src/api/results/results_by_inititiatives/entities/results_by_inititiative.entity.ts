@@ -66,5 +66,5 @@ export class ResultsByInititiative {
         type: 'timestamp',
         nullable: true
     })
-    lastUpdatedDate!: Date;
+    last_updated_date!: Date;
 }

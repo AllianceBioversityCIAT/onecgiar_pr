@@ -1,4 +1,4 @@
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { GenderTagLevel } from "../gender_tag_levels/entities/gender_tag_level.entity";
 import { ResultType } from "../result_types/entities/result_type.entity";
 import { User } from "../users/entities/user.entity";
@@ -58,9 +58,8 @@ export class Result {
     })
     created_by: number;
 
-    @Column({
+    @CreateDateColumn({
         name: 'created_date',
-        type: 'timestamp',
         nullable: false
     })
     created_date: Date;
@@ -71,10 +70,17 @@ export class Result {
     })
     last_updated_by!: number;
 
-    @Column({
+    @UpdateDateColumn({
         name: 'last_updated_date',
         type: 'timestamp',
         nullable: true
     })
-    last_updated_date!: number;
+    last_updated_date!: Date;
+
+    @Column({
+        name: 'status',
+        type: 'tinyint',
+        nullable: true
+    })
+    status!: number;
 }
