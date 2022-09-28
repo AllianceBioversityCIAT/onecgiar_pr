@@ -93,6 +93,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`results` (
   `created_date` DATE NOT NULL,
   `last_updated_by` BIGINT NULL,
   `last_updated_date` DATE NULL,
+  `status` TINYINT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   INDEX `fk_results_result_types1_idx` (`result_type_id` ASC) VISIBLE,
   INDEX `fk_results_gender_tag_level1_idx` (`gender_tag_level_id` ASC) VISIBLE,
