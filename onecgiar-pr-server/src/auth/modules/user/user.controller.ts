@@ -52,12 +52,6 @@ export class UserController {
     throw new HttpException({message,response}, status);
   }
 
-  @Get('get/all/full')
-  async findAllFull() {
-    const {message, response, status} = await this.userService.findAllFull();
-    throw new HttpException({message,response}, status);
-  }
-
   @Get('get/all/:email')
   async findByEmail(@Param('email') email: string) {
     const {message, response, status} = await this.userService.findOneByEmail(email);

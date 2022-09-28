@@ -2,10 +2,14 @@ import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
 import { FullUserRequestDto } from '../dto/full-user-request.dto';
+import { HandlersError } from '../../../../shared/handlers/error.utils';
 
 @Injectable()
 export class UserRepository extends Repository<User> {
-  constructor(private dataSource: DataSource) {
+  constructor(
+    private dataSource: DataSource,
+    private readonly _handlersError: HandlersError
+    ) {
     super(User, dataSource.createEntityManager());
   }
 
@@ -28,11 +32,11 @@ export class UserRepository extends Repository<User> {
       ]);
       return completeUser[0];
     } catch (error) {
-      throw {
-        message: `[${UserRepository.name}] => completeDataByEmail error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR
-      };
+      throw this._handlersError.returnErrorRepository({
+        className: UserRepository.name,
+        error: error,
+        debug: true
+      });
     }
   }
 
@@ -51,11 +55,11 @@ export class UserRepository extends Repository<User> {
       const completeUser: FullUserRequestDto[] = await this.query(queryData);
       return completeUser;
     } catch (error) {
-      throw {
-        message: `[${UserRepository.name}] => completeAllData error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR
-      };
+      throw this._handlersError.returnErrorRepository({
+        className: UserRepository.name,
+        error: error,
+        debug: true
+      });
     }
   }
 
@@ -74,11 +78,12 @@ export class UserRepository extends Repository<User> {
       const completeUser: any[] = await this.query(queryData, [userId]);
       return completeUser;
     } catch (error) {
-      throw {
-        message: `[${UserRepository.name}] => completeAllData error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR
-      };
+      throw this._handlersError.returnErrorRepository({
+        className: UserRepository.name,
+        error: error,
+        debug: true
+      });
     }
   }
+
 }
