@@ -9,12 +9,13 @@ import { HeaderPanelComponent } from './shared/components/header-panel/header-pa
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { UtilsComponentsModule } from './shared/components/utils-components/utils-components.module';
 import { ExternalToolsComponent } from './shared/components/external-tools/external-tools.component';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
+import { GeneralInterceptorService } from './shared/interceptors/general-interceptor.service';
 
 @NgModule({
   declarations: [AppComponent, NavigationBarComponent, FooterComponent, HeaderPanelComponent, ExternalToolsComponent],
   imports: [BrowserModule, AppRoutingModule, BrowserAnimationsModule, UtilsComponentsModule, HttpClientModule],
-  providers: [],
+  providers: [{ provide: HTTP_INTERCEPTORS, useClass: GeneralInterceptorService, multi: true }],
   bootstrap: [AppComponent]
 })
 export class AppModule {}
