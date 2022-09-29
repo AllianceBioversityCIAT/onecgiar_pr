@@ -1,4 +1,6 @@
 import { Component } from '@angular/core';
+import { internationalizationData } from 'src/app/shared/data/internationalizationData';
+import { AuthService } from '../../shared/services/auth.service';
 
 @Component({
   selector: 'app-home',
@@ -6,5 +8,6 @@ import { Component } from '@angular/core';
   styleUrls: ['./home.component.scss']
 })
 export class HomeComponent {
-  constructor() {}
+  internationalizationData = internationalizationData;
+  constructor(public authService: AuthService) {}
 }
