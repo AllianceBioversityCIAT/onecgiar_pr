@@ -1,9 +1,11 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseFilters, HttpException } from '@nestjs/common';
 import { RoleByUserService } from './role-by-user.service';
 import { CreateRoleByUserDto } from './dto/create-role-by-user.dto';
 import { UpdateRoleByUserDto } from './dto/update-role-by-user.dto';
+import { HttpExceptionFilter } from '../../../shared/handlers/error.exception';
 
-@Controller('role-by-user')
+@Controller()
+@UseFilters(new HttpExceptionFilter())
 export class RoleByUserController {
   constructor(private readonly roleByUserService: RoleByUserService) {}
 
@@ -12,14 +14,15 @@ export class RoleByUserController {
     return this.roleByUserService.create(createRoleByUserDto);
   }
 
-  @Get()
-  findAll() {
-    return this.roleByUserService.findAll();
+  @Get('get/user/:id')
+  async findAll(@Param('id') userId: number) {
+    const {message, response, status} = await this.roleByUserService.allRolesByUser(userId);
+    throw new HttpException({message,response}, status);
   }
 
-  @Get(':id')
+  @Get('all')
   findOne(@Param('id') id: string) {
-    return this.roleByUserService.findOne(+id);
+    return this.roleByUserService.getAllUsersAndRoles();
   }
 
   @Patch(':id')

@@ -15,6 +15,7 @@ import { AuthModule } from '../../auth.module';
 import { AuthService } from '../../auth.service';
 import { JwtModule } from '@nestjs/jwt';
 import { RoleByUserModule } from '../role-by-user/role-by-user.module';
+import { HandlersError } from '../../../shared/handlers/error.utils';
 
 @Module({
   controllers: [UserController],
@@ -23,7 +24,8 @@ import { RoleByUserModule } from '../role-by-user/role-by-user.module';
     BcryptPasswordEncoder, 
     Repository, 
     UserRepository,
-    AuthService
+    AuthService,
+    HandlersError
   ],
   imports: [
     UserModule,

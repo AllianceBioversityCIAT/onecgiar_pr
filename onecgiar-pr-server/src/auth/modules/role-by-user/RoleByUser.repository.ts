@@ -1,11 +1,15 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { RoleByUser } from './entities/role-by-user.entity';
+import { HandlersError } from '../../../shared/handlers/error.utils';
 
 
 @Injectable()
 export class RoleByUserRepository extends Repository<RoleByUser> {
-  constructor(private dataSource: DataSource) {
+  constructor(
+    private dataSource: DataSource,
+    private readonly _handlersError: HandlersError
+    ) {
     super(RoleByUser, dataSource.createEntityManager());
   }
 
@@ -17,12 +21,41 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
       const deleteData = await this.query(queryData);
       return deleteData;
     } catch (error) {
-      throw {
-        message: `[${RoleByUserRepository.name}] => deleteAllData error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR
-      };
+      throw this._handlersError.returnErrorRepository({
+        className: RoleByUserRepository.name,
+        error: error,
+        debug: true
+      });
     }
+  }
+
+  async getAllRolesByUser(userId: number) {
+    const queryData = `
+    select  
+    	r.id as role_id,
+    	rl.id as role_level_id,
+    	rl.name as role_level_name,
+    	r.description,
+    	rbu.initiative_id,
+    	rbu.action_area_id
+    from role_by_user rbu 
+    	inner join \`role\` r on r.id = rbu.\`role\` 
+    						and r.active > 0
+    	inner join role_levels rl on rl.id = r.role_level_id 
+    where rbu.\`user\` = ?
+    `;
+    try {
+      const deleteData = await this.query(queryData, [userId]);
+      return deleteData;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: RoleByUserRepository.name,
+        error: error,
+        debug: true
+      });
+    }
+
+    
   }
 
 }

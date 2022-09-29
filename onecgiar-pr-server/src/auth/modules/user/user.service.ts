@@ -13,6 +13,7 @@ import { BcryptPasswordEncoder } from '../../utils/bcrypt.util'
 import { RoleByUserRepository } from '../role-by-user/RoleByUser.repository';
 import { RoleByUser } from '../role-by-user/entities/role-by-user.entity';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
+import { HandlersError, returnErrorDto } from '../../../shared/handlers/error.utils';
 
 @Injectable()
 export class UserService {
@@ -24,6 +25,7 @@ export class UserService {
     private readonly _customUserRespository: UserRepository,
     private readonly _roleByUserRepository: RoleByUserRepository,
     private readonly _bcryptPasswordEncoder: BcryptPasswordEncoder,
+    public readonly _handlersError: HandlersError
   ) {}
 
   create(createUserDto: CreateUserDto) {
@@ -94,45 +96,32 @@ export class UserService {
         status: HttpStatus.CREATED
       }
     } catch (error) {
-      return  {
-        response: error?.response? error.response: {error: true},
-        message: error?.message?error.message:'INTERNAL_SERVER_ERROR',
-        status: error?.status?error.status: HttpStatus.INTERNAL_SERVER_ERROR
-      }
+      return  this._handlersError.returnErrorRes({error});
     }
   }
 
   async findAll():Promise<retunrFormatUser>  {
     try {
-      const user: User[] = await this._userRepository.find();
+      const user: User[] = await this._userRepository.find({select:[
+      'id',
+      'first_name', 
+      'last_name',
+      'email',
+      'is_cgiar',
+      'last_login',
+      'active',
+      'created_by',
+      'created_date',
+      'last_updated_by',
+      'last_updated_date',
+    ]});
       return {
         response: user,
         message: 'Successful response',
         status: HttpStatus.OK
       };
     } catch (error) {
-      return {
-        response: {},
-        message: 'Users not found',
-        status: HttpStatus.NOT_FOUND
-      };
-    }
-  }
-
-  async findAllFull():Promise<retunrFormatUser>  {
-    try {
-      const user: FullUserRequestDto[] = await this._customUserRespository.AllUsers()
-      return {
-        response: user,
-        message: 'Successful response',
-        status: HttpStatus.OK
-      };
-    } catch (error) {
-      return {
-        response: {},
-        message: 'Users not found',
-        status: HttpStatus.NOT_FOUND
-      };
+      return  this._handlersError.returnErrorRes({error});
     }
   }
 
@@ -141,7 +130,15 @@ export class UserService {
       const user: User = await this._userRepository.findOne({
         where: { id: id },
       });
-      console.log(user);
+      console.log(!user)
+
+      if(!user){
+        throw {
+          response: {},
+          message: 'User Not found',
+          status: HttpStatus.NOT_FOUND
+        };
+      }
       
       return {
         response: user,
@@ -149,17 +146,13 @@ export class UserService {
         status: HttpStatus.OK
       };
     } catch (error) {
-      return {
-        response: {},
-        message: 'User not found',
-        status: HttpStatus.NOT_FOUND
-      };
+      return  this._handlersError.returnErrorRes({error});
     }
   }
 
   async findOneByEmail(email: string):Promise<retunrFormatUser> {
     try {
-      const user: User = await this._userRepository.findOne({
+      const user: User = await this._customUserRespository.findOne({
         where: { email: email },
       });
       return {
@@ -168,28 +161,35 @@ export class UserService {
         status: HttpStatus.OK
       };
     } catch (error) {
-      return {
-        response: {},
-        message: 'User not found',
-        status: HttpStatus.NOT_FOUND
-      };
+      return  this._handlersError.returnErrorRes({error});
     }
   }
 
-  async findInitiativeByUserId(userId: number){
+  async findInitiativeByUserId(userId: number): Promise<returnErrorDto|retunrFormatUser>{
     try {
       const initiativeByUser = await this._customUserRespository.InitiativeByUser(userId);
+      if(!initiativeByUser.length){
+        throw {
+          response: {},
+          message: 'User Initiative Not Found',
+          status: HttpStatus.NOT_FOUND
+        }
+      }
       return {
         response: initiativeByUser,
         message: 'Successful response',
         status: HttpStatus.OK
       };
     } catch (error) {
-      return {
-        response: {},
-        message: 'User not found',
-        status: HttpStatus.NOT_FOUND
-      };
+      return this._handlersError.returnErrorRes({error});
+    }
+  }
+
+  async getRolesByUser(userId: number){
+    try {
+      
+    } catch (error) {
+      
     }
   }
 

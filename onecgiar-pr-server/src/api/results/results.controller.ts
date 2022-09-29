@@ -15,7 +15,7 @@ import { UpdateResultDto } from './dto/update-result.dto';
 export class ResultsController {
   constructor(private readonly resultsService: ResultsService) {}
 
-  @Post()
+  @Post('create/header')
   create(@Body() createResultDto: CreateResultDto) {
     return this.resultsService.create(createResultDto);
   }

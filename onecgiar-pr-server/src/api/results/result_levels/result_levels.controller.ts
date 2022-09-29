@@ -1,9 +1,9 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException } from '@nestjs/common';
 import { ResultLevelsService } from './result_levels.service';
 import { CreateResultLevelDto } from './dto/create-result_level.dto';
 import { UpdateResultLevelDto } from './dto/update-result_level.dto';
 
-@Controller('/')
+@Controller()
 export class ResultLevelsController {
   constructor(private readonly resultLevelsService: ResultLevelsService) {}
 
@@ -13,8 +13,9 @@ export class ResultLevelsController {
   }
 
   @Get('all')
-  findAll() {
-    return this.resultLevelsService.findAll();
+  async findAll() {
+    const {message, response, status} = await this.resultLevelsService.getResultsLevels();
+    throw new HttpException({message,response}, status);
   }
 
   @Get(':id')

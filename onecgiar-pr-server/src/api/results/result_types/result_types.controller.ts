@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException } from '@nestjs/common';
 import { ResultTypesService } from './result_types.service';
 import { CreateResultTypeDto } from './dto/create-result_type.dto';
 import { UpdateResultTypeDto } from './dto/update-result_type.dto';
@@ -12,9 +12,10 @@ export class ResultTypesController {
     return this.resultTypesService.create(createResultTypeDto);
   }
 
-  @Get('all')
-  findAll() {
-    return this.resultTypesService.findAll();
+  @Get('get/all')
+  async findAll() {
+    const {message, response, status} = await this.resultTypesService.getAllResultType();
+    throw new HttpException({message,response}, status);
   }
 
   @Get(':id')
