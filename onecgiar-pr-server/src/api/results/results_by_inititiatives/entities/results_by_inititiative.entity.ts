@@ -1,7 +1,7 @@
+import { User } from "../../../../auth/modules/user/entities/user.entity";
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryColumn, UpdateDateColumn } from "typeorm";
 import { Result } from "../../entities/result.entity";
 import { InitiativeRole } from "../../initiative_roles/entities/initiative_role.entity";
-import { User } from "../../users/entities/user.entity";
 import { Version } from "../../versions/entities/version.entity";
 
 @Entity()

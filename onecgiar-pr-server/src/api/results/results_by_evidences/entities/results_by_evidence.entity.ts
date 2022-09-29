@@ -1,8 +1,8 @@
+import { User } from "../../../../auth/modules/user/entities/user.entity";
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { Result } from "../../entities/result.entity";
 import { Evidence } from "../../evidences/entities/evidence.entity";
 import { EvidenceType } from "../../evidence_types/entities/evidence_type.entity";
-import { User } from "../../users/entities/user.entity";
 import { Version } from "../../versions/entities/version.entity";
 
 @Entity('results_by_evidence')

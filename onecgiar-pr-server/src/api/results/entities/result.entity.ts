@@ -1,7 +1,7 @@
+import { User } from "../../../auth/modules/user/entities/user.entity";
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { GenderTagLevel } from "../gender_tag_levels/entities/gender_tag_level.entity";
 import { ResultType } from "../result_types/entities/result_type.entity";
-import { User } from "../users/entities/user.entity";
 import { Version } from "../versions/entities/version.entity";
 
 @Entity()

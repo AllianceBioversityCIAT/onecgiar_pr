@@ -1,7 +1,6 @@
-import { truncate } from "fs";
+import { User } from "../../../../auth/modules/user/entities/user.entity";
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { InstitutionRole } from "../../institution_roles/entities/institution_role.entity";
-import { User } from "../../users/entities/user.entity";
 import { Version } from "../../versions/entities/version.entity";
 
 @Entity()
