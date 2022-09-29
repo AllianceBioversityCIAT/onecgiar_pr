@@ -1,6 +1,7 @@
 import { User } from "../../../../auth/modules/user/entities/user.entity";
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { Version } from "../../versions/entities/version.entity";
+import { Result } from "../../entities/result.entity";
 
 @Entity('evidence')
 export class Evidence {
@@ -10,11 +11,11 @@ export class Evidence {
     })
     id: number;
 
-    @Column({ 
-        name: 'link', 
-        type: 'varchar', 
+    @Column({
+        name: 'link',
+        type: 'varchar',
         length: 100,
-        nullable: false 
+        nullable: false
     })
     link: number;
 
@@ -61,4 +62,17 @@ export class Evidence {
         nullable: true
     })
     last_updated_date!: Date;
+
+    @ManyToOne(() => Result, r => r.id, { nullable: true })
+    @JoinColumn({
+        name: 'result_evidence_id'
+    })
+    result_evidence_id!: number;
+
+    @Column({
+        name: 'gender_related',
+        type: 'tinyint',
+        default: false
+    })
+    gender_related!: number;
 }
