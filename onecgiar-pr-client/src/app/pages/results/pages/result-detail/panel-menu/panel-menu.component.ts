@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { PrRoute, resultDetailRouting } from '../../../../../shared/data/routing-data';
+import { PrRoute, resultDetailRouting } from '../../../../../shared/routing/routing-data';
 
 @Component({
   selector: 'app-panel-menu',
