@@ -9,7 +9,7 @@
   <div class="information">
     <div class="user_tag">
       <i class="material-icons-round icon">account_circle</i>
-      <div class="title">Juan Carlos Cadavid</div>
+      <div class="title">{{ this.authService?.localStorageUser?.user_name }}</div>
     </div>
     <div class="my_initiatives">
       <div class="title">My initiatives:</div>
@@ -18,6 +18,8 @@
         <div class="item">INIT-28 (editor)</div>
       </div>
     </div>
-    <div routerLink="/login"><app-pr-button text="Logout" icon="logout" colorType="secondary"></app-pr-button></div>
+    <div (click)="this.authService.logout()">
+      <app-pr-button text="Logout" icon="logout" colorType="secondary"></app-pr-button>
+    </div>
   </div>
 </div>
