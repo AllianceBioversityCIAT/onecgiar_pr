@@ -11,7 +11,7 @@ of Simple CSS Waves-->
       </lord-icon>
       <div class="form" [ngClass]="{'successLogin': successLogin}">
         <!-- <div class="title">Login</div> -->
-        <div class="welcome">Welcome to the {{internationalizationData.platformName}}</div>
+        <div class="welcome">Welcome to the {{internationalizationData.global.platformName}}</div>
         <app-pr-input placeholder="e.g. Example@gmail.com" label="Email" type="email" [(ngModel)]="userLoginData.email">
         </app-pr-input>
         <app-pr-input placeholder="Enter your password" label="Password" type="password"

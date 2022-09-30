@@ -2,8 +2,8 @@
   <div class="logo">
     <img class="cgiar_logo" src="/assets/cgiar_logo.png" alt="" srcset="" />
     <div class="title">
-      <div class="first-text">Planning &</div>
-      <div class="second-text">Reporting</div>
+      <!-- <div class="first-text">{{this.internationalizationData.global.platformName}}</div> -->
+      <div class="second-text">{{this.internationalizationData.global.platformName}}</div>
     </div>
   </div>
   <div class="information">
@@ -14,8 +14,14 @@
     <div class="my_initiatives">
       <div class="title">My initiatives:</div>
       <div class="items">
-        <div class="item">INIT-17 (editor)</div>
-        <div class="item">INIT-28 (editor)</div>
+        <div class="item">
+          <div class="init">INIT-17 </div>
+          <div class="role">editor</div>
+        </div>
+        <div class="item">
+          <div class="init">INIT-28 </div>
+          <div class="role">editor</div>
+        </div>
       </div>
     </div>
     <div (click)="this.authService.logout()">

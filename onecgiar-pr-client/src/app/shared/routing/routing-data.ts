@@ -1,6 +1,4 @@
 import { Route } from '@angular/router';
-import { ResultsModule } from '../../pages/results/results.module';
-import { HomeModule } from '../../pages/home/home.module';
 import { CheckLoginGuard } from '../guards/check-login.guard';
 
 export const routingApp: PrRoute[] = [
@@ -8,7 +6,7 @@ export const routingApp: PrRoute[] = [
   { prName: 'Results', canActivate: [CheckLoginGuard], path: 'result', loadChildren: () => import('../../pages/results/results.module').then(m => m.ResultsModule) },
   { prName: 'Type one report', canActivate: [CheckLoginGuard], path: 'type-one-report', loadChildren: () => import('../../pages/type-one-report/type-one-report.module').then(m => m.TypeOneReportModule) },
   { prName: 'login', prHide: true, path: 'login', loadChildren: () => import('../../pages/login/login.module').then(m => m.LoginModule) },
-  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'home' }
+  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'result' }
 ];
 
 export const resultRouting: PrRoute[] = [
