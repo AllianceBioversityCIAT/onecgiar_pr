@@ -3,6 +3,7 @@ import { UserAuth } from '../../shared/interfaces/user';
 import { AuthService } from '../../shared/services/auth.service';
 import { CustomAlertService } from '../../shared/services/custom-alert.service';
 import { Router } from '@angular/router';
+import { internationalizationData } from '../../shared/data/internationalizationData';
 
 @Component({
   selector: 'app-login',
@@ -10,16 +11,24 @@ import { Router } from '@angular/router';
   styleUrls: ['./login.component.scss']
 })
 export class LoginComponent implements OnDestroy {
+  internationalizationData = internationalizationData;
   userLoginData = new UserAuth();
+  successLogin = false;
   constructor(private authService: AuthService, private customAlertService: CustomAlertService, private router: Router) {
     this.authService.inLogin = true;
+    if (!!this.authService.localStorageUser) this.router.navigate(['/']);
   }
 
   onLogin() {
     this.authService.userAuth(this.userLoginData).subscribe(
       resp => {
-        console.log(resp);
-        this.router.navigate(['/']);
+        const { token, user } = resp?.response;
+        this.authService.localStorageToken = token;
+        this.authService.localStorageUser = user;
+        this.successLogin = true;
+        setTimeout(() => {
+          this.router.navigate(['/']);
+        }, 1500);
       },
       err => {
         this.customAlertService.show({ id: 'loginAlert', title: 'Ups!', description: err.error.message, status: 'error' });

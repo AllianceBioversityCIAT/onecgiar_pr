@@ -1,4 +1,6 @@
 import { Component } from '@angular/core';
+import { AuthService } from '../../services/auth.service';
+import { internationalizationData } from '../../data/internationalizationData';
 
 @Component({
   selector: 'app-header-panel',
@@ -6,5 +8,6 @@ import { Component } from '@angular/core';
   styleUrls: ['./header-panel.component.scss']
 })
 export class HeaderPanelComponent {
-  constructor() {}
+  internationalizationData = internationalizationData;
+  constructor(public authService: AuthService) {}
 }

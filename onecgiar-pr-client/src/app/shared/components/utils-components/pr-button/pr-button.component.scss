@@ -1,5 +1,17 @@
-.pr_button {
+.pr_button.small {
     padding: 6px 12px;
+}
+
+.pr_button.medium {
+    padding: 10px 40px;
+}
+
+.pr_button.big {
+    padding: 30px 40px;
+}
+
+.pr_button {
+
     width: max-content;
     border-radius: 5px;
     margin: 10px 0px;
@@ -10,15 +22,19 @@
     overflow: hidden;
     align-items: center;
 
-    .text,i {
+    .text,
+    i {
         color: #5569DD;
         z-index: 1;
     }
-    .text{
+
+    .text {
         font-size: .9em;
     }
-    i{
+
+    i {
         font-size: 1.4em;
+        margin-right: -6px;
     }
 
 }
@@ -27,11 +43,14 @@
     flex-direction: row-reverse;
 }
 
-.show_background{
-    .text,i {
+.show_background {
+
+    .text,
+    i {
         color: white;
     }
-    .filter{
+
+    .filter {
         // background: #5569DD;
         position: absolute;
         left: -60%;
@@ -44,8 +63,9 @@
         transform: translateX(-50%);
         box-sizing: border-box;
     }
-    &:hover{
-        .filter{
+
+    &:hover {
+        .filter {
             left: 50%;
         }
     }

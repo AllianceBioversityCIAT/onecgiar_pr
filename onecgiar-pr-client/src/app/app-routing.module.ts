@@ -1,6 +1,6 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { routingApp } from './shared/data/routing-data';
+import { routingApp } from './shared/routing/routing-data';
 
 const routes: Routes = routingApp;
 

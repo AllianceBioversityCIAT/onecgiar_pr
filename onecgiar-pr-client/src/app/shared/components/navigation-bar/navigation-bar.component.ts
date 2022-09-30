@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { PrRoute, routingApp } from '../../data/routing-data';
+import { PrRoute, routingApp } from '../../routing/routing-data';
 import { NavigationBarService } from '../../services/navigation-bar.service';
 
 @Component({

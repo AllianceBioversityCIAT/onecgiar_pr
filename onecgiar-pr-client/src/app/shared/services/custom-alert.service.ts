@@ -39,9 +39,9 @@ export class CustomAlertService {
             <div class="description">${description}</div>
           </div>
           <div class="options">
-            <div class="close_button accept_button" id="close-${id}">Aceptar</div>
-            <div class="close_button cancel_button" style="display:none" id="cancel-${id}">Cancelar</div>
-            <div class="close_button confirm_button" style="display:none" id="confirm-${id}">Confirmar</div>
+            <div class="close_button accept_button" id="close-${id}">Ok</div>
+            <div class="close_button cancel_button" style="display:none" id="cancel-${id}">Cancel</div>
+            <div class="close_button confirm_button" style="display:none" id="confirm-${id}">Ok</div>
           </div>
         </div>
         <div class="bg animate__animated animate__fadeIn" id="bg-${id}"></div>

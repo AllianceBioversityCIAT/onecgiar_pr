@@ -18,3 +18,9 @@ interface UserData {
   last_name: string;
   email: string;
 }
+
+export interface LocalStorageUser {
+  id: number;
+  user_name: string;
+  email: string;
+}

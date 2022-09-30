@@ -3,16 +3,26 @@ of Simple CSS Waves-->
 
 <div class="header">
   <!--Content before waves-->
+
   <div class="inner-header flex">
-    <div class="login_card">
-      <div class="title">Login</div>
-      <app-pr-input placeholder="e.g. Example@gmail.com" label="Email" type="email" [(ngModel)]="userLoginData.email">
-      </app-pr-input>
-      <app-pr-input placeholder="Enter your password" label="Password" type="password"
-        [(ngModel)]="userLoginData.password">
-      </app-pr-input>
-      <div class="center_flex_100" style="margin-top: 20px;" (click)="onLogin()">
-        <app-pr-button text="Login" icon="arrow_forward_ios"></app-pr-button>
+    <div class="login_card" [ngClass]="{'success_padding': successLogin}">
+      <lord-icon *ngIf="successLogin" src="https://cdn.lordicon.com/lcucqigi.json" trigger="loop"
+        style="width:100px;height:100px">
+      </lord-icon>
+      <div class="form" [ngClass]="{'successLogin': successLogin}">
+        <!-- <div class="title">Login</div> -->
+        <div class="welcome">Welcome to the {{internationalizationData.global.platformName}}</div>
+        <app-pr-input placeholder="e.g. Example@gmail.com" label="Email" type="email" [(ngModel)]="userLoginData.email">
+        </app-pr-input>
+        <app-pr-input placeholder="Enter your password" label="Password" type="password"
+          [(ngModel)]="userLoginData.password">
+        </app-pr-input>
+        <div class="center_flex_100" style="margin-top: 20px;" (click)="onLogin()">
+          <app-pr-button padding="medium" text="Login" icon="arrow_forward_ios"></app-pr-button>
+        </div>
+        <div class="question_container">
+          <a class="question">Do you have any question?</a>
+        </div>
       </div>
     </div>
   </div>

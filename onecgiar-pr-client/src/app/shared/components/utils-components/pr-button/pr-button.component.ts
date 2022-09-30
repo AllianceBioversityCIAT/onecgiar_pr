@@ -11,5 +11,6 @@ export class PrButtonComponent {
   @Input() reverse: boolean = false;
   @Input() showBackground: boolean = true;
   @Input() colorType = 'primary';
+  @Input() padding: 'small' | 'medium' | 'big' = 'small';
   constructor() {}
 }
