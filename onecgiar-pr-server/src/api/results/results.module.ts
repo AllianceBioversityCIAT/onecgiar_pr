@@ -45,8 +45,8 @@ import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/
     HandlersError,
     ResultRepository,
     ClarisaInitiativesRepository
-
   ],
+  exports: [ResultRepository]
 })
 export class ResultsModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

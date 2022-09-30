@@ -8,7 +8,7 @@ export class ResultRepository extends Repository<Result> {
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError
-    ) {
+  ) {
     super(Result, dataSource.createEntityManager());
   }
 
@@ -44,6 +44,33 @@ export class ResultRepository extends Repository<Result> {
         debug: true
       });
     }
+  }
+
+  async AllResults() {
+    const queryData = `SELECT
+      r.id,
+      r.title,
+      v.version_name AS reported_year,
+      rt.name AS result_type,
+      r.status,
+      r.created_date
+  FROM
+      result r
+      INNER JOIN version v ON v.id = r.version_id
+      INNER JOIN result_type rt ON rt.id = r.result_type_id
+  WHERE
+      r.is_active > 0;`;
+
+    try {
+      const results: any[] = await this.query(queryData);
+      return results;
+    } catch (error) {
+      throw {
+        message: `[${ResultRepository.name}] => completeAllData error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR
+      };
+    };
   }
 
 }

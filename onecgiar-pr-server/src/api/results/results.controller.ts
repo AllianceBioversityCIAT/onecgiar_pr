@@ -17,13 +17,13 @@ import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 
 @Controller()
 export class ResultsController {
-  constructor(private readonly resultsService: ResultsService) {}
+  constructor(private readonly resultsService: ResultsService) { }
 
   @Post('create/header')
   async create(@Body() createResultDto: CreateResultDto, @Headers() auth: HeadersDto) {
     const token: TokenDto = <TokenDto>JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString());
-    const {message, response, status} = await this.resultsService.createOwnerResult(createResultDto, token);
-    throw new HttpException({message,response}, status);
+    const { message, response, status } = await this.resultsService.createOwnerResult(createResultDto, token);
+    throw new HttpException({ message, response }, status);
   }
 
   @Get('get/name/:name')
@@ -31,8 +31,14 @@ export class ResultsController {
     return this.resultsService.findAll();
   }
 
+  @Get('get/all-results')
+  async findAllResults() {
+    const { message, response, status } = await this.resultsService.findAll();
+    throw new HttpException({ message, response }, status);
+  }
+
   @Get('get/initiatives/:userId')
-  findInitiativesByUser(@Param('userId') userId: number){
+  findInitiativesByUser(@Param('userId') userId: number) {
     return `aja ${userId}`;
   }
 

@@ -1,5 +1,9 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { retunrFormatUser } from 'src/auth/modules/user/dto/return-create-user.dto';
+import { Repository } from 'typeorm';
 import { CreateResultDto } from './dto/create-result.dto';
+import { FullResultsRequestDto } from './dto/full-results-request.dto';
 import { UpdateResultDto } from './dto/update-result.dto';
 import { ResultRepository } from './result.repository';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
@@ -21,7 +25,8 @@ export class ResultsService {
     private readonly _clarisaInitiativesRepository:ClarisaInitiativesRepository,
     private readonly _resultTypesService: ResultTypesService,
     private readonly _versionsService: VersionsService,
-    private readonly _handlersError: HandlersError
+    private readonly _handlersError: HandlersError,
+    private readonly _customResultRepository: ResultRepository
   ){}
 
   async createOwnerResult(createResultDto: CreateResultDto, user: TokenDto): Promise<retunrFormatResul | returnErrorDto> {
@@ -74,11 +79,24 @@ export class ResultsService {
       return this._handlersError.returnErrorRes({error});
       
     }
-    
   }
 
-  findAll() {
-    return `This action returns all results`;
+  async findAll(): Promise<retunrFormatUser> {
+    try {
+      const result: FullResultsRequestDto[] = await this._customResultRepository.AllResults()
+
+      return {
+        response: result,
+        message: 'Successful response',
+        status: HttpStatus.OK
+      }
+    } catch (error) {
+      return {
+        response: {},
+        message: 'Results not found',
+        status: HttpStatus.NOT_FOUND
+      };
+    }
   }
 
   findOne(id: number) {
