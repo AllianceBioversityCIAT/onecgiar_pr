@@ -31,7 +31,7 @@ export class Result {
     @JoinColumn({
         name: 'result_type_id'
     })
-    result_type_id: string;
+    result_type_id: number;
 
     @ManyToOne(() => GenderTagLevel, gtl => gtl.id, { nullable: true })
     @JoinColumn({
@@ -42,7 +42,8 @@ export class Result {
     @Column({
         name: 'is_active',
         type: 'tinyint',
-        nullable: false
+        nullable: false,
+        default: true
     })
     is_active: number;
 
@@ -80,7 +81,8 @@ export class Result {
     @Column({
         name: 'status',
         type: 'tinyint',
-        nullable: true
+        nullable: true,
+        default: 0
     })
     status!: number;
 }

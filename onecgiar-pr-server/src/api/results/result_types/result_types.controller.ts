@@ -20,7 +20,7 @@ export class ResultTypesController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.resultTypesService.findOne(+id);
+    return this.resultTypesService.findOneResultType(+id);
   }
 
   @Patch(':id')

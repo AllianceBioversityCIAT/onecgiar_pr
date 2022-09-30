@@ -6,22 +6,28 @@ import {
   Patch,
   Param,
   Delete,
+  Headers,
+  HttpException,
 } from '@nestjs/common';
 import { ResultsService } from './results.service';
 import { CreateResultDto } from './dto/create-result.dto';
 import { UpdateResultDto } from './dto/update-result.dto';
+import { HeadersDto } from '../../shared/globalInterfaces/headers.dto';
+import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 
 @Controller()
 export class ResultsController {
   constructor(private readonly resultsService: ResultsService) {}
 
   @Post('create/header')
-  create(@Body() createResultDto: CreateResultDto) {
-    return this.resultsService.create(createResultDto);
+  async create(@Body() createResultDto: CreateResultDto, @Headers() auth: HeadersDto) {
+    const token: TokenDto = <TokenDto>JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString());
+    const {message, response, status} = await this.resultsService.createOwnerResult(createResultDto, token);
+    throw new HttpException({message,response}, status);
   }
 
-  @Get()
-  findAll() {
+  @Get('get/name/:name')
+  findAll(@Param('name') resultName: string) {
     return this.resultsService.findAll();
   }
 

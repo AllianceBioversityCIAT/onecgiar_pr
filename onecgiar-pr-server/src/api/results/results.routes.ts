@@ -6,7 +6,6 @@ import { ResultsByInstitutionsModule } from './results_by_institutions/results_b
 import { ResultsByInstitutionTypesModule } from './results_by_institution_types/results_by_institution_types.module';
 import { ResultLevelsModule } from './result_levels/result_levels.module';
 import { ResultTypesModule } from './result_types/result_types.module';
-import { UsersModule } from './users/users.module';
 import { VersionsModule } from './versions/versions.module';
 
 export const ResultsRoutes: Routes = [
@@ -37,10 +36,6 @@ export const ResultsRoutes: Routes = [
   {
     path: 'results-by-institutions',
     module: ResultsByInstitutionsModule,
-  },
-  {
-    path: 'users',
-    module: UsersModule,
   },
   {
     path: 'versions',

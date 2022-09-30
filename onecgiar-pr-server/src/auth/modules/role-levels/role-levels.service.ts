@@ -11,7 +11,7 @@ export class RoleLevelsService {
 
   constructor(
     private readonly _roleLevelRepository:RoleLevelRepository,
-    public readonly _handlersError: HandlersError
+    private readonly _handlersError: HandlersError
   ){}
 
   create(createRoleLevelDto: CreateRoleLevelDto) {

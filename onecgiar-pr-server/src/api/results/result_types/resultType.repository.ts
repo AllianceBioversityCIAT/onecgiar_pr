@@ -48,4 +48,26 @@ export class ResultTypeRepository extends Repository<ResultType> {
     }
   }
 
+  async getOneResultTypeById(resultTypeId: number): Promise<ResultType> {
+    const queryData = `
+    select 
+        rt.id,
+        rt.name,
+        rt.description,
+        rt.result_level_id 
+    from result_type rt
+    where rt.id = ?;
+    `;
+    try {
+      const resultType = await this.query(queryData, [resultTypeId]);
+      return resultType;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultTypeRepository.name,
+        error: error,
+        debug: true
+      });
+    }
+  }
+
 }

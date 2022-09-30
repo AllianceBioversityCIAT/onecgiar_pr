@@ -5,6 +5,7 @@ import { HandlersError, returnErrorDto } from '../../../shared/handlers/error.ut
 import { ResultTypeRepository } from './resultType.repository';
 import { ResultType } from './entities/result_type.entity';
 import { retunrFormatResultType } from './dto/return-format-result-type.dto';
+import { MessageResponse } from '../../../shared/constants/Responses.constant';
 
 @Injectable()
 export class ResultTypesService {
@@ -21,10 +22,9 @@ export class ResultTypesService {
   async getAllResultType(): Promise<retunrFormatResultType|returnErrorDto> {
     try {
       const resultType:ResultType[] = await this._resultTypeRepository.getAllResultType();
-      console.log(resultType)
       return {
         response: resultType,
-        message: '',
+        message: MessageResponse.OK,
         status: HttpStatus.OK
       }
     } catch (error) {
@@ -32,8 +32,24 @@ export class ResultTypesService {
     }
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} resultType`;
+  async findOneResultType(id: number):Promise<retunrFormatResultType|returnErrorDto> {
+    try {
+      const resultType:ResultType = await this._resultTypeRepository.findOne({where:{id: id}});
+      if(!resultType){
+        throw {
+          response: {},
+          message: 'Result Type not dound',
+          status: HttpStatus.NOT_FOUND
+        }
+      }
+      return {
+        response: resultType,
+        message: MessageResponse.OK,
+        status: HttpStatus.OK
+      }
+    } catch (error) {
+      return this._handlersError.returnErrorRes({error, debug: true});
+    }
   }
 
   update(id: number, updateResultTypeDto: UpdateResultTypeDto) {
