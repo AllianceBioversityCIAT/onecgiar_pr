@@ -12,7 +12,13 @@ export const routingApp: PrRoute[] = [
 export const resultRouting: PrRoute[] = [
   { prName: 'Result Creator', path: 'result-creator', loadChildren: () => import('../../pages/results/pages/result-creator/result-creator.module').then(m => m.ResultCreatorModule) },
   { prName: 'Result detail', path: 'result-detail/:id', loadChildren: () => import('../../pages/results/pages/result-detail/result-detail.module').then(m => m.ResultDetailModule) },
-  { prName: '', path: 'results-list', loadChildren: () => import('../../pages/results/pages/results-list/results-list.module').then(m => m.ResultsListModule) },
+  { prName: '', path: 'results-outlet', loadChildren: () => import('../../pages/results/pages/results-outlet/results-outlet.module').then(m => m.ResultsOutletModule) },
+  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'results-outlet' }
+];
+
+export const resultsOutletRouting: PrRoute[] = [
+  { prName: 'Notifications', path: 'results-notifications', loadChildren: () => import('../../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.module').then(m => m.ResultsNotificationsModule) },
+  { prName: '', path: 'results-list', loadChildren: () => import('../../pages/results/pages/results-outlet/pages/results-list/results-list.module').then(m => m.ResultsListModule) },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'results-list' }
 ];
 

@@ -7,7 +7,7 @@ import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { MenuModule } from 'primeng/menu';
 import { RouterModule } from '@angular/router';
-import { UtilsComponentsModule } from '../../../../shared/components/utils-components/utils-components.module';
+import { UtilsComponentsModule } from '../../../../../../shared/components/utils-components/utils-components.module';
 @NgModule({
   declarations: [ResultsListComponent],
   imports: [CommonModule, ResultsListRoutingModule, TableModule, ButtonModule, MenuModule, RouterModule, UtilsComponentsModule]
