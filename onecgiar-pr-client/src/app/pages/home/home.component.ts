@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { internationalizationData } from 'src/app/shared/data/internationalizationData';
-import { AuthService } from '../../shared/services/auth.service';
+import { AuthService } from '../../shared/services/api/auth.service';
 
 @Component({
   selector: 'app-home',
