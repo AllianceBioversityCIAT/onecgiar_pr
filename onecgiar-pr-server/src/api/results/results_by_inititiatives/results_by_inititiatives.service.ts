@@ -13,7 +13,20 @@ export class ResultsByInititiativesService {
   ){}
 
   create(createResultsByInititiativeDto: CreateResultsByInititiativeDto) {
-    return 'This action adds a new resultsByInititiative';
+    try {
+      const arrayValue: any[] = Object.values(createResultsByInititiativeDto)
+      const validCount: number = Object.values(createResultsByInititiativeDto).reduce((sum, data) => data?++sum:sum);
+      if(!(arrayValue.length == validCount)){
+        throw {
+          response: {},
+          message: 'Missing data in the request',
+          status: HttpStatus.BAD_REQUEST
+        }
+      }
+      this._resultByInitiativesRepository.save(createResultsByInititiativeDto);
+    } catch (error) {
+      return this._handlersError.returnErrorRes({error, debug: true});
+    }
   }
 
   findAll() {

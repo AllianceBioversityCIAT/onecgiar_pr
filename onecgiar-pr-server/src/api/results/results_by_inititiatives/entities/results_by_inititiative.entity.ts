@@ -1,5 +1,5 @@
 import { User } from "../../../../auth/modules/user/entities/user.entity";
-import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryColumn, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { Result } from "../../entities/result.entity";
 import { InitiativeRole } from "../../initiative_roles/entities/initiative_role.entity";
 import { Version } from "../../versions/entities/version.entity";
@@ -7,15 +7,20 @@ import { ClarisaInitiative } from '../../../../clarisa/clarisa-initiatives/entit
 
 @Entity()
 export class ResultsByInititiative {
+
+    @PrimaryGeneratedColumn()
+    id: number;
+
     @ManyToOne(() => Result, r => r.id)
-    @PrimaryColumn({
-        name: 'result_id',
-        type: 'bigint'
+    @JoinColumn({
+        name: 'result_id'
     })
-    resultId: number;
+    result_id: number;
 
     @ManyToOne(() => ClarisaInitiative, i => i.id)
-    @PrimaryColumn({ name: 'inititiative_id', type: 'bigint' })
+    @JoinColumn({ 
+        name: 'inititiative_id' 
+    })
     inititiative_id: number;
 
     @ManyToOne(() => InitiativeRole, v => v.id, { nullable: false })
@@ -26,10 +31,11 @@ export class ResultsByInititiative {
 
     @Column({
         name: 'is_active',
-        type: 'tinyint',
-        nullable: false
+        type: 'boolean',
+        nullable: false,
+        default: true
     })
-    is_active: number;
+    is_active: boolean;
 
     @ManyToOne(() => Version, v => v.id, { nullable: false })
     @JoinColumn({

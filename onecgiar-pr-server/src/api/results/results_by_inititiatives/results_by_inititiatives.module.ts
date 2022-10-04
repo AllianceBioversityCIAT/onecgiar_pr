@@ -5,6 +5,13 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultByInitiativesRepository } from './resultByInitiatives.repository';
 import { JwtMiddleware } from '../../../auth/Middlewares/jwt.middleware';
 import { AuthModule } from '../../../auth/auth.module';
+import { ResultsModule } from '../results.module';
+import { ResultsService } from '../results.service';
+import { ResultRepository } from '../result.repository';
+import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
+import { ResultTypesService } from '../result_types/result_types.service';
+import { VersionsService } from '../versions/versions.service';
+import { ResultTypeRepository } from '../result_types/resultType.repository';
 
 @Module({
   controllers: [ResultsByInititiativesController],
@@ -17,7 +24,9 @@ import { AuthModule } from '../../../auth/auth.module';
     ResultsByInititiativesService,
     ResultByInitiativesRepository
   ],
-  imports: [AuthModule]
+  imports: [
+    AuthModule
+  ]
 })
 export class ResultsByInititiativesModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

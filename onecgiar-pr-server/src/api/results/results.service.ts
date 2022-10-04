@@ -17,6 +17,7 @@ import { Version } from './versions/entities/version.entity';
 import { retunrFormatResul } from './dto/return-format-result.dto';
 import { Result } from './entities/result.entity';
 import { CreateGeneralInformationResultDto } from './dto/create-general-information-result.dto';
+import { ResultsByInititiativesService } from './results_by_inititiatives/results_by_inititiatives.service';
 
 @Injectable()
 export class ResultsService {
@@ -27,7 +28,8 @@ export class ResultsService {
     private readonly _resultTypesService: ResultTypesService,
     private readonly _versionsService: VersionsService,
     private readonly _handlersError: HandlersError,
-    private readonly _customResultRepository: ResultRepository
+    private readonly _customResultRepository: ResultRepository,
+    private readonly _resultsByInititiativesService: ResultsByInititiativesService
   ){}
 
   async createOwnerResult(createResultDto: CreateResultDto, user: TokenDto): Promise<retunrFormatResul | returnErrorDto> {
@@ -70,6 +72,14 @@ export class ResultsService {
         version_id: vrs.id,
         title: createResultDto.result_name
       });
+
+      this._resultsByInititiativesService.create({
+        created_by: newResultHeader.created_by,
+        initiative_id: createResultDto.initiative_id,
+        initiative_role_id: 1,
+        result_id: newResultHeader.id,
+        version_id: vrs.id
+      })
 
       return {
         response: newResultHeader,
