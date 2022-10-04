@@ -8,7 +8,15 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
   styleUrls: ['./results-list.component.scss']
 })
 export class ResultsListComponent implements OnInit {
-  columnOrder = [{ attr: 'id' }, { attr: 'title', class: 'notCenter' }, { attr: 'planned_year' }, { attr: 'result_type' }, { attr: 'owner' }, { attr: 'contributes_to' }, { attr: 'creation_date' }];
+  columnOrder = [
+    { title: 'ID', attr: 'id' },
+    { title: 'Title', attr: 'title', class: 'notCenter' },
+    { title: 'Reported year', attr: 'planned_year' },
+    { title: 'Result type', attr: 'result_type' },
+    { title: 'Submitter', attr: 'owner' },
+    { title: 'Status', attr: 'contributes_to' },
+    { title: 'Creation date	', attr: 'creation_date' }
+  ];
   results: any[] = [
     {
       id: '1',

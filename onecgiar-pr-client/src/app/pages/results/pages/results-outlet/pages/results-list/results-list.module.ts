@@ -8,8 +8,10 @@ import { ButtonModule } from 'primeng/button';
 import { MenuModule } from 'primeng/menu';
 import { RouterModule } from '@angular/router';
 import { UtilsComponentsModule } from '../../../../../../shared/components/utils-components/utils-components.module';
+import { ResultsListFiltersComponent } from './components/results-list-filters/results-list-filters.component';
+import { ReportNewResultButtonComponent } from './components/report-new-result-button/report-new-result-button.component';
 @NgModule({
-  declarations: [ResultsListComponent],
+  declarations: [ResultsListComponent, ResultsListFiltersComponent, ReportNewResultButtonComponent],
   imports: [CommonModule, ResultsListRoutingModule, TableModule, ButtonModule, MenuModule, RouterModule, UtilsComponentsModule]
 })
 export class ResultsListModule {}

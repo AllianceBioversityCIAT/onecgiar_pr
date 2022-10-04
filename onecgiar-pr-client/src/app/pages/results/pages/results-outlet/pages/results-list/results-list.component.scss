@@ -1,6 +1,26 @@
 tr {
+
+
     th {
         text-align: center;
+    }
+
+    .creation_date {
+
+        .transparent_text,
+        a {
+            min-width: 200px !important;
+
+        }
+    }
+
+    .contributes_to {
+
+        .transparent_text,
+        a {
+            min-width: 100px !important;
+
+        }
     }
 
     td {
@@ -9,6 +29,8 @@ tr {
         .transparent_text {
             color: transparent;
         }
+
+
 
         .notCenter {
             justify-content: unset !important;
@@ -35,9 +57,4 @@ tr {
             cursor: pointer;
         }
     }
-}
-
-.new_result_button {
-    display: flex;
-    justify-content: flex-end;
 }
