@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { MenuItem } from 'primeng/api';
+import { ApiService } from '../../../../../../shared/services/api/api.service';
 
 @Component({
   selector: 'app-results-list',
@@ -123,9 +124,16 @@ export class ResultsListComponent implements OnInit {
     { label: 'Submit', icon: 'pi pi-fw pi-reply' }
   ];
 
-  constructor() {}
+  constructor(public api: ApiService) {}
 
   ngOnInit(): void {
     this.items;
+    this.getAllResultLevel();
+  }
+
+  getAllResultLevel() {
+    this.api.resultsApiService.getAllResultLevel().subscribe(resp => {
+      console.log(resp);
+    });
   }
 }

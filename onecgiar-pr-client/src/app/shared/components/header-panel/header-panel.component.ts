@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
-import { AuthService } from '../../services/auth.service';
 import { internationalizationData } from '../../data/internationalizationData';
+import { AuthService } from '../../services/api/auth.service';
 
 @Component({
   selector: 'app-header-panel',

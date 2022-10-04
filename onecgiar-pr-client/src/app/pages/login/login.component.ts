@@ -1,9 +1,9 @@
 import { Component, OnDestroy } from '@angular/core';
 import { UserAuth } from '../../shared/interfaces/user';
-import { AuthService } from '../../shared/services/auth.service';
 import { CustomAlertService } from '../../shared/services/custom-alert.service';
 import { Router } from '@angular/router';
 import { internationalizationData } from '../../shared/data/internationalizationData';
+import { AuthService } from '../../shared/services/api/auth.service';
 
 @Component({
   selector: 'app-login',
