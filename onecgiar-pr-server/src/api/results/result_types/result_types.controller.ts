@@ -12,7 +12,7 @@ export class ResultTypesController {
     return this.resultTypesService.create(createResultTypeDto);
   }
 
-  @Get('get/all')
+  @Get('all')
   async findAll() {
     const {message, response, status} = await this.resultTypesService.getAllResultType();
     throw new HttpException({message,response}, status);

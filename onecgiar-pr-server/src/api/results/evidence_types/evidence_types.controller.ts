@@ -12,7 +12,7 @@ export class EvidenceTypesController {
     return this.evidenceTypesService.create(createEvidenceTypeDto);
   }
 
-  @Get()
+  @Get('all')
   findAll() {
     return this.evidenceTypesService.findAll();
   }

@@ -12,7 +12,7 @@ export class InitiativeRolesController {
     return this.initiativeRolesService.create(createInitiativeRoleDto);
   }
 
-  @Get()
+  @Get('all')
   findAll() {
     return this.initiativeRolesService.findAll();
   }

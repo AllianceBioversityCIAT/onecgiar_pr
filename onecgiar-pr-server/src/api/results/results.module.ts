@@ -46,7 +46,7 @@ import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/
     ResultRepository,
     ClarisaInitiativesRepository
   ],
-  exports: [ResultRepository]
+  exports: [ResultRepository, JwtMiddleware]
 })
 export class ResultsModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
@@ -56,13 +56,17 @@ export class ResultsModule implements NestModule {
         method: RequestMethod.GET,
       },
       {
-        path: '/auth/user/all/full',
+        path: '/api/results/get/name/:name',
         method: RequestMethod.GET,
       },
       {
-        path: '/auth/user/create',
+        path: '/api/results/get/all-results',
+        method: RequestMethod.GET,
+      },
+      {
+        path: '/api/results/create/header',
         method: RequestMethod.POST,
-      }
+      },
     );
   }
 }
