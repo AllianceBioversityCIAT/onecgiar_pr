@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException } from '@nestjs/common';
 import { GenderTagLevelsService } from './gender_tag_levels.service';
 import { CreateGenderTagLevelDto } from './dto/create-gender_tag_level.dto';
 import { UpdateGenderTagLevelDto } from './dto/update-gender_tag_level.dto';
@@ -13,8 +13,9 @@ export class GenderTagLevelsController {
   }
 
   @Get('all')
-  findAll() {
-    return this.genderTagLevelsService.findAll();
+  async findAll() {
+    const { message, response, status } =  await this.genderTagLevelsService.findAll();
+    throw new HttpException({ message, response }, status);
   }
 
   @Get(':id')

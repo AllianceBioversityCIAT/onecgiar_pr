@@ -26,18 +26,33 @@ export class Evidence {
     })
     description!: string;
 
-    @Column({
-        name: 'is_active',
-        type: 'tinyint',
-        nullable: false
+    @ManyToOne(() => Result, r => r.id, { nullable: true })
+    @JoinColumn({
+        name: 'result_evidence_id'
     })
-    is_active: number;
+    result_evidence_id!: number;
+
+    @Column({
+        name: 'gender_related',
+        type: 'tinyint',
+        nullable: true,
+        default: false
+    })
+    gender_related!: number;
 
     @ManyToOne(() => Version, v => v.id, { nullable: false })
     @JoinColumn({
         name: 'version_id'
     })
     version_id: number;
+
+    @Column({
+        name: 'is_active',
+        type: 'tinyint',
+        nullable: false,
+        default: true
+    })
+    is_active: number;
 
     @ManyToOne(() => User, u => u.id, { nullable: false })
     @JoinColumn({
@@ -63,16 +78,4 @@ export class Evidence {
     })
     last_updated_date!: Date;
 
-    @ManyToOne(() => Result, r => r.id, { nullable: true })
-    @JoinColumn({
-        name: 'result_evidence_id'
-    })
-    result_evidence_id!: number;
-
-    @Column({
-        name: 'gender_related',
-        type: 'tinyint',
-        default: false
-    })
-    gender_related!: number;
 }

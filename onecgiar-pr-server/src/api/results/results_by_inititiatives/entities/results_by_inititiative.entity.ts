@@ -3,6 +3,7 @@ import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryColumn,
 import { Result } from "../../entities/result.entity";
 import { InitiativeRole } from "../../initiative_roles/entities/initiative_role.entity";
 import { Version } from "../../versions/entities/version.entity";
+import { ClarisaInitiative } from '../../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 
 @Entity()
 export class ResultsByInititiative {
@@ -13,15 +14,8 @@ export class ResultsByInititiative {
     })
     resultId: number;
 
-    // @ManyToOne(() => Inititiative, i => i.id)
-    // @PrimaryColumn({ name: 'inititiative_id', type: 'bigint' })
-    // inititiative_id: number;
-
-    @Column({
-        name: 'inititiative_id',
-        type: 'bigint',
-        nullable: false
-    })
+    @ManyToOne(() => ClarisaInitiative, i => i.id)
+    @PrimaryColumn({ name: 'inititiative_id', type: 'bigint' })
     inititiative_id: number;
 
     @ManyToOne(() => InitiativeRole, v => v.id, { nullable: false })

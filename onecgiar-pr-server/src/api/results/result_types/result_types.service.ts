@@ -38,7 +38,7 @@ export class ResultTypesService {
       if(!resultType){
         throw {
           response: {},
-          message: 'Result Type not dound',
+          message: 'Result Type not found',
           status: HttpStatus.NOT_FOUND
         }
       }

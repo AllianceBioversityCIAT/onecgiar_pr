@@ -16,6 +16,7 @@ import { VersionsService } from './versions/versions.service';
 import { Version } from './versions/entities/version.entity';
 import { retunrFormatResul } from './dto/return-format-result.dto';
 import { Result } from './entities/result.entity';
+import { CreateGeneralInformationResultDto } from './dto/create-general-information-result.dto';
 
 @Injectable()
 export class ResultsService {
@@ -78,6 +79,24 @@ export class ResultsService {
     } catch (error) {
       return this._handlersError.returnErrorRes({error});
       
+    }
+  }
+
+  async createResultGeneralInformation(resultGI: CreateGeneralInformationResultDto){
+    try {
+      
+      
+    } catch (error) {
+      return this._handlersError.returnErrorRes({error});
+      
+    }
+  }
+
+  async creatFullResult(){
+    try {
+      
+    } catch (error) {
+      return this._handlersError.returnErrorRes({error});
     }
   }
 
