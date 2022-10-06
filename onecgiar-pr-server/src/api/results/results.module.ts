@@ -20,6 +20,7 @@ import { JwtMiddleware } from 'src/auth/Middlewares/jwt.middleware';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { ResultRepository } from './result.repository';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
+import { YearsModule } from './years/years.module';
 
 @Module({
   controllers: [ResultsController],
@@ -37,7 +38,8 @@ import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/
     ResultsByEvidencesModule, 
     EvidenceTypesModule, 
     InitiativeRolesModule,
-    AuthModule
+    AuthModule,
+    YearsModule
   ],
   providers: [
     ResultsService,

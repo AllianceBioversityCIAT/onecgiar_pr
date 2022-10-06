@@ -53,27 +53,23 @@ export class ResultRepository extends Repository<Result> {
   async AllResults() {
     const queryData = `
     SELECT
-        r.id,
-        r.title,
-        '2022' AS reported_year,
-        rt.name AS result_type,
-        r.status,
-        r.created_date,
-        rt.name as result_level_name,
-        ci.official_code as submitter,
-        r.status,
-        if(r.status = 0, 'Editing', 'Submitted') as status_name
-    FROM
-        result r
-        INNER JOIN \`version\` v ON v.id = r.version_id
-        INNER JOIN result_type rt ON rt.id = r.result_type_id
-        inner join result_level rl on rl.id = rt.result_level_id 	
-        inner join results_by_inititiative rbi on rbi.result_id = r.id 
-        inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
-    WHERE
-        	r.is_active > 0
-       	and rbi.is_active > 0
-      	and ci.active > 0;
+    r.id,
+    r.title,
+    r.reported_year_id,
+    rt.name AS result_level_name,
+    r.created_date,
+    ci.official_code AS submitter,
+    r.status,
+    IF(r.status = 0, 'Editing', 'Submitted') AS status_name
+FROM
+    result r
+    INNER JOIN result_type rt ON rt.id = r.result_type_id
+    INNER JOIN results_by_inititiative rbi ON rbi.result_id = r.id
+    INNER JOIN clarisa_initiatives ci ON ci.id = rbi.inititiative_id
+WHERE
+    r.is_active > 0
+    AND rbi.is_active > 0
+    AND ci.active > 0;
     `;
 
     try {

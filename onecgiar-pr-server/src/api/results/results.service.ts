@@ -23,20 +23,20 @@ import { ResultsByInititiativesService } from './results_by_inititiatives/result
 export class ResultsService {
 
   constructor(
-    private readonly _resultRepository:ResultRepository,
-    private readonly _clarisaInitiativesRepository:ClarisaInitiativesRepository,
+    private readonly _resultRepository: ResultRepository,
+    private readonly _clarisaInitiativesRepository: ClarisaInitiativesRepository,
     private readonly _resultTypesService: ResultTypesService,
     private readonly _versionsService: VersionsService,
     private readonly _handlersError: HandlersError,
     private readonly _customResultRepository: ResultRepository,
     private readonly _resultsByInititiativesService: ResultsByInititiativesService
-  ){}
+  ) { }
 
   async createOwnerResult(createResultDto: CreateResultDto, user: TokenDto): Promise<retunrFormatResul | returnErrorDto> {
     try {
-      if(!createResultDto?.result_name || 
+      if (!createResultDto?.result_name ||
         !createResultDto?.initiative_id ||
-        !createResultDto?.result_type_id){
+        !createResultDto?.result_type_id) {
         throw {
           response: {},
           message: 'missing data: Result name, Initiative or Result type',
@@ -44,24 +44,24 @@ export class ResultsService {
         }
       }
 
-      const initiative = await this._clarisaInitiativesRepository.findOne({where: {id: createResultDto.initiative_id}});
-      if(!initiative){
+      const initiative = await this._clarisaInitiativesRepository.findOne({ where: { id: createResultDto.initiative_id } });
+      if (!initiative) {
         throw {
           response: {},
           message: 'Initiative Not fount',
           status: HttpStatus.NOT_FOUND
         }
       }
-      
-      const resultType  = await this._resultTypesService.findOneResultType(createResultDto.result_type_id);
-      if(resultType.status >= 300 ){
-        throw this._handlersError.returnErrorRes({error:resultType});
+
+      const resultType = await this._resultTypesService.findOneResultType(createResultDto.result_type_id);
+      if (resultType.status >= 300) {
+        throw this._handlersError.returnErrorRes({ error: resultType });
       }
-      const rt:ResultType = <ResultType>resultType.response;
-      
+      const rt: ResultType = <ResultType>resultType.response;
+
       const version = await this._versionsService.findBaseVersion();
-      if(version.status >= 300 ){
-        throw this._handlersError.returnErrorRes({error:version});
+      if (version.status >= 300) {
+        throw this._handlersError.returnErrorRes({ error: version });
       }
       const vrs: Version = <Version>version.response;
 
@@ -87,32 +87,40 @@ export class ResultsService {
         status: HttpStatus.CREATED
       }
     } catch (error) {
-      return this._handlersError.returnErrorRes({error});
-      
+      return this._handlersError.returnErrorRes({ error });
+
     }
   }
 
-  async createResultGeneralInformation(resultGI: CreateGeneralInformationResultDto){
+  async createResultGeneralInformation(resultGI: CreateGeneralInformationResultDto) {
     try {
-      
-      
+
+
     } catch (error) {
-      return this._handlersError.returnErrorRes({error});
-      
+      return this._handlersError.returnErrorRes({ error });
+
     }
   }
 
-  async creatFullResult(){
+  async creatFullResult() {
     try {
-      
+
     } catch (error) {
-      return this._handlersError.returnErrorRes({error});
+      return this._handlersError.returnErrorRes({ error });
     }
   }
 
   async findAll(): Promise<retunrFormatUser> {
     try {
       const result: FullResultsRequestDto[] = await this._customResultRepository.AllResults()
+
+      if (!result.length) {
+        throw {
+          response: {},
+          message: 'Results Not Found',
+          status: HttpStatus.NOT_FOUND
+        }
+      }
 
       return {
         response: result,

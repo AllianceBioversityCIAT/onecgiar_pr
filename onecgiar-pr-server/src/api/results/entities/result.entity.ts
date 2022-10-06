@@ -3,6 +3,7 @@ import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGenerat
 import { GenderTagLevel } from "../gender_tag_levels/entities/gender_tag_level.entity";
 import { ResultType } from "../result_types/entities/result_type.entity";
 import { Version } from "../versions/entities/version.entity";
+import { Year } from "../years/entities/year.entity";
 
 @Entity()
 export class Result {
@@ -85,4 +86,10 @@ export class Result {
         default: 0
     })
     status!: number;
+    
+    @ManyToOne(() => Year, y => y.year, { nullable: true })
+    @JoinColumn({
+        name: 'reported_year_id'
+    })
+    reported_year_id: number;
 }
