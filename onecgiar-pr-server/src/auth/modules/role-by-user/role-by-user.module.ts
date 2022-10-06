@@ -5,16 +5,21 @@ import { RoleByUserRepository } from './RoleByUser.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { RoleLevelRepository } from '../role-levels/RoleLevels.repository';
 import { RoleLevelsModule } from '../role-levels/role-levels.module';
+import { UserService } from '../user/user.service';
+import { UserRepository } from '../user/repositories/user.repository';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { User } from '../user/entities/user.entity';
 
 @Module({
   controllers: [RoleByUserController],
   imports: [
-    RoleLevelsModule
+    RoleLevelsModule,
   ],
   providers: [
     RoleByUserService,
     RoleByUserRepository,
-    HandlersError
+    HandlersError,
+    UserRepository
   ],
   exports: [
     RoleByUserRepository

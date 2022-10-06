@@ -10,13 +10,16 @@ import { RoleByUser } from './entities/role-by-user.entity';
 import { resultRolesDto } from './dto/resultRoles.dto';
 import { retunrFormatRoleByUser } from './dto/returnFormatRoleByUser.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
+import { UserRepository } from '../user/repositories/user.repository';
+import { User } from '../user/entities/user.entity';
 
 @Injectable()
 export class RoleByUserService {
 constructor(
   private readonly _roleByUserRepository:RoleByUserRepository,
   private readonly _roleLevelsService:RoleLevelsService,
-  public readonly _handlersError: HandlersError
+  private readonly _handlersError: HandlersError,
+  private readonly _userRepository:UserRepository
   
 ){}
 
@@ -24,6 +27,18 @@ constructor(
     try {
       const targetsValues: any[] = Object.values(createRoleByUserDto.target);
       let validCount: boolean = false;
+
+      const user:User = await this._userRepository.findOne({where:{
+        id: createRoleByUserDto.user
+      }});
+      if(!user){
+        throw {
+          response:{}, 
+          message: 'User Not Found', 
+          status: HttpStatus.NOT_FOUND
+        }
+      }
+
       if(targetsValues.length){
         validCount = targetsValues.reduce((sum, data) => data?++sum:sum) > 1?true:false;
       }
@@ -34,6 +49,7 @@ constructor(
           status: HttpStatus.BAD_REQUEST
         }
       }
+
       const existRole:RoleByUser = await this._roleByUserRepository.findOne({where:{
         role: createRoleByUserDto.role,
         user: user.id,
