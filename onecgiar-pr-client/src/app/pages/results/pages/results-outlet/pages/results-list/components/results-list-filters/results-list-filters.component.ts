@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { ResultsListService } from '../../services/results-list.service';
 
 @Component({
   selector: 'app-results-list-filters',
@@ -6,5 +7,5 @@ import { Component } from '@angular/core';
   styleUrls: ['./results-list-filters.component.scss']
 })
 export class ResultsListFiltersComponent {
-  constructor() {}
+  constructor(public resultsListService: ResultsListService) {}
 }

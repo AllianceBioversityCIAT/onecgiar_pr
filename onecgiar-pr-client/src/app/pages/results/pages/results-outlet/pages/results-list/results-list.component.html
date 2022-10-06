@@ -1,10 +1,16 @@
-<app-report-new-result-button></app-report-new-result-button>
-<app-results-list-filters></app-results-list-filters>
-<p-table [value]="results" responsiveLayout="scroll" styleClass="p-datatable-gridlines p-datatable-sm"
-  selectionMode="single">
+<div class="local_container">
+  <app-report-new-result-button></app-report-new-result-button>
+  <div class="alert"></div>
+  <app-results-list-filters></app-results-list-filters>
+</div>
+
+<p-table [value]="(results | resultsListFilter:this.resultsListService.text_to_search)" responsiveLayout="scroll"
+  [paginator]="true" [rows]="10" styleClass="p-datatable-gridlines p-datatable-sm" selectionMode="single">
   <ng-template pTemplate="header">
     <tr>
-      <th *ngFor="let column of columnOrder">{{column.title}}</th>
+      <th pSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder">
+        <p-sortIcon field="{{column.attr}}"></p-sortIcon>{{column.title}}
+      </th>
       <th>Action</th>
     </tr>
   </ng-template>

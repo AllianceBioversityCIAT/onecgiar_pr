@@ -1,10 +1,4 @@
-/*  
-  Yecksin custom alert 
-  v 1.0.0
-*/
 import { Injectable } from '@angular/core';
-declare var animateCSS;
-
 interface alertOptions {
   id;
   title;
@@ -16,9 +10,9 @@ interface alertOptions {
 @Injectable({
   providedIn: 'root'
 })
-export class CustomAlertService {
+export class CustomizedAlertsFeService {
+  //TODO customized alerts for events
   showed = false;
-  inited = false;
   constructor() {}
 
   show(alertOptions: alertOptions, callback?) {

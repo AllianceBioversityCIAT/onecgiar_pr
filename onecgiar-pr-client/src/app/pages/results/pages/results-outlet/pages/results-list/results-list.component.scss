@@ -23,6 +23,24 @@ tr {
         }
     }
 
+    .owner {
+
+        .transparent_text,
+        a {
+            min-width: 100px !important;
+
+        }
+    }
+
+    .id {
+
+        .transparent_text,
+        a {
+            min-width: 60px !important;
+
+        }
+    }
+
     td {
         position: relative;
 
@@ -57,4 +75,8 @@ tr {
             cursor: pointer;
         }
     }
+}
+
+.local_container {
+    padding: 0px 50px;
 }

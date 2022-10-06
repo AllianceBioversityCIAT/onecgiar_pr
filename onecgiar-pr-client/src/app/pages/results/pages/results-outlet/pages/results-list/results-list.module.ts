@@ -10,8 +10,10 @@ import { RouterModule } from '@angular/router';
 import { UtilsComponentsModule } from '../../../../../../shared/components/utils-components/utils-components.module';
 import { ResultsListFiltersComponent } from './components/results-list-filters/results-list-filters.component';
 import { ReportNewResultButtonComponent } from './components/report-new-result-button/report-new-result-button.component';
+import { ResultsListFilterPipe } from './pipes/results-list-filter.pipe';
+import { FormsModule } from '@angular/forms';
 @NgModule({
-  declarations: [ResultsListComponent, ResultsListFiltersComponent, ReportNewResultButtonComponent],
-  imports: [CommonModule, ResultsListRoutingModule, TableModule, ButtonModule, MenuModule, RouterModule, UtilsComponentsModule]
+  declarations: [ResultsListComponent, ResultsListFiltersComponent, ReportNewResultButtonComponent, ResultsListFilterPipe, ResultsListFilterPipe],
+  imports: [CommonModule, ResultsListRoutingModule, TableModule, ButtonModule, MenuModule, RouterModule, UtilsComponentsModule, FormsModule]
 })
 export class ResultsListModule {}
