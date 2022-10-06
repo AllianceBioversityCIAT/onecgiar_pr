@@ -41,11 +41,11 @@ export class RoleByUser {
     })
     active: boolean;
 
-    @ManyToOne(() => User, u => u.id, { nullable: false })
+    @ManyToOne(() => User, u => u.id, { nullable: true })
     @JoinColumn({
         name: 'created_by'
     })
-    created_by: number;
+    created_by!: number;
 
     @CreateDateColumn({
         name: 'created_date'

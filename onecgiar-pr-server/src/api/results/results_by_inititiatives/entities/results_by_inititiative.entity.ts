@@ -21,7 +21,7 @@ export class ResultsByInititiative {
     @JoinColumn({ 
         name: 'inititiative_id' 
     })
-    inititiative_id: number;
+    initiative_id: number;
 
     @ManyToOne(() => InitiativeRole, v => v.id, { nullable: false })
     @JoinColumn({

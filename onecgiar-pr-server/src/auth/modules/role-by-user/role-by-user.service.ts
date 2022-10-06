@@ -9,6 +9,7 @@ import { RoleLevelsService } from '../role-levels/role-levels.service';
 import { RoleByUser } from './entities/role-by-user.entity';
 import { resultRolesDto } from './dto/resultRoles.dto';
 import { retunrFormatRoleByUser } from './dto/returnFormatRoleByUser.dto';
+import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 
 @Injectable()
 export class RoleByUserService {
@@ -19,8 +20,47 @@ constructor(
   
 ){}
 
-  create(createRoleByUserDto: CreateRoleByUserDto) {
-    return 'This action adds a new roleByUser';
+  async create(createRoleByUserDto: CreateRoleByUserDto, user: TokenDto):Promise<retunrFormatRoleByUser> {
+    try {
+      const targetsValues: any[] = Object.values(createRoleByUserDto.target);
+      let validCount: boolean = false;
+      if(targetsValues.length){
+        validCount = targetsValues.reduce((sum, data) => data?++sum:sum) > 1?true:false;
+      }
+      if(validCount){
+        throw {
+          response:{error: createRoleByUserDto.target}, 
+          message: 'There are two or more targets to assign in the role', 
+          status: HttpStatus.BAD_REQUEST
+        }
+      }
+      const existRole:RoleByUser = await this._roleByUserRepository.findOne({where:{
+        role: createRoleByUserDto.role,
+        user: user.id,
+        ...createRoleByUserDto.target
+      }});
+
+      if(existRole){
+        throw {
+          response:{}, 
+          message: 'The user already has this role assignment', 
+          status: HttpStatus.CONFLICT
+        }
+      }
+      createRoleByUserDto.last_updated_by = user.id;
+      createRoleByUserDto.created_by = user.id;
+      const roleByUser: RoleByUser = await this._roleByUserRepository.save({
+        ...createRoleByUserDto,
+        ...createRoleByUserDto.target
+      });
+      return {
+        response: roleByUser,
+        message: 'Correct role assignment',
+        status: HttpStatus.CREATED
+      }
+    } catch (error) {
+      return this._handlersError.returnErrorRes({error});
+    }
   }
 
   async allRolesByUser(userId: number): Promise<retunrFormatRoleByUser> {

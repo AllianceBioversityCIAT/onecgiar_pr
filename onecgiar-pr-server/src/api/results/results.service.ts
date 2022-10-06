@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { ConsoleLogger, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { retunrFormatUser } from 'src/auth/modules/user/dto/return-create-user.dto';
 import { Repository } from 'typeorm';
@@ -73,9 +73,9 @@ export class ResultsService {
         title: createResultDto.result_name
       });
 
-      this._resultsByInititiativesService.create({
+      await this._resultsByInititiativesService.create({
         created_by: newResultHeader.created_by,
-        initiative_id: createResultDto.initiative_id,
+        initiative_id: initiative.id,
         initiative_role_id: 1,
         result_id: newResultHeader.id,
         version_id: vrs.id
