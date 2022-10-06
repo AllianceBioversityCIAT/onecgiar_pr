@@ -1,9 +1,9 @@
 import { Component, OnDestroy } from '@angular/core';
 import { UserAuth } from '../../shared/interfaces/user';
-import { CustomAlertService } from '../../shared/services/custom-alert.service';
 import { Router } from '@angular/router';
 import { internationalizationData } from '../../shared/data/internationalizationData';
 import { AuthService } from '../../shared/services/api/auth.service';
+import { CustomizedAlertsFeService } from '../../shared/services/customized-alerts-fe.service';
 
 @Component({
   selector: 'app-login',
@@ -14,7 +14,7 @@ export class LoginComponent implements OnDestroy {
   internationalizationData = internationalizationData;
   userLoginData = new UserAuth();
   successLogin = false;
-  constructor(private authService: AuthService, private customAlertService: CustomAlertService, private router: Router) {
+  constructor(private authService: AuthService, private customAlertService: CustomizedAlertsFeService, private router: Router) {
     this.authService.inLogin = true;
     if (!!this.authService.localStorageUser) this.router.navigate(['/']);
   }
