@@ -242,8 +242,13 @@ export class ResultsListComponent implements OnInit {
       id: 'indoasd',
       status: 'success',
       title: '',
-      description: internationalizationData.resultsList.alerts.info,
+      description: internationalizationData?.resultsList?.alerts?.info,
       querySelector: '.alert'
     });
+    console.log(
+      this.api.resultsSV.getAllResults().subscribe(resp => {
+        console.log(resp);
+      })
+    );
   }
 }

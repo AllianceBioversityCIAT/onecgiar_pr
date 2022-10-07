@@ -6,5 +6,5 @@ import { CustomizedAlertsFsService } from '../customized-alerts-fs.service';
   providedIn: 'root'
 })
 export class ApiService {
-  constructor(public resultsApiService: ResultsApiService, public alertsFs: CustomizedAlertsFsService) {}
+  constructor(public resultsSV: ResultsApiService, public alertsFs: CustomizedAlertsFsService) {}
 }
