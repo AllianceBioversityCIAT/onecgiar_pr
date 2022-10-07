@@ -15,7 +15,7 @@
         text-align: center;
 
         .success_padding {
-            width: 150px !important;
+            width: 220px !important;
             // height: 150px !important;
             padding: 25px !important;
             // box-sizing: border-box;
@@ -28,6 +28,14 @@
             transition: all ease-in-out .15s;
             transition-delay: .3s;
             margin-top: 50px;
+
+            .successText {
+                text-align: center;
+                color: var(--pr-color-primary);
+                white-space: nowrap;
+                font-weight: 500;
+                font-size: 1.2em;
+            }
 
             .form {
                 transition: all ease-in-out .4s;
@@ -92,9 +100,54 @@
 }
 
 
+.modal_container {
+    position: relative;
+    padding: 80px 80px;
 
+    .close_icon {
+        position: absolute;
+        color: var(--pr-color-primary);
+        right: 0;
+        top: 8px;
+        margin-right: 20px;
+        cursor: pointer;
+    }
 
+    .email {
+        margin-bottom: 8px;
 
+        a {
+            color: var(--pr-color-primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+    }
+
+    .title {
+        font-size: 1.8em;
+        font-weight: 600;
+        margin-bottom: 20px;
+    }
+
+    .line:nth-child(1) {
+        width: 15px;
+        height: 100%;
+        background-color: var(--pr-color-primary);
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+
+    .line:nth-child(2) {
+        width: 15px;
+        height: 100%;
+        background-color: var(--pr-color-primary);
+        position: absolute;
+        top: 0;
+        right: 0;
+
+    }
+}
 
 
 

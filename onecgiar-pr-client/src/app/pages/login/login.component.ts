@@ -40,4 +40,5 @@ export class LoginComponent implements OnDestroy {
   ngOnDestroy(): void {
     this.authService.inLogin = false;
   }
+  display: boolean = false;
 }
