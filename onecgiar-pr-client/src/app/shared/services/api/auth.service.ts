@@ -18,6 +18,10 @@ export class AuthService {
     return this.http.get<any>(`${environment.apiBaseUrl}auth/user/all`);
   }
 
+  getInitiativesByUser() {
+    return this.http.get<any>(`${environment.apiBaseUrl}auth/role-by-user/get/user/${this.localStorageUser.id}`);
+  }
+
   set localStorageToken(token: string) {
     localStorage.setItem('token', token);
   }

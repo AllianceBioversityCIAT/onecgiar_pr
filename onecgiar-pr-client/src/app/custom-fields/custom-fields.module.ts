@@ -7,11 +7,13 @@ import { DropdownModule } from 'primeng/dropdown';
 import { PrSelectComponent } from './pr-select/pr-select.component';
 import { RadioButtonComponent } from './radio-button/radio-button.component';
 import { RadioButtonModule } from 'primeng/radiobutton';
+import { PrFieldHeaderComponent } from './pr-field-header/pr-field-header.component';
+import { PrFieldValidationsComponent } from './pr-field-validations/pr-field-validations.component';
 
 const fieldComponents = [PrInputComponent, PrSelectComponent, RadioButtonComponent];
 
 @NgModule({
-  declarations: [...fieldComponents],
+  declarations: [...fieldComponents, PrFieldHeaderComponent, PrFieldValidationsComponent],
   exports: [...fieldComponents],
   imports: [CommonModule, FormsModule, InputTextModule, DropdownModule, RadioButtonModule]
 })

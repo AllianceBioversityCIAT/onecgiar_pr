@@ -5,6 +5,7 @@ import { Pipe, PipeTransform } from '@angular/core';
 })
 export class ResultsListFilterPipe implements PipeTransform {
   transform(list: any[], word: string): any {
+    if (!list?.length) return;
     list.map(item => {
       const { id, title, owner, planned_year, result_type } = item;
       item.joinAll = id + title + owner + planned_year + result_type;

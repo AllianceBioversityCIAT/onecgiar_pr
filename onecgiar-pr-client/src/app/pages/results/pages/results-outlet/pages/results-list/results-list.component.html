@@ -4,7 +4,7 @@
   <app-results-list-filters></app-results-list-filters>
 </div>
 
-<p-table [value]="(results | resultsListFilter:this.resultsListService.text_to_search)" responsiveLayout="scroll"
+<p-table [value]="(resultsList | resultsListFilter:this.resultsListService.text_to_search)" responsiveLayout="scroll"
   [paginator]="true" [rows]="10" styleClass="p-datatable-gridlines p-datatable-sm" selectionMode="single">
   <ng-template pTemplate="header">
     <tr>
