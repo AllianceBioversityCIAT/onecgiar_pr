@@ -17,6 +17,7 @@ export class PrInputComponent implements ControlValueAccessor {
   @Input() placeholder: string;
   @Input() type: string;
   @Input() label: string;
+  @Input() description: string;
   private _value: string;
   constructor() {}
 
