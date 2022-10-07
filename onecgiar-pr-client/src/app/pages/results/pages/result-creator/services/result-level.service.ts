@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { ResultLevel, Resulttype } from '../../../../../shared/interfaces/result';
+import { ResultLevel, Resulttype, ResultBody } from '../../../../../shared/interfaces/result';
 import { ApiService } from '../../../../../shared/services/api/api.service';
 
 @Injectable({
@@ -8,7 +8,7 @@ import { ApiService } from '../../../../../shared/services/api/api.service';
 export class ResultLevelService {
   resultLevelList: ResultLevel[];
   resultTypeList: Resulttype[];
-
+  resultBody = new ResultBody();
   constructor(private api: ApiService) {
     this.getAllResultLevel();
   }
@@ -18,9 +18,8 @@ export class ResultLevelService {
   }
 
   getAllResultLevel() {
-    this.api.resultsSV.getAllResultLevel().subscribe(resp => {
+    this.api.resultsSE.getAllResultLevel().subscribe(resp => {
       this.resultLevelList = resp.response;
-      console.log(this.resultLevelList);
     });
   }
 }

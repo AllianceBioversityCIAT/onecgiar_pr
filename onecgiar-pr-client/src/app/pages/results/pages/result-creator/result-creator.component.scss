@@ -3,8 +3,14 @@
 
     .section_container {
         width: 100% !important;
-        padding: 50px 50px 100px 50px;
+        padding: 50px 50px 50px 50px;
     }
 
     .greeting {}
+
+    .save_button {
+        margin-top: 50px;
+        display: flex;
+        justify-content: flex-end;
+    }
 }

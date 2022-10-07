@@ -7,15 +7,23 @@
     <div class="greeting">{{naratives.greeting('Yecksin')}}</div>
     <div class="report_container">
       <app-pr-select class="segment_title_margin" [options]="this.initiatives" inputTitle="Report for"
-        optionLabel="name" optionValue="code" [(ngModel)]="some">
+        optionLabel="name" optionValue="code" [(ngModel)]="this.resultLevelSE.resultBody.initiative_id">
       </app-pr-select>
       <app-result-level-buttons></app-result-level-buttons>
       <div class="segment_title segment_title_margin" *ngIf="this.resultLevelSE?.resultTypeList?.length">Result type
       </div>
-      <app-radio-button [options]="this.resultLevelSE.resultTypeList" optionLabel="name">
+      <app-radio-button [options]="this.resultLevelSE.resultTypeList" optionLabel="name"
+        [(ngModel)]="this.resultLevelSE.resultBody.result_type_id">
       </app-radio-button>
-      <app-pr-input placeholder="Policy title..." label="Title" type="text">
+      <app-pr-input placeholder="Policy title..." label="Title" type="text"
+        description="To search for results that have already been reported, enter key words into the title box below. If your result has not already been reported, you can add it here."
+        [(ngModel)]="this.resultLevelSE.resultBody.result_name">
       </app-pr-input>
+    </div>
+    <div class="save_button">
+      <div (click)="onSaveSection()">
+        <app-pr-button padding="medium" text="Save and continue" icon="save"></app-pr-button>
+      </div>
     </div>
   </div>
 </div>
