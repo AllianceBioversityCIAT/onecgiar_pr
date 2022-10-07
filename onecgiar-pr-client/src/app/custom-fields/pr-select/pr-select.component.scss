@@ -1,0 +1,10 @@
+.field_container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    .inputTitle {
+        font-size: 1.2em;
+        font-weight: 500;
+    }
+}
