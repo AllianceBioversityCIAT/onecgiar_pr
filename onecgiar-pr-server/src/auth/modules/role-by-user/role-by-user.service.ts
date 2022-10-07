@@ -40,7 +40,7 @@ constructor(
       }
 
       if(targetsValues.length){
-        validCount = targetsValues.reduce((sum, data) => data?++sum:sum) > 1?true:false;
+        validCount = targetsValues.reduce((sum, data, initial = 0) => data?++initial:initial,0) > 1? true: false;
       }
       if(validCount){
         throw {
@@ -50,11 +50,11 @@ constructor(
         }
       }
 
-      const existRole:RoleByUser = await this._roleByUserRepository.findOne({where:{
+      const existRole:RoleByUser = await this._roleByUserRepository.getSpecificRole({
         role: createRoleByUserDto.role,
         user: user.id,
         ...createRoleByUserDto.target
-      }});
+      });
 
       if(existRole){
         throw {

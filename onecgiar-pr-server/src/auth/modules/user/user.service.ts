@@ -17,7 +17,7 @@ import { HandlersError, returnErrorDto } from '../../../shared/handlers/error.ut
 
 @Injectable()
 export class UserService {
-  private readonly cgiarRegex: RegExp = /cgiar\.org/g;
+  private readonly cgiarRegex: RegExp = /@cgiar\.org/gi;
 
   constructor(
     @InjectRepository(User)
@@ -38,7 +38,7 @@ export class UserService {
     token: TokenDto
   ): Promise<retunrFormatUser> {
     try {
-      createUserDto.is_cgiar = this.cgiarRegex.test(createUserDto.email);
+      createUserDto.is_cgiar = createUserDto.email.search(this.cgiarRegex) > -1?true:false;
       const user = await this.findOneByEmail(createUserDto.email);
       if (user.response) {
         throw {
