@@ -55,8 +55,8 @@ export class ResultRepository extends Repository<Result> {
     SELECT
     r.id,
     r.title,
-    r.reported_year_id,
-    rt.name AS result_level_name,
+    r.reported_year_id AS reported_year,
+    rt.name AS result_type,
     r.created_date,
     ci.official_code AS submitter,
     r.status,
