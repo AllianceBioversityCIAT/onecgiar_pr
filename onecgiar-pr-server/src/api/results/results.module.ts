@@ -21,6 +21,7 @@ import { HandlersError } from '../../shared/handlers/error.utils';
 import { ResultRepository } from './result.repository';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { YearsModule } from './years/years.module';
+import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 
 @Module({
   controllers: [ResultsController],
@@ -46,7 +47,8 @@ import { YearsModule } from './years/years.module';
     JwtMiddleware,
     HandlersError,
     ResultRepository,
-    ClarisaInitiativesRepository
+    ClarisaInitiativesRepository,
+    RoleByUserRepository
   ],
   exports: [ResultRepository, JwtMiddleware]
 })

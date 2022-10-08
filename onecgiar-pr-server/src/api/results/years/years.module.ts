@@ -3,11 +3,20 @@ import { YearsService } from './years.service';
 import { YearsController } from './years.controller';
 import { JwtMiddleware } from '../../../auth/Middlewares/jwt.middleware';
 import { AuthModule } from '../../../auth/auth.module';
+import { YearRepository } from './year.repository';
+import { HandlersError } from '../../../shared/handlers/error.utils';
 
 @Module({
   controllers: [YearsController],
-  providers: [YearsService],
-  imports: [AuthModule]
+  providers: [
+    YearsService,
+    YearRepository,
+    HandlersError
+  ],
+  imports: [AuthModule],
+  exports: [
+    YearRepository
+  ]
 })
 export class YearsModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

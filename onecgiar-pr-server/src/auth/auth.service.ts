@@ -1,4 +1,4 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { UpdateAuthDto } from './dto/update-auth.dto';
 import { UserLoginDto } from './dto/login-user.dto';
@@ -11,14 +11,19 @@ import { UserRepository } from './modules/user/repositories/user.repository';
 import { FullUserRequestDto } from './modules/user/dto/full-user-request.dto';
 import { returnFormatSingin } from './dto/return-fromat-singin.dto';
 import { User } from './modules/user/entities/user.entity';
+import { HandlersError, returnErrorDto } from '../shared/handlers/error.utils';
 
 @Injectable()
 export class AuthService {
+
+  private readonly _logger: Logger = new Logger(AuthService.name);
+
   constructor(
     private readonly _jwtService: JwtService,
     private readonly _userService: UserService,
     private readonly _bcryptPasswordEncoder: BcryptPasswordEncoder,
     private readonly _customUserRepository: UserRepository,
+    private readonly _handlersError: HandlersError
   ) {}
   create(createAuthDto: CreateAuthDto) {
     return 'This action adds a new auth';
@@ -40,7 +45,7 @@ export class AuthService {
     return `This action removes a #${id} auth`;
   }
 
-  async singIn(userLogin: UserLoginDto): Promise<returnFormatSingin> {
+  async singIn(userLogin: UserLoginDto): Promise<any> {
     try {
       if (!(userLogin.email && userLogin.password)) {
         throw {
@@ -53,13 +58,21 @@ export class AuthService {
       }
       userLogin.email = userLogin.email.trim().toLowerCase();
       const user: User = await this._customUserRepository.findOne({where: {email: userLogin.email}});
-      let valid: boolean | any = false;
+      let valid: any;
       if (user) {
         const { email, first_name, last_name, is_cgiar, id } = <FullUserRequestDto>(
           user
         );
         if (is_cgiar) {
-          valid = await this.validateAD(email, userLogin.password);
+          const {response, message, status}: any = await this.validateAD(email, userLogin.password);
+          if(!response.valid){
+            throw {
+              response,
+              message,
+              status
+            }
+          }
+          valid = response.valid;
         } else {
           valid = this._bcryptPasswordEncoder.matches(
             user.password,
@@ -67,7 +80,7 @@ export class AuthService {
           );
         }
 
-        if (valid == true) {
+        if (valid) {
           return {
             message: 'Successful login',
             response: {
@@ -99,7 +112,7 @@ export class AuthService {
         };
       }
     } catch (error) {
-      return error
+      return  this._handlersError.returnErrorRes({error});
     }
   }
 
@@ -108,56 +121,40 @@ export class AuthService {
     const ad = new ActiveDirectory(config.active_directory);
 
     return new Promise((resolve, reject) => {
+      this._logger.log(`Validation with the active directory`);
       ad.authenticate(email, password, (err, auth) => {
         try {
           if (auth) {
-            console.log('Authenticated AD!', JSON.stringify(auth));
-            return resolve(auth);
+            this._logger.verbose(`Successful validation`);
+            return resolve({
+              response: {
+                valid: !!auth
+              },
+              message: 'Successful validation',
+              status: HttpStatus.ACCEPTED
+            });
           }
           if (err) {
-            console.log('ERROR AUTH: ' + JSON.stringify(err));
-            const notFound = {
-              name: 'SERVER_NOT_FOUND',
-              description: `There was an internal server error: ${err.lde_message}`,
-              httpCode: 400,
-            };
-            if (err.errno == 'ENOTFOUND') {
-              notFound.name = 'SERVER_NOT_FOUND';
-              notFound.description = 'Server not found';
+            throw {
+              response: {
+                valid: false,
+                error: err
+              },
+              message: err.lde_message,
+              status: HttpStatus.UNAUTHORIZED
             }
-
-            return {
-              message: notFound.name,
-              response: {
-                valid: false
-              },
-              status: HttpStatus.BAD_REQUEST
-            };
           } else {
-            console.log('Authentication failed!');
-            const err = {
-              name: 'INVALID_CREDENTIALS',
-              description: 'The supplied credential is invalid',
-              httpCode: 400,
-            };
-
-            console.log('ERROR: ' + JSON.stringify(err));
-            return {
-              message: 'INVALID_CREDENTIALS',
+            throw {
               response: {
-                valid: false
+                valid: false,
+                error: err
               },
-              status: HttpStatus.BAD_REQUEST
-            };
+              message: err.lde_message,
+              status: HttpStatus.UNAUTHORIZED
+            }
           }
         } catch (error) {
-          return {
-            message: 'INVALID_CREDENTIALS',
-            response: {
-              valid: false
-            },
-            status: HttpStatus.BAD_REQUEST
-          };
+          return reject(this._handlersError.returnErrorRes({error}));
         }
       });
     });

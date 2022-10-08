@@ -5,13 +5,16 @@ import { HandlersError, returnErrorDto } from '../../../shared/handlers/error.ut
 import { RoleLevelRepository } from './RoleLevels.repository';
 import { RoleLevel } from './entities/role-level.entity';
 import { retunrFormatRoleLevels } from './dto/update-role-level.dto copy';
+import { RoleRepository } from '../role/Role.repository';
+import { Role } from '../role/entities/role.entity';
 
 @Injectable()
 export class RoleLevelsService {
 
   constructor(
     private readonly _roleLevelRepository:RoleLevelRepository,
-    private readonly _handlersError: HandlersError
+    private readonly _handlersError: HandlersError,
+    private readonly _roleRepository: RoleRepository
   ){}
 
   create(createRoleLevelDto: CreateRoleLevelDto) {
@@ -28,6 +31,22 @@ export class RoleLevelsService {
           status: HttpStatus.NOT_FOUND
         }
       }
+      
+      const roles: Role[] = await this._roleRepository.getAllRoles();
+      if(!roles.length){
+        throw {
+          response: {},
+          message: 'Role Not fount',
+          status: HttpStatus.NOT_FOUND
+        }
+      }
+      console.log(rolesLevels)
+      console.log(roles)
+
+      rolesLevels.map(rl => {
+        
+        rl['roles'] = roles.filter(r => r.role_level_id == rl.id);
+      })
       
       return {
         response: rolesLevels,

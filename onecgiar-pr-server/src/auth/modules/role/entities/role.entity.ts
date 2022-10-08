@@ -17,7 +17,7 @@ export class Role extends Auditable {
   @JoinColumn({
     name: 'role_level_id'
   })
-  role_level: number;
+  role_level_id: number;
 
   @Column({
     name: 'active',

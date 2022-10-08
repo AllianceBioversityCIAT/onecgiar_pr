@@ -51,7 +51,8 @@ export class ResultsByInititiative {
 
     @CreateDateColumn({
         name: 'created_date',
-        nullable: false
+        nullable: false,
+        type: 'timestamp'
     })
     created_date: Date;
 

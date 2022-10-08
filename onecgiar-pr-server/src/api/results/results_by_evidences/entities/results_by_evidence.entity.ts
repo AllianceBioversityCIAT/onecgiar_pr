@@ -52,7 +52,8 @@ export class ResultsByEvidence {
 
     @CreateDateColumn({
         name: 'creation_date',
-        nullable: false
+        nullable: false,
+        type: 'timestamp'
     })
     creation_date: Date;
 
@@ -64,7 +65,8 @@ export class ResultsByEvidence {
 
     @UpdateDateColumn({
         name: 'last_updated_date',
-        nullable: true
+        nullable: true,
+        type: 'timestamp'
     })
     last_updated_date!: Date;
 }

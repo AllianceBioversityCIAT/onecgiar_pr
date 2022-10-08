@@ -18,6 +18,9 @@ import { retunrFormatResul } from './dto/return-format-result.dto';
 import { Result } from './entities/result.entity';
 import { CreateGeneralInformationResultDto } from './dto/create-general-information-result.dto';
 import { ResultsByInititiativesService } from './results_by_inititiatives/results_by_inititiatives.service';
+import { YearRepository } from './years/year.repository';
+import { Year } from './years/entities/year.entity';
+import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 
 @Injectable()
 export class ResultsService {
@@ -29,7 +32,9 @@ export class ResultsService {
     private readonly _versionsService: VersionsService,
     private readonly _handlersError: HandlersError,
     private readonly _customResultRepository: ResultRepository,
-    private readonly _resultsByInititiativesService: ResultsByInititiativesService
+    private readonly _resultsByInititiativesService: ResultsByInititiativesService,
+    private readonly _yearRepository: YearRepository,
+    private readonly _roleByUserRepository: RoleByUserRepository
   ) { }
 
   async createOwnerResult(createResultDto: CreateResultDto, user: TokenDto): Promise<retunrFormatResul | returnErrorDto> {
@@ -59,18 +64,41 @@ export class ResultsService {
       }
       const rt: ResultType = <ResultType>resultType.response;
 
+      if(rt.name === 'Knowledge Product'){
+        /** aca va la funcion de QAP */
+        /** funcion para mapear el Knowledge Product */
+        /**
+         * !cambiar esta funcion apenas se tenga MQAP
+         */
+        throw {
+          response: {},
+          message: 'Knowledge Product not working!',
+          status: HttpStatus.INTERNAL_SERVER_ERROR
+        }
+      }
+
       const version = await this._versionsService.findBaseVersion();
       if (version.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: version });
       }
       const vrs: Version = <Version>version.response;
 
+      const year: Year = await this._yearRepository.findOne({where: {active: true}});
+      if(!year){
+        throw {
+          response: {},
+          message: 'Active year Not fount',
+          status: HttpStatus.NOT_FOUND
+        }
+      }
+
       const newResultHeader: Result = await this._resultRepository.save({
         created_by: user.id,
         last_updated_by: user.id,
         result_type_id: rt.id,
         version_id: vrs.id,
-        title: createResultDto.result_name
+        title: createResultDto.result_name,
+        reported_year_id: year.year
       });
 
       await this._resultsByInititiativesService.create({
@@ -128,11 +156,7 @@ export class ResultsService {
         status: HttpStatus.OK
       }
     } catch (error) {
-      return {
-        response: {},
-        message: 'Results not found',
-        status: HttpStatus.NOT_FOUND
-      };
+      return this._handlersError.returnErrorRes({ error });
     }
   }
 

@@ -3,7 +3,7 @@ import { RoleLevelsService } from './role-levels.service';
 import { CreateRoleLevelDto } from './dto/create-role-level.dto';
 import { UpdateRoleLevelDto } from './dto/update-role-level.dto';
 
-@Controller('role-levels')
+@Controller()
 export class RoleLevelsController {
   constructor(private readonly roleLevelsService: RoleLevelsService) {}
 

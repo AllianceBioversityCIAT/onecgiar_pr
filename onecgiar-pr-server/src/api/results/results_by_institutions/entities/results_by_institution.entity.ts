@@ -30,10 +30,11 @@ export class ResultsByInstitution {
 
     @Column({
         name: 'is_active',
-        type: 'tinyint',
-        nullable: false
+        type: 'boolean',
+        nullable: false,
+        default: true
     })
-    is_active: number;
+    is_active: boolean;
 
     @ManyToOne(() => Version, v => v.id, { nullable: false })
     @JoinColumn({
@@ -42,12 +43,12 @@ export class ResultsByInstitution {
     version_id: number;
 
     @ManyToOne(() => User, u => u.id, { nullable: false })
-    @CreateDateColumn({
+    @JoinColumn({
         name: 'created_by'
     })
     created_by: number;
 
-    @Column({
+    @CreateDateColumn({
         name: 'created_date',
         type: 'timestamp',
         nullable: false
@@ -62,7 +63,8 @@ export class ResultsByInstitution {
 
     @UpdateDateColumn({
         name: 'last_updated_date',
-        nullable: true
+        nullable: true,
+        type: 'timestamp'
     })
     last_updated_date!: Date;
 

@@ -25,7 +25,7 @@ export class UserService {
     private readonly _customUserRespository: UserRepository,
     private readonly _roleByUserRepository: RoleByUserRepository,
     private readonly _bcryptPasswordEncoder: BcryptPasswordEncoder,
-    public readonly _handlersError: HandlersError
+    private readonly _handlersError: HandlersError
   ) {}
 
   create(createUserDto: CreateUserDto) {

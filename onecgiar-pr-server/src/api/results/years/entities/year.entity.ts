@@ -11,10 +11,10 @@ export class Year {
 
     @Column({
         name: 'active',
-        type: 'tinyint',
-        default: 1
+        type: 'boolean',
+        default: true
     })
-    active: number;
+    active: boolean;
 
     @Column({
         name: 'start_date',

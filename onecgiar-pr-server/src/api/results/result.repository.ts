@@ -84,4 +84,43 @@ WHERE
     };
   }
 
+  async AllResultsByRoleUsers(userid: number) {
+    const queryData = `
+    SELECT
+    r.id,
+    r.title,
+    r.reported_year_id AS reported_year,
+    rt.name AS result_type,
+    r.created_date,
+    ci.official_code AS submitter,
+    r.status,
+    IF(r.status = 0, 'Editing', 'Submitted') AS status_name,
+    r2.id as role_id,
+    r2.description as role_name
+FROM
+    \`result\` r
+    INNER JOIN result_type rt ON rt.id = r.result_type_id
+    INNER JOIN results_by_inititiative rbi ON rbi.result_id = r.id
+    INNER JOIN clarisa_initiatives ci ON ci.id = rbi.inititiative_id
+    left join role_by_user rbu on rbu.initiative_id = rbi.inititiative_id 
+    							and rbu.\`user\`  = ?
+    left join \`role\` r2 on r2.id  = rbu.\`role\` 
+WHERE
+    r.is_active > 0
+    AND rbi.is_active > 0
+    AND ci.active > 0;
+    `;
+
+    try {
+      const results: any[] = await this.query(queryData, [userid]);
+      return results;
+    } catch (error) {
+      throw {
+        message: `[${ResultRepository.name}] => completeAllData error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR
+      };
+    };
+  }
+
 }
