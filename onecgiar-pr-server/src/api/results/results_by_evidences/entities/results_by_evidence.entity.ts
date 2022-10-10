@@ -17,13 +17,13 @@ export class ResultsByEvidence {
     @JoinColumn({
         name: 'results_id'
     })
-    results_id: string;
+    results_id: number;
 
     @ManyToOne(() => Evidence, e => e.id, { nullable: false })
     @JoinColumn({
         name: 'evidences_id'
     })
-    evidences_id: string;
+    evidences_id: number;
 
     @ManyToOne(() => EvidenceType, et => et.id, { nullable: false })
     @JoinColumn({
@@ -33,10 +33,10 @@ export class ResultsByEvidence {
     
     @Column({
         name: 'is_active',
-        type: 'tinyint',
+        type: 'boolean',
         nullable: false
     })
-    is_active: number;
+    is_active: boolean;
     
     @ManyToOne(() => Version, v => v.id, { nullable: false })
     @JoinColumn({

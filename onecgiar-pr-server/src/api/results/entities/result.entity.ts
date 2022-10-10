@@ -42,11 +42,11 @@ export class Result {
 
     @Column({
         name: 'is_active',
-        type: 'tinyint',
+        type: 'boolean',
         nullable: false,
         default: true
     })
-    is_active: number;
+    is_active: boolean;
 
     @ManyToOne(() => Version, v => v.id, { nullable: false })
     @JoinColumn({
