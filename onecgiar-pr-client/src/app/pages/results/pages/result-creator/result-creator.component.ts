@@ -14,6 +14,7 @@ export class ResultCreatorComponent {
   constructor(public api: ApiService, public resultLevelSE: ResultLevelService, private router: Router) {}
 
   ngOnInit(): void {
+    this.resultLevelSE.cleanData();
     this.api.updateUserData();
     this.api.alertsFs.show({
       id: 'indoasd',
@@ -26,7 +27,7 @@ export class ResultCreatorComponent {
   }
 
   onSaveSection() {
-    console.log(this.resultLevelSE.resultBody);
+    this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody);
     this.api.resultsSE.POST_resultCreateHeader(this.resultLevelSE.resultBody).subscribe(
       resp => {
         console.log(resp);

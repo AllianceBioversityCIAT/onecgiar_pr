@@ -3,6 +3,7 @@ export interface ResultLevel {
   name: string;
   description: string;
   result_type: Resulttype[];
+  selected: boolean;
 }
 
 export interface Resulttype {

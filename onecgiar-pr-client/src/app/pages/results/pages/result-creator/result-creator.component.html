@@ -21,7 +21,7 @@
         [(ngModel)]="this.resultLevelSE.resultBody.result_name">
       </app-pr-input>
     </div>
-    <div class="save_button">
+    <div class="save_button" *ngIf="this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody)">
       <div (click)="onSaveSection()">
         <app-pr-button padding="medium" text="Save and continue" icon="save"></app-pr-button>
       </div>

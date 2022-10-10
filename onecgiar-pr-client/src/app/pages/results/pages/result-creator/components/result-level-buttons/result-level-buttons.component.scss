@@ -3,6 +3,8 @@
     grid-template-columns: repeat(3, 1fr);
     gap: 20px;
 
+
+
     .resultLevel:nth-child(1) .name {
         background-color: var(--pr-color-result-level-1);
     }
@@ -15,11 +17,19 @@
         background-color: var(--pr-color-result-level-3);
     }
 
+    .selected {
+        opacity: 1 !important;
+    }
+
     .resultLevel {
         background-color: white;
         overflow: hidden;
         border-radius: 10px;
         cursor: pointer;
+        opacity: 0.5;
+        transition: all ease-in-out .3s;
+
+
 
         .name {
             color: white;
