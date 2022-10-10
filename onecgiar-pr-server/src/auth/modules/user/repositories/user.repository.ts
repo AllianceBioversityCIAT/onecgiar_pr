@@ -1,4 +1,4 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
 import { FullUserRequestDto } from '../dto/full-user-request.dto';
@@ -9,7 +9,7 @@ export class UserRepository extends Repository<User> {
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError
-    ) {
+  ) {
     super(User, dataSource.createEntityManager());
   }
 
