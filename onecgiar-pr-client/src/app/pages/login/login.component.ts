@@ -19,6 +19,17 @@ export class LoginComponent implements OnDestroy {
     if (!!this.authService.localStorageUser) this.router.navigate(['/']);
   }
 
+  ngOnInit(): void {
+    //Called after the constructor, initializing input properties, and the first call to ngOnChanges.
+    //Add 'implements OnInit' to the class.
+    document.getElementById('password').addEventListener('keyup', function (event) {
+      if (event.key === 'Enter') {
+        console.log('hol');
+        document.getElementById('login').click();
+      }
+    });
+  }
+
   onLogin() {
     this.authService.userAuth(this.userLoginData).subscribe(
       resp => {
