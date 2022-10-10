@@ -66,7 +66,7 @@ export class UserRepository extends Repository<User> {
   async InitiativeByUser(userId: number) {
     const queryData = `
     select 
-    	ci.id,
+    	ci.id as initiative_id,
     	ci.official_code,
     	ci.name as initiative_name,
       ci.short_name
