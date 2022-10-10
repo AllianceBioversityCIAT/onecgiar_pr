@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { internationalizationData } from '../../data/internationalizationData';
 import { AuthService } from '../../services/api/auth.service';
+import { ApiService } from '../../services/api/api.service';
 
 @Component({
   selector: 'app-header-panel',
@@ -9,5 +10,5 @@ import { AuthService } from '../../services/api/auth.service';
 })
 export class HeaderPanelComponent {
   internationalizationData = internationalizationData;
-  constructor(public authService: AuthService) {}
+  constructor(public api: ApiService) {}
 }

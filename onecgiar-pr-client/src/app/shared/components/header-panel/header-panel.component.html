@@ -9,22 +9,18 @@
   <div class="information">
     <div class="user_tag">
       <i class="material-icons-round icon">account_circle</i>
-      <div class="title">{{ this.authService?.localStorageUser?.user_name }}</div>
+      <div class="title">{{ this.api.authSE?.localStorageUser?.user_name }}</div>
     </div>
     <div class="my_initiatives">
       <div class="title">My initiatives:</div>
       <div class="items">
-        <div class="item">
-          <div class="init">INIT-17 </div>
-          <div class="role">editor</div>
-        </div>
-        <div class="item">
-          <div class="init">INIT-28 </div>
-          <div class="role">editor</div>
+        <div class="item" *ngFor="let item of this.api.dataControlSE.myInitiativesList">
+          <div class="init">{{item?.official_code}}</div>
+          <div class="role">{{item?.role}}</div>
         </div>
       </div>
     </div>
-    <div (click)="this.authService.logout()">
+    <div (click)="this.api.authSE.logout()">
       <app-pr-button text="Logout" icon="logout" colorType="secondary"></app-pr-button>
     </div>
   </div>
