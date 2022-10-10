@@ -28,7 +28,13 @@
         cursor: pointer;
         opacity: 0.5;
         transition: all ease-in-out .3s;
+        // border: 2px solid rgba(255, 255, 255, 0) !important;
 
+        &:hover {
+            // border: 2px solid #b3b3b3 !important;
+            box-shadow: 0px 0px 8px rgb(177, 177, 177);
+            opacity: 1 !important;
+        }
 
 
         .name {
