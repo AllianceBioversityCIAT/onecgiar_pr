@@ -21,6 +21,12 @@ import { ResultsByInititiativesService } from './results_by_inititiatives/result
 import { YearRepository } from './years/year.repository';
 import { Year } from './years/entities/year.entity';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
+import { ResultByEvidencesRepository } from './results_by_evidences/result_by_evidences.repository';
+import { ResultByIntitutionsRepository } from './results_by_institutions/result_by_intitutions.repository';
+import { ResultsByEvidence } from './results_by_evidences/entities/results_by_evidence.entity';
+import { ResultsByInstitution } from './results_by_institutions/entities/results_by_institution.entity';
+import { ResultByInitiativesRepository } from './results_by_inititiatives/resultByInitiatives.repository';
+import { ResultsByInititiative } from './results_by_inititiatives/entities/results_by_inititiative.entity';
 
 @Injectable()
 export class ResultsService {
@@ -34,7 +40,9 @@ export class ResultsService {
     private readonly _customResultRepository: ResultRepository,
     private readonly _resultsByInititiativesService: ResultsByInititiativesService,
     private readonly _yearRepository: YearRepository,
-    private readonly _roleByUserRepository: RoleByUserRepository
+    private readonly _resultByEvidencesRepository: ResultByEvidencesRepository,
+    private readonly _resultByIntitutionsRepository:ResultByIntitutionsRepository,
+    private readonly _resultByInitiativesRepository: ResultByInitiativesRepository
   ) { }
 
   async createOwnerResult(createResultDto: CreateResultDto, user: TokenDto): Promise<retunrFormatResul | returnErrorDto> {
@@ -127,6 +135,54 @@ export class ResultsService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
 
+    }
+  }
+
+  async deleteResult(resultId: number){
+    try {
+      const result: Result = await this._resultRepository.findOne({where:{id: resultId}});
+      if(!result) {
+        throw {
+          response: {},
+          message: 'The result does not exist',
+          status: HttpStatus.NOT_FOUND
+        }
+      }
+      result.is_active = false;
+      
+      const initiatives: any[] = await this._resultByInitiativesRepository.InitiativeByResult(resultId);
+      console.log(initiatives)
+      if(initiatives.length) {
+        initiatives.map(ev => {
+          ev.is_active = false;
+        })
+        await this._resultByInitiativesRepository.save(initiatives);
+      }
+
+      await this._resultRepository.save(result);
+      const evidences: ResultsByEvidence[] = await this._resultByEvidencesRepository.find({where:{results_id: result.id}});
+      if(evidences.length) {
+        evidences.map(ev => {
+          ev.is_active = false;
+        })
+        await this._resultByEvidencesRepository.save(evidences);
+      }
+      
+      const institutions: ResultsByInstitution[] = await this._resultByIntitutionsRepository.find({where:{results_id: result.id}});
+      if(institutions.length) {
+        institutions.map(ev => {
+          ev.is_active = false;
+        })
+        await this._resultByIntitutionsRepository.save(institutions);
+      }
+
+      return {
+        response: result,
+        message: 'The result has been successfully deleted',
+        status: HttpStatus.OK
+      }
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
     }
   }
 

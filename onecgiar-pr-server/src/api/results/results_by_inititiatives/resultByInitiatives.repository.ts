@@ -40,7 +40,8 @@ export class ResultByInitiativesRepository extends Repository<ResultsByInititiat
     from results_by_inititiative rbi 
     	inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
         									and ci.active > 0
-    where rbi.result_id = ?;
+    where rbi.result_id = ?
+      and rbi.is_active > 0;
     `;
     try {
       const completeUser: InitiativeByResultDTO[] = await this.query(queryData, [resultId]);

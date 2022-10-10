@@ -53,13 +53,11 @@ export class ResultsController {
     return this.resultsService.findOne(+id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateResultDto: UpdateResultDto) {
-    return this.resultsService.update(+id, updateResultDto);
+  @Patch('delete/:id')
+  async update(@Param('id') id: number ) {
+    console.log(id)
+    const { message, response, status } = await this.resultsService.deleteResult(id);
+    throw new HttpException({ message, response }, status);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.resultsService.remove(+id);
-  }
 }

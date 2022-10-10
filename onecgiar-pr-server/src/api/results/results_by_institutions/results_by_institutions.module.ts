@@ -3,11 +3,20 @@ import { ResultsByInstitutionsService } from './results_by_institutions.service'
 import { ResultsByInstitutionsController } from './results_by_institutions.controller';
 import { JwtMiddleware } from '../../../auth/Middlewares/jwt.middleware';
 import { AuthModule } from '../../../auth/auth.module';
+import { ResultByIntitutionsRepository } from './result_by_intitutions.repository';
+import { HandlersError } from '../../../shared/handlers/error.utils';
 
 @Module({
   controllers: [ResultsByInstitutionsController],
-  providers: [ResultsByInstitutionsService],
-  imports: [AuthModule]
+  providers: [
+    ResultsByInstitutionsService,
+    ResultByIntitutionsRepository,
+    HandlersError
+  ],
+  imports: [AuthModule],
+  exports: [
+    ResultByIntitutionsRepository
+  ]
 })
 export class ResultsByInstitutionsModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
