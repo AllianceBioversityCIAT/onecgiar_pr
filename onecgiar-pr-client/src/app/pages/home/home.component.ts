@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { internationalizationData } from 'src/app/shared/data/internationalizationData';
-import { AuthService } from '../../shared/services/api/auth.service';
+import { ApiService } from '../../shared/services/api/api.service';
 
 @Component({
   selector: 'app-home',
@@ -9,5 +9,8 @@ import { AuthService } from '../../shared/services/api/auth.service';
 })
 export class HomeComponent {
   internationalizationData = internationalizationData;
-  constructor(public authService: AuthService) {}
+  constructor(public api: ApiService) {}
+  ngOnInit(): void {
+    this.api.updateUserData();
+  }
 }
