@@ -96,7 +96,8 @@ WHERE
     r.status,
     IF(r.status = 0, 'Editing', 'Submitted') AS status_name,
     r2.id as role_id,
-    r2.description as role_name
+    r2.description as role_name,
+    if(y.\`year\` = r.reported_year_id, 1, 0) as is_new
 FROM
     \`result\` r
     INNER JOIN result_type rt ON rt.id = r.result_type_id
@@ -105,6 +106,7 @@ FROM
     left join role_by_user rbu on rbu.initiative_id = rbi.inititiative_id 
     							and rbu.\`user\`  = ?
     left join \`role\` r2 on r2.id  = rbu.\`role\` 
+    left join \`year\` y ON y.active > 0
 WHERE
     r.is_active > 0
     AND rbi.is_active > 0
