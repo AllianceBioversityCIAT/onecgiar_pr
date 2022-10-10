@@ -11,13 +11,10 @@ import { Router } from '@angular/router';
 })
 export class ResultCreatorComponent {
   naratives = internationalizationData.reportNewResult;
-  initiatives = [
-    { name: 'INIT-17 SAPLING', code: 1 },
-    { name: 'INIT-28 Nexus Gains', code: 2 }
-  ];
-  constructor(private api: ApiService, public resultLevelSE: ResultLevelService, private router: Router) {}
+  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, private router: Router) {}
 
   ngOnInit(): void {
+    this.api.updateUserData();
     this.api.alertsFs.show({
       id: 'indoasd',
       status: 'success',
@@ -27,11 +24,7 @@ export class ResultCreatorComponent {
     });
     // this.getInitiativesByUser();
   }
-  getInitiativesByUser() {
-    this.api.authSE.getInitiativesByUser().subscribe(resp => {
-      console.log(resp);
-    });
-  }
+
   onSaveSection() {
     console.log(this.resultLevelSE.resultBody);
     this.api.resultsSE.POST_resultCreateHeader(this.resultLevelSE.resultBody).subscribe(resp => {

@@ -6,8 +6,9 @@
   <div class="local_container section_container">
     <div class="greeting">{{naratives.greeting('Yecksin')}}</div>
     <div class="report_container">
-      <app-pr-select class="segment_title_margin" [options]="this.initiatives" inputTitle="Report for"
-        optionLabel="name" optionValue="code" [(ngModel)]="this.resultLevelSE.resultBody.initiative_id">
+      <app-pr-select class="segment_title_margin" [options]="this.api.dataControlSE.myInitiativesList"
+        inputTitle="Report for" optionLabel="official_code" optionValue="id"
+        [(ngModel)]="this.resultLevelSE.resultBody.initiative_id">
       </app-pr-select>
       <app-result-level-buttons></app-result-level-buttons>
       <div class="segment_title segment_title_margin" *ngIf="this.resultLevelSE?.resultTypeList?.length">Result type
