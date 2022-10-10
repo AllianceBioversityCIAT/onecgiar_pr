@@ -109,13 +109,13 @@ export class ResultsService {
         reported_year_id: year.year
       });
 
-      await this._resultsByInititiativesService.create({
+      const resultByInitiative = await this._resultByInitiativesRepository.save({
         created_by: newResultHeader.created_by,
         initiative_id: initiative.id,
         initiative_role_id: 1,
         result_id: newResultHeader.id,
         version_id: vrs.id
-      })
+      });
 
       return {
         response: newResultHeader,
