@@ -15,7 +15,7 @@ export class ResultsListComponent implements OnInit {
   columnOrder = [
     { title: 'ID', attr: 'id' },
     { title: 'Title', attr: 'title', class: 'notCenter' },
-    { title: 'Reported year', attr: 'reported_year_id' },
+    { title: 'Reported year', attr: 'reported_year' },
     { title: 'Result type', attr: 'result_type' },
     { title: 'Submitter', attr: 'submitter' },
     { title: 'Status', attr: 'status_name' },
@@ -47,6 +47,7 @@ export class ResultsListComponent implements OnInit {
     });
 
     this.api.resultsSE.getAllResults().subscribe(resp => {
+      console.log(resp.response);
       this.resultsList = resp.response;
     });
   }
