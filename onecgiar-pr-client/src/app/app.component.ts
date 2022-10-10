@@ -9,4 +9,7 @@ import { AuthService } from './shared/services/api/auth.service';
 export class AppComponent {
   title = 'onecgiar-pr-client';
   constructor(public AuthService: AuthService) {}
+  ngOnInit(): void {
+    this.AuthService.inLogin = false;
+  }
 }
