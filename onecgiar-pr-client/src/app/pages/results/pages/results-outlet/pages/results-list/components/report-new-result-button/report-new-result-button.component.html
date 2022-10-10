@@ -1,3 +1,4 @@
-<div routerLink="/result/result-creator">
+<div routerLink="/result/result-creator"
+    [ngClass]="{'globalDisabled': !this.api?.dataControlSE?.myInitiativesList?.length}">
     <app-pr-button text="Report new result" icon="note_add" [reverse]="true"></app-pr-button>
 </div>

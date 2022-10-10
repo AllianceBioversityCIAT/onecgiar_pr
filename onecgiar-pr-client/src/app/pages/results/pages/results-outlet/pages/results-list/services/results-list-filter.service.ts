@@ -49,7 +49,7 @@ export class ResultsListFilterService {
         attr: 'result_type',
         options: [
           { attr: 'Knowledge Product', name: 'Knowledge products', selected: false },
-          { attr: 'Innovation Developmen', name: 'Innovation development' },
+          { attr: 'Innovation Development', name: 'Innovation development' },
           { attr: 'Capacity Sharing for Development', name: 'Capacity sharing for development' },
           { attr: 'Other output', name: 'Other' }
         ],
