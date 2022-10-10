@@ -68,7 +68,8 @@ export class UserRepository extends Repository<User> {
     select 
     	ci.id,
     	ci.official_code,
-    	ci.name as initiative_name
+    	ci.name as initiative_name,
+      ci.short_name
     from role_by_user rbu 
     	inner join clarisa_initiatives ci on ci.id = rbu.initiative_id 
     									and ci.active > 0

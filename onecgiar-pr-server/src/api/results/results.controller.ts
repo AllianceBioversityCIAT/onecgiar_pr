@@ -31,7 +31,7 @@ export class ResultsController {
     return this.resultsService.findAll();
   }
 
-  @Get('get/all-results')
+  @Get('get/all')
   async findAllResults() {
     const { message, response, status } = await this.resultsService.findAll();
     throw new HttpException({ message, response }, status);
@@ -40,6 +40,12 @@ export class ResultsController {
   @Get('get/initiatives/:userId')
   findInitiativesByUser(@Param('userId') userId: number) {
     return `aja ${userId}`;
+  }
+
+  @Get('get/all/roles/:userId')
+  async findAllResultRoles(@Param('userId') userId: number) {
+    const { message, response, status } = await this.resultsService.findAllByRole(userId);
+    throw new HttpException({ message, response }, status);
   }
 
   @Get(':id')

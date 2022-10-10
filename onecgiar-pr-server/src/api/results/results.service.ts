@@ -160,6 +160,28 @@ export class ResultsService {
     }
   }
 
+  async findAllByRole(userId: number) {
+    try {
+      const result: any[] = await this._customResultRepository.AllResultsByRoleUsers(userId);
+
+      if (!result.length) {
+        throw {
+          response: {},
+          message: 'Results Not Found',
+          status: HttpStatus.NOT_FOUND
+        }
+      }
+
+      return {
+        response: result,
+        message: 'Successful response',
+        status: HttpStatus.OK
+      }
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
   findOne(id: number) {
     return `This action returns a #${id} result`;
   }
