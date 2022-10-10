@@ -18,6 +18,11 @@
             flex-wrap: wrap;
             gap: 10px;
 
+            .disabled {
+                pointer-events: none;
+                opacity: .5;
+            }
+
             .chip {
                 background-color: rgb(221, 221, 221);
                 padding: 4px 10px;

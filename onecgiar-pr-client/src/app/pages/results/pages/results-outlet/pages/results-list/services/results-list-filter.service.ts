@@ -10,31 +10,49 @@ export class ResultsListFilterService {
       {
         filter_title: 'Submitter (s)',
         attr: 'submitter',
-        options: [{ name: 'All results', selected: false }, { name: 'Other submitters' }, { name: 'Pre-2022 results' }]
+        options: [
+          { attr: '', name: 'All results', selected: false },
+          { attr: '', name: 'Other submitters' },
+          { attr: '', name: 'Pre-2022 results' }
+        ]
       },
       {
         filter_title: 'Reported year',
         attr: 'reported_year',
-        options: [{ name: '2022' }, { name: '2023' }, { name: '2024' }]
+        options: [
+          { attr: '2022', selected: true, name: '2022' },
+          { attr: '2023', name: '2023' },
+          { attr: '2024', name: '2024' }
+        ]
       }
     ],
     resultLevel: [
       {
         filter_title: 'Impact',
         attr: 'result_type',
-        options: [{ name: 'Impact contributions', selected: false }],
+        options: [{ attr: 'Impact Contribution', name: 'Impact contributions', selected: false }],
         class: 'impact'
       },
       {
         filter_title: 'Outcomes',
         attr: 'result_type',
-        options: [{ name: 'Policy Change', selected: false }, { name: 'Innovation Use' }, { name: 'Other' }],
+        options: [
+          { attr: 'Policy Change', name: 'Policy Change', selected: false },
+          { attr: 'Innovation use', name: 'Innovation Use' },
+          { attr: 'Organizational change', name: 'Organizational change' },
+          { attr: 'Other outcome', name: 'Other' }
+        ],
         class: 'outcomes'
       },
       {
         filter_title: 'Outputs',
         attr: 'result_type',
-        options: [{ name: 'Knowledge products', selected: false }, { name: 'Innovation development' }, { name: 'Capacity sharing for development' }, { name: 'Other' }],
+        options: [
+          { attr: 'Knowledge Product', name: 'Knowledge products', selected: false },
+          { attr: 'Innovation Developmen', name: 'Innovation development' },
+          { attr: 'Capacity Sharing for Development', name: 'Capacity sharing for development' },
+          { attr: 'Other output', name: 'Other' }
+        ],
         class: 'outputs'
       }
     ]
@@ -42,11 +60,15 @@ export class ResultsListFilterService {
 
   constructor() {}
   filtersPipeList = [];
-  filterJoin: string;
+  filterJoin: number = 0;
 
   updateMyInitiatives(initiatives) {
-    initiatives.map(init => (init.selected = true));
-    this.filters.general[0].options = [{ name: 'All results', selected: false }, ...initiatives, { name: 'Other submitters' }, { name: 'Pre-2022 results' }];
+    console.log(initiatives);
+    initiatives.map(init => {
+      init.selected = true;
+      init.attr = init.name;
+    });
+    this.filters.general[0].options = [{ attr: '', name: 'All results', selected: false }, ...initiatives, { attr: '', name: 'Other submitters' }, { attr: '', name: 'Pre-2022 results' }];
     // get fist element from array in js without index?
   }
 
@@ -56,14 +78,14 @@ export class ResultsListFilterService {
     this.filters.general.map(filter => {
       let optionsSelected = [];
       filter?.options.map(option => {
-        if (option.selected === true) optionsSelected.push(option?.name);
+        if (option.selected === true) optionsSelected.push(option?.attr);
       });
       if (optionsSelected.length) generalListFiltered.push({ attr: filter.attr, options: optionsSelected });
     });
     this.filters.resultLevel.map(filter => {
       let optionsSelected = [];
       filter?.options.map(option => {
-        if (option.selected === true) optionsSelected.push(option?.name);
+        if (option.selected === true) optionsSelected.push(option?.attr);
       });
       if (optionsSelected.length) resultLevelListFiltered.push({ attr: filter.attr, options: optionsSelected });
     });
@@ -76,7 +98,7 @@ export class ResultsListFilterService {
 
   onSelectChip(option: any) {
     option.selected = !option.selected;
-    this.filterJoin += 'd';
+    this.filterJoin++;
   }
 }
 

@@ -8,7 +8,7 @@ export class ResultsListFilterPipe implements PipeTransform {
   list: any[];
   word: string;
   constructor(private resultsListFilterSE: ResultsListFilterService) {}
-  transform(list: any[], word: string, filterJoin: string): any {
+  transform(list: any[], word: string, filterJoin: number): any {
     this.word = word;
     const textF = this.filterByText(list);
     let a = this.resultsListFilterSE?.filtersPipe?.generalListFiltered[0];
@@ -30,8 +30,6 @@ export class ResultsListFilterPipe implements PipeTransform {
     return list.filter(item => item.joinAll.toUpperCase().indexOf(this.word?.toUpperCase()) > -1);
   }
   filterByOptions(list: any[], filters: any[]) {
-    console.log(filters);
-    console.log(!filters?.length);
     if (!filters?.length) return list;
     return list.filter(item => {
       for (const filter of filters) {

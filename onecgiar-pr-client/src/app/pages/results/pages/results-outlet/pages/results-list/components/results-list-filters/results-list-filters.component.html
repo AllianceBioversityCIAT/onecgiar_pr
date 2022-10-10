@@ -2,7 +2,8 @@
     <div *ngFor="let filter of this.resultsListFilterSE.filters.general" class="filter {{filter.attr}}">
         <div class="filter_title">{{filter.filter_title}}</div>
         <div class="chips">
-            <div class="chip" [ngClass]="{'chip_selected': option.selected}"
+            <div class="chip"
+                [ngClass]="{'chip_selected': option.selected,'disabled':option.name=='2023' || option.name=='2024'}"
                 (click)="this.resultsListFilterSE.onSelectChip(option)" *ngFor="let option of filter?.options">
                 {{option.name}}</div>
         </div>
