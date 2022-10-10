@@ -26,6 +26,8 @@ export class LoginComponent implements OnDestroy {
       if (event.key === 'Enter') {
         console.log('hol');
         document.getElementById('login').click();
+        document.getElementById('password').blur();
+        document.getElementById('fake').focus();
       }
     });
   }
