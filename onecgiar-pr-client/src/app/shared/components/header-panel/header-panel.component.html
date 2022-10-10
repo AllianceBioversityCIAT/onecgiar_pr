@@ -11,7 +11,7 @@
       <i class="material-icons-round icon">account_circle</i>
       <div class="title">{{ this.api.authSE?.localStorageUser?.user_name }}</div>
     </div>
-    <div class="my_initiatives">
+    <div class="my_initiatives" *ngIf="this.api.dataControlSE?.myInitiativesList?.length">
       <div class="title">My initiatives:</div>
       <div class="items">
         <div class="item" *ngFor="let item of this.api.dataControlSE.myInitiativesList">

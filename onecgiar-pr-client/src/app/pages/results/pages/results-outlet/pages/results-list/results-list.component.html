@@ -18,10 +18,14 @@
   </ng-template>
   <ng-template pTemplate="body" let-result>
     <tr>
-      <td *ngFor="let column of columnOrder" class="{{column.attr}}">
-        <a class="{{column.class}}" [routerLink]="'/result/result-detail/' + result[column.attr]">{{ result[column.attr]
-          }}</a>
-        <div class="transparent_text">{{ result[column.attr] }}</div>
+      <td *ngFor="let column of columnOrder; let i=index" class="{{column.attr}}">
+        <a class="{{column.class}}" [routerLink]="'/result/result-detail/' + result[column.attr]">
+          <div class="new_tag" *ngIf="i==1 && validateNew(result)">New</div> {{ result[column.attr]
+          }}
+        </a>
+        <div class="transparent_text">
+          {{ result[column.attr] }}
+        </div>
       </td>
       <td>
         <div class="icon_container"><i class="pi pi-ellipsis-v" (click)="menu.toggle($event)"></i></div>

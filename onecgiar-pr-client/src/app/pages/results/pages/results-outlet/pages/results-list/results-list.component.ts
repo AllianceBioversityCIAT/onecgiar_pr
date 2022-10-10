@@ -46,9 +46,16 @@ export class ResultsListComponent implements OnInit {
       querySelector: '.alert'
     });
 
-    this.api.resultsSE.getAllResults().subscribe(resp => {
+    this.api.resultsSE.getAllResultsWithUseRole(this.api.authSE.localStorageUser.id).subscribe(resp => {
       console.log(resp.response);
+      console.table(resp.response);
       this.resultsList = resp.response;
     });
+  }
+
+  validateNew(date) {
+    // console.log(new Date(date?.created_date));
+    // console.log(new Date());
+    return true;
   }
 }

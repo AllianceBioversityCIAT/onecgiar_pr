@@ -15,6 +15,9 @@ export class ResultsApiService {
   getAllResults() {
     return this.http.get<any>(`${this.apiBaseUrl}get/all`);
   }
+  getAllResultsWithUseRole(userId) {
+    return this.http.get<any>(`${this.apiBaseUrl}get/all/roles/${userId}`);
+  }
   POST_resultCreateHeader(body: ResultBody) {
     return this.http.post<any>(`${this.apiBaseUrl}create/header`, body);
   }

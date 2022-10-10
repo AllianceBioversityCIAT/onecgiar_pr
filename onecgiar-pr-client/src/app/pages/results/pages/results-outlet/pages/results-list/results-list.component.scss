@@ -88,3 +88,12 @@ tr {
     font-weight: 500;
     color: var(--pr-color-primary);
 }
+
+.new_tag {
+    background-color: var(--pr-color-primary);
+    margin-right: 10px;
+    padding: 2px 3px;
+    font-size: .8em;
+    border-radius: 3px;
+    color: white;
+}
