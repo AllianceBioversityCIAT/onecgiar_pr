@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, EventEmitter } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
 import { LocalStorageUser, UserAuth } from '../../interfaces/user';
@@ -8,19 +8,8 @@ import { Router } from '@angular/router';
 })
 export class AuthService {
   inLogin = false;
+  apiBaseUrl = environment.apiBaseUrl + 'auth/';
   constructor(public http: HttpClient, private router: Router) {}
-
-  userAuth(body: UserAuth) {
-    return this.http.post<any>(`${environment.apiBaseUrl}auth/singin`, body);
-  }
-
-  getAllUsers() {
-    return this.http.get<any>(`${environment.apiBaseUrl}auth/user/all`);
-  }
-
-  getInitiativesByUser() {
-    return this.http.get<any>(`${environment.apiBaseUrl}auth/role-by-user/get/user/${this.localStorageUser.id}`);
-  }
 
   set localStorageToken(token: string) {
     localStorage.setItem('token', token);
@@ -42,5 +31,17 @@ export class AuthService {
   logout() {
     this.router.navigate(['/login']);
     localStorage.clear();
+  }
+
+  userAuth(body: UserAuth) {
+    return this.http.post<any>(`${this.apiBaseUrl}singin`, body);
+  }
+
+  GET_allRolesByUser() {
+    return this.http.get<any>(`${this.apiBaseUrl}role-by-user/get/user/${this.localStorageUser.id}`);
+  }
+
+  GET_initiativesByUser() {
+    return this.http.get<any>(`${this.apiBaseUrl}user/get/initiative/${this.localStorageUser.id}`);
   }
 }
