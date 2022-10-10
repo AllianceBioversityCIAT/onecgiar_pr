@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { map } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -9,7 +10,7 @@ export class ResultsListFilterService {
       {
         filter_title: 'Submitter (s)',
         attr: 'submitter',
-        options: [{ name: 'All results', selected: false }, { name: 'INIT-17' }, { name: 'INIT-02' }, { name: 'Other submitters' }, { name: 'Pre-2022 results' }]
+        options: [{ name: 'All results', selected: false }, { name: 'Other submitters' }, { name: 'Pre-2022 results' }]
       },
       {
         filter_title: 'Reported year',
@@ -42,6 +43,12 @@ export class ResultsListFilterService {
   constructor() {}
   filtersPipeList = [];
   filterJoin: string;
+
+  updateMyInitiatives(initiatives) {
+    this.filters.general[0].options = [{ name: 'All results', selected: false }, ...initiatives, { name: 'Other submitters' }, { name: 'Pre-2022 results' }];
+    // get fist element from array in js without index?
+  }
+
   get filtersPipe(): FiltersPipe[] {
     let listFiltered = [];
     this.filters.general.map(filter => {

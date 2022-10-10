@@ -1,7 +1,7 @@
 <div class="radioButtonList">
-    <div class="radioButton" *ngFor="let option of this.options">
-        <p-radioButton name="groupname" [value]="option.id" [(ngModel)]="value">
+    <div class="radioButton" *ngFor="let option of this.options; let i=index">
+        <p-radioButton name="groupname" inputId="groupname{{i}}" [value]="option.id" [(ngModel)]="value">
         </p-radioButton>
-        <div class="name">{{option[this.optionLabel]}}</div>
+        <label for="groupname{{i}}" class="name">{{option[this.optionLabel]}}</label>
     </div>
 </div>

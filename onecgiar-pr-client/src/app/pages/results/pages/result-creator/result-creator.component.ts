@@ -27,11 +27,15 @@ export class ResultCreatorComponent {
 
   onSaveSection() {
     console.log(this.resultLevelSE.resultBody);
-    this.api.resultsSE.POST_resultCreateHeader(this.resultLevelSE.resultBody).subscribe(resp => {
-      console.log(resp);
-      this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Great!', description: 'Result reported', status: 'success', closeIn: 500, confirm: false });
-      // this.api.alertsFe.show({ id: 'reportResultError', title: 'Ups!', description: 'some', status: 'error' });
-      this.router.navigate(['/']);
-    });
+    this.api.resultsSE.POST_resultCreateHeader(this.resultLevelSE.resultBody).subscribe(
+      resp => {
+        console.log(resp);
+        this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Great!', description: 'Result reported', status: 'success', closeIn: 500, confirm: false });
+        this.router.navigate(['/']);
+      },
+      err => {
+        this.api.alertsFe.show({ id: 'reportResultError', title: 'Ups!', description: 'some', status: 'error' });
+      }
+    );
   }
 }

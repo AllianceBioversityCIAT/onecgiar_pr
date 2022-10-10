@@ -13,7 +13,7 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}result-levels/all`);
   }
   getAllResults() {
-    return this.http.get<any>(`${this.apiBaseUrl}get/all-results`);
+    return this.http.get<any>(`${this.apiBaseUrl}get/all`);
   }
   POST_resultCreateHeader(body: ResultBody) {
     return this.http.post<any>(`${this.apiBaseUrl}create/header`, body);

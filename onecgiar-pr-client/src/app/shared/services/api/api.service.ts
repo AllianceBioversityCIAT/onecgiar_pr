@@ -5,18 +5,25 @@ import { AuthService } from './auth.service';
 import { CustomizedAlertsFeService } from '../customized-alerts-fe.service';
 import { DataControlService } from '../data-control.service';
 import { forkJoin } from 'rxjs';
+import { ResultsListFilterService } from '../../../pages/results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ApiService {
-  constructor(public resultsSE: ResultsApiService, public alertsFs: CustomizedAlertsFsService, public authSE: AuthService, public alertsFe: CustomizedAlertsFeService, public dataControlSE: DataControlService) {}
+  constructor(public resultsSE: ResultsApiService, public alertsFs: CustomizedAlertsFsService, public authSE: AuthService, public alertsFe: CustomizedAlertsFeService, public dataControlSE: DataControlService, public resultsListFilterSE: ResultsListFilterService) {}
 
   updateUserData() {
     forkJoin([this.authSE.GET_allRolesByUser(), this.authSE.GET_initiativesByUser()]).subscribe(resp => {
       const [GET_allRolesByUser, GET_initiativesByUser] = resp;
+      console.log(GET_initiativesByUser);
       this.dataControlSE.myInitiativesList = GET_initiativesByUser?.response;
-      this.dataControlSE.myInitiativesList.map(myInit => (myInit.role = GET_allRolesByUser?.response?.initiative?.find(initRole => initRole?.initiative_id == myInit?.id)?.description));
+      this.dataControlSE.myInitiativesList.map(myInit => {
+        myInit.role = GET_allRolesByUser?.response?.initiative?.find(initRole => initRole?.initiative_id == myInit?.initiative_id)?.description;
+        myInit.name = myInit.official_code;
+        myInit.official_code_short_name = myInit.official_code + ' ' + myInit.short_name;
+      });
+      this.resultsListFilterSE.updateMyInitiatives(this.dataControlSE.myInitiativesList);
     });
   }
 }
