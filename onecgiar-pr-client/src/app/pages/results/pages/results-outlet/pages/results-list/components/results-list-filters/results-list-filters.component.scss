@@ -31,22 +31,47 @@
 
     .submitter {
         width: 50%;
+
+        .chip_selected {
+            background-color: var(--pr-color-secondary) !important;
+            color: white !important;
+        }
     }
 
-    .reported {
+    .reported_year {
         width: 50%;
+
+        .chip_selected {
+            background-color: var(--pr-color-secondary) !important;
+            color: white !important;
+        }
     }
 
     .impact {
         width: 200px;
+
+        .chip_selected {
+            background-color: var(--pr-color-result-level-1) !important;
+            color: white !important;
+        }
     }
 
     .outcomes {
         width: 365px;
+
+        .chip_selected {
+            background-color: var(--pr-color-result-level-2) !important;
+            color: white !important;
+        }
     }
 
     .outputs {
         width: 750px;
+
+        .chip_selected {
+            background-color: var(--pr-color-result-level-3) !important;
+            color: white !important;
+        }
     }
 }
 

@@ -1,50 +1,23 @@
 <div class="filters">
-    <div class="filter submitter">
-        <div class="filter_title">Submitter (s)</div>
+    <div *ngFor="let filter of this.resultsListFilterSE.filters.general" class="filter {{filter.attr}}">
+        <div class="filter_title">{{filter.filter_title}}</div>
         <div class="chips">
-            <div class="chip">All results</div>
-            <div class="chip">INIT-17 </div>
-            <div class="chip">INIT-28</div>
-            <div class="chip">Other submitters</div>
-            <div class="chip">Pre-2022 results</div>
+            <div class="chip" [ngClass]="{'chip_selected': option.selected}"
+                (click)="this.resultsListFilterSE.onSelectChip(option)" *ngFor="let option of filter?.options">
+                {{option.name}}</div>
         </div>
     </div>
-
-    <div class="filter reported">
-        <div class="filter_title ">Reported year</div>
-        <div class="chips">
-            <div class="chip">2022</div>
-            <div class="chip">2023</div>
-            <div class="chip">2024</div>
-        </div>
-    </div>
-
 </div>
 
 <div class="result_level_container">
     <div class="result_level_title">Result level</div>
     <div class="filters">
-        <div class="filter impact">
-            <div class="filter_title">Impact</div>
+        <div *ngFor="let filter of this.resultsListFilterSE.filters.resultLevel" class="filter {{filter.class}}">
+            <div class="filter_title">{{filter.filter_title}}</div>
             <div class="chips">
-                <div class="chip">Impact contributions</div>
-            </div>
-        </div>
-        <div class="filter outcomes">
-            <div class="filter_title">Outcomes</div>
-            <div class="chips">
-                <div class="chip">Policy Change</div>
-                <div class="chip">Innovation Use</div>
-                <div class="chip">Other</div>
-            </div>
-        </div>
-        <div class="filter outputs">
-            <div class="filter_title">Outputs</div>
-            <div class="chips">
-                <div class="chip">Knowledge products</div>
-                <div class="chip">Innovation development</div>
-                <div class="chip">Capacity sharing for development</div>
-                <div class="chip">Other</div>
+                <div class="chip" [ngClass]="{'chip_selected': option.selected}"
+                    (click)="this.resultsListFilterSE.onSelectChip(option)" *ngFor="let option of filter?.options">
+                    {{option.name}}</div>
             </div>
         </div>
     </div>

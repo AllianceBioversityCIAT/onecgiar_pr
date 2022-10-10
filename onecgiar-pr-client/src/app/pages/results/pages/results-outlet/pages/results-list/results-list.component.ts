@@ -4,6 +4,7 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { internationalizationData } from '../../../../../../shared/data/internationalizationData';
 import { ResultsListService } from './services/results-list.service';
 import { ResultItem } from '../../../../../../shared/interfaces/result';
+import { ResultsListFilterService } from './services/results-list-filter.service';
 
 @Component({
   selector: 'app-results-list',
@@ -33,11 +34,9 @@ export class ResultsListComponent implements OnInit {
     { label: 'Delete', icon: 'pi pi-fw pi-trash' },
     { label: 'Submit', icon: 'pi pi-fw pi-reply' }
   ];
-
-  constructor(public api: ApiService, public resultsListService: ResultsListService) {}
+  constructor(public api: ApiService, public resultsListService: ResultsListService, public resultsListFilterSE: ResultsListFilterService) {}
 
   ngOnInit(): void {
-    console.log('Result list');
     this.items;
     this.api.alertsFs.show({
       id: 'indoasd',
@@ -48,7 +47,6 @@ export class ResultsListComponent implements OnInit {
     });
 
     this.api.resultsSE.getAllResults().subscribe(resp => {
-      console.log(resp.response);
       this.resultsList = resp.response;
     });
   }

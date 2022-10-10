@@ -3,9 +3,10 @@
   <div class="alert"></div>
   <app-results-list-filters></app-results-list-filters>
 </div>
-
-<p-table [value]="(resultsList | resultsListFilter:this.resultsListService.text_to_search)" responsiveLayout="scroll"
-  [paginator]="true" [rows]="10" styleClass="p-datatable-gridlines p-datatable-sm" selectionMode="single">
+<p-table
+  [value]="(resultsList | resultsListFilter:this.resultsListService.text_to_search:this.resultsListFilterSE.filterJoin)"
+  responsiveLayout="scroll" [paginator]="true" [rows]="10" styleClass="p-datatable-gridlines p-datatable-sm"
+  selectionMode="single">
   <ng-template pTemplate="header">
     <tr>
       <th pSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder">
