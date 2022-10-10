@@ -45,27 +45,29 @@ export class ResultsListFilterService {
   filterJoin: string;
 
   updateMyInitiatives(initiatives) {
+    initiatives.map(init => (init.selected = true));
     this.filters.general[0].options = [{ name: 'All results', selected: false }, ...initiatives, { name: 'Other submitters' }, { name: 'Pre-2022 results' }];
     // get fist element from array in js without index?
   }
 
-  get filtersPipe(): FiltersPipe[] {
-    let listFiltered = [];
+  get filtersPipe() {
+    let generalListFiltered = [];
+    let resultLevelListFiltered = [];
     this.filters.general.map(filter => {
       let optionsSelected = [];
       filter?.options.map(option => {
         if (option.selected === true) optionsSelected.push(option?.name);
       });
-      if (optionsSelected.length) listFiltered.push({ attr: filter.attr, options: optionsSelected });
+      if (optionsSelected.length) generalListFiltered.push({ attr: filter.attr, options: optionsSelected });
     });
     this.filters.resultLevel.map(filter => {
       let optionsSelected = [];
       filter?.options.map(option => {
         if (option.selected === true) optionsSelected.push(option?.name);
       });
-      if (optionsSelected.length) listFiltered.push({ attr: filter.attr, options: optionsSelected });
+      if (optionsSelected.length) resultLevelListFiltered.push({ attr: filter.attr, options: optionsSelected });
     });
-    return listFiltered;
+    return { generalListFiltered, resultLevelListFiltered };
     // [
     //   { attr: 'result_type', options: ['Knowledge Product', 'Organizational change'] },
     //   { attr: 'submitter', options: ['INIT-30'] }

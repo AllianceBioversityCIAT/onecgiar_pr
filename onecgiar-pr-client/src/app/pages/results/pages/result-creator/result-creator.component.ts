@@ -30,12 +30,11 @@ export class ResultCreatorComponent {
     this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody);
     this.api.resultsSE.POST_resultCreateHeader(this.resultLevelSE.resultBody).subscribe(
       resp => {
-        console.log(resp);
         this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Great!', description: 'Result reported', status: 'success', closeIn: 500, confirm: false });
         this.router.navigate(['/']);
       },
       err => {
-        this.api.alertsFe.show({ id: 'reportResultError', title: 'Ups!', description: 'some', status: 'error' });
+        this.api.alertsFe.show({ id: 'reportResultError', title: 'Ups!', description: err?.error?.message, status: 'error' });
       }
     );
   }

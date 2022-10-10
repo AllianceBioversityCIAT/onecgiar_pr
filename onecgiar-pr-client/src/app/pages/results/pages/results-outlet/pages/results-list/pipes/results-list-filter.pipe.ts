@@ -10,7 +10,13 @@ export class ResultsListFilterPipe implements PipeTransform {
   constructor(private resultsListFilterSE: ResultsListFilterService) {}
   transform(list: any[], word: string, filterJoin: string): any {
     this.word = word;
-    return this.filterByOptions(this.filterByText(list));
+    const textF = this.filterByText(list);
+    let a = this.resultsListFilterSE?.filtersPipe?.generalListFiltered[0];
+    const initF = this.filterByOptions(textF, a?.hasOwnProperty('attr') ? [a] : []);
+    let b = this.resultsListFilterSE?.filtersPipe?.generalListFiltered[1];
+    const yeatF = this.filterByOptions(initF, b?.hasOwnProperty('attr') ? [b] : []);
+    const resultlevelF = this.filterByOptions(yeatF, this.resultsListFilterSE?.filtersPipe?.resultLevelListFiltered);
+    return resultlevelF;
   }
 
   filterByText(list: any[]) {
@@ -23,10 +29,12 @@ export class ResultsListFilterPipe implements PipeTransform {
     });
     return list.filter(item => item.joinAll.toUpperCase().indexOf(this.word?.toUpperCase()) > -1);
   }
-  filterByOptions(list: any[]) {
-    if (!this.resultsListFilterSE?.filtersPipe?.length) return list;
+  filterByOptions(list: any[], filters: any[]) {
+    console.log(filters);
+    console.log(!filters?.length);
+    if (!filters?.length) return list;
     return list.filter(item => {
-      for (const filter of this.resultsListFilterSE.filtersPipe) {
+      for (const filter of filters) {
         if (!filter?.options) return false;
         for (const option of filter?.options) {
           if (item[filter.attr] == option) return true;
