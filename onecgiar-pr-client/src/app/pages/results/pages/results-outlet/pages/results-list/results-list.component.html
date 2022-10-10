@@ -1,5 +1,6 @@
 <div class="local_container">
-  <app-report-new-result-button></app-report-new-result-button>
+  <app-report-new-result-button *ngIf="this.api?.dataControlSE?.myInitiativesList?.length">
+  </app-report-new-result-button>
   <div class="alert"></div>
   <app-results-list-filters></app-results-list-filters>
 </div>
