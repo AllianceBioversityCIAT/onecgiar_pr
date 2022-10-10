@@ -80,3 +80,11 @@ tr {
 .local_container {
     padding: 0px 50px;
 }
+
+.noDataText {
+    text-align: center;
+    padding: 50px 0px;
+    font-size: 1.3em;
+    font-weight: 500;
+    color: var(--pr-color-primary);
+}
