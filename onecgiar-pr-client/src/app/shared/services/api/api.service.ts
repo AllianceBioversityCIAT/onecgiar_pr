@@ -25,4 +25,8 @@ export class ApiService {
       this.resultsListFilterSE.updateMyInitiatives(this.dataControlSE.myInitiativesList);
     });
   }
+
+  clearAll() {
+    this.dataControlSE.myInitiativesList = [];
+  }
 }

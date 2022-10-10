@@ -20,7 +20,7 @@
         </div>
       </div>
     </div>
-    <div (click)="this.api.authSE.logout()">
+    <div (click)="this.api.authSE.logout();this.api.clearAll();">
       <app-pr-button text="Logout" icon="logout" colorType="secondary"></app-pr-button>
     </div>
   </div>
