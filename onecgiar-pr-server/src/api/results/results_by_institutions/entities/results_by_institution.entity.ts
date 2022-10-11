@@ -1,14 +1,20 @@
 import { User } from "../../../../auth/modules/user/entities/user.entity";
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { Version } from "../../versions/entities/version.entity";
+import { Result } from '../../entities/result.entity';
 
 @Entity()
 export class ResultsByInstitution {
     @PrimaryGeneratedColumn({
-        name: 'results_id',
         type: 'bigint'
     })
-    results_id: number;
+    id: number;
+
+    @ManyToOne(() => Result, r => r.id, {nullable: false})
+    @JoinColumn({
+        name:'result_id'
+    })
+    result_id: number;
 
     @Column({
         name: 'institutions_id',

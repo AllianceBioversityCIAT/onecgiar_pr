@@ -27,6 +27,10 @@ import { ResultsByEvidence } from './results_by_evidences/entities/results_by_ev
 import { ResultsByInstitution } from './results_by_institutions/entities/results_by_institution.entity';
 import { ResultByInitiativesRepository } from './results_by_inititiatives/resultByInitiatives.repository';
 import { ResultsByInititiative } from './results_by_inititiatives/entities/results_by_inititiative.entity';
+import { InitiativeByResultDTO } from './results_by_inititiatives/dto/InitiativeByResult.dto';
+import { EvidencesRepository } from './evidences/evidences.repository';
+import { ResultByIntitutionsTypeRepository } from './results_by_institution_types/result_by_intitutions_type.repository';
+import { ResultsByInstitutionType } from './results_by_institution_types/entities/results_by_institution_type.entity';
 
 @Injectable()
 export class ResultsService {
@@ -42,7 +46,8 @@ export class ResultsService {
     private readonly _yearRepository: YearRepository,
     private readonly _resultByEvidencesRepository: ResultByEvidencesRepository,
     private readonly _resultByIntitutionsRepository:ResultByIntitutionsRepository,
-    private readonly _resultByInitiativesRepository: ResultByInitiativesRepository
+    private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
+    private readonly _resultByIntitutionsTypeRepository: ResultByIntitutionsTypeRepository
   ) { }
 
   async createOwnerResult(createResultDto: CreateResultDto, user: TokenDto): Promise<retunrFormatResul | returnErrorDto> {
@@ -150,31 +155,11 @@ export class ResultsService {
       }
       result.is_active = false;
       
-      const initiatives: any[] = await this._resultByInitiativesRepository.InitiativeByResult(resultId);
-      console.log(initiatives)
-      if(initiatives.length) {
-        initiatives.map(ev => {
-          ev.is_active = false;
-        })
-        await this._resultByInitiativesRepository.save(initiatives);
-      }
-
       await this._resultRepository.save(result);
-      const evidences: ResultsByEvidence[] = await this._resultByEvidencesRepository.find({where:{results_id: result.id}});
-      if(evidences.length) {
-        evidences.map(ev => {
-          ev.is_active = false;
-        })
-        await this._resultByEvidencesRepository.save(evidences);
-      }
-      
-      const institutions: ResultsByInstitution[] = await this._resultByIntitutionsRepository.find({where:{results_id: result.id}});
-      if(institutions.length) {
-        institutions.map(ev => {
-          ev.is_active = false;
-        })
-        await this._resultByIntitutionsRepository.save(institutions);
-      }
+      await this._resultByInitiativesRepository.logicalElimination(resultId);
+      await this._resultByIntitutionsTypeRepository.logicalElimination(result.id);
+      await this._resultByIntitutionsRepository.logicalElimination(result.id);
+      await this._resultByEvidencesRepository.logicalElimination(result.id);
 
       return {
         response: result,

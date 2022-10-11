@@ -2,12 +2,18 @@ import { User } from "../../../../auth/modules/user/entities/user.entity";
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { InstitutionRole } from "../../institution_roles/entities/institution_role.entity";
 import { Version } from "../../versions/entities/version.entity";
+import { Result } from '../../entities/result.entity';
 
 @Entity()
 export class ResultsByInstitutionType {
     @PrimaryGeneratedColumn({
-        name: 'results_id',
         type: 'bigint'
+    })
+    id: number;
+
+    @ManyToOne(() => Result, r => r.id, {nullable: false})
+    @JoinColumn({
+        name: 'results_id'
     })
     results_id: number;
 
@@ -22,10 +28,11 @@ export class ResultsByInstitutionType {
 
     @Column({
         name: 'is_active',
-        type: 'tinyint',
-        nullable: false
+        type: 'boolean',
+        nullable: false,
+        default: true
     })
-    is_active: number;
+    is_active: boolean;
 
     @ManyToOne(() => Version, v => v.id, { nullable: false })
     @JoinColumn({

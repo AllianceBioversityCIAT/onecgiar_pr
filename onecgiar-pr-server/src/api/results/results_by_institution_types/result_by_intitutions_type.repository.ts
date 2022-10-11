@@ -1,40 +1,40 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
-import { ResultsByEvidence } from './entities/results_by_evidence.entity';
+import { ResultsByInstitutionType } from './entities/results_by_institution_type.entity';
 
 @Injectable()
-export class ResultByEvidencesRepository extends Repository<ResultsByEvidence> {
+export class ResultByIntitutionsTypeRepository extends Repository<ResultsByInstitutionType> {
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError
   ) {
-    super(ResultsByEvidence, dataSource.createEntityManager());
+    super(ResultsByInstitutionType, dataSource.createEntityManager());
   }
 
-  async getResultByEvidenceFull(resultId: number) {
+  async getResultByInstitutionTypeFull(resultId: number) {
     const queryData = `
     select 
-    	rbe.id,
-    	rbe.is_active,
-    	rbe.creation_date,
-    	rbe.last_updated_date,
-    	rbe.results_id,
-    	rbe.evidences_id,
-    	rbe.evidence_types_id,
-    	rbe.version_id,
-    	rbe.created_by,
-    	rbe.last_updated_by 
-    from results_by_evidence rbe 
-    where rbe.results_id  = ?
-         and rbe.is_active  > 0;
+    	rbit.id,
+    	rbit .institution_types_id,
+    	rbit.is_active,
+    	rbit.creation_date,
+    	rbit.last_updated_date,
+    	rbit.results_id,
+    	rbit.institution_roles_id,
+    	rbit.version_id,
+    	rbit.created_by,
+    	rbit.last_updated_by 
+    from results_by_institution_type rbit
+    where rbit.results_id  = ?
+    	and rbit.is_active > 0;
     `;
     try {
-      const completeUser: ResultsByEvidence[] = await this.query(queryData, [resultId]);
+      const completeUser: ResultsByInstitutionType[] = await this.query(queryData, [resultId]);
       return completeUser;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
-        className: ResultByEvidencesRepository.name,
+        className: ResultByIntitutionsTypeRepository.name,
         error: error,
         debug: true
       });
@@ -43,7 +43,7 @@ export class ResultByEvidencesRepository extends Repository<ResultsByEvidence> {
 
   async logicalElimination(resultId: number) {
     const queryData = `
-    update results_by_evidence
+    update results_by_institution_type 
     set is_active = false
     where results_id = ?;
     `;
@@ -52,7 +52,7 @@ export class ResultByEvidencesRepository extends Repository<ResultsByEvidence> {
       return completeUser;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
-        className: ResultByEvidencesRepository.name,
+        className: ResultByIntitutionsTypeRepository.name,
         error: error,
         debug: true
       });
