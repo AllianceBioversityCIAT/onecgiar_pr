@@ -3,7 +3,6 @@ import { MenuItem } from 'primeng/api';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { internationalizationData } from '../../../../../../shared/data/internationalizationData';
 import { ResultsListService } from './services/results-list.service';
-import { ResultItem } from '../../../../../../shared/interfaces/result';
 import { ResultsListFilterService } from './services/results-list-filter.service';
 
 @Component({
@@ -21,7 +20,7 @@ export class ResultsListComponent implements OnInit {
     { title: 'Status', attr: 'status_name' },
     { title: 'Creation date	', attr: 'created_date' }
   ];
-  resultsList: ResultItem[];
+
   items: MenuItem[] = [
     {
       label: 'Map to TOC',
@@ -37,6 +36,7 @@ export class ResultsListComponent implements OnInit {
   constructor(public api: ApiService, public resultsListService: ResultsListService, public resultsListFilterSE: ResultsListFilterService) {}
 
   ngOnInit(): void {
+    this.api.updateResultsList();
     this.items;
     this.api.alertsFs.show({
       id: 'indoasd',
@@ -44,10 +44,6 @@ export class ResultsListComponent implements OnInit {
       title: '',
       description: internationalizationData?.resultsList?.alerts?.info,
       querySelector: '.alert'
-    });
-
-    this.api.resultsSE.getAllResultsWithUseRole(this.api.authSE.localStorageUser.id).subscribe(resp => {
-      this.resultsList = resp.response;
     });
   }
 

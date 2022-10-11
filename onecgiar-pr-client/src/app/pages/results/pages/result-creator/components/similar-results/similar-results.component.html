@@ -1,0 +1,14 @@
+<div class="validation-text"
+    *ngIf="!(this.api.dataControlSE.resultsList | similarResults:this.resultLevelSE.resultBody.result_name)?.length">
+    The title of your result has no similarities in the PRMS Reporting tool.</div>
+<div class="validation-text"
+    *ngIf="(this.api.dataControlSE.resultsList | similarResults:this.resultLevelSE.resultBody.result_name)?.length">
+    Similar results have already been reported. If the result you would like to report is in the list below, please
+    select it using the three dots on the right and map it to your ToC.</div>
+<div class="similar_results"
+    *ngIf="(this.api.dataControlSE.resultsList | similarResults:this.resultLevelSE.resultBody.result_name)?.length">
+    <div class=" result"
+        *ngFor="let item of this.api.dataControlSE.resultsList | similarResults:this.resultLevelSE.resultBody.result_name">
+        {{item?.submitter}} - {{item?.result_type}} <div class="title">{{item?.title}}</div>
+    </div>
+</div>

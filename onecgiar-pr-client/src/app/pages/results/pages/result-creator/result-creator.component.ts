@@ -14,6 +14,7 @@ export class ResultCreatorComponent {
   constructor(public api: ApiService, public resultLevelSE: ResultLevelService, private router: Router) {}
 
   ngOnInit(): void {
+    this.api.updateResultsList();
     this.resultLevelSE.cleanData();
     this.api.updateUserData();
     this.api.alertsFs.show({

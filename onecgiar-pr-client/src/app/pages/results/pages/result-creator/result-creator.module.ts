@@ -7,9 +7,11 @@ import { UtilsComponentsModule } from '../../../../shared/components/utils-compo
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { FormsModule } from '@angular/forms';
 import { ResultLevelButtonsComponent } from './components/result-level-buttons/result-level-buttons.component';
+import { SimilarResultsComponent } from './components/similar-results/similar-results.component';
+import { SimilarResultsPipe } from './components/similar-results/pipes/similar-results.pipe';
 
 @NgModule({
-  declarations: [ResultCreatorComponent, ResultLevelButtonsComponent],
+  declarations: [ResultCreatorComponent, ResultLevelButtonsComponent, SimilarResultsComponent, SimilarResultsPipe],
   imports: [CommonModule, ResultCreatorRoutingModule, UtilsComponentsModule, CustomFieldsModule, FormsModule],
   schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })

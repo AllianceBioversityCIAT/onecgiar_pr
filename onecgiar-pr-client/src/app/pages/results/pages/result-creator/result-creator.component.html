@@ -22,9 +22,10 @@
         description="To search for results that have already been reported, enter key words into the title box below. If your result has not already been reported, you can add it here."
         [(ngModel)]="this.resultLevelSE.resultBody.result_name">
       </app-pr-input>
+      <app-similar-results></app-similar-results>
     </div>
     <div class="save_button"
-      [ngClass]="{'globalDisabled': !this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody)}">
+      [ngClass]="{'globalDisabled': (!this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody)) || (this.api.dataControlSE.resultsList | similarResults:this.resultLevelSE.resultBody.result_name).length   }">
       <div (click)="onSaveSection()">
         <app-pr-button padding="medium" text="Save and continue" icon="save"></app-pr-button>
       </div>

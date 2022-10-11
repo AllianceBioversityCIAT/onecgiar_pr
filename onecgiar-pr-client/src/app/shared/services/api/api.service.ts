@@ -29,4 +29,11 @@ export class ApiService {
   clearAll() {
     this.dataControlSE.myInitiativesList = [];
   }
+
+  updateResultsList() {
+    this.resultsSE.getAllResultsWithUseRole(this.authSE.localStorageUser.id).subscribe(resp => {
+      this.dataControlSE.resultsList = resp.response;
+      console.log(this.dataControlSE.resultsList);
+    });
+  }
 }
