@@ -23,7 +23,7 @@ export class ResultLevelsService {
 
   async getResultsLevels(): Promise<retunrFormatResultLevel|returnErrorDto> {
     try {
-      const resultLevel:ResultLevel[] = await this._resultLevelRepository.find();
+      const resultLevel:ResultLevel[] = await this._resultLevelRepository.find({order: {id: 'ASC'}});
       const {message, response, status} = await this._resultTypesService.getAllResultType();
       if(status >= 300){
         throw {
