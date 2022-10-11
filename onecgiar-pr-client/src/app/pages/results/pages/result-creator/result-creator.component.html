@@ -4,7 +4,9 @@
       optionValue="code"></app-pr-button>
   </div>
   <div class="local_container section_container">
-    <div class="greeting">{{naratives.greeting('Yecksin')}}</div>
+    <div class="greeting"
+      [innerHTML]="naratives.greeting(this.api.authSE.localStorageUser.user_name,this.api.dataControlSE.myInitiativesListText(this.api.dataControlSE.myInitiativesList))">
+    </div>
     <div class="report_container">
       <app-pr-select class="segment_title_margin" [options]="this.api.dataControlSE.myInitiativesList"
         inputTitle="Report for" optionLabel="official_code_short_name" optionValue="initiative_id"
