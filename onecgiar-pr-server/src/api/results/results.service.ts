@@ -64,7 +64,7 @@ export class ResultsService {
       }
       const rt: ResultType = <ResultType>resultType.response;
 
-      if(rt.name === 'Knowledge Product'){
+      if (rt.name === 'Knowledge Product') {
         /** aca va la funcion de QAP */
         /** funcion para mapear el Knowledge Product */
         /**
@@ -83,8 +83,8 @@ export class ResultsService {
       }
       const vrs: Version = <Version>version.response;
 
-      const year: Year = await this._yearRepository.findOne({where: {active: true}});
-      if(!year){
+      const year: Year = await this._yearRepository.findOne({ where: { active: true } });
+      if (!year) {
         throw {
           response: {},
           message: 'Active year Not fount',

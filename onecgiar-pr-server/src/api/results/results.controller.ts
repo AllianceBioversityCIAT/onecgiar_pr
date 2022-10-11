@@ -31,6 +31,7 @@ export class ResultsController {
     return this.resultsService.findAll();
   }
 
+  // * Get all results
   @Get('get/all')
   async findAllResults() {
     const { message, response, status } = await this.resultsService.findAll();
@@ -42,6 +43,7 @@ export class ResultsController {
     return `aja ${userId}`;
   }
 
+  // * Get all results-roles by user ID
   @Get('get/all/roles/:userId')
   async findAllResultRoles(@Param('userId') userId: number) {
     const { message, response, status } = await this.resultsService.findAllByRole(userId);

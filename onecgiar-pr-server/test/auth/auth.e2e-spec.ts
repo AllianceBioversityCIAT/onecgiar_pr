@@ -30,7 +30,7 @@ describe('Results Controller (e2e)', () => {
             });
     });
 
-    // * Error incomplete login test
+    // ! Error incomplete login test
     it('/auth/singin (POST)', async () => {
         return await request(app)
             .post('/auth/singin')
@@ -42,7 +42,7 @@ describe('Results Controller (e2e)', () => {
             });
     });
 
-    // * Error unregistered login test
+    // ! Error unregistered login test
     it('/auth/singin (POST)', async () => {
         return await request(app)
             .post('/auth/singin')
@@ -53,4 +53,4 @@ describe('Results Controller (e2e)', () => {
                 console.log('Error unregistered login test:', res.text)
             });
     });
-})
+});
