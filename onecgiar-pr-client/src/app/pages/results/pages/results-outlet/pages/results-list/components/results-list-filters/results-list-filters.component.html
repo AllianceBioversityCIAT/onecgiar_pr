@@ -4,7 +4,8 @@
         <div class="chips">
             <div class="chip"
                 [ngClass]="{'chip_selected': option.selected,'disabled':option.name=='2023' || option.name=='2024'}"
-                (click)="this.resultsListFilterSE.onSelectChip(option)" *ngFor="let option of filter?.options">
+                (click)="this.resultsListFilterSE.onSelectChip(option); this.resultsListFilterSE.cleanAllFilters(option)"
+                *ngFor="let option of filter?.options">
                 {{option.name}}</div>
         </div>
     </div>

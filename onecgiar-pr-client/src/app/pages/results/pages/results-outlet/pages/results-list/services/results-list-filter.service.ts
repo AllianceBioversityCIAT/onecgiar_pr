@@ -5,13 +5,13 @@ import { map } from 'rxjs';
   providedIn: 'root'
 })
 export class ResultsListFilterService {
-  filters = {
+  filters: any = {
     general: [
       {
         filter_title: 'Submitter (s)',
         attr: 'submitter',
         options: [
-          { attr: '', name: 'All results', selected: false },
+          { name: 'All results', selected: false, cleanAll: true },
           { attr: '', name: 'Other submitters' },
           { attr: '', name: 'Pre-2022 results' }
         ]
@@ -63,12 +63,11 @@ export class ResultsListFilterService {
   filterJoin: number = 0;
 
   updateMyInitiatives(initiatives) {
-    console.log(initiatives);
     initiatives.map(init => {
       init.selected = true;
       init.attr = init.name;
     });
-    this.filters.general[0].options = [{ attr: '', name: 'All results', selected: false }, ...initiatives, { attr: '', name: 'Other submitters' }, { attr: '', name: 'Pre-2022 results' }];
+    this.filters.general[0].options = [{ name: 'All results', selected: false, cleanAll: true }, ...initiatives, { attr: '', name: 'Other submitters' }, { attr: '', name: 'Pre-2022 results' }];
     // get fist element from array in js without index?
   }
 
@@ -98,7 +97,24 @@ export class ResultsListFilterService {
 
   onSelectChip(option: any) {
     option.selected = !option.selected;
+    if (option.name != 'All results') this.filters.general[0].options[0].selected = false;
+
     this.filterJoin++;
+  }
+  cleanAllFilters(option) {
+    if (!option.selected) return;
+    if (option?.cleanAll !== true) return;
+    this.filters.general.map(filter => {
+      filter.options.map(option => {
+        option.selected = false;
+      });
+    });
+    this.filters.resultLevel.map(filter => {
+      filter.options.map(option => {
+        option.selected = false;
+      });
+    });
+    this.filters.general[0].options[0].selected = true;
   }
 }
 

@@ -30,7 +30,7 @@ export class ResultsListFilterPipe implements PipeTransform {
     return list.filter(item => item.joinAll.toUpperCase().indexOf(this.word?.toUpperCase()) > -1);
   }
   filterByOptions(list: any[], filters: any[]) {
-    if (!filters?.length) return list;
+    if (!filters?.length || filters[0]?.options[0] == undefined) return list;
     return list.filter(item => {
       for (const filter of filters) {
         if (!filter?.options) return false;

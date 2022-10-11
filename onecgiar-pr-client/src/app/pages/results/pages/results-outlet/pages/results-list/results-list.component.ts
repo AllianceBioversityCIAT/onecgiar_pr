@@ -47,8 +47,6 @@ export class ResultsListComponent implements OnInit {
     });
 
     this.api.resultsSE.getAllResultsWithUseRole(this.api.authSE.localStorageUser.id).subscribe(resp => {
-      console.log(resp.response);
-      console.table(resp.response);
       this.resultsList = resp.response;
     });
   }
