@@ -10,16 +10,14 @@ export class GenderTagLevel {
 
     @Column({
         name: 'title',
-        type: 'varchar',
-        length: 45,
+        type: 'text',
         nullable: true
     })
     title!: string;
 
     @Column({
         name: 'description',
-        type: 'varchar',
-        length: 500,
+        type: 'text',
         nullable: true
     })
     description!: string;

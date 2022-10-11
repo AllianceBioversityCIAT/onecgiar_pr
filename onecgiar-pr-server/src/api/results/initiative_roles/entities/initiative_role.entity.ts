@@ -10,16 +10,14 @@ export class InitiativeRole {
 
     @Column({
         name: 'name',
-        type: 'varchar',
-        length: 45,
+        type: 'text',
         nullable: true
     })
     name!: string;
 
     @Column({
         name: 'description',
-        type: 'varchar',
-        length: 45,
+        type: 'text',
         nullable: true
     })
     description!: string;

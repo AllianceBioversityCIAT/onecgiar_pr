@@ -13,8 +13,7 @@ export class Evidence {
 
     @Column({
         name: 'link',
-        type: 'varchar',
-        length: 100,
+        type: 'text',
         nullable: false
     })
     link: number;

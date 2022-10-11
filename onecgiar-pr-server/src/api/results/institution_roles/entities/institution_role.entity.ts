@@ -9,8 +9,7 @@ export class InstitutionRole {
 
     @Column({
         name: 'name',
-        type: 'varchar',
-        length: 50,
+        type: 'text',
         nullable: true
     })
     name!: string;

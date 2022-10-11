@@ -10,24 +10,21 @@ export class Version {
 
     @Column({
         name: 'version_name',
-        type: 'varchar',
-        length: 45,
+        type: 'text',
         nullable: false
     })
     version_name: string;
 
     @Column({
         name: 'start_date',
-        type: 'varchar',
-        length: 45,
+        type: 'text',
         nullable: true
     })
     start_date!: string;
 
     @Column({
         name: 'end_date',
-        type: 'varchar',
-        length: 45,
+        type: 'text',
         nullable: true
     })
     end_date!: string;

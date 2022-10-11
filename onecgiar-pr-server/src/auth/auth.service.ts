@@ -95,20 +95,20 @@ export class AuthService {
           }
         } else {
           throw {
-            message: 'INVALID_CREDENTIALS',
             response: {
               valid: false
             },
-            status: HttpStatus.BAD_REQUEST
+            message: 'Password does not match',
+            status: HttpStatus.UNAUTHORIZED
           };
         }
       }else{
         throw {
-          message: 'INVALID_CREDENTIALS',
+          message: `The user ${userLogin.email} is not registered in the PRMS Reporting database.`,
           response: {
             valid: false
           },
-          status: HttpStatus.BAD_REQUEST
+          status: HttpStatus.NOT_FOUND
         };
       }
     } catch (error) {
@@ -135,22 +135,51 @@ export class AuthService {
             });
           }
           if (err) {
-            throw {
-              response: {
-                valid: false,
-                error: err
-              },
-              message: err.lde_message,
-              status: HttpStatus.UNAUTHORIZED
+            if(err?.errno){
+              throw {
+                response: {
+                  valid: false,
+                  error: err.errno,
+                  code: err.code
+                },
+                message: 'Error with communication with third party servers',
+                status: HttpStatus.INTERNAL_SERVER_ERROR
+              }
+            }else{
+              const error: string = err.lde_message.split(/:|,/)[2].trim();
+              switch (error){
+                case 'DSID-0C090447':
+                  throw {
+                    response: {
+                      valid: false,
+                      error: err.errno,
+                      code: err.code
+                    },
+                    message: 'Password does not match',
+                    status: HttpStatus.UNAUTHORIZED
+                  }
+                  break;
+                default:
+                  throw {
+                    response: {
+                      valid: false
+                    },
+                    message: 'Unknown error in validation',
+                    status: HttpStatus.UNAUTHORIZED
+                  }
+                break;
+              }
+              
             }
+            
           } else {
             throw {
               response: {
                 valid: false,
                 error: err
               },
-              message: err.lde_message,
-              status: HttpStatus.UNAUTHORIZED
+              message: 'Unknown error',
+              status: HttpStatus.INTERNAL_SERVER_ERROR
             }
           }
         } catch (error) {

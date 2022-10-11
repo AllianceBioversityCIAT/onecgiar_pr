@@ -10,8 +10,7 @@ export class EvidenceType {
 
     @Column({
         name: 'name',
-        type: 'varchar',
-        length: 100,
+        type: 'text',
         nullable: true
     })
     name!: string;

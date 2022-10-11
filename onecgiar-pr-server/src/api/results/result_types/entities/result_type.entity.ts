@@ -8,16 +8,14 @@ export class ResultType {
 
     @Column({
         name: 'name',
-        type: 'varchar',
-        length: 100,
+        type: 'text',
         nullable: true
     })
     name!: string;
 
     @Column({
         name: 'description',
-        type: 'varchar',
-        length: 500,
+        type: 'text',
         nullable: true
     })
     description!: string;
