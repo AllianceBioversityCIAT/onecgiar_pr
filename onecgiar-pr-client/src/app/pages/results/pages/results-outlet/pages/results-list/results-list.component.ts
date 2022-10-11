@@ -46,10 +46,4 @@ export class ResultsListComponent implements OnInit {
       querySelector: '.alert'
     });
   }
-
-  validateNew(date) {
-    // console.log(new Date(date?.created_date));
-    // console.log(new Date());
-    return true;
-  }
 }

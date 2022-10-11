@@ -9,10 +9,11 @@ import { FormsModule } from '@angular/forms';
 import { ResultLevelButtonsComponent } from './components/result-level-buttons/result-level-buttons.component';
 import { SimilarResultsComponent } from './components/similar-results/similar-results.component';
 import { SimilarResultsPipe } from './components/similar-results/pipes/similar-results.pipe';
+import { MenuModule } from 'primeng/menu';
 
 @NgModule({
   declarations: [ResultCreatorComponent, ResultLevelButtonsComponent, SimilarResultsComponent, SimilarResultsPipe],
-  imports: [CommonModule, ResultCreatorRoutingModule, UtilsComponentsModule, CustomFieldsModule, FormsModule],
+  imports: [CommonModule, ResultCreatorRoutingModule, UtilsComponentsModule, CustomFieldsModule, FormsModule, MenuModule],
   schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })
 export class ResultCreatorModule {}

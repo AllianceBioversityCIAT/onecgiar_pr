@@ -14,6 +14,7 @@
         padding-left: 20px;
         font-weight: 500;
         color: var(--pr-color-secondary);
+        justify-content: space-between;
 
         &::after {
             content: '';
@@ -23,6 +24,10 @@
             position: absolute;
             left: 0;
             top: 0;
+        }
+
+        .texts {
+            display: flex;
         }
 
         .title {

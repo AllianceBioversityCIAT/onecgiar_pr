@@ -3,6 +3,7 @@ import { internationalizationData } from '../../../../shared/data/internationali
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultLevelService } from './services/result-level.service';
 import { Router } from '@angular/router';
+import { MenuItem } from 'primeng/api';
 
 @Component({
   selector: 'app-result-creator',
@@ -11,6 +12,7 @@ import { Router } from '@angular/router';
 })
 export class ResultCreatorComponent {
   naratives = internationalizationData.reportNewResult;
+
   constructor(public api: ApiService, public resultLevelSE: ResultLevelService, private router: Router) {}
 
   ngOnInit(): void {
