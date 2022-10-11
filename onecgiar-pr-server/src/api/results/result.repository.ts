@@ -2,6 +2,7 @@ import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { Result } from './entities/result.entity';
 import { HandlersError } from '../../shared/handlers/error.utils';
+import { ResultListRolesDto } from './dto/ResultListRoles.dto';
 
 @Injectable()
 export class ResultRepository extends Repository<Result> {
@@ -97,7 +98,7 @@ WHERE
     IF(r.status = 0, 'Editing', 'Submitted') AS status_name,
     r2.id as role_id,
     r2.description as role_name,
-    if(y.\`year\` = r.reported_year_id, 1, 0) as is_new
+    if(y.\`year\` = r.reported_year_id, 'New', '') as is_new
 FROM
     \`result\` r
     INNER JOIN result_type rt ON rt.id = r.result_type_id
@@ -114,7 +115,7 @@ WHERE
     `;
 
     try {
-      const results: any[] = await this.query(queryData, [userid]);
+      const results: any = await this.query(queryData, [userid]);
       return results;
     } catch (error) {
       throw {
