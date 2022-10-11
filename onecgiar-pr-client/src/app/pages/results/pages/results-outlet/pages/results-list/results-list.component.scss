@@ -97,3 +97,15 @@ tr {
     border-radius: 3px;
     color: white;
 }
+
+.table {
+    position: relative;
+
+    .total {
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        padding-left: 30px;
+        padding-bottom: 23px;
+    }
+}

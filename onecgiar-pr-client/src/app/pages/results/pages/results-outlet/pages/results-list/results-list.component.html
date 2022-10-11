@@ -4,36 +4,40 @@
   <div class="alert"></div>
   <app-results-list-filters></app-results-list-filters>
 </div>
-<p-table
-  [value]="(resultsList | resultsListFilter:this.resultsListService.text_to_search:this.resultsListFilterSE.filterJoin)"
-  responsiveLayout="scroll"
-  [paginator]="(resultsList | resultsListFilter:this.resultsListService.text_to_search:this.resultsListFilterSE.filterJoin)?.length"
-  [rows]="10" styleClass="p-datatable-gridlines p-datatable-sm" selectionMode="single">
-  <ng-template pTemplate="header">
-    <tr>
-      <th pSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder">
-        <p-sortIcon field="{{column.attr}}"></p-sortIcon>{{column.title}}
-      </th>
-      <th>Action</th>
-    </tr>
-  </ng-template>
-  <ng-template pTemplate="body" let-result>
-    <tr>
-      <td *ngFor="let column of columnOrder; let i=index" class="{{column.attr}}">
-        <a class="{{column.class}}" [routerLink]="'/result/result-detail/' + result[column.attr]">
-          <div class="new_tag" *ngIf="i==1 && validateNew(result)">New</div> {{ result[column.attr]
-          }}
-        </a>
-        <div class="transparent_text">
-          {{ result[column.attr] }}
-        </div>
-      </td>
-      <td>
-        <div class="icon_container"><i class="pi pi-ellipsis-v" (click)="menu.toggle($event)"></i></div>
-      </td>
-    </tr>
-  </ng-template>
-</p-table>
+<div class="table">
+  <p-table
+    [value]="(resultsList | resultsListFilter:this.resultsListService.text_to_search:this.resultsListFilterSE.filterJoin)"
+    responsiveLayout="scroll"
+    [paginator]="(resultsList | resultsListFilter:this.resultsListService.text_to_search:this.resultsListFilterSE.filterJoin)?.length"
+    [rows]="10" styleClass="p-datatable-gridlines p-datatable-sm" selectionMode="single">
+    <ng-template pTemplate="header">
+      <tr>
+        <th pSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder">
+          <p-sortIcon field="{{column.attr}}"></p-sortIcon>{{column.title}}
+        </th>
+        <th>Action</th>
+      </tr>
+    </ng-template>
+    <ng-template pTemplate="body" let-result>
+      <tr>
+        <td *ngFor="let column of columnOrder; let i=index" class="{{column.attr}}">
+          <a class="{{column.class}}" [routerLink]="'/result/result-detail/' + result[column.attr]">
+            <div class="new_tag" *ngIf="i==1 && validateNew(result)">New</div> {{ result[column.attr]
+            }}
+          </a>
+          <div class="transparent_text">
+            {{ result[column.attr] }}
+          </div>
+        </td>
+        <td>
+          <div class="icon_container"><i class="pi pi-ellipsis-v" (click)="menu.toggle($event)"></i></div>
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+  <div class="total">Total: {{(resultsList |
+    resultsListFilter:this.resultsListService.text_to_search:this.resultsListFilterSE.filterJoin)?.length}}</div>
+</div>
 
 <div class="noDataText"
   *ngIf="!(resultsList | resultsListFilter:this.resultsListService.text_to_search:this.resultsListFilterSE.filterJoin)?.length">
