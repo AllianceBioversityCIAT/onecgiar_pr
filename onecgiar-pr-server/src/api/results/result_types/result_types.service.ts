@@ -19,6 +19,7 @@ export class ResultTypesService {
     return 'This action adds a new resultType';
   }
 
+  // * Service to fetch al result types
   async getAllResultType(): Promise<retunrFormatResultType|returnErrorDto> {
     try {
       const resultType:ResultType[] = await this._resultTypeRepository.getAllResultType();
@@ -32,6 +33,7 @@ export class ResultTypesService {
     }
   }
 
+  // * Service to fetch a result type by ID
   async findOneResultType(id: number):Promise<retunrFormatResultType|returnErrorDto> {
     try {
       const resultType:ResultType = await this._resultTypeRepository.findOne({where:{id: id}});

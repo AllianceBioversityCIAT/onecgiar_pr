@@ -8,7 +8,7 @@ export class ResultLevelRepository extends Repository<ResultLevel> {
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError
-    ) {
+  ) {
     super(ResultLevel, dataSource.createEntityManager());
   }
 

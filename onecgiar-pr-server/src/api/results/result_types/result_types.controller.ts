@@ -5,19 +5,21 @@ import { UpdateResultTypeDto } from './dto/update-result_type.dto';
 
 @Controller('')
 export class ResultTypesController {
-  constructor(private readonly resultTypesService: ResultTypesService) {}
+  constructor(private readonly resultTypesService: ResultTypesService) { }
 
   @Post()
   create(@Body() createResultTypeDto: CreateResultTypeDto) {
     return this.resultTypesService.create(createResultTypeDto);
   }
 
+  // * Fetch all result types
   @Get('all')
   async findAll() {
-    const {message, response, status} = await this.resultTypesService.getAllResultType();
-    throw new HttpException({message,response}, status);
+    const { message, response, status } = await this.resultTypesService.getAllResultType();
+    throw new HttpException({ message, response }, status);
   }
 
+  // * Fetch a result type by ID
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.resultTypesService.findOneResultType(+id);

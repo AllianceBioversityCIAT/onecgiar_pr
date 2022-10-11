@@ -5,17 +5,18 @@ import { UpdateResultLevelDto } from './dto/update-result_level.dto';
 
 @Controller()
 export class ResultLevelsController {
-  constructor(private readonly resultLevelsService: ResultLevelsService) {}
+  constructor(private readonly resultLevelsService: ResultLevelsService) { }
 
   @Post()
   create(@Body() createResultLevelDto: CreateResultLevelDto) {
     return this.resultLevelsService.create(createResultLevelDto);
   }
 
+  // * Fetch all result levels with their respective result type
   @Get('all')
   async findAll() {
-    const {message, response, status} = await this.resultLevelsService.getResultsLevels();
-    throw new HttpException({message,response}, status);
+    const { message, response, status } = await this.resultLevelsService.getResultsLevels();
+    throw new HttpException({ message, response }, status);
   }
 
   @Get(':id')

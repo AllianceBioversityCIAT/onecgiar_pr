@@ -13,19 +13,19 @@ export class ResultLevelsService {
 
   constructor(
     private readonly _handlersError: HandlersError,
-    private readonly _resultLevelRepository:ResultLevelRepository,
-    private readonly _resultTypesService:ResultTypesService
-  ){}
+    private readonly _resultLevelRepository: ResultLevelRepository,
+    private readonly _resultTypesService: ResultTypesService
+  ) { }
 
   create(createResultLevelDto: CreateResultLevelDto) {
     return 'This action adds a new resultLevel';
   }
 
-  async getResultsLevels(): Promise<retunrFormatResultLevel|returnErrorDto> {
+  async getResultsLevels(): Promise<retunrFormatResultLevel | returnErrorDto> {
     try {
-      const resultLevel:ResultLevel[] = await this._resultLevelRepository.find();
-      const {message, response, status} = await this._resultTypesService.getAllResultType();
-      if(status >= 300){
+      const resultLevel: ResultLevel[] = await this._resultLevelRepository.find();
+      const { message, response, status } = await this._resultTypesService.getAllResultType();
+      if (status >= 300) {
         throw {
           response,
           message,
@@ -47,7 +47,7 @@ export class ResultLevelsService {
         status: HttpStatus.OK
       }
     } catch (error) {
-      return this._handlersError.returnErrorRes({error, debug: true});
+      return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 
