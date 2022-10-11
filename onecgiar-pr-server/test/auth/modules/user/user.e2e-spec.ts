@@ -18,19 +18,6 @@ describe('Results Controller (e2e)', () => {
         role: 1
     };
 
-    const createDataIncomplete: CreateFullUserDto = {
-        userData: {
-            "first_name": "",
-            "last_name": "",
-            "email": "c.adams@gmail.com",
-            "password": "",
-            "created_by": 1,
-            "last_updated_by": 1,
-            "is_cgiar": true
-        },
-        role: 1
-    };
-
     // * Successfull login test & obtaine the token
     it('/auth/singin (POST)', async () => {
         const createUser = await request(app)
@@ -116,4 +103,52 @@ describe('Results Controller (e2e)', () => {
                 console.log('Success fetch all users test:', res.text)
             });
     });
-})
+
+    // * Success fetch user by ID
+    it('/auth/user (GET)', async () => {
+        return await request(app)
+            .get('/auth/user/' + 2)
+            .set('Content-Type', 'application/json')
+            .set('auth', token)
+            .expect(200)
+            .expect(res => {
+                console.log('Success fetch user by ID test:', res.text)
+            });
+    });
+
+    // * Success fetch user by Email
+    it('/auth/user/get/all (GET)', async () => {
+        return await request(app)
+            .get('/auth/user/get/all/' + 'juan@gmail.com')
+            .set('Content-Type', 'application/json')
+            .set('auth', token)
+            .expect(200)
+            .expect(res => {
+                console.log('Success fetch user by Email test:', res.text)
+            });
+    });
+
+    // * Success fetch user by Email
+    it('/auth/user/get/all (GET)', async () => {
+        return await request(app)
+            .get('/auth/user/get/all/' + 'juan@gmail.com')
+            .set('Content-Type', 'application/json')
+            .set('auth', token)
+            .expect(200)
+            .expect(res => {
+                console.log('Success fetch user by ID test:', res.text)
+            });
+    });
+
+    // * Success fetch initiatives by user ID
+    it('/auth/user/get/initiative (GET)', async () => {
+        return await request(app)
+            .get('/auth/user/get/initiative/' + 1)
+            .set('Content-Type', 'application/json')
+            .set('auth', token)
+            .expect(200)
+            .expect(res => {
+                console.log('Success fetch initiatives by user ID:', res.text)
+            });
+    });
+});
