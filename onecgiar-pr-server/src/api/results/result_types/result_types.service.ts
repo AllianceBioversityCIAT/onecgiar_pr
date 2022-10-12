@@ -7,7 +7,7 @@ import {
 } from '../../../shared/handlers/error.utils';
 import { ResultTypeRepository } from './resultType.repository';
 import { ResultType } from './entities/result_type.entity';
-import { retunrFormatResultType } from './dto/return-format-result-type.dto';
+import { returnFormatResultType } from './dto/return-format-result-type.dto';
 import { MessageResponse } from '../../../shared/constants/Responses.constant';
 
 @Injectable()
@@ -18,10 +18,10 @@ export class ResultTypesService {
   ) {}
 
   create(createResultTypeDto: CreateResultTypeDto) {
-    return 'This action adds a new resultType';
+    return createResultTypeDto;
   }
 
-  async getAllResultType(): Promise<retunrFormatResultType | returnErrorDto> {
+  async getAllResultType(): Promise<returnFormatResultType | returnErrorDto> {
     try {
       const resultType: ResultType[] =
         await this._resultTypeRepository.getAllResultType();
@@ -37,7 +37,7 @@ export class ResultTypesService {
 
   async findOneResultType(
     id: number,
-  ): Promise<retunrFormatResultType | returnErrorDto> {
+  ): Promise<returnFormatResultType | returnErrorDto> {
     try {
       const resultType: ResultType = await this._resultTypeRepository.findOne({
         where: { id: id },
@@ -60,7 +60,7 @@ export class ResultTypesService {
   }
 
   update(id: number, updateResultTypeDto: UpdateResultTypeDto) {
-    return `This action updates a #${id} resultType`;
+    return `This action updates a #${id} resultType ${updateResultTypeDto}`;
   }
 
   remove(id: number) {

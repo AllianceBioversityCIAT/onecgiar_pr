@@ -1,6 +1,6 @@
 import { GenderTagLevel } from '../entities/gender_tag_level.entity';
-import { retunFormatService } from '../../../../shared/extendsGlobalDTO/retunServices.dto';
+import { returnFormatService } from '../../../../shared/extendsGlobalDTO/returnServices.dto';
 
-export class retunrFormatGenderTag extends retunFormatService {
+export class returnFormatGenderTag extends returnFormatService {
   public response!: GenderTagLevel[] | {};
 }

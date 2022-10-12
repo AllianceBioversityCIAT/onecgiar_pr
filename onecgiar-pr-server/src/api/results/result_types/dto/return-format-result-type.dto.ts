@@ -1,6 +1,6 @@
 import { ResultType } from '../entities/result_type.entity';
-import { retunFormatService } from '../../../../shared/extendsGlobalDTO/retunServices.dto';
+import { returnFormatService } from '../../../../shared/extendsGlobalDTO/returnServices.dto';
 
-export class retunrFormatResultType extends retunFormatService {
+export class returnFormatResultType extends returnFormatService {
   public response!: ResultType[] | {};
 }

@@ -7,7 +7,7 @@ import {
 } from '../../../shared/handlers/error.utils';
 import { RoleLevelRepository } from './RoleLevels.repository';
 import { RoleLevel } from './entities/role-level.entity';
-import { retunrFormatRoleLevels } from './dto/update-role-level.dto copy';
+import { returnFormatRoleLevels } from './dto/update-role-level.dto copy';
 import { RoleRepository } from '../role/Role.repository';
 import { Role } from '../role/entities/role.entity';
 
@@ -20,10 +20,10 @@ export class RoleLevelsService {
   ) {}
 
   create(createRoleLevelDto: CreateRoleLevelDto) {
-    return 'This action adds a new roleLevel';
+    return createRoleLevelDto;
   }
 
-  async findAll(): Promise<retunrFormatRoleLevels | returnErrorDto> {
+  async findAll(): Promise<returnFormatRoleLevels | returnErrorDto> {
     try {
       const rolesLevels: RoleLevel[] = await this._roleLevelRepository.find();
       if (!rolesLevels.length) {
@@ -64,7 +64,7 @@ export class RoleLevelsService {
   }
 
   update(id: number, updateRoleLevelDto: UpdateRoleLevelDto) {
-    return `This action updates a #${id} roleLevel`;
+    return `This action updates a #${id} roleLevel ${updateRoleLevelDto}`;
   }
 
   remove(id: number) {

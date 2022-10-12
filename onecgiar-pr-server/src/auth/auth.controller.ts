@@ -7,7 +7,6 @@ import {
   Param,
   Delete,
   Res,
-  Req,
   HttpException,
   UseFilters,
 } from '@nestjs/common';
@@ -15,7 +14,7 @@ import { AuthService } from './auth.service';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { UpdateAuthDto } from './dto/update-auth.dto';
 import { UserLoginDto } from './dto/login-user.dto';
-import { Response, Request } from 'express';
+import { Response } from 'express';
 import { HttpExceptionFilter } from '../shared/handlers/error.exception';
 
 @Controller()

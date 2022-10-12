@@ -5,7 +5,7 @@ import { UpdateEvidenceDto } from './dto/update-evidence.dto';
 @Injectable()
 export class EvidencesService {
   create(createEvidenceDto: CreateEvidenceDto) {
-    return 'This action adds a new evidence';
+    return createEvidenceDto;
   }
 
   findAll() {
@@ -17,7 +17,7 @@ export class EvidencesService {
   }
 
   update(id: number, updateEvidenceDto: UpdateEvidenceDto) {
-    return `This action updates a #${id} evidence`;
+    return `This action updates a #${id} evidence ${updateEvidenceDto}`;
   }
 
   remove(id: number) {

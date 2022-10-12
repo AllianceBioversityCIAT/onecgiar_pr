@@ -7,7 +7,7 @@ import {
   HandlersError,
   returnErrorDto,
 } from '../../../shared/handlers/error.utils';
-import { retunrFormatVersion } from './dto/return-format-version.dto';
+import { returnFormatVersion } from './dto/return-format-version.dto';
 
 @Injectable()
 export class VersionsService {
@@ -17,7 +17,7 @@ export class VersionsService {
   ) {}
 
   create(createVersionDto: CreateVersionDto) {
-    return 'This action adds a new version';
+    return createVersionDto;
   }
 
   findAll() {
@@ -28,7 +28,7 @@ export class VersionsService {
     return `This action returns a #${id} version`;
   }
 
-  async findBaseVersion(): Promise<retunrFormatVersion | returnErrorDto> {
+  async findBaseVersion(): Promise<returnFormatVersion | returnErrorDto> {
     try {
       const version = await this._versionRepository.getBaseVersion();
       return {
@@ -42,7 +42,7 @@ export class VersionsService {
   }
 
   update(id: number, updateVersionDto: UpdateVersionDto) {
-    return `This action updates a #${id} version`;
+    return `This action updates a #${id} version ${updateVersionDto}`;
   }
 
   remove(id: number) {

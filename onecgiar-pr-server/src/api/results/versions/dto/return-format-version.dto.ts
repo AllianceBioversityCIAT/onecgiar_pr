@@ -1,6 +1,6 @@
-import { retunFormatService } from '../../../../shared/extendsGlobalDTO/retunServices.dto';
+import { returnFormatService } from '../../../../shared/extendsGlobalDTO/returnServices.dto';
 import { Version } from '../entities/version.entity';
 
-export class retunrFormatVersion extends retunFormatService {
+export class returnFormatVersion extends returnFormatService {
   public response!: Version[] | {};
 }

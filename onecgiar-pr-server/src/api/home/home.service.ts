@@ -5,7 +5,7 @@ import { UpdateHomeDto } from './dto/update-home.dto';
 @Injectable()
 export class HomeService {
   create(createHomeDto: CreateHomeDto) {
-    return 'This action adds a new home';
+    return createHomeDto;
   }
 
   findAll() {
@@ -17,7 +17,7 @@ export class HomeService {
   }
 
   update(id: number, updateHomeDto: UpdateHomeDto) {
-    return `This action updates a #${id} home`;
+    return `This action updates a #${id} home ${updateHomeDto}`;
   }
 
   remove(id: number) {

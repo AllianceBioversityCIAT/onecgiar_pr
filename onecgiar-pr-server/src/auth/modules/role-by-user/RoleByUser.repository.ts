@@ -1,4 +1,4 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { RoleByUser } from './entities/role-by-user.entity';
 import { HandlersError } from '../../../shared/handlers/error.utils';

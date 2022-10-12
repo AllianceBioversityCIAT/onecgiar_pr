@@ -7,7 +7,7 @@ import {
 } from '../../../shared/handlers/error.utils';
 import { ResultLevelRepository } from './resultLevel.repository';
 import { ResultLevel } from './entities/result_level.entity';
-import { retunrFormatResultLevel } from './dto/return-format-result-level.dto';
+import { returnFormatResultLevel } from './dto/return-format-result-level.dto';
 import { ResultTypesService } from '../result_types/result_types.service';
 import { ResultType } from '../result_types/entities/result_type.entity';
 
@@ -20,10 +20,10 @@ export class ResultLevelsService {
   ) {}
 
   create(createResultLevelDto: CreateResultLevelDto) {
-    return 'This action adds a new resultLevel';
+    return createResultLevelDto;
   }
 
-  async getResultsLevels(): Promise<retunrFormatResultLevel | returnErrorDto> {
+  async getResultsLevels(): Promise<returnFormatResultLevel | returnErrorDto> {
     try {
       const resultLevel: ResultLevel[] = await this._resultLevelRepository.find(
         { order: { id: 'ASC' } },
@@ -62,7 +62,7 @@ export class ResultLevelsService {
   }
 
   update(id: number, updateResultLevelDto: UpdateResultLevelDto) {
-    return `This action updates a #${id} resultLevel`;
+    return `This action updates a #${id} resultLevel ${updateResultLevelDto}`;
   }
 
   remove(id: number) {

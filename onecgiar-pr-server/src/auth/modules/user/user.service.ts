@@ -1,14 +1,11 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { Repository, JoinColumn } from 'typeorm';
+import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Role } from '../role/entities/role.entity';
-import { RoleService } from '../role/role.service';
-import { retunrFormatUser } from './dto/return-create-user.dto';
+import { returnFormatUser } from './dto/return-create-user.dto';
 import { UserRepository } from './repositories/user.repository';
-import { FullUserRequestDto } from './dto/full-user-request.dto';
 import { BcryptPasswordEncoder } from '../../utils/bcrypt.util';
 import { RoleByUserRepository } from '../role-by-user/RoleByUser.repository';
 import { RoleByUser } from '../role-by-user/entities/role-by-user.entity';
@@ -39,7 +36,7 @@ export class UserService {
     createUserDto: CreateUserDto,
     role: number,
     token: TokenDto,
-  ): Promise<retunrFormatUser> {
+  ): Promise<returnFormatUser> {
     try {
       createUserDto.is_cgiar =
         createUserDto.email.search(this.cgiarRegex) > -1 ? true : false;
@@ -103,7 +100,7 @@ export class UserService {
     }
   }
 
-  async findAll(): Promise<retunrFormatUser> {
+  async findAll(): Promise<returnFormatUser> {
     try {
       const user: User[] = await this._userRepository.find({
         select: [
@@ -130,7 +127,7 @@ export class UserService {
     }
   }
 
-  async findOne(id: number): Promise<retunrFormatUser> {
+  async findOne(id: number): Promise<returnFormatUser> {
     try {
       const user: User = await this._userRepository.findOne({
         where: { id: id },
@@ -154,7 +151,7 @@ export class UserService {
     }
   }
 
-  async findOneByEmail(email: string): Promise<retunrFormatUser> {
+  async findOneByEmail(email: string): Promise<returnFormatUser> {
     try {
       const user: User = await this._customUserRespository.findOne({
         where: { email: email },
@@ -171,7 +168,7 @@ export class UserService {
 
   async findInitiativeByUserId(
     userId: number,
-  ): Promise<returnErrorDto | retunrFormatUser> {
+  ): Promise<returnErrorDto | returnFormatUser> {
     try {
       const initiativeByUser =
         await this._customUserRespository.InitiativeByUser(userId);

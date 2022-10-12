@@ -5,7 +5,7 @@ import { UpdateResultsByInstitutionTypeDto } from './dto/update-results_by_insti
 @Injectable()
 export class ResultsByInstitutionTypesService {
   create(createResultsByInstitutionTypeDto: CreateResultsByInstitutionTypeDto) {
-    return 'This action adds a new resultsByInstitutionType';
+    return createResultsByInstitutionTypeDto;
   }
 
   findAll() {
@@ -20,7 +20,7 @@ export class ResultsByInstitutionTypesService {
     id: number,
     updateResultsByInstitutionTypeDto: UpdateResultsByInstitutionTypeDto,
   ) {
-    return `This action updates a #${id} resultsByInstitutionType`;
+    return `This action updates a #${id} resultsByInstitutionType ${updateResultsByInstitutionTypeDto}`;
   }
 
   remove(id: number) {
