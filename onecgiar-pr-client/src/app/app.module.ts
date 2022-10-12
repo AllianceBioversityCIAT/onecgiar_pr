@@ -11,9 +11,10 @@ import { UtilsComponentsModule } from './shared/components/utils-components/util
 import { ExternalToolsComponent } from './shared/components/external-tools/external-tools.component';
 import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { GeneralInterceptorService } from './shared/interceptors/general-interceptor.service';
+import { TestEnvironmentLabelComponent } from './shared/components/test-environment-label/test-environment-label.component';
 
 @NgModule({
-  declarations: [AppComponent, NavigationBarComponent, FooterComponent, HeaderPanelComponent, ExternalToolsComponent],
+  declarations: [AppComponent, NavigationBarComponent, FooterComponent, HeaderPanelComponent, ExternalToolsComponent, TestEnvironmentLabelComponent],
   imports: [BrowserModule, AppRoutingModule, BrowserAnimationsModule, UtilsComponentsModule, HttpClientModule],
   providers: [{ provide: HTTP_INTERCEPTORS, useClass: GeneralInterceptorService, multi: true }],
   bootstrap: [AppComponent]

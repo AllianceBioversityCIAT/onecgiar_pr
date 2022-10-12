@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { AuthService } from './shared/services/api/auth.service';
+import { environment } from '../environments/environment';
 
 @Component({
   selector: 'app-root',
@@ -8,6 +9,7 @@ import { AuthService } from './shared/services/api/auth.service';
 })
 export class AppComponent {
   title = 'onecgiar-pr-client';
+  isProduction = environment.production;
   constructor(public AuthService: AuthService) {}
   ngOnInit(): void {
     this.AuthService.inLogin = false;
