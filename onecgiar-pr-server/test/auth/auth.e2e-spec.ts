@@ -1,7 +1,7 @@
 import request from 'supertest';
 import { UserLoginDto } from 'src/auth/dto/login-user.dto';
 
-describe('Results Controller (e2e)', () => {
+describe('Auth Controller (e2e)', () => {
     let app = 'http://localhost:3400'
     const loginDataSuccess: UserLoginDto = {
         "email": "juan@gmail.com",

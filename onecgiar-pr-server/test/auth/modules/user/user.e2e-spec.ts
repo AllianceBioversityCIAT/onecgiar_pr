@@ -1,7 +1,7 @@
 import request from 'supertest';
 import { CreateFullUserDto } from 'src/auth/modules/user/dto/create-full-user.dto';
 
-describe('Results Controller (e2e)', () => {
+describe('User Controller(e2e)', () => {
     let app = 'http://localhost:3400'
     let token: string;
 
@@ -33,7 +33,7 @@ describe('Results Controller (e2e)', () => {
         token = createUser.body.response.token;
     });
 
-    // * Error to create user without valid token
+    // ! Error to create user without valid token
     it('/auth/user/create (POST)', async () => {
         return await request(app)
             .post('/auth/user/create')
@@ -59,7 +59,7 @@ describe('Results Controller (e2e)', () => {
             });
     });
 
-    // * Incomplete data to create user
+    // ? Incomplete data to create user
     it('/auth/user/create (POST)', async () => {
         return await request(app)
             .post('/auth/user/create')
@@ -79,7 +79,7 @@ describe('Results Controller (e2e)', () => {
             });
     });
 
-    // * Duplicate data to create user
+    // ? Duplicate data to create user
     it('/auth/user/create (POST)', async () => {
         return await request(app)
             .post('/auth/user/create')

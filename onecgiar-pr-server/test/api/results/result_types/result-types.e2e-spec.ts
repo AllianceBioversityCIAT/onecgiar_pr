@@ -1,6 +1,6 @@
 import request from 'supertest';
 
-describe('Results Controller (e2e)', () => {
+describe('Result Type Controller (e2e)', () => {
     let app = 'http://localhost:3400'
     let token: string;
 

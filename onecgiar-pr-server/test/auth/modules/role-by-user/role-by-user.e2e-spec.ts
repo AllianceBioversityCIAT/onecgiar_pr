@@ -1,9 +1,9 @@
 import request from 'supertest';
 
-describe('Result Levels Controller (e2e)', () => {
+describe('Role by User Controller (e2e)', () => {
     let app = 'http://localhost:3400'
     let token: string;
-    
+
     // * Successfull login test & obtaine the token
     it('/auth/singin (POST)', async () => {
         const createUser = await request(app)
@@ -19,15 +19,15 @@ describe('Result Levels Controller (e2e)', () => {
         token = createUser.body.response.token;
     });
 
-    // * Success fetch all results levels with valid token
-    it('/api/results/result-levels/all (GET)', async () => {
+    // * Successfully fetch role by user ID
+    it('/auth/role-by-user/get/user/<id> (GET)', async () => {
         return await request(app)
-            .get('/api/results/result-levels/all')
+            .get('/auth/role-by-user/get/user/' + 1)
             .set('Content-Type', 'application/json')
             .set('auth', token)
             .expect(200)
             .expect(res => {
-                console.log('Success fetch all results levels with valid token:', res.text)
+                console.log('Successfully fetch role by user ID:', res.text)
             });
     });
 });
