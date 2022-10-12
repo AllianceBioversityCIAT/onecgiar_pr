@@ -44,7 +44,7 @@ export class LoginComponent implements OnDestroy {
         }, 1500);
       },
       err => {
-        this.customAlertService.show({ id: 'loginAlert', title: 'Ups!', description: err.error.message, status: 'error' });
+        this.customAlertService.show({ id: 'loginAlert', title: 'Error!', description: err.error.message, status: 'error' });
         console.log(err.error.message);
       }
     );
