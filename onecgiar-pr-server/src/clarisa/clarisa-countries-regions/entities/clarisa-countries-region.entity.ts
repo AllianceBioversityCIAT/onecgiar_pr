@@ -15,9 +15,9 @@ export class ClarisaCountriesRegion {
     })
     country_id: number;
 
-    @ManyToOne(() => ClarisaRegion, (crn) => crn.um49Code, {nullable: true})
+    @ManyToOne(() => ClarisaRegion, (crn) => crn.id, {nullable: true})
     @JoinColumn({
-        name: 'region_code'
+        name: 'region_id'
     })
-    region_code: number;
+    region_id: number;
 }

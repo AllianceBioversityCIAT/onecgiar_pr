@@ -1,21 +1,42 @@
 import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
-import { ClarisaRegionType } from '../../clarisa-region-types/entities/clarisa-region-type.entity';
+import { ClarisaRegionType } from '../../region-types/entities/clarisa-region-type.entity';
 
 @Entity('clarisa_regions')
 export class ClarisaRegion {
 
     @PrimaryGeneratedColumn()
-    um49Code: number;
-    
-    @Column({
-        type: 'text',
-        name: 'name'
-    })
-    name: string;
+    id: number;
 
-    @ManyToOne(() => ClarisaRegion, cr => cr.um49Code, {nullable: true})
-    @JoinColumn({
-        name: 'parent_regions_code',
+    @Column({
+        name: 'iso_numeric',
+        nullable: true,
+        type: 'int'
     })
-    parent_regions_code: number;
+    iso_numeric!: number;
+
+    @Column({
+        name: 'acronym',
+        nullable: true,
+        type: 'text'
+    })
+    acronym!: string;
+
+    @ManyToOne(() => ClarisaRegionType, (rgt) => rgt.id, {nullable: true})
+    @JoinColumn({
+        name: 'region_type_id'
+    })
+    region_type_id: number;
+
+    @ManyToOne(() => ClarisaRegion, (cr) => cr.id, {nullable: true})
+    @JoinColumn({
+        name: 'parent_id'
+    })
+    parent_id: number;
+
+    @Column({
+        name: 'active',
+        type: 'boolean',
+        default: true
+    })
+    active: boolean;
 }

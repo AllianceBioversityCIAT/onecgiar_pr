@@ -1,24 +1,24 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
-import { ClarisaGlobalTarget } from './entities/clarisa-global-target.entity';
+import { ClarisaRegionType } from '../region-types/entities/clarisa-region-type.entity';
 
 
 @Injectable()
-export class ClarisaGobalTargetRepository extends Repository<ClarisaGlobalTarget> {
+export class ClarisaRegionsTypesRepository extends Repository<ClarisaRegionType> {
   constructor(private dataSource: DataSource) {
-    super(ClarisaGlobalTarget, dataSource.createEntityManager());
+    super(ClarisaRegionType, dataSource.createEntityManager());
   }
 
   async deleteAllData() {
     const queryData = `
-    DELETE FROM clarisa_global_targets;
+    DELETE FROM clarisa_outcome_indicators;
     `;
     try {
       const deleteData = await this.query(queryData);
       return deleteData;
     } catch (error) {
       throw {
-        message: `[${ClarisaGobalTargetRepository.name}] => deleteAllData error: ${error}`,
+        message: `[${ClarisaRegionsTypesRepository.name}] => deleteAllData error: ${error}`,
         response: {},
         status: HttpStatus.INTERNAL_SERVER_ERROR
       };

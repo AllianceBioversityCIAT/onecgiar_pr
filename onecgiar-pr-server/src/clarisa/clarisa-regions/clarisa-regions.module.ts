@@ -1,16 +1,16 @@
 import { Module } from '@nestjs/common';
 import { ClarisaRegionsService } from './clarisa-regions.service';
 import { ClarisaRegionsController } from './clarisa-regions.controller';
-import { ClarisaRegionsRepository } from './ClariasaRegions.repository';
+import { ClarisaRegionsTypesRepository } from './ClariasaRegionsTypes.repository';
 
 @Module({
   controllers: [ClarisaRegionsController],
   providers: [
     ClarisaRegionsService,
-    ClarisaRegionsRepository
+    ClarisaRegionsTypesRepository
   ],
   exports: [
-    ClarisaRegionsRepository
+    ClarisaRegionsTypesRepository
   ]
 })
 export class ClarisaRegionsModule {}
