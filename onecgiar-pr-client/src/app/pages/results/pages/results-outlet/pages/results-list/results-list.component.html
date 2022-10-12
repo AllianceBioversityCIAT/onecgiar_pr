@@ -5,7 +5,7 @@
   <app-results-list-filters></app-results-list-filters>
 </div>
 <div class="table">
-  <p-table
+  <p-table sortField="id" [sortOrder]="1"
     [value]="(this.api.dataControlSE.resultsList | resultsListFilter:this.resultsListService.text_to_search:this.resultsListFilterSE.filterJoin)"
     responsiveLayout="scroll"
     [paginator]="(this.api.dataControlSE.resultsList | resultsListFilter:this.resultsListService.text_to_search:this.resultsListFilterSE.filterJoin)?.length"
