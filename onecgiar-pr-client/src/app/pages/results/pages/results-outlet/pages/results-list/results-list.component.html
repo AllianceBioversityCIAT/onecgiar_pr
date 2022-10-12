@@ -23,7 +23,7 @@
         <td *ngFor="let column of columnOrder; let i=index" class="{{column.attr}}">
           <a class="{{column.class}}" [routerLink]="'/result/result-detail/' + result[column.attr]">
             <div class="new_tag" *ngIf="i==1 && result.is_new">New</div> {{column.attr !== 'created_date' ?
-            result[column.attr] : (result[column.attr] | date: 'YYYY/MM/dd')}}
+            result[column.attr] : (result[column.attr] | date: 'YYYY-MM-dd')}}
           </a>
           <div class="transparent_text">
             {{ result[column.attr] }}
