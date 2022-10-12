@@ -1,4 +1,9 @@
-import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/common';
+import {
+  MiddlewareConsumer,
+  Module,
+  NestModule,
+  RequestMethod,
+} from '@nestjs/common';
 import { ResultsByEvidencesService } from './results_by_evidences.service';
 import { ResultsByEvidencesController } from './results_by_evidences.controller';
 import { JwtMiddleware } from '../../../auth/Middlewares/jwt.middleware';
@@ -11,21 +16,16 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
   providers: [
     ResultsByEvidencesService,
     ResultByEvidencesRepository,
-    HandlersError
+    HandlersError,
   ],
   imports: [AuthModule],
-  exports: [
-    ResultByEvidencesRepository
-  ]
+  exports: [ResultByEvidencesRepository],
 })
 export class ResultsByEvidencesModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(JwtMiddleware).forRoutes(
-      {
-        path: '/api/result/result-by-evidences/all',
-        method: RequestMethod.GET,
-      }
-    );
+    consumer.apply(JwtMiddleware).forRoutes({
+      path: '/api/result/result-by-evidences/all',
+      method: RequestMethod.GET,
+    });
   }
 }
-

@@ -7,7 +7,7 @@ import { ResultsByInstitutionType } from './entities/results_by_institution_type
 export class ResultByIntitutionsTypeRepository extends Repository<ResultsByInstitutionType> {
   constructor(
     private dataSource: DataSource,
-    private readonly _handlersError: HandlersError
+    private readonly _handlersError: HandlersError,
   ) {
     super(ResultsByInstitutionType, dataSource.createEntityManager());
   }
@@ -30,13 +30,16 @@ export class ResultByIntitutionsTypeRepository extends Repository<ResultsByInsti
     	and rbit.is_active > 0;
     `;
     try {
-      const completeUser: ResultsByInstitutionType[] = await this.query(queryData, [resultId]);
+      const completeUser: ResultsByInstitutionType[] = await this.query(
+        queryData,
+        [resultId],
+      );
       return completeUser;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByIntitutionsTypeRepository.name,
         error: error,
-        debug: true
+        debug: true,
       });
     }
   }
@@ -54,9 +57,8 @@ export class ResultByIntitutionsTypeRepository extends Repository<ResultsByInsti
       throw this._handlersError.returnErrorRepository({
         className: ResultByIntitutionsTypeRepository.name,
         error: error,
-        debug: true
+        debug: true,
       });
     }
   }
-
 }

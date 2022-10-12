@@ -1,15 +1,29 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { ClarisaOutcomeIndicatorsService } from './clarisa-outcome-indicators.service';
 import { CreateClarisaOutcomeIndicatorDto } from './dto/create-clarisa-outcome-indicator.dto';
 import { UpdateClarisaOutcomeIndicatorDto } from './dto/update-clarisa-outcome-indicator.dto';
 
 @Controller('clarisa-outcome-indicators')
 export class ClarisaOutcomeIndicatorsController {
-  constructor(private readonly clarisaOutcomeIndicatorsService: ClarisaOutcomeIndicatorsService) {}
+  constructor(
+    private readonly clarisaOutcomeIndicatorsService: ClarisaOutcomeIndicatorsService,
+  ) {}
 
   @Post()
-  create(@Body() createClarisaOutcomeIndicatorDto: CreateClarisaOutcomeIndicatorDto) {
-    return this.clarisaOutcomeIndicatorsService.create(createClarisaOutcomeIndicatorDto);
+  create(
+    @Body() createClarisaOutcomeIndicatorDto: CreateClarisaOutcomeIndicatorDto,
+  ) {
+    return this.clarisaOutcomeIndicatorsService.create(
+      createClarisaOutcomeIndicatorDto,
+    );
   }
 
   @Get()
@@ -23,8 +37,14 @@ export class ClarisaOutcomeIndicatorsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateClarisaOutcomeIndicatorDto: UpdateClarisaOutcomeIndicatorDto) {
-    return this.clarisaOutcomeIndicatorsService.update(+id, updateClarisaOutcomeIndicatorDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateClarisaOutcomeIndicatorDto: UpdateClarisaOutcomeIndicatorDto,
+  ) {
+    return this.clarisaOutcomeIndicatorsService.update(
+      +id,
+      updateClarisaOutcomeIndicatorDto,
+    );
   }
 
   @Delete(':id')

@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  HttpException,
+} from '@nestjs/common';
 import { ResultTypesService } from './result_types.service';
 import { CreateResultTypeDto } from './dto/create-result_type.dto';
 import { UpdateResultTypeDto } from './dto/update-result_type.dto';
@@ -14,8 +23,9 @@ export class ResultTypesController {
 
   @Get('all')
   async findAll() {
-    const {message, response, status} = await this.resultTypesService.getAllResultType();
-    throw new HttpException({message,response}, status);
+    const { message, response, status } =
+      await this.resultTypesService.getAllResultType();
+    throw new HttpException({ message, response }, status);
   }
 
   @Get(':id')
@@ -24,7 +34,10 @@ export class ResultTypesController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateResultTypeDto: UpdateResultTypeDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateResultTypeDto: UpdateResultTypeDto,
+  ) {
     return this.resultTypesService.update(+id, updateResultTypeDto);
   }
 

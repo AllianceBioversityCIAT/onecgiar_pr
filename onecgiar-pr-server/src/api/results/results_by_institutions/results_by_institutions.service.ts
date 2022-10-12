@@ -16,7 +16,10 @@ export class ResultsByInstitutionsService {
     return `This action returns a #${id} resultsByInstitution`;
   }
 
-  update(id: number, updateResultsByInstitutionDto: UpdateResultsByInstitutionDto) {
+  update(
+    id: number,
+    updateResultsByInstitutionDto: UpdateResultsByInstitutionDto,
+  ) {
     return `This action updates a #${id} resultsByInstitution`;
   }
 

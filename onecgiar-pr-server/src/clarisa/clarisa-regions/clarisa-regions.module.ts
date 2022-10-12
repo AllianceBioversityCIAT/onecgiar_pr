@@ -5,12 +5,7 @@ import { ClarisaRegionsTypesRepository } from './ClariasaRegionsTypes.repository
 
 @Module({
   controllers: [ClarisaRegionsController],
-  providers: [
-    ClarisaRegionsService,
-    ClarisaRegionsTypesRepository
-  ],
-  exports: [
-    ClarisaRegionsTypesRepository
-  ]
+  providers: [ClarisaRegionsService, ClarisaRegionsTypesRepository],
+  exports: [ClarisaRegionsTypesRepository],
 })
 export class ClarisaRegionsModule {}

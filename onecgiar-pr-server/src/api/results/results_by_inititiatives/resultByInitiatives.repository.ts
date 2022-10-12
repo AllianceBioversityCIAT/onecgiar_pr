@@ -8,8 +8,8 @@ import { InitiativeByResultDTO } from './dto/InitiativeByResult.dto';
 export class ResultByInitiativesRepository extends Repository<ResultsByInititiative> {
   constructor(
     private dataSource: DataSource,
-    private readonly _handlersError: HandlersError
-    ) {
+    private readonly _handlersError: HandlersError,
+  ) {
     super(ResultsByInititiative, dataSource.createEntityManager());
   }
 
@@ -23,7 +23,7 @@ export class ResultByInitiativesRepository extends Repository<ResultsByInititiat
       throw this._handlersError.returnErrorRepository({
         className: ResultByInitiativesRepository.name,
         error: error,
-        debug: true
+        debug: true,
       });
     }
   }
@@ -44,13 +44,16 @@ export class ResultByInitiativesRepository extends Repository<ResultsByInititiat
       and rbi.is_active > 0;
     `;
     try {
-      const completeUser: InitiativeByResultDTO[] = await this.query(queryData, [resultId]);
+      const completeUser: InitiativeByResultDTO[] = await this.query(
+        queryData,
+        [resultId],
+      );
       return completeUser;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByInitiativesRepository.name,
         error: error,
-        debug: true
+        debug: true,
       });
     }
   }
@@ -73,13 +76,16 @@ export class ResultByInitiativesRepository extends Repository<ResultsByInititiat
       and rbi.is_active > 0;
     `;
     try {
-      const completeUser: ResultsByInititiative[] = await this.query(queryData, [resultId]);
+      const completeUser: ResultsByInititiative[] = await this.query(
+        queryData,
+        [resultId],
+      );
       return completeUser;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByInitiativesRepository.name,
         error: error,
-        debug: true
+        debug: true,
       });
     }
   }
@@ -97,9 +103,8 @@ export class ResultByInitiativesRepository extends Repository<ResultsByInititiat
       throw this._handlersError.returnErrorRepository({
         className: ResultByInitiativesRepository.name,
         error: error,
-        debug: true
+        debug: true,
       });
     }
   }
-
 }

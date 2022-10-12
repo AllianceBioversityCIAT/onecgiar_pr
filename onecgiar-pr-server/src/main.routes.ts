@@ -19,6 +19,6 @@ export const MainRoutes: Routes = [
   },
   {
     path: 'clarisa',
-    children: ClarisaRoutes
-  }
+    children: ClarisaRoutes,
+  },
 ];

@@ -2,7 +2,6 @@ import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { ClarisaMeliaStudyType } from './entities/clarisa-melia-study-type.entity';
 
-
 @Injectable()
 export class ClarisaMeliaStudyTypeRepository extends Repository<ClarisaMeliaStudyType> {
   constructor(private dataSource: DataSource) {
@@ -20,9 +19,8 @@ export class ClarisaMeliaStudyTypeRepository extends Repository<ClarisaMeliaStud
       throw {
         message: `[${ClarisaMeliaStudyTypeRepository.name}] => deleteAllData error: ${error}`,
         response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
       };
     }
   }
-
 }

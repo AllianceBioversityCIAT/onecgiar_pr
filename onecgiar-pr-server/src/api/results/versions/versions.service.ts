@@ -3,20 +3,20 @@ import { CreateVersionDto } from './dto/create-version.dto';
 import { UpdateVersionDto } from './dto/update-version.dto';
 import { VersionRepository } from './version.repository';
 import { MessageResponse } from '../../../shared/constants/Responses.constant';
-import { HandlersError, returnErrorDto } from '../../../shared/handlers/error.utils';
+import {
+  HandlersError,
+  returnErrorDto,
+} from '../../../shared/handlers/error.utils';
 import { retunrFormatVersion } from './dto/return-format-version.dto';
 
 @Injectable()
 export class VersionsService {
-
   constructor(
     private readonly _handlersError: HandlersError,
-    private readonly _versionRepository:VersionRepository
-  ){}
+    private readonly _versionRepository: VersionRepository,
+  ) {}
 
-  create(
-    createVersionDto: CreateVersionDto
-    ) {
+  create(createVersionDto: CreateVersionDto) {
     return 'This action adds a new version';
   }
 
@@ -28,17 +28,16 @@ export class VersionsService {
     return `This action returns a #${id} version`;
   }
 
-  async findBaseVersion(): Promise<retunrFormatVersion|returnErrorDto>{
+  async findBaseVersion(): Promise<retunrFormatVersion | returnErrorDto> {
     try {
       const version = await this._versionRepository.getBaseVersion();
       return {
         response: version,
         message: MessageResponse.OK,
-        status: HttpStatus.OK
-      }
-
+        status: HttpStatus.OK,
+      };
     } catch (error) {
-      return this._handlersError.returnErrorRes({error, debug: true});
+      return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 

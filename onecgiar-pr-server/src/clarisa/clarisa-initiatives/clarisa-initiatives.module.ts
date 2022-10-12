@@ -5,12 +5,7 @@ import { ClarisaInitiativesRepository } from './ClarisaInitiatives.repository';
 
 @Module({
   controllers: [ClarisaInitiativesController],
-  providers: [
-    ClarisaInitiativesService,
-    ClarisaInitiativesRepository
-  ],
-  exports: [
-    ClarisaInitiativesRepository
-  ]
+  providers: [ClarisaInitiativesService, ClarisaInitiativesRepository],
+  exports: [ClarisaInitiativesRepository],
 })
 export class ClarisaInitiativesModule {}

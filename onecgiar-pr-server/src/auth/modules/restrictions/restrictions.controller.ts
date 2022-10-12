@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { RestrictionsService } from './restrictions.service';
 import { CreateRestrictionDto } from './dto/create-restriction.dto';
 import { UpdateRestrictionDto } from './dto/update-restriction.dto';
@@ -23,7 +31,10 @@ export class RestrictionsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateRestrictionDto: UpdateRestrictionDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateRestrictionDto: UpdateRestrictionDto,
+  ) {
     return this.restrictionsService.update(+id, updateRestrictionDto);
   }
 

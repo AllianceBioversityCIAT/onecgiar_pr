@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { ClarisaRegionsService } from './clarisa-regions.service';
 import { CreateClarisaRegionDto } from './dto/create-clarisa-region.dto';
 import { UpdateClarisaRegionDto } from './dto/update-clarisa-region.dto';
@@ -23,7 +31,10 @@ export class ClarisaRegionsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateClarisaRegionDto: UpdateClarisaRegionDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateClarisaRegionDto: UpdateClarisaRegionDto,
+  ) {
     return this.clarisaRegionsService.update(+id, updateClarisaRegionDto);
   }
 

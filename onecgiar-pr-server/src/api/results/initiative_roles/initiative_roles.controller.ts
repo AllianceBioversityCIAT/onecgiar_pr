@@ -1,11 +1,21 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { InitiativeRolesService } from './initiative_roles.service';
 import { CreateInitiativeRoleDto } from './dto/create-initiative_role.dto';
 import { UpdateInitiativeRoleDto } from './dto/update-initiative_role.dto';
 
 @Controller('initiative-roles')
 export class InitiativeRolesController {
-  constructor(private readonly initiativeRolesService: InitiativeRolesService) {}
+  constructor(
+    private readonly initiativeRolesService: InitiativeRolesService,
+  ) {}
 
   @Post()
   create(@Body() createInitiativeRoleDto: CreateInitiativeRoleDto) {
@@ -23,7 +33,10 @@ export class InitiativeRolesController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateInitiativeRoleDto: UpdateInitiativeRoleDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateInitiativeRoleDto: UpdateInitiativeRoleDto,
+  ) {
     return this.initiativeRolesService.update(+id, updateInitiativeRoleDto);
   }
 

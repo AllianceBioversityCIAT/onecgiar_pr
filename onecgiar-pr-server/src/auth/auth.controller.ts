@@ -38,7 +38,7 @@ export class AuthController {
     const { message, response, status } = await this.authService.singIn(
       userLogin,
     );
-    throw new HttpException({message,response}, status);
+    throw new HttpException({ message, response }, status);
   }
 
   @Patch(':id')

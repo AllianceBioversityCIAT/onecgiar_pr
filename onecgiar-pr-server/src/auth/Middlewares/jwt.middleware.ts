@@ -70,10 +70,13 @@ export class JwtMiddleware implements NestMiddleware {
       res.setHeader('auth', newToken);
       next();
     } catch (error) {
-      throw new HttpException({
-        message: 'Invalid token',
-        response: {}
-      }, HttpStatus.UNAUTHORIZED)
+      throw new HttpException(
+        {
+          message: 'Invalid token',
+          response: {},
+        },
+        HttpStatus.UNAUTHORIZED,
+      );
     }
   }
 }

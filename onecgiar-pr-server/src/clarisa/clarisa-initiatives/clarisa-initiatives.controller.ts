@@ -1,11 +1,21 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { ClarisaInitiativesService } from './clarisa-initiatives.service';
 import { CreateClarisaInitiativeDto } from './dto/create-clarisa-initiative.dto';
 import { UpdateClarisaInitiativeDto } from './dto/update-clarisa-initiative.dto';
 
 @Controller('clarisa-initiatives')
 export class ClarisaInitiativesController {
-  constructor(private readonly clarisaInitiativesService: ClarisaInitiativesService) {}
+  constructor(
+    private readonly clarisaInitiativesService: ClarisaInitiativesService,
+  ) {}
 
   @Post()
   create(@Body() createClarisaInitiativeDto: CreateClarisaInitiativeDto) {
@@ -23,8 +33,14 @@ export class ClarisaInitiativesController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateClarisaInitiativeDto: UpdateClarisaInitiativeDto) {
-    return this.clarisaInitiativesService.update(+id, updateClarisaInitiativeDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateClarisaInitiativeDto: UpdateClarisaInitiativeDto,
+  ) {
+    return this.clarisaInitiativesService.update(
+      +id,
+      updateClarisaInitiativeDto,
+    );
   }
 
   @Delete(':id')

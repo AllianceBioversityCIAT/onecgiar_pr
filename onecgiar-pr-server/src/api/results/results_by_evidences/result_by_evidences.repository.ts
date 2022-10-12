@@ -7,7 +7,7 @@ import { ResultsByEvidence } from './entities/results_by_evidence.entity';
 export class ResultByEvidencesRepository extends Repository<ResultsByEvidence> {
   constructor(
     private dataSource: DataSource,
-    private readonly _handlersError: HandlersError
+    private readonly _handlersError: HandlersError,
   ) {
     super(ResultsByEvidence, dataSource.createEntityManager());
   }
@@ -30,13 +30,15 @@ export class ResultByEvidencesRepository extends Repository<ResultsByEvidence> {
          and rbe.is_active  > 0;
     `;
     try {
-      const completeUser: ResultsByEvidence[] = await this.query(queryData, [resultId]);
+      const completeUser: ResultsByEvidence[] = await this.query(queryData, [
+        resultId,
+      ]);
       return completeUser;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByEvidencesRepository.name,
         error: error,
-        debug: true
+        debug: true,
       });
     }
   }
@@ -54,9 +56,8 @@ export class ResultByEvidencesRepository extends Repository<ResultsByEvidence> {
       throw this._handlersError.returnErrorRepository({
         className: ResultByEvidencesRepository.name,
         error: error,
-        debug: true
+        debug: true,
       });
     }
   }
-
 }

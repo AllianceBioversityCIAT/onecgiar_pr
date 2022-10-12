@@ -9,11 +9,9 @@ import { ClarisaImpactAreaInticatorsRepository } from './ClarisaImpactAreaIndica
   controllers: [ClarisaImpactAreaIndicatorsController],
   providers: [
     ClarisaImpactAreaIndicatorsService,
-    ClarisaImpactAreaInticatorsRepository
+    ClarisaImpactAreaInticatorsRepository,
   ],
   imports: [RouterModule.register(ClarisaImpactAreaIndicatorsRoutes)],
-  exports: [
-    ClarisaImpactAreaInticatorsRepository
-  ]
+  exports: [ClarisaImpactAreaInticatorsRepository],
 })
 export class ClarisaImpactAreaIndicatorsModule {}

@@ -7,15 +7,8 @@ import { ClarisaMeliaStudyTypeRepository } from './ClariasaMeliasStudyType.repos
 
 @Module({
   controllers: [ClarisaMeliaStudyTypeController],
-  providers: [
-    ClarisaMeliaStudyTypeService,
-    ClarisaMeliaStudyTypeRepository
-  ],
-  imports: [
-    RouterModule.register(ClarisaMeliaStudyTypeRoutes)
-  ],
-  exports: [
-    ClarisaMeliaStudyTypeRepository
-  ]
+  providers: [ClarisaMeliaStudyTypeService, ClarisaMeliaStudyTypeRepository],
+  imports: [RouterModule.register(ClarisaMeliaStudyTypeRoutes)],
+  exports: [ClarisaMeliaStudyTypeRepository],
 })
 export class ClarisaMeliaStudyTypeModule {}
