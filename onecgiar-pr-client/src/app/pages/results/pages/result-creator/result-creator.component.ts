@@ -37,7 +37,7 @@ export class ResultCreatorComponent {
         this.router.navigate(['/']);
       },
       err => {
-        this.api.alertsFe.show({ id: 'reportResultError', title: 'Ups!', description: err?.error?.message, status: 'error' });
+        this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
       }
     );
   }
