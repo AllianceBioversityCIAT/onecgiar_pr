@@ -7,6 +7,7 @@ import { ClarisaImpactAreaIndicatorsModule } from './clarisa-impact-area-indicat
 import { ClarisaInstitutionsModule } from './clarisa-institutions/clarisa-institutions.module';
 import { ClarisaInstitutionsTypeModule } from './clarisa-institutions-type/clarisa-institutions-type.module';
 import { ClarisaMeliaStudyTypeModule } from './clarisa-melia-study-type/clarisa-melia-study-type.module';
+import { ClarisaCountriesModule } from './clarisa-countries/clarisa-countries.module';
 
 export const ClarisaRoutes: Routes = [
   {
@@ -41,4 +42,8 @@ export const ClarisaRoutes: Routes = [
     path: 'melia-study-type',
     module: ClarisaMeliaStudyTypeModule,
   },
+  {
+    path: 'countries',
+    module: ClarisaCountriesModule
+  }
 ];

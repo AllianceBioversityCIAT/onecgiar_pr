@@ -12,9 +12,12 @@ import { ClarisaImpactAreaIndicator } from './clarisa-impact-area-indicators/ent
 import { ClarisaCountry } from './clarisa-countries/entities/clarisa-country.entity';
 import { ClarisaOutcomeIndicatorsRepository } from './clarisa-outcome-indicators/ClariasaOutcomeIndicators.repository';
 import { ClarisaOutcomeIndicator } from './clarisa-outcome-indicators/entities/clarisa-outcome-indicator.entity';
-import { ClarisaRegionsTypesRepository } from './clarisa-regions/ClariasaRegionsTypes.repository';
-import { ClarisaRegionType } from './region-types/entities/clarisa-region-type.entity';
+import { ClarisaRegionsTypeRepository } from './clarisa-region-types/ClariasaRegionsTypes.repository';
+import { ClarisaRegionType } from './clarisa-region-types/entities/clarisa-region-type.entity';
 import { ClarisaCountriesRepository } from './clarisa-countries/ClarisaCountries.repository';
+import { ClarisaRegionsRepository } from './clarisa-regions/ClariasaRegions.repository';
+import { ClarisaGobalTargetRepository } from './clarisa-global-target/ClariasaGlobalTarget.repository';
+import { ClarisaGlobalTarget } from './clarisa-global-target/entities/clarisa-global-target.entity';
 
 @Injectable()
 export class ClarisaTaskService {
@@ -35,7 +38,10 @@ export class ClarisaTaskService {
     private readonly _clarisaImpactAreaInticatorsRepository: ClarisaImpactAreaInticatorsRepository,
     private readonly _clarisaCountriesRepository: ClarisaCountriesRepository,
     private readonly _clarisaOutcomeIndicatorsRepository: ClarisaOutcomeIndicatorsRepository,
-    private readonly _clarisaRegionsTypesRepository: ClarisaRegionsTypesRepository,
+    private readonly _clarisaRegionsTypesRepository: ClarisaRegionsTypeRepository,
+    private readonly _clarisaRegionsRepository: ClarisaRegionsRepository,
+    private readonly _clarisaGobalTargetRepository: ClarisaGobalTargetRepository
+    
   ) {}
 
   public async clarisaBootstrap() {
@@ -43,17 +49,21 @@ export class ClarisaTaskService {
     let count = 1;
     count = await this.cloneClarisaCountries(count, true);
     count = await this.cloneClarisaMeliaStudyTypes(count, true);
+    count = await this.cloneClarisaGlobalTargetType(count, true);
+    count = await this.cloneClarisaRegions(count, true);
     //count = await this.cloneClarisaInitiatives(count, true);
     //count = await this.cloneClarisaActionArea(count, true);
     count = await this.cloneClarisaImpactAreaIndicators(count, true);
     count = await this.cloneClarisaImpactArea(count, true);
     count = await this.cloneClarisaOutcomeIndicators(count, true);
     count = await this.cloneClarisaRegionsType(count, true);
+    count = await this.cloneClarisaRegions(count);
     count = await this.cloneClarisaCountries(count);
     count = await this.cloneClarisaMeliaStudyTypes(count);
     count = await this.cloneClarisaActionArea(count);
     count = await this.cloneClarisaInitiatives(count);
     count = await this.cloneClarisaImpactArea(count);
+    count = await this.cloneClarisaGlobalTargetType(count);
     count = await this.cloneClarisaImpactAreaIndicators(count);
     count = await this.cloneClarisaOutcomeIndicators(count);
     count = await this.cloneClarisaRegionsType(count);
@@ -80,7 +90,7 @@ export class ClarisaTaskService {
             name: el.name,
           };
         });
-        this._clarisaCountriesRepository.save(countries);
+        await this._clarisaCountriesRepository.save(countries);
         this._logger.verbose(
           `[${position}]: All CLARISA Countries control list data has been created`,
         );
@@ -95,15 +105,38 @@ export class ClarisaTaskService {
     }
   }
 
-  private async cloneClarisaRegions() {
+  private async cloneClarisaRegions(
+    position: number,
+    deleteItem = false,
+  ) {
     try {
-      const regions = await axios.get(
-        `${this.clarisaHost}un-regions`,
-        this.configAuth,
-      );
-      console.log(regions);
+      if (deleteItem) {
+        const deleteData =
+          await this._clarisaMeliaStudyTypeRepository.deleteAllData();
+        this._logger.warn(
+          `[${position}]: All CLARISA Regions control list data has been deleted`,
+        );
+      } else {
+        const { data } = await axios.get(
+          `${this.clarisaHost}regions/un-regions`,
+          this.configAuth,
+        );
+        await this._clarisaRegionsRepository.save(data);
+        data.map(el => {
+            el['parent_regions_code'] = el.parentRegion?.um49Code ? el.parentRegion.um49Code: null;
+        });
+        await this._clarisaRegionsRepository.save(data);
+        this._logger.verbose(
+          `[${position}]: All CLARISA Regions control list data has been created`,
+        );
+      }
+      return ++position;
     } catch (error) {
-      console.log(error);
+      this._logger.error(
+        `[${position}]: Error in manipulating the data of CLARISA Regions`,
+      );
+      this._logger.error(error);
+      return ++position;
     }
   }
 
@@ -123,7 +156,7 @@ export class ClarisaTaskService {
           `${this.clarisaHost}study-types`,
           this.configAuth,
         );
-        this._clarisaMeliaStudyTypeRepository.save(data);
+        await this._clarisaMeliaStudyTypeRepository.save(data);
         this._logger.verbose(
           `[${position}]: All CLARISA MELIA Study Type control list data has been created`,
         );
@@ -151,7 +184,7 @@ export class ClarisaTaskService {
           `${this.clarisaHost}action-areas`,
           this.configAuth,
         );
-        this._clariasaActionAreaRepository.save(data);
+        await this._clariasaActionAreaRepository.save(data);
         this._logger.verbose(
           `[${position}]: All CLARISA Action Areas control list data has been created`,
         );
@@ -179,7 +212,7 @@ export class ClarisaTaskService {
           `${this.clarisaHost}initiatives`,
           this.configAuth,
         );
-        this._clarisaInitiativesRepository.save(data);
+        await this._clarisaInitiativesRepository.save(data);
         this._logger.verbose(
           `[${position}]: All CLARISA Initiatives control list data has been created`,
         );
@@ -207,7 +240,7 @@ export class ClarisaTaskService {
           `${this.clarisaHost}impact-areas`,
           this.configAuth,
         );
-        this._clarisaImpactAreaRepository.save(data);
+        await this._clarisaImpactAreaRepository.save(data);
         this._logger.verbose(
           `[${position}]: All CLARISA Impact Area control list data has been created`,
         );
@@ -238,7 +271,7 @@ export class ClarisaTaskService {
           `${this.clarisaHost}impact-area-indicators`,
           this.configAuth,
         );
-        this._clarisaImpactAreaInticatorsRepository.save(data);
+        await this._clarisaImpactAreaInticatorsRepository.save(data);
         this._logger.verbose(
           `[${position}]: All CLARISA Impact Area Indicators control list data has been created`,
         );
@@ -269,7 +302,7 @@ export class ClarisaTaskService {
           `${this.clarisaHost}outcome-indicators`,
           this.configAuth,
         );
-        this._clarisaOutcomeIndicatorsRepository.save<ClarisaOutcomeIndicator>(
+        await this._clarisaOutcomeIndicatorsRepository.save<ClarisaOutcomeIndicator>(
           data,
         );
         this._logger.verbose(
@@ -299,7 +332,7 @@ export class ClarisaTaskService {
           `${this.clarisaHost}region-types`,
           this.configAuth,
         );
-        this._clarisaRegionsTypesRepository.save<ClarisaRegionType>(data);
+        await this._clarisaRegionsTypesRepository.save<ClarisaRegionType>(data);
         this._logger.verbose(
           `[${position}]: All CLARISA Region Types control list data has been created`,
         );
@@ -308,6 +341,41 @@ export class ClarisaTaskService {
     } catch (error) {
       this._logger.error(
         `[${position}]: Error in manipulating the data of CLARISA Region Types`,
+      );
+      this._logger.error(error);
+      return ++position;
+    }
+  }
+
+  private async cloneClarisaGlobalTargetType(position: number, deleteItem = false) {
+    try {
+      if (deleteItem) {
+        const deleteData =
+          await this._clarisaGobalTargetRepository.deleteAllData();
+        this._logger.warn(
+          `[${position}]: All CLARISA Global Target control list data has been deleted`,
+        );
+      } else {
+        const { data } = await axios.get(
+          `${this.clarisaHost}global-targets`,
+          this.configAuth,
+        );
+        const transformData = data.map(el => {
+            return {
+                id:	el.targetId,
+                target:	el.target,
+                impact_area_id: el.impactAreasId
+            }
+        });
+        await this._clarisaGobalTargetRepository.save<ClarisaGlobalTarget>(transformData);
+        this._logger.verbose(
+          `[${position}]: All CLARISA Global Target control list data has been created`,
+        );
+      }
+      return ++position;
+    } catch (error) {
+      this._logger.error(
+        `[${position}]: Error in manipulating the data of CLARISA Global Target`,
       );
       this._logger.error(error);
       return ++position;
