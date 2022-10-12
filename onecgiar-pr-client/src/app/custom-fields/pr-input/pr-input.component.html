@@ -1,5 +1,6 @@
 <app-pr-field-header [label]="this.label" [description]="this.description"></app-pr-field-header>
-<div class="p-fluid">
+<div class="p-fluid input_container">
     <input pInputText [type]="this.type" [placeholder]="this.placeholder" [(ngModel)]="value" />
+    <app-pr-word-counter [wordCount]="wordCount" [maxWords]="maxWords"></app-pr-word-counter>
 </div>
 <app-pr-field-validations></app-pr-field-validations>

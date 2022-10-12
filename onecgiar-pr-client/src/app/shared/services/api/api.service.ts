@@ -6,12 +6,13 @@ import { CustomizedAlertsFeService } from '../customized-alerts-fe.service';
 import { DataControlService } from '../data-control.service';
 import { forkJoin } from 'rxjs';
 import { ResultsListFilterService } from '../../../pages/results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
+import { WordCounterService } from '../word-counter.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ApiService {
-  constructor(public resultsSE: ResultsApiService, public alertsFs: CustomizedAlertsFsService, public authSE: AuthService, public alertsFe: CustomizedAlertsFeService, public dataControlSE: DataControlService, public resultsListFilterSE: ResultsListFilterService) {}
+  constructor(public resultsSE: ResultsApiService, public alertsFs: CustomizedAlertsFsService, public authSE: AuthService, public alertsFe: CustomizedAlertsFeService, public dataControlSE: DataControlService, public resultsListFilterSE: ResultsListFilterService, public wordCounterSE: WordCounterService) {}
 
   updateUserData() {
     forkJoin([this.authSE.GET_allRolesByUser(), this.authSE.GET_initiativesByUser()]).subscribe(resp => {
