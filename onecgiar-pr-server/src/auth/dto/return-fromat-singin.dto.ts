@@ -1,10 +1,10 @@
-import { retunFormatService } from 'src/shared/extendsGlobalDTO/retunServices.dto';
+import { returnFormatService } from 'src/shared/extendsGlobalDTO/returnServices.dto';
 
-export class returnFormatSingin extends retunFormatService {
-  public response: retunrFormatSinginInterface;
+export class returnFormatSingin extends returnFormatService {
+  public response: returnFormatSinginInterface;
 }
 
-interface retunrFormatSinginInterface {
+interface returnFormatSinginInterface {
   valid: boolean;
   token?: string | null;
   user?: userJwtInterface;

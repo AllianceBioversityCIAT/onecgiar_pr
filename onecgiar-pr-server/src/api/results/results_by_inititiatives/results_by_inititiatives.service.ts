@@ -59,7 +59,7 @@ export class ResultsByInititiativesService {
     id: number,
     updateResultsByInititiativeDto: UpdateResultsByInititiativeDto,
   ) {
-    return `This action updates a #${id} resultsByInititiative`;
+    return `This action updates a #${id} resultsByInititiative ${updateResultsByInititiativeDto}`;
   }
 
   remove(id: number) {

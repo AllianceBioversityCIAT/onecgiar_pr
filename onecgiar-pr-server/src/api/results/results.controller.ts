@@ -5,13 +5,11 @@ import {
   Body,
   Patch,
   Param,
-  Delete,
   Headers,
   HttpException,
 } from '@nestjs/common';
 import { ResultsService } from './results.service';
 import { CreateResultDto } from './dto/create-result.dto';
-import { UpdateResultDto } from './dto/update-result.dto';
 import { HeadersDto } from '../../shared/globalInterfaces/headers.dto';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 
@@ -34,7 +32,7 @@ export class ResultsController {
 
   @Get('get/name/:name')
   findAll(@Param('name') resultName: string) {
-    return this.resultsService.findAll();
+    return this.resultsService.findAll() + resultName;
   }
 
   @Get('get/all')

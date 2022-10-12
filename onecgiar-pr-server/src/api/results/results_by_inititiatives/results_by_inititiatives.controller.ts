@@ -31,11 +31,6 @@ export class ResultsByInititiativesController {
     return this.resultsByInititiativesService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    //return this.resultsByInititiativesService.findOne(+id);
-  }
-
   @Patch(':id')
   update(
     @Param('id') id: string,

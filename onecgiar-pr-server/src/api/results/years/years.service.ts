@@ -5,7 +5,7 @@ import { UpdateYearDto } from './dto/update-year.dto';
 @Injectable()
 export class YearsService {
   create(createYearDto: CreateYearDto) {
-    return 'This action adds a new year';
+    return createYearDto;
   }
 
   findAll() {
@@ -17,7 +17,7 @@ export class YearsService {
   }
 
   update(id: number, updateYearDto: UpdateYearDto) {
-    return `This action updates a #${id} year`;
+    return `This action updates a #${id} year ${updateYearDto}`;
   }
 
   remove(id: number) {

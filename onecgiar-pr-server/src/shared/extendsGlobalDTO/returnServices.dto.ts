@@ -1,6 +1,6 @@
 import { HttpStatus } from '@nestjs/common';
 
-export class retunFormatService {
+export class returnFormatService {
   public response: object;
   public message: string;
   public status: HttpStatus;

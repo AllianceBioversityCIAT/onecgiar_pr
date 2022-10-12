@@ -1,4 +1,4 @@
-import { Injectable, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import { Injectable, HttpStatus, Logger } from '@nestjs/common';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { UpdateAuthDto } from './dto/update-auth.dto';
 import { UserLoginDto } from './dto/login-user.dto';
@@ -9,9 +9,8 @@ import config from '../config/const.config';
 import { UserService } from './modules/user/user.service';
 import { UserRepository } from './modules/user/repositories/user.repository';
 import { FullUserRequestDto } from './modules/user/dto/full-user-request.dto';
-import { returnFormatSingin } from './dto/return-fromat-singin.dto';
 import { User } from './modules/user/entities/user.entity';
-import { HandlersError, returnErrorDto } from '../shared/handlers/error.utils';
+import { HandlersError } from '../shared/handlers/error.utils';
 
 @Injectable()
 export class AuthService {
@@ -25,7 +24,7 @@ export class AuthService {
     private readonly _handlersError: HandlersError,
   ) {}
   create(createAuthDto: CreateAuthDto) {
-    return 'This action adds a new auth';
+    return createAuthDto;
   }
 
   findAll() {
@@ -37,7 +36,7 @@ export class AuthService {
   }
 
   update(id: number, updateAuthDto: UpdateAuthDto) {
-    return `This action updates a #${id} auth`;
+    return `This action updates a #${id} auth ${updateAuthDto}`;
   }
 
   remove(id: number) {

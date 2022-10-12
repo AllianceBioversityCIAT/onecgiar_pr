@@ -2,13 +2,11 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { CreateRoleByUserDto } from './dto/create-role-by-user.dto';
 import { UpdateRoleByUserDto } from './dto/update-role-by-user.dto';
 import { RoleByUserRepository } from './RoleByUser.repository';
-import { RoleLevelRepository } from '../role-levels/RoleLevels.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
-import { RoleLevel } from '../role-levels/entities/role-level.entity';
 import { RoleLevelsService } from '../role-levels/role-levels.service';
 import { RoleByUser } from './entities/role-by-user.entity';
 import { resultRolesDto } from './dto/resultRoles.dto';
-import { retunrFormatRoleByUser } from './dto/returnFormatRoleByUser.dto';
+import { returnFormatRoleByUser } from './dto/returnFormatRoleByUser.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { UserRepository } from '../user/repositories/user.repository';
 import { User } from '../user/entities/user.entity';
@@ -25,7 +23,7 @@ export class RoleByUserService {
   async create(
     createRoleByUserDto: CreateRoleByUserDto,
     user: TokenDto,
-  ): Promise<retunrFormatRoleByUser> {
+  ): Promise<returnFormatRoleByUser> {
     try {
       const targetsValues: any[] = Object.values(createRoleByUserDto.target);
       let validCount = false;
@@ -90,7 +88,7 @@ export class RoleByUserService {
     }
   }
 
-  async allRolesByUser(userId: number): Promise<retunrFormatRoleByUser> {
+  async allRolesByUser(userId: number): Promise<returnFormatRoleByUser> {
     try {
       const { response, message, status } =
         await this._roleLevelsService.findAll();

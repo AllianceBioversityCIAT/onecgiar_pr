@@ -8,7 +8,7 @@ import {
   returnErrorDto,
 } from '../../../shared/handlers/error.utils';
 import { MessageResponse } from '../../../shared/constants/Responses.constant';
-import { retunrFormatGenderTag } from './dto/return-format-gender-tag.dto';
+import { returnFormatGenderTag } from './dto/return-format-gender-tag.dto';
 
 @Injectable()
 export class GenderTagLevelsService {
@@ -18,10 +18,10 @@ export class GenderTagLevelsService {
   ) {}
 
   create(createGenderTagLevelDto: CreateGenderTagLevelDto) {
-    return 'This action adds a new genderTagLevel';
+    return createGenderTagLevelDto;
   }
 
-  async findAll(): Promise<retunrFormatGenderTag | returnErrorDto> {
+  async findAll(): Promise<returnFormatGenderTag | returnErrorDto> {
     try {
       const genderTag: GenderTagLevel[] =
         await this._genderTagRepository.find();
@@ -48,7 +48,7 @@ export class GenderTagLevelsService {
   }
 
   update(id: number, updateGenderTagLevelDto: UpdateGenderTagLevelDto) {
-    return `This action updates a #${id} genderTagLevel`;
+    return `This action updates a #${id} genderTagLevel ${updateGenderTagLevelDto}`;
   }
 
   remove(id: number) {

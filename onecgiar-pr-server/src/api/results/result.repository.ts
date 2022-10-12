@@ -1,8 +1,7 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { Result } from './entities/result.entity';
 import { HandlersError } from '../../shared/handlers/error.utils';
-import { ResultListRolesDto } from './dto/ResultListRoles.dto';
 
 @Injectable()
 export class ResultRepository extends Repository<Result> {

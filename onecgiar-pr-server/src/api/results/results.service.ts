@@ -1,7 +1,5 @@
-import { ConsoleLogger, HttpStatus, Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { retunrFormatUser } from 'src/auth/modules/user/dto/return-create-user.dto';
-import { Repository } from 'typeorm';
+import { HttpStatus, Injectable } from '@nestjs/common';
+import { returnFormatUser } from 'src/auth/modules/user/dto/return-create-user.dto';
 import { CreateResultDto } from './dto/create-result.dto';
 import { FullResultsRequestDto } from './dto/full-results-request.dto';
 import { UpdateResultDto } from './dto/update-result.dto';
@@ -13,27 +11,19 @@ import {
   returnErrorDto,
 } from '../../shared/handlers/error.utils';
 import { ResultTypesService } from './result_types/result_types.service';
-import { retunrFormatResultType } from './result_types/dto/return-format-result-type.dto';
 import { ResultType } from './result_types/entities/result_type.entity';
 import { VersionsService } from './versions/versions.service';
 import { Version } from './versions/entities/version.entity';
-import { retunrFormatResul } from './dto/return-format-result.dto';
+import { returnFormatResult } from './dto/return-format-result.dto';
 import { Result } from './entities/result.entity';
 import { CreateGeneralInformationResultDto } from './dto/create-general-information-result.dto';
 import { ResultsByInititiativesService } from './results_by_inititiatives/results_by_inititiatives.service';
 import { YearRepository } from './years/year.repository';
 import { Year } from './years/entities/year.entity';
-import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 import { ResultByEvidencesRepository } from './results_by_evidences/result_by_evidences.repository';
 import { ResultByIntitutionsRepository } from './results_by_institutions/result_by_intitutions.repository';
-import { ResultsByEvidence } from './results_by_evidences/entities/results_by_evidence.entity';
-import { ResultsByInstitution } from './results_by_institutions/entities/results_by_institution.entity';
 import { ResultByInitiativesRepository } from './results_by_inititiatives/resultByInitiatives.repository';
-import { ResultsByInititiative } from './results_by_inititiatives/entities/results_by_inititiative.entity';
-import { InitiativeByResultDTO } from './results_by_inititiatives/dto/InitiativeByResult.dto';
-import { EvidencesRepository } from './evidences/evidences.repository';
 import { ResultByIntitutionsTypeRepository } from './results_by_institution_types/result_by_intitutions_type.repository';
-import { ResultsByInstitutionType } from './results_by_institution_types/entities/results_by_institution_type.entity';
 
 @Injectable()
 export class ResultsService {
@@ -55,7 +45,7 @@ export class ResultsService {
   async createOwnerResult(
     createResultDto: CreateResultDto,
     user: TokenDto,
-  ): Promise<retunrFormatResul | returnErrorDto> {
+  ): Promise<returnFormatResult | returnErrorDto> {
     try {
       if (
         !createResultDto?.result_name ||
@@ -195,7 +185,7 @@ export class ResultsService {
     }
   }
 
-  async findAll(): Promise<retunrFormatUser> {
+  async findAll(): Promise<returnFormatUser> {
     try {
       const result: FullResultsRequestDto[] =
         await this._customResultRepository.AllResults();
@@ -246,7 +236,7 @@ export class ResultsService {
   }
 
   update(id: number, updateResultDto: UpdateResultDto) {
-    return `This action updates a #${id} result`;
+    return `This action updates a #${id} result ${updateResultDto}`;
   }
 
   remove(id: number) {
