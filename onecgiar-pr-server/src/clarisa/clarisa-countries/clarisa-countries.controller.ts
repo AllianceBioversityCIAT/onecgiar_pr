@@ -11,7 +11,7 @@ import { ClarisaCountriesService } from './clarisa-countries.service';
 import { CreateClarisaCountryDto } from './dto/create-clarisa-country.dto';
 import { UpdateClarisaCountryDto } from './dto/update-clarisa-country.dto';
 
-@Controller('clarisa-countries')
+@Controller()
 export class ClarisaCountriesController {
   constructor(
     private readonly clarisaCountriesService: ClarisaCountriesService,
