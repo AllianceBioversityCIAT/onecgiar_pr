@@ -9,7 +9,7 @@ export class RoleLevelRepository extends Repository<RoleLevel> {
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError
-    ) {
+  ) {
     super(RoleLevel, dataSource.createEntityManager());
   }
 
@@ -28,6 +28,4 @@ export class RoleLevelRepository extends Repository<RoleLevel> {
       });
     }
   }
-
-
 }

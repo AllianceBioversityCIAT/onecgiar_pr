@@ -12,10 +12,10 @@ import { Role } from '../role/entities/role.entity';
 export class RoleLevelsService {
 
   constructor(
-    private readonly _roleLevelRepository:RoleLevelRepository,
+    private readonly _roleLevelRepository: RoleLevelRepository,
     private readonly _handlersError: HandlersError,
     private readonly _roleRepository: RoleRepository
-  ){}
+  ) { }
 
   create(createRoleLevelDto: CreateRoleLevelDto) {
     return 'This action adds a new roleLevel';
@@ -24,16 +24,16 @@ export class RoleLevelsService {
   async findAll(): Promise<retunrFormatRoleLevels | returnErrorDto> {
     try {
       const rolesLevels: RoleLevel[] = await this._roleLevelRepository.find();
-      if(!rolesLevels.length){
+      if (!rolesLevels.length) {
         throw {
           response: {},
           message: 'Role Levels Not fount',
           status: HttpStatus.NOT_FOUND
         }
       }
-      
+
       const roles: Role[] = await this._roleRepository.getAllRoles();
-      if(!roles.length){
+      if (!roles.length) {
         throw {
           response: {},
           message: 'Role Not fount',
@@ -44,17 +44,17 @@ export class RoleLevelsService {
       console.log(roles)
 
       rolesLevels.map(rl => {
-        
+
         rl['roles'] = roles.filter(r => r.role_level_id == rl.id);
       })
-      
+
       return {
         response: rolesLevels,
         message: 'Successful response',
         status: HttpStatus.OK
       }
     } catch (error) {
-      return this._handlersError.returnErrorRes({error});
+      return this._handlersError.returnErrorRes({ error });
     }
   }
 
