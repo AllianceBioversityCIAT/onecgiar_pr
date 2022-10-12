@@ -7,7 +7,7 @@ import { Evidence } from './entities/evidence.entity';
 export class EvidencesRepository extends Repository<Evidence> {
   constructor(
     private dataSource: DataSource,
-    private readonly _handlersError: HandlersError
+    private readonly _handlersError: HandlersError,
   ) {
     super(Evidence, dataSource.createEntityManager());
   }
@@ -31,15 +31,16 @@ export class EvidencesRepository extends Repository<Evidence> {
     	and e.is_active > 0;
     `;
     try {
-      const completeUser: Evidence[] = await this.query(queryData, [evidenceId]);
+      const completeUser: Evidence[] = await this.query(queryData, [
+        evidenceId,
+      ]);
       return completeUser;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: EvidencesRepository.name,
         error: error,
-        debug: true
+        debug: true,
       });
     }
   }
-
 }

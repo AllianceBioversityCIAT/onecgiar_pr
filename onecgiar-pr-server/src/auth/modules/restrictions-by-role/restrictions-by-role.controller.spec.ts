@@ -11,7 +11,9 @@ describe('RestrictionsByRoleController', () => {
       providers: [RestrictionsByRoleService],
     }).compile();
 
-    controller = module.get<RestrictionsByRoleController>(RestrictionsByRoleController);
+    controller = module.get<RestrictionsByRoleController>(
+      RestrictionsByRoleController,
+    );
   });
 
   it('should be defined', () => {

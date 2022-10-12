@@ -7,8 +7,8 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 export class VersionRepository extends Repository<Version> {
   constructor(
     private dataSource: DataSource,
-    private readonly _handlersError: HandlersError
-    ) {
+    private readonly _handlersError: HandlersError,
+  ) {
     super(Version, dataSource.createEntityManager());
   }
 
@@ -33,9 +33,8 @@ export class VersionRepository extends Repository<Version> {
       throw this._handlersError.returnErrorRepository({
         className: VersionRepository.name,
         error: error,
-        debug: true
+        debug: true,
       });
     }
   }
-
 }

@@ -35,10 +35,10 @@ describe('UserController (e2e)', () => {
     return request(app.getHttpServer())
       .get('/auth/user/' + 0)
       .expect(200)
-      .expect(res => {
-        const data = res.body
+      .expect((res) => {
+        const data = res.body;
         expect(data.response).toEqual({});
-      })
+      });
   });
 
   afterAll(async () => {

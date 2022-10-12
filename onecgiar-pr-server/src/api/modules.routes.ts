@@ -12,10 +12,10 @@ export const ModulesRoutes: Routes = [
   {
     path: 'results',
     module: ResultsModule,
-    children: ResultsRoutes
+    children: ResultsRoutes,
   },
   {
     path: 'type-one-report',
     module: TypeOneReportModule,
-  }
+  },
 ];

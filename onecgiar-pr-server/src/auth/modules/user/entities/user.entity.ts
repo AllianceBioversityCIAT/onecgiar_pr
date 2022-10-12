@@ -1,8 +1,17 @@
-import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { Auditable } from '../../../../shared/entities/auditableEntity';
 
 @Entity('users')
-export class User{
+export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -17,21 +26,21 @@ export class User{
 
   @Column({
     name: 'is_cgiar',
-    type: 'boolean'
+    type: 'boolean',
   })
   is_cgiar: boolean;
 
   @Column({
     name: 'password',
     type: 'text',
-    nullable: true
+    nullable: true,
   })
   password!: string;
 
   @Column({
     name: 'last_login',
     type: 'timestamp',
-    nullable: true
+    nullable: true,
   })
   last_login!: Date;
 
@@ -42,26 +51,24 @@ export class User{
   })
   active: boolean;
 
-  @ManyToOne(() => User, u => u.id, { nullable: true })
+  @ManyToOne(() => User, (u) => u.id, { nullable: true })
   @JoinColumn({
-      name: 'created_by'
+    name: 'created_by',
   })
   created_by!: number;
 
   @CreateDateColumn({
-      name: 'created_date'
+    name: 'created_date',
   })
   created_date: Date;
-  @ManyToOne(() => User, u => u.id, { nullable: true })
+  @ManyToOne(() => User, (u) => u.id, { nullable: true })
   @JoinColumn({
-      name: 'last_updated_by'
+    name: 'last_updated_by',
   })
-  
   last_updated_by!: number;
   @UpdateDateColumn({
-      name: 'last_updated_date',
-      nullable: true
+    name: 'last_updated_date',
+    nullable: true,
   })
   last_updated_date!: Date;
-
 }

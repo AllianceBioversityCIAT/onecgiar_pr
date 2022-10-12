@@ -1,4 +1,9 @@
-import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/common';
+import {
+  MiddlewareConsumer,
+  Module,
+  NestModule,
+  RequestMethod,
+} from '@nestjs/common';
 import { UserService } from './user.service';
 import { UserController } from './user.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -16,25 +21,21 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 @Module({
   controllers: [UserController],
   providers: [
-    UserService, 
-    BcryptPasswordEncoder, 
-    Repository, 
+    UserService,
+    BcryptPasswordEncoder,
+    Repository,
     UserRepository,
     AuthService,
-    HandlersError
+    HandlersError,
   ],
   imports: [
     UserModule,
     RoleModule,
     TypeOrmModule.forFeature([User]),
     JwtModule,
-    RoleByUserModule
+    RoleByUserModule,
   ],
-  exports: [
-    UserRepository, 
-    UserService, 
-    TypeOrmModule.forFeature([User])
-  ],
+  exports: [UserRepository, UserService, TypeOrmModule.forFeature([User])],
 })
 export class UserModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
@@ -50,7 +51,7 @@ export class UserModule implements NestModule {
       {
         path: '/auth/user/create',
         method: RequestMethod.POST,
-      }
+      },
     );
   }
 }

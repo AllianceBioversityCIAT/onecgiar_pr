@@ -45,7 +45,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     UserModule,
     RoleModule,
     TypeOrmModule.forFeature([User]),
-    ScheduleModule.forRoot()
+    ScheduleModule.forRoot(),
   ],
   controllers: [AppController],
   providers: [

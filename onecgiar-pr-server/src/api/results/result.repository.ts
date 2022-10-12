@@ -8,12 +8,16 @@ import { ResultListRolesDto } from './dto/ResultListRoles.dto';
 export class ResultRepository extends Repository<Result> {
   constructor(
     private dataSource: DataSource,
-    private readonly _handlersError: HandlersError
+    private readonly _handlersError: HandlersError,
   ) {
     super(Result, dataSource.createEntityManager());
   }
 
-  async getResultByName(name: string, result_type: number, result_name: number) {
+  async getResultByName(
+    name: string,
+    result_type: number,
+    result_name: number,
+  ) {
     const queryData = `
     SELECT 
     	ci.id as init_id,
@@ -35,21 +39,23 @@ export class ResultRepository extends Repository<Result> {
     `;
     try {
       const completeUser: any[] = await this.query(queryData, [
-        name, result_type, result_name
+        name,
+        result_type,
+        result_name,
       ]);
       return completeUser[0];
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultRepository.name,
         error: error,
-        debug: true
+        debug: true,
       });
     }
   }
 
   /**
    * !reported_year revisar
-   * @returns 
+   * @returns
    */
   async AllResults() {
     const queryData = `
@@ -80,9 +86,9 @@ WHERE
       throw {
         message: `[${ResultRepository.name}] => completeAllData error: ${error}`,
         response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
       };
-    };
+    }
   }
 
   async AllResultsByRoleUsers(userid: number) {
@@ -123,9 +129,8 @@ WHERE
       throw {
         message: `[${ResultRepository.name}] => completeAllData error: ${error}`,
         response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
       };
-    };
+    }
   }
-
 }

@@ -17,18 +17,18 @@ export const AuthModulesRoutes: Routes = [
   },
   {
     path: 'role-by-user',
-    module: RoleByUserModule
+    module: RoleByUserModule,
   },
   {
     path: 'role-levels',
-    module: RoleLevelsModule
+    module: RoleLevelsModule,
   },
   {
     path: 'restrictions-by-role',
-    module: RestrictionsByRoleModule
+    module: RestrictionsByRoleModule,
   },
   {
     path: 'restrictions',
-    module: RestrictionsModule
-  }
+    module: RestrictionsModule,
+  },
 ];

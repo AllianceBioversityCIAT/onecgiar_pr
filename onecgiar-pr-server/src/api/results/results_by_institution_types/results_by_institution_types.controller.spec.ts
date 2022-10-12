@@ -11,7 +11,9 @@ describe('ResultsByInstitutionTypesController', () => {
       providers: [ResultsByInstitutionTypesService],
     }).compile();
 
-    controller = module.get<ResultsByInstitutionTypesController>(ResultsByInstitutionTypesController);
+    controller = module.get<ResultsByInstitutionTypesController>(
+      ResultsByInstitutionTypesController,
+    );
   });
 
   it('should be defined', () => {

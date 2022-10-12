@@ -16,7 +16,10 @@ export class ClarisaOutcomeIndicatorsService {
     return `This action returns a #${id} clarisaOutcomeIndicator`;
   }
 
-  update(id: number, updateClarisaOutcomeIndicatorDto: UpdateClarisaOutcomeIndicatorDto) {
+  update(
+    id: number,
+    updateClarisaOutcomeIndicatorDto: UpdateClarisaOutcomeIndicatorDto,
+  ) {
     return `This action updates a #${id} clarisaOutcomeIndicator`;
   }
 

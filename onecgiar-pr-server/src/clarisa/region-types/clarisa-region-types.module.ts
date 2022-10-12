@@ -4,6 +4,6 @@ import { ClarisaRegionTypesController } from './clarisa-region-types.controller'
 
 @Module({
   controllers: [ClarisaRegionTypesController],
-  providers: [ClarisaRegionTypesService]
+  providers: [ClarisaRegionTypesService],
 })
 export class ClarisaRegionTypesModule {}

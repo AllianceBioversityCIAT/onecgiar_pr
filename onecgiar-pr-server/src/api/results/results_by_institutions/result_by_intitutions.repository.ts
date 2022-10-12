@@ -7,7 +7,7 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 export class ResultByIntitutionsRepository extends Repository<ResultsByInstitution> {
   constructor(
     private dataSource: DataSource,
-    private readonly _handlersError: HandlersError
+    private readonly _handlersError: HandlersError,
   ) {
     super(ResultsByInstitution, dataSource.createEntityManager());
   }
@@ -30,13 +30,15 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     	and rbi.is_active > 0;
     `;
     try {
-      const completeUser: ResultsByInstitution[] = await this.query(queryData, [resultId]);
+      const completeUser: ResultsByInstitution[] = await this.query(queryData, [
+        resultId,
+      ]);
       return completeUser;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByIntitutionsRepository.name,
         error: error,
-        debug: true
+        debug: true,
       });
     }
   }
@@ -54,9 +56,8 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
       throw this._handlersError.returnErrorRepository({
         className: ResultByIntitutionsRepository.name,
         error: error,
-        debug: true
+        debug: true,
       });
     }
   }
-
 }

@@ -1,7 +1,7 @@
 export enum RoleApp {
-    Guest = 'guest',
-    Admin = 'admin',
-  }
+  Guest = 'guest',
+  Admin = 'admin',
+}
 
 export enum RoleInitiative {
   Lead = 'lead',

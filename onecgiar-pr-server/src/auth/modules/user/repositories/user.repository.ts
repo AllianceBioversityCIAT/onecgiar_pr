@@ -8,8 +8,8 @@ import { HandlersError } from '../../../../shared/handlers/error.utils';
 export class UserRepository extends Repository<User> {
   constructor(
     private dataSource: DataSource,
-    private readonly _handlersError: HandlersError
-    ) {
+    private readonly _handlersError: HandlersError,
+  ) {
     super(User, dataSource.createEntityManager());
   }
 
@@ -35,7 +35,7 @@ export class UserRepository extends Repository<User> {
       throw this._handlersError.returnErrorRepository({
         className: UserRepository.name,
         error: error,
-        debug: true
+        debug: true,
       });
     }
   }
@@ -58,7 +58,7 @@ export class UserRepository extends Repository<User> {
       throw this._handlersError.returnErrorRepository({
         className: UserRepository.name,
         error: error,
-        debug: true
+        debug: true,
       });
     }
   }
@@ -82,9 +82,8 @@ export class UserRepository extends Repository<User> {
       throw this._handlersError.returnErrorRepository({
         className: UserRepository.name,
         error: error,
-        debug: true
+        debug: true,
       });
     }
   }
-
 }

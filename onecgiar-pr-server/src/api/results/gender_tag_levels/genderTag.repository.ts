@@ -7,8 +7,8 @@ import { GenderTagLevel } from './entities/gender_tag_level.entity';
 export class GenderTagRepository extends Repository<GenderTagLevel> {
   constructor(
     private dataSource: DataSource,
-    private readonly _handlersError: HandlersError
-    ) {
+    private readonly _handlersError: HandlersError,
+  ) {
     super(GenderTagLevel, dataSource.createEntityManager());
   }
 
@@ -22,9 +22,8 @@ export class GenderTagRepository extends Repository<GenderTagLevel> {
       throw this._handlersError.returnErrorRepository({
         className: GenderTagRepository.name,
         error: error,
-        debug: true
+        debug: true,
       });
     }
   }
-
 }

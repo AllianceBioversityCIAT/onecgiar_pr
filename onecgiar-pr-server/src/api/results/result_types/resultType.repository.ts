@@ -7,8 +7,8 @@ import { ResultType } from './entities/result_type.entity';
 export class ResultTypeRepository extends Repository<ResultType> {
   constructor(
     private dataSource: DataSource,
-    private readonly _handlersError: HandlersError
-    ) {
+    private readonly _handlersError: HandlersError,
+  ) {
     super(ResultType, dataSource.createEntityManager());
   }
 
@@ -22,7 +22,7 @@ export class ResultTypeRepository extends Repository<ResultType> {
       throw this._handlersError.returnErrorRepository({
         className: ResultTypeRepository.name,
         error: error,
-        debug: true
+        debug: true,
       });
     }
   }
@@ -43,7 +43,7 @@ export class ResultTypeRepository extends Repository<ResultType> {
       throw this._handlersError.returnErrorRepository({
         className: ResultTypeRepository.name,
         error: error,
-        debug: true
+        debug: true,
       });
     }
   }
@@ -65,9 +65,8 @@ export class ResultTypeRepository extends Repository<ResultType> {
       throw this._handlersError.returnErrorRepository({
         className: ResultTypeRepository.name,
         error: error,
-        debug: true
+        debug: true,
       });
     }
   }
-
 }

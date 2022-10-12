@@ -22,38 +22,35 @@ import { ClarisaMeliaStudyTypeRepository } from './clarisa-melia-study-type/Clar
 import { ClarisaInitiativesModule } from './clarisa-initiatives/clarisa-initiatives.module';
 
 @Module({
-    imports: [
-        ClarisaActionAreasModule,
-        ClarisaActionAreasOutcomesIndicatorsModule,
-        ClarisaGlobalTargetModule,
-        ClarisaImpactAreaModule,
-        ClarisaImpactAreaIndicatorsModule,
-        ClarisaInstitutionsModule,
-        ClarisaInstitutionsTypeModule,
-        ClarisaMeliaStudyTypeModule,
-        ClarisaCountriesModule,
-        ClarisaRegionsModule,
-        ClarisaCountriesRegionsModule,
-        ClarisaOutcomeIndicatorsModule,
-        ClarisaRegionTypesModule,
-        ClarisaInitiativesModule
-    ],
-    controllers: [],
-    providers: [
-        ClarisaCronsService,
-        ClarisaTaskService
-    ],
-    exports: [
-        ClarisaActionAreasModule,
-        ClarisaActionAreasOutcomesIndicatorsModule,
-        ClarisaGlobalTargetModule,
-        ClarisaImpactAreaModule,
-        ClarisaImpactAreaIndicatorsModule,
-        ClarisaInstitutionsModule,
-        ClarisaInstitutionsTypeModule,
-        ClarisaMeliaStudyTypeModule,
-        ClarisaCronsService,
-        ClarisaTaskService
-    ]
+  imports: [
+    ClarisaActionAreasModule,
+    ClarisaActionAreasOutcomesIndicatorsModule,
+    ClarisaGlobalTargetModule,
+    ClarisaImpactAreaModule,
+    ClarisaImpactAreaIndicatorsModule,
+    ClarisaInstitutionsModule,
+    ClarisaInstitutionsTypeModule,
+    ClarisaMeliaStudyTypeModule,
+    ClarisaCountriesModule,
+    ClarisaRegionsModule,
+    ClarisaCountriesRegionsModule,
+    ClarisaOutcomeIndicatorsModule,
+    ClarisaRegionTypesModule,
+    ClarisaInitiativesModule,
+  ],
+  controllers: [],
+  providers: [ClarisaCronsService, ClarisaTaskService],
+  exports: [
+    ClarisaActionAreasModule,
+    ClarisaActionAreasOutcomesIndicatorsModule,
+    ClarisaGlobalTargetModule,
+    ClarisaImpactAreaModule,
+    ClarisaImpactAreaIndicatorsModule,
+    ClarisaInstitutionsModule,
+    ClarisaInstitutionsTypeModule,
+    ClarisaMeliaStudyTypeModule,
+    ClarisaCronsService,
+    ClarisaTaskService,
+  ],
 })
 export class ClarisaModule {}

@@ -8,7 +8,10 @@ import { UpdateResultDto } from './dto/update-result.dto';
 import { ResultRepository } from './result.repository';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
-import { HandlersError, returnErrorDto } from '../../shared/handlers/error.utils';
+import {
+  HandlersError,
+  returnErrorDto,
+} from '../../shared/handlers/error.utils';
 import { ResultTypesService } from './result_types/result_types.service';
 import { retunrFormatResultType } from './result_types/dto/return-format-result-type.dto';
 import { ResultType } from './result_types/entities/result_type.entity';
@@ -34,7 +37,6 @@ import { ResultsByInstitutionType } from './results_by_institution_types/entitie
 
 @Injectable()
 export class ResultsService {
-
   constructor(
     private readonly _resultRepository: ResultRepository,
     private readonly _clarisaInitiativesRepository: ClarisaInitiativesRepository,
@@ -45,39 +47,48 @@ export class ResultsService {
     private readonly _resultsByInititiativesService: ResultsByInititiativesService,
     private readonly _yearRepository: YearRepository,
     private readonly _resultByEvidencesRepository: ResultByEvidencesRepository,
-    private readonly _resultByIntitutionsRepository:ResultByIntitutionsRepository,
+    private readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
     private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
-    private readonly _resultByIntitutionsTypeRepository: ResultByIntitutionsTypeRepository
-  ) { }
+    private readonly _resultByIntitutionsTypeRepository: ResultByIntitutionsTypeRepository,
+  ) {}
 
-  async createOwnerResult(createResultDto: CreateResultDto, user: TokenDto): Promise<retunrFormatResul | returnErrorDto> {
+  async createOwnerResult(
+    createResultDto: CreateResultDto,
+    user: TokenDto,
+  ): Promise<retunrFormatResul | returnErrorDto> {
     try {
-      if (!createResultDto?.result_name ||
+      if (
+        !createResultDto?.result_name ||
         !createResultDto?.initiative_id ||
-        !createResultDto?.result_type_id) {
+        !createResultDto?.result_type_id
+      ) {
         throw {
           response: {},
           message: 'missing data: Result name, Initiative or Result type',
-          status: HttpStatus.BAD_REQUEST
-        }
+          status: HttpStatus.BAD_REQUEST,
+        };
       }
 
-      const initiative = await this._clarisaInitiativesRepository.findOne({ where: { id: createResultDto.initiative_id } });
+      const initiative = await this._clarisaInitiativesRepository.findOne({
+        where: { id: createResultDto.initiative_id },
+      });
       if (!initiative) {
         throw {
           response: {},
           message: 'Initiative Not fount',
-          status: HttpStatus.NOT_FOUND
-        }
+          status: HttpStatus.NOT_FOUND,
+        };
       }
 
-      const resultType = await this._resultTypesService.findOneResultType(createResultDto.result_type_id);
+      const resultType = await this._resultTypesService.findOneResultType(
+        createResultDto.result_type_id,
+      );
       if (resultType.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: resultType });
       }
       const rt: ResultType = <ResultType>resultType.response;
 
-      if(rt.name === 'Knowledge Product'){
+      if (rt.name === 'Knowledge Product') {
         /** aca va la funcion de QAP */
         /** funcion para mapear el Knowledge Product */
         /**
@@ -86,8 +97,8 @@ export class ResultsService {
         throw {
           response: {},
           message: 'Knowledge Product not working!',
-          status: HttpStatus.INTERNAL_SERVER_ERROR
-        }
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+        };
       }
 
       const version = await this._versionsService.findBaseVersion();
@@ -96,13 +107,15 @@ export class ResultsService {
       }
       const vrs: Version = <Version>version.response;
 
-      const year: Year = await this._yearRepository.findOne({where: {active: true}});
-      if(!year){
+      const year: Year = await this._yearRepository.findOne({
+        where: { active: true },
+      });
+      if (!year) {
         throw {
           response: {},
           message: 'Active year Not fount',
-          status: HttpStatus.NOT_FOUND
-        }
+          status: HttpStatus.NOT_FOUND,
+        };
       }
 
       const newResultHeader: Result = await this._resultRepository.save({
@@ -111,61 +124,65 @@ export class ResultsService {
         result_type_id: rt.id,
         version_id: vrs.id,
         title: createResultDto.result_name,
-        reported_year_id: year.year
+        reported_year_id: year.year,
       });
 
-      const resultByInitiative = await this._resultByInitiativesRepository.save({
-        created_by: newResultHeader.created_by,
-        initiative_id: initiative.id,
-        initiative_role_id: 1,
-        result_id: newResultHeader.id,
-        version_id: vrs.id
-      });
+      const resultByInitiative = await this._resultByInitiativesRepository.save(
+        {
+          created_by: newResultHeader.created_by,
+          initiative_id: initiative.id,
+          initiative_role_id: 1,
+          result_id: newResultHeader.id,
+          version_id: vrs.id,
+        },
+      );
 
       return {
         response: newResultHeader,
         message: 'The Result has been created successfully',
-        status: HttpStatus.CREATED
-      }
+        status: HttpStatus.CREATED,
+      };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
-
     }
   }
 
-  async createResultGeneralInformation(resultGI: CreateGeneralInformationResultDto) {
+  async createResultGeneralInformation(
+    resultGI: CreateGeneralInformationResultDto,
+  ) {
     try {
-
-
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
-
     }
   }
 
-  async deleteResult(resultId: number){
+  async deleteResult(resultId: number) {
     try {
-      const result: Result = await this._resultRepository.findOne({where:{id: resultId}});
-      if(!result) {
+      const result: Result = await this._resultRepository.findOne({
+        where: { id: resultId },
+      });
+      if (!result) {
         throw {
           response: {},
           message: 'The result does not exist',
-          status: HttpStatus.NOT_FOUND
-        }
+          status: HttpStatus.NOT_FOUND,
+        };
       }
       result.is_active = false;
-      
+
       await this._resultRepository.save(result);
       await this._resultByInitiativesRepository.logicalElimination(resultId);
-      await this._resultByIntitutionsTypeRepository.logicalElimination(result.id);
+      await this._resultByIntitutionsTypeRepository.logicalElimination(
+        result.id,
+      );
       await this._resultByIntitutionsRepository.logicalElimination(result.id);
       await this._resultByEvidencesRepository.logicalElimination(result.id);
 
       return {
         response: result,
         message: 'The result has been successfully deleted',
-        status: HttpStatus.OK
-      }
+        status: HttpStatus.OK,
+      };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
@@ -173,7 +190,6 @@ export class ResultsService {
 
   async creatFullResult() {
     try {
-
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
@@ -181,21 +197,22 @@ export class ResultsService {
 
   async findAll(): Promise<retunrFormatUser> {
     try {
-      const result: FullResultsRequestDto[] = await this._customResultRepository.AllResults()
+      const result: FullResultsRequestDto[] =
+        await this._customResultRepository.AllResults();
 
       if (!result.length) {
         throw {
           response: {},
           message: 'Results Not Found',
-          status: HttpStatus.NOT_FOUND
-        }
+          status: HttpStatus.NOT_FOUND,
+        };
       }
 
       return {
         response: result,
         message: 'Successful response',
-        status: HttpStatus.OK
-      }
+        status: HttpStatus.OK,
+      };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
@@ -203,21 +220,22 @@ export class ResultsService {
 
   async findAllByRole(userId: number) {
     try {
-      const result: any[] = await this._customResultRepository.AllResultsByRoleUsers(userId);
+      const result: any[] =
+        await this._customResultRepository.AllResultsByRoleUsers(userId);
 
       if (!result.length) {
         throw {
           response: {},
           message: 'Results Not Found',
-          status: HttpStatus.NOT_FOUND
-        }
+          status: HttpStatus.NOT_FOUND,
+        };
       }
 
       return {
         response: result,
         message: 'Successful response',
-        status: HttpStatus.OK
-      }
+        status: HttpStatus.OK,
+      };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }

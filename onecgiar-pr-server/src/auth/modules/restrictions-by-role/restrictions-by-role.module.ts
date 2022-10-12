@@ -4,6 +4,6 @@ import { RestrictionsByRoleController } from './restrictions-by-role.controller'
 
 @Module({
   controllers: [RestrictionsByRoleController],
-  providers: [RestrictionsByRoleService]
+  providers: [RestrictionsByRoleService],
 })
 export class RestrictionsByRoleModule {}

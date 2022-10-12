@@ -7,10 +7,8 @@ import { ClarisaOutcomeIndicatorsRepository } from './ClariasaOutcomeIndicators.
   controllers: [ClarisaOutcomeIndicatorsController],
   providers: [
     ClarisaOutcomeIndicatorsService,
-    ClarisaOutcomeIndicatorsRepository
+    ClarisaOutcomeIndicatorsRepository,
   ],
-  exports: [
-    ClarisaOutcomeIndicatorsRepository
-  ]
+  exports: [ClarisaOutcomeIndicatorsRepository],
 })
 export class ClarisaOutcomeIndicatorsModule {}

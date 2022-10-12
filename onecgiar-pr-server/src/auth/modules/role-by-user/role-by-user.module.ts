@@ -12,17 +12,13 @@ import { User } from '../user/entities/user.entity';
 
 @Module({
   controllers: [RoleByUserController],
-  imports: [
-    RoleLevelsModule,
-  ],
+  imports: [RoleLevelsModule],
   providers: [
     RoleByUserService,
     RoleByUserRepository,
     HandlersError,
-    UserRepository
+    UserRepository,
   ],
-  exports: [
-    RoleByUserRepository
-  ]
+  exports: [RoleByUserRepository],
 })
 export class RoleByUserModule {}

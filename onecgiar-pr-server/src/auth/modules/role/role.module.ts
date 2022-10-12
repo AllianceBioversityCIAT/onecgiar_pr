@@ -9,18 +9,8 @@ import { RoleRepository } from './Role.repository';
 
 @Module({
   controllers: [RoleController],
-  providers: [
-    RoleService, 
-    Repository,
-    HandlersError,
-    RoleRepository
-  ],
+  providers: [RoleService, Repository, HandlersError, RoleRepository],
   imports: [TypeOrmModule.forFeature([Role])],
-  exports: [
-    TypeOrmModule.forFeature([Role]), 
-    RoleService,
-    RoleRepository
-    
-  ],
+  exports: [TypeOrmModule.forFeature([Role]), RoleService, RoleRepository],
 })
 export class RoleModule {}

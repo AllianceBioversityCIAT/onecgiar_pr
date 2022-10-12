@@ -1,5 +1,12 @@
 import { Auditable } from '../../../../shared/entities/auditableEntity';
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { RoleLevel } from '../../role-levels/entities/role-level.entity';
 
 @Entity('role')
@@ -15,7 +22,7 @@ export class Role extends Auditable {
 
   @ManyToOne(() => RoleLevel, (rl) => rl.id)
   @JoinColumn({
-    name: 'role_level_id'
+    name: 'role_level_id',
   })
   role_level_id: number;
 
@@ -25,5 +32,4 @@ export class Role extends Auditable {
     default: true,
   })
   active: boolean;
-
 }

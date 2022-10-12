@@ -1,11 +1,21 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { RestrictionsByRoleService } from './restrictions-by-role.service';
 import { CreateRestrictionsByRoleDto } from './dto/create-restrictions-by-role.dto';
 import { UpdateRestrictionsByRoleDto } from './dto/update-restrictions-by-role.dto';
 
 @Controller('restrictions-by-role')
 export class RestrictionsByRoleController {
-  constructor(private readonly restrictionsByRoleService: RestrictionsByRoleService) {}
+  constructor(
+    private readonly restrictionsByRoleService: RestrictionsByRoleService,
+  ) {}
 
   @Post()
   create(@Body() createRestrictionsByRoleDto: CreateRestrictionsByRoleDto) {
@@ -23,8 +33,14 @@ export class RestrictionsByRoleController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateRestrictionsByRoleDto: UpdateRestrictionsByRoleDto) {
-    return this.restrictionsByRoleService.update(+id, updateRestrictionsByRoleDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateRestrictionsByRoleDto: UpdateRestrictionsByRoleDto,
+  ) {
+    return this.restrictionsByRoleService.update(
+      +id,
+      updateRestrictionsByRoleDto,
+    );
   }
 
   @Delete(':id')

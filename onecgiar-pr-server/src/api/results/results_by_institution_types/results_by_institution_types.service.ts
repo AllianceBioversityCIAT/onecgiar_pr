@@ -16,7 +16,10 @@ export class ResultsByInstitutionTypesService {
     return `This action returns a #${id} resultsByInstitutionType`;
   }
 
-  update(id: number, updateResultsByInstitutionTypeDto: UpdateResultsByInstitutionTypeDto) {
+  update(
+    id: number,
+    updateResultsByInstitutionTypeDto: UpdateResultsByInstitutionTypeDto,
+  ) {
     return `This action updates a #${id} resultsByInstitutionType`;
   }
 

@@ -1,3 +1,3 @@
-export class HeadersDto{
-    public auth: string;
+export class HeadersDto {
+  public auth: string;
 }
