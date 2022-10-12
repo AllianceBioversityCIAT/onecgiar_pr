@@ -12,9 +12,12 @@ import { ClarisaImpactAreaIndicator } from './clarisa-impact-area-indicators/ent
 import { ClarisaCountry } from './clarisa-countries/entities/clarisa-country.entity';
 import { ClarisaOutcomeIndicatorsRepository } from './clarisa-outcome-indicators/ClariasaOutcomeIndicators.repository';
 import { ClarisaOutcomeIndicator } from './clarisa-outcome-indicators/entities/clarisa-outcome-indicator.entity';
-import { ClarisaRegionsTypesRepository } from './clarisa-regions/ClariasaRegionsTypes.repository';
-import { ClarisaRegionType } from './region-types/entities/clarisa-region-type.entity';
+import { ClarisaRegionsRepository } from './clarisa-regions/ClariasaRegions.repository';
+import { ClarisaRegionType } from './clarisa-region-types/entities/clarisa-region-type.entity';
 import { ClarisaCountriesRepository } from './clarisa-countries/ClarisaCountries.repository';
+import { ClarisaRegionsTypeRepository } from './clarisa-region-types/ClariasaRegionsTypes.repository'
+import { ClarisaGobalTargetRepository } from './clarisa-global-target/ClariasaGlobalTarget.repository';
+
 
 @Injectable()
 export class ClarisaTaskService {
@@ -34,7 +37,9 @@ export class ClarisaTaskService {
         private readonly _clarisaImpactAreaInticatorsRepository: ClarisaImpactAreaInticatorsRepository,
         private readonly _clarisaCountriesRepository: ClarisaCountriesRepository,
         private readonly _clarisaOutcomeIndicatorsRepository: ClarisaOutcomeIndicatorsRepository,
-        private readonly _clarisaRegionsTypesRepository: ClarisaRegionsTypesRepository
+        private readonly _clarisaRegionsTypeRepository: ClarisaRegionsTypeRepository,
+        private readonly _clarisaRegionsRepository: ClarisaRegionsRepository,
+        private readonly _clarisaGobalTargetRepository: ClarisaGobalTargetRepository
     ) { }
 
     public async clarisaBootstrap() {
@@ -42,12 +47,14 @@ export class ClarisaTaskService {
         let count: number = 1;
         count = await this.cloneClarisaCountries(count, true);
         count = await this.cloneClarisaMeliaStudyTypes(count, true);
+        //count = await this.cloneClarisaRegions(count, true);
         //count = await this.cloneClarisaInitiatives(count, true);
         //count = await this.cloneClarisaActionArea(count, true);
         count = await this.cloneClarisaImpactAreaIndicators(count, true);
         count = await this.cloneClarisaImpactArea(count, true);
         count = await this.cloneClarisaOutcomeIndicators(count, true);
         count = await this.cloneClarisaRegionsType(count, true);
+        count = await this.cloneClarisaRegions(count);
         count = await this.cloneClarisaCountries(count);
         count = await this.cloneClarisaMeliaStudyTypes(count);
         count = await this.cloneClarisaActionArea(count);
@@ -84,12 +91,26 @@ export class ClarisaTaskService {
         }
     }
 
-    private async cloneClarisaRegions() {
+    private async cloneClarisaRegions(position: number, deleteItem:boolean = false) {
         try {
-            const regions = await axios.get(`${this.clarisaHost}un-regions`, this.configAuth);
-            console.log(regions);
+            if (deleteItem) {
+                const deleteData = await this._clarisaRegionsRepository.deleteAllData();
+                this._logger.warn(`[${position}]: All CLARISA Regions control list data has been deleted`);
+            } else {
+                const { data } = await axios.get(`${this.clarisaHost}regions/un-regions`, this.configAuth);
+                console.log(data)
+                await this._clarisaRegionsRepository.save(data);
+                data.map(el => {
+                    el['parent_regions_code'] = el.parentRegion?.um49Code ? el.parentRegion.um49Code: null;
+                })
+                await this._clarisaRegionsRepository.save(data);
+                this._logger.verbose(`[${position}]: All CLARISA Regions control list data has been created`);
+            }
+            return ++position;
         } catch (error) {
-            console.log(error)
+            this._logger.error(`[${position}]: Error in manipulating the data of CLARISA Regions`);
+            this._logger.error(error);
+            return ++position;
         }
     }
 
@@ -204,16 +225,34 @@ export class ClarisaTaskService {
     private async cloneClarisaRegionsType(position: number, deleteItem:boolean = false) {
         try {
             if (deleteItem) {
-                const deleteData = await this._clarisaRegionsTypesRepository.deleteAllData();
+                const deleteData = await this._clarisaRegionsTypeRepository.deleteAllData();
                 this._logger.warn(`[${position}]: All CLARISA Region Types control list data has been deleted`);
             } else {
                 const { data } = await axios.get(`${this.clarisaHost}region-types`, this.configAuth);
-                this._clarisaRegionsTypesRepository.save<ClarisaRegionType>(data);
+                this._clarisaRegionsTypeRepository.save<ClarisaRegionType>(data);
                 this._logger.verbose(`[${position}]: All CLARISA Region Types control list data has been created`);
             }
             return ++position;
         } catch (error) {
             this._logger.error(`[${position}]: Error in manipulating the data of CLARISA Region Types`);
+            this._logger.error(error);
+            return ++position;
+        }
+    }
+
+    private async cloneClarisaGlobalTargetType(position: number, deleteItem:boolean = false) {
+        try {
+            if (deleteItem) {
+                const deleteData = await this._clarisaGobalTargetRepository.deleteAllData();
+                this._logger.warn(`[${position}]: All CLARISA Global Target control list data has been deleted`);
+            } else {
+                const { data } = await axios.get(`${this.clarisaHost}global-targets`, this.configAuth);
+                this._clarisaGobalTargetRepository.save<ClarisaRegionType>(data);
+                this._logger.verbose(`[${position}]: All CLARISA Global Target control list data has been created`);
+            }
+            return ++position;
+        } catch (error) {
+            this._logger.error(`[${position}]: Error in manipulating the data of CLARISA Global Target`);
             this._logger.error(error);
             return ++position;
         }

@@ -16,7 +16,7 @@ import { ClarisaCountriesModule } from './clarisa-countries/clarisa-countries.mo
 import { ClarisaRegionsModule } from './clarisa-regions/clarisa-regions.module';
 import { ClarisaCountriesRegionsModule } from './clarisa-countries-regions/clarisa-countries-regions.module';
 import { ClarisaOutcomeIndicatorsModule } from './clarisa-outcome-indicators/clarisa-outcome-indicators.module';
-import { ClarisaRegionTypesModule } from './region-types/clarisa-region-types.module';
+import { ClarisaRegionTypesModule } from './clarisa-region-types/clarisa-region-types.module';
 import { ClarisaTaskService } from './clarisatask.service';
 import { ClarisaMeliaStudyTypeRepository } from './clarisa-melia-study-type/ClariasaMeliasStudyType.repository';
 import { ClarisaInitiativesModule } from './clarisa-initiatives/clarisa-initiatives.module';
