@@ -74,7 +74,7 @@
 
             .title {
                 text-align: center;
-                font-size: 15px;
+                font-size: 13px;
                 font-weight: 500;
                 margin-bottom: 2px;
             }
@@ -82,6 +82,9 @@
             .items {
                 display: flex;
                 gap: 8px;
+                overflow-x: auto;
+                max-width: 300px;
+                padding-bottom: 5px;
 
                 .item {
                     font-weight: 200;
@@ -89,6 +92,7 @@
                     display: flex;
                     border-radius: 3px;
                     overflow: auto;
+                    min-width: max-content;
 
                     .init,
                     .role {

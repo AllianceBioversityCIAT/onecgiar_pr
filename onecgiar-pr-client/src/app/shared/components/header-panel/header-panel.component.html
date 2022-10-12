@@ -13,7 +13,7 @@
     </div>
     <div class="my_initiatives" *ngIf="this.api.dataControlSE?.myInitiativesList?.length">
       <div class="title">My initiatives:</div>
-      <div class="items">
+      <div class="items custom_scroll">
         <div class="item" *ngFor="let item of this.api.dataControlSE.myInitiativesList">
           <div class="init">{{item?.official_code}}</div>
           <div class="role">{{item?.role}}</div>

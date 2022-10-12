@@ -4,3 +4,24 @@
     opacity: .5;
     pointer-events: none;
 }
+
+/* width */
+.custom_scroll::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+}
+
+/* Track */
+.custom_scroll::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+/* Handle */
+.custom_scroll::-webkit-scrollbar-thumb {
+    background: var(--pr-color-primary);
+}
+
+/* Handle on hover */
+.custom_scroll::-webkit-scrollbar-thumb:hover {
+    background: #7486ee;
+}
