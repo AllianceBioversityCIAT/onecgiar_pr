@@ -15,6 +15,7 @@ export class ApiService {
   constructor(public resultsSE: ResultsApiService, public alertsFs: CustomizedAlertsFsService, public authSE: AuthService, public alertsFe: CustomizedAlertsFeService, public dataControlSE: DataControlService, public resultsListFilterSE: ResultsListFilterService, public wordCounterSE: WordCounterService) {}
 
   updateUserData() {
+    if (!this.authSE?.localStorageUser?.id) return;
     forkJoin([this.authSE.GET_allRolesByUser(), this.authSE.GET_initiativesByUser()]).subscribe(resp => {
       const [GET_allRolesByUser, GET_initiativesByUser] = resp;
       this.dataControlSE.myInitiativesList = GET_initiativesByUser?.response;
