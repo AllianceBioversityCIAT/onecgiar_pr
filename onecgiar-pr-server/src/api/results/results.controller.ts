@@ -53,9 +53,11 @@ export class ResultsController {
     throw new HttpException({ message, response }, status);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.resultsService.findOne(+id);
+  @Get('get/depth-search/:title')
+  async depthSearch(@Param('title') title: string) {
+    const { message, response, status } = 
+      await this.resultsService.findAllResultsLegacyNew(title);
+    throw new HttpException({ message, response }, status);
   }
 
   @Patch('delete/:id')

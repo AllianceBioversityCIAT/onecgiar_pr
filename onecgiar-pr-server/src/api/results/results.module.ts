@@ -27,6 +27,7 @@ import { ResultRepository } from './result.repository';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { YearsModule } from './years/years.module';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
+import { LegacyResultModule } from './legacy-result/legacy-result.module';
 
 @Module({
   controllers: [ResultsController],
@@ -46,6 +47,7 @@ import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser
     InitiativeRolesModule,
     AuthModule,
     YearsModule,
+    LegacyResultModule,
   ],
   providers: [
     ResultsService,

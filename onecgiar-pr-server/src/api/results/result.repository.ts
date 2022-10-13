@@ -2,6 +2,7 @@ import { Injectable, HttpStatus } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { Result } from './entities/result.entity';
 import { HandlersError } from '../../shared/handlers/error.utils';
+import { DepthSearch } from './dto/depth-search.dto';
 
 @Injectable()
 export class ResultRepository extends Repository<Result> {
@@ -123,6 +124,47 @@ WHERE
 
     try {
       const results: any = await this.query(queryData, [userid]);
+      return results;
+    } catch (error) {
+      throw {
+        message: `[${ResultRepository.name}] => completeAllData error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
+  async AllResultsLegacyNewByTitle(title: string) {
+    const queryData = `
+    (select 
+      lr.legacy_id as id,
+      lr.title,
+      lr.description,
+      lr.crp,
+      lr.\`year\`,
+      1 as legacy
+    from legacy_result lr
+    where lr.title like ?)
+    union
+    (select 
+      r.id,
+      r.title,
+      r.description,
+      ci.official_code as crp,
+      r.reported_year_id as \`year\`,
+      0 as legacy
+    from \`result\` r 
+      inner join results_by_inititiative rbi on rbi.result_id = r.id
+                          and rbi.initiative_role_id = 1
+                          and rbi.is_active > 0
+      inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id
+                          and ci.active > 0
+    where r.is_active > 0
+      and r.title like ?)
+    `;
+
+    try {
+      const results: DepthSearch[] = await this.query(queryData, [`%${title}%`,`%${title}%`]);
       return results;
     } catch (error) {
       throw {

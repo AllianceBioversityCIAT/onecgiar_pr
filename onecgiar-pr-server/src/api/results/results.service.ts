@@ -24,6 +24,7 @@ import { ResultByEvidencesRepository } from './results_by_evidences/result_by_ev
 import { ResultByIntitutionsRepository } from './results_by_institutions/result_by_intitutions.repository';
 import { ResultByInitiativesRepository } from './results_by_inititiatives/resultByInitiatives.repository';
 import { ResultByIntitutionsTypeRepository } from './results_by_institution_types/result_by_intitutions_type.repository';
+import { DepthSearch } from './dto/depth-search.dto';
 
 @Injectable()
 export class ResultsService {
@@ -231,8 +232,25 @@ export class ResultsService {
     }
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} result`;
+  async findAllResultsLegacyNew(title: string) {
+    try {
+      const results: DepthSearch[] = await this._customResultRepository.AllResultsLegacyNewByTitle(title);
+      if(!results.length){
+        throw {
+          response: {},
+          message: 'Results Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      return {
+        response: results,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
   }
 
   update(id: number, updateResultDto: UpdateResultDto) {
