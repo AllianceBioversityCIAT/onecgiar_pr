@@ -29,6 +29,11 @@ export class ResultCreatorComponent {
     // this.getInitiativesByUser();
   }
 
+  get resultTypeName(): string {
+    if (!this.resultLevelSE.resultTypeList || !this.resultLevelSE.resultBody.result_type_id) return 'Title...';
+    return this.resultLevelSE.resultTypeList.find(resultType => resultType.id == this.resultLevelSE.resultBody.result_type_id)?.name + ' title...';
+  }
+
   onSaveSection() {
     this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody);
     this.api.resultsSE.POST_resultCreateHeader(this.resultLevelSE.resultBody).subscribe(
