@@ -16,7 +16,7 @@
         color: var(--pr-color-secondary);
         justify-content: space-between;
 
-        &::after {
+        .line {
             content: '';
             background-color: rgb(0, 162, 255);
             width: 7px;

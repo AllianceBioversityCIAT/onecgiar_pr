@@ -9,6 +9,7 @@
     *ngIf="(this.api.dataControlSE.resultsList | similarResults:this.resultLevelSE.resultBody.result_name)?.length">
     <div class=" result"
         *ngFor="let item of this.api.dataControlSE.resultsList | similarResults:this.resultLevelSE.resultBody.result_name">
+        <div class="line" [style.background]="'var(--pr-color-result-level-'+item?.result_level_id+')'"></div>
         <div class="texts">{{item?.submitter}} - {{item?.result_type}} <div class="title">{{item?.title}}</div>
         </div>
         <div class="icon_container"><i class="pi pi-ellipsis-v" (click)="menu.toggle($event)"></i></div>
