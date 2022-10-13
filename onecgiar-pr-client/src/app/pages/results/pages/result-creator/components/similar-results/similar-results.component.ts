@@ -11,15 +11,13 @@ import { MenuItem } from 'primeng/api';
 export class SimilarResultsComponent {
   constructor(public api: ApiService, public resultLevelSE: ResultLevelService) {}
   items: MenuItem[] = [
+    { label: 'See detail', icon: 'pi pi-fw pi-external-link' },
     {
       label: 'Map to TOC',
       icon: 'pi pi-fw pi-sitemap',
       command: () => {
         console.log('hola mundo');
       }
-    },
-    { label: 'Edit', icon: 'pi pi-fw pi-pencil' },
-    { label: 'Delete', icon: 'pi pi-fw pi-trash' },
-    { label: 'Submit', icon: 'pi pi-fw pi-reply' }
+    }
   ];
 }
