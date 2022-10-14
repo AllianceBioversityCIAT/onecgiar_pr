@@ -2,7 +2,7 @@
     background-color: white;
     @extend %global-shadow-1;
     border-radius: 15px;
-    width: 90%;
+
     margin-left: auto;
     margin-right: auto;
 }
@@ -25,4 +25,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+@media only screen and (max-width: 1400px) {
+    .section_container {
+        width: 97%;
+    }
+}
+
+@media only screen and (min-width: 1400px) {
+    .section_container {
+        width: 90%;
+    }
 }
