@@ -13,6 +13,7 @@ import { ResultType } from '../result_types/entities/result_type.entity';
 import { Version } from '../versions/entities/version.entity';
 import { Year } from '../years/entities/year.entity';
 import { ResultLevel } from '../result_levels/entities/result_level.entity';
+import { LegacyResult } from '../legacy-result/entities/legacy-result.entity';
 
 @Entity()
 export class Result {
@@ -107,4 +108,10 @@ export class Result {
     name: 'reported_year_id',
   })
   reported_year_id: number;
+
+  @ManyToOne(() => LegacyResult, lr => lr.legacy_id, {nullable: true})
+  @JoinColumn({
+    name: 'legacy_id'
+  })
+  legacy_id!: string;
 }
