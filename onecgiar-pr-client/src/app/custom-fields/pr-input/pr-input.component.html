@@ -1,5 +1,6 @@
 <app-pr-field-header [label]="this.label" [description]="this.description"></app-pr-field-header>
-<div class="p-fluid input_container">
+<div class="read-only" *ngIf="readOnly">{{value}}</div>
+<div class="p-fluid input_container" *ngIf="!readOnly">
     <input pInputText [type]="this.type" [placeholder]="this.placeholder" [(ngModel)]="value" />
     <app-pr-word-counter *ngIf="maxWords" [wordCount]="wordCount" [maxWords]="maxWords"></app-pr-word-counter>
 </div>

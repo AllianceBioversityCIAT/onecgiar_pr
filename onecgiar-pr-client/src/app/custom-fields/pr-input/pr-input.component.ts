@@ -20,6 +20,8 @@ export class PrInputComponent implements ControlValueAccessor {
   @Input() label: string;
   @Input() description: string;
   @Input() maxWords: number;
+  @Input() readOnly: boolean;
+
   private _value: string;
   private beforeValue: string;
   public wordCount: number = 0;
