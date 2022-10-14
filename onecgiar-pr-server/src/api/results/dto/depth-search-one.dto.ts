@@ -6,6 +6,6 @@ export class DepthSearchOne{
     public description!: string;
     public crp: string
     public year: number;
-    public legacy: number;
-    public is_migrated: number;
+    public legacy: string;
+    public is_migrated: string;
 }

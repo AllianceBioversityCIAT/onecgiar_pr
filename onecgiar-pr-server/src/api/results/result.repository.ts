@@ -127,7 +127,7 @@ WHERE
     `;
 
     try {
-      const results: DepthSearch[] = await <Promise<DepthSearch[]>> this.query(queryData, [userid]);      
+      const results = await this.query(queryData, [userid]);      
       return results;
     } catch (error) {
       throw {

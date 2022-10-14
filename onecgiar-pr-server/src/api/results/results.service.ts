@@ -285,9 +285,15 @@ export class ResultsService {
     }
   }
 
-  async mapResultLegacy(resultId: string, mapLegacy: MapLegacy, user: TokenDto) {
+  /**
+   * 
+   * @param mapLegacy 
+   * @param user 
+   * @returns 
+   */
+  async mapResultLegacy(mapLegacy: MapLegacy, user: TokenDto) {
     try {
-      const results: DepthSearchOne = await this._customResultRepository.findResultsLegacyNewById(resultId);
+      const results: DepthSearchOne = await this._customResultRepository.findResultsLegacyNewById(mapLegacy.legacy_id);
       if(!results?.id){
         throw {
           response: {},
@@ -295,8 +301,8 @@ export class ResultsService {
           status: HttpStatus.NOT_FOUND,
         };
       }
-      
-      if(!results.legacy){
+
+      if(results.legacy == '0'){
         throw {
           response: {},
           message: 'This result is already part of the PRMS reporting',
@@ -327,7 +333,6 @@ export class ResultsService {
           status: HttpStatus.NOT_FOUND,
         };
       }
-
       
       if (resultType.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: resultType });
@@ -361,9 +366,9 @@ export class ResultsService {
       const rt: ResultType = <ResultType>resultType.response;
       const vrs: Version = <Version>version.response;
       
-      const legacyResult = await this._resultLegacyRepository.findOne({ where:{legacy_id: resultId} });
+      const legacyResult = await this._resultLegacyRepository.findOne({ where:{legacy_id: mapLegacy.legacy_id} });
       legacyResult.is_migrated = true;
-      
+
       const newResultHeader: Result = await this._resultRepository.save({
         created_by: user.id,
         last_updated_by: user.id,
@@ -387,9 +392,6 @@ export class ResultsService {
 
       await this._resultLegacyRepository.save(legacyResult);
       
-      
-
-
       return {
         response: results,
         message: 'Successful response',
