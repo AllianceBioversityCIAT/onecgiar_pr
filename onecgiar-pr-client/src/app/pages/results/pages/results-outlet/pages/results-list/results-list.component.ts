@@ -8,7 +8,7 @@ import { ResultsListFilterService } from './services/results-list-filter.service
 @Component({
   selector: 'app-results-list',
   templateUrl: './results-list.component.html',
-  styleUrls: ['./results-list.component.scss']
+  styleUrls: ['./results-list.component.scss', './results-list.responsive.scss']
 })
 export class ResultsListComponent implements OnInit {
   columnOrder = [
