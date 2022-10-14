@@ -4,8 +4,8 @@ interface alertOptions {
   title;
   description?: string;
   closeIn?: number;
-  status: 'error' | 'success';
-  confirm?: boolean;
+  status: 'error' | 'success' | 'warning';
+  confirmText?: string;
 }
 @Injectable({
   providedIn: 'root'
@@ -13,10 +13,15 @@ interface alertOptions {
 export class CustomizedAlertsFeService {
   //TODO customized alerts for events
   showed = false;
-  constructor() {}
+  statusIcons = [];
+  constructor() {
+    this.statusIcons['error'] = 'close';
+    this.statusIcons['success'] = 'check';
+    this.statusIcons['warning'] = 'priority_high';
+  }
 
   show(alertOptions: alertOptions, callback?) {
-    let { id, title, description = '', closeIn, status, confirm } = alertOptions;
+    let { id, title, description = '', closeIn, status, confirmText } = alertOptions;
     this.showed = true;
     let alert = document.getElementById(id);
 
@@ -28,14 +33,14 @@ export class CustomizedAlertsFeService {
         <div class="custom-alert animate__animated animate__bounceIn"  id="alert-${id}">
           <div class="top-line ${status}"></div>
           <div class="alert-content ${status}">
-            <div class="icon"><i class="material-icons-round">${status == 'success' ? 'check' : 'close'}</i></div>
+            <div class="icon"><i class="material-icons-round">${this.statusIcons[status]}</i></div>
             <div class="title">${title}</div>
             <div class="description">${description}</div>
           </div>
           <div class="options">
             <div class="close_button accept_button" id="close-${id}">Ok</div>
             <div class="close_button cancel_button" style="display:none" id="cancel-${id}">Cancel</div>
-            <div class="close_button confirm_button" style="display:none" id="confirm-${id}">Ok</div>
+            <div class="close_button confirm_button" style="display:none" id="confirm-${id}">${confirmText}</div>
           </div>
         </div>
         <div class="bg animate__animated animate__fadeIn" id="bg-${id}"></div>
@@ -43,7 +48,7 @@ export class CustomizedAlertsFeService {
       `
     );
     alert = document.getElementById(id);
-    if (confirm) {
+    if (confirmText) {
       document.getElementById(`close-${id}`).style.display = 'none';
       document.getElementById(`cancel-${id}`).style.display = 'block';
       document.getElementById(`confirm-${id}`).style.display = 'block';
