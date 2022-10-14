@@ -24,8 +24,7 @@ export class Result {
 
   @Column({
     name: 'title',
-    type: 'varchar',
-    length: 45,
+    type: 'text',
     nullable: false,
   })
   title: string;
