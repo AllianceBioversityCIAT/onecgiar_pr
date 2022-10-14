@@ -25,6 +25,9 @@ import { ResultByIntitutionsRepository } from './results_by_institutions/result_
 import { ResultByInitiativesRepository } from './results_by_inititiatives/resultByInitiatives.repository';
 import { ResultByIntitutionsTypeRepository } from './results_by_institution_types/result_by_intitutions_type.repository';
 import { DepthSearch } from './dto/depth-search.dto';
+import { ResultLevelRepository } from './result_levels/resultLevel.repository';
+import { ResultByLevelRepository } from './result-by-level/result-by-level.repository';
+import { ResultLevel } from './result_levels/entities/result_level.entity';
 
 @Injectable()
 export class ResultsService {
@@ -41,6 +44,8 @@ export class ResultsService {
     private readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
     private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
     private readonly _resultByIntitutionsTypeRepository: ResultByIntitutionsTypeRepository,
+    private readonly _resultLevelRepository: ResultLevelRepository,
+    private readonly _resultByLevelRepository: ResultByLevelRepository
   ) {}
 
   async createOwnerResult(
@@ -51,7 +56,8 @@ export class ResultsService {
       if (
         !createResultDto?.result_name ||
         !createResultDto?.initiative_id ||
-        !createResultDto?.result_type_id
+        !createResultDto?.result_type_id ||
+        !createResultDto?.result_level_id
       ) {
         throw {
           response: {},
@@ -71,12 +77,33 @@ export class ResultsService {
         };
       }
 
+      const resultByLevel = await this._resultByLevelRepository.getByTypeAndLevel(createResultDto.result_level_id, createResultDto.result_type_id);
+      const resultLevel = await this._resultLevelRepository.findOne({where: {id: createResultDto.result_level_id }});
       const resultType = await this._resultTypesService.findOneResultType(
         createResultDto.result_type_id,
       );
+      if(!resultLevel){
+        throw {
+          response: {},
+          message: 'Result Level not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      
       if (resultType.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: resultType });
       }
+
+      if(!resultByLevel){
+        throw {
+          response: {},
+          message: 'The type or level is not compatible',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+      
+      const rl: ResultLevel = <ResultLevel>resultLevel;
       const rt: ResultType = <ResultType>resultType.response;
 
       if (rt.name === 'Knowledge Product') {
@@ -91,7 +118,7 @@ export class ResultsService {
           status: HttpStatus.INTERNAL_SERVER_ERROR,
         };
       }
-
+      
       const version = await this._versionsService.findBaseVersion();
       if (version.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: version });
@@ -107,7 +134,7 @@ export class ResultsService {
           message: 'Active year Not fount',
           status: HttpStatus.NOT_FOUND,
         };
-      }
+      }   
 
       const newResultHeader: Result = await this._resultRepository.save({
         created_by: user.id,
@@ -116,6 +143,7 @@ export class ResultsService {
         version_id: vrs.id,
         title: createResultDto.result_name,
         reported_year_id: year.year,
+        result_level_id: rl.id
       });
 
       const resultByInitiative = await this._resultByInitiativesRepository.save(

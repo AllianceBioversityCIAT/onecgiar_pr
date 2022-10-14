@@ -32,8 +32,7 @@ export class ResultTypeRepository extends Repository<ResultType> {
     select 
         rt.id,
         rt.name,
-        rt.description,
-        rt.result_level_id 
+        rt.description
     from result_type rt;
     `;
     try {
@@ -53,8 +52,7 @@ export class ResultTypeRepository extends Repository<ResultType> {
     select 
         rt.id,
         rt.name,
-        rt.description,
-        rt.result_level_id 
+        rt.description
     from result_type rt
     where rt.id = ?;
     `;

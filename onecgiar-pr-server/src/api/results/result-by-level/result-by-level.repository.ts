@@ -50,4 +50,26 @@ export class ResultByLevelRepository extends Repository<ResultByLevel> {
     }
   }
 
+  async getByTypeAndLevel(levelId:  number, typeId: number) {
+    const queryData = `
+    select 
+    	rbl.id,
+    	rbl.result_level_id,
+    	rbl.result_type_id 
+    from result_by_level rbl 
+    where rbl.result_level_id = ?
+    	and rbl.result_type_id = ?;
+    `;
+    try {
+      const resultByLevel: ResultByLevel[] = await this.query(queryData, [levelId, typeId]);
+      return resultByLevel.length?resultByLevel[0]:[];
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultByLevelRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
 }
