@@ -1,9 +1,9 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException } from '@nestjs/common';
 import { ResultByLevelService } from './result-by-level.service';
 import { CreateResultByLevelDto } from './dto/create-result-by-level.dto';
 import { UpdateResultByLevelDto } from './dto/update-result-by-level.dto';
 
-@Controller('result-by-level')
+@Controller()
 export class ResultByLevelController {
   constructor(private readonly resultByLevelService: ResultByLevelService) {}
 
@@ -12,9 +12,11 @@ export class ResultByLevelController {
     return this.resultByLevelService.create(createResultByLevelDto);
   }
 
-  @Get()
-  findAll() {
-    return this.resultByLevelService.findAll();
+  @Get('get/all')
+  async findAll() {
+    const { message, response, status } = 
+      await this.resultByLevelService.findAll();
+    throw new HttpException({ message, response }, status);
   }
 
   @Get(':id')

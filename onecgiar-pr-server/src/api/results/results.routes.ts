@@ -7,6 +7,7 @@ import { ResultsByInstitutionTypesModule } from './results_by_institution_types/
 import { ResultLevelsModule } from './result_levels/result_levels.module';
 import { ResultTypesModule } from './result_types/result_types.module';
 import { VersionsModule } from './versions/versions.module';
+import { ResultByLevelModule } from './result-by-level/result-by-level.module';
 
 export const ResultsRoutes: Routes = [
   {
@@ -40,5 +41,9 @@ export const ResultsRoutes: Routes = [
   {
     path: 'versions',
     module: VersionsModule,
+  },
+  {
+    path: 'type-by-level',
+    module: ResultByLevelModule,
   },
 ];
