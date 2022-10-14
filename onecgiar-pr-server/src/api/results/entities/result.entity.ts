@@ -12,6 +12,7 @@ import { GenderTagLevel } from '../gender_tag_levels/entities/gender_tag_level.e
 import { ResultType } from '../result_types/entities/result_type.entity';
 import { Version } from '../versions/entities/version.entity';
 import { Year } from '../years/entities/year.entity';
+import { ResultLevel } from '../result_levels/entities/result_level.entity';
 
 @Entity()
 export class Result {
@@ -41,6 +42,12 @@ export class Result {
     name: 'result_type_id',
   })
   result_type_id: number;
+
+  @ManyToOne(() => ResultLevel, (rl) => rl.id)
+  @JoinColumn({
+    name: 'result_level_id',
+  })
+  result_level_id: number;
 
   @ManyToOne(() => GenderTagLevel, (gtl) => gtl.id, { nullable: true })
   @JoinColumn({

@@ -8,15 +8,12 @@ import {
 import { ResultLevelRepository } from './resultLevel.repository';
 import { ResultLevel } from './entities/result_level.entity';
 import { returnFormatResultLevel } from './dto/return-format-result-level.dto';
-import { ResultTypesService } from '../result_types/result_types.service';
-import { ResultType } from '../result_types/entities/result_type.entity';
 
 @Injectable()
 export class ResultLevelsService {
   constructor(
     private readonly _handlersError: HandlersError,
     private readonly _resultLevelRepository: ResultLevelRepository,
-    private readonly _resultTypesService: ResultTypesService,
   ) {}
 
   create(createResultLevelDto: CreateResultLevelDto) {
@@ -28,28 +25,17 @@ export class ResultLevelsService {
       const resultLevel: ResultLevel[] = await this._resultLevelRepository.find(
         { order: { id: 'ASC' } },
       );
-      const { message, response, status } =
-        await this._resultTypesService.getAllResultType();
-      if (status >= 300) {
+      if (!resultLevel.length) {
         throw {
-          response,
-          message,
-          status,
+          response: {},
+          message: `Results Levels Not Found `,
+          status: HttpStatus.NOT_FOUND,
         };
       }
 
-      const restulType: ResultType[] = <ResultType[]>response;
-      console.log(restulType);
-      console.log(resultLevel);
-      resultLevel.map((rl) => {
-        rl['result_type'] = restulType.filter(
-          (rt) => rt.result_level_id === rl.id,
-        );
-      });
-
       return {
         response: resultLevel,
-        message: '',
+        message: 'Successful response',
         status: HttpStatus.OK,
       };
     } catch (error) {

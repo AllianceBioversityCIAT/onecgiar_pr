@@ -18,11 +18,11 @@ export const ResultsRoutes: Routes = [
     module: InstitutionRolesModule,
   },
   {
-    path: 'result-levels',
+    path: 'levels',
     module: ResultLevelsModule,
   },
   {
-    path: 'result-types',
+    path: 'types',
     module: ResultTypesModule,
   },
   {

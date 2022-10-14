@@ -25,6 +25,14 @@ export class ResultTypesService {
     try {
       const resultType: ResultType[] =
         await this._resultTypeRepository.getAllResultType();
+      if(!resultType.length){
+        throw {
+          response: {},
+          message: `Results Types Not Found `,
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
       return {
         response: resultType,
         message: MessageResponse.OK,
