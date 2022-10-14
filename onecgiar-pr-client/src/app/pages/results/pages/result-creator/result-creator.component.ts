@@ -34,11 +34,15 @@ export class ResultCreatorComponent {
     return this.resultLevelSE.resultTypeList.find(resultType => resultType.id == this.resultLevelSE.resultBody.result_type_id)?.name + ' title...';
   }
 
+  cleanTitle() {
+    if (this.resultLevelSE.resultBody.result_type_id == 7) this.resultLevelSE.resultBody.result_name = '';
+  }
+
   onSaveSection() {
     this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody);
     this.api.resultsSE.POST_resultCreateHeader(this.resultLevelSE.resultBody).subscribe(
       resp => {
-        this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Great!', description: 'Result reported', status: 'success', closeIn: 500, confirm: false });
+        this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Great!', description: 'Result reported', status: 'success', closeIn: 500 });
         this.router.navigate(['/']);
       },
       err => {
