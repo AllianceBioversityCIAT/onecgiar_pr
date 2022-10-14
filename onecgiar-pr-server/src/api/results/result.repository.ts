@@ -67,6 +67,7 @@ export class ResultRepository extends Repository<Result> {
     rt.name AS result_type,
     r.created_date,
     ci.official_code AS submitter,
+    ci.id AS submitter_id,
     r.status,
     IF(r.status = 0, 'Editing', 'Submitted') AS status_name
 FROM
