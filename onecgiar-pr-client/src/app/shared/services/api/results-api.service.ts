@@ -9,8 +9,11 @@ import { ResultBody } from '../../interfaces/result';
 export class ResultsApiService {
   constructor(public http: HttpClient) {}
   apiBaseUrl = environment.apiBaseUrl + 'api/results/';
-  getAllResultLevel() {
-    return this.http.get<any>(`${this.apiBaseUrl}result-levels/all`);
+  GET_AllResultLevel() {
+    return this.http.get<any>(`${this.apiBaseUrl}levels/all`);
+  }
+  GET_TypeByResultLevel() {
+    return this.http.get<any>(`${this.apiBaseUrl}type-by-level/get/all`);
   }
   getAllResults() {
     return this.http.get<any>(`${this.apiBaseUrl}get/all`);
