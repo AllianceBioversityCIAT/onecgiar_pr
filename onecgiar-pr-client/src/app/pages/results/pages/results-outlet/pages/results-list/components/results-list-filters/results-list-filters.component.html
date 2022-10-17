@@ -14,10 +14,11 @@
 <div class="result_level_container">
     <div class="result_level_title">Result level</div>
     <div class="filters">
-        <div *ngFor="let filter of this.resultsListFilterSE.filters.resultLevel" class="filter {{filter.class}}">
-            <div class="filter_title">{{filter.filter_title}}</div>
+        <div *ngFor="let filter of this.resultsListFilterSE.filters.resultLevel" class="filter">
+            <div class="filter_title">{{filter.name}}</div>
             <div class="chips">
                 <div class="chip" [ngClass]="{'chip_selected': option.selected}"
+                    [style.background]="option.selected ?'var(--pr-color-result-level-'+filter?.id+')':''"
                     (click)="this.resultsListFilterSE.onSelectChip(option)" *ngFor="let option of filter?.options">
                     {{option.name}}</div>
             </div>

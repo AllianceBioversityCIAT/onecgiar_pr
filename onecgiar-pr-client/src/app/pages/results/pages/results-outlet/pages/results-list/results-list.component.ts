@@ -3,7 +3,7 @@ import { MenuItem } from 'primeng/api';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { internationalizationData } from '../../../../../../shared/data/internationalizationData';
 import { ResultsListService } from './services/results-list.service';
-import { ResultsListFilterService } from './services/results-list-filter.service';
+import { ResultLevelService } from '../../../result-creator/services/result-level.service';
 
 @Component({
   selector: 'app-results-list',
@@ -33,7 +33,7 @@ export class ResultsListComponent implements OnInit {
     { label: 'Delete', icon: 'pi pi-fw pi-trash' },
     { label: 'Submit', icon: 'pi pi-fw pi-reply' }
   ];
-  constructor(public api: ApiService, public resultsListService: ResultsListService, public resultsListFilterSE: ResultsListFilterService) {}
+  constructor(public api: ApiService, public resultsListService: ResultsListService, private ResultLevelSE: ResultLevelService) {}
 
   ngOnInit(): void {
     this.api.updateResultsList();

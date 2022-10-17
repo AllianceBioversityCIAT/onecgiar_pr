@@ -8,37 +8,40 @@ export class ResultsListFilterPipe implements PipeTransform {
   list: any[];
   word: string;
   constructor(private resultsListFilterSE: ResultsListFilterService) {}
-  transform(list: any[], word: string, filterJoin: number): any {
-    this.word = word;
-    const textF = this.filterByText(list);
-    let a = this.resultsListFilterSE?.filtersPipe?.generalListFiltered[0];
-    const initF = this.filterByOptions(textF, a?.hasOwnProperty('attr') ? [a] : []);
-    let b = this.resultsListFilterSE?.filtersPipe?.generalListFiltered[1];
-    const yeatF = this.filterByOptions(initF, b?.hasOwnProperty('attr') ? [b] : []);
-    const resultlevelF = this.filterByOptions(yeatF, this.resultsListFilterSE?.filtersPipe?.resultLevelListFiltered);
-    return resultlevelF;
+  transform(resultList: any[], word: string, filterJoin: number): any {
+    // console.log(resultList);
+    return this.filterByResultLevelOptions(this.filterByText(resultList, word));
   }
 
-  filterByText(list: any[]) {
-    if (!list?.length) return [];
-    list.map(item => {
+  filterByText(resultList: any[], word: string) {
+    if (!resultList?.length) return [];
+    resultList.map(item => {
       item.joinAll = '';
       Object.keys(item).map(attr => {
         item.joinAll += (item[attr] ? item[attr] : '') + ' ';
       });
     });
-    return list.filter(item => item.joinAll.toUpperCase().indexOf(this.word?.toUpperCase()) > -1);
+    return resultList.filter(item => item.joinAll.toUpperCase().indexOf(word?.toUpperCase()) > -1);
   }
-  filterByOptions(list: any[], filters: any[]) {
-    if (!filters?.length || filters[0]?.options[0] == undefined) return list;
-    return list.filter(item => {
-      for (const filter of filters) {
-        if (!filter?.options) return false;
-        for (const option of filter?.options) {
-          if (item[filter.attr] == option) return true;
-        }
+
+  filterByResultLevelOptions(resultList: any[]) {
+    console.log(this.resultsListFilterSE.filters.resultLevel);
+    const resultsFilters = [];
+    this.resultsListFilterSE.filters.resultLevel.map((filter: any) => {
+      for (const option of filter?.options) {
+        if (option?.selected === true) resultsFilters.push({ result_level_id: filter?.id, result_type_id: option?.id });
+      }
+    });
+
+    console.log(resultsFilters);
+    if (!resultsFilters.length) return resultList;
+    resultList = resultList.filter(result => {
+      for (const filter of resultsFilters) {
+        if (filter.result_level_id == result.result_level_id && filter.result_type_id == result.result_type_id) return true;
       }
       return false;
     });
+
+    return resultList;
   }
 }
