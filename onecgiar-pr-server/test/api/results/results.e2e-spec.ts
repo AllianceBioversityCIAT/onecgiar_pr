@@ -20,7 +20,7 @@ describe('Results Controller (e2e)', () => {
             .post('/auth/singin')
             .send({
                 'email': 'juan@gmail.com',
-                'password': '12345678'
+                'password': '1234567'
             })
             .set('Content-Type', 'application/json')
             .expect(202)

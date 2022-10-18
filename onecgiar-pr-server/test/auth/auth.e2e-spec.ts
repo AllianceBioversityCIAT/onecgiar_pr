@@ -5,7 +5,7 @@ describe('Auth Controller (e2e)', () => {
     let app = 'http://localhost:3400'
     const loginDataSuccess: UserLoginDto = {
         "email": "juan@gmail.com",
-        "password": "12345678"
+        "password": "1234567"
     };
 
     const loginDataIncomplete: UserLoginDto = {
