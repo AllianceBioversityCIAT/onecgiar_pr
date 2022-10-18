@@ -3,7 +3,7 @@ import { internationalizationData } from '../../../../shared/data/internationali
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultLevelService } from './services/result-level.service';
 import { Router } from '@angular/router';
-import { MenuItem } from 'primeng/api';
+import { ResultBody } from '../../../../shared/interfaces/result';
 
 @Component({
   selector: 'app-result-creator',
@@ -16,6 +16,9 @@ export class ResultCreatorComponent {
   constructor(public api: ApiService, public resultLevelSE: ResultLevelService, private router: Router) {}
 
   ngOnInit(): void {
+    console.log('ngOnInit');
+    this.resultLevelSE.resultBody = new ResultBody();
+    this.resultLevelSE.resultLevelList?.map(reLevel => (reLevel.selected = false));
     this.api.updateResultsList();
     this.resultLevelSE.cleanData();
     this.api.updateUserData();
