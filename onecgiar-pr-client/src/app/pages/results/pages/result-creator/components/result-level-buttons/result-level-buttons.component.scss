@@ -3,20 +3,6 @@
     grid-template-columns: repeat(3, 1fr);
     gap: 20px;
 
-
-
-    .resultLevel:nth-child(1) .name {
-        background-color: var(--pr-color-result-level-1);
-    }
-
-    .resultLevel:nth-child(2) .name {
-        background-color: var(--pr-color-result-level-2);
-    }
-
-    .resultLevel:nth-child(3) .name {
-        background-color: var(--pr-color-result-level-3);
-    }
-
     .selected {
         opacity: 1 !important;
     }

@@ -3,7 +3,8 @@
     <div class="resultLevel shadow-1" [ngClass]="{'selected': resultLevel?.selected}"
         *ngFor="let resultLevel of this.resultLevelSE.resultLevelList"
         (click)="this.resultLevelSE.onSelectResultLevel(resultLevel)">
-        <div class="name">{{resultLevel.name}}</div>
+        <div class="name" [style.background]="'var(--pr-color-result-level-'+resultLevel?.id+')'">{{resultLevel.name}}
+        </div>
         <div class="description">{{resultLevel.description}}</div>
     </div>
 </div>
