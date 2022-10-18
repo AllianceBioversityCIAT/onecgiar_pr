@@ -131,6 +131,7 @@ export class Result {
   @Column({
     name: 'is_krs',
     type: 'boolean',
+    default: false
   })
-  is_krs!: string;
+  is_krs!: boolean;
 }

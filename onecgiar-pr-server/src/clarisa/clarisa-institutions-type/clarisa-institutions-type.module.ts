@@ -3,10 +3,14 @@ import { ClarisaInstitutionsTypeService } from './clarisa-institutions-type.serv
 import { ClarisaInstitutionsTypeController } from './clarisa-institutions-type.controller';
 import { RouterModule } from '@nestjs/core';
 import { ClarisaInstitutionsTypeRoutes } from './clarisaInstitutionsType.routes';
+import { ClarisaInstitutionsTypeRepository } from './ClariasaInstitutionsType.repository';
 
 @Module({
   controllers: [ClarisaInstitutionsTypeController],
-  providers: [ClarisaInstitutionsTypeService],
+  providers: [ClarisaInstitutionsTypeService, ClarisaInstitutionsTypeRepository],
   imports: [RouterModule.register(ClarisaInstitutionsTypeRoutes)],
+  exports: [
+    ClarisaInstitutionsTypeRepository
+  ]
 })
 export class ClarisaInstitutionsTypeModule {}

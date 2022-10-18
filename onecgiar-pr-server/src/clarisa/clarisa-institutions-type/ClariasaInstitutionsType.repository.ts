@@ -10,7 +10,7 @@ export class ClarisaInstitutionsTypeRepository extends Repository<ClarisaInstitu
 
   async deleteAllData() {
     const queryData = `
-    DELETE FROM institution_types;
+    DELETE FROM clarisa_institution_types;
     `;
     try {
       const deleteData = await this.query(queryData);
