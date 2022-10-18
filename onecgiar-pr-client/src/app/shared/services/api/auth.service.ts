@@ -24,7 +24,6 @@ export class AuthService {
   }
 
   get localStorageUser(): LocalStorageUser {
-    // console.log('localStorageUser');
     return JSON.parse(localStorage.getItem('user'));
   }
 

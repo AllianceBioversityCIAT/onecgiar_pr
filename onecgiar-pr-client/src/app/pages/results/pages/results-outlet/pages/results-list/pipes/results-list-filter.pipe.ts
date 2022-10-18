@@ -9,7 +9,6 @@ export class ResultsListFilterPipe implements PipeTransform {
   word: string;
   constructor(private resultsListFilterSE: ResultsListFilterService) {}
   transform(resultList: any[], word: string, filterJoin: number): any {
-    // console.log(resultList);
     return this.filterByResultLevelOptions(this.filterByInitsAndYear(this.filterByText(resultList, word)));
   }
 

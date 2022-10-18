@@ -16,7 +16,7 @@ export class SimilarResultsComponent {
       label: 'Map to TOC',
       icon: 'pi pi-fw pi-sitemap',
       command: () => {
-        console.log('hola mundo');
+        // event
       }
     }
   ];

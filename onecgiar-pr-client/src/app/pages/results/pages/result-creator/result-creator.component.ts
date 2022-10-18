@@ -16,7 +16,6 @@ export class ResultCreatorComponent {
   constructor(public api: ApiService, public resultLevelSE: ResultLevelService, private router: Router) {}
 
   ngOnInit(): void {
-    console.log('ngOnInit');
     this.resultLevelSE.resultBody = new ResultBody();
     this.resultLevelSE.resultLevelList?.map(reLevel => (reLevel.selected = false));
     this.api.updateResultsList();

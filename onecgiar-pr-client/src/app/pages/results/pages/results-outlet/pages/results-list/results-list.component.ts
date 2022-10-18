@@ -26,7 +26,7 @@ export class ResultsListComponent implements OnInit {
       label: 'Map to TOC',
       icon: 'pi pi-fw pi-sitemap',
       command: () => {
-        console.log('hola mundo');
+        // event
       }
     },
     { label: 'Edit', icon: 'pi pi-fw pi-pencil' },
