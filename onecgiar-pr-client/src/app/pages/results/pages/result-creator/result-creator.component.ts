@@ -30,12 +30,12 @@ export class ResultCreatorComponent {
   }
 
   get resultTypeName(): string {
-    if (!this.resultLevelSE.resultTypeList || !this.resultLevelSE.resultBody.result_type_id) return 'Title...';
-    return this.resultLevelSE.resultTypeList.find(resultType => resultType.id == this.resultLevelSE.resultBody.result_type_id)?.name + ' title...';
+    if (!this.resultLevelSE.currentResultTypeList || !this.resultLevelSE.resultBody.result_type_id) return 'Title...';
+    return this.resultLevelSE.currentResultTypeList.find(resultType => resultType.id == this.resultLevelSE.resultBody.result_type_id)?.name + ' title...';
   }
 
   cleanTitle() {
-    if (this.resultLevelSE.resultBody.result_type_id == 7) this.resultLevelSE.resultBody.result_name = '';
+    if (this.resultLevelSE.resultBody.result_type_id == 6) this.resultLevelSE.resultBody.result_name = '';
   }
 
   onSaveSection() {
