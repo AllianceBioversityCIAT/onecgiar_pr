@@ -11,6 +11,7 @@ export class ResultLevelService {
   resultLevelList: ResultLevel[];
   currentResultTypeList: Resulttype[];
   resultBody = new ResultBody();
+  resultHandle: string = '';
   constructor(private api: ApiService, private resultsListFilterSE: ResultsListFilterService) {
     this.GET_TypeByResultLevel();
   }

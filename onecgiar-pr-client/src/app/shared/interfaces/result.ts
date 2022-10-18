@@ -17,7 +17,6 @@ export class ResultBody {
   public initiative_id: number = null;
   public result_type_id: number = null;
   public result_name: string = '';
-  public handle: string = '';
   public result_level_id: string | number = '';
 }
 
