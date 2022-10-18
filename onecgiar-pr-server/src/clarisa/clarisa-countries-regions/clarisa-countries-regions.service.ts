@@ -16,7 +16,10 @@ export class ClarisaCountriesRegionsService {
     return `This action returns a #${id} clarisaCountriesRegion`;
   }
 
-  update(id: number, updateClarisaCountriesRegionDto: UpdateClarisaCountriesRegionDto) {
+  update(
+    id: number,
+    updateClarisaCountriesRegionDto: UpdateClarisaCountriesRegionDto,
+  ) {
     return `This action updates a #${id} clarisaCountriesRegion`;
   }
 

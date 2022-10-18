@@ -15,31 +15,13 @@ CREATE SCHEMA IF NOT EXISTS `mydb` DEFAULT CHARACTER SET utf8 ;
 USE `mydb` ;
 
 -- -----------------------------------------------------
--- Table `mydb`.`result_levels`
--- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`result_levels` (
-  `id` BIGINT NOT NULL,
-  `name` VARCHAR(45) NULL,
-  `description` VARCHAR(500) NULL,
-  PRIMARY KEY (`id`))
-ENGINE = InnoDB;
-
-
--- -----------------------------------------------------
 -- Table `mydb`.`result_types`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `mydb`.`result_types` (
   `id` BIGINT NOT NULL,
   `name` VARCHAR(100) NULL,
   `description` VARCHAR(500) NULL,
-  `result_level_id` BIGINT NOT NULL,
-  PRIMARY KEY (`id`),
-  INDEX `fk_result_types_result_levels1_idx` (`result_level_id` ASC) VISIBLE,
-  CONSTRAINT `fk_result_types_result_levels1`
-    FOREIGN KEY (`result_level_id`)
-    REFERENCES `mydb`.`result_levels` (`id`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION)
+  PRIMARY KEY (`id`))
 ENGINE = InnoDB;
 
 
@@ -79,12 +61,36 @@ ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
+-- Table `mydb`.`years`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `mydb`.`years` (
+  `year` INT NOT NULL,
+  `active` TINYINT NOT NULL DEFAULT 1,
+  `start_date` TIMESTAMP NULL,
+  `end_date` TIMESTAMP NULL,
+  PRIMARY KEY (`year`));
+
+
+-- -----------------------------------------------------
+-- Table `mydb`.`result_levels`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `mydb`.`result_levels` (
+  `id` BIGINT NOT NULL,
+  `name` VARCHAR(45) NULL,
+  `description` VARCHAR(500) NULL,
+  PRIMARY KEY (`id`))
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
 -- Table `mydb`.`results`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `mydb`.`results` (
   `id` BIGINT NOT NULL,
   `title` VARCHAR(45) NOT NULL,
   `description` TEXT NULL,
+  `reported_year_id` INT NOT NULL,
+  `result_level_id` BIGINT NOT NULL,
   `result_type_id` VARCHAR(20) NOT NULL,
   `gender_tag_level_id` BIGINT NULL,
   `is_active` TINYINT NOT NULL,
@@ -100,6 +106,8 @@ CREATE TABLE IF NOT EXISTS `mydb`.`results` (
   INDEX `fk_results_users1_idx` (`created_by` ASC) VISIBLE,
   INDEX `fk_results_users2_idx` (`last_updated_by` ASC) VISIBLE,
   INDEX `fk_results_versions1_idx` (`version_id` ASC) VISIBLE,
+  INDEX `fk_results_current_year1_idx` (`reported_year_id` ASC) VISIBLE,
+  INDEX `fk_results_result_levels1_idx` (`result_level_id` ASC) VISIBLE,
   CONSTRAINT `fk_results_result_types1`
     FOREIGN KEY (`result_type_id`)
     REFERENCES `mydb`.`result_types` (`id`)
@@ -123,6 +131,16 @@ CREATE TABLE IF NOT EXISTS `mydb`.`results` (
   CONSTRAINT `fk_results_versions1`
     FOREIGN KEY (`version_id`)
     REFERENCES `mydb`.`versions` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_current_year1`
+    FOREIGN KEY (`reported_year_id`)
+    REFERENCES `mydb`.`years` (`year`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_result_levels1`
+    FOREIGN KEY (`result_level_id`)
+    REFERENCES `mydb`.`result_levels` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
@@ -381,10 +399,13 @@ CREATE TABLE IF NOT EXISTS `mydb`.`evidences` (
   `created_date` DATE NOT NULL,
   `last_updated_by` BIGINT NULL,
   `last_updated_date` DATE NULL,
+  `result_evidence_id` BIGINT NULL,
+  `gender_related` TINYINT NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   INDEX `fk_evidences_versions1_idx` (`version_id` ASC) VISIBLE,
   INDEX `fk_evidences_users1_idx` (`created_by` ASC) VISIBLE,
   INDEX `fk_evidences_users2_idx` (`last_updated_by` ASC) VISIBLE,
+  INDEX `fk_evidences_result_evidence_id_idx` (`result_evidence_id` ASC) VISIBLE,
   CONSTRAINT `fk_evidences_versions1`
     FOREIGN KEY (`version_id`)
     REFERENCES `mydb`.`versions` (`id`)
@@ -398,6 +419,11 @@ CREATE TABLE IF NOT EXISTS `mydb`.`evidences` (
   CONSTRAINT `fk_evidences_users2`
     FOREIGN KEY (`last_updated_by`)
     REFERENCES `mydb`.`users` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_evidences_result_evidence_id`
+    FOREIGN KEY (`result_evidence_id`)
+    REFERENCES `mydb`.`results` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
@@ -463,6 +489,27 @@ CREATE TABLE IF NOT EXISTS `mydb`.`results_by_evidences` (
   CONSTRAINT `fk_results_by_evidences_users2`
     FOREIGN KEY (`last_updated_by`)
     REFERENCES `mydb`.`users` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Table `mydb`.`results_by_level`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `mydb`.`results_by_level` (
+  `result_types_id` BIGINT NOT NULL,
+  `result_levels_id` BIGINT NOT NULL,
+  PRIMARY KEY (`result_types_id`, `result_levels_id`),
+  INDEX `fk_results_by_level_result_levels1_idx` (`result_levels_id` ASC) VISIBLE,
+  CONSTRAINT `fk_results_by_level_result_types1`
+    FOREIGN KEY (`result_types_id`)
+    REFERENCES `mydb`.`result_types` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_by_level_result_levels1`
+    FOREIGN KEY (`result_levels_id`)
+    REFERENCES `mydb`.`result_levels` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;

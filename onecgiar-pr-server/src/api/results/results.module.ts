@@ -1,4 +1,9 @@
-import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/common';
+import {
+  MiddlewareConsumer,
+  Module,
+  NestModule,
+  RequestMethod,
+} from '@nestjs/common';
 import { ResultsService } from './results.service';
 import { ResultsController } from './results.controller';
 import { RouterModule } from '@nestjs/core';
@@ -22,25 +27,29 @@ import { ResultRepository } from './result.repository';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { YearsModule } from './years/years.module';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
+import { LegacyResultModule } from './legacy-result/legacy-result.module';
+import { ResultByLevelModule } from './result-by-level/result-by-level.module';
 
 @Module({
   controllers: [ResultsController],
   imports: [
-    RouterModule.register(ResultsRoutes), 
-    ResultLevelsModule, 
-    ResultTypesModule, 
-    GenderTagLevelsModule,  
-    VersionsModule, 
-    InstitutionRolesModule, 
-    ResultsByInititiativesModule, 
-    ResultsByInstitutionsModule, 
-    ResultsByInstitutionTypesModule, 
-    EvidencesModule, 
-    ResultsByEvidencesModule, 
-    EvidenceTypesModule, 
+    RouterModule.register(ResultsRoutes),
+    ResultLevelsModule,
+    ResultTypesModule,
+    GenderTagLevelsModule,
+    VersionsModule,
+    InstitutionRolesModule,
+    ResultsByInititiativesModule,
+    ResultsByInstitutionsModule,
+    ResultsByInstitutionTypesModule,
+    EvidencesModule,
+    ResultsByEvidencesModule,
+    EvidenceTypesModule,
     InitiativeRolesModule,
     AuthModule,
-    YearsModule
+    YearsModule,
+    LegacyResultModule,
+    ResultByLevelModule,
   ],
   providers: [
     ResultsService,
@@ -48,9 +57,9 @@ import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser
     HandlersError,
     ResultRepository,
     ClarisaInitiativesRepository,
-    RoleByUserRepository
+    RoleByUserRepository,
   ],
-  exports: [ResultRepository, JwtMiddleware]
+  exports: [ResultRepository, JwtMiddleware],
 })
 export class ResultsModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

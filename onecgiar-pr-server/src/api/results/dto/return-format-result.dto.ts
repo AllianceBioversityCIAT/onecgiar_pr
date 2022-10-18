@@ -1,6 +1,6 @@
-import { Result } from "../entities/result.entity";
-import { retunFormatService } from '../../../shared/extendsGlobalDTO/retunServices.dto';
+import { Result } from '../entities/result.entity';
+import { returnFormatService } from '../../../shared/extendsGlobalDTO/returnServices.dto';
 
-export class retunrFormatResul extends retunFormatService{
-    public response!: Result[] | {};
+export class returnFormatResult extends returnFormatService {
+  public response!: Result[] | {};
 }

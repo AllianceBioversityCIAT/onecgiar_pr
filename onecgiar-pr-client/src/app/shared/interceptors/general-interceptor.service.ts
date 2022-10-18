@@ -20,7 +20,8 @@ export class GeneralInterceptorService implements HttpInterceptor {
       headers
     });
 
-    return next.handle(reqClone).pipe(catchError(this.manageError));
+    return next.handle(reqClone);
+    // .pipe(catchError(this.manageError))
   }
 
   manageError(error: HttpErrorResponse) {

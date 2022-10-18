@@ -1,17 +1,16 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()
 export class InstitutionRole {
-    @PrimaryGeneratedColumn({
-        type: 'bigint'
-    })
-    id: number;
+  @PrimaryGeneratedColumn({
+    type: 'bigint',
+  })
+  id: number;
 
-    @Column({
-        name: 'name',
-        type: 'varchar',
-        length: 50,
-        nullable: true
-    })
-    name!: string;
+  @Column({
+    name: 'name',
+    type: 'text',
+    nullable: true,
+  })
+  name!: string;
 }

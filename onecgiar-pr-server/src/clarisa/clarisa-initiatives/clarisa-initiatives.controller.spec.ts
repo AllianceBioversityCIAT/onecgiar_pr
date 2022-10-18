@@ -11,7 +11,9 @@ describe('ClarisaInitiativesController', () => {
       providers: [ClarisaInitiativesService],
     }).compile();
 
-    controller = module.get<ClarisaInitiativesController>(ClarisaInitiativesController);
+    controller = module.get<ClarisaInitiativesController>(
+      ClarisaInitiativesController,
+    );
   });
 
   it('should be defined', () => {

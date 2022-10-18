@@ -5,7 +5,7 @@ import { UpdateRestrictionsByRoleDto } from './dto/update-restrictions-by-role.d
 @Injectable()
 export class RestrictionsByRoleService {
   create(createRestrictionsByRoleDto: CreateRestrictionsByRoleDto) {
-    return 'This action adds a new restrictionsByRole';
+    return createRestrictionsByRoleDto;
   }
 
   findAll() {
@@ -17,7 +17,7 @@ export class RestrictionsByRoleService {
   }
 
   update(id: number, updateRestrictionsByRoleDto: UpdateRestrictionsByRoleDto) {
-    return `This action updates a #${id} restrictionsByRole`;
+    return `This action updates a #${id} restrictionsByRole ${updateRestrictionsByRoleDto}`;
   }
 
   remove(id: number) {

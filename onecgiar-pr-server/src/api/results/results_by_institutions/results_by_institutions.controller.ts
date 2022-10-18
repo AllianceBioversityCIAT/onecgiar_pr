@@ -1,15 +1,27 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { ResultsByInstitutionsService } from './results_by_institutions.service';
 import { CreateResultsByInstitutionDto } from './dto/create-results_by_institution.dto';
 import { UpdateResultsByInstitutionDto } from './dto/update-results_by_institution.dto';
 
 @Controller('/')
 export class ResultsByInstitutionsController {
-  constructor(private readonly resultsByInstitutionsService: ResultsByInstitutionsService) {}
+  constructor(
+    private readonly resultsByInstitutionsService: ResultsByInstitutionsService,
+  ) {}
 
   @Post()
   create(@Body() createResultsByInstitutionDto: CreateResultsByInstitutionDto) {
-    return this.resultsByInstitutionsService.create(createResultsByInstitutionDto);
+    return this.resultsByInstitutionsService.create(
+      createResultsByInstitutionDto,
+    );
   }
 
   @Get('all')
@@ -23,8 +35,14 @@ export class ResultsByInstitutionsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateResultsByInstitutionDto: UpdateResultsByInstitutionDto) {
-    return this.resultsByInstitutionsService.update(+id, updateResultsByInstitutionDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateResultsByInstitutionDto: UpdateResultsByInstitutionDto,
+  ) {
+    return this.resultsByInstitutionsService.update(
+      +id,
+      updateResultsByInstitutionDto,
+    );
   }
 
   @Delete(':id')

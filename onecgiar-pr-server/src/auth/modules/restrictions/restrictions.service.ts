@@ -5,7 +5,7 @@ import { UpdateRestrictionDto } from './dto/update-restriction.dto';
 @Injectable()
 export class RestrictionsService {
   create(createRestrictionDto: CreateRestrictionDto) {
-    return 'This action adds a new restriction';
+    return createRestrictionDto;
   }
 
   findAll() {
@@ -17,7 +17,7 @@ export class RestrictionsService {
   }
 
   update(id: number, updateRestrictionDto: UpdateRestrictionDto) {
-    return `This action updates a #${id} restriction`;
+    return `This action updates a #${id} restriction ${updateRestrictionDto}`;
   }
 
   remove(id: number) {

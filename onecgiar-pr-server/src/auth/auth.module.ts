@@ -28,9 +28,7 @@ import { RestrictionsModule } from './modules/restrictions/restrictions.module';
       secret: env.JWT_SKEY,
       signOptions: { expiresIn: env.JWT_EXPIRES },
     }),
-    TypeOrmModule.forFeature([
-      User
-    ]),
+    TypeOrmModule.forFeature([User]),
     RoleByUserModule,
     RoleLevelsModule,
     RestrictionsByRoleModule,
@@ -43,13 +41,8 @@ import { RestrictionsModule } from './modules/restrictions/restrictions.module';
     BcryptPasswordEncoder,
     JwtMiddleware,
     Repository,
-    HandlersError
+    HandlersError,
   ],
-  exports: [
-    BcryptPasswordEncoder, 
-    JwtMiddleware, 
-    AuthService,
-    JwtService
-  ],
+  exports: [BcryptPasswordEncoder, JwtMiddleware, AuthService, JwtService],
 })
 export class AuthModule {}

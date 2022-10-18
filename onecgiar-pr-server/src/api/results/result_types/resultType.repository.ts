@@ -1,4 +1,4 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultType } from './entities/result_type.entity';
@@ -7,8 +7,8 @@ import { ResultType } from './entities/result_type.entity';
 export class ResultTypeRepository extends Repository<ResultType> {
   constructor(
     private dataSource: DataSource,
-    private readonly _handlersError: HandlersError
-    ) {
+    private readonly _handlersError: HandlersError,
+  ) {
     super(ResultType, dataSource.createEntityManager());
   }
 
@@ -22,7 +22,7 @@ export class ResultTypeRepository extends Repository<ResultType> {
       throw this._handlersError.returnErrorRepository({
         className: ResultTypeRepository.name,
         error: error,
-        debug: true
+        debug: true,
       });
     }
   }
@@ -32,8 +32,7 @@ export class ResultTypeRepository extends Repository<ResultType> {
     select 
         rt.id,
         rt.name,
-        rt.description,
-        rt.result_level_id 
+        rt.description
     from result_type rt;
     `;
     try {
@@ -43,7 +42,7 @@ export class ResultTypeRepository extends Repository<ResultType> {
       throw this._handlersError.returnErrorRepository({
         className: ResultTypeRepository.name,
         error: error,
-        debug: true
+        debug: true,
       });
     }
   }
@@ -53,8 +52,7 @@ export class ResultTypeRepository extends Repository<ResultType> {
     select 
         rt.id,
         rt.name,
-        rt.description,
-        rt.result_level_id 
+        rt.description
     from result_type rt
     where rt.id = ?;
     `;
@@ -65,9 +63,8 @@ export class ResultTypeRepository extends Repository<ResultType> {
       throw this._handlersError.returnErrorRepository({
         className: ResultTypeRepository.name,
         error: error,
-        debug: true
+        debug: true,
       });
     }
   }
-
 }

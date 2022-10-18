@@ -1,5 +1,5 @@
 <div class="header_panel" id="sdsdsdsd">
-  <div class="logo">
+  <div class="logo" routerLink="/">
     <img class="cgiar_logo" src="/assets/cgiar_logo.png" alt="" srcset="" />
     <div class="title">
       <!-- <div class="first-text">{{this.internationalizationData.global.platformName}}</div> -->
@@ -11,16 +11,16 @@
       <i class="material-icons-round icon">account_circle</i>
       <div class="title">{{ this.api.authSE?.localStorageUser?.user_name }}</div>
     </div>
-    <div class="my_initiatives">
+    <div class="my_initiatives" *ngIf="this.api.dataControlSE?.myInitiativesList?.length">
       <div class="title">My initiatives:</div>
-      <div class="items">
+      <div class="items custom_scroll">
         <div class="item" *ngFor="let item of this.api.dataControlSE.myInitiativesList">
           <div class="init">{{item?.official_code}}</div>
           <div class="role">{{item?.role}}</div>
         </div>
       </div>
     </div>
-    <div (click)="this.api.authSE.logout()">
+    <div (click)="this.api.authSE.logout();this.api.clearAll();">
       <app-pr-button text="Logout" icon="logout" colorType="secondary"></app-pr-button>
     </div>
   </div>

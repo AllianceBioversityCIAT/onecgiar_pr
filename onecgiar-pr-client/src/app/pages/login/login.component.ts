@@ -19,6 +19,18 @@ export class LoginComponent implements OnDestroy {
     if (!!this.authService.localStorageUser) this.router.navigate(['/']);
   }
 
+  ngOnInit(): void {
+    //Called after the constructor, initializing input properties, and the first call to ngOnChanges.
+    //Add 'implements OnInit' to the class.
+    document.getElementById('password').addEventListener('keyup', function (event) {
+      if (event.key === 'Enter') {
+        document.getElementById('login').click();
+        document.getElementById('password').blur();
+        document.getElementById('fake').focus();
+      }
+    });
+  }
+
   onLogin() {
     this.authService.userAuth(this.userLoginData).subscribe(
       resp => {
@@ -31,8 +43,14 @@ export class LoginComponent implements OnDestroy {
         }, 1500);
       },
       err => {
-        this.customAlertService.show({ id: 'loginAlert', title: 'Ups!', description: err.error.message, status: 'error' });
-        console.log(err.error.message);
+        const statusCode = err?.error?.statusCode;
+        if (statusCode == 404)
+          return this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: err.error.message, status: 'warning', confirmText: 'Contact us' }, () => {
+            document.getElementById('question').click();
+            this.customAlertService.closeAction('loginAlert');
+          });
+
+        this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: err.error.message, status: 'warning' });
       }
     );
   }

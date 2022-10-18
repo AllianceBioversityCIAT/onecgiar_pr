@@ -3,7 +3,6 @@
 html {
     scroll-behavior: smooth;
     font-family: 'Poppins', sans-serif;
-    font-size: 14px;
 }
 
 .segment_title {
@@ -14,4 +13,17 @@ html {
 .segment_title_margin {
     margin-top: 30px;
     margin-bottom: 10px;
+}
+
+
+@media only screen and (max-width: 1400px) {
+    html {
+        font-size: 12px;
+    }
+}
+
+@media only screen and (min-width: 1400px) {
+    html {
+        font-size: 14px;
+    }
 }

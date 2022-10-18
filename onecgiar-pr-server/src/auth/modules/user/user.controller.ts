@@ -9,7 +9,7 @@ import {
   Res,
   Req,
   UseFilters,
-  Headers
+  Headers,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { UserService } from './user.service';
@@ -33,15 +33,22 @@ export class UserController {
 
   // * Create new user endpoint
   @Post('create')
-  async creteFull(@Body() createFullUserDto: CreateFullUserDto, @Headers() auth: HeadersDto, @Res() res: Response, @Req() req: Request) {
+  async creteFull(
+    @Body() createFullUserDto: CreateFullUserDto,
+    @Headers() auth: HeadersDto,
+    @Res() res: Response,
+    @Req() req: Request,
+  ) {
     const createUser: CreateUserDto = createFullUserDto.userData;
     const role: number = createFullUserDto.role;
-    const token: TokenDto = <TokenDto>JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString());
+    const token: TokenDto = <TokenDto>(
+      JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
+    );
 
     const { message, response, status } = await this.userService.createFull(
       createUser,
       role,
-      token
+      token,
     );
 
     throw new HttpException({ message, response }, status);
@@ -57,14 +64,17 @@ export class UserController {
   // * Get user by email
   @Get('get/all/:email')
   async findByEmail(@Param('email') email: string) {
-    const { message, response, status } = await this.userService.findOneByEmail(email);
+    const { message, response, status } = await this.userService.findOneByEmail(
+      email,
+    );
     throw new HttpException({ message, response }, status);
   }
-  
+
   // * Get initiatives associates to user by ID
   @Get('get/initiative/:userId')
   async findInitiativeByUserId(@Param('userId') userId: number) {
-    const { message, response, status } = await this.userService.findInitiativeByUserId(userId);
+    const { message, response, status } =
+      await this.userService.findInitiativeByUserId(userId);
     throw new HttpException({ message, response }, status);
   }
 

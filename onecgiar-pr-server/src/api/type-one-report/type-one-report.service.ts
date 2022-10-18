@@ -5,7 +5,7 @@ import { UpdateTypeOneReportDto } from './dto/update-type-one-report.dto';
 @Injectable()
 export class TypeOneReportService {
   create(createTypeOneReportDto: CreateTypeOneReportDto) {
-    return 'This action adds a new typeOneReport';
+    return createTypeOneReportDto;
   }
 
   findAll() {
@@ -17,7 +17,7 @@ export class TypeOneReportService {
   }
 
   update(id: number, updateTypeOneReportDto: UpdateTypeOneReportDto) {
-    return `This action updates a #${id} typeOneReport`;
+    return `This action updates a #${id} typeOneReport ${updateTypeOneReportDto}`;
   }
 
   remove(id: number) {

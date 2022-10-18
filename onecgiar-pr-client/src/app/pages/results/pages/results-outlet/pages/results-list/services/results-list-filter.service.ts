@@ -1,77 +1,66 @@
 import { Injectable } from '@angular/core';
+import { map } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ResultsListFilterService {
-  filters = {
+  filters: any = {
     general: [
       {
         filter_title: 'Submitter (s)',
         attr: 'submitter',
-        options: [{ name: 'All results', selected: false }, { name: 'INIT-17' }, { name: 'INIT-02' }, { name: 'Other submitters' }, { name: 'Pre-2022 results' }]
+        options: []
       },
       {
         filter_title: 'Reported year',
         attr: 'reported_year',
-        options: [{ name: '2022' }, { name: '2023' }, { name: '2024' }]
+        options: [
+          { attr: '2022', selected: true, name: '2022' },
+          { attr: '2023', name: '2023' },
+          { attr: '2024', name: '2024' }
+        ]
       }
     ],
-    resultLevel: [
-      {
-        filter_title: 'Impact',
-        attr: 'result_type',
-        options: [{ name: 'Impact contributions', selected: false }],
-        class: 'impact'
-      },
-      {
-        filter_title: 'Outcomes',
-        attr: 'result_type',
-        options: [{ name: 'Policy Change', selected: false }, { name: 'Innovation Use' }, { name: 'Other' }],
-        class: 'outcomes'
-      },
-      {
-        filter_title: 'Outputs',
-        attr: 'result_type',
-        options: [{ name: 'Knowledge products', selected: false }, { name: 'Innovation development' }, { name: 'Capacity sharing for development' }, { name: 'Other' }],
-        class: 'outputs'
-      }
-    ]
+    resultLevel: []
   };
 
   constructor() {}
   filtersPipeList = [];
-  filterJoin: string;
-  get filtersPipe(): FiltersPipe[] {
-    let listFiltered = [];
-    this.filters.general.map(filter => {
-      let optionsSelected = [];
-      filter?.options.map(option => {
-        if (option.selected === true) optionsSelected.push(option?.name);
-      });
-      if (optionsSelected.length) listFiltered.push({ attr: filter.attr, options: optionsSelected });
+  filterJoin: number = 0;
+
+  updateMyInitiatives(initiatives) {
+    initiatives.map(init => {
+      init.selected = true;
+      init.attr = init.name;
+      init.id = init.initiative_id;
     });
-    this.filters.resultLevel.map(filter => {
-      let optionsSelected = [];
-      filter?.options.map(option => {
-        if (option.selected === true) optionsSelected.push(option?.name);
-      });
-      if (optionsSelected.length) listFiltered.push({ attr: filter.attr, options: optionsSelected });
-    });
-    return listFiltered;
-    // [
-    //   { attr: 'result_type', options: ['Knowledge Product', 'Organizational change'] },
-    //   { attr: 'submitter', options: ['INIT-30'] }
-    // ];
+    this.filters.general[0].options = [{ name: 'All results', selected: false, cleanAll: true }, ...initiatives, { attr: '', name: 'Other submitters' }, { attr: '', name: 'Pre-2022 results' }];
   }
 
   onSelectChip(option: any) {
     option.selected = !option.selected;
-    this.filterJoin += 'd';
+    if (option.name != 'All results') this.filters.general[0].options[0].selected = false;
+    this.filterJoin++;
   }
-}
+  cleanAllFilters(option) {
+    if (!option.selected) return;
+    if (option?.cleanAll !== true) return;
+    this.filters.general.map(filter => {
+      filter.options.map(option => {
+        option.selected = false;
+      });
+    });
+    this.filters.resultLevel.map(filter => {
+      filter.options.map(option => {
+        option.selected = false;
+      });
+    });
+    this.filters.general[0].options[0].selected = true;
+  }
 
-interface FiltersPipe {
-  attr: string;
-  options: string[];
+  setFiltersByResultLevelTypes(resultLevelTypes) {
+    this.filters.resultLevel = resultLevelTypes;
+    this.filters.resultLevel.map(resultLevel => (resultLevel.options = resultLevel?.result_type));
+  }
 }

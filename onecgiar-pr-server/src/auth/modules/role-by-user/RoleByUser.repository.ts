@@ -1,16 +1,15 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { RoleByUser } from './entities/role-by-user.entity';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { getSpecificRoleDto } from './dto/getSpecificRole.dto';
 
-
 @Injectable()
 export class RoleByUserRepository extends Repository<RoleByUser> {
   constructor(
     private dataSource: DataSource,
-    private readonly _handlersError: HandlersError
-    ) {
+    private readonly _handlersError: HandlersError,
+  ) {
     super(RoleByUser, dataSource.createEntityManager());
   }
 
@@ -25,7 +24,7 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
       throw this._handlersError.returnErrorRepository({
         className: RoleByUserRepository.name,
         error: error,
-        debug: true
+        debug: true,
       });
     }
   }
@@ -52,11 +51,9 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
       throw this._handlersError.returnErrorRepository({
         className: RoleByUserRepository.name,
         error: error,
-        debug: true
+        debug: true,
       });
     }
-
-    
   }
 
   async getSpecificRole(config: getSpecificRoleDto) {
@@ -82,20 +79,17 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
         config.user,
         config.role,
         config.initiative_id,
-        config.action_area_id
+        config.action_area_id,
       ]);
-      console.log(getSpecificRole)
-      console.log(config)
+      console.log(getSpecificRole);
+      console.log(config);
       return getSpecificRole[0];
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: RoleByUserRepository.name,
         error: error,
-        debug: true
+        debug: true,
       });
     }
-
-    
   }
-
 }

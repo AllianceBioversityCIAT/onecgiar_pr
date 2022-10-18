@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { EvidenceTypesService } from './evidence_types.service';
 import { CreateEvidenceTypeDto } from './dto/create-evidence_type.dto';
 import { UpdateEvidenceTypeDto } from './dto/update-evidence_type.dto';
@@ -23,7 +31,10 @@ export class EvidenceTypesController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateEvidenceTypeDto: UpdateEvidenceTypeDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateEvidenceTypeDto: UpdateEvidenceTypeDto,
+  ) {
     return this.evidenceTypesService.update(+id, updateEvidenceTypeDto);
   }
 

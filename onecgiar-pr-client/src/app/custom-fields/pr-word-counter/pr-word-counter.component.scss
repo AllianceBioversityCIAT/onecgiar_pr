@@ -1,0 +1,15 @@
+.word_counter {
+    position: absolute;
+    right: 0;
+    bottom: -30px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--pr-color-medium);
+    font-size: .9em;
+
+    .limitBreaker {
+        font-weight: 700;
+        color: rgb(26, 26, 26);
+    }
+}

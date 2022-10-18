@@ -4,24 +4,35 @@
       optionValue="code"></app-pr-button>
   </div>
   <div class="local_container section_container">
-    <div class="greeting">{{naratives.greeting('Yecksin')}}</div>
+    <div class="greeting"
+      [innerHTML]="naratives.greeting(this.api.authSE.localStorageUser?.user_name,this.api.dataControlSE.myInitiativesListText(this.api.dataControlSE.myInitiativesList))">
+    </div>
     <div class="report_container">
       <app-pr-select class="segment_title_margin" [options]="this.api.dataControlSE.myInitiativesList"
-        inputTitle="Report for" optionLabel="official_code" optionValue="id"
+        inputTitle="Report for" optionLabel="official_code_short_name" optionValue="initiative_id"
         [(ngModel)]="this.resultLevelSE.resultBody.initiative_id">
       </app-pr-select>
       <app-result-level-buttons></app-result-level-buttons>
-      <div class="segment_title segment_title_margin" *ngIf="this.resultLevelSE?.resultTypeList?.length">Result type
+      <div class="segment_title segment_title_margin" *ngIf="this.resultLevelSE?.currentResultTypeList?.length">Result
+        type
       </div>
-      <app-radio-button [options]="this.resultLevelSE.resultTypeList" optionLabel="name"
-        [(ngModel)]="this.resultLevelSE.resultBody.result_type_id">
+      <app-radio-button [options]="this.resultLevelSE.currentResultTypeList" optionLabel="name"
+        [(ngModel)]="this.resultLevelSE.resultBody.result_type_id" (ngModelChange)="cleanTitle()">
       </app-radio-button>
-      <app-pr-input placeholder="Policy title..." label="Title" type="text"
-        description="To search for results that have already been reported, enter key words into the title box below. If your result has not already been reported, you can add it here."
+      <app-pr-input *ngIf="resultLevelSE.resultBody.result_type_id == 6" placeholder="Handle..." label="Handle"
+        type="text" [(ngModel)]="this.resultLevelSE.resultBody.result_name">
+      </app-pr-input>
+      <app-pr-input *ngIf="resultLevelSE.resultBody.result_type_id != 6 || this.resultLevelSE.resultBody.result_name"
+        [readOnly]="resultLevelSE.resultBody.result_type_id == 6" [placeholder]="resultTypeName+ ''" label="Title"
+        type="text" [maxWords]="30"
+        [description]="resultLevelSE.resultBody.result_type_id == 6 ? 'Title fetched from CGSpace' :'To search for results that have already been reported, enter key words into the title box below. If your result has not already been reported, you can add it here.'"
         [(ngModel)]="this.resultLevelSE.resultBody.result_name">
       </app-pr-input>
+
+      <app-similar-results *ngIf="resultLevelSE.resultBody.result_type_id != 6"></app-similar-results>
     </div>
-    <div class="save_button">
+    <div class="save_button"
+      [ngClass]="{'globalDisabled': ((!this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody)) || (this.api.dataControlSE.resultsList | similarResults:this.resultLevelSE.resultBody.result_name).length) || this.api.wordCounterSE.counter(this.resultLevelSE.resultBody.result_name) > 30  }">
       <div (click)="onSaveSection()">
         <app-pr-button padding="medium" text="Save and continue" icon="save"></app-pr-button>
       </div>

@@ -12,5 +12,4 @@ export class ClarisaActionArea {
 
   @Column({ name: 'description', type: 'text' })
   description: string;
-
 }

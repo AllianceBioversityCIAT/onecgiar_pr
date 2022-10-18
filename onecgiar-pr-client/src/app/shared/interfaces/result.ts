@@ -3,6 +3,7 @@ export interface ResultLevel {
   name: string;
   description: string;
   result_type: Resulttype[];
+  selected: boolean;
 }
 
 export interface Resulttype {
@@ -16,6 +17,7 @@ export class ResultBody {
   public initiative_id: number = null;
   public result_type_id: number = null;
   public result_name: string = '';
+  public result_level_id: string | number = '';
 }
 
 export interface ResultItem {

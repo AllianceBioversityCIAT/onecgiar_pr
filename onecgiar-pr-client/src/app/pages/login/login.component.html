@@ -1,12 +1,12 @@
 <!--Hey! This is the original version
 of Simple CSS Waves-->
 
-<div class="header">
+<div class="header fadeIn">
   <!--Content before waves-->
-
+  <input type="text" id="fake" style="opacity: 0;position: absolute;">
   <div class="inner-header flex">
     <div class="login_card" [ngClass]="{'success_padding': successLogin}">
-      <lord-icon *ngIf="successLogin" src="https://cdn.lordicon.com/lcucqigi.json" trigger="loop"
+      <lord-icon *ngIf="successLogin" src="https://cdn.lordicon.com/vnioezyi.json" trigger="loop"
         style="width:100px;height:100px">
       </lord-icon>
       <div *ngIf="successLogin" class="successText">Successful login</div>
@@ -15,13 +15,13 @@ of Simple CSS Waves-->
         <div class="welcome">Welcome to the {{internationalizationData.global.platformName}}</div>
         <app-pr-input placeholder="e.g. Example@cgiar.org" label="Email" type="email" [(ngModel)]="userLoginData.email">
         </app-pr-input>
-        <app-pr-input placeholder="Enter your password" label="Password" type="password"
+        <app-pr-input id="password" placeholder="Enter your password" label="Password" type="password"
           [(ngModel)]="userLoginData.password">
         </app-pr-input>
-        <div class="center_flex_100" style="margin-top: 20px;" (click)="onLogin()">
+        <div class="center_flex_100" id="login" style="margin-top: 20px;" (click)="onLogin()">
           <app-pr-button padding="medium" text="Login" icon="arrow_forward_ios"></app-pr-button>
         </div>
-        <div class="question_container" (click)="this.display = true">
+        <div class="question_container" (click)="this.display = true" id="question">
           <a class="question">Do you have any question?</a>
         </div>
 
@@ -50,9 +50,10 @@ of Simple CSS Waves-->
 <p-dialog class="support_information" header="Title" [(visible)]="display" [draggable]="false" [modal]="true"
   [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true" [style]="{padding: '0px'}">
   <div class="modal_container">
+    <div class="line"></div>
+    <div class="line"></div>
     <i class="material-icons-round close_icon" (click)="this.display = false">close</i>
-    <div class="line"></div>
-    <div class="line"></div>
+
     <div class="title">Please do not hesitate to contact us:</div>
     <div class="email">For technical questions related with this tool, please contact <a
         href="mailto: OSTTechSupport@cgiar.org">OSTTechSupport@cgiar.org</a>

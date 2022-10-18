@@ -7,13 +7,8 @@ import { ClarisaImpactAreaRepository } from './ClarisaImpactArea.repository';
 
 @Module({
   controllers: [ClarisaImpactAreaController],
-  providers: [
-    ClarisaImpactAreaService,
-    ClarisaImpactAreaRepository
-  ],
+  providers: [ClarisaImpactAreaService, ClarisaImpactAreaRepository],
   imports: [RouterModule.register(ClarisaImpactAreaRoutes)],
-  exports: [
-    ClarisaImpactAreaRepository
-  ]
+  exports: [ClarisaImpactAreaRepository],
 })
 export class ClarisaImpactAreaModule {}

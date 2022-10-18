@@ -3,6 +3,7 @@ import { internationalizationData } from '../../../../shared/data/internationali
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultLevelService } from './services/result-level.service';
 import { Router } from '@angular/router';
+import { ResultBody } from '../../../../shared/interfaces/result';
 
 @Component({
   selector: 'app-result-creator',
@@ -11,9 +12,14 @@ import { Router } from '@angular/router';
 })
 export class ResultCreatorComponent {
   naratives = internationalizationData.reportNewResult;
+
   constructor(public api: ApiService, public resultLevelSE: ResultLevelService, private router: Router) {}
 
   ngOnInit(): void {
+    this.resultLevelSE.resultBody = new ResultBody();
+    this.resultLevelSE.resultLevelList?.map(reLevel => (reLevel.selected = false));
+    this.api.updateResultsList();
+    this.resultLevelSE.cleanData();
     this.api.updateUserData();
     this.api.alertsFs.show({
       id: 'indoasd',
@@ -25,13 +31,25 @@ export class ResultCreatorComponent {
     // this.getInitiativesByUser();
   }
 
+  get resultTypeName(): string {
+    if (!this.resultLevelSE.currentResultTypeList || !this.resultLevelSE.resultBody.result_type_id) return 'Title...';
+    return this.resultLevelSE.currentResultTypeList.find(resultType => resultType.id == this.resultLevelSE.resultBody.result_type_id)?.name + ' title...';
+  }
+
+  cleanTitle() {
+    if (this.resultLevelSE.resultBody.result_type_id == 6) this.resultLevelSE.resultBody.result_name = '';
+  }
+
   onSaveSection() {
-    console.log(this.resultLevelSE.resultBody);
-    this.api.resultsSE.POST_resultCreateHeader(this.resultLevelSE.resultBody).subscribe(resp => {
-      console.log(resp);
-      this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Great!', description: 'Result reported', status: 'success', closeIn: 500, confirm: false });
-      // this.api.alertsFe.show({ id: 'reportResultError', title: 'Ups!', description: 'some', status: 'error' });
-      this.router.navigate(['/']);
-    });
+    this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody);
+    this.api.resultsSE.POST_resultCreateHeader(this.resultLevelSE.resultBody).subscribe(
+      resp => {
+        this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Great!', description: 'Result reported', status: 'success', closeIn: 500 });
+        this.router.navigate(['/']);
+      },
+      err => {
+        this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
+      }
+    );
   }
 }

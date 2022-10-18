@@ -7,7 +7,7 @@ import { Router } from '@angular/router';
   providedIn: 'root'
 })
 export class AuthService {
-  inLogin = false;
+  inLogin = true;
   apiBaseUrl = environment.apiBaseUrl + 'auth/';
   constructor(public http: HttpClient, private router: Router) {}
 
@@ -24,7 +24,6 @@ export class AuthService {
   }
 
   get localStorageUser(): LocalStorageUser {
-    // console.log('localStorageUser');
     return JSON.parse(localStorage.getItem('user'));
   }
 
@@ -38,10 +37,10 @@ export class AuthService {
   }
 
   GET_allRolesByUser() {
-    return this.http.get<any>(`${this.apiBaseUrl}role-by-user/get/user/${this.localStorageUser.id}`);
+    return this.http.get<any>(`${this.apiBaseUrl}role-by-user/get/user/${this.localStorageUser?.id}`);
   }
 
   GET_initiativesByUser() {
-    return this.http.get<any>(`${this.apiBaseUrl}user/get/initiative/${this.localStorageUser.id}`);
+    return this.http.get<any>(`${this.apiBaseUrl}user/get/initiative/${this.localStorageUser?.id}`);
   }
 }

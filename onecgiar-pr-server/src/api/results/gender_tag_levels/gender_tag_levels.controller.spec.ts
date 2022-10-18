@@ -11,7 +11,9 @@ describe('GenderTagLevelsController', () => {
       providers: [GenderTagLevelsService],
     }).compile();
 
-    controller = module.get<GenderTagLevelsController>(GenderTagLevelsController);
+    controller = module.get<GenderTagLevelsController>(
+      GenderTagLevelsController,
+    );
   });
 
   it('should be defined', () => {

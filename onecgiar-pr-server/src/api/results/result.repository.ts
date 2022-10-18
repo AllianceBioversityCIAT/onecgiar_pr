@@ -1,18 +1,24 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { Result } from './entities/result.entity';
 import { HandlersError } from '../../shared/handlers/error.utils';
+import { DepthSearch } from './dto/depth-search.dto';
+import { DepthSearchOne } from './dto/depth-search-one.dto';
 
 @Injectable()
 export class ResultRepository extends Repository<Result> {
   constructor(
     private dataSource: DataSource,
-    private readonly _handlersError: HandlersError
+    private readonly _handlersError: HandlersError,
   ) {
     super(Result, dataSource.createEntityManager());
   }
 
-  async getResultByName(name: string, result_type: number, result_name: number) {
+  async getResultByName(
+    name: string,
+    result_type: number,
+    result_name: number,
+  ) {
     const queryData = `
     SELECT 
     	ci.id as init_id,
@@ -34,21 +40,23 @@ export class ResultRepository extends Repository<Result> {
     `;
     try {
       const completeUser: any[] = await this.query(queryData, [
-        name, result_type, result_name
+        name,
+        result_type,
+        result_name,
       ]);
       return completeUser[0];
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultRepository.name,
         error: error,
-        debug: true
+        debug: true,
       });
     }
   }
 
   /**
    * !reported_year revisar
-   * @returns 
+   * @returns
    */
   async AllResults() {
     const queryData = `
@@ -59,6 +67,7 @@ export class ResultRepository extends Repository<Result> {
     rt.name AS result_type,
     r.created_date,
     ci.official_code AS submitter,
+    ci.id AS submitter_id,
     r.status,
     IF(r.status = 0, 'Editing', 'Submitted') AS status_name
 FROM
@@ -79,9 +88,9 @@ WHERE
       throw {
         message: `[${ResultRepository.name}] => completeAllData error: ${error}`,
         response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
       };
-    };
+    }
   }
 
   async AllResultsByRoleUsers(userid: number) {
@@ -91,20 +100,26 @@ WHERE
     r.title,
     r.reported_year_id AS reported_year,
     rt.name AS result_type,
+    rt.id AS result_type_id,
     r.created_date,
     ci.official_code AS submitter,
+    ci.id AS submitter_id,
     r.status,
     IF(r.status = 0, 'Editing', 'Submitted') AS status_name,
     r2.id as role_id,
-    r2.description as role_name
+    r2.description as role_name,
+    if(y.\`year\` = r.reported_year_id, 'New', '') as is_new,
+    r.result_level_id
 FROM
     \`result\` r
     INNER JOIN result_type rt ON rt.id = r.result_type_id
+    inner join result_level rl on rl.id = r.result_level_id 
     INNER JOIN results_by_inititiative rbi ON rbi.result_id = r.id
     INNER JOIN clarisa_initiatives ci ON ci.id = rbi.inititiative_id
     left join role_by_user rbu on rbu.initiative_id = rbi.inititiative_id 
     							and rbu.\`user\`  = ?
     left join \`role\` r2 on r2.id  = rbu.\`role\` 
+    left join \`year\` y ON y.active > 0
 WHERE
     r.is_active > 0
     AND rbi.is_active > 0
@@ -112,15 +127,100 @@ WHERE
     `;
 
     try {
-      const results: any[] = await this.query(queryData, [userid]);
+      const results = await this.query(queryData, [userid]);      
       return results;
     } catch (error) {
       throw {
         message: `[${ResultRepository.name}] => completeAllData error: ${error}`,
         response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
       };
-    };
+    }
   }
 
+  async AllResultsLegacyNewByTitle(title: string) {
+    const queryData = `
+    (select 
+      lr.legacy_id as id,
+      lr.title,
+      lr.description,
+      lr.crp,
+      lr.\`year\`,
+      1 as legacy
+    from legacy_result lr
+    where lr.title like ?
+      and lr.is_migrated = 0)
+    union
+    (select 
+      r.id,
+      r.title,
+      r.description,
+      ci.official_code as crp,
+      r.reported_year_id as \`year\`,
+      0 as legacy
+    from \`result\` r 
+      inner join results_by_inititiative rbi on rbi.result_id = r.id
+                          and rbi.initiative_role_id = 1
+                          and rbi.is_active > 0
+      inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id
+                          and ci.active > 0
+    where r.is_active > 0
+      and r.title like ?)
+    `;
+
+    try {
+      const results: DepthSearch[] = await this.query(queryData, [`%${title}%`,`%${title}%`]);
+      return results;
+    } catch (error) {
+      throw {
+        message: `[${ResultRepository.name}] => completeAllData error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
+  async findResultsLegacyNewById(id: string) {
+    const queryData = `
+    (select 
+      lr.legacy_id as id,
+      lr.title,
+      lr.description,
+      lr.crp,
+      lr.\`year\`,
+      1 as legacy,
+      lr.is_migrated
+    from legacy_result lr
+    where lr.legacy_id = ?
+      and lr.is_migrated = 0)
+    union
+    (select 
+      r.id,
+      r.title,
+      r.description,
+      ci.official_code as crp,
+      r.reported_year_id as \`year\`,
+      0 as legacy,
+      1 as is_migrated
+    from \`result\` r 
+      inner join results_by_inititiative rbi on rbi.result_id = r.id
+                          and rbi.initiative_role_id = 1
+                          and rbi.is_active > 0
+      inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id
+                          and ci.active > 0
+    where r.is_active > 0
+    and r.id = ?)
+    `;
+
+    try {
+      const results: DepthSearchOne[] = await this.query(queryData, [id,id]);
+      return results.length?results[0]: new DepthSearchOne();
+    } catch (error) {
+      throw {
+        message: `[${ResultRepository.name}] => completeAllData error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
 }

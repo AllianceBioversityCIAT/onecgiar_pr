@@ -1,8 +1,6 @@
-import { retunFormatService } from '../../../../shared/extendsGlobalDTO/retunServices.dto';
+import { returnFormatService } from '../../../../shared/extendsGlobalDTO/returnServices.dto';
 import { ResultLevel } from '../entities/result_level.entity';
 
-
-
-export class retunrFormatResultLevel extends retunFormatService{
-    public response!: ResultLevel | {};
+export class returnFormatResultLevel extends returnFormatService {
+  public response!: ResultLevel | {};
 }

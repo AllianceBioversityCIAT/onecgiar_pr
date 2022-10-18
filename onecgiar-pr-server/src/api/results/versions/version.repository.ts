@@ -1,4 +1,4 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { Version } from './entities/version.entity';
 import { HandlersError } from '../../../shared/handlers/error.utils';
@@ -7,8 +7,8 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 export class VersionRepository extends Repository<Version> {
   constructor(
     private dataSource: DataSource,
-    private readonly _handlersError: HandlersError
-    ) {
+    private readonly _handlersError: HandlersError,
+  ) {
     super(Version, dataSource.createEntityManager());
   }
 
@@ -28,14 +28,13 @@ export class VersionRepository extends Repository<Version> {
     `;
     try {
       const version: Version[] = await this.query(queryData);
-      return version[0];
+      return version.length?version[0]:[];
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: VersionRepository.name,
         error: error,
-        debug: true
+        debug: true,
       });
     }
   }
-
 }

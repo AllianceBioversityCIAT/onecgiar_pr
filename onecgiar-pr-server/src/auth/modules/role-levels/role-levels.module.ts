@@ -11,11 +11,8 @@ import { RoleRepository } from '../role/Role.repository';
     RoleLevelsService,
     RoleLevelRepository,
     HandlersError,
-    RoleRepository
+    RoleRepository,
   ],
-  exports: [
-    RoleLevelRepository,
-    RoleLevelsService
-  ]
+  exports: [RoleLevelRepository, RoleLevelsService],
 })
 export class RoleLevelsModule {}

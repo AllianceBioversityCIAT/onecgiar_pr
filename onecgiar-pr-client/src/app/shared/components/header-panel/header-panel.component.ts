@@ -11,4 +11,7 @@ import { ApiService } from '../../services/api/api.service';
 export class HeaderPanelComponent {
   internationalizationData = internationalizationData;
   constructor(public api: ApiService) {}
+  ngOnInit(): void {
+    this.api.updateUserData();
+  }
 }

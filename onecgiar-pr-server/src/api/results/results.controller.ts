@@ -5,30 +5,35 @@ import {
   Body,
   Patch,
   Param,
-  Delete,
   Headers,
   HttpException,
 } from '@nestjs/common';
 import { ResultsService } from './results.service';
 import { CreateResultDto } from './dto/create-result.dto';
-import { UpdateResultDto } from './dto/update-result.dto';
 import { HeadersDto } from '../../shared/globalInterfaces/headers.dto';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
+import { MapLegacy } from './dto/map-legacy.dto';
 
 @Controller()
 export class ResultsController {
-  constructor(private readonly resultsService: ResultsService) { }
+  constructor(private readonly resultsService: ResultsService) {}
 
   @Post('create/header')
-  async create(@Body() createResultDto: CreateResultDto, @Headers() auth: HeadersDto) {
-    const token: TokenDto = <TokenDto>JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString());
-    const { message, response, status } = await this.resultsService.createOwnerResult(createResultDto, token);
+  async create(
+    @Body() createResultDto: CreateResultDto,
+    @Headers() auth: HeadersDto,
+  ) {
+    const token: TokenDto = <TokenDto>(
+      JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
+    );
+    const { message, response, status } =
+      await this.resultsService.createOwnerResult(createResultDto, token);
     throw new HttpException({ message, response }, status);
   }
 
   @Get('get/name/:name')
   findAll(@Param('name') resultName: string) {
-    return this.resultsService.findAll();
+    return this.resultsService.findAll() + resultName;
   }
 
   // * Get all results
@@ -46,22 +51,36 @@ export class ResultsController {
   // * Get all results-roles by user ID
   @Get('get/all/roles/:userId')
   async findAllResultRoles(@Param('userId') userId: number) {
-    const { message, response, status } = await this.resultsService.findAllByRole(userId);
+    const { message, response, status } =
+      await this.resultsService.findAllByRole(userId);
     throw new HttpException({ message, response }, status);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.resultsService.findOne(+id);
+  @Get('get/depth-search/:title')
+  async depthSearch(@Param('title') title: string) {
+    const { message, response, status } = 
+      await this.resultsService.findAllResultsLegacyNew(title);
+    throw new HttpException({ message, response }, status);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateResultDto: UpdateResultDto) {
-    return this.resultsService.update(+id, updateResultDto);
+  @Post('map/legacy')
+  async mapResultLegacy(
+    @Body() MapLegacy: MapLegacy,
+    @Headers() auth: HeadersDto,
+  ){
+    const token: TokenDto = <TokenDto>(
+      JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
+    );
+    const { message, response, status } = 
+      await this.resultsService.mapResultLegacy(MapLegacy, token);
+    throw new HttpException({ message, response }, status);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.resultsService.remove(+id);
+  @Patch('delete/:id')
+  async update(@Param('id') id: number) {
+    console.log(id);
+    const { message, response, status } =
+      await this.resultsService.deleteResult(id);
+    throw new HttpException({ message, response }, status);
   }
 }

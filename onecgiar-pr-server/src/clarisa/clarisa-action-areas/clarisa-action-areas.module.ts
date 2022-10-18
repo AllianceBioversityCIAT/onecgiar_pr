@@ -7,15 +7,8 @@ import { ClariasaActionAreaRepository } from './ClariasaActionArea.repository';
 
 @Module({
   controllers: [ClarisaActionAreasController],
-  providers: [
-    ClarisaActionAreasService,
-    ClariasaActionAreaRepository
-  ],
-  imports: [
-    RouterModule.register(ClarisaActionAreasRoutes)
-  ],
-  exports: [
-    ClariasaActionAreaRepository
-  ]
+  providers: [ClarisaActionAreasService, ClariasaActionAreaRepository],
+  imports: [RouterModule.register(ClarisaActionAreasRoutes)],
+  exports: [ClariasaActionAreaRepository],
 })
 export class ClarisaActionAreasModule {}

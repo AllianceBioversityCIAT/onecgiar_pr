@@ -15,7 +15,7 @@ export const internationalizationData = {
     }
   },
   reportNewResult: {
-    greeting: (name: string) => `Hello ${name}, you can report for INIT-17 and INIT-28. If you would like to report for another Initiative, please contact Project Coordination Unit.`,
+    greeting: (name: string, initiatives: string) => `Hello <strong>${name}</strong>, you can report for <strong>${initiatives}</strong>. If you would like to report for another Initiative, please contact Project Coordination Unit.`,
     alerts: {
       info: 'Remember that there is a possibility that the result you want to report has already been entered into the PRMS Reporting tool. If this is the case, it is only necessary to map the result to your Initiative. There is no need to enter it as a new result. Please check the results section to see if your result has been previously entered.'
     }

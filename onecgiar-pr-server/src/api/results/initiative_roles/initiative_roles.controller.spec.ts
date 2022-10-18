@@ -11,7 +11,9 @@ describe('InitiativeRolesController', () => {
       providers: [InitiativeRolesService],
     }).compile();
 
-    controller = module.get<InitiativeRolesController>(InitiativeRolesController);
+    controller = module.get<InitiativeRolesController>(
+      InitiativeRolesController,
+    );
   });
 
   it('should be defined', () => {

@@ -5,7 +5,7 @@ import { UpdateResultsByEvidenceDto } from './dto/update-results_by_evidence.dto
 @Injectable()
 export class ResultsByEvidencesService {
   create(createResultsByEvidenceDto: CreateResultsByEvidenceDto) {
-    return 'This action adds a new resultsByEvidence';
+    return createResultsByEvidenceDto;
   }
 
   findAll() {
@@ -17,7 +17,7 @@ export class ResultsByEvidencesService {
   }
 
   update(id: number, updateResultsByEvidenceDto: UpdateResultsByEvidenceDto) {
-    return `This action updates a #${id} resultsByEvidence`;
+    return `This action updates a #${id} resultsByEvidence ${updateResultsByEvidenceDto}`;
   }
 
   remove(id: number) {

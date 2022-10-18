@@ -1,15 +1,29 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { ClarisaCountriesRegionsService } from './clarisa-countries-regions.service';
 import { CreateClarisaCountriesRegionDto } from './dto/create-clarisa-countries-region.dto';
 import { UpdateClarisaCountriesRegionDto } from './dto/update-clarisa-countries-region.dto';
 
 @Controller('clarisa-countries-regions')
 export class ClarisaCountriesRegionsController {
-  constructor(private readonly clarisaCountriesRegionsService: ClarisaCountriesRegionsService) {}
+  constructor(
+    private readonly clarisaCountriesRegionsService: ClarisaCountriesRegionsService,
+  ) {}
 
   @Post()
-  create(@Body() createClarisaCountriesRegionDto: CreateClarisaCountriesRegionDto) {
-    return this.clarisaCountriesRegionsService.create(createClarisaCountriesRegionDto);
+  create(
+    @Body() createClarisaCountriesRegionDto: CreateClarisaCountriesRegionDto,
+  ) {
+    return this.clarisaCountriesRegionsService.create(
+      createClarisaCountriesRegionDto,
+    );
   }
 
   @Get()
@@ -23,8 +37,14 @@ export class ClarisaCountriesRegionsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateClarisaCountriesRegionDto: UpdateClarisaCountriesRegionDto) {
-    return this.clarisaCountriesRegionsService.update(+id, updateClarisaCountriesRegionDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateClarisaCountriesRegionDto: UpdateClarisaCountriesRegionDto,
+  ) {
+    return this.clarisaCountriesRegionsService.update(
+      +id,
+      updateClarisaCountriesRegionDto,
+    );
   }
 
   @Delete(':id')

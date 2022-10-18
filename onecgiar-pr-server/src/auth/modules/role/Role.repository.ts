@@ -1,15 +1,14 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { Role } from './entities/role.entity';
-
 
 @Injectable()
 export class RoleRepository extends Repository<Role> {
   constructor(
     private dataSource: DataSource,
-    private readonly _handlersError: HandlersError
-    ) {
+    private readonly _handlersError: HandlersError,
+  ) {
     super(Role, dataSource.createEntityManager());
   }
 
@@ -24,7 +23,7 @@ export class RoleRepository extends Repository<Role> {
       throw this._handlersError.returnErrorRepository({
         className: RoleRepository.name,
         error: error,
-        debug: true
+        debug: true,
       });
     }
   }
@@ -49,10 +48,8 @@ export class RoleRepository extends Repository<Role> {
       throw this._handlersError.returnErrorRepository({
         className: RoleRepository.name,
         error: error,
-        debug: true
+        debug: true,
       });
     }
   }
-
-
 }

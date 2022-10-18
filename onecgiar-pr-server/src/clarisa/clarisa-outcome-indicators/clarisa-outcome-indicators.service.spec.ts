@@ -9,7 +9,9 @@ describe('ClarisaOutcomeIndicatorsService', () => {
       providers: [ClarisaOutcomeIndicatorsService],
     }).compile();
 
-    service = module.get<ClarisaOutcomeIndicatorsService>(ClarisaOutcomeIndicatorsService);
+    service = module.get<ClarisaOutcomeIndicatorsService>(
+      ClarisaOutcomeIndicatorsService,
+    );
   });
 
   it('should be defined', () => {

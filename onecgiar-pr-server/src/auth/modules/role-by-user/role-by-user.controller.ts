@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseFilters, HttpException, Headers } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseFilters,
+  HttpException,
+  Headers,
+} from '@nestjs/common';
 import { RoleByUserService } from './role-by-user.service';
 import { CreateRoleByUserDto } from './dto/create-role-by-user.dto';
 import { UpdateRoleByUserDto } from './dto/update-role-by-user.dto';
@@ -12,16 +23,25 @@ export class RoleByUserController {
   constructor(private readonly roleByUserService: RoleByUserService) {}
 
   @Post()
-  async create(@Body() createRoleByUserDto: CreateRoleByUserDto, @Headers() auth: HeadersDto) {
-    const token: TokenDto = <TokenDto>JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString());
-    const {message, response, status} = await this.roleByUserService.create(createRoleByUserDto, token);
-    throw new HttpException({message,response}, status);
+  async create(
+    @Body() createRoleByUserDto: CreateRoleByUserDto,
+    @Headers() auth: HeadersDto,
+  ) {
+    const token: TokenDto = <TokenDto>(
+      JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
+    );
+    const { message, response, status } = await this.roleByUserService.create(
+      createRoleByUserDto,
+      token,
+    );
+    throw new HttpException({ message, response }, status);
   }
 
   @Get('get/user/:id')
   async findAll(@Param('id') userId: number) {
-    const {message, response, status} = await this.roleByUserService.allRolesByUser(userId);
-    throw new HttpException({message,response}, status);
+    const { message, response, status } =
+      await this.roleByUserService.allRolesByUser(userId);
+    throw new HttpException({ message, response }, status);
   }
 
   @Get('all')
@@ -30,7 +50,10 @@ export class RoleByUserController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateRoleByUserDto: UpdateRoleByUserDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateRoleByUserDto: UpdateRoleByUserDto,
+  ) {
     return this.roleByUserService.update(+id, updateRoleByUserDto);
   }
 

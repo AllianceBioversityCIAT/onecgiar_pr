@@ -10,7 +10,8 @@ describe('Results Controller (e2e)', () => {
         "initiative_id": 20,
         "result_type_id": 1,
         "result_name": "Test creating a result",
-        "handler": ""
+        "handler": "",
+        "result_level_id": 1
     }
 
     // * Successfull login test & obtaine the token

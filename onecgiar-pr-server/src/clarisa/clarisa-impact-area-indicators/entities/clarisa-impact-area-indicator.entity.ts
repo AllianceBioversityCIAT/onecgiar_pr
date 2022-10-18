@@ -12,43 +12,43 @@ export class ClarisaImpactAreaIndicator {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ 
-    name: 'indicator_statement', 
+  @Column({
+    name: 'indicator_statement',
     type: 'text',
-    nullable: true
+    nullable: true,
   })
   indicator_statement!: string;
 
-  @ManyToOne(() => ClarisaImpactArea, (cia) => cia.id, {nullable: true})
+  @ManyToOne(() => ClarisaImpactArea, (cia) => cia.id, { nullable: true })
   @JoinColumn({ name: 'impact_area_id' })
   impact_area_id!: number;
 
   @Column({ name: 'target_year', type: 'int' })
   target_year: number;
 
-  @Column({ 
-    name: 'target_unit', 
+  @Column({
+    name: 'target_unit',
     type: 'text',
-    nullable: true 
+    nullable: true,
   })
   target_unit!: string;
 
-  @Column({ 
-    name: 'value', 
+  @Column({
+    name: 'value',
     type: 'int',
-    nullable: true 
+    nullable: true,
   })
   value!: number;
 
-  @Column({ 
-    name: 'is_aplicable_projected_benefits', 
-    type: 'boolean'
-    })
-    is_aplicable_projected_benefits: boolean;
+  @Column({
+    name: 'is_aplicable_projected_benefits',
+    type: 'boolean',
+  })
+  is_aplicable_projected_benefits: boolean;
 
   @Column({
     name: 'name',
-    type: 'text'
+    type: 'text',
   })
   name: string;
 }

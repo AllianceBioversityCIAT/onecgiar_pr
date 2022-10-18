@@ -1,15 +1,30 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { ResultsByInstitutionTypesService } from './results_by_institution_types.service';
 import { CreateResultsByInstitutionTypeDto } from './dto/create-results_by_institution_type.dto';
 import { UpdateResultsByInstitutionTypeDto } from './dto/update-results_by_institution_type.dto';
 
 @Controller('/')
 export class ResultsByInstitutionTypesController {
-  constructor(private readonly resultsByInstitutionTypesService: ResultsByInstitutionTypesService) {}
+  constructor(
+    private readonly resultsByInstitutionTypesService: ResultsByInstitutionTypesService,
+  ) {}
 
   @Post()
-  create(@Body() createResultsByInstitutionTypeDto: CreateResultsByInstitutionTypeDto) {
-    return this.resultsByInstitutionTypesService.create(createResultsByInstitutionTypeDto);
+  create(
+    @Body()
+    createResultsByInstitutionTypeDto: CreateResultsByInstitutionTypeDto,
+  ) {
+    return this.resultsByInstitutionTypesService.create(
+      createResultsByInstitutionTypeDto,
+    );
   }
 
   @Get('all')
@@ -23,8 +38,15 @@ export class ResultsByInstitutionTypesController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateResultsByInstitutionTypeDto: UpdateResultsByInstitutionTypeDto) {
-    return this.resultsByInstitutionTypesService.update(+id, updateResultsByInstitutionTypeDto);
+  update(
+    @Param('id') id: string,
+    @Body()
+    updateResultsByInstitutionTypeDto: UpdateResultsByInstitutionTypeDto,
+  ) {
+    return this.resultsByInstitutionTypesService.update(
+      +id,
+      updateResultsByInstitutionTypeDto,
+    );
   }
 
   @Delete(':id')

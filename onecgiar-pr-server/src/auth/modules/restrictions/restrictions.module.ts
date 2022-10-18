@@ -4,6 +4,6 @@ import { RestrictionsController } from './restrictions.controller';
 
 @Module({
   controllers: [RestrictionsController],
-  providers: [RestrictionsService]
+  providers: [RestrictionsService],
 })
 export class RestrictionsModule {}
