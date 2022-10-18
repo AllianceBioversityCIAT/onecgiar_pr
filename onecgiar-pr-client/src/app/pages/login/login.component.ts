@@ -24,7 +24,6 @@ export class LoginComponent implements OnDestroy {
     //Add 'implements OnInit' to the class.
     document.getElementById('password').addEventListener('keyup', function (event) {
       if (event.key === 'Enter') {
-        console.log('hol');
         document.getElementById('login').click();
         document.getElementById('password').blur();
         document.getElementById('fake').focus();
@@ -44,8 +43,14 @@ export class LoginComponent implements OnDestroy {
         }, 1500);
       },
       err => {
-        this.customAlertService.show({ id: 'loginAlert', title: 'Error!', description: err.error.message, status: 'error' });
-        console.log(err.error.message);
+        const statusCode = err?.error?.statusCode;
+        if (statusCode == 404)
+          return this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: err.error.message, status: 'warning', confirmText: 'Contact us' }, () => {
+            document.getElementById('question').click();
+            this.customAlertService.closeAction('loginAlert');
+          });
+
+        this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: err.error.message, status: 'warning' });
       }
     );
   }
