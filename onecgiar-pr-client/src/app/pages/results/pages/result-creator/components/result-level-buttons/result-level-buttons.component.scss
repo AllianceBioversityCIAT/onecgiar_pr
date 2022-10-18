@@ -1,6 +1,6 @@
 .all_results_level_Container {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 20px;
 
     .selected {
@@ -35,5 +35,15 @@
         .description {
             padding: 15px;
         }
+    }
+}
+
+.segment {
+    margin-top: 30px;
+    padding: 0px 200px;
+    font-weight: 500;
+
+    .segmet_title {
+        margin-bottom: 5px;
     }
 }
