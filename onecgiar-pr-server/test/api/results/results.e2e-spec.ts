@@ -1,21 +1,13 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { AppModule } from '../../../src/app.module';
 import { testModule, usePipes } from '../../test.module';
-import { UserLoginDto } from 'src/auth/dto/login-user.dto';
 
 describe('Results Controller (e2e)', () => {
   let app: INestApplication;
-  //let app = 'http://localhost:3400'
-  const auth = '';
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await testModule.compile();
-    const loginData: UserLoginDto = {
-      email: 'test@jest.com',
-      password: '12345678',
-    };
     app = moduleFixture.createNestApplication();
     usePipes(app);
     await app.init();

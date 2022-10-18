@@ -127,7 +127,7 @@ WHERE
     `;
 
     try {
-      const results = await this.query(queryData, [userid]);      
+      const results = await this.query(queryData, [userid]);
       return results;
     } catch (error) {
       throw {
@@ -169,7 +169,10 @@ WHERE
     `;
 
     try {
-      const results: DepthSearch[] = await this.query(queryData, [`%${title}%`,`%${title}%`]);
+      const results: DepthSearch[] = await this.query(queryData, [
+        `%${title}%`,
+        `%${title}%`,
+      ]);
       return results;
     } catch (error) {
       throw {
@@ -213,8 +216,47 @@ WHERE
     `;
 
     try {
-      const results: DepthSearchOne[] = await this.query(queryData, [id,id]);
-      return results.length?results[0]: new DepthSearchOne();
+      const results: DepthSearchOne[] = await this.query(queryData, [id, id]);
+      return results.length ? results[0] : new DepthSearchOne();
+    } catch (error) {
+      throw {
+        message: `[${ResultRepository.name}] => completeAllData error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
+  async getResultById(id: number): Promise<Result> {
+    const queryData = `
+    SELECT
+    r.id,
+    r.description,
+    r.is_active,
+    r.last_updated_date,
+    r.gender_tag_level_id,
+    r.version_id,
+    r.result_type_id,
+    r.status,
+    r.created_by,
+    r.last_updated_by,
+    r.reported_year_id,
+    r.created_date,
+    r.result_level_id,
+    r.title,
+    r.legacy_id 
+FROM
+    result r
+    inner join results_by_inititiative rbi ON rbi.result_id = r.id 
+    									and rbi.is_active > 0
+WHERE
+    r.is_active > 0
+    and r.id = ?;
+    `;
+
+    try {
+      const results: Result[] = await this.query(queryData, [id]);
+      return results.length? results[0]: new Result();
     } catch (error) {
       throw {
         message: `[${ResultRepository.name}] => completeAllData error: ${error}`,

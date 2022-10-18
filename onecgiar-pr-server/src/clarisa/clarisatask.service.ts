@@ -22,7 +22,7 @@ import { ClarisaGlobalTarget } from './clarisa-global-target/entities/clarisa-gl
 @Injectable()
 export class ClarisaTaskService {
   private readonly clarisaHost: string =
-    env.CLA_URL || 'https://clarisa.cgiar.org/api/';
+    env.CLA_URL ?? env.L_CLA_URL;
   private readonly configAuth: AxiosRequestConfig = {
     auth: {
       username: env.CLA_USER,
@@ -40,8 +40,7 @@ export class ClarisaTaskService {
     private readonly _clarisaOutcomeIndicatorsRepository: ClarisaOutcomeIndicatorsRepository,
     private readonly _clarisaRegionsTypesRepository: ClarisaRegionsTypeRepository,
     private readonly _clarisaRegionsRepository: ClarisaRegionsRepository,
-    private readonly _clarisaGobalTargetRepository: ClarisaGobalTargetRepository
-    
+    private readonly _clarisaGobalTargetRepository: ClarisaGobalTargetRepository,
   ) {}
 
   public async clarisaBootstrap() {
@@ -105,10 +104,7 @@ export class ClarisaTaskService {
     }
   }
 
-  private async cloneClarisaRegions(
-    position: number,
-    deleteItem = false,
-  ) {
+  private async cloneClarisaRegions(position: number, deleteItem = false) {
     try {
       if (deleteItem) {
         const deleteData =
@@ -122,8 +118,10 @@ export class ClarisaTaskService {
           this.configAuth,
         );
         await this._clarisaRegionsRepository.save(data);
-        data.map(el => {
-            el['parent_regions_code'] = el.parentRegion?.um49Code ? el.parentRegion.um49Code: null;
+        data.map((el) => {
+          el['parent_regions_code'] = el.parentRegion?.um49Code
+            ? el.parentRegion.um49Code
+            : null;
         });
         await this._clarisaRegionsRepository.save(data);
         this._logger.verbose(
@@ -347,7 +345,10 @@ export class ClarisaTaskService {
     }
   }
 
-  private async cloneClarisaGlobalTargetType(position: number, deleteItem = false) {
+  private async cloneClarisaGlobalTargetType(
+    position: number,
+    deleteItem = false,
+  ) {
     try {
       if (deleteItem) {
         const deleteData =
@@ -360,14 +361,56 @@ export class ClarisaTaskService {
           `${this.clarisaHost}global-targets`,
           this.configAuth,
         );
-        const transformData = data.map(el => {
-            return {
-                id:	el.targetId,
-                target:	el.target,
-                impact_area_id: el.impactAreasId
-            }
+        const transformData = data.map((el) => {
+          return {
+            id: el.targetId,
+            target: el.target,
+            impact_area_id: el.impactAreasId,
+          };
         });
-        await this._clarisaGobalTargetRepository.save<ClarisaGlobalTarget>(transformData);
+        await this._clarisaGobalTargetRepository.save<ClarisaGlobalTarget>(
+          transformData,
+        );
+        this._logger.verbose(
+          `[${position}]: All CLARISA Global Target control list data has been created`,
+        );
+      }
+      return ++position;
+    } catch (error) {
+      this._logger.error(
+        `[${position}]: Error in manipulating the data of CLARISA Global Target`,
+      );
+      this._logger.error(error);
+      return ++position;
+    }
+  }
+
+  private async cloneClarisaInstitutionsType(
+    position: number,
+    deleteItem = false,
+  ) {
+    try {
+      if (deleteItem) {
+        const deleteData =
+          await this._clarisaGobalTargetRepository.deleteAllData();
+        this._logger.warn(
+          `[${position}]: All CLARISA Global Target control list data has been deleted`,
+        );
+      } else {
+        const { data } = await axios.get(
+          `${this.clarisaHost}global-targets`,
+          this.configAuth,
+        );
+        const transformData = data.map((el) => {
+          return {
+            id: el.targetId,
+            target: el.target,
+            impact_area_id: el.impactAreasId,
+          };
+        });
+        await this._clarisaGobalTargetRepository.save<ClarisaGlobalTarget>(
+          transformData,
+        );
         this._logger.verbose(
           `[${position}]: All CLARISA Global Target control list data has been created`,
         );

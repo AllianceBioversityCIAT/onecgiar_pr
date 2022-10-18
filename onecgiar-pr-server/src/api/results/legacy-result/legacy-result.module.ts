@@ -7,8 +7,6 @@ import { ResultLegacyRepository } from './legacy-result.repository';
 @Module({
   controllers: [LegacyResultController],
   providers: [LegacyResultService, HandlersError, ResultLegacyRepository],
-  exports: [
-    ResultLegacyRepository
-  ]
+  exports: [ResultLegacyRepository],
 })
 export class LegacyResultModule {}

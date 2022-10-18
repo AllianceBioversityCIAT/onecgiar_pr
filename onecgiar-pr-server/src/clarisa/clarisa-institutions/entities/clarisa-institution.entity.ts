@@ -32,23 +32,10 @@ export class ClarisaInstitution {
   })
   website_link!: string;
 
-  @ManyToOne(() => ClarisaInstitutionsType, (cit) => cit.id)
+  @ManyToOne(() => ClarisaInstitutionsType, (cit) => cit.code)
   @JoinColumn({
-    name: 'institution_type_id',
+    name: 'institution_type_code',
   })
-  institution_type_id: number;
+  institution_type_code: number;
 
-  @Column({
-    name: 'parent_id',
-    type: 'int',
-    nullable: true,
-  })
-  parent_id!: number;
-
-  @Column({
-    name: 'is_parent',
-    type: 'boolean',
-    nullable: true,
-  })
-  is_parent!: boolean;
 }

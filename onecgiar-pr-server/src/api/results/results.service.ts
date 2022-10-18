@@ -49,7 +49,7 @@ export class ResultsService {
     private readonly _resultByIntitutionsTypeRepository: ResultByIntitutionsTypeRepository,
     private readonly _resultLevelRepository: ResultLevelRepository,
     private readonly _resultByLevelRepository: ResultByLevelRepository,
-    private readonly _resultLegacyRepository: ResultLegacyRepository
+    private readonly _resultLegacyRepository: ResultLegacyRepository,
   ) {}
 
   async createOwnerResult(
@@ -81,12 +81,18 @@ export class ResultsService {
         };
       }
 
-      const resultByLevel = await this._resultByLevelRepository.getByTypeAndLevel(createResultDto.result_level_id, createResultDto.result_type_id);
-      const resultLevel = await this._resultLevelRepository.findOne({where: {id: createResultDto.result_level_id }});
+      const resultByLevel =
+        await this._resultByLevelRepository.getByTypeAndLevel(
+          createResultDto.result_level_id,
+          createResultDto.result_type_id,
+        );
+      const resultLevel = await this._resultLevelRepository.findOne({
+        where: { id: createResultDto.result_level_id },
+      });
       const resultType = await this._resultTypesService.findOneResultType(
         createResultDto.result_type_id,
       );
-      if(!resultLevel){
+      if (!resultLevel) {
         throw {
           response: {},
           message: 'Result Level not found',
@@ -94,19 +100,18 @@ export class ResultsService {
         };
       }
 
-      
       if (resultType.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: resultType });
       }
 
-      if(!resultByLevel){
+      if (!resultByLevel) {
         throw {
           response: {},
           message: 'The type or level is not compatible',
           status: HttpStatus.BAD_REQUEST,
         };
       }
-      
+
       const rl: ResultLevel = <ResultLevel>resultLevel;
       const rt: ResultType = <ResultType>resultType.response;
 
@@ -122,7 +127,7 @@ export class ResultsService {
           status: HttpStatus.INTERNAL_SERVER_ERROR,
         };
       }
-      
+
       const version = await this._versionsService.findBaseVersion();
       if (version.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: version });
@@ -138,7 +143,7 @@ export class ResultsService {
           message: 'Active year Not fount',
           status: HttpStatus.NOT_FOUND,
         };
-      }   
+      }
 
       const newResultHeader: Result = await this._resultRepository.save({
         created_by: user.id,
@@ -147,7 +152,7 @@ export class ResultsService {
         version_id: vrs.id,
         title: createResultDto.result_name,
         reported_year_id: year.year,
-        result_level_id: rl.id
+        result_level_id: rl.id,
       });
 
       const resultByInitiative = await this._resultByInitiativesRepository.save(
@@ -171,9 +176,18 @@ export class ResultsService {
   }
 
   async createResultGeneralInformation(
-    resultGI: CreateGeneralInformationResultDto,
+    resultGeneralInformation: CreateGeneralInformationResultDto,
   ) {
     try {
+      const result = await this._resultRepository.getResultById(resultGeneralInformation.result_id);
+      if(!result?.id){
+        throw {
+          response: {},
+          message: 'The result does not exist',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+      return result;
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
@@ -211,8 +225,10 @@ export class ResultsService {
     }
   }
 
-  async creatFullResult() {
+  async creatFullResult(resultGeneralInformation: CreateGeneralInformationResultDto) {
     try {
+      const result = await this._resultRepository.getResultById(resultGeneralInformation.result_id);
+      return result;
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
@@ -266,8 +282,9 @@ export class ResultsService {
 
   async findAllResultsLegacyNew(title: string) {
     try {
-      const results: DepthSearch[] = await this._customResultRepository.AllResultsLegacyNewByTitle(title);
-      if(!results.length){
+      const results: DepthSearch[] =
+        await this._customResultRepository.AllResultsLegacyNewByTitle(title);
+      if (!results.length) {
         throw {
           response: {},
           message: 'Results Not Found',
@@ -286,15 +303,18 @@ export class ResultsService {
   }
 
   /**
-   * 
-   * @param mapLegacy 
-   * @param user 
-   * @returns 
+   *
+   * @param mapLegacy
+   * @param user
+   * @returns
    */
   async mapResultLegacy(mapLegacy: MapLegacy, user: TokenDto) {
     try {
-      const results: DepthSearchOne = await this._customResultRepository.findResultsLegacyNewById(mapLegacy.legacy_id);
-      if(!results?.id){
+      const results: DepthSearchOne =
+        await this._customResultRepository.findResultsLegacyNewById(
+          mapLegacy.legacy_id,
+        );
+      if (!results?.id) {
         throw {
           response: {},
           message: 'Results Not Found',
@@ -302,7 +322,7 @@ export class ResultsService {
         };
       }
 
-      if(results.legacy == '0'){
+      if (results.legacy == '0') {
         throw {
           response: {},
           message: 'This result is already part of the PRMS reporting',
@@ -321,24 +341,30 @@ export class ResultsService {
         };
       }
 
-      const resultByLevel = await this._resultByLevelRepository.getByTypeAndLevel(mapLegacy.result_level_id, mapLegacy.result_type_id);
-      const resultLevel = await this._resultLevelRepository.findOne({where: {id: mapLegacy.result_level_id }});
+      const resultByLevel =
+        await this._resultByLevelRepository.getByTypeAndLevel(
+          mapLegacy.result_level_id,
+          mapLegacy.result_type_id,
+        );
+      const resultLevel = await this._resultLevelRepository.findOne({
+        where: { id: mapLegacy.result_level_id },
+      });
       const resultType = await this._resultTypesService.findOneResultType(
         mapLegacy.result_type_id,
       );
-      if(!resultLevel){
+      if (!resultLevel) {
         throw {
           response: {},
           message: 'Result Level not found',
           status: HttpStatus.NOT_FOUND,
         };
       }
-      
+
       if (resultType.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: resultType });
       }
 
-      if(!resultByLevel){
+      if (!resultByLevel) {
         throw {
           response: {},
           message: 'The type or level is not compatible',
@@ -350,7 +376,7 @@ export class ResultsService {
       if (version.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: version });
       }
-      
+
       const year: Year = await this._yearRepository.findOne({
         where: { active: true },
       });
@@ -360,13 +386,15 @@ export class ResultsService {
           message: 'Active year Not fount',
           status: HttpStatus.NOT_FOUND,
         };
-      }  
-      
+      }
+
       const rl: ResultLevel = <ResultLevel>resultLevel;
       const rt: ResultType = <ResultType>resultType.response;
       const vrs: Version = <Version>version.response;
-      
-      const legacyResult = await this._resultLegacyRepository.findOne({ where:{legacy_id: mapLegacy.legacy_id} });
+
+      const legacyResult = await this._resultLegacyRepository.findOne({
+        where: { legacy_id: mapLegacy.legacy_id },
+      });
       legacyResult.is_migrated = true;
 
       const newResultHeader: Result = await this._resultRepository.save({
@@ -377,7 +405,7 @@ export class ResultsService {
         title: legacyResult.title,
         reported_year_id: year.year,
         result_level_id: rl.id,
-        legacy_id: legacyResult.legacy_id
+        legacy_id: legacyResult.legacy_id,
       });
 
       const resultByInitiative = await this._resultByInitiativesRepository.save(
@@ -391,7 +419,7 @@ export class ResultsService {
       );
 
       await this._resultLegacyRepository.save(legacyResult);
-      
+
       return {
         response: results,
         message: 'Successful response',

@@ -44,6 +44,6 @@ export const ClarisaRoutes: Routes = [
   },
   {
     path: 'countries',
-    module: ClarisaCountriesModule
-  }
+    module: ClarisaCountriesModule,
+  },
 ];

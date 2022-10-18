@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { LegacyResultService } from './legacy-result.service';
 import { CreateLegacyResultDto } from './dto/create-legacy-result.dto';
 import { UpdateLegacyResultDto } from './dto/update-legacy-result.dto';
@@ -23,7 +31,10 @@ export class LegacyResultController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateLegacyResultDto: UpdateLegacyResultDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateLegacyResultDto: UpdateLegacyResultDto,
+  ) {
     return this.legacyResultService.update(+id, updateLegacyResultDto);
   }
 

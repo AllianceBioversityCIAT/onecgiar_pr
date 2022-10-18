@@ -13,6 +13,7 @@ import { CreateResultDto } from './dto/create-result.dto';
 import { HeadersDto } from '../../shared/globalInterfaces/headers.dto';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { MapLegacy } from './dto/map-legacy.dto';
+import { CreateGeneralInformationResultDto } from './dto/create-general-information-result.dto';
 
 @Controller()
 export class ResultsController {
@@ -56,7 +57,7 @@ export class ResultsController {
 
   @Get('get/depth-search/:title')
   async depthSearch(@Param('title') title: string) {
-    const { message, response, status } = 
+    const { message, response, status } =
       await this.resultsService.findAllResultsLegacyNew(title);
     throw new HttpException({ message, response }, status);
   }
@@ -65,13 +66,22 @@ export class ResultsController {
   async mapResultLegacy(
     @Body() MapLegacy: MapLegacy,
     @Headers() auth: HeadersDto,
-  ){
+  ) {
     const token: TokenDto = <TokenDto>(
       JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
     );
-    const { message, response, status } = 
+    const { message, response, status } =
       await this.resultsService.mapResultLegacy(MapLegacy, token);
     throw new HttpException({ message, response }, status);
+  }
+
+  @Post('generla-information')
+  async createGeneralInformation(
+    @Body() CreateGeneralInformationResultDto: CreateGeneralInformationResultDto,
+    @Headers() auth: HeadersDto,
+  ){
+    const result = await this.resultsService.createResultGeneralInformation(CreateGeneralInformationResultDto);
+    return result;
   }
 
   @Patch('delete/:id')

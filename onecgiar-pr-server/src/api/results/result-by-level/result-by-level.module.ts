@@ -8,7 +8,13 @@ import { ResultTypeRepository } from '../result_types/resultType.repository';
 
 @Module({
   controllers: [ResultByLevelController],
-  providers: [ResultByLevelService, HandlersError, ResultByLevelRepository, ResultLevelRepository, ResultTypeRepository],
-  exports: [ ResultByLevelRepository ]
+  providers: [
+    ResultByLevelService,
+    HandlersError,
+    ResultByLevelRepository,
+    ResultLevelRepository,
+    ResultTypeRepository,
+  ],
+  exports: [ResultByLevelRepository],
 })
 export class ResultByLevelModule {}

@@ -39,7 +39,9 @@ export class ResultByLevelRepository extends Repository<ResultByLevel> {
     	inner join result_type rt on rt.id = rbl.result_type_id;
     `;
     try {
-      const resultByLevel: getResultTypeLevelDto[] = await this.query(queryData);
+      const resultByLevel: getResultTypeLevelDto[] = await this.query(
+        queryData,
+      );
       return resultByLevel;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -50,7 +52,7 @@ export class ResultByLevelRepository extends Repository<ResultByLevel> {
     }
   }
 
-  async getByTypeAndLevel(levelId:  number, typeId: number) {
+  async getByTypeAndLevel(levelId: number, typeId: number) {
     const queryData = `
     select 
     	rbl.id,
@@ -61,8 +63,11 @@ export class ResultByLevelRepository extends Repository<ResultByLevel> {
     	and rbl.result_type_id = ?;
     `;
     try {
-      const resultByLevel: ResultByLevel[] = await this.query(queryData, [levelId, typeId]);
-      return resultByLevel.length?resultByLevel[0]:[];
+      const resultByLevel: ResultByLevel[] = await this.query(queryData, [
+        levelId,
+        typeId,
+      ]);
+      return resultByLevel.length ? resultByLevel[0] : [];
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByLevelRepository.name,
@@ -71,5 +76,4 @@ export class ResultByLevelRepository extends Repository<ResultByLevel> {
       });
     }
   }
-
 }
