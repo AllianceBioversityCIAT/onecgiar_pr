@@ -5,17 +5,20 @@ import { FormsModule } from '@angular/forms';
 import { InputTextModule } from 'primeng/inputtext';
 import { DropdownModule } from 'primeng/dropdown';
 import { PrSelectComponent } from './pr-select/pr-select.component';
-import { RadioButtonComponent } from './radio-button/radio-button.component';
 import { RadioButtonModule } from 'primeng/radiobutton';
 import { PrFieldHeaderComponent } from './pr-field-header/pr-field-header.component';
 import { PrFieldValidationsComponent } from './pr-field-validations/pr-field-validations.component';
 import { PrWordCounterComponent } from './pr-word-counter/pr-word-counter.component';
+import { DetailSectionTitleComponent } from './detail-section-title/detail-section-title.component';
+import { PrRadioButtonComponent } from './pr-radio-button/pr-radio-button.component';
+import { PrMultiSelectComponent } from './pr-multi-select/pr-multi-select.component';
+import { MultiSelectModule } from 'primeng/multiselect';
 
-const fieldComponents = [PrInputComponent, PrSelectComponent, RadioButtonComponent];
+const fieldComponents = [PrInputComponent, PrSelectComponent, PrRadioButtonComponent, DetailSectionTitleComponent, PrMultiSelectComponent, PrFieldHeaderComponent];
 
 @NgModule({
-  declarations: [...fieldComponents, PrFieldHeaderComponent, PrFieldValidationsComponent, PrWordCounterComponent],
-  exports: [...fieldComponents],
-  imports: [CommonModule, FormsModule, InputTextModule, DropdownModule, RadioButtonModule]
+  declarations: [...fieldComponents, PrFieldValidationsComponent, PrWordCounterComponent],
+  exports: [...fieldComponents, FormsModule],
+  imports: [CommonModule, FormsModule, InputTextModule, DropdownModule, RadioButtonModule, MultiSelectModule]
 })
 export class CustomFieldsModule {}

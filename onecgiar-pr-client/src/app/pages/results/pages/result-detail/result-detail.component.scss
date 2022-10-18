@@ -2,7 +2,7 @@
     display: grid;
     grid-template-columns: 300px 1fr;
     grid-template-rows: minmax(calc(100vh - 180px), 1fr);
-    padding: 25px 15px;
+    padding: 25px 0px 25px 15px;
     height: 100%;
     box-sizing: border-box;
 
@@ -10,5 +10,9 @@
         position: fixed;
         height: calc(100vh - 180px);
         width: 300px;
+    }
+
+    .section_container {
+        width: 95% !important;
     }
 }

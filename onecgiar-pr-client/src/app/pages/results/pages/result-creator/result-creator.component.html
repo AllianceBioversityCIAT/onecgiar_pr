@@ -16,9 +16,9 @@
       <div class="segment_title segment_title_margin" *ngIf="this.resultLevelSE?.currentResultTypeList?.length">Result
         type
       </div>
-      <app-radio-button [options]="this.resultLevelSE.currentResultTypeList" optionLabel="name"
+      <app-pr-radio-button [options]="this.resultLevelSE.currentResultTypeList" optionLabel="name" optionValue='id'
         [(ngModel)]="this.resultLevelSE.resultBody.result_type_id" (ngModelChange)="cleanTitle()">
-      </app-radio-button>
+      </app-pr-radio-button>
       <app-pr-input *ngIf="resultLevelSE.resultBody.result_type_id == 6" placeholder="Handle..." label="Handle"
         type="text" [(ngModel)]="this.resultLevelSE.resultBody.result_name">
       </app-pr-input>

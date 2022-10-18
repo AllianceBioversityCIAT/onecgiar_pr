@@ -8,5 +8,6 @@ import { Component, Input, OnInit } from '@angular/core';
 export class PrFieldHeaderComponent {
   @Input() label: string;
   @Input() description: string;
+  @Input() required: boolean = true;
   constructor() {}
 }

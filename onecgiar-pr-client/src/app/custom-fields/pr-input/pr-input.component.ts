@@ -21,6 +21,7 @@ export class PrInputComponent implements ControlValueAccessor {
   @Input() description: string;
   @Input() maxWords: number;
   @Input() readOnly: boolean;
+  @Input() required: boolean = true;
 
   private _value: string;
   private beforeValue: string;

@@ -1,30 +1,25 @@
 import { Component, forwardRef, Input } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
-
 @Component({
-  selector: 'app-pr-select',
-  templateUrl: './pr-select.component.html',
-  styleUrls: ['./pr-select.component.scss'],
+  selector: 'app-pr-radio-button',
+  templateUrl: './pr-radio-button.component.html',
+  styleUrls: ['./pr-radio-button.component.scss'],
   providers: [
     {
       provide: NG_VALUE_ACCESSOR,
-      useExisting: forwardRef(() => PrSelectComponent),
+      useExisting: forwardRef(() => PrRadioButtonComponent),
       multi: true
     }
   ]
 })
-export class PrSelectComponent implements ControlValueAccessor {
-  constructor() {}
+export class PrRadioButtonComponent implements ControlValueAccessor {
+  @Input() options: any;
   @Input() optionLabel: string;
   @Input() optionValue: string;
-  @Input() options: any;
-  @Input() placeholder: string;
   @Input() label: string;
-  @Input() inputTitle: string;
   @Input() description: string;
-  @Input() readOnly: boolean;
-  @Input() required: boolean = true;
   private _value: string;
+  constructor() {}
 
   get value() {
     return this._value;
