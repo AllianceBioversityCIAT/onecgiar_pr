@@ -10,7 +10,7 @@ export class ResultsListFilterPipe implements PipeTransform {
   constructor(private resultsListFilterSE: ResultsListFilterService) {}
   transform(resultList: any[], word: string, filterJoin: number): any {
     // console.log(resultList);
-    return this.filterByResultLevelOptions(this.filterByText(resultList, word));
+    return this.filterByResultLevelOptions(this.filterByInitsAndYear(this.filterByText(resultList, word)));
   }
 
   filterByText(resultList: any[], word: string) {
@@ -24,21 +24,28 @@ export class ResultsListFilterPipe implements PipeTransform {
     return resultList.filter(item => item.joinAll.toUpperCase().indexOf(word?.toUpperCase()) > -1);
   }
 
-  filterByResultLevelOptions(resultList: any[]) {
-    console.log(this.resultsListFilterSE.filters.resultLevel);
+  filterByInitsAndYear(resultList: any[]) {
+    const [submitter, reported_year] = this.resultsListFilterSE.filters.general;
     const resultsFilters = [];
-    this.resultsListFilterSE.filters.resultLevel.map((filter: any) => {
-      for (const option of filter?.options) {
-        if (option?.selected === true) resultsFilters.push({ result_level_id: filter?.id, result_type_id: option?.id });
-      }
-    });
-
-    console.log(resultsFilters);
+    for (const option of submitter?.options) if (option?.selected === true && option?.cleanAll !== true) resultsFilters.push(option);
     if (!resultsFilters.length) return resultList;
     resultList = resultList.filter(result => {
-      for (const filter of resultsFilters) {
-        if (filter.result_level_id == result.result_level_id && filter.result_type_id == result.result_type_id) return true;
-      }
+      for (const filter of resultsFilters) if (filter?.id == result?.submitter_id) return true;
+      return false;
+    });
+
+    return resultList;
+  }
+
+  filterByResultLevelOptions(resultList: any[]) {
+    const resultsFilters = [];
+    this.resultsListFilterSE.filters.resultLevel.map((filter: any) => {
+      for (const option of filter?.options) if (option?.selected === true) resultsFilters.push({ result_level_id: filter?.id, result_type_id: option?.id });
+    });
+
+    if (!resultsFilters.length) return resultList;
+    resultList = resultList.filter(result => {
+      for (const filter of resultsFilters) if (filter.result_level_id == result.result_level_id && filter.result_type_id == result.result_type_id) return true;
       return false;
     });
 
