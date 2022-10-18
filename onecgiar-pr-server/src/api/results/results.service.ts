@@ -31,6 +31,8 @@ import { ResultLevel } from './result_levels/entities/result_level.entity';
 import { ResultLegacyRepository } from './legacy-result/legacy-result.repository';
 import { DepthSearchOne } from './dto/depth-search-one.dto';
 import { MapLegacy } from './dto/map-legacy.dto';
+import { ClarisaInstitutionsRepository } from '../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
+import { ClarisaInstitutionsTypeRepository } from '../../clarisa/clarisa-institutions-type/ClariasaInstitutionsType.repository';
 
 @Injectable()
 export class ResultsService {
@@ -50,6 +52,8 @@ export class ResultsService {
     private readonly _resultLevelRepository: ResultLevelRepository,
     private readonly _resultByLevelRepository: ResultByLevelRepository,
     private readonly _resultLegacyRepository: ResultLegacyRepository,
+    private readonly _clarisaInstitutionsRepository: ClarisaInstitutionsRepository,
+    private readonly _clarisaInstitutionsTypeRepository: ClarisaInstitutionsTypeRepository
   ) {}
 
   async createOwnerResult(
@@ -169,6 +173,48 @@ export class ResultsService {
         response: newResultHeader,
         message: 'The Result has been created successfully',
         status: HttpStatus.CREATED,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async getAllInstitutions(){
+    try {
+      const entities = await this._clarisaInstitutionsRepository.find();
+      if(!entities.length){
+        throw {
+          response: {},
+          message: 'Institutions Not fount',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      return {
+        response: entities,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async getAllInstitutionsType(){
+    try {
+      const entities = await this._clarisaInstitutionsTypeRepository.find();
+      if(!entities.length){
+        throw {
+          response: {},
+          message: 'Institutions Type Not fount',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      return {
+        response: entities,
+        message: 'Successful response',
+        status: HttpStatus.OK,
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });

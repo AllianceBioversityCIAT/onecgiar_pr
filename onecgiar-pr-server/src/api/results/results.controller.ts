@@ -62,6 +62,20 @@ export class ResultsController {
     throw new HttpException({ message, response }, status);
   }
 
+  @Get('get/institutions/all')
+  async getInstitutions() {
+    const { message, response, status } =
+      await this.resultsService.getAllInstitutions();
+    throw new HttpException({ message, response }, status);
+  }
+
+  @Get('get/institutions-type/all')
+  async getInstitutionsType() {
+    const { message, response, status } =
+      await this.resultsService.getAllInstitutionsType();
+    throw new HttpException({ message, response }, status);
+  }
+
   @Post('map/legacy')
   async mapResultLegacy(
     @Body() MapLegacy: MapLegacy,
