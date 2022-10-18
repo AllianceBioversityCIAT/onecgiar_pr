@@ -8,9 +8,8 @@ describe('SimilarResultsComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ SimilarResultsComponent ]
-    })
-    .compileComponents();
+      declarations: [SimilarResultsComponent]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(SimilarResultsComponent);
     component = fixture.componentInstance;

@@ -1,4 +1,4 @@
-import { Component, OnDestroy } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { UserAuth } from '../../shared/interfaces/user';
 import { Router } from '@angular/router';
 import { internationalizationData } from '../../shared/data/internationalizationData';
@@ -10,7 +10,7 @@ import { CustomizedAlertsFeService } from '../../shared/services/customized-aler
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss']
 })
-export class LoginComponent implements OnDestroy {
+export class LoginComponent implements OnDestroy, OnInit {
   internationalizationData = internationalizationData;
   userLoginData = new UserAuth();
   successLogin = false;

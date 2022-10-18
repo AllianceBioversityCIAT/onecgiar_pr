@@ -8,9 +8,8 @@ describe('PrFieldHeaderComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ PrFieldHeaderComponent ]
-    })
-    .compileComponents();
+      declarations: [PrFieldHeaderComponent]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(PrFieldHeaderComponent);
     component = fixture.componentInstance;

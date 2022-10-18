@@ -8,9 +8,8 @@ describe('ResultLevelButtonsComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ ResultLevelButtonsComponent ]
-    })
-    .compileComponents();
+      declarations: [ResultLevelButtonsComponent]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(ResultLevelButtonsComponent);
     component = fixture.componentInstance;
