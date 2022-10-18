@@ -19,6 +19,13 @@ export const internationalizationData = {
     alerts: {
       info: 'Remember that there is a possibility that the result you want to report has already been entered into the PRMS Reporting tool. If this is the case, it is only necessary to map the result to your Initiative. There is no need to enter it as a new result. Please check the results section to see if your result has been previously entered.'
     }
+  },
+  login: {
+    alerts: {
+      400: 'Missing information',
+      401: 'Incorrect credentials',
+      404: 'This user is not registered. <br> Please contact the support team.'
+    }
   }
 };
 
