@@ -41,7 +41,8 @@
   <div class="total" *ngIf="(this.api.dataControlSE.resultsList |
   resultsListFilter:this.resultsListService.text_to_search:this.api.resultsListFilterSE.filterJoin)?.length">Total:
     {{(this.api.dataControlSE.resultsList |
-    resultsListFilter:this.resultsListService.text_to_search:this.api.resultsListFilterSE.filterJoin)?.length}}</div>
+    resultsListFilter:this.resultsListService.text_to_search:this.api.resultsListFilterSE.filterJoin)?.length}} /
+    {{this.api.dataControlSE.resultsList?.length}}</div>
 </div>
 
 <div class="noDataText"
