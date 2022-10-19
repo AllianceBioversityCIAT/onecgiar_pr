@@ -45,4 +45,42 @@ export class ClarisaInstitutionsRepository extends Repository<ClarisaInstitution
       };
     }
   }
+
+  async getValidInstitution(id: institutionsInterface[]) {
+    let values = '';
+    for (let index = 0; index < id.length; index++) {
+      if(!values){
+        values = `values row(${id[index].id})`
+      }else{
+        values += `, row(${id[index].id})`
+      }
+    }
+    const arrayId = id.map(i => i.id);
+    const queryData = `
+    select 
+    	rl.column_0 as institution_id, 
+    	if(dt.id is null, false, true) as valid
+    from (${values}) rl
+    	left join (select 
+    				ci.id 
+    				from clarisa_institutions ci 
+    				where ci.id in(${arrayId.toString()})) dt on dt.id = rl.column_0;
+    `;
+
+    try {
+      const validInstitutions = await this.query(queryData);
+      return validInstitutions;
+    } catch (error) {
+      throw {
+        message: `[${ClarisaInstitutionsRepository.name}] => getValidInstitution error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+}
+
+interface institutionsInterface{
+  id: number;
+  is_active: boolean;
 }

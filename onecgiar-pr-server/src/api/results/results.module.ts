@@ -77,11 +77,15 @@ export class ResultsModule implements NestModule {
         method: RequestMethod.GET,
       },
       {
-        path: '/api/results/get/all-results',
+        path: '/api/results/get/all',
         method: RequestMethod.GET,
       },
       {
         path: '/api/results/create/header',
+        method: RequestMethod.POST,
+      },
+      {
+        path: '/api/results/create/generla-information',
         method: RequestMethod.POST,
       },
     );

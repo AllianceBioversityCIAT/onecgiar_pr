@@ -67,7 +67,7 @@ export class ResultByLevelRepository extends Repository<ResultByLevel> {
         levelId,
         typeId,
       ]);
-      return resultByLevel.length ? resultByLevel[0] : [];
+      return resultByLevel.length ? resultByLevel[0] : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByLevelRepository.name,

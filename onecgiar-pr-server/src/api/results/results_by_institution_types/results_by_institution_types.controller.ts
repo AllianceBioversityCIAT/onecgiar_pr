@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Delete,
+  HttpException,
 } from '@nestjs/common';
 import { ResultsByInstitutionTypesService } from './results_by_institution_types.service';
 import { CreateResultsByInstitutionTypeDto } from './dto/create-results_by_institution_type.dto';
@@ -27,9 +28,11 @@ export class ResultsByInstitutionTypesController {
     );
   }
 
-  @Get('all')
-  findAll() {
-    return this.resultsByInstitutionTypesService.findAll();
+  @Get('result/:id')
+  async findAll(@Param('id') id: number) {
+    const { message, response, status } =
+      await this.resultsByInstitutionTypesService.getGetInstitutionsTypeByResultId(id);
+    throw new HttpException({ message, response }, status);
   }
 
   @Get(':id')

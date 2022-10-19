@@ -10,6 +10,8 @@ import {
 } from 'typeorm';
 import { Version } from '../../versions/entities/version.entity';
 import { Result } from '../../entities/result.entity';
+import { InstitutionRole } from '../../institution_roles/entities/institution_role.entity';
+import { ClarisaInstitution } from '../../../../clarisa/clarisa-institutions/entities/clarisa-institution.entity';
 
 @Entity()
 export class ResultsByInstitution {
@@ -24,23 +26,15 @@ export class ResultsByInstitution {
   })
   result_id: number;
 
-  @Column({
-    name: 'institutions_id',
-    type: 'int',
-    nullable: false,
+  @ManyToOne(() => ClarisaInstitution, ci => ci.id, { nullable: true })
+  @JoinColumn({
+    name: 'institutions_id'
   })
   institutions_id: number;
 
-  @Column({
-    name: 'institution_roles_id',
-    type: 'bigint',
-    nullable: false,
-  })
+  @ManyToOne(() => InstitutionRole, i => i.id, { nullable: false })
+  @JoinColumn({ name: 'institution_roles_id' })
   institution_roles_id: number;
-
-  // @ManyToOne(() => Institution, i => i.id, { nullable: false })
-  // @JoinColumn({ name: 'institution_roles_id' })
-  // institution_roles_id: number;
 
   @Column({
     name: 'is_active',

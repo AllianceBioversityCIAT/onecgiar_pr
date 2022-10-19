@@ -14,7 +14,7 @@ export class GenderTagRepository extends Repository<GenderTagLevel> {
 
   async deleteAllData() {
     const queryData = `
-    DELETE FROM result_type;
+    DELETE FROM gender_tag_level;
     `;
     try {
       await this.query(queryData);
