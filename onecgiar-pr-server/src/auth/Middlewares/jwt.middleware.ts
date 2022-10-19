@@ -54,7 +54,7 @@ export class JwtMiddleware implements NestMiddleware {
         token_ = <string>req.headers['auth'];
       }
       jwtPayload = await this._jwtService.verifyAsync(token_, {
-        secret: env.JWT_SKEY,
+        secret: env.JWT_SKEY, ignoreExpiration: true
       });
       res.locals.jwtPayload = jwtPayload;
 

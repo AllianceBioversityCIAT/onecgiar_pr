@@ -16,16 +16,21 @@ export class ApiService {
 
   updateUserData() {
     if (!this.authSE?.localStorageUser?.id) return;
-    forkJoin([this.authSE.GET_allRolesByUser(), this.authSE.GET_initiativesByUser()]).subscribe(resp => {
-      const [GET_allRolesByUser, GET_initiativesByUser] = resp;
-      this.dataControlSE.myInitiativesList = GET_initiativesByUser?.response;
-      this.dataControlSE.myInitiativesList.map(myInit => {
-        myInit.role = GET_allRolesByUser?.response?.initiative?.find(initRole => initRole?.initiative_id == myInit?.initiative_id)?.description;
-        myInit.name = myInit.official_code;
-        myInit.official_code_short_name = myInit.official_code + ' ' + myInit.short_name;
-      });
-      this.resultsListFilterSE.updateMyInitiatives(this.dataControlSE.myInitiativesList);
-    });
+    forkJoin([this.authSE.GET_allRolesByUser(), this.authSE.GET_initiativesByUser()]).subscribe(
+      resp => {
+        const [GET_allRolesByUser, GET_initiativesByUser] = resp;
+        this.dataControlSE.myInitiativesList = GET_initiativesByUser?.response;
+        this.dataControlSE.myInitiativesList.map(myInit => {
+          myInit.role = GET_allRolesByUser?.response?.initiative?.find(initRole => initRole?.initiative_id == myInit?.initiative_id)?.description;
+          myInit.name = myInit.official_code;
+          myInit.official_code_short_name = myInit.official_code + ' ' + myInit.short_name;
+        });
+        this.resultsListFilterSE.updateMyInitiatives(this.dataControlSE.myInitiativesList);
+      },
+      err => {
+        this.resultsListFilterSE.updateMyInitiatives(this.dataControlSE.myInitiativesList);
+      }
+    );
   }
 
   clearAll() {

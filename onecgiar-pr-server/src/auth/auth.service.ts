@@ -89,7 +89,7 @@ export class AuthService {
               valid: true,
               token: this._jwtService.sign(
                 { id, email, first_name, last_name },
-                { secret: env.JWT_SKEY, expiresIn: env.JWT_EXPIRES },
+                { secret: env.JWT_SKEY },
               ),
               user: {
                 id: user.id,

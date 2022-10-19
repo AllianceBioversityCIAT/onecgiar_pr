@@ -1,10 +1,10 @@
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { Auditable } from '../../../shared/entities/auditableEntity';
 
-@Entity('institution_types')
+@Entity('clarisa_institution_types')
 export class ClarisaInstitutionsType {
   @PrimaryGeneratedColumn()
-  id: number;
+  code: number;
 
   @Column({
     name: 'name',
@@ -12,30 +12,4 @@ export class ClarisaInstitutionsType {
   })
   name: string;
 
-  @Column({
-    name: 'acronym',
-    type: 'text',
-    nullable: true,
-  })
-  acronym!: string;
-
-  @Column({
-    name: 'sub_department_active',
-    type: 'int',
-  })
-  sub_department_active: number;
-
-  @Column({
-    name: 'old',
-    type: 'int',
-    nullable: true,
-  })
-  old: number;
-
-  @Column({
-    name: 'description',
-    type: 'text',
-    nullable: true,
-  })
-  description!: string;
 }

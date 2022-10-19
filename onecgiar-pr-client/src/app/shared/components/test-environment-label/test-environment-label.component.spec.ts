@@ -8,9 +8,8 @@ describe('TestEnvironmentLabelComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ TestEnvironmentLabelComponent ]
-    })
-    .compileComponents();
+      declarations: [TestEnvironmentLabelComponent]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(TestEnvironmentLabelComponent);
     component = fixture.componentInstance;

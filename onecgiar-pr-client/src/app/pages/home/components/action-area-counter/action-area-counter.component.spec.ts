@@ -8,9 +8,8 @@ describe('ActionAreaCounterComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ ActionAreaCounterComponent ]
-    })
-    .compileComponents();
+      declarations: [ActionAreaCounterComponent]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(ActionAreaCounterComponent);
     component = fixture.componentInstance;

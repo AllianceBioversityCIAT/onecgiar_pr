@@ -1,5 +1,4 @@
 import request from 'supertest';
-import { CreateFullUserDto } from 'src/auth/modules/user/dto/create-full-user.dto';
 import { CreateResultDto } from 'src/api/results/dto/create-result.dto';
 
 describe('Results Controller (e2e)', () => {

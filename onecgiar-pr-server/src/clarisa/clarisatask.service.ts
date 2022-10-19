@@ -18,12 +18,15 @@ import { ClarisaCountriesRepository } from './clarisa-countries/ClarisaCountries
 import { ClarisaRegionsRepository } from './clarisa-regions/ClariasaRegions.repository';
 import { ClarisaGobalTargetRepository } from './clarisa-global-target/ClariasaGlobalTarget.repository';
 import { ClarisaGlobalTarget } from './clarisa-global-target/entities/clarisa-global-target.entity';
+import { ClarisaInstitutionsTypeRepository } from './clarisa-institutions-type/ClariasaInstitutionsType.repository';
+import { ClarisaInstitutionsRepository } from './clarisa-institutions/ClariasaInstitutions.repository';
+import { HttpService } from '@nestjs/axios';
 
 @Injectable()
 export class ClarisaTaskService {
   private readonly clarisaHost: string =
-    env.CLA_URL || 'https://clarisa.cgiar.org/api/';
-  private readonly configAuth: AxiosRequestConfig = {
+    env.CLA_URL ?? env.L_CLA_URL;
+  private readonly configAuth = {
     auth: {
       username: env.CLA_USER,
       password: env.CLA_PASSWORD,
@@ -40,8 +43,10 @@ export class ClarisaTaskService {
     private readonly _clarisaOutcomeIndicatorsRepository: ClarisaOutcomeIndicatorsRepository,
     private readonly _clarisaRegionsTypesRepository: ClarisaRegionsTypeRepository,
     private readonly _clarisaRegionsRepository: ClarisaRegionsRepository,
-    private readonly _clarisaGobalTargetRepository: ClarisaGobalTargetRepository
-    
+    private readonly _clarisaGobalTargetRepository: ClarisaGobalTargetRepository,
+    private readonly _clarisaInstitutionsRepository: ClarisaInstitutionsRepository,
+    private readonly _clarisaInstitutionsTypeRepository: ClarisaInstitutionsTypeRepository,
+    private readonly _httpService: HttpService
   ) {}
 
   public async clarisaBootstrap() {
@@ -67,6 +72,8 @@ export class ClarisaTaskService {
     count = await this.cloneClarisaImpactAreaIndicators(count);
     count = await this.cloneClarisaOutcomeIndicators(count);
     count = await this.cloneClarisaRegionsType(count);
+    count = await this.cloneClarisaInstitutionsType(count);
+    count = await this.cloneClarisaInstitutions(count);
   }
 
   private async cloneClarisaCountries(position: number, deleteItem = false) {
@@ -105,10 +112,7 @@ export class ClarisaTaskService {
     }
   }
 
-  private async cloneClarisaRegions(
-    position: number,
-    deleteItem = false,
-  ) {
+  private async cloneClarisaRegions(position: number, deleteItem = false) {
     try {
       if (deleteItem) {
         const deleteData =
@@ -122,8 +126,10 @@ export class ClarisaTaskService {
           this.configAuth,
         );
         await this._clarisaRegionsRepository.save(data);
-        data.map(el => {
-            el['parent_regions_code'] = el.parentRegion?.um49Code ? el.parentRegion.um49Code: null;
+        data.map((el) => {
+          el['parent_regions_code'] = el.parentRegion?.um49Code
+            ? el.parentRegion.um49Code
+            : null;
         });
         await this._clarisaRegionsRepository.save(data);
         this._logger.verbose(
@@ -347,7 +353,10 @@ export class ClarisaTaskService {
     }
   }
 
-  private async cloneClarisaGlobalTargetType(position: number, deleteItem = false) {
+  private async cloneClarisaGlobalTargetType(
+    position: number,
+    deleteItem = false,
+  ) {
     try {
       if (deleteItem) {
         const deleteData =
@@ -360,14 +369,16 @@ export class ClarisaTaskService {
           `${this.clarisaHost}global-targets`,
           this.configAuth,
         );
-        const transformData = data.map(el => {
-            return {
-                id:	el.targetId,
-                target:	el.target,
-                impact_area_id: el.impactAreasId
-            }
+        const transformData = data.map((el) => {
+          return {
+            id: el.targetId,
+            target: el.target,
+            impact_area_id: el.impactAreasId,
+          };
         });
-        await this._clarisaGobalTargetRepository.save<ClarisaGlobalTarget>(transformData);
+        await this._clarisaGobalTargetRepository.save<ClarisaGlobalTarget>(
+          transformData,
+        );
         this._logger.verbose(
           `[${position}]: All CLARISA Global Target control list data has been created`,
         );
@@ -376,6 +387,78 @@ export class ClarisaTaskService {
     } catch (error) {
       this._logger.error(
         `[${position}]: Error in manipulating the data of CLARISA Global Target`,
+      );
+      this._logger.error(error);
+      return ++position;
+    }
+  }
+
+  private async cloneClarisaInstitutionsType(
+    position: number,
+    deleteItem = false,
+  ) {
+    try {
+      if (deleteItem) {
+        const deleteData =
+          await this._clarisaInstitutionsTypeRepository.deleteAllData();
+        this._logger.warn(
+          `[${position}]: All CLARISA Institutions type control list data has been deleted`,
+        );
+      } else {
+        const data = await this._httpService.get(`${env.L_CLA_URL}institution-types`, {auth: {username:'pandr.data', password: 'PandR.data2022' }});
+        await data.subscribe(async el => {
+          const {data} = el;
+          await this._clarisaInstitutionsTypeRepository.save(
+            data,
+          );
+        });
+        this._logger.verbose(
+          `[${position}]: All CLARISA Institutions type control list data has been created`,
+        );
+      }
+      return ++position;
+    } catch (error) {
+      this._logger.error(
+        `[${position}]: Error in manipulating the data of CLARISA Institutions type`,
+      );
+      this._logger.error(error);
+      return ++position;
+    }
+  }
+
+  private async cloneClarisaInstitutions(
+    position: number,
+    deleteItem = false,
+  ) {
+    try {
+      if (deleteItem) {
+        const deleteData =
+          await this._clarisaInstitutionsRepository.deleteAllData();
+        this._logger.warn(
+          `[${position}]: All CLARISA Institutions control list data has been deleted`,
+        );
+      } else {
+        const data = await this._httpService.get(`${env.L_CLA_URL}institutions`, {auth: {username:'pandr.data', password: 'PandR.data2022' }});
+        await data.subscribe(async el => {
+          const {data} = el;
+          console.log(data);
+          data.map(dat => {
+            dat['institution_type_code'] = dat.institutionType.code ?? null;
+            dat['id'] = dat.code;
+            dat['website_link'] = dat.websiteLink;
+          })
+          await this._clarisaInstitutionsRepository.save(
+            data,
+          );
+        });
+        this._logger.verbose(
+          `[${position}]: All CLARISA Institutions control list data has been created`,
+        );
+      }
+      return ++position;
+    } catch (error) {
+      this._logger.error(
+        `[${position}]: Error in manipulating the data of CLARISA Institutions `,
       );
       this._logger.error(error);
       return ++position;

@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { RadioButtonComponent } from './radio-button.component';
+import { PrMultiSelectComponent } from './pr-multi-select.component';
 
-describe('RadioButtonComponent', () => {
-  let component: RadioButtonComponent;
-  let fixture: ComponentFixture<RadioButtonComponent>;
+describe('PrMultiSelectComponent', () => {
+  let component: PrMultiSelectComponent;
+  let fixture: ComponentFixture<PrMultiSelectComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ RadioButtonComponent ]
+      declarations: [ PrMultiSelectComponent ]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(RadioButtonComponent);
+    fixture = TestBed.createComponent(PrMultiSelectComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

@@ -30,7 +30,7 @@ export class ResultsListFilterService {
   filterJoin: number = 0;
 
   updateMyInitiatives(initiatives) {
-    initiatives.map(init => {
+    initiatives?.map(init => {
       init.selected = true;
       init.attr = init.name;
       init.id = init.initiative_id;

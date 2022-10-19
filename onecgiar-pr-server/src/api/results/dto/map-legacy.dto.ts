@@ -1,4 +1,4 @@
-export class MapLegacy{
+export class MapLegacy {
   public initiative_id: number;
   public legacy_id: string;
   public result_type_id: number;

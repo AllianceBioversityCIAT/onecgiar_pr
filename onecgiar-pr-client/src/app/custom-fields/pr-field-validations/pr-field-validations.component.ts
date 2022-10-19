@@ -1,15 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 
 @Component({
   selector: 'app-pr-field-validations',
   templateUrl: './pr-field-validations.component.html',
   styleUrls: ['./pr-field-validations.component.scss']
 })
-export class PrFieldValidationsComponent implements OnInit {
-
-  constructor() { }
-
-  ngOnInit(): void {
-  }
-
+export class PrFieldValidationsComponent {
+  constructor() {}
 }

@@ -19,9 +19,11 @@ export class PrSelectComponent implements ControlValueAccessor {
   @Input() optionValue: string;
   @Input() options: any;
   @Input() placeholder: string;
-  @Input() type: string;
   @Input() label: string;
   @Input() inputTitle: string;
+  @Input() description: string;
+  @Input() readOnly: boolean;
+  @Input() required: boolean = true;
   private _value: string;
 
   get value() {

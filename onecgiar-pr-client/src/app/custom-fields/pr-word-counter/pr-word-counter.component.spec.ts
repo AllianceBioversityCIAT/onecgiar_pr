@@ -8,9 +8,8 @@ describe('PrWordCounterComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ PrWordCounterComponent ]
-    })
-    .compileComponents();
+      declarations: [PrWordCounterComponent]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(PrWordCounterComponent);
     component = fixture.componentInstance;

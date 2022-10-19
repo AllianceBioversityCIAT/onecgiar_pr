@@ -29,6 +29,8 @@ import { YearsModule } from './years/years.module';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 import { LegacyResultModule } from './legacy-result/legacy-result.module';
 import { ResultByLevelModule } from './result-by-level/result-by-level.module';
+import { ClarisaInstitutionsRepository } from '../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
+import { ClarisaInstitutionsTypeRepository } from '../../clarisa/clarisa-institutions-type/ClariasaInstitutionsType.repository';
 
 @Module({
   controllers: [ResultsController],
@@ -58,6 +60,8 @@ import { ResultByLevelModule } from './result-by-level/result-by-level.module';
     ResultRepository,
     ClarisaInitiativesRepository,
     RoleByUserRepository,
+    ClarisaInstitutionsRepository,
+    ClarisaInstitutionsTypeRepository
   ],
   exports: [ResultRepository, JwtMiddleware],
 })

@@ -7,13 +7,8 @@ import { ClarisaGobalTargetRepository } from './ClariasaGlobalTarget.repository'
 
 @Module({
   controllers: [ClarisaGlobalTargetController],
-  providers: [
-    ClarisaGlobalTargetService,
-    ClarisaGobalTargetRepository
-  ],
+  providers: [ClarisaGlobalTargetService, ClarisaGobalTargetRepository],
   imports: [],
-  exports: [
-    ClarisaGobalTargetRepository
-  ]
+  exports: [ClarisaGobalTargetRepository],
 })
 export class ClarisaGlobalTargetModule {}

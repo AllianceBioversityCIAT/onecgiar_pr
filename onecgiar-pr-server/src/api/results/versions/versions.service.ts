@@ -31,14 +31,14 @@ export class VersionsService {
   async findBaseVersion(): Promise<returnFormatVersion | returnErrorDto> {
     try {
       const version = await this._versionRepository.getBaseVersion();
-      if(!version){
+      if (!version) {
         throw {
           response: {},
           message: 'Base Version not found!',
           status: HttpStatus.NOT_FOUND,
         };
       }
-      
+
       return {
         response: version,
         message: MessageResponse.OK,

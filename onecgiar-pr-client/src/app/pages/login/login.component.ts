@@ -1,4 +1,4 @@
-import { Component, OnDestroy } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { UserAuth } from '../../shared/interfaces/user';
 import { Router } from '@angular/router';
 import { internationalizationData } from '../../shared/data/internationalizationData';
@@ -10,7 +10,7 @@ import { CustomizedAlertsFeService } from '../../shared/services/customized-aler
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss']
 })
-export class LoginComponent implements OnDestroy {
+export class LoginComponent implements OnDestroy, OnInit {
   internationalizationData = internationalizationData;
   userLoginData = new UserAuth();
   successLogin = false;
@@ -44,13 +44,14 @@ export class LoginComponent implements OnDestroy {
       },
       err => {
         const statusCode = err?.error?.statusCode;
+        const alertText = this.internationalizationData.login.alerts[statusCode];
         if (statusCode == 404)
-          return this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: err.error.message, status: 'warning', confirmText: 'Contact us' }, () => {
+          return this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: alertText, status: 'warning', confirmText: 'Contact us' }, () => {
             document.getElementById('question').click();
             this.customAlertService.closeAction('loginAlert');
           });
 
-        this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: err.error.message, status: 'warning' });
+        this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: alertText, status: 'warning' });
       }
     );
   }

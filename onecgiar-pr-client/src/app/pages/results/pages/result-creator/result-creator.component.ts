@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { internationalizationData } from '../../../../shared/data/internationalizationData';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultLevelService } from './services/result-level.service';
@@ -10,13 +10,14 @@ import { ResultBody } from '../../../../shared/interfaces/result';
   templateUrl: './result-creator.component.html',
   styleUrls: ['./result-creator.component.scss']
 })
-export class ResultCreatorComponent {
+export class ResultCreatorComponent implements OnInit {
   naratives = internationalizationData.reportNewResult;
 
   constructor(public api: ApiService, public resultLevelSE: ResultLevelService, private router: Router) {}
 
   ngOnInit(): void {
     this.resultLevelSE.resultBody = new ResultBody();
+    this.resultLevelSE.currentResultTypeList = [];
     this.resultLevelSE.resultLevelList?.map(reLevel => (reLevel.selected = false));
     this.api.updateResultsList();
     this.resultLevelSE.cleanData();
@@ -26,7 +27,8 @@ export class ResultCreatorComponent {
       status: 'success',
       title: '',
       description: this.naratives.alerts.info,
-      querySelector: '.report_container'
+      querySelector: '.report_container',
+      position: 'beforebegin'
     });
     // this.getInitiativesByUser();
   }

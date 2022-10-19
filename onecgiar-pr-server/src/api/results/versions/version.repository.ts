@@ -28,7 +28,7 @@ export class VersionRepository extends Repository<Version> {
     `;
     try {
       const version: Version[] = await this.query(queryData);
-      return version.length?version[0]:[];
+      return version.length ? version[0] : [];
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: VersionRepository.name,

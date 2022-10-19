@@ -8,9 +8,8 @@ describe('PrFieldValidationsComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ PrFieldValidationsComponent ]
-    })
-    .compileComponents();
+      declarations: [PrFieldValidationsComponent]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(PrFieldValidationsComponent);
     component = fixture.componentInstance;

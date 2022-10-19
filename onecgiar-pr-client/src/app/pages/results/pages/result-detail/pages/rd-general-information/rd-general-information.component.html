@@ -1,1 +1,49 @@
-<p>rd-general-information works!</p>
+<app-detail-section-title sectionName="General information"></app-detail-section-title>
+<div class="detail_container">
+    <app-pr-input placeholder="Write some..." label="Result level" type="text" [required]="false" [readOnly]="true"
+        [(ngModel)]="this.result_level">
+    </app-pr-input>
+    <app-pr-input placeholder="Write some..." label="Result type" type="text" [required]="false" [readOnly]="true"
+        [(ngModel)]="this.result_type">
+    </app-pr-input>
+    <app-pr-input placeholder="Write some..." label="Title" type="text" [(ngModel)]="this.generalInfoBody.title">
+    </app-pr-input>
+    <app-pr-input placeholder="Write some..." label="Description" type="text"
+        [(ngModel)]="this.generalInfoBody.description"></app-pr-input>
+    <div class="radio_grid" id="gender_tag">
+        <app-pr-radio-button [options]="this.scoreList" optionLabel="name" optionValue="id" label="Gender tag"
+            [(ngModel)]="this.generalInfoBody.genderTag">
+        </app-pr-radio-button>
+    </div>
+    <div class="radio_grid" id="climate_change_tag">
+        <app-pr-radio-button [options]="this.scoreList" optionLabel="name" optionValue="id" label="Climate change tag"
+            [(ngModel)]="this.generalInfoBody.climateChangeTag">
+        </app-pr-radio-button>
+    </div>
+
+    <app-pr-field-header label="Actors"
+        description="Individuals, organizations or networks operating within or beyond the system the Initiative or intervention aims to influence and whose actions can advance or impede the Initiative’s aims.">
+    </app-pr-field-header>
+    <div class="auto_fit_container">
+        <app-pr-multi-select [options]="this.scoreList" optionLabel="name" optionValue="id"
+            [(ngModel)]="this.generalInfoBody.actors" placeholder="Select actors"></app-pr-multi-select>
+
+        <app-pr-multi-select [options]="this.scoreList" optionLabel="name" optionValue="id"
+            [(ngModel)]="this.generalInfoBody.actorsType" placeholder="Select actor type"></app-pr-multi-select>
+    </div>
+
+    <app-pr-yes-or-not label="Is this result featured in a Key Result Story for the reported year?"
+        [(ngModel)]="yesornot" [(ngModel)]="this.generalInfoBody.iskey"></app-pr-yes-or-not>
+
+    <app-pr-input placeholder="Write some..." description="Link to Key Result Story" type="text" [required]="false"
+        [(ngModel)]="this.generalInfoBody.keyResultLink">
+    </app-pr-input>
+
+    <div class="save_button_container">
+        <div (click)="onSaveSection()">
+            <app-pr-button padding="medium" text="Save" icon="save"></app-pr-button>
+        </div>
+    </div>
+
+
+</div>

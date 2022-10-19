@@ -10,11 +10,4 @@ export class ClarisaRegionType {
     type: 'text',
   })
   name: string;
-
-  @Column({
-    name: 'description',
-    type: 'text',
-    nullable: true,
-  })
-  description!: string;
 }

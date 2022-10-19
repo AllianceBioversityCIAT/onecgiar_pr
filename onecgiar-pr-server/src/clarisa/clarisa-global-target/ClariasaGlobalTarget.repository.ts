@@ -2,7 +2,6 @@ import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { ClarisaGlobalTarget } from './entities/clarisa-global-target.entity';
 
-
 @Injectable()
 export class ClarisaGobalTargetRepository extends Repository<ClarisaGlobalTarget> {
   constructor(private dataSource: DataSource) {
@@ -20,9 +19,8 @@ export class ClarisaGobalTargetRepository extends Repository<ClarisaGlobalTarget
       throw {
         message: `[${ClarisaGobalTargetRepository.name}] => deleteAllData error: ${error}`,
         response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
       };
     }
   }
-
 }

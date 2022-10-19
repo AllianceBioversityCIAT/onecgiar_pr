@@ -9,13 +9,12 @@ import { MessageResponse } from '../../../shared/constants/Responses.constant';
 
 @Injectable()
 export class ResultByLevelService {
-  
   constructor(
     private readonly _resultByLevelRepository: ResultByLevelRepository,
     private readonly _resultLevelRepository: ResultLevelRepository,
     private readonly _resultTypeRepository: ResultTypeRepository,
-    private readonly _handlersError: HandlersError
-  ){}
+    private readonly _handlersError: HandlersError,
+  ) {}
 
   create(createResultByLevelDto: CreateResultByLevelDto) {
     return 'This action adds a new resultByLevel';
@@ -23,21 +22,24 @@ export class ResultByLevelService {
 
   async findAll() {
     try {
-      const resultByLevel = await this._resultByLevelRepository.getAllResultTypeByLevel();
+      const resultByLevel =
+        await this._resultByLevelRepository.getAllResultTypeByLevel();
       const resultLevel = await this._resultLevelRepository.find();
 
-      resultLevel.map(rl => {
-        rl['result_type'] = resultByLevel.filter(rbl => rbl.result_level_id === rl.id);
-        rl['result_type'].map(rt => {
+      resultLevel.map((rl) => {
+        rl['result_type'] = resultByLevel.filter(
+          (rbl) => rbl.result_level_id === rl.id,
+        );
+        rl['result_type'].map((rt) => {
           delete rt.result_level_id;
-        })
+        });
       });
 
       return {
         response: resultLevel,
         message: 'Successful response',
         status: HttpStatus.OK,
-      } 
+      };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }

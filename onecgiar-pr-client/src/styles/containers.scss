@@ -7,6 +7,22 @@
     margin-right: auto;
 }
 
+.detail_container {
+    padding: 0px 80px 100px 80px;
+}
+
+.save_button_container {
+    margin-top: 20px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.auto_fit_container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 20px;
+}
+
 .shadow-1 {
     @extend %global-shadow-1;
 }

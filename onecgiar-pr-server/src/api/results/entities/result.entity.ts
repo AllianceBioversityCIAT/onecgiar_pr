@@ -55,6 +55,12 @@ export class Result {
   })
   gender_tag_level_id!: number;
 
+  @ManyToOne(() => GenderTagLevel, (gtl) => gtl.id, { nullable: true })
+  @JoinColumn({
+    name: 'climate_change_tag_level_id',
+  })
+  climate_change_tag_level_id!: number;
+
   @Column({
     name: 'is_active',
     type: 'boolean',
@@ -109,9 +115,23 @@ export class Result {
   })
   reported_year_id: number;
 
-  @ManyToOne(() => LegacyResult, lr => lr.legacy_id, {nullable: true})
+  @ManyToOne(() => LegacyResult, (lr) => lr.legacy_id, { nullable: true })
   @JoinColumn({
-    name: 'legacy_id'
+    name: 'legacy_id',
   })
   legacy_id!: string;
+
+  @Column({
+    name: 'krs_url',
+    type: 'text',
+    nullable: true,
+  })
+  krs_url!: string;
+
+  @Column({
+    name: 'is_krs',
+    type: 'boolean',
+    default: false
+  })
+  is_krs!: boolean;
 }
