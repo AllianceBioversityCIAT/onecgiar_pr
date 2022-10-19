@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
+import { GeneralInfoBody } from './models/generalInfoBody';
 
 @Component({
   selector: 'app-rd-general-information',
@@ -7,6 +8,9 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
   styleUrls: ['./rd-general-information.component.scss']
 })
 export class RdGeneralInformationComponent {
+  generalInfoBody = new GeneralInfoBody();
+  result_level: string = 'Inititative Outcome';
+  result_type: string = 'Innovation use';
   scoreList = [
     {
       id: 1,
@@ -40,5 +44,8 @@ export class RdGeneralInformationComponent {
       querySelector: '#climate_change_tag',
       position: 'beforeend'
     });
+  }
+  onSaveSection() {
+    console.log(this.generalInfoBody);
   }
 }

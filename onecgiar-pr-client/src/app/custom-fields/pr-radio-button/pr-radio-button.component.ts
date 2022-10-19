@@ -45,4 +45,8 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
   registerOnTouched(fn: any): void {
     this.onTouch = fn;
   }
+
+  joinName() {
+    return this.label.split(' ').join('');
+  }
 }

@@ -1,10 +1,11 @@
 import { Injectable } from '@angular/core';
 interface alertOptions {
-  id;
+  id?;
   title;
   description?: string;
   status: 'error' | 'success';
   querySelector: string;
+  position: 'beforebegin' | 'afterbegin' | 'beforeend' | 'afterend';
 }
 @Injectable({
   providedIn: 'root'
@@ -14,14 +15,14 @@ export class CustomizedAlertsFsService {
   showed = false;
   constructor() {}
 
-  show(alertOptions: alertOptions, callback?) {
-    let { id, title, description = '', status, querySelector } = alertOptions;
+  show(alertOptions: alertOptions) {
+    let { id, title, description = '', status, querySelector, position } = alertOptions;
     this.showed = true;
     let alert = document.getElementById(id);
 
     let appRoot = document.querySelector(querySelector);
     appRoot.insertAdjacentHTML(
-      'beforebegin',
+      position,
       `
       <div class="pr_alert" id="${id}">
         <div class="text">${description}</div>
