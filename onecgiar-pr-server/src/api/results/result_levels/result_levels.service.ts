@@ -14,8 +14,7 @@ export class ResultLevelsService {
   constructor(
     private readonly _handlersError: HandlersError,
     private readonly _resultLevelRepository: ResultLevelRepository,
-
-  ) { }
+  ) {}
 
   create(createResultLevelDto: CreateResultLevelDto) {
     return createResultLevelDto;

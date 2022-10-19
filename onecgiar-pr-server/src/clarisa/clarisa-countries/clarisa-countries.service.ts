@@ -5,7 +5,7 @@ import { UpdateClarisaCountryDto } from './dto/update-clarisa-country.dto';
 @Injectable()
 export class ClarisaCountriesService {
   create(createClarisaCountryDto: CreateClarisaCountryDto) {
-    return 'This action adds a new clarisaCountry';
+    return createClarisaCountryDto;
   }
 
   findAll() {
@@ -17,7 +17,7 @@ export class ClarisaCountriesService {
   }
 
   update(id: number, updateClarisaCountryDto: UpdateClarisaCountryDto) {
-    return `This action updates a #${id} clarisaCountry`;
+    return `This action updates a #${id} clarisaCountry ${updateClarisaCountryDto}`;
   }
 
   remove(id: number) {

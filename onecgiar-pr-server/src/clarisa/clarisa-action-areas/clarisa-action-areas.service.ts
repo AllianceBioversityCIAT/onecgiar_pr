@@ -5,7 +5,7 @@ import { UpdateClarisaActionAreaDto } from './dto/update-clarisa-action-area.dto
 @Injectable()
 export class ClarisaActionAreasService {
   create(createClarisaActionAreaDto: CreateClarisaActionAreaDto) {
-    return 'This action adds a new clarisaActionArea';
+    return createClarisaActionAreaDto;
   }
 
   findAll() {
@@ -17,7 +17,7 @@ export class ClarisaActionAreasService {
   }
 
   update(id: number, updateClarisaActionAreaDto: UpdateClarisaActionAreaDto) {
-    return `This action updates a #${id} clarisaActionArea`;
+    return `This action updates a #${id} clarisaActionArea ${updateClarisaActionAreaDto}`;
   }
 
   remove(id: number) {

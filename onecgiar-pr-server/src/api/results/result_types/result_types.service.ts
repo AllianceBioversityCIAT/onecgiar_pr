@@ -15,7 +15,7 @@ export class ResultTypesService {
   constructor(
     private readonly _handlersError: HandlersError,
     private readonly _resultTypeRepository: ResultTypeRepository,
-  ) { }
+  ) {}
 
   create(createResultTypeDto: CreateResultTypeDto) {
     return createResultTypeDto;

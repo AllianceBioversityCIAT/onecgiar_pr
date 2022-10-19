@@ -7,7 +7,6 @@ import {
 } from 'typeorm';
 import { ClarisaActionArea } from '../../clarisa-action-areas/entities/clarisa-action-area.entity';
 import { ClarisaOutcomeIndicator } from '../../clarisa-outcome-indicators/entities/clarisa-outcome-indicator.entity';
-import { Auditable } from '../../../shared/entities/auditableEntity';
 
 @Entity('clarisa_action_areas_outcomes_indicators')
 export class ClarisaActionAreasOutcomesIndicator {

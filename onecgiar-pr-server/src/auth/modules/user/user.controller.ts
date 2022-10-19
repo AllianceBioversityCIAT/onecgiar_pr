@@ -3,9 +3,7 @@ import {
   Get,
   Post,
   Body,
-  Patch,
   Param,
-  Delete,
   Res,
   Req,
   UseFilters,
@@ -14,7 +12,6 @@ import {
 import { Request, Response } from 'express';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
 import { CreateFullUserDto } from './dto/create-full-user.dto';
 import { HttpExceptionFilter } from '../../../shared/handlers/error.exception';
 import { HttpException } from '@nestjs/common';
@@ -24,7 +21,7 @@ import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 @Controller()
 @UseFilters(new HttpExceptionFilter())
 export class UserController {
-  constructor(private readonly userService: UserService) { }
+  constructor(private readonly userService: UserService) {}
 
   @Post()
   create(@Body() createUserDto: CreateUserDto) {

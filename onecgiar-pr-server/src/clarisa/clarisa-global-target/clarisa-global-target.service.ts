@@ -5,7 +5,7 @@ import { UpdateClarisaGlobalTargetDto } from './dto/update-clarisa-global-target
 @Injectable()
 export class ClarisaGlobalTargetService {
   create(createClarisaGlobalTargetDto: CreateClarisaGlobalTargetDto) {
-    return 'This action adds a new clarisaGlobalTarget';
+    return createClarisaGlobalTargetDto;
   }
 
   findAll() {
@@ -20,7 +20,7 @@ export class ClarisaGlobalTargetService {
     id: number,
     updateClarisaGlobalTargetDto: UpdateClarisaGlobalTargetDto,
   ) {
-    return `This action updates a #${id} clarisaGlobalTarget`;
+    return `This action updates a #${id} clarisaGlobalTarget ${updateClarisaGlobalTargetDto}`;
   }
 
   remove(id: number) {

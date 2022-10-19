@@ -1,5 +1,4 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { FullResultsRequestDto } from './dto/full-results-request.dto';
 import { ResultsController } from './results.controller';
 import { ResultsService } from './results.service';
 

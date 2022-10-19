@@ -14,7 +14,7 @@ import { UpdateResultTypeDto } from './dto/update-result_type.dto';
 
 @Controller('')
 export class ResultTypesController {
-  constructor(private readonly resultTypesService: ResultTypesService) { }
+  constructor(private readonly resultTypesService: ResultTypesService) {}
 
   @Post()
   create(@Body() createResultTypeDto: CreateResultTypeDto) {

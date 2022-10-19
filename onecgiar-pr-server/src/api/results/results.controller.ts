@@ -93,10 +93,13 @@ export class ResultsController {
 
   @Post('generla-information')
   async createGeneralInformation(
-    @Body() CreateGeneralInformationResultDto: CreateGeneralInformationResultDto,
+    @Body()
+    CreateGeneralInformationResultDto: CreateGeneralInformationResultDto,
     @Headers() auth: HeadersDto,
-  ){
-    const result = await this.resultsService.createResultGeneralInformation(CreateGeneralInformationResultDto);
+  ) {
+    const result = await this.resultsService.createResultGeneralInformation(
+      CreateGeneralInformationResultDto,
+    );
     return result;
   }
 

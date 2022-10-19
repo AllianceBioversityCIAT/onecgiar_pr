@@ -1,14 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { env } from 'process';
-import axios, { AxiosRequestConfig } from 'axios';
-import { ClarisaMeliaStudyType } from './clarisa-melia-study-type/entities/clarisa-melia-study-type.entity';
+import axios from 'axios';
 import { ClarisaMeliaStudyTypeRepository } from './clarisa-melia-study-type/ClariasaMeliasStudyType.repository';
-import { ClarisaActionArea } from './clarisa-action-areas/entities/clarisa-action-area.entity';
 import { ClariasaActionAreaRepository } from './clarisa-action-areas/ClariasaActionArea.repository';
 import { ClarisaInitiativesRepository } from './clarisa-initiatives/ClarisaInitiatives.repository';
 import { ClarisaImpactAreaRepository } from './clarisa-impact-area/ClarisaImpactArea.repository';
 import { ClarisaImpactAreaInticatorsRepository } from './clarisa-impact-area-indicators/ClarisaImpactAreaIndicators.repository';
-import { ClarisaImpactAreaIndicator } from './clarisa-impact-area-indicators/entities/clarisa-impact-area-indicator.entity';
 import { ClarisaCountry } from './clarisa-countries/entities/clarisa-country.entity';
 import { ClarisaOutcomeIndicatorsRepository } from './clarisa-outcome-indicators/ClariasaOutcomeIndicators.repository';
 import { ClarisaOutcomeIndicator } from './clarisa-outcome-indicators/entities/clarisa-outcome-indicator.entity';
@@ -24,8 +21,7 @@ import { HttpService } from '@nestjs/axios';
 
 @Injectable()
 export class ClarisaTaskService {
-  private readonly clarisaHost: string =
-    env.CLA_URL ?? env.L_CLA_URL;
+  private readonly clarisaHost: string = env.CLA_URL ?? env.L_CLA_URL;
   private readonly configAuth = {
     auth: {
       username: env.CLA_USER,
@@ -46,7 +42,7 @@ export class ClarisaTaskService {
     private readonly _clarisaGobalTargetRepository: ClarisaGobalTargetRepository,
     private readonly _clarisaInstitutionsRepository: ClarisaInstitutionsRepository,
     private readonly _clarisaInstitutionsTypeRepository: ClarisaInstitutionsTypeRepository,
-    private readonly _httpService: HttpService
+    private readonly _httpService: HttpService,
   ) {}
 
   public async clarisaBootstrap() {
@@ -405,12 +401,13 @@ export class ClarisaTaskService {
           `[${position}]: All CLARISA Institutions type control list data has been deleted`,
         );
       } else {
-        const data = await this._httpService.get(`${env.L_CLA_URL}institution-types`, {auth: {username:'pandr.data', password: 'PandR.data2022' }});
-        await data.subscribe(async el => {
-          const {data} = el;
-          await this._clarisaInstitutionsTypeRepository.save(
-            data,
-          );
+        const data = await this._httpService.get(
+          `${env.L_CLA_URL}institution-types`,
+          { auth: { username: 'pandr.data', password: 'PandR.data2022' } },
+        );
+        await data.subscribe(async (el) => {
+          const { data } = el;
+          await this._clarisaInstitutionsTypeRepository.save(data);
         });
         this._logger.verbose(
           `[${position}]: All CLARISA Institutions type control list data has been created`,
@@ -426,10 +423,7 @@ export class ClarisaTaskService {
     }
   }
 
-  private async cloneClarisaInstitutions(
-    position: number,
-    deleteItem = false,
-  ) {
+  private async cloneClarisaInstitutions(position: number, deleteItem = false) {
     try {
       if (deleteItem) {
         const deleteData =
@@ -438,18 +432,19 @@ export class ClarisaTaskService {
           `[${position}]: All CLARISA Institutions control list data has been deleted`,
         );
       } else {
-        const data = await this._httpService.get(`${env.L_CLA_URL}institutions`, {auth: {username:'pandr.data', password: 'PandR.data2022' }});
-        await data.subscribe(async el => {
-          const {data} = el;
+        const data = await this._httpService.get(
+          `${env.L_CLA_URL}institutions`,
+          { auth: { username: 'pandr.data', password: 'PandR.data2022' } },
+        );
+        await data.subscribe(async (el) => {
+          const { data } = el;
           console.log(data);
-          data.map(dat => {
+          data.map((dat) => {
             dat['institution_type_code'] = dat.institutionType.code ?? null;
             dat['id'] = dat.code;
             dat['website_link'] = dat.websiteLink;
-          })
-          await this._clarisaInstitutionsRepository.save(
-            data,
-          );
+          });
+          await this._clarisaInstitutionsRepository.save(data);
         });
         this._logger.verbose(
           `[${position}]: All CLARISA Institutions control list data has been created`,

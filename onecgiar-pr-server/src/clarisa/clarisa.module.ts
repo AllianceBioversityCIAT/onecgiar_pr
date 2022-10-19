@@ -19,7 +19,7 @@ import { ClarisaOutcomeIndicatorsModule } from './clarisa-outcome-indicators/cla
 import { ClarisaRegionTypesModule } from './clarisa-region-types/clarisa-region-types.module';
 import { ClarisaTaskService } from './clarisatask.service';
 import { ClarisaInitiativesModule } from './clarisa-initiatives/clarisa-initiatives.module';
-import { HttpModule, HttpService } from '@nestjs/axios';
+import { HttpModule } from '@nestjs/axios';
 
 @Module({
   imports: [
@@ -37,7 +37,7 @@ import { HttpModule, HttpService } from '@nestjs/axios';
     ClarisaOutcomeIndicatorsModule,
     ClarisaRegionTypesModule,
     ClarisaInitiativesModule,
-    HttpModule
+    HttpModule,
   ],
   controllers: [],
   providers: [ClarisaCronsService, ClarisaTaskService],

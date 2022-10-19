@@ -37,5 +37,4 @@ export class ClarisaInstitution {
     name: 'institution_type_code',
   })
   institution_type_code: number;
-
 }

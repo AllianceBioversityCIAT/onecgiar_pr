@@ -53,7 +53,7 @@ export class ResultsService {
     private readonly _resultByLevelRepository: ResultByLevelRepository,
     private readonly _resultLegacyRepository: ResultLegacyRepository,
     private readonly _clarisaInstitutionsRepository: ClarisaInstitutionsRepository,
-    private readonly _clarisaInstitutionsTypeRepository: ClarisaInstitutionsTypeRepository
+    private readonly _clarisaInstitutionsTypeRepository: ClarisaInstitutionsTypeRepository,
   ) {}
 
   async createOwnerResult(
@@ -141,7 +141,7 @@ export class ResultsService {
       const year: Year = await this._yearRepository.findOne({
         where: { active: true },
       });
-      
+
       if (!year) {
         throw {
           response: {},
@@ -160,15 +160,13 @@ export class ResultsService {
         result_level_id: rl.id,
       });
 
-      const resultByInitiative = await this._resultByInitiativesRepository.save(
-        {
-          created_by: newResultHeader.created_by,
-          initiative_id: initiative.id,
-          initiative_role_id: 1,
-          result_id: newResultHeader.id,
-          version_id: vrs.id,
-        },
-      );
+      await this._resultByInitiativesRepository.save({
+        created_by: newResultHeader.created_by,
+        initiative_id: initiative.id,
+        initiative_role_id: 1,
+        result_id: newResultHeader.id,
+        version_id: vrs.id,
+      });
 
       return {
         response: newResultHeader,
@@ -180,10 +178,10 @@ export class ResultsService {
     }
   }
 
-  async getAllInstitutions(){
+  async getAllInstitutions() {
     try {
       const entities = await this._clarisaInstitutionsRepository.find();
-      if(!entities.length){
+      if (!entities.length) {
         throw {
           response: {},
           message: 'Institutions Not fount',
@@ -201,10 +199,10 @@ export class ResultsService {
     }
   }
 
-  async getAllInstitutionsType(){
+  async getAllInstitutionsType() {
     try {
       const entities = await this._clarisaInstitutionsTypeRepository.find();
-      if(!entities.length){
+      if (!entities.length) {
         throw {
           response: {},
           message: 'Institutions Type Not fount',
@@ -226,8 +224,10 @@ export class ResultsService {
     resultGeneralInformation: CreateGeneralInformationResultDto,
   ) {
     try {
-      const result = await this._resultRepository.getResultById(resultGeneralInformation.result_id);
-      if(!result?.id){
+      const result = await this._resultRepository.getResultById(
+        resultGeneralInformation.result_id,
+      );
+      if (!result?.id) {
         throw {
           response: {},
           message: 'The result does not exist',
@@ -272,9 +272,13 @@ export class ResultsService {
     }
   }
 
-  async creatFullResult(resultGeneralInformation: CreateGeneralInformationResultDto) {
+  async creatFullResult(
+    resultGeneralInformation: CreateGeneralInformationResultDto,
+  ) {
     try {
-      const result = await this._resultRepository.getResultById(resultGeneralInformation.result_id);
+      const result = await this._resultRepository.getResultById(
+        resultGeneralInformation.result_id,
+      );
       return result;
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
@@ -455,15 +459,13 @@ export class ResultsService {
         legacy_id: legacyResult.legacy_id,
       });
 
-      const resultByInitiative = await this._resultByInitiativesRepository.save(
-        {
-          created_by: newResultHeader.created_by,
-          initiative_id: initiative.id,
-          initiative_role_id: 1,
-          result_id: newResultHeader.id,
-          version_id: vrs.id,
-        },
-      );
+      await this._resultByInitiativesRepository.save({
+        created_by: newResultHeader.created_by,
+        initiative_id: initiative.id,
+        initiative_role_id: 1,
+        result_id: newResultHeader.id,
+        version_id: vrs.id,
+      });
 
       await this._resultLegacyRepository.save(legacyResult);
 

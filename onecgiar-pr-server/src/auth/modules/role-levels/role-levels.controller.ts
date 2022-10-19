@@ -13,7 +13,7 @@ import { UpdateRoleLevelDto } from './dto/update-role-level.dto';
 
 @Controller()
 export class RoleLevelsController {
-  constructor(private readonly roleLevelsService: RoleLevelsService) { }
+  constructor(private readonly roleLevelsService: RoleLevelsService) {}
 
   @Post()
   create(@Body() createRoleLevelDto: CreateRoleLevelDto) {

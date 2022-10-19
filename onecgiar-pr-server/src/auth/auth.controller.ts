@@ -14,9 +14,9 @@ import { HttpExceptionFilter } from '../shared/handlers/error.exception';
 @Controller()
 @UseFilters(new HttpExceptionFilter())
 export class AuthController {
-  constructor(private readonly authService: AuthService) { }
+  constructor(private readonly authService: AuthService) {}
 
-  // * Method to SignIn into PRMS Reporting 
+  // * Method to SignIn into PRMS Reporting
   @Post('/singin')
   async singIn(@Body() userLogin: UserLoginDto, @Res() res: Response) {
     const { message, response, status } = await this.authService.singIn(
@@ -24,5 +24,4 @@ export class AuthController {
     );
     throw new HttpException({ message, response }, status);
   }
-
 }

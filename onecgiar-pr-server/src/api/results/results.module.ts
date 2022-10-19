@@ -61,7 +61,7 @@ import { ClarisaInstitutionsTypeRepository } from '../../clarisa/clarisa-institu
     ClarisaInitiativesRepository,
     RoleByUserRepository,
     ClarisaInstitutionsRepository,
-    ClarisaInstitutionsTypeRepository
+    ClarisaInstitutionsTypeRepository,
   ],
   exports: [ResultRepository, JwtMiddleware],
 })

@@ -9,5 +9,4 @@ export class CreateGeneralInformationResultDto {
   public climate_change_tag_id: number;
   public institutions: number[];
   public institutions_type: number[];
-
 }

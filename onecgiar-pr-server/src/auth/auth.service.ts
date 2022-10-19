@@ -22,7 +22,7 @@ export class AuthService {
     private readonly _bcryptPasswordEncoder: BcryptPasswordEncoder,
     private readonly _customUserRepository: UserRepository,
     private readonly _handlersError: HandlersError,
-  ) { }
+  ) {}
   create(createAuthDto: CreateAuthDto) {
     return createAuthDto;
   }
@@ -61,7 +61,7 @@ export class AuthService {
       if (user) {
         const { email, first_name, last_name, is_cgiar, id } = <
           FullUserRequestDto
-          >user;
+        >user;
         if (is_cgiar) {
           const { response, message, status }: any = await this.validateAD(
             email,

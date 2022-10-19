@@ -256,7 +256,7 @@ WHERE
 
     try {
       const results: Result[] = await this.query(queryData, [id]);
-      return results.length? results[0]: new Result();
+      return results.length ? results[0] : new Result();
     } catch (error) {
       throw {
         message: `[${ResultRepository.name}] => completeAllData error: ${error}`,

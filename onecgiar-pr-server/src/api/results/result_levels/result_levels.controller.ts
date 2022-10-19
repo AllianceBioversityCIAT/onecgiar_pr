@@ -14,7 +14,7 @@ import { UpdateResultLevelDto } from './dto/update-result_level.dto';
 
 @Controller()
 export class ResultLevelsController {
-  constructor(private readonly resultLevelsService: ResultLevelsService) { }
+  constructor(private readonly resultLevelsService: ResultLevelsService) {}
 
   @Post()
   create(@Body() createResultLevelDto: CreateResultLevelDto) {

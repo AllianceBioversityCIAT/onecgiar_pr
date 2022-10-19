@@ -5,7 +5,7 @@ import { UpdateLegacyResultDto } from './dto/update-legacy-result.dto';
 @Injectable()
 export class LegacyResultService {
   create(createLegacyResultDto: CreateLegacyResultDto) {
-    return 'This action adds a new legacyResult';
+    return createLegacyResultDto;
   }
 
   findAll() {
@@ -17,7 +17,7 @@ export class LegacyResultService {
   }
 
   update(id: number, updateLegacyResultDto: UpdateLegacyResultDto) {
-    return `This action updates a #${id} legacyResult`;
+    return `This action updates a #${id} legacyResult ${updateLegacyResultDto}`;
   }
 
   remove(id: number) {
