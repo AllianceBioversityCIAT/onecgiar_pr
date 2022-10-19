@@ -180,8 +180,8 @@ export class ResultsService {
 
   async getAllInstitutions() {
     try {
-      const entities = await this._clarisaInstitutionsRepository.find();
-      if (!entities.length) {
+      const entities = await this._clarisaInstitutionsRepository.getAllInstitutions();
+      if(!entities.length){
         throw {
           response: {},
           message: 'Institutions Not fount',
