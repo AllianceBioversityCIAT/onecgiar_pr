@@ -43,7 +43,8 @@ export class ResultsListComponent implements OnInit {
       status: 'success',
       title: '',
       description: internationalizationData?.resultsList?.alerts?.info,
-      querySelector: '.alert'
+      querySelector: '.alert',
+      position: 'beforebegin'
     });
   }
 }

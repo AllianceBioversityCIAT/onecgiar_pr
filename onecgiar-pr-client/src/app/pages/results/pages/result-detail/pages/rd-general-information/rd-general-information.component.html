@@ -4,11 +4,11 @@
     <app-pr-input placeholder="Write some..." label="Result type" type="text"></app-pr-input>
     <app-pr-input placeholder="Write some..." label="Title" type="text"></app-pr-input>
     <app-pr-input placeholder="Write some..." label="Description" type="text"></app-pr-input>
-    <div class="auto_fit_container">
+    <div class="radio_grid" id="gender_tag">
         <app-pr-radio-button [options]="this.scoreList" optionLabel="name" optionValue="id" label="Gender tag">
         </app-pr-radio-button>
     </div>
-    <div class="auto_fit_container">
+    <div class="radio_grid" id="climate_change_tag">
         <app-pr-radio-button [options]="this.scoreList" optionLabel="name" optionValue="id" label="Climate change tag">
         </app-pr-radio-button>
     </div>
@@ -18,12 +18,17 @@
     </app-pr-field-header>
     <div class="auto_fit_container">
         <app-pr-multi-select [options]="this.scoreList" optionLabel="name" optionValue="id" [(ngModel)]="listvalue"
-            (ngModelChange)="print()" placeholder="Select actors"></app-pr-multi-select>
+            placeholder="Select actors"></app-pr-multi-select>
 
         <app-pr-multi-select [options]="this.scoreList" optionLabel="name" optionValue="id" [(ngModel)]="listvalue"
-            (ngModelChange)="print()" placeholder="Select actor type"></app-pr-multi-select>
+            placeholder="Select actor type"></app-pr-multi-select>
     </div>
 
+    <app-pr-yes-or-not label="Is this result featured in a Key Result Story for the reported year?"
+        [(ngModel)]="yesornot"></app-pr-yes-or-not>
+
+    <app-pr-input placeholder="Write some..." description="Link to Key Result Story" type="text" [required]="false">
+    </app-pr-input>
 
 
 </div>

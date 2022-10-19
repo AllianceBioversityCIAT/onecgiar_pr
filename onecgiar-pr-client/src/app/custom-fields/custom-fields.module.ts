@@ -13,8 +13,9 @@ import { DetailSectionTitleComponent } from './detail-section-title/detail-secti
 import { PrRadioButtonComponent } from './pr-radio-button/pr-radio-button.component';
 import { PrMultiSelectComponent } from './pr-multi-select/pr-multi-select.component';
 import { MultiSelectModule } from 'primeng/multiselect';
+import { PrYesOrNotComponent } from './pr-yes-or-not/pr-yes-or-not.component';
 
-const fieldComponents = [PrInputComponent, PrSelectComponent, PrRadioButtonComponent, DetailSectionTitleComponent, PrMultiSelectComponent, PrFieldHeaderComponent];
+const fieldComponents = [PrInputComponent, PrSelectComponent, PrRadioButtonComponent, DetailSectionTitleComponent, PrMultiSelectComponent, PrFieldHeaderComponent, PrYesOrNotComponent];
 
 @NgModule({
   declarations: [...fieldComponents, PrFieldValidationsComponent, PrWordCounterComponent],

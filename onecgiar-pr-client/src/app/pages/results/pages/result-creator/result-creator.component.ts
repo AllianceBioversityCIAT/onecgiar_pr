@@ -27,7 +27,8 @@ export class ResultCreatorComponent implements OnInit {
       status: 'success',
       title: '',
       description: this.naratives.alerts.info,
-      querySelector: '.report_container'
+      querySelector: '.report_container',
+      position: 'beforebegin'
     });
     // this.getInitiativesByUser();
   }
