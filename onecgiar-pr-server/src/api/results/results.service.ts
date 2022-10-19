@@ -181,7 +181,7 @@ export class ResultsService {
 
   async getAllInstitutions(){
     try {
-      const entities = await this._clarisaInstitutionsRepository.find();
+      const entities = await this._clarisaInstitutionsRepository.getAllInstitutions();
       if(!entities.length){
         throw {
           response: {},

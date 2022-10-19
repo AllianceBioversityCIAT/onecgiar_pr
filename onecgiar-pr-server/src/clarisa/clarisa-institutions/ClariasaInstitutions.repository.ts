@@ -23,4 +23,26 @@ export class ClarisaInstitutionsRepository extends Repository<ClarisaInstitution
       };
     }
   }
+
+  async getAllInstitutions() {
+    const queryData = `
+    select 
+    	ci.id,
+    	ci.name,
+    	ci.acronym,
+    	ci.website_link,
+    	ci.institution_type_code
+    from clarisa_institutions ci;
+    `;
+    try {
+      const deleteData: ClarisaInstitution[] = await this.query(queryData);
+      return deleteData;
+    } catch (error) {
+      throw {
+        message: `[${ClarisaInstitutionsRepository.name}] => deleteAllData error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
 }
