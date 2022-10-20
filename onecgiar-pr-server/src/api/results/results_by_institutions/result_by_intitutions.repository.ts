@@ -61,7 +61,10 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     }
   }
 
-  async getResultByInstitutionExists(resultId: number, institutionsId: number): Promise<ResultsByInstitution> {
+  async getResultByInstitutionExists(
+    resultId: number,
+    institutionsId: number,
+  ): Promise<ResultsByInstitution> {
     const queryData = `
     select 
     	rbi.id,
@@ -80,9 +83,10 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     `;
     try {
       const completeUser: ResultsByInstitution[] = await this.query(queryData, [
-        resultId, institutionsId
+        resultId,
+        institutionsId,
       ]);
-      return completeUser.length? completeUser[0]: undefined;
+      return completeUser.length ? completeUser[0] : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByIntitutionsRepository.name,

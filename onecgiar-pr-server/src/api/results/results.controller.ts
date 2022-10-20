@@ -96,12 +96,15 @@ export class ResultsController {
     @Body()
     CreateGeneralInformationResultDto: CreateGeneralInformationResultDto,
     @Headers() auth: HeadersDto,
-  ){
+  ) {
     const token: TokenDto = <TokenDto>(
       JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
     );
-    const { message, response, status }
-       = await this.resultsService.createResultGeneralInformation(CreateGeneralInformationResultDto, token);
+    const { message, response, status } =
+      await this.resultsService.createResultGeneralInformation(
+        CreateGeneralInformationResultDto,
+        token,
+      );
     throw new HttpException({ message, response }, status);
   }
 

@@ -6,20 +6,22 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 
 @Injectable()
 export class ResultsByInstitutionsService {
-
   constructor(
     private readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
-    private readonly _handlersError: HandlersError
-  ){}
+    private readonly _handlersError: HandlersError,
+  ) {}
 
   create(createResultsByInstitutionDto: CreateResultsByInstitutionDto) {
     return createResultsByInstitutionDto;
   }
 
-  async getGetInstitutionsByResultId(id: number){
+  async getGetInstitutionsByResultId(id: number) {
     try {
-      const intitutions =  await this._resultByIntitutionsRepository.getResultByInstitutionFull(id);
-      if(!intitutions.length){
+      const intitutions =
+        await this._resultByIntitutionsRepository.getResultByInstitutionFull(
+          id,
+        );
+      if (!intitutions.length) {
         throw {
           response: {},
           message: 'Institutions Not fount',

@@ -28,7 +28,7 @@ export class ResultsByInstitutionsController {
   @Get('result/:id')
   async findAll(@Param('id') id: number) {
     const { message, response, status } =
-       await this.resultsByInstitutionsService.getGetInstitutionsByResultId(id);
+      await this.resultsByInstitutionsService.getGetInstitutionsByResultId(id);
     throw new HttpException({ message, response }, status);
   }
 

@@ -34,7 +34,6 @@ import { MapLegacy } from './dto/map-legacy.dto';
 import { ClarisaInstitutionsRepository } from '../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
 import { ClarisaInstitutionsTypeRepository } from '../../clarisa/clarisa-institutions-type/ClariasaInstitutionsType.repository';
 import { GenderTagRepository } from './gender_tag_levels/genderTag.repository';
-import { In } from 'typeorm';
 import { ResultsByInstitution } from './results_by_institutions/entities/results_by_institution.entity';
 import { ResultsByInstitutionType } from './results_by_institution_types/entities/results_by_institution_type.entity';
 
@@ -58,7 +57,7 @@ export class ResultsService {
     private readonly _resultLegacyRepository: ResultLegacyRepository,
     private readonly _clarisaInstitutionsRepository: ClarisaInstitutionsRepository,
     private readonly _clarisaInstitutionsTypeRepository: ClarisaInstitutionsTypeRepository,
-    private readonly _genderTagRepository: GenderTagRepository
+    private readonly _genderTagRepository: GenderTagRepository,
   ) {}
 
   async createOwnerResult(
@@ -185,8 +184,9 @@ export class ResultsService {
 
   async getAllInstitutions() {
     try {
-      const entities = await this._clarisaInstitutionsRepository.getAllInstitutions();
-      if(!entities.length){
+      const entities =
+        await this._clarisaInstitutionsRepository.getAllInstitutions();
+      if (!entities.length) {
         throw {
           response: {},
           message: 'Institutions Not fount',
@@ -227,7 +227,7 @@ export class ResultsService {
 
   async createResultGeneralInformation(
     resultGeneralInformation: CreateGeneralInformationResultDto,
-    user: TokenDto
+    user: TokenDto,
   ) {
     try {
       const result = await this._resultRepository.getResultById(
@@ -247,8 +247,12 @@ export class ResultsService {
         throw this._handlersError.returnErrorRes({ error: resultType });
       }
 
-      const resultByLevel = await this._resultByLevelRepository.getByTypeAndLevel(resultGeneralInformation.result_level_id, resultGeneralInformation.result_type_id);
-      if(!resultByLevel){
+      const resultByLevel =
+        await this._resultByLevelRepository.getByTypeAndLevel(
+          resultGeneralInformation.result_level_id,
+          resultGeneralInformation.result_type_id,
+        );
+      if (!resultByLevel) {
         throw {
           response: {},
           message: 'The type or level is not compatible',
@@ -256,8 +260,10 @@ export class ResultsService {
         };
       }
 
-      const genderTag = await this._genderTagRepository.findOne({where:{id: resultGeneralInformation.gender_tag_id}});
-      if(!genderTag){
+      const genderTag = await this._genderTagRepository.findOne({
+        where: { id: resultGeneralInformation.gender_tag_id },
+      });
+      if (!genderTag) {
         throw {
           response: {},
           message: 'The Gender tag does not exist',
@@ -265,8 +271,10 @@ export class ResultsService {
         };
       }
 
-      const climateTag = await this._genderTagRepository.findOne({where:{id: resultGeneralInformation.climate_change_tag_id}});
-      if(!climateTag){
+      const climateTag = await this._genderTagRepository.findOne({
+        where: { id: resultGeneralInformation.climate_change_tag_id },
+      });
+      if (!climateTag) {
         throw {
           response: {},
           message: 'The Climate change tag does not exist',
@@ -274,10 +282,15 @@ export class ResultsService {
         };
       }
 
-      const validInstitutions = await this._clarisaInstitutionsRepository.getValidInstitution(resultGeneralInformation.institutions);
+      const validInstitutions =
+        await this._clarisaInstitutionsRepository.getValidInstitution(
+          resultGeneralInformation.institutions,
+        );
 
-      const isValidInst: any[] = validInstitutions.filter(el => el.valid === '0');
-      if(isValidInst.length){
+      const isValidInst: any[] = validInstitutions.filter(
+        (el) => el.valid === '0',
+      );
+      if (isValidInst.length) {
         throw {
           response: isValidInst,
           message: 'Institutions do not exist that are intended to assign',
@@ -285,9 +298,14 @@ export class ResultsService {
         };
       }
 
-      const validInstitutionType = await this._clarisaInstitutionsTypeRepository.getValidInstitutionType(resultGeneralInformation.institutions_type);
-      const isValidInstType: any[] = validInstitutionType.filter(el => el.valid === '0');
-      if(isValidInstType.length){
+      const validInstitutionType =
+        await this._clarisaInstitutionsTypeRepository.getValidInstitutionType(
+          resultGeneralInformation.institutions_type,
+        );
+      const isValidInstType: any[] = validInstitutionType.filter(
+        (el) => el.valid === '0',
+      );
+      if (isValidInstType.length) {
         throw {
           response: isValidInstType,
           message: 'Institutions type do not exist that are intended to assign',
@@ -295,7 +313,7 @@ export class ResultsService {
         };
       }
 
-      if(!resultGeneralInformation.is_krs){
+      if (!resultGeneralInformation.is_krs) {
         resultGeneralInformation.krs_url = null;
       }
 
@@ -315,56 +333,85 @@ export class ResultsService {
         climate_change_tag_level_id: climateTag.id,
         krs_url: resultGeneralInformation.krs_url,
         is_krs: resultGeneralInformation.is_krs,
-        last_updated_by: user.id
+        last_updated_by: user.id,
       });
 
-      let saveInstitutions: ResultsByInstitution[] = [];
-      for (let index = 0; index < resultGeneralInformation.institutions.length; index++) {
-        const institutions = await this._resultByIntitutionsRepository.getResultByInstitutionExists(resultGeneralInformation.result_id, resultGeneralInformation.institutions[index].institutions_id);
-        if(!institutions){
-          const institutionsNew: ResultsByInstitution = new ResultsByInstitution();
+      const saveInstitutions: ResultsByInstitution[] = [];
+      for (
+        let index = 0;
+        index < resultGeneralInformation.institutions.length;
+        index++
+      ) {
+        const institutions =
+          await this._resultByIntitutionsRepository.getResultByInstitutionExists(
+            resultGeneralInformation.result_id,
+            resultGeneralInformation.institutions[index].institutions_id,
+          );
+        if (!institutions) {
+          const institutionsNew: ResultsByInstitution =
+            new ResultsByInstitution();
           institutionsNew.created_by = user.id;
           institutionsNew.institution_roles_id = 1;
-          institutionsNew.institutions_id = resultGeneralInformation.institutions[index].institutions_id;
+          institutionsNew.institutions_id =
+            resultGeneralInformation.institutions[index].institutions_id;
           institutionsNew.last_updated_by = user.id;
           institutionsNew.result_id = resultGeneralInformation.result_id;
           institutionsNew.version_id = vrs.id;
-          institutionsNew.is_active = resultGeneralInformation.institutions[index].is_active;
+          institutionsNew.is_active =
+            resultGeneralInformation.institutions[index].is_active;
           saveInstitutions.push(institutionsNew);
-        }else{
-          institutions.is_active = resultGeneralInformation.institutions[index].is_active;  
+        } else {
+          institutions.is_active =
+            resultGeneralInformation.institutions[index].is_active;
           saveInstitutions.push(institutions);
         }
-        
       }
-      const updateInstitutions = await this._resultByIntitutionsRepository.save(saveInstitutions);
+      const updateInstitutions = await this._resultByIntitutionsRepository.save(
+        saveInstitutions,
+      );
 
-      let saveInstitutionsType: ResultsByInstitutionType[] = [];
-      for (let index = 0; index < resultGeneralInformation.institutions_type.length; index++) {
-        const institutionsType = await this._resultByIntitutionsTypeRepository.getResultByInstitutionTypeExists(resultGeneralInformation.result_id, resultGeneralInformation.institutions_type[index].institution_types_id);
-        if(!institutionsType){
-          const institutionsTypeNew: ResultsByInstitutionType = new ResultsByInstitutionType();
+      const saveInstitutionsType: ResultsByInstitutionType[] = [];
+      for (
+        let index = 0;
+        index < resultGeneralInformation.institutions_type.length;
+        index++
+      ) {
+        const institutionsType =
+          await this._resultByIntitutionsTypeRepository.getResultByInstitutionTypeExists(
+            resultGeneralInformation.result_id,
+            resultGeneralInformation.institutions_type[index]
+              .institution_types_id,
+          );
+        if (!institutionsType) {
+          const institutionsTypeNew: ResultsByInstitutionType =
+            new ResultsByInstitutionType();
           institutionsTypeNew.created_by = user.id;
           institutionsTypeNew.institution_roles_id = 1;
-          institutionsTypeNew.institution_types_id = resultGeneralInformation.institutions_type[index].institution_types_id;
+          institutionsTypeNew.institution_types_id =
+            resultGeneralInformation.institutions_type[
+              index
+            ].institution_types_id;
           institutionsTypeNew.last_updated_by = user.id;
           institutionsTypeNew.results_id = resultGeneralInformation.result_id;
           institutionsTypeNew.version_id = vrs.id;
-          institutionsTypeNew.is_active = resultGeneralInformation.institutions_type[index].is_active;
+          institutionsTypeNew.is_active =
+            resultGeneralInformation.institutions_type[index].is_active;
           saveInstitutionsType.push(institutionsTypeNew);
-        }else{
-          institutionsType.is_active = resultGeneralInformation.institutions_type[index].is_active;  
+        } else {
+          institutionsType.is_active =
+            resultGeneralInformation.institutions_type[index].is_active;
           saveInstitutionsType.push(institutionsType);
         }
-        
       }
-      const updateInstitutionsType = await this._resultByIntitutionsTypeRepository.save(saveInstitutionsType);
+      const updateInstitutionsType =
+        await this._resultByIntitutionsTypeRepository.save(
+          saveInstitutionsType,
+        );
       return {
         response: {
           updateResult,
           updateInstitutions,
-          updateInstitutionsType
-
+          updateInstitutionsType,
         },
         message: `Updated the general information of result ${resultGeneralInformation.result_id}`,
         status: HttpStatus.OK,

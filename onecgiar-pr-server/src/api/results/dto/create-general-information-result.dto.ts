@@ -9,18 +9,17 @@ export class CreateGeneralInformationResultDto {
   public climate_change_tag_id: number;
   public institutions: institutionsInterface[];
   public institutions_type: institutionsTypeInterface[];
-  public krs_url!: string
+  public krs_url!: string;
   public is_krs!: boolean;
-
 }
 
-interface institutionsInterface{
+interface institutionsInterface {
   id: number;
   institutions_id: number;
   is_active: boolean;
 }
 
-interface institutionsTypeInterface{
+interface institutionsTypeInterface {
   id: number;
   institution_types_id: number;
   is_active: boolean;

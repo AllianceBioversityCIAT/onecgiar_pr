@@ -24,18 +24,16 @@ export class ClarisaInstitutionsTypeRepository extends Repository<ClarisaInstitu
     }
   }
 
-  
   async getValidInstitutionType(id: institutionsTypeInterface[]) {
     let values = '';
     for (let index = 0; index < id.length; index++) {
-      if(!values){
-        values = `values row(${id[index].institution_types_id})`
-      }else{
-        values += `, row(${id[index].institution_types_id})`
+      if (!values) {
+        values = `values row(${id[index].institution_types_id})`;
+      } else {
+        values += `, row(${id[index].institution_types_id})`;
       }
-      
     }
-    const arrayId = id.map(i => i.institution_types_id);
+    const arrayId = id.map((i) => i.institution_types_id);
     const queryData = `
     select 
     	rl.column_0 as institution_id, 
@@ -46,7 +44,7 @@ export class ClarisaInstitutionsTypeRepository extends Repository<ClarisaInstitu
     				from clarisa_institution_types ci 
     				where ci.code in(${arrayId.toString()})) dt on dt.code = rl.column_0;
     `;
-    
+
     try {
       const InstitutionsType = await this.query(queryData);
       return InstitutionsType;
@@ -60,7 +58,7 @@ export class ClarisaInstitutionsTypeRepository extends Repository<ClarisaInstitu
   }
 }
 
-interface institutionsTypeInterface{
+interface institutionsTypeInterface {
   id: number;
   institution_types_id: number;
   is_active: boolean;

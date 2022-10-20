@@ -26,13 +26,13 @@ export class ResultsByInstitution {
   })
   result_id: number;
 
-  @ManyToOne(() => ClarisaInstitution, ci => ci.id, { nullable: true })
+  @ManyToOne(() => ClarisaInstitution, (ci) => ci.id, { nullable: true })
   @JoinColumn({
-    name: 'institutions_id'
+    name: 'institutions_id',
   })
   institutions_id: number;
 
-  @ManyToOne(() => InstitutionRole, i => i.id, { nullable: false })
+  @ManyToOne(() => InstitutionRole, (i) => i.id, { nullable: false })
   @JoinColumn({ name: 'institution_roles_id' })
   institution_roles_id: number;
 
