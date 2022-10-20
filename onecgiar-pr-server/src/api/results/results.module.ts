@@ -85,7 +85,7 @@ export class ResultsModule implements NestModule {
         method: RequestMethod.POST,
       },
       {
-        path: '/api/results/create/generla-information',
+        path: '/api/results/create/general-information',
         method: RequestMethod.POST,
       },
     );

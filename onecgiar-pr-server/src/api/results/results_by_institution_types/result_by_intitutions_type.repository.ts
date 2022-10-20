@@ -17,14 +17,8 @@ export class ResultByIntitutionsTypeRepository extends Repository<ResultsByInsti
     select 
     	rbit.id,
     	rbit .institution_types_id,
-    	rbit.is_active,
-    	rbit.creation_date,
-    	rbit.last_updated_date,
-    	rbit.results_id,
     	rbit.institution_roles_id,
-    	rbit.version_id,
-    	rbit.created_by,
-    	rbit.last_updated_by 
+    	rbit.version_id
     from results_by_institution_type rbit
     where rbit.results_id  = ?
     	and rbit.is_active > 0;

@@ -89,7 +89,7 @@ export class ResultsController {
     throw new HttpException({ message, response }, status);
   }
 
-  @Post('create/generla-information')
+  @Post('create/general-information')
   async createGeneralInformation(
     @Body() CreateGeneralInformationResultDto: CreateGeneralInformationResultDto,
     @Headers() auth: HeadersDto,

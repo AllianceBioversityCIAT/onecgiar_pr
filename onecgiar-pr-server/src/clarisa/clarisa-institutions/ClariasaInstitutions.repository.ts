@@ -81,7 +81,6 @@ export class ClarisaInstitutionsRepository extends Repository<ClarisaInstitution
 }
 
 interface institutionsInterface{
-  id: number;
   institutions_id: number;
   is_active: boolean;
 }

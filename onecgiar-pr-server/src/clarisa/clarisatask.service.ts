@@ -441,7 +441,6 @@ export class ClarisaTaskService {
         const data = await this._httpService.get(`${env.L_CLA_URL}institutions`, {auth: {username:'pandr.data', password: 'PandR.data2022' }});
         await data.subscribe(async el => {
           const {data} = el;
-          console.log(data);
           data.map(dat => {
             dat['institution_type_code'] = dat.institutionType.code ?? null;
             dat['id'] = dat.code;
