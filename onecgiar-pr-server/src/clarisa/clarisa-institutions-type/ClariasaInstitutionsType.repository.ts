@@ -58,8 +58,7 @@ export class ClarisaInstitutionsTypeRepository extends Repository<ClarisaInstitu
   }
 }
 
-interface institutionsTypeInterface {
-  id: number;
+interface institutionsTypeInterface{
   institution_types_id: number;
   is_active: boolean;
 }

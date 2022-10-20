@@ -13,14 +13,12 @@ export class CreateGeneralInformationResultDto {
   public is_krs!: boolean;
 }
 
-interface institutionsInterface {
-  id: number;
+interface institutionsInterface{
   institutions_id: number;
   is_active: boolean;
 }
 
-interface institutionsTypeInterface {
-  id: number;
+interface institutionsTypeInterface{
   institution_types_id: number;
   is_active: boolean;
 }

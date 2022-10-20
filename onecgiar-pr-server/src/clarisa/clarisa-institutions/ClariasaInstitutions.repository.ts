@@ -80,8 +80,7 @@ export class ClarisaInstitutionsRepository extends Repository<ClarisaInstitution
   }
 }
 
-interface institutionsInterface {
-  id: number;
+interface institutionsInterface{
   institutions_id: number;
   is_active: boolean;
 }

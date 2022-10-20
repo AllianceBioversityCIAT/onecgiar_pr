@@ -16,15 +16,9 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     const queryData = `
     select 
     	rbi.id,
-    	rbi.result_id,
     	rbi.institutions_id,
     	rbi.institution_roles_id,
-    	rbi.is_active,
-    	rbi.created_date,
-    	rbi.version_id,
-    	rbi.created_by,
-    	rbi.last_updated_date,
-    	rbi.last_updated_by 
+    	rbi.version_id
     from results_by_institution rbi 
     where rbi.result_id = ?
     	and rbi.is_active > 0;

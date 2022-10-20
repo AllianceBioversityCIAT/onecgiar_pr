@@ -432,14 +432,10 @@ export class ClarisaTaskService {
           `[${position}]: All CLARISA Institutions control list data has been deleted`,
         );
       } else {
-        const data = await this._httpService.get(
-          `${env.L_CLA_URL}institutions`,
-          { auth: { username: 'pandr.data', password: 'PandR.data2022' } },
-        );
-        await data.subscribe(async (el) => {
-          const { data } = el;
-          console.log(data);
-          data.map((dat) => {
+        const data = await this._httpService.get(`${env.L_CLA_URL}institutions`, {auth: {username:'pandr.data', password: 'PandR.data2022' }});
+        await data.subscribe(async el => {
+          const {data} = el;
+          data.map(dat => {
             dat['institution_type_code'] = dat.institutionType.code ?? null;
             dat['id'] = dat.code;
             dat['website_link'] = dat.websiteLink;
