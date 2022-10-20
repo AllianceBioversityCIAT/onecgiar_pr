@@ -29,13 +29,13 @@ export class ClarisaInstitutionsTypeRepository extends Repository<ClarisaInstitu
     let values = '';
     for (let index = 0; index < id.length; index++) {
       if(!values){
-        values = `values row(${id[index].code})`
+        values = `values row(${id[index].institution_types_id})`
       }else{
-        values += `, row(${id[index].code})`
+        values += `, row(${id[index].institution_types_id})`
       }
       
     }
-    const arrayId = id.map(i => i.code);
+    const arrayId = id.map(i => i.institution_types_id);
     const queryData = `
     select 
     	rl.column_0 as institution_id, 
@@ -61,6 +61,7 @@ export class ClarisaInstitutionsTypeRepository extends Repository<ClarisaInstitu
 }
 
 interface institutionsTypeInterface{
-  code: number;
+  id: number;
+  institution_types_id: number;
   is_active: boolean;
 }

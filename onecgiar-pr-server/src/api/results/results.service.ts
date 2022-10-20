@@ -35,6 +35,8 @@ import { ClarisaInstitutionsRepository } from '../../clarisa/clarisa-institution
 import { ClarisaInstitutionsTypeRepository } from '../../clarisa/clarisa-institutions-type/ClariasaInstitutionsType.repository';
 import { GenderTagRepository } from './gender_tag_levels/genderTag.repository';
 import { In } from 'typeorm';
+import { ResultsByInstitution } from './results_by_institutions/entities/results_by_institution.entity';
+import { ResultsByInstitutionType } from './results_by_institution_types/entities/results_by_institution_type.entity';
 
 @Injectable()
 export class ResultsService {
@@ -300,8 +302,9 @@ export class ResultsService {
       if (version.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: version });
       }
-      /*
-      this._resultRepository.save({
+      const vrs: Version = <Version>version.response;
+
+      const updateResult = await this._resultRepository.save({
         id: result.id,
         title: resultGeneralInformation.result_name,
         result_type_id: resultByLevel.result_type_id,
@@ -312,18 +315,59 @@ export class ResultsService {
         krs_url: resultGeneralInformation.krs_url,
         is_krs: resultGeneralInformation.is_krs,
         last_updated_by: user.id
-      });*/
-      const resultInst = resultGeneralInformation.institutions.map(ri => ri.id);
-      const institutions = await this._clarisaInstitutionsRepository.find({where:{id: In(resultInst)}});
-      console.log(institutions)
-      
-      const resultInstType = resultGeneralInformation.institutions_type.map(ri => ri.code);
-      const institutionsType = await this._clarisaInstitutionsTypeRepository.find({where:{code: In(resultInstType)}});
-      console.log(institutionsType)
+      });
 
-      //await this._clarisaInstitutionsRepository.save();
+      let saveInstitutions: ResultsByInstitution[] = [];
+      for (let index = 0; index < resultGeneralInformation.institutions.length; index++) {
+        const institutions = await this._resultByIntitutionsRepository.getResultByInstitutionExists(resultGeneralInformation.result_id, resultGeneralInformation.institutions[index].institutions_id);
+        if(!institutions){
+          const institutionsNew: ResultsByInstitution = new ResultsByInstitution();
+          institutionsNew.created_by = user.id;
+          institutionsNew.institution_roles_id = 1;
+          institutionsNew.institutions_id = resultGeneralInformation.institutions[index].institutions_id;
+          institutionsNew.last_updated_by = user.id;
+          institutionsNew.result_id = resultGeneralInformation.result_id;
+          institutionsNew.version_id = vrs.id;
+          institutionsNew.is_active = resultGeneralInformation.institutions[index].is_active;
+          saveInstitutions.push(institutionsNew);
+        }else{
+          institutions.is_active = resultGeneralInformation.institutions[index].is_active;  
+          saveInstitutions.push(institutions);
+        }
+        
+      }
+      const updateInstitutions = await this._resultByIntitutionsRepository.save(saveInstitutions);
 
-      return result;
+      let saveInstitutionsType: ResultsByInstitutionType[] = [];
+      for (let index = 0; index < resultGeneralInformation.institutions_type.length; index++) {
+        const institutionsType = await this._resultByIntitutionsTypeRepository.getResultByInstitutionTypeExists(resultGeneralInformation.result_id, resultGeneralInformation.institutions_type[index].institution_types_id);
+        if(!institutionsType){
+          const institutionsTypeNew: ResultsByInstitutionType = new ResultsByInstitutionType();
+          institutionsTypeNew.created_by = user.id;
+          institutionsTypeNew.institution_roles_id = 1;
+          institutionsTypeNew.institution_types_id = resultGeneralInformation.institutions_type[index].institution_types_id;
+          institutionsTypeNew.last_updated_by = user.id;
+          institutionsTypeNew.results_id = resultGeneralInformation.result_id;
+          institutionsTypeNew.version_id = vrs.id;
+          institutionsTypeNew.is_active = resultGeneralInformation.institutions_type[index].is_active;
+          saveInstitutionsType.push(institutionsTypeNew);
+        }else{
+          institutionsType.is_active = resultGeneralInformation.institutions_type[index].is_active;  
+          saveInstitutionsType.push(institutionsType);
+        }
+        
+      }
+      const updateInstitutionsType = await this._resultByIntitutionsTypeRepository.save(saveInstitutionsType);
+      return {
+        response: {
+          updateResult,
+          updateInstitutions,
+          updateInstitutionsType
+
+        },
+        message: `Updated the general information of result ${resultGeneralInformation.result_id}`,
+        status: HttpStatus.OK,
+      };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }

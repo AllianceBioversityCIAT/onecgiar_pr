@@ -16,10 +16,12 @@ export class CreateGeneralInformationResultDto {
 
 interface institutionsInterface{
   id: number;
+  institutions_id: number;
   is_active: boolean;
 }
 
 interface institutionsTypeInterface{
-  code: number;
+  id: number;
+  institution_types_id: number;
   is_active: boolean;
 }

@@ -18,7 +18,7 @@ export class ResultsByInstitution {
   @PrimaryGeneratedColumn({
     type: 'bigint',
   })
-  id: number;
+  id!: number;
 
   @ManyToOne(() => Result, (r) => r.id, { nullable: false })
   @JoinColumn({
@@ -42,7 +42,7 @@ export class ResultsByInstitution {
     nullable: false,
     default: true,
   })
-  is_active: boolean;
+  is_active!: boolean;
 
   @ManyToOne(() => Version, (v) => v.id, { nullable: false })
   @JoinColumn({
@@ -61,7 +61,7 @@ export class ResultsByInstitution {
     type: 'timestamp',
     nullable: false,
   })
-  created_date: Date;
+  created_date!: Date;
 
   @ManyToOne(() => User, (u) => u.id, { nullable: true })
   @JoinColumn({

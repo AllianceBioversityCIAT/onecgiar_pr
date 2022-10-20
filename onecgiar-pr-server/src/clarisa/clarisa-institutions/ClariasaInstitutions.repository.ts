@@ -50,12 +50,12 @@ export class ClarisaInstitutionsRepository extends Repository<ClarisaInstitution
     let values = '';
     for (let index = 0; index < id.length; index++) {
       if(!values){
-        values = `values row(${id[index].id})`
+        values = `values row(${id[index].institutions_id})`
       }else{
-        values += `, row(${id[index].id})`
+        values += `, row(${id[index].institutions_id})`
       }
     }
-    const arrayId = id.map(i => i.id);
+    const arrayId = id.map(i => i.institutions_id);
     const queryData = `
     select 
     	rl.column_0 as institution_id, 
@@ -82,5 +82,6 @@ export class ClarisaInstitutionsRepository extends Repository<ClarisaInstitution
 
 interface institutionsInterface{
   id: number;
+  institutions_id: number;
   is_active: boolean;
 }
