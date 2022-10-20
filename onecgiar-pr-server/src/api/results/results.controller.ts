@@ -89,7 +89,7 @@ export class ResultsController {
     throw new HttpException({ message, response }, status);
   }
 
-  @Post('create/general-information')
+  @Patch('create/general-information')
   async createGeneralInformation(
     @Body() CreateGeneralInformationResultDto: CreateGeneralInformationResultDto,
     @Headers() auth: HeadersDto,
@@ -99,6 +99,13 @@ export class ResultsController {
     );
     const { message, response, status }
        = await this.resultsService.createResultGeneralInformation(CreateGeneralInformationResultDto, token);
+    throw new HttpException({ message, response }, status);
+  }
+
+  @Get('get/general-information/result/:id')
+  async getGeneralInformationByResult(@Param('id') id: number){
+    const { message, response, status } =
+      await this.resultsService.getGeneralInformation(id);
     throw new HttpException({ message, response }, status);
   }
 

@@ -86,7 +86,7 @@ export class ResultsModule implements NestModule {
       },
       {
         path: '/api/results/create/general-information',
-        method: RequestMethod.POST,
+        method: RequestMethod.PATCH,
       },
     );
   }

@@ -405,15 +405,6 @@ export class ResultsService {
     }
   }
 
-  async creatFullResult(resultGeneralInformation: CreateGeneralInformationResultDto) {
-    try {
-      const result = await this._resultRepository.getResultById(resultGeneralInformation.result_id);
-      return result;
-    } catch (error) {
-      return this._handlersError.returnErrorRes({ error });
-    }
-  }
-
   async findAll(): Promise<returnFormatUser> {
     try {
       const result: FullResultsRequestDto[] =
@@ -602,6 +593,43 @@ export class ResultsService {
 
       return {
         response: results,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async getGeneralInformation(resultId: number){
+    try {
+      const result = await this._resultRepository.getResultById(resultId);
+      if(!result?.id){
+        throw {
+          response: {},
+          message: 'Results Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+      const initiativa = await this._resultByInitiativesRepository.getResultByInitiativeOwnerFull(result.id);
+      const institutions = await this._resultByIntitutionsRepository.getResultByInstitutionFull(result.id);
+      const institutionsType = await this._resultByIntitutionsTypeRepository.getResultByInstitutionTypeFull(result.id);
+
+      return {
+        response: {
+          result_id: result.id,
+          initiative_id: initiativa.id,
+          result_type_id: result.result_type_id,
+          result_level_id: result.result_level_id,
+          result_name: result.title ?? null,
+          result_description: result.description ?? null,
+          gender_tag_id: result.gender_tag_level_id ?? null,
+          climate_change_tag_id: result.climate_change_tag_level_id ?? null,
+          institutions: institutions,
+          institutions_type:institutionsType,
+          krs_url: result.krs_url ?? null,
+          is_krs: result.is_krs? true: false
+        },
         message: 'Successful response',
         status: HttpStatus.OK,
       };
