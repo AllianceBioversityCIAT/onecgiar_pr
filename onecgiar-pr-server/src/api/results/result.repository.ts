@@ -4,6 +4,7 @@ import { Result } from './entities/result.entity';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { DepthSearch } from './dto/depth-search.dto';
 import { DepthSearchOne } from './dto/depth-search-one.dto';
+import { ResultLevelType } from './dto/result-level-type.dto';
 
 @Injectable()
 export class ResultRepository extends Repository<Result> {
@@ -257,6 +258,49 @@ WHERE
     try {
       const results: Result[] = await this.query(queryData, [id]);
       return results.length? results[0]: new Result();
+    } catch (error) {
+      throw {
+        message: `[${ResultRepository.name}] => completeAllData error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
+  async getResultAndLevelTypeById(id: number): Promise<ResultLevelType> {
+    const queryData = `
+    SELECT
+    r.id,
+    r.description,
+    r.is_active,
+    r.last_updated_date,
+    r.gender_tag_level_id,
+    r.version_id,
+    r.result_type_id,
+    rt.name as result_type_name,
+    r.status,
+    r.created_by,
+    r.last_updated_by,
+    r.reported_year_id,
+    r.created_date,
+    r.result_level_id,
+    rl.name as result_level_name,
+    r.title,
+    r.legacy_id 
+FROM
+    result r
+    inner join results_by_inititiative rbi ON rbi.result_id = r.id 
+    									and rbi.is_active > 0
+    inner join result_level rl on rl.id = r.result_level_id 
+    inner join result_type rt on rt.id = r.result_type_id 
+WHERE
+    r.is_active > 0
+    and r.id = ?;
+    `;
+
+    try {
+      const results: ResultLevelType[] = await this.query(queryData, [id]);
+      return results.length? results[0]: new ResultLevelType();
     } catch (error) {
       throw {
         message: `[${ResultRepository.name}] => completeAllData error: ${error}`,

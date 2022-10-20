@@ -24,6 +24,25 @@ export class ClarisaInstitutionsTypeRepository extends Repository<ClarisaInstitu
     }
   }
 
+  async getInstitutionsType() {
+    const queryData = `
+    select 
+    cit.code as institution_types_id,
+    cit.name
+    from clarisa_institution_types cit;
+    `;
+    try {
+      const institutionsType = await this.query(queryData);
+      return institutionsType;
+    } catch (error) {
+      throw {
+        message: `[${ClarisaInstitutionsTypeRepository.name}] => deleteAllData error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
   
   async getValidInstitutionType(id: institutionsTypeInterface[]) {
     let values = '';

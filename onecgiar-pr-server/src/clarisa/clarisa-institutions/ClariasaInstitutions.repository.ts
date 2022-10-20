@@ -27,7 +27,7 @@ export class ClarisaInstitutionsRepository extends Repository<ClarisaInstitution
   async getAllInstitutions() {
     const queryData = `
     select 
-    	ci.id,
+    	ci.id as institutions_id,
     	ci.name,
     	ci.acronym,
     	ci.website_link,

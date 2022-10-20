@@ -207,7 +207,7 @@ export class ResultsService {
 
   async getAllInstitutionsType(){
     try {
-      const entities = await this._clarisaInstitutionsTypeRepository.find();
+      const entities = await this._clarisaInstitutionsTypeRepository.getInstitutionsType();
       if(!entities.length){
         throw {
           response: {},
@@ -603,7 +603,7 @@ export class ResultsService {
 
   async getGeneralInformation(resultId: number){
     try {
-      const result = await this._resultRepository.getResultById(resultId);
+      const result = await this._resultRepository.getResultAndLevelTypeById(resultId);
       if(!result?.id){
         throw {
           response: {},
@@ -620,7 +620,9 @@ export class ResultsService {
           result_id: result.id,
           initiative_id: initiativa.id,
           result_type_id: result.result_type_id,
+          result_type_name: result.result_type_name,
           result_level_id: result.result_level_id,
+          result_level_name: result.result_level_name,
           result_name: result.title ?? null,
           result_description: result.description ?? null,
           gender_tag_id: result.gender_tag_level_id ?? null,
