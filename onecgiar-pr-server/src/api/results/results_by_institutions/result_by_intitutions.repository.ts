@@ -37,6 +37,58 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     }
   }
 
+  async getResultByInstitutionActorsFull(resultId: number) {
+    const queryData = `
+    select 
+    	rbi.id,
+    	rbi.institutions_id,
+    	rbi.institution_roles_id,
+    	rbi.version_id
+    from results_by_institution rbi 
+    where rbi.result_id = ?
+      and rbi.institution_roles_id = 1
+    	and rbi.is_active > 0;
+    `;
+    try {
+      const completeUser: ResultsByInstitution[] = await this.query(queryData, [
+        resultId,
+      ]);
+      return completeUser;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultByIntitutionsRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async getResultByInstitutionPartnersFull(resultId: number) {
+    const queryData = `
+    select 
+    	rbi.id,
+    	rbi.institutions_id,
+    	rbi.institution_roles_id,
+    	rbi.version_id
+    from results_by_institution rbi 
+    where rbi.result_id = ?
+      and rbi.institution_roles_id = 2
+    	and rbi.is_active > 0;
+    `;
+    try {
+      const completeUser: ResultsByInstitution[] = await this.query(queryData, [
+        resultId,
+      ]);
+      return completeUser;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultByIntitutionsRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async logicalElimination(resultId: number) {
     const queryData = `
     update results_by_institution 

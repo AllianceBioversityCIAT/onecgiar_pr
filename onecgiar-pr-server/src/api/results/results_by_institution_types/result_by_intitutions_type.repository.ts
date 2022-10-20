@@ -38,6 +38,60 @@ export class ResultByIntitutionsTypeRepository extends Repository<ResultsByInsti
     }
   }
 
+  async getResultByInstitutionTypeActorFull(resultId: number) {
+    const queryData = `
+    select 
+    	rbit.id,
+    	rbit .institution_types_id,
+    	rbit.institution_roles_id,
+    	rbit.version_id
+    from results_by_institution_type rbit
+    where rbit.results_id  = ?
+      and rbit.institution_roles_id = 1
+    	and rbit.is_active > 0;
+    `;
+    try {
+      const completeUser: ResultsByInstitutionType[] = await this.query(
+        queryData,
+        [resultId],
+      );
+      return completeUser;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultByIntitutionsTypeRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async getResultByInstitutionTypePartnersFull(resultId: number) {
+    const queryData = `
+    select 
+    	rbit.id,
+    	rbit .institution_types_id,
+    	rbit.institution_roles_id,
+    	rbit.version_id
+    from results_by_institution_type rbit
+    where rbit.results_id  = ?
+      and rbit.institution_roles_id = 2
+    	and rbit.is_active > 0;
+    `;
+    try {
+      const completeUser: ResultsByInstitutionType[] = await this.query(
+        queryData,
+        [resultId],
+      );
+      return completeUser;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultByIntitutionsTypeRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async getResultByInstitutionTypeExists(resultId: number, institutionsTypeId: number) {
     const queryData = `
     select 

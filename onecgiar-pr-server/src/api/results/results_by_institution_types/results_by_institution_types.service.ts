@@ -40,6 +40,46 @@ export class ResultsByInstitutionTypesService {
     }
   }
 
+  async getGetInstitutionsTypeActorsByResultId(id: number){
+    try {
+      const intitutionsType =  await this._resultByIntitutionsTypeRepository.getResultByInstitutionTypeActorFull(id);
+      if(!intitutionsType.length){
+        throw {
+          response: {},
+          message: 'Institutions Type Actors Not fount',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+      return {
+        response: intitutionsType,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async getGetInstitutionsTypePartnersByResultId(id: number){
+    try {
+      const intitutionsType =  await this._resultByIntitutionsTypeRepository.getResultByInstitutionTypePartnersFull(id);
+      if(!intitutionsType.length){
+        throw {
+          response: {},
+          message: 'Institutions Type Partners Not fount',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+      return {
+        response: intitutionsType,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
   findOne(id: number) {
     return `This action returns a #${id} resultsByInstitutionType`;
   }

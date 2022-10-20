@@ -3,6 +3,7 @@ import { CreateResultsByInstitutionDto } from './dto/create-results_by_instituti
 import { UpdateResultsByInstitutionDto } from './dto/update-results_by_institution.dto';
 import { ResultByIntitutionsRepository } from './result_by_intitutions.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
+import { ResultsByInstitution } from './entities/results_by_institution.entity';
 
 @Injectable()
 export class ResultsByInstitutionsService {
@@ -23,6 +24,46 @@ export class ResultsByInstitutionsService {
         throw {
           response: {},
           message: 'Institutions Not fount',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+      return {
+        response: intitutions,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async getGetInstitutionsActorsByResultId(id: number){
+    try {
+      const intitutions =  await this._resultByIntitutionsRepository.getResultByInstitutionActorsFull(id);
+      if(!intitutions.length){
+        throw {
+          response: {},
+          message: 'Institutions Actors Not fount',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+      return {
+        response: intitutions,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async getGetInstitutionsPartnersByResultId(id: number){
+    try {
+      const intitutions =  await this._resultByIntitutionsRepository.getResultByInstitutionPartnersFull(id);
+      if(!intitutions.length){
+        throw {
+          response: {},
+          message: 'Institutions Partners Not fount',
           status: HttpStatus.NOT_FOUND,
         };
       }

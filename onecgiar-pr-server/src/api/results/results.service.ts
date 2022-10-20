@@ -612,8 +612,8 @@ export class ResultsService {
         };
       }
       const initiativa = await this._resultByInitiativesRepository.getResultByInitiativeOwnerFull(result.id);
-      const institutions = await this._resultByIntitutionsRepository.getResultByInstitutionFull(result.id);
-      const institutionsType = await this._resultByIntitutionsTypeRepository.getResultByInstitutionTypeFull(result.id);
+      const institutions = await this._resultByIntitutionsRepository.getResultByInstitutionActorsFull(result.id);
+      const institutionsType = await this._resultByIntitutionsTypeRepository.getResultByInstitutionTypeActorFull(result.id);
 
       return {
         response: {

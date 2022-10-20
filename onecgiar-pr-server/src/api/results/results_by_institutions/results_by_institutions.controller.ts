@@ -32,6 +32,20 @@ export class ResultsByInstitutionsController {
     throw new HttpException({ message, response }, status);
   }
 
+  @Get('actors/result/:id')
+  async findAllByActors(@Param('id') id: number) {
+    const { message, response, status } =
+       await this.resultsByInstitutionsService.getGetInstitutionsActorsByResultId(id);
+    throw new HttpException({ message, response }, status);
+  }
+
+  @Get('partners/result/:id')
+  async findAllByPartners(@Param('id') id: number) {
+    const { message, response, status } =
+       await this.resultsByInstitutionsService.getGetInstitutionsPartnersByResultId(id);
+    throw new HttpException({ message, response }, status);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.resultsByInstitutionsService.findOne(+id);
