@@ -5,7 +5,7 @@
   <app-results-list-filters></app-results-list-filters>
 </div>
 <div class="table">
-  <p-table sortField="id" [sortOrder]="1"
+  <p-table sortField="id" [sortOrder]="2"
     [value]="(this.api.dataControlSE.resultsList | resultsListFilter:this.resultsListService.text_to_search:this.api.resultsListFilterSE.filterJoin)"
     responsiveLayout="scroll"
     [paginator]="(this.api.dataControlSE.resultsList | resultsListFilter:this.resultsListService.text_to_search:this.api.resultsListFilterSE.filterJoin)?.length"
@@ -21,7 +21,7 @@
     <ng-template pTemplate="body" let-result>
       <tr>
         <td *ngFor="let column of columnOrder; let i=index" class="{{column.attr}}">
-          <a class="{{column.class}}" [routerLink]="'/result/result-detail/' + result[column.attr]">
+          <a class="{{column.class}}" [routerLink]="'/result/result-detail/' + result?.id">
             <div class="point" [style.background]="'var(--pr-color-result-level-'+result?.result_level_id+')'"
               *ngIf="column.attr === 'result_type'"></div>
 
