@@ -25,9 +25,6 @@ export class RdGeneralInformationComponent {
       name: '2 - Principal'
     }
   ];
-
-  listvalue: any;
-  yesornot: boolean = null;
   constructor(private api: ApiService) {}
   ngOnInit(): void {
     this.api.alertsFs.show({
@@ -47,5 +44,8 @@ export class RdGeneralInformationComponent {
   }
   onSaveSection() {
     console.log(this.generalInfoBody);
+  }
+  onChangeKrs() {
+    if (this.generalInfoBody.is_krs === false) this.generalInfoBody.krs_url = null;
   }
 }
