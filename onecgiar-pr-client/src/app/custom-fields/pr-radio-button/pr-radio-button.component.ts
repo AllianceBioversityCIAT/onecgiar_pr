@@ -47,6 +47,6 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
   }
 
   joinName() {
-    return this.label.split(' ').join('');
+    return this.label?.split(' ')?.join('');
   }
 }

@@ -60,4 +60,35 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
       });
     }
   }
+
+  async getResultByInstitutionExists(resultId: number, institutionsId: number): Promise<ResultsByInstitution> {
+    const queryData = `
+    select 
+    	rbi.id,
+    	rbi.result_id,
+    	rbi.institutions_id,
+    	rbi.institution_roles_id,
+    	rbi.is_active,
+    	rbi.created_date,
+    	rbi.version_id,
+    	rbi.created_by,
+    	rbi.last_updated_date,
+    	rbi.last_updated_by 
+    from results_by_institution rbi 
+    where rbi.result_id = ?
+      and rbi.institutions_id = ?;
+    `;
+    try {
+      const completeUser: ResultsByInstitution[] = await this.query(queryData, [
+        resultId, institutionsId
+      ]);
+      return completeUser.length? completeUser[0]: undefined;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultByIntitutionsRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
 }

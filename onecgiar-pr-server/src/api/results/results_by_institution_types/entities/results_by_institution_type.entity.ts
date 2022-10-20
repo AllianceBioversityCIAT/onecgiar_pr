@@ -11,6 +11,7 @@ import {
 import { InstitutionRole } from '../../institution_roles/entities/institution_role.entity';
 import { Version } from '../../versions/entities/version.entity';
 import { Result } from '../../entities/result.entity';
+import { ClarisaInstitutionsType } from '../../../../clarisa/clarisa-institutions-type/entities/clarisa-institutions-type.entity';
 
 @Entity()
 export class ResultsByInstitutionType {
@@ -25,8 +26,11 @@ export class ResultsByInstitutionType {
   })
   results_id: number;
 
-  @Column({ name: 'institution_types_id', type: 'bigint', nullable: false })
-  institution_types_id: number;
+  @ManyToOne(() => ClarisaInstitutionsType, cit => cit.code, {nullable: true})
+  @JoinColumn({
+    name: 'institution_types_id'
+  })
+  institution_types_id!: number;
 
   @ManyToOne(() => InstitutionRole, (ir) => ir.id, { nullable: false })
   @JoinColumn({

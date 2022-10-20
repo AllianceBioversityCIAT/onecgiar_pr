@@ -47,6 +47,14 @@ export class ResultTypesService {
     id: number,
   ): Promise<returnFormatResultType | returnErrorDto> {
     try {
+      if(!id){
+        throw {
+          response: {},
+          message: 'Invalid Result Type Id',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
       const resultType: ResultType = await this._resultTypeRepository.findOne({
         where: { id: id },
       });

@@ -7,6 +7,21 @@ export class CreateGeneralInformationResultDto {
   public result_description: string;
   public gender_tag_id: number;
   public climate_change_tag_id: number;
-  public institutions: number[];
-  public institutions_type: number[];
+  public institutions: institutionsInterface[];
+  public institutions_type: institutionsTypeInterface[];
+  public krs_url!: string
+  public is_krs!: boolean;
+
+}
+
+interface institutionsInterface{
+  id: number;
+  institutions_id: number;
+  is_active: boolean;
+}
+
+interface institutionsTypeInterface{
+  id: number;
+  institution_types_id: number;
+  is_active: boolean;
 }
