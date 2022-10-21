@@ -137,4 +137,60 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
       });
     }
   }
+
+  async updateIstitutions(resultId: number, institutions: number[], isActor: boolean, userId: number) {
+    
+    const upDateInactive = `
+    update results_by_institution 
+    set is_active = 0, 
+    	last_updated_date = NOW(), 
+    	last_updated_by = ? 
+    where is_active > 0 
+    	and result_id = ?
+      and institution_roles_id = ?
+    	and institutions_id not in (${institutions.toString()});
+    `;
+
+    const upDateActive = `
+    update results_by_institution 
+    set is_active = 1, 
+    	last_updated_date = NOW(), 
+    	last_updated_by = ? 
+    where result_id = ?
+      and institution_roles_id = ?
+    	and institutions_id in (${institutions.toString()});
+    `;
+
+    const upDateAllInactive = `
+    update results_by_institution 
+    set is_active = 0, 
+    	last_updated_date = NOW(), 
+    	last_updated_by = ? 
+    where is_active > 0 
+      and result_id = ?
+      and institution_roles_id = ?;
+    `;
+
+    try {
+      if(institutions.length){
+        const upDateInactiveResult = await this.query(upDateInactive, [
+          userId, resultId, isActor?1:2
+        ]);
+  
+        return await this.query(upDateActive, [
+          userId, resultId, isActor?1:2
+        ]);
+      }else{
+        return await this.query(upDateAllInactive, [
+          userId, resultId, isActor?1:2
+        ]);
+      }
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultByIntitutionsRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
 }

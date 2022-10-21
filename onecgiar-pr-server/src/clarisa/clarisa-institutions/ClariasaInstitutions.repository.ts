@@ -46,16 +46,15 @@ export class ClarisaInstitutionsRepository extends Repository<ClarisaInstitution
     }
   }
 
-  async getValidInstitution(id: institutionsInterface[]) {
+  async getValidInstitution(id: number[]) {
     let values = '';
     for (let index = 0; index < id.length; index++) {
       if(!values){
-        values = `values row(${id[index].institutions_id})`
+        values = `values row(${id[index]})`
       }else{
-        values += `, row(${id[index].institutions_id})`
+        values += `, row(${id[index]})`
       }
     }
-    const arrayId = id.map(i => i.institutions_id);
     const queryData = `
     select 
     	rl.column_0 as institution_id, 
@@ -64,7 +63,7 @@ export class ClarisaInstitutionsRepository extends Repository<ClarisaInstitution
     	left join (select 
     				ci.id 
     				from clarisa_institutions ci 
-    				where ci.id in(${arrayId.toString()})) dt on dt.id = rl.column_0;
+    				where ci.id in(${id.toString()})) dt on dt.id = rl.column_0;
     `;
 
     try {
@@ -78,9 +77,4 @@ export class ClarisaInstitutionsRepository extends Repository<ClarisaInstitution
       };
     }
   }
-}
-
-interface institutionsInterface{
-  institutions_id: number;
-  is_active: boolean;
 }

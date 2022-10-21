@@ -272,26 +272,31 @@ export class ResultsService {
           status: HttpStatus.NOT_FOUND,
         };
       }
+      if(resultGeneralInformation.institutions.length){
+        const validInstitutions = await this._clarisaInstitutionsRepository.getValidInstitution(resultGeneralInformation.institutions);
+  
+        const isValidInst: any[] = validInstitutions.filter(el => el.valid === '0');
+        if(isValidInst.length){
+          throw {
+            response: isValidInst,
+            message: 'Institutions do not exist that are intended to assign',
+            status: HttpStatus.BAD_REQUEST,
+          };
+        }
 
-      const validInstitutions = await this._clarisaInstitutionsRepository.getValidInstitution(resultGeneralInformation.institutions);
-
-      const isValidInst: any[] = validInstitutions.filter(el => el.valid === '0');
-      if(isValidInst.length){
-        throw {
-          response: isValidInst,
-          message: 'Institutions do not exist that are intended to assign',
-          status: HttpStatus.BAD_REQUEST,
-        };
       }
 
-      const validInstitutionType = await this._clarisaInstitutionsTypeRepository.getValidInstitutionType(resultGeneralInformation.institutions_type);
-      const isValidInstType: any[] = validInstitutionType.filter(el => el.valid === '0');
-      if(isValidInstType.length){
-        throw {
-          response: isValidInstType,
-          message: 'Institutions type do not exist that are intended to assign',
-          status: HttpStatus.BAD_REQUEST,
-        };
+      if(resultGeneralInformation.institutions_type.length){
+        const validInstitutionType = await this._clarisaInstitutionsTypeRepository.getValidInstitutionType(resultGeneralInformation.institutions_type);
+        const isValidInstType: any[] = validInstitutionType.filter(el => el.valid === '0');
+        if(isValidInstType.length){
+          throw {
+            response: isValidInstType,
+            message: 'Institutions type do not exist that are intended to assign',
+            status: HttpStatus.BAD_REQUEST,
+          };
+        }
+        
       }
 
       if(!resultGeneralInformation.is_krs){
@@ -317,43 +322,39 @@ export class ResultsService {
         last_updated_by: user.id
       });
 
+      const institutions = await this._resultByIntitutionsRepository.updateIstitutions(resultGeneralInformation.result_id, resultGeneralInformation.institutions, true, user.id);
       let saveInstitutions: ResultsByInstitution[] = [];
       for (let index = 0; index < resultGeneralInformation.institutions.length; index++) {
-        const institutions = await this._resultByIntitutionsRepository.getResultByInstitutionExists(resultGeneralInformation.result_id, resultGeneralInformation.institutions[index].institutions_id);
-        if(!institutions){
+        const isInstitutions = await this._resultByIntitutionsRepository.getResultByInstitutionExists(resultGeneralInformation.result_id, resultGeneralInformation.institutions[index]);
+        if(!isInstitutions){
           const institutionsNew: ResultsByInstitution = new ResultsByInstitution();
           institutionsNew.created_by = user.id;
           institutionsNew.institution_roles_id = 1;
-          institutionsNew.institutions_id = resultGeneralInformation.institutions[index].institutions_id;
+          institutionsNew.institutions_id = resultGeneralInformation.institutions[index];
           institutionsNew.last_updated_by = user.id;
           institutionsNew.result_id = resultGeneralInformation.result_id;
           institutionsNew.version_id = vrs.id;
-          institutionsNew.is_active = resultGeneralInformation.institutions[index].is_active;
+          institutionsNew.is_active = true;
           saveInstitutions.push(institutionsNew);
-        }else{
-          institutions.is_active = resultGeneralInformation.institutions[index].is_active;  
-          saveInstitutions.push(institutions);
         }
         
       }
       const updateInstitutions = await this._resultByIntitutionsRepository.save(saveInstitutions);
 
+      const institutionsType = await this._resultByIntitutionsTypeRepository.updateIstitutionsType(resultGeneralInformation.result_id, resultGeneralInformation.institutions_type, true, user.id);
       let saveInstitutionsType: ResultsByInstitutionType[] = [];
       for (let index = 0; index < resultGeneralInformation.institutions_type.length; index++) {
-        const institutionsType = await this._resultByIntitutionsTypeRepository.getResultByInstitutionTypeExists(resultGeneralInformation.result_id, resultGeneralInformation.institutions_type[index].institution_types_id);
+        const institutionsType = await this._resultByIntitutionsTypeRepository.getResultByInstitutionTypeExists(resultGeneralInformation.result_id, resultGeneralInformation.institutions_type[index]);
         if(!institutionsType){
           const institutionsTypeNew: ResultsByInstitutionType = new ResultsByInstitutionType();
           institutionsTypeNew.created_by = user.id;
           institutionsTypeNew.institution_roles_id = 1;
-          institutionsTypeNew.institution_types_id = resultGeneralInformation.institutions_type[index].institution_types_id;
+          institutionsTypeNew.institution_types_id = resultGeneralInformation.institutions_type[index];
           institutionsTypeNew.last_updated_by = user.id;
           institutionsTypeNew.results_id = resultGeneralInformation.result_id;
           institutionsTypeNew.version_id = vrs.id;
-          institutionsTypeNew.is_active = resultGeneralInformation.institutions_type[index].is_active;
+          institutionsTypeNew.is_active = true;
           saveInstitutionsType.push(institutionsTypeNew);
-        }else{
-          institutionsType.is_active = resultGeneralInformation.institutions_type[index].is_active;  
-          saveInstitutionsType.push(institutionsType);
         }
         
       }
@@ -361,8 +362,14 @@ export class ResultsService {
       return {
         response: {
           updateResult,
-          updateInstitutions,
-          updateInstitutionsType
+          institutions:{
+            institutions,
+            updateInstitutions
+          },
+          institutionsType:{
+            institutionsType,
+            saveInstitutionsType
+          }
 
         },
         message: `Updated the general information of result ${resultGeneralInformation.result_id}`,
