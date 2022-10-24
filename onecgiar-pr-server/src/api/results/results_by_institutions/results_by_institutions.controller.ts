@@ -59,11 +59,11 @@ export class ResultsByInstitutionsController {
       if(!auth?.auth){
         throw new HttpException({ message: `Token not found`, response: {} }, HttpStatus.BAD_REQUEST);
       }
-    const token: TokenDto = <TokenDto>(
-      JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
-    );
-    const { message, response, status } = await this.resultsByInstitutionsService.savePartnersInstitutionsByResult(updatePartners, token);
-    throw new HttpException({ message, response }, status);
+      const token: TokenDto = <TokenDto>(
+        JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
+      );
+      const { message, response, status } = await this.resultsByInstitutionsService.savePartnersInstitutionsByResult(updatePartners, token);
+      throw new HttpException({ message, response }, status);
   }
 
   @Patch(':id')

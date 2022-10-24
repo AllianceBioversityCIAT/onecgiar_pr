@@ -10,7 +10,7 @@ import { ClarisaPolicyStageRepository } from './clarisa-policy-stages.repository
     ClarisaPolicyStageRepository
   ],
   exports: [
-    ClarisaPolicyStageRepository
+    ClarisaPolicyStageRepository 
   ]
 })
 export class ClarisaPolicyStagesModule {}

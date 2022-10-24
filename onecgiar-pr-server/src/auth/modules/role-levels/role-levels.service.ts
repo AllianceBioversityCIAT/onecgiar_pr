@@ -29,7 +29,7 @@ export class RoleLevelsService {
       if (!rolesLevels.length) {
         throw {
           response: {},
-          message: 'Role Levels Not fount',
+          message: 'Role Levels Not Found',
           status: HttpStatus.NOT_FOUND,
         };
       }
@@ -38,7 +38,7 @@ export class RoleLevelsService {
       if (!roles.length) {
         throw {
           response: {},
-          message: 'Role Not fount',
+          message: 'Role Not Found',
           status: HttpStatus.NOT_FOUND,
         };
       }

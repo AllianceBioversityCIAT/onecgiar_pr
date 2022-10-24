@@ -27,7 +27,7 @@ export class ResultsByInstitutionsService {
       if(!intitutions.length){
         throw {
           response: {},
-          message: 'Institutions Not fount',
+          message: 'Institutions Not Found',
           status: HttpStatus.NOT_FOUND,
         };
       }
@@ -47,7 +47,7 @@ export class ResultsByInstitutionsService {
       if(!intitutions.length){
         throw {
           response: {},
-          message: 'Institutions Actors Not fount',
+          message: 'Institutions Actors Not Found',
           status: HttpStatus.NOT_FOUND,
         };
       }
@@ -67,7 +67,7 @@ export class ResultsByInstitutionsService {
       if(!intitutions.length){
         throw {
           response: {},
-          message: 'Institutions Partners Not fount',
+          message: 'Institutions Partners Not Found',
           status: HttpStatus.NOT_FOUND,
         };
       }
@@ -87,7 +87,7 @@ export class ResultsByInstitutionsService {
       if(!rExists){
         throw {
           response: {},
-          message: 'Result Not fount',
+          message: 'Result Not Found',
           status: HttpStatus.NOT_FOUND,
         };
       }

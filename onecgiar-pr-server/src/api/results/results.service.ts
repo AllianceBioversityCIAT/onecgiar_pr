@@ -88,7 +88,7 @@ export class ResultsService {
       if (!initiative) {
         throw {
           response: {},
-          message: 'Initiative Not fount',
+          message: 'Initiative Not Found',
           status: HttpStatus.NOT_FOUND,
         };
       }
@@ -152,7 +152,7 @@ export class ResultsService {
       if (!year) {
         throw {
           response: {},
-          message: 'Active year Not fount',
+          message: 'Active year Not Found',
           status: HttpStatus.NOT_FOUND,
         };
       }
@@ -197,7 +197,7 @@ export class ResultsService {
       if(!entities.length){
         throw {
           response: {},
-          message: 'Institutions Not fount',
+          message: 'Institutions Not Found',
           status: HttpStatus.NOT_FOUND,
         };
       }
@@ -218,7 +218,7 @@ export class ResultsService {
       if(!entities.length){
         throw {
           response: {},
-          message: 'Institutions Type Not fount',
+          message: 'Institutions Type Not Found',
           status: HttpStatus.NOT_FOUND,
         };
       }
@@ -544,7 +544,7 @@ export class ResultsService {
       if (!initiative) {
         throw {
           response: {},
-          message: 'Initiative Not fount',
+          message: 'Initiative Not Found',
           status: HttpStatus.NOT_FOUND,
         };
       }
@@ -591,7 +591,7 @@ export class ResultsService {
       if (!year) {
         throw {
           response: {},
-          message: 'Active year Not fount',
+          message: 'Active year Not Found',
           status: HttpStatus.NOT_FOUND,
         };
       }

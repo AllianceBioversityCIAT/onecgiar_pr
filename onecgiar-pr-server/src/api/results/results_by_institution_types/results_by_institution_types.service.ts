@@ -26,7 +26,7 @@ export class ResultsByInstitutionTypesService {
       if(!intitutionsType.length){
         throw {
           response: {},
-          message: 'Institutions Type Not fount',
+          message: 'Institutions Type Not Found',
           status: HttpStatus.NOT_FOUND,
         };
       }
@@ -46,7 +46,7 @@ export class ResultsByInstitutionTypesService {
       if(!intitutionsType.length){
         throw {
           response: {},
-          message: 'Institutions Type Actors Not fount',
+          message: 'Institutions Type Actors Not Found',
           status: HttpStatus.NOT_FOUND,
         };
       }
@@ -66,7 +66,7 @@ export class ResultsByInstitutionTypesService {
       if(!intitutionsType.length){
         throw {
           response: {},
-          message: 'Institutions Type Partners Not fount',
+          message: 'Institutions Type Partners Not Found',
           status: HttpStatus.NOT_FOUND,
         };
       }
