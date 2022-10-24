@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { ResultItem } from '../interfaces/result';
+import { ResultItem } from '../interfaces/result.interface';
 
 @Injectable({
   providedIn: 'root'

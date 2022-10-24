@@ -3,7 +3,7 @@ import { internationalizationData } from '../../../../shared/data/internationali
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultLevelService } from './services/result-level.service';
 import { Router } from '@angular/router';
-import { ResultBody } from '../../../../shared/interfaces/result';
+import { ResultBody } from '../../../../shared/interfaces/result.interface';
 
 @Component({
   selector: 'app-result-creator',

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { ResultLevel, Resulttype, ResultBody } from '../../../../../shared/interfaces/result';
+import { ResultLevel, Resulttype, ResultBody } from '../../../../../shared/interfaces/result.interface';
 import { ApiService } from '../../../../../shared/services/api/api.service';
 import { ResultsListService } from '../../results-outlet/pages/results-list/services/results-list.service';
 import { ResultsListFilterService } from '../../results-outlet/pages/results-list/services/results-list-filter.service';
