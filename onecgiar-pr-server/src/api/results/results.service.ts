@@ -61,6 +61,9 @@ export class ResultsService {
     private readonly _genderTagRepository: GenderTagRepository
   ) {}
 
+  /**
+   * !endpoint createOwnerResult
+   */
   async createOwnerResult(
     createResultDto: CreateResultDto,
     user: TokenDto,
@@ -184,6 +187,10 @@ export class ResultsService {
     }
   }
 
+  /**
+   * ! endpoint getAllInstitutions
+   * @returns 
+   */
   async getAllInstitutions(){
     try {
       const entities = await this._clarisaInstitutionsRepository.getAllInstitutions();
@@ -232,7 +239,7 @@ export class ResultsService {
   ) {
     try {
       const result = await this._resultRepository.getResultById(resultGeneralInformation.result_id);
-      if(!result?.id){
+      if(!result){
         throw {
           response: {},
           message: 'The result does not exist',
@@ -418,6 +425,29 @@ export class ResultsService {
         await this._customResultRepository.AllResults();
 
       if (!result.length) {
+        throw {
+          response: {},
+          message: 'Results Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      return {
+        response: result,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async findResultById(id: number): Promise<returnFormatUser> {
+    try {
+      const result: Result =
+        await this._customResultRepository.getResultById(id);
+
+      if (!result) {
         throw {
           response: {},
           message: 'Results Not Found',

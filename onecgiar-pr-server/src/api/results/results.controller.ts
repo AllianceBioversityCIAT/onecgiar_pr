@@ -32,11 +32,18 @@ export class ResultsController {
     throw new HttpException({ message, response }, status);
   }
 
+  @Get('get/:id')
+  async findResultById(@Param('id') id: number) {
+    const { message, response, status } = await this.resultsService.findResultById(id);
+    throw new HttpException({ message, response }, status);
+
+  }
+
   @Get('get/name/:name')
   findAll(@Param('name') resultName: string) {
     return this.resultsService.findAll() + resultName;
   }
-
+  
   @Get('get/all')
   async findAllResults() {
     const { message, response, status } = await this.resultsService.findAll();
