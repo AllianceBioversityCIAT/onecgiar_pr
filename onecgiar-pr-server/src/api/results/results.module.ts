@@ -69,25 +69,9 @@ export class ResultsModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer.apply(JwtMiddleware).forRoutes(
       {
-        path: '/api/results/get/initiatives/:userId',
-        method: RequestMethod.GET,
-      },
-      {
-        path: '/api/results/get/name/:name',
-        method: RequestMethod.GET,
-      },
-      {
-        path: '/api/results/get/all',
-        method: RequestMethod.GET,
-      },
-      {
-        path: '/api/results/create/header',
-        method: RequestMethod.POST,
-      },
-      {
-        path: '/api/results/create/general-information',
-        method: RequestMethod.PATCH,
-      },
+        path: '/api/results/*',
+        method: RequestMethod.ALL,
+      }
     );
   }
 }
