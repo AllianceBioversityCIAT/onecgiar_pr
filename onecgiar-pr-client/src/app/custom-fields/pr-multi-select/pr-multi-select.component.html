@@ -1,7 +1,7 @@
 <app-pr-field-header [label]="this.label" [description]="this.description" [required]="this.required">
 </app-pr-field-header>
 <div class="p-fluid">
-    <p-multiSelect *ngIf="this.options.length" [options]="this.options" [virtualScroll]="true"
+    <p-multiSelect *ngIf="this.options.length" [options]="this.options" [virtualScroll]="true" [showToggleAll]="false"
         [virtualScrollItemSize]="30" [optionLabel]="this.optionLabel" [optionValue]="this.optionValue"
         [(ngModel)]="value" [placeholder]="placeholder">
     </p-multiSelect>
