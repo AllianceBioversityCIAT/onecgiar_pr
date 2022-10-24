@@ -9,7 +9,8 @@
     [value]="(this.api.dataControlSE.resultsList | resultsListFilter:this.resultsListService.text_to_search:this.api.resultsListFilterSE.filterJoin)"
     responsiveLayout="scroll"
     [paginator]="(this.api.dataControlSE.resultsList | resultsListFilter:this.resultsListService.text_to_search:this.api.resultsListFilterSE.filterJoin)?.length"
-    [rows]="10" styleClass="p-datatable-gridlines p-datatable-sm" selectionMode="single">
+    [rows]="10" styleClass="p-datatable-gridlines p-datatable-sm" selectionMode="single"
+    [rowsPerPageOptions]="[10,50,100]">
     <ng-template pTemplate="header">
       <tr>
         <th pSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder">
