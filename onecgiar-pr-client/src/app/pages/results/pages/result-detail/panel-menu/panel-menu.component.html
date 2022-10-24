@@ -1,12 +1,17 @@
 <div class="panel_menu shadow-1">
   <div>
     <div class="back_button">
-      <div routerLink="/result/results-list"><app-pr-button text="Back to results" icon="arrow_back" [reverse]="true" [showBackground]="false"></app-pr-button></div>
+      <div routerLink="/result/results-list">
+        <app-pr-button text="Back to results" icon="arrow_back" [reverse]="true" [showBackground]="false">
+        </app-pr-button>
+      </div>
     </div>
     <div class="segment">
       <div class="name">Sections</div>
       <div class="sections">
-        <a *ngFor="let navOption of navigationOptions" [routerLink]="'/result/result-detail/2/' + navOption.path" routerLinkActive="section_active">{{ navOption.prName }}</a>
+        <a *ngFor="let navOption of navigationOptions | panelMenu:this.ResultLevelSE.currentResultTypeId; let i=index"
+          [routerLink]="'/result/result-detail/2/' + navOption.path" routerLinkActive="section_active">{{i+1}}.
+          {{navOption.prName }}</a>
       </div>
     </div>
   </div>

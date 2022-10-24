@@ -30,12 +30,12 @@
     <div id="parterRequestAlert"></div>
     <div class="auto_fit_container">
         <app-pr-multi-select [options]="this.institutionsSE.institutionsList" optionLabel="name"
-            [(ngModel)]="this.generalInfoBody.institutions" placeholder="Select actors">
+            optionValue="institutions_id" [(ngModel)]="this.generalInfoBody.institutions" placeholder="Select actors">
         </app-pr-multi-select>
 
         <app-pr-multi-select [options]="this.institutionsSE.institutionsTypesList" optionLabel="name"
-            optionValue="institution_types_id" [(ngModel)]="this.generalInfoBody.institutions_type"
-            placeholder="Select actor type">
+            optionValue="institution_types_id" optionValue="institution_types_id"
+            [(ngModel)]="this.generalInfoBody.institutions_type" placeholder="Select actor type">
         </app-pr-multi-select>
     </div>
 

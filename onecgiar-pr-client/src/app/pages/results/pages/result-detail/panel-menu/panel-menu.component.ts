@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { PrRoute, resultDetailRouting } from '../../../../../shared/routing/routing-data';
+import { ResultLevelService } from '../../result-creator/services/result-level.service';
 
 @Component({
   selector: 'app-panel-menu',
@@ -9,5 +10,5 @@ import { PrRoute, resultDetailRouting } from '../../../../../shared/routing/rout
 export class PanelMenuComponent {
   navigationOptions: PrRoute[] = resultDetailRouting;
 
-  constructor() {}
+  constructor(public ResultLevelSE: ResultLevelService) {}
 }

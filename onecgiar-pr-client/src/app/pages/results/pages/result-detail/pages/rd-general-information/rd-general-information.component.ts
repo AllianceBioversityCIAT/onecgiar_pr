@@ -14,6 +14,32 @@ export class RdGeneralInformationComponent {
   generalInfoBody = new GeneralInfoBody();
   constructor(private api: ApiService, public scoreSE: ScoreService, public institutionsSE: InstitutionsService) {}
   ngOnInit(): void {
+    this.showAlerts();
+    this.getSectionInformation();
+  }
+  getSectionInformation() {
+    this.api.resultsSE.GET_generalInformationByResultId().subscribe(({ response }) => {
+      this.generalInfoBody = response;
+      console.log(this.generalInfoBody);
+    });
+  }
+  onSaveSection() {
+    console.log(this.generalInfoBody);
+    this.api.resultsSE.PATCH_generalInformation(this.generalInfoBody).subscribe(
+      resp => {
+        this.api.alertsFe.show({ id: 'sectionSaved', title: 'Section saved correctly', description: '', status: 'success', closeIn: 500 });
+        this.getSectionInformation();
+      },
+      err => {
+        this.getSectionInformation();
+      }
+    );
+  }
+  onChangeKrs() {
+    if (this.generalInfoBody.is_krs === false) this.generalInfoBody.krs_url = null;
+  }
+
+  showAlerts() {
     this.api.alertsFs.show({
       status: 'success',
       title: 'sd',
@@ -28,7 +54,6 @@ export class RdGeneralInformationComponent {
       querySelector: '#climate_change_tag',
       position: 'beforeend'
     });
-    console.log(`${environment.frontBaseUrl}result/result-detail/2/evidences`);
     this.api.alertsFs.show({
       status: 'success',
       title: 'sd',
@@ -36,21 +61,5 @@ export class RdGeneralInformationComponent {
       querySelector: '#parterRequestAlert',
       position: 'beforeend'
     });
-    this.getSectionInformation();
-  }
-  getSectionInformation() {
-    this.api.resultsSE.GET_generalInformationByResultId().subscribe(({ response }) => {
-      this.generalInfoBody = response;
-      console.log((response.institutions_type = [28, 17, 26, 27]));
-    });
-  }
-  onSaveSection() {
-    console.log(this.generalInfoBody);
-    this.api.resultsSE.PATCH_generalInformation(this.generalInfoBody).subscribe(resp => {
-      console.log(resp);
-    });
-  }
-  onChangeKrs() {
-    if (this.generalInfoBody.is_krs === false) this.generalInfoBody.krs_url = null;
   }
 }

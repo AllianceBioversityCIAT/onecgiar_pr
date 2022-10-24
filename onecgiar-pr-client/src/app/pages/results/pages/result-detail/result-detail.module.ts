@@ -5,9 +5,10 @@ import { ResultDetailRoutingModule } from './result-detail-routing.module';
 import { ResultDetailComponent } from './result-detail.component';
 import { PanelMenuComponent } from './panel-menu/panel-menu.component';
 import { UtilsComponentsModule } from '../../../../shared/components/utils-components/utils-components.module';
+import { PanelMenuPipe } from './panel-menu/pipes/panel-menu.pipe';
 
 @NgModule({
-  declarations: [ResultDetailComponent, PanelMenuComponent],
+  declarations: [ResultDetailComponent, PanelMenuComponent, PanelMenuPipe],
   imports: [CommonModule, ResultDetailRoutingModule, UtilsComponentsModule]
 })
 export class ResultDetailModule {}

@@ -16,12 +16,14 @@ import { MultiSelectModule } from 'primeng/multiselect';
 import { PrYesOrNotComponent } from './pr-yes-or-not/pr-yes-or-not.component';
 import { PrTextareaComponent } from './pr-textarea/pr-textarea.component';
 import { InputTextareaModule } from 'primeng/inputtextarea';
+import { PrCheckboxComponent } from './pr-checkbox/pr-checkbox.component';
+import { CheckboxModule } from 'primeng/checkbox';
 
-const fieldComponents = [PrInputComponent, PrSelectComponent, PrRadioButtonComponent, DetailSectionTitleComponent, PrMultiSelectComponent, PrFieldHeaderComponent, PrYesOrNotComponent, PrTextareaComponent];
+const fieldComponents = [PrInputComponent, PrSelectComponent, PrRadioButtonComponent, DetailSectionTitleComponent, PrMultiSelectComponent, PrFieldHeaderComponent, PrYesOrNotComponent, PrTextareaComponent, PrCheckboxComponent];
 
 @NgModule({
   declarations: [...fieldComponents, PrFieldValidationsComponent, PrWordCounterComponent],
   exports: [...fieldComponents, FormsModule],
-  imports: [CommonModule, FormsModule, InputTextModule, DropdownModule, RadioButtonModule, MultiSelectModule, InputTextareaModule]
+  imports: [CommonModule, FormsModule, InputTextModule, DropdownModule, RadioButtonModule, MultiSelectModule, InputTextareaModule, CheckboxModule]
 })
 export class CustomFieldsModule {}

@@ -51,4 +51,8 @@ export class ResultsApiService {
   PATCH_generalInformation(body: GeneralInfoBody) {
     return this.http.patch<any>(`${this.apiBaseUrl}create/general-information`, body);
   }
+
+  GET_resultById() {
+    return this.http.get<any>(`${this.apiBaseUrl}get/${this.currentResultId}`);
+  }
 }

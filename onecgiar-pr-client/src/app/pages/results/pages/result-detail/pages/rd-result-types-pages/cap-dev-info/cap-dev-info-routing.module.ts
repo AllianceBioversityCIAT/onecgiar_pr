@@ -1,11 +1,11 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { RdPolicyInfoComponent } from './rd-policy-info.component';
+import { CapDevInfoComponent } from './cap-dev-info.component';
 
-const routes: Routes = [{ path: '', component: RdPolicyInfoComponent }];
+const routes: Routes = [{ path: '', component: CapDevInfoComponent }];
 
 @NgModule({
   imports: [RouterModule.forChild(routes)],
   exports: [RouterModule]
 })
-export class RdPolicyInfoRoutingModule {}
+export class CapDevInfoRoutingModule {}
