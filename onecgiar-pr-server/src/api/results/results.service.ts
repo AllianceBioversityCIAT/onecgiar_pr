@@ -664,8 +664,8 @@ export class ResultsService {
           result_description: result.description ?? null,
           gender_tag_id: result.gender_tag_level_id ?? null,
           climate_change_tag_id: result.climate_change_tag_level_id ?? null,
-          institutions: institutions,
-          institutions_type:institutionsType,
+          institutions: institutions.map(el => el.institutions_id),
+          institutions_type:institutionsType.map(el => el.institution_types_id),
           krs_url: result.krs_url ?? null,
           is_krs: result.is_krs? true: false
         },
