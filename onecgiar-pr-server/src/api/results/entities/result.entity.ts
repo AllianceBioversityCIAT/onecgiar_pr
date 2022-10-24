@@ -132,7 +132,7 @@ export class Result {
     name: 'is_krs',
     type: 'boolean',
     nullable: true,
-    default: false,
+    default: null,
   })
   is_krs!: boolean;
 }

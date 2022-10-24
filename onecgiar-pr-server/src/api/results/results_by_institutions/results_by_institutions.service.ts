@@ -4,12 +4,16 @@ import { UpdateResultsByInstitutionDto } from './dto/update-results_by_instituti
 import { ResultByIntitutionsRepository } from './result_by_intitutions.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultsByInstitution } from './entities/results_by_institution.entity';
+import { SaveResultsByInstitutionDto } from './dto/save_results_by_institution.dto';
+import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
+import { ResultRepository } from '../result.repository';
 
 @Injectable()
 export class ResultsByInstitutionsService {
 
   constructor(
     private readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
+    private readonly _resultRepository: ResultRepository,
     private readonly _handlersError: HandlersError
   ){}
 
@@ -70,6 +74,27 @@ export class ResultsByInstitutionsService {
       return {
         response: intitutions,
         message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async savePartnersInstitutionsByResult(data: SaveResultsByInstitutionDto, user: TokenDto){
+    try {
+      const rExists = await this._resultRepository.getResultById(data.result_id);
+      if(!rExists){
+        throw {
+          response: {},
+          message: 'Result Not fount',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+      const result = await this._resultByIntitutionsRepository.updateIstitutions(data.result_id, data.institutions_id, false, user.id);
+      return {
+        response: result,
+        message: 'Successfully update partners',
         status: HttpStatus.OK,
       };
     } catch (error) {
