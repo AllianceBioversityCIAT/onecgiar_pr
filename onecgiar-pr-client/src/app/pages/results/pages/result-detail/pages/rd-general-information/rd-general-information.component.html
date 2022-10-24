@@ -27,8 +27,8 @@
         [required]="this.generalInfoBody?.result_level_id !== 1"
         description="Individuals, organizations or networks operating within or beyond the system the Initiative or intervention aims to influence and whose actions can advance or impede the Initiative’s aims.">
     </app-pr-field-header>
-    <div id="parterRequestAlert"></div>
-    <div class="auto_fit_container">
+    <div id="parterRequestAlert" [hidden]="this.generalInfoBody?.result_level_id === 4"></div>
+    <div class="auto_fit_container" *ngIf="this.generalInfoBody?.result_level_id !== 4">
         <app-pr-multi-select [options]="this.institutionsSE.institutionsList" optionLabel="name"
             optionValue="institutions_id" [(ngModel)]="this.generalInfoBody.institutions" placeholder="Select actors">
         </app-pr-multi-select>
