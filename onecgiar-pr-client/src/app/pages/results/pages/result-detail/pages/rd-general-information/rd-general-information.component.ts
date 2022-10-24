@@ -3,7 +3,7 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { GeneralInfoBody } from './models/generalInfoBody';
 import { ScoreService } from '../../../../../../shared/services/global/score.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
-import { environment } from '../../../../../../../environments/environment.prod';
+import { environment } from '../../../../../../../environments/environment';
 
 @Component({
   selector: 'app-rd-general-information',
