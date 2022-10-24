@@ -1,7 +1,6 @@
 .word_counter {
-    position: absolute;
-    right: 0;
-    bottom: -30px;
+    display: flex;
+    justify-content: space-between;
     display: flex;
     align-items: center;
     gap: 5px;
@@ -11,5 +10,9 @@
     .limitBreaker {
         font-weight: 700;
         color: rgb(26, 26, 26);
+    }
+
+    .counter {
+        display: flex;
     }
 }
