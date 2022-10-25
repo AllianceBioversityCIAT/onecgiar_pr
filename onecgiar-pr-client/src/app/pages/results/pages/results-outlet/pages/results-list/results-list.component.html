@@ -44,11 +44,12 @@
     {{(this.api.dataControlSE.resultsList |
     resultsListFilter:this.resultsListService.text_to_search:this.api.resultsListFilterSE.filterJoin)?.length}} /
     {{this.api.dataControlSE.resultsList?.length}}</div>
+  <div class="noDataText"
+    *ngIf="!(this.api.dataControlSE.resultsList | resultsListFilter:this.resultsListService.text_to_search:this.api.resultsListFilterSE.filterJoin)?.length">
+    There are no results for the selected filters.
+  </div>
 </div>
 
-<div class="noDataText"
-  *ngIf="!(this.api.dataControlSE.resultsList | resultsListFilter:this.resultsListService.text_to_search:this.api.resultsListFilterSE.filterJoin)?.length">
-  There are no results for the selected filters.
-</div>
+
 
 <p-menu #menu [popup]="true" [model]="items"></p-menu>

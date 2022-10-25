@@ -12,7 +12,7 @@ of Simple CSS Waves-->
       <div *ngIf="successLogin" class="successText">Successful login</div>
       <div class="form" [ngClass]="{'successLogin': successLogin}">
         <!-- <div class="title">Login</div> -->
-        <div class="welcome">Welcome to the {{internationalizationData.global.platformName}}</div>
+        <div class="welcome">{{internationalizationData.global.platformName}} Tool</div>
         <app-pr-input [required]="false" placeholder="e.g. Example@cgiar.org" label="Email" type="email"
           [(ngModel)]="userLoginData.email">
         </app-pr-input>
@@ -23,7 +23,7 @@ of Simple CSS Waves-->
           <app-pr-button padding="medium" text="Login" icon="arrow_forward_ios"></app-pr-button>
         </div>
         <div class="question_container" (click)="this.display = true" id="question">
-          <a class="question">Do you have any question?</a>
+          <a class="question">Have a question?</a>
         </div>
 
       </div>

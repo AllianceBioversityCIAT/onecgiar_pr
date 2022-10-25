@@ -25,7 +25,7 @@
     </div>
     <app-pr-field-header *ngIf="this.generalInfoBody?.result_level_id !== 4" label="Actors"
         [required]="this.generalInfoBody?.result_level_id !== 1"
-        description="Individuals, organizations or networks operating within or beyond the system the Initiative or intervention aims to influence and whose actions can advance or impede the Initiative’s aims.">
+        description="An actor is an individual, organization or network operating within or beyond the system the Initiative or intervention aims to influence and whose actions can advance or impede the Initiative’s aims.">
     </app-pr-field-header>
     <div id="parterRequestAlert" [hidden]="this.generalInfoBody?.result_level_id === 4"></div>
     <div class="auto_fit_container" *ngIf="this.generalInfoBody?.result_level_id !== 4">
@@ -39,7 +39,7 @@
         </app-pr-multi-select>
     </div>
 
-    <app-pr-yes-or-not label="Is this result featured in a Key Result Story for the reported year?"
+    <app-pr-yes-or-not label="Is this result featured in a Key Result Story for the Reporting year?"
         [(ngModel)]="this.generalInfoBody.is_krs" (ngModelChange)="onChangeKrs()"></app-pr-yes-or-not>
 
     <app-pr-input *ngIf="this.generalInfoBody.is_krs" placeholder="Write some..." description="Link to Key Result Story"

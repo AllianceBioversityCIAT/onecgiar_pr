@@ -13,7 +13,7 @@ export class ResultsListFilterService {
         options: []
       },
       {
-        filter_title: 'Reported year',
+        filter_title: 'Reporting year',
         attr: 'reported_year',
         options: [
           { attr: '2022', selected: true, name: '2022' },
