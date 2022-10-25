@@ -27,8 +27,8 @@ export class ClarisaInstitutionsTypeRepository extends Repository<ClarisaInstitu
   async getInstitutionsType() {
     const queryData = `
     select 
-    cit.code as institution_types_id,
-    cit.name
+    cit.code as institutions_types_id,
+    cit.name as institutions_types_name
     from clarisa_institution_types cit;
     `;
     try {
