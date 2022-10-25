@@ -46,8 +46,9 @@ export class ResultCreatorComponent implements OnInit {
     this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody);
     this.api.resultsSE.POST_resultCreateHeader(this.resultLevelSE.resultBody).subscribe(
       resp => {
+        this.router.navigate([`/result/result-detail/${resp?.response?.id}/general-information`]);
         this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Great!', description: 'Result reported', status: 'success', closeIn: 500 });
-        this.router.navigate(['/']);
+        // this.router.navigate(['/']);
       },
       err => {
         this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
