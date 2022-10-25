@@ -322,8 +322,8 @@ export class ResultsService {
         result_type_id: resultByLevel.result_type_id,
         result_level_id: resultByLevel.result_level_id,
         description: resultGeneralInformation.result_description,
-        gender_tag_level_id: genderTag.id,
-        climate_change_tag_level_id: climateTag.id,
+        gender_tag_level_id: resultGeneralInformation.gender_tag_id?genderTag.id: null,
+        climate_change_tag_level_id: resultGeneralInformation.climate_change_tag_id?climateTag.id:null,
         krs_url: resultGeneralInformation.krs_url,
         is_krs: resultGeneralInformation.is_krs,
         last_updated_by: user.id
