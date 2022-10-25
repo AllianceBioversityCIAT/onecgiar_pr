@@ -2,3 +2,12 @@
     display: grid;
     grid-template-columns: 450px 1fr;
 }
+
+.general_header {
+    display: flex;
+    justify-content: space-between;
+
+    .reporting_year {
+        text-align: right;
+    }
+}

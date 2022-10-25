@@ -13,6 +13,7 @@ export class GeneralInfoBody {
   public institutions_type: institutionsTypeInterface[] = [];
   public krs_url: string = null;
   public is_krs: boolean = null;
+  public reporting_year: string = null;
 }
 
 interface institutionsInterface {
