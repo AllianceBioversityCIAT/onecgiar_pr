@@ -9,8 +9,9 @@
     <div class="segment">
       <div class="name">Sections</div>
       <div class="sections">
-        <a *ngFor="let navOption of navigationOptions | panelMenu:this.ResultLevelSE.currentResultTypeId; let i=index"
-          [routerLink]="'/result/result-detail/2/' + navOption.path" routerLinkActive="section_active">{{i+1}}.
+        <a *ngFor="let navOption of navigationOptions | panelMenu:this.resultLevelSE.currentResultTypeId; let i=index"
+          [routerLink]="'/result/result-detail/'+this.resultsListSE.currentResultId+'/' + navOption.path"
+          routerLinkActive="section_active">{{i+1}}.
           {{navOption.prName }}</a>
       </div>
     </div>
