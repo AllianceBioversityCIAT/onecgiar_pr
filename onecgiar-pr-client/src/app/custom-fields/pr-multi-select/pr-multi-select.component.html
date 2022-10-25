@@ -1,8 +1,37 @@
 <app-pr-field-header [label]="this.label" [description]="this.description" [required]="this.required">
 </app-pr-field-header>
+
+<div class="multi_select">
+    <button class="field">
+        <div class="text">{{placeholder}}</div>
+        <i class="pi pi-chevron-down"></i>
+        <div class="options">
+            <div class="option" *ngFor="let option of this.options">{{option[this.optionLabel]}}</div>
+        </div>
+    </button>
+</div>
+
+<br>
 <div class="p-fluid">
-    <p-multiSelect *ngIf="this.options.length" [options]="this.options" [virtualScroll]="true" [showToggleAll]="false"
+    <!-- <p-multiSelect *ngIf="this.options.length" [options]="this.options" [virtualScroll]="true" [showToggleAll]="false"
         [displaySelectedLabel]="false" [virtualScrollItemSize]="30" [optionLabel]="this.optionLabel"
         [optionValue]="this.optionValue" [(ngModel)]="value" [placeholder]="placeholder">
+    </p-multiSelect> -->
+    <p-multiSelect *ngIf="this.options.length" [options]="this.options" [(ngModel)]="value"
+        [displaySelectedLabel]="false" defaultLabel="Select a Country" [virtualScroll]="true"
+        [virtualScrollItemSize]="30" class="multiselect-custom" [showToggleAll]="false" [placeholder]="placeholder">
+        <!-- <ng-template let-value pTemplate="selectedItems">
+            <div class="country-item country-item-value" *ngFor="let option of [1,1,1]">
+                <div>asas</div>
+            </div>
+            <div>
+                Select Countries
+            </div>
+        </ng-template> -->
+        <ng-template let-country pTemplate="item">
+            <div class="country-item">
+                <div>{{country[this.optionLabel]}}</div>
+            </div>
+        </ng-template>
     </p-multiSelect>
 </div>
