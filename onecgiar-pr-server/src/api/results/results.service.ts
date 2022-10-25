@@ -332,12 +332,12 @@ export class ResultsService {
       const institutions = await this._resultByIntitutionsRepository.updateIstitutions(resultGeneralInformation.result_id, resultGeneralInformation.institutions, true, user.id);
       let saveInstitutions: ResultsByInstitution[] = [];
       for (let index = 0; index < resultGeneralInformation.institutions.length; index++) {
-        const isInstitutions = await this._resultByIntitutionsRepository.getResultByInstitutionExists(resultGeneralInformation.result_id, resultGeneralInformation.institutions[index], true);
+        const isInstitutions = await this._resultByIntitutionsRepository.getResultByInstitutionExists(resultGeneralInformation.result_id, resultGeneralInformation.institutions[index].institutions_id, true);
         if(!isInstitutions){
           const institutionsNew: ResultsByInstitution = new ResultsByInstitution();
           institutionsNew.created_by = user.id;
           institutionsNew.institution_roles_id = 1;
-          institutionsNew.institutions_id = resultGeneralInformation.institutions[index];
+          institutionsNew.institutions_id = resultGeneralInformation.institutions[index].institutions_id;
           institutionsNew.last_updated_by = user.id;
           institutionsNew.result_id = resultGeneralInformation.result_id;
           institutionsNew.version_id = vrs.id;
@@ -351,12 +351,12 @@ export class ResultsService {
       const institutionsType = await this._resultByIntitutionsTypeRepository.updateIstitutionsType(resultGeneralInformation.result_id, resultGeneralInformation.institutions_type, true, user.id);
       let saveInstitutionsType: ResultsByInstitutionType[] = [];
       for (let index = 0; index < resultGeneralInformation.institutions_type.length; index++) {
-        const institutionsType = await this._resultByIntitutionsTypeRepository.getResultByInstitutionTypeExists(resultGeneralInformation.result_id, resultGeneralInformation.institutions_type[index], true);
+        const institutionsType = await this._resultByIntitutionsTypeRepository.getResultByInstitutionTypeExists(resultGeneralInformation.result_id, resultGeneralInformation.institutions_type[index].institutions_type_id, true);
         if(!institutionsType){
           const institutionsTypeNew: ResultsByInstitutionType = new ResultsByInstitutionType();
           institutionsTypeNew.created_by = user.id;
           institutionsTypeNew.institution_roles_id = 1;
-          institutionsTypeNew.institution_types_id = resultGeneralInformation.institutions_type[index];
+          institutionsTypeNew.institution_types_id = resultGeneralInformation.institutions_type[index].institutions_type_id;
           institutionsTypeNew.last_updated_by = user.id;
           institutionsTypeNew.results_id = resultGeneralInformation.result_id;
           institutionsTypeNew.version_id = vrs.id;

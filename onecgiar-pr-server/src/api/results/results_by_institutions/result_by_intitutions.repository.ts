@@ -145,8 +145,8 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     }
   }
 
-  async updateIstitutions(resultId: number, institutions: number[], isActor: boolean, userId: number) {
-    
+  async updateIstitutions(resultId: number, institutionsArray: institutionsInterface[], isActor: boolean, userId: number) {
+    const institutions = institutionsArray.map(el => el.institutions_id);
     const upDateInactive = `
     update results_by_institution 
     set is_active = 0, 
@@ -200,4 +200,8 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
       });
     }
   }
+}
+
+interface institutionsInterface{
+  institutions_id: number;
 }
