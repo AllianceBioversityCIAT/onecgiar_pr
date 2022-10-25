@@ -34,7 +34,7 @@
       </app-similar-results>
     </div>
     <div class="save_button_container"
-      [ngClass]="{'globalDisabled': ((!this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody)) || (this.api.dataControlSE.resultsList | similarResults:this.resultLevelSE.resultBody.result_name).length) || this.api.wordCounterSE.counter(this.resultLevelSE.resultBody.result_name) > 30  }">
+      [ngClass]="{'globalDisabled': ((!this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody)) || exactTitleFound) || this.api.wordCounterSE.counter(this.resultLevelSE.resultBody.result_name) > 30  }">
       <div (click)="onSaveSection()">
         <app-pr-button padding="medium" text="Save and continue" icon="save"></app-pr-button>
       </div>

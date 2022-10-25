@@ -13,6 +13,7 @@ import { ResultBody } from '../../../../shared/interfaces/result.interface';
 export class ResultCreatorComponent implements OnInit {
   naratives = internationalizationData.reportNewResult;
   depthSearchList: any[] = [];
+  exactTitleFound = false;
   constructor(public api: ApiService, public resultLevelSE: ResultLevelService, private router: Router) {}
 
   ngOnInit(): void {
@@ -43,13 +44,16 @@ export class ResultCreatorComponent implements OnInit {
   }
 
   depthSearch(title: string) {
+    const cleanSpaces = text => text?.replaceAll(' ', '')?.toLowerCase();
     this.api.resultsSE.GET_depthSearch(title).subscribe(
       ({ response }) => {
         console.log(response);
         this.depthSearchList = response;
+        this.exactTitleFound = !!this.depthSearchList.find(result => cleanSpaces(result.title) === cleanSpaces(title));
       },
       err => {
         this.depthSearchList = [];
+        this.exactTitleFound = false;
       }
     );
   }
