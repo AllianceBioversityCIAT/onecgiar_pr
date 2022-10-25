@@ -28,11 +28,13 @@ export class ClarisaInstitutionsRepository extends Repository<ClarisaInstitution
     const queryData = `
     select 
     	ci.id as institutions_id,
-    	ci.name,
-    	ci.acronym,
-    	ci.website_link,
-    	ci.institution_type_code
-    from clarisa_institutions ci;
+    	ci.name institutions_name,
+    	ci.acronym as institutions_acronym,
+      ci.website_link,
+    	cit.code as institutions_type_id, 
+    	cit.name as institutions_type_name
+    from clarisa_institutions ci 
+    inner join clarisa_institution_types cit on cit.code = ci.institution_type_code;
     `;
     try {
       const deleteData: ClarisaInstitution[] = await this.query(queryData);
