@@ -42,9 +42,15 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     select 
     	rbi.id,
     	rbi.institutions_id,
+    	ci.name institutions_name,
+    	ci.acronym as institutions_acronym,
     	rbi.institution_roles_id,
-    	rbi.version_id
+    	rbi.version_id,
+    	cit.code as institutions_type_id, 
+    	cit.name as institutions_type_name
     from results_by_institution rbi 
+    inner join clarisa_institutions ci on ci.id  = rbi.institutions_id 
+    inner join clarisa_institution_types cit on cit.code = ci.institution_type_code 
     where rbi.result_id = ?
       and rbi.institution_roles_id = 1
     	and rbi.is_active > 0;

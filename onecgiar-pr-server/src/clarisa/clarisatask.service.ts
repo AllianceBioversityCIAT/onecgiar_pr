@@ -433,7 +433,7 @@ export class ClarisaTaskService {
           await this._clarisaInstitutionsTypeRepository.save(
             data,
           );
-        });
+        }).closed;
         this._logger.verbose(
           `[${position}]: All CLARISA Institutions type control list data has been created`,
         );
@@ -460,18 +460,20 @@ export class ClarisaTaskService {
           `[${position}]: All CLARISA Institutions control list data has been deleted`,
         );
       } else {
-        const { data } = await axios.get(
-          `${this.clarisaHost}institutions`,
-          this.configAuth,
-        );
-        data.map(dat => {
-          dat['institution_type_code'] = dat.institutionType.code ?? null;
-          dat['id'] = dat.code;
-          dat['website_link'] = dat.websiteLink;
-        })
-        await this._clarisaInstitutionsRepository.save(
-          data,
-        );
+        const data = await this._httpService.get(`${this.clarisaHost}institutions`, {auth: {username:env.L_CLA_USER, password: env.L_CLA_PASSWORD }});
+        await data.subscribe(async el => {
+          const {data} = el;
+
+          data.map(dat => {
+            dat['institution_type_code'] = dat.institutionType.code ?? null;
+            dat['id'] = dat.code;
+            dat['website_link'] = dat.websiteLink;
+          })
+          
+          await this._clarisaInstitutionsRepository.save(
+            data,
+          );
+        });
         this._logger.verbose(
           `[${position}]: All CLARISA Institutions control list data has been created`,
         );
