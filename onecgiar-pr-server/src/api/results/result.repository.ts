@@ -292,7 +292,9 @@ WHERE
     rl.name as result_level_name,
     r.title,
     r.legacy_id,
-    r.climate_change_tag_level_id
+    r.climate_change_tag_level_id,
+    r.is_krs,
+    r.krs_url
 FROM
     result r
     inner join results_by_inititiative rbi ON rbi.result_id = r.id 
