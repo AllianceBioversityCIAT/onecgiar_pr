@@ -42,10 +42,12 @@ export class ResultByIntitutionsTypeRepository extends Repository<ResultsByInsti
     const queryData = `
     select 
     	rbit.id,
-    	rbit .institution_types_id,
-    	rbit.institution_roles_id,
-    	rbit.version_id
+    	rbit.institution_types_id as institutions_types_id,
+    	rbit.institution_roles_id as institutions_roles_id,
+    	rbit.version_id,
+    	cit.name as institutions_type_name
     from results_by_institution_type rbit
+    inner join clarisa_institution_types cit ON cit.code = rbit.institution_types_id 
     where rbit.results_id  = ?
       and rbit.institution_roles_id = 1
     	and rbit.is_active > 0;
