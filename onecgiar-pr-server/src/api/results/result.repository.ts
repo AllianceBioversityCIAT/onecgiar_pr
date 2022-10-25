@@ -147,7 +147,9 @@ WHERE
       lr.description,
       lr.crp,
       lr.\`year\`,
-      1 as legacy
+      1 as legacy,
+      null as result_level_id,
+      null as result_type_name
     from legacy_result lr
     where lr.title like ?
       and lr.is_migrated = 0)
@@ -158,13 +160,16 @@ WHERE
       r.description,
       ci.official_code as crp,
       r.reported_year_id as \`year\`,
-      0 as legacy
+      0 as legacy,
+      r.result_level_id,
+      rt.name as result_type_name
     from \`result\` r 
       inner join results_by_inititiative rbi on rbi.result_id = r.id
                           and rbi.initiative_role_id = 1
                           and rbi.is_active > 0
       inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id
                           and ci.active > 0
+      inner join result_type rt on rt.id = r.result_type_id 
     where r.is_active > 0
       and r.title like ?)
     `;
