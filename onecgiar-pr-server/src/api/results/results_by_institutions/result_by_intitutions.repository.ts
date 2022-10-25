@@ -107,7 +107,7 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     }
   }
 
-  async getResultByInstitutionExists(resultId: number, institutionsId: number): Promise<ResultsByInstitution> {
+  async getResultByInstitutionExists(resultId: number, institutionsId: number, isActor: boolean): Promise<ResultsByInstitution> {
     const queryData = `
     select 
     	rbi.id,
@@ -122,11 +122,12 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     	rbi.last_updated_by 
     from results_by_institution rbi 
     where rbi.result_id = ?
+      and institution_roles_id = ?
       and rbi.institutions_id = ?;
     `;
     try {
       const completeUser: ResultsByInstitution[] = await this.query(queryData, [
-        resultId, institutionsId
+        resultId, isActor?1:2, institutionsId
       ]);
       return completeUser.length? completeUser[0]: undefined;
     } catch (error) {

@@ -332,7 +332,7 @@ export class ResultsService {
       const institutions = await this._resultByIntitutionsRepository.updateIstitutions(resultGeneralInformation.result_id, resultGeneralInformation.institutions, true, user.id);
       let saveInstitutions: ResultsByInstitution[] = [];
       for (let index = 0; index < resultGeneralInformation.institutions.length; index++) {
-        const isInstitutions = await this._resultByIntitutionsRepository.getResultByInstitutionExists(resultGeneralInformation.result_id, resultGeneralInformation.institutions[index]);
+        const isInstitutions = await this._resultByIntitutionsRepository.getResultByInstitutionExists(resultGeneralInformation.result_id, resultGeneralInformation.institutions[index], true);
         if(!isInstitutions){
           const institutionsNew: ResultsByInstitution = new ResultsByInstitution();
           institutionsNew.created_by = user.id;
@@ -351,7 +351,7 @@ export class ResultsService {
       const institutionsType = await this._resultByIntitutionsTypeRepository.updateIstitutionsType(resultGeneralInformation.result_id, resultGeneralInformation.institutions_type, true, user.id);
       let saveInstitutionsType: ResultsByInstitutionType[] = [];
       for (let index = 0; index < resultGeneralInformation.institutions_type.length; index++) {
-        const institutionsType = await this._resultByIntitutionsTypeRepository.getResultByInstitutionTypeExists(resultGeneralInformation.result_id, resultGeneralInformation.institutions_type[index]);
+        const institutionsType = await this._resultByIntitutionsTypeRepository.getResultByInstitutionTypeExists(resultGeneralInformation.result_id, resultGeneralInformation.institutions_type[index], true);
         if(!institutionsType){
           const institutionsTypeNew: ResultsByInstitutionType = new ResultsByInstitutionType();
           institutionsTypeNew.created_by = user.id;

@@ -92,7 +92,7 @@ export class ResultByIntitutionsTypeRepository extends Repository<ResultsByInsti
     }
   }
 
-  async getResultByInstitutionTypeExists(resultId: number, institutionsTypeId: number) {
+  async getResultByInstitutionTypeExists(resultId: number, institutionsTypeId: number, isActor: boolean) {
     const queryData = `
     select 
     	rbit.id,
@@ -107,12 +107,13 @@ export class ResultByIntitutionsTypeRepository extends Repository<ResultsByInsti
     	rbit.last_updated_by 
     from results_by_institution_type rbit
     where rbit.results_id  = ?
-      and rbit.institution_types_id = ?;;
+      and institution_roles_id = ?
+      and rbit.institution_types_id = ?;
     `;
     try {
       const completeUser: ResultsByInstitutionType[] = await this.query(
         queryData,
-        [resultId, institutionsTypeId],
+        [resultId, isActor?1:2, institutionsTypeId],
       );
       return completeUser?.length?completeUser[0]:undefined;
     } catch (error) {

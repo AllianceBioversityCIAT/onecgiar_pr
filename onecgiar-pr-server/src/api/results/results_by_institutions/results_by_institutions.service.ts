@@ -7,6 +7,8 @@ import { ResultsByInstitution } from './entities/results_by_institution.entity';
 import { SaveResultsByInstitutionDto } from './dto/save_results_by_institution.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResultRepository } from '../result.repository';
+import { Version } from '../versions/entities/version.entity';
+import { VersionsService } from '../versions/versions.service';
 
 @Injectable()
 export class ResultsByInstitutionsService {
@@ -14,6 +16,7 @@ export class ResultsByInstitutionsService {
   constructor(
     private readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
     private readonly _resultRepository: ResultRepository,
+    private readonly _versionsService: VersionsService,
     private readonly _handlersError: HandlersError
   ){}
 
@@ -91,9 +94,36 @@ export class ResultsByInstitutionsService {
           status: HttpStatus.NOT_FOUND,
         };
       }
+
+      const version = await this._versionsService.findBaseVersion();
+      if (version.status >= 300) {
+        throw this._handlersError.returnErrorRes({ error: version });
+      }
+      const vrs: Version = <Version>version.response;
+
       const result = await this._resultByIntitutionsRepository.updateIstitutions(data.result_id, data.institutions_id, false, user.id);
+      let saveInstitutions: ResultsByInstitution[] = [];
+      for (let index = 0; index < data.institutions_id.length; index++) {
+        const isInstitutions = await this._resultByIntitutionsRepository.getResultByInstitutionExists(data.result_id, data.institutions_id[index], false);
+        if(!isInstitutions){
+          const institutionsNew: ResultsByInstitution = new ResultsByInstitution();
+          institutionsNew.created_by = user.id;
+          institutionsNew.institution_roles_id = 2;
+          institutionsNew.institutions_id = data.institutions_id[index];
+          institutionsNew.last_updated_by = user.id;
+          institutionsNew.result_id = data.result_id;
+          institutionsNew.version_id = vrs.id;
+          institutionsNew.is_active = true;
+          saveInstitutions.push(institutionsNew);
+        }
+        
+      }
+      const updateInstitutions = await this._resultByIntitutionsRepository.save(saveInstitutions);
       return {
-        response: result,
+        response: {
+          result,
+          updateInstitutions
+        },
         message: 'Successfully update partners',
         status: HttpStatus.OK,
       };
