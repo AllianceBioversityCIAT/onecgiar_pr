@@ -19,6 +19,7 @@
 
         <div class="institutionsTypes">
             <app-pr-field-header label="Institution types" [required]="false"></app-pr-field-header>
+            <div *ngFor="let item of this.partnersBody.institutions|instToInstTypes">item</div>
         </div>
 
     </div>
