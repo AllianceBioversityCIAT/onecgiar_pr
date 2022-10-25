@@ -48,11 +48,16 @@ export class ResultsApiService {
   GET_generalInformationByResultId() {
     return this.http.get<any>(`${this.apiBaseUrl}get/general-information/result/${this.currentResultId}`);
   }
+
   PATCH_generalInformation(body: GeneralInfoBody) {
     return this.http.patch<any>(`${this.apiBaseUrl}create/general-information`, body);
   }
 
   GET_resultById() {
     return this.http.get<any>(`${this.apiBaseUrl}get/${this.currentResultId}`);
+  }
+
+  GET_depthSearch(title: string) {
+    return this.http.get<any>(`${this.apiBaseUrl}get/depth-search/${title}`);
   }
 }

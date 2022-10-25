@@ -12,7 +12,7 @@ import { ResultBody } from '../../../../shared/interfaces/result.interface';
 })
 export class ResultCreatorComponent implements OnInit {
   naratives = internationalizationData.reportNewResult;
-
+  depthSearchList: any[] = [];
   constructor(public api: ApiService, public resultLevelSE: ResultLevelService, private router: Router) {}
 
   ngOnInit(): void {
@@ -40,6 +40,18 @@ export class ResultCreatorComponent implements OnInit {
 
   cleanTitle() {
     if (this.resultLevelSE.resultBody.result_type_id == 6) this.resultLevelSE.resultBody.result_name = '';
+  }
+
+  depthSearch(title: string) {
+    this.api.resultsSE.GET_depthSearch(title).subscribe(
+      ({ response }) => {
+        console.log(response);
+        this.depthSearchList = response;
+      },
+      err => {
+        this.depthSearchList = [];
+      }
+    );
   }
 
   onSaveSection() {

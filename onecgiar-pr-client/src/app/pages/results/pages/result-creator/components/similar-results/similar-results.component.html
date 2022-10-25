@@ -1,16 +1,13 @@
-<div class="validation-text"
-    *ngIf="!(this.api.dataControlSE.resultsList | similarResults:this.resultLevelSE.resultBody.result_name)?.length">
+<div class="validation-text" *ngIf="!options?.length">
     The title of your result has no similarities in the PRMS Reporting tool.</div>
-<div class="validation-text"
-    *ngIf="(this.api.dataControlSE.resultsList | similarResults:this.resultLevelSE.resultBody.result_name)?.length">
+<div class="validation-text" *ngIf="options?.length">
     Similar results have already been reported. If the result you would like to report is in the list below, please
     select it using the three dots on the right and map it to your ToC.</div>
-<div class="similar_results"
-    *ngIf="(this.api.dataControlSE.resultsList | similarResults:this.resultLevelSE.resultBody.result_name)?.length">
-    <div class=" result"
-        *ngFor="let item of this.api.dataControlSE.resultsList | similarResults:this.resultLevelSE.resultBody.result_name">
+<div class="similar_results" *ngIf="options?.length">
+    <div class=" result" *ngFor="let item of options">
         <div class="line" [style.background]="'var(--pr-color-result-level-'+item?.result_level_id+')'"></div>
-        <div class="texts">{{item?.submitter}} - {{item?.result_type}} <div class="title">{{item?.title}}</div>
+        <div class="texts">{{(item?.result_type ? (item?.result_type + ' -'):'')}} {{item?.crp}} <div class="title">
+                {{item?.title}}</div>
         </div>
         <div class="icon_container"><i class="pi pi-ellipsis-v" (click)="menu.toggle($event)"></i></div>
     </div>
