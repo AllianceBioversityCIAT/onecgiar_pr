@@ -289,7 +289,17 @@ export class ClarisaTaskService {
           `${this.clarisaHost}impact-area-indicators`,
           this.configAuth,
         );
-        await this._clarisaImpactAreaInticatorsRepository.save(data);
+        const mapdata = data.map(el => ({
+          id: el.indicatorId,
+          indicator_statement: el.indicatorStatement,
+          target_year: el.targetYear,
+          target_unit: el.targetUnit,
+          value: el.value||null,
+          is_aplicable_projected_benefits: el.isAplicableProjectedBenefits,
+          impact_area_id: el.impactAreaId,
+          name: el.impactAreaName
+        }))
+        await this._clarisaImpactAreaInticatorsRepository.save(mapdata);
         this._logger.verbose(
           `[${position}]: All CLARISA Impact Area Indicators control list data has been created`,
         );
@@ -450,18 +460,18 @@ export class ClarisaTaskService {
           `[${position}]: All CLARISA Institutions control list data has been deleted`,
         );
       } else {
-        const data = await this._httpService.get(`${env.L_CLA_URL}institutions`, {auth: {username:env.L_CLA_USER, password: env.L_CLA_PASSWORD }});
-        await data.subscribe(async el => {
-          const {data} = el;
-          data.map(dat => {
-            dat['institution_type_code'] = dat.institutionType.code ?? null;
-            dat['id'] = dat.code;
-            dat['website_link'] = dat.websiteLink;
-          })
-          await this._clarisaInstitutionsRepository.save(
-            data,
-          );
-        });
+        const { data } = await axios.get(
+          `${this.clarisaHost}institutions`,
+          this.configAuth,
+        );
+        data.map(dat => {
+          dat['institution_type_code'] = dat.institutionType.code ?? null;
+          dat['id'] = dat.code;
+          dat['website_link'] = dat.websiteLink;
+        })
+        await this._clarisaInstitutionsRepository.save(
+          data,
+        );
         this._logger.verbose(
           `[${position}]: All CLARISA Institutions control list data has been created`,
         );

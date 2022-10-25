@@ -286,7 +286,8 @@ WHERE
     r.result_level_id,
     rl.name as result_level_name,
     r.title,
-    r.legacy_id 
+    r.legacy_id,
+    r.climate_change_tag_level_id
 FROM
     result r
     inner join results_by_inititiative rbi ON rbi.result_id = r.id 
