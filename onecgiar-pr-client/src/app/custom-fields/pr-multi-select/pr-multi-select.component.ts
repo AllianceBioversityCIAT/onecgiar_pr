@@ -30,7 +30,7 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
     return this._value;
   }
 
-  set value(v: string) {
+  set value(v: any) {
     if (v !== this._value) {
       this._value = v;
       this.onChange(v);

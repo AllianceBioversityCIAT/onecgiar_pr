@@ -5,9 +5,18 @@
     <button class="field">
         <div class="text">{{placeholder}}</div>
         <i class="pi pi-chevron-down"></i>
-        <div class="options">
-            <div class="option" *ngFor="let option of this.options">{{option[this.optionLabel]}}</div>
-        </div>
+
+
+
+
+        <cdk-virtual-scroll-viewport itemSize="7" class="options">
+            <div *cdkVirtualFor="let option of this.options" class="option" (click)="value.push(option)">
+                <p-checkbox [binary]="true" [(ngModel)]="option.selected"></p-checkbox>
+                <div class="label">{{option[this.optionLabel]}}</div>
+                <div class="event" (click)="option.selected = !option.selected"></div>
+            </div>
+        </cdk-virtual-scroll-viewport>
+
     </button>
 </div>
 
