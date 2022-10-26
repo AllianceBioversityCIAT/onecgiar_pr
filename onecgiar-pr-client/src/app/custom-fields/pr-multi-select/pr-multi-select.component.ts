@@ -23,9 +23,29 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   @Input() description: string;
   @Input() readOnly: boolean;
   @Input() required: boolean = true;
-  private _value: string;
+  private _optionsIntance: any[];
+  private _value: any[] = [];
+  private _beforeValueLength: number = 0;
+  private init = true;
+  get optionsIntance() {
+    if (!this._optionsIntance?.length) this._optionsIntance = JSON.parse(JSON.stringify(this.options));
 
-  get value() {
+    // console.log(this._optionsIntance);
+    // console.log(this._value);
+    // if ((this._beforeValueLength | 0) != (this._value?.length | 0) || this.init) {
+    // console.log('carga');
+    this.value?.map(savedListItem => {
+      let itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == savedListItem[this.optionValue]);
+      if (itemFinded) itemFinded.selected = true;
+    });
+    // }
+
+    this._beforeValueLength = this._value?.length;
+
+    return this._optionsIntance;
+  }
+
+  get value(): any[] {
     return this._value;
   }
 
@@ -48,5 +68,30 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   }
   registerOnTouched(fn: any): void {
     this.onTouch = fn;
+  }
+
+  onSelectOption(option) {
+    console.log('onSelectOption');
+    const optionFinded = this.value.findIndex(valueItem => valueItem[this.optionValue] == option[this.optionValue]);
+    console.log(optionFinded);
+    if (optionFinded < 0) {
+      this.value.push(option);
+    } else {
+      console.log('lo enceutra');
+      this.value.splice(optionFinded, 1);
+      let itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == option[this.optionValue]);
+      console.log(itemFinded);
+      if (itemFinded) itemFinded.selected = false;
+    }
+  }
+
+  selectBySavedList(savedList: any[]) {
+    // console.log(this.options);
+    // console.log(savedList);
+    // savedList?.map(savedListItem => {
+    //   let itemFinded = listBr.find(listItem => listItem[this.optionValue] == savedListItem[this.optionValue]);
+    //   if (itemFinded) itemFinded.selected = true;
+    // });
+    // return listBr;
   }
 }

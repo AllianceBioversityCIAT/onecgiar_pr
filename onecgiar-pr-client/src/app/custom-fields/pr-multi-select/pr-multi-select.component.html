@@ -21,7 +21,7 @@
                 <input type="text" pInputText placeholder="Search" />
             </span> -->
             <cdk-virtual-scroll-viewport itemSize="7" class="custom_scroll virtual_scroll">
-                <div *cdkVirtualFor="let option of this.options" class="option" (click)="value.push(option)">
+                <div *cdkVirtualFor="let option of optionsIntance" class="option" (click)="onSelectOption(option)">
                     <p-checkbox [binary]="true" [(ngModel)]="option.selected"></p-checkbox>
                     <div class="label">{{option[this.optionLabel]}}</div>
                     <div class="event" (click)="option.selected = !option.selected"></div>
@@ -33,27 +33,17 @@
     </button>
 </div>
 
-<br>
+<!-- <br>
 <div class="p-fluid">
-    <!-- <p-multiSelect *ngIf="this.options.length" [options]="this.options" [virtualScroll]="true" [showToggleAll]="false"
-        [displaySelectedLabel]="false" [virtualScrollItemSize]="30" [optionLabel]="this.optionLabel"
-        [optionValue]="this.optionValue" [(ngModel)]="value" [placeholder]="placeholder">
-    </p-multiSelect> -->
+
     <p-multiSelect *ngIf="this.options.length" [options]="this.options" [(ngModel)]="value"
         [displaySelectedLabel]="false" defaultLabel="Select a Country" [virtualScroll]="true"
         [virtualScrollItemSize]="30" class="multiselect-custom" [showToggleAll]="false" [placeholder]="placeholder">
-        <!-- <ng-template let-value pTemplate="selectedItems">
-            <div class="country-item country-item-value" *ngFor="let option of [1,1,1]">
-                <div>asas</div>
-            </div>
-            <div>
-                Select Countries
-            </div>
-        </ng-template> -->
+
         <ng-template let-country pTemplate="item">
             <div class="country-item">
                 <div>{{country[this.optionLabel]}}</div>
             </div>
         </ng-template>
     </p-multiSelect>
-</div>
+</div> -->
