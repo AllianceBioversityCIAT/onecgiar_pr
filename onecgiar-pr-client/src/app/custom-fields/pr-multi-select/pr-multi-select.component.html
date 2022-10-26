@@ -1,21 +1,34 @@
 <app-pr-field-header [label]="this.label" [description]="this.description" [required]="this.required">
 </app-pr-field-header>
-
 <div class="multi_select">
-    <button class="field">
+    <button class="field" tabindex="0">
         <div class="text">{{placeholder}}</div>
         <i class="pi pi-chevron-down"></i>
-
-
-
-
-        <cdk-virtual-scroll-viewport itemSize="7" class="options">
-            <div *cdkVirtualFor="let option of this.options" class="option" (click)="value.push(option)">
-                <p-checkbox [binary]="true" [(ngModel)]="option.selected"></p-checkbox>
-                <div class="label">{{option[this.optionLabel]}}</div>
-                <div class="event" (click)="option.selected = !option.selected"></div>
+        <div class="options">
+            <!-- <div class="field_search">
+                <input type="text">
+            </div> -->
+            <div class="search_input_container">
+                <div class="p-input-icon-left p-fluid">
+                    <i class="pi pi-search"></i>
+                    <input type="text" pInputText placeholder="Search" />
+                </div>
             </div>
-        </cdk-virtual-scroll-viewport>
+
+
+            <!-- <span class="p-input-icon-left">
+                <i class="pi pi-search"></i>
+                <input type="text" pInputText placeholder="Search" />
+            </span> -->
+            <cdk-virtual-scroll-viewport itemSize="7" class="custom_scroll virtual_scroll">
+                <div *cdkVirtualFor="let option of this.options" class="option" (click)="value.push(option)">
+                    <p-checkbox [binary]="true" [(ngModel)]="option.selected"></p-checkbox>
+                    <div class="label">{{option[this.optionLabel]}}</div>
+                    <div class="event" (click)="option.selected = !option.selected"></div>
+                </div>
+            </cdk-virtual-scroll-viewport>
+        </div>
+
 
     </button>
 </div>
