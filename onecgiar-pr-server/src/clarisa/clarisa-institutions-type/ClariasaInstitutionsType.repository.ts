@@ -44,7 +44,8 @@ export class ClarisaInstitutionsTypeRepository extends Repository<ClarisaInstitu
   }
 
   
-  async getValidInstitutionType(id: number[]) {
+  async getValidInstitutionType(institutionsType: institutionsTypeInterface[]) {
+    const id = institutionsType.map(el => el.institutions_type_id);
     let values = '';
     for (let index = 0; index < id.length; index++) {
       if(!values){
@@ -76,4 +77,8 @@ export class ClarisaInstitutionsTypeRepository extends Repository<ClarisaInstitu
       };
     }
   }
+}
+
+interface institutionsTypeInterface{
+  institutions_type_id: number;
 }

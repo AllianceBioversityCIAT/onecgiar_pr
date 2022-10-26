@@ -101,15 +101,15 @@ export class ResultsByInstitutionsService {
       }
       const vrs: Version = <Version>version.response;
 
-      const result = await this._resultByIntitutionsRepository.updateIstitutions(data.result_id, data.institutions_id, false, user.id);
+      const result = await this._resultByIntitutionsRepository.updateIstitutions(data.result_id, data.institutions, false, user.id);
       let saveInstitutions: ResultsByInstitution[] = [];
-      for (let index = 0; index < data.institutions_id.length; index++) {
-        const isInstitutions = await this._resultByIntitutionsRepository.getResultByInstitutionExists(data.result_id, data.institutions_id[index], false);
+      for (let index = 0; index < data.institutions.length; index++) {
+        const isInstitutions = await this._resultByIntitutionsRepository.getResultByInstitutionExists(data.result_id, data.institutions[index].institutions_id, false);
         if(!isInstitutions){
           const institutionsNew: ResultsByInstitution = new ResultsByInstitution();
           institutionsNew.created_by = user.id;
           institutionsNew.institution_roles_id = 2;
-          institutionsNew.institutions_id = data.institutions_id[index];
+          institutionsNew.institutions_id = data.institutions[index].institutions_id;
           institutionsNew.last_updated_by = user.id;
           institutionsNew.result_id = data.result_id;
           institutionsNew.version_id = vrs.id;
