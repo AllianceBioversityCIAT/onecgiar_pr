@@ -19,6 +19,10 @@
     overflow: hidden;
 }
 
+input::placeholder {
+    color: rgb(194, 194, 194);
+}
+
 .input_container {
     position: relative;
 

@@ -18,12 +18,13 @@ import { PrTextareaComponent } from './pr-textarea/pr-textarea.component';
 import { InputTextareaModule } from 'primeng/inputtextarea';
 import { PrCheckboxComponent } from './pr-checkbox/pr-checkbox.component';
 import { CheckboxModule } from 'primeng/checkbox';
+import { ScrollingModule } from '@angular/cdk/scrolling';
 
 const fieldComponents = [PrInputComponent, PrSelectComponent, PrRadioButtonComponent, DetailSectionTitleComponent, PrMultiSelectComponent, PrFieldHeaderComponent, PrYesOrNotComponent, PrTextareaComponent, PrCheckboxComponent];
 
 @NgModule({
   declarations: [...fieldComponents, PrFieldValidationsComponent, PrWordCounterComponent],
   exports: [...fieldComponents, FormsModule],
-  imports: [CommonModule, FormsModule, InputTextModule, DropdownModule, RadioButtonModule, MultiSelectModule, InputTextareaModule, CheckboxModule]
+  imports: [CommonModule, FormsModule, InputTextModule, DropdownModule, RadioButtonModule, MultiSelectModule, InputTextareaModule, CheckboxModule, ScrollingModule]
 })
 export class CustomFieldsModule {}
