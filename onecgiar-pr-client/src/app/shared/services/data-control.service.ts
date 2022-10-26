@@ -5,6 +5,7 @@ import { ResultItem } from '../interfaces/result.interface';
   providedIn: 'root'
 })
 export class DataControlService {
+  showPartnersRequest: boolean = true;
   myInitiativesList = [];
   resultsList: ResultItem[];
   constructor() {}

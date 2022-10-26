@@ -10,7 +10,6 @@ import { ResultLevelService } from '../result-creator/services/result-level.serv
   styleUrls: ['./result-detail.component.scss']
 })
 export class ResultDetailComponent {
-  display: boolean = true;
   constructor(public navigationBarSE: NavigationBarService, private activatedRoute: ActivatedRoute, private api: ApiService, private resultLevelSE: ResultLevelService) {}
   ngOnInit(): void {
     this.api.resultsSE.currentResultId = this.activatedRoute.snapshot.paramMap.get('id');

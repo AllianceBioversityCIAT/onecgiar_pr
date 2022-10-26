@@ -58,9 +58,15 @@ export class RdGeneralInformationComponent {
     this.api.alertsFs.show({
       status: 'success',
       title: 'sd',
-      description: "If you don't find the actor you are looking for, <a class='open_route'>request</a> to have it added to the list.",
+      description: "If you don't find the actor you are looking for, <a class='open_route' id='partnerRequest'>request</a> to have it added to the list.",
       querySelector: '#parterRequestAlert',
       position: 'beforeend'
     });
+
+    try {
+      document.getElementById('partnerRequest').addEventListener('click', e => {
+        this.api.dataControlSE.showPartnersRequest = true;
+      });
+    } catch (error) {}
   }
 }

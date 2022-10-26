@@ -6,10 +6,10 @@ import { ResultDetailComponent } from './result-detail.component';
 import { PanelMenuComponent } from './panel-menu/panel-menu.component';
 import { UtilsComponentsModule } from '../../../../shared/components/utils-components/utils-components.module';
 import { PanelMenuPipe } from './panel-menu/pipes/panel-menu.pipe';
-import { DialogModule } from 'primeng/dialog';
+import { PartnersRequestModule } from './components/partners-request/partners-request.module';
 
 @NgModule({
   declarations: [ResultDetailComponent, PanelMenuComponent, PanelMenuPipe],
-  imports: [CommonModule, ResultDetailRoutingModule, UtilsComponentsModule, DialogModule]
+  imports: [CommonModule, ResultDetailRoutingModule, UtilsComponentsModule, PartnersRequestModule]
 })
 export class ResultDetailModule {}

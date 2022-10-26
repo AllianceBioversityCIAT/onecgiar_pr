@@ -20,7 +20,6 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   @Input() options: any;
   @Input() placeholder: string;
   @Input() label: string;
-  @Input() inputTitle: string;
   @Input() description: string;
   @Input() readOnly: boolean;
   @Input() required: boolean = true;
