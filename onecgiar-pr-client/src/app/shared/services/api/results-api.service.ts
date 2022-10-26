@@ -42,7 +42,12 @@ export class ResultsApiService {
   }
 
   GET_allInstitutions() {
-    return this.http.get<any>(`${this.apiBaseUrl}get/institutions/all`);
+    return this.http.get<any>(`${this.apiBaseUrl}get/institutions/all`).pipe(
+      map(resp => {
+        resp.response.map(institution => (institution.full_name = `(Id:${institution?.institutions_id}) ${institution?.institutions_acronym} - ${institution?.institutions_name}`));
+        return resp;
+      })
+    );
   }
 
   GET_generalInformationByResultId() {
