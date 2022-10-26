@@ -45,14 +45,14 @@ export class RdGeneralInformationComponent {
       status: 'success',
       title: 'sd',
       description: `As a score of 2 has been selected, you are required to provide evidence of the gender tag in the <a href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultId}/evidences" target='_blank' class="open_route">Evidence</a> section `,
-      querySelector: '#gender_tag',
+      querySelector: '#gender_tag_alert',
       position: 'beforeend'
     });
     this.api.alertsFs.show({
       status: 'success',
       title: 'sd',
       description: `As a score of 2 has been selected, you are required to provide evidence of the climate change tag in the <a class="open_route" href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultId}/evidences" target='_blank'>Evidence</a> section`,
-      querySelector: '#climate_change_tag',
+      querySelector: '#climate_change_tag_alert',
       position: 'beforeend'
     });
     this.api.alertsFs.show({

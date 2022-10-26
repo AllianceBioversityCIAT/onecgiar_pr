@@ -20,15 +20,17 @@
     <app-pr-textarea placeholder="Write some..." label="Description" type="text"
         [(ngModel)]="this.generalInfoBody.result_description" [maxWords]="150"></app-pr-textarea>
 
-    <div class="radio_grid" id="gender_tag">
+    <div class="radio_grid">
         <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="title" optionValue="id"
             label="Gender tag" [(ngModel)]="this.generalInfoBody.gender_tag_id">
         </app-pr-radio-button>
+        <div id="gender_tag_alert" [hidden]="this.generalInfoBody.gender_tag_id != 3"></div>
     </div>
     <div class="radio_grid" id="climate_change_tag">
         <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="title" optionValue="id"
             label="Climate change tag" [(ngModel)]="this.generalInfoBody.climate_change_tag_id">
         </app-pr-radio-button>
+        <div id="climate_change_tag_alert" [hidden]="this.generalInfoBody.climate_change_tag_id != 3"></div>
     </div>
     <app-pr-field-header *ngIf="this.generalInfoBody?.result_level_id !== 4" label="Actors"
         [required]="this.generalInfoBody?.result_level_id !== 1"
@@ -36,7 +38,7 @@
     </app-pr-field-header>
     <div id="parterRequestAlert" [hidden]="this.generalInfoBody?.result_level_id === 4"></div>
     <div class="auto_fit_container" *ngIf="this.generalInfoBody?.result_level_id !== 4">
-        <app-pr-multi-select [options]="this.institutionsSE.institutionsList" optionLabel="institutions_name"
+        <app-pr-multi-select [options]="this.institutionsSE.institutionsList" optionLabel="full_name"
             optionValue="institutions_id" [(ngModel)]="this.generalInfoBody.institutions" placeholder="Select actors">
         </app-pr-multi-select>
 
@@ -49,8 +51,9 @@
     <app-pr-yes-or-not label="Is this result featured in a Key Result Story for the Reporting year?"
         [(ngModel)]="this.generalInfoBody.is_krs" (ngModelChange)="onChangeKrs()"></app-pr-yes-or-not>
 
-    <app-pr-input *ngIf="this.generalInfoBody.is_krs" placeholder="Write some..." description="Link to Key Result Story"
-        type="text" [required]="false" [(ngModel)]="this.generalInfoBody.krs_url">
+    <app-pr-input *ngIf="this.generalInfoBody.is_krs" placeholder="e.g. https://www.cgiar.org/example"
+        description="Link to Key Result Story" type="text" [required]="false"
+        [(ngModel)]="this.generalInfoBody.krs_url">
     </app-pr-input>
 
     <div class="save_button_container">
