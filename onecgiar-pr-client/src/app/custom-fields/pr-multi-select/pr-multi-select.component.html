@@ -1,49 +1,36 @@
 <app-pr-field-header [label]="this.label" [description]="this.description" [required]="this.required">
 </app-pr-field-header>
 <div class="multi_select">
-    <button class="field" tabindex="0">
+    <button class="field" tabindex="0" [id]="this.optionValue">
         <div class="text">{{placeholder}}</div>
         <i class="pi pi-chevron-down"></i>
+        <div class="remove_focus" (click)="removeFocus()"></div>
         <div class="options">
-            <!-- <div class="field_search">
-                <input type="text">
-            </div> -->
             <div class="search_input_container">
                 <div class="p-input-icon-left p-fluid">
                     <i class="pi pi-search"></i>
-                    <input type="text" pInputText placeholder="Search" />
+                    <input type="text" pInputText placeholder="Search" [(ngModel)]="this.searchText" />
                 </div>
             </div>
 
-
-            <!-- <span class="p-input-icon-left">
-                <i class="pi pi-search"></i>
-                <input type="text" pInputText placeholder="Search" />
-            </span> -->
             <cdk-virtual-scroll-viewport itemSize="7" class="custom_scroll virtual_scroll">
-                <div *cdkVirtualFor="let option of optionsIntance" class="option" (click)="onSelectOption(option)">
+                <div *cdkVirtualFor="let option of optionsIntance | listFilterByTextAndAttr:this.optionLabel:this.searchText"
+                    class="option" (click)="onSelectOption(option)">
                     <p-checkbox [binary]="true" [(ngModel)]="option.selected"></p-checkbox>
                     <div class="label">{{option[this.optionLabel]}}</div>
                     <div class="event" (click)="option.selected = !option.selected"></div>
                 </div>
             </cdk-virtual-scroll-viewport>
         </div>
-
-
     </button>
-</div>
-
-<!-- <br>
-<div class="p-fluid">
-
-    <p-multiSelect *ngIf="this.options.length" [options]="this.options" [(ngModel)]="value"
-        [displaySelectedLabel]="false" defaultLabel="Select a Country" [virtualScroll]="true"
-        [virtualScrollItemSize]="30" class="multiselect-custom" [showToggleAll]="false" [placeholder]="placeholder">
-
-        <ng-template let-country pTemplate="item">
-            <div class="country-item">
-                <div>{{country[this.optionLabel]}}</div>
+    <div class="selected_container custom_scroll" *ngIf="this.selectedLabel">
+        <app-pr-field-header [description]="this.selectedLabel+'('+value?.length+')'">
+        </app-pr-field-header>
+        <div class="chips_container ">
+            <div class="pr_chip_selected" *ngFor="let option of value; let i=index">
+                <div class="name">{{option[this.selectedOptionLabel]}}</div><i class="material-icons-round"
+                    (click)="removeOption(option)">remove_circle </i>
             </div>
-        </ng-template>
-    </p-multiSelect>
-</div> -->
+        </div>
+    </div>
+</div>

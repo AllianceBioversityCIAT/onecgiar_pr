@@ -20,13 +20,15 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   @Input() options: any;
   @Input() placeholder: string;
   @Input() label: string;
+  @Input() selectedLabel: string;
+  @Input() selectedOptionLabel: string;
   @Input() description: string;
   @Input() readOnly: boolean;
   @Input() required: boolean = true;
   private _optionsIntance: any[];
   private _value: any[] = [];
   private _beforeValueLength: number = 0;
-  private init = true;
+  public searchText: string;
   get optionsIntance() {
     if (!this._optionsIntance?.length) this._optionsIntance = JSON.parse(JSON.stringify(this.options));
 
@@ -70,19 +72,36 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
     this.onTouch = fn;
   }
 
+  removeFocus() {
+    console.log('removeFocus');
+    const element: any = document.getElementById(this.optionValue);
+    element.blur();
+  }
+
+  getUniqueId() {
+    const id = (this.optionValue + this.optionLabel + this.label).replace(' ', '');
+    console.log(id);
+    return id;
+  }
+
   onSelectOption(option) {
     console.log('onSelectOption');
     const optionFinded = this.value.findIndex(valueItem => valueItem[this.optionValue] == option[this.optionValue]);
-    console.log(optionFinded);
     if (optionFinded < 0) {
       this.value.push(option);
     } else {
       console.log('lo enceutra');
       this.value.splice(optionFinded, 1);
       let itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == option[this.optionValue]);
-      console.log(itemFinded);
       if (itemFinded) itemFinded.selected = false;
     }
+  }
+
+  removeOption(option) {
+    const optionFinded = this.value.findIndex(valueItem => valueItem[this.optionValue] == option[this.optionValue]);
+    this.value.splice(optionFinded, 1);
+    let itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == option[this.optionValue]);
+    if (itemFinded) itemFinded.selected = false;
   }
 
   selectBySavedList(savedList: any[]) {

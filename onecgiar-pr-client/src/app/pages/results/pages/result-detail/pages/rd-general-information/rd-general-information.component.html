@@ -38,13 +38,15 @@
     </app-pr-field-header>
     <div id="parterRequestAlert" [hidden]="this.generalInfoBody?.result_level_id === 4"></div>
     <div class="auto_fit_container" *ngIf="this.generalInfoBody?.result_level_id !== 4">
-        <app-pr-multi-select [options]="this.institutionsSE.institutionsList" optionLabel="full_name"
-            optionValue="institutions_id" [(ngModel)]="this.generalInfoBody.institutions" placeholder="Select actors">
+        <app-pr-multi-select [options]="this.institutionsSE.institutionsList" selectedLabel="Actor(s) selected"
+            selectedOptionLabel="institutions_name" optionLabel="full_name" optionValue="institutions_id"
+            [(ngModel)]="this.generalInfoBody.institutions" placeholder="Select actors">
         </app-pr-multi-select>
 
-        <app-pr-multi-select [options]="this.institutionsSE.institutionsTypesList" optionLabel="institutions_type_name"
-            optionValue="institutions_type_id" [(ngModel)]="this.generalInfoBody.institutions_type"
-            placeholder="Select actor type">
+        <app-pr-multi-select [options]="this.institutionsSE.institutionsTypesList"
+            selectedLabel="Actor(s) Types(s) selected" selectedOptionLabel="institutions_type_name"
+            optionLabel="institutions_type_name" optionValue="institutions_type_id"
+            [(ngModel)]="this.generalInfoBody.institutions_type" placeholder="Select actor type">
         </app-pr-multi-select>
     </div>
 
@@ -61,6 +63,5 @@
             <app-pr-button padding="medium" text="Save" icon="save"></app-pr-button>
         </div>
     </div>
-
 
 </div>

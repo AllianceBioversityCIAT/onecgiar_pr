@@ -14,9 +14,22 @@
         width: 100%;
         cursor: pointer;
 
+        .remove_focus {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
         &:focus-within {
             .options {
                 display: flex;
+            }
+
+            .remove_focus {
+                display: block;
             }
         }
 
@@ -78,6 +91,18 @@
         i {
             color: #71717A;
             height: min-content;
+        }
+    }
+
+    .selected_container {
+        margin-top: 10px;
+        overflow-y: auto;
+        max-height: 300px;
+
+        .chips_container {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
         }
     }
 }

@@ -39,3 +39,22 @@ input::placeholder {
         }
     }
 }
+
+.pr_chip_selected {
+    background-color: var(--pr-color-primary-2);
+    color: var(--pr-color-secondary);
+    font-size: .95em;
+    padding: 1px 10px;
+    border-radius: 10px;
+    display: grid;
+    grid-template-columns: 1fr 15px;
+
+    i {
+        justify-self: center;
+        align-self: center;
+        cursor: pointer;
+        font-size: 1.4em;
+        color: rgb(252, 95, 95);
+    }
+
+}

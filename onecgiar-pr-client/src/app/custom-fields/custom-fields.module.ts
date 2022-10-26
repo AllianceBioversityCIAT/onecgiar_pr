@@ -19,11 +19,12 @@ import { InputTextareaModule } from 'primeng/inputtextarea';
 import { PrCheckboxComponent } from './pr-checkbox/pr-checkbox.component';
 import { CheckboxModule } from 'primeng/checkbox';
 import { ScrollingModule } from '@angular/cdk/scrolling';
+import { ListFilterByTextAndAttrPipe } from './pr-multi-select/pipes/list-filter-by-text-and-attr.pipe';
 
 const fieldComponents = [PrInputComponent, PrSelectComponent, PrRadioButtonComponent, DetailSectionTitleComponent, PrMultiSelectComponent, PrFieldHeaderComponent, PrYesOrNotComponent, PrTextareaComponent, PrCheckboxComponent];
 
 @NgModule({
-  declarations: [...fieldComponents, PrFieldValidationsComponent, PrWordCounterComponent],
+  declarations: [...fieldComponents, PrFieldValidationsComponent, PrWordCounterComponent, ListFilterByTextAndAttrPipe],
   exports: [...fieldComponents, FormsModule],
   imports: [CommonModule, FormsModule, InputTextModule, DropdownModule, RadioButtonModule, MultiSelectModule, InputTextareaModule, CheckboxModule, ScrollingModule]
 })
