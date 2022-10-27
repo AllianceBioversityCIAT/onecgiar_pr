@@ -62,8 +62,8 @@
         </div>
     </div>
 
-    <!-- <app-pr-yes-or-not label="Is this result featured in a Key Result Story for the Reporting year?"
-        [(ngModel)]="this.generalInfoBody.is_krs" (ngModelChange)="onChangeKrs()"></app-pr-yes-or-not> -->
+    <app-pr-yes-or-not label="Is this result featured in a Key Result Story for the Reporting year?"
+        [(ngModel)]="this.generalInfoBody.is_krs" (ngModelChange)="onChangeKrs()"></app-pr-yes-or-not>
 
     <app-pr-input *ngIf="this.generalInfoBody.is_krs" placeholder="e.g. https://www.cgiar.org/example"
         description="Link to Key Result Story" type="text" [required]="false"
