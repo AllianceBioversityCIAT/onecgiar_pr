@@ -1,4 +1,4 @@
-import { Component, forwardRef, Input } from '@angular/core';
+import { Component, forwardRef, Input, Output, EventEmitter } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 @Component({
@@ -18,6 +18,7 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   @Input() optionLabel: string;
   @Input() optionValue: string;
   @Input() options: any;
+  @Input() disableOptions: any;
   @Input() placeholder: string;
   @Input() label: string;
   @Input() selectedLabel: string;
@@ -25,17 +26,24 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   @Input() description: string;
   @Input() readOnly: boolean;
   @Input() required: boolean = true;
+  @Output() selectOptionEvent = new EventEmitter();
   private _optionsIntance: any[];
   private _value: any[] = [];
   private _beforeValueLength: number = 0;
   public searchText: string;
   get optionsIntance() {
     if (!this._optionsIntance?.length) this._optionsIntance = JSON.parse(JSON.stringify(this.options));
-
-    // console.log(this._optionsIntance);
-    // console.log(this._value);
     // if ((this._beforeValueLength | 0) != (this._value?.length | 0) || this.init) {
-    // console.log('carga');
+    // console.log('optionsIntance');
+    this._optionsIntance.map((resp: any) => {
+      resp.disabled = false;
+      resp.selected = false;
+    });
+    this.disableOptions?.map(disableOption => {
+      let itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == disableOption[this.optionValue]);
+      if (itemFinded) itemFinded.disabled = true;
+    });
+
     this.value?.map(savedListItem => {
       let itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == savedListItem[this.optionValue]);
       if (itemFinded) itemFinded.selected = true;
@@ -72,36 +80,45 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
     this.onTouch = fn;
   }
 
+  toggleSelectOption(option) {
+    if (option?.disabled) return;
+    option.selected = !option.selected;
+  }
+
   removeFocus() {
-    console.log('removeFocus');
+    // console.log('removeFocus');
     const element: any = document.getElementById(this.optionValue);
     element.blur();
   }
 
   getUniqueId() {
     const id = (this.optionValue + this.optionLabel + this.label).replace(' ', '');
-    console.log(id);
+    // console.log(id);
     return id;
   }
 
   onSelectOption(option) {
-    console.log('onSelectOption');
+    if (option?.disabled) return;
+    // this.onChange(null);
+    // console.log('onSelectOption');
     const optionFinded = this.value.findIndex(valueItem => valueItem[this.optionValue] == option[this.optionValue]);
     if (optionFinded < 0) {
       this.value.push(option);
     } else {
-      console.log('lo enceutra');
+      // console.log('lo enceutra');
       this.value.splice(optionFinded, 1);
-      let itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == option[this.optionValue]);
-      if (itemFinded) itemFinded.selected = false;
+      // let itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == option[this.optionValue]);
+      // if (itemFinded) itemFinded.selected = false;
     }
+    this.selectOptionEvent.emit();
   }
 
   removeOption(option) {
     const optionFinded = this.value.findIndex(valueItem => valueItem[this.optionValue] == option[this.optionValue]);
     this.value.splice(optionFinded, 1);
-    let itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == option[this.optionValue]);
-    if (itemFinded) itemFinded.selected = false;
+    // let itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == option[this.optionValue]);
+    // if (itemFinded) itemFinded.selected = false;
+    this.selectOptionEvent.emit();
   }
 
   selectBySavedList(savedList: any[]) {

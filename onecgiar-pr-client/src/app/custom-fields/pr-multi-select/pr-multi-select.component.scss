@@ -106,3 +106,15 @@
         }
     }
 }
+
+.disabled {
+
+    // pointer-events: none;
+    p-checkbox {
+        opacity: .7;
+    }
+
+    .label {
+        opacity: .7;
+    }
+}

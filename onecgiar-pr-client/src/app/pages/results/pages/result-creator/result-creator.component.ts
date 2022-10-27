@@ -47,7 +47,6 @@ export class ResultCreatorComponent implements OnInit {
     const cleanSpaces = text => text?.replaceAll(' ', '')?.toLowerCase();
     this.api.resultsSE.GET_depthSearch(title).subscribe(
       ({ response }) => {
-        console.log(response);
         this.depthSearchList = response;
         this.exactTitleFound = !!this.depthSearchList.find(result => cleanSpaces(result.title) === cleanSpaces(title));
       },
@@ -60,6 +59,7 @@ export class ResultCreatorComponent implements OnInit {
 
   onSaveSection() {
     this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody);
+    console.log(this.resultLevelSE.resultBody);
     this.api.resultsSE.POST_resultCreateHeader(this.resultLevelSE.resultBody).subscribe(
       resp => {
         this.router.navigate([`/result/result-detail/${resp?.response?.id}/general-information`]);

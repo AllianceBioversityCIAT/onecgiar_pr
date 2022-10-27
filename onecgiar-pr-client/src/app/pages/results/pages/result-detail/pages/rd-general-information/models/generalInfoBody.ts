@@ -19,9 +19,11 @@ export class GeneralInfoBody {
 interface institutionsInterface {
   institutions_id: number;
   is_active: boolean;
+  institutions_type_name: string;
 }
 
 interface institutionsTypeInterface {
   institution_types_id: number;
   is_active: boolean;
+  institutions_type_name: string;
 }

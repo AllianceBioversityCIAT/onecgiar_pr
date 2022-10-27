@@ -15,10 +15,11 @@
 
             <cdk-virtual-scroll-viewport itemSize="7" class="custom_scroll virtual_scroll">
                 <div *cdkVirtualFor="let option of optionsIntance | listFilterByTextAndAttr:this.optionLabel:this.searchText"
-                    class="option" (click)="onSelectOption(option)">
-                    <p-checkbox [binary]="true" [(ngModel)]="option.selected"></p-checkbox>
+                    class="option" [ngClass]="{'disabled': option?.disabled}" (click)="onSelectOption(option)">
+                    <p-checkbox [disabled]="option?.disabled" [binary]="true" [(ngModel)]="option.selected">
+                    </p-checkbox>
                     <div class="label">{{option[this.optionLabel]}}</div>
-                    <div class="event" (click)="option.selected = !option.selected"></div>
+                    <div class="event" (click)="toggleSelectOption(option)"></div>
                 </div>
             </cdk-virtual-scroll-viewport>
         </div>
@@ -26,7 +27,7 @@
     <div class="selected_container custom_scroll" *ngIf="this.selectedLabel">
         <app-pr-field-header [description]="this.selectedLabel+'('+value?.length+')'">
         </app-pr-field-header>
-        <div class="chips_container ">
+        <div class="chips_container" *ngIf="this.selectedOptionLabel">
             <div class="pr_chip_selected" *ngFor="let option of value; let i=index">
                 <div class="name">{{option[this.selectedOptionLabel]}}</div><i class="material-icons-round"
                     (click)="removeOption(option)">remove_circle </i>

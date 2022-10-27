@@ -12,20 +12,26 @@ import { environment } from '../../../../../../../environments/environment';
 })
 export class RdGeneralInformationComponent {
   generalInfoBody = new GeneralInfoBody();
+  toggle = 0;
   constructor(private api: ApiService, public scoreSE: ScoreService, public institutionsSE: InstitutionsService) {}
   ngOnInit(): void {
     this.showAlerts();
     this.getSectionInformation();
   }
+  get disableOptions() {
+    return this.generalInfoBody.institutions;
+  }
   getSectionInformation() {
     this.api.resultsSE.GET_generalInformationByResultId().subscribe(({ response }) => {
       this.generalInfoBody = response;
       this.generalInfoBody.reporting_year = '2022';
-      console.log(this.generalInfoBody);
+      this.generalInfoBody.institutions_type = [...this.generalInfoBody.institutions_type, ...this.generalInfoBody.institutions] as any;
+      // console.log(this.generalInfoBody);
     });
   }
   onSaveSection() {
-    console.log(this.generalInfoBody);
+    this.generalInfoBody.institutions_type = this.generalInfoBody.institutions_type.filter(inst => !inst.hasOwnProperty('institutions_id'));
+    // console.log(this.generalInfoBody);
     this.api.resultsSE.PATCH_generalInformation(this.generalInfoBody).subscribe(
       resp => {
         this.api.alertsFe.show({ id: 'sectionSaved', title: 'Section saved correctly', description: '', status: 'success', closeIn: 500 });
@@ -35,6 +41,12 @@ export class RdGeneralInformationComponent {
         this.getSectionInformation();
       }
     );
+  }
+  sendIntitutionsTypes() {
+    // console.log(this.generalInfoBody.institutions_type);
+    this.generalInfoBody.institutions_type = this.generalInfoBody.institutions_type.filter(inst => !inst.hasOwnProperty('institutions_id'));
+    // console.log(this.generalInfoBody.institutions_type);
+    this.generalInfoBody.institutions_type = [...this.generalInfoBody?.institutions_type, ...this.generalInfoBody?.institutions] as any;
   }
   onChangeKrs() {
     if (this.generalInfoBody.is_krs === false) this.generalInfoBody.krs_url = null;
