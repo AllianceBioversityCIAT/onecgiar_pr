@@ -137,7 +137,7 @@ export class Result {
   is_krs!: boolean;
 
   @Column({
-    name: 'applicable_partner',
+    name: 'no_applicable_partner',
     type: 'boolean',
     default: false
   })

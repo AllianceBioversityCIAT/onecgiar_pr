@@ -27,7 +27,8 @@ export class ResultRepository extends Repository<Result> {
     	ci.name as init_name,
     	ci.official_code,
     	r.title,
-    	r.description
+    	r.description,
+      r.no_applicable_partner
     FROM \`result\` r 
     	inner join results_by_inititiative rbi on rbi.result_id = r.id 
     											and rbi.is_active > 0
@@ -70,7 +71,8 @@ export class ResultRepository extends Repository<Result> {
     ci.official_code AS submitter,
     ci.id AS submitter_id,
     r.status,
-    IF(r.status = 0, 'Editing', 'Submitted') AS status_name
+    IF(r.status = 0, 'Editing', 'Submitted') AS status_name,
+    r.no_applicable_partner
 FROM
     result r
     INNER JOIN result_type rt ON rt.id = r.result_type_id
@@ -105,7 +107,8 @@ WHERE
     ci.official_code AS submitter,
     ci.id AS submitter_id,
     r.status,
-    IF(r.status = 0, 'Editing', 'Submitted') AS status_name
+    IF(r.status = 0, 'Editing', 'Submitted') AS status_name,
+    r.no_applicable_partner
 FROM
     result r
     INNER JOIN result_type rt ON rt.id = r.result_type_id
@@ -146,7 +149,8 @@ WHERE
     r2.id as role_id,
     r2.description as role_name,
     if(y.\`year\` = r.reported_year_id, 'New', '') as is_new,
-    r.result_level_id
+    r.result_level_id,
+    r.no_applicable_partner
 FROM
     \`result\` r
     INNER JOIN result_type rt ON rt.id = r.result_type_id
@@ -287,7 +291,7 @@ WHERE
     r.result_level_id,
     r.title,
     r.legacy_id,
-    r.applicable_partner
+    r.no_applicable_partner
 FROM
     result r
     inner join results_by_inititiative rbi ON rbi.result_id = r.id 
@@ -331,7 +335,8 @@ WHERE
     r.legacy_id,
     r.climate_change_tag_level_id,
     r.is_krs,
-    r.krs_url
+    r.krs_url,
+    r.no_applicable_partner
 FROM
     result r
     inner join results_by_inititiative rbi ON rbi.result_id = r.id 

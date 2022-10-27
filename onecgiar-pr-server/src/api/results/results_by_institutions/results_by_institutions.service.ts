@@ -86,7 +86,7 @@ export class ResultsByInstitutionsService {
       })
       return {
         response: {
-          applicable_partner: result.applicable_partner? true: false,
+          no_applicable_partner: result.applicable_partner? true: false,
           institutions
         },
         message: 'Successful response',
@@ -112,11 +112,11 @@ export class ResultsByInstitutionsService {
       if (version.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: version });
       }
-      const result = await this._resultByIntitutionsRepository.updateIstitutions(data.result_id, data.institutions, false, user.id, data?.applicable_partner);
+      const result = await this._resultByIntitutionsRepository.updateIstitutions(data.result_id, data.institutions, false, user.id, data?.no_applicable_partner);
       const vrs: Version = <Version>version.response;
-      rExists.applicable_partner = data.applicable_partner;
+      rExists.applicable_partner = data.no_applicable_partner;
       await this._resultRepository.save(rExists);
-      if(!data?.applicable_partner){
+      if(!data?.no_applicable_partner){
         for (let index = 0; index < data.institutions.length; index++) {
           const isInstitutions = await this._resultByIntitutionsRepository.getResultByInstitutionExists(data.result_id, data.institutions[index].institutions_id, false);
           if(!isInstitutions){

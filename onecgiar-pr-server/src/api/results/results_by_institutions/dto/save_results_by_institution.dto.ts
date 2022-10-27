@@ -1,6 +1,6 @@
 export class SaveResultsByInstitutionDto {
     public result_id: number;
-    public applicable_partner: boolean;
+    public no_applicable_partner: boolean;
     public institutions: institutionsInterface[];
 }
 
