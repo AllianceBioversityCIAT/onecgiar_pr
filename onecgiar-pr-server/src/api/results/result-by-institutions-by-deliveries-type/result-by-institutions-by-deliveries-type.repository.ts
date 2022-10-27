@@ -44,6 +44,35 @@ export class ResultByInstitutionsByDeliveriesTypeRepository extends Repository<R
     }
   }
 
+  async getDeliveryByResultByInstitution(resultByInstitutionsId: number[]){
+    const query = `
+    select 
+    rbibdt.id,
+    rbibdt.is_active,
+    rbibdt.created_date,
+    rbibdt.last_updated_date,
+    rbibdt.partner_delivery_type_id,
+    rbibdt.result_by_institution_id,
+    rbibdt.versions_id,
+    rbibdt.created_by,
+    rbibdt.last_updated_by
+    from result_by_institutions_by_deliveries_type rbibdt 
+    where rbibdt.is_active > 0
+    	and rbibdt.result_by_institution_id in (${resultByInstitutionsId.toString()});
+    `;
+
+    try {
+      const result: ResultByInstitutionsByDeliveriesType[] = await this.query(query);
+      return result;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultByInstitutionsByDeliveriesType.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async inactiveResultDeLivery(resultByInstitution: number, deliveryType: number[]){
     const updateInactive = `
     update result_by_institutions_by_deliveries_type 
