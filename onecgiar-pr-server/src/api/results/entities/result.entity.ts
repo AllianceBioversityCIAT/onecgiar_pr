@@ -141,5 +141,5 @@ export class Result {
     type: 'boolean',
     default: false
   })
-  applicable_partner: boolean;
+  no_applicable_partner: boolean;
 }

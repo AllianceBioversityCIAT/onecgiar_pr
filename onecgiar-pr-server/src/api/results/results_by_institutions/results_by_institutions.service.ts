@@ -11,6 +11,7 @@ import { Version } from '../versions/entities/version.entity';
 import { VersionsService } from '../versions/versions.service';
 import { ResultByInstitutionsByDeliveriesTypeRepository } from '../result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';
 import { ResultByInstitutionsByDeliveriesType } from '../result-by-institutions-by-deliveries-type/entities/result-by-institutions-by-deliveries-type.entity';
+import { Result } from '../entities/result.entity';
 
 @Injectable()
 export class ResultsByInstitutionsService {
@@ -70,23 +71,18 @@ export class ResultsByInstitutionsService {
   async getGetInstitutionsPartnersByResultId(id: number){
     try {
       const institutions =  await this._resultByIntitutionsRepository.getResultByInstitutionPartnersFull(id);
-      
-      if(!institutions.length){
-        throw {
-          response: {},
-          message: 'Institutions Partners Not Found',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
       const result = await this._resultRepository.getResultById(id);
-      const institutionsId: number[] = institutions.map(el => el.id);
-      const delivery = await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByResultByInstitution(institutionsId);
-      institutions.map(inst => {
-        inst['deliveries'] = delivery.filter( dl => dl.result_by_institution_id == inst.id).map(res => res.partner_delivery_type_id);
-      })
+      if(institutions.length){
+        const institutionsId: number[] = institutions.map(el => el.id);
+        const delivery = await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByResultByInstitution(institutionsId);
+        institutions.map(inst => {
+          inst['deliveries'] = delivery.filter( dl => dl.result_by_institution_id == inst.id).map(res => res.partner_delivery_type_id);
+        })
+      }
+      
       return {
         response: {
-          no_applicable_partner: result.applicable_partner? true: false,
+          no_applicable_partner: result.no_applicable_partner? true: false,
           institutions
         },
         message: 'Successful response',
@@ -114,7 +110,7 @@ export class ResultsByInstitutionsService {
       }
       const result = await this._resultByIntitutionsRepository.updateIstitutions(data.result_id, data.institutions, false, user.id, data?.no_applicable_partner);
       const vrs: Version = <Version>version.response;
-      rExists.applicable_partner = data.no_applicable_partner;
+      rExists.no_applicable_partner = data.no_applicable_partner;
       await this._resultRepository.save(rExists);
       if(!data?.no_applicable_partner){
         for (let index = 0; index < data.institutions.length; index++) {
