@@ -1,9 +1,9 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException } from '@nestjs/common';
 import { PartnerDeliveryTypeService } from './partner-delivery-type.service';
 import { CreatePartnerDeliveryTypeDto } from './dto/create-partner-delivery-type.dto';
 import { UpdatePartnerDeliveryTypeDto } from './dto/update-partner-delivery-type.dto';
 
-@Controller('partner-delivery-type')
+@Controller()
 export class PartnerDeliveryTypeController {
   constructor(private readonly partnerDeliveryTypeService: PartnerDeliveryTypeService) {}
 
@@ -12,9 +12,10 @@ export class PartnerDeliveryTypeController {
     return this.partnerDeliveryTypeService.create(createPartnerDeliveryTypeDto);
   }
 
-  @Get()
-  findAll() {
-    return this.partnerDeliveryTypeService.findAll();
+  @Get('get/all')
+  async findAll() {
+    const { message, response, status } = await this.partnerDeliveryTypeService.findAll();
+    throw new HttpException({ message, response }, status);
   }
 
   @Get(':id')

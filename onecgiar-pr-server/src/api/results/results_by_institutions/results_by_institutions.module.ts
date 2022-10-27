@@ -8,6 +8,7 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultRepository } from '../result.repository';
 import { VersionsService } from '../versions/versions.service';
 import { VersionRepository } from '../versions/version.repository';
+import { ResultByInstitutionsByDeliveriesTypeRepository } from '../result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';
 
 @Module({
   controllers: [ResultsByInstitutionsController],
@@ -18,6 +19,7 @@ import { VersionRepository } from '../versions/version.repository';
     VersionsService,
     VersionRepository,
     HandlersError,
+    ResultByInstitutionsByDeliveriesTypeRepository
   ],
   imports: [],
   exports: [ResultByIntitutionsRepository],
