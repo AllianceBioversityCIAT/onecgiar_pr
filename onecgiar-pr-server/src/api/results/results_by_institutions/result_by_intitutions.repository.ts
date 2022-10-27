@@ -185,7 +185,7 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     `;
 
     try {
-      if(institutions.length){
+      if(institutions?.length){
         const upDateInactiveResult = await this.query(upDateInactive, [
           userId, resultId, isActor?1:2
         ]);

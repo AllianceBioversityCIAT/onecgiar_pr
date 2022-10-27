@@ -74,6 +74,7 @@ export class ResultByInstitutionsByDeliveriesTypeRepository extends Repository<R
   }
 
   async inactiveResultDeLivery(resultByInstitution: number, deliveryType: number[]){
+    deliveryType = deliveryType? deliveryType: [];
     const updateInactive = `
     update result_by_institutions_by_deliveries_type 
     set is_active = 0,
