@@ -69,16 +69,22 @@ export class ResultsByInstitutionsService {
 
   async getGetInstitutionsPartnersByResultId(id: number){
     try {
-      const intitutions =  await this._resultByIntitutionsRepository.getResultByInstitutionPartnersFull(id);
-      if(!intitutions.length){
+      const institutions =  await this._resultByIntitutionsRepository.getResultByInstitutionPartnersFull(id);
+      
+      if(!institutions.length){
         throw {
           response: {},
           message: 'Institutions Partners Not Found',
           status: HttpStatus.NOT_FOUND,
         };
       }
+      const institutionsId: number[] = institutions.map(el => el.id);
+      const delivery = await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByResultByInstitution(institutionsId);
+      institutions.map(inst => {
+        inst['deliveries'] = delivery.filter( dl => dl.result_by_institution_id == inst.id).map(res => res.partner_delivery_type_id);
+      })
       return {
-        response: intitutions,
+        response: institutions,
         message: 'Successful response',
         status: HttpStatus.OK,
       };
@@ -104,9 +110,9 @@ export class ResultsByInstitutionsService {
       }
       const vrs: Version = <Version>version.response;
       const result = await this._resultByIntitutionsRepository.updateIstitutions(data.result_id, data.institutions, false, user.id);
+        
       for (let index = 0; index < data.institutions.length; index++) {
         const isInstitutions = await this._resultByIntitutionsRepository.getResultByInstitutionExists(data.result_id, data.institutions[index].institutions_id, false);
-        console.log(isInstitutions)
         if(!isInstitutions){
           const institutionsNew: ResultsByInstitution = new ResultsByInstitution();
           institutionsNew.created_by = user.id;

@@ -24,6 +24,7 @@ import { ClarisaInnovationCharacteristicsModule } from './clarisa-innovation-cha
 import { ClarisaInnovationTypeModule } from './clarisa-innovation-type/clarisa-innovation-type.module';
 import { ClarisaInnovationReadinessLevelsModule } from './clarisa-innovation-readiness-levels/clarisa-innovation-readiness-levels.module';
 import { ClarisaPolicyStagesModule } from './clarisa-policy-stages/clarisa-policy-stages.module';
+import { ClarisaConnectionsModule } from './clarisa-connections/clarisa-connections.module';
 
 @Module({
   imports: [
@@ -45,7 +46,8 @@ import { ClarisaPolicyStagesModule } from './clarisa-policy-stages/clarisa-polic
     ClarisaInnovationCharacteristicsModule,
     ClarisaInnovationTypeModule,
     ClarisaInnovationReadinessLevelsModule,
-    ClarisaPolicyStagesModule
+    ClarisaPolicyStagesModule,
+    ClarisaConnectionsModule
   ],
   controllers: [],
   providers: [ClarisaCronsService, ClarisaTaskService],
