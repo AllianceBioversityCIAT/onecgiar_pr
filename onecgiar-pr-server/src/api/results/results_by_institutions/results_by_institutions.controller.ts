@@ -51,17 +51,16 @@ export class ResultsByInstitutionsController {
     throw new HttpException({ message, response }, status);
   }
 
-  @Patch('create/partners')
+  @Patch('create/partners/:id')
   async findOne(
     @Body() updatePartners: SaveResultsByInstitutionDto,
     @Headers() auth: HeadersDto,
+    @Param('id') id: number
     ) {
-      if(!auth?.auth){
-        throw new HttpException({ message: `Token not found`, response: {} }, HttpStatus.BAD_REQUEST);
-      }
       const token: TokenDto = <TokenDto>(
         JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
       );
+      updatePartners.result_id = id;
       const { message, response, status } = await this.resultsByInstitutionsService.savePartnersInstitutionsByResult(updatePartners, token);
       throw new HttpException({ message, response }, status);
   }
