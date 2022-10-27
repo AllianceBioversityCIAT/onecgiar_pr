@@ -94,6 +94,42 @@ WHERE
     }
   }
 
+  async getResultsById(id: number) {
+    const queryData = `
+    SELECT
+    r.id,
+    r.title,
+    r.reported_year_id AS reported_year,
+    rt.name AS result_type,
+    r.created_date,
+    ci.official_code AS submitter,
+    ci.id AS submitter_id,
+    r.status,
+    IF(r.status = 0, 'Editing', 'Submitted') AS status_name
+FROM
+    result r
+    INNER JOIN result_type rt ON rt.id = r.result_type_id
+    INNER JOIN results_by_inititiative rbi ON rbi.result_id = r.id
+    INNER JOIN clarisa_initiatives ci ON ci.id = rbi.inititiative_id
+WHERE
+    r.is_active > 0
+    AND rbi.is_active > 0
+    AND ci.active > 0
+    AND r.id = ?;
+    `;
+
+    try {
+      const results: any[] = await this.query(queryData, [id]);
+      return results;
+    } catch (error) {
+      throw {
+        message: `[${ResultRepository.name}] => getResultsById error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
   async AllResultsByRoleUsers(userid: number) {
     const queryData = `
     SELECT
@@ -250,7 +286,8 @@ WHERE
     r.created_date,
     r.result_level_id,
     r.title,
-    r.legacy_id 
+    r.legacy_id,
+    r.applicable_partner
 FROM
     result r
     inner join results_by_inititiative rbi ON rbi.result_id = r.id 

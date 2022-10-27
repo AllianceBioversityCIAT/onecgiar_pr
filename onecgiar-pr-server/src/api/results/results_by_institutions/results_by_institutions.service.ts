@@ -78,13 +78,17 @@ export class ResultsByInstitutionsService {
           status: HttpStatus.NOT_FOUND,
         };
       }
+      const result = await this._resultRepository.getResultById(id);
       const institutionsId: number[] = institutions.map(el => el.id);
       const delivery = await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByResultByInstitution(institutionsId);
       institutions.map(inst => {
         inst['deliveries'] = delivery.filter( dl => dl.result_by_institution_id == inst.id).map(res => res.partner_delivery_type_id);
       })
       return {
-        response: institutions,
+        response: {
+          applicable_partner: result.applicable_partner? true: false,
+          institutions
+        },
         message: 'Successful response',
         status: HttpStatus.OK,
       };
@@ -110,48 +114,51 @@ export class ResultsByInstitutionsService {
       }
       const vrs: Version = <Version>version.response;
       const result = await this._resultByIntitutionsRepository.updateIstitutions(data.result_id, data.institutions, false, user.id);
-        
-      for (let index = 0; index < data.institutions.length; index++) {
-        const isInstitutions = await this._resultByIntitutionsRepository.getResultByInstitutionExists(data.result_id, data.institutions[index].institutions_id, false);
-        if(!isInstitutions){
-          const institutionsNew: ResultsByInstitution = new ResultsByInstitution();
-          institutionsNew.created_by = user.id;
-          institutionsNew.institution_roles_id = 2;
-          institutionsNew.institutions_id = data.institutions[index].institutions_id;
-          institutionsNew.last_updated_by = user.id;
-          institutionsNew.result_id = data.result_id;
-          institutionsNew.version_id = vrs.id;
-          institutionsNew.is_active = true;
-          const responseInstitution = await this._resultByIntitutionsRepository.save(institutionsNew);
-          const delivery = data.institutions[index].deliveries;
-          let InstitutionsDeliveriesArray: ResultByInstitutionsByDeliveriesType[] = [];
-          for (let i = 0; i < delivery.length; i++) {
-            const newInstitutionsDeliveries = new ResultByInstitutionsByDeliveriesType();
-            newInstitutionsDeliveries.result_by_institution_id = responseInstitution.id;
-            newInstitutionsDeliveries.partner_delivery_type_id = delivery[i];
-            newInstitutionsDeliveries.last_updated_by = user.id;
-            newInstitutionsDeliveries.versions_id = vrs.id;
-            newInstitutionsDeliveries.created_by = user.id;
-            InstitutionsDeliveriesArray.push(newInstitutionsDeliveries);
-          }      
-          const Institutionsdelivery = await this._resultByInstitutionsByDeliveriesTypeRepository.save(InstitutionsDeliveriesArray);
-        }else{
-          const delivery = data.institutions[index].deliveries;
-          await this._resultByInstitutionsByDeliveriesTypeRepository.inactiveResultDeLivery(isInstitutions.id, data.institutions[index].deliveries);
-          let InstitutionsDeliveriesArray: ResultByInstitutionsByDeliveriesType[] = [];
-          for (let i = 0; i < delivery.length; i++) {
-            const exist = await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByTypeAndResultByInstitution(isInstitutions.id, data.institutions[index].deliveries[i]);
-            if(!exist){
+      rExists.applicable_partner = data.applicable_partner;
+      await this._resultRepository.save(rExists);
+      if(!data?.applicable_partner){
+        for (let index = 0; index < data.institutions.length; index++) {
+          const isInstitutions = await this._resultByIntitutionsRepository.getResultByInstitutionExists(data.result_id, data.institutions[index].institutions_id, false);
+          if(!isInstitutions){
+            const institutionsNew: ResultsByInstitution = new ResultsByInstitution();
+            institutionsNew.created_by = user.id;
+            institutionsNew.institution_roles_id = 2;
+            institutionsNew.institutions_id = data.institutions[index].institutions_id;
+            institutionsNew.last_updated_by = user.id;
+            institutionsNew.result_id = data.result_id;
+            institutionsNew.version_id = vrs.id;
+            institutionsNew.is_active = true;
+            const responseInstitution = await this._resultByIntitutionsRepository.save(institutionsNew);
+            const delivery = data.institutions[index].deliveries;
+            let InstitutionsDeliveriesArray: ResultByInstitutionsByDeliveriesType[] = [];
+            for (let i = 0; i < delivery.length; i++) {
               const newInstitutionsDeliveries = new ResultByInstitutionsByDeliveriesType();
-              newInstitutionsDeliveries.result_by_institution_id = isInstitutions.id;
+              newInstitutionsDeliveries.result_by_institution_id = responseInstitution.id;
               newInstitutionsDeliveries.partner_delivery_type_id = delivery[i];
               newInstitutionsDeliveries.last_updated_by = user.id;
               newInstitutionsDeliveries.versions_id = vrs.id;
               newInstitutionsDeliveries.created_by = user.id;
               InstitutionsDeliveriesArray.push(newInstitutionsDeliveries);
-            }
-          } 
-          const Institutionsdelivery = await this._resultByInstitutionsByDeliveriesTypeRepository.save(InstitutionsDeliveriesArray);
+            }      
+            const Institutionsdelivery = await this._resultByInstitutionsByDeliveriesTypeRepository.save(InstitutionsDeliveriesArray);
+          }else{
+            const delivery = data.institutions[index].deliveries;
+            await this._resultByInstitutionsByDeliveriesTypeRepository.inactiveResultDeLivery(isInstitutions.id, data.institutions[index].deliveries);
+            let InstitutionsDeliveriesArray: ResultByInstitutionsByDeliveriesType[] = [];
+            for (let i = 0; i < delivery.length; i++) {
+              const exist = await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByTypeAndResultByInstitution(isInstitutions.id, data.institutions[index].deliveries[i]);
+              if(!exist){
+                const newInstitutionsDeliveries = new ResultByInstitutionsByDeliveriesType();
+                newInstitutionsDeliveries.result_by_institution_id = isInstitutions.id;
+                newInstitutionsDeliveries.partner_delivery_type_id = delivery[i];
+                newInstitutionsDeliveries.last_updated_by = user.id;
+                newInstitutionsDeliveries.versions_id = vrs.id;
+                newInstitutionsDeliveries.created_by = user.id;
+                InstitutionsDeliveriesArray.push(newInstitutionsDeliveries);
+              }
+            } 
+            const Institutionsdelivery = await this._resultByInstitutionsByDeliveriesTypeRepository.save(InstitutionsDeliveriesArray);
+          }
         }
 
       }

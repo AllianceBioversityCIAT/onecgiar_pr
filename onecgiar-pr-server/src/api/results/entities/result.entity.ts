@@ -135,4 +135,11 @@ export class Result {
     default: null,
   })
   is_krs!: boolean;
+
+  @Column({
+    name: 'applicable_partner',
+    type: 'boolean',
+    default: false
+  })
+  applicable_partner: boolean;
 }

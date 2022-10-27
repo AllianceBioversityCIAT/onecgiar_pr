@@ -29,7 +29,7 @@ import { ClarisaInnovationCharacteristicRepository } from './clarisa-innovation-
 @Injectable()
 export class ClarisaTaskService {
   private readonly clarisaHost: string =
-    env.CLA_URL ?? env.L_CLA_URL;
+    `${env.CLA_URL}api/` ?? env.L_CLA_URL;
   private readonly configAuth = {
     auth: {
       username: env.CLA_USER,
