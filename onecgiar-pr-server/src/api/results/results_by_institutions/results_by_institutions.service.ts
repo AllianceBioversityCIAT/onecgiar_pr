@@ -112,12 +112,11 @@ export class ResultsByInstitutionsService {
       if (version.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: version });
       }
-      let result: any;
+      const result = await this._resultByIntitutionsRepository.updateIstitutions(data.result_id, data.institutions, false, user.id, data?.applicable_partner);
       const vrs: Version = <Version>version.response;
       rExists.applicable_partner = data.applicable_partner;
       await this._resultRepository.save(rExists);
       if(!data?.applicable_partner){
-        result = await this._resultByIntitutionsRepository.updateIstitutions(data.result_id, data.institutions, false, user.id);
         for (let index = 0; index < data.institutions.length; index++) {
           const isInstitutions = await this._resultByIntitutionsRepository.getResultByInstitutionExists(data.result_id, data.institutions[index].institutions_id, false);
           if(!isInstitutions){
