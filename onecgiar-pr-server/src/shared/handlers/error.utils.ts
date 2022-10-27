@@ -25,7 +25,7 @@ export class HandlersError {
     }
     return {
       response: error?.response ? error.response : { error: true },
-      message: `[${className}] => completeDataByEmail error: ${error}`,
+      message: `[${className}] => error: ${error}`,
       status: HttpStatus.INTERNAL_SERVER_ERROR,
     };
   }

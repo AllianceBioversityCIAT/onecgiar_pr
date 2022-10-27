@@ -5,4 +5,5 @@ export class SaveResultsByInstitutionDto {
 
 interface institutionsInterface{
     institutions_id: number;
-  }
+    deliveries?: number[];
+}

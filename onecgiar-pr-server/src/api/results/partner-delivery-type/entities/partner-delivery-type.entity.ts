@@ -14,7 +14,8 @@ export class PartnerDeliveryType {
 
     @Column({
         name: 'is_active',
-        type: 'boolean'
+        type: 'boolean',
+        default: true
     })
     is_active: boolean;
 }

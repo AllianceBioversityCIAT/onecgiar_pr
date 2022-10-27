@@ -74,9 +74,15 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     select 
     	rbi.id,
     	rbi.institutions_id,
+    	ci.name institutions_name,
+    	ci.acronym as institutions_acronym,
     	rbi.institution_roles_id,
-    	rbi.version_id
+    	rbi.version_id,
+    	cit.code as institutions_type_id, 
+    	cit.name as institutions_type_name
     from results_by_institution rbi 
+    inner join clarisa_institutions ci on ci.id  = rbi.institutions_id 
+    inner join clarisa_institution_types cit on cit.code = ci.institution_type_code 
     where rbi.result_id = ?
       and rbi.institution_roles_id = 2
     	and rbi.is_active > 0;
@@ -146,6 +152,7 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
   }
 
   async updateIstitutions(resultId: number, institutionsArray: institutionsInterface[], isActor: boolean, userId: number) {
+    console.log(institutionsArray)
     const institutions = institutionsArray.map(el => el.institutions_id);
     const upDateInactive = `
     update results_by_institution 
@@ -178,6 +185,10 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
       and institution_roles_id = ?;
     `;
 
+    console.log(upDateInactive)
+    console.log(upDateActive)
+    console.log(upDateAllInactive)
+
     try {
       if(institutions.length){
         const upDateInactiveResult = await this.query(upDateInactive, [
@@ -195,7 +206,7 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByIntitutionsRepository.name,
-        error: error,
+        error: `updateIstitutions ${error}`,
         debug: true,
       });
     }
