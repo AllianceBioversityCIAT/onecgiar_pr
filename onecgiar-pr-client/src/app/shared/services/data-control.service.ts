@@ -1,10 +1,11 @@
 import { Injectable } from '@angular/core';
-import { ResultItem } from '../interfaces/result';
+import { ResultItem } from '../interfaces/result.interface';
 
 @Injectable({
   providedIn: 'root'
 })
 export class DataControlService {
+  showPartnersRequest: boolean = false;
   myInitiativesList = [];
   resultsList: ResultItem[];
   constructor() {}

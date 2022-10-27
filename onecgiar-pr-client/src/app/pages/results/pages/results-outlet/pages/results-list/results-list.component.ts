@@ -14,7 +14,7 @@ export class ResultsListComponent implements OnInit {
   columnOrder = [
     { title: 'ID', attr: 'id' },
     { title: 'Title', attr: 'title', class: 'notCenter' },
-    { title: 'Reported year', attr: 'reported_year' },
+    { title: 'Reporting year', attr: 'reported_year' },
     { title: 'Result type', attr: 'result_type' },
     { title: 'Submitter', attr: 'submitter' },
     { title: 'Status', attr: 'status_name' },

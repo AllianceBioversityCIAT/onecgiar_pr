@@ -14,12 +14,18 @@ import { PrRadioButtonComponent } from './pr-radio-button/pr-radio-button.compon
 import { PrMultiSelectComponent } from './pr-multi-select/pr-multi-select.component';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { PrYesOrNotComponent } from './pr-yes-or-not/pr-yes-or-not.component';
+import { PrTextareaComponent } from './pr-textarea/pr-textarea.component';
+import { InputTextareaModule } from 'primeng/inputtextarea';
+import { PrCheckboxComponent } from './pr-checkbox/pr-checkbox.component';
+import { CheckboxModule } from 'primeng/checkbox';
+import { ScrollingModule } from '@angular/cdk/scrolling';
+import { ListFilterByTextAndAttrPipe } from './pr-multi-select/pipes/list-filter-by-text-and-attr.pipe';
 
-const fieldComponents = [PrInputComponent, PrSelectComponent, PrRadioButtonComponent, DetailSectionTitleComponent, PrMultiSelectComponent, PrFieldHeaderComponent, PrYesOrNotComponent];
+const fieldComponents = [PrInputComponent, PrSelectComponent, PrRadioButtonComponent, DetailSectionTitleComponent, PrMultiSelectComponent, PrFieldHeaderComponent, PrYesOrNotComponent, PrTextareaComponent, PrCheckboxComponent];
 
 @NgModule({
-  declarations: [...fieldComponents, PrFieldValidationsComponent, PrWordCounterComponent],
+  declarations: [...fieldComponents, PrFieldValidationsComponent, PrWordCounterComponent, ListFilterByTextAndAttrPipe],
   exports: [...fieldComponents, FormsModule],
-  imports: [CommonModule, FormsModule, InputTextModule, DropdownModule, RadioButtonModule, MultiSelectModule]
+  imports: [CommonModule, FormsModule, InputTextModule, DropdownModule, RadioButtonModule, MultiSelectModule, InputTextareaModule, CheckboxModule, ScrollingModule]
 })
 export class CustomFieldsModule {}

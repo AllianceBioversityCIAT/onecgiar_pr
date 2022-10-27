@@ -9,7 +9,7 @@
     </div>
     <div class="report_container">
       <app-pr-select class="segment_title_margin" [options]="this.api.dataControlSE.myInitiativesList"
-        inputTitle="Report for" optionLabel="official_code_short_name" optionValue="initiative_id"
+        label="Report for" optionLabel="official_code_short_name" optionValue="initiative_id"
         [(ngModel)]="this.resultLevelSE.resultBody.initiative_id">
       </app-pr-select>
       <app-result-level-buttons></app-result-level-buttons>
@@ -26,13 +26,15 @@
         [readOnly]="resultLevelSE.resultBody.result_type_id == 6" [placeholder]="resultTypeName+ ''" label="Title"
         type="text" [maxWords]="30"
         [description]="resultLevelSE.resultBody.result_type_id == 6 ? 'Title fetched from CGSpace' :'To search for results that have already been reported, enter key words into the title box below. If your result has not already been reported, you can add it here.'"
-        [(ngModel)]="this.resultLevelSE.resultBody.result_name">
+        [(ngModel)]="this.resultLevelSE.resultBody.result_name"
+        (ngModelChange)="depthSearch(this.resultLevelSE.resultBody.result_name)">
       </app-pr-input>
 
-      <app-similar-results *ngIf="resultLevelSE.resultBody.result_type_id != 6"></app-similar-results>
+      <app-similar-results *ngIf="resultLevelSE.resultBody.result_type_id != 6" [options]="this.depthSearchList">
+      </app-similar-results>
     </div>
     <div class="save_button_container"
-      [ngClass]="{'globalDisabled': ((!this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody)) || (this.api.dataControlSE.resultsList | similarResults:this.resultLevelSE.resultBody.result_name).length) || this.api.wordCounterSE.counter(this.resultLevelSE.resultBody.result_name) > 30  }">
+      [ngClass]="{'globalDisabled': ((!this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody)) || exactTitleFound) || this.api.wordCounterSE.counter(this.resultLevelSE.resultBody.result_name) > 30  }">
       <div (click)="onSaveSection()">
         <app-pr-button padding="medium" text="Save and continue" icon="save"></app-pr-button>
       </div>

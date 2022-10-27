@@ -1,5 +1,5 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { UserAuth } from '../../shared/interfaces/user';
+import { UserAuth } from '../../shared/interfaces/user.interface';
 import { Router } from '@angular/router';
 import { internationalizationData } from '../../shared/data/internationalizationData';
 import { AuthService } from '../../shared/services/api/auth.service';

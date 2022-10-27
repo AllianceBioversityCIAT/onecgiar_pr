@@ -32,12 +32,18 @@ export class ResultsController {
     throw new HttpException({ message, response }, status);
   }
 
+  @Get('get/:id')
+  async findResultById(@Param('id') id: number) {
+    const { message, response, status } = await this.resultsService.findResultById(id);
+    throw new HttpException({ message, response }, status);
+
+  }
+
   @Get('get/name/:name')
   findAll(@Param('name') resultName: string) {
     return this.resultsService.findAll() + resultName;
   }
-
-  // * Get all results
+  
   @Get('get/all')
   async findAllResults() {
     const { message, response, status } = await this.resultsService.findAll();
@@ -91,7 +97,7 @@ export class ResultsController {
     throw new HttpException({ message, response }, status);
   }
 
-  @Post('create/general-information')
+  @Patch('create/general-information')
   async createGeneralInformation(
     @Body()
     CreateGeneralInformationResultDto: CreateGeneralInformationResultDto,
@@ -105,6 +111,13 @@ export class ResultsController {
         CreateGeneralInformationResultDto,
         token,
       );
+    throw new HttpException({ message, response }, status);
+  }
+
+  @Get('get/general-information/result/:id')
+  async getGeneralInformationByResult(@Param('id') id: number){
+    const { message, response, status } =
+      await this.resultsService.getGeneralInformation(id);
     throw new HttpException({ message, response }, status);
   }
 

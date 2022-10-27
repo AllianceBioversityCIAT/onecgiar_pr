@@ -1,31 +1,27 @@
 import {
-  MiddlewareConsumer,
   Module,
-  NestModule,
-  RequestMethod,
 } from '@nestjs/common';
 import { ResultsByInstitutionsService } from './results_by_institutions.service';
 import { ResultsByInstitutionsController } from './results_by_institutions.controller';
-import { JwtMiddleware } from '../../../auth/Middlewares/jwt.middleware';
-import { AuthModule } from '../../../auth/auth.module';
 import { ResultByIntitutionsRepository } from './result_by_intitutions.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
+import { ResultRepository } from '../result.repository';
+import { VersionsService } from '../versions/versions.service';
+import { VersionRepository } from '../versions/version.repository';
+import { ResultByInstitutionsByDeliveriesTypeRepository } from '../result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';
 
 @Module({
   controllers: [ResultsByInstitutionsController],
   providers: [
     ResultsByInstitutionsService,
     ResultByIntitutionsRepository,
+    ResultRepository,
+    VersionsService,
+    VersionRepository,
     HandlersError,
+    ResultByInstitutionsByDeliveriesTypeRepository
   ],
-  imports: [AuthModule],
+  imports: [],
   exports: [ResultByIntitutionsRepository],
 })
-export class ResultsByInstitutionsModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(JwtMiddleware).forRoutes({
-      path: '/api/results/results-by-institutions/all',
-      method: RequestMethod.GET,
-    });
-  }
-}
+export class ResultsByInstitutionsModule{}

@@ -6,6 +6,7 @@
 
 .pr_label {
     margin-top: 20px;
+    margin-bottom: 7px;
     color: black;
     text-align: left;
 }
@@ -17,4 +18,43 @@
     padding: 0px !important;
     border-radius: 5px;
     overflow: hidden;
+}
+
+input::placeholder {
+    color: rgb(194, 194, 194);
+}
+
+.input_container {
+    position: relative;
+
+    .hints_container {
+        display: flex;
+        justify-content: space-between;
+        padding: 0px 8px;
+        padding-top: 5px;
+
+        .hint {
+            color: var(--pr-color-medium);
+            font-size: .9em;
+        }
+    }
+}
+
+.pr_chip_selected {
+    background-color: var(--pr-color-primary-2);
+    color: var(--pr-color-secondary);
+    font-size: .95em;
+    padding: 1px 10px;
+    border-radius: 10px;
+    display: grid;
+    grid-template-columns: 1fr 15px;
+
+    i {
+        justify-self: center;
+        align-self: center;
+        cursor: pointer;
+        font-size: 1.4em;
+        color: rgb(252, 95, 95);
+    }
+
 }

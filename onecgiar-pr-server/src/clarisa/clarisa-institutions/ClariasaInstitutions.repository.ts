@@ -27,12 +27,14 @@ export class ClarisaInstitutionsRepository extends Repository<ClarisaInstitution
   async getAllInstitutions() {
     const queryData = `
     select 
-    	ci.id,
-    	ci.name,
-    	ci.acronym,
-    	ci.website_link,
-    	ci.institution_type_code
-    from clarisa_institutions ci;
+    	ci.id as institutions_id,
+    	ci.name institutions_name,
+    	ci.acronym as institutions_acronym,
+      ci.website_link,
+    	cit.code as institutions_type_id, 
+    	cit.name as institutions_type_name
+    from clarisa_institutions ci 
+    inner join clarisa_institution_types cit on cit.code = ci.institution_type_code;
     `;
     try {
       const deleteData: ClarisaInstitution[] = await this.query(queryData);
@@ -46,16 +48,16 @@ export class ClarisaInstitutionsRepository extends Repository<ClarisaInstitution
     }
   }
 
-  async getValidInstitution(id: institutionsInterface[]) {
+  async getValidInstitution(institutions: institutionsInterface[]) {
+    const id = institutions.map(el => el.institutions_id);
     let values = '';
     for (let index = 0; index < id.length; index++) {
-      if (!values) {
-        values = `values row(${id[index].institutions_id})`;
-      } else {
-        values += `, row(${id[index].institutions_id})`;
+      if(!values){
+        values = `values row(${id[index]})`
+      }else{
+        values += `, row(${id[index]})`
       }
     }
-    const arrayId = id.map((i) => i.institutions_id);
     const queryData = `
     select 
     	rl.column_0 as institution_id, 
@@ -64,7 +66,7 @@ export class ClarisaInstitutionsRepository extends Repository<ClarisaInstitution
     	left join (select 
     				ci.id 
     				from clarisa_institutions ci 
-    				where ci.id in(${arrayId.toString()})) dt on dt.id = rl.column_0;
+    				where ci.id in(${id.toString()})) dt on dt.id = rl.column_0;
     `;
 
     try {
@@ -82,5 +84,4 @@ export class ClarisaInstitutionsRepository extends Repository<ClarisaInstitution
 
 interface institutionsInterface{
   institutions_id: number;
-  is_active: boolean;
 }

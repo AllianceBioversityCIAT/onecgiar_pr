@@ -1,0 +1,26 @@
+<p-dialog class="support_information" header="Title" [(visible)]="this.api.dataControlSE.showPartnersRequest"
+    [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true"
+    [style]="{padding: '0px'}">
+    <div class="modal_title">Partners Request</div>
+    <div class="modal_container">
+        <app-pr-input placeholder="Write some..." label="Acronym" type="text" [required]="false"
+            [(ngModel)]="this.partnersRequestBody.name">
+        </app-pr-input>
+        <app-pr-input placeholder="Write some..." label="Name" type="text" [(ngModel)]="this.partnersRequestBody.name">
+        </app-pr-input>
+        <app-pr-select class="segment_title_margin" [options]="[1,1,1]" label="Type"
+            optionLabel="official_code_short_name" optionValue="initiative_id"
+            [(ngModel)]="this.partnersRequestBody.name">
+        </app-pr-select>
+        <app-pr-select class="segment_title_margin" [options]="[1,1,1]" label="Headquarter country"
+            optionLabel="official_code_short_name" optionValue="initiative_id"
+            [(ngModel)]="this.partnersRequestBody.name">
+        </app-pr-select>
+        <app-pr-input placeholder="Write some..." label="Website" type="text" [required]="false"
+            [(ngModel)]="this.partnersRequestBody.name">
+        </app-pr-input>
+        <app-pr-input placeholder="Write some..." label="RequestSource" type="text"
+            [(ngModel)]="this.partnersRequestBody.name">
+        </app-pr-input>
+    </div>
+</p-dialog>

@@ -31,6 +31,8 @@ import { LegacyResultModule } from './legacy-result/legacy-result.module';
 import { ResultByLevelModule } from './result-by-level/result-by-level.module';
 import { ClarisaInstitutionsRepository } from '../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
 import { ClarisaInstitutionsTypeRepository } from '../../clarisa/clarisa-institutions-type/ClariasaInstitutionsType.repository';
+import { PartnerDeliveryTypeModule } from './partner-delivery-type/partner-delivery-type.module';
+import { ResultByInstitutionsByDeliveriesTypeModule } from './result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.module';
 
 @Module({
   controllers: [ResultsController],
@@ -52,6 +54,8 @@ import { ClarisaInstitutionsTypeRepository } from '../../clarisa/clarisa-institu
     YearsModule,
     LegacyResultModule,
     ResultByLevelModule,
+    PartnerDeliveryTypeModule,
+    ResultByInstitutionsByDeliveriesTypeModule,
   ],
   providers: [
     ResultsService,
@@ -69,25 +73,9 @@ export class ResultsModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer.apply(JwtMiddleware).forRoutes(
       {
-        path: '/api/results/get/initiatives/:userId',
-        method: RequestMethod.GET,
-      },
-      {
-        path: '/api/results/get/name/:name',
-        method: RequestMethod.GET,
-      },
-      {
-        path: '/api/results/get/all',
-        method: RequestMethod.GET,
-      },
-      {
-        path: '/api/results/create/header',
-        method: RequestMethod.POST,
-      },
-      {
-        path: '/api/results/create/general-information',
-        method: RequestMethod.POST,
-      },
+        path: '/api/results/*',
+        method: RequestMethod.ALL,
+      }
     );
   }
 }

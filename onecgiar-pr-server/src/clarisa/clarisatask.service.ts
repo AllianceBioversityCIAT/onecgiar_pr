@@ -18,6 +18,10 @@ import { ClarisaGlobalTarget } from './clarisa-global-target/entities/clarisa-gl
 import { ClarisaInstitutionsTypeRepository } from './clarisa-institutions-type/ClariasaInstitutionsType.repository';
 import { ClarisaInstitutionsRepository } from './clarisa-institutions/ClariasaInstitutions.repository';
 import { HttpService } from '@nestjs/axios';
+import { ClarisaPolicyStageRepository } from './clarisa-policy-stages/clarisa-policy-stages.repository';
+import { ClarisaInnovationTypeRepository } from './clarisa-innovation-type/clarisa-innovation-type.repository';
+import { ClarisaInnovationReadinessLevelRepository } from './clarisa-innovation-readiness-levels/clarisa-innovation-readiness-levels.repository';
+import { ClarisaInnovationCharacteristicRepository } from './clarisa-innovation-characteristics/clarisa-innovation-characteristics.repository';
 
 @Injectable()
 export class ClarisaTaskService {
@@ -42,7 +46,11 @@ export class ClarisaTaskService {
     private readonly _clarisaGobalTargetRepository: ClarisaGobalTargetRepository,
     private readonly _clarisaInstitutionsRepository: ClarisaInstitutionsRepository,
     private readonly _clarisaInstitutionsTypeRepository: ClarisaInstitutionsTypeRepository,
-    private readonly _httpService: HttpService,
+    private readonly _clarisaPolicyStageRepository: ClarisaPolicyStageRepository,
+    private readonly _clarisaInnovationTypeRepository: ClarisaInnovationTypeRepository,
+    private readonly _clarisaInnovationReadinessLevelRepository: ClarisaInnovationReadinessLevelRepository,
+    private readonly _clarisaInnovationCharacteristicRepository: ClarisaInnovationCharacteristicRepository,
+    private readonly _httpService: HttpService
   ) {}
 
   public async clarisaBootstrap() {
@@ -70,6 +78,10 @@ export class ClarisaTaskService {
     count = await this.cloneClarisaRegionsType(count);
     count = await this.cloneClarisaInstitutionsType(count);
     count = await this.cloneClarisaInstitutions(count);
+    count = await this.cloneClarisaPolicyStageRepository(count);
+    count = await this.cloneClarisaInnovationTypeRepository(count);
+    count = await this.cloneClarisaInnovationReadinessLevelRepository(count);
+    count = await this.cloneClarisaInnovationCharacteristicRepository(count);
   }
 
   private async cloneClarisaCountries(position: number, deleteItem = false) {
@@ -273,7 +285,17 @@ export class ClarisaTaskService {
           `${this.clarisaHost}impact-area-indicators`,
           this.configAuth,
         );
-        await this._clarisaImpactAreaInticatorsRepository.save(data);
+        const mapdata = data.map(el => ({
+          id: el.indicatorId,
+          indicator_statement: el.indicatorStatement,
+          target_year: el.targetYear,
+          target_unit: el.targetUnit,
+          value: el.value||null,
+          is_aplicable_projected_benefits: el.isAplicableProjectedBenefits,
+          impact_area_id: el.impactAreaId,
+          name: el.impactAreaName
+        }))
+        await this._clarisaImpactAreaInticatorsRepository.save(mapdata);
         this._logger.verbose(
           `[${position}]: All CLARISA Impact Area Indicators control list data has been created`,
         );
@@ -401,14 +423,13 @@ export class ClarisaTaskService {
           `[${position}]: All CLARISA Institutions type control list data has been deleted`,
         );
       } else {
-        const data = await this._httpService.get(
-          `${env.L_CLA_URL}institution-types`,
-          { auth: { username: 'pandr.data', password: 'PandR.data2022' } },
-        );
-        await data.subscribe(async (el) => {
-          const { data } = el;
-          await this._clarisaInstitutionsTypeRepository.save(data);
-        });
+        const data = await this._httpService.get(`${env.L_CLA_URL}institution-types`, {auth: {username:env.L_CLA_USER, password: env.L_CLA_PASSWORD }});
+        await data.subscribe(async el => {
+          const {data} = el;
+          await this._clarisaInstitutionsTypeRepository.save(
+            data,
+          );
+        }).closed;
         this._logger.verbose(
           `[${position}]: All CLARISA Institutions type control list data has been created`,
         );
@@ -432,15 +453,19 @@ export class ClarisaTaskService {
           `[${position}]: All CLARISA Institutions control list data has been deleted`,
         );
       } else {
-        const data = await this._httpService.get(`${env.L_CLA_URL}institutions`, {auth: {username:'pandr.data', password: 'PandR.data2022' }});
+        const data = await this._httpService.get(`${this.clarisaHost}institutions`, {auth: {username:env.L_CLA_USER, password: env.L_CLA_PASSWORD }});
         await data.subscribe(async el => {
           const {data} = el;
+
           data.map(dat => {
             dat['institution_type_code'] = dat.institutionType.code ?? null;
             dat['id'] = dat.code;
             dat['website_link'] = dat.websiteLink;
-          });
-          await this._clarisaInstitutionsRepository.save(data);
+          })
+          
+          await this._clarisaInstitutionsRepository.save(
+            data,
+          );
         });
         this._logger.verbose(
           `[${position}]: All CLARISA Institutions control list data has been created`,
@@ -450,6 +475,118 @@ export class ClarisaTaskService {
     } catch (error) {
       this._logger.error(
         `[${position}]: Error in manipulating the data of CLARISA Institutions `,
+      );
+      this._logger.error(error);
+      return ++position;
+    }
+  }
+
+  private async cloneClarisaPolicyStageRepository(position: number, deleteItem = false) {
+    try {
+      if (deleteItem) {
+        const deleteData =
+          await this._clarisaPolicyStageRepository.deleteAllData();
+        this._logger.warn(
+          `[${position}]: All CLARISA Policy Stage control list data has been deleted`,
+        );
+      } else {
+        const { data } = await axios.get(
+          `${this.clarisaHost}policy-stages`,
+          this.configAuth,
+        );
+        await this._clarisaPolicyStageRepository.save<ClarisaRegionType>(data);
+        this._logger.verbose(
+          `[${position}]: All CLARISA Policy Stage control list data has been created`,
+        );
+      }
+      return ++position;
+    } catch (error) {
+      this._logger.error(
+        `[${position}]: Error in manipulating the data of CLARISA Policy Stage`,
+      );
+      this._logger.error(error);
+      return ++position;
+    }
+  }
+
+  private async cloneClarisaInnovationTypeRepository(position: number, deleteItem = false) {
+    try {
+      if (deleteItem) {
+        const deleteData =
+          await this._clarisaInnovationTypeRepository.deleteAllData();
+        this._logger.warn(
+          `[${position}]: All CLARISA Innovation Type control list data has been deleted`,
+        );
+      } else {
+        const { data } = await axios.get(
+          `${this.clarisaHost}innovation-types`,
+          this.configAuth,
+        );
+        await this._clarisaInnovationTypeRepository.save<ClarisaRegionType>(data);
+        this._logger.verbose(
+          `[${position}]: All CLARISA Innovation Type control list data has been created`,
+        );
+      }
+      return ++position;
+    } catch (error) {
+      this._logger.error(
+        `[${position}]: Error in manipulating the data of CLARISA Innovation Type`,
+      );
+      this._logger.error(error);
+      return ++position;
+    }
+  }
+
+  private async cloneClarisaInnovationReadinessLevelRepository(position: number, deleteItem = false) {
+    try {
+      if (deleteItem) {
+        const deleteData =
+          await this._clarisaInnovationReadinessLevelRepository.deleteAllData();
+        this._logger.warn(
+          `[${position}]: All CLARISA Innovation Readiness Level control list data has been deleted`,
+        );
+      } else {
+        const { data } = await axios.get(
+          `${this.clarisaHost}innovation-readiness-levels`,
+          this.configAuth,
+        );
+        await this._clarisaInnovationReadinessLevelRepository.save<ClarisaRegionType>(data);
+        this._logger.verbose(
+          `[${position}]: All CLARISA Innovation Readiness Level control list data has been created`,
+        );
+      }
+      return ++position;
+    } catch (error) {
+      this._logger.error(
+        `[${position}]: Error in manipulating the data of CLARISA Innovation Readiness Level`,
+      );
+      this._logger.error(error);
+      return ++position;
+    }
+  }
+
+  private async cloneClarisaInnovationCharacteristicRepository(position: number, deleteItem = false) {
+    try {
+      if (deleteItem) {
+        const deleteData =
+          await this._clarisaInnovationCharacteristicRepository.deleteAllData();
+        this._logger.warn(
+          `[${position}]: All CLARISA Innovation Innovation Characteristic control list data has been deleted`,
+        );
+      } else {
+        const { data } = await axios.get(
+          `${this.clarisaHost}innovation-characteristics`,
+          this.configAuth,
+        );
+        await this._clarisaInnovationCharacteristicRepository.save<ClarisaRegionType>(data);
+        this._logger.verbose(
+          `[${position}]: All CLARISA Innovation Innovation Characteristic control list data has been created`,
+        );
+      }
+      return ++position;
+    } catch (error) {
+      this._logger.error(
+        `[${position}]: Error in manipulating the data of CLARISA Innovation Innovation Characteristic`,
       );
       this._logger.error(error);
       return ++position;

@@ -5,9 +5,10 @@ import { RdGeneralInformationRoutingModule } from './rd-general-information-rout
 import { RdGeneralInformationComponent } from './rd-general-information.component';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { UtilsComponentsModule } from '../../../../../../shared/components/utils-components/utils-components.module';
+import { CountInstitutionsTypesPipe } from './pipes/count-institutions-types.pipe';
 
 @NgModule({
-  declarations: [RdGeneralInformationComponent],
+  declarations: [RdGeneralInformationComponent, CountInstitutionsTypesPipe],
   imports: [CommonModule, RdGeneralInformationRoutingModule, CustomFieldsModule, UtilsComponentsModule]
 })
 export class RdGeneralInformationModule {}

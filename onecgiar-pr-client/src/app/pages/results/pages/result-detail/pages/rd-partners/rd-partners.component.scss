@@ -1,0 +1,13 @@
+.partners_container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+
+    .intitutions {}
+
+    .institutionsTypes {
+        // padding-top: 32px;
+        font-weight: 600;
+    }
+
+}

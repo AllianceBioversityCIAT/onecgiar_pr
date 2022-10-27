@@ -8,9 +8,8 @@ describe('PrMultiSelectComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ PrMultiSelectComponent ]
-    })
-    .compileComponents();
+      declarations: [PrMultiSelectComponent]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(PrMultiSelectComponent);
     component = fixture.componentInstance;

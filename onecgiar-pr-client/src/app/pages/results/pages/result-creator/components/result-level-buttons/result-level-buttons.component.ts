@@ -1,7 +1,5 @@
 import { Component } from '@angular/core';
-import { internationalizationData } from '../../../../../../shared/data/internationalizationData';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
-import { ResultLevel, Resulttype } from '../../../../../../shared/interfaces/result';
 import { ResultLevelService } from '../../services/result-level.service';
 
 @Component({

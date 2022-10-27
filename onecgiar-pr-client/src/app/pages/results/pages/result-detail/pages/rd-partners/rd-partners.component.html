@@ -1,1 +1,26 @@
-<p>rd-partners works!</p>
+<app-detail-section-title sectionName="Partners"></app-detail-section-title>
+
+<div class="detail_container">
+    <app-pr-checkbox label="Mark this option if this section is not applicable" [(ngModel)]="checkboxExample">
+    </app-pr-checkbox>
+    <div class="partnerRequestAlert"></div>
+    <div class="partners_container">
+
+        <div class="intitutions">
+            <app-pr-multi-select [options]="this.institutionsSE.institutionsList" optionLabel="name" label="Partners"
+                [required]="false" optionValue="institutions_id" [(ngModel)]="this.partnersBody.institutions"
+                placeholder="Select actors">
+            </app-pr-multi-select>
+            <br>
+            <app-pr-field-header [description]="'Partner(s) selected ('+this.partnersBody.institutions?.length+'):'">
+            </app-pr-field-header>
+
+        </div>
+
+        <div class="institutionsTypes">
+            <app-pr-field-header label="Institution types" [required]="false"></app-pr-field-header>
+            <div *ngFor="let item of this.partnersBody.institutions|instToInstTypes">item</div>
+        </div>
+
+    </div>
+</div>

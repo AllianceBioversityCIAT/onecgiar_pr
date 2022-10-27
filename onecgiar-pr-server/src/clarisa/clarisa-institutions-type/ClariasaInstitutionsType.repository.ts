@@ -24,16 +24,36 @@ export class ClarisaInstitutionsTypeRepository extends Repository<ClarisaInstitu
     }
   }
 
-  async getValidInstitutionType(id: institutionsTypeInterface[]) {
+  async getInstitutionsType() {
+    const queryData = `
+    select 
+    cit.code as institutions_type_id,
+    cit.name as institutions_type_name
+    from clarisa_institution_types cit;
+    `;
+    try {
+      const institutionsType = await this.query(queryData);
+      return institutionsType;
+    } catch (error) {
+      throw {
+        message: `[${ClarisaInstitutionsTypeRepository.name}] => deleteAllData error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
+  
+  async getValidInstitutionType(institutionsType: institutionsTypeInterface[]) {
+    const id = institutionsType.map(el => el.institutions_type_id);
     let values = '';
     for (let index = 0; index < id.length; index++) {
-      if (!values) {
-        values = `values row(${id[index].institution_types_id})`;
-      } else {
-        values += `, row(${id[index].institution_types_id})`;
+      if(!values){
+        values = `values row(${id[index]})`
+      }else{
+        values += `, row(${id[index]})`
       }
     }
-    const arrayId = id.map((i) => i.institution_types_id);
     const queryData = `
     select 
     	rl.column_0 as institution_id, 
@@ -42,7 +62,7 @@ export class ClarisaInstitutionsTypeRepository extends Repository<ClarisaInstitu
     	left join (select 
     				ci.code 
     				from clarisa_institution_types ci 
-    				where ci.code in(${arrayId.toString()})) dt on dt.code = rl.column_0;
+    				where ci.code in(${id.toString()})) dt on dt.code = rl.column_0;
     `;
 
     try {
@@ -59,6 +79,5 @@ export class ClarisaInstitutionsTypeRepository extends Repository<ClarisaInstitu
 }
 
 interface institutionsTypeInterface{
-  institution_types_id: number;
-  is_active: boolean;
+  institutions_type_id: number;
 }

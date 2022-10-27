@@ -1,5 +1,6 @@
+<app-pr-field-header [label]="this.label" [description]="this.description" [required]="this.required">
+</app-pr-field-header>
 <div class="field_container">
-    <div class="inputTitle">{{inputTitle}}:</div>
     <div class="p-fluid">
         <p-dropdown *ngIf="this.options.length" [options]="this.options" [virtualScroll]="true"
             [virtualScrollItemSize]="30" [optionLabel]="this.optionLabel" [optionValue]="this.optionValue"
