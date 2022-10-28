@@ -6,10 +6,13 @@ import { Component, OnInit } from '@angular/core';
   styleUrls: ['./policy-change-info.component.scss']
 })
 export class PolicyChangeInfoComponent implements OnInit {
-
-  constructor() { }
+  constructor() {}
 
   ngOnInit(): void {
+    this.showAlerts();
+    this.getSectionInformation();
   }
-
+  getSectionInformation() {}
+  onSaveSection() {}
+  showAlerts() {}
 }

@@ -7,4 +7,11 @@ import { Component } from '@angular/core';
 })
 export class RdTheoryOfChangeComponent {
   constructor() {}
+  ngOnInit(): void {
+    this.showAlerts();
+    this.getSectionInformation();
+  }
+  getSectionInformation() {}
+  onSaveSection() {}
+  showAlerts() {}
 }

@@ -6,10 +6,13 @@ import { Component, OnInit } from '@angular/core';
   styleUrls: ['./cap-dev-info.component.scss']
 })
 export class CapDevInfoComponent implements OnInit {
-
-  constructor() { }
+  constructor() {}
 
   ngOnInit(): void {
+    this.showAlerts();
+    this.getSectionInformation();
   }
-
+  getSectionInformation() {}
+  onSaveSection() {}
+  showAlerts() {}
 }

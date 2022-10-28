@@ -7,4 +7,11 @@ import { Component } from '@angular/core';
 })
 export class RdLinksToResultsComponent {
   constructor() {}
+  ngOnInit(): void {
+    this.showAlerts();
+    this.getSectionInformation();
+  }
+  getSectionInformation() {}
+  onSaveSection() {}
+  showAlerts() {}
 }
