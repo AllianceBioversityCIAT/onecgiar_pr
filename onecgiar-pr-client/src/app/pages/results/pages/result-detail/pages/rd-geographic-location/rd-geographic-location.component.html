@@ -1,1 +1,26 @@
-<p>rd-geographic-location works!</p>
+<app-detail-section-title sectionName="Geographic location"></app-detail-section-title>
+
+<div class="detail_container">
+    <div id="alert"></div>
+    <app-pr-radio-button label="What is the main geographic focus of the ___?"
+        description="This should reflect where the outcome has taken place/contributed to benefit."
+        [options]="this.geographic_focus" optionLabel="name" optionValue='id'
+        [(ngModel)]="this.geographicLocationBody.a">
+    </app-pr-radio-button>
+    <app-pr-yes-or-not label="Are there any regions that you wish to specify for this ___?"
+        [description]="this.geographicLocationBody.b  !== false ? thereAnyRegionText() : null"
+        [(ngModel)]="this.geographicLocationBody.b">
+    </app-pr-yes-or-not>
+    <app-pr-multi-select *ngIf="this.geographicLocationBody.b  !== false" [options]="[]"
+        selectedLabel="Actor(s) selected" selectedOptionLabel="institutions_name" optionLabel="full_name"
+        optionValue="institutions_id" placeholder="Select regions" [(ngModel)]="this.geographicLocationBody.c">
+    </app-pr-multi-select>
+    <app-pr-yes-or-not label="Are there any countries that you wish to specify for this ___?"
+        [description]="this.geographicLocationBody.d  !== false  ? thereAnycountriesText() : null"
+        [(ngModel)]="this.geographicLocationBody.d">
+    </app-pr-yes-or-not>
+    <app-pr-multi-select *ngIf="this.geographicLocationBody.d !== false" [options]="[]"
+        selectedLabel="Countries selected" selectedOptionLabel="institutions_name" optionLabel="full_name"
+        optionValue="institutions_id" placeholder="Select countries" [(ngModel)]="this.geographicLocationBody.e">
+    </app-pr-multi-select>
+</div>

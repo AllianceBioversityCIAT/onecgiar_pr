@@ -1,2 +1,2 @@
 <div class="pr_label segment_title" [ngClass]="{'required': this.required}" *ngIf="this.label">{{this.label}}:</div>
-<div class="pr_description" *ngIf="this.description">{{this.description}}</div>
+<div class="pr_description" *ngIf="this.description" [innerHTML]="this.description"></div>

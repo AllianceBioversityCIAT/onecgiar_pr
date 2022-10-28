@@ -1,4 +1,7 @@
 import { Component } from '@angular/core';
+import { ApiService } from '../../../../../../shared/services/api/api.service';
+import { environment } from '../../../../../../../environments/environment.prod';
+import { GeographicLocationBody } from './models/geographicLocationBody';
 
 @Component({
   selector: 'app-rd-geographic-location',
@@ -6,12 +9,47 @@ import { Component } from '@angular/core';
   styleUrls: ['./rd-geographic-location.component.scss']
 })
 export class RdGeographicLocationComponent {
-  constructor() {}
+  constructor(public api: ApiService) {}
+  geographicLocationBody = new GeographicLocationBody();
+  UNM49 = 'https://unstats.un.org/unsd/methodology/m49/';
+  ISO3166 = 'https://www.iso.org/iso-3166-country-codes.html';
+  geographic_focus = [
+    {
+      name: 'Global',
+      id: 1
+    },
+    {
+      name: 'Regional',
+      id: 2
+    },
+    {
+      name: 'Country',
+      id: 3
+    },
+    {
+      name: 'This is yet to be determined',
+      id: 4
+    }
+  ];
   ngOnInit(): void {
     this.showAlerts();
     this.getSectionInformation();
   }
   getSectionInformation() {}
   onSaveSection() {}
-  showAlerts() {}
+  showAlerts() {
+    this.api.alertsFs.show({
+      status: 'success',
+      title: 'sd',
+      description: `Select the geographical locations where this result is taking place. Please be as specific as possible and do not forget to include the locations coming from any Bilateral contributing to this result.`,
+      querySelector: '#alert',
+      position: 'beforeend'
+    });
+  }
+  thereAnyRegionText() {
+    return `The list of regions below follows the <a href='${this.UNM49}' class="open_route" target='_blank'>UN (M.49)<a> standard`;
+  }
+  thereAnycountriesText() {
+    return `The list of countries below follows the <a href='${this.ISO3166}' class="open_route" target='_blank'>ISO 3166<a> standard`;
+  }
 }
