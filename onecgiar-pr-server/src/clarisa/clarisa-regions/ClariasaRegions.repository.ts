@@ -23,4 +23,45 @@ export class ClarisaRegionsRepository extends Repository<ClarisaRegion> {
       };
     }
   }
+
+  async getAllRegions() {
+    const queryData = `
+    select 
+   	cr.um49Code as id,
+   	cr.name,
+   	cr.parent_regions_code 
+   	from clarisa_regions cr;
+    `;
+    try {
+      const regions = await this.query(queryData);
+      return regions;
+    } catch (error) {
+      throw {
+        message: `[${ClarisaRegionsRepository.name}] => getAllRegions error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
+  async getAllNoParentRegions() {
+    const queryData = `
+    select 
+   	cr.um49Code as id,
+   	cr.name,
+   	cr.parent_regions_code 
+   	from clarisa_regions cr
+   	where  cr.parent_regions_code is not null;
+    `;
+    try {
+      const regions = await this.query(queryData);
+      return regions;
+    } catch (error) {
+      throw {
+        message: `[${ClarisaRegionsRepository.name}] => getAllRegions error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
 }

@@ -33,6 +33,7 @@ import { ClarisaInstitutionsRepository } from '../../clarisa/clarisa-institution
 import { ClarisaInstitutionsTypeRepository } from '../../clarisa/clarisa-institutions-type/ClariasaInstitutionsType.repository';
 import { PartnerDeliveryTypeModule } from './partner-delivery-type/partner-delivery-type.module';
 import { ResultByInstitutionsByDeliveriesTypeModule } from './result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.module';
+import { ResultRegionsModule } from './result-regions/result-regions.module';
 
 @Module({
   controllers: [ResultsController],
@@ -56,6 +57,7 @@ import { ResultByInstitutionsByDeliveriesTypeModule } from './result-by-institut
     ResultByLevelModule,
     PartnerDeliveryTypeModule,
     ResultByInstitutionsByDeliveriesTypeModule,
+    ResultRegionsModule,
   ],
   providers: [
     ResultsService,

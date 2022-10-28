@@ -10,6 +10,7 @@ import {
 import { ClarisaCountriesService } from './clarisa-countries.service';
 import { CreateClarisaCountryDto } from './dto/create-clarisa-country.dto';
 import { UpdateClarisaCountryDto } from './dto/update-clarisa-country.dto';
+import { HttpException } from '@nestjs/common';
 
 @Controller()
 export class ClarisaCountriesController {
@@ -22,9 +23,11 @@ export class ClarisaCountriesController {
     return this.clarisaCountriesService.create(createClarisaCountryDto);
   }
 
-  @Get()
-  findAll() {
-    return this.clarisaCountriesService.findAll();
+  @Get('get/all')
+  async findAll() {
+    const { message, response, status } =
+      await this.clarisaCountriesService.findAllCountries();
+    throw new HttpException({ message, response }, status);
   }
 
   @Get(':id')

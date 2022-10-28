@@ -25,6 +25,7 @@ import { ClarisaPolicyStageRepository } from './clarisa-policy-stages/clarisa-po
 import { ClarisaInnovationTypeRepository } from './clarisa-innovation-type/clarisa-innovation-type.repository';
 import { ClarisaInnovationReadinessLevelRepository } from './clarisa-innovation-readiness-levels/clarisa-innovation-readiness-levels.repository';
 import { ClarisaInnovationCharacteristicRepository } from './clarisa-innovation-characteristics/clarisa-innovation-characteristics.repository';
+import { lastValueFrom, map } from 'rxjs';
 
 @Injectable()
 export class ClarisaTaskService {
@@ -60,16 +61,16 @@ export class ClarisaTaskService {
   public async clarisaBootstrap() {
     this._logger.debug(`Cloning of CLARISA control lists`);
     let count = 1;
-    count = await this.cloneClarisaCountries(count, true);
-    count = await this.cloneClarisaMeliaStudyTypes(count, true);
-    count = await this.cloneClarisaGlobalTargetType(count, true);
-    count = await this.cloneClarisaRegions(count, true);
+    //count = await this.cloneClarisaCountries(count, true);
+    //count = await this.cloneClarisaMeliaStudyTypes(count, true);
+    //count = await this.cloneClarisaGlobalTargetType(count, true);
+    //count = await this.cloneClarisaRegions(count, true);
     //count = await this.cloneClarisaInitiatives(count, true);
     //count = await this.cloneClarisaActionArea(count, true);
-    count = await this.cloneClarisaImpactAreaIndicators(count, true);
-    count = await this.cloneClarisaImpactArea(count, true);
-    count = await this.cloneClarisaOutcomeIndicators(count, true);
-    count = await this.cloneClarisaRegionsType(count, true);
+    //count = await this.cloneClarisaImpactAreaIndicators(count, true);
+    //count = await this.cloneClarisaImpactArea(count, true);
+    //count = await this.cloneClarisaOutcomeIndicators(count, true);
+    //count = await this.cloneClarisaRegionsType(count, true);
     count = await this.cloneClarisaRegions(count);
     count = await this.cloneClarisaCountries(count);
     count = await this.cloneClarisaMeliaStudyTypes(count);
@@ -460,20 +461,18 @@ export class ClarisaTaskService {
           `[${position}]: All CLARISA Institutions control list data has been deleted`,
         );
       } else {
-        const data = await this._httpService.get(`${this.clarisaHost}institutions`, {auth: {username:env.L_CLA_USER, password: env.L_CLA_PASSWORD }});
-        await data.subscribe(async el => {
-          const {data} = el;
-
-          data.map(dat => {
-            dat['institution_type_code'] = dat.institutionType.code ?? null;
-            dat['id'] = dat.code;
-            dat['website_link'] = dat.websiteLink;
-          })
-          
-          await this._clarisaInstitutionsRepository.save(
-            data,
-          );
-        });
+        const data = await lastValueFrom(this._httpService.get(`${this.clarisaHost}institutions`, {auth: {username:env.L_CLA_USER, password: env.L_CLA_PASSWORD }}).pipe(map(resp => resp.data)));
+        data.map(dat => {
+          dat['institution_type_code'] = dat.institutionType.code ?? null;
+          dat['id'] = dat.code;
+          dat['website_link'] = dat.websiteLink;
+          const hqarray: any[] = dat.countryOfficeDTO.filter(hq => hq.isHeadquarter == true);
+          dat['headquarter_country_iso2'] = hqarray.length? hqarray[0].isoAlpha2:null;
+        })
+        
+        await this._clarisaInstitutionsRepository.save(
+          data,
+        );
         this._logger.verbose(
           `[${position}]: All CLARISA Institutions control list data has been created`,
         );
