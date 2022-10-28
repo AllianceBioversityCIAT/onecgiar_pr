@@ -126,17 +126,19 @@ export class ResultsByInstitutionsService {
             institutionsNew.is_active = true;
             const responseInstitution = await this._resultByIntitutionsRepository.save(institutionsNew);
             const delivery = data.institutions[index].deliveries;
-            let InstitutionsDeliveriesArray: ResultByInstitutionsByDeliveriesType[] = [];
-            for (let i = 0; i < delivery.length; i++) {
-              const newInstitutionsDeliveries = new ResultByInstitutionsByDeliveriesType();
-              newInstitutionsDeliveries.result_by_institution_id = responseInstitution.id;
-              newInstitutionsDeliveries.partner_delivery_type_id = delivery[i];
-              newInstitutionsDeliveries.last_updated_by = user.id;
-              newInstitutionsDeliveries.versions_id = vrs.id;
-              newInstitutionsDeliveries.created_by = user.id;
-              InstitutionsDeliveriesArray.push(newInstitutionsDeliveries);
-            }      
-            await this._resultByInstitutionsByDeliveriesTypeRepository.save(InstitutionsDeliveriesArray);
+            if(delivery){
+              let InstitutionsDeliveriesArray: ResultByInstitutionsByDeliveriesType[] = [];
+              for (let i = 0; i < delivery.length; i++) {
+                const newInstitutionsDeliveries = new ResultByInstitutionsByDeliveriesType();
+                newInstitutionsDeliveries.result_by_institution_id = responseInstitution.id;
+                newInstitutionsDeliveries.partner_delivery_type_id = delivery[i];
+                newInstitutionsDeliveries.last_updated_by = user.id;
+                newInstitutionsDeliveries.versions_id = vrs.id;
+                newInstitutionsDeliveries.created_by = user.id;
+                InstitutionsDeliveriesArray.push(newInstitutionsDeliveries);
+              }      
+              await this._resultByInstitutionsByDeliveriesTypeRepository.save(InstitutionsDeliveriesArray);
+            }
           }else{
             const delivery = data.institutions[index].deliveries;
             await this._resultByInstitutionsByDeliveriesTypeRepository.inactiveResultDeLivery(isInstitutions.id, data.institutions[index].deliveries);

@@ -141,7 +141,7 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
       const completeUser: ResultsByInstitution[] = await this.query(queryData, [
         resultId, isActor?1:2, institutionsId
       ]);
-      return completeUser.length? completeUser[0]: undefined;
+      return completeUser?.length? completeUser[0]: undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByIntitutionsRepository.name,
