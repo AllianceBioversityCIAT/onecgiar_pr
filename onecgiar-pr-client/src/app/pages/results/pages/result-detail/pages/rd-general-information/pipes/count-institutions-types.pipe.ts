@@ -5,7 +5,7 @@ import { Pipe, PipeTransform } from '@angular/core';
 })
 export class CountInstitutionsTypesPipe implements PipeTransform {
   transform(list: any[], toggle: number): any {
-    // console.log(list);
+    console.log(list);
     const objectCounter = {};
     const result = [];
     list.map(item => {

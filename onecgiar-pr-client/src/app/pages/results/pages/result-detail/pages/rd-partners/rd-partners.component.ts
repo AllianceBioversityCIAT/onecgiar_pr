@@ -10,11 +10,49 @@ import { PartnersBody } from './models/partnersBody';
 })
 export class RdPartnersComponent {
   partnersBody = new PartnersBody();
-
+  toggle = 0;
   constructor(private api: ApiService, public institutionsSE: InstitutionsService) {}
-  checkboxExample = null;
   ngOnInit(): void {
     this.showAlerts();
+    this.getSectionInformation();
+  }
+  getSectionInformation(no_applicable_partner?) {
+    console.log(no_applicable_partner);
+    this.api.resultsSE.GET_partnersSection().subscribe(
+      ({ response }) => {
+        console.log(response);
+
+        this.partnersBody = response;
+        if (no_applicable_partner === true || no_applicable_partner === false) this.partnersBody.no_applicable_partner = no_applicable_partner;
+      },
+      err => {
+        if (no_applicable_partner === true || no_applicable_partner === false) this.partnersBody.no_applicable_partner = no_applicable_partner;
+      }
+    );
+  }
+  onSaveSection() {
+    console.log(this.partnersBody);
+    this.api.resultsSE.PATCH_partnersSection(this.partnersBody).subscribe(resp => {
+      console.log(resp);
+      this.api.alertsFe.show({ id: 'sectionSaved', title: 'Section saved correctly', description: '', status: 'success', closeIn: 500 });
+    });
+  }
+  validateDeliverySelection(deliveries, deliveryId) {
+    if (!(typeof deliveries == 'object')) return false;
+    const index = deliveries.indexOf(deliveryId);
+    return index < 0 ? false : true;
+  }
+  onSelectDelivery(option, deliveryId) {
+    if (!(typeof option?.deliveries == 'object')) option.deliveries = [];
+    const index = option?.deliveries.indexOf(deliveryId);
+    index < 0 ? option?.deliveries.push(deliveryId) : option?.deliveries.splice(index, 1);
+  }
+  removePartner(index) {
+    this.partnersBody.institutions.splice(index, 1);
+  }
+  cleanBody() {
+    if (this.partnersBody.no_applicable_partner === true) this.partnersBody = new PartnersBody(true);
+    if (this.partnersBody.no_applicable_partner === false) this.getSectionInformation(false);
   }
   showAlerts() {
     this.api.alertsFs.show({
@@ -27,9 +65,14 @@ export class RdPartnersComponent {
     this.api.alertsFs.show({
       status: 'success',
       title: 'sd',
-      description: `If you don't find the partner you are looking for, <a href="">request</a> to have it added to the list.`,
+      description: `If you don't find the partner you are looking for, <a id='partnerRequest' class="open_route">request</a> to have it added to the list.`,
       querySelector: '.partnerRequestAlert',
       position: 'afterbegin'
     });
+    try {
+      document.getElementById('partnerRequest').addEventListener('click', e => {
+        this.api.dataControlSE.showPartnersRequest = true;
+      });
+    } catch (error) {}
   }
 }

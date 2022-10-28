@@ -4,6 +4,7 @@ import { environment } from 'src/environments/environment';
 import { map } from 'rxjs';
 import { ResultBody } from '../../interfaces/result.interface';
 import { GeneralInfoBody } from '../../../pages/results/pages/result-detail/pages/rd-general-information/models/generalInfoBody';
+import { PartnersBody } from 'src/app/pages/results/pages/result-detail/pages/rd-partners/models/partnersBody';
 
 @Injectable({
   providedIn: 'root'
@@ -64,5 +65,12 @@ export class ResultsApiService {
 
   GET_depthSearch(title: string) {
     return this.http.get<any>(`${this.apiBaseUrl}get/depth-search/${title}`);
+  }
+
+  PATCH_partnersSection(body: PartnersBody) {
+    return this.http.patch<any>(`${this.apiBaseUrl}results-by-institutions/create/partners/${this.currentResultId}`, body);
+  }
+  GET_partnersSection() {
+    return this.http.get<any>(`${this.apiBaseUrl}results-by-institutions/partners/result/${this.currentResultId}`);
   }
 }

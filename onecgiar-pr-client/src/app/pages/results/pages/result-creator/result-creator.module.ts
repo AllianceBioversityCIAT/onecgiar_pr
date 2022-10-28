@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 
 import { ResultCreatorRoutingModule } from './result-creator-routing.module';
 import { ResultCreatorComponent } from './result-creator.component';
-import { UtilsComponentsModule } from '../../../../shared/components/utils-components/utils-components.module';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { FormsModule } from '@angular/forms';
 import { ResultLevelButtonsComponent } from './components/result-level-buttons/result-level-buttons.component';
@@ -13,7 +12,7 @@ import { MenuModule } from 'primeng/menu';
 
 @NgModule({
   declarations: [ResultCreatorComponent, ResultLevelButtonsComponent, SimilarResultsComponent, SimilarResultsPipe],
-  imports: [CommonModule, ResultCreatorRoutingModule, UtilsComponentsModule, CustomFieldsModule, FormsModule, MenuModule],
+  imports: [CommonModule, ResultCreatorRoutingModule, CustomFieldsModule, FormsModule, MenuModule],
   schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })
 export class ResultCreatorModule {}

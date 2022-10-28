@@ -7,13 +7,13 @@ import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { MenuModule } from 'primeng/menu';
 import { RouterModule } from '@angular/router';
-import { UtilsComponentsModule } from '../../../../../../shared/components/utils-components/utils-components.module';
 import { ResultsListFiltersComponent } from './components/results-list-filters/results-list-filters.component';
 import { ReportNewResultButtonComponent } from './components/report-new-result-button/report-new-result-button.component';
 import { ResultsListFilterPipe } from './pipes/results-list-filter.pipe';
 import { FormsModule } from '@angular/forms';
+import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 @NgModule({
   declarations: [ResultsListComponent, ResultsListFiltersComponent, ReportNewResultButtonComponent, ResultsListFilterPipe, ResultsListFilterPipe],
-  imports: [CommonModule, ResultsListRoutingModule, TableModule, ButtonModule, MenuModule, RouterModule, UtilsComponentsModule, FormsModule]
+  imports: [CommonModule, ResultsListRoutingModule, TableModule, ButtonModule, MenuModule, RouterModule, FormsModule, CustomFieldsModule]
 })
 export class ResultsListModule {}

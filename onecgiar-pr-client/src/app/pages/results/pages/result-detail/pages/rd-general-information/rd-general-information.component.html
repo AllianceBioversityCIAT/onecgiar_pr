@@ -70,10 +70,9 @@
         [(ngModel)]="this.generalInfoBody.krs_url">
     </app-pr-input>
 
-    <div class="save_button_container">
-        <div (click)="onSaveSection()">
-            <app-pr-button padding="medium" text="Save" icon="save"></app-pr-button>
-        </div>
-    </div>
+
+    <app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>
+
+
 
 </div>
