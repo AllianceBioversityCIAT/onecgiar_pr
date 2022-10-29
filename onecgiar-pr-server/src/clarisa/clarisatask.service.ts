@@ -26,6 +26,7 @@ import { ClarisaInnovationTypeRepository } from './clarisa-innovation-type/clari
 import { ClarisaInnovationReadinessLevelRepository } from './clarisa-innovation-readiness-levels/clarisa-innovation-readiness-levels.repository';
 import { ClarisaInnovationCharacteristicRepository } from './clarisa-innovation-characteristics/clarisa-innovation-characteristics.repository';
 import { lastValueFrom, map } from 'rxjs';
+import { ClarisaGeographicScopeRepository } from './clarisa-geographic-scopes/clarisa-geographic-scopes.repository';
 
 @Injectable()
 export class ClarisaTaskService {
@@ -55,6 +56,7 @@ export class ClarisaTaskService {
     private readonly _clarisaInnovationTypeRepository: ClarisaInnovationTypeRepository,
     private readonly _clarisaInnovationReadinessLevelRepository: ClarisaInnovationReadinessLevelRepository,
     private readonly _clarisaInnovationCharacteristicRepository: ClarisaInnovationCharacteristicRepository,
+    private readonly _clarisaGeographicScopeRepository: ClarisaGeographicScopeRepository,
     private readonly _httpService: HttpService
   ) {}
 
@@ -87,6 +89,7 @@ export class ClarisaTaskService {
     count = await this.cloneClarisaInnovationTypeRepository(count);
     count = await this.cloneClarisaInnovationReadinessLevelRepository(count);
     count = await this.cloneClarisaInnovationCharacteristicRepository(count);
+    count = await this.cloneClarisaGeographicScope(count);
   }
 
   private async cloneClarisaCountries(position: number, deleteItem = false) {
@@ -593,6 +596,41 @@ export class ClarisaTaskService {
     } catch (error) {
       this._logger.error(
         `[${position}]: Error in manipulating the data of CLARISA Innovation Innovation Characteristic`,
+      );
+      this._logger.error(error);
+      return ++position;
+    }
+  }
+
+  private async cloneClarisaGeographicScope(
+    position: number,
+    deleteItem = false,
+  ) {
+    try {
+      if (deleteItem) {
+        const deleteData =
+          await this._clarisaGeographicScopeRepository.deleteAllData();
+        this._logger.warn(
+          `[${position}]: All CLARISA Geographic scope control list data has been deleted`,
+        );
+      } else {
+        const data = await lastValueFrom(this._httpService.get(`${this.clarisaHost}geographic-scopes?type=legacy`, {auth: {username:env.L_CLA_USER, password: env.L_CLA_PASSWORD }}).pipe(map(resp => resp.data)));
+        data.map(dat => {
+          dat['id'] = dat.code;
+          dat['description'] = dat.definition;
+        })
+        
+        await this._clarisaGeographicScopeRepository.save(
+          data,
+        );
+        this._logger.verbose(
+          `[${position}]: All CLARISA Geographic scope control list data has been created`,
+        );
+      }
+      return ++position;
+    } catch (error) {
+      this._logger.error(
+        `[${position}]: Error in manipulating the data of CLARISA Geographic Scope `,
       );
       this._logger.error(error);
       return ++position;
