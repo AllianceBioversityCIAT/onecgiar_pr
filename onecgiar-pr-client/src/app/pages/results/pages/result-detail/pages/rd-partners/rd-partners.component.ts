@@ -14,17 +14,24 @@ export class RdPartnersComponent {
   constructor(private api: ApiService, public institutionsSE: InstitutionsService) {}
   ngOnInit(): void {
     this.getSectionInformation();
+    this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
+      console.log(resp);
+      try {
+        document.querySelector('.alert-event').addEventListener('click', e => {
+          console.log(e);
+          this.api.dataControlSE.showPartnersRequest = true;
+        });
+      } catch (error) {}
+    });
   }
   getSectionInformation(no_applicable_partner?) {
     this.api.resultsSE.GET_partnersSection().subscribe(
       ({ response }) => {
         this.partnersBody = response;
         if (no_applicable_partner === true || no_applicable_partner === false) this.partnersBody.no_applicable_partner = no_applicable_partner;
-        this.showAlerts();
       },
       err => {
         if (no_applicable_partner === true || no_applicable_partner === false) this.partnersBody.no_applicable_partner = no_applicable_partner;
-        this.showAlerts();
       }
     );
   }
@@ -51,26 +58,5 @@ export class RdPartnersComponent {
   cleanBody() {
     if (this.partnersBody.no_applicable_partner === true) this.partnersBody = new PartnersBody(true);
     if (this.partnersBody.no_applicable_partner === false) this.getSectionInformation(false);
-  }
-  showAlerts() {
-    this.api.alertsFs.show({
-      status: 'success',
-      title: 'sd',
-      description: 'Partner organization that you collaborated with to generate this result or that contributed to this result.',
-      querySelector: '.detail_container',
-      position: 'afterbegin'
-    });
-    this.api.alertsFs.show({
-      status: 'success',
-      title: 'sd',
-      description: `If you don't find the partner you are looking for, <a id='partnerRequest' class="open_route">request</a> to have it added to the list.`,
-      querySelector: '#partnerRequestAlert',
-      position: 'afterbegin'
-    });
-    try {
-      document.getElementById('partnerRequest').addEventListener('click', e => {
-        this.api.dataControlSE.showPartnersRequest = true;
-      });
-    } catch (error) {}
   }
 }

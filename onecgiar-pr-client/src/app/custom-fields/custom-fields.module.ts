@@ -22,8 +22,9 @@ import { ScrollingModule } from '@angular/cdk/scrolling';
 import { ListFilterByTextAndAttrPipe } from './pr-multi-select/pipes/list-filter-by-text-and-attr.pipe';
 import { SaveButtonComponent } from './save-button/save-button.component';
 import { PrButtonComponent } from './pr-button/pr-button.component';
+import { AlertStatusComponent } from './alert-status/alert-status.component';
 
-const fieldComponents = [PrInputComponent, PrSelectComponent, PrRadioButtonComponent, DetailSectionTitleComponent, PrMultiSelectComponent, PrFieldHeaderComponent, PrYesOrNotComponent, PrTextareaComponent, PrCheckboxComponent, SaveButtonComponent, PrButtonComponent];
+const fieldComponents = [PrInputComponent, PrSelectComponent, PrRadioButtonComponent, DetailSectionTitleComponent, PrMultiSelectComponent, PrFieldHeaderComponent, PrYesOrNotComponent, PrTextareaComponent, PrCheckboxComponent, SaveButtonComponent, PrButtonComponent, AlertStatusComponent];
 
 @NgModule({
   declarations: [...fieldComponents, PrFieldValidationsComponent, PrWordCounterComponent, ListFilterByTextAndAttrPipe],
