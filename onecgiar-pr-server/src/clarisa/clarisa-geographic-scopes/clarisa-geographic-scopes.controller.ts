@@ -1,9 +1,9 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException } from '@nestjs/common';
 import { ClarisaGeographicScopesService } from './clarisa-geographic-scopes.service';
 import { CreateClarisaGeographicScopeDto } from './dto/create-clarisa-geographic-scope.dto';
 import { UpdateClarisaGeographicScopeDto } from './dto/update-clarisa-geographic-scope.dto';
 
-@Controller('clarisa-geographic-scopes')
+@Controller()
 export class ClarisaGeographicScopesController {
   constructor(private readonly clarisaGeographicScopesService: ClarisaGeographicScopesService) {}
 
@@ -12,9 +12,11 @@ export class ClarisaGeographicScopesController {
     return this.clarisaGeographicScopesService.create(createClarisaGeographicScopeDto);
   }
 
-  @Get()
-  findAll() {
-    return this.clarisaGeographicScopesService.findAll();
+  @Get('get/all/prms')
+  async findAll() {
+    const { message, response, status } =
+      await  this.clarisaGeographicScopesService.findAllPRMS();
+    throw new HttpException({ message, response }, status);
   }
 
   @Get(':id')
