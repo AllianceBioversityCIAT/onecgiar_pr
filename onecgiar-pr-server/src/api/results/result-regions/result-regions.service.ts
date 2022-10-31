@@ -20,14 +20,14 @@ export class ResultRegionsService {
 
   async create(createResultRegionDto: CreateResultRegionDto) {
     try {
-      if (createResultRegionDto?.id) {
+      if (createResultRegionDto?.scope_id) {
         throw {
           response: {},
           message: 'Missing data in the request',
           status: HttpStatus.BAD_REQUEST,
         };
       }
-      //!importante hay una tabla por cada uno pero fijo se mandara a un solo enpoint y que el haga el resto
+      //!importante hay una tabla por cada uno pero fijo se mandara a un solo enpoint y que el haga el restos
       const result: Result = await this._resultRepository.getResultById(createResultRegionDto.result_id);
       if (result) {
         throw {
@@ -55,13 +55,17 @@ export class ResultRegionsService {
           }
         }
       }
-      result.geographic_scope_id = createResultRegionDto.id;
+      result.geographic_scope_id = createResultRegionDto.scope_id;
       await this._resultRepository.save(result);
+
+      return {
+        response: regions,
+        message: 'The data was updated correctly',
+        status: HttpStatus.OK,
+      };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
-
-    return 'This action adds a new resultRegion';
   }
 
   findAll() {
