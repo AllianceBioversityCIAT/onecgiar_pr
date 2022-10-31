@@ -80,7 +80,7 @@ export class ResultRegionRepository extends Repository<ResultRegion> {
 
     try {
       const result: ResultRegion[] = await this.query(query, [resultId, regionId]);
-      return result;
+      return result?.length?result[0]:undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultRegionRepository.name,

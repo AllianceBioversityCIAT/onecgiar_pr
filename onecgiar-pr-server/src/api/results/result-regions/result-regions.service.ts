@@ -20,7 +20,7 @@ export class ResultRegionsService {
 
   async create(createResultRegionDto: CreateResultRegionDto) {
     try {
-      if (createResultRegionDto?.scope_id) {
+      if (!createResultRegionDto?.scope_id) {
         throw {
           response: {},
           message: 'Missing data in the request',
@@ -29,7 +29,7 @@ export class ResultRegionsService {
       }
       //!importante hay una tabla por cada uno pero fijo se mandara a un solo enpoint y que el haga el restos
       const result: Result = await this._resultRepository.getResultById(createResultRegionDto.result_id);
-      if (result) {
+      if (!result) {
         throw {
           response: {},
           message: 'Results Not Found',
@@ -50,6 +50,7 @@ export class ResultRegionsService {
               newRegions.result_id = result.id;
               resultRegionArray.push(newRegions);
             }
+            console.log(resultRegionArray)
             await this._resultRegionRepository.save(resultRegionArray);
 
           }

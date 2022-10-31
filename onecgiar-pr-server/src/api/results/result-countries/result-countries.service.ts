@@ -18,7 +18,7 @@ export class ResultCountriesService {
 
   async create(createResultCountryDto: CreateResultCountryDto) {
     try {
-      if (createResultCountryDto?.scope_id) {
+      if (!createResultCountryDto?.scope_id) {
         throw {
           response: {},
           message: 'Missing data in the request',
@@ -27,20 +27,19 @@ export class ResultCountriesService {
       }
       //!importante hay una tabla por cada uno pero fijo se mandara a un solo enpoint y que el haga el restos
       const result: Result = await this._resultRepository.getResultById(createResultCountryDto.result_id);
-      if (result) {
+      if (!result) {
         throw {
           response: {},
           message: 'Results Not Found',
           status: HttpStatus.NOT_FOUND,
         };
       }
-
       const countries = createResultCountryDto.countries;
-      if (countries?.length) {
+      if (countries) {
         await this._resultCountryRepository.updateCountries(result.id, createResultCountryDto.countries);
         if (countries?.length) {
           let resultRegionArray: ResultCountry[] = [];
-          for (let index = 0; index < countries.length; index++) {
+          for (let index = 0; index < countries?.length; index++) {
             const exist = await this._resultCountryRepository.getResultCountrieByIdResultAndCountryId(result.id, countries[index]);
             if (!exist) {
               const newRegions = new ResultCountry();
@@ -48,12 +47,16 @@ export class ResultCountriesService {
               newRegions.result_id = result.id;
               resultRegionArray.push(newRegions);
             }
+            console.log(resultRegionArray)
             await this._resultCountryRepository.save(resultRegionArray);
           }
         }
       }
-
-      result.geographic_scope_id = createResultCountryDto.countries.length > 1? 3:4;
+      if(countries){
+        result.geographic_scope_id = createResultCountryDto.countries?.length>1?3:4;
+      }else{
+        result.geographic_scope_id = null;
+      }
       await this._resultRepository.save(result);
 
       return {

@@ -54,7 +54,7 @@ export class ResultCountryRepository extends Repository<ResultCountry> {
 
     try {
       const result: ResultCountry[] = await this.query(query, [resultId, countryId]);
-      return result;
+      return result?.length?result[0]:undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultCountryRepository.name,
