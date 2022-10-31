@@ -5,7 +5,6 @@ import { Pipe, PipeTransform } from '@angular/core';
 })
 export class CountInstitutionsTypesPipe implements PipeTransform {
   transform(list: any[], toggle: number): any {
-    console.log(list);
     const objectCounter = {};
     const result = [];
     list.map(item => {
@@ -14,7 +13,7 @@ export class CountInstitutionsTypesPipe implements PipeTransform {
         return typeof objectCounter[item?.institutions_type_id]?.count == 'number' ? objectCounter[item?.institutions_type_id]?.count + 1 : 1;
       };
       // console.log(objectCounter[item?.institutions_type_id]?.count);
-      objectCounter[item?.institutions_type_id] = { count_name: `${item?.institutions_type_name}(${count()})`, count: count() };
+      objectCounter[item?.institutions_type_id] = { count_name: `${item?.institutions_type_name} (${count()})`, count: count() };
     });
     Object.keys(objectCounter).map(item => {
       result.push(objectCounter[item]);

@@ -15,10 +15,8 @@ export class RdPartnersComponent {
   ngOnInit(): void {
     this.getSectionInformation();
     this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
-      console.log(resp);
       try {
         document.querySelector('.alert-event').addEventListener('click', e => {
-          console.log(e);
           this.api.dataControlSE.showPartnersRequest = true;
         });
       } catch (error) {}
