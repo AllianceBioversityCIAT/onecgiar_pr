@@ -13,20 +13,18 @@ export class RdPartnersComponent {
   toggle = 0;
   constructor(private api: ApiService, public institutionsSE: InstitutionsService) {}
   ngOnInit(): void {
-    this.showAlerts();
     this.getSectionInformation();
   }
   getSectionInformation(no_applicable_partner?) {
-    console.log(no_applicable_partner);
     this.api.resultsSE.GET_partnersSection().subscribe(
       ({ response }) => {
-        console.log(response);
-
         this.partnersBody = response;
         if (no_applicable_partner === true || no_applicable_partner === false) this.partnersBody.no_applicable_partner = no_applicable_partner;
+        this.showAlerts();
       },
       err => {
         if (no_applicable_partner === true || no_applicable_partner === false) this.partnersBody.no_applicable_partner = no_applicable_partner;
+        this.showAlerts();
       }
     );
   }
@@ -66,7 +64,7 @@ export class RdPartnersComponent {
       status: 'success',
       title: 'sd',
       description: `If you don't find the partner you are looking for, <a id='partnerRequest' class="open_route">request</a> to have it added to the list.`,
-      querySelector: '.partnerRequestAlert',
+      querySelector: '#partnerRequestAlert',
       position: 'afterbegin'
     });
     try {
