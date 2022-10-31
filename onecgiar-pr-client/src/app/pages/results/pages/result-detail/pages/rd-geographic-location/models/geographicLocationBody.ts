@@ -1,5 +1,5 @@
 export class GeographicLocationBody {
-  public a: string = null;
+  public a: string = '2';
   public b: boolean = null;
   public c: string = null;
   public d: boolean = null;

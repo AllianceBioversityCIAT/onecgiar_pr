@@ -1,8 +1,15 @@
 <div class="field_container">
-    <app-pr-field-header [label]="this.label" [description]="this.description" [required]="this.required">
-    </app-pr-field-header>
-    <div class="choices">
-        <div class="choice" [ngClass]="{'yes': this.value === true}" (click)="onclickYes()">Yes</div>
-        <div class="choice" [ngClass]="{'no': this.value === false}" (click)="onClickNo()">No</div>
+    <div class="title">
+        <app-pr-field-header [label]="this.label" [required]="this.required">
+        </app-pr-field-header>
+        <div class="choices">
+            <div class="choice" [ngClass]="{'yes': this.value === true}" (click)="onclickYes()">Yes</div>
+            <div class="choice" [ngClass]="{'no': this.value === false}" (click)="onClickNo()">No</div>
+        </div>
     </div>
+    <div class="description">
+        <app-pr-field-header [description]="this.description">
+        </app-pr-field-header>
+    </div>
+
 </div>

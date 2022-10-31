@@ -10,8 +10,8 @@
         </div>
     </div>
 
-    <app-pr-input placeholder="Write some..." label="Result type" type="text" [required]="false" [readOnly]="true"
-        [(ngModel)]="this.generalInfoBody.result_type_name">
+    <app-pr-input [attr.attribute-you-are-targeting]="'expression'" placeholder="Write some..." label="Result type"
+        type="text" [required]="false" [readOnly]="true" [(ngModel)]="this.generalInfoBody.result_type_name">
     </app-pr-input>
     <app-pr-input placeholder="Write some..." label="Title" type="text" [(ngModel)]="this.generalInfoBody.result_name"
         [maxWords]="30">

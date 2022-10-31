@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { environment } from '../../../../../../../environments/environment.prod';
 import { GeographicLocationBody } from './models/geographicLocationBody';
+import { ResultLevelService } from '../../../result-creator/services/result-level.service';
 
 @Component({
   selector: 'app-rd-geographic-location',
@@ -9,7 +10,7 @@ import { GeographicLocationBody } from './models/geographicLocationBody';
   styleUrls: ['./rd-geographic-location.component.scss']
 })
 export class RdGeographicLocationComponent {
-  constructor(public api: ApiService) {}
+  constructor(public api: ApiService, public resultLevelSE: ResultLevelService) {}
   geographicLocationBody = new GeographicLocationBody();
   UNM49 = 'https://unstats.un.org/unsd/methodology/m49/';
   ISO3166 = 'https://www.iso.org/iso-3166-country-codes.html';

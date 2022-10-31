@@ -53,4 +53,10 @@ export class DataControlService {
       }, 1000);
     });
   }
+
+  getLastWord(text) {
+    if (!text) return '';
+    const lastWord = text?.split(' ')[text?.split(' ').length - 1];
+    return lastWord[0].toUpperCase() + lastWord.substring(1);
+  }
 }
