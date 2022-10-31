@@ -295,11 +295,15 @@ WHERE
     r.title,
     r.legacy_id,
     r.no_applicable_partner,
-    r.geographic_scope_id 
+    r.geographic_scope_id,
+    rl.name as result_level_name,
+    rt.name as result_type_name
 FROM
     result r
     inner join results_by_inititiative rbi ON rbi.result_id = r.id 
     									and rbi.is_active > 0
+    inner join result_level rl on rl.id = r.result_level_id 
+    inner join result_type rt on rt.id = r.result_type_id 
 WHERE
     r.is_active > 0
     and r.id = ?;
