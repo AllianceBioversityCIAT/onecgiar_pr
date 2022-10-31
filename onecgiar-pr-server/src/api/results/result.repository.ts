@@ -28,7 +28,8 @@ export class ResultRepository extends Repository<Result> {
     	ci.official_code,
     	r.title,
     	r.description,
-      r.no_applicable_partner
+      r.no_applicable_partner,
+      r.geographic_scope_id 
     FROM \`result\` r 
     	inner join results_by_inititiative rbi on rbi.result_id = r.id 
     											and rbi.is_active > 0
@@ -72,7 +73,8 @@ export class ResultRepository extends Repository<Result> {
     ci.id AS submitter_id,
     r.status,
     IF(r.status = 0, 'Editing', 'Submitted') AS status_name,
-    r.no_applicable_partner
+    r.no_applicable_partner,
+    if(r.geographic_scope_id in (3, 4), 3, r.geographic_scope_id ) as geographic_scope_id
 FROM
     result r
     INNER JOIN result_type rt ON rt.id = r.result_type_id
@@ -96,7 +98,7 @@ WHERE
     }
   }
 
-  async getResultsById(id: number) {
+  /*async getResultsById(id: number) {
     const queryData = `
     SELECT
     r.id,
@@ -131,7 +133,7 @@ WHERE
         status: HttpStatus.INTERNAL_SERVER_ERROR,
       };
     }
-  }
+  }*/
 
   async AllResultsByRoleUsers(userid: number) {
     const queryData = `
@@ -150,7 +152,8 @@ WHERE
     r2.description as role_name,
     if(y.\`year\` = r.reported_year_id, 'New', '') as is_new,
     r.result_level_id,
-    r.no_applicable_partner
+    r.no_applicable_partner,
+    if(r.geographic_scope_id in (3, 4), 3, r.geographic_scope_id ) as geographic_scope_id
 FROM
     \`result\` r
     INNER JOIN result_type rt ON rt.id = r.result_type_id
@@ -291,7 +294,8 @@ WHERE
     r.result_level_id,
     r.title,
     r.legacy_id,
-    r.no_applicable_partner
+    r.no_applicable_partner,
+    r.geographic_scope_id 
 FROM
     result r
     inner join results_by_inititiative rbi ON rbi.result_id = r.id 
@@ -336,7 +340,9 @@ WHERE
     r.climate_change_tag_level_id,
     r.is_krs,
     r.krs_url,
-    r.no_applicable_partner
+    r.no_applicable_partner,
+    r.geographic_scope_id,
+    if(r.geographic_scope_id in (3, 4), 3, r.geographic_scope_id ) as geographic_scope_id
 FROM
     result r
     inner join results_by_inititiative rbi ON rbi.result_id = r.id 

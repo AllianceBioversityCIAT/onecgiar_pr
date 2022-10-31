@@ -37,6 +37,9 @@ import { GenderTagRepository } from './gender_tag_levels/genderTag.repository';
 import { In } from 'typeorm';
 import { ResultsByInstitution } from './results_by_institutions/entities/results_by_institution.entity';
 import { ResultsByInstitutionType } from './results_by_institution_types/entities/results_by_institution_type.entity';
+import { CreateResultGeoDto } from './dto/create-result-geo-scope.dto';
+import { ResultRegionsService } from './result-regions/result-regions.service';
+import { ResultCountriesService } from './result-countries/result-countries.service';
 
 @Injectable()
 export class ResultsService {
@@ -58,6 +61,8 @@ export class ResultsService {
     private readonly _resultLegacyRepository: ResultLegacyRepository,
     private readonly _clarisaInstitutionsRepository: ClarisaInstitutionsRepository,
     private readonly _clarisaInstitutionsTypeRepository: ClarisaInstitutionsTypeRepository,
+    private readonly _resultRegionsService: ResultRegionsService,
+    private readonly _resultCountriesService: ResultCountriesService,
     private readonly _genderTagRepository: GenderTagRepository
   ) {}
 
@@ -672,6 +677,18 @@ export class ResultsService {
         message: 'Successful response',
         status: HttpStatus.OK,
       };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async saveGeoScope(createResultGeo: CreateResultGeoDto){
+    try {
+      if(createResultGeo.scope_id = 3){
+        return await this._resultCountriesService.create(createResultGeo);
+      }else{
+        return await this._resultRegionsService.create(createResultGeo);
+      }
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }

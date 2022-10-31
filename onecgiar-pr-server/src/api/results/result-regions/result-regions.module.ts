@@ -10,7 +10,8 @@ import { ResultRepository } from '../result.repository';
   controllers: [ResultRegionsController],
   providers: [ResultRegionsService, ResultRegionRepository, HandlersError, ClarisaGeographicScopeRepository, ResultRepository],
   exports: [
-    ResultRegionRepository
+    ResultRegionRepository,
+    ResultRegionsService
   ]
 })
 export class ResultRegionsModule {}
