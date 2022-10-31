@@ -35,7 +35,12 @@ export class ResultsApiService {
   }
 
   GET_allGenderTag() {
-    return this.http.get<any>(`${this.apiBaseUrl}gender-tag-levels/all`);
+    return this.http.get<any>(`${this.apiBaseUrl}gender-tag-levels/all`).pipe(
+      map(resp => {
+        resp.response.map(institution => (institution.full_name = `(${institution?.id}) ${institution?.title}`));
+        return resp;
+      })
+    );
   }
 
   GET_institutionTypes() {

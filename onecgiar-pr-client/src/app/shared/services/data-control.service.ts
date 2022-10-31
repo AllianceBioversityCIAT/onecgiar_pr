@@ -41,10 +41,8 @@ export class DataControlService {
     let seconds = 0;
     return new Promise((resolve, reject) => {
       const timer = setInterval(() => {
-        console.log('sdsd  ' + seconds);
         seconds++;
         if (document.querySelector(`.${className}`)) {
-          console.log('finded');
           resolve(document.querySelector(`.${className}`));
           clearInterval(timer);
         }
