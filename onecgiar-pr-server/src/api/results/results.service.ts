@@ -684,11 +684,17 @@ export class ResultsService {
 
   async saveGeoScope(createResultGeo: CreateResultGeoDto){
     try {
-      if(createResultGeo.scope_id == 3){
-        return await this._resultCountriesService.create(createResultGeo);
-      }else{
-        return await this._resultRegionsService.create(createResultGeo);
+      if(createResultGeo.scope_id != 3){
+        await this._resultRegionsService.create(createResultGeo);
       }
+      
+      await this._resultCountriesService.create(createResultGeo);
+      
+      return {
+        response: createResultGeo,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }

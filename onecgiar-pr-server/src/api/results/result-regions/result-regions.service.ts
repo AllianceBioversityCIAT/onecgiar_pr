@@ -36,28 +36,32 @@ export class ResultRegionsService {
           status: HttpStatus.NOT_FOUND,
         };
       }
-
       const regions = createResultRegionDto.regions;
-      if (regions?.length) {
-        await this._resultRegionRepository.updateRegions(result.id, createResultRegionDto.regions);
+      if(!createResultRegionDto.has_regions && createResultRegionDto.scope_id != 2 ){
+        await this._resultRegionRepository.updateRegions(result.id, []);
+      }else if(createResultRegionDto.scope_id == 2 || createResultRegionDto.scope_id == 1 || createResultRegionDto.has_regions){
         if (regions?.length) {
-          let resultRegionArray: ResultRegion[] = [];
-          for (let index = 0; index < regions.length; index++) {
-            const exist = await this._resultRegionRepository.getResultRegionByResultIdAndRegionId(result.id, regions[index]);
-            if (!exist) {
-              const newRegions = new ResultRegion();
-              newRegions.region_id = regions[index];
-              newRegions.result_id = result.id;
-              resultRegionArray.push(newRegions);
+          await this._resultRegionRepository.updateRegions(result.id, createResultRegionDto.regions);
+          if (regions?.length) {
+            let resultRegionArray: ResultRegion[] = [];
+            for (let index = 0; index < regions.length; index++) {
+              const exist = await this._resultRegionRepository.getResultRegionByResultIdAndRegionId(result.id, regions[index]);
+              if (!exist) {
+                const newRegions = new ResultRegion();
+                newRegions.region_id = regions[index];
+                newRegions.result_id = result.id;
+                resultRegionArray.push(newRegions);
+              }
+              await this._resultRegionRepository.save(resultRegionArray);
+  
             }
-            console.log(resultRegionArray)
-            await this._resultRegionRepository.save(resultRegionArray);
-
           }
         }
+        result.has_regions = createResultRegionDto.has_regions;
+        result.geographic_scope_id = createResultRegionDto.scope_id;
+        await this._resultRepository.save(result);
       }
-      result.geographic_scope_id = createResultRegionDto.scope_id;
-      await this._resultRepository.save(result);
+      
 
       return {
         response: regions,

@@ -149,4 +149,19 @@ export class Result {
     name: 'geographic_scope_id'
   })
   geographic_scope_id!:number
+
+  @Column({
+    name: 'has_regions',
+    nullable: true,
+    type: 'boolean'
+  })
+  has_regions: boolean;
+
+  @Column({
+    name: 'has_countries',
+    nullable: true,
+    type: 'boolean'
+  })
+  has_countries: boolean;
+
 }

@@ -14,7 +14,7 @@ export class ResultCountriesService {
     private readonly _resultRepository: ResultRepository,
     private readonly _resultCountryRepository: ResultCountryRepository,
     private readonly _handlersError: HandlersError,
-  ){}
+  ) { }
 
   async create(createResultCountryDto: CreateResultCountryDto) {
     try {
@@ -35,27 +35,34 @@ export class ResultCountriesService {
         };
       }
       const countries = createResultCountryDto.countries;
-      if (countries) {
-        await this._resultCountryRepository.updateCountries(result.id, createResultCountryDto.countries);
-        if (countries?.length) {
-          let resultRegionArray: ResultCountry[] = [];
-          for (let index = 0; index < countries?.length; index++) {
-            const exist = await this._resultCountryRepository.getResultCountrieByIdResultAndCountryId(result.id, countries[index]);
-            if (!exist) {
-              const newRegions = new ResultCountry();
-              newRegions.country_id = countries[index];
-              newRegions.result_id = result.id;
-              resultRegionArray.push(newRegions);
+      if (!createResultCountryDto.has_countries && createResultCountryDto.scope_id != 3) {
+        await this._resultCountryRepository.updateCountries(result.id, []);
+      }else if(createResultCountryDto.scope_id == 3 || createResultCountryDto.has_countries){
+        if (countries) {
+          await this._resultCountryRepository.updateCountries(result.id, createResultCountryDto.countries);
+          if (countries?.length) {
+            let resultRegionArray: ResultCountry[] = [];
+            for (let index = 0; index < countries?.length; index++) {
+              const exist = await this._resultCountryRepository.getResultCountrieByIdResultAndCountryId(result.id, countries[index]);
+              if (!exist) {
+                const newRegions = new ResultCountry();
+                newRegions.country_id = countries[index];
+                newRegions.result_id = result.id;
+                resultRegionArray.push(newRegions);
+              }
+  
+              await this._resultCountryRepository.save(resultRegionArray);
             }
-            console.log(resultRegionArray)
-            await this._resultCountryRepository.save(resultRegionArray);
           }
         }
+        
       }
-      if(countries){
-        result.geographic_scope_id = createResultCountryDto.countries?.length>1?3:4;
-      }else{
-        result.geographic_scope_id = null;
+
+      result.has_countries = createResultCountryDto.has_countries;
+      if (countries && createResultCountryDto.scope_id == 3) {
+        result.geographic_scope_id = createResultCountryDto.countries?.length > 1 ? 3 : 4;
+      } else {
+        result.geographic_scope_id = createResultCountryDto.scope_id;
       }
       await this._resultRepository.save(result);
 
