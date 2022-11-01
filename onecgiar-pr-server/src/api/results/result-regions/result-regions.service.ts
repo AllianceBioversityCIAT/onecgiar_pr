@@ -37,11 +37,10 @@ export class ResultRegionsService {
         };
       }
       const regions = createResultRegionDto.regions;
-      if(!createResultRegionDto.has_regions && createResultRegionDto.scope_id != 2 || createResultRegionDto.scope_id == 4){
+      if(!createResultRegionDto.has_regions && createResultRegionDto.scope_id != 2 || createResultRegionDto.scope_id == 4 || createResultRegionDto.scope_id == 3){
         await this._resultRegionRepository.updateRegions(result.id, []);
-        console.log(createResultRegionDto.has_regions)
       }else if(createResultRegionDto.scope_id == 2 || createResultRegionDto.scope_id == 1 || createResultRegionDto.has_regions){
-        if (regions?.length) {
+        if (regions) {
           await this._resultRegionRepository.updateRegions(result.id, createResultRegionDto.regions.map(el => el.id));
           if (regions?.length) {
             let resultRegionArray: ResultRegion[] = [];
