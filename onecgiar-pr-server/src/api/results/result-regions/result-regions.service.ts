@@ -37,18 +37,18 @@ export class ResultRegionsService {
         };
       }
       const regions = createResultRegionDto.regions;
-      if(!createResultRegionDto.has_regions && createResultRegionDto.scope_id != 2 ){
+      if(!createResultRegionDto.has_regions && createResultRegionDto.scope_id != 2 || createResultRegionDto.scope_id == 4){
         await this._resultRegionRepository.updateRegions(result.id, []);
       }else if(createResultRegionDto.scope_id == 2 || createResultRegionDto.scope_id == 1 || createResultRegionDto.has_regions){
         if (regions?.length) {
-          await this._resultRegionRepository.updateRegions(result.id, createResultRegionDto.regions);
+          await this._resultRegionRepository.updateRegions(result.id, createResultRegionDto.regions.map(el => el.id));
           if (regions?.length) {
             let resultRegionArray: ResultRegion[] = [];
             for (let index = 0; index < regions.length; index++) {
-              const exist = await this._resultRegionRepository.getResultRegionByResultIdAndRegionId(result.id, regions[index]);
+              const exist = await this._resultRegionRepository.getResultRegionByResultIdAndRegionId(result.id, regions[index].id);
               if (!exist) {
                 const newRegions = new ResultRegion();
-                newRegions.region_id = regions[index];
+                newRegions.region_id = regions[index].id;
                 newRegions.result_id = result.id;
                 resultRegionArray.push(newRegions);
               }
@@ -57,8 +57,12 @@ export class ResultRegionsService {
             }
           }
         }
+        if(createResultRegionDto.scope_id == 4){
+          result.geographic_scope_id = 50;
+        }else{
+          result.geographic_scope_id = createResultRegionDto.scope_id;
+        }
         result.has_regions = createResultRegionDto.has_regions;
-        result.geographic_scope_id = createResultRegionDto.scope_id;
         await this._resultRepository.save(result);
       }
       

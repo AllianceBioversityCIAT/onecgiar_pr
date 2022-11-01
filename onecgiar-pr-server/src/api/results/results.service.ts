@@ -709,14 +709,21 @@ export class ResultsService {
       const regions = await this._resultRegionRepository.getResultRegionByResultId(resultId);
       const contries = await this._resultCountryRepository.getResultCountriesByResultId(resultId);
       const result = await this._resultRepository.getResultById(resultId);
-      
+      let scope: number = 0;
+      if(result.geographic_scope_id == 1 || result.geographic_scope_id == 2){
+        scope = result.geographic_scope_id;
+      }else if(result.geographic_scope_id == 3 || result.geographic_scope_id == 4){
+        scope = 3;
+      }else{
+        scope = 4;
+      }
       return {
         response: {
-          regions: regions.map(r => r.region_id),
-          countries: contries.map(c => c.country_id),
-          scope_id: result.geographic_scope_id == 3? (contries?.length > 1?4:3): result.geographic_scope_id,
-          has_countries: result?.has_countries ?? null,
-          has_regions: result?.has_regions ?? null
+          regions: regions,
+          countries: contries,
+          scope_id: scope,
+          has_countries: result?.has_countries?true:false ?? null,
+          has_regions: result?.has_regions?true:false ?? null
         },
         message: 'Successful response',
         status: HttpStatus.OK,

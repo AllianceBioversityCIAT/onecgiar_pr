@@ -35,18 +35,18 @@ export class ResultCountriesService {
         };
       }
       const countries = createResultCountryDto.countries;
-      if (!createResultCountryDto.has_countries && createResultCountryDto.scope_id != 3) {
+      if (!createResultCountryDto.has_countries && createResultCountryDto.scope_id != 3 || createResultCountryDto.scope_id == 4) {
         await this._resultCountryRepository.updateCountries(result.id, []);
       }else if(createResultCountryDto.scope_id == 3 || createResultCountryDto.has_countries){
         if (countries) {
-          await this._resultCountryRepository.updateCountries(result.id, createResultCountryDto.countries);
+          await this._resultCountryRepository.updateCountries(result.id, createResultCountryDto.countries.map(e => e.id));
           if (countries?.length) {
             let resultRegionArray: ResultCountry[] = [];
             for (let index = 0; index < countries?.length; index++) {
-              const exist = await this._resultCountryRepository.getResultCountrieByIdResultAndCountryId(result.id, countries[index]);
+              const exist = await this._resultCountryRepository.getResultCountrieByIdResultAndCountryId(result.id, countries[index].id);
               if (!exist) {
                 const newRegions = new ResultCountry();
-                newRegions.country_id = countries[index];
+                newRegions.country_id = countries[index].id;
                 newRegions.result_id = result.id;
                 resultRegionArray.push(newRegions);
               }
@@ -61,7 +61,9 @@ export class ResultCountriesService {
       result.has_countries = createResultCountryDto.has_countries;
       if (countries && createResultCountryDto.scope_id == 3) {
         result.geographic_scope_id = createResultCountryDto.countries?.length > 1 ? 3 : 4;
-      } else {
+      } else if(createResultCountryDto.scope_id == 4) {
+        result.geographic_scope_id = 50;
+      }else{
         result.geographic_scope_id = createResultCountryDto.scope_id;
       }
       await this._resultRepository.save(result);

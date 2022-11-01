@@ -297,7 +297,9 @@ WHERE
     r.no_applicable_partner,
     r.geographic_scope_id,
     rl.name as result_level_name,
-    rt.name as result_type_name
+    rt.name as result_type_name,
+    r.has_regions,
+    r.has_countries 
 FROM
     result r
     inner join results_by_inititiative rbi ON rbi.result_id = r.id 
