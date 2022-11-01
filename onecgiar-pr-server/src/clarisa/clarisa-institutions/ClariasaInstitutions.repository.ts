@@ -32,9 +32,11 @@ export class ClarisaInstitutionsRepository extends Repository<ClarisaInstitution
     	ci.acronym as institutions_acronym,
       ci.website_link,
     	cit.code as institutions_type_id, 
-    	cit.name as institutions_type_name
+    	cit.name as institutions_type_name,
+      cc.name as  headquarter_name
     from clarisa_institutions ci 
-    inner join clarisa_institution_types cit on cit.code = ci.institution_type_code;
+    inner join clarisa_institution_types cit on cit.code = ci.institution_type_code
+    left join clarisa_countries cc on cc.iso_alpha_2 = ci.headquarter_country_iso2 ;
     `;
     try {
       const deleteData: ClarisaInstitution[] = await this.query(queryData);
