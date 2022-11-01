@@ -39,6 +39,7 @@ export class ResultRegionsService {
       const regions = createResultRegionDto.regions;
       if(!createResultRegionDto.has_regions && createResultRegionDto.scope_id != 2 || createResultRegionDto.scope_id == 4){
         await this._resultRegionRepository.updateRegions(result.id, []);
+        console.log(createResultRegionDto.has_regions)
       }else if(createResultRegionDto.scope_id == 2 || createResultRegionDto.scope_id == 1 || createResultRegionDto.has_regions){
         if (regions?.length) {
           await this._resultRegionRepository.updateRegions(result.id, createResultRegionDto.regions.map(el => el.id));
@@ -57,16 +58,16 @@ export class ResultRegionsService {
             }
           }
         }
-        if(createResultRegionDto.scope_id == 4){
-          result.geographic_scope_id = 50;
-        }else{
-          result.geographic_scope_id = createResultRegionDto.scope_id;
-        }
-        result.has_regions = createResultRegionDto.has_regions;
-        await this._resultRepository.save(result);
       }
       
-
+      if(createResultRegionDto.scope_id == 4){
+        result.geographic_scope_id = 50;
+      }else{
+        result.geographic_scope_id = createResultRegionDto.scope_id;
+      }
+      result.has_regions = createResultRegionDto.has_regions;
+      await this._resultRepository.save(result);
+      
       return {
         response: regions,
         message: 'The data was updated correctly',
