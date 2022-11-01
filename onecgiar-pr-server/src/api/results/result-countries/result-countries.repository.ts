@@ -45,8 +45,10 @@ export class ResultCountryRepository extends Repository<ResultCountry> {
     rc.result_id,
     rc.country_id,
     rc.created_date,
-    rc.last_updated_date 
+    rc.last_updated_date,
+    cc.name 
     from result_country rc 
+    inner join clarisa_countries cc on cc.id = rc.country_id 
     where rc.is_active > 0
       and rc.result_id = ?;
     `;

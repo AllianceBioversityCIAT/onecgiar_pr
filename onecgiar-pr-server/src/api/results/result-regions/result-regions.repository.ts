@@ -45,8 +45,10 @@ export class ResultRegionRepository extends Repository<ResultRegion> {
     rr.result_id,
     rr.is_active,
     rr.created_date,
-    rr.last_updated_date 
+    rr.last_updated_date,
+    cr.name
     from result_region rr 
+    inner join clarisa_regions cr on cr.um49Code = rr.region_id 
     where rr.is_active > 0
       and rr.result_id = ?;
     `;
