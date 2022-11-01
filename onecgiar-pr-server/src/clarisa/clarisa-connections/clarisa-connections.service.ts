@@ -6,6 +6,7 @@ import { HttpService } from '@nestjs/axios';
 import { env } from 'process';
 import { lastValueFrom, map } from 'rxjs';
 import { HandlersError } from '../../shared/handlers/error.utils';
+import { ClarisaTaskService } from '../clarisatask.service';
 
 @Injectable()
 export class ClarisaConnectionsService {
@@ -13,7 +14,8 @@ export class ClarisaConnectionsService {
     env.CLA_URL ?? env.L_CLA_URL;
   constructor(
     private readonly _httpService: HttpService,
-    private readonly _handlersError: HandlersError
+    private readonly _handlersError: HandlersError,
+    private readonly _clarisaTaskService: ClarisaTaskService
   ) { }
 
   async create(createClarisaConnectionDto: CreateClarisaConnectionDto, user: TokenDto) {
@@ -58,8 +60,9 @@ export class ClarisaConnectionsService {
 
   }
 
-  findAll() {
-    return `This action returns all clarisaConnections`;
+  async executeTask() {
+    await this._clarisaTaskService.clarisaBootstrap();
+    return true;
   }
 
   findOne(id: number) {

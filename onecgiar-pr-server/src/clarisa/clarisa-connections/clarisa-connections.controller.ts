@@ -20,9 +20,9 @@ export class ClarisaConnectionsController {
     return this.clarisaConnectionsService.create(createClarisaConnectionDto, token);
   }
 
-  @Get()
-  findAll() {
-    return this.clarisaConnectionsService.findAll();
+  @Get('execute-task')
+  async executeTask() {
+    return await this.clarisaConnectionsService.executeTask();
   }
 
   @Get(':id')
