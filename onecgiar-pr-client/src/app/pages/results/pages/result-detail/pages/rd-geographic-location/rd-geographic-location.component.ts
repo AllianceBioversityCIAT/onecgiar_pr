@@ -3,6 +3,7 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { environment } from '../../../../../../../environments/environment.prod';
 import { GeographicLocationBody } from './models/geographicLocationBody';
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
+import { RegionsCountriesService } from '../../../../../../shared/services/global/regions-countries.service';
 
 @Component({
   selector: 'app-rd-geographic-location',
@@ -10,7 +11,7 @@ import { ResultLevelService } from '../../../result-creator/services/result-leve
   styleUrls: ['./rd-geographic-location.component.scss']
 })
 export class RdGeographicLocationComponent {
-  constructor(public api: ApiService, public resultLevelSE: ResultLevelService) {}
+  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public regionsCountriesSE: RegionsCountriesService) {}
   geographicLocationBody = new GeographicLocationBody();
   UNM49 = 'https://unstats.un.org/unsd/methodology/m49/';
   ISO3166 = 'https://www.iso.org/iso-3166-country-codes.html';
@@ -24,7 +25,7 @@ export class RdGeographicLocationComponent {
       id: 2
     },
     {
-      name: 'Country',
+      name: 'National',
       id: 3
     },
     {
@@ -36,8 +37,18 @@ export class RdGeographicLocationComponent {
     this.showAlerts();
     this.getSectionInformation();
   }
-  getSectionInformation() {}
-  onSaveSection() {}
+  getSectionInformation() {
+    this.api.resultsSE.GET_geographicSection().subscribe(resp => {
+      console.log(resp);
+    });
+  }
+  onSaveSection() {
+    console.log(this.geographicLocationBody);
+    this.api.resultsSE.PATCH_geographicSection(this.geographicLocationBody).subscribe(resp => {
+      console.log(resp);
+      this.api.alertsFe.show({ id: 'sectionSaved', title: 'Section saved correctly', description: '', status: 'success', closeIn: 500 });
+    });
+  }
   showAlerts() {
     this.api.alertsFs.show({
       status: 'success',

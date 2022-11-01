@@ -6,27 +6,31 @@
         [label]="'What is the main geographic focus of the ' + this.api.dataControlSE.getLastWord(this.resultLevelSE.currentResultLevelName)+'?'"
         description="This should reflect where the outcome has taken place/contributed to benefit."
         [options]="this.geographic_focus" optionLabel="name" optionValue='id'
-        [(ngModel)]="this.geographicLocationBody.a">
+        [(ngModel)]="this.geographicLocationBody.scope_id" [required]="false">
     </app-pr-radio-button>
-    <div *ngIf="this.geographicLocationBody.a != '4' && !!this.geographicLocationBody.a">
-        <app-pr-yes-or-not *ngIf="this.geographicLocationBody.a != '3'"
-            [label]="this.geographicLocationBody.a != '2' ? 'Are there any regions that you wish to specify for this '+this.api.dataControlSE.getLastWord(this.resultLevelSE.currentResultLevelName)+'?':'Select regions'"
-            [description]="this.geographicLocationBody.b  !== false ? thereAnyRegionText() : null"
-            [(ngModel)]="this.geographicLocationBody.b">
+    <div *ngIf="this.geographicLocationBody.scope_id != 4 && !!this.geographicLocationBody.scope_id">
+        <app-pr-yes-or-not *ngIf="this.geographicLocationBody.scope_id != 3"
+            [label]="this.geographicLocationBody.scope_id != 2 ? 'Are there any regions that you wish to specify for this '+this.api.dataControlSE.getLastWord(this.resultLevelSE.currentResultLevelName)+'?':'Select regions'"
+            [description]="this.geographicLocationBody.has_regions  !== false ? thereAnyRegionText() : null"
+            [(ngModel)]="this.geographicLocationBody.has_regions" [required]="false">
         </app-pr-yes-or-not>
-        <app-pr-multi-select *ngIf="this.geographicLocationBody.b  !== false && this.geographicLocationBody.a != '3'"
-            [options]="[]" selectedLabel="Actor(s) selected" selectedOptionLabel="institutions_name"
-            optionLabel="full_name" optionValue="institutions_id" placeholder="Select regions"
-            [(ngModel)]="this.geographicLocationBody.c">
+        <app-pr-multi-select
+            *ngIf="this.geographicLocationBody.has_regions  !== false && this.geographicLocationBody.scope_id != 3 && !!this.geographicLocationBody.has_regions"
+            [options]="this.regionsCountriesSE.countriesList" selectedLabel="Regions(s) selected"
+            selectedOptionLabel="name" optionLabel="name" optionValue="id" placeholder="Select regions"
+            [(ngModel)]="this.geographicLocationBody.regions">
         </app-pr-multi-select>
         <app-pr-yes-or-not
-            [label]="this.geographicLocationBody.a != '3'?'Are there any countries that you wish to specify for this '+this.api.dataControlSE.getLastWord(this.resultLevelSE.currentResultLevelName)+'?' : 'Select countries'"
-            [description]="this.geographicLocationBody.d  !== false  ? thereAnycountriesText() : null"
-            [(ngModel)]="this.geographicLocationBody.d">
+            [label]="this.geographicLocationBody.scope_id != 3?'Are there any countries that you wish to specify for this '+this.api.dataControlSE.getLastWord(this.resultLevelSE.currentResultLevelName)+'?' : 'Select countries'"
+            [description]="this.geographicLocationBody.has_countries  !== false  ? thereAnycountriesText() : null"
+            [(ngModel)]="this.geographicLocationBody.has_countries" [required]="false">
         </app-pr-yes-or-not>
-        <app-pr-multi-select *ngIf="this.geographicLocationBody.d !== false" [options]="[]"
-            selectedLabel="Countries selected" selectedOptionLabel="institutions_name" optionLabel="full_name"
-            optionValue="institutions_id" placeholder="Select countries" [(ngModel)]="this.geographicLocationBody.e">
+        <app-pr-multi-select
+            *ngIf="this.geographicLocationBody.has_countries !== false && !!this.geographicLocationBody.has_countries"
+            [options]="this.regionsCountriesSE.regionsList" selectedLabel="Countries selected"
+            selectedOptionLabel="name" optionLabel="name" optionValue="id" placeholder="Select countries"
+            [(ngModel)]="this.geographicLocationBody.countries">
         </app-pr-multi-select>
     </div>
 </div>
+<app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>

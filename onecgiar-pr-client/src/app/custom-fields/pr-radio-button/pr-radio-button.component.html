@@ -1,4 +1,5 @@
-<app-pr-field-header [label]="this.label" [description]="this.description"></app-pr-field-header>
+<app-pr-field-header [label]="this.label" [description]="this.description" [required]="this.required">
+</app-pr-field-header>
 <div class="radioButtonList">
     <div class="radioButton" *ngFor="let option of this.options; let i=index">
         <p-radioButton name="groupname" inputId="groupname{{i}}{{this.joinName()}}" [value]="option[optionValue]"

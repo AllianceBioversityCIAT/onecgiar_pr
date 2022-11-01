@@ -1,7 +1,7 @@
 export class GeographicLocationBody {
-  public a: string = '2';
-  public b: boolean = null;
-  public c: string = null;
-  public d: boolean = null;
-  public e: string = null;
+  public scope_id: number;
+  public has_countries: boolean;
+  public has_regions: boolean;
+  public regions: number[] = [];
+  public countries: number[] = [];
 }

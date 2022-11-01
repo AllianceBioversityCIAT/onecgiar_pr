@@ -5,6 +5,7 @@ import { map } from 'rxjs';
 import { ResultBody } from '../../interfaces/result.interface';
 import { GeneralInfoBody } from '../../../pages/results/pages/result-detail/pages/rd-general-information/models/generalInfoBody';
 import { PartnersBody } from 'src/app/pages/results/pages/result-detail/pages/rd-partners/models/partnersBody';
+import { GeographicLocationBody } from '../../../pages/results/pages/result-detail/pages/rd-geographic-location/models/geographicLocationBody';
 
 @Injectable({
   providedIn: 'root'
@@ -50,6 +51,7 @@ export class ResultsApiService {
   GET_allInstitutions() {
     return this.http.get<any>(`${this.apiBaseUrl}get/institutions/all`).pipe(
       map(resp => {
+        console.log(resp);
         resp.response.map(institution => (institution.full_name = `(Id:${institution?.institutions_id}) ${institution?.institutions_acronym} - ${institution?.institutions_name}`));
         return resp;
       })
@@ -77,5 +79,25 @@ export class ResultsApiService {
   }
   GET_partnersSection() {
     return this.http.get<any>(`${this.apiBaseUrl}results-by-institutions/partners/result/${this.currentResultId}`);
+  }
+
+  GET_AllPrmsGeographicScope() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/geographic-scope/get/all/prms`);
+  }
+
+  GET_AllCLARISARegions() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/regions/get/all`);
+  }
+
+  GET_AllCLARISACountries() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/countries/get/all`);
+  }
+
+  PATCH_geographicSection(body: GeographicLocationBody) {
+    return this.http.patch<any>(`${this.apiBaseUrl}update/geographic/${this.currentResultId}`, body);
+  }
+
+  GET_geographicSection() {
+    return this.http.get<any>(`${this.apiBaseUrl}get/geographic/${this.currentResultId}`);
   }
 }
