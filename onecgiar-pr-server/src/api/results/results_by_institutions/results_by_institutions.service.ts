@@ -153,7 +153,7 @@ export class ResultsByInstitutionsService {
             }
           }else{
             const delivery = data.institutions[index].deliveries;
-            await this._resultByInstitutionsByDeliveriesTypeRepository.inactiveResultDeLivery(isInstitutions.id, data.institutions[index].deliveries);
+            await this._resultByInstitutionsByDeliveriesTypeRepository.inactiveResultDeLivery(isInstitutions.id, data.institutions[index].deliveries, user.id);
             let InstitutionsDeliveriesArray: ResultByInstitutionsByDeliveriesType[] = [];
             if(delivery){
               for (let i = 0; i < delivery.length; i++) {
