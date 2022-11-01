@@ -1,0 +1,13 @@
+<div class="evidence_item">
+    <div class="index">{{this.index}}</div>
+    <div>
+        <div class="link">
+            <app-pr-input label="Link" [(ngModel)]="this.evidence.name"></app-pr-input>
+            <div class="checkboxes">
+                <app-pr-checkbox label="Gender related evidence"></app-pr-checkbox>
+                <app-pr-checkbox label="Climate related evidence"></app-pr-checkbox>
+            </div>
+        </div>
+        <app-pr-textarea label="Description" [(ngModel)]="this.evidence.description" [maxWords]="50"></app-pr-textarea>
+    </div>
+</div>

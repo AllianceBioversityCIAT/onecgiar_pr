@@ -7,11 +7,14 @@ import { Component } from '@angular/core';
 })
 export class RdEvidencesComponent {
   constructor() {}
+  evidences = [{ name: '' }, { name: '' }];
   ngOnInit(): void {
     this.showAlerts();
     this.getSectionInformation();
   }
   getSectionInformation() {}
-  onSaveSection() {}
+  onSaveSection() {
+    console.log(this.evidences);
+  }
   showAlerts() {}
 }
