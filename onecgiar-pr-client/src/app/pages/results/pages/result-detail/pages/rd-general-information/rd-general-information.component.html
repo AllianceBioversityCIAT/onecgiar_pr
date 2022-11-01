@@ -10,8 +10,8 @@
         </div>
     </div>
 
-    <app-pr-input placeholder="Write some..." label="Result type" type="text" [required]="false" [readOnly]="true"
-        [(ngModel)]="this.generalInfoBody.result_type_name">
+    <app-pr-input [attr.attribute-you-are-targeting]="'expression'" placeholder="Write some..." label="Result type"
+        type="text" [required]="false" [readOnly]="true" [(ngModel)]="this.generalInfoBody.result_type_name">
     </app-pr-input>
     <app-pr-input placeholder="Write some..." label="Title" type="text" [(ngModel)]="this.generalInfoBody.result_name"
         [maxWords]="30">
@@ -21,13 +21,13 @@
         [(ngModel)]="this.generalInfoBody.result_description" [maxWords]="150"></app-pr-textarea>
 
     <div class="radio_grid">
-        <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="title" optionValue="id"
+        <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
             label="Gender tag" [(ngModel)]="this.generalInfoBody.gender_tag_id">
         </app-pr-radio-button>
         <div id="gender_tag_alert" [hidden]="this.generalInfoBody.gender_tag_id != 3"></div>
     </div>
     <div class="radio_grid" id="climate_change_tag">
-        <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="title" optionValue="id"
+        <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
             label="Climate change tag" [(ngModel)]="this.generalInfoBody.climate_change_tag_id">
         </app-pr-radio-button>
         <div id="climate_change_tag_alert" [hidden]="this.generalInfoBody.climate_change_tag_id != 3"></div>

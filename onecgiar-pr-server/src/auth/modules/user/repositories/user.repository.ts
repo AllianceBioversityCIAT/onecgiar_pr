@@ -63,6 +63,30 @@ export class UserRepository extends Repository<User> {
     }
   }
 
+  async getUserById(userId: number) {
+    const queryData = `
+    SELECT  u.id,
+            u.first_name, 
+            u.last_name ,
+            u.email, 
+            u.is_cgiar , 
+            u.active  
+    FROM users u
+    WHERE u.active > 0
+      and u.id = ?
+    `;
+    try {
+      const completeUser: FullUserRequestDto[] = await this.query(queryData, [userId]);
+      return completeUser?.length?completeUser[0]: undefined;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: UserRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async InitiativeByUser(userId: number) {
     const queryData = `
     select 

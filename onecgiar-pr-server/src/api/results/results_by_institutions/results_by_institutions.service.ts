@@ -12,6 +12,7 @@ import { VersionsService } from '../versions/versions.service';
 import { ResultByInstitutionsByDeliveriesTypeRepository } from '../result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';
 import { ResultByInstitutionsByDeliveriesType } from '../result-by-institutions-by-deliveries-type/entities/result-by-institutions-by-deliveries-type.entity';
 import { Result } from '../entities/result.entity';
+import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 
 @Injectable()
 export class ResultsByInstitutionsService {
@@ -21,7 +22,8 @@ export class ResultsByInstitutionsService {
     private readonly _resultRepository: ResultRepository,
     private readonly _versionsService: VersionsService,
     private readonly _resultByInstitutionsByDeliveriesTypeRepository: ResultByInstitutionsByDeliveriesTypeRepository,
-    private readonly _handlersError: HandlersError
+    private readonly _handlersError: HandlersError,
+    private readonly _userRepository: UserRepository
   ){}
 
   create(createResultsByInstitutionDto: CreateResultsByInstitutionDto) {
@@ -104,10 +106,20 @@ export class ResultsByInstitutionsService {
         };
       }
 
+      const uExists = await this._userRepository.getUserById(user.id);
+      if(!uExists){
+        throw {
+          response: user,
+          message: 'User Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
       const version = await this._versionsService.findBaseVersion();
       if (version.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: version });
       }
+      console.log('esto es') 
       const result = await this._resultByIntitutionsRepository.updateIstitutions(data.result_id, data.institutions, false, user.id, data?.no_applicable_partner);
       const vrs: Version = <Version>version.response;
       rExists.no_applicable_partner = data.no_applicable_partner;
@@ -126,20 +138,22 @@ export class ResultsByInstitutionsService {
             institutionsNew.is_active = true;
             const responseInstitution = await this._resultByIntitutionsRepository.save(institutionsNew);
             const delivery = data.institutions[index].deliveries;
-            let InstitutionsDeliveriesArray: ResultByInstitutionsByDeliveriesType[] = [];
-            for (let i = 0; i < delivery.length; i++) {
-              const newInstitutionsDeliveries = new ResultByInstitutionsByDeliveriesType();
-              newInstitutionsDeliveries.result_by_institution_id = responseInstitution.id;
-              newInstitutionsDeliveries.partner_delivery_type_id = delivery[i];
-              newInstitutionsDeliveries.last_updated_by = user.id;
-              newInstitutionsDeliveries.versions_id = vrs.id;
-              newInstitutionsDeliveries.created_by = user.id;
-              InstitutionsDeliveriesArray.push(newInstitutionsDeliveries);
-            }      
-            await this._resultByInstitutionsByDeliveriesTypeRepository.save(InstitutionsDeliveriesArray);
+            if(delivery){
+              let InstitutionsDeliveriesArray: ResultByInstitutionsByDeliveriesType[] = [];
+              for (let i = 0; i < delivery.length; i++) {
+                const newInstitutionsDeliveries = new ResultByInstitutionsByDeliveriesType();
+                newInstitutionsDeliveries.result_by_institution_id = responseInstitution.id;
+                newInstitutionsDeliveries.partner_delivery_type_id = delivery[i];
+                newInstitutionsDeliveries.last_updated_by = user.id;
+                newInstitutionsDeliveries.versions_id = vrs.id;
+                newInstitutionsDeliveries.created_by = user.id;
+                InstitutionsDeliveriesArray.push(newInstitutionsDeliveries);
+              }      
+              await this._resultByInstitutionsByDeliveriesTypeRepository.save(InstitutionsDeliveriesArray);
+            }
           }else{
             const delivery = data.institutions[index].deliveries;
-            await this._resultByInstitutionsByDeliveriesTypeRepository.inactiveResultDeLivery(isInstitutions.id, data.institutions[index].deliveries);
+            await this._resultByInstitutionsByDeliveriesTypeRepository.inactiveResultDeLivery(isInstitutions.id, data.institutions[index].deliveries, user.id);
             let InstitutionsDeliveriesArray: ResultByInstitutionsByDeliveriesType[] = [];
             if(delivery){
               for (let i = 0; i < delivery.length; i++) {

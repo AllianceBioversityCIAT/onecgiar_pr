@@ -12,8 +12,10 @@ export class ResultLevelService {
   currentResultTypeList: Resulttype[];
   resultBody = new ResultBody();
   currentResultLevelId = null;
+  currentResultLevelName = null;
   currentResultTypeId = null;
   resultHandle: string = '';
+
   constructor(private api: ApiService, private resultsListFilterSE: ResultsListFilterService) {
     this.GET_TypeByResultLevel();
   }
@@ -25,6 +27,7 @@ export class ResultLevelService {
     this.resultLevelList.map(reLevel => (reLevel.selected = false));
     resultLevel.selected = !resultLevel.selected;
   }
+
   cleanData() {
     this.resultBody = new ResultBody();
   }

@@ -9,11 +9,11 @@ import { MenuModule } from 'primeng/menu';
 import { RouterModule } from '@angular/router';
 import { ResultsListFiltersComponent } from './components/results-list-filters/results-list-filters.component';
 import { ReportNewResultButtonComponent } from './components/report-new-result-button/report-new-result-button.component';
-import { ResultsListFilterPipe } from './pipes/results-list-filter.pipe';
 import { FormsModule } from '@angular/forms';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
+import { ResultsListFilterPipeModule } from './pipes/results-list-filter-pipe.module';
 @NgModule({
-  declarations: [ResultsListComponent, ResultsListFiltersComponent, ReportNewResultButtonComponent, ResultsListFilterPipe, ResultsListFilterPipe],
-  imports: [CommonModule, ResultsListRoutingModule, TableModule, ButtonModule, MenuModule, RouterModule, FormsModule, CustomFieldsModule]
+  declarations: [ResultsListComponent, ResultsListFiltersComponent, ReportNewResultButtonComponent],
+  imports: [CommonModule, ResultsListRoutingModule, TableModule, ButtonModule, MenuModule, RouterModule, FormsModule, CustomFieldsModule, ResultsListFilterPipeModule]
 })
 export class ResultsListModule {}

@@ -9,6 +9,7 @@ import { ResultTypesModule } from './result_types/result_types.module';
 import { VersionsModule } from './versions/versions.module';
 import { ResultByLevelModule } from './result-by-level/result-by-level.module';
 import { PartnerDeliveryTypeModule } from './partner-delivery-type/partner-delivery-type.module';
+import { ResultCountry } from './result-countries/entities/result-country.entity';
 
 export const ResultsRoutes: Routes = [
   {
@@ -50,5 +51,9 @@ export const ResultsRoutes: Routes = [
   {
     path: 'partner-delivery-type',
     module: PartnerDeliveryTypeModule
+  },
+  {
+    path: 'result-countries',
+    module: ResultCountry
   }
 ];

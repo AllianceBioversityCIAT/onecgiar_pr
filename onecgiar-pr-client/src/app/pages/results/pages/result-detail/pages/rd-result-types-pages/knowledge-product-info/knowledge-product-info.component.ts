@@ -6,10 +6,13 @@ import { Component, OnInit } from '@angular/core';
   styleUrls: ['./knowledge-product-info.component.scss']
 })
 export class KnowledgeProductInfoComponent implements OnInit {
-
-  constructor() { }
+  constructor() {}
 
   ngOnInit(): void {
+    this.showAlerts();
+    this.getSectionInformation();
   }
-
+  getSectionInformation() {}
+  onSaveSection() {}
+  showAlerts() {}
 }

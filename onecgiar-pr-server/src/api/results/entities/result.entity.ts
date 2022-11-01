@@ -14,6 +14,7 @@ import { Version } from '../versions/entities/version.entity';
 import { Year } from '../years/entities/year.entity';
 import { ResultLevel } from '../result_levels/entities/result_level.entity';
 import { LegacyResult } from '../legacy-result/entities/legacy-result.entity';
+import { ClarisaGeographicScope } from '../../../clarisa/clarisa-geographic-scopes/entities/clarisa-geographic-scope.entity';
 
 @Entity()
 export class Result {
@@ -142,4 +143,25 @@ export class Result {
     default: false
   })
   no_applicable_partner: boolean;
+
+  @ManyToOne(() => ClarisaGeographicScope, cgo => cgo.id, {nullable: true})
+  @JoinColumn({
+    name: 'geographic_scope_id'
+  })
+  geographic_scope_id!:number
+
+  @Column({
+    name: 'has_regions',
+    nullable: true,
+    type: 'boolean'
+  })
+  has_regions: boolean;
+
+  @Column({
+    name: 'has_countries',
+    nullable: true,
+    type: 'boolean'
+  })
+  has_countries: boolean;
+
 }

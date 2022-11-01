@@ -9,6 +9,7 @@ import { ResultRepository } from '../result.repository';
 import { VersionsService } from '../versions/versions.service';
 import { VersionRepository } from '../versions/version.repository';
 import { ResultByInstitutionsByDeliveriesTypeRepository } from '../result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';
+import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 
 @Module({
   controllers: [ResultsByInstitutionsController],
@@ -19,7 +20,8 @@ import { ResultByInstitutionsByDeliveriesTypeRepository } from '../result-by-ins
     VersionsService,
     VersionRepository,
     HandlersError,
-    ResultByInstitutionsByDeliveriesTypeRepository
+    ResultByInstitutionsByDeliveriesTypeRepository,
+    UserRepository
   ],
   imports: [],
   exports: [ResultByIntitutionsRepository],

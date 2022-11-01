@@ -6,10 +6,13 @@ import { Component, OnInit } from '@angular/core';
   styleUrls: ['./innovation-use-info.component.scss']
 })
 export class InnovationUseInfoComponent implements OnInit {
-
-  constructor() { }
+  constructor() {}
 
   ngOnInit(): void {
+    this.showAlerts();
+    this.getSectionInformation();
   }
-
+  getSectionInformation() {}
+  onSaveSection() {}
+  showAlerts() {}
 }

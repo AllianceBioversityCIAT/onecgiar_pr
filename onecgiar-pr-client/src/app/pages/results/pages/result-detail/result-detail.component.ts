@@ -18,6 +18,7 @@ export class ResultDetailComponent {
 
   GET_resultById() {
     this.api.resultsSE.GET_resultById().subscribe(({ response }) => {
+      this.resultLevelSE.currentResultLevelName = response.result_level_name;
       this.resultLevelSE.currentResultLevelId = response.result_level_id;
       this.resultLevelSE.currentResultTypeId = response.result_type_id;
     });
