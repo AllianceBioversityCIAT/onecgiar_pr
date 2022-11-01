@@ -124,8 +124,12 @@ export class ResultsController {
     throw new HttpException({ message, response }, status);
   }
 
-  @Patch('update/geographic')
-  async saveGeographic(@Body() createResultGeoDto: CreateResultGeoDto){
+  @Patch('update/geographic/:resiltId')
+  async saveGeographic(
+    @Body() createResultGeoDto: CreateResultGeoDto,
+    @Param('resiltId') resiltId: number
+    ){
+      createResultGeoDto.result_id = resiltId;
     const { message, response, status } =
       await this.resultsService.saveGeoScope(createResultGeoDto);
     throw new HttpException({ message, response }, status);
