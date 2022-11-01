@@ -38,14 +38,15 @@ export class RdGeographicLocationComponent {
     this.getSectionInformation();
   }
   getSectionInformation() {
-    this.api.resultsSE.GET_geographicSection().subscribe(resp => {
-      console.log(resp);
+    this.api.resultsSE.GET_geographicSection().subscribe(({ response }) => {
+      this.geographicLocationBody = response;
+      console.log(response);
     });
   }
   onSaveSection() {
     console.log(this.geographicLocationBody);
-    this.api.resultsSE.PATCH_geographicSection(this.geographicLocationBody).subscribe(resp => {
-      console.log(resp);
+    this.api.resultsSE.PATCH_geographicSection(this.geographicLocationBody).subscribe(({ response }) => {
+      console.log(response);
       this.api.alertsFe.show({ id: 'sectionSaved', title: 'Section saved correctly', description: '', status: 'success', closeIn: 500 });
     });
   }
