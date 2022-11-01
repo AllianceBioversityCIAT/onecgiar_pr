@@ -43,7 +43,7 @@ export class ResultCountryRepository extends Repository<ResultCountry> {
     rc.result_country_id,
     rc.is_active,
     rc.result_id,
-    rc.country_id,
+    rc.country_id as id,
     rc.created_date,
     rc.last_updated_date,
     cc.name 

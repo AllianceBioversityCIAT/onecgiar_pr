@@ -41,7 +41,7 @@ export class ResultRegionRepository extends Repository<ResultRegion> {
     const query = `
     select 
     rr.result_region_id,
-    rr.region_id,
+    rr.region_id as id,
     rr.result_id,
     rr.is_active,
     rr.created_date,
