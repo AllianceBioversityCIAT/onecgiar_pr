@@ -40,6 +40,8 @@ import { ResultsByInstitutionType } from './results_by_institution_types/entitie
 import { CreateResultGeoDto } from './dto/create-result-geo-scope.dto';
 import { ResultRegionsService } from './result-regions/result-regions.service';
 import { ResultCountriesService } from './result-countries/result-countries.service';
+import { ResultRegionRepository } from './result-regions/result-regions.repository';
+import { ResultCountryRepository } from './result-countries/result-countries.repository';
 
 @Injectable()
 export class ResultsService {
@@ -63,7 +65,9 @@ export class ResultsService {
     private readonly _clarisaInstitutionsTypeRepository: ClarisaInstitutionsTypeRepository,
     private readonly _resultRegionsService: ResultRegionsService,
     private readonly _resultCountriesService: ResultCountriesService,
-    private readonly _genderTagRepository: GenderTagRepository
+    private readonly _genderTagRepository: GenderTagRepository,
+    private readonly _resultRegionRepository: ResultRegionRepository,
+    private readonly _resultCountryRepository: ResultCountryRepository
   ) {}
 
   /**
@@ -689,9 +693,31 @@ export class ResultsService {
       }
       
       await this._resultCountriesService.create(createResultGeo);
-      
+
       return {
         response: createResultGeo,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async getGeoScope(resultId: number){
+    try {
+      const regions = await this._resultRegionRepository.getResultRegionByResultId(resultId);
+      const contries = await this._resultCountryRepository.getResultCountriesByResultId(resultId);
+      const result = await this._resultRepository.getResultById(resultId);
+      
+      return {
+        response: {
+          regions: regions.map(r => r.region_id),
+          countries: contries.map(c => c.country_id),
+          scope_id: result.geographic_scope_id == 3? (contries?.length > 1?4:3): result.geographic_scope_id,
+          has_countries: result?.has_countries ?? null,
+          has_regions: result?.has_regions ?? null
+        },
         message: 'Successful response',
         status: HttpStatus.OK,
       };

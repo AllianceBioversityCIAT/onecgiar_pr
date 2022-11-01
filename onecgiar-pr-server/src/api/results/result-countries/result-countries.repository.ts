@@ -37,6 +37,32 @@ export class ResultCountryRepository extends Repository<ResultCountry> {
     }
   }
 
+  async getResultCountriesByResultId(resultId: number){
+    const query = `
+    select 
+    rc.result_country_id,
+    rc.is_active,
+    rc.result_id,
+    rc.country_id,
+    rc.created_date,
+    rc.last_updated_date 
+    from result_country rc 
+    where rc.is_active > 0
+      and rc.result_id = ?;
+    `;
+
+    try {
+      const result: ResultCountry[] = await this.query(query, [resultId]);
+      return result;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultCountryRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async getResultCountrieByIdResultAndCountryId(resultId: number, countryId: number){
     const query = `
     select 

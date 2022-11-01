@@ -134,4 +134,13 @@ export class ResultsController {
       await this.resultsService.saveGeoScope(createResultGeoDto);
     throw new HttpException({ message, response }, status);
   }
+
+  @Get('get/geographic/:resiltId')
+  async getGeographic(
+    @Param('resiltId') resiltId: number
+    ){
+    const { message, response, status } =
+      await this.resultsService.getGeoScope(resiltId);
+    throw new HttpException({ message, response }, status);
+  }
 }
