@@ -2,8 +2,8 @@
 </app-pr-field-header>
 <div class="field_container">
     <div class="p-fluid">
-        <p-dropdown *ngIf="this.options.length" [options]="this.options" [virtualScroll]="true"
-            [virtualScrollItemSize]="30" [optionLabel]="this.optionLabel" [optionValue]="this.optionValue"
-            [(ngModel)]="value"></p-dropdown>
+        <p-dropdown *ngIf="this.options.length" [autoDisplayFirst]="false" [options]="this.options"
+            [virtualScroll]="true" [virtualScrollItemSize]="30" [optionLabel]="this.optionLabel"
+            [optionValue]="this.optionValue" [(ngModel)]="value" [placeholder]="this.placeholder"></p-dropdown>
     </div>
 </div>

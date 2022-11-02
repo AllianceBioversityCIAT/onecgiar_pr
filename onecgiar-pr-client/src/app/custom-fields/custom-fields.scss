@@ -20,7 +20,8 @@
     overflow: hidden;
 }
 
-input::placeholder {
+input::placeholder,
+.p-dropdown .p-dropdown-label.p-placeholder {
     color: rgb(194, 194, 194);
 }
 
