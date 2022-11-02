@@ -4,7 +4,6 @@ export class PartnersRequestBody {
   public institutionTypeCode: string = null;
   public hqCountryIso: string = null;
   public websiteLink: string = null;
-  public requestSource?: string = null;
   public externalUserMail: string = null;
   public externalUserName: string = null;
   public externalUserComments: string = null;
