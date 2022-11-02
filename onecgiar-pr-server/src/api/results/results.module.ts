@@ -81,6 +81,10 @@ export class ResultsModule implements NestModule {
       {
         path: '/api/results/*',
         method: RequestMethod.ALL,
+      },
+      {
+        path: '/api/clarisa/*',
+        method: RequestMethod.ALL,
       }
     );
   }

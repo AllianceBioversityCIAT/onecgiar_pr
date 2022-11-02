@@ -58,6 +58,37 @@ export class ResultByInitiativesRepository extends Repository<ResultsByInititiat
     }
   }
 
+  async getOwnerInitiativeByResult(resultId: number) {
+    const queryData = `
+    select 
+    	ci.id,
+      ci.official_code,
+      ci.name as initiative_name,
+      rbi.initiative_role_id,
+      rbi.version_id,
+      rbi.is_active 
+    from results_by_inititiative rbi 
+    	inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
+        									and ci.active > 0
+    where rbi.result_id = ?
+      and rbi.initiative_role_id = 1
+      and rbi.is_active > 0;
+    `;
+    try {
+      const completeUser: InitiativeByResultDTO[] = await this.query(
+        queryData,
+        [resultId],
+      );
+      return completeUser?.length?completeUser[0]: undefined;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultByInitiativesRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async getResultByInitiativeFull(resultId: number) {
     const queryData = `
     select 

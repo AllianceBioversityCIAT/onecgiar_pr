@@ -9,15 +9,16 @@ import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 export class ClarisaConnectionsController {
   constructor(private readonly clarisaConnectionsService: ClarisaConnectionsService) {}
 
-  @Post('partner-request')
+  @Post('partner-request/:resultId')
   create(
     @Body() createClarisaConnectionDto: CreateClarisaConnectionDto,
     @Headers() auth: HeadersDto,
+    @Param('resultId') resultId: number
     ) {
     const token: TokenDto = <TokenDto>(
       JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
     );
-    return this.clarisaConnectionsService.create(createClarisaConnectionDto, token);
+    return this.clarisaConnectionsService.create(createClarisaConnectionDto, resultId, token);
   }
 
   @Get('execute-task')
