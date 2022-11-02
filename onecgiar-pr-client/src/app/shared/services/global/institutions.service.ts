@@ -14,7 +14,7 @@ export class InstitutionsService {
     });
     this.api.resultsSE.GET_institutionTypes().subscribe(({ response }) => {
       this.institutionsTypesList = response;
-      // console.log(this.institutionsTypesList);
+      console.log(this.institutionsTypesList);
     });
   }
 }
