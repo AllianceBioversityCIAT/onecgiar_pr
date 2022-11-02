@@ -10,6 +10,7 @@ import { VersionsModule } from './versions/versions.module';
 import { ResultByLevelModule } from './result-by-level/result-by-level.module';
 import { PartnerDeliveryTypeModule } from './partner-delivery-type/partner-delivery-type.module';
 import { ResultCountry } from './result-countries/entities/result-country.entity';
+import { LinkedResultsModule } from './linked-results/linked-results.module';
 
 export const ResultsRoutes: Routes = [
   {
@@ -55,5 +56,9 @@ export const ResultsRoutes: Routes = [
   {
     path: 'result-countries',
     module: ResultCountry
+  },
+  {
+    path:'linked',
+    module: LinkedResultsModule
   }
 ];

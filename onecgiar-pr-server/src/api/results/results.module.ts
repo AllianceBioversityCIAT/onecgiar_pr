@@ -35,6 +35,7 @@ import { PartnerDeliveryTypeModule } from './partner-delivery-type/partner-deliv
 import { ResultByInstitutionsByDeliveriesTypeModule } from './result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.module';
 import { ResultRegionsModule } from './result-regions/result-regions.module';
 import { ResultCountriesModule } from './result-countries/result-countries.module';
+import { LinkedResultsModule } from './linked-results/linked-results.module';
 
 @Module({
   controllers: [ResultsController],
@@ -60,6 +61,7 @@ import { ResultCountriesModule } from './result-countries/result-countries.modul
     ResultByInstitutionsByDeliveriesTypeModule,
     ResultRegionsModule,
     ResultCountriesModule,
+    LinkedResultsModule,
   ],
   providers: [
     ResultsService,
