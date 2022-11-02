@@ -7,6 +7,7 @@ export class FilterResultNotLinkedPipe implements PipeTransform {
   transform(list: any[], linkedList: any[], counter: number): any {
     // console.log(linkedList);
     // console.log(linkedList);
+    if (!list?.length) return [];
     list.map(result => {
       result.selected = false;
     });
