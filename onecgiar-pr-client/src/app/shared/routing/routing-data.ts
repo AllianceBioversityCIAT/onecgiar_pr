@@ -32,8 +32,8 @@ export const rdResultTypesPages: PrRoute[] = [
 export const resultDetailRouting: PrRoute[] = [
   { prName: 'General information', path: 'general-information', underConstruction: false, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-general-information/rd-general-information.module').then(m => m.RdGeneralInformationModule) },
   { prName: 'Theory of change', path: 'theory-of-change', underConstruction: true, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-theory-of-change/rd-theory-of-change.module').then(m => m.RdTheoryOfChangeModule) },
-  { prName: 'Partners', path: 'partners', underConstruction: true, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-partners/rd-partners.module').then(m => m.RdPartnersModule) },
-  { prName: 'Geographic location', path: 'geographic-location', underConstruction: true, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-geographic-location/rd-geographic-location.module').then(m => m.RdGeographicLocationModule) },
+  { prName: 'Partners', path: 'partners', underConstruction: false, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-partners/rd-partners.module').then(m => m.RdPartnersModule) },
+  { prName: 'Geographic location', path: 'geographic-location', underConstruction: false, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-geographic-location/rd-geographic-location.module').then(m => m.RdGeographicLocationModule) },
   { prName: 'Links to results', path: 'links-to-results', underConstruction: true, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-links-to-results/rd-links-to-results.module').then(m => m.RdLinksToResultsModule) },
   { prName: 'Evidences', path: 'evidences', underConstruction: true, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-evidences/rd-evidences.module').then(m => m.RdEvidencesModule) },
   ...rdResultTypesPages,
