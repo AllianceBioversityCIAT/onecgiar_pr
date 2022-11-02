@@ -6,6 +6,7 @@ import { ResultBody } from '../../interfaces/result.interface';
 import { GeneralInfoBody } from '../../../pages/results/pages/result-detail/pages/rd-general-information/models/generalInfoBody';
 import { PartnersBody } from 'src/app/pages/results/pages/result-detail/pages/rd-partners/models/partnersBody';
 import { GeographicLocationBody } from '../../../pages/results/pages/result-detail/pages/rd-geographic-location/models/geographicLocationBody';
+import { LinksToResultsBody } from '../../../pages/results/pages/result-detail/pages/rd-links-to-results/models/linksToResultsBody';
 
 @Injectable({
   providedIn: 'root'
@@ -99,5 +100,13 @@ export class ResultsApiService {
 
   GET_geographicSection() {
     return this.http.get<any>(`${this.apiBaseUrl}get/geographic/${this.currentResultId}`);
+  }
+
+  GET_resultsLinked() {
+    return this.http.get<any>(`${this.apiBaseUrl}linked/get/${this.currentResultId}`);
+  }
+
+  PATCH_resultsLinked(body: LinksToResultsBody) {
+    return this.http.patch<any>(`${this.apiBaseUrl}linked/create/${this.currentResultId}`, body);
   }
 }

@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ResultsListService } from '../../../results-outlet/pages/results-list/services/results-list.service';
+import { LinksToResultsBody } from './models/linksToResultsBody';
 
 @Component({
   selector: 'app-rd-links-to-results',
@@ -9,7 +10,7 @@ import { ResultsListService } from '../../../results-outlet/pages/results-list/s
 })
 export class RdLinksToResultsComponent {
   constructor(public api: ApiService, public resultsListService: ResultsListService) {}
-  results_linked: any[] = [];
+  linksToResultsBody = new LinksToResultsBody();
   text_to_search: string = '';
   columnOrder = [
     // { title: 'ID', attr: 'id' },
@@ -27,8 +28,19 @@ export class RdLinksToResultsComponent {
   }
   onLinkResult(result) {
     console.log(result);
-    this.results_linked.push(result);
+    this.linksToResultsBody.links.push(result);
   }
-  getSectionInformation() {}
-  onSaveSection() {}
+  getSectionInformation() {
+    this.api.resultsSE.GET_resultsLinked().subscribe(resp => {
+      console.log(resp);
+    });
+  }
+  onSaveSection() {
+    console.log(this.linksToResultsBody);
+    this.api.resultsSE.PATCH_resultsLinked(this.linksToResultsBody).subscribe(resp => {
+      console.log(resp);
+      this.api.alertsFe.show({ id: 'sectionSaved', title: 'Section saved correctly', description: '', status: 'success', closeIn: 500 });
+      this.getSectionInformation();
+    });
+  }
 }
