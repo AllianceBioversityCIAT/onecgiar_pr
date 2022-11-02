@@ -7,6 +7,7 @@ import { Component, Input, OnInit } from '@angular/core';
 })
 export class EvidenceItemComponent {
   @Input() evidence: any;
-  @Input() index: any;
+  @Input() index: number;
+  @Input() isSuppInfo: boolean;
   constructor() {}
 }

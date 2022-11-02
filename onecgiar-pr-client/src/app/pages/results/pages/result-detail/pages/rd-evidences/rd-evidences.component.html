@@ -9,7 +9,7 @@
         <li>Files cannot be uploaded; only reference links to CG-authorized repositories can be entered. From 2023, only CGSpace will be used. This helps quality control and handling legal issues for files we don’t have the consent to retain on a system even if for internal purposes.</ul> ">
     </app-alert-status>
     <div class="evidences">
-        <div class="evidence" *ngFor="let evidence of evidences; let i=index">
+        <div class="evidence evidenceItem" *ngFor="let evidence of evidences; let i=index">
             <app-evidence-item [evidence]="evidence" [index]="i+1"></app-evidence-item>
         </div>
     </div>
@@ -18,8 +18,8 @@
         <li>Submit a maximum of 2 links for supplementary information. This is not QAed.</li></ul> ">
     </app-alert-status>
     <div class="evidences">
-        <div class="evidence" *ngFor="let evidence of evidences; let i=index">
-            <app-evidence-item [evidence]="evidence" [index]="i+1"></app-evidence-item>
+        <div class="evidence supp_info" *ngFor="let evidence of evidences; let i=index">
+            <app-evidence-item [evidence]="evidence" [index]="i+1" [isSuppInfo]="true"></app-evidence-item>
         </div>
     </div>
 </div>

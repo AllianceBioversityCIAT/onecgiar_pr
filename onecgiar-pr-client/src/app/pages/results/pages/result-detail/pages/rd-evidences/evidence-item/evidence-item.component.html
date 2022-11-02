@@ -3,11 +3,14 @@
     <div>
         <div class="link">
             <app-pr-input label="Link" [(ngModel)]="this.evidence.name"></app-pr-input>
-            <div class="checkboxes">
+            <div class="checkboxes" *ngIf="!isSuppInfo">
                 <app-pr-checkbox label="Gender related evidence"></app-pr-checkbox>
                 <app-pr-checkbox label="Climate related evidence"></app-pr-checkbox>
             </div>
         </div>
-        <app-pr-textarea label="Description" [(ngModel)]="this.evidence.description" [maxWords]="50"></app-pr-textarea>
+        <app-pr-textarea label="Description" [required]="false" [(ngModel)]="this.evidence.description" [maxWords]="50">
+        </app-pr-textarea>
     </div>
+    <app-edit-or-delete-item-button></app-edit-or-delete-item-button>
+
 </div>
