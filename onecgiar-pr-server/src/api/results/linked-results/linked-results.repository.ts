@@ -82,8 +82,8 @@ export class LinkedResultRepository extends Repository<LinkedResult> {
     r.legacy_id,
     r.no_applicable_partner,
     r.geographic_scope_id,
-    rl.name as result_level_name,
-    rt.name as result_type_name,
+    rl.name as result_level,
+    rt.name as result_type,
     r.has_regions,
     r.has_countries 
   from linked_result lr 
