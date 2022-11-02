@@ -1,20 +1,20 @@
 import { Pipe, PipeTransform } from '@angular/core';
+import { ApiService } from '../../../../../../../shared/services/api/api.service';
 
 @Pipe({
   name: 'filterResultNotLinked'
 })
 export class FilterResultNotLinkedPipe implements PipeTransform {
+  constructor(private api: ApiService) {}
   transform(list: any[], linkedList: any[], counter: number, text_to_search: string): any {
-    // console.log(linkedList);
-    // console.log(linkedList);
     if (!list?.length) return [];
+    list = list.filter(result => result.id != this.api.resultsSE.currentResultId);
     list.map(result => {
       result.selected = false;
     });
     linkedList.map(result => {
       let resultFinded = list.find(linked => linked.id == result.id);
       if (resultFinded) resultFinded.selected = true;
-      // console.log(resultFinded);
     });
     return this.filterByText(list, text_to_search);
   }
