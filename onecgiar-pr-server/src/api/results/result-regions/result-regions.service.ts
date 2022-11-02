@@ -39,6 +39,7 @@ export class ResultRegionsService {
       const regions = createResultRegionDto.regions;
       if(!createResultRegionDto.has_regions && createResultRegionDto.scope_id != 2 || createResultRegionDto.scope_id == 4 || createResultRegionDto.scope_id == 3){
         await this._resultRegionRepository.updateRegions(result.id, []);
+        result.has_regions = false;
       }else if(createResultRegionDto.scope_id == 2 || createResultRegionDto.scope_id == 1 || createResultRegionDto.has_regions){
         if (regions) {
           await this._resultRegionRepository.updateRegions(result.id, createResultRegionDto.regions.map(el => el.id));
@@ -53,10 +54,11 @@ export class ResultRegionsService {
                 resultRegionArray.push(newRegions);
               }
               await this._resultRegionRepository.save(resultRegionArray);
-  
+              
             }
           }
         }
+        result.has_regions = createResultRegionDto.has_regions;
       }
       
       if(createResultRegionDto.scope_id == 4){
@@ -64,7 +66,6 @@ export class ResultRegionsService {
       }else{
         result.geographic_scope_id = createResultRegionDto.scope_id;
       }
-      result.has_regions = createResultRegionDto.has_regions;
       await this._resultRepository.save(result);
       
       return {

@@ -37,6 +37,7 @@ export class ResultCountriesService {
       const countries = createResultCountryDto.countries;
       if (!createResultCountryDto.has_countries && createResultCountryDto.scope_id != 3 || createResultCountryDto.scope_id == 4) {
         await this._resultCountryRepository.updateCountries(result.id, []);
+        result.has_countries = false;
       }else if(createResultCountryDto.scope_id == 3 || createResultCountryDto.has_countries){
         if (countries) {
           await this._resultCountryRepository.updateCountries(result.id, createResultCountryDto.countries.map(e => e.id));
@@ -56,9 +57,9 @@ export class ResultCountriesService {
           }
         }
         
+        result.has_countries = createResultCountryDto.has_countries;
       }
 
-      result.has_countries = createResultCountryDto.has_countries;
       if (countries && createResultCountryDto.scope_id == 3) {
         result.geographic_scope_id = createResultCountryDto.countries?.length > 1 ? 3 : 4;
       } else if(createResultCountryDto.scope_id == 4) {
