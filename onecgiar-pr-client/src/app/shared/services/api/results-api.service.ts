@@ -107,6 +107,6 @@ export class ResultsApiService {
   }
 
   PATCH_resultsLinked(body: LinksToResultsBody) {
-    return this.http.patch<any>(`${this.apiBaseUrl}linked/create/${this.currentResultId}`, body);
+    return this.http.post<any>(`${this.apiBaseUrl}linked/create/${this.currentResultId}`, body);
   }
 }

@@ -12,6 +12,7 @@ export class RdLinksToResultsComponent {
   constructor(public api: ApiService, public resultsListService: ResultsListService) {}
   linksToResultsBody = new LinksToResultsBody();
   text_to_search: string = '';
+  counterPipe = 0;
   columnOrder = [
     // { title: 'ID', attr: 'id' },
     { title: 'Title', attr: 'title', class: 'notCenter' },
@@ -29,10 +30,17 @@ export class RdLinksToResultsComponent {
   onLinkResult(result) {
     console.log(result);
     this.linksToResultsBody.links.push(result);
+    this.counterPipe++;
   }
+  onRemove(index) {
+    this.linksToResultsBody.links.splice(index, 1);
+    this.counterPipe++;
+  }
+
   getSectionInformation() {
-    this.api.resultsSE.GET_resultsLinked().subscribe(resp => {
-      console.log(resp);
+    this.api.resultsSE.GET_resultsLinked().subscribe(({ response }) => {
+      console.log(response);
+      this.linksToResultsBody.links = response;
     });
   }
   onSaveSection() {
