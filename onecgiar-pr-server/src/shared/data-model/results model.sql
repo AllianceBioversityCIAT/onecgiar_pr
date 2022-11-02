@@ -270,26 +270,17 @@ ENGINE = InnoDB;
 -- Table `mydb`.`results_by_inititiatives`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `mydb`.`results_by_inititiatives` (
-  `result_id` BIGINT(20) NOT NULL,
-  `inititiative_id` BIGINT(20) NOT NULL,
+  `result_initiative_id` BIGINT(20) NOT NULL,
+  `inititiative_id` BIGINT NOT NULL,
   `initiative_role_id` BIGINT NOT NULL,
+  `results_id` BIGINT NOT NULL,
   `is_active` TINYINT NOT NULL,
   `version_id` BIGINT NOT NULL,
   `created_by` BIGINT NOT NULL,
   `created_date` DATE NOT NULL DEFAULT sysdate(),
   `last_updated_by` BIGINT NULL,
   `last_updated_date` DATE NULL,
-  PRIMARY KEY (`result_id`, `inititiative_id`),
-  CONSTRAINT `fk_result_has_inititiative_result1`
-    FOREIGN KEY (`result_id`)
-    REFERENCES `mydb`.`results` (`id`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION,
-  CONSTRAINT `fk_result_has_inititiative_inititiative1`
-    FOREIGN KEY (`inititiative_id`)
-    REFERENCES `mydb`.`inititiatives` (`id`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION,
+  PRIMARY KEY (`result_initiative_id`),
   CONSTRAINT `fk_results_by_inititiatives_users2`
     FOREIGN KEY (`last_updated_by`)
     REFERENCES `mydb`.`users` (`id`)
@@ -309,12 +300,18 @@ CREATE TABLE IF NOT EXISTS `mydb`.`results_by_inititiatives` (
     FOREIGN KEY (`initiative_role_id`)
     REFERENCES `mydb`.`initiative_roles` (`id`)
     ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_by_inititiatives_results1`
+    FOREIGN KEY (`results_id`)
+    REFERENCES `mydb`.`results` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_by_inititiatives_inititiatives1`
+    FOREIGN KEY (`inititiative_id`)
+    REFERENCES `mydb`.`inititiatives` (`id`)
+    ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
-
-CREATE INDEX `fk_result_has_inititiative_inititiative1_idx` ON `mydb`.`results_by_inititiatives` (`inititiative_id` ASC) VISIBLE;
-
-CREATE INDEX `fk_result_has_inititiative_result1_idx` ON `mydb`.`results_by_inititiatives` (`result_id` ASC) VISIBLE;
 
 CREATE INDEX `fk_results_by_inititiatives_users2_idx` ON `mydb`.`results_by_inititiatives` (`last_updated_by` ASC) VISIBLE;
 
@@ -323,6 +320,10 @@ CREATE INDEX `fk_results_by_inititiatives_users1_idx` ON `mydb`.`results_by_init
 CREATE INDEX `fk_results_by_inititiatives_versions1_idx` ON `mydb`.`results_by_inititiatives` (`version_id` ASC) VISIBLE;
 
 CREATE INDEX `fk_results_by_inititiatives_initiative_roles1_idx` ON `mydb`.`results_by_inititiatives` (`initiative_role_id` ASC) VISIBLE;
+
+CREATE INDEX `fk_results_by_inititiatives_results1_idx` ON `mydb`.`results_by_inititiatives` (`results_id` ASC) VISIBLE;
+
+CREATE INDEX `fk_results_by_inititiatives_inititiatives1_idx` ON `mydb`.`results_by_inititiatives` (`inititiative_id` ASC) VISIBLE;
 
 
 -- -----------------------------------------------------
@@ -1034,8 +1035,11 @@ CREATE TABLE IF NOT EXISTS `mydb`.`results_countries` (
   `result_country_id` BIGINT NOT NULL,
   `country_id` BIGINT NOT NULL,
   `result_id` BIGINT NOT NULL,
-  `is_active` TINYINT NULL,
+  `is_active` TINYINT NOT NULL,
+  `versions_id` BIGINT NOT NULL,
+  `created_by` BIGINT NOT NULL,
   `created_date` DATE NULL,
+  `last_updated_by` BIGINT NULL,
   `last_updated_date` DATE NULL,
   PRIMARY KEY (`result_country_id`),
   CONSTRAINT `fk_results_cuntries_countries1`
@@ -1046,6 +1050,21 @@ CREATE TABLE IF NOT EXISTS `mydb`.`results_countries` (
   CONSTRAINT `fk_results_cuntries_results1`
     FOREIGN KEY (`result_id`)
     REFERENCES `mydb`.`results` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_countries_versions1`
+    FOREIGN KEY (`versions_id`)
+    REFERENCES `mydb`.`versions` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_countries_users1`
+    FOREIGN KEY (`created_by`)
+    REFERENCES `mydb`.`users` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_countries_users2`
+    FOREIGN KEY (`last_updated_by`)
+    REFERENCES `mydb`.`users` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
@@ -1151,8 +1170,11 @@ CREATE TABLE IF NOT EXISTS `mydb`.`results_countries` (
   `result_country_id` BIGINT NOT NULL,
   `country_id` BIGINT NOT NULL,
   `result_id` BIGINT NOT NULL,
-  `is_active` TINYINT NULL,
+  `is_active` TINYINT NOT NULL,
+  `versions_id` BIGINT NOT NULL,
+  `created_by` BIGINT NOT NULL,
   `created_date` DATE NULL,
+  `last_updated_by` BIGINT NULL,
   `last_updated_date` DATE NULL,
   PRIMARY KEY (`result_country_id`),
   CONSTRAINT `fk_results_cuntries_countries1`
@@ -1164,6 +1186,21 @@ CREATE TABLE IF NOT EXISTS `mydb`.`results_countries` (
     FOREIGN KEY (`result_id`)
     REFERENCES `mydb`.`results` (`id`)
     ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_countries_versions1`
+    FOREIGN KEY (`versions_id`)
+    REFERENCES `mydb`.`versions` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_countries_users1`
+    FOREIGN KEY (`created_by`)
+    REFERENCES `mydb`.`users` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_countries_users2`
+    FOREIGN KEY (`last_updated_by`)
+    REFERENCES `mydb`.`users` (`id`)
+    ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
@@ -1171,17 +1208,25 @@ CREATE INDEX `fk_results_cuntries_countries1_idx` ON `mydb`.`results_countries` 
 
 CREATE INDEX `fk_results_cuntries_results1_idx` ON `mydb`.`results_countries` (`result_id` ASC) VISIBLE;
 
+CREATE INDEX `fk_results_countries_versions1_idx` ON `mydb`.`results_countries` (`versions_id` ASC) VISIBLE;
+
+CREATE INDEX `fk_results_countries_users1_idx` ON `mydb`.`results_countries` (`created_by` ASC) VISIBLE;
+
+CREATE INDEX `fk_results_countries_users2_idx` ON `mydb`.`results_countries` (`last_updated_by` ASC) VISIBLE;
+
 
 -- -----------------------------------------------------
 -- Table `mydb`.`example`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `mydb`.`example` (
+  `id` BIGINT NOT NULL,
   `is_active` TINYINT NOT NULL,
   `version_id` BIGINT NOT NULL,
   `created_by` BIGINT NOT NULL,
   `created_date` DATE NOT NULL,
   `last_updated_date` DATE NULL,
   `last_updated_by` BIGINT NULL,
+  PRIMARY KEY (`id`),
   CONSTRAINT `fk_table1_users1`
     FOREIGN KEY (`created_by`)
     REFERENCES `mydb`.`users` (`id`)
@@ -1516,6 +1561,272 @@ CREATE INDEX `fk_results_centers_centers1_idx` ON `mydb`.`results_centers` (`cen
 CREATE INDEX `fk_results_centers_results1_idx` ON `mydb`.`results_centers` (`result_id` ASC) VISIBLE;
 
 CREATE UNIQUE INDEX `uk_results_centers_idx` ON `mydb`.`results_centers` (`center_id` ASC, `result_id` ASC) VISIBLE;
+
+
+-- -----------------------------------------------------
+-- Table `mydb`.`impact_areas`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `mydb`.`impact_areas` (
+  `impact_area_id` BIGINT NOT NULL,
+  `name` VARCHAR(100) NULL,
+  `description` VARCHAR(2000) NULL,
+  PRIMARY KEY (`impact_area_id`))
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Table `mydb`.`impact_area_indicators`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `mydb`.`impact_area_indicators` (
+  `impact_area_indicator_id` BIGINT NOT NULL,
+  `smo_code` VARCHAR(20) NULL,
+  `name` VARCHAR(100) NULL,
+  `description` VARCHAR(2000) NULL,
+  `target_year` INT NULL,
+  `impact_area_id` BIGINT NOT NULL,
+  PRIMARY KEY (`impact_area_indicator_id`),
+  CONSTRAINT `fk_impact_area_indicators_impact_areas1`
+    FOREIGN KEY (`impact_area_id`)
+    REFERENCES `mydb`.`impact_areas` (`impact_area_id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
+ENGINE = InnoDB;
+
+CREATE INDEX `fk_impact_area_indicators_impact_areas1_idx` ON `mydb`.`impact_area_indicators` (`impact_area_id` ASC) VISIBLE;
+
+
+-- -----------------------------------------------------
+-- Table `mydb`.`impact_area_targets`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `mydb`.`impact_area_targets` (
+  `impact_area_target_id` BIGINT NOT NULL,
+  `name` VARCHAR(100) NULL,
+  `impact_area_id` BIGINT NOT NULL,
+  PRIMARY KEY (`impact_area_target_id`),
+  CONSTRAINT `fk_impact_area_targets_impact_areas1`
+    FOREIGN KEY (`impact_area_id`)
+    REFERENCES `mydb`.`impact_areas` (`impact_area_id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
+ENGINE = InnoDB;
+
+CREATE INDEX `fk_impact_area_targets_impact_areas1_idx` ON `mydb`.`impact_area_targets` (`impact_area_id` ASC) VISIBLE;
+
+
+-- -----------------------------------------------------
+-- Table `mydb`.`results_impact_area_target`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `mydb`.`results_impact_area_target` (
+  `result_impact_area_target_id` VARCHAR(45) NOT NULL,
+  `result_id` BIGINT NOT NULL,
+  `impact_area_target_id` BIGINT NOT NULL,
+  `is_active` TINYINT NOT NULL,
+  `version_id` BIGINT NOT NULL,
+  `created_by` BIGINT NOT NULL,
+  `created_date` DATE NOT NULL,
+  `last_updated_date` DATE NULL,
+  `last_updated_by` BIGINT NULL,
+  PRIMARY KEY (`result_impact_area_target_id`),
+  CONSTRAINT `fk_table1_users14`
+    FOREIGN KEY (`created_by`)
+    REFERENCES `mydb`.`users` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_table1_users24`
+    FOREIGN KEY (`last_updated_by`)
+    REFERENCES `mydb`.`users` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_table1_versions14`
+    FOREIGN KEY (`version_id`)
+    REFERENCES `mydb`.`versions` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_example_copy1_impact_area_targets1`
+    FOREIGN KEY (`impact_area_target_id`)
+    REFERENCES `mydb`.`impact_area_targets` (`impact_area_target_id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_example_copy1_results1`
+    FOREIGN KEY (`result_id`)
+    REFERENCES `mydb`.`results` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
+ENGINE = InnoDB;
+
+CREATE INDEX `fk_results_impact_area_target_users1_idx` ON `mydb`.`results_impact_area_target` (`created_by` ASC) VISIBLE;
+
+CREATE INDEX `fk_results_impact_area_target_user2_idx` ON `mydb`.`results_impact_area_target` (`last_updated_by` ASC) VISIBLE;
+
+CREATE INDEX `fk_table1_versions1_idx` ON `mydb`.`results_impact_area_target` (`version_id` ASC) VISIBLE;
+
+CREATE INDEX `fk_results_impact_area_target1_idx` ON `mydb`.`results_impact_area_target` (`impact_area_target_id` ASC) VISIBLE;
+
+CREATE INDEX `fk_results_impact_area_targets_results1_idx` ON `mydb`.`results_impact_area_target` (`result_id` ASC) INVISIBLE;
+
+CREATE UNIQUE INDEX `uk_results_impact_area_targets_idx` ON `mydb`.`results_impact_area_target` (`result_id` ASC, `impact_area_target_id` ASC) VISIBLE;
+
+
+-- -----------------------------------------------------
+-- Table `mydb`.`results_impact_area_indicators`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `mydb`.`results_impact_area_indicators` (
+  `results_impact_area_indicator_id` VARCHAR(45) NOT NULL,
+  `impact_area_indicator_id` BIGINT NOT NULL,
+  `result_id` BIGINT NOT NULL,
+  `is_active` TINYINT NOT NULL,
+  `version_id` BIGINT NOT NULL,
+  `created_by` BIGINT NOT NULL,
+  `created_date` DATE NOT NULL,
+  `last_updated_date` DATE NULL,
+  `last_updated_by` BIGINT NULL,
+  PRIMARY KEY (`results_impact_area_indicator_id`),
+  CONSTRAINT `fk_table1_users15`
+    FOREIGN KEY (`created_by`)
+    REFERENCES `mydb`.`users` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_table1_users25`
+    FOREIGN KEY (`last_updated_by`)
+    REFERENCES `mydb`.`users` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_table1_versions15`
+    FOREIGN KEY (`version_id`)
+    REFERENCES `mydb`.`versions` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_impact_area_indicators_impact_area_indicators1`
+    FOREIGN KEY (`impact_area_indicator_id`)
+    REFERENCES `mydb`.`impact_area_indicators` (`impact_area_indicator_id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_impact_area_indicators_results1`
+    FOREIGN KEY (`result_id`)
+    REFERENCES `mydb`.`results` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
+ENGINE = InnoDB;
+
+CREATE INDEX `fk_results_impact_area_indicators_users1_idx` ON `mydb`.`results_impact_area_indicators` (`created_by` ASC) VISIBLE;
+
+CREATE INDEX `fk_results_impact_area_indicators_users2_idx` ON `mydb`.`results_impact_area_indicators` (`last_updated_by` ASC) VISIBLE;
+
+CREATE INDEX `fk_results_impact_area_indicators_versions1_idx` ON `mydb`.`results_impact_area_indicators` (`version_id` ASC) VISIBLE;
+
+CREATE INDEX `fk_results_impact_area_indicators_impact_area_indicators1_idx` ON `mydb`.`results_impact_area_indicators` (`impact_area_indicator_id` ASC) VISIBLE;
+
+CREATE INDEX `fk_results_impact_area_indicators_results1_idx` ON `mydb`.`results_impact_area_indicators` (`result_id` ASC) INVISIBLE;
+
+CREATE UNIQUE INDEX `uk_results_impact_area_indicators_idx` ON `mydb`.`results_impact_area_indicators` (`impact_area_indicator_id` ASC, `result_id` ASC) VISIBLE;
+
+
+-- -----------------------------------------------------
+-- Table `mydb`.`results_innovations_use`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `mydb`.`results_innovations_use` (
+  `result_innovation_use_id` BIGINT NOT NULL,
+  `is_active` TINYINT NOT NULL,
+  `version_id` BIGINT NOT NULL,
+  `created_by` BIGINT NOT NULL,
+  `created_date` DATE NOT NULL,
+  `last_updated_date` DATE NULL,
+  `last_updated_by` BIGINT NULL,
+  PRIMARY KEY (`result_innovation_use_id`),
+  CONSTRAINT `fk_table1_users16`
+    FOREIGN KEY (`created_by`)
+    REFERENCES `mydb`.`users` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_table1_users26`
+    FOREIGN KEY (`last_updated_by`)
+    REFERENCES `mydb`.`users` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_table1_versions16`
+    FOREIGN KEY (`version_id`)
+    REFERENCES `mydb`.`versions` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
+ENGINE = InnoDB;
+
+CREATE INDEX `fk_results_innovations_use_users1_idx` ON `mydb`.`results_innovations_use` (`created_by` ASC) VISIBLE;
+
+CREATE INDEX `fk_results_innovations_use_users2_idx` ON `mydb`.`results_innovations_use` (`last_updated_by` ASC) VISIBLE;
+
+CREATE INDEX `fk_results_innovations_use_versions1_idx` ON `mydb`.`results_innovations_use` (`version_id` ASC) VISIBLE;
+
+
+-- -----------------------------------------------------
+-- Table `mydb`.`results_policy_changes`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `mydb`.`results_policy_changes` (
+  `result_policy_change_id` BIGINT NOT NULL,
+  `is_active` TINYINT NOT NULL,
+  `version_id` BIGINT NOT NULL,
+  `created_by` BIGINT NOT NULL,
+  `created_date` DATE NOT NULL,
+  `last_updated_date` DATE NULL,
+  `last_updated_by` BIGINT NULL,
+  PRIMARY KEY (`result_policy_change_id`),
+  CONSTRAINT `fk_table1_users160`
+    FOREIGN KEY (`created_by`)
+    REFERENCES `mydb`.`users` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_table1_users260`
+    FOREIGN KEY (`last_updated_by`)
+    REFERENCES `mydb`.`users` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_table1_versions160`
+    FOREIGN KEY (`version_id`)
+    REFERENCES `mydb`.`versions` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
+ENGINE = InnoDB;
+
+CREATE INDEX `fk_table1_users1_idx` ON `mydb`.`results_policy_changes` (`created_by` ASC) VISIBLE;
+
+CREATE INDEX `fk_table1_users2_idx` ON `mydb`.`results_policy_changes` (`last_updated_by` ASC) VISIBLE;
+
+CREATE INDEX `fk_table1_versions1_idx` ON `mydb`.`results_policy_changes` (`version_id` ASC) VISIBLE;
+
+
+-- -----------------------------------------------------
+-- Table `mydb`.`results_capacity_changes`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `mydb`.`results_capacity_changes` (
+  `result_capacity_change_id` BIGINT NOT NULL,
+  `is_active` TINYINT NOT NULL,
+  `version_id` BIGINT NOT NULL,
+  `created_by` BIGINT NOT NULL,
+  `created_date` DATE NOT NULL,
+  `last_updated_date` DATE NULL,
+  `last_updated_by` BIGINT NULL,
+  PRIMARY KEY (`result_capacity_change_id`),
+  CONSTRAINT `fk_table1_users1600`
+    FOREIGN KEY (`created_by`)
+    REFERENCES `mydb`.`users` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_table1_users2600`
+    FOREIGN KEY (`last_updated_by`)
+    REFERENCES `mydb`.`users` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_table1_versions1600`
+    FOREIGN KEY (`version_id`)
+    REFERENCES `mydb`.`versions` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
+ENGINE = InnoDB;
+
+CREATE INDEX `fk_table1_users1_idx` ON `mydb`.`results_capacity_changes` (`created_by` ASC) VISIBLE;
+
+CREATE INDEX `fk_table1_users2_idx` ON `mydb`.`results_capacity_changes` (`last_updated_by` ASC) VISIBLE;
+
+CREATE INDEX `fk_table1_versions1_idx` ON `mydb`.`results_capacity_changes` (`version_id` ASC) VISIBLE;
 
 
 SET SQL_MODE=@OLD_SQL_MODE;
