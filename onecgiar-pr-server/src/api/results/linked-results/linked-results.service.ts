@@ -34,18 +34,21 @@ export class LinkedResultsService {
         };
       }
 
+      let isExistsNew:number[] =[];
+
       if(createLinkedResultDto?.links?.length){
         const links: interfaceLinkResults[]  = createLinkedResultDto.links;
         const newLinks: LinkedResult[] = [];
         for (let index = 0; index < links.length; index++) {
           await this._linkedResultRepository.updateLink(createLinkedResultDto.result_id,links.map(e => e.id),user.id);
           const linkExists = await this._linkedResultRepository.getLinkResultByIdResultAndLinkId(result.id, links[index].id);
-          if(!linkExists){
+          if(!linkExists && !isExistsNew.includes(links[index].id)){
             const newLink = new LinkedResult();
             newLink.created_by = user.id;
             newLink.last_updated_by = user.id;
             newLink.origin_result_id = result.id;
             newLink.linked_results_id = links[index].id;
+            isExistsNew.push(links[index].id);
             newLinks.push(newLink);
           }
         }
