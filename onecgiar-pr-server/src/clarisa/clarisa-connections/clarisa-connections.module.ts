@@ -22,6 +22,7 @@ import { ClarisaInnovationTypeRepository } from '../clarisa-innovation-type/clar
 import { ClarisaInnovationReadinessLevelRepository } from '../clarisa-innovation-readiness-levels/clarisa-innovation-readiness-levels.repository';
 import { ClarisaInnovationCharacteristicRepository } from '../clarisa-innovation-characteristics/clarisa-innovation-characteristics.repository';
 import { ClarisaGeographicScopeRepository } from '../clarisa-geographic-scopes/clarisa-geographic-scopes.repository';
+import { ResultByInitiativesRepository } from '../../api/results/results_by_inititiatives/resultByInitiatives.repository';
 
 @Module({
   controllers: [ClarisaConnectionsController],
@@ -43,6 +44,7 @@ import { ClarisaGeographicScopeRepository } from '../clarisa-geographic-scopes/c
     ClarisaInnovationReadinessLevelRepository,
     ClarisaInnovationCharacteristicRepository,
     ClarisaGeographicScopeRepository,
+    ResultByInitiativesRepository
   ],
   imports:[
     HttpModule

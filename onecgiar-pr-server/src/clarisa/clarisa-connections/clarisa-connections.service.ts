@@ -7,6 +7,7 @@ import { env } from 'process';
 import { lastValueFrom, map } from 'rxjs';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { ClarisaTaskService } from '../clarisatask.service';
+import { ResultByInitiativesRepository } from '../../api/results/results_by_inititiatives/resultByInitiatives.repository';
 
 @Injectable()
 export class ClarisaConnectionsService {
@@ -15,26 +16,37 @@ export class ClarisaConnectionsService {
   constructor(
     private readonly _httpService: HttpService,
     private readonly _handlersError: HandlersError,
-    private readonly _clarisaTaskService: ClarisaTaskService
+    private readonly _clarisaTaskService: ClarisaTaskService,
+    private readonly _resultByInitiativesRepository: ResultByInitiativesRepository
   ) { }
 
-  async create(createClarisaConnectionDto: CreateClarisaConnectionDto, user: TokenDto) {
-    createClarisaConnectionDto.name = `${user.first_name} ${user.last_name}`;
+  async create(createClarisaConnectionDto: CreateClarisaConnectionDto, resultId: number, user: TokenDto) {
+    createClarisaConnectionDto.externalUserName = `${user.first_name} ${user.last_name}`;
     createClarisaConnectionDto.externalUserMail = user.email;
     createClarisaConnectionDto.misAcronym = 'PRMS';
     
     try {
+      const result = await this._resultByInitiativesRepository.getOwnerInitiativeByResult(resultId);
+      if (!result) {
+        throw {
+          response: {},
+          message: 'Result Level not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+      createClarisaConnectionDto.requestSource = result.official_code;
       const token = await this.getClarisaToken();
-      const data = await lastValueFrom(this._httpService.post(`${this.clarisaHost}api/partner-requests/institution`,createClarisaConnectionDto, {headers:{Authorization: `Bearer ${token}`}}).pipe(
+      const data = await lastValueFrom(this._httpService.post(`${this.clarisaHost}api/partner-requests/create`,createClarisaConnectionDto, {headers:{Authorization: `Bearer ${token.response}`}}).pipe(
         map(resp => resp.data)
       ));
       console.log(data)
       return {
-        response: data,
-        message: 'Successful Partner Request',
-        status: HttpStatus.OK,
+        response: data.response,
+        message: data.message,
+        status: data.status,
       };
     } catch (error) {
+      console.log(error)
       return this._handlersError.returnErrorRes({ error });
     }
 
@@ -42,7 +54,7 @@ export class ClarisaConnectionsService {
 
   async getClarisaToken() {
     const config = {
-      email: env.CLA_USER,
+      login: env.CLA_USER,
       password: env.CLA_PASSWORD
     }
     try {
