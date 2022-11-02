@@ -119,7 +119,6 @@ export class ResultsByInstitutionsService {
       if (version.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: version });
       }
-      console.log('esto es') 
       const result = await this._resultByIntitutionsRepository.updateIstitutions(data.result_id, data.institutions, false, user.id, data?.no_applicable_partner);
       const vrs: Version = <Version>version.response;
       rExists.no_applicable_partner = data.no_applicable_partner;
