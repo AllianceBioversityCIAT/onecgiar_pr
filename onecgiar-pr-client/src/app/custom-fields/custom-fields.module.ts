@@ -25,8 +25,9 @@ import { PrButtonComponent } from './pr-button/pr-button.component';
 import { AlertStatusComponent } from './alert-status/alert-status.component';
 import { EditOrDeleteItemButtonComponent } from './edit-or-delete-item-button/edit-or-delete-item-button.component';
 import { AddButtonComponent } from './add-button/add-button.component';
+import { NoDataTextComponent } from './no-data-text/no-data-text.component';
 
-const fieldComponents = [PrInputComponent, PrSelectComponent, PrRadioButtonComponent, DetailSectionTitleComponent, PrMultiSelectComponent, PrFieldHeaderComponent, PrYesOrNotComponent, PrTextareaComponent, PrCheckboxComponent, SaveButtonComponent, PrButtonComponent, AlertStatusComponent, EditOrDeleteItemButtonComponent, AddButtonComponent];
+const fieldComponents = [PrInputComponent, PrSelectComponent, PrRadioButtonComponent, DetailSectionTitleComponent, PrMultiSelectComponent, PrFieldHeaderComponent, PrYesOrNotComponent, PrTextareaComponent, PrCheckboxComponent, SaveButtonComponent, PrButtonComponent, AlertStatusComponent, EditOrDeleteItemButtonComponent, AddButtonComponent, NoDataTextComponent];
 
 @NgModule({
   declarations: [...fieldComponents, PrFieldValidationsComponent, PrWordCounterComponent, ListFilterByTextAndAttrPipe],

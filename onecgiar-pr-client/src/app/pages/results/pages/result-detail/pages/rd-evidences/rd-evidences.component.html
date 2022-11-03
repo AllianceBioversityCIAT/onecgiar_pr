@@ -14,6 +14,7 @@
             </app-evidence-item>
         </div>
     </div>
+    <app-no-data-text *ngIf="!this.evidencesBody?.aaa?.length" title="No evidence added"></app-no-data-text>
     <app-add-button name="Add CGSpace evidence" (clickEvent)="addEvidence()"></app-add-button>
 
     <br><br>
@@ -27,6 +28,7 @@
             </app-evidence-item>
         </div>
     </div>
+    <app-no-data-text *ngIf="!this.evidencesBody?.bbb?.length" title="No links added"></app-no-data-text>
     <app-add-button name="Add link" (clickEvent)="addLink()"></app-add-button>
 </div>
 
