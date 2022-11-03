@@ -33,19 +33,41 @@ export class Evidence {
   })
   description!: string;
 
-  @ManyToOne(() => Result, (r) => r.id, { nullable: true })
+  @ManyToOne(() => Result, (r) => r.id)
   @JoinColumn({
-    name: 'result_evidence_id',
+    name: 'result_id',
   })
-  result_evidence_id!: number;
+  result_id!: number;
 
   @Column({
     name: 'gender_related',
-    type: 'tinyint',
+    type: 'boolean',
     nullable: true,
-    default: false,
+    default: null,
   })
-  gender_related!: number;
+  gender_related!: boolean;
+
+  @Column({
+    name: 'youth_related',
+    type: 'boolean',
+    nullable: true,
+    default: null,
+  })
+  youth_related!: boolean;
+
+  @Column({
+    name: 'is_supplementary',
+    type: 'boolean',
+    nullable: true,
+    default: null,
+  })
+  is_supplementary!: boolean;
+
+  @ManyToOne(() => Result, (r) => r.id)
+  @JoinColumn({
+    name: 'knowledge_product_related',
+  })
+  knowledge_product_related!: number;
 
   @ManyToOne(() => Version, (v) => v.id, { nullable: false })
   @JoinColumn({
@@ -77,11 +99,19 @@ export class Evidence {
   @JoinColumn({
     name: 'last_updated_by',
   })
-  last_updated_by: number;
+  last_updated_by!: number;
 
   @UpdateDateColumn({
     name: 'last_updated_date',
     nullable: true,
   })
   last_updated_date!: Date;
+
+  @Column({
+    name: 'status',
+    type: 'tinyint',
+    nullable: true
+
+  })
+  status!: number;
 }
