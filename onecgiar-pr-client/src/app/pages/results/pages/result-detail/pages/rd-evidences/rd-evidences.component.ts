@@ -12,6 +12,8 @@ export class RdEvidencesComponent {
   evidences = [{ name: '' }, { name: '' }];
   ngOnInit(): void {
     this.getSectionInformation();
+
+    this.validateCheckBoxes();
   }
   getSectionInformation() {}
   onSaveSection() {
@@ -34,5 +36,10 @@ export class RdEvidencesComponent {
   deleteLink(index) {
     console.log('deleteLink');
     this.evidencesBody.bbb.splice(index, 1);
+  }
+  validateCheckBoxes() {
+    console.log(this.evidencesBody.aaa);
+    console.log(this.evidencesBody.aaa.some(evidence => evidence.climate === true));
+    console.log(this.evidencesBody.aaa.some(evidence => evidence.gender === true));
   }
 }

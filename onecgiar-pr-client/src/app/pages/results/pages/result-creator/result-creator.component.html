@@ -8,10 +8,13 @@
       [innerHTML]="naratives.greeting(this.api.authSE.localStorageUser?.user_name,this.api.dataControlSE.myInitiativesListText(this.api.dataControlSE.myInitiativesList))">
     </div>
     <div class="report_container">
-      <app-pr-select class="segment_title_margin" [options]="this.api.dataControlSE.myInitiativesList"
-        label="Report for" optionLabel="official_code_short_name" optionValue="initiative_id"
-        placeholder="Select initiative" [(ngModel)]="this.resultLevelSE.resultBody.initiative_id">
-      </app-pr-select>
+      <div class="w20vw">
+        <app-pr-select class="segment_title_margin" [options]="this.api.dataControlSE.myInitiativesList"
+          label="Report for" optionLabel="official_code_short_name" optionValue="initiative_id"
+          placeholder="Select initiative" [(ngModel)]="this.resultLevelSE.resultBody.initiative_id">
+        </app-pr-select>
+      </div>
+
       <app-result-level-buttons></app-result-level-buttons>
       <div class="segment_title segment_title_margin" *ngIf="this.resultLevelSE?.currentResultTypeList?.length">Result
         type
