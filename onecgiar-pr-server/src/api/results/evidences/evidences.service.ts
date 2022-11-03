@@ -21,11 +21,12 @@ export class EvidencesService {
       const result = await this._resultRepository.getResultById(createEvidenceDto.result_id);
       const vr = await this._versionRepository.getBaseVersion();
       if(createEvidenceDto?.evidences){
-        await this._evidencesRepository.updateEvidences(createEvidenceDto.result_id, createEvidenceDto.evidences.map(e => e.link.trim()), user.id, false)
-        const long: number = createEvidenceDto.evidences.length > 3? 3: createEvidenceDto.evidences.length; 
+        const evidencesArray = createEvidenceDto?.evidences.filter(e => !!e?.link);
+        await this._evidencesRepository.updateEvidences(createEvidenceDto.result_id, evidencesArray.map(e => e.link.trim()), user.id, false)
+        const long: number = evidencesArray.length > 3? 3: evidencesArray.length; 
         let newsEvidencesArray: Evidence[] = [];
         for (let index = 0; index < long; index++) {
-          const evidence = createEvidenceDto.evidences[index];
+          const evidence = evidencesArray[index];
           let eExists = await this._evidencesRepository.getEvidencesByResultIdAndLink(result.id, evidence.link, false);
           if(!eExists){
             let newEvidnece = new Evidence();
@@ -55,11 +56,12 @@ export class EvidencesService {
       }
 
       if(createEvidenceDto?.supplementary){
-        await this._evidencesRepository.updateEvidences(createEvidenceDto.result_id, createEvidenceDto.supplementary.map(e => e.link.trim()), user.id, true)
-        const long: number = createEvidenceDto.supplementary.length > 3? 3: createEvidenceDto.supplementary.length; 
+        const supplementaryArray = createEvidenceDto?.supplementary.filter(e => !!e?.link);
+        await this._evidencesRepository.updateEvidences(createEvidenceDto.result_id, supplementaryArray.map(e => e.link.trim()), user.id, true)
+        const long: number = supplementaryArray.length > 3? 3: supplementaryArray.length; 
         let newsEvidencesArray: Evidence[] = [];
         for (let index = 0; index < long; index++) {
-          const supplementary = createEvidenceDto.supplementary[index];
+          const supplementary = supplementaryArray[index];
           const eExists = await this._evidencesRepository.getEvidencesByResultIdAndLink(result.id, supplementary.link, true);
           if(!eExists){
             let newEvidnece = new Evidence();
