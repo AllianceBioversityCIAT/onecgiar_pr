@@ -52,6 +52,7 @@ export class RdPartnersComponent {
   }
   removePartner(index) {
     this.partnersBody.institutions.splice(index, 1);
+    this.toggle++;
   }
   cleanBody() {
     if (this.partnersBody.no_applicable_partner === true) this.partnersBody = new PartnersBody(true);
