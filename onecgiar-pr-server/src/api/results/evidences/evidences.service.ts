@@ -36,7 +36,7 @@ export class EvidencesService {
 
             newEvidnece.created_by = user.id;
             newEvidnece.last_updated_by = user.id;
-            newEvidnece.description = evidence.description;
+            newEvidnece.description = evidence?.description ?? null;
             newEvidnece.gender_related = evidence.gender_related;
             newEvidnece.youth_related = evidence.youth_related;
             newEvidnece.is_supplementary = false;
@@ -45,7 +45,7 @@ export class EvidencesService {
             newEvidnece.version_id = vr.id;
             newsEvidencesArray.push(newEvidnece);
           }else{
-            eExists.description = evidence.description;
+            eExists.description = evidence?.description ?? null;
             eExists.gender_related = evidence.gender_related;
             eExists.youth_related = evidence.youth_related;
             newsEvidencesArray.push(eExists);
@@ -65,14 +65,14 @@ export class EvidencesService {
             let newEvidnece = new Evidence();
             newEvidnece.created_by = user.id;
             newEvidnece.last_updated_by = user.id;
-            newEvidnece.description = supplementary.description;
+            newEvidnece.description = supplementary?.description ?? null;
             newEvidnece.is_supplementary = true;
             newEvidnece.link = supplementary.link;
             newEvidnece.result_id = result.id;
             newEvidnece.version_id = vr.id;
             newsEvidencesArray.push(newEvidnece);
           }else{
-            eExists.description = supplementary.description;
+            eExists.description = supplementary?.description ?? null;
             newsEvidencesArray.push(eExists);
           }
         }
@@ -92,6 +92,17 @@ export class EvidencesService {
     try {
       const evidences = await this._evidencesRepository.getEvidencesByResultId(resultId, false);
       const supplementary = await this._evidencesRepository.getEvidencesByResultId(resultId, true);
+      
+      evidences.map(e => {
+        e.gender_related = !!e.gender_related;
+        e.youth_related = !!e.youth_related;
+      });
+      
+      supplementary.map(e => {
+        e.gender_related = !!e.gender_related;
+        e.youth_related = !!e.youth_related;
+      });
+
       return {
         response: {
           evidences,
