@@ -9,19 +9,25 @@
         <li>Files cannot be uploaded; only reference links to CG-authorized repositories can be entered. From 2023, only CGSpace will be used. This helps quality control and handling legal issues for files we don’t have the consent to retain on a system even if for internal purposes.</ul> ">
     </app-alert-status>
     <div class="evidences">
-        <div class="evidence evidenceItem" *ngFor="let evidence of evidences; let i=index">
-            <app-evidence-item [evidence]="evidence" [index]="i+1"></app-evidence-item>
+        <div class="evidence evidenceItem" *ngFor="let evidence of this.evidencesBody.aaa; let i=index">
+            <app-evidence-item [evidence]="evidence" [index]="i+1" (deleteEvent)="deleteEvidence(i)">
+            </app-evidence-item>
         </div>
     </div>
+    <app-add-button name="Add CGSpace evidence" (clickEvent)="addEvidence()"></app-add-button>
+
+    <br><br>
     <app-pr-field-header label="Supplementary information" [required]="false"></app-pr-field-header>
     <app-alert-status description="<ul>
         <li>Submit a maximum of 2 links for supplementary information. This is not QAed.</li></ul> ">
     </app-alert-status>
     <div class="evidences">
-        <div class="evidence supp_info" *ngFor="let evidence of evidences; let i=index">
-            <app-evidence-item [evidence]="evidence" [index]="i+1" [isSuppInfo]="true"></app-evidence-item>
+        <div class="evidence supp_info" *ngFor="let evidence of this.evidencesBody.bbb; let i=index">
+            <app-evidence-item [evidence]="evidence" [index]="i+1" [isSuppInfo]="true" (deleteEvent)="deleteLink(i)">
+            </app-evidence-item>
         </div>
     </div>
+    <app-add-button name="Add link" (clickEvent)="addLink()"></app-add-button>
 </div>
 
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>

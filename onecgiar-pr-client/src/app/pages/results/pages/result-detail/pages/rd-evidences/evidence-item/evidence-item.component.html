@@ -11,6 +11,6 @@
         <app-pr-textarea label="Description" [required]="false" [(ngModel)]="this.evidence.description" [maxWords]="50">
         </app-pr-textarea>
     </div>
-    <app-edit-or-delete-item-button></app-edit-or-delete-item-button>
+    <app-edit-or-delete-item-button (click)="deleteEvent.emit()"></app-edit-or-delete-item-button>
 
 </div>
