@@ -8,6 +8,10 @@
         <li>Please list evidence from most to least important.</li>
         <li>Files cannot be uploaded; only reference links to CG-authorized repositories can be entered. From 2023, only CGSpace will be used. This helps quality control and handling legal issues for files we don’t have the consent to retain on a system even if for internal purposes.</ul> ">
     </app-alert-status>
+    <app-alert-status description="
+        At least one of the evidence sources must have the gender checkbox marked if the gender tag has a score of 2."
+        status="warning">
+    </app-alert-status>
     <div class="evidences">
         <div class="evidence evidenceItem" *ngFor="let evidence of this.evidencesBody.aaa; let i=index">
             <app-evidence-item [evidence]="evidence" [index]="i+1" (deleteEvent)="deleteEvidence(i)">
