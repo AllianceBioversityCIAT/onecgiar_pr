@@ -24,6 +24,9 @@ export class PartnersRequestComponent {
     Result role: ???,
     Result status: ???,
     App role: ???`;
+    this.api.resultsSE.POST_partnerRequest(this.partnersRequestBody).subscribe(resp => {
+      console.log(resp);
+    });
     this.partnersRequestBody = this.partnersRequestBody = new PartnersRequestBody();
   }
 }

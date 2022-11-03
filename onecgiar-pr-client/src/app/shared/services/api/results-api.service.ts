@@ -7,6 +7,7 @@ import { GeneralInfoBody } from '../../../pages/results/pages/result-detail/page
 import { PartnersBody } from 'src/app/pages/results/pages/result-detail/pages/rd-partners/models/partnersBody';
 import { GeographicLocationBody } from '../../../pages/results/pages/result-detail/pages/rd-geographic-location/models/geographicLocationBody';
 import { LinksToResultsBody } from '../../../pages/results/pages/result-detail/pages/rd-links-to-results/models/linksToResultsBody';
+import { PartnersRequestBody } from '../../../pages/results/pages/result-detail/components/partners-request/models/partnersRequestBody.model';
 
 @Injectable({
   providedIn: 'root'
@@ -52,7 +53,6 @@ export class ResultsApiService {
   GET_allInstitutions() {
     return this.http.get<any>(`${this.apiBaseUrl}get/institutions/all`).pipe(
       map(resp => {
-        console.log(resp);
         resp.response.map(institution => (institution.full_name = `(Id:${institution?.institutions_id}) ${institution?.institutions_acronym} - ${institution?.institutions_name} - ${institution?.headquarter_name}`));
         return resp;
       })
@@ -90,6 +90,10 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/regions/get/all`);
   }
 
+  POST_partnerRequest(body: PartnersRequestBody) {
+    return this.http.post<any>(`${environment.apiBaseUrl}api/clarisa/partner-request/${this.currentResultId}`, body);
+  }
+
   GET_AllCLARISACountries() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/countries/get/all`).pipe(
       map(resp => {
@@ -111,7 +115,7 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}linked/get/${this.currentResultId}`);
   }
 
-  PATCH_resultsLinked(body: LinksToResultsBody) {
+  POST_resultsLinked(body: LinksToResultsBody) {
     return this.http.post<any>(`${this.apiBaseUrl}linked/create/${this.currentResultId}`, body);
   }
 }
