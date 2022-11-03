@@ -29,8 +29,8 @@
         </app-pr-yes-or-not>
         <app-pr-multi-select
             *ngIf="this.geographicLocationBody.has_countries !== false && !!this.geographicLocationBody.has_countries  || this.geographicLocationBody.scope_id == 3"
-            [options]="this.regionsCountriesSE.countriesList" selectedLabel="Countries selected"
-            selectedOptionLabel="name" optionLabel="name" optionValue="id" placeholder="Select countries"
+            [options]="this.regionsCountriesSE.countriesList" selectedLabel="Countries selected" flagsCode="iso_alpha_2"
+            selectedOptionLabel="name" optionLabel="full_name" optionValue="id" placeholder="Select countries"
             [(ngModel)]="this.geographicLocationBody.countries">
         </app-pr-multi-select>
     </div>

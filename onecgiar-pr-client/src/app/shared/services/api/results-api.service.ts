@@ -91,7 +91,12 @@ export class ResultsApiService {
   }
 
   GET_AllCLARISACountries() {
-    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/countries/get/all`);
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/countries/get/all`).pipe(
+      map(resp => {
+        resp.response.map(institution => (institution.full_name = `${institution?.iso_alpha_2} - ${institution?.name}`));
+        return resp;
+      })
+    );
   }
 
   PATCH_geographicSection(body: GeographicLocationBody) {

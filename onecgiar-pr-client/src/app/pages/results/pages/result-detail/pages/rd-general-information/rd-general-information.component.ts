@@ -17,9 +17,6 @@ export class RdGeneralInformationComponent {
   ngOnInit(): void {
     this.showAlerts();
     this.getSectionInformation();
-    setTimeout(() => {
-      console.log(document.querySelectorAll('input'));
-    }, 2000);
   }
   get disableOptions() {
     return this.generalInfoBody.institutions;

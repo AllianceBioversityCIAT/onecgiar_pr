@@ -13,8 +13,8 @@
             [(ngModel)]="this.partnersRequestBody.institutionTypeCode" placeholder="Select type">
         </app-pr-select>
         <app-pr-select class="segment_title_margin" [options]="this.regionsCountriesSE.countriesList"
-            label="Headquarter country" optionLabel="name" optionValue="id" placeholder="Select Headquarter country"
-            [(ngModel)]="this.partnersRequestBody.hqCountryIso">
+            flagsCode="iso_alpha_2" label="Headquarter country" optionLabel="full_name" optionValue="id"
+            placeholder="Select Headquarter country" [(ngModel)]="this.partnersRequestBody.hqCountryIso">
         </app-pr-select>
         <app-pr-input placeholder="Write some..." label="Website" type="text" [required]="false"
             [(ngModel)]="this.partnersRequestBody.websiteLink">
