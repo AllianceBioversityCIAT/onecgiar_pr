@@ -24,19 +24,21 @@
         <ng-template pTemplate="body" let-result>
             <tr>
                 <td *ngFor="let column of columnOrder; let i=index" class="{{column.attr}}">
-                    <a class="{{column.class}}" [href]="'/result/result-detail/' + result?.id" target="_blank">
+                    <a class="{{column.class}}">
                         <div class="point"
                             [style.background]="'var(--pr-color-result-level-'+result?.result_level_id+')'"
                             *ngIf="column.attr === 'result_type'"></div>
 
-                        <div class="new_tag" *ngIf="i==0 && result.is_new">New</div> {{column.attr !== 'created_date' ?
+                        <div class="new_tag" *ngIf="i==1 && result.is_new">New</div> {{column.attr !== 'created_date' ?
                         result[column.attr] : (result[column.attr] | date: 'YYYY-MM-dd')}}
                     </a>
                     <div class="transparent_text">
                         {{ result[column.attr] }}
                     </div>
                 </td>
-                <td class="center_flex">
+                <td class="actions">
+                    <div class="link_button view" (click)="openInNewPage('/result/result-detail/' + result?.id)">View
+                    </div>
                     <div class="link_button" [ngClass]="{'globalDisabled': result.selected}"
                         (click)="!result.selected ? onLinkResult(result) : null">{{result.selected ? 'Selected' :
                         'Link'}}</div>
