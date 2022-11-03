@@ -1,9 +1,27 @@
 <app-pr-field-header [label]="this.label" [description]="this.description" [required]="this.required">
 </app-pr-field-header>
+<!-- <div class="field_container">
+    <div class="p-fluid">
+        <p-dropdown *ngIf="this.options.length" [autoDisplayFirst]="false" [options]="this.options"
+            [virtualScroll]="true" [virtualScrollItemSize]="30" [optionLabel]="this.optionLabel"
+            [optionValue]="this.optionValue" [(ngModel)]="value" [placeholder]="this.placeholder">
+
+        </p-dropdown>
+    </div>
+</div> -->
+
 <div class="field_container">
     <div class="p-fluid">
         <p-dropdown *ngIf="this.options.length" [autoDisplayFirst]="false" [options]="this.options"
             [virtualScroll]="true" [virtualScrollItemSize]="30" [optionLabel]="this.optionLabel"
-            [optionValue]="this.optionValue" [(ngModel)]="value" [placeholder]="this.placeholder"></p-dropdown>
+            [optionValue]="this.optionValue" [(ngModel)]="value" [placeholder]="this.placeholder">
+            <ng-template let-option pTemplate="item">
+                <div class="option" [ngClass]="{'flags': flagsCode}">
+                    <img *ngIf="flagsCode" [src]="'https://countryflagsapi.com/png/'+option[this.flagsCode]" alt=""
+                        srcset="">
+                    <div>{{option[this.optionLabel]}}</div>
+                </div>
+            </ng-template>
+        </p-dropdown>
     </div>
 </div>

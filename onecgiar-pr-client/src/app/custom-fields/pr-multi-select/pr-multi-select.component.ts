@@ -26,6 +26,7 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   @Input() description: string;
   @Input() readOnly: boolean;
   @Input() required: boolean = true;
+  @Input() flagsCode: string;
   @Output() selectOptionEvent = new EventEmitter();
   private _optionsIntance: any[];
   private _value: any[] = [];

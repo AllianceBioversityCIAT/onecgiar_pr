@@ -23,6 +23,8 @@ export class PrSelectComponent implements ControlValueAccessor {
   @Input() description: string;
   @Input() readOnly: boolean;
   @Input() required: boolean = true;
+  @Input() flagsCode: string;
+
   private _value: string;
 
   get value() {
