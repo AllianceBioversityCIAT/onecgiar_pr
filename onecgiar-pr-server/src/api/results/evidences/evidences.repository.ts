@@ -44,7 +44,7 @@ export class EvidencesRepository extends Repository<Evidence> {
     }
   }
 
-  async getEvidencesByResultIdAnd(resultId: number, link: string){
+  async getEvidencesByResultIdAndLink(resultId: number, link: string, is_supplementary: boolean){
     const query = `
     select 
     e.id,
@@ -53,11 +53,12 @@ export class EvidencesRepository extends Repository<Evidence> {
     from evidence e 
     where e.result_id = ?
     	and e.is_active > 0
-    	and e.link = ?;
+    	and e.link = ?
+      and is_supplementary = ?;
     `;
 
     try {
-      const evidence: Evidence[] = await this.query(query, [resultId, link]);
+      const evidence: Evidence[] = await this.query(query, [resultId, link, is_supplementary]);
       return evidence?.length?evidence[0]:undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -68,7 +69,7 @@ export class EvidencesRepository extends Repository<Evidence> {
     }
   }
 
-  async updateLink(resultId: number, linkArray: string[], userId: number) {
+  async updateEvidences(resultId: number, linkArray: string[], userId: number, is_supplementary: boolean) {
     const evidences = linkArray??[];
     const upDateInactive = `
       update evidence 
@@ -77,7 +78,8 @@ export class EvidencesRepository extends Repository<Evidence> {
         last_updated_by  = ?
       where is_active  > 0 
         and result_id = ?
-        and link not in (${`'${evidences.toString().replace(/,/g,'\',\'')}'`});
+        and link not in (${`'${evidences.toString().replace(/,/g,'\',\'')}'`})
+        and is_supplementary = ?;
     `;
 
     const upDateActive = `
@@ -86,7 +88,8 @@ export class EvidencesRepository extends Repository<Evidence> {
         last_updated_date  = NOW(),
         last_updated_by  = ?
       where result_id = ?
-        and link in (${`'${evidences.toString().replace(/,/g,'\',\'')}'`});
+        and link in (${`'${evidences.toString().replace(/,/g,'\',\'')}'`})
+        and is_supplementary = ?;
     `;
 
     const upDateAllInactive = `
@@ -95,27 +98,63 @@ export class EvidencesRepository extends Repository<Evidence> {
         last_updated_date  = NOW(),
         last_updated_by  = ?
       where is_active  > 0 
-      and result_id = ?;
+      and result_id = ?
+      and is_supplementary = ?;
     `;
 
     try {
       if(evidences?.length){
         const upDateInactiveResult = await this.query(upDateInactive, [
-          userId, resultId
+          userId, resultId, is_supplementary
         ]);
   
         return await this.query(upDateActive, [
-          userId, resultId
+          userId, resultId, is_supplementary
         ]);
       }else{
         return await this.query(upDateAllInactive, [
-          userId, resultId
+          userId, resultId, is_supplementary
         ]);
       }
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: EvidencesRepository.name,
         error: `updateEvidences ${error}`,
+        debug: true,
+      });
+    }
+  }
+
+  async getEvidencesByResultId(resultId: number, is_supplementary: boolean){
+    const query = `
+    select 
+    e.id,
+    e.description,
+    e.is_active,
+    e.creation_date,
+    e.last_updated_date,
+    e.version_id,
+    e.created_by,
+    e.last_updated_by,
+    e.gender_related,
+    e.link,
+    e.youth_related,
+    e.is_supplementary,
+    e.result_id,
+    e.knowledge_product_related 
+    from evidence e 
+    where e.result_id = ?
+      and e.is_supplementary = ?
+      and e.is_active > 0;
+    `;
+
+    try {
+      const evidence: Evidence[] = await this.query(query, [resultId, is_supplementary]);
+      return evidence;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: EvidencesRepository.name,
+        error: error,
         debug: true,
       });
     }

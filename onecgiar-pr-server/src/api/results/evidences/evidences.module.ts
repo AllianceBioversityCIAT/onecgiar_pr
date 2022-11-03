@@ -10,10 +10,12 @@ import { AuthModule } from '../../../auth/auth.module';
 import { JwtMiddleware } from '../../../auth/Middlewares/jwt.middleware';
 import { EvidencesRepository } from './evidences.repository';
 import { HandlersError } from 'src/shared/handlers/error.utils';
+import { ResultRepository } from '../result.repository';
+import { VersionRepository } from '../versions/version.repository';
 
 @Module({
   controllers: [EvidencesController],
-  providers: [EvidencesService, EvidencesRepository, HandlersError],
+  providers: [EvidencesService, EvidencesRepository, HandlersError, ResultRepository, VersionRepository],
   imports: [AuthModule],
   exports: [EvidencesRepository],
 })

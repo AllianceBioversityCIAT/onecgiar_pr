@@ -5,6 +5,7 @@ export class CreateEvidenceDto {
 }
 
 interface evidencesCreateInterface{
+    is_knowledge_product?: boolean;
     link: string;
     description?: string;
     gender_related?: boolean;

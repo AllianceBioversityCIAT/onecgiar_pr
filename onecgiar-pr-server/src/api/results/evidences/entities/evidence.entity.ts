@@ -24,7 +24,7 @@ export class Evidence {
     type: 'text',
     nullable: false,
   })
-  link: number;
+  link: string;
 
   @Column({
     name: 'description',
@@ -106,12 +106,4 @@ export class Evidence {
     nullable: true,
   })
   last_updated_date!: Date;
-
-  @Column({
-    name: 'status',
-    type: 'tinyint',
-    nullable: true
-
-  })
-  status!: number;
 }
