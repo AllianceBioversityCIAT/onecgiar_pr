@@ -8,6 +8,7 @@ import { PartnersBody } from 'src/app/pages/results/pages/result-detail/pages/rd
 import { GeographicLocationBody } from '../../../pages/results/pages/result-detail/pages/rd-geographic-location/models/geographicLocationBody';
 import { LinksToResultsBody } from '../../../pages/results/pages/result-detail/pages/rd-links-to-results/models/linksToResultsBody';
 import { PartnersRequestBody } from '../../../pages/results/pages/result-detail/components/partners-request/models/partnersRequestBody.model';
+import { EvidencesBody } from '../../../pages/results/pages/result-detail/pages/rd-evidences/model/evidencesBody.model';
 
 @Injectable({
   providedIn: 'root'
@@ -117,5 +118,13 @@ export class ResultsApiService {
 
   POST_resultsLinked(body: LinksToResultsBody) {
     return this.http.post<any>(`${this.apiBaseUrl}linked/create/${this.currentResultId}`, body);
+  }
+
+  GET_evidences() {
+    return this.http.get<any>(`${this.apiBaseUrl}evidences/get/${this.currentResultId}`);
+  }
+
+  POST_evidences(body: EvidencesBody) {
+    return this.http.post<any>(`${this.apiBaseUrl}evidences/create/${this.currentResultId}`, body);
   }
 }

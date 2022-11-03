@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { EvidencesBody } from './model/evidencesBody.model';
+import { ApiService } from '../../../../../../shared/services/api/api.service';
 
 @Component({
   selector: 'app-rd-evidences',
@@ -8,38 +9,46 @@ import { EvidencesBody } from './model/evidencesBody.model';
 })
 export class RdEvidencesComponent {
   evidencesBody = new EvidencesBody();
-  constructor() {}
-  evidences = [{ name: '' }, { name: '' }];
+  constructor(private api: ApiService) {}
   ngOnInit(): void {
     this.getSectionInformation();
-
     this.validateCheckBoxes();
   }
-  getSectionInformation() {}
+  getSectionInformation() {
+    this.api.resultsSE.GET_evidences().subscribe(({ response }) => {
+      this.evidencesBody = response;
+      console.log(this.evidencesBody);
+    });
+  }
   onSaveSection() {
-    console.log(this.evidences);
+    console.log(this.evidencesBody);
+    this.api.resultsSE.POST_evidences(this.evidencesBody).subscribe(resp => {
+      this.getSectionInformation();
+      this.api.alertsFe.show({ id: 'sectionSaved', title: 'Section saved correctly', description: '', status: 'success', closeIn: 500 });
+    });
   }
 
   addEvidence() {
-    console.log('addEvidence');
-    this.evidencesBody.aaa.push({});
+    this.evidencesBody.evidences.push({});
   }
   addLink() {
-    console.log('addLink');
-    this.evidencesBody.bbb.push({});
+    this.evidencesBody.supplementary.push({});
   }
 
   deleteEvidence(index) {
-    console.log('deleteEvidence');
-    this.evidencesBody.aaa.splice(index, 1);
+    this.evidencesBody.evidences.splice(index, 1);
   }
   deleteLink(index) {
-    console.log('deleteLink');
-    this.evidencesBody.bbb.splice(index, 1);
+    this.evidencesBody.supplementary.splice(index, 1);
   }
   validateCheckBoxes() {
-    console.log(this.evidencesBody.aaa);
-    console.log(this.evidencesBody.aaa.some(evidence => evidence.climate === true));
-    console.log(this.evidencesBody.aaa.some(evidence => evidence.gender === true));
+    let text = '<ul>';
+    const gender_related = this.evidencesBody.evidences.some(evidence => evidence.gender_related === true);
+    const youth_related = this.evidencesBody.evidences.some(evidence => evidence.youth_related === true);
+    if (!gender_related) text += '<li>At least one of the evidence sources must have the gender checkbox marked if the gender tag has a score of 2.</li>';
+    if (!youth_related) text += '<li>At least one of the evidence sources must have the gender youth marked if the gender tag has a score of 2.</li>';
+    text += '</ul>';
+    if (gender_related && youth_related) return false;
+    return text;
   }
 }

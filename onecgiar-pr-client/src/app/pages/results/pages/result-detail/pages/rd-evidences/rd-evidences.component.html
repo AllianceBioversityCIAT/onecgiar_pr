@@ -8,17 +8,15 @@
         <li>Please list evidence from most to least important.</li>
         <li>Files cannot be uploaded; only reference links to CG-authorized repositories can be entered. From 2023, only CGSpace will be used. This helps quality control and handling legal issues for files we don’t have the consent to retain on a system even if for internal purposes.</ul> ">
     </app-alert-status>
-    <app-alert-status description="
-        At least one of the evidence sources must have the gender checkbox marked if the gender tag has a score of 2."
-        status="warning">
+    <app-alert-status *ngIf="validateCheckBoxes()" [description]="validateCheckBoxes()" status="warning">
     </app-alert-status>
     <div class="evidences">
-        <div class="evidence evidenceItem" *ngFor="let evidence of this.evidencesBody.aaa; let i=index">
+        <div class="evidence evidenceItem" *ngFor="let evidence of this.evidencesBody.evidences; let i=index">
             <app-evidence-item [evidence]="evidence" [index]="i+1" (deleteEvent)="deleteEvidence(i)">
             </app-evidence-item>
         </div>
     </div>
-    <app-no-data-text *ngIf="!this.evidencesBody?.aaa?.length" title="No evidence added"></app-no-data-text>
+    <app-no-data-text *ngIf="!this.evidencesBody?.evidences?.length" title="No evidence added"></app-no-data-text>
     <app-add-button name="Add CGSpace evidence" (clickEvent)="addEvidence()"></app-add-button>
 
     <br><br>
@@ -27,12 +25,12 @@
         <li>Submit a maximum of 2 links for supplementary information. This is not QAed.</li></ul> ">
     </app-alert-status>
     <div class="evidences">
-        <div class="evidence supp_info" *ngFor="let evidence of this.evidencesBody.bbb; let i=index">
+        <div class="evidence supp_info" *ngFor="let evidence of this.evidencesBody.supplementary; let i=index">
             <app-evidence-item [evidence]="evidence" [index]="i+1" [isSuppInfo]="true" (deleteEvent)="deleteLink(i)">
             </app-evidence-item>
         </div>
     </div>
-    <app-no-data-text *ngIf="!this.evidencesBody?.bbb?.length" title="No links added"></app-no-data-text>
+    <app-no-data-text *ngIf="!this.evidencesBody?.supplementary?.length" title="No links added"></app-no-data-text>
     <app-add-button name="Add link" (clickEvent)="addLink()"></app-add-button>
 </div>
 
