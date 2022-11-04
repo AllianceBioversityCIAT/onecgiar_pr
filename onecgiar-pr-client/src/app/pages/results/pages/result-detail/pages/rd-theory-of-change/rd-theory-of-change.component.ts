@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { TheoryOfChangeBody } from './model/theoryOfChangeBody';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
+import { ResultLevelService } from '../../../result-creator/services/result-level.service';
 
 @Component({
   selector: 'app-rd-theory-of-change',
@@ -9,7 +10,7 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 })
 export class RdTheoryOfChangeComponent {
   theoryOfChangeBody = new TheoryOfChangeBody();
-  constructor(private api: ApiService) {}
+  constructor(private api: ApiService, public resultLevelSE: ResultLevelService) {}
   ngOnInit(): void {
     this.requestEvent();
     this.getSectionInformation();
@@ -27,5 +28,9 @@ export class RdTheoryOfChangeComponent {
         });
       } catch (error) {}
     });
+  }
+  addPrimary(center) {
+    this.theoryOfChangeBody.ddd.map(center => (center.primary = false));
+    center.primary = true;
   }
 }

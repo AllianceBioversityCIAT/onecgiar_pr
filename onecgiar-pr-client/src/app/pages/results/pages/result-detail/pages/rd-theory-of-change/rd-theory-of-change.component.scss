@@ -5,8 +5,50 @@
 
     .donor {
         background-color: #e8ebff;
-        padding: 10px;
+        padding: 10px 50px 40px 50px;
         position: relative;
         border-radius: 10px;
+    }
+}
+
+.selected_container {
+    margin-top: 10px;
+    overflow-y: auto;
+    max-height: 300px;
+
+    .chips_container {
+        display: flex;
+        position: relative;
+        gap: 5px;
+
+        .pr_chip_selected {
+            background-color: var(--pr-color-primary-2);
+            color: var(--pr-color-secondary);
+            font-size: .95em;
+            padding: 8px 13px;
+            border-radius: 10px;
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 10px;
+
+            .medal {
+                // font-size: 2em;
+                transition: all ease-in-out .4s;
+                color: rgb(167, 167, 167);
+            }
+
+            .primary {
+                color: var(--pr-color-primary);
+            }
+
+            i {
+                justify-self: center;
+                align-self: center;
+                cursor: pointer;
+                font-size: 1.5em;
+                color: rgb(68, 68, 68);
+            }
+
+        }
     }
 }

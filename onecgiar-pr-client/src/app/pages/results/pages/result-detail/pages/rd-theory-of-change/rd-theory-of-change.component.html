@@ -1,4 +1,4 @@
-<app-detail-section-title sectionName="Theory of Change"></app-detail-section-title>
+<app-detail-section-title sectionName=""></app-detail-section-title>
 <div class="detail_container">
     <app-alert-status
         description="Initiatives and non-pooled projects that you collaborated with to generated this result/contributed to this result.">
@@ -32,10 +32,37 @@
             <app-edit-or-delete-item-button></app-edit-or-delete-item-button>
         </div>
     </div>
-    <app-add-button name="Add bilateral contribution" (clickEvent)="addBilateralContribution()"></app-add-button>
+    <app-add-button name="Contributing Centers" (clickEvent)="addBilateralContribution()"></app-add-button>
+    <app-pr-multi-select [options]="[{name:'center-1',id:0},{name:'center-2',id:1},{name:'center-3',id:2}]"
+        label="Select center(s)" selectedLabel="Center(s) selected" optionLabel="name" optionValue="id"
+        [(ngModel)]="this.theoryOfChangeBody.ddd" placeholder="Select initiative(s)
+        ">
+    </app-pr-multi-select>
+    <div class="medal_selector selected_container">
+        <div class="centers chips_container">
+            <div class="center pr_chip_selected" *ngFor="let center of this.theoryOfChangeBody.ddd">
+                <i class="material-icons-round medal" [ngClass]="{'primary': center.primary}"
+                    (click)="addPrimary(center)">workspace_premium</i>
+                <div class="name">{{center?.name}}</div><i class="material-icons-round">cancel</i>
+            </div>
+        </div>
+    </div>
+    <div [ngSwitch]="this.resultLevelSE.currentResultLevelId">
+        <div *ngSwitchCase="1">
+            <app-toc-impact-section></app-toc-impact-section>
+        </div>
+        <div *ngSwitchCase="2">
+            <app-toc-action-area-outcome-section></app-toc-action-area-outcome-section>
+        </div>
+        <div *ngSwitchCase="3">
+            <app-toc-initiative-outcome-section></app-toc-initiative-outcome-section>
+        </div>
+        <div *ngSwitchCase="4">
+            <app-toc-initiative-output-section></app-toc-initiative-output-section>
+        </div>
+        <div *ngSwitchDefault>
 
-    <app-toc-impact-section></app-toc-impact-section>
-    <app-toc-action-area-outcome-section></app-toc-action-area-outcome-section>
-    <app-toc-initiative-outcome-section></app-toc-initiative-outcome-section>
-    <app-toc-initiative-output-section></app-toc-initiative-output-section>
+        </div>
+    </div>
+
 </div>
