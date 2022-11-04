@@ -18,10 +18,19 @@ export class EvidencesService {
   ){}
   async create(createEvidenceDto: CreateEvidenceDto, user: TokenDto) {
     try {
+
       const result = await this._resultRepository.getResultById(createEvidenceDto.result_id);
       const vr = await this._versionRepository.getBaseVersion();
       if(createEvidenceDto?.evidences){
         const evidencesArray = createEvidenceDto?.evidences.filter(e => !!e?.link);
+        const testDuplicate = evidencesArray.map(e => e.link);
+        if(new Set(testDuplicate).size !== testDuplicate.length){
+          throw {
+            response: {},
+            message: 'Duplicate links found in the evidence',
+            status: HttpStatus.BAD_REQUEST,
+          };
+        }
         await this._evidencesRepository.updateEvidences(createEvidenceDto.result_id, evidencesArray.map(e => e.link.trim()), user.id, false)
         const long: number = evidencesArray.length > 3? 3: evidencesArray.length; 
         let newsEvidencesArray: Evidence[] = [];
@@ -57,6 +66,14 @@ export class EvidencesService {
 
       if(createEvidenceDto?.supplementary){
         const supplementaryArray = createEvidenceDto?.supplementary.filter(e => !!e?.link);
+        const testDuplicate = supplementaryArray.map(e => e.link);
+        if(new Set(testDuplicate).size !== testDuplicate.length){
+          throw {
+            response: {},
+            message: 'Duplicate links found in supplementary information',
+            status: HttpStatus.BAD_REQUEST,
+          };
+        }
         await this._evidencesRepository.updateEvidences(createEvidenceDto.result_id, supplementaryArray.map(e => e.link.trim()), user.id, true)
         const long: number = supplementaryArray.length > 3? 3: supplementaryArray.length; 
         let newsEvidencesArray: Evidence[] = [];
