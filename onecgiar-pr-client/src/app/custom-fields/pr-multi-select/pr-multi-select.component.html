@@ -1,7 +1,7 @@
 <app-pr-field-header [label]="this.label" [description]="this.description" [required]="this.required">
 </app-pr-field-header>
 <div class="multi_select">
-    <button class="field" tabindex="0" [id]="this.optionValue">
+    <a class="field" tabindex="0" [id]="this.optionValue">
         <div class="text">{{placeholder}}</div>
         <i class="pi pi-chevron-down"></i>
         <div class="remove_focus" (click)="removeFocus()"></div>
@@ -25,7 +25,7 @@
                 </div>
             </cdk-virtual-scroll-viewport>
         </div>
-    </button>
+    </a>
     <div class="selected_container custom_scroll" *ngIf="this.selectedLabel">
         <app-pr-field-header [description]="this.selectedLabel+'('+value?.length+')'">
         </app-pr-field-header>
