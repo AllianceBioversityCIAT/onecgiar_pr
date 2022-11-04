@@ -1,4 +1,6 @@
 import { Component } from '@angular/core';
+import { TheoryOfChangeBody } from './model/theoryOfChangeBody';
+import { ApiService } from '../../../../../../shared/services/api/api.service';
 
 @Component({
   selector: 'app-rd-theory-of-change',
@@ -6,12 +8,24 @@ import { Component } from '@angular/core';
   styleUrls: ['./rd-theory-of-change.component.scss']
 })
 export class RdTheoryOfChangeComponent {
-  constructor() {}
+  theoryOfChangeBody = new TheoryOfChangeBody();
+  constructor(private api: ApiService) {}
   ngOnInit(): void {
-    this.showAlerts();
+    this.requestEvent();
     this.getSectionInformation();
   }
   getSectionInformation() {}
   onSaveSection() {}
-  showAlerts() {}
+  addBilateralContribution() {
+    this.theoryOfChangeBody.ccc.push({});
+  }
+  requestEvent() {
+    this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
+      try {
+        document.querySelector('.alert-event').addEventListener('click', e => {
+          this.api.dataControlSE.showPartnersRequest = true;
+        });
+      } catch (error) {}
+    });
+  }
 }

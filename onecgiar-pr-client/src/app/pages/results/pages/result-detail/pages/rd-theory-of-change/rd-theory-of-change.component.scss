@@ -1,0 +1,12 @@
+.donors {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+
+    .donor {
+        background-color: #e8ebff;
+        padding: 10px;
+        position: relative;
+        border-radius: 10px;
+    }
+}
