@@ -33,4 +33,5 @@ export class RdTheoryOfChangeComponent {
     this.theoryOfChangeBody.ddd.map(center => (center.primary = false));
     center.primary = true;
   }
+  // TODO Add first selection as primaty
 }

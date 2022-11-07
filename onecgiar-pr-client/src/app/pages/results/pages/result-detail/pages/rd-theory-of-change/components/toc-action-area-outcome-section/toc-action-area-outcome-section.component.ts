@@ -6,10 +6,5 @@ import { Component, OnInit } from '@angular/core';
   styleUrls: ['./toc-action-area-outcome-section.component.scss']
 })
 export class TocActionAreaOutcomeSectionComponent {
-  inits = ['INIT-17 SAPLING'];
-  otherContributorsList = ['INIT-10 F2R-CWANA'];
-  // , 'INIT-22 TAFS-WCA'
-  yesornotValue = true;
-  select = 1;
   constructor() {}
 }
