@@ -1,3 +1,3 @@
-<div class="pr_label segment_title" [ngClass]="{'required': this.required}" *ngIf="this.label"
-    [innerHTML]="this.label + ':'"></div>
+<div class="pr_label segment_title" [ngClass]="{'required': this.required, 'simpleStyle':simpleStyle}"
+    *ngIf="this.label" [innerHTML]="this.label + ':'"></div>
 <div class="pr_description" *ngIf="this.description" [innerHTML]="this.description"></div>

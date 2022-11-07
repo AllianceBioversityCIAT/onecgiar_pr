@@ -1,4 +1,4 @@
-<app-detail-section-title sectionName=""></app-detail-section-title>
+<app-detail-section-title sectionName="Contributors"></app-detail-section-title>
 <div class="detail_container">
     <app-alert-status
         description="Initiatives and non-pooled projects that you collaborated with to generated this result/contributed to this result.">
@@ -34,7 +34,7 @@
     </div>
     <app-add-button name="Contributing Centers" (clickEvent)="addBilateralContribution()"></app-add-button>
     <app-pr-multi-select [options]="[{name:'center-1',id:0},{name:'center-2',id:1},{name:'center-3',id:2}]"
-        label="Select center(s)" selectedLabel="Center(s) selected" optionLabel="name" optionValue="id"
+        label="Contributing Centers" selectedLabel="Center(s) selected" optionLabel="name" optionValue="id"
         [(ngModel)]="this.theoryOfChangeBody.ddd" placeholder="Select initiative(s)
         ">
     </app-pr-multi-select>
@@ -66,3 +66,5 @@
     </div>
 
 </div>
+
+<app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>

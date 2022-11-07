@@ -5,11 +5,6 @@ import { Component, OnInit } from '@angular/core';
   templateUrl: './toc-impact-section.component.html',
   styleUrls: ['./toc-impact-section.component.scss']
 })
-export class TocImpactSectionComponent implements OnInit {
-
-  constructor() { }
-
-  ngOnInit(): void {
-  }
-
+export class TocImpactSectionComponent {
+  constructor() {}
 }

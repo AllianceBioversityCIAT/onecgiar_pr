@@ -27,7 +27,7 @@
     </div>
 </div> -->
 <div class="custom_select">
-    <a class="field" tabindex="0" [id]="this.optionValue">
+    <a class="field" tabindex="0" [id]="this.optionValue" [ngClass]="{'select-disable': this.disabled}">
         <div class="text" [ngClass]="{'select_placeholder': !labelName}">{{labelName? labelName :placeholder}}</div>
         <i class="pi pi-chevron-down"></i>
         <div class="remove_focus" (click)="removeFocus()"></div>
@@ -43,7 +43,7 @@
                 <div *cdkVirtualFor="let option of optionsIntance | listFilterByTextAndAttr:this.optionLabel:this.searchText"
                     class="option"
                     [ngClass]="{'disabled': option?.disabled === true, 'selected':option?.selected === true}"
-                    (click)="onSelectOption(option)">
+                    (click)="this.disabled ? null :onSelectOption(option)">
                     <!-- <p-checkbox [disabled]="option?.disabled" [binary]="true" [(ngModel)]="option.selected">
                     </p-checkbox> -->
                     <img *ngIf="flagsCode" [src]="'https://countryflagsapi.com/png/'+option[this.flagsCode]" alt=""
