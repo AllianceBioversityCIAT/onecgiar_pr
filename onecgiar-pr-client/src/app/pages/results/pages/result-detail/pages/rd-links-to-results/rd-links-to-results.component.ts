@@ -14,7 +14,7 @@ export class RdLinksToResultsComponent {
   text_to_search: string = '';
   counterPipe = 0;
   columnOrder = [
-    // { title: 'ID', attr: 'id' },
+    { title: 'ID', attr: 'id' },
     { title: 'Title', attr: 'title', class: 'notCenter' },
     // { title: 'Reporting year', attr: 'reported_year' },
     { title: 'Result type', attr: 'result_type' },
@@ -45,10 +45,13 @@ export class RdLinksToResultsComponent {
   }
   onSaveSection() {
     console.log(this.linksToResultsBody);
-    this.api.resultsSE.PATCH_resultsLinked(this.linksToResultsBody).subscribe(resp => {
+    this.api.resultsSE.POST_resultsLinked(this.linksToResultsBody).subscribe(resp => {
       console.log(resp);
       this.api.alertsFe.show({ id: 'sectionSaved', title: 'Section saved correctly', description: '', status: 'success', closeIn: 500 });
       this.getSectionInformation();
     });
+  }
+  openInNewPage(link) {
+    window.open(link, '_blank');
   }
 }

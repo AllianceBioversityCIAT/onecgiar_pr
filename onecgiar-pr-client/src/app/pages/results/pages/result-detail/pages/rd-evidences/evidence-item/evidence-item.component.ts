@@ -1,4 +1,5 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, EventEmitter, Output } from '@angular/core';
+import { EvidencesCreateInterface } from '../model/evidencesBody.model';
 
 @Component({
   selector: 'app-evidence-item',
@@ -6,8 +7,9 @@ import { Component, Input, OnInit } from '@angular/core';
   styleUrls: ['./evidence-item.component.scss']
 })
 export class EvidenceItemComponent {
-  @Input() evidence: any;
+  @Input() evidence: EvidencesCreateInterface;
   @Input() index: number;
   @Input() isSuppInfo: boolean;
+  @Output() deleteEvent = new EventEmitter();
   constructor() {}
 }

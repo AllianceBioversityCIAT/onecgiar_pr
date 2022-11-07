@@ -38,7 +38,10 @@ export class ClarisaConnectionsService {
       const token = await this.getClarisaToken();
       const data = await lastValueFrom(this._httpService.post(`${this.clarisaHost}api/partner-requests/create`,createClarisaConnectionDto, {headers:{Authorization: `Bearer ${token.response}`}}).pipe(
         map(resp => resp.data)
-      ));
+      )).catch(res => {
+        console.log(res.data)
+      });
+      
       console.log(data)
       return {
         response: data.response,

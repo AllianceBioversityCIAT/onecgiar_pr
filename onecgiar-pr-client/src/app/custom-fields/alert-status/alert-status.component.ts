@@ -6,7 +6,7 @@ import { Component, Input, OnInit } from '@angular/core';
   styleUrls: ['./alert-status.component.scss']
 })
 export class AlertStatusComponent {
-  @Input() status;
+  @Input() status: 'info' | 'warning' = 'info';
   @Input() title;
   @Input() description;
   constructor() {}

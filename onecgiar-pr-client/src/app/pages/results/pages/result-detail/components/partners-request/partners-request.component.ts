@@ -24,6 +24,11 @@ export class PartnersRequestComponent {
     Result role: ???,
     Result status: ???,
     App role: ???`;
-    this.partnersRequestBody = this.partnersRequestBody = new PartnersRequestBody();
+    console.log(this.partnersRequestBody);
+    this.api.resultsSE.POST_partnerRequest(this.partnersRequestBody).subscribe(resp => {
+      console.log(resp);
+      this.api.alertsFe.show({ id: 'sectionSaved', title: `Partner "${this.partnersRequestBody.name}" has been requested.`, description: 'The partner request was sent successfully. You will receive a confirmation message as soon as it has been processed. The validation process usually takes 1 business day. In case of any questions, please contact the technical support.', status: 'success' });
+      this.partnersRequestBody = this.partnersRequestBody = new PartnersRequestBody();
+    });
   }
 }

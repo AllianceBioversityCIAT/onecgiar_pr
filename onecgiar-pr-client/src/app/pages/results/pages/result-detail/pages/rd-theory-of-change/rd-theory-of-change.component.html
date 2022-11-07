@@ -1,1 +1,68 @@
-<p>rd-theory-of-change works!</p>
+<app-detail-section-title sectionName=""></app-detail-section-title>
+<div class="detail_container">
+    <app-alert-status
+        description="Initiatives and non-pooled projects that you collaborated with to generated this result/contributed to this result.">
+    </app-alert-status>
+    <app-pr-input label="Primary submitter" [required]="false" [readOnly]="true" [(ngModel)]="theoryOfChangeBody.aaa">
+    </app-pr-input>
+    <app-pr-multi-select [options]="[{},{},{}]" label="Contributing Initiatives"
+        selectedLabel="Contributing Initiatives" optionLabel="Initiative(s) selected" optionValue="institutions_type_id"
+        [(ngModel)]="this.theoryOfChangeBody.bbb" placeholder="Select initiative(s)
+        ">
+    </app-pr-multi-select>
+    <app-pr-field-header label="Contributing non-pooled projects" [required]="false"></app-pr-field-header>
+    <app-alert-status
+        description="If you don't find the funder you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. ">
+    </app-alert-status>
+    <div class="donors">
+        <div class="donor" *ngFor="let donor of this.theoryOfChangeBody.ccc">
+            <app-pr-select class="segment_title_margin" [options]="[{}]" label="Funder name"
+                optionLabel="official_code_short_name" optionValue="initiative_id" placeholder="Select donor"
+                [(ngModel)]="donor.some" [required]="false">
+            </app-pr-select>
+            <div class="auto_fit_container">
+                <app-pr-input label="Grant title" [required]="false" [(ngModel)]="theoryOfChangeBody.aaa">
+                </app-pr-input>
+                <app-pr-input label="Center Grant ID" [required]="false" [(ngModel)]="theoryOfChangeBody.aaa">
+                </app-pr-input>
+                <app-pr-select [options]="[{}]" label="Lead/Contract Center" optionLabel="official_code_short_name"
+                    optionValue="initiative_id" placeholder="Select donor" [(ngModel)]="donor.some" [required]="false">
+                </app-pr-select>
+            </div>
+            <app-edit-or-delete-item-button></app-edit-or-delete-item-button>
+        </div>
+    </div>
+    <app-add-button name="Contributing Centers" (clickEvent)="addBilateralContribution()"></app-add-button>
+    <app-pr-multi-select [options]="[{name:'center-1',id:0},{name:'center-2',id:1},{name:'center-3',id:2}]"
+        label="Select center(s)" selectedLabel="Center(s) selected" optionLabel="name" optionValue="id"
+        [(ngModel)]="this.theoryOfChangeBody.ddd" placeholder="Select initiative(s)
+        ">
+    </app-pr-multi-select>
+    <div class="medal_selector selected_container">
+        <div class="centers chips_container">
+            <div class="center pr_chip_selected" *ngFor="let center of this.theoryOfChangeBody.ddd">
+                <i class="material-icons-round medal" [ngClass]="{'primary': center.primary}"
+                    (click)="addPrimary(center)">workspace_premium</i>
+                <div class="name">{{center?.name}}</div><i class="material-icons-round">cancel</i>
+            </div>
+        </div>
+    </div>
+    <div [ngSwitch]="this.resultLevelSE.currentResultLevelId">
+        <div *ngSwitchCase="1">
+            <app-toc-impact-section></app-toc-impact-section>
+        </div>
+        <div *ngSwitchCase="2">
+            <app-toc-action-area-outcome-section></app-toc-action-area-outcome-section>
+        </div>
+        <div *ngSwitchCase="3">
+            <app-toc-initiative-outcome-section></app-toc-initiative-outcome-section>
+        </div>
+        <div *ngSwitchCase="4">
+            <app-toc-initiative-output-section></app-toc-initiative-output-section>
+        </div>
+        <div *ngSwitchDefault>
+
+        </div>
+    </div>
+
+</div>

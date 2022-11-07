@@ -9,6 +9,22 @@
     }
 
     .p-fluid {
-        width: 500px;
+        width: 100%;
+    }
+}
+
+.flags {
+    padding-left: 25px;
+}
+
+.option {
+    position: relative;
+
+    img {
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 20px;
     }
 }

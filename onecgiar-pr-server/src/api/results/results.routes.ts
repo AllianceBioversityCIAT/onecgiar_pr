@@ -11,6 +11,7 @@ import { ResultByLevelModule } from './result-by-level/result-by-level.module';
 import { PartnerDeliveryTypeModule } from './partner-delivery-type/partner-delivery-type.module';
 import { ResultCountry } from './result-countries/entities/result-country.entity';
 import { LinkedResultsModule } from './linked-results/linked-results.module';
+import { EvidencesModule } from './evidences/evidences.module';
 
 export const ResultsRoutes: Routes = [
   {
@@ -60,5 +61,9 @@ export const ResultsRoutes: Routes = [
   {
     path:'linked',
     module: LinkedResultsModule
+  },
+  {
+    path: 'evidences',
+    module: EvidencesModule
   }
 ];

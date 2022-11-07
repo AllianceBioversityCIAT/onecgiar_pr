@@ -134,9 +134,10 @@ tr {
     color: white;
     background-color: var(--pr-color-primary);
     padding: 3px 10px;
-    width: max-content;
+    width: 100px;
     border-radius: 3px;
     cursor: pointer;
+    text-align: center;
 }
 
 .results_linked {
@@ -157,5 +158,15 @@ tr {
         i {
             cursor: pointer;
         }
+    }
+}
+
+.actions {
+    gap: 10px;
+    display: flex;
+
+    .view {
+        background-color: var(--pr-color-secondary) !important;
+        width: min-content !important;
     }
 }

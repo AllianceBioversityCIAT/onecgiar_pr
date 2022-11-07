@@ -21,7 +21,8 @@
 }
 
 input::placeholder,
-.p-dropdown .p-dropdown-label.p-placeholder {
+.p-dropdown .p-dropdown-label.p-placeholder,
+.p-inputtextarea::placeholder {
     color: rgb(194, 194, 194);
 }
 
@@ -57,5 +58,4 @@ input::placeholder,
         font-size: 1.4em;
         color: rgb(252, 95, 95);
     }
-
 }
