@@ -1,0 +1,41 @@
+<app-pr-field-header label="Theory of Change" [required]="false" [simpleStyle]="true">
+</app-pr-field-header>
+
+<app-pr-field-header label="Contribution to Action Area">
+</app-pr-field-header>
+
+<app-alert-status
+    description="As in the entry point of this result the Action Area level was selected in this section the contributors should map this result to an Action Area Outcome.">
+</app-alert-status>
+
+
+<app-pr-field-header label="Action Area Outcome <strong>{{'INIT-17 SAPLING'}}</strong>"
+    description="The AA-Outcomes below are pulled from the Initiative ToC, please select the one to which this result contributes.">
+</app-pr-field-header>
+<div class="action_area_items">
+    <div class="action_area_item_toc" *ngFor="let item of [1,1,1]; let i=index">
+        <img src="assets/action_areas/1.png" alt="" srcset="">
+        <div class="text"><strong>Resilient Agrifood Systems - </strong>NARES and Regional Agricultural Research
+            Institutes develop farming system innovations with the potential to increase the food security of
+            smallholders in targeted areas. </div>
+        <p-radioButton name="groupname" inputId="action_area_toc{{i}}" value="value{{i}}" [(ngModel)]="value">
+        </p-radioButton>
+    </div>
+
+</div>
+
+<app-pr-field-header label="Other contributors" [required]="false" [simpleStyle]="true">
+</app-pr-field-header>
+
+<div *ngFor="let item of [1,1,1]">
+    <app-pr-field-header label="Action Area Outcome <strong>{{'INIT-10 F2R-CWANA'}}</strong>" [required]="false">
+    </app-pr-field-header>
+    <div class="action_area_item">
+        <img src="assets/action_areas/1.png" alt="" srcset="">
+        <div class="text"><strong>Resilient Agrifood Systems - </strong>NARES and Regional Agricultural Research
+            Institutes develop farming system innovations with the potential to increase the food security of
+            smallholders in targeted areas. </div>
+    </div>
+    <hr class="divider-20">
+
+</div>
