@@ -1405,6 +1405,26 @@ ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
+-- Table `mydb`.`initiatives_work_packages`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `mydb`.`initiatives_work_packages` (
+  `work_package_id` INT NOT NULL,
+  `inititiative_id` BIGINT NOT NULL,
+  `work_package_oficial_code` BIGINT NULL,
+  `name` VARCHAR(100) NULL,
+  `short_name` VARCHAR(20) NULL,
+  PRIMARY KEY (`work_package_id`),
+  CONSTRAINT `fk_initiatives_work_packages_inititiatives1`
+    FOREIGN KEY (`inititiative_id`)
+    REFERENCES `mydb`.`inititiatives` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
+ENGINE = InnoDB;
+
+CREATE INDEX `fk_initiatives_work_packages_inititiatives1_idx` ON `mydb`.`initiatives_work_packages` (`inititiative_id` ASC) VISIBLE;
+
+
+-- -----------------------------------------------------
 -- Table `mydb`.`toc_results`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `mydb`.`toc_results` (
@@ -1415,7 +1435,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`toc_results` (
   `toc_level_id` BIGINT NOT NULL,
   `toc_type_id` BIGINT NOT NULL,
   `inititiative_id` BIGINT NOT NULL,
-  `work_package_short_title` VARCHAR(45) NULL,
+  `work_package_id` INT NOT NULL,
   PRIMARY KEY (`toc_result_id`),
   CONSTRAINT `fk_toc_results_toc_level1`
     FOREIGN KEY (`toc_level_id`)
@@ -1426,12 +1446,19 @@ CREATE TABLE IF NOT EXISTS `mydb`.`toc_results` (
     FOREIGN KEY (`inititiative_id`)
     REFERENCES `mydb`.`inititiatives` (`id`)
     ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_toc_results_initiatives_work_packages1`
+    FOREIGN KEY (`work_package_id`)
+    REFERENCES `mydb`.`initiatives_work_packages` (`work_package_id`)
+    ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
 CREATE INDEX `fk_toc_results_toc_level1_idx` ON `mydb`.`toc_results` (`toc_level_id` ASC) VISIBLE;
 
 CREATE INDEX `fk_toc_results_inititiatives1_idx` ON `mydb`.`toc_results` (`inititiative_id` ASC) VISIBLE;
+
+CREATE INDEX `fk_toc_results_initiatives_work_packages1_idx` ON `mydb`.`toc_results` (`work_package_id` ASC) VISIBLE;
 
 
 -- -----------------------------------------------------
@@ -1818,8 +1845,6 @@ CREATE TABLE IF NOT EXISTS `mydb`.`results_knowledge_products` (
   `doi` VARCHAR(200) NULL,
   `accesibility` VARCHAR(100) NULL,
   `licence` VARCHAR(100) NULL,
-  `keywords` TEXT NULL,
-  `agrovoc_keywords` TEXT NULL,
   `comodity` VARCHAR(100) NULL,
   `sponsors` TEXT NULL,
   `findable` FLOAT NULL,
@@ -2019,7 +2044,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`results_kp_altmetrics` (
   `result_knowledge_product_id` BIGINT NOT NULL,
   `altmetric_id` VARCHAR(100) NULL,
   `journal` VARCHAR(200) NULL,
-  `score` BIGINT NULL,
+  `score` FLOAT NULL,
   `cited_by_posts` BIGINT NULL,
   `cited_by_delicious` BIGINT NULL,
   `cited_by_facebook_pages` BIGINT NULL,
