@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException } from '@nestjs/common';
 import { TocLevelService } from './toc-level.service';
 import { CreateTocLevelDto } from './dto/create-toc-level.dto';
 import { UpdateTocLevelDto } from './dto/update-toc-level.dto';
@@ -12,9 +12,11 @@ export class TocLevelController {
     return this.tocLevelService.create(createTocLevelDto);
   }
 
-  @Get()
-  findAll() {
-    return this.tocLevelService.findAll();
+  @Get('get/all')
+  async findAll() {
+    const { message, response, status } =
+      await this.tocLevelService.findAll();
+    throw new HttpException({ message, response }, status);
   }
 
   @Get(':id')
