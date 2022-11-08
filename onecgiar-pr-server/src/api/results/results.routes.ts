@@ -12,6 +12,7 @@ import { PartnerDeliveryTypeModule } from './partner-delivery-type/partner-deliv
 import { ResultCountry } from './result-countries/entities/result-country.entity';
 import { LinkedResultsModule } from './linked-results/linked-results.module';
 import { EvidencesModule } from './evidences/evidences.module';
+import { ResultsKnowledgeProductsModule } from './results-knowledge-products/results-knowledge-products.module';
 
 export const ResultsRoutes: Routes = [
   {
@@ -52,18 +53,22 @@ export const ResultsRoutes: Routes = [
   },
   {
     path: 'partner-delivery-type',
-    module: PartnerDeliveryTypeModule
+    module: PartnerDeliveryTypeModule,
   },
   {
     path: 'result-countries',
-    module: ResultCountry
+    module: ResultCountry,
   },
   {
-    path:'linked',
-    module: LinkedResultsModule
+    path: 'linked',
+    module: LinkedResultsModule,
   },
   {
     path: 'evidences',
-    module: EvidencesModule
-  }
+    module: EvidencesModule,
+  },
+  {
+    path: 'results-knowledge-products',
+    module: ResultsKnowledgeProductsModule,
+  },
 ];

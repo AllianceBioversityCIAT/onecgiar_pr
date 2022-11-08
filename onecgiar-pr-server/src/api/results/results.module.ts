@@ -39,6 +39,7 @@ import { LinkedResultsModule } from './linked-results/linked-results.module';
 import { ResultsTocResultsModule } from './results-toc-results/results-toc-results.module';
 import { NonPooledProjectsModule } from './non-pooled-projects/non-pooled-projects.module';
 import { ResultsCentersModule } from './results-centers/results-centers.module';
+import { ResultsKnowledgeProductsModule } from './results-knowledge-products/results-knowledge-products.module';
 
 @Module({
   controllers: [ResultsController],
@@ -68,6 +69,7 @@ import { ResultsCentersModule } from './results-centers/results-centers.module';
     ResultsTocResultsModule,
     NonPooledProjectsModule,
     ResultsCentersModule,
+    ResultsKnowledgeProductsModule,
   ],
   providers: [
     ResultsService,
