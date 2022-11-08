@@ -8,7 +8,7 @@ export class ClarisaCenter {
         type: 'varchar',
         length: 15,
         name: 'code',
-        primary: true
+        primary: true,
     })
     code: number;
 

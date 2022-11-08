@@ -23,4 +23,20 @@ export class ClarisaCentersRepository extends Repository<ClarisaCenter> {
       };
     }
   }
+
+  async getAllCenters() {
+    const queryData = `
+    DELETE FROM clarisa_center;
+    `;
+    try {
+      const deleteData = await this.query(queryData);
+      return deleteData;
+    } catch (error) {
+      throw {
+        message: `[${ClarisaCentersRepository.name}] => deleteAllData error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
 }
