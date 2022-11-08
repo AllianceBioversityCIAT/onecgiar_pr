@@ -1,5 +1,6 @@
 import { Component, forwardRef, Input, Output, EventEmitter } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { RolesService } from '../../shared/services/global/roles.service';
 
 @Component({
   selector: 'app-pr-select',
@@ -14,7 +15,7 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
   ]
 })
 export class PrSelectComponent implements ControlValueAccessor {
-  constructor() {}
+  constructor(public rolesSE: RolesService) {}
   @Input() optionLabel: string;
   @Input() optionValue: string;
   @Input() options: any;

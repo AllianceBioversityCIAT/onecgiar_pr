@@ -1,12 +1,14 @@
 <app-pr-field-header [label]="this.label" [description]="this.description" [required]="this.required">
 </app-pr-field-header>
-<div class="read-only" *ngIf="readOnly">{{value}}</div>
-<div class="p-fluid input_container" *ngIf="!readOnly">
-    <input pInputText [type]="this.type" [placeholder]="this.placeholder" [(ngModel)]="value" [attr.prValid]="true"
-        [ngClass]="{'pr-valid': true}" />
-    <div class="hints_container">
-        <div class="hint">{{this.hint}}</div>
-        <app-pr-word-counter *ngIf="maxWords" [wordCount]="wordCount" [maxWords]="maxWords"></app-pr-word-counter>
+<div [ngSwitch]="readOnly || this.rolesSE.readOnly">
+    <div class="read-only" *ngSwitchCase="true">{{value}}</div>
+    <div class="p-fluid input_container" *ngSwitchCase="false">
+        <input pInputText [type]="this.type" [placeholder]="this.placeholder" [(ngModel)]="value" [attr.prValid]="true"
+            [ngClass]="{'pr-valid': true}" />
+        <div class="hints_container">
+            <div class="hint">{{this.hint}}</div>
+            <app-pr-word-counter *ngIf="maxWords" [wordCount]="wordCount" [maxWords]="maxWords"></app-pr-word-counter>
+        </div>
     </div>
+    <app-pr-field-validations></app-pr-field-validations>
 </div>
-<app-pr-field-validations></app-pr-field-validations>

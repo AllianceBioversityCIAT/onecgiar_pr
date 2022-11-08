@@ -1,6 +1,7 @@
 import { Component, forwardRef, Input } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { WordCounterService } from '../../shared/services/word-counter.service';
+import { RolesService } from '../../shared/services/global/roles.service';
 
 @Component({
   selector: 'app-pr-input',
@@ -27,7 +28,7 @@ export class PrInputComponent implements ControlValueAccessor {
   private _value: string;
   private beforeValue: string;
   public wordCount: number = 0;
-  constructor(private wordCounterSE: WordCounterService) {}
+  constructor(private wordCounterSE: WordCounterService, public rolesSE: RolesService) {}
 
   get value() {
     if (this.beforeValue !== this._value && this.maxWords) this.wordCount = this.wordCounterSE.counter(this._value);
