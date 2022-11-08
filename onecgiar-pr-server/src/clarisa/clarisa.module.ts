@@ -29,6 +29,7 @@ import { ClarisaGeographicScopesModule } from './clarisa-geographic-scopes/clari
 import { ClarisaActionAreaOutcomeModule } from './clarisa-action-area-outcome/clarisa-action-area-outcome.module';
 import { ClarisaActionAreaOutcomesActionAreaModule } from './clarisa-action-area-outcomes-action-area/clarisa-action-area-outcomes-action-area.module';
 import { ClarisaCentersModule } from './clarisa-centers/clarisa-centers.module';
+import { TocResultsRepository } from '../toc/toc-results/toc-results.repository';
 
 @Module({
   imports: [
@@ -58,7 +59,7 @@ import { ClarisaCentersModule } from './clarisa-centers/clarisa-centers.module';
     ClarisaCentersModule
   ],
   controllers: [],
-  providers: [ClarisaCronsService, ClarisaTaskService],
+  providers: [ClarisaCronsService, ClarisaTaskService, TocResultsRepository],
   exports: [
     ClarisaActionAreasModule,
     ClarisaActionAreasOutcomesIndicatorsModule,

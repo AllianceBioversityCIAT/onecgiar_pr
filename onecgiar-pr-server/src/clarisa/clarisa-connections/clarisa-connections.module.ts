@@ -24,6 +24,7 @@ import { ClarisaInnovationCharacteristicRepository } from '../clarisa-innovation
 import { ClarisaGeographicScopeRepository } from '../clarisa-geographic-scopes/clarisa-geographic-scopes.repository';
 import { ResultByInitiativesRepository } from '../../api/results/results_by_inititiatives/resultByInitiatives.repository';
 import { ClarisaActionAreaOutcomeRepository } from '../clarisa-action-area-outcome/clarisa-action-area-outcome.repository';
+import { TocResultsRepository } from '../../toc/toc-results/toc-results.repository';
 
 @Module({
   controllers: [ClarisaConnectionsController],
@@ -46,7 +47,8 @@ import { ClarisaActionAreaOutcomeRepository } from '../clarisa-action-area-outco
     ClarisaInnovationCharacteristicRepository,
     ClarisaGeographicScopeRepository,
     ResultByInitiativesRepository,
-    ClarisaActionAreaOutcomeRepository
+    ClarisaActionAreaOutcomeRepository,
+    TocResultsRepository
   ],
   imports:[
     HttpModule

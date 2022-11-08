@@ -76,7 +76,7 @@ export class ClarisaConnectionsService {
   }
 
   async executeTask() {
-    //await this._clarisaTaskService.clarisaBootstrap();
+    await this._clarisaTaskService.clarisaBootstrap();
     return 1;
   }
 

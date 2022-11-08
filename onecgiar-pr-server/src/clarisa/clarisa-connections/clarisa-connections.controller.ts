@@ -22,8 +22,9 @@ export class ClarisaConnectionsController {
   }
 
   @Get('execute-task')
-  async executeTask() {
-    await this.clarisaConnectionsService.executeTask();
+  executeTask() {
+    this.clarisaConnectionsService.executeTask();
+    return 1;
   }
 
   @Get(':id')

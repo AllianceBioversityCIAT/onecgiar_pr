@@ -28,6 +28,7 @@ import { ClarisaInnovationCharacteristicRepository } from './clarisa-innovation-
 import { lastValueFrom, map } from 'rxjs';
 import { ClarisaGeographicScopeRepository } from './clarisa-geographic-scopes/clarisa-geographic-scopes.repository';
 import { ClarisaActionAreaOutcomeRepository } from './clarisa-action-area-outcome/clarisa-action-area-outcome.repository';
+import { TocResultsRepository } from '../toc/toc-results/toc-results.repository';
 
 @Injectable()
 export class ClarisaTaskService {
@@ -59,6 +60,7 @@ export class ClarisaTaskService {
     private readonly _clarisaInnovationCharacteristicRepository: ClarisaInnovationCharacteristicRepository,
     private readonly _clarisaGeographicScopeRepository: ClarisaGeographicScopeRepository,
     private readonly _clarisaActionAreaOutcomeRepository: ClarisaActionAreaOutcomeRepository,
+    private readonly _tocResultsRepository: TocResultsRepository,
     private readonly _httpService: HttpService
   ) {}
 
@@ -93,6 +95,7 @@ export class ClarisaTaskService {
     count = await this.cloneClarisaInnovationCharacteristicRepository(count);
     count = await this.cloneClarisaActionAreaOutcomeRepository(count);
     count = await this.cloneClarisaGeographicScope(count);
+    count = await this.cloneResultTocRepository(count);
   }
 
   private async cloneClarisaCountries(position: number, deleteItem = false) {
@@ -237,7 +240,14 @@ export class ClarisaTaskService {
           `${this.clarisaHost}initiatives`,
           this.configAuth,
         );
+        const tocId = await this._clarisaInitiativesRepository.getTocIdFromOst();
+        data.map(el => {
+          const tocData = tocId.filter(toc => toc.initiativeId == el['id']);
+          el['toc_id'] = tocData.length?tocData[0].toc_id: null;
+        });
+
         await this._clarisaInitiativesRepository.save(data);
+
         this._logger.verbose(
           `[${position}]: All CLARISA Initiatives control list data has been created`,
         );
@@ -667,6 +677,31 @@ export class ClarisaTaskService {
     } catch (error) {
       this._logger.error(
         `[${position}]: Error in manipulating the data of CLARISA Geographic Scope `,
+      );
+      this._logger.error(error);
+      return ++position;
+    }
+  }
+
+  private async cloneResultTocRepository(position: number, deleteItem = false) {
+    try {
+      if (deleteItem) {
+        const deleteData =
+          await this._tocResultsRepository.deleteAllData();
+        this._logger.warn(
+          `[${position}]: All ToC Results control list data has been deleted`,
+        );
+      } else {
+        const data = await this._tocResultsRepository.getAllTocResultsFromOst();
+        await this._tocResultsRepository.save(data);
+        this._logger.verbose(
+          `[${position}]: All ToC Results control list data has been created`,
+        );
+      }
+      return ++position;
+    } catch (error) {
+      this._logger.error(
+        `[${position}]: Error in manipulating the data of ToC Results`,
       );
       this._logger.error(error);
       return ++position;

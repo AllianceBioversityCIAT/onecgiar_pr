@@ -26,11 +26,11 @@ export class ResultsTocResult {
     })
     results_id: number;
 
-    @ManyToOne(() => ClarisaActionAreaOutcome, caao => caao.id)
+    @ManyToOne(() => ClarisaActionAreaOutcome, caao => caao.id, {nullable: true})
     @JoinColumn({
         name: 'action_area_outcome_id'
     })
-    action_area_outcome_id: number;
+    action_area_outcome_id!: number;
 
     @Column({
         name: 'planned_result',
