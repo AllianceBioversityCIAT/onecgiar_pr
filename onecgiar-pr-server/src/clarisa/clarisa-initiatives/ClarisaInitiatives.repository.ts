@@ -2,6 +2,7 @@ import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { ClarisaInitiative } from './entities/clarisa-initiative.entity';
 import { OstTocIdDto } from './dto/ost-toc-id.dto';
+import { env } from 'process';
 
 @Injectable()
 export class ClarisaInitiativesRepository extends Repository<ClarisaInitiative> {
@@ -31,8 +32,8 @@ export class ClarisaInitiativesRepository extends Repository<ClarisaInitiative> 
     ibs.initiativeId,
     t.initvStgId,
     t.toc_id
-    from submissiontooldb.tocs t
-    left join submissiontooldb.initiatives_by_stages ibs
+    from ${env.DB_OST}.tocs t
+    left join ${env.DB_OST}.initiatives_by_stages ibs
         on t.initvStgId = ibs.id
        where t.active > 0
         and t.type = 1
@@ -41,6 +42,41 @@ export class ClarisaInitiativesRepository extends Repository<ClarisaInitiative> 
     try {
       const tocid: OstTocIdDto[] = await this.query(queryData);
       return tocid;
+    } catch (error) {
+      throw {
+        message: `[${ClarisaInitiativesRepository.name}] => getTocIdFromOst error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
+  async getAllInitiativesWithoutCurrentInitiative(resultId: number) {
+    const queryData = `
+    select
+      	DISTINCT 
+      ci.id,
+      	ci.official_code,
+      	ci.name,
+      	ci.short_name,
+      	ci.active,
+      	ci.action_area_id,
+      	ci.toc_id
+      from
+      	clarisa_initiatives ci
+      where
+      	ci.id not in (
+      	SELECT
+      		DISTINCT rbi2.inititiative_id
+      	FROM
+      		results_by_inititiative rbi2
+      	where
+      		rbi2.result_id = ?
+      		and rbi2.initiative_role_id = 1);
+    `;
+    try {
+      const initiative: ClarisaInitiative[] = await this.query(queryData, [resultId]);
+      return initiative;
     } catch (error) {
       throw {
         message: `[${ClarisaInitiativesRepository.name}] => getTocIdFromOst error: ${error}`,
