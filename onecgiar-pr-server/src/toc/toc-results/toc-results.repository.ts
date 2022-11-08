@@ -62,7 +62,7 @@ export class TocResultsRepository extends Repository<TocResult> {
       tr.work_package_id 
     from toc_result tr
     where tr.inititiative_id = ?
-    	and tr.toc_type_id = ?;
+    	and tr.toc_level_id = ?;
     `;
     try {
       const tocResult:TocResult[] = await this.query(queryData, [initId, tocLevel]);

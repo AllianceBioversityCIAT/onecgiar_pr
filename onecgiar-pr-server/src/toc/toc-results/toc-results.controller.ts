@@ -1,9 +1,9 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException } from '@nestjs/common';
 import { TocResultsService } from './toc-results.service';
 import { CreateTocResultDto } from './dto/create-toc-result.dto';
 import { UpdateTocResultDto } from './dto/update-toc-result.dto';
 
-@Controller('toc-results')
+@Controller()
 export class TocResultsController {
   constructor(private readonly tocResultsService: TocResultsService) {}
 
@@ -17,9 +17,14 @@ export class TocResultsController {
     return this.tocResultsService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.tocResultsService.findOne(+id);
+  @Get('get/all/initiative/:initiativeId/level/:levelId')
+  async getTocResultByInitiativeAndLevels(
+    @Param('initiativeId') initiativeId: number,
+    @Param('levelId') levelId: number
+    ) {
+    const { message, response, status } =
+      await this.tocResultsService.findAllByinitiativeId(initiativeId, levelId);
+    throw new HttpException({ message, response }, status);
   }
 
   @Patch(':id')

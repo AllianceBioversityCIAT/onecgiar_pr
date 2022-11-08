@@ -1,3 +1,4 @@
+import { TocModule } from './toc/toc.module';
 import { ClarisaModule } from './clarisa/clarisa.module';
 import {
   MiddlewareConsumer,
@@ -28,6 +29,7 @@ import { TocLevelModule } from './toc/toc-level/toc-level.module';
 
 @Module({
   imports: [
+    TocModule,
     ClarisaModule,
     AuthModule,
     HomeModule,
@@ -38,14 +40,14 @@ import { TocLevelModule } from './toc/toc-level/toc-level.module';
       keepConnectionAlive: true,
       autoLoadEntities: true,
     }),
-    RouterModule.register(MainRoutes),
     ClarisaModule,
     UserModule,
     RoleModule,
     TypeOrmModule.forFeature([User]),
     ScheduleModule.forRoot(),
-    TocResultsModule,
     TocLevelModule,
+    TocResultsModule,
+    RouterModule.register(MainRoutes),
   ],
   controllers: [AppController],
   providers: [

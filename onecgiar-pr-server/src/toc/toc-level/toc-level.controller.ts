@@ -3,7 +3,7 @@ import { TocLevelService } from './toc-level.service';
 import { CreateTocLevelDto } from './dto/create-toc-level.dto';
 import { UpdateTocLevelDto } from './dto/update-toc-level.dto';
 
-@Controller('toc-level')
+@Controller()
 export class TocLevelController {
   constructor(private readonly tocLevelService: TocLevelService) {}
 

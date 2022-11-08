@@ -40,6 +40,8 @@ import { ResultsTocResultsModule } from './results-toc-results/results-toc-resul
 import { NonPooledProjectsModule } from './non-pooled-projects/non-pooled-projects.module';
 import { ResultsCentersModule } from './results-centers/results-centers.module';
 import { ResultsKnowledgeProductsModule } from './results-knowledge-products/results-knowledge-products.module';
+import { TocResult } from '../../toc/toc-results/entities/toc-result.entity';
+import { TocLevel } from '../../toc/toc-level/entities/toc-level.entity';
 
 @Module({
   controllers: [ResultsController],
@@ -69,7 +71,7 @@ import { ResultsKnowledgeProductsModule } from './results-knowledge-products/res
     ResultsTocResultsModule,
     NonPooledProjectsModule,
     ResultsCentersModule,
-    ResultsKnowledgeProductsModule,
+    ResultsKnowledgeProductsModule
   ],
   providers: [
     ResultsService,

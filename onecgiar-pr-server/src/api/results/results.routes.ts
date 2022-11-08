@@ -13,6 +13,7 @@ import { ResultCountry } from './result-countries/entities/result-country.entity
 import { LinkedResultsModule } from './linked-results/linked-results.module';
 import { EvidencesModule } from './evidences/evidences.module';
 import { ResultsKnowledgeProductsModule } from './results-knowledge-products/results-knowledge-products.module';
+import { TocResult } from '../../toc/toc-results/entities/toc-result.entity';
 
 export const ResultsRoutes: Routes = [
   {
@@ -70,5 +71,5 @@ export const ResultsRoutes: Routes = [
   {
     path: 'results-knowledge-products',
     module: ResultsKnowledgeProductsModule,
-  },
+  }
 ];

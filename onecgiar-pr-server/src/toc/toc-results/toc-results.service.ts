@@ -1,9 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
 import { CreateTocResultDto } from './dto/create-toc-result.dto';
 import { UpdateTocResultDto } from './dto/update-toc-result.dto';
+import { HandlersError } from '../../shared/handlers/error.utils';
+import { TocResultsRepository } from './toc-results.repository';
 
 @Injectable()
 export class TocResultsService {
+
+  constructor(
+    private readonly _handlersError: HandlersError,
+    private readonly _tocResultsRepository: TocResultsRepository
+  ){}
+
   create(createTocResultDto: CreateTocResultDto) {
     return 'This action adds a new tocResult';
   }
@@ -12,8 +20,25 @@ export class TocResultsService {
     return `This action returns all tocResults`;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} tocResult`;
+  async findAllByinitiativeId(initiativeId: number, levelId: number) {
+    try {
+      const tocResults = await this._tocResultsRepository.getAllTocResultsByInitiative(initiativeId, levelId);
+      if(!tocResults.length){
+        throw {
+          response: {},
+          message: 'ToC Results Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      return {
+        response: tocResults,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
   }
 
   update(id: number, updateTocResultDto: UpdateTocResultDto) {

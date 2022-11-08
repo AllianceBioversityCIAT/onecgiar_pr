@@ -6,6 +6,8 @@ import { TypeOneReportModule } from './api/type-one-report/type-one-report.modul
 import { ClarisaRoutes } from './clarisa/clarisa.routes';
 import { AuthModulesRoutes } from './auth/modules/auth-modules.routes';
 import { ModulesRoutes } from './api/modules.routes';
+import { TocRoutes } from './toc/toc.routes';
+import { TocModule } from './toc/toc.module';
 
 export const MainRoutes: Routes = [
   {
@@ -21,4 +23,8 @@ export const MainRoutes: Routes = [
     path: 'clarisa',
     children: ClarisaRoutes,
   },
+  {
+    path: 'toc',
+    children: TocRoutes,
+  }
 ];
