@@ -23,6 +23,8 @@ import { User } from './auth/modules/user/entities/user.entity';
 import { Repository } from 'typeorm';
 import { HttpExceptionFilter } from './shared/handlers/error.exception';
 import { ScheduleModule } from '@nestjs/schedule';
+import { TocResultsModule } from './toc/toc-results/toc-results.module';
+import { TocLevelModule } from './toc/toc-level/toc-level.module';
 
 @Module({
   imports: [
@@ -42,6 +44,8 @@ import { ScheduleModule } from '@nestjs/schedule';
     RoleModule,
     TypeOrmModule.forFeature([User]),
     ScheduleModule.forRoot(),
+    TocResultsModule,
+    TocLevelModule,
   ],
   controllers: [AppController],
   providers: [

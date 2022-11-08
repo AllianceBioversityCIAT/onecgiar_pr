@@ -36,6 +36,9 @@ import { ResultByInstitutionsByDeliveriesTypeModule } from './result-by-institut
 import { ResultRegionsModule } from './result-regions/result-regions.module';
 import { ResultCountriesModule } from './result-countries/result-countries.module';
 import { LinkedResultsModule } from './linked-results/linked-results.module';
+import { ResultsTocResultsModule } from './results-toc-results/results-toc-results.module';
+import { NonPooledProjectsModule } from './non-pooled-projects/non-pooled-projects.module';
+import { ResultsCentersModule } from './results-centers/results-centers.module';
 
 @Module({
   controllers: [ResultsController],
@@ -62,6 +65,9 @@ import { LinkedResultsModule } from './linked-results/linked-results.module';
     ResultRegionsModule,
     ResultCountriesModule,
     LinkedResultsModule,
+    ResultsTocResultsModule,
+    NonPooledProjectsModule,
+    ResultsCentersModule,
   ],
   providers: [
     ResultsService,

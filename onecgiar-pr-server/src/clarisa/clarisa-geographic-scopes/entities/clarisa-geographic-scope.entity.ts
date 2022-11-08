@@ -2,9 +2,7 @@ import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity('clarisa_geographic_scope')
 export class ClarisaGeographicScope {
-    @PrimaryGeneratedColumn({
-        type: 'bigint'
-    })
+    @PrimaryGeneratedColumn()
     id: number;
 
     @Column({
