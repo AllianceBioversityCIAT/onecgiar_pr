@@ -76,8 +76,8 @@ export class ClarisaConnectionsService {
   }
 
   async executeTask() {
-    await this._clarisaTaskService.clarisaBootstrap();
-    return true;
+    //await this._clarisaTaskService.clarisaBootstrap();
+    return 1;
   }
 
   findOne(id: number) {
