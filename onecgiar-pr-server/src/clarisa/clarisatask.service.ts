@@ -22,10 +22,15 @@ import { ClarisaPolicyStageRepository } from './clarisa-policy-stages/clarisa-po
 import { ClarisaInnovationTypeRepository } from './clarisa-innovation-type/clarisa-innovation-type.repository';
 import { ClarisaInnovationReadinessLevelRepository } from './clarisa-innovation-readiness-levels/clarisa-innovation-readiness-levels.repository';
 import { ClarisaInnovationCharacteristicRepository } from './clarisa-innovation-characteristics/clarisa-innovation-characteristics.repository';
+import { lastValueFrom, map } from 'rxjs';
+import { ClarisaGeographicScopeRepository } from './clarisa-geographic-scopes/clarisa-geographic-scopes.repository';
+import { ClarisaActionAreaOutcomeRepository } from './clarisa-action-area-outcome/clarisa-action-area-outcome.repository';
+import { TocResultsRepository } from '../toc/toc-results/toc-results.repository';
 
 @Injectable()
 export class ClarisaTaskService {
-  private readonly clarisaHost: string = env.CLA_URL ?? env.L_CLA_URL;
+  private readonly clarisaHost: string =
+    `${env.CLA_URL}api/` ?? env.L_CLA_URL;
   private readonly configAuth = {
     auth: {
       username: env.CLA_USER,
@@ -50,22 +55,25 @@ export class ClarisaTaskService {
     private readonly _clarisaInnovationTypeRepository: ClarisaInnovationTypeRepository,
     private readonly _clarisaInnovationReadinessLevelRepository: ClarisaInnovationReadinessLevelRepository,
     private readonly _clarisaInnovationCharacteristicRepository: ClarisaInnovationCharacteristicRepository,
+    private readonly _clarisaGeographicScopeRepository: ClarisaGeographicScopeRepository,
+    private readonly _clarisaActionAreaOutcomeRepository: ClarisaActionAreaOutcomeRepository,
+    private readonly _tocResultsRepository: TocResultsRepository,
     private readonly _httpService: HttpService
   ) {}
 
   public async clarisaBootstrap() {
     this._logger.debug(`Cloning of CLARISA control lists`);
     let count = 1;
-    count = await this.cloneClarisaCountries(count, true);
-    count = await this.cloneClarisaMeliaStudyTypes(count, true);
-    count = await this.cloneClarisaGlobalTargetType(count, true);
-    count = await this.cloneClarisaRegions(count, true);
+    //count = await this.cloneClarisaCountries(count, true);
+    //count = await this.cloneClarisaMeliaStudyTypes(count, true);
+    //count = await this.cloneClarisaGlobalTargetType(count, true);
+    //count = await this.cloneClarisaRegions(count, true);
     //count = await this.cloneClarisaInitiatives(count, true);
     //count = await this.cloneClarisaActionArea(count, true);
-    count = await this.cloneClarisaImpactAreaIndicators(count, true);
-    count = await this.cloneClarisaImpactArea(count, true);
-    count = await this.cloneClarisaOutcomeIndicators(count, true);
-    count = await this.cloneClarisaRegionsType(count, true);
+    //count = await this.cloneClarisaImpactAreaIndicators(count, true);
+    //count = await this.cloneClarisaImpactArea(count, true);
+    //count = await this.cloneClarisaOutcomeIndicators(count, true);
+    //count = await this.cloneClarisaRegionsType(count, true);
     count = await this.cloneClarisaRegions(count);
     count = await this.cloneClarisaCountries(count);
     count = await this.cloneClarisaMeliaStudyTypes(count);
@@ -77,11 +85,14 @@ export class ClarisaTaskService {
     count = await this.cloneClarisaOutcomeIndicators(count);
     count = await this.cloneClarisaRegionsType(count);
     count = await this.cloneClarisaInstitutionsType(count);
-    count = await this.cloneClarisaInstitutions(count);
+    //count = await this.cloneClarisaInstitutions(count);
     count = await this.cloneClarisaPolicyStageRepository(count);
     count = await this.cloneClarisaInnovationTypeRepository(count);
     count = await this.cloneClarisaInnovationReadinessLevelRepository(count);
     count = await this.cloneClarisaInnovationCharacteristicRepository(count);
+    count = await this.cloneClarisaActionAreaOutcomeRepository(count);
+    count = await this.cloneClarisaGeographicScope(count);
+    count = await this.cloneResultTocRepository(count);
   }
 
   private async cloneClarisaCountries(position: number, deleteItem = false) {
@@ -226,7 +237,14 @@ export class ClarisaTaskService {
           `${this.clarisaHost}initiatives`,
           this.configAuth,
         );
+        const tocId = await this._clarisaInitiativesRepository.getTocIdFromOst();
+        data.map(el => {
+          const tocData = tocId.filter(toc => toc.initiativeId == el['id']);
+          el['toc_id'] = tocData.length?tocData[0].toc_id: null;
+        });
+
         await this._clarisaInitiativesRepository.save(data);
+
         this._logger.verbose(
           `[${position}]: All CLARISA Initiatives control list data has been created`,
         );
@@ -453,20 +471,18 @@ export class ClarisaTaskService {
           `[${position}]: All CLARISA Institutions control list data has been deleted`,
         );
       } else {
-        const data = await this._httpService.get(`${this.clarisaHost}institutions`, {auth: {username:env.L_CLA_USER, password: env.L_CLA_PASSWORD }});
-        await data.subscribe(async el => {
-          const {data} = el;
-
-          data.map(dat => {
-            dat['institution_type_code'] = dat.institutionType.code ?? null;
-            dat['id'] = dat.code;
-            dat['website_link'] = dat.websiteLink;
-          })
-          
-          await this._clarisaInstitutionsRepository.save(
-            data,
-          );
-        });
+        const data = await lastValueFrom(this._httpService.get(`${this.clarisaHost}institutions`, {auth: {username:env.L_CLA_USER, password: env.L_CLA_PASSWORD }}).pipe(map(resp => resp.data)));
+        data.map(dat => {
+          dat['institution_type_code'] = dat.institutionType.code ?? null;
+          dat['id'] = dat.code;
+          dat['website_link'] = dat.websiteLink;
+          const hqarray: any[] = dat.countryOfficeDTO.filter(hq => hq.isHeadquarter == true);
+          dat['headquarter_country_iso2'] = hqarray.length? hqarray[0].isoAlpha2:null;
+        })
+        
+        await this._clarisaInstitutionsRepository.save(
+          data,
+        );
         this._logger.verbose(
           `[${position}]: All CLARISA Institutions control list data has been created`,
         );
@@ -592,4 +608,112 @@ export class ClarisaTaskService {
       return ++position;
     }
   }
+
+  private async cloneClarisaActionAreaOutcomeRepository(position: number, deleteItem = false) {
+    try {
+      if (deleteItem) {
+        const deleteData =
+          await this._clarisaActionAreaOutcomeRepository.deleteAllData();
+        this._logger.warn(
+          `[${position}]: All CLARISA Action Area Outcome control list data has been deleted`,
+        );
+      } else {
+        const { data } = await axios.get(
+          `${this.clarisaHost}action-area-outcomes`,
+          this.configAuth,
+        );
+        data.map(el => {
+          el['id'] = el.outcomeId;
+        })
+        const newData = this.removeDuplicates(data, 'id');
+        console.log(newData)
+        await this._clarisaActionAreaOutcomeRepository.save(newData);
+        this._logger.verbose(
+          `[${position}]: All CLARISA Action Area Outcome control list data has been created`,
+        );
+      }
+      return ++position;
+    } catch (error) {
+      this._logger.error(
+        `[${position}]: Error in manipulating the data of CLARISA Action Area Outcome`,
+      );
+      this._logger.error(error);
+      return ++position;
+    }
+  }
+
+  private async cloneClarisaGeographicScope(
+    position: number,
+    deleteItem = false,
+  ) {
+    try {
+      if (deleteItem) {
+        const deleteData =
+          await this._clarisaGeographicScopeRepository.deleteAllData();
+        this._logger.warn(
+          `[${position}]: All CLARISA Geographic scope control list data has been deleted`,
+        );
+      } else {
+        const data = await lastValueFrom(this._httpService.get(`${this.clarisaHost}geographic-scopes?type=legacy`, {auth: {username:env.L_CLA_USER, password: env.L_CLA_PASSWORD }}).pipe(map(resp => resp.data)));
+        data.map(dat => {
+          dat['id'] = dat.code;
+          dat['description'] = dat.definition;
+        })
+        
+        await this._clarisaGeographicScopeRepository.save(
+          data,
+        );
+        this._logger.verbose(
+          `[${position}]: All CLARISA Geographic scope control list data has been created`,
+        );
+      }
+      return ++position;
+    } catch (error) {
+      this._logger.error(
+        `[${position}]: Error in manipulating the data of CLARISA Geographic Scope `,
+      );
+      this._logger.error(error);
+      return ++position;
+    }
+  }
+
+  private async cloneResultTocRepository(position: number, deleteItem = false) {
+    try {
+      if (deleteItem) {
+        const deleteData =
+          await this._tocResultsRepository.deleteAllData();
+        this._logger.warn(
+          `[${position}]: All ToC Results control list data has been deleted`,
+        );
+      } else {
+        const data = await this._tocResultsRepository.getAllTocResultsFromOst();
+        await this._tocResultsRepository.save(data);
+        this._logger.verbose(
+          `[${position}]: All ToC Results control list data has been created`,
+        );
+      }
+      return ++position;
+    } catch (error) {
+      this._logger.error(
+        `[${position}]: Error in manipulating the data of ToC Results`,
+      );
+      this._logger.error(error);
+      return ++position;
+    }
+  }
+
+
+  private removeDuplicates(originalArray, prop) {
+    var newArray = [];
+    var lookupObject  = {};
+
+    for(var i in originalArray) {
+       lookupObject[originalArray[i][prop]] = originalArray[i];
+    }
+
+    for(i in lookupObject) {
+        newArray.push(lookupObject[i]);
+    }
+     return newArray;
+}
 }

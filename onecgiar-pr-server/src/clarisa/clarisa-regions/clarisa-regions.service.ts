@@ -1,15 +1,32 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { CreateClarisaRegionDto } from './dto/create-clarisa-region.dto';
 import { UpdateClarisaRegionDto } from './dto/update-clarisa-region.dto';
+import { HandlersError } from '../../shared/handlers/error.utils';
+import { ClarisaRegionsRepository } from './ClariasaRegions.repository';
 
 @Injectable()
 export class ClarisaRegionsService {
+
+  constructor(
+    private readonly _handlersError: HandlersError,
+    private readonly _clarisaRegionsRepository: ClarisaRegionsRepository
+  ){}
+
   create(createClarisaRegionDto: CreateClarisaRegionDto) {
     return createClarisaRegionDto;
   }
 
-  findAll() {
-    return `This action returns all clarisaRegions`;
+  async findAllNoParent() {
+    try {
+      const region = await this._clarisaRegionsRepository.getAllNoParentRegions();
+      return {
+        response: region,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes(error);
+    }
   }
 
   findOne(id: number) {

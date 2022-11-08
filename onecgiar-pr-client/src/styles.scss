@@ -29,3 +29,56 @@
     border-radius: 10px;
 
 }
+
+.position_sticky {
+    position: sticky;
+    right: 0;
+    bottom: 0;
+}
+
+.search_input {
+    display: flex;
+    align-items: center;
+    border: 1px solid rgb(139, 139, 139);
+    border-radius: 100px;
+    width: 50vw;
+    padding: 3px 5px;
+    margin-bottom: 10px;
+
+    i {
+        color: rgb(139, 139, 139);
+    }
+
+    input {
+        outline: none;
+        border: none;
+        width: 100%;
+        color: rgb(139, 139, 139);
+    }
+}
+
+
+.w50vw {
+    width: 50vw !important;
+}
+
+.w20vw {
+    width: 20vw !important;
+}
+
+.divider-50 {
+    @extend .dividerStyles;
+    margin-top: 40px;
+    margin-bottom: 50px;
+}
+
+.divider-20 {
+    @extend .dividerStyles;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+.dividerStyles {
+    border: .5px solid rgb(224, 224, 224);
+    border-radius: 100px;
+}

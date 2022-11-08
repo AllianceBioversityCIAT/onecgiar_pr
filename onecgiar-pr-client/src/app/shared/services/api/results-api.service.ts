@@ -4,6 +4,11 @@ import { environment } from 'src/environments/environment';
 import { map } from 'rxjs';
 import { ResultBody } from '../../interfaces/result.interface';
 import { GeneralInfoBody } from '../../../pages/results/pages/result-detail/pages/rd-general-information/models/generalInfoBody';
+import { PartnersBody } from 'src/app/pages/results/pages/result-detail/pages/rd-partners/models/partnersBody';
+import { GeographicLocationBody } from '../../../pages/results/pages/result-detail/pages/rd-geographic-location/models/geographicLocationBody';
+import { LinksToResultsBody } from '../../../pages/results/pages/result-detail/pages/rd-links-to-results/models/linksToResultsBody';
+import { PartnersRequestBody } from '../../../pages/results/pages/result-detail/components/partners-request/models/partnersRequestBody.model';
+import { EvidencesBody } from '../../../pages/results/pages/result-detail/pages/rd-evidences/model/evidencesBody.model';
 
 @Injectable({
   providedIn: 'root'
@@ -34,7 +39,12 @@ export class ResultsApiService {
   }
 
   GET_allGenderTag() {
-    return this.http.get<any>(`${this.apiBaseUrl}gender-tag-levels/all`);
+    return this.http.get<any>(`${this.apiBaseUrl}gender-tag-levels/all`).pipe(
+      map(resp => {
+        resp.response.map(institution => (institution.full_name = `(${institution?.id - 1}) ${institution?.title}`));
+        return resp;
+      })
+    );
   }
 
   GET_institutionTypes() {
@@ -44,7 +54,7 @@ export class ResultsApiService {
   GET_allInstitutions() {
     return this.http.get<any>(`${this.apiBaseUrl}get/institutions/all`).pipe(
       map(resp => {
-        resp.response.map(institution => (institution.full_name = `(Id:${institution?.institutions_id}) ${institution?.institutions_acronym} - ${institution?.institutions_name}`));
+        resp.response.map(institution => (institution.full_name = `(Id:${institution?.institutions_id}) ${institution?.institutions_acronym} - ${institution?.institutions_name} - ${institution?.headquarter_name}`));
         return resp;
       })
     );
@@ -64,5 +74,57 @@ export class ResultsApiService {
 
   GET_depthSearch(title: string) {
     return this.http.get<any>(`${this.apiBaseUrl}get/depth-search/${title}`);
+  }
+
+  PATCH_partnersSection(body: PartnersBody) {
+    return this.http.patch<any>(`${this.apiBaseUrl}results-by-institutions/create/partners/${this.currentResultId}`, body);
+  }
+  GET_partnersSection() {
+    return this.http.get<any>(`${this.apiBaseUrl}results-by-institutions/partners/result/${this.currentResultId}`);
+  }
+
+  GET_AllPrmsGeographicScope() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/geographic-scope/get/all/prms`);
+  }
+
+  GET_AllCLARISARegions() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/regions/get/all`);
+  }
+
+  POST_partnerRequest(body: PartnersRequestBody) {
+    return this.http.post<any>(`${environment.apiBaseUrl}api/clarisa/partner-request/${this.currentResultId}`, body);
+  }
+
+  GET_AllCLARISACountries() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/countries/get/all`).pipe(
+      map(resp => {
+        resp.response.map(institution => (institution.full_name = `${institution?.iso_alpha_2} - ${institution?.name}`));
+        return resp;
+      })
+    );
+  }
+
+  PATCH_geographicSection(body: GeographicLocationBody) {
+    return this.http.patch<any>(`${this.apiBaseUrl}update/geographic/${this.currentResultId}`, body);
+  }
+
+  GET_geographicSection() {
+    return this.http.get<any>(`${this.apiBaseUrl}get/geographic/${this.currentResultId}`);
+  }
+
+  GET_resultsLinked() {
+    return this.http.get<any>(`${this.apiBaseUrl}linked/get/${this.currentResultId}`);
+  }
+
+  POST_resultsLinked(body: LinksToResultsBody) {
+    return this.http.post<any>(`${this.apiBaseUrl}linked/create/${this.currentResultId}`, body);
+  }
+
+  GET_evidences() {
+    return this.http.get<any>(`${this.apiBaseUrl}evidences/get/${this.currentResultId}`);
+  }
+
+  POST_evidences(body: EvidencesBody) {
+    return this.http.post<any>(`${this.apiBaseUrl}evidences/create/${this.currentResultId}`, body);
   }
 }

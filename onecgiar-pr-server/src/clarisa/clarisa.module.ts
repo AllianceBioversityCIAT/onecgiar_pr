@@ -25,6 +25,11 @@ import { ClarisaInnovationTypeModule } from './clarisa-innovation-type/clarisa-i
 import { ClarisaInnovationReadinessLevelsModule } from './clarisa-innovation-readiness-levels/clarisa-innovation-readiness-levels.module';
 import { ClarisaPolicyStagesModule } from './clarisa-policy-stages/clarisa-policy-stages.module';
 import { ClarisaConnectionsModule } from './clarisa-connections/clarisa-connections.module';
+import { ClarisaGeographicScopesModule } from './clarisa-geographic-scopes/clarisa-geographic-scopes.module';
+import { ClarisaActionAreaOutcomeModule } from './clarisa-action-area-outcome/clarisa-action-area-outcome.module';
+import { ClarisaActionAreaOutcomesActionAreaModule } from './clarisa-action-area-outcomes-action-area/clarisa-action-area-outcomes-action-area.module';
+import { ClarisaCentersModule } from './clarisa-centers/clarisa-centers.module';
+import { TocResultsRepository } from '../toc/toc-results/toc-results.repository';
 
 @Module({
   imports: [
@@ -47,10 +52,14 @@ import { ClarisaConnectionsModule } from './clarisa-connections/clarisa-connecti
     ClarisaInnovationTypeModule,
     ClarisaInnovationReadinessLevelsModule,
     ClarisaPolicyStagesModule,
-    ClarisaConnectionsModule
+    ClarisaConnectionsModule,
+    ClarisaGeographicScopesModule,
+    ClarisaActionAreaOutcomeModule,
+    ClarisaActionAreaOutcomesActionAreaModule,
+    ClarisaCentersModule
   ],
   controllers: [],
-  providers: [ClarisaCronsService, ClarisaTaskService],
+  providers: [ClarisaCronsService, ClarisaTaskService, TocResultsRepository],
   exports: [
     ClarisaActionAreasModule,
     ClarisaActionAreasOutcomesIndicatorsModule,

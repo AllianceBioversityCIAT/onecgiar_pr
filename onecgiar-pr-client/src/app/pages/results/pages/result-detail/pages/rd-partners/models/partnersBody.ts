@@ -1,15 +1,14 @@
 export class PartnersBody {
-  public result_type_name: string = null;
-  public institutions: institutionsInterface[] = [];
-  public institutions_type: institutionsTypeInterface[] = [];
+  public no_applicable_partner: boolean = false;
+  public institutions: InstitutionsInterface[] = [];
+  constructor(no_applicable_partner?) {
+    this.no_applicable_partner = no_applicable_partner ? no_applicable_partner : false;
+  }
 }
 
-interface institutionsInterface {
+class InstitutionsInterface {
   institutions_id: number;
-  is_active: boolean;
-}
-
-interface institutionsTypeInterface {
-  institution_types_id: number;
-  is_active: boolean;
+  institutions_name: string;
+  institutions_type_name: string;
+  deliveries?: boolean[] = [false, false, false];
 }

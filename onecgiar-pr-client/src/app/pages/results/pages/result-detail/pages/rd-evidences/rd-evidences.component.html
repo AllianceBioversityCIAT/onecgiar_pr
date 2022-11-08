@@ -1,1 +1,38 @@
-<p>rd-evidences works!</p>
+<app-detail-section-title sectionName=""></app-detail-section-title>
+
+<div class="detail_container">
+    <app-pr-field-header label="Evidence"></app-pr-field-header>
+    <app-alert-status description="<ul>
+        <li>Submit a maximum of 3 pieces of evidence.</li>
+        <li>Please list evidence from most to least important.</li>
+        <li>Files cannot be uploaded; only reference links from CGSpace repository can be entered.</li></ul> ">
+    </app-alert-status>
+    <app-alert-status *ngIf="validateCheckBoxes()" [description]="validateCheckBoxes()" status="warning">
+    </app-alert-status>
+    <div class="evidences">
+        <div class="evidence evidenceItem" *ngFor="let evidence of this.evidencesBody.evidences; let i=index">
+            <app-evidence-item [evidence]="evidence" [index]="i+1" (deleteEvent)="deleteEvidence(i)">
+            </app-evidence-item>
+        </div>
+    </div>
+    <app-no-data-text *ngIf="!this.evidencesBody?.evidences?.length" title="No evidence added"></app-no-data-text>
+    <app-add-button name="Add CGSpace evidence" (clickEvent)="addEvidence()"
+        *ngIf="this.evidencesBody?.evidences?.length <3"></app-add-button>
+
+    <br><br>
+    <app-pr-field-header label="Supplementary information" [required]="false"></app-pr-field-header>
+    <app-alert-status description="<ul>
+        <li>Submit a maximum of 2 links for supplementary information. This is not QAed.</li></ul> ">
+    </app-alert-status>
+    <div class="evidences">
+        <div class="evidence supp_info" *ngFor="let evidence of this.evidencesBody.supplementary; let i=index">
+            <app-evidence-item [evidence]="evidence" [index]="i+1" [isSuppInfo]="true" (deleteEvent)="deleteLink(i)">
+            </app-evidence-item>
+        </div>
+    </div>
+    <app-no-data-text *ngIf="!this.evidencesBody?.supplementary?.length" title="No links added"></app-no-data-text>
+    <app-add-button name="Add link" (clickEvent)="addLink()" *ngIf="this.evidencesBody?.supplementary?.length < 2">
+    </app-add-button>
+</div>
+
+<app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>

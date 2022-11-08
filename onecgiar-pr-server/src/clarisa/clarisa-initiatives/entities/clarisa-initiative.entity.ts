@@ -41,4 +41,11 @@ export class ClarisaInitiative {
     type: 'boolean',
   })
   active: boolean;
+
+  @Column({
+    name: 'toc_id',
+    type: 'text',
+    nullable: true
+  })
+  toc_id!: string;
 }

@@ -14,6 +14,7 @@ import { HeadersDto } from '../../shared/globalInterfaces/headers.dto';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { MapLegacy } from './dto/map-legacy.dto';
 import { CreateGeneralInformationResultDto } from './dto/create-general-information-result.dto';
+import { CreateResultGeoDto } from './dto/create-result-geo-scope.dto';
 
 @Controller()
 export class ResultsController {
@@ -125,6 +126,26 @@ export class ResultsController {
   async update(@Param('id') id: number) {
     const { message, response, status } =
       await this.resultsService.deleteResult(id);
+    throw new HttpException({ message, response }, status);
+  }
+
+  @Patch('update/geographic/:resiltId')
+  async saveGeographic(
+    @Body() createResultGeoDto: CreateResultGeoDto,
+    @Param('resiltId') resiltId: number
+    ){
+      createResultGeoDto.result_id = resiltId;
+    const { message, response, status } =
+      await this.resultsService.saveGeoScope(createResultGeoDto);
+    throw new HttpException({ message, response }, status);
+  }
+
+  @Get('get/geographic/:resiltId')
+  async getGeographic(
+    @Param('resiltId') resiltId: number
+    ){
+    const { message, response, status } =
+      await this.resultsService.getGeoScope(resiltId);
     throw new HttpException({ message, response }, status);
   }
 }

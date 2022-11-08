@@ -1,0 +1,121 @@
+<app-pr-field-header label="Theory of Change" description="For impact results, mapping to ToC does not apply."
+    [required]="false">
+</app-pr-field-header>
+
+<br>
+
+<div *ngFor="let item of ['INIT-17 SAPLING','INIT-10 F2R-CWANA','INIT-22 TAFS-WCA']">
+    Is this result planned in the <strong>{{item}}</strong> SAPLING ToC?: <strong>No</strong>
+</div>
+
+<br>
+
+<app-pr-field-header label="Which impact area indicators are mapped to this result?"
+    description="At least one impact area should be indicated." [required]="false"></app-pr-field-header>
+
+<div class="impact_areas">
+    <div class="impact_area">
+        <div class="impact_area_title">
+            <img class="icon" src="assets/impact_areas/1.png" alt="" srcset="">
+            <div class="title">Nutrition, health and food security</div>
+        </div>
+
+        <div class="auto_fit_container">
+            <app-pr-multi-select [required]="false" [options]="[{},{},{}]" label="Target"
+                selectedLabel="target(s) selected" optionLabel="Target(s) selected" optionValue="institutions_type_id"
+                placeholder="Select target(s)
+            ">
+            </app-pr-multi-select>
+            <app-pr-multi-select [required]="false" [options]="[{},{},{}]" label="Indicators"
+                selectedLabel="Indicators(s) selected" optionLabel="Indicators(s) selected"
+                optionValue="institutions_type_id" placeholder="Select indicator(s)
+        ">
+            </app-pr-multi-select>
+        </div>
+    </div>
+
+    <hr class="divider-50">
+
+    <div class="impact_area">
+        <div class="impact_area_title">
+            <img class="icon" src="assets/impact_areas/2.png" alt="" srcset="">
+            <div class="title">Poverty reduction, livehoods and jobs</div>
+        </div>
+        <div class="auto_fit_container">
+            <app-pr-multi-select [required]="false" [options]="[{},{},{}]" label="Target"
+                selectedLabel="Target(s) selected" optionLabel="Target(s) selected" optionValue="institutions_type_id"
+                placeholder="Select target(s)
+            ">
+            </app-pr-multi-select>
+            <app-pr-multi-select [required]="false" [options]="[{},{},{}]" label="Indicators"
+                selectedLabel="Indicators(s) selected" optionLabel="Indicators(s) selected"
+                optionValue="institutions_type_id" placeholder="Select indicator(s)
+        ">
+            </app-pr-multi-select>
+        </div>
+    </div>
+
+    <hr class="divider-50">
+
+    <div class="impact_area">
+        <div class="impact_area_title">
+            <img class="icon" src="assets/impact_areas/3.png" alt="" srcset="">
+            <div class="title">Gender quality, youth and social inclusion</div>
+        </div>
+        <div class="auto_fit_container">
+            <app-pr-multi-select [required]="false" [options]="[{},{},{}]" label="Target"
+                selectedLabel="Target(s) selected" optionLabel="Target(s) selected" optionValue="institutions_type_id"
+                placeholder="Select target(s)
+            ">
+            </app-pr-multi-select>
+            <app-pr-multi-select [required]="false" [options]="[{},{},{}]" label="Indicators"
+                selectedLabel="Indicators(s) selected" optionLabel="Indicators(s) selected"
+                optionValue="institutions_type_id" placeholder="Select indicator(s)
+        ">
+            </app-pr-multi-select>
+        </div>
+
+    </div>
+
+    <hr class="divider-50">
+
+    <div class="impact_area">
+        <div class="impact_area_title">
+            <img class="icon" src="assets/impact_areas/4.png" alt="" srcset="">
+            <div class="title">Climate adaption and mitigation</div>
+        </div>
+        <div class="auto_fit_container">
+            <app-pr-multi-select [required]="false" [options]="[{},{},{}]" label="Target"
+                selectedLabel="Target(s) selected" optionLabel="Target(s) selected" optionValue="institutions_type_id"
+                placeholder="Select target(s)
+            ">
+            </app-pr-multi-select>
+            <app-pr-multi-select [required]="false" [options]="[{},{},{}]" label="Indicators"
+                selectedLabel="Indicators(s) selected" optionLabel="Indicators(s) selected"
+                optionValue="institutions_type_id" placeholder="Select indicator(s)
+        ">
+            </app-pr-multi-select>
+        </div>
+    </div>
+
+    <hr class="divider-50">
+
+    <div class="impact_area">
+        <div class="impact_area_title">
+            <img class="icon" src="assets/impact_areas/5.png" alt="" srcset="">
+            <div class="title">Environmental health and biodiversity</div>
+        </div>
+        <div class="auto_fit_container">
+            <app-pr-multi-select [required]="false" [options]="[{},{},{}]" label="Target"
+                selectedLabel="Target(s) selected" optionLabel="Target(s) selected" optionValue="institutions_type_id"
+                placeholder="Select target(s)
+            ">
+            </app-pr-multi-select>
+            <app-pr-multi-select [required]="false" [options]="[{},{},{}]" label="Indicators"
+                selectedLabel="Indicators(s) selected" optionLabel="Indicators(s) selected"
+                optionValue="institutions_type_id" placeholder="Select indicator(s)
+        ">
+            </app-pr-multi-select>
+        </div>
+    </div>
+</div>

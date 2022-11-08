@@ -1,4 +1,9 @@
 import { Component } from '@angular/core';
+import { ApiService } from '../../../../../../shared/services/api/api.service';
+import { environment } from '../../../../../../../environments/environment.prod';
+import { GeographicLocationBody } from './models/geographicLocationBody';
+import { ResultLevelService } from '../../../result-creator/services/result-level.service';
+import { RegionsCountriesService } from '../../../../../../shared/services/global/regions-countries.service';
 
 @Component({
   selector: 'app-rd-geographic-location',
@@ -6,5 +11,58 @@ import { Component } from '@angular/core';
   styleUrls: ['./rd-geographic-location.component.scss']
 })
 export class RdGeographicLocationComponent {
-  constructor() {}
+  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public regionsCountriesSE: RegionsCountriesService) {}
+  geographicLocationBody = new GeographicLocationBody();
+  UNM49 = 'https://unstats.un.org/unsd/methodology/m49/';
+  ISO3166 = 'https://www.iso.org/iso-3166-country-codes.html';
+  geographic_focus = [
+    {
+      name: 'Global',
+      id: 1
+    },
+    {
+      name: 'Regional',
+      id: 2
+    },
+    {
+      name: 'National',
+      id: 3
+    },
+    {
+      name: 'This is yet to be determined',
+      id: 4
+    }
+  ];
+  ngOnInit(): void {
+    this.showAlerts();
+    this.getSectionInformation();
+  }
+  getSectionInformation() {
+    this.api.resultsSE.GET_geographicSection().subscribe(({ response }) => {
+      this.geographicLocationBody = response;
+      console.log(response);
+    });
+  }
+  onSaveSection() {
+    console.log(this.geographicLocationBody);
+    this.api.resultsSE.PATCH_geographicSection(this.geographicLocationBody).subscribe(({ response }) => {
+      this.api.alertsFe.show({ id: 'sectionSaved', title: 'Section saved correctly', description: '', status: 'success', closeIn: 500 });
+      this.getSectionInformation();
+    });
+  }
+  showAlerts() {
+    this.api.alertsFs.show({
+      status: 'success',
+      title: 'sd',
+      description: `Select the geographical locations where this result is taking place. Please be as specific as possible and do not forget to include the locations coming from any Bilateral contributing to this result.`,
+      querySelector: '#alert',
+      position: 'beforeend'
+    });
+  }
+  thereAnyRegionText() {
+    return `The list of regions below follows the <a href='${this.UNM49}' class="open_route" target='_blank'>UN (M.49)<a> standard`;
+  }
+  thereAnycountriesText() {
+    return `The list of countries below follows the <a href='${this.ISO3166}' class="open_route" target='_blank'>ISO 3166<a> standard`;
+  }
 }

@@ -1,12 +1,12 @@
 export class CreateClarisaConnectionDto {
-    name: string;
-    acronym: string;
-    institutionTypeCode: number;
-    hqCountryIso: string; 
-    websiteLink: string;
-    requestSource: string;
-    misAcronym?: string = "PRMS"; 
-    externalUserMail?: string;
-    externalUserName?: string;
-    externalUserComments: string;
+    public name: string;
+    public acronym: string;
+    public institutionTypeCode: number;
+    public hqCountryIso: string; 
+    public websiteLink: string;
+    public requestSource: string;
+    public misAcronym?: string = "PRMS"; 
+    public externalUserMail?: string;
+    public externalUserName?: string;
+    public externalUserComments: string;
 }

@@ -73,12 +73,13 @@ export class ResultByInstitutionsByDeliveriesTypeRepository extends Repository<R
     }
   }
 
-  async inactiveResultDeLivery(resultByInstitution: number, deliveryType: number[]){
+  async inactiveResultDeLivery(resultByInstitution: number, deliveryType: number[], userId: number){
+    deliveryType = deliveryType? deliveryType: [];
     const updateInactive = `
     update result_by_institutions_by_deliveries_type 
     set is_active = 0,
     	last_updated_date  = NOW(),
-    	last_updated_by = 1
+    	last_updated_by = ?
     	where is_active > 0
     		and result_by_institution_id = ?
     		and partner_delivery_type_id not in (${deliveryType.toString()});
@@ -88,7 +89,7 @@ export class ResultByInstitutionsByDeliveriesTypeRepository extends Repository<R
     update result_by_institutions_by_deliveries_type 
     set is_active = 1,
     	last_updated_date  = NOW(),
-    	last_updated_by = 1
+    	last_updated_by = ?
     	where result_by_institution_id = ?
     		and partner_delivery_type_id in (${deliveryType.toString()});
     `;
@@ -97,21 +98,21 @@ export class ResultByInstitutionsByDeliveriesTypeRepository extends Repository<R
     update result_by_institutions_by_deliveries_type 
     set is_active = 0,
     	last_updated_date  = NOW(),
-    	last_updated_by = 1
+    	last_updated_by = ?
     	where result_by_institution_id = ?;
     `;
     try {
       if(deliveryType.length){
         const resultInactive = await this.query(updateInactive, [
-          resultByInstitution
+          userId, resultByInstitution
           ]);
 
           return await this.query(updateActive, [
-          resultByInstitution
+            userId, resultByInstitution
           ]);
       }else{
         return await this.query(inactiveAll, [
-          resultByInstitution
+          userId, resultByInstitution
           ]);
       }
 

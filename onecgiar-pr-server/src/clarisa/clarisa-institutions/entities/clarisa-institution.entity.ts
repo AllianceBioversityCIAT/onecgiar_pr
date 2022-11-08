@@ -6,6 +6,8 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { ClarisaInstitutionsType } from '../../clarisa-institutions-type/entities/clarisa-institutions-type.entity';
+import { ClarisaRegion } from '../../clarisa-regions/entities/clarisa-region.entity';
+import { ClarisaCountry } from '../../clarisa-countries/entities/clarisa-country.entity';
 
 @Entity('clarisa_institutions')
 export class ClarisaInstitution {
@@ -37,4 +39,12 @@ export class ClarisaInstitution {
     name: 'institution_type_code',
   })
   institution_type_code: number;
+
+  @ManyToOne(() => ClarisaCountry, cr => cr.iso_alpha_2, {nullable: true})
+  @JoinColumn({
+    name: 'headquarter_country_iso2',
+    referencedColumnName:'iso_alpha_2'
+  })
+  headquarter_country_iso2: number;
+
 }

@@ -18,6 +18,8 @@ export class PrYesOrNotComponent {
   @Input() description: string;
   @Input() readOnly: boolean;
   @Input() required: boolean = true;
+  @Input() hideOptions: boolean;
+
   private _value: boolean;
 
   get value() {

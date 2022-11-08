@@ -23,4 +23,25 @@ export class ClarisaCountriesRepository extends Repository<ClarisaCountry> {
       };
     }
   }
+
+  async getAllCountries() {
+    const queryData = `
+    select 
+    cc.id,
+    cc.name,
+    cc.iso_alpha_2,
+    cc.iso_alpha_3
+    from clarisa_countries cc 
+    `;
+    try {
+      const countries = await this.query(queryData);
+      return countries;
+    } catch (error) {
+      throw {
+        message: `[${ClarisaCountriesRepository.name}] => getAllCountries error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
 }

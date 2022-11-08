@@ -9,6 +9,40 @@
     }
 
     .p-fluid {
-        width: 500px;
+        width: 100%;
+    }
+}
+
+.flags {
+    padding-left: 25px;
+}
+
+.option {
+    position: relative;
+
+    img {
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 20px;
+    }
+}
+
+.selected {
+    color: var(--pr-color-primary) !important;
+}
+
+.select-disable {
+    background-color: rgb(245, 245, 245) !important;
+    cursor: not-allowed;
+
+    .text {
+        color: gray;
+    }
+
+    .options {
+        opacity: 0;
+        pointer-events: none;
     }
 }

@@ -36,6 +36,11 @@ import { ClarisaInstitutionsTypeRepository } from '../../clarisa/clarisa-institu
 import { GenderTagRepository } from './gender_tag_levels/genderTag.repository';
 import { ResultsByInstitution } from './results_by_institutions/entities/results_by_institution.entity';
 import { ResultsByInstitutionType } from './results_by_institution_types/entities/results_by_institution_type.entity';
+import { CreateResultGeoDto } from './dto/create-result-geo-scope.dto';
+import { ResultRegionsService } from './result-regions/result-regions.service';
+import { ResultCountriesService } from './result-countries/result-countries.service';
+import { ResultRegionRepository } from './result-regions/result-regions.repository';
+import { ResultCountryRepository } from './result-countries/result-countries.repository';
 
 @Injectable()
 export class ResultsService {
@@ -57,7 +62,11 @@ export class ResultsService {
     private readonly _resultLegacyRepository: ResultLegacyRepository,
     private readonly _clarisaInstitutionsRepository: ClarisaInstitutionsRepository,
     private readonly _clarisaInstitutionsTypeRepository: ClarisaInstitutionsTypeRepository,
+    private readonly _resultRegionsService: ResultRegionsService,
+    private readonly _resultCountriesService: ResultCountriesService,
     private readonly _genderTagRepository: GenderTagRepository,
+    private readonly _resultRegionRepository: ResultRegionRepository,
+    private readonly _resultCountryRepository: ResultCountryRepository
   ) {}
 
   /**
@@ -677,6 +686,50 @@ export class ResultsService {
           institutions_type:institutionsType,
           krs_url: result.krs_url ?? null,
           is_krs: result.is_krs? true: false
+        },
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async saveGeoScope(createResultGeo: CreateResultGeoDto){
+    try {
+      await this._resultRegionsService.create(createResultGeo);
+      await this._resultCountriesService.create(createResultGeo);
+
+      return {
+        response: createResultGeo,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async getGeoScope(resultId: number){
+    try {
+      const regions = await this._resultRegionRepository.getResultRegionByResultId(resultId);
+      const contries = await this._resultCountryRepository.getResultCountriesByResultId(resultId);
+      const result = await this._resultRepository.getResultById(resultId);
+      let scope: number = 0;
+      if(result.geographic_scope_id == 1 || result.geographic_scope_id == 2){
+        scope = result.geographic_scope_id;
+      }else if(result.geographic_scope_id == 3 || result.geographic_scope_id == 4){
+        scope = 3;
+      }else{
+        scope = 4;
+      }
+      return {
+        response: {
+          regions: regions,
+          countries: contries,
+          scope_id: scope,
+          has_countries: result?.has_countries?true:false ?? null,
+          has_regions: result?.has_regions?true:false ?? null
         },
         message: 'Successful response',
         status: HttpStatus.OK,

@@ -4,23 +4,28 @@
     <div class="modal_title">Partners Request</div>
     <div class="modal_container">
         <app-pr-input placeholder="Write some..." label="Acronym" type="text" [required]="false"
-            [(ngModel)]="this.partnersRequestBody.name">
+            [(ngModel)]="this.partnersRequestBody.acronym">
         </app-pr-input>
         <app-pr-input placeholder="Write some..." label="Name" type="text" [(ngModel)]="this.partnersRequestBody.name">
         </app-pr-input>
-        <app-pr-select class="segment_title_margin" [options]="[1,1,1]" label="Type"
-            optionLabel="official_code_short_name" optionValue="initiative_id"
-            [(ngModel)]="this.partnersRequestBody.name">
+        <app-pr-select class="segment_title_margin" [options]="this.institutionsService.institutionsTypesList"
+            label="Type" optionLabel="institutions_type_name" optionValue="institutions_type_id"
+            [(ngModel)]="this.partnersRequestBody.institutionTypeCode" placeholder="Select type">
         </app-pr-select>
-        <app-pr-select class="segment_title_margin" [options]="[1,1,1]" label="Headquarter country"
-            optionLabel="official_code_short_name" optionValue="initiative_id"
-            [(ngModel)]="this.partnersRequestBody.name">
+        <app-pr-select class="segment_title_margin" [options]="this.regionsCountriesSE.countriesList"
+            flagsCode="iso_alpha_2" label="Headquarter country" optionLabel="full_name" optionValue="iso_alpha_2"
+            placeholder="Select Headquarter country" [(ngModel)]="this.partnersRequestBody.hqCountryIso">
         </app-pr-select>
         <app-pr-input placeholder="Write some..." label="Website" type="text" [required]="false"
-            [(ngModel)]="this.partnersRequestBody.name">
+            [(ngModel)]="this.partnersRequestBody.websiteLink">
         </app-pr-input>
-        <app-pr-input placeholder="Write some..." label="RequestSource" type="text"
-            [(ngModel)]="this.partnersRequestBody.name">
-        </app-pr-input>
+
+
     </div>
+    <div class="buttons">
+        <app-pr-button padding="medium" text="Cancel" icon="cancel_schedule_send"
+            (click)="this.api.dataControlSE.showPartnersRequest = false;" colorType="secondary"></app-pr-button>
+        <app-pr-button padding="medium" text="Request" icon="send" (click)="onRequestPartner()"></app-pr-button>
+    </div>
+
 </p-dialog>

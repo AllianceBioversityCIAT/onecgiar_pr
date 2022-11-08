@@ -13,7 +13,9 @@ export class ClarisaCountry {
 
   @Column({
     name: 'iso_alpha_2',
-    type: 'text',
+    type: 'varchar',
+    length: 5,
+    unique: true
   })
   iso_alpha_2: string;
 

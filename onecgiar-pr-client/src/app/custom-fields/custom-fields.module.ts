@@ -20,11 +20,19 @@ import { PrCheckboxComponent } from './pr-checkbox/pr-checkbox.component';
 import { CheckboxModule } from 'primeng/checkbox';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { ListFilterByTextAndAttrPipe } from './pr-multi-select/pipes/list-filter-by-text-and-attr.pipe';
+import { SaveButtonComponent } from './save-button/save-button.component';
+import { PrButtonComponent } from './pr-button/pr-button.component';
+import { AlertStatusComponent } from './alert-status/alert-status.component';
+import { EditOrDeleteItemButtonComponent } from './edit-or-delete-item-button/edit-or-delete-item-button.component';
+import { AddButtonComponent } from './add-button/add-button.component';
+import { NoDataTextComponent } from './no-data-text/no-data-text.component';
+import { PrRangeLevelComponent } from './pr-range-level/pr-range-level.component';
+import { UnderConstructionPointComponent } from './under-construction-point/under-construction-point.component';
 
-const fieldComponents = [PrInputComponent, PrSelectComponent, PrRadioButtonComponent, DetailSectionTitleComponent, PrMultiSelectComponent, PrFieldHeaderComponent, PrYesOrNotComponent, PrTextareaComponent, PrCheckboxComponent];
+const fieldComponents = [PrInputComponent, PrSelectComponent, PrRadioButtonComponent, DetailSectionTitleComponent, PrMultiSelectComponent, PrFieldHeaderComponent, PrYesOrNotComponent, PrTextareaComponent, PrCheckboxComponent, SaveButtonComponent, PrButtonComponent, AlertStatusComponent, EditOrDeleteItemButtonComponent, NoDataTextComponent, AddButtonComponent, PrRangeLevelComponent];
 
 @NgModule({
-  declarations: [...fieldComponents, PrFieldValidationsComponent, PrWordCounterComponent, ListFilterByTextAndAttrPipe],
+  declarations: [...fieldComponents, PrFieldValidationsComponent, PrWordCounterComponent, ListFilterByTextAndAttrPipe, UnderConstructionPointComponent],
   exports: [...fieldComponents, FormsModule],
   imports: [CommonModule, FormsModule, InputTextModule, DropdownModule, RadioButtonModule, MultiSelectModule, InputTextareaModule, CheckboxModule, ScrollingModule]
 })

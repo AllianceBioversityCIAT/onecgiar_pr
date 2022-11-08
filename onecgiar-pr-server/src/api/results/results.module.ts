@@ -33,6 +33,15 @@ import { ClarisaInstitutionsRepository } from '../../clarisa/clarisa-institution
 import { ClarisaInstitutionsTypeRepository } from '../../clarisa/clarisa-institutions-type/ClariasaInstitutionsType.repository';
 import { PartnerDeliveryTypeModule } from './partner-delivery-type/partner-delivery-type.module';
 import { ResultByInstitutionsByDeliveriesTypeModule } from './result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.module';
+import { ResultRegionsModule } from './result-regions/result-regions.module';
+import { ResultCountriesModule } from './result-countries/result-countries.module';
+import { LinkedResultsModule } from './linked-results/linked-results.module';
+import { ResultsTocResultsModule } from './results-toc-results/results-toc-results.module';
+import { NonPooledProjectsModule } from './non-pooled-projects/non-pooled-projects.module';
+import { ResultsCentersModule } from './results-centers/results-centers.module';
+import { ResultsKnowledgeProductsModule } from './results-knowledge-products/results-knowledge-products.module';
+import { TocResult } from '../../toc/toc-results/entities/toc-result.entity';
+import { TocLevel } from '../../toc/toc-level/entities/toc-level.entity';
 
 @Module({
   controllers: [ResultsController],
@@ -56,6 +65,13 @@ import { ResultByInstitutionsByDeliveriesTypeModule } from './result-by-institut
     ResultByLevelModule,
     PartnerDeliveryTypeModule,
     ResultByInstitutionsByDeliveriesTypeModule,
+    ResultRegionsModule,
+    ResultCountriesModule,
+    LinkedResultsModule,
+    ResultsTocResultsModule,
+    NonPooledProjectsModule,
+    ResultsCentersModule,
+    ResultsKnowledgeProductsModule
   ],
   providers: [
     ResultsService,
@@ -74,6 +90,10 @@ export class ResultsModule implements NestModule {
     consumer.apply(JwtMiddleware).forRoutes(
       {
         path: '/api/results/*',
+        method: RequestMethod.ALL,
+      },
+      {
+        path: '/api/clarisa/*',
         method: RequestMethod.ALL,
       }
     );

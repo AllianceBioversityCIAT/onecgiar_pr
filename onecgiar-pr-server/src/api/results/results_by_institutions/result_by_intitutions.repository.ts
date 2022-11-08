@@ -141,7 +141,7 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
       const completeUser: ResultsByInstitution[] = await this.query(queryData, [
         resultId, isActor?1:2, institutionsId
       ]);
-      return completeUser.length ? completeUser[0] : undefined;
+      return completeUser?.length? completeUser[0]: undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByIntitutionsRepository.name,
@@ -151,9 +151,8 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     }
   }
 
-  async updateIstitutions(resultId: number, institutionsArray: institutionsInterface[], isActor: boolean, userId: number) {
-    console.log(institutionsArray)
-    const institutions = institutionsArray.map(el => el.institutions_id);
+  async updateIstitutions(resultId: number, institutionsArray: institutionsInterface[], isActor: boolean, userId: number, applicablePartner: boolean = false) {
+    const institutions = !applicablePartner?institutionsArray.map(el => el.institutions_id):[];
     const upDateInactive = `
     update results_by_institution 
     set is_active = 0, 
@@ -185,12 +184,8 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
       and institution_roles_id = ?;
     `;
 
-    console.log(upDateInactive)
-    console.log(upDateActive)
-    console.log(upDateAllInactive)
-
     try {
-      if(institutions.length){
+      if(institutions?.length){
         const upDateInactiveResult = await this.query(upDateInactive, [
           userId, resultId, isActor?1:2
         ]);
@@ -199,6 +194,7 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
           userId, resultId, isActor?1:2
         ]);
       }else{
+        console.log('entro')
         return await this.query(upDateAllInactive, [
           userId, resultId, isActor?1:2
         ]);

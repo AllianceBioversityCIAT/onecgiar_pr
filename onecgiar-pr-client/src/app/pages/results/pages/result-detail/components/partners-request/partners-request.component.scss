@@ -10,4 +10,17 @@
 
 .modal_container {
     padding: 20px 70px 80px 70px;
+    width: 100vw !important;
+    max-width: 600px !important;
+}
+
+.buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    width: 100%;
+    // border: 1px solid red;
+    margin-top: -50px;
+    padding-right: 50px;
+    padding-bottom: 10px;
 }

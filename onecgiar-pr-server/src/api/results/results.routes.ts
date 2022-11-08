@@ -9,6 +9,11 @@ import { ResultTypesModule } from './result_types/result_types.module';
 import { VersionsModule } from './versions/versions.module';
 import { ResultByLevelModule } from './result-by-level/result-by-level.module';
 import { PartnerDeliveryTypeModule } from './partner-delivery-type/partner-delivery-type.module';
+import { ResultCountry } from './result-countries/entities/result-country.entity';
+import { LinkedResultsModule } from './linked-results/linked-results.module';
+import { EvidencesModule } from './evidences/evidences.module';
+import { ResultsKnowledgeProductsModule } from './results-knowledge-products/results-knowledge-products.module';
+import { TocResult } from '../../toc/toc-results/entities/toc-result.entity';
 
 export const ResultsRoutes: Routes = [
   {
@@ -49,6 +54,22 @@ export const ResultsRoutes: Routes = [
   },
   {
     path: 'partner-delivery-type',
-    module: PartnerDeliveryTypeModule
+    module: PartnerDeliveryTypeModule,
+  },
+  {
+    path: 'result-countries',
+    module: ResultCountry,
+  },
+  {
+    path: 'linked',
+    module: LinkedResultsModule,
+  },
+  {
+    path: 'evidences',
+    module: EvidencesModule,
+  },
+  {
+    path: 'results-knowledge-products',
+    module: ResultsKnowledgeProductsModule,
   }
 ];

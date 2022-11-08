@@ -27,7 +27,9 @@ export class ResultRepository extends Repository<Result> {
     	ci.name as init_name,
     	ci.official_code,
     	r.title,
-    	r.description
+    	r.description,
+      r.no_applicable_partner,
+      r.geographic_scope_id 
     FROM \`result\` r 
     	inner join results_by_inititiative rbi on rbi.result_id = r.id 
     											and rbi.is_active > 0
@@ -70,7 +72,9 @@ export class ResultRepository extends Repository<Result> {
     ci.official_code AS submitter,
     ci.id AS submitter_id,
     r.status,
-    IF(r.status = 0, 'Editing', 'Submitted') AS status_name
+    IF(r.status = 0, 'Editing', 'Submitted') AS status_name,
+    r.no_applicable_partner,
+    if(r.geographic_scope_id in (3, 4), 3, r.geographic_scope_id ) as geographic_scope_id
 FROM
     result r
     INNER JOIN result_type rt ON rt.id = r.result_type_id
@@ -94,6 +98,43 @@ WHERE
     }
   }
 
+  /*async getResultsById(id: number) {
+    const queryData = `
+    SELECT
+    r.id,
+    r.title,
+    r.reported_year_id AS reported_year,
+    rt.name AS result_type,
+    r.created_date,
+    ci.official_code AS submitter,
+    ci.id AS submitter_id,
+    r.status,
+    IF(r.status = 0, 'Editing', 'Submitted') AS status_name,
+    r.no_applicable_partner
+FROM
+    result r
+    INNER JOIN result_type rt ON rt.id = r.result_type_id
+    INNER JOIN results_by_inititiative rbi ON rbi.result_id = r.id
+    INNER JOIN clarisa_initiatives ci ON ci.id = rbi.inititiative_id
+WHERE
+    r.is_active > 0
+    AND rbi.is_active > 0
+    AND ci.active > 0
+    AND r.id = ?;
+    `;
+
+    try {
+      const results: any[] = await this.query(queryData, [id]);
+      return results;
+    } catch (error) {
+      throw {
+        message: `[${ResultRepository.name}] => getResultsById error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }*/
+
   async AllResultsByRoleUsers(userid: number) {
     const queryData = `
     SELECT
@@ -110,7 +151,9 @@ WHERE
     r2.id as role_id,
     r2.description as role_name,
     if(y.\`year\` = r.reported_year_id, 'New', '') as is_new,
-    r.result_level_id
+    r.result_level_id,
+    r.no_applicable_partner,
+    if(r.geographic_scope_id in (3, 4), 3, r.geographic_scope_id ) as geographic_scope_id
 FROM
     \`result\` r
     INNER JOIN result_type rt ON rt.id = r.result_type_id
@@ -250,11 +293,19 @@ WHERE
     r.created_date,
     r.result_level_id,
     r.title,
-    r.legacy_id 
+    r.legacy_id,
+    r.no_applicable_partner,
+    r.geographic_scope_id,
+    rl.name as result_level_name,
+    rt.name as result_type_name,
+    r.has_regions,
+    r.has_countries 
 FROM
     result r
     inner join results_by_inititiative rbi ON rbi.result_id = r.id 
     									and rbi.is_active > 0
+    inner join result_level rl on rl.id = r.result_level_id 
+    inner join result_type rt on rt.id = r.result_type_id 
 WHERE
     r.is_active > 0
     and r.id = ?;
@@ -294,7 +345,10 @@ WHERE
     r.legacy_id,
     r.climate_change_tag_level_id,
     r.is_krs,
-    r.krs_url
+    r.krs_url,
+    r.no_applicable_partner,
+    r.geographic_scope_id,
+    if(r.geographic_scope_id in (3, 4), 3, r.geographic_scope_id ) as geographic_scope_id
 FROM
     result r
     inner join results_by_inititiative rbi ON rbi.result_id = r.id 

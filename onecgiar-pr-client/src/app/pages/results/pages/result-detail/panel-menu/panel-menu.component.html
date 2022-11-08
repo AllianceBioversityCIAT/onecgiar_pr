@@ -12,11 +12,12 @@
         <a *ngFor="let navOption of navigationOptions | panelMenu:this.resultLevelSE.currentResultTypeId; let i=index"
           [routerLink]="'/result/result-detail/'+this.resultsListSE.currentResultId+'/' + navOption.path"
           routerLinkActive="section_active">{{i+1}}.
-          {{navOption.prName }} <img class="under_construction" src="assets/work-in-progress.png" alt="" srcset=""> </a>
+          {{navOption.prName }} <img *ngIf="navOption.underConstruction === true" class="under_construction"
+            src="assets/work-in-progress.png" alt="" srcset=""> </a>
       </div>
     </div>
   </div>
   <div class="submit_button">
-    <app-pr-button text="Submit"></app-pr-button>
+    <app-pr-button [ngClass]="{'globalDisabled': true}" text="Submit"></app-pr-button>
   </div>
 </div>
