@@ -8,6 +8,10 @@ export class ResultsTocResultsService {
     return 'This action adds a new resultsTocResult';
   }
 
+  async createToc(){
+
+  }
+
   findAll() {
     return `This action returns all resultsTocResults`;
   }
