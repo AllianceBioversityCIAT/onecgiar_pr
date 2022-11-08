@@ -20,9 +20,9 @@ export class TocResultsService {
     return `This action returns all tocResults`;
   }
 
-  async findAllByinitiativeId(initiativeId: number, levelId: number) {
+  async findAllByinitiativeId(resultId: number, levelId: number) {
     try {
-      const tocResults = await this._tocResultsRepository.getAllTocResultsByInitiative(initiativeId, levelId);
+      const tocResults = await this._tocResultsRepository.getAllTocResultsByInitiative(resultId, levelId);
       if(!tocResults.length){
         throw {
           response: {},

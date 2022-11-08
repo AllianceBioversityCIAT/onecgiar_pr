@@ -49,7 +49,7 @@ export class TocResultsRepository extends Repository<TocResult> {
     }
   }
 
-  async getAllTocResultsByInitiative(initId: number, tocLevel: number) {
+  async getAllTocResultsByInitiative(resultId: number, tocLevel: number) {
     const queryData = `
     select 
       tr.toc_result_id ,
@@ -61,11 +61,13 @@ export class TocResultsRepository extends Repository<TocResult> {
       tr.inititiative_id ,
       tr.work_package_id 
     from toc_result tr
-    where tr.inititiative_id = ?
+    inner join results_by_inititiative rbi on rbi.inititiative_id = tr.inititiative_id 
+										and rbi.initiative_role_id = 1
+	  where rbi.result_id = ?
     	and tr.toc_level_id = ?;
     `;
     try {
-      const tocResult:TocResult[] = await this.query(queryData, [initId, tocLevel]);
+      const tocResult:TocResult[] = await this.query(queryData, [resultId, tocLevel]);
       return tocResult;
     } catch (error) {
       throw {
