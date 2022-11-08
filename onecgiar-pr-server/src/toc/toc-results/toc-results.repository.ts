@@ -110,5 +110,27 @@ export class TocResultsRepository extends Repository<TocResult> {
       };
     }
   }
+
+  async getFullInitiativeTocByResult(resultId: number) {
+    const queryData = `
+    select 
+      rbi.result_id,
+      rbi.inititiative_id,
+      ci.toc_id 
+      from results_by_inititiative rbi 
+      inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id
+      where rbi.result_id = ?;
+    `;
+    try {
+      const tocid = await this.query(queryData, [resultId]);
+      return tocid;
+    } catch (error) {
+      throw {
+        message: `[${TocResultsRepository.name}] => getTocIdFromOst error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
 }
 

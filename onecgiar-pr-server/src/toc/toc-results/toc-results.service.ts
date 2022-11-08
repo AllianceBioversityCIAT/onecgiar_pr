@@ -41,6 +41,27 @@ export class TocResultsService {
     }
   }
 
+  async findFullInitiativeTocByResult(resultId: number) {
+    try {
+      const tocResults = await this._tocResultsRepository.getFullInitiativeTocByResult(resultId);
+      if(!tocResults.length){
+        throw {
+          response: {},
+          message: 'ToC Results Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      return {
+        response: tocResults,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
   update(id: number, updateTocResultDto: UpdateTocResultDto) {
     return `This action updates a #${id} tocResult`;
   }
