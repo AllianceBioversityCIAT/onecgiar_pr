@@ -15,7 +15,7 @@ export class TocResult {
         type: 'text',
         nullable: true
     })
-    toc_internal_id: string;
+    toc_internal_id!: string;
 
     @Column({
         name: 'titel',
@@ -40,9 +40,9 @@ export class TocResult {
     @Column({
         name: 'toc_type_id',
         type: 'bigint',
-        nullable: false
+        nullable: true
     })
-    toc_type_id: number;
+    toc_type_id!: number;
 
     @ManyToOne(() => ClarisaInitiative, ci => ci.id)
     @JoinColumn({
@@ -51,10 +51,10 @@ export class TocResult {
     inititiative_id: number;
 
     @Column({
-        name: 'work_package_short_title',
+        name: 'work_package_id',
         type: 'text',
         nullable: true
     })
-    work_package_short_title: string;
+    work_package_id!: string;
 
 }
