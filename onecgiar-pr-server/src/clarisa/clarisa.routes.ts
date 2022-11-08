@@ -10,6 +10,7 @@ import { ClarisaMeliaStudyTypeModule } from './clarisa-melia-study-type/clarisa-
 import { ClarisaCountriesModule } from './clarisa-countries/clarisa-countries.module';
 import { ClarisaRegionsModule } from './clarisa-regions/clarisa-regions.module';
 import { ClarisaGeographicScopesModule } from './clarisa-geographic-scopes/clarisa-geographic-scopes.module';
+import { ClarisaCentersModule } from './clarisa-centers/clarisa-centers.module';
 
 export const ClarisaRoutes: Routes = [
   {
@@ -55,5 +56,9 @@ export const ClarisaRoutes: Routes = [
   {
     path: 'geographic-scope',
     module: ClarisaGeographicScopesModule
+  },
+  {
+    path: 'centers',
+    module: ClarisaCentersModule
   }
 ];
