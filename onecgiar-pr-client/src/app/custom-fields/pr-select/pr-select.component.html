@@ -9,12 +9,13 @@
         </p-dropdown>
     </div>
 </div> -->
-
+<!-- 
 <div class="field_container">
     <div class="p-fluid">
         <p-dropdown *ngIf="this.options.length" [autoDisplayFirst]="false" [options]="this.options"
-            [virtualScroll]="true" [virtualScrollItemSize]="30" [optionLabel]="this.optionLabel"
-            [optionValue]="this.optionValue" [(ngModel)]="value" [placeholder]="this.placeholder">
+            [dataKey]="this.optionValue" [virtualScroll]="true" [virtualScrollItemSize]="30"
+            [optionLabel]="this.optionLabel" [optionValue]="this.optionValue" [(ngModel)]="value"
+            [placeholder]="this.placeholder">
             <ng-template let-option pTemplate="item">
                 <div class="option" [ngClass]="{'flags': flagsCode}">
                     <img *ngIf="flagsCode" [src]="'https://countryflagsapi.com/png/'+option[this.flagsCode]" alt=""
@@ -24,4 +25,33 @@
             </ng-template>
         </p-dropdown>
     </div>
+</div> -->
+<div class="custom_select">
+    <a class="field" tabindex="0" [id]="this.optionValue" [ngClass]="{'select-disable': this.disabled}">
+        <div class="text" [ngClass]="{'select_placeholder': !labelName}">{{labelName? labelName :placeholder}}</div>
+        <i class="pi pi-chevron-down"></i>
+        <div class="remove_focus" (click)="removeFocus()"></div>
+        <div class="options">
+            <div class="search_input_container">
+                <div class="p-input-icon-left p-fluid">
+                    <i class="pi pi-search"></i>
+                    <input type="text" pInputText placeholder="Search" [(ngModel)]="this.searchText" />
+                </div>
+            </div>
+
+            <cdk-virtual-scroll-viewport itemSize="7" class="custom_scroll virtual_scroll">
+                <div *cdkVirtualFor="let option of optionsIntance | listFilterByTextAndAttr:this.optionLabel:this.searchText"
+                    class="option"
+                    [ngClass]="{'disabled': option?.disabled === true, 'selected':option?.selected === true}"
+                    (click)="this.disabled ? null :onSelectOption(option)">
+                    <!-- <p-checkbox [disabled]="option?.disabled" [binary]="true" [(ngModel)]="option.selected">
+                    </p-checkbox> -->
+                    <img *ngIf="flagsCode" [src]="'https://countryflagsapi.com/png/'+option[this.flagsCode]" alt=""
+                        srcset="">
+                    <div class="label">{{option[this.optionLabel]}}</div>
+                    <div class="event"></div>
+                </div>
+            </cdk-virtual-scroll-viewport>
+        </div>
+    </a>
 </div>

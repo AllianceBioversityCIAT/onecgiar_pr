@@ -1,8 +1,3 @@
-<app-pr-field-header label="Which impact area indicators are mapped to this result?"
-    description="At least one impact area should be indicated." [required]="false"></app-pr-field-header>
-
-<br>
-
 <app-pr-field-header label="Theory of Change" description="For impact results, mapping to ToC does not apply."
     [required]="false">
 </app-pr-field-header>
@@ -13,7 +8,10 @@
     Is this result planned in the <strong>{{item}}</strong> SAPLING ToC?: <strong>No</strong>
 </div>
 
-<br><br><br>
+<br>
+
+<app-pr-field-header label="Which impact area indicators are mapped to this result?"
+    description="At least one impact area should be indicated." [required]="false"></app-pr-field-header>
 
 <div class="impact_areas">
     <div class="impact_area">
@@ -23,18 +21,20 @@
         </div>
 
         <div class="auto_fit_container">
-            <app-pr-multi-select [options]="[{},{},{}]" label="Target" selectedLabel="Contributing Initiatives"
-                optionLabel="Target(s) selected" optionValue="institutions_type_id" placeholder="Select initiative(s)
+            <app-pr-multi-select [required]="false" [options]="[{},{},{}]" label="Target"
+                selectedLabel="target(s) selected" optionLabel="Target(s) selected" optionValue="institutions_type_id"
+                placeholder="Select target(s)
             ">
             </app-pr-multi-select>
-            <app-pr-multi-select [options]="[{},{},{}]" label="Indicators" selectedLabel="Contributing Initiatives"
-                optionLabel="Indicators(s) selected" optionValue="institutions_type_id" placeholder="Select initiative(s)
+            <app-pr-multi-select [required]="false" [options]="[{},{},{}]" label="Indicators"
+                selectedLabel="Indicators(s) selected" optionLabel="Indicators(s) selected"
+                optionValue="institutions_type_id" placeholder="Select indicator(s)
         ">
             </app-pr-multi-select>
         </div>
     </div>
 
-    <hr class="divider">
+    <hr class="divider-50">
 
     <div class="impact_area">
         <div class="impact_area_title">
@@ -42,18 +42,20 @@
             <div class="title">Poverty reduction, livehoods and jobs</div>
         </div>
         <div class="auto_fit_container">
-            <app-pr-multi-select [options]="[{},{},{}]" label="Target" selectedLabel="Contributing Initiatives"
-                optionLabel="Target(s) selected" optionValue="institutions_type_id" placeholder="Select initiative(s)
+            <app-pr-multi-select [required]="false" [options]="[{},{},{}]" label="Target"
+                selectedLabel="Target(s) selected" optionLabel="Target(s) selected" optionValue="institutions_type_id"
+                placeholder="Select target(s)
             ">
             </app-pr-multi-select>
-            <app-pr-multi-select [options]="[{},{},{}]" label="Indicators" selectedLabel="Contributing Initiatives"
-                optionLabel="Indicators(s) selected" optionValue="institutions_type_id" placeholder="Select initiative(s)
+            <app-pr-multi-select [required]="false" [options]="[{},{},{}]" label="Indicators"
+                selectedLabel="Indicators(s) selected" optionLabel="Indicators(s) selected"
+                optionValue="institutions_type_id" placeholder="Select indicator(s)
         ">
             </app-pr-multi-select>
         </div>
     </div>
 
-    <hr class="divider">
+    <hr class="divider-50">
 
     <div class="impact_area">
         <div class="impact_area_title">
@@ -61,19 +63,21 @@
             <div class="title">Gender quality, youth and social inclusion</div>
         </div>
         <div class="auto_fit_container">
-            <app-pr-multi-select [options]="[{},{},{}]" label="Target" selectedLabel="Contributing Initiatives"
-                optionLabel="Target(s) selected" optionValue="institutions_type_id" placeholder="Select initiative(s)
+            <app-pr-multi-select [required]="false" [options]="[{},{},{}]" label="Target"
+                selectedLabel="Target(s) selected" optionLabel="Target(s) selected" optionValue="institutions_type_id"
+                placeholder="Select target(s)
             ">
             </app-pr-multi-select>
-            <app-pr-multi-select [options]="[{},{},{}]" label="Indicators" selectedLabel="Contributing Initiatives"
-                optionLabel="Indicators(s) selected" optionValue="institutions_type_id" placeholder="Select initiative(s)
+            <app-pr-multi-select [required]="false" [options]="[{},{},{}]" label="Indicators"
+                selectedLabel="Indicators(s) selected" optionLabel="Indicators(s) selected"
+                optionValue="institutions_type_id" placeholder="Select indicator(s)
         ">
             </app-pr-multi-select>
         </div>
 
     </div>
 
-    <hr class="divider">
+    <hr class="divider-50">
 
     <div class="impact_area">
         <div class="impact_area_title">
@@ -81,18 +85,20 @@
             <div class="title">Climate adaption and mitigation</div>
         </div>
         <div class="auto_fit_container">
-            <app-pr-multi-select [options]="[{},{},{}]" label="Target" selectedLabel="Contributing Initiatives"
-                optionLabel="Target(s) selected" optionValue="institutions_type_id" placeholder="Select initiative(s)
+            <app-pr-multi-select [required]="false" [options]="[{},{},{}]" label="Target"
+                selectedLabel="Target(s) selected" optionLabel="Target(s) selected" optionValue="institutions_type_id"
+                placeholder="Select target(s)
             ">
             </app-pr-multi-select>
-            <app-pr-multi-select [options]="[{},{},{}]" label="Indicators" selectedLabel="Contributing Initiatives"
-                optionLabel="Indicators(s) selected" optionValue="institutions_type_id" placeholder="Select initiative(s)
+            <app-pr-multi-select [required]="false" [options]="[{},{},{}]" label="Indicators"
+                selectedLabel="Indicators(s) selected" optionLabel="Indicators(s) selected"
+                optionValue="institutions_type_id" placeholder="Select indicator(s)
         ">
             </app-pr-multi-select>
         </div>
     </div>
 
-    <hr class="divider">
+    <hr class="divider-50">
 
     <div class="impact_area">
         <div class="impact_area_title">
@@ -100,12 +106,14 @@
             <div class="title">Environmental health and biodiversity</div>
         </div>
         <div class="auto_fit_container">
-            <app-pr-multi-select [options]="[{},{},{}]" label="Target" selectedLabel="Contributing Initiatives"
-                optionLabel="Target(s) selected" optionValue="institutions_type_id" placeholder="Select initiative(s)
+            <app-pr-multi-select [required]="false" [options]="[{},{},{}]" label="Target"
+                selectedLabel="Target(s) selected" optionLabel="Target(s) selected" optionValue="institutions_type_id"
+                placeholder="Select target(s)
             ">
             </app-pr-multi-select>
-            <app-pr-multi-select [options]="[{},{},{}]" label="Indicators" selectedLabel="Contributing Initiatives"
-                optionLabel="Indicators(s) selected" optionValue="institutions_type_id" placeholder="Select initiative(s)
+            <app-pr-multi-select [required]="false" [options]="[{},{},{}]" label="Indicators"
+                selectedLabel="Indicators(s) selected" optionLabel="Indicators(s) selected"
+                optionValue="institutions_type_id" placeholder="Select indicator(s)
         ">
             </app-pr-multi-select>
         </div>

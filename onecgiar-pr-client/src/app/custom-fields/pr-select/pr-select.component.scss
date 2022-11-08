@@ -28,3 +28,21 @@
         width: 20px;
     }
 }
+
+.selected {
+    color: var(--pr-color-primary) !important;
+}
+
+.select-disable {
+    background-color: rgb(245, 245, 245) !important;
+    cursor: not-allowed;
+
+    .text {
+        color: gray;
+    }
+
+    .options {
+        opacity: 0;
+        pointer-events: none;
+    }
+}

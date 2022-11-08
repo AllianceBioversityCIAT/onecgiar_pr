@@ -8,9 +8,8 @@ describe('TocActionAreaOutcomeSectionComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ TocActionAreaOutcomeSectionComponent ]
-    })
-    .compileComponents();
+      declarations: [TocActionAreaOutcomeSectionComponent]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(TocActionAreaOutcomeSectionComponent);
     component = fixture.componentInstance;

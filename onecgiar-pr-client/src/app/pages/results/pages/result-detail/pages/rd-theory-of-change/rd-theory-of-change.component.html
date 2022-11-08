@@ -1,4 +1,4 @@
-<app-detail-section-title sectionName=""></app-detail-section-title>
+<app-detail-section-title sectionName="Contributors"></app-detail-section-title>
 <div class="detail_container">
     <app-alert-status
         description="Initiatives and non-pooled projects that you collaborated with to generated this result/contributed to this result.">
@@ -16,6 +16,7 @@
     </app-alert-status>
     <div class="donors">
         <div class="donor" *ngFor="let donor of this.theoryOfChangeBody.ccc">
+            <app-pr-field-header label="Donor No.1" [required]="false"></app-pr-field-header>
             <app-pr-select class="segment_title_margin" [options]="[{}]" label="Funder name"
                 optionLabel="official_code_short_name" optionValue="initiative_id" placeholder="Select donor"
                 [(ngModel)]="donor.some" [required]="false">
@@ -32,17 +33,19 @@
             <app-edit-or-delete-item-button></app-edit-or-delete-item-button>
         </div>
     </div>
-    <app-add-button name="Contributing Centers" (clickEvent)="addBilateralContribution()"></app-add-button>
+    <app-add-button name="Add non-pooled project" (clickEvent)="addBilateralContribution()"></app-add-button>
     <app-pr-multi-select [options]="[{name:'center-1',id:0},{name:'center-2',id:1},{name:'center-3',id:2}]"
-        label="Select center(s)" selectedLabel="Center(s) selected" optionLabel="name" optionValue="id"
+        label="Contributing Centers" selectedLabel="Center(s) selected" optionLabel="name" optionValue="id"
         [(ngModel)]="this.theoryOfChangeBody.ddd" placeholder="Select initiative(s)
         ">
     </app-pr-multi-select>
+    Please select the primary center by clicking the medal icon <i class="material-icons-round">workspace_premium</i>
     <div class="medal_selector selected_container">
         <div class="centers chips_container">
             <div class="center pr_chip_selected" *ngFor="let center of this.theoryOfChangeBody.ddd">
                 <i class="material-icons-round medal" [ngClass]="{'primary': center.primary}"
                     (click)="addPrimary(center)">workspace_premium</i>
+                <!--TODO add primary text  -->
                 <div class="name">{{center?.name}}</div><i class="material-icons-round">cancel</i>
             </div>
         </div>
@@ -66,3 +69,5 @@
     </div>
 
 </div>
+
+<app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>

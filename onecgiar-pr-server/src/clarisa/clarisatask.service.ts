@@ -27,6 +27,7 @@ import { ClarisaInnovationReadinessLevelRepository } from './clarisa-innovation-
 import { ClarisaInnovationCharacteristicRepository } from './clarisa-innovation-characteristics/clarisa-innovation-characteristics.repository';
 import { lastValueFrom, map } from 'rxjs';
 import { ClarisaGeographicScopeRepository } from './clarisa-geographic-scopes/clarisa-geographic-scopes.repository';
+import { ClarisaActionAreaOutcomeRepository } from './clarisa-action-area-outcome/clarisa-action-area-outcome.repository';
 
 @Injectable()
 export class ClarisaTaskService {
@@ -57,6 +58,7 @@ export class ClarisaTaskService {
     private readonly _clarisaInnovationReadinessLevelRepository: ClarisaInnovationReadinessLevelRepository,
     private readonly _clarisaInnovationCharacteristicRepository: ClarisaInnovationCharacteristicRepository,
     private readonly _clarisaGeographicScopeRepository: ClarisaGeographicScopeRepository,
+    private readonly _clarisaActionAreaOutcomeRepository: ClarisaActionAreaOutcomeRepository,
     private readonly _httpService: HttpService
   ) {}
 
@@ -84,11 +86,12 @@ export class ClarisaTaskService {
     count = await this.cloneClarisaOutcomeIndicators(count);
     count = await this.cloneClarisaRegionsType(count);
     count = await this.cloneClarisaInstitutionsType(count);
-    count = await this.cloneClarisaInstitutions(count);
+    //count = await this.cloneClarisaInstitutions(count);
     count = await this.cloneClarisaPolicyStageRepository(count);
     count = await this.cloneClarisaInnovationTypeRepository(count);
     count = await this.cloneClarisaInnovationReadinessLevelRepository(count);
     count = await this.cloneClarisaInnovationCharacteristicRepository(count);
+    count = await this.cloneClarisaActionAreaOutcomeRepository(count);
     count = await this.cloneClarisaGeographicScope(count);
   }
 
@@ -602,6 +605,39 @@ export class ClarisaTaskService {
     }
   }
 
+  private async cloneClarisaActionAreaOutcomeRepository(position: number, deleteItem = false) {
+    try {
+      if (deleteItem) {
+        const deleteData =
+          await this._clarisaActionAreaOutcomeRepository.deleteAllData();
+        this._logger.warn(
+          `[${position}]: All CLARISA Action Area Outcome control list data has been deleted`,
+        );
+      } else {
+        const { data } = await axios.get(
+          `${this.clarisaHost}action-area-outcomes`,
+          this.configAuth,
+        );
+        data.map(el => {
+          el['id'] = el.outcomeId;
+        })
+        const newData = this.removeDuplicates(data, 'id');
+        console.log(newData)
+        await this._clarisaActionAreaOutcomeRepository.save(newData);
+        this._logger.verbose(
+          `[${position}]: All CLARISA Action Area Outcome control list data has been created`,
+        );
+      }
+      return ++position;
+    } catch (error) {
+      this._logger.error(
+        `[${position}]: Error in manipulating the data of CLARISA Action Area Outcome`,
+      );
+      this._logger.error(error);
+      return ++position;
+    }
+  }
+
   private async cloneClarisaGeographicScope(
     position: number,
     deleteItem = false,
@@ -636,4 +672,19 @@ export class ClarisaTaskService {
       return ++position;
     }
   }
+
+
+  private removeDuplicates(originalArray, prop) {
+    var newArray = [];
+    var lookupObject  = {};
+
+    for(var i in originalArray) {
+       lookupObject[originalArray[i][prop]] = originalArray[i];
+    }
+
+    for(i in lookupObject) {
+        newArray.push(lookupObject[i]);
+    }
+     return newArray;
+}
 }

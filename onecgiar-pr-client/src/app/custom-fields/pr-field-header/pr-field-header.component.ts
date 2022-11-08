@@ -6,6 +6,7 @@ import { Component, Input, OnInit } from '@angular/core';
   styleUrls: ['./pr-field-header.component.scss']
 })
 export class PrFieldHeaderComponent {
+  @Input() simpleStyle: boolean;
   @Input() label: string;
   @Input() description: string;
   @Input() required: boolean = true;
