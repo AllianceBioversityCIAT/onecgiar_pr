@@ -1,4 +1,4 @@
-import { retunFormatService } from '../../../shared/extendsGlobalDTO/retunServices.dto';
-export class returnJwtMiddlewareDto extends retunFormatService{
-    public response: object | {};
+import { returnFormatService } from '../../../shared/extendsGlobalDTO/returnServices.dto';
+export class returnJwtMiddlewareDto extends returnFormatService {
+  public response: object | {};
 }

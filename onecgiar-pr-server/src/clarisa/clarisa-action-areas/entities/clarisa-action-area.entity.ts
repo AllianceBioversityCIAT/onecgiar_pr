@@ -1,5 +1,4 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { ClarisaActionAreasOutcomesIndicator } from '../../clarisa-action-areas-outcomes-indicators/entities/clarisa-action-areas-outcomes-indicator.entity';
+import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('clarisa_action_area')
 export class ClarisaActionArea {
@@ -11,12 +10,4 @@ export class ClarisaActionArea {
 
   @Column({ name: 'description', type: 'text' })
   description: string;
-
-  //RELATIONS
-
-  @OneToMany(
-    () => ClarisaActionAreasOutcomesIndicator,
-    (caaoi) => caaoi.actionArea,
-  )
-  actionAreasOutcomesIndicators: ClarisaActionAreasOutcomesIndicator[];
 }

@@ -1,0 +1,37 @@
+<app-detail-section-title sectionName="Innovation use information"></app-detail-section-title>
+<div class="detail_container">
+    <app-alert-status [description]="alertInfoText()">
+    </app-alert-status>
+    <app-pr-field-header label="Number of people using the innovation, dissagregated by gender"></app-pr-field-header>
+
+    <div class="auto_fit_container">
+        <app-pr-input placeholder="Type quantity" label="Female" type="number" [required]="false"
+            [(ngModel)]="this.innovationUseInfoBody.aaa">
+        </app-pr-input>
+        <app-pr-input placeholder="Type quantity" label="Male" type="number" [required]="false"
+            [(ngModel)]="this.innovationUseInfoBody.bbb">
+        </app-pr-input>
+    </div>
+
+    <app-pr-field-header label="Other quantitative measures of innovation use (e.g. area)" [required]="false">
+    </app-pr-field-header>
+    <br>
+    <div class="other_items">
+        <div class="auto_fit_container other_item" *ngFor="let item of otherList; let i=index">
+            <app-pr-select [options]="[{}]" label="Unit of measure" optionLabel="official_code_short_name"
+                optionValue="initiative_id" placeholder="Select unit of measure"
+                [(ngModel)]="this.innovationUseInfoBody.bbb">
+            </app-pr-select>
+            <app-pr-input placeholder="Type quantity" label="Quantity" type="number" [required]="false"
+                [(ngModel)]="this.innovationUseInfoBody.bbb">
+            </app-pr-input>
+            <app-edit-or-delete-item-button (click)="onRemoveOne(i)"></app-edit-or-delete-item-button>
+        </div>
+    </div>
+
+    <div style="margin-top: 20px;"></div>
+    <app-no-data-text *ngIf="!this.otherList?.length" title="No links added"></app-no-data-text>
+
+    <app-add-button name="Add more" (clickEvent)="onAddMore()"></app-add-button>
+
+</div>

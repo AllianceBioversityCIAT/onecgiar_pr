@@ -11,7 +11,9 @@ export class RoleService {
   create(createRoleDto: CreateRoleDto) {
     try {
       this._roleRepository.create();
-    } catch (error) {}
+    } catch (error) {
+      return createRoleDto;
+    }
   }
 
   findAll() {
@@ -23,7 +25,7 @@ export class RoleService {
   }
 
   update(id: number, updateRoleDto: UpdateRoleDto) {
-    return `This action updates a #${id} role`;
+    return `This action updates a #${id} role ${updateRoleDto}`;
   }
 
   remove(id: number) {

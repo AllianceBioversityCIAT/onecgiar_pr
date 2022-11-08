@@ -1,5 +1,6 @@
 .section_container {
     margin-top: 50px;
+    padding: 50px;
 
     .big_text {
         display: flex;
@@ -29,10 +30,9 @@
             font-size: 2em;
             text-align: center;
             margin-top: 50px;
+            margin-bottom: 40px;
         }
 
-        .primary_action_areas {
-            .action_area {}
-        }
+
     }
 }

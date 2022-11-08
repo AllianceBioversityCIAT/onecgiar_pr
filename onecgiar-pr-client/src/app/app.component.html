@@ -2,3 +2,4 @@
 <app-navigation-bar *ngIf="!this.AuthService.inLogin"></app-navigation-bar>
 <router-outlet></router-outlet>
 <app-external-tools></app-external-tools>
+<app-test-environment-label *ngIf="!isProduction"></app-test-environment-label>

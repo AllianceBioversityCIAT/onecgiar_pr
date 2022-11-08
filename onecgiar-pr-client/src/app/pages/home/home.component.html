@@ -1,16 +1,15 @@
 <div class="section_container">
   <div class="big_text">
-    <div class="hello">Hello <strong>Juan Carlos Cadavid</strong></div>
+    <div class="hello">Hello <strong>{{ this.api.authSE?.localStorageUser?.user_name }}</strong></div>
     <div class="year">2022</div>
   </div>
-  <div class="description">Welcome to the P&R tool. As per your profile, you have not editing permissions to report on any initiatives. Therefore, you are able to access everything in the system, but you are not able to edit anything.</div>
+  <div class="description">Welcome to the {{internationalizationData.global.platformName}}. As per your profile, you
+    have not editing permissions to report on
+    any initiatives. Therefore, you are able to access everything in the system, but you are not able to edit anything.
+  </div>
 
   <div class="result_information">
     <div class="title">Results reported by Action Area</div>
-    <div class="primary_action_areas">
-      <div class="action_area"></div>
-      <div class="action_area"></div>
-      <div class="action_area"></div>
-    </div>
+    <app-action-area-counter></app-action-area-counter>
   </div>
 </div>

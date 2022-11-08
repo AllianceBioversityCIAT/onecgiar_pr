@@ -1,8 +1,10 @@
 import { Routes } from '@nestjs/core';
 import { UserModule } from './user/user.module';
 import { RoleModule } from './role/role.module';
-import { RolesUserByAplicationModule } from './roles-user-by-aplication/roles-user-by-aplication.module';
-import { ComplementaryDataUserModule } from './complementary-data-user/complementary-data-user.module';
+import { RoleByUserModule } from './role-by-user/role-by-user.module';
+import { RoleLevelsModule } from './role-levels/role-levels.module';
+import { RestrictionsByRoleModule } from './restrictions-by-role/restrictions-by-role.module';
+import { RestrictionsModule } from './restrictions/restrictions.module';
 
 export const AuthModulesRoutes: Routes = [
   {
@@ -14,11 +16,19 @@ export const AuthModulesRoutes: Routes = [
     module: RoleModule,
   },
   {
-    path: 'roles-user-by-aplication',
-    module: RolesUserByAplicationModule,
+    path: 'role-by-user',
+    module: RoleByUserModule,
   },
   {
-    path: 'complementary-data-user',
-    module: ComplementaryDataUserModule,
+    path: 'role-levels',
+    module: RoleLevelsModule,
+  },
+  {
+    path: 'restrictions-by-role',
+    module: RestrictionsByRoleModule,
+  },
+  {
+    path: 'restrictions',
+    module: RestrictionsModule,
   },
 ];

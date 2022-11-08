@@ -1,0 +1,25 @@
+<app-detail-section-title sectionName="Policy change information"></app-detail-section-title>
+
+<div class="detail_container">
+    <app-alert-status
+        description="Please fill in the following fields that are required based on the type of this result.">
+    </app-alert-status>
+    <div class="auto_fit_container">
+        <app-pr-select [options]="[{}]" label="Policy type" description="Select policy type"
+            optionLabel="official_code_short_name" optionValue="initiative_id" placeholder="Select policy type">
+        </app-pr-select>
+        <app-pr-input label="Unit of measure" type="number" description="USD amount" placeholder="0">
+        </app-pr-input>
+    </div>
+
+    <app-pr-select [options]="[{}]" label="Stage" description="Select stage" optionLabel="official_code_short_name"
+        optionValue="initiative_id" placeholder="Select stage">
+    </app-pr-select>
+    <app-pr-multi-select [options]="[{}]" label="Whose policy is this? (Implementing organizations)" selectedLabel=""
+        description="Select min 1, max 3 organizations <br> If you don't find the organization you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list."
+        selectedOptionLabel="institutions_name" optionLabel="full_name" optionValue="institutions_id"
+        placeholder="Select organization(s)">
+    </app-pr-multi-select>
+</div>
+
+<app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>

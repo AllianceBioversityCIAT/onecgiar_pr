@@ -6,7 +6,7 @@ import { env } from 'process';
 import { dataSource } from './config/orm.config';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {cors: true});
+  const app = await NestFactory.create(AppModule, { cors: true });
   const port = env.PORT || 3000;
 
   await dataSource

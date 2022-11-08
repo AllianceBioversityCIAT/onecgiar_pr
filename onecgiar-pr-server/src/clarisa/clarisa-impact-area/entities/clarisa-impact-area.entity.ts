@@ -15,9 +15,9 @@ export class ClarisaImpactArea {
 
   /**     RELATIONS       **/
 
-  @OneToMany(() => ClarisaGlobalTarget, (cgt) => cgt.impactArea)
-  globalTarget: ClarisaGlobalTarget[];
+  @OneToMany(() => ClarisaGlobalTarget, (cgt) => cgt.id)
+  globalTarget: number[];
 
-  @OneToMany(() => ClarisaImpactAreaIndicator, (ciai) => ciai.impactArea)
-  impactAreaIndicators: ClarisaImpactAreaIndicator[];
+  @OneToMany(() => ClarisaImpactAreaIndicator, (ciai) => ciai.id)
+  impactAreaIndicators: number[];
 }

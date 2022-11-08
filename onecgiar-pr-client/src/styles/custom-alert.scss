@@ -26,6 +26,10 @@
         &.success {
             background-color: #41cf82;
         }
+
+        &.warning {
+            background-color: #FDC82F;
+        }
     }
 
     .custom-alert {
@@ -90,7 +94,15 @@
                 .icon {
                     background-color: #41cf82;
                 }
+
             }
+
+            &.warning {
+                .icon {
+                    background-color: #FDC82F;
+                }
+            }
+
         }
 
         .options {
@@ -104,7 +116,7 @@
                 color: white;
                 text-align: center;
                 max-width: max-content;
-                padding: 10px 40px;
+                padding: 5px 30px;
                 border-radius: 100px;
                 cursor: pointer;
             }
@@ -118,7 +130,8 @@
             }
 
             .confirm_button {
-                background-color: rgb(247, 86, 86) !important;
+                color: var(--pr-color-primary);
+                background-color: var(--pr-color-primary-2);
             }
         }
 
@@ -132,5 +145,30 @@
         left: 0;
         background-color: rgba(0, 0, 0, 0.329);
 
+    }
+}
+
+.pr_alert {
+    padding: 15px 10px;
+    background-color: rgb(248, 248, 248);
+    box-shadow: 0px 0px 8px #00000027;
+    position: relative;
+    margin: 0px 10px;
+    border-radius: 3px;
+    margin: 20px 10px;
+
+    .text {
+        color: var(--pr-color-secondary);
+    }
+
+    .icon {
+        position: absolute;
+        right: -15px;
+        top: -15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.4em;
+        // z-index: 1;
     }
 }

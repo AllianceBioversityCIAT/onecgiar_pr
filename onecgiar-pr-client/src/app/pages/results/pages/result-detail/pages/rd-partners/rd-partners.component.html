@@ -1,1 +1,64 @@
-<p>rd-partners works!</p>
+<app-detail-section-title sectionName="Partners"></app-detail-section-title>
+
+<div class="detail_container">
+    <app-alert-status
+        description="Partner organization that you collaborated with to generate this result or that contributed to this result.">
+    </app-alert-status>
+    <app-pr-checkbox label="Mark this option if this section is not applicable"
+        [(ngModel)]="this.partnersBody.no_applicable_partner" (ngModelChange)="cleanBody()">
+    </app-pr-checkbox>
+    <app-alert-status [hidden]="this.partnersBody.no_applicable_partner"
+        description="If you don't find the partner you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list.">
+    </app-alert-status>
+
+    <div class="auto_fit_container fadeIn" *ngIf="this.partnersBody.no_applicable_partner !== true">
+        <div>
+            <app-pr-multi-select [options]="this.institutionsSE.institutionsList" [required]="false" label="Partners"
+                selectedOptionLabel="institutions_name" optionLabel="full_name" optionValue="institutions_id"
+                [(ngModel)]="this.partnersBody.institutions" placeholder="Select Partners"
+                (selectOptionEvent)="toggle = toggle+1">
+            </app-pr-multi-select>
+            <div class="partners_selected_header">
+                <app-pr-field-header
+                    [description]="'Partner(s) selected ('+this.partnersBody.institutions?.length+'):'">
+                </app-pr-field-header>
+            </div>
+
+            <div class="chips_container  custom_scroll partners_selected">
+                <div class="pr_chip_selected" *ngFor="let option of this.partnersBody.institutions; let i=index">
+                    <div class="name">{{option?.institutions_name}}</div>
+                    <div class="type"> <strong>Institution type:</strong> {{option?.institutions_type_name}}</div>
+                    <div class="deliveries">
+                        <div class="delivery"
+                            [ngClass]="{'active': this.validateDeliverySelection(option?.deliveries,1)}"
+                            (click)="onSelectDelivery(option,1)">Scaling</div>
+                        <div class="delivery"
+                            [ngClass]="{'active': this.validateDeliverySelection(option?.deliveries,2)}"
+                            (click)="onSelectDelivery(option,2)">Demand</div>
+                        <div class="delivery"
+                            [ngClass]="{'active': this.validateDeliverySelection(option?.deliveries,3)}"
+                            (click)="onSelectDelivery(option,3)">Innovation</div>
+                    </div>
+                    <i class="material-icons-round" (click)="removePartner(i)">remove_circle
+                    </i>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <app-pr-field-header label="Partners types" [required]="false">
+            </app-pr-field-header>
+            <!-- <app-pr-field-header [description]="'Partner(s) selected ('+this.partnersBody.institutions?.length+'):'">
+            </app-pr-field-header> -->
+
+            <div class="chips_container custom_scroll">
+                <div class="pr_chip_selected"
+                    *ngFor="let option of this.partnersBody.institutions | countInstitutionsTypes:toggle; let i=index">
+                    <div class="name">{{option?.count_name}}</div><i class="material-icons-round"
+                        *ngIf="false">remove_circle </i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>
+</div>

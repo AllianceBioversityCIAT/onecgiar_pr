@@ -1,1 +1,78 @@
-<p>rd-general-information works!</p>
+<app-detail-section-title sectionName="General information"></app-detail-section-title>
+<div class="detail_container">
+    <div class="general_header">
+        <app-pr-input placeholder="Write some..." label="Result level" type="text" [required]="false" [readOnly]="true"
+            [(ngModel)]="this.generalInfoBody.result_level_name">
+        </app-pr-input>
+        <div class="reporting_year">
+            <div class="pr_label segment_title">Reporting year</div>
+            <div class="pr_description">{{this.generalInfoBody.reporting_year}}</div>
+        </div>
+    </div>
+
+    <app-pr-input [attr.attribute-you-are-targeting]="'expression'" placeholder="Write some..." label="Result type"
+        type="text" [required]="false" [readOnly]="true" [(ngModel)]="this.generalInfoBody.result_type_name">
+    </app-pr-input>
+    <app-pr-input placeholder="Write some..." label="Title" type="text" [(ngModel)]="this.generalInfoBody.result_name"
+        [maxWords]="30">
+    </app-pr-input>
+
+    <app-pr-textarea placeholder="Write some..." label="Description" type="text"
+        [(ngModel)]="this.generalInfoBody.result_description" [maxWords]="150"></app-pr-textarea>
+
+    <div class="radio_grid">
+        <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
+            label="Gender tag" [(ngModel)]="this.generalInfoBody.gender_tag_id">
+        </app-pr-radio-button>
+        <div id="gender_tag_alert" [hidden]="this.generalInfoBody.gender_tag_id != 3"></div>
+    </div>
+    <div class="radio_grid" id="climate_change_tag">
+        <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
+            label="Climate change tag" [(ngModel)]="this.generalInfoBody.climate_change_tag_id">
+        </app-pr-radio-button>
+        <div id="climate_change_tag_alert" [hidden]="this.generalInfoBody.climate_change_tag_id != 3"></div>
+    </div>
+    <app-pr-field-header *ngIf="this.generalInfoBody?.result_level_id !== 4" label="Actors"
+        [required]="this.generalInfoBody?.result_level_id !== 1"
+        description="An actor is an individual, organization or network operating within or beyond the system the Initiative or intervention aims to influence and whose actions can advance or impede the Initiative’s aims.">
+    </app-pr-field-header>
+    <div id="parterRequestAlert" [hidden]="this.generalInfoBody?.result_level_id === 4"></div>
+    <div class="auto_fit_container" *ngIf="this.generalInfoBody?.result_level_id !== 4">
+        <app-pr-multi-select [options]="this.institutionsSE.institutionsList" selectedLabel="Actor(s) selected"
+            selectedOptionLabel="institutions_name" optionLabel="full_name" optionValue="institutions_id"
+            [(ngModel)]="this.generalInfoBody.institutions" (selectOptionEvent)="sendIntitutionsTypes()"
+            placeholder="Select actors">
+        </app-pr-multi-select>
+
+        <div>
+            <app-pr-multi-select [options]="this.institutionsSE.institutionsTypesList"
+                selectedLabel="Actor(s) Types(s) selected" optionLabel="institutions_type_name"
+                optionValue="institutions_type_id" [disableOptions]="this.disableOptions"
+                [(ngModel)]="this.generalInfoBody.institutions_type" (selectOptionEvent)="toggle = toggle+1"
+                placeholder="Select actor type">
+            </app-pr-multi-select>
+
+            <div class="chips_container ">
+                <div class="pr_chip_selected"
+                    *ngFor="let option of this.generalInfoBody.institutions_type | countInstitutionsTypes:toggle; let i=index">
+                    <div class="name">{{option?.count_name}}</div><i class="material-icons-round"
+                        *ngIf="false">remove_circle </i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <app-pr-yes-or-not label="Is this result featured in a Key Result Story for the Reporting year?"
+        [(ngModel)]="this.generalInfoBody.is_krs" (ngModelChange)="onChangeKrs()"></app-pr-yes-or-not>
+
+    <app-pr-input *ngIf="this.generalInfoBody.is_krs" placeholder="e.g. https://www.cgiar.org/example"
+        description="Link to Key Result Story" type="text" [required]="false"
+        [(ngModel)]="this.generalInfoBody.krs_url">
+    </app-pr-input>
+
+
+    <app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>
+
+
+
+</div>

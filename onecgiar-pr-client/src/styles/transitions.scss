@@ -4,8 +4,11 @@
 
 
 
-
 .section_container,
+.detail_container {
+  @extend .fadeIn;
+}
+
 .fadeIn {
   -webkit-animation-duration: 1s;
   animation-duration: 1s;
@@ -18,8 +21,6 @@
 
 @media print,
 (prefers-reduced-motion: reduce) {
-
-  .section_container,
   .fadeIn {
     -webkit-animation-duration: 1ms !important;
     animation-duration: 1ms !important;
@@ -56,7 +57,7 @@
   }
 }
 
-.section_container,
+
 .fadeIn {
   -webkit-animation-name: fadeIn;
   animation-name: fadeIn;

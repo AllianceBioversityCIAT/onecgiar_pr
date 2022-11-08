@@ -1,0 +1,62 @@
+<app-detail-section-title sectionName="Innovation Development information"></app-detail-section-title>
+<div class="detail_container">
+    <app-alert-status [description]="alertInfoText()">
+    </app-alert-status>
+    <app-pr-input label="Long title" [required]="false" [readOnly]="true" [(ngModel)]="innovationDevInfoBody.aaa">
+    </app-pr-input>
+    <app-pr-input label="Provide a short title for the innovation"
+        description="Short name facilitates clear communication about the innovation. Avoid abbreviations or (technical) jargon"
+        [maxWords]="10" placeholder="Innovation short name goes here..." [(ngModel)]="innovationDevInfoBody.bbb">
+    </app-pr-input>
+    <app-pr-select [options]="[{}]" label="What would be the best way to characterize this innovation?"
+        optionLabel="official_code_short_name" optionValue="initiative_id"
+        placeholder="Select innovation characteristics">
+    </app-pr-select>
+    <app-pr-select [options]="[{}]" label="Which of the below typologies best fits the nature of the innovation?"
+        description="Choose ‘other’ if you feel the Innovation does not fit well with the proposed categories. "
+        optionLabel="official_code_short_name" optionValue="initiative_id" placeholder="Select innovation type">
+    </app-pr-select>
+    <!-- Todo only for Technological innovation -->
+    <div>
+        <app-pr-yes-or-not label="Are you profiling a new or improved variety or breed?"
+            [(ngModel)]="innovationDevInfoBody.ccc">
+        </app-pr-yes-or-not>
+        <app-pr-input *ngIf="innovationDevInfoBody.ccc"
+            label="Indicate the number of individual new or improved lines/ varieties" [required]="false" type="number"
+            placeholder="0">
+        </app-pr-input>
+    </div>
+    <!-- Todo -->
+
+    <app-pr-textarea placeholder="Contact persons info goes here..." [required]="false" label="Innovation Developer"
+        description="Provide the full name(s), email address and organizational affiliation(s) of the innovation developer/ contact person
+        Innovation developer will be first author of the Innovation Profile document and the prime contact for the innovation.<br> 
+        Please provide information such as first name, family name, email address and organizational affiliations.">
+    </app-pr-textarea>
+
+    <app-pr-textarea placeholder="Contact persons info goes here..." [required]="false" label="Innovation collaborators"
+        description="Provide the full name(s), email address and organizational affiliation(s)  of other CGIAR and/or partner colleagues that contribute to this innovation
+        Names of key contributors will feature as co-authors on the Innovation Profile document in the same order as provided below.">
+    </app-pr-textarea>
+
+
+    <app-pr-field-header label="How would you assess the current readiness of this innovation?"
+        description="Please provide a single readiness score to the innovation, irrespectively of the specific geo-location where the innovation is being designed, tested and/or scaled. Geo-location-specific scoring will be part of subsequent innovation package design and assessment. Be realistic in assessing the readiness level of the innovation and keep in mind that the claimed readiness level needs to be supported by evidence documentation.">
+    </app-pr-field-header>
+
+    <app-pr-range-level [(ngModel)]="range"></app-pr-range-level>
+
+
+    <div class="pr_description"> <a href="https://drive.google.com/file/d/1muDLtqpeaSCIX60g6qQG_GGOPR61Rq7E/view"
+            class="open_route" target="_blank">Click here </a> to see the definition of all readiness
+        levels</div>
+
+    <app-alert-status [description]="alertInfoText2()">
+    </app-alert-status>
+
+    <app-pr-textarea placeholder="Provide a brief explanation here..."
+        label="Please provide a brief explanation that explains how the provided evidence (inputted in the general information section) justifies the chosen innovation readiness level"
+        description="<strong>Example:</strong> We chose readiness level 6 (semi-controlled testing) for the genetically improved farm tilapia (GIFT) because it is currently being tested under semi-controlled conditions in the multiplication center and hatchery in the selected countries as shown in the provided evidence. ">
+    </app-pr-textarea>
+
+</div>

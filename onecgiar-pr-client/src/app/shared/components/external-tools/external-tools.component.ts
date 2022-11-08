@@ -11,8 +11,7 @@ export class ExternalToolsComponent implements OnInit {
 
   ngOnInit(): void {
     this.router.events.subscribe((event: NavigationEvent) => {
-      if (!(event instanceof NavigationStart)) return;
-      // console.log(event);
+      if (!(event instanceof NavigationStart)) return window.scrollTo(0, 0);
     });
   }
 }

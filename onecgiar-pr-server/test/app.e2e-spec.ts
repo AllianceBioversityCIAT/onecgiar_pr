@@ -1,7 +1,6 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
-import { AppModule } from './../src/app.module';
+import request from 'supertest';
 import { testModule, usePipes } from './test.module';
 
 describe('AppController (e2e)', () => {
@@ -25,5 +24,4 @@ describe('AppController (e2e)', () => {
   afterAll(async () => {
     await app.close();
   });
-
 });

@@ -3,21 +3,20 @@ import {
   Get,
   Post,
   Body,
-  Patch,
   Param,
-  Delete,
   Res,
   Req,
   UseFilters,
+  Headers,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
 import { CreateFullUserDto } from './dto/create-full-user.dto';
-import { CreateComplementaryDataUserDto } from '../complementary-data-user/dto/create-complementary-data-user.dto';
 import { HttpExceptionFilter } from '../../../shared/handlers/error.exception';
-import { HttpException, HttpStatus } from '@nestjs/common';
+import { HttpException } from '@nestjs/common';
+import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
+import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 
 @Controller()
 @UseFilters(new HttpExceptionFilter())
@@ -29,53 +28,57 @@ export class UserController {
     return this.userService.create(createUserDto);
   }
 
+  // * Create new user endpoint
   @Post('create')
-  async creteFull(@Body() createFullUserDto: CreateFullUserDto, @Res() res: Response, @Req() req: Request) {
+  async creteFull(
+    @Body() createFullUserDto: CreateFullUserDto,
+    @Headers() auth: HeadersDto,
+    @Res() res: Response,
+    @Req() req: Request,
+  ) {
     const createUser: CreateUserDto = createFullUserDto.userData;
-    const createComplementaryData: CreateComplementaryDataUserDto =
-      createFullUserDto.complementData;
     const role: number = createFullUserDto.role;
-
-    const {message, response, status} = await this.userService.createFull(
-      createUser,
-      createComplementaryData,
-      role,
+    const token: TokenDto = <TokenDto>(
+      JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
     );
 
-    throw new HttpException({message,response}, status);
+    const { message, response, status } = await this.userService.createFull(
+      createUser,
+      role,
+      token,
+    );
+
+    throw new HttpException({ message, response }, status);
   }
 
-  @Get('all')
+  // * Get all users
+  @Get('get/all')
   async findAll() {
-    const {message, response, status} = await this.userService.findAll();
-    throw new HttpException({message,response}, status);
+    const { message, response, status } = await this.userService.findAll();
+    throw new HttpException({ message, response }, status);
   }
 
-  @Get('all/full')
-  async findAllFull() {
-    const {message, response, status} = await this.userService.findAllFull();
-    throw new HttpException({message,response}, status);
-  }
-
-  @Get('all/:email')
+  // * Get user by email
+  @Get('get/all/:email')
   async findByEmail(@Param('email') email: string) {
-    const {message, response, status} = await this.userService.findOneByEmail(email);
-    throw new HttpException({message,response}, status);
+    const { message, response, status } = await this.userService.findOneByEmail(
+      email,
+    );
+    throw new HttpException({ message, response }, status);
   }
 
+  // * Get initiatives associates to user by ID
+  @Get('get/initiative/:userId')
+  async findInitiativeByUserId(@Param('userId') userId: number) {
+    const { message, response, status } =
+      await this.userService.findInitiativeByUserId(userId);
+    throw new HttpException({ message, response }, status);
+  }
+
+  // * Get user by ID
   @Get(':id')
   async findOne(@Param('id') id: string) {
-    const {message, response, status} = await this.userService.findOne(+id);
-    throw new HttpException({message,response}, status);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.userService.update(+id, updateUserDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.userService.remove(+id);
+    const { message, response, status } = await this.userService.findOne(+id);
+    throw new HttpException({ message, response }, status);
   }
 }

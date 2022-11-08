@@ -1,0 +1,72 @@
+.pr_button.small {
+    padding: 6px 12px;
+}
+
+.pr_button.medium {
+    padding: 10px 40px;
+}
+
+.pr_button.big {
+    padding: 30px 40px;
+}
+
+.pr_button {
+
+    width: max-content;
+    border-radius: 5px;
+    margin: 10px 0px;
+    display: flex;
+    gap: 10px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    align-items: center;
+
+    .text,
+    i {
+        color: #5569DD;
+        z-index: 1;
+    }
+
+    .text {
+        font-size: .9em;
+    }
+
+    i {
+        font-size: 1.4em;
+        margin-right: -6px;
+    }
+
+}
+
+.reverse {
+    flex-direction: row-reverse;
+}
+
+.show_background {
+
+    .text,
+    i {
+        color: white;
+    }
+
+    .filter {
+        // background: #5569DD;
+        position: absolute;
+        left: -60%;
+        top: 0px;
+        height: 100%;
+        width: 100%;
+        transition: all ease-in-out .4s;
+        z-index: 0;
+        // rotate: 15deg;
+        transform: translateX(-50%);
+        box-sizing: border-box;
+    }
+
+    &:hover {
+        .filter {
+            left: 50%;
+        }
+    }
+}

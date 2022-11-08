@@ -1,6 +1,46 @@
 <div class="local_container">
   <div routerLink="/results/results-list">
-    <app-pr-button text="Back to results" icon="arrow_back" [reverse]="true" [showBackground]="false"></app-pr-button>
+    <app-pr-button text="Back to results" icon="arrow_back" [reverse]="true" [showBackground]="false" optionLabel="name"
+      optionValue="code"></app-pr-button>
   </div>
-  <div class="section_container animate__animated animate__fadeIn">Report Lorem ipsum dolor sit amet consectetur adipisicing elit. In sint unde nisi deleniti repellat voluptas excepturi doloremque placeat adipisci quod! Quaerat iusto enim necessitatibus consectetur numquam eaque itaque quam officia delectus exercitationem accusantium dignissimos sunt dolores vel eveniet doloribus aliquid, eligendi quod laborum nobis. Animi in laudantium quam incidunt repellat iure numquam esse, distinctio quos aspernatur necessitatibus consequuntur facere praesentium mollitia ipsum nemo cum excepturi assumenda quod provident. Adipisci libero architecto quibusdam? Voluptates rerum architecto impedit itaque numquam! Assumenda cupiditate ex, voluptatem excepturi consectetur in similique iure minus accusantium? Quaerat asperiores velit tempora voluptatum explicabo, placeat id fugit error iste?</div>
+  <div class="local_container section_container">
+    <div class="greeting"
+      [innerHTML]="naratives.greeting(this.api.authSE.localStorageUser?.user_name,this.api.dataControlSE.myInitiativesListText(this.api.dataControlSE.myInitiativesList))">
+    </div>
+    <div class="report_container">
+      <div class="w20vw">
+        <app-pr-select class="segment_title_margin" [options]="this.api.dataControlSE.myInitiativesList"
+          label="Report for" optionLabel="official_code_short_name" optionValue="initiative_id"
+          placeholder="Select initiative" [(ngModel)]="this.resultLevelSE.resultBody.initiative_id">
+        </app-pr-select>
+      </div>
+
+      <app-result-level-buttons></app-result-level-buttons>
+      <div class="segment_title segment_title_margin" *ngIf="this.resultLevelSE?.currentResultTypeList?.length">Result
+        type
+      </div>
+      <app-pr-radio-button [options]="this.resultLevelSE.currentResultTypeList" optionLabel="name" optionValue='id'
+        [(ngModel)]="this.resultLevelSE.resultBody.result_type_id" (ngModelChange)="cleanTitle()">
+      </app-pr-radio-button>
+      <app-pr-input *ngIf="resultLevelSE.resultBody.result_type_id == 6" placeholder="Handle..." label="Handle"
+        type="text" [(ngModel)]="this.resultLevelSE.resultBody.result_name">
+      </app-pr-input>
+      <app-pr-input *ngIf="resultLevelSE.resultBody.result_type_id != 6 || this.resultLevelSE.resultBody.result_name"
+        [readOnly]="resultLevelSE.resultBody.result_type_id == 6" [placeholder]="resultTypeName+ ''" label="Title"
+        type="text" [maxWords]="30"
+        [description]="resultLevelSE.resultBody.result_type_id == 6 ? 'Title fetched from CGSpace' :'To search for results that have already been reported, enter key words into the title box below. If your result has not already been reported, you can add it here.'"
+        [(ngModel)]="this.resultLevelSE.resultBody.result_name"
+        (ngModelChange)="depthSearch(this.resultLevelSE.resultBody.result_name)">
+      </app-pr-input>
+
+      <app-similar-results *ngIf="resultLevelSE.resultBody.result_type_id != 6" [options]="this.depthSearchList">
+      </app-similar-results>
+    </div>
+    <div class="save_button_container"
+      [ngClass]="{'globalDisabled': ((!this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody)) || exactTitleFound) || this.api.wordCounterSE.counter(this.resultLevelSE.resultBody.result_name) > 30  }">
+      <div (click)="onSaveSection()">
+        <app-pr-button padding="medium" text="Save and continue" icon="save"></app-pr-button>
+      </div>
+    </div>
+  </div>
 </div>

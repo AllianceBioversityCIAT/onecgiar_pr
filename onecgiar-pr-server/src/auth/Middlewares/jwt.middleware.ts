@@ -1,8 +1,5 @@
 import {
-  forwardRef,
-  Inject,
   Injectable,
-  Module,
   NestMiddleware,
   Next,
   Req,
@@ -12,11 +9,9 @@ import {
 } from '@nestjs/common';
 import { NextFunction, Request, Response } from 'express';
 import { env } from 'process';
-import { verify, sign } from 'jsonwebtoken';
 import { AuthService } from '../auth.service';
 import { UserLoginDto } from 'src/auth/dto/login-user.dto';
 import { JwtService } from '@nestjs/jwt';
-import { returnJwtMiddlewareDto } from './middlewareDTOs/jwt.dto';
 import { returnFormatSingin } from '../dto/return-fromat-singin.dto';
 
 @Injectable()
@@ -60,6 +55,7 @@ export class JwtMiddleware implements NestMiddleware {
       }
       jwtPayload = await this._jwtService.verifyAsync(token_, {
         secret: env.JWT_SKEY,
+        ignoreExpiration: true,
       });
       res.locals.jwtPayload = jwtPayload;
 
@@ -70,10 +66,13 @@ export class JwtMiddleware implements NestMiddleware {
       res.setHeader('auth', newToken);
       next();
     } catch (error) {
-      throw new HttpException({
-        message: 'Invalid token',
-        response: {}
-      }, HttpStatus.UNAUTHORIZED)
+      throw new HttpException(
+        {
+          message: 'Invalid token',
+          response: {},
+        },
+        HttpStatus.UNAUTHORIZED,
+      );
     }
   }
 }

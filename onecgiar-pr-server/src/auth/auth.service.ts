@@ -1,4 +1,4 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpStatus, Logger } from '@nestjs/common';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { UpdateAuthDto } from './dto/update-auth.dto';
 import { UserLoginDto } from './dto/login-user.dto';
@@ -9,18 +9,22 @@ import config from '../config/const.config';
 import { UserService } from './modules/user/user.service';
 import { UserRepository } from './modules/user/repositories/user.repository';
 import { FullUserRequestDto } from './modules/user/dto/full-user-request.dto';
-import { returnFormatSingin } from './dto/return-fromat-singin.dto';
+import { User } from './modules/user/entities/user.entity';
+import { HandlersError } from '../shared/handlers/error.utils';
 
 @Injectable()
 export class AuthService {
+  private readonly _logger: Logger = new Logger(AuthService.name);
+
   constructor(
     private readonly _jwtService: JwtService,
     private readonly _userService: UserService,
     private readonly _bcryptPasswordEncoder: BcryptPasswordEncoder,
     private readonly _customUserRepository: UserRepository,
+    private readonly _handlersError: HandlersError,
   ) {}
   create(createAuthDto: CreateAuthDto) {
-    return 'This action adds a new auth';
+    return createAuthDto;
   }
 
   findAll() {
@@ -32,35 +36,45 @@ export class AuthService {
   }
 
   update(id: number, updateAuthDto: UpdateAuthDto) {
-    return `This action updates a #${id} auth`;
+    return `This action updates a #${id} auth ${updateAuthDto}`;
   }
 
   remove(id: number) {
     return `This action removes a #${id} auth`;
   }
-
-  async singIn(userLogin: UserLoginDto): Promise<returnFormatSingin> {
+  async singIn(userLogin: UserLoginDto): Promise<any> {
     try {
       if (!(userLogin.email && userLogin.password)) {
         throw {
-            message:'Missing required fields: email or password.',
-            response:{
-              valid: false
-            },
-            status: HttpStatus.BAD_REQUEST
-        }
+          message: 'Missing required fields: email or password.',
+          response: {
+            valid: false,
+          },
+          status: HttpStatus.BAD_REQUEST,
+        };
       }
       userLogin.email = userLogin.email.trim().toLowerCase();
-      const user: any = await this._customUserRepository.completeDataByEmail(
-        userLogin.email,
-      );
-      let valid: boolean | any = false;
+      const user: User = await this._customUserRepository.findOne({
+        where: { email: userLogin.email },
+      });
+      let valid: any;
       if (user) {
-        const { email, first_name, last_name, is_cgiar } = <FullUserRequestDto>(
-          user
-        );
+        const { email, first_name, last_name, is_cgiar, id } = <
+          FullUserRequestDto
+        >user;
         if (is_cgiar) {
-          valid = await this.validateAD(email, userLogin.password);
+          const { response, message, status }: any = await this.validateAD(
+            email,
+            userLogin.password,
+          );
+          if (!response.valid) {
+            throw {
+              response,
+              message,
+              status,
+            };
+          }
+          valid = response.valid;
         } else {
           valid = this._bcryptPasswordEncoder.matches(
             user.password,
@@ -68,39 +82,43 @@ export class AuthService {
           );
         }
 
-        if (valid == true) {
+        if (valid) {
           return {
             message: 'Successful login',
             response: {
               valid: true,
               token: this._jwtService.sign(
-                { email, first_name, last_name },
-                { secret: env.JWT_SKEY, expiresIn: env.JWT_EXPIRES },
+                { id, email, first_name, last_name },
+                { secret: env.JWT_SKEY },
               ),
-              user: user
+              user: {
+                id: user.id,
+                user_name: `${user.first_name} ${user.last_name}`,
+                email: user.email,
+              },
             },
-            status: HttpStatus.ACCEPTED
-          }
+            status: HttpStatus.ACCEPTED,
+          };
         } else {
           throw {
-            message: 'INVALID_CREDENTIALS',
             response: {
-              valid: false
+              valid: false,
             },
-            status: HttpStatus.BAD_REQUEST
+            message: 'Password does not match',
+            status: HttpStatus.UNAUTHORIZED,
           };
         }
-      }else{
+      } else {
         throw {
-          message: 'INVALID_CREDENTIALS',
+          message: `The user ${userLogin.email} is not registered in the PRMS Reporting database.`,
           response: {
-            valid: false
+            valid: false,
           },
-          status: HttpStatus.BAD_REQUEST
+          status: HttpStatus.NOT_FOUND,
         };
       }
     } catch (error) {
-      return error
+      return this._handlersError.returnErrorRes({ error });
     }
   }
 
@@ -109,56 +127,67 @@ export class AuthService {
     const ad = new ActiveDirectory(config.active_directory);
 
     return new Promise((resolve, reject) => {
+      this._logger.log(`Validation with the active directory`);
       ad.authenticate(email, password, (err, auth) => {
         try {
           if (auth) {
-            console.log('Authenticated AD!', JSON.stringify(auth));
-            return resolve(auth);
+            this._logger.verbose(`Successful validation`);
+            return resolve({
+              response: {
+                valid: !!auth,
+              },
+              message: 'Successful validation',
+              status: HttpStatus.ACCEPTED,
+            });
           }
           if (err) {
-            console.log('ERROR AUTH: ' + JSON.stringify(err));
-            const notFound = {
-              name: 'SERVER_NOT_FOUND',
-              description: `There was an internal server error: ${err.lde_message}`,
-              httpCode: 400,
-            };
-            if (err.errno == 'ENOTFOUND') {
-              notFound.name = 'SERVER_NOT_FOUND';
-              notFound.description = 'Server not found';
+            if (err?.errno) {
+              throw {
+                response: {
+                  valid: false,
+                  error: err.errno,
+                  code: err.code,
+                },
+                message: 'Error with communication with third party servers',
+                status: HttpStatus.INTERNAL_SERVER_ERROR,
+              };
+            } else {
+              const error: string = err.lde_message.split(/:|,/)[2].trim();
+              switch (error) {
+                case 'DSID-0C090447':
+                  throw {
+                    response: {
+                      valid: false,
+                      error: err.errno,
+                      code: err.code,
+                    },
+                    message: 'Password does not match',
+                    status: HttpStatus.UNAUTHORIZED,
+                  };
+                  break;
+                default:
+                  throw {
+                    response: {
+                      valid: false,
+                    },
+                    message: 'Unknown error in validation',
+                    status: HttpStatus.UNAUTHORIZED,
+                  };
+                  break;
+              }
             }
-
-            return {
-              message: notFound.name,
-              response: {
-                valid: false
-              },
-              status: HttpStatus.BAD_REQUEST
-            };
           } else {
-            console.log('Authentication failed!');
-            const err = {
-              name: 'INVALID_CREDENTIALS',
-              description: 'The supplied credential is invalid',
-              httpCode: 400,
-            };
-
-            console.log('ERROR: ' + JSON.stringify(err));
-            return {
-              message: 'INVALID_CREDENTIALS',
+            throw {
               response: {
-                valid: false
+                valid: false,
+                error: err,
               },
-              status: HttpStatus.BAD_REQUEST
+              message: 'Unknown error',
+              status: HttpStatus.INTERNAL_SERVER_ERROR,
             };
           }
         } catch (error) {
-          return {
-            message: 'INVALID_CREDENTIALS',
-            response: {
-              valid: false
-            },
-            status: HttpStatus.BAD_REQUEST
-          };
+          return reject(this._handlersError.returnErrorRes({ error }));
         }
       });
     });

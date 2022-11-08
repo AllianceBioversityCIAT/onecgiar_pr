@@ -1,18 +1,31 @@
 <!--Hey! This is the original version
 of Simple CSS Waves-->
 
-<div class="header">
+<div class="header fadeIn">
   <!--Content before waves-->
+  <input type="text" id="fake" style="opacity: 0;position: absolute;">
   <div class="inner-header flex">
-    <div class="login_card">
-      <div class="title">Login</div>
-      <app-pr-input placeholder="e.g. Example@gmail.com" label="Email" type="email" [(ngModel)]="userLoginData.email">
-      </app-pr-input>
-      <app-pr-input placeholder="Enter your password" label="Password" type="password"
-        [(ngModel)]="userLoginData.password">
-      </app-pr-input>
-      <div class="center_flex_100" style="margin-top: 20px;" (click)="onLogin()">
-        <app-pr-button text="Login" icon="arrow_forward_ios"></app-pr-button>
+    <div class="login_card" [ngClass]="{'success_padding': successLogin}">
+      <lord-icon *ngIf="successLogin" src="https://cdn.lordicon.com/vnioezyi.json" trigger="loop"
+        style="width:100px;height:100px">
+      </lord-icon>
+      <div *ngIf="successLogin" class="successText">Successful login</div>
+      <div class="form" [ngClass]="{'successLogin': successLogin}">
+        <!-- <div class="title">Login</div> -->
+        <div class="welcome">{{internationalizationData.global.platformName}} Tool</div>
+        <app-pr-input [required]="false" placeholder="e.g. Example@cgiar.org" label="Email" type="email"
+          [(ngModel)]="userLoginData.email">
+        </app-pr-input>
+        <app-pr-input [required]="false" id="password" placeholder="Enter your password" label="Password"
+          type="password" [(ngModel)]="userLoginData.password">
+        </app-pr-input>
+        <div class="center_flex_100" id="login" style="margin-top: 20px;" (click)="onLogin()">
+          <app-pr-button padding="medium" text="Login" icon="arrow_forward_ios"></app-pr-button>
+        </div>
+        <div class="question_container" (click)="this.display = true" id="question">
+          <a class="question">Have a question?</a>
+        </div>
+
       </div>
     </div>
   </div>
@@ -35,3 +48,19 @@ of Simple CSS Waves-->
   <!--Waves end-->
 </div>
 <!--Header ends-->
+<p-dialog class="support_information" header="Title" [(visible)]="display" [draggable]="false" [modal]="true"
+  [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true" [style]="{padding: '0px'}">
+  <div class="modal_container">
+    <div class="line"></div>
+    <div class="line"></div>
+    <i class="material-icons-round close_icon" (click)="this.display = false">close</i>
+
+    <div class="title">Please do not hesitate to contact us:</div>
+    <div class="email">For technical questions related with this tool, please contact <a
+        href="mailto: OSTTechSupport@cgiar.org">OSTTechSupport@cgiar.org</a>
+    </div>
+    <div class="email">For content questions related on how to fill different sections, please contact <a
+        href="mailto: projectcoordinationunit@cgiar.org">projectcoordinationunit@cgiar.org</a>
+    </div>
+  </div>
+</p-dialog>

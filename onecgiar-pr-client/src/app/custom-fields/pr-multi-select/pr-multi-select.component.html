@@ -1,0 +1,39 @@
+<app-pr-field-header [label]="this.label" [description]="this.description" [required]="this.required">
+</app-pr-field-header>
+<div class="custom_select">
+    <a class="field" tabindex="0" [id]="this.optionValue">
+        <div class="text select_placeholder">{{placeholder}}</div>
+        <i class="pi pi-chevron-down"></i>
+        <div class="remove_focus" (click)="removeFocus()"></div>
+        <div class="options">
+            <div class="search_input_container">
+                <div class="p-input-icon-left p-fluid">
+                    <i class="pi pi-search"></i>
+                    <input type="text" pInputText placeholder="Search" [(ngModel)]="this.searchText" />
+                </div>
+            </div>
+
+            <cdk-virtual-scroll-viewport itemSize="7" class="custom_scroll virtual_scroll">
+                <div *cdkVirtualFor="let option of optionsIntance | listFilterByTextAndAttr:this.optionLabel:this.searchText"
+                    class="option" [ngClass]="{'disabled': option?.disabled}" (click)="onSelectOption(option)">
+                    <p-checkbox [disabled]="option?.disabled" [binary]="true" [(ngModel)]="option.selected">
+                    </p-checkbox>
+                    <img *ngIf="flagsCode" [src]="'https://countryflagsapi.com/png/'+option[this.flagsCode]" alt=""
+                        srcset="">
+                    <div class="label">{{option[this.optionLabel]}}</div>
+                    <div class="event" (click)="toggleSelectOption(option)"></div>
+                </div>
+            </cdk-virtual-scroll-viewport>
+        </div>
+    </a>
+    <div class="selected_container custom_scroll" *ngIf="this.selectedLabel">
+        <app-pr-field-header [description]="this.selectedLabel+'('+value?.length+')'">
+        </app-pr-field-header>
+        <div class="chips_container" *ngIf="this.selectedOptionLabel">
+            <div class="pr_chip_selected" *ngFor="let option of value; let i=index">
+                <div class="name">{{option[this.selectedOptionLabel]}}</div><i class="material-icons-round"
+                    (click)="removeOption(option)">remove_circle </i>
+            </div>
+        </div>
+    </div>
+</div>

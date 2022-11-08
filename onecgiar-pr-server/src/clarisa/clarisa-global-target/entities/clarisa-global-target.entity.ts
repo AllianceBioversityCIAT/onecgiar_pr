@@ -12,9 +12,9 @@ export class ClarisaGlobalTarget {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => ClarisaImpactArea, (cia) => cia.globalTarget)
+  @ManyToOne(() => ClarisaImpactArea, (cia) => cia.id)
   @JoinColumn({ name: 'impact_area_id' })
-  impactArea: ClarisaImpactArea;
+  impact_area_id: number;
 
   @Column({ name: 'target', type: 'text' })
   target: number;

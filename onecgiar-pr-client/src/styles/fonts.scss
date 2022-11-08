@@ -3,12 +3,39 @@
 html {
     scroll-behavior: smooth;
     font-family: 'Poppins', sans-serif;
-    font-size: 15px;
 }
 
+.segment_title {
+    font-size: 1.2em;
+    font-weight: 500;
+}
 
-.pr_label {
-    margin-top: 20px;
-    color: black;
-    text-align: left;
+.segment_title_margin {
+    margin-top: 30px;
+    margin-bottom: 10px;
+}
+
+.open_route {
+    font-weight: 600;
+    color: var(--pr-color-primary);
+    cursor: pointer;
+}
+
+.read-only {
+    color: var(--pr-color-medium);
+}
+
+.section_detail_title {}
+
+
+@media only screen and (max-width: 1400px) {
+    html {
+        font-size: 12px;
+    }
+}
+
+@media only screen and (min-width: 1400px) {
+    html {
+        font-size: 14px;
+    }
 }

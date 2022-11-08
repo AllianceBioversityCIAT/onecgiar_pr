@@ -5,7 +5,7 @@
     color: white;
 
     .inner-header {
-        height: calc(100vh - 200px);
+        height: calc(100vh - 20vh);
         width: 100%;
         margin: 0;
         padding: 0;
@@ -14,18 +14,71 @@
         align-items: center;
         text-align: center;
 
+        .success_padding {
+            width: 220px !important;
+            // height: 150px !important;
+            padding: 25px !important;
+            // box-sizing: border-box;
+        }
+
         .login_card {
-            background-color: rgba(255, 255, 255, 0.897);
-            padding: 50px 100px;
+            background-color: #ffffff;
             border-radius: 10px;
-            width: 30vw;
-            padding-bottom: 100px;
+            width: 550px;
+            transition: all ease-in-out .15s;
+            transition-delay: .3s;
+            margin-top: 50px;
+
+            .successText {
+                text-align: center;
+                color: var(--pr-color-primary);
+                white-space: nowrap;
+                font-weight: 500;
+                font-size: 1.2em;
+            }
+
+            .form {
+                transition: all ease-in-out .4s;
+                height: 450px;
+                padding: 30px 40px 50px 40px;
+
+                .question_container {
+                    margin-top: 20px;
+                    transition: all ease-in-out .3s;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    padding: 5px 0px;
+
+                    &:hover {
+                        background-color: #e1e3f5;
+                    }
+
+                    .question {
+                        color: var(--pr-color-primary);
+                        text-decoration: underline;
+                        font-weight: 500;
+                    }
+                }
+
+            }
+
+            .successLogin {
+                overflow: hidden;
+                height: 0px !important;
+                padding: 0px !important;
+            }
 
             .title {
                 color: var(--pr-color-primary);
                 font-size: 2em;
                 font-weight: 600;
-                margin-bottom: 40px;
+            }
+
+            .welcome {
+                color: var(--pr-color-primary);
+                font-size: 1.5em;
+                font-weight: 600;
+                margin-bottom: 50px;
             }
 
             .field {
@@ -47,9 +100,54 @@
 }
 
 
+.modal_container {
+    position: relative;
+    padding: 80px 80px;
 
+    .close_icon {
+        position: absolute;
+        color: var(--pr-color-primary);
+        right: 0;
+        top: 8px;
+        margin-right: 20px;
+        cursor: pointer;
+    }
 
+    .email {
+        margin-bottom: 8px;
 
+        a {
+            color: var(--pr-color-primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+    }
+
+    .title {
+        font-size: 1.8em;
+        font-weight: 600;
+        margin-bottom: 20px;
+    }
+
+    .line:nth-child(1) {
+        width: 15px;
+        height: 100%;
+        background-color: var(--pr-color-primary);
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+
+    .line:nth-child(2) {
+        width: 15px;
+        height: 100%;
+        background-color: var(--pr-color-primary);
+        position: absolute;
+        top: 0;
+        right: 0;
+
+    }
+}
 
 
 

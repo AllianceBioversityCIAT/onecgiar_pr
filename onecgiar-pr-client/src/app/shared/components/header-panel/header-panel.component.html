@@ -1,23 +1,27 @@
 <div class="header_panel" id="sdsdsdsd">
-  <div class="logo">
+  <div class="logo" routerLink="/">
     <img class="cgiar_logo" src="/assets/cgiar_logo.png" alt="" srcset="" />
     <div class="title">
-      <div class="first-text">Planning &</div>
-      <div class="second-text">Reporting</div>
+      <!-- <div class="first-text">{{this.internationalizationData.global.platformName}}</div> -->
+      <div class="second-text">{{this.internationalizationData.global.platformName}}</div>
     </div>
   </div>
   <div class="information">
     <div class="user_tag">
       <i class="material-icons-round icon">account_circle</i>
-      <div class="title">Juan Carlos Cadavid</div>
+      <div class="title">{{ this.api.authSE?.localStorageUser?.user_name }}</div>
     </div>
-    <div class="my_initiatives">
+    <div class="my_initiatives" *ngIf="this.api.dataControlSE?.myInitiativesList?.length">
       <div class="title">My initiatives:</div>
-      <div class="items">
-        <div class="item">INIT-17 (editor)</div>
-        <div class="item">INIT-28 (editor)</div>
+      <div class="items custom_scroll">
+        <div class="item" *ngFor="let item of this.api.dataControlSE.myInitiativesList">
+          <div class="init">{{item?.official_code}}</div>
+          <div class="role">{{item?.role}}</div>
+        </div>
       </div>
     </div>
-    <div routerLink="/login"><app-pr-button text="Logout" icon="logout" colorType="secondary"></app-pr-button></div>
+    <div (click)="this.api.authSE.logout();this.api.clearAll();">
+      <app-pr-button text="Logout" icon="logout" colorType="secondary"></app-pr-button>
+    </div>
   </div>
 </div>
