@@ -15,6 +15,7 @@ export class InnovationUseInfoComponent implements OnInit {
 
   ngOnInit(): void {
     this.getSectionInformation();
+    window.scrollTo(100, 0);
   }
   getSectionInformation() {}
   onSaveSection() {}
