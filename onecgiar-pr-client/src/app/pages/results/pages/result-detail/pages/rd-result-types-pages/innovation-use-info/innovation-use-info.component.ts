@@ -10,6 +10,7 @@ import { InnovationUseInfoBody } from './model/innovationUseInfoBody';
 })
 export class InnovationUseInfoComponent implements OnInit {
   innovationUseInfoBody = new InnovationUseInfoBody();
+  otherList: any[] = [];
   constructor(private api: ApiService) {}
 
   ngOnInit(): void {
@@ -20,5 +21,12 @@ export class InnovationUseInfoComponent implements OnInit {
   alertInfoText() {
     return `Please fill in the following fields that are required based on the result type. <br>
     Please provide evidence of use claims in the <a href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultId}/general-information" class="open_route" target="_blank">General information</a> section. `;
+  }
+  onAddMore() {
+    console.log('onAddMore');
+    this.otherList.push({});
+  }
+  onRemoveOne(index) {
+    this.otherList.splice(index, 1);
   }
 }
