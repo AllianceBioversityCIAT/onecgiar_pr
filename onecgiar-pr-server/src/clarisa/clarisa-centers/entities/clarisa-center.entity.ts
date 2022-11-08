@@ -1,17 +1,22 @@
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, JoinColumn, ManyToOne, PrimaryColumn, PrimaryGeneratedColumn } from "typeorm";
 import { ClarisaInstitution } from '../../clarisa-institutions/entities/clarisa-institution.entity';
 
 @Entity('clarisa_center')
 export class ClarisaCenter {
 
-    @PrimaryGeneratedColumn()
-    id: number;
+    @PrimaryColumn({
+        type: 'varchar',
+        length: 15,
+        name: 'code',
+        primary: true
+    })
+    code: number;
 
     @ManyToOne(() => ClarisaInstitution, ci => ci.id)
     @JoinColumn({
-        name: 'institution_id'
+        name: 'institutionId'
     })
-    institution_id: number;
+    institutionId: number;
 
     @Column({
         name: 'financial_code',

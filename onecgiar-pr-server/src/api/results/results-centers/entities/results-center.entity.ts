@@ -15,11 +15,11 @@ export class ResultsCenter {
     })
     is_primary: boolean;
 
-    @ManyToOne(() => ClarisaCenter, cc => cc.id)
+    @ManyToOne(() => ClarisaCenter, cc => cc.code, )
     @JoinColumn({
         name: 'center_id'
     })
-    center_id: number;
+    center_id: string;
 
     @ManyToOne( () => Result, r => r.id)
     @JoinColumn({
