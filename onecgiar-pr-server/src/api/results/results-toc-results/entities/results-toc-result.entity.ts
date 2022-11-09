@@ -34,11 +34,11 @@ export class ResultsTocResult {
 
     @Column({
         name: 'planned_result',
-        type: 'tinyint',
+        type: 'boolean',
         nullable: true
 
     })
-    planned_result: number;
+    planned_result!: boolean;
 
     @Column({
         name: 'is_active',
