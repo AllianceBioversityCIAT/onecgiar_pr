@@ -1,1 +1,3 @@
-export class CreateResultsTocResultDto {}
+export class CreateResultsTocResultDto {
+    
+}

@@ -29,6 +29,7 @@ import { lastValueFrom, map } from 'rxjs';
 import { ClarisaGeographicScopeRepository } from './clarisa-geographic-scopes/clarisa-geographic-scopes.repository';
 import { ClarisaActionAreaOutcomeRepository } from './clarisa-action-area-outcome/clarisa-action-area-outcome.repository';
 import { TocResultsRepository } from '../toc/toc-results/toc-results.repository';
+import { ClarisaCentersRepository } from './clarisa-centers/clarisa-centers.repository';
 
 @Injectable()
 export class ClarisaTaskService {
@@ -61,6 +62,7 @@ export class ClarisaTaskService {
     private readonly _clarisaGeographicScopeRepository: ClarisaGeographicScopeRepository,
     private readonly _clarisaActionAreaOutcomeRepository: ClarisaActionAreaOutcomeRepository,
     private readonly _tocResultsRepository: TocResultsRepository,
+    private readonly _clarisaCentersRepository : ClarisaCentersRepository,
     private readonly _httpService: HttpService
   ) {}
 
@@ -77,6 +79,7 @@ export class ClarisaTaskService {
     //count = await this.cloneClarisaImpactArea(count, true);
     //count = await this.cloneClarisaOutcomeIndicators(count, true);
     //count = await this.cloneClarisaRegionsType(count, true);
+    count = await this.cloneClarisaCenterRepository(count);
     count = await this.cloneClarisaRegions(count);
     count = await this.cloneClarisaCountries(count);
     count = await this.cloneClarisaMeliaStudyTypes(count);
@@ -702,6 +705,32 @@ export class ClarisaTaskService {
     } catch (error) {
       this._logger.error(
         `[${position}]: Error in manipulating the data of ToC Results`,
+      );
+      this._logger.error(error);
+      return ++position;
+    }
+  }
+
+  private async cloneClarisaCenterRepository(position: number, deleteItem = false) {
+    try {
+      if (deleteItem) {
+        const deleteData =
+          await this._clarisaCentersRepository.deleteAllData();
+        this._logger.warn(
+          `[${position}]: All CLARISA Centers control list data has been deleted`,
+        );
+      } else {
+        const data = await lastValueFrom(this._httpService.get(`${this.clarisaHost}cgiar-entities`, {auth: {username:env.L_CLA_USER, password: env.L_CLA_PASSWORD }}).pipe(map(resp => resp.data)));
+        const onlyCenters = data.filter(d => d.cgiarEntityTypeDTO.code == 4);
+        await this._clarisaCentersRepository.save(onlyCenters);
+        this._logger.verbose(
+          `[${position}]: All CLARISA Centers control list data has been created`,
+        );
+      }
+      return ++position;
+    } catch (error) {
+      this._logger.error(
+        `[${position}]: Error in manipulating the data of CLARISA Centers`,
       );
       this._logger.error(error);
       return ++position;

@@ -26,11 +26,15 @@ export class ClarisaCentersRepository extends Repository<ClarisaCenter> {
 
   async getAllCenters() {
     const queryData = `
-    DELETE FROM clarisa_center;
-    `;
+    select 
+    cc.code ,
+    cc.financial_code ,
+    cc.institutionId 
+    from clarisa_center cc 
+`;
     try {
-      const deleteData = await this.query(queryData);
-      return deleteData;
+      const centers: ClarisaCenter[] = await this.query(queryData);
+      return centers;
     } catch (error) {
       throw {
         message: `[${ClarisaCentersRepository.name}] => deleteAllData error: ${error}`,
