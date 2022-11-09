@@ -26,6 +26,7 @@ import { HttpExceptionFilter } from './shared/handlers/error.exception';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TocResultsModule } from './toc/toc-results/toc-results.module';
 import { TocLevelModule } from './toc/toc-level/toc-level.module';
+import { MQAPModule } from './api/m-qap/m-qap.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { TocLevelModule } from './toc/toc-level/toc-level.module';
     ClarisaModule,
     UserModule,
     RoleModule,
+    MQAPModule,
     TypeOrmModule.forFeature([User]),
     ScheduleModule.forRoot(),
     TocLevelModule,
