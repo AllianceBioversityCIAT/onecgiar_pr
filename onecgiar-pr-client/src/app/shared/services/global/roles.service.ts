@@ -4,7 +4,7 @@ import { Injectable } from '@angular/core';
   providedIn: 'root'
 })
 export class RolesService {
-  readOnly = true;
+  readOnly = false;
   currentInitiativeRole = null;
   roles: any;
   restrictions = [
@@ -35,7 +35,8 @@ export class RolesService {
     const { application, initiative } = this.roles;
     application.role_id = 1;
     this.readOnly = application?.role_id != 1;
-    console.log(this.readOnly);
+    // console.log(this.readOnly);
+    this.readOnly = false;
     // const initiativeFinded = initiative.find(init => init.initiative_id == 7);
     // this.readOnly = Boolean(initiativeFinded);
     // this.currentInitiativeRole = initiativeFinded?.role_id;

@@ -104,6 +104,14 @@ export class ResultsApiService {
     );
   }
 
+  GET_AllCLARISACenters() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/centers/get/all`);
+  }
+
+  GET_AllWithoutResults() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/initiatives/get/all/without/result/${this.currentResultId}`);
+  }
+
   PATCH_geographicSection(body: GeographicLocationBody) {
     return this.http.patch<any>(`${this.apiBaseUrl}update/geographic/${this.currentResultId}`, body);
   }

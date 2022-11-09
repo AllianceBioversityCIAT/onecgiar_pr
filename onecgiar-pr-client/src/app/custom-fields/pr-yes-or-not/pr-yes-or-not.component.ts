@@ -1,4 +1,4 @@
-import { Component, forwardRef, Input } from '@angular/core';
+import { Component, forwardRef, Input, EventEmitter, Output } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 @Component({
@@ -19,7 +19,7 @@ export class PrYesOrNotComponent {
   @Input() readOnly: boolean;
   @Input() required: boolean = true;
   @Input() hideOptions: boolean;
-
+  @Output() selectOptionEvent = new EventEmitter();
   private _value: boolean;
 
   get value() {
@@ -49,9 +49,11 @@ export class PrYesOrNotComponent {
 
   onclickYes() {
     this.value = true;
+    this.selectOptionEvent.emit();
   }
 
   onClickNo() {
     this.value = false;
+    this.selectOptionEvent.emit();
   }
 }

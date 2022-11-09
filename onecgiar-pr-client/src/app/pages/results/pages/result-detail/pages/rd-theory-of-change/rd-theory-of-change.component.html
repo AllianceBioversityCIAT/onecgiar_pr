@@ -5,8 +5,8 @@
     </app-alert-status>
     <app-pr-input label="Primary submitter" [required]="false" [readOnly]="true" [(ngModel)]="theoryOfChangeBody.aaa">
     </app-pr-input>
-    <app-pr-multi-select [options]="[{},{},{}]" label="Contributing Initiatives"
-        selectedLabel="Contributing Initiatives" optionLabel="Initiative(s) selected" optionValue="institutions_type_id"
+    <app-pr-multi-select [options]="this.contributingInitiativesList" label="Contributing Initiatives"
+        selectedLabel="Contributing Initiatives" optionLabel="name" optionValue="id"
         [(ngModel)]="this.theoryOfChangeBody.bbb" placeholder="Select initiative(s)
         ">
     </app-pr-multi-select>
@@ -26,17 +26,17 @@
                 </app-pr-input>
                 <app-pr-input label="Center Grant ID" [required]="false" [(ngModel)]="theoryOfChangeBody.aaa">
                 </app-pr-input>
-                <app-pr-select [options]="[{}]" label="Lead/Contract Center" optionLabel="official_code_short_name"
-                    optionValue="initiative_id" placeholder="Select donor" [(ngModel)]="donor.some" [required]="false">
+                <app-pr-select [options]="this.centersSE.centersList" label="Lead/Contract Center" optionLabel="code"
+                    optionValue="id" placeholder="Select donor" [(ngModel)]="donor.some" [required]="false">
                 </app-pr-select>
             </div>
             <app-edit-or-delete-item-button></app-edit-or-delete-item-button>
         </div>
     </div>
     <app-add-button name="Add non-pooled project" (clickEvent)="addBilateralContribution()"></app-add-button>
-    <app-pr-multi-select [options]="[{name:'center-1',id:0},{name:'center-2',id:1},{name:'center-3',id:2}]"
-        label="Contributing Centers" selectedLabel="Center(s) selected" optionLabel="name" optionValue="id"
-        [(ngModel)]="this.theoryOfChangeBody.ddd" placeholder="Select initiative(s)
+    <app-pr-multi-select [options]="this.centersSE.centersList" label="Contributing Centers"
+        selectedLabel="Center(s) selected" optionLabel="code" optionValue="id" [(ngModel)]="this.theoryOfChangeBody.ddd"
+        placeholder="Select initiative(s)
         ">
     </app-pr-multi-select>
     Please select the primary center by clicking the medal icon <i class="material-icons-round">workspace_premium</i>

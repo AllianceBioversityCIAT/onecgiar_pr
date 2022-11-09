@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { TheoryOfChangeBody } from './model/theoryOfChangeBody';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
+import { CentersService } from '../../../../../../shared/services/global/centers.service';
 
 @Component({
   selector: 'app-rd-theory-of-change',
@@ -10,10 +11,18 @@ import { ResultLevelService } from '../../../result-creator/services/result-leve
 })
 export class RdTheoryOfChangeComponent {
   theoryOfChangeBody = new TheoryOfChangeBody();
-  constructor(private api: ApiService, public resultLevelSE: ResultLevelService) {}
+  contributingInitiativesList = [];
+  constructor(private api: ApiService, public resultLevelSE: ResultLevelService, public centersSE: CentersService) {}
   ngOnInit(): void {
     this.requestEvent();
     this.getSectionInformation();
+    this.GET_AllWithoutResults();
+  }
+  GET_AllWithoutResults() {
+    this.api.resultsSE.GET_AllWithoutResults().subscribe(({ response }) => {
+      console.log(response);
+      this.contributingInitiativesList = response;
+    });
   }
   getSectionInformation() {}
   onSaveSection() {}

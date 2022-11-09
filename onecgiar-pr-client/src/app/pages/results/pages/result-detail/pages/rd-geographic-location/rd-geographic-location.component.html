@@ -29,10 +29,11 @@
         </app-pr-yes-or-not>
         <app-pr-multi-select
             *ngIf="this.geographicLocationBody.has_countries !== false && !!this.geographicLocationBody.has_countries  || this.geographicLocationBody.scope_id == 3"
-            [options]="this.regionsCountriesSE.countriesList" selectedLabel="Countries selected" flagsCode="iso_alpha_2"
+            [options]="this.regionsCountriesSE.countriesList" selectedLabel="Countries selected"
             selectedOptionLabel="name" optionLabel="full_name" optionValue="id" placeholder="Select countries"
             [(ngModel)]="this.geographicLocationBody.countries">
         </app-pr-multi-select>
+        <!-- flagsCode="iso_alpha_2" -->
     </div>
 </div>
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>

@@ -8,12 +8,13 @@ import { forkJoin } from 'rxjs';
 import { ResultsListFilterService } from '../../../pages/results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
 import { WordCounterService } from '../word-counter.service';
 import { RolesService } from '../global/roles.service';
+import { TocApiService } from './toc-api.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ApiService {
-  constructor(public resultsSE: ResultsApiService, public alertsFs: CustomizedAlertsFsService, public authSE: AuthService, public alertsFe: CustomizedAlertsFeService, public dataControlSE: DataControlService, public resultsListFilterSE: ResultsListFilterService, public wordCounterSE: WordCounterService, public rolesSE: RolesService) {}
+  constructor(public resultsSE: ResultsApiService, public alertsFs: CustomizedAlertsFsService, public authSE: AuthService, public alertsFe: CustomizedAlertsFeService, public dataControlSE: DataControlService, public resultsListFilterSE: ResultsListFilterService, public wordCounterSE: WordCounterService, public rolesSE: RolesService, public tocApiSE: TocApiService) {}
 
   updateUserData() {
     if (!this.authSE?.localStorageUser?.id) return;
