@@ -14,6 +14,9 @@ import { LinkedResultsModule } from './linked-results/linked-results.module';
 import { EvidencesModule } from './evidences/evidences.module';
 import { ResultsKnowledgeProductsModule } from './results-knowledge-products/results-knowledge-products.module';
 import { TocResult } from '../../toc/toc-results/entities/toc-result.entity';
+import { NonPooledProjectsModule } from './non-pooled-projects/non-pooled-projects.module';
+import { ResultsCentersModule } from './results-centers/results-centers.module';
+import { ResultsTocResultsModule } from './results-toc-results/results-toc-results.module';
 
 export const ResultsRoutes: Routes = [
   {
@@ -71,5 +74,17 @@ export const ResultsRoutes: Routes = [
   {
     path: 'results-knowledge-products',
     module: ResultsKnowledgeProductsModule,
+  },
+  {
+    path: 'non-pooled-projects',
+    module: NonPooledProjectsModule
+  },
+  {
+    path: 'centers',
+    module: ResultsCentersModule
+  },
+  {
+    path: 'toc',
+    module: ResultsTocResultsModule
   }
 ];

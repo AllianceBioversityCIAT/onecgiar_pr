@@ -30,7 +30,8 @@ export class ResultsCenter {
     @Column({
         name: 'is_active',
         type: 'boolean',
-        nullable: false
+        nullable: false,
+        default: true
     })
     is_active: boolean;
 
