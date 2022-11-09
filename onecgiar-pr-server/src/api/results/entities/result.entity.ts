@@ -140,28 +140,30 @@ export class Result {
   @Column({
     name: 'no_applicable_partner',
     type: 'boolean',
-    default: false
+    default: false,
   })
   no_applicable_partner: boolean;
 
-  @ManyToOne(() => ClarisaGeographicScope, cgo => cgo.id, {nullable: true})
+  @ManyToOne(() => ClarisaGeographicScope, (cgo) => cgo.id, { nullable: true })
   @JoinColumn({
-    name: 'geographic_scope_id'
+    name: 'geographic_scope_id',
   })
-  geographic_scope_id!:number
+  geographic_scope_id!: number;
 
   @Column({
     name: 'has_regions',
     nullable: true,
-    type: 'boolean'
+    type: 'boolean',
   })
   has_regions: boolean;
 
   @Column({
     name: 'has_countries',
     nullable: true,
-    type: 'boolean'
+    type: 'boolean',
   })
   has_countries: boolean;
 
+  // helpers??
+  initiative_id!: number;
 }
