@@ -13,13 +13,14 @@ import { RolesService } from '../../../../shared/services/global/roles.service';
 export class ResultDetailComponent {
   constructor(public navigationBarSE: NavigationBarService, private activatedRoute: ActivatedRoute, private api: ApiService, private resultLevelSE: ResultLevelService, private rolesSE: RolesService) {}
   ngOnInit(): void {
+    this.api.updateUserData();
     this.api.resultsSE.currentResultId = this.activatedRoute.snapshot.paramMap.get('id');
     this.GET_resultById();
   }
 
   GET_resultById() {
     this.api.resultsSE.GET_resultById().subscribe(({ response }) => {
-      console.log(response);
+      // console.log(response);
       this.rolesSE.validateReadOnly(response);
       this.resultLevelSE.currentResultLevelName = response.result_level_name;
       this.resultLevelSE.currentResultLevelId = response.result_level_id;

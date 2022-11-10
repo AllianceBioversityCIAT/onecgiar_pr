@@ -1,10 +1,11 @@
 import { Injectable } from '@angular/core';
+import { AuthService } from '../api/auth.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class RolesService {
-  readOnly = false;
+  readOnly = true;
   currentInitiativeRole = null;
   roles: any;
   restrictions = [
@@ -25,21 +26,47 @@ export class RolesService {
     }
   ];
 
+  constructor(private authSE: AuthService) {}
+
   fieldValidation(restrictionId) {
     const restrictionFinded = this.restrictions.find(restriction => restriction.id == restrictionId);
     console.log(restrictionFinded);
     return Boolean(restrictionFinded.roleIds.find(roleId => roleId == this.currentInitiativeRole));
   }
+  validateApplication(application) {
+    this.readOnly = application?.role_id != 1;
+    return { isAdmin: !this.readOnly };
+  }
 
-  validateReadOnly(result) {
-    // const { application, initiative } = this.roles;
-    // application.role_id = 1;
-    // this.readOnly = application?.role_id != 1;
-    // console.log(this.readOnly);
-    this.readOnly = false;
-    // const initiativeFinded = initiative.find(init => init.initiative_id == 7);
-    // this.readOnly = Boolean(initiativeFinded);
-    // this.currentInitiativeRole = initiativeFinded?.role_id;
+  async validateReadOnly(result?) {
+    // console.log('%cvalidateReadOnly', 'background: #222; color: #52cd47');
+    if (!this.roles) await this.updateRolesList();
+    if (!this.roles) return (this.readOnly = true);
+    const { application, initiative } = this.roles;
+    const { isAdmin } = this.validateApplication(application);
+    if (isAdmin) return null;
+    const { initiative_id } = result;
+    const initiativeFinded = initiative.find(init => init.initiative_id == initiative_id);
+    this.readOnly = Boolean(!initiativeFinded);
+    // this.readOnly ? console.log('%cIs ReadOnly => ' + this.readOnly, 'background: #222; color: #d84242') : console.log('%cNot ReadOnly => ' + this.readOnly, 'background: #222; color: #aaeaf5');
+    // console.log('%c******END OF validateReadOnly*******', 'background: #222; color: #52cd47');
+    return null;
+  }
+
+  async updateRolesList() {
+    return new Promise((resolve, reject) => {
+      this.authSE.GET_allRolesByUser().subscribe(
+        ({ response }) => {
+          //? Update role list
+          this.roles = response;
+          //?
+          resolve(response);
+        },
+        err => {
+          reject();
+        }
+      );
+    });
   }
 
   //TODO App roles
@@ -55,6 +82,4 @@ export class RolesService {
   Coordinator
   Member
   */
-
-  constructor() {}
 }

@@ -2,7 +2,7 @@
     <app-under-construction-point *ngIf="this.underConstruction"></app-under-construction-point>
     <app-pr-field-header [label]="this.label" [description]="this.description" [required]="this.required">
     </app-pr-field-header>
-    <div [ngSwitch]="readOnly || this.rolesSE.readOnly" class="position-relative">
+    <div [ngSwitch]="(readOnly || this.rolesSE.readOnly) && (!isStatic)" class="position-relative">
         <div class="read-only" *ngSwitchCase="true">{{value}}</div>
         <div class="p-fluid input_container" *ngSwitchCase="false">
             <input pInputText [type]="this.type" [placeholder]="this.placeholder" [(ngModel)]="value"

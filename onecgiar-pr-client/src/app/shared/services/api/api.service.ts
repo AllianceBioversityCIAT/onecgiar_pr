@@ -21,7 +21,9 @@ export class ApiService {
     forkJoin([this.authSE.GET_allRolesByUser(), this.authSE.GET_initiativesByUser()]).subscribe(
       resp => {
         const [GET_allRolesByUser, GET_initiativesByUser] = resp;
-        this.rolesSE.roles = GET_allRolesByUser.response;
+        //? Update role list
+        // this.rolesSE.roles = GET_allRolesByUser.response;
+        //?
         this.dataControlSE.myInitiativesList = GET_initiativesByUser?.response;
         this.dataControlSE.myInitiativesList.map(myInit => {
           myInit.role = GET_allRolesByUser?.response?.initiative?.find(initRole => initRole?.initiative_id == myInit?.initiative_id)?.description;
