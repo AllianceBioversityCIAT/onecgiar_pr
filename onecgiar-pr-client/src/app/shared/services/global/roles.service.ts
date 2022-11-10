@@ -32,9 +32,9 @@ export class RolesService {
   }
 
   validateReadOnly(result) {
-    const { application, initiative } = this.roles;
-    application.role_id = 1;
-    this.readOnly = application?.role_id != 1;
+    // const { application, initiative } = this.roles;
+    // application.role_id = 1;
+    // this.readOnly = application?.role_id != 1;
     // console.log(this.readOnly);
     this.readOnly = false;
     // const initiativeFinded = initiative.find(init => init.initiative_id == 7);

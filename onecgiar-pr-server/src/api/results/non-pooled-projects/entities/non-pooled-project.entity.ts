@@ -12,7 +12,7 @@ export class NonPooledProject {
     @Column({
         name: 'grant_title',
         type: 'text' ,
-        nullable: true
+        nullable: false
     })
     grant_title: string;
 
@@ -21,7 +21,7 @@ export class NonPooledProject {
         type: 'text',
         nullable: true
     })
-    center_grant_id: string;
+    center_grant_id!: string;
 
     @ManyToOne(() => Result, r => r.id)
     @JoinColumn({
@@ -29,11 +29,11 @@ export class NonPooledProject {
     })
     results_id: number;
 
-    @ManyToOne(() => ClarisaInstitution, ci => ci.id)
+    @ManyToOne(() => ClarisaInstitution, ci => ci.id, { nullable: true })
     @JoinColumn({
         name: 'lead_center_id'
     })
-    lead_center_id: number;
+    lead_center_id!: string;
 
     @ManyToOne(() => ClarisaInstitution, ci => ci.id)
     @JoinColumn({
@@ -44,7 +44,8 @@ export class NonPooledProject {
     @Column({
         name: 'is_active',
         type: 'boolean',
-        nullable: false
+        nullable: false,
+        default: true
     })
     is_active: boolean;
 

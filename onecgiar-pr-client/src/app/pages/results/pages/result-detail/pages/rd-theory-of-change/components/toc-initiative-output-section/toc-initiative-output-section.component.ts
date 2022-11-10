@@ -24,7 +24,7 @@ export class TocInitiativeOutputSectionComponent {
     this.GET_tocLevelsByresultId();
     this.GET_fullInitiativeToc();
   }
-  GET_tocLevelsByresultId(outcomeLevelId?) {
+  GET_tocLevelsByresultId() {
     this.api.tocApiSE.GET_tocLevelsByresultId(this.api.resultsSE.currentResultId, this.yesornotValue ? 1 : 2).subscribe(
       ({ response }) => {
         this.outcomeList = [];

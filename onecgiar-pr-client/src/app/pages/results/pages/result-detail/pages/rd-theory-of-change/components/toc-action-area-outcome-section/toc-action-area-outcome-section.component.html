@@ -12,6 +12,7 @@
 <app-pr-field-header label="Action Area Outcome <strong>{{'INIT-17 SAPLING'}}</strong>"
     description="The AA-Outcomes below are pulled from the Initiative ToC, please select the one to which this result contributes.">
 </app-pr-field-header>
+<h1>{{this.actionAreasOutcomesList?.length}}</h1>
 <div class="action_area_items">
     <div class="action_area_item_toc" *ngFor="let item of [1,1,1]; let i=index">
         <img src="assets/action_areas/1.png" alt="" srcset="">

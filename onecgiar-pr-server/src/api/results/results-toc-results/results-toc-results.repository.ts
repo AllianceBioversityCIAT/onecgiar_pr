@@ -12,13 +12,56 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
     super(ResultsTocResult, dataSource.createEntityManager());
   }
 
-  async getTocByResult() {
+  async getResultTocResultById(id: string) {
     const queryData = `
-    
+    SELECT
+      rtr.result_toc_result_id,
+      rtr.planned_result ,
+      rtr.is_active ,
+      rtr.created_date ,
+      rtr.last_updated_date ,
+      rtr.toc_result_id ,
+      rtr.results_id ,
+      rtr.action_area_outcome_id ,
+      rtr.version_id ,
+      rtr.created_by ,
+      rtr.last_updated_by
+    FROM
+      results_toc_result rtr 
+    WHERE rtr.result_toc_result_id = ?;
     `;
     try {
-      const version: ResultsTocResult[] = await this.query(queryData);
-      return version.length ? version[0] : undefined;
+      const resultTocResult: ResultsTocResult[] = await this.query(queryData, [id]);
+      return resultTocResult.length ? resultTocResult[0] : undefined;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsTocResultRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async getAllResultTocResult() {
+    const queryData = `
+    SELECT
+      rtr.result_toc_result_id,
+      rtr.planned_result ,
+      rtr.is_active ,
+      rtr.created_date ,
+      rtr.last_updated_date ,
+      rtr.toc_result_id ,
+      rtr.results_id ,
+      rtr.action_area_outcome_id ,
+      rtr.version_id ,
+      rtr.created_by ,
+      rtr.last_updated_by
+    FROM
+      results_toc_result rtr;
+    `;
+    try {
+      const resultTocResult: ResultsTocResult[] = await this.query(queryData);
+      return resultTocResult;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
