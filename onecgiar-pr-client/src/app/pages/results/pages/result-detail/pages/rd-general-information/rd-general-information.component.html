@@ -69,8 +69,8 @@
         [(ngModel)]="this.generalInfoBody.is_krs" (ngModelChange)="onChangeKrs()"></app-pr-yes-or-not>
 
     <app-pr-input *ngIf="this.generalInfoBody.is_krs" placeholder="e.g. https://www.cgiar.org/example"
-        description="Link to Key Result Story" type="text" [required]="false"
-        [(ngModel)]="this.generalInfoBody.krs_url">
+        description="Link to Key Result Story - Please note this is not intended to be reported in december" type="text"
+        [required]="false" [(ngModel)]="this.generalInfoBody.krs_url">
     </app-pr-input>
 
 
