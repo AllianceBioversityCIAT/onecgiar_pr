@@ -29,7 +29,8 @@ interface centerInterfacesToc{
 }
 
 interface resultToResultInterfaceToc{
-    toc_result_id: number;
+    toc_result_id?: number;
+    outcome_id?: number;
     results_id: number;
 }
 

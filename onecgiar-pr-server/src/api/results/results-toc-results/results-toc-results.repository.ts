@@ -70,4 +70,34 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       });
     }
   }
+
+  async getAllResultTocResultByResultId(resultId: number) {
+    const queryData = `
+    SELECT
+      rtr.result_toc_result_id,
+      rtr.planned_result ,
+      rtr.is_active ,
+      rtr.created_date ,
+      rtr.last_updated_date ,
+      rtr.toc_result_id ,
+      rtr.results_id ,
+      rtr.action_area_outcome_id ,
+      rtr.version_id ,
+      rtr.created_by ,
+      rtr.last_updated_by
+    FROM
+      results_toc_result rtr
+    where rtr.results_id = ?;
+    `;
+    try {
+      const resultTocResult: ResultsTocResult[] = await this.query(queryData, [resultId]);
+      return resultTocResult?.length?resultTocResult[0]:undefined;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsTocResultRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
 }

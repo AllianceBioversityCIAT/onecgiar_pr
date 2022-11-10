@@ -14,11 +14,11 @@ export class ResultsTocResult {
     })
     result_toc_result_id: number;
 
-    @ManyToOne(() => TocResult, tr => tr.toc_result_id)
+    @ManyToOne(() => TocResult, tr => tr.toc_result_id, { nullable: true})
     @JoinColumn({
         name: 'toc_result_id'
     })
-    toc_result_id: number;
+    toc_result_id!: number;
 
     @ManyToOne(() => Result, r => r.id)
     @JoinColumn({

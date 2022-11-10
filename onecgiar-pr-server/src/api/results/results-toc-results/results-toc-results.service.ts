@@ -13,6 +13,7 @@ import { ResultByInitiativesRepository } from '../results_by_inititiatives/resul
 import { ResultsByInititiative } from '../results_by_inititiatives/entities/results_by_inititiative.entity';
 import { VersionsService } from '../versions/versions.service';
 import { Version } from '../versions/entities/version.entity';
+import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 
 @Injectable()
 export class ResultsTocResultsService {
@@ -23,12 +24,13 @@ export class ResultsTocResultsService {
     private readonly _resultsCenterRepository: ResultsCenterRepository,
     private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
     private readonly _handlersError: HandlersError,
-    private readonly _versionsService: VersionsService
+    private readonly _versionsService: VersionsService,
+    private readonly _userRepository: UserRepository
   ) { }
 
   async create(createResultsTocResultDto: CreateResultsTocResultDto, user: TokenDto) {
     try {
-      const { contributing_np_projects, result_id, contributing_center, contributing_initiatives } = createResultsTocResultDto;
+      const { contributing_np_projects, result_id, contributing_center, contributing_initiatives, result_planned, result_toc_result, contributors_result_toc_result } = createResultsTocResultDto;
       const version = await this._versionsService.findBaseVersion();
       if (version.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: version });
@@ -49,6 +51,26 @@ export class ResultsTocResultsService {
           message: 'More than one primary center',
           status: HttpStatus.BAD_REQUEST,
         };
+      }
+
+      if ((!result_planned && !result_toc_result?.outcome_id) ||
+        result_planned && !result_toc_result?.toc_result_id) {
+        throw {
+          response: {},
+          message: 'No outcome_id or toc_result_id found in the request ',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      if(contributors_result_toc_result?.length){
+        if (contributors_result_toc_result.filter(el => !el.result_planned && !el.result_toc_result?.outcome_id).length ||
+        contributors_result_toc_result.filter(el => el.result_planned && !el.result_toc_result?.toc_result_id).length) {
+        throw {
+          response: {},
+          message: 'No outcome_id found in the request ',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
       }
 
       if (contributing_initiatives?.length) {
@@ -128,6 +150,21 @@ export class ResultsTocResultsService {
         await this._resultsCenterRepository.updateCenter(result_id, [], user.id);
       }
 
+      const restulTocResultsave = await this.resultTocResultSave(result_toc_result, result_planned, user, result_id);
+      console.log(restulTocResultsave)
+      await this._resultsTocResultRepository.save(restulTocResultsave);
+      if (contributors_result_toc_result?.length) {
+        let restulTocResultsaveArray: ResultsTocResult[] = [];
+        for (let index = 0; index < contributors_result_toc_result.length; index++) {
+          const { result_toc_result: resTocRes, result_planned: resPlan } = contributors_result_toc_result[index];
+          if (await this._userRepository.isUserInInitiative(resTocRes.results_id, user.id)) {
+            restulTocResultsaveArray.push(await this.resultTocResultSave(resTocRes, resPlan, user, resTocRes.results_id));
+          }
+        }
+        await this._resultsTocResultRepository.save(restulTocResultsaveArray);
+      }
+
+
       return {
         response: {},
         message: 'The toc data is successfully created',
@@ -136,6 +173,38 @@ export class ResultsTocResultsService {
 
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  private async resultTocResultSave(result_toc_result: resultToResultInterfaceToc, result_planned: boolean, user: TokenDto, result_id: number) {
+    const resultTocExists = await this._resultsTocResultRepository.getAllResultTocResultByResultId(result_id);
+
+    if (resultTocExists) {
+      resultTocExists.last_updated_by = user.id
+      resultTocExists.planned_result = result_planned;
+      if (result_planned) {
+        resultTocExists.toc_result_id = result_toc_result.toc_result_id;
+        resultTocExists.action_area_outcome_id = null;
+      } else {
+        resultTocExists.toc_result_id = null;
+        resultTocExists.action_area_outcome_id = result_toc_result.outcome_id;
+
+      }
+      return resultTocExists;
+    } else {
+      const newResltTocResult = new ResultsTocResult();
+      newResltTocResult.planned_result = result_planned;
+      if (result_planned) {
+        newResltTocResult.toc_result_id = result_toc_result.toc_result_id;
+        newResltTocResult.action_area_outcome_id = null;
+      } else {
+        newResltTocResult.toc_result_id = null;
+        newResltTocResult.action_area_outcome_id = result_toc_result.outcome_id;
+      }
+      newResltTocResult.results_id = result_id;
+      newResltTocResult.last_updated_by = user.id;
+      newResltTocResult.created_by = user.id;
+      return newResltTocResult;
     }
   }
 
@@ -158,4 +227,10 @@ export class ResultsTocResultsService {
   remove(id: number) {
     return `This action removes a #${id} resultsTocResult`;
   }
+}
+
+interface resultToResultInterfaceToc {
+  toc_result_id?: number;
+  results_id: number;
+  outcome_id?: number;
 }

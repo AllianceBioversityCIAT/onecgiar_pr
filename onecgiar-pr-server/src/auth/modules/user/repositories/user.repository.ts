@@ -110,4 +110,26 @@ export class UserRepository extends Repository<User> {
       });
     }
   }
+
+  async isUserInInitiative(userId: number, resultId: number) {
+    const queryData = `
+    select 
+      if(COUNT(u.id) > 0, 1, 0) as valid
+    from users u
+      inner join role_by_user rbu on rbu.\`user\` = u.id 
+      inner JOIN results_by_inititiative rbi ON rbi.inititiative_id = rbu.initiative_id 
+    where rbi.result_id = ?
+      and u.id = ?
+    `;
+    try {
+      const completeUser: any[] = await this.query(queryData, [userId, resultId]);
+      return completeUser?.length? (completeUser[0].valid == 1? true: false) : false;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: UserRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
 }

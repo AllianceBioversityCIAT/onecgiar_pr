@@ -8,10 +8,11 @@ import { ResultsCenterRepository } from '../results-centers/results-centers.repo
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
 import { VersionsService } from '../versions/versions.service';
 import { VersionRepository } from '../versions/version.repository';
+import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 
 @Module({
   controllers: [ResultsTocResultsController],
-  providers: [ResultsTocResultsService, HandlersError, ResultsTocResultRepository, NonPooledProjectRepository, ResultsCenterRepository, ResultByInitiativesRepository, VersionsService, VersionRepository],
+  providers: [ResultsTocResultsService, HandlersError, ResultsTocResultRepository, NonPooledProjectRepository, ResultsCenterRepository, ResultByInitiativesRepository, VersionsService, VersionRepository, UserRepository],
   exports: [
     ResultsTocResultRepository
   ]
