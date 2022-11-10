@@ -62,7 +62,7 @@ export class ResultCountriesService {
 
       if (countries && createResultCountryDto.scope_id == 3) {
         result.geographic_scope_id = createResultCountryDto.countries?.length > 1 ? 3 : 4;
-      } else if(createResultCountryDto.scope_id == 4) {
+      } else if(createResultCountryDto.scope_id == 4 || createResultCountryDto.scope_id == 50) {
         result.geographic_scope_id = 50;
       }else{
         result.geographic_scope_id = createResultCountryDto.scope_id;

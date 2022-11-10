@@ -61,7 +61,7 @@ export class ResultRegionsService {
         result.has_regions = createResultRegionDto.has_regions;
       }
       
-      if(createResultRegionDto.scope_id == 4){
+      if(createResultRegionDto.scope_id == 4 || createResultRegionDto.scope_id == 50){
         result.geographic_scope_id = 50;
       }else{
         result.geographic_scope_id = createResultRegionDto.scope_id;
