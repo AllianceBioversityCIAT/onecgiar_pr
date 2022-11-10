@@ -51,7 +51,8 @@ export class ResultsCenterRepository extends Repository<ResultsCenter> {
       rc.last_updated_by,
       rc.center_id
       from results_center rc 
-      WHERE rc.result_id = ?;
+      WHERE rc.result_id = ?
+        and rc.is_active > 0;
     `;
     try {
       const resultCenter: ResultsCenter[] = await this.query(queryData, [resultId]);

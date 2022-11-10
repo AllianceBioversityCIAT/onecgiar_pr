@@ -30,7 +30,7 @@ export class ResultsTocResultsService {
 
   async create(createResultsTocResultDto: CreateResultsTocResultDto, user: TokenDto) {
     try {
-      const { contributing_np_projects, result_id, contributing_center, contributing_initiatives, result_planned, result_toc_result, contributors_result_toc_result } = createResultsTocResultDto;
+      const { contributing_np_projects, result_id, contributing_center, contributing_initiatives, result_toc_result, contributors_result_toc_result } = createResultsTocResultDto;
       const version = await this._versionsService.findBaseVersion();
       if (version.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: version });
@@ -53,8 +53,8 @@ export class ResultsTocResultsService {
         };
       }
 
-      if ((!result_planned && !result_toc_result?.outcome_id) ||
-        result_planned && !result_toc_result?.toc_result_id) {
+      if ((!result_toc_result.planned_result && !result_toc_result?.outcome_id) ||
+        result_toc_result.planned_result && !result_toc_result?.toc_result_id) {
         throw {
           response: {},
           message: 'No outcome_id or toc_result_id found in the request ',
@@ -63,8 +63,8 @@ export class ResultsTocResultsService {
       }
 
       if(contributors_result_toc_result?.length){
-        if (contributors_result_toc_result.filter(el => !el.result_planned && !el.result_toc_result?.outcome_id).length ||
-        contributors_result_toc_result.filter(el => el.result_planned && !el.result_toc_result?.toc_result_id).length) {
+        if (contributors_result_toc_result.filter(el => !el.result_toc_result.planned_result && !el.result_toc_result?.outcome_id).length ||
+        contributors_result_toc_result.filter(el => el.result_toc_result.planned_result && !el.result_toc_result?.toc_result_id).length) {
         throw {
           response: {},
           message: 'No outcome_id found in the request ',
@@ -150,15 +150,15 @@ export class ResultsTocResultsService {
         await this._resultsCenterRepository.updateCenter(result_id, [], user.id);
       }
 
-      const restulTocResultsave = await this.resultTocResultSave(result_toc_result, result_planned, user, result_id);
+      const restulTocResultsave = await this.resultTocResultSave(result_toc_result, result_toc_result.planned_result, user, result_id, vrs.id);
       console.log(restulTocResultsave)
       await this._resultsTocResultRepository.save(restulTocResultsave);
       if (contributors_result_toc_result?.length) {
         let restulTocResultsaveArray: ResultsTocResult[] = [];
         for (let index = 0; index < contributors_result_toc_result.length; index++) {
-          const { result_toc_result: resTocRes, result_planned: resPlan } = contributors_result_toc_result[index];
+          const { result_toc_result: resTocRes } = contributors_result_toc_result[index];
           if (await this._userRepository.isUserInInitiative(resTocRes.results_id, user.id)) {
-            restulTocResultsaveArray.push(await this.resultTocResultSave(resTocRes, resPlan, user, resTocRes.results_id));
+            restulTocResultsaveArray.push(await this.resultTocResultSave(resTocRes, resTocRes.planned_result, user, resTocRes.results_id, vrs.id));
           }
         }
         await this._resultsTocResultRepository.save(restulTocResultsaveArray);
@@ -176,7 +176,7 @@ export class ResultsTocResultsService {
     }
   }
 
-  private async resultTocResultSave(result_toc_result: resultToResultInterfaceToc, result_planned: boolean, user: TokenDto, result_id: number) {
+  private async resultTocResultSave(result_toc_result: resultToResultInterfaceToc, result_planned: boolean, user: TokenDto, result_id: number, versionId: number) {
     const resultTocExists = await this._resultsTocResultRepository.getAllResultTocResultByResultId(result_id);
 
     if (resultTocExists) {
@@ -204,20 +204,39 @@ export class ResultsTocResultsService {
       newResltTocResult.results_id = result_id;
       newResltTocResult.last_updated_by = user.id;
       newResltTocResult.created_by = user.id;
+      newResltTocResult.version_id = versionId;
       return newResltTocResult;
     }
   }
 
-  async createToc() {
-
-  }
 
   findAll() {
     return `This action returns all resultsTocResults`;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} resultsTocResult`;
+  async getTocByResult(resultId: number) {
+    try {
+      const conInit = await this._resultByInitiativesRepository.getContributorInitiativeByResult(resultId);
+      const npProject = await this._nonPooledProjectRepository.getAllNPProjectByResultId(resultId);
+      const resCenters = await this._resultsCenterRepository.getAllResultsCenterByResultId(resultId);
+      const resTocRes = await this._resultsTocResultRepository.getAllResultTocResultByResultId(resultId);
+      const conResTocRes = await this._resultsTocResultRepository.getAllResultTocResultContributorsByResultIdAndInitId( resultId, conInit.map(el => el.id));
+      resTocRes.planned_result = !!resTocRes.planned_result;
+      conResTocRes.map(el => {el.planned_result = !!el.planned_result});
+      return {
+        response: {
+          contributing_initiatives: conInit,
+          contributing_np_projects: npProject,
+          contributing_center: resCenters,
+          result_toc_result: resTocRes,
+          contributors_result_toc_result: conResTocRes
+        },
+        message: 'The toc data is successfully created',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
   }
 
   update(id: number, updateResultsTocResultDto: UpdateResultsTocResultDto) {
@@ -233,4 +252,5 @@ interface resultToResultInterfaceToc {
   toc_result_id?: number;
   results_id: number;
   outcome_id?: number;
+  planned_result: boolean;
 }

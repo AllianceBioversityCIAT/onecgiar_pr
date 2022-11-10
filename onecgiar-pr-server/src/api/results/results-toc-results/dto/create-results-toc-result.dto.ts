@@ -3,7 +3,6 @@ export class CreateResultsTocResultDto {
     contributing_initiatives: initiativeInterfaces[];
     contributing_np_projects: donorInterfaceToc[];
     contributing_center: centerInterfacesToc[];
-    result_planned: boolean;
     result_toc_result: resultToResultInterfaceToc;
     contributors_result_toc_result: contributorsResultToResultInterfaceToc[];
 
@@ -32,9 +31,9 @@ interface resultToResultInterfaceToc{
     toc_result_id?: number;
     outcome_id?: number;
     results_id: number;
+    planned_result: boolean;
 }
 
 interface contributorsResultToResultInterfaceToc{
-    result_planned: boolean;
     result_toc_result: resultToResultInterfaceToc;
 }

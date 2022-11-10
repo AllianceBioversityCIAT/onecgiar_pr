@@ -87,7 +87,8 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       rtr.last_updated_by
     FROM
       results_toc_result rtr
-    where rtr.results_id = ?;
+    where rtr.results_id = ?
+      and rtr.is_active > 0;
     `;
     try {
       const resultTocResult: ResultsTocResult[] = await this.query(queryData, [resultId]);
@@ -100,4 +101,42 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       });
     }
   }
+
+  async getAllResultTocResultContributorsByResultIdAndInitId(resultId: number, initiativeArray: number[]) {
+    const init: number[] = initiativeArray ?? [];
+    const queryData = `
+    select 
+      rtr.result_toc_result_id,
+      rtr.planned_result,
+      rtr.is_active,
+      rtr.created_date,
+      rtr.last_updated_date,
+      rtr.toc_result_id,
+      rtr.results_id,
+      rtr.action_area_outcome_id,
+      rtr.version_id,
+      rtr.created_by,
+      rtr.last_updated_by,
+      ci.id as initiative_id,
+      ci.official_code,
+      ci.short_name
+      from results_toc_result rtr 
+      inner join results_by_inititiative rbi on rtr.results_id = rbi.result_id 
+      inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
+      WHERE rbi.inititiative_id in (${init.toString()})
+      	and rbi.initiative_role_id = 1
+      	and rtr.results_id  <> ?;
+    `;
+    try {
+      const resultTocResult: ResultsTocResult[] = await this.query(queryData, [resultId]);
+      return resultTocResult;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsTocResultRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
 }
+

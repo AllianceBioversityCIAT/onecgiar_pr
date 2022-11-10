@@ -70,6 +70,36 @@ export class NonPooledProjectRepository extends Repository<NonPooledProject> {
     }
   }
 
+  async getAllNPProjectByResultId(resultId: number) {
+    const queryData = `
+    select 
+      npp.id,
+      npp.grant_title,
+      npp.center_grant_id,
+      npp.is_active,
+      npp.created_date,
+      npp.last_updated_date,
+      npp.results_id,
+      npp.lead_center_id,
+      npp.funder_institution_id,
+      npp.created_by,
+      npp.last_updated_by
+      from non_pooled_project npp
+      WHERE npp.results_id = ?
+        and npp.is_active > 0;
+    `;
+    try {
+      const npProject: NonPooledProject[] = await this.query(queryData, [resultId]);
+      return npProject;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: NonPooledProjectRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async updateNPProjectById(resultId: number, titleArray: string[], userId: number) {
     const titles = titleArray??[];
     const upDateInactive = `

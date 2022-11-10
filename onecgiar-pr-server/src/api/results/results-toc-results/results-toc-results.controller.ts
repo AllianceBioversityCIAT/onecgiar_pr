@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Headers } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Headers, HttpException } from '@nestjs/common';
 import { ResultsTocResultsService } from './results-toc-results.service';
 import { CreateResultsTocResultDto } from './dto/create-results-toc-result.dto';
 import { UpdateResultsTocResultDto } from './dto/update-results-toc-result.dto';
@@ -10,7 +10,7 @@ export class ResultsTocResultsController {
   constructor(private readonly resultsTocResultsService: ResultsTocResultsService) {}
 
   @Post('create/toc/result/:resultId')
-  create(
+  async create(
     @Body() createResultsTocResultDto: CreateResultsTocResultDto,
     @Headers() auth: HeadersDto,
     @Param('resultId') resultId: number
@@ -19,7 +19,9 @@ export class ResultsTocResultsController {
       JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
     );
     createResultsTocResultDto.result_id = resultId;
-    return this.resultsTocResultsService.create(createResultsTocResultDto, token);
+    const {message, response, status} = 
+      await this.resultsTocResultsService.create(createResultsTocResultDto, token);
+    throw new HttpException({ message, response }, status);
   }
 
   @Get()
@@ -27,9 +29,11 @@ export class ResultsTocResultsController {
     return this.resultsTocResultsService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.resultsTocResultsService.findOne(+id);
+  @Get('get/result/:resultId')
+  async finTocByResult(@Param('resultId') resultId: number) {
+    const {message, response, status} = 
+      await this.resultsTocResultsService.getTocByResult(resultId);
+    throw new HttpException({ message, response }, status);
   }
 
   @Patch(':id')
