@@ -1,5 +1,6 @@
 import { Component, forwardRef, Input } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { RolesService } from '../../shared/services/global/roles.service';
 @Component({
   selector: 'app-pr-radio-button',
   templateUrl: './pr-radio-button.component.html',
@@ -20,8 +21,10 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
   @Input() description: string;
   @Input() required: boolean;
   @Input() hideOptions: boolean;
+  @Input() readOnly: boolean;
+  @Input() isStatic: boolean = false;
   private _value: string;
-  constructor() {}
+  constructor(public rolesSE: RolesService) {}
 
   get value() {
     return this._value;
@@ -50,5 +53,11 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
 
   joinName() {
     return this.label?.split(' ')?.join('');
+  }
+
+  get valueName() {
+    const optionFinded = this.options.find(option => option[this.optionValue] == this.value);
+    if (optionFinded) return optionFinded[this.optionLabel];
+    return "<div class='not_provided_color'>Not provided</div>";
   }
 }

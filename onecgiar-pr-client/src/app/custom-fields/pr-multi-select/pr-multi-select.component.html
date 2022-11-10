@@ -1,7 +1,7 @@
 <app-pr-field-header [label]="this.label" [description]="this.description" [required]="this.required">
 </app-pr-field-header>
 <div class="custom_select">
-    <a class="field" tabindex="0" [id]="this.optionValue">
+    <a class="field" tabindex="0" [id]="this.optionValue" *ngIf="!(readOnly || this.rolesSE.readOnly) || (isStatic)">
         <div class="text select_placeholder">{{placeholder}}</div>
         <i class="pi pi-chevron-down"></i>
         <div class="remove_focus" (click)="removeFocus()"></div>
@@ -31,7 +31,8 @@
         </app-pr-field-header>
         <div class="chips_container" *ngIf="this.selectedOptionLabel">
             <div class="pr_chip_selected" *ngFor="let option of value; let i=index">
-                <div class="name">{{option[this.selectedOptionLabel]}}</div><i class="material-icons-round"
+                <div class="name">{{option[this.selectedOptionLabel]}}</div><i
+                    *ngIf="!(readOnly || this.rolesSE.readOnly) || (isStatic)" class="material-icons-round"
                     (click)="removeOption(option)">remove_circle </i>
             </div>
         </div>

@@ -1,5 +1,6 @@
 import { Component, forwardRef, Input, Output, EventEmitter } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { RolesService } from '../../shared/services/global/roles.service';
 
 @Component({
   selector: 'app-pr-multi-select',
@@ -14,7 +15,7 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
   ]
 })
 export class PrMultiSelectComponent implements ControlValueAccessor {
-  constructor() {}
+  constructor(public rolesSE: RolesService) {}
   @Input() optionLabel: string;
   @Input() optionValue: string;
   @Input() options: any;
@@ -25,6 +26,7 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   @Input() selectedOptionLabel: string;
   @Input() description: string;
   @Input() readOnly: boolean;
+  @Input() isStatic: boolean = false;
   @Input() required: boolean = true;
   @Input() flagsCode: string;
   @Output() selectOptionEvent = new EventEmitter();

@@ -32,11 +32,14 @@
         </app-pr-radio-button>
         <div id="climate_change_tag_alert" [hidden]="this.generalInfoBody.climate_change_tag_id != 3"></div>
     </div>
+
     <app-pr-field-header *ngIf="this.generalInfoBody?.result_level_id !== 4" label="Actors"
         [required]="this.generalInfoBody?.result_level_id !== 1"
         description="An actor is an individual, organization or network operating within or beyond the system the Initiative or intervention aims to influence and whose actions can advance or impede the Initiative’s aims.">
     </app-pr-field-header>
-    <div id="parterRequestAlert" [hidden]="this.generalInfoBody?.result_level_id === 4"></div>
+    <app-alert-status [hidden]="this.generalInfoBody?.result_level_id === 4 || this.rolesSE.readOnly"
+        description="If you don't find the funder you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. ">
+    </app-alert-status>
     <div class="auto_fit_container" *ngIf="this.generalInfoBody?.result_level_id !== 4">
         <app-pr-multi-select [options]="this.institutionsSE.institutionsList" selectedLabel="Actor(s) selected"
             selectedOptionLabel="institutions_name" optionLabel="full_name" optionValue="institutions_id"
