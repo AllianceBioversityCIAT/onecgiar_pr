@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { Like } from 'typeorm';
+import { FindOptionsRelations, FindOptionsWhere, Like } from 'typeorm';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { MQAPResultDto } from '../../m-qap/dtos/m-qap.dto';
@@ -12,10 +12,47 @@ import { CreateResultsKnowledgeProductFromHandleDto } from './dto/create-results
 import { UpdateResultsKnowledgeProductDto } from './dto/update-results-knowledge-product.dto';
 import { ResultsKnowledgeProduct } from './entities/results-knowledge-product.entity';
 import { ResultsKnowledgeProductMapper } from './results-knowledge-products.mapper';
-import { ResultsKnowledgeProductsRepository } from './results-knowledge-products.repository';
+import { ResultsKnowledgeProductsRepository } from './repositories/results-knowledge-products.repository';
+import { ResultsKnowledgeProductAltmetricRepository } from './repositories/results-knowledge-product-altmetrics.repository';
+import { ResultsKnowledgeProductAuthorRepository } from './repositories/results-knowledge-product-authors.repository';
+import { ResultsKnowledgeProductInstitutionRepository } from './repositories/results-knowledge-product-institution.repository';
+import { ResultsKnowledgeProductKeywordRepository } from './repositories/results-knowledge-product-keywords.repository';
+import { ResultsKnowledgeProductMetadataRepository } from './repositories/results-knowledge-product-metadata.repository';
+import { ResultsKnowledgeProductDto } from './dto/results-knowledge-product.dto';
 
 @Injectable()
 export class ResultsKnowledgeProductsService {
+  private readonly _resultsKnowledgeProductRelations: FindOptionsRelations<ResultsKnowledgeProduct> =
+    {
+      result_knowledge_product_altmetric_array: true,
+      result_knowledge_product_institution_array: {
+        results_by_institutions_object: true,
+      },
+      result_knowledge_product_metadata_array: true,
+      result_knowledge_product_keyword_array: true,
+      result_knowledge_product_author_array: true,
+    };
+
+  private readonly _resultsKnowledgeProductWhere: FindOptionsWhere<ResultsKnowledgeProduct> =
+    {
+      is_active: true,
+      result_knowledge_product_altmetric_array: {
+        is_active: true,
+      },
+      result_knowledge_product_institution_array: {
+        is_active: true,
+      },
+      result_knowledge_product_metadata_array: {
+        is_active: true,
+      },
+      result_knowledge_product_keyword_array: {
+        is_active: true,
+      },
+      result_knowledge_product_author_array: {
+        is_active: true,
+      },
+    };
+
   constructor(
     private readonly _resultsKnowledgeProductRepository: ResultsKnowledgeProductsRepository,
     private readonly _handlersError: HandlersError,
@@ -23,6 +60,11 @@ export class ResultsKnowledgeProductsService {
     private readonly _resultRepository: ResultRepository,
     private readonly _mqapService: MQAPService,
     private readonly _resultsKnowledgeProductMapper: ResultsKnowledgeProductMapper,
+    private readonly _resultsKnowledgeProductAltmetricRepository: ResultsKnowledgeProductAltmetricRepository,
+    private readonly _resultsKnowledgeProductAuthorRepository: ResultsKnowledgeProductAuthorRepository,
+    private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
+    private readonly _resultsKnowledgeProductKeywordRepository: ResultsKnowledgeProductKeywordRepository,
+    private readonly _resultsKnowledgeProductMetadataRepository: ResultsKnowledgeProductMetadataRepository,
   ) {}
   async create(
     createResultsKnowledgeProductDto: CreateResultsKnowledgeProductFromHandleDto,
@@ -40,19 +82,23 @@ export class ResultsKnowledgeProductsService {
         };
       }
 
+      let response: ResultsKnowledgeProductDto = null;
       const resultKnowledgeProduct: ResultsKnowledgeProduct =
-        await this._resultsKnowledgeProductRepository.findOneBy({
-          handle: Like(createResultsKnowledgeProductDto.handle),
-          is_active: true,
+        await this._resultsKnowledgeProductRepository.findOne({
+          where: {
+            handle: Like(createResultsKnowledgeProductDto.handle),
+          },
+          relations: this._resultsKnowledgeProductRelations,
         });
 
       if (resultKnowledgeProduct) {
+        response = this._resultsKnowledgeProductMapper.entityToDto(
+          resultKnowledgeProduct,
+        );
         return {
-          response: this._resultsKnowledgeProductMapper.entityToDto(
-            resultKnowledgeProduct,
-          ),
+          response: response,
           message: 'The Result Knowledge Product has already been created.',
-          status: HttpStatus.CREATED,
+          status: HttpStatus.OK,
         };
       }
 
@@ -78,19 +124,52 @@ export class ResultsKnowledgeProductsService {
         );
 
       let newKnowledgeProduct: ResultsKnowledgeProduct =
-        this._resultsKnowledgeProductMapper.dtoToEntity(mqapResponse);
-
-      newKnowledgeProduct.created_by = user.id;
-      newKnowledgeProduct.results_id = result.id;
-      newKnowledgeProduct.version_id = currentVersion.id;
+        this._resultsKnowledgeProductMapper.fillBasicInfo(
+          mqapResponse,
+          user.id,
+          result.id,
+          currentVersion.id,
+        );
 
       newKnowledgeProduct = await this._resultsKnowledgeProductRepository.save(
         newKnowledgeProduct,
       );
 
+      newKnowledgeProduct = this._resultsKnowledgeProductMapper.fillRelations(
+        mqapResponse,
+        newKnowledgeProduct,
+      );
+
+      await this._resultsKnowledgeProductAltmetricRepository.save(
+        newKnowledgeProduct.result_knowledge_product_altmetric_array ?? [],
+      );
+      await this._resultsKnowledgeProductAuthorRepository.save(
+        newKnowledgeProduct.result_knowledge_product_author_array ?? [],
+      );
+      await this._resultsKnowledgeProductInstitutionRepository.save(
+        newKnowledgeProduct.result_knowledge_product_institution_array ?? {},
+      );
+      await this._resultsKnowledgeProductKeywordRepository.save(
+        newKnowledgeProduct.result_knowledge_product_keyword_array ?? [],
+      );
+      await this._resultsKnowledgeProductMetadataRepository.save(
+        newKnowledgeProduct.result_knowledge_product_metadata_array ?? [],
+      );
+
+      newKnowledgeProduct =
+        await this._resultsKnowledgeProductRepository.findOne({
+          where: {
+            result_knowledge_product_id:
+              newKnowledgeProduct.result_knowledge_product_id,
+          },
+          relations: this._resultsKnowledgeProductRelations,
+        });
+
+      response =
+        this._resultsKnowledgeProductMapper.entityToDto(newKnowledgeProduct);
+
       return {
-        response:
-          this._resultsKnowledgeProductMapper.entityToDto(newKnowledgeProduct),
+        response: response,
         message: 'The Result Knowledge Product has been created successfully',
         status: HttpStatus.CREATED,
       };

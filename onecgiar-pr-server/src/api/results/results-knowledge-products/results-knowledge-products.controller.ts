@@ -8,6 +8,7 @@ import {
   Delete,
   Query,
   Headers,
+  HttpException,
 } from '@nestjs/common';
 import { ResultsKnowledgeProductsService } from './results-knowledge-products.service';
 import { CreateResultsKnowledgeProductFromHandleDto } from './dto/create-results-knowledge-product-from-handle.dto';
@@ -36,6 +37,8 @@ export class ResultsKnowledgeProductsController {
         createResultsKnowledgeProductDto,
         token,
       );
+
+    throw new HttpException({ message, response }, status);
   }
 
   @Get()
