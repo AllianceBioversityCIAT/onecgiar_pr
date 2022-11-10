@@ -53,8 +53,8 @@ export class ResultsTocResultsService {
         };
       }
 
-      if ((!result_toc_result.planned_result && !result_toc_result?.outcome_id) ||
-        result_toc_result.planned_result && !result_toc_result?.toc_result_id) {
+      if ((!result_toc_result?.planned_result && !result_toc_result?.outcome_id) ||
+        result_toc_result?.planned_result && !result_toc_result?.toc_result_id) {
         throw {
           response: {},
           message: 'No outcome_id or toc_result_id found in the request ',
@@ -63,8 +63,8 @@ export class ResultsTocResultsService {
       }
 
       if(contributors_result_toc_result?.length){
-        if (contributors_result_toc_result.filter(el => !el.result_toc_result.planned_result && !el.result_toc_result?.outcome_id).length ||
-        contributors_result_toc_result.filter(el => el.result_toc_result.planned_result && !el.result_toc_result?.toc_result_id).length) {
+        if (contributors_result_toc_result.filter(el => !el.result_toc_result?.planned_result && !el.result_toc_result?.outcome_id).length ||
+        contributors_result_toc_result.filter(el => el.result_toc_result?.planned_result && !el.result_toc_result?.toc_result_id).length) {
         throw {
           response: {},
           message: 'No outcome_id found in the request ',
@@ -151,7 +151,6 @@ export class ResultsTocResultsService {
       }
 
       const restulTocResultsave = await this.resultTocResultSave(result_toc_result, result_toc_result.planned_result, user, result_id, vrs.id);
-      console.log(restulTocResultsave)
       await this._resultsTocResultRepository.save(restulTocResultsave);
       if (contributors_result_toc_result?.length) {
         let restulTocResultsaveArray: ResultsTocResult[] = [];
