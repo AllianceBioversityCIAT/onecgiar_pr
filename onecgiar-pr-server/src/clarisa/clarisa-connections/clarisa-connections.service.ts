@@ -11,8 +11,7 @@ import { ResultByInitiativesRepository } from '../../api/results/results_by_init
 
 @Injectable()
 export class ClarisaConnectionsService {
-  private readonly clarisaHost: string =
-    env.CLA_URL ?? env.L_CLA_URL;
+  private readonly clarisaHost: string = env.CLA_URL;
   constructor(
     private readonly _httpService: HttpService,
     private readonly _handlersError: HandlersError,
