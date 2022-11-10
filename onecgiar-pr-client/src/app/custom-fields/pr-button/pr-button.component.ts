@@ -1,5 +1,4 @@
 import { Component, Input } from '@angular/core';
-import { RolesService } from '../../shared/services/global/roles.service';
 
 @Component({
   selector: 'app-pr-button',
@@ -13,5 +12,5 @@ export class PrButtonComponent {
   @Input() showBackground: boolean = true;
   @Input() colorType: 'primary' | 'danger' | 'secondary' = 'primary';
   @Input() padding: 'small' | 'medium' | 'big' = 'small';
-  constructor(public rolesSE: RolesService) {}
+  constructor() {}
 }
