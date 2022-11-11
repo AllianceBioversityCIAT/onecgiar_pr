@@ -8,8 +8,8 @@ export class CentersService {
   centersList = [];
   constructor(private api: ApiService) {
     this.api.resultsSE.GET_AllCLARISACenters().subscribe(({ response }) => {
-      console.log(response);
       this.centersList = response;
+      // console.log(response);
     });
   }
 }

@@ -24,10 +24,24 @@ export class RdTheoryOfChangeComponent {
       this.contributingInitiativesList = response;
     });
   }
-  getSectionInformation() {}
-  onSaveSection() {}
+  getSectionInformation() {
+    this.api.resultsSE.GET_toc().subscribe(
+      resp => {
+        console.log(resp);
+      },
+      err => {
+        console.log(err);
+      }
+    );
+  }
+  onSaveSection() {
+    console.log(this.theoryOfChangeBody);
+    this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
+      console.log(resp);
+    });
+  }
   addBilateralContribution() {
-    this.theoryOfChangeBody.ccc.push({});
+    this.theoryOfChangeBody.contributing_np_projects.push({});
   }
   requestEvent() {
     this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
@@ -39,7 +53,7 @@ export class RdTheoryOfChangeComponent {
     });
   }
   addPrimary(center) {
-    this.theoryOfChangeBody.ddd.map(center => (center.primary = false));
+    this.theoryOfChangeBody.contributing_center.map(center => (center.primary = false));
     center.primary = true;
   }
   // TODO Add first selection as primaty

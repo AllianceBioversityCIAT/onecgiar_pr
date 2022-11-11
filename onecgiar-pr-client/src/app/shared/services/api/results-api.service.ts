@@ -9,6 +9,7 @@ import { GeographicLocationBody } from '../../../pages/results/pages/result-deta
 import { LinksToResultsBody } from '../../../pages/results/pages/result-detail/pages/rd-links-to-results/models/linksToResultsBody';
 import { PartnersRequestBody } from '../../../pages/results/pages/result-detail/components/partners-request/models/partnersRequestBody.model';
 import { EvidencesBody } from '../../../pages/results/pages/result-detail/pages/rd-evidences/model/evidencesBody.model';
+import { TheoryOfChangeBody } from '../../../pages/results/pages/result-detail/pages/rd-theory-of-change/model/theoryOfChangeBody';
 
 @Injectable({
   providedIn: 'root'
@@ -109,7 +110,13 @@ export class ResultsApiService {
   }
 
   GET_AllWithoutResults() {
-    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/initiatives/get/all/without/result/${this.currentResultId}`);
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/initiatives/get/all/without/result/${this.currentResultId}`).pipe(
+      map(resp => {
+        console.log(resp.response);
+        resp.response.map(initiative => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name}</strong> - ${initiative?.name}`));
+        return resp;
+      })
+    );
   }
 
   PATCH_geographicSection(body: GeographicLocationBody) {
@@ -134,5 +141,13 @@ export class ResultsApiService {
 
   POST_evidences(body: EvidencesBody) {
     return this.http.post<any>(`${this.apiBaseUrl}evidences/create/${this.currentResultId}`, body);
+  }
+
+  POST_toc(body: TheoryOfChangeBody) {
+    return this.http.post<any>(`${this.apiBaseUrl}toc/create/toc/result/${this.currentResultId}`, body);
+  }
+
+  GET_toc() {
+    return this.http.get<any>(`${this.apiBaseUrl}toc/get/result/${this.currentResultId}`);
   }
 }

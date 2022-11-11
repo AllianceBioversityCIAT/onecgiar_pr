@@ -3,11 +3,11 @@
     <app-alert-status
         description="Initiatives and non-pooled projects that you collaborated with to generated this result/contributed to this result.">
     </app-alert-status>
-    <app-pr-input label="Primary submitter" [required]="false" [readOnly]="true" [(ngModel)]="theoryOfChangeBody.aaa">
+    <app-pr-input label="Primary submitter" [required]="false" [readOnly]="true">
     </app-pr-input>
     <app-pr-multi-select [options]="this.contributingInitiativesList" label="Contributing Initiatives"
-        selectedLabel="Contributing Initiatives" optionLabel="name" optionValue="id"
-        [(ngModel)]="this.theoryOfChangeBody.bbb" placeholder="Select initiative(s)
+        selectedLabel="Contributing Initiatives" optionLabel="full_name" optionValue="id" selectedOptionLabel="name"
+        [(ngModel)]="this.theoryOfChangeBody.contributing_initiatives" placeholder="Select initiative(s)
         ">
     </app-pr-multi-select>
     <app-pr-field-header label="Contributing non-pooled projects" [required]="false"></app-pr-field-header>
@@ -15,38 +15,40 @@
         description="If you don't find the funder you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. ">
     </app-alert-status>
     <div class="donors">
-        <div class="donor" *ngFor="let donor of this.theoryOfChangeBody.ccc">
-            <app-pr-field-header label="Donor No.1" [required]="false"></app-pr-field-header>
+        <div class="donor" *ngFor="let donor of this.theoryOfChangeBody.contributing_np_projects; let i=index">
+            <app-pr-field-header [label]="'Non-pooled No. ' + (i+1)" [required]="false"></app-pr-field-header>
             <app-pr-select class="segment_title_margin" [options]="[{}]" label="Funder name"
                 optionLabel="official_code_short_name" optionValue="initiative_id" placeholder="Select donor"
-                [(ngModel)]="donor.some" [required]="false">
+                [(ngModel)]="donor.funder" [required]="false">
             </app-pr-select>
             <div class="auto_fit_container">
-                <app-pr-input label="Grant title" [required]="false" [(ngModel)]="theoryOfChangeBody.aaa">
+                <app-pr-input label="Grant title" [required]="false" [(ngModel)]="donor.grant_title">
                 </app-pr-input>
-                <app-pr-input label="Center Grant ID" [required]="false" [(ngModel)]="theoryOfChangeBody.aaa">
+                <app-pr-input label="Center Grant ID" [required]="false" [(ngModel)]="donor.center_grant_id">
                 </app-pr-input>
                 <app-pr-select [options]="this.centersSE.centersList" label="Lead/Contract Center" optionLabel="code"
-                    optionValue="id" placeholder="Select donor" [(ngModel)]="donor.some" [required]="false">
+                    optionValue="id" placeholder="Select donor" [(ngModel)]="donor.lead_center" [required]="false">
                 </app-pr-select>
             </div>
             <app-edit-or-delete-item-button></app-edit-or-delete-item-button>
         </div>
     </div>
+    <app-no-data-text *ngIf="!this.theoryOfChangeBody?.contributing_np_projects?.length" title="No Non-pooled added">
+    </app-no-data-text>
     <app-add-button name="Add non-pooled project" (clickEvent)="addBilateralContribution()"></app-add-button>
     <app-pr-multi-select [options]="this.centersSE.centersList" label="Contributing Centers"
-        selectedLabel="Center(s) selected" optionLabel="code" optionValue="id" [(ngModel)]="this.theoryOfChangeBody.ddd"
-        placeholder="Select initiative(s)
+        selectedLabel="Center(s) selected" optionLabel="code" optionValue="id"
+        [(ngModel)]="this.theoryOfChangeBody.contributing_center" placeholder="Select initiative(s)
         ">
     </app-pr-multi-select>
     Please select the primary center by clicking the medal icon <i class="material-icons-round">workspace_premium</i>
     <div class="medal_selector selected_container">
         <div class="centers chips_container">
-            <div class="center pr_chip_selected" *ngFor="let center of this.theoryOfChangeBody.ddd">
+            <div class="center pr_chip_selected" *ngFor="let center of this.theoryOfChangeBody.contributing_center">
                 <i class="material-icons-round medal" [ngClass]="{'primary': center.primary}"
                     (click)="addPrimary(center)">workspace_premium</i>
                 <!--TODO add primary text  -->
-                <div class="name">{{center?.name}}</div><i class="material-icons-round">cancel</i>
+                <div class="name">{{center?.code}}</div><i class="material-icons-round">cancel</i>
             </div>
         </div>
     </div>
