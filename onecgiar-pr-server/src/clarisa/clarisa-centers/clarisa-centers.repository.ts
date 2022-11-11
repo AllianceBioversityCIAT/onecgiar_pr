@@ -29,8 +29,11 @@ export class ClarisaCentersRepository extends Repository<ClarisaCenter> {
     select 
     cc.code ,
     cc.financial_code ,
-    cc.institutionId 
-    from clarisa_center cc 
+    cc.institutionId,
+    ci.name,
+    ci.acronym 
+    from clarisa_center cc
+   	inner join clarisa_institutions ci on ci.id  = cc.institutionId;
 `;
     try {
       const centers: ClarisaCenter[] = await this.query(queryData);

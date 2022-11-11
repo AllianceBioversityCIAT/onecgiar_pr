@@ -20,7 +20,7 @@ interface donorInterfaceToc{
     funder: institutionsInterfaceToc;
     grant_title: string;
     center_grant_id: string;
-    lead_center: centerInterfacesToc;
+    lead_center: string;
 }
 interface centerInterfacesToc{
     code: string;

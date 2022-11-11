@@ -142,6 +142,7 @@ WHERE
     r.title,
     r.reported_year_id AS reported_year,
     rt.name AS result_type,
+    rl.name AS result_level_name,
     rt.id AS result_type_id,
     r.created_date,
     ci.official_code AS submitter,

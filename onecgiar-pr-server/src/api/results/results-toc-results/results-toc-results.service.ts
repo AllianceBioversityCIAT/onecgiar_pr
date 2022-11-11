@@ -75,7 +75,7 @@ export class ResultsTocResultsService {
             if (resultData) {
               resultData.center_grant_id = contributing_np_projects[index].center_grant_id;
               resultData.funder_institution_id = contributing_np_projects[index].funder.institutions_id;
-              resultData.lead_center_id = contributing_np_projects[index].lead_center.code;
+              resultData.lead_center_id = contributing_np_projects[index].lead_center;
               resultData.is_active = true;
               resultData.last_updated_by = user.id;
               resultTocResultArray.push(resultData);
@@ -84,7 +84,7 @@ export class ResultsTocResultsService {
               newNpProject.results_id = result_id;
               newNpProject.center_grant_id = contributing_np_projects[index].center_grant_id;
               newNpProject.funder_institution_id = contributing_np_projects[index].funder.institutions_id;
-              newNpProject.lead_center_id = contributing_np_projects[index].lead_center.code;
+              newNpProject.lead_center_id = contributing_np_projects[index].lead_center;
               newNpProject.grant_title = contributing_np_projects[index].grant_title;
               newNpProject.created_by = user.id;
               newNpProject.last_updated_by = user.id;
