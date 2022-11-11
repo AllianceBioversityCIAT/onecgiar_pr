@@ -6,8 +6,8 @@
     <app-pr-input label="Primary submitter" [required]="false" [readOnly]="true">
     </app-pr-input>
     <app-pr-multi-select [options]="this.contributingInitiativesList" label="Contributing Initiatives"
-        selectedLabel="Contributing Initiatives" optionLabel="full_name" optionValue="id" selectedOptionLabel="name"
-        [(ngModel)]="this.theoryOfChangeBody.contributing_initiatives" placeholder="Select initiative(s)
+        selectedLabel="Contributing Initiatives" optionLabel="full_name" optionValue="id"
+        selectedOptionLabel="full_name" [(ngModel)]="this.theoryOfChangeBody.contributing_initiatives" placeholder="Select initiative(s)
         ">
     </app-pr-multi-select>
     <app-pr-field-header label="Contributing non-pooled projects" [required]="false"></app-pr-field-header>
@@ -16,18 +16,21 @@
     </app-alert-status>
     <div class="donors">
         <div class="donor" *ngFor="let donor of this.theoryOfChangeBody.contributing_np_projects; let i=index">
-            <app-pr-field-header [label]="'Non-pooled No. ' + (i+1)" [required]="false"></app-pr-field-header>
-            <app-pr-select class="segment_title_margin" [options]="[{}]" label="Funder name"
-                optionLabel="official_code_short_name" optionValue="initiative_id" placeholder="Select donor"
+            <app-pr-field-header [label]="'Non-pooled project No. ' + (i+1)" [required]="false"></app-pr-field-header>
+            <app-pr-select class="segment_title_margin" [options]="this.institutionsSE?.institutionsList"
+                label="Funder name" optionLabel="full_name" optionValue="institutions_id" placeholder="Select funder"
                 [(ngModel)]="donor.funder" [required]="false">
             </app-pr-select>
             <div class="auto_fit_container">
-                <app-pr-input label="Grant title" [required]="false" [(ngModel)]="donor.grant_title">
+                <app-pr-input label="Grant title" [required]="false" [(ngModel)]="donor.grant_title"
+                    placeholder="Grant title goes here...">
                 </app-pr-input>
-                <app-pr-input label="Center Grant ID" [required]="false" [(ngModel)]="donor.center_grant_id">
+                <app-pr-input label="Center Grant ID" [required]="false" [(ngModel)]="donor.center_grant_id"
+                    placeholder="e.g. G184">
                 </app-pr-input>
                 <app-pr-select [options]="this.centersSE.centersList" label="Lead/Contract Center" optionLabel="code"
-                    optionValue="id" placeholder="Select donor" [(ngModel)]="donor.lead_center" [required]="false">
+                    optionValue="code" placeholder="Select donor" [(ngModel)]="donor.lead_center" [required]="false"
+                    placeholder="Lead/Contract Center goes here...">
                 </app-pr-select>
             </div>
             <app-edit-or-delete-item-button></app-edit-or-delete-item-button>
@@ -63,7 +66,9 @@
             <app-toc-initiative-outcome-section></app-toc-initiative-outcome-section>
         </div>
         <div *ngSwitchCase="4">
-            <app-toc-initiative-output-section></app-toc-initiative-output-section>
+            <app-toc-initiative-output-section [result_toc_result]="this.theoryOfChangeBody.result_toc_result"
+                [contributors_result_toc_result]="this.theoryOfChangeBody.contributors_result_toc_result">
+            </app-toc-initiative-output-section>
         </div>
         <div *ngSwitchDefault>
 

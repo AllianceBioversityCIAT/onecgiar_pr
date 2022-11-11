@@ -5,24 +5,27 @@
     <div class="date"><strong>Updated on:&nbsp;</strong> 6 October, 2022 - 2:00:22 PM - (CET)</div>
     <div class="editable_field">
         <app-pr-yes-or-not label="Is this result planned in the <strong>{{name}}</strong> ToC?"
-            [description]="yesornotValue === false ? 'Please select the End of Initiative (EOI)-Outcome that most closely matches this result. You will have time during the reflect moment to update your ToC':''"
-            [(ngModel)]="yesornotValue" (selectOptionEvent)="GET_tocLevelsByresultId()">
+            [description]="result_toc_result?.planned_result === false ? 'Please select the End of Initiative (EOI)-Outcome that most closely matches this result. You will have time during the reflect moment to update your ToC':''"
+            [(ngModel)]="result_toc_result.planned_result" (selectOptionEvent)="GET_tocLevelsByresultId()">
         </app-pr-yes-or-not>
         <a ref="https://toc.mel.cgiar.org/toc/48a4a5df-2b6b-4ff8-a1c6-c709c5ba9c1e" target="_blank"
             class="toc_button"><span>See ToC</span>
             <img src="assets/icons/toc_icon.png" alt="">
         </a>
     </div>
-    <div class="auto_fit_container">
-        <app-pr-select *ngIf="yesornotValue" [options]="this.outputList" label="Output" optionLabel="title"
-            optionValue="toc_level_id" placeholder="Select output">
+    <div class="auto_fit_container"
+        *ngIf="result_toc_result?.planned_result === false || result_toc_result?.planned_result === true">
+        <app-pr-select *ngIf="this.result_toc_result?.planned_result" [options]="this.outputList" label="Output"
+            optionLabel="title" optionValue="toc_result_id" placeholder="Select output"
+            [(ngModel)]="result_toc_result.toc_result_id">
         </app-pr-select>
-        <app-pr-select *ngIf="!yesornotValue" [options]="this.tocInitiativeOutcomeListsSE.outcomeLevelList"
-            [disabled]="true" label="Outcome level" optionLabel="name" optionValue="toc_level_id"
-            placeholder="Select outcome level" [(ngModel)]="select" [required]="false">
+        <app-pr-select *ngIf="!this.result_toc_result.planned_result"
+            [options]="this.tocInitiativeOutcomeListsSE.outcomeLevelList" [disabled]="true" label="Outcome level"
+            optionLabel="name" optionValue="toc_level_id" placeholder="Select outcome level" [required]="false">
         </app-pr-select>
-        <app-pr-select *ngIf="!yesornotValue" [options]="this.outcomeList" label="Outcome" optionLabel="title"
-            optionValue="toc_level_id" placeholder="Select outcome" [required]="false">
+        <app-pr-select *ngIf="!this.result_toc_result.planned_result" [options]="this.outcomeList" label="Outcome"
+            optionLabel="title" optionValue="toc_result_id" placeholder="Select outcome" [required]="false"
+            [(ngModel)]="result_toc_result.outcome_id">
         </app-pr-select>
     </div>
 
@@ -30,23 +33,21 @@
 </div>
 <app-pr-field-header label="Other contributors" [required]="false" [simpleStyle]="true">
 </app-pr-field-header>
-<div *ngFor="let init of otherContributorsList">
-    <app-pr-yes-or-not label="Is this result planned in the <strong>{{init?.name}}</strong> ToC?" [required]="false"
-        [(ngModel)]="init.yesornotValue" [readOnly]="true">
+<div *ngFor="let item of contributors_result_toc_result">
+    <app-pr-yes-or-not label="Is this result planned in the <strong>{{item?.name}}</strong> ToC?" [required]="false"
+        [(ngModel)]="item.planned_result" [readOnly]="true">
     </app-pr-yes-or-not>
     <div class="auto_fit_container">
-        <app-pr-select *ngIf="init.yesornotValue"
-            [options]="[{id:1,name:'test'},{id:2,name:'sample'},{id:3,name:'Example'}]" label="Output"
-            optionLabel="name" optionValue="id" placeholder="Select output" [disabled]="true">
+        <app-pr-select *ngIf="item.planned_result" [options]="this.outputList" label="Output" optionLabel="title"
+            optionValue="toc_result_id" placeholder="Select output" [disabled]="true" [(ngModel)]="item.toc_result_id">
         </app-pr-select>
-        <app-pr-select *ngIf="!init.yesornotValue"
-            [options]="[{id:1,name:'test'},{id:2,name:'sample'},{id:3,name:'Example'}]" label="Outcome level"
-            [disabled]="true" optionLabel="name" optionValue="id" placeholder="Select outcome level"
-            [(ngModel)]="init.select" [required]="false">
+        <app-pr-select *ngIf="!item.planned_result" [options]="this.tocInitiativeOutcomeListsSE.outcomeLevelList"
+            label="Outcome level" [disabled]="true" optionLabel="name" optionValue="toc_level_id"
+            placeholder="Select outcome level" [required]="false">
         </app-pr-select>
-        <app-pr-select *ngIf="!init.yesornotValue" [options]="[{}]" label="Outcome" [disabled]="true"
-            optionLabel="official_code_short_name" optionValue="initiative_id" placeholder="Select outcome"
-            [required]="false">
+        <app-pr-select *ngIf="!item.planned_result" [options]="this.outcomeList" label="Outcome" [disabled]="true"
+            optionLabel="title" optionValue="toc_result_id" placeholder="Select outcome" [required]="false"
+            [(ngModel)]="item.outcome_id">
         </app-pr-select>
     </div>
     <hr class="divider-20">

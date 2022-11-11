@@ -56,7 +56,7 @@ export class ResultsApiService {
   GET_allInstitutions() {
     return this.http.get<any>(`${this.apiBaseUrl}get/institutions/all`).pipe(
       map(resp => {
-        resp.response.map(institution => (institution.full_name = `(Id:${institution?.institutions_id}) ${institution?.institutions_acronym} - ${institution?.institutions_name} - ${institution?.headquarter_name}`));
+        resp.response.map(institution => (institution.full_name = `(Id:${institution?.institutions_id}) <strong>${institution?.institutions_acronym}</strong> - ${institution?.institutions_name} - ${institution?.headquarter_name}`));
         return resp;
       })
     );
@@ -80,7 +80,7 @@ export class ResultsApiService {
   }
 
   PATCH_partnersSection(body: PartnersBody) {
-    return this.http.patch<any>(`${this.apiBaseUrl}results-by-institutions/create/partners/${this.currentResultId}`, body);
+    return this.http.patch<any>(`${this.apiBaseUrl}results-by-institutions/create/partners/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
   GET_partnersSection() {
     return this.http.get<any>(`${this.apiBaseUrl}results-by-institutions/partners/result/${this.currentResultId}`);
@@ -114,7 +114,7 @@ export class ResultsApiService {
   GET_AllWithoutResults() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/initiatives/get/all/without/result/${this.currentResultId}`).pipe(
       map(resp => {
-        console.log(resp.response);
+        // console.log(resp.response);
         resp.response.map(initiative => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name}</strong> - ${initiative?.name}`));
         return resp;
       })
@@ -122,7 +122,7 @@ export class ResultsApiService {
   }
 
   PATCH_geographicSection(body: GeographicLocationBody) {
-    return this.http.patch<any>(`${this.apiBaseUrl}update/geographic/${this.currentResultId}`, body);
+    return this.http.patch<any>(`${this.apiBaseUrl}update/geographic/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
   GET_geographicSection() {
@@ -134,7 +134,7 @@ export class ResultsApiService {
   }
 
   POST_resultsLinked(body: LinksToResultsBody) {
-    return this.http.post<any>(`${this.apiBaseUrl}linked/create/${this.currentResultId}`, body);
+    return this.http.post<any>(`${this.apiBaseUrl}linked/create/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
   GET_evidences() {
@@ -142,14 +142,20 @@ export class ResultsApiService {
   }
 
   POST_evidences(body: EvidencesBody) {
-    return this.http.post<any>(`${this.apiBaseUrl}evidences/create/${this.currentResultId}`, body);
+    return this.http.post<any>(`${this.apiBaseUrl}evidences/create/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
   POST_toc(body: TheoryOfChangeBody) {
-    return this.http.post<any>(`${this.apiBaseUrl}toc/create/toc/result/${this.currentResultId}`, body);
+    return this.http.post<any>(`${this.apiBaseUrl}toc/create/toc/result/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
   GET_toc() {
-    return this.http.get<any>(`${this.apiBaseUrl}toc/get/result/${this.currentResultId}`);
+    return this.http.get<any>(`${this.apiBaseUrl}toc/get/result/${this.currentResultId}`).pipe(
+      map(resp => {
+        // console.log(resp.response);
+        resp?.response?.contributing_initiatives.map(initiative => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name || ''}</strong> - ${initiative?.initiative_name}`));
+        return resp;
+      })
+    );
   }
 }

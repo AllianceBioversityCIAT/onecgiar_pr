@@ -31,7 +31,7 @@
         </app-pr-field-header>
         <div class="chips_container" *ngIf="this.selectedOptionLabel">
             <div class="pr_chip_selected" *ngFor="let option of value; let i=index">
-                <div class="name">{{option[this.selectedOptionLabel]}}</div><i
+                <div class="name" [innerHtml]="option[this.selectedOptionLabel]"></div><i
                     *ngIf="!(readOnly || this.rolesSE.readOnly) || (isStatic)" class="material-icons-round"
                     (click)="removeOption(option)">remove_circle </i>
             </div>

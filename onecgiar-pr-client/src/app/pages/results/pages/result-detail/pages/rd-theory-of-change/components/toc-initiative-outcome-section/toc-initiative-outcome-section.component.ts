@@ -23,6 +23,7 @@ export class TocInitiativeOutcomeSectionComponent {
   onSelectOutcomeLevel(outcomeLevelId) {
     this.api.tocApiSE.GET_tocLevelsByresultId(this.api.resultsSE.currentResultId, outcomeLevelId).subscribe(
       ({ response }) => {
+        console.log(outcomeLevelId);
         this.outcomeList = response;
         console.log(this.outcomeList);
       },
@@ -32,6 +33,7 @@ export class TocInitiativeOutcomeSectionComponent {
       }
     );
   }
+
   valdiateEOI() {
     console.log(this.yesornotValue);
     if (this.yesornotValue == false) this.outcomeLevelValue = 3;

@@ -35,7 +35,6 @@ export class RdGeneralInformationComponent {
     // console.log(this.generalInfoBody);
     this.api.resultsSE.PATCH_generalInformation(this.generalInfoBody).subscribe(
       resp => {
-        this.api.alertsFe.show({ id: 'sectionSaved', title: 'Section saved correctly', description: '', status: 'success', closeIn: 500 });
         this.getSectionInformation();
       },
       err => {

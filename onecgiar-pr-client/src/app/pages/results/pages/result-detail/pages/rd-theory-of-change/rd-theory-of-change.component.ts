@@ -1,8 +1,9 @@
 import { Component } from '@angular/core';
-import { TheoryOfChangeBody } from './model/theoryOfChangeBody';
+import { TheoryOfChangeBody, donorInterfaceToc } from './model/theoryOfChangeBody';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
+import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 
 @Component({
   selector: 'app-rd-theory-of-change',
@@ -12,7 +13,7 @@ import { CentersService } from '../../../../../../shared/services/global/centers
 export class RdTheoryOfChangeComponent {
   theoryOfChangeBody = new TheoryOfChangeBody();
   contributingInitiativesList = [];
-  constructor(private api: ApiService, public resultLevelSE: ResultLevelService, public centersSE: CentersService) {}
+  constructor(private api: ApiService, public resultLevelSE: ResultLevelService, public centersSE: CentersService, public institutionsSE: InstitutionsService) {}
   ngOnInit(): void {
     this.requestEvent();
     this.getSectionInformation();
@@ -20,14 +21,15 @@ export class RdTheoryOfChangeComponent {
   }
   GET_AllWithoutResults() {
     this.api.resultsSE.GET_AllWithoutResults().subscribe(({ response }) => {
-      console.log(response);
+      // console.log(response);
       this.contributingInitiativesList = response;
     });
   }
   getSectionInformation() {
     this.api.resultsSE.GET_toc().subscribe(
-      resp => {
-        console.log(resp);
+      ({ response }) => {
+        console.log(response);
+        this.theoryOfChangeBody = response;
       },
       err => {
         console.log(err);
@@ -41,7 +43,8 @@ export class RdTheoryOfChangeComponent {
     });
   }
   addBilateralContribution() {
-    this.theoryOfChangeBody.contributing_np_projects.push({});
+    this.theoryOfChangeBody.contributing_np_projects.push(new donorInterfaceToc());
+    console.log(this.theoryOfChangeBody.contributing_np_projects);
   }
   requestEvent() {
     this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {

@@ -36,8 +36,8 @@ export class RdPartnersComponent {
   onSaveSection() {
     console.log(this.partnersBody);
     this.api.resultsSE.PATCH_partnersSection(this.partnersBody).subscribe(resp => {
-      console.log(resp);
-      this.api.alertsFe.show({ id: 'sectionSaved', title: 'Section saved correctly', description: '', status: 'success', closeIn: 500 });
+      // console.log(resp);
+      this.getSectionInformation();
     });
   }
   validateDeliverySelection(deliveries, deliveryId) {

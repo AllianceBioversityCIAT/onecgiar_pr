@@ -46,7 +46,6 @@ export class RdGeographicLocationComponent {
   onSaveSection() {
     console.log(this.geographicLocationBody);
     this.api.resultsSE.PATCH_geographicSection(this.geographicLocationBody).subscribe(({ response }) => {
-      this.api.alertsFe.show({ id: 'sectionSaved', title: 'Section saved correctly', description: '', status: 'success', closeIn: 500 });
       this.getSectionInformation();
     });
   }
