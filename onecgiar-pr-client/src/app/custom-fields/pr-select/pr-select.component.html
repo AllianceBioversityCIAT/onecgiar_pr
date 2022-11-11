@@ -1,6 +1,6 @@
 <app-pr-field-header [label]="this.label" [description]="this.description" [required]="this.required">
 </app-pr-field-header>
-<div [ngSwitch]="readOnly || this.rolesSE.readOnly">
+<div [ngSwitch]="readOnly || this.rolesSE.readOnly && !isStatic">
     <div class="read-only" *ngSwitchCase="true">{{value}}</div>
     <div class="custom_select" *ngSwitchCase="false">
         <a class="field" tabindex="0" [id]="this.optionValue" [ngClass]="{'select-disable': this.disabled}">

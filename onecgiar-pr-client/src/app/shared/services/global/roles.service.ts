@@ -40,17 +40,25 @@ export class RolesService {
 
   async validateReadOnly(result?) {
     // console.log('%cvalidateReadOnly', 'background: #222; color: #52cd47');
-    if (!this.roles) await this.updateRolesList();
-    if (!this.roles) return (this.readOnly = true);
-    const { application, initiative } = this.roles;
-    const { isAdmin } = this.validateApplication(application);
-    if (isAdmin) return null;
-    const { initiative_id } = result;
-    const initiativeFinded = initiative.find(init => init.initiative_id == initiative_id);
-    this.readOnly = Boolean(!initiativeFinded);
-    // this.readOnly ? console.log('%cIs ReadOnly => ' + this.readOnly, 'background: #222; color: #d84242') : console.log('%cNot ReadOnly => ' + this.readOnly, 'background: #222; color: #aaeaf5');
-    // console.log('%c******END OF validateReadOnly*******', 'background: #222; color: #52cd47');
-    return null;
+    const updateMyRoles = async roles => {
+      if (!this.roles) await roles;
+      if (!this.roles) return (this.readOnly = true);
+      const { application, initiative } = this.roles;
+      const { isAdmin } = this.validateApplication(application);
+      if (isAdmin) return null;
+      const { initiative_id } = result;
+      const initiativeFinded = initiative.find(init => init.initiative_id == initiative_id);
+      this.readOnly = Boolean(!initiativeFinded);
+      // this.readOnly ? console.log('%cIs ReadOnly => ' + this.readOnly, 'background: #222; color: #d84242') : console.log('%cNot ReadOnly => ' + this.readOnly, 'background: #222; color: #aaeaf5');
+      // console.log('%c******END OF validateReadOnly*******', 'background: #222; color: #52cd47');
+      return null;
+    };
+    updateMyRoles(this.updateRolesListFromLocalStorage());
+    updateMyRoles(this.updateRolesList());
+  }
+
+  async updateRolesListFromLocalStorage() {
+    this.roles = JSON.parse(localStorage.getItem('roles'));
   }
 
   async updateRolesList() {
@@ -59,11 +67,12 @@ export class RolesService {
         ({ response }) => {
           //? Update role list
           this.roles = response;
+          localStorage.setItem('roles', JSON.stringify(response));
           //?
           resolve(response);
         },
         err => {
-          reject();
+          reject(err);
         }
       );
     });

@@ -29,14 +29,23 @@ export class CapDevInfoComponent implements OnInit {
   constructor(public api: ApiService, public institutionsSE: InstitutionsService) {}
 
   ngOnInit(): void {
-    this.showAlerts();
     this.getSectionInformation();
+    this.requestEvent();
   }
   getSectionInformation() {}
   onSaveSection() {}
-  showAlerts() {}
 
   deliveryMethodDescription() {
     return `Please go to <a href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultId}/geographic-location" class="open_route" target="_blank">section 4. Geographic Location</a> and specify the location info of where the training took place in case you select the Face to face or Blended option.`;
+  }
+
+  requestEvent() {
+    this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
+      try {
+        document.querySelector('.alert-event').addEventListener('click', e => {
+          this.api.dataControlSE.showPartnersRequest = true;
+        });
+      } catch (error) {}
+    });
   }
 }

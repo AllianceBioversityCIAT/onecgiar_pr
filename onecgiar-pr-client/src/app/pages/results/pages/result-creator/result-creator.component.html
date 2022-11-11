@@ -10,7 +10,7 @@
     <div class="report_container">
       <div class="w20vw">
         <app-pr-select class="segment_title_margin" [options]="this.api.dataControlSE.myInitiativesList"
-          label="Report for" optionLabel="official_code_short_name" optionValue="initiative_id"
+          label="Report for" [isStatic]="true" optionLabel="official_code_short_name" optionValue="initiative_id"
           placeholder="Select initiative" [(ngModel)]="this.resultLevelSE.resultBody.initiative_id">
         </app-pr-select>
       </div>
@@ -19,15 +19,15 @@
       <div class="segment_title segment_title_margin" *ngIf="this.resultLevelSE?.currentResultTypeList?.length">Result
         type
       </div>
-      <app-pr-radio-button [options]="this.resultLevelSE.currentResultTypeList" optionLabel="name" optionValue='id'
-        [(ngModel)]="this.resultLevelSE.resultBody.result_type_id" (ngModelChange)="cleanTitle()">
+      <app-pr-radio-button [options]="this.resultLevelSE.currentResultTypeList" [isStatic]="true" optionLabel="name"
+        optionValue='id' [(ngModel)]="this.resultLevelSE.resultBody.result_type_id" (ngModelChange)="cleanTitle()">
       </app-pr-radio-button>
-      <app-pr-input *ngIf="resultLevelSE.resultBody.result_type_id == 6" placeholder="Handle..." label="Handle"
-        type="text" [(ngModel)]="this.resultLevelSE.resultBody.result_name">
+      <app-pr-input *ngIf="resultLevelSE.resultBody.result_type_id == 6" [isStatic]="true" placeholder="Handle..."
+        label="CGSpace link" type="text" [(ngModel)]="this.resultLevelSE.resultBody.result_name">
       </app-pr-input>
       <app-pr-input *ngIf="resultLevelSE.resultBody.result_type_id != 6 || this.resultLevelSE.resultBody.result_name"
-        [readOnly]="resultLevelSE.resultBody.result_type_id == 6" [placeholder]="resultTypeName+ ''" label="Title"
-        type="text" [maxWords]="30"
+        [readOnly]="resultLevelSE.resultBody.result_type_id == 6" [isStatic]="true" [placeholder]="resultTypeName+ ''"
+        label="Title" type="text" [maxWords]="30"
         [description]="resultLevelSE.resultBody.result_type_id == 6 ? 'Title fetched from CGSpace' :'To search for results that have already been reported, enter key words into the title box below. If your result has not already been reported, you can add it here.'"
         [(ngModel)]="this.resultLevelSE.resultBody.result_name"
         (ngModelChange)="depthSearch(this.resultLevelSE.resultBody.result_name)">
