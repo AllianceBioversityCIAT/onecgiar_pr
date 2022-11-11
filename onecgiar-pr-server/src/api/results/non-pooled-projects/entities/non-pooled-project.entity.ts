@@ -35,11 +35,11 @@ export class NonPooledProject {
     })
     lead_center_id!: string;
 
-    @ManyToOne(() => ClarisaInstitution, ci => ci.id)
+    @ManyToOne(() => ClarisaInstitution, ci => ci.id, {nullable: true})
     @JoinColumn({
         name: 'funder_institution_id'
     })
-    funder_institution_id: number;
+    funder_institution_id!: number;
 
     @Column({
         name: 'is_active',

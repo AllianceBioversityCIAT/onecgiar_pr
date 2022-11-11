@@ -37,40 +37,9 @@ export class ResultsTocResultsService {
       }
       const vrs: Version = <Version>version.response;
       const titleArray = contributing_np_projects.map(el => el.grant_title);
-      if (titleArray.length != titleArray.filter(el => el.length).length) {
-        throw {
-          response: {},
-          message: 'One of the grant titles is empty',
-          status: HttpStatus.BAD_REQUEST,
-        };
-      }
 
       if (contributing_center.filter(el => el.primary == true).length > 1) {
-        throw {
-          response: {},
-          message: 'More than one primary center',
-          status: HttpStatus.BAD_REQUEST,
-        };
-      }
-
-      if ((!result_toc_result?.planned_result && !result_toc_result?.outcome_id) ||
-        result_toc_result?.planned_result && !result_toc_result?.toc_result_id) {
-        throw {
-          response: {},
-          message: 'No outcome_id or toc_result_id found in the request ',
-          status: HttpStatus.BAD_REQUEST,
-        };
-      }
-
-      if(contributors_result_toc_result?.length){
-        if (contributors_result_toc_result.filter(el => !el.result_toc_result?.planned_result && !el.result_toc_result?.outcome_id).length ||
-        contributors_result_toc_result.filter(el => el.result_toc_result?.planned_result && !el.result_toc_result?.toc_result_id).length) {
-        throw {
-          response: {},
-          message: 'No outcome_id found in the request ',
-          status: HttpStatus.BAD_REQUEST,
-        };
-      }
+        contributing_center.map(el => {el.primary = false;});
       }
 
       if (contributing_initiatives?.length) {
@@ -100,27 +69,30 @@ export class ResultsTocResultsService {
         await this._nonPooledProjectRepository.updateNPProjectById(result_id, titleArray, user.id);
         let resultTocResultArray: NonPooledProject[] = [];
         for (let index = 0; index < contributing_np_projects.length; index++) {
-          const resultData = await this._nonPooledProjectRepository.getAllNPProjectById(result_id, contributing_np_projects[index].grant_title)
-          if (resultData) {
-            resultData.center_grant_id = contributing_np_projects[index].center_grant_id;
-            resultData.funder_institution_id = contributing_np_projects[index].funder.institutions_id;
-            resultData.lead_center_id = contributing_np_projects[index].lead_center.code;
-            resultData.is_active = true;
-            resultData.last_updated_by = user.id;
-            resultTocResultArray.push(resultData);
-          } else {
-            const newNpProject = new NonPooledProject();
-            newNpProject.results_id = result_id;
-            newNpProject.center_grant_id = contributing_np_projects[index].center_grant_id;
-            newNpProject.funder_institution_id = contributing_np_projects[index].funder.institutions_id;
-            newNpProject.lead_center_id = contributing_np_projects[index].lead_center.code;
-            newNpProject.grant_title = contributing_np_projects[index].grant_title;
-            newNpProject.created_by = user.id;
-            newNpProject.last_updated_by = user.id;
-            resultTocResultArray.push(newNpProject);
+          if (contributing_np_projects[index]?.grant_title.length) {
+            const resultData = await this._nonPooledProjectRepository.getAllNPProjectById(result_id, contributing_np_projects[index].grant_title);
+
+            if (resultData) {
+              resultData.center_grant_id = contributing_np_projects[index].center_grant_id;
+              resultData.funder_institution_id = contributing_np_projects[index].funder.institutions_id;
+              resultData.lead_center_id = contributing_np_projects[index].lead_center.code;
+              resultData.is_active = true;
+              resultData.last_updated_by = user.id;
+              resultTocResultArray.push(resultData);
+            } else {
+              const newNpProject = new NonPooledProject();
+              newNpProject.results_id = result_id;
+              newNpProject.center_grant_id = contributing_np_projects[index].center_grant_id;
+              newNpProject.funder_institution_id = contributing_np_projects[index].funder.institutions_id;
+              newNpProject.lead_center_id = contributing_np_projects[index].lead_center.code;
+              newNpProject.grant_title = contributing_np_projects[index].grant_title;
+              newNpProject.created_by = user.id;
+              newNpProject.last_updated_by = user.id;
+              resultTocResultArray.push(newNpProject);
+            }
           }
-          await this._nonPooledProjectRepository.save(resultTocResultArray);
         }
+        await this._nonPooledProjectRepository.save(resultTocResultArray);
       } else {
         await this._nonPooledProjectRepository.updateNPProjectById(result_id, [], user.id);
       }
@@ -149,14 +121,17 @@ export class ResultsTocResultsService {
       } else {
         await this._resultsCenterRepository.updateCenter(result_id, [], user.id);
       }
+      
+      if(this.validResultRocResult(result_toc_result?.planned_result,result_toc_result?.outcome_id, result_toc_result?.toc_result_id)){
+        const restulTocResultsave = await this.resultTocResultSave(result_toc_result, result_toc_result.planned_result, user, result_id, vrs.id);
+        await this._resultsTocResultRepository.save(restulTocResultsave);
+      }
 
-      const restulTocResultsave = await this.resultTocResultSave(result_toc_result, result_toc_result.planned_result, user, result_id, vrs.id);
-      await this._resultsTocResultRepository.save(restulTocResultsave);
       if (contributors_result_toc_result?.length) {
         let restulTocResultsaveArray: ResultsTocResult[] = [];
         for (let index = 0; index < contributors_result_toc_result.length; index++) {
           const { result_toc_result: resTocRes } = contributors_result_toc_result[index];
-          if (await this._userRepository.isUserInInitiative(resTocRes.results_id, user.id)) {
+          if (await this._userRepository.isUserInInitiative(resTocRes.results_id, user.id) || this.validResultRocResult(resTocRes?.planned_result,resTocRes?.outcome_id, resTocRes?.toc_result_id)) {
             restulTocResultsaveArray.push(await this.resultTocResultSave(resTocRes, resTocRes.planned_result, user, resTocRes.results_id, vrs.id));
           }
         }
@@ -173,6 +148,11 @@ export class ResultsTocResultsService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
+  }
+
+  private validResultRocResult(planned_result?:boolean, outcome_id?:number, toc_result_id?:number){
+    return !((!planned_result && !outcome_id) ||
+    (planned_result && !toc_result_id));
   }
 
   private async resultTocResultSave(result_toc_result: resultToResultInterfaceToc, result_planned: boolean, user: TokenDto, result_id: number, versionId: number) {
@@ -219,9 +199,9 @@ export class ResultsTocResultsService {
       const npProject = await this._nonPooledProjectRepository.getAllNPProjectByResultId(resultId);
       const resCenters = await this._resultsCenterRepository.getAllResultsCenterByResultId(resultId);
       const resTocRes = await this._resultsTocResultRepository.getAllResultTocResultByResultId(resultId);
-      const conResTocRes = await this._resultsTocResultRepository.getAllResultTocResultContributorsByResultIdAndInitId( resultId, conInit.map(el => el.id));
+      const conResTocRes = await this._resultsTocResultRepository.getAllResultTocResultContributorsByResultIdAndInitId(resultId, conInit.map(el => el.id));
       resTocRes.planned_result = !!resTocRes.planned_result;
-      conResTocRes.map(el => {el.planned_result = !!el.planned_result});
+      conResTocRes.map(el => { el.planned_result = !!el.planned_result });
       return {
         response: {
           contributing_initiatives: conInit,
