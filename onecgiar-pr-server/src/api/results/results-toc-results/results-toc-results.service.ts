@@ -121,7 +121,7 @@ export class ResultsTocResultsService {
       } else {
         await this._resultsCenterRepository.updateCenter(result_id, [], user.id);
       }
-      
+
       if(this.validResultRocResult(result_toc_result?.planned_result,result_toc_result?.outcome_id, result_toc_result?.toc_result_id)){
         const restulTocResultsave = await this.resultTocResultSave(result_toc_result, result_toc_result.planned_result, user, result_id, vrs.id);
         await this._resultsTocResultRepository.save(restulTocResultsave);
@@ -198,10 +198,19 @@ export class ResultsTocResultsService {
       const conInit = await this._resultByInitiativesRepository.getContributorInitiativeByResult(resultId);
       const npProject = await this._nonPooledProjectRepository.getAllNPProjectByResultId(resultId);
       const resCenters = await this._resultsCenterRepository.getAllResultsCenterByResultId(resultId);
-      const resTocRes = await this._resultsTocResultRepository.getAllResultTocResultByResultId(resultId);
-      const conResTocRes = await this._resultsTocResultRepository.getAllResultTocResultContributorsByResultIdAndInitId(resultId, conInit.map(el => el.id));
-      resTocRes.planned_result = !!resTocRes.planned_result;
-      conResTocRes.map(el => { el.planned_result = !!el.planned_result });
+      let resTocRes = await this._resultsTocResultRepository.getAllResultTocResultByResultId(resultId);
+      let conResTocRes = await this._resultsTocResultRepository.getAllResultTocResultContributorsByResultIdAndInitId(resultId, conInit.map(el => el.id));
+      if(resTocRes){
+        resTocRes.planned_result = !!resTocRes?.planned_result || null;
+      }else{
+        resTocRes = null;
+      }
+
+      if(conResTocRes.length){
+        conResTocRes.map(el => { el.planned_result = !!el?.planned_result || null});
+      }else{
+        conResTocRes =  [];
+      }
       return {
         response: {
           contributing_initiatives: conInit,

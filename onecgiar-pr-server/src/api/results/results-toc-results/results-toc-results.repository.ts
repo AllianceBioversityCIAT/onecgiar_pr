@@ -103,7 +103,7 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
   }
 
   async getAllResultTocResultContributorsByResultIdAndInitId(resultId: number, initiativeArray: number[]) {
-    const init: number[] = initiativeArray ?? [];
+    const init: number[] = initiativeArray || [];
     const queryData = `
     select 
       rtr.result_toc_result_id,
@@ -123,7 +123,7 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       from results_toc_result rtr 
       inner join results_by_inititiative rbi on rtr.results_id = rbi.result_id 
       inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
-      WHERE rbi.inititiative_id in (${init.toString()})
+      WHERE rbi.inititiative_id in (${init?.length? init.toString(): null})
       	and rbi.initiative_role_id = 1
       	and rtr.results_id  <> ?;
     `;
