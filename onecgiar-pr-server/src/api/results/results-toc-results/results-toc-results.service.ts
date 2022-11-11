@@ -131,8 +131,8 @@ export class ResultsTocResultsService {
         let restulTocResultsaveArray: ResultsTocResult[] = [];
         for (let index = 0; index < contributors_result_toc_result.length; index++) {
           const { result_toc_result: resTocRes } = contributors_result_toc_result[index];
-          if (await this._userRepository.isUserInInitiative(resTocRes.results_id, user.id) || this.validResultRocResult(resTocRes?.planned_result, resTocRes?.outcome_id, resTocRes?.toc_result_id)) {
-            restulTocResultsaveArray.push(await this.resultTocResultSave(resTocRes, resTocRes.planned_result, user, resTocRes.results_id, vrs.id));
+          if (await this._userRepository.isUserInInitiative(resTocRes?.results_id, user.id) || this.validResultRocResult(resTocRes?.planned_result, resTocRes?.outcome_id, resTocRes?.toc_result_id)) {
+            restulTocResultsaveArray.push(await this.resultTocResultSave(resTocRes, resTocRes.planned_result, user, resTocRes?.results_id, vrs.id));
           }
         }
         await this._resultsTocResultRepository.save(restulTocResultsaveArray);
