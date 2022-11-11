@@ -1,10 +1,33 @@
 export class TheoryOfChangeBody {
-  public aaa: string = 'INIT-17 Sustainable Animal Productivity';
-  public bbb: any = null;
-  public ccc: any = [{}];
-  public ddd: any = [
-    { name: 'center-1', id: 0 },
-    { name: 'center-2', id: 1 },
-    { name: 'center-3', id: 2 }
-  ];
+  result_id: number;
+  contributing_initiatives: initiativeInterfaces[] = [];
+  contributing_np_projects: donorInterfaceToc[] = [];
+  contributing_center: centerInterfacesToc[] = [];
+  result_toc_result: resultToResultInterfaceToc;
+  contributors_result_toc_result: contributorsResultToResultInterfaceToc[] = [];
+}
+interface initiativeInterfaces {
+  id: number;
+}
+interface institutionsInterfaceToc {
+  institutions_id: number;
+}
+interface donorInterfaceToc {
+  funder?: institutionsInterfaceToc;
+  grant_title?: string;
+  center_grant_id?: string;
+  lead_center?: centerInterfacesToc;
+}
+interface centerInterfacesToc {
+  code: string;
+  primary?: boolean;
+}
+interface resultToResultInterfaceToc {
+  toc_result_id?: number;
+  outcome_id?: number;
+  results_id: number;
+  planned_result: boolean;
+}
+interface contributorsResultToResultInterfaceToc {
+  result_toc_result: resultToResultInterfaceToc;
 }
