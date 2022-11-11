@@ -19,6 +19,8 @@ import { ResultsKnowledgeProductInstitutionRepository } from './repositories/res
 import { ResultsKnowledgeProductKeywordRepository } from './repositories/results-knowledge-product-keywords.repository';
 import { ResultsKnowledgeProductMetadataRepository } from './repositories/results-knowledge-product-metadata.repository';
 import { ResultsKnowledgeProductDto } from './dto/results-knowledge-product.dto';
+import { ResultsService } from '../results.service';
+import { returnFormatResult } from '../dto/return-format-result.dto';
 
 @Injectable()
 export class ResultsKnowledgeProductsService {
@@ -57,7 +59,7 @@ export class ResultsKnowledgeProductsService {
     private readonly _resultsKnowledgeProductRepository: ResultsKnowledgeProductsRepository,
     private readonly _handlersError: HandlersError,
     private readonly _versionRepository: VersionRepository,
-    private readonly _resultRepository: ResultRepository,
+    private readonly _resultService: ResultsService,
     private readonly _mqapService: MQAPService,
     private readonly _resultsKnowledgeProductMapper: ResultsKnowledgeProductMapper,
     private readonly _resultsKnowledgeProductAltmetricRepository: ResultsKnowledgeProductAltmetricRepository,
@@ -66,18 +68,12 @@ export class ResultsKnowledgeProductsService {
     private readonly _resultsKnowledgeProductKeywordRepository: ResultsKnowledgeProductKeywordRepository,
     private readonly _resultsKnowledgeProductMetadataRepository: ResultsKnowledgeProductMetadataRepository,
   ) {}
-  async create(
-    createResultsKnowledgeProductDto: CreateResultsKnowledgeProductFromHandleDto,
-    user: TokenDto,
-  ) {
+  async findOnCGSpace(handle: string) {
     try {
-      if (
-        !createResultsKnowledgeProductDto?.result_id ||
-        !createResultsKnowledgeProductDto?.handle
-      ) {
+      if (!handle) {
         throw {
           response: {},
-          message: 'missing data: Result ID or CGSpace Handle',
+          message: 'Missing data: handle',
           status: HttpStatus.BAD_REQUEST,
         };
       }
@@ -86,7 +82,7 @@ export class ResultsKnowledgeProductsService {
       const resultKnowledgeProduct: ResultsKnowledgeProduct =
         await this._resultsKnowledgeProductRepository.findOne({
           where: {
-            handle: Like(createResultsKnowledgeProductDto.handle),
+            handle: Like(handle),
           },
           relations: this._resultsKnowledgeProductRelations,
         });
@@ -95,6 +91,7 @@ export class ResultsKnowledgeProductsService {
         response = this._resultsKnowledgeProductMapper.entityToDto(
           resultKnowledgeProduct,
         );
+
         return {
           response: response,
           message: 'The Result Knowledge Product has already been created.',
@@ -102,95 +99,112 @@ export class ResultsKnowledgeProductsService {
         };
       }
 
-      const result: Result = await this._resultRepository.findOneBy({
-        id: createResultsKnowledgeProductDto.result_id,
-        is_active: true,
-      });
-
-      if (!result) {
-        throw {
-          response: {},
-          message: 'Result Not Found',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
-
-      const currentVersion: Version =
-        await this._versionRepository.getBaseVersion();
-
       const mqapResponse: MQAPResultDto =
-        await this._mqapService.getDataFromCGSpaceHandle(
-          createResultsKnowledgeProductDto.handle,
-        );
-
-      let newKnowledgeProduct: ResultsKnowledgeProduct =
-        this._resultsKnowledgeProductMapper.fillBasicInfo(
-          mqapResponse,
-          user.id,
-          result.id,
-          currentVersion.id,
-        );
-
-      newKnowledgeProduct = await this._resultsKnowledgeProductRepository.save(
-        newKnowledgeProduct,
-      );
-
-      newKnowledgeProduct = this._resultsKnowledgeProductMapper.fillRelations(
-        mqapResponse,
-        newKnowledgeProduct,
-      );
-
-      await this._resultsKnowledgeProductAltmetricRepository.save(
-        newKnowledgeProduct.result_knowledge_product_altmetric_array ?? [],
-      );
-      await this._resultsKnowledgeProductAuthorRepository.save(
-        newKnowledgeProduct.result_knowledge_product_author_array ?? [],
-      );
-      await this._resultsKnowledgeProductInstitutionRepository.save(
-        newKnowledgeProduct.result_knowledge_product_institution_array ?? {},
-      );
-      await this._resultsKnowledgeProductKeywordRepository.save(
-        newKnowledgeProduct.result_knowledge_product_keyword_array ?? [],
-      );
-      await this._resultsKnowledgeProductMetadataRepository.save(
-        newKnowledgeProduct.result_knowledge_product_metadata_array ?? [],
-      );
-
-      newKnowledgeProduct =
-        await this._resultsKnowledgeProductRepository.findOne({
-          where: {
-            result_knowledge_product_id:
-              newKnowledgeProduct.result_knowledge_product_id,
-          },
-          relations: this._resultsKnowledgeProductRelations,
-        });
+        await this._mqapService.getDataFromCGSpaceHandle(handle);
 
       response =
-        this._resultsKnowledgeProductMapper.entityToDto(newKnowledgeProduct);
+        this._resultsKnowledgeProductMapper.mqapResponseToKnowledgeProductDto(
+          mqapResponse,
+        );
 
       return {
         response: response,
-        message: 'The Result Knowledge Product has been created successfully',
-        status: HttpStatus.CREATED,
+        message: 'The Result Knowledge Product is yet to be created',
+        status: HttpStatus.OK,
       };
-
-      //console.log(newKnowledgeProduct);
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
   }
 
-  findAll() {
-    return `This action returns all resultsKnowledgeProducts`;
+  async create(
+    resultsKnowledgeProductDto: ResultsKnowledgeProductDto,
+    user: TokenDto,
+  ) {
+    const currentVersion: Version =
+      await this._versionRepository.getBaseVersion();
+
+    if (!resultsKnowledgeProductDto.result_data) {
+      throw {
+        response: {},
+        message: 'missing data needed to create a result',
+        status: HttpStatus.BAD_REQUEST,
+      };
+    }
+
+    let newResult = await this._resultService.createOwnerResult(
+      resultsKnowledgeProductDto.result_data,
+      user,
+    );
+
+    if (newResult.status >= 300) {
+      throw this._handlersError.returnErrorRes({ error: newResult });
+    }
+
+    let newKnowledgeProduct: ResultsKnowledgeProduct =
+      this._resultsKnowledgeProductMapper.dtoToEntity(
+        resultsKnowledgeProductDto,
+        user.id,
+        (newResult.response as Result).id,
+        currentVersion.id,
+      );
+
+    newKnowledgeProduct = await this._resultsKnowledgeProductRepository.save(
+      newKnowledgeProduct,
+    );
+
+    newKnowledgeProduct = this._resultsKnowledgeProductMapper.fillOutRelations(
+      resultsKnowledgeProductDto,
+      newKnowledgeProduct,
+    );
+
+    await this._resultsKnowledgeProductAltmetricRepository.save(
+      newKnowledgeProduct.result_knowledge_product_altmetric_array ?? [],
+    );
+    await this._resultsKnowledgeProductAuthorRepository.save(
+      newKnowledgeProduct.result_knowledge_product_author_array ?? [],
+    );
+    await this._resultsKnowledgeProductInstitutionRepository.save(
+      newKnowledgeProduct.result_knowledge_product_institution_array ?? {},
+    );
+    await this._resultsKnowledgeProductKeywordRepository.save(
+      newKnowledgeProduct.result_knowledge_product_keyword_array ?? [],
+    );
+    await this._resultsKnowledgeProductMetadataRepository.save(
+      newKnowledgeProduct.result_knowledge_product_metadata_array ?? [],
+    );
+
+    const response = { ...resultsKnowledgeProductDto };
+
+    return {
+      response: response,
+      message: 'The Result Knowledge Product has been created successfully',
+      status: HttpStatus.CREATED,
+    };
+  }
+
+  async findResultKnowledgeProductByHandle(handle: string) {
+    return this._resultsKnowledgeProductRepository
+      .findOneByOrFail({ handle: Like(handle) })
+      .then((rkp) => {
+        return {
+          response: this._resultsKnowledgeProductMapper.entityToDto(rkp),
+          message: 'The Result Knowledge Product has already been created.',
+          status: HttpStatus.OK,
+        };
+      })
+      .catch((err) => {
+        return this._handlersError.returnErrorRes({ error: err });
+      });
   }
 
   findOne(id: number) {
     return `This action returns a #${id} resultsKnowledgeProduct`;
   }
 
-  async findOnCGSpace(handle: string): Promise<MQAPResultDto> {
+  /*async findOnCGSpace(handle: string): Promise<MQAPResultDto> {
     return this._mqapService.getDataFromCGSpaceHandle(handle);
-  }
+  }*/
 
   update(
     id: number,

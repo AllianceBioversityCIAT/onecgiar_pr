@@ -71,7 +71,7 @@ import { TocLevel } from '../../toc/toc-level/entities/toc-level.entity';
     ResultsTocResultsModule,
     NonPooledProjectsModule,
     ResultsCentersModule,
-    ResultsKnowledgeProductsModule
+    ResultsKnowledgeProductsModule,
   ],
   providers: [
     ResultsService,
@@ -81,7 +81,7 @@ import { TocLevel } from '../../toc/toc-level/entities/toc-level.entity';
     ClarisaInitiativesRepository,
     RoleByUserRepository,
     ClarisaInstitutionsRepository,
-    ClarisaInstitutionsTypeRepository
+    ClarisaInstitutionsTypeRepository,
   ],
   exports: [ResultRepository, JwtMiddleware],
 })
@@ -95,7 +95,7 @@ export class ResultsModule implements NestModule {
       {
         path: '/api/clarisa/*',
         method: RequestMethod.ALL,
-      }
+      },
     );
   }
 }

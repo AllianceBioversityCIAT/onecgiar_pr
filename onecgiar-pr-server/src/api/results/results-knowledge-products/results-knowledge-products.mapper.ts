@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { MQAPResultDto } from '../../m-qap/dtos/m-qap.dto';
 import { MQAPAuthor } from './dto/mqap-author.dto';
+import { ResultsKnowledgeProductAltmetricDto } from './dto/results-knowledge-product-altmetric.dto';
 import { ResultsKnowledgeProductAuthorDto } from './dto/results-knowledge-product-author.dto';
 import { ResultsKnowledgeProductInstitutionDto } from './dto/results-knowledge-product-institution.dto';
 import { ResultsKnowledgeProductMetadataDto } from './dto/results-knowledge-product-metadata.dto';
@@ -14,165 +15,131 @@ import { ResultsKnowledgeProduct } from './entities/results-knowledge-product.en
 
 @Injectable()
 export class ResultsKnowledgeProductMapper {
-  fillBasicInfo(
-    dto: MQAPResultDto,
-    createdBy: number,
-    resultId: number,
-    versionId: number,
-  ): ResultsKnowledgeProduct {
-    const knowledgeProduct: ResultsKnowledgeProduct =
-      new ResultsKnowledgeProduct();
+  mqapResponseToKnowledgeProductDto(
+    mqapResponseDto: MQAPResultDto,
+  ): ResultsKnowledgeProductDto {
+    let knowledgeProductDto = new ResultsKnowledgeProductDto();
 
-    knowledgeProduct.accesible = dto?.FAIR?.score?.A;
-    knowledgeProduct.comodity = null; //TODO TBD
-    knowledgeProduct.findable = dto?.FAIR?.score?.F;
-    knowledgeProduct.handle = dto?.handle;
-    knowledgeProduct.interoperable = dto?.FAIR?.score?.I;
-    knowledgeProduct.is_melia = false; //TODO TBD
-    knowledgeProduct.knowledge_product_type = dto?.Type;
-    knowledgeProduct.licence = dto?.Rights;
-    knowledgeProduct.melia_previous_submitted = false; //TODO TBD
-    knowledgeProduct.melia_type_id = null; //TODO TBD
-    knowledgeProduct.reusable = dto?.FAIR?.score?.R;
-    knowledgeProduct.sponsors = null; //TODO TBD
+    knowledgeProductDto.accessible = mqapResponseDto?.FAIR?.score?.A;
+    knowledgeProductDto.commodity = null; //TODO TBD
+    knowledgeProductDto.description = mqapResponseDto?.Description;
+    knowledgeProductDto.findable = mqapResponseDto?.FAIR?.score?.F;
+    knowledgeProductDto.handle = mqapResponseDto?.handle;
+    knowledgeProductDto.interoperable = mqapResponseDto?.FAIR?.score?.I;
+    knowledgeProductDto.is_melia = null; //null, as this field is mapped by the user
+    knowledgeProductDto.licence = mqapResponseDto?.Rights;
+    knowledgeProductDto.melia_previous_submitted = null; //null, as this info is mapped by the user
+    knowledgeProductDto.melia_type_id = null; //null, as this info is mapped by the user
+    knowledgeProductDto.name = mqapResponseDto?.Title;
+    knowledgeProductDto.reusable = mqapResponseDto?.FAIR?.score?.R;
+    knowledgeProductDto.sponsor = null; //TODO TBD
+    knowledgeProductDto.type = mqapResponseDto?.Type;
 
-    knowledgeProduct.created_by = createdBy;
-    knowledgeProduct.results_id = resultId;
-    knowledgeProduct.version_id = versionId;
+    knowledgeProductDto = this.fillRelatedMetadata(
+      mqapResponseDto,
+      knowledgeProductDto,
+    );
 
-    return knowledgeProduct;
+    return knowledgeProductDto;
   }
 
-  fillRelations(
+  fillRelatedMetadata(
     dto: MQAPResultDto,
-    knowledgeProduct: ResultsKnowledgeProduct,
-  ): ResultsKnowledgeProduct {
-    const authors: MQAPAuthor[] = this.getAuthorsFromMQAPResponse(dto);
-    knowledgeProduct.result_knowledge_product_author_array = (
-      authors ?? []
-    ).map((a) => {
-      const author: ResultsKnowledgeProductAuthor =
-        new ResultsKnowledgeProductAuthor();
+    knowledgeProductDto: ResultsKnowledgeProductDto,
+  ): ResultsKnowledgeProductDto {
+    const authors: ResultsKnowledgeProductAuthorDto[] =
+      this.getAuthorsFromMQAPResponse(dto);
+    knowledgeProductDto.authors = (authors ?? []).map((a) => {
+      const author: ResultsKnowledgeProductAuthorDto =
+        new ResultsKnowledgeProductAuthorDto();
 
-      author.author_name = a.name;
+      author.name = a.name;
       author.orcid = a.name;
-
-      author.created_by = knowledgeProduct.created_by;
-      author.version_id = knowledgeProduct.version_id;
-      author.result_knowledge_product_id =
-        knowledgeProduct.result_knowledge_product_id;
 
       return author;
     });
 
     const keywords = dto?.agrovoc_keywords?.results;
-    knowledgeProduct.result_knowledge_product_keyword_array = (
-      keywords ?? []
-    ).map((k) => {
-      const keyword: ResultsKnowledgeProductKeyword =
-        new ResultsKnowledgeProductKeyword();
+    knowledgeProductDto.keywords = (keywords ?? [])
+      .filter((k) => !k.is_agrovoc)
+      .map((k) => k.keyword);
 
-      keyword.keyword = k.keyword;
-      keyword.is_agrovoc = k.is_agrovoc;
-
-      keyword.created_by = knowledgeProduct.created_by;
-      keyword.version_id = knowledgeProduct.version_id;
-      keyword.result_knowledge_product_id =
-        knowledgeProduct.result_knowledge_product_id;
-
-      return keyword;
-    });
+    knowledgeProductDto.agrovoc_keywords = (keywords ?? [])
+      .filter((k) => k.is_agrovoc)
+      .map((k) => k.keyword);
 
     // init metadata parsing
-    const metadataHolder: ResultsKnowledgeProductMetadata[] = [];
+    const metadataHolder: ResultsKnowledgeProductMetadataDto[] = [];
 
-    const metadataCGSpace: ResultsKnowledgeProductMetadata =
-      new ResultsKnowledgeProductMetadata();
+    const metadataCGSpace: ResultsKnowledgeProductMetadataDto =
+      new ResultsKnowledgeProductMetadataDto();
 
     metadataCGSpace.source = 'CGSpace';
-    metadataCGSpace.accesibility = dto?.['Open Access'];
+    metadataCGSpace.accessibility = dto?.['Open Access'];
     metadataCGSpace.doi = dto?.DOI;
     metadataCGSpace.is_isi = dto?.ISI === 'ISI Journal';
     metadataCGSpace.is_peer_reviewed = dto?.['Peer-reviewed'] === 'Peer Review';
-    metadataCGSpace.year = this.getPublicationYearFromMQAPResponse(dto);
-
-    metadataCGSpace.created_by = knowledgeProduct.created_by;
-    metadataCGSpace.version_id = knowledgeProduct.version_id;
-    metadataCGSpace.result_knowledge_product_id =
-      knowledgeProduct.result_knowledge_product_id;
+    metadataCGSpace.issue_year = this.getPublicationYearFromMQAPResponse(dto);
 
     metadataHolder.push(metadataCGSpace);
 
     const mqapDOIData = dto?.DOI_Info;
     if (mqapDOIData) {
-      const metadataWoS: ResultsKnowledgeProductMetadata =
-        new ResultsKnowledgeProductMetadata();
+      const metadataWoS: ResultsKnowledgeProductMetadataDto =
+        new ResultsKnowledgeProductMetadataDto();
 
       metadataWoS.source = mqapDOIData.source;
-      metadataWoS.accesibility = mqapDOIData.is_oa;
+      metadataWoS.accessibility = mqapDOIData.is_oa;
       metadataWoS.doi = mqapDOIData.doi;
       metadataWoS.is_isi = mqapDOIData.is_isi
         ?.toLocaleLowerCase()
         ?.includes('yes');
       metadataWoS.is_peer_reviewed = null; //TODO implement the convoluted logic regarding this field
-      metadataWoS.year = mqapDOIData.publication_year;
-
-      metadataWoS.created_by = knowledgeProduct.created_by;
-      metadataWoS.version_id = knowledgeProduct.version_id;
-      metadataWoS.result_knowledge_product_id =
-        knowledgeProduct.result_knowledge_product_id;
+      metadataWoS.issue_year = mqapDOIData.publication_year;
 
       metadataHolder.push(metadataWoS);
     }
 
-    knowledgeProduct.result_knowledge_product_metadata_array = metadataHolder;
+    knowledgeProductDto.metadata = metadataHolder;
     //finished metadata parsing
 
     const altmetric = this.getAltmetricInfoFromMQAPResponse(dto);
+    knowledgeProductDto.altmetric_full_data = altmetric;
     if (altmetric) {
-      altmetric.created_by = knowledgeProduct.created_by;
-      altmetric.version_id = knowledgeProduct.version_id;
-      altmetric.result_knowledge_product_id =
-        knowledgeProduct.result_knowledge_product_id;
-
-      knowledgeProduct.result_knowledge_product_altmetric_array = [altmetric];
+      knowledgeProductDto.altmetric_detail_url = `https://www.altmetric.com/details/${altmetric.altmetric_id}`;
+      knowledgeProductDto.altmetric_image_url =
+        altmetric.image_large ??
+        altmetric.image_medium ??
+        altmetric.image_small;
     }
 
     const institutions = dto?.Affiliation;
-    knowledgeProduct.result_knowledge_product_institution_array = (
-      institutions ?? []
-    ).map((i) => {
-      const institution: ResultsKnowledgeProductInstitution =
-        new ResultsKnowledgeProductInstitution();
+    knowledgeProductDto.institutions = (institutions ?? []).map((i) => {
+      const institution: ResultsKnowledgeProductInstitutionDto =
+        new ResultsKnowledgeProductInstitutionDto();
 
-      institution.intitution_name = i.name;
-
-      institution.confidant = i.prediction?.confidant;
-      institution.predicted_institution_id = i.prediction?.value?.code;
-
-      institution.created_by = knowledgeProduct.created_by;
-      institution.version_id = knowledgeProduct.version_id;
-      institution.result_knowledge_product_id =
-        knowledgeProduct.result_knowledge_product_id;
+      institution.source_name = i.name;
+      institution.confidence_percentage = i.prediction?.confidant;
+      institution.possible_matched_institution_id = i.prediction?.value?.code;
 
       return institution;
     });
 
     //TODO map country and region information
 
-    return knowledgeProduct;
+    return knowledgeProductDto;
   }
 
   private getAltmetricInfoFromMQAPResponse(
     dto: MQAPResultDto,
-  ): ResultsKnowledgeProductAltmetric {
+  ): ResultsKnowledgeProductAltmetricDto {
     const altmetricDto = dto?.handle_altmetric;
     if (!altmetricDto) {
       return undefined;
     }
 
-    const altmetric: ResultsKnowledgeProductAltmetric =
-      new ResultsKnowledgeProductAltmetric();
+    const altmetric: ResultsKnowledgeProductAltmetricDto =
+      new ResultsKnowledgeProductAltmetricDto();
 
     altmetric.altmetric_id = altmetricDto?.altmetric_id;
 
@@ -207,6 +174,7 @@ export class ResultsKnowledgeProductMapper {
 
     return altmetric;
   }
+
   private getPublicationYearFromMQAPResponse(dto: MQAPResultDto): number {
     const publicationDate = dto?.['Publication Date'] ?? '';
     const isComposed: boolean = publicationDate.indexOf('-') > 0;
@@ -313,5 +281,139 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProductDto.regions = null; //TODO TBD
 
     return knowledgeProductDto;
+  }
+
+  dtoToEntity(
+    dto: ResultsKnowledgeProductDto,
+    userId: number,
+    resultId: number,
+    versionId: number,
+  ): ResultsKnowledgeProduct {
+    let knowledgeProduct: ResultsKnowledgeProduct =
+      new ResultsKnowledgeProduct();
+
+    knowledgeProduct.accesible = dto.accessible;
+    knowledgeProduct.comodity = dto.commodity;
+    knowledgeProduct.description = dto.description;
+    knowledgeProduct.findable = dto.findable;
+    knowledgeProduct.handle = dto.handle;
+    knowledgeProduct.interoperable = dto.interoperable;
+    knowledgeProduct.is_melia = null;
+    knowledgeProduct.knowledge_product_type = dto.type;
+    knowledgeProduct.licence = dto.licence;
+    knowledgeProduct.melia_previous_submitted = null;
+    knowledgeProduct.melia_type_id = null;
+    knowledgeProduct.name = dto.name;
+    knowledgeProduct.reusable = dto.reusable;
+    knowledgeProduct.sponsors = dto.sponsor;
+
+    knowledgeProduct.created_by = userId;
+    knowledgeProduct.results_id = resultId;
+    knowledgeProduct.version_id = versionId;
+
+    return knowledgeProduct;
+  }
+
+  fillOutRelations(
+    dto: ResultsKnowledgeProductDto,
+    knowledgeProduct: ResultsKnowledgeProduct,
+  ): ResultsKnowledgeProduct {
+    knowledgeProduct.result_knowledge_product_author_array = (
+      dto.authors ?? []
+    ).map((a) => {
+      const author: ResultsKnowledgeProductAuthor =
+        new ResultsKnowledgeProductAuthor();
+
+      author.author_name = a.name;
+      author.orcid = a.name;
+
+      author.created_by = knowledgeProduct.created_by;
+      author.version_id = knowledgeProduct.version_id;
+      author.result_knowledge_product_id =
+        knowledgeProduct.result_knowledge_product_id;
+
+      return author;
+    });
+
+    const keywords: { keyword: string; agrovoc: boolean }[] = [
+      ...(dto.agrovoc_keywords ?? []).map((ag) => {
+        return { keyword: ag, agrovoc: true };
+      }),
+      ...(dto.keywords ?? []).map((ag) => {
+        return { keyword: ag, agrovoc: false };
+      }),
+    ];
+
+    knowledgeProduct.result_knowledge_product_keyword_array = keywords.map(
+      (k) => {
+        const keyword: ResultsKnowledgeProductKeyword =
+          new ResultsKnowledgeProductKeyword();
+
+        keyword.keyword = k.keyword;
+        keyword.is_agrovoc = k.agrovoc;
+
+        keyword.created_by = knowledgeProduct.created_by;
+        keyword.version_id = knowledgeProduct.version_id;
+        keyword.result_knowledge_product_id =
+          knowledgeProduct.result_knowledge_product_id;
+
+        return keyword;
+      },
+    );
+
+    knowledgeProduct.result_knowledge_product_metadata_array = (
+      dto.metadata ?? []
+    ).map((m) => {
+      const metadata: ResultsKnowledgeProductMetadata =
+        new ResultsKnowledgeProductMetadata();
+
+      metadata.source = m.source;
+      metadata.accesibility = m.accessibility;
+      metadata.doi = m.doi;
+      metadata.is_isi = m.is_isi;
+      metadata.is_peer_reviewed = m.is_peer_reviewed;
+      metadata.year = m.issue_year;
+
+      metadata.created_by = knowledgeProduct.created_by;
+      metadata.version_id = knowledgeProduct.version_id;
+      metadata.result_knowledge_product_id =
+        knowledgeProduct.result_knowledge_product_id;
+
+      return metadata;
+    });
+
+    let altmetric: ResultsKnowledgeProductAltmetric =
+      new ResultsKnowledgeProductAltmetric();
+    altmetric = Object.assign(altmetric, dto.altmetric_full_data);
+
+    altmetric.created_by = knowledgeProduct.created_by;
+    altmetric.version_id = knowledgeProduct.version_id;
+    altmetric.result_knowledge_product_id =
+      knowledgeProduct.result_knowledge_product_id;
+
+    knowledgeProduct.result_knowledge_product_altmetric_array = [altmetric];
+
+    knowledgeProduct.result_knowledge_product_institution_array = (
+      dto.institutions ?? []
+    ).map((i) => {
+      const institution: ResultsKnowledgeProductInstitution =
+        new ResultsKnowledgeProductInstitution();
+
+      institution.intitution_name = i.source_name;
+
+      institution.confidant = i.confidence_percentage;
+      institution.predicted_institution_id = i.possible_matched_institution_id;
+
+      institution.created_by = knowledgeProduct.created_by;
+      institution.version_id = knowledgeProduct.version_id;
+      institution.result_knowledge_product_id =
+        knowledgeProduct.result_knowledge_product_id;
+
+      return institution;
+    });
+
+    //TODO map country and region information
+
+    return knowledgeProduct;
   }
 }
