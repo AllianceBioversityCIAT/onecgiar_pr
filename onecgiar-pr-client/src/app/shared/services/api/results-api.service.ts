@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
-import { map } from 'rxjs';
+import { map, tap, catchError, of, retry, throwError } from 'rxjs';
 import { ResultBody } from '../../interfaces/result.interface';
 import { GeneralInfoBody } from '../../../pages/results/pages/result-detail/pages/rd-general-information/models/generalInfoBody';
 import { PartnersBody } from 'src/app/pages/results/pages/result-detail/pages/rd-partners/models/partnersBody';
@@ -10,12 +10,13 @@ import { LinksToResultsBody } from '../../../pages/results/pages/result-detail/p
 import { PartnersRequestBody } from '../../../pages/results/pages/result-detail/components/partners-request/models/partnersRequestBody.model';
 import { EvidencesBody } from '../../../pages/results/pages/result-detail/pages/rd-evidences/model/evidencesBody.model';
 import { TheoryOfChangeBody } from '../../../pages/results/pages/result-detail/pages/rd-theory-of-change/model/theoryOfChangeBody';
+import { SaveButtonService } from '../../../custom-fields/save-button/save-button.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ResultsApiService {
-  constructor(public http: HttpClient) {}
+  constructor(public http: HttpClient, private saveButtonSE: SaveButtonService) {}
   apiBaseUrl = environment.apiBaseUrl + 'api/results/';
   currentResultId: number | string = null;
   GET_AllResultLevel() {
@@ -66,7 +67,8 @@ export class ResultsApiService {
   }
 
   PATCH_generalInformation(body: GeneralInfoBody) {
-    return this.http.patch<any>(`${this.apiBaseUrl}create/general-information`, body);
+    this.saveButtonSE.showSaveSpinner();
+    return this.http.patch<any>(`${this.apiBaseUrl}create/general-information`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
   GET_resultById() {
