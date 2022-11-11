@@ -9,6 +9,7 @@ export class PrButtonComponent {
   @Input() text: string;
   @Input() icon: string;
   @Input() reverse: boolean = false;
+  @Input() rotating: boolean = false;
   @Input() showBackground: boolean = true;
   @Input() colorType: 'primary' | 'danger' | 'secondary' = 'primary';
   @Input() padding: 'small' | 'medium' | 'big' = 'small';

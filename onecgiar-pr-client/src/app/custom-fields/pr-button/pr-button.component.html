@@ -1,7 +1,7 @@
 <div class="pr_button {{padding}}" [ngClass]="{ reverse: this.reverse, show_background: this.showBackground }"
   [ngStyle]="this.showBackground ? { 'background-color': 'var(--pr-color-' + this.colorType + ')' } : {}">
   <div class="text">{{ this.text }}</div>
-  <i class="material-icons-round" *ngIf="this.icon">{{ this.icon }}</i>
+  <i class="material-icons-round" [ngClass]="{'rotating': this.rotating}" *ngIf="this.icon">{{ this.icon }}</i>
   <div class="filter"
     [ngStyle]="this.showBackground ? { background: 'linear-gradient(20deg, #ffffff4d 0%, ' + 'var(--pr-color-' + this.colorType + ')' + ' 85%)' } : {}">
   </div>
