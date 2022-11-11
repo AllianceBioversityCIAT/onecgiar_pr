@@ -17,13 +17,13 @@ export class TocResultsController {
     return this.tocResultsService.findAll();
   }
 
-  @Get('get/all/result/:resultId/level/:levelId')
+  @Get('get/all/initiative/:initiativeId/level/:levelId')
   async getTocResultByInitiativeAndLevels(
-    @Param('resultId') resultId: number,
+    @Param('initiativeId') initiativeId: number,
     @Param('levelId') levelId: number
     ) {
     const { message, response, status } =
-      await this.tocResultsService.findAllByinitiativeId(resultId, levelId);
+      await this.tocResultsService.findAllByinitiativeId(initiativeId, levelId);
     throw new HttpException({ message, response }, status);
   }
 

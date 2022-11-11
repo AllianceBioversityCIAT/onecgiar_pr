@@ -50,7 +50,7 @@ export class TocResultsRepository extends Repository<TocResult> {
     }
   }
 
-  async getAllTocResultsByInitiative(resultId: number, tocLevel: number) {
+  async getAllTocResultsByInitiative(initiativeId: number, tocLevel: number) {
     const queryData = `
     select 
       tr.toc_result_id ,
@@ -61,10 +61,8 @@ export class TocResultsRepository extends Repository<TocResult> {
       tr.toc_level_id ,
       tr.inititiative_id ,
       tr.work_package_id ,
-      null as outcome_id
+      null as action_area_outcome_id
     from toc_result tr
-    inner join results_by_inititiative rbi on rbi.inititiative_id = tr.inititiative_id 
-										and rbi.initiative_role_id = 1
 	  where rbi.result_id = ?
     	and tr.toc_level_id = ?;
     `,
@@ -72,7 +70,7 @@ export class TocResultsRepository extends Repository<TocResult> {
     select
     	null as toc_result_id,
     	ibs.initiativeId as inititiative_id ,
-    	iaaoi.outcome_id,
+    	iaaoi.outcome_id as action_area_outcome_id,
     	caao.id,
     	caao.outcomeSMOcode as title,
     	caao.outcomeStatement as description,
@@ -84,12 +82,9 @@ export class TocResultsRepository extends Repository<TocResult> {
     	ibs.id = iaaoi.initvStgId
     inner join ${env.DB_NAME}.clarisa_action_area_outcome caao on
     	caao.id = iaaoi.outcome_id
-    inner join results_by_inititiative rbi on
-    	rbi.inititiative_id = ibs.initiativeId
-    	and rbi.initiative_role_id = 1
     WHERE
     	iaaoi.outcome_id is not null
-    	and rbi.result_id = 1
+    	and ibs.initiativeId = ?
     GROUP by
     	ibs.initiativeId,
     	iaaoi.outcome_id;
@@ -97,7 +92,7 @@ export class TocResultsRepository extends Repository<TocResult> {
 
 
     try {
-      const tocResult:TocResult[] = await this.query(tocLevel == 4? queryOst:queryData, [resultId, tocLevel]);
+      const tocResult:TocResult[] = await this.query(tocLevel == 4? queryOst:queryData, [initiativeId, tocLevel]);
       return tocResult;
     } catch (error) {
       throw {
