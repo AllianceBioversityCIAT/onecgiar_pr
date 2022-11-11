@@ -39,7 +39,7 @@ export class ResultsTocResultsService {
       const titleArray = contributing_np_projects.map(el => el.grant_title);
 
       if (contributing_center.filter(el => el.primary == true).length > 1) {
-        contributing_center.map(el => {el.primary = false;});
+        contributing_center.map(el => { el.primary = false; });
       }
 
       if (contributing_initiatives?.length) {
@@ -122,7 +122,7 @@ export class ResultsTocResultsService {
         await this._resultsCenterRepository.updateCenter(result_id, [], user.id);
       }
 
-      if(this.validResultRocResult(result_toc_result?.planned_result,result_toc_result?.outcome_id, result_toc_result?.toc_result_id)){
+      if (this.validResultRocResult(result_toc_result?.planned_result, result_toc_result?.outcome_id, result_toc_result?.toc_result_id)) {
         const restulTocResultsave = await this.resultTocResultSave(result_toc_result, result_toc_result.planned_result, user, result_id, vrs.id);
         await this._resultsTocResultRepository.save(restulTocResultsave);
       }
@@ -131,7 +131,7 @@ export class ResultsTocResultsService {
         let restulTocResultsaveArray: ResultsTocResult[] = [];
         for (let index = 0; index < contributors_result_toc_result.length; index++) {
           const { result_toc_result: resTocRes } = contributors_result_toc_result[index];
-          if (await this._userRepository.isUserInInitiative(resTocRes.results_id, user.id) || this.validResultRocResult(resTocRes?.planned_result,resTocRes?.outcome_id, resTocRes?.toc_result_id)) {
+          if (await this._userRepository.isUserInInitiative(resTocRes.results_id, user.id) || this.validResultRocResult(resTocRes?.planned_result, resTocRes?.outcome_id, resTocRes?.toc_result_id)) {
             restulTocResultsaveArray.push(await this.resultTocResultSave(resTocRes, resTocRes.planned_result, user, resTocRes.results_id, vrs.id));
           }
         }
@@ -150,9 +150,9 @@ export class ResultsTocResultsService {
     }
   }
 
-  private validResultRocResult(planned_result?:boolean, outcome_id?:number, toc_result_id?:number){
+  private validResultRocResult(planned_result?: boolean, outcome_id?: number, toc_result_id?: number) {
     return !((!planned_result && !outcome_id) ||
-    (planned_result && !toc_result_id));
+      (planned_result && !toc_result_id));
   }
 
   private async resultTocResultSave(result_toc_result: resultToResultInterfaceToc, result_planned: boolean, user: TokenDto, result_id: number, versionId: number) {
@@ -200,23 +200,28 @@ export class ResultsTocResultsService {
       const resCenters = await this._resultsCenterRepository.getAllResultsCenterByResultId(resultId);
       let resTocRes = await this._resultsTocResultRepository.getAllResultTocResultByResultId(resultId);
       let conResTocRes = await this._resultsTocResultRepository.getAllResultTocResultContributorsByResultIdAndInitId(resultId, conInit.map(el => el.id));
-      if(resTocRes){
+      if (resTocRes) {
         resTocRes.planned_result = !!resTocRes?.planned_result || null;
-      }else{
+      } else {
         resTocRes = null;
       }
 
-      if(conResTocRes.length){
-        conResTocRes.map(el => { el.planned_result = !!el?.planned_result || null});
-      }else{
-        conResTocRes =  [];
+      if (conResTocRes.length) {
+        conResTocRes.map(el => { el.planned_result = !!el?.planned_result || null });
+      } else {
+        conResTocRes = [];
       }
       return {
         response: {
           contributing_initiatives: conInit,
           contributing_np_projects: npProject,
           contributing_center: resCenters,
-          result_toc_result: resTocRes,
+          result_toc_result: resTocRes || {
+            action_area_outcome_id: null,
+            toc_result_id: null,
+            planned_result: null,
+            results_id: resultId
+          },
           contributors_result_toc_result: conResTocRes
         },
         message: 'The toc data is successfully created',
