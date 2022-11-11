@@ -41,7 +41,7 @@ export class ResultsKnowledgeProductInstitution {
   })
   confidant: number;
 
-  @Column()
+  @Column({ nullable: true })
   results_by_institutions_id: number;
 
   //versioning field
