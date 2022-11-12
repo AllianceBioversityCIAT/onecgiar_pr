@@ -59,5 +59,13 @@ export class RdTheoryOfChangeComponent {
     this.theoryOfChangeBody.contributing_center.map(center => (center.primary = false));
     center.primary = true;
   }
-  // TODO Add first selection as primaty
+
+  deleteEvidence(index) {
+    console.log(index);
+    this.theoryOfChangeBody.contributing_np_projects.splice(index, 1);
+  }
+
+  validatePrimarySelection() {
+    if (this.theoryOfChangeBody.contributing_center.length === 1) this.theoryOfChangeBody.contributing_center[0].primary = true;
+  }
 }

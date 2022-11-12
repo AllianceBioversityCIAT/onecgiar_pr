@@ -1,6 +1,6 @@
-<p-dialog class="support_information" header="Title" [(visible)]="this.api.dataControlSE.showPartnersRequest"
-    [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true"
-    [style]="{padding: '0px'}">
+<p-dialog class="support_information" header="Title" *ngIf="this.api.dataControlSE.showPartnersRequest"
+    [(visible)]="this.api.dataControlSE.showPartnersRequest" [draggable]="false" [modal]="true" [closeOnEscape]="true"
+    [showHeader]="false" [dismissableMask]="true" [style]="{padding: '0px'}">
     <div class="modal_title">Partners Request</div>
     <div class="modal_container">
         <app-pr-input placeholder="Write some..." label="Acronym" type="text" [required]="false"
