@@ -1,8 +1,8 @@
 <div class="local_container">
-  <div routerLink="/results/results-list">
+  <a routerLink="/results/results-list">
     <app-pr-button text="Back to results" icon="arrow_back" [reverse]="true" [showBackground]="false" optionLabel="name"
       optionValue="code"></app-pr-button>
-  </div>
+  </a>
   <div class="local_container section_container">
     <div class="greeting"
       [innerHTML]="naratives.greeting(this.api.authSE.localStorageUser?.user_name,this.api.dataControlSE.myInitiativesListText(this.api.dataControlSE.myInitiativesList))">

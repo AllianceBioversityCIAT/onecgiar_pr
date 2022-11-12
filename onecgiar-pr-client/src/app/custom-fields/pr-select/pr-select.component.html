@@ -20,7 +20,7 @@
                     <div *cdkVirtualFor="let option of optionsIntance | listFilterByTextAndAttr:this.optionLabel:this.searchText"
                         class="option"
                         [ngClass]="{'disabled': option?.disabled === true, 'selected':option?.selected === true}"
-                        (click)="this.disabled ? null :onSelectOption(option)">
+                        (click)="this.disabled ? null :onSelectOption(option);removeFocus()">
                         <!-- <p-checkbox [disabled]="option?.disabled" [binary]="true" [(ngModel)]="option.selected">
                         </p-checkbox> -->
                         <img *ngIf="flagsCode" [src]="'https://countryflagsapi.com/png/'+option[this.flagsCode]" alt=""

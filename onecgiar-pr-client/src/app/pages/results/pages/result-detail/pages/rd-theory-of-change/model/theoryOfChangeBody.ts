@@ -21,6 +21,7 @@ export class donorInterfaceToc {
 interface centerInterfacesToc {
   code: string;
   primary?: boolean;
+  name?: string;
 }
 export class resultToResultInterfaceToc {
   toc_result_id?: number = null;

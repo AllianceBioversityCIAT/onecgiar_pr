@@ -28,30 +28,33 @@
                 <app-pr-input label="Center Grant ID" [required]="false" [(ngModel)]="donor.center_grant_id"
                     placeholder="e.g. G184">
                 </app-pr-input>
-                <app-pr-select [options]="this.centersSE.centersList" label="Lead/Contract Center" optionLabel="code"
+                <app-pr-select [options]="this.centersSE.centersList" label="Lead/Contract Center" optionLabel="name"
                     optionValue="code" placeholder="Select donor" [(ngModel)]="donor.lead_center" [required]="false"
                     placeholder="Lead/Contract Center goes here...">
                 </app-pr-select>
             </div>
-            <app-edit-or-delete-item-button></app-edit-or-delete-item-button>
+            <app-edit-or-delete-item-button (click)="deleteEvidence(i)"></app-edit-or-delete-item-button>
         </div>
     </div>
     <app-no-data-text *ngIf="!this.theoryOfChangeBody?.contributing_np_projects?.length" title="No Non-pooled added">
     </app-no-data-text>
     <app-add-button name="Add non-pooled project" (clickEvent)="addBilateralContribution()"></app-add-button>
     <app-pr-multi-select [options]="this.centersSE.centersList" label="Contributing Centers"
-        selectedLabel="Center(s) selected" optionLabel="code" optionValue="id"
-        [(ngModel)]="this.theoryOfChangeBody.contributing_center" placeholder="Select initiative(s)
+        (selectOptionEvent)="validatePrimarySelection()" selectedLabel="Center(s) selected" optionLabel="name"
+        optionValue="code" [(ngModel)]="this.theoryOfChangeBody.contributing_center" placeholder="Select initiative(s)
         ">
     </app-pr-multi-select>
-    Please select the primary center by clicking the medal icon <i class="material-icons-round">workspace_premium</i>
+    <div class="medal_info">
+        Please select the primary center by clicking the medal icon <i
+            class="material-icons-round">workspace_premium</i>
+    </div>
     <div class="medal_selector selected_container">
         <div class="centers chips_container">
             <div class="center pr_chip_selected" *ngFor="let center of this.theoryOfChangeBody.contributing_center">
                 <i class="material-icons-round medal" [ngClass]="{'primary': center.primary}"
                     (click)="addPrimary(center)">workspace_premium</i>
                 <!--TODO add primary text  -->
-                <div class="name">{{center?.code}}</div><i class="material-icons-round">cancel</i>
+                <div class="name">{{center?.name}}</div><i class="material-icons-round">cancel</i>
             </div>
         </div>
     </div>

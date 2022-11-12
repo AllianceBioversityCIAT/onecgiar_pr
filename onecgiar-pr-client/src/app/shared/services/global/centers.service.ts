@@ -9,7 +9,7 @@ export class CentersService {
   constructor(private api: ApiService) {
     this.api.resultsSE.GET_AllCLARISACenters().subscribe(({ response }) => {
       this.centersList = response;
-      // console.log(response);
+      console.log(response);
     });
   }
 }
