@@ -14,6 +14,8 @@ import { ResultsByInititiative } from '../results_by_inititiatives/entities/resu
 import { VersionsService } from '../versions/versions.service';
 import { Version } from '../versions/entities/version.entity';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
+import { ResultRepository } from '../result.repository';
+import { TocResultsRepository } from '../../../toc/toc-results/toc-results.repository';
 
 @Injectable()
 export class ResultsTocResultsService {
@@ -25,13 +27,16 @@ export class ResultsTocResultsService {
     private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
     private readonly _handlersError: HandlersError,
     private readonly _versionsService: VersionsService,
-    private readonly _userRepository: UserRepository
+    private readonly _userRepository: UserRepository,
+    private readonly _resultRepository: ResultRepository,
+    private readonly _tocResultsRepository: TocResultsRepository
   ) { }
 
   async create(createResultsTocResultDto: CreateResultsTocResultDto, user: TokenDto) {
     try {
       const { contributing_np_projects, result_id, contributing_center, contributing_initiatives, result_toc_result, contributors_result_toc_result } = createResultsTocResultDto;
       const version = await this._versionsService.findBaseVersion();
+      const result = await this._resultRepository.getResultById(result_id);
       if (version.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: version });
       }
@@ -122,21 +127,77 @@ export class ResultsTocResultsService {
         await this._resultsCenterRepository.updateCenter(result_id, [], user.id);
       }
 
-      if (this.validResultRocResult(result_toc_result?.planned_result, result_toc_result?.outcome_id, result_toc_result?.toc_result_id)) {
-        const restulTocResultsave = await this.resultTocResultSave(result_toc_result, result_toc_result.planned_result, user, result_id, vrs.id);
-        await this._resultsTocResultRepository.save(restulTocResultsave);
+      if (result.result_level_id != 2) {
+        let RtR = await this._resultsTocResultRepository.getRTRById(result_toc_result?.result_toc_result_id, result_id);
+        if(await this._tocResultsRepository.isTocResoultByInitiative(result.id, result_toc_result?.toc_result_id)){
+          if (RtR) {
+            RtR.toc_result_id = result_toc_result?.toc_result_id ?? null;
+            RtR.last_updated_by = user.id;
+            await this._resultsTocResultRepository.save(RtR);
+          } else if(result_toc_result) {
+            const newRtR = new ResultsTocResult();
+            newRtR.version_id = vrs.id;
+            newRtR.created_by = user.id;
+            newRtR.last_updated_by = user.id;
+            newRtR.results_id = result.id;
+            newRtR.toc_result_id = result_toc_result?.toc_result_id ?? null;
+            newRtR.planned_result = result_toc_result?.planned_result ?? null;
+            await this._resultsTocResultRepository.save(newRtR);
+          }
+        }
+        
+      } else {
+        /**
+         * !Implementar Action Area
+         */
       }
 
       if (contributors_result_toc_result?.length) {
+        if (result.result_level_id != 2) {
+          let RtRArray: ResultsTocResult[] = [];
+          for (let index = 0; index < contributors_result_toc_result.length; index++) {
+            let RtR = await this._resultsTocResultRepository.getRTRByIdNotInit(contributors_result_toc_result[index].result_toc_result_id, result_id);
+            if (RtR) {
+              RtR.toc_result_id = contributors_result_toc_result[index]?.toc_result_id ?? null;
+              RtR.last_updated_by = user.id;
+              RtRArray.push(RtR);
+            } else {
+              const newRtR = new ResultsTocResult();
+              newRtR.version_id = vrs.id;
+              newRtR.created_by = user.id;
+              newRtR.last_updated_by = user.id;
+              newRtR.results_id = result.id;
+              newRtR.toc_result_id = contributors_result_toc_result[index]?.toc_result_id ?? null;
+              newRtR.planned_result = contributors_result_toc_result[index]?.planned_result ?? null;
+              RtRArray.push(newRtR);
+            }
+
+          }
+          await this._resultsTocResultRepository.save(RtRArray);
+        } else {
+          /**
+          * !Implementar Action Area
+          */
+        }
+      }
+
+
+
+      /*
+      if (this.validResultRocResult(result_toc_result?.planned_result, result_toc_result?.action_area_outcome_id, result_toc_result?.toc_result_id)) {
+        const restulTocResultsave = await this.resultTocResultSave(result_toc_result, result_toc_result.planned_result, user, result_id, vrs.id, result.result_level_id);
+        await this._resultsTocResultRepository.save(restulTocResultsave);
+      }
+      if (contributors_result_toc_result?.length) {
         let restulTocResultsaveArray: ResultsTocResult[] = [];
         for (let index = 0; index < contributors_result_toc_result.length; index++) {
-          const { result_toc_result: resTocRes } = contributors_result_toc_result[index];
-          if (await this._userRepository.isUserInInitiative(resTocRes?.results_id, user.id) || this.validResultRocResult(resTocRes?.planned_result, resTocRes?.outcome_id, resTocRes?.toc_result_id)) {
-            restulTocResultsaveArray.push(await this.resultTocResultSave(resTocRes, resTocRes.planned_result, user, resTocRes?.results_id, vrs.id));
+          if (true) {
+            restulTocResultsaveArray.push(await this.resultTocResultSave(contributors_result_toc_result[index], contributors_result_toc_result[index].planned_result, user, contributors_result_toc_result[index]?.results_id, vrs.id, result.result_level_id));
           }
         }
+        console.log(restulTocResultsaveArray)
         await this._resultsTocResultRepository.save(restulTocResultsaveArray);
-      }
+      }*/
 
 
       return {
@@ -151,41 +212,8 @@ export class ResultsTocResultsService {
   }
 
   private validResultRocResult(planned_result?: boolean, outcome_id?: number, toc_result_id?: number) {
-    return !((!planned_result && !outcome_id) ||
-      (planned_result && !toc_result_id));
-  }
-
-  private async resultTocResultSave(result_toc_result: resultToResultInterfaceToc, result_planned: boolean, user: TokenDto, result_id: number, versionId: number) {
-    const resultTocExists = await this._resultsTocResultRepository.getAllResultTocResultByResultId(result_id);
-
-    if (resultTocExists) {
-      resultTocExists.last_updated_by = user.id
-      resultTocExists.planned_result = result_planned;
-      if (result_planned) {
-        resultTocExists.toc_result_id = result_toc_result.toc_result_id;
-        resultTocExists.action_area_outcome_id = null;
-      } else {
-        resultTocExists.toc_result_id = null;
-        resultTocExists.action_area_outcome_id = result_toc_result.outcome_id;
-
-      }
-      return resultTocExists;
-    } else {
-      const newResltTocResult = new ResultsTocResult();
-      newResltTocResult.planned_result = result_planned;
-      if (result_planned) {
-        newResltTocResult.toc_result_id = result_toc_result.toc_result_id;
-        newResltTocResult.action_area_outcome_id = null;
-      } else {
-        newResltTocResult.toc_result_id = null;
-        newResltTocResult.action_area_outcome_id = result_toc_result.outcome_id;
-      }
-      newResltTocResult.results_id = result_id;
-      newResltTocResult.last_updated_by = user.id;
-      newResltTocResult.created_by = user.id;
-      newResltTocResult.version_id = versionId;
-      return newResltTocResult;
-    }
+    return ((!planned_result && outcome_id) ||
+      (planned_result && toc_result_id));
   }
 
 
@@ -195,11 +223,15 @@ export class ResultsTocResultsService {
 
   async getTocByResult(resultId: number) {
     try {
+/*
+      const result = await this._resultRepository.getResultById(resultId);
+      const resultInit = await this._resultByInitiativesRepository.getOwnerInitiativeByResult(resultId);
       const conInit = await this._resultByInitiativesRepository.getContributorInitiativeByResult(resultId);
       const npProject = await this._nonPooledProjectRepository.getAllNPProjectByResultId(resultId);
       const resCenters = await this._resultsCenterRepository.getAllResultsCenterByResultId(resultId);
-      let resTocRes = await this._resultsTocResultRepository.getAllResultTocResultByResultId(resultId);
-      let conResTocRes = await this._resultsTocResultRepository.getAllResultTocResultContributorsByResultIdAndInitId(resultId, conInit.map(el => el.id));
+      let resTocRes = await this._resultsTocResultRepository.getAllResultTocResultByResultId(resultId, resultInit.id, result.result_level_id);
+      let conResTocRes = await this._resultsTocResultRepository.getAllResultTocResultContributorsByResultIdAndInitId(resultId, conInit.map(el => el.id), resultInit.id, result.result_level_id);
+      console.log(resTocRes)
       if (resTocRes) {
         resTocRes.planned_result = !!resTocRes?.planned_result || null;
       } else {
@@ -210,19 +242,19 @@ export class ResultsTocResultsService {
         conResTocRes.map(el => { el.planned_result = !!el?.planned_result || null });
       } else {
         conResTocRes = [];
-      }
+      }*/
       return {
         response: {
-          contributing_initiatives: conInit,
-          contributing_np_projects: npProject,
-          contributing_center: resCenters,
-          result_toc_result: resTocRes || {
+          contributing_initiatives: 'conInit',
+          contributing_np_projects: 'npProject',
+          contributing_center: 'resCenters',
+          result_toc_result: 'resTocRes' || {
             action_area_outcome_id: null,
             toc_result_id: null,
             planned_result: null,
             results_id: resultId
           },
-          contributors_result_toc_result: conResTocRes
+          contributors_result_toc_result: 'conResTocRes'
         },
         message: 'The toc data is successfully created',
         status: HttpStatus.OK,
@@ -244,6 +276,6 @@ export class ResultsTocResultsService {
 interface resultToResultInterfaceToc {
   toc_result_id?: number;
   results_id: number;
-  outcome_id?: number;
+  action_area_outcome_id?: number;
   planned_result: boolean;
 }

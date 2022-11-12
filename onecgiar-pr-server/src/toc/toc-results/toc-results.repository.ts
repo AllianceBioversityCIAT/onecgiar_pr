@@ -63,7 +63,7 @@ export class TocResultsRepository extends Repository<TocResult> {
       tr.work_package_id ,
       null as action_area_outcome_id
     from toc_result tr
-	  where rbi.result_id = ?
+	  where tr.inititiative_id = ?
     	and tr.toc_level_id = ?;
     `,
     queryOst = `
@@ -89,7 +89,6 @@ export class TocResultsRepository extends Repository<TocResult> {
     	ibs.initiativeId,
     	iaaoi.outcome_id;
     `;
-
 
     try {
       const tocResult:TocResult[] = await this.query(tocLevel == 4? queryOst:queryData, [initiativeId, tocLevel]);
@@ -152,6 +151,35 @@ export class TocResultsRepository extends Repository<TocResult> {
     } catch (error) {
       throw {
         message: `[${TocResultsRepository.name}] => getTocIdFromOst error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
+  async isTocResoultByInitiative(resultId: number, tResult: number) {
+    const queryData = `
+    select 
+      tr.toc_result_id ,
+      tr.toc_internal_id ,
+      tr.title,
+      tr.description,
+      tr.toc_type_id,
+      tr.toc_level_id ,
+      tr.inititiative_id ,
+      tr.work_package_id 
+      from toc_result tr
+      inner join results_by_inititiative rbi on rbi.inititiative_id = tr.inititiative_id 
+      where rbi.initiative_role_id = 1
+      and rbi.result_id = ${resultId}
+      and tr.toc_result_id = ${tResult};
+    `;
+    try {
+      const tocResult:TocResult[] = await this.query(queryData);
+      return tocResult.length? tocResult[0]: undefined;
+    } catch (error) {
+      throw {
+        message: `[${TocResultsRepository.name}] => getAllTocResults error: ${error}`,
         response: {},
         status: HttpStatus.INTERNAL_SERVER_ERROR,
       };
