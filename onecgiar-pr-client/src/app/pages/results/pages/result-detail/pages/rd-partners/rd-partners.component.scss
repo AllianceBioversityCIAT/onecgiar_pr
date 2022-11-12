@@ -53,3 +53,10 @@
     padding-top: 15px;
     padding-bottom: 2px;
 }
+
+.readOnly_deliveries {
+    .delivery {
+        padding: 4px 8px !important;
+        border-radius: 3px !important;
+    }
+}

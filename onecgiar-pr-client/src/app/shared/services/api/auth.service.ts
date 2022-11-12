@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
 import { Router } from '@angular/router';
 import { LocalStorageUser, UserAuth } from '../../interfaces/user.interface';
+import { map } from 'rxjs';
 @Injectable({
   providedIn: 'root'
 })
@@ -41,6 +42,12 @@ export class AuthService {
   }
 
   GET_initiativesByUser() {
-    return this.http.get<any>(`${this.apiBaseUrl}user/get/initiative/${this.localStorageUser?.id}`);
+    return this.http.get<any>(`${this.apiBaseUrl}user/get/initiative/${this.localStorageUser?.id}`).pipe(
+      map(resp => {
+        // console.log(resp.response);
+        resp.response.map(init => (init.full_name = `${init?.official_code} - <strong>${init?.short_name}</strong> - ${init?.initiative_name}`));
+        return resp;
+      })
+    );
   }
 }

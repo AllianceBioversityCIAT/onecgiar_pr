@@ -7,7 +7,7 @@
     <app-pr-checkbox label="Mark this option if this section is not applicable"
         [(ngModel)]="this.partnersBody.no_applicable_partner" (ngModelChange)="cleanBody()">
     </app-pr-checkbox>
-    <app-alert-status [hidden]="this.partnersBody.no_applicable_partner"
+    <app-alert-status [hidden]="this.partnersBody.no_applicable_partner" *ngIf="!this.rolesSE.readOnly"
         description="If you don't find the partner you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list.">
     </app-alert-status>
 
@@ -18,7 +18,7 @@
                 [(ngModel)]="this.partnersBody.institutions" placeholder="Select Partners"
                 (selectOptionEvent)="toggle = toggle+1">
             </app-pr-multi-select>
-            <div class="partners_selected_header">
+            <div class="partners_selected_header" [style]="this.rolesSE.readOnly?'margin-top: -15px':''">
                 <app-pr-field-header
                     [description]="'Partner(s) selected ('+this.partnersBody.institutions?.length+'):'">
                 </app-pr-field-header>
@@ -28,25 +28,31 @@
                 <div class="pr_chip_selected" *ngFor="let option of this.partnersBody.institutions; let i=index">
                     <div class="name">{{option?.institutions_name}}</div>
                     <div class="type"> <strong>Institution type:</strong> {{option?.institutions_type_name}}</div>
-                    <div class="deliveries">
+                    <div class="deliveries" [ngClass]="{'readOnly_deliveries': this.rolesSE.readOnly}">
                         <div class="delivery"
+                            *ngIf="this.rolesSE.readOnly ? this.validateDeliverySelection(option?.deliveries,1) : true"
                             [ngClass]="{'active': this.validateDeliverySelection(option?.deliveries,1)}"
                             (click)="onSelectDelivery(option,1)">Scaling</div>
                         <div class="delivery"
+                            *ngIf="this.rolesSE.readOnly ? this.validateDeliverySelection(option?.deliveries,2) : true"
                             [ngClass]="{'active': this.validateDeliverySelection(option?.deliveries,2)}"
                             (click)="onSelectDelivery(option,2)">Demand</div>
                         <div class="delivery"
+                            *ngIf="this.rolesSE.readOnly ? this.validateDeliverySelection(option?.deliveries,3) : true"
                             [ngClass]="{'active': this.validateDeliverySelection(option?.deliveries,3)}"
                             (click)="onSelectDelivery(option,3)">Innovation</div>
                     </div>
-                    <i class="material-icons-round" (click)="removePartner(i)">remove_circle
+                    <i class="material-icons-round" *ngIf="!this.rolesSE.readOnly"
+                        (click)="removePartner(i)">remove_circle
                     </i>
                 </div>
             </div>
         </div>
 
         <div>
-            <app-pr-field-header label="Partners types" [required]="false">
+            <app-pr-field-header label="Partners types"
+                [description]="'Total partner(s) type ('+this.partnersBody.institutions?.length+'):'"
+                [required]="false">
             </app-pr-field-header>
             <!-- <app-pr-field-header [description]="'Partner(s) selected ('+this.partnersBody.institutions?.length+'):'">
             </app-pr-field-header> -->
