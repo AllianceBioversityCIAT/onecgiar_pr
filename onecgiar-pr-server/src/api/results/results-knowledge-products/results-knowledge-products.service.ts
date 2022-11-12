@@ -59,7 +59,7 @@ export class ResultsKnowledgeProductsService {
     private readonly _resultsKnowledgeProductRepository: ResultsKnowledgeProductsRepository,
     private readonly _handlersError: HandlersError,
     private readonly _versionRepository: VersionRepository,
-    private readonly _resultService: ResultsService,
+    private readonly _resultRepository: ResultRepository,
     private readonly _mqapService: MQAPService,
     private readonly _resultsKnowledgeProductMapper: ResultsKnowledgeProductMapper,
     private readonly _resultsKnowledgeProductAltmetricRepository: ResultsKnowledgeProductAltmetricRepository,
@@ -132,20 +132,20 @@ export class ResultsKnowledgeProductsService {
       };
     }
 
-    let newResult = await this._resultService.createOwnerResult(
+    let newResult: Result = null; /*await this._resultService.createOwnerResult(
       resultsKnowledgeProductDto.result_data,
       user,
     );
 
     if (newResult.status >= 300) {
       throw this._handlersError.returnErrorRes({ error: newResult });
-    }
+    }*/
 
     let newKnowledgeProduct: ResultsKnowledgeProduct =
       this._resultsKnowledgeProductMapper.dtoToEntity(
         resultsKnowledgeProductDto,
         user.id,
-        (newResult.response as Result).id,
+        newResult.id,
         currentVersion.id,
       );
 
