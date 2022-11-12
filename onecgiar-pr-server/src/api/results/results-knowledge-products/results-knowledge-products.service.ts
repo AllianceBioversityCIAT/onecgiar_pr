@@ -1,7 +1,10 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, OnModuleInit } from '@nestjs/common';
 import { FindOptionsRelations, FindOptionsWhere, Like } from 'typeorm';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import {
+  HandlersError,
+  returnErrorDto,
+} from '../../../shared/handlers/error.utils';
 import { MQAPResultDto } from '../../m-qap/dtos/m-qap.dto';
 import { MQAPService } from '../../m-qap/m-qap.service';
 import { Result } from '../entities/result.entity';
@@ -21,6 +24,19 @@ import { ResultsKnowledgeProductMetadataRepository } from './repositories/result
 import { ResultsKnowledgeProductDto } from './dto/results-knowledge-product.dto';
 import { ResultsService } from '../results.service';
 import { returnFormatResult } from '../dto/return-format-result.dto';
+import { ModuleRef } from '@nestjs/core';
+import { CreateResultDto } from '../dto/create-result.dto';
+import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
+import { ResultByLevelRepository } from '../result-by-level/result-by-level.repository';
+import { ResultLevelRepository } from '../result_levels/resultLevel.repository';
+import { ResultTypesService } from '../result_types/result_types.service';
+import { ResultLevel } from '../result_levels/entities/result_level.entity';
+import { ResultType } from '../result_types/entities/result_type.entity';
+import { VersionsService } from '../versions/versions.service';
+import { Year } from '../years/entities/year.entity';
+import { YearRepository } from '../years/year.repository';
+import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
+import { ResultTypeRepository } from '../result_types/resultType.repository';
 
 @Injectable()
 export class ResultsKnowledgeProductsService {
@@ -58,7 +74,6 @@ export class ResultsKnowledgeProductsService {
   constructor(
     private readonly _resultsKnowledgeProductRepository: ResultsKnowledgeProductsRepository,
     private readonly _handlersError: HandlersError,
-    private readonly _versionRepository: VersionRepository,
     private readonly _resultRepository: ResultRepository,
     private readonly _mqapService: MQAPService,
     private readonly _resultsKnowledgeProductMapper: ResultsKnowledgeProductMapper,
@@ -67,7 +82,126 @@ export class ResultsKnowledgeProductsService {
     private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
     private readonly _resultsKnowledgeProductKeywordRepository: ResultsKnowledgeProductKeywordRepository,
     private readonly _resultsKnowledgeProductMetadataRepository: ResultsKnowledgeProductMetadataRepository,
+
+    private readonly _clarisaInitiativesRepository: ClarisaInitiativesRepository,
+    private readonly _resultByLevelRepository: ResultByLevelRepository,
+    private readonly _resultLevelRepository: ResultLevelRepository,
+    private readonly _resultTypeRepository: ResultTypeRepository,
+    private readonly _versionRepository: VersionRepository,
+    private readonly _yearRepository: YearRepository,
+    private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
   ) {}
+
+  async createOwnerResult(
+    createResultDto: CreateResultDto,
+    user: TokenDto,
+  ): Promise<returnFormatResult | returnErrorDto> {
+    try {
+      if (
+        !createResultDto?.result_name ||
+        !createResultDto?.initiative_id ||
+        !createResultDto?.result_type_id ||
+        !createResultDto?.result_level_id
+      ) {
+        throw {
+          response: {},
+          message: 'missing data: Result name, Initiative or Result type',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const initiative = await this._clarisaInitiativesRepository.findOne({
+        where: { id: createResultDto.initiative_id },
+      });
+      if (!initiative) {
+        throw {
+          response: {},
+          message: 'Initiative Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const resultByLevel =
+        await this._resultByLevelRepository.getByTypeAndLevel(
+          createResultDto.result_level_id,
+          createResultDto.result_type_id,
+        );
+      const resultLevel = await this._resultLevelRepository.findOne({
+        where: { id: createResultDto.result_level_id },
+      });
+      const resultType = await this._resultTypeRepository.findOneBy({
+        id: createResultDto.result_type_id,
+      });
+      if (!resultLevel) {
+        throw {
+          response: {},
+          message: 'Result Level not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      if (!resultByLevel) {
+        throw {
+          response: {},
+          message: 'The type or level is not compatible',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const rl: ResultLevel = <ResultLevel>resultLevel;
+
+      const currentVersion: Version =
+        await this._versionRepository.getBaseVersion();
+
+      if (!currentVersion) {
+        throw {
+          response: {},
+          message: 'Current Version Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const year: Year = await this._yearRepository.findOne({
+        where: { active: true },
+      });
+      if (!year) {
+        throw {
+          response: {},
+          message: 'Active year Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const newResultHeader: Result = await this._resultRepository.save({
+        created_by: user.id,
+        last_updated_by: user.id,
+        result_type_id: resultType.id,
+        version_id: currentVersion.id,
+        title: createResultDto.result_name,
+        reported_year_id: year.year,
+        result_level_id: rl.id,
+      });
+
+      const resultByInitiative = await this._resultByInitiativesRepository.save(
+        {
+          created_by: newResultHeader.created_by,
+          initiative_id: initiative.id,
+          initiative_role_id: 1,
+          result_id: newResultHeader.id,
+          version_id: currentVersion.id,
+        },
+      );
+
+      return {
+        response: newResultHeader,
+        message: 'The Result has been created successfully',
+        status: HttpStatus.CREATED,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
   async findOnCGSpace(handle: string) {
     try {
       if (!handle) {
@@ -121,81 +255,105 @@ export class ResultsKnowledgeProductsService {
     resultsKnowledgeProductDto: ResultsKnowledgeProductDto,
     user: TokenDto,
   ) {
-    const currentVersion: Version =
-      await this._versionRepository.getBaseVersion();
+    try {
+      if (!resultsKnowledgeProductDto.result_data) {
+        throw {
+          response: {},
+          message: 'missing data needed to create a result',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
 
-    if (!resultsKnowledgeProductDto.result_data) {
-      throw {
-        response: {},
-        message: 'missing data needed to create a result',
-        status: HttpStatus.BAD_REQUEST,
-      };
-    }
+      const currentVersion: Version =
+        await this._versionRepository.getBaseVersion();
 
-    let newResult: Result = null; /*await this._resultService.createOwnerResult(
-      resultsKnowledgeProductDto.result_data,
-      user,
-    );
+      if (!currentVersion) {
+        throw {
+          response: {},
+          message: 'Current Version Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
 
-    if (newResult.status >= 300) {
-      throw this._handlersError.returnErrorRes({ error: newResult });
-    }*/
-
-    let newKnowledgeProduct: ResultsKnowledgeProduct =
-      this._resultsKnowledgeProductMapper.dtoToEntity(
-        resultsKnowledgeProductDto,
-        user.id,
-        newResult.id,
-        currentVersion.id,
+      let newResult = await this.createOwnerResult(
+        resultsKnowledgeProductDto.result_data,
+        user,
       );
 
-    newKnowledgeProduct = await this._resultsKnowledgeProductRepository.save(
-      newKnowledgeProduct,
-    );
+      if (newResult.status >= 300) {
+        throw this._handlersError.returnErrorRes({ error: newResult });
+      }
 
-    newKnowledgeProduct = this._resultsKnowledgeProductMapper.fillOutRelations(
-      resultsKnowledgeProductDto,
-      newKnowledgeProduct,
-    );
+      let newKnowledgeProduct: ResultsKnowledgeProduct =
+        this._resultsKnowledgeProductMapper.dtoToEntity(
+          resultsKnowledgeProductDto,
+          user.id,
+          (newResult.response as Result).id,
+          currentVersion.id,
+        );
 
-    await this._resultsKnowledgeProductAltmetricRepository.save(
-      newKnowledgeProduct.result_knowledge_product_altmetric_array ?? [],
-    );
-    await this._resultsKnowledgeProductAuthorRepository.save(
-      newKnowledgeProduct.result_knowledge_product_author_array ?? [],
-    );
-    await this._resultsKnowledgeProductInstitutionRepository.save(
-      newKnowledgeProduct.result_knowledge_product_institution_array ?? {},
-    );
-    await this._resultsKnowledgeProductKeywordRepository.save(
-      newKnowledgeProduct.result_knowledge_product_keyword_array ?? [],
-    );
-    await this._resultsKnowledgeProductMetadataRepository.save(
-      newKnowledgeProduct.result_knowledge_product_metadata_array ?? [],
-    );
+      newKnowledgeProduct = await this._resultsKnowledgeProductRepository.save(
+        newKnowledgeProduct,
+      );
 
-    const response = { ...resultsKnowledgeProductDto };
+      newKnowledgeProduct =
+        this._resultsKnowledgeProductMapper.fillOutRelations(
+          resultsKnowledgeProductDto,
+          newKnowledgeProduct,
+        );
 
-    return {
-      response: response,
-      message: 'The Result Knowledge Product has been created successfully',
-      status: HttpStatus.CREATED,
-    };
+      await this._resultsKnowledgeProductAltmetricRepository.save(
+        newKnowledgeProduct.result_knowledge_product_altmetric_array ?? [],
+      );
+      await this._resultsKnowledgeProductAuthorRepository.save(
+        newKnowledgeProduct.result_knowledge_product_author_array ?? [],
+      );
+      await this._resultsKnowledgeProductInstitutionRepository.save(
+        newKnowledgeProduct.result_knowledge_product_institution_array ?? {},
+      );
+      await this._resultsKnowledgeProductKeywordRepository.save(
+        newKnowledgeProduct.result_knowledge_product_keyword_array ?? [],
+      );
+      await this._resultsKnowledgeProductMetadataRepository.save(
+        newKnowledgeProduct.result_knowledge_product_metadata_array ?? [],
+      );
+
+      const response = { ...resultsKnowledgeProductDto };
+
+      return {
+        response: response,
+        message: 'The Result Knowledge Product has been created successfully',
+        status: HttpStatus.CREATED,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
   }
 
   async findResultKnowledgeProductByHandle(handle: string) {
-    return this._resultsKnowledgeProductRepository
-      .findOneByOrFail({ handle: Like(handle) })
-      .then((rkp) => {
-        return {
-          response: this._resultsKnowledgeProductMapper.entityToDto(rkp),
-          message: 'The Result Knowledge Product has already been created.',
-          status: HttpStatus.OK,
+    try {
+      if ((handle ?? '').length < 1) {
+        throw {
+          response: {},
+          message: 'missing data: handle',
+          status: HttpStatus.NOT_FOUND,
         };
-      })
-      .catch((err) => {
-        return this._handlersError.returnErrorRes({ error: err });
-      });
+      }
+
+      const knowledgeProduct =
+        await this._resultsKnowledgeProductRepository.findOneBy({
+          handle: Like(handle),
+        });
+
+      return {
+        response:
+          this._resultsKnowledgeProductMapper.entityToDto(knowledgeProduct),
+        message: 'The Result Knowledge Product has already been created.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
   }
 
   findOne(id: number) {

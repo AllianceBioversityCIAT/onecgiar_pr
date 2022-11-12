@@ -42,7 +42,7 @@ export class ResultsKnowledgeProductsController {
   }
 
   @Get('find/by-handle')
-  async findResultKnowledgeProductByHandle(@Param('handle') handle: string) {
+  async findResultKnowledgeProductByHandle(@Query('handle') handle: string) {
     const { message, response, status } =
       await this._resultsKnowledgeProductsService.findResultKnowledgeProductByHandle(
         handle,
@@ -51,9 +51,12 @@ export class ResultsKnowledgeProductsController {
     throw new HttpException({ message, response }, status);
   }
 
-  @Get('/by-handle')
-  findOnCGSpace(@Query('handle') handle: string) {
-    return this._resultsKnowledgeProductsService.findOnCGSpace(handle);
+  @Get('mqap')
+  async getFromMQAPByHandle(@Query('handle') handle: string) {
+    const { message, response, status } =
+      await this._resultsKnowledgeProductsService.findOnCGSpace(handle);
+
+    throw new HttpException({ message, response }, status);
   }
 
   @Get(':id')
