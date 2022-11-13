@@ -37,6 +37,7 @@ import { Year } from '../years/entities/year.entity';
 import { YearRepository } from '../years/year.repository';
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
 import { ResultTypeRepository } from '../result_types/resultType.repository';
+import { EvidencesRepository } from '../evidences/evidences.repository';
 
 @Injectable()
 export class ResultsKnowledgeProductsService {
@@ -82,7 +83,7 @@ export class ResultsKnowledgeProductsService {
     private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
     private readonly _resultsKnowledgeProductKeywordRepository: ResultsKnowledgeProductKeywordRepository,
     private readonly _resultsKnowledgeProductMetadataRepository: ResultsKnowledgeProductMetadataRepository,
-
+    private readonly _evidenceRepository: EvidencesRepository,
     private readonly _clarisaInitiativesRepository: ClarisaInitiativesRepository,
     private readonly _resultByLevelRepository: ResultByLevelRepository,
     private readonly _resultLevelRepository: ResultLevelRepository,
@@ -92,7 +93,7 @@ export class ResultsKnowledgeProductsService {
     private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
   ) {}
 
-  async createOwnerResult(
+  private async createOwnerResult(
     createResultDto: CreateResultDto,
     user: TokenDto,
   ): Promise<returnFormatResult | returnErrorDto> {
@@ -236,6 +237,14 @@ export class ResultsKnowledgeProductsService {
       const mqapResponse: MQAPResultDto =
         await this._mqapService.getDataFromCGSpaceHandle(handle);
 
+      if (!mqapResponse) {
+        throw {
+          response: {},
+          message: 'Not a valid handle',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
       response =
         this._resultsKnowledgeProductMapper.mqapResponseToKnowledgeProductDto(
           mqapResponse,
@@ -275,20 +284,22 @@ export class ResultsKnowledgeProductsService {
         };
       }
 
-      let newResult = await this.createOwnerResult(
+      let newResultResponse = await this.createOwnerResult(
         resultsKnowledgeProductDto.result_data,
         user,
       );
 
-      if (newResult.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: newResult });
+      if (newResultResponse.status >= 300) {
+        throw this._handlersError.returnErrorRes({ error: newResultResponse });
       }
+
+      const newResult = newResultResponse.response as Result;
 
       let newKnowledgeProduct: ResultsKnowledgeProduct =
         this._resultsKnowledgeProductMapper.dtoToEntity(
           resultsKnowledgeProductDto,
           user.id,
-          (newResult.response as Result).id,
+          newResult.id,
           currentVersion.id,
         );
 
@@ -302,6 +313,7 @@ export class ResultsKnowledgeProductsService {
           newKnowledgeProduct,
         );
 
+      //updating relations
       await this._resultsKnowledgeProductAltmetricRepository.save(
         newKnowledgeProduct.result_knowledge_product_altmetric_array ?? [],
       );
@@ -318,10 +330,42 @@ export class ResultsKnowledgeProductsService {
         newKnowledgeProduct.result_knowledge_product_metadata_array ?? [],
       );
 
-      const response = { ...resultsKnowledgeProductDto };
+      //updating general result tables
+      this._resultRepository.update(
+        { id: newResult.id },
+        {
+          title: resultsKnowledgeProductDto.name,
+          description: resultsKnowledgeProductDto.description,
+        },
+      );
+
+      //TODO: update geoscope table
+
+      //adding link to this knowledge product to existing evidences
+      this._evidenceRepository
+        .findBy({ link: Like(resultsKnowledgeProductDto.handle) })
+        .then((re) => {
+          return Promise.all(
+            re.map((e) => {
+              this._evidenceRepository.update(
+                { id: e.id },
+                { knowledge_product_related: newResult.id },
+              );
+            }),
+          );
+        })
+        .catch((error) => this._handlersError.returnErrorRes({ error }));
+
+      //creating own evidence linking it to itself
+      this._evidenceRepository.save({
+        link: resultsKnowledgeProductDto.handle,
+        result_id: newResult.id,
+        created_by: user.id,
+        version_id: currentVersion.id,
+      });
 
       return {
-        response: response,
+        response: resultsKnowledgeProductDto,
         message: 'The Result Knowledge Product has been created successfully',
         status: HttpStatus.CREATED,
       };
@@ -336,7 +380,7 @@ export class ResultsKnowledgeProductsService {
         throw {
           response: {},
           message: 'missing data: handle',
-          status: HttpStatus.NOT_FOUND,
+          status: HttpStatus.BAD_REQUEST,
         };
       }
 
@@ -344,6 +388,14 @@ export class ResultsKnowledgeProductsService {
         await this._resultsKnowledgeProductRepository.findOneBy({
           handle: Like(handle),
         });
+
+      if (!knowledgeProduct) {
+        throw {
+          response: {},
+          message: `There is not a Knowledge Product with the handle ${handle}`,
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
 
       return {
         response:

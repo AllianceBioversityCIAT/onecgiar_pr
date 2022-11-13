@@ -26,7 +26,10 @@ export class MQAPService {
               return resp as MQAPResultDto;
             }),
           ),
-      );
+      ).catch((error) => {
+        this._logger.error(`${error}: ${JSON.stringify(error.response?.data)}`);
+        return null;
+      });
     } catch (err) {
       this._logger.error(err);
     }
