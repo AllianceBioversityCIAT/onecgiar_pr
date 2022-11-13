@@ -223,38 +223,39 @@ export class ResultsTocResultsService {
 
   async getTocByResult(resultId: number) {
     try {
-/*
+
       const result = await this._resultRepository.getResultById(resultId);
       const resultInit = await this._resultByInitiativesRepository.getOwnerInitiativeByResult(resultId);
       const conInit = await this._resultByInitiativesRepository.getContributorInitiativeByResult(resultId);
       const npProject = await this._nonPooledProjectRepository.getAllNPProjectByResultId(resultId);
       const resCenters = await this._resultsCenterRepository.getAllResultsCenterByResultId(resultId);
-      let resTocRes = await this._resultsTocResultRepository.getAllResultTocResultByResultId(resultId, resultInit.id, result.result_level_id);
-      let conResTocRes = await this._resultsTocResultRepository.getAllResultTocResultContributorsByResultIdAndInitId(resultId, conInit.map(el => el.id), resultInit.id, result.result_level_id);
-      console.log(resTocRes)
-      if (resTocRes) {
-        resTocRes.planned_result = !!resTocRes?.planned_result || null;
-      } else {
-        resTocRes = null;
+      let resTocRes: any = {};
+      let conResTocRes: any = [];
+      if(result.result_level_id != 2){
+        resTocRes = await this._resultsTocResultRepository.getRTRPrimary(resultId, true);
+        if(resTocRes){
+          resTocRes['inititiative_id'] = resultInit.id;
+        }
+        conResTocRes = await this._resultsTocResultRepository.getRTRPrimary(resultId, false);
+        
+      }else{
+        /**
+         * !Implementar Action Area
+         */
       }
-
-      if (conResTocRes.length) {
-        conResTocRes.map(el => { el.planned_result = !!el?.planned_result || null });
-      } else {
-        conResTocRes = [];
-      }*/
       return {
         response: {
-          contributing_initiatives: 'conInit',
-          contributing_np_projects: 'npProject',
-          contributing_center: 'resCenters',
-          result_toc_result: 'resTocRes' || {
+          contributing_initiatives: conInit,
+          contributing_np_projects: npProject,
+          contributing_center: resCenters,
+          result_toc_result: resTocRes || {
             action_area_outcome_id: null,
             toc_result_id: null,
             planned_result: null,
-            results_id: resultId
+            results_id: resultId,
+            inititiative_id: resultInit.id,
           },
-          contributors_result_toc_result: 'conResTocRes'
+          contributors_result_toc_result: conResTocRes
         },
         message: 'The toc data is successfully created',
         status: HttpStatus.OK,
