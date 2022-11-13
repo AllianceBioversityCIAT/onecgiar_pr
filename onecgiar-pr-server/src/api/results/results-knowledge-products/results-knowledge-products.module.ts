@@ -21,6 +21,7 @@ import { ResultLevelRepository } from '../result_levels/resultLevel.repository';
 import { ResultByLevelRepository } from '../result-by-level/result-by-level.repository';
 import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { ResultTypeRepository } from '../result_types/resultType.repository';
+import { EvidencesRepository } from '../evidences/evidences.repository';
 
 @Module({
   imports: [HttpModule],
@@ -44,6 +45,7 @@ import { ResultTypeRepository } from '../result_types/resultType.repository';
     ResultTypeRepository,
     YearRepository,
     ResultByInitiativesRepository,
+    EvidencesRepository,
   ],
 })
 export class ResultsKnowledgeProductsModule {}
