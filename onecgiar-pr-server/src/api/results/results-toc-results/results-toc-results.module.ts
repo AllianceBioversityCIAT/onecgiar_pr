@@ -9,10 +9,23 @@ import { ResultByInitiativesRepository } from '../results_by_inititiatives/resul
 import { VersionsService } from '../versions/versions.service';
 import { VersionRepository } from '../versions/version.repository';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
+import { ResultRepository } from '../result.repository';
+import { TocResultsRepository } from '../../../toc/toc-results/toc-results.repository';
 
 @Module({
   controllers: [ResultsTocResultsController],
-  providers: [ResultsTocResultsService, HandlersError, ResultsTocResultRepository, NonPooledProjectRepository, ResultsCenterRepository, ResultByInitiativesRepository, VersionsService, VersionRepository, UserRepository],
+  providers: [ResultsTocResultsService,
+    HandlersError,
+    ResultsTocResultRepository,
+    NonPooledProjectRepository,
+    ResultsCenterRepository,
+    ResultByInitiativesRepository,
+    VersionsService,
+    VersionRepository,
+    UserRepository,
+    ResultRepository,
+    TocResultsRepository
+  ],
   exports: [
     ResultsTocResultRepository
   ]

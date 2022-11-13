@@ -4,9 +4,15 @@
     <app-alert-status
         description="Partner organization that you collaborated with to generate this result or that contributed to this result.">
     </app-alert-status>
-    <app-pr-checkbox label="Mark this option if this section is not applicable"
-        [(ngModel)]="this.partnersBody.no_applicable_partner" (ngModelChange)="cleanBody()">
-    </app-pr-checkbox>
+    <div [ngSwitch]="this.rolesSE.readOnly">
+        <div *ngSwitchCase="true">{{this.partnersBody.no_applicable_partner?'Marked as not applicable':''}}</div>
+        <div *ngSwitchCase="false">
+            <app-pr-checkbox label="Mark this option if this section is not applicable"
+                [(ngModel)]="this.partnersBody.no_applicable_partner" (ngModelChange)="cleanBody()">
+            </app-pr-checkbox>
+        </div>
+    </div>
+
     <app-alert-status [hidden]="this.partnersBody.no_applicable_partner" *ngIf="!this.rolesSE.readOnly"
         description="If you don't find the partner you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list.">
     </app-alert-status>

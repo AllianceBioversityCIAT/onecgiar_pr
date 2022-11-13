@@ -4,7 +4,7 @@ export class CreateResultsTocResultDto {
     contributing_np_projects: donorInterfaceToc[];
     contributing_center: centerInterfacesToc[];
     result_toc_result: resultToResultInterfaceToc;
-    contributors_result_toc_result: contributorsResultToResultInterfaceToc[];
+    contributors_result_toc_result: resultToResultInterfaceToc[];
 
 }
 
@@ -28,12 +28,9 @@ interface centerInterfacesToc{
 }
 
 interface resultToResultInterfaceToc{
+    result_toc_result_id?: number;
     toc_result_id?: number;
-    outcome_id?: number;
+    action_area_outcome_id?: number;
     results_id: number;
     planned_result: boolean;
-}
-
-interface contributorsResultToResultInterfaceToc{
-    result_toc_result: resultToResultInterfaceToc;
 }
