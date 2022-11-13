@@ -337,7 +337,7 @@ export class ResultsKnowledgeProductsService {
       this._resultRepository.update(
         { id: newResult.id },
         {
-          title: resultsKnowledgeProductDto.name,
+          title: resultsKnowledgeProductDto.title,
           description: resultsKnowledgeProductDto.description,
         },
       );

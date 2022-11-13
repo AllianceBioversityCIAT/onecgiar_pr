@@ -119,7 +119,11 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     }
   }
 
-  async getResultByInstitutionExists(resultId: number, institutionsId: number, isActor: boolean): Promise<ResultsByInstitution> {
+  async getResultByInstitutionExists(
+    resultId: number,
+    institutionsId: number,
+    isActor: boolean,
+  ): Promise<ResultsByInstitution> {
     const queryData = `
     select 
     	rbi.id,
@@ -139,9 +143,11 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     `;
     try {
       const completeUser: ResultsByInstitution[] = await this.query(queryData, [
-        resultId, isActor?1:2, institutionsId
+        resultId,
+        isActor ? 1 : 2,
+        institutionsId,
       ]);
-      return completeUser?.length? completeUser[0]: undefined;
+      return completeUser?.length ? completeUser[0] : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByIntitutionsRepository.name,
@@ -151,9 +157,17 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     }
   }
 
-  async updateIstitutions(resultId: number, institutionsArray: institutionsInterface[], isActor: boolean, userId: number, applicablePartner: boolean = false) {
-    const institutions = !applicablePartner?institutionsArray.map(el => el.institutions_id):[];
-    const upDateInactive = `
+  async updateIstitutions(
+    resultId: number,
+    institutionsArray: institutionsInterface[],
+    isActor: boolean,
+    userId: number,
+    applicablePartner: boolean = false,
+  ) {
+    const institutions = !applicablePartner
+      ? institutionsArray.map((el) => el.institutions_id)
+      : [];
+    const upDateInactiveRBI = `
     update results_by_institution 
     set is_active = 0, 
     	last_updated_date = NOW(), 
@@ -163,8 +177,18 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
       and institution_roles_id = ?
     	and institutions_id not in (${institutions.toString()});
     `;
+    const removeRelationRKPMI = `
+    update results_kp_mqap_institutions rkpmi
+    inner join results_knowledge_product rkp on rkpmi.result_knowledge_product_id = rkp.result_knowledge_product_id
+    set rkpmi.results_by_institutions_id = NULL,
+      rkpmi.last_updated_date = NOW(), 
+    	rkpmi.last_updated_by = ? 
+    where rkpmi.is_active > 0 
+      and rkp.results_id = ?
+    	and rkpmi.results_by_institutions_id not in (${institutions.toString()});
+    `; //TODO validate query
 
-    const upDateActive = `
+    const upDateActiveRBI = `
     update results_by_institution 
     set is_active = 1, 
     	last_updated_date = NOW(), 
@@ -174,7 +198,7 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     	and institutions_id in (${institutions.toString()});
     `;
 
-    const upDateAllInactive = `
+    const upDateAllInactiveRBI = `
     update results_by_institution 
     set is_active = 0, 
     	last_updated_date = NOW(), 
@@ -185,18 +209,24 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     `;
 
     try {
-      if(institutions?.length){
-        const upDateInactiveResult = await this.query(upDateInactive, [
-          userId, resultId, isActor?1:2
+      if (institutions?.length) {
+        const upDateInactiveResult = await this.query(upDateInactiveRBI, [
+          userId,
+          resultId,
+          isActor ? 1 : 2,
         ]);
-  
-        return await this.query(upDateActive, [
-          userId, resultId, isActor?1:2
+
+        return await this.query(upDateActiveRBI, [
+          userId,
+          resultId,
+          isActor ? 1 : 2,
         ]);
-      }else{
-        console.log('entro')
-        return await this.query(upDateAllInactive, [
-          userId, resultId, isActor?1:2
+      } else {
+        console.log('entro');
+        return await this.query(upDateAllInactiveRBI, [
+          userId,
+          resultId,
+          isActor ? 1 : 2,
         ]);
       }
     } catch (error) {
@@ -209,6 +239,6 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
   }
 }
 
-interface institutionsInterface{
+interface institutionsInterface {
   institutions_id: number;
 }

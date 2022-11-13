@@ -5,7 +5,6 @@ export class SaveResultsByInstitutionDto {
 }
 
 interface institutionsInterface {
-  institution_mqap_name?: string;
   institution_mqap_id?: number;
   institutions_id: number;
   deliveries?: number[];

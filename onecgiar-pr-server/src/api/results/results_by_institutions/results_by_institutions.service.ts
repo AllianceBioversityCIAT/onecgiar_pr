@@ -15,6 +15,7 @@ import { Result } from '../entities/result.entity';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 import { ResultsKnowledgeProductsRepository } from '../results-knowledge-products/repositories/results-knowledge-products.repository';
 import { ResultsKnowledgeProductInstitutionRepository } from '../results-knowledge-products/repositories/results-knowledge-product-institution.repository';
+import { IsNull } from 'typeorm';
 
 @Injectable()
 export class ResultsByInstitutionsService {
@@ -86,6 +87,31 @@ export class ResultsByInstitutionsService {
           id,
         );
       const result = await this._resultRepository.getResultById(id);
+      const knowledgeProduct =
+        await this._resultKnowledgeProductRepository.findOne({
+          where: {
+            results_id: id,
+          },
+          relations: {
+            result_knowledge_product_institution_array: true,
+          },
+        });
+      let unmapped_mqap_institutions = null;
+
+      if (knowledgeProduct) {
+        unmapped_mqap_institutions =
+          knowledgeProduct.result_knowledge_product_institution_array.filter(
+            (rkpi) => rkpi.results_by_institutions_id == null,
+          );
+        // mapped institution
+        institutions.map((inst) => {
+          inst['mapped_mqap_institutions'] =
+            knowledgeProduct.result_knowledge_product_institution_array
+              .filter((rkpi) => rkpi.results_by_institutions_id == inst.id)
+              .map((rkpi) => rkpi.result_kp_mqap_institution_id);
+        });
+      }
+
       if (institutions.length) {
         const institutionsId: number[] = institutions.map((el) => el.id);
         const delivery =
@@ -103,6 +129,7 @@ export class ResultsByInstitutionsService {
         response: {
           no_applicable_partner: result.no_applicable_partner ? true : false,
           institutions,
+          unmapped_mqap_institutions,
         },
         message: 'Successful response',
         status: HttpStatus.OK,
@@ -182,12 +209,16 @@ export class ResultsByInstitutionsService {
             if (knowledgeProduct) {
               const kpInstitution =
                 this._resultsKnowledgeProductInstitutionRepository.findOneBy({
-                  result_kp_mqap_institution_id: 1, //TODO modify incoming dto from front-end to include the kpinstitution id
+                  result_kp_mqap_institution_id:
+                    data.institutions[index].institution_mqap_id ?? 0,
                 });
 
               if (kpInstitution) {
                 this._resultsKnowledgeProductInstitutionRepository.update(
-                  { result_kp_mqap_institution_id: 1 }, //TODO modify incoming dto from front-end to include the kpinstitution id
+                  {
+                    result_kp_mqap_institution_id:
+                      data.institutions[index].institution_mqap_id,
+                  },
                   { results_by_institutions_id: responseInstitution.id },
                 );
               }

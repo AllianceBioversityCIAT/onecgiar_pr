@@ -23,7 +23,7 @@ export class ResultsKnowledgeProductsController {
     private readonly _resultsKnowledgeProductsService: ResultsKnowledgeProductsService,
   ) {}
 
-  @Post('create/from-handle')
+  @Post('create')
   async create(
     @Body() mqapMappedResponse: ResultsKnowledgeProductDto,
     @Headers() auth: HeadersDto,
@@ -41,20 +41,20 @@ export class ResultsKnowledgeProductsController {
     throw new HttpException({ message, response }, status);
   }
 
+  @Get('mqap')
+  async getFromMQAPByHandle(@Query('handle') handle: string) {
+    const { message, response, status } =
+      await this._resultsKnowledgeProductsService.findOnCGSpace(handle);
+
+    throw new HttpException({ message, response }, status);
+  }
+
   @Get('find/by-handle')
   async findResultKnowledgeProductByHandle(@Query('handle') handle: string) {
     const { message, response, status } =
       await this._resultsKnowledgeProductsService.findResultKnowledgeProductByHandle(
         handle,
       );
-
-    throw new HttpException({ message, response }, status);
-  }
-
-  @Get('mqap')
-  async getFromMQAPByHandle(@Query('handle') handle: string) {
-    const { message, response, status } =
-      await this._resultsKnowledgeProductsService.findOnCGSpace(handle);
 
     throw new HttpException({ message, response }, status);
   }

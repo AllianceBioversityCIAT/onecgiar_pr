@@ -30,7 +30,7 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProductDto.licence = mqapResponseDto?.Rights;
     knowledgeProductDto.melia_previous_submitted = null; //null, as this info is mapped by the user
     knowledgeProductDto.melia_type_id = null; //null, as this info is mapped by the user
-    knowledgeProductDto.name = mqapResponseDto?.Title;
+    knowledgeProductDto.title = mqapResponseDto?.Title;
     knowledgeProductDto.reusable = mqapResponseDto?.FAIR?.score?.R;
     knowledgeProductDto.sponsor = null; //TODO TBD
     knowledgeProductDto.type = mqapResponseDto?.Type;
@@ -213,7 +213,7 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProductDto.handle = entity.handle;
     knowledgeProductDto.interoperable = entity.interoperable;
     knowledgeProductDto.licence = entity.licence;
-    knowledgeProductDto.name = entity.name;
+    knowledgeProductDto.title = entity.name;
     knowledgeProductDto.references_other_knowledge_products = null; //TODO TBD
     knowledgeProductDto.reusable = entity.reusable;
     knowledgeProductDto.sponsor = null; //TODO TBD
@@ -303,7 +303,7 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProduct.licence = dto.licence;
     knowledgeProduct.melia_previous_submitted = null;
     knowledgeProduct.melia_type_id = null;
-    knowledgeProduct.name = dto.name;
+    knowledgeProduct.name = dto.title;
     knowledgeProduct.reusable = dto.reusable;
     knowledgeProduct.sponsors = dto.sponsor;
 

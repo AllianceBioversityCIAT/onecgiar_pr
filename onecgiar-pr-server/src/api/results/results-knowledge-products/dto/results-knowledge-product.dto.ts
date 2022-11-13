@@ -7,7 +7,7 @@ import { ResultsKnowledgeProductMetadataDto } from './results-knowledge-product-
 
 export class ResultsKnowledgeProductDto {
   id: number;
-  name: string;
+  title: string;
   description: string;
   institutions: ResultsKnowledgeProductInstitutionDto[];
   metadata: ResultsKnowledgeProductMetadataDto[];
