@@ -17,10 +17,10 @@ export class resultsByInitiativeTest1668442157335 implements MigrationInterface 
         await queryRunner.query(`INSERT INTO \`results_by_inititiative\` (result_id,inititiative_id,initiative_role_id,version_id,created_by) VALUES (12,6,1,1,307)`);
         await queryRunner.query(`INSERT INTO \`results_by_inititiative\` (result_id,inititiative_id,initiative_role_id,version_id,created_by) VALUES (13,7,1,1,307)`);
         await queryRunner.query(`INSERT INTO \`results_by_inititiative\` (result_id,inititiative_id,initiative_role_id,version_id,created_by) VALUES (14,7,1,1,307)`);
-        await queryRunner.query(`INSERT INTO \`results_by_inititiative\` (result_id,inititiative_id,initiative_role_id,version_id,created_by) VALUES (15,8,1,1,307)`);
-        await queryRunner.query(`INSERT INTO \`results_by_inititiative\` (result_id,inititiative_id,initiative_role_id,version_id,created_by) VALUES (16,8,1,1,307)`);
-        await queryRunner.query(`INSERT INTO \`results_by_inititiative\` (result_id,inititiative_id,initiative_role_id,version_id,created_by) VALUES (17,9,1,1,307)`);
-        await queryRunner.query(`INSERT INTO \`results_by_inititiative\` (result_id,inititiative_id,initiative_role_id,version_id,created_by) VALUES (18,9,1,1,307)`);
+        await queryRunner.query(`INSERT INTO \`results_by_inititiative\` (result_id,inititiative_id,initiative_role_id,version_id,created_by) VALUES (15,7,1,1,307)`);
+        await queryRunner.query(`INSERT INTO \`results_by_inititiative\` (result_id,inititiative_id,initiative_role_id,version_id,created_by) VALUES (16,7,1,1,307)`);
+        await queryRunner.query(`INSERT INTO \`results_by_inititiative\` (result_id,inititiative_id,initiative_role_id,version_id,created_by) VALUES (17,10,1,1,307)`);
+        await queryRunner.query(`INSERT INTO \`results_by_inititiative\` (result_id,inititiative_id,initiative_role_id,version_id,created_by) VALUES (18,10,1,1,307)`);
         await queryRunner.query(`INSERT INTO \`results_by_inititiative\` (result_id,inititiative_id,initiative_role_id,version_id,created_by) VALUES (19,10,1,1,307)`);
         await queryRunner.query(`INSERT INTO \`results_by_inititiative\` (result_id,inititiative_id,initiative_role_id,version_id,created_by) VALUES (20,10,1,1,307)`);
         await queryRunner.query(`INSERT INTO \`results_by_inititiative\` (result_id,inititiative_id,initiative_role_id,version_id,created_by) VALUES (21,11,1,1,307)`);
