@@ -26,10 +26,7 @@ export class ResultsKnowledgeProduct {
   })
   result_knowledge_product_id: number;
 
-  @ManyToOne(() => Result, (r) => r.id)
-  @JoinColumn({
-    name: 'results_id',
-  })
+  @Column()
   results_id: number;
 
   @Column({
@@ -208,4 +205,10 @@ export class ResultsKnowledgeProduct {
     (rkpi) => rkpi.result_knowledge_product_object,
   )
   result_knowledge_product_author_array: ResultsKnowledgeProductAuthor[];
+
+  @ManyToOne(() => Result, (r) => r.id)
+  @JoinColumn({
+    name: 'results_id',
+  })
+  result_object: Result;
 }

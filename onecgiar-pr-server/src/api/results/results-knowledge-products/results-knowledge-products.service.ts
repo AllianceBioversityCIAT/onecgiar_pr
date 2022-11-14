@@ -519,7 +519,7 @@ export class ResultsKnowledgeProductsService {
     const warnings: string[] = [];
 
     if (response.doi?.length < 1) {
-      response.warnings.push(
+      warnings.push(
         'Journal articles without the DOI will directly go to ' +
           'the Quality Assurance. In case you need support to add the DOI in CGSPACE, ' +
           'please contact the librarian of your Center.',
@@ -527,7 +527,7 @@ export class ResultsKnowledgeProductsService {
     }
 
     if (response.doi?.length > 1 && !response.altmetric_detail_url) {
-      response.warnings.push(
+      warnings.push(
         'Please make sure the DOI is valid otherwise the journal article will directly go ' +
           'to the Quality Assurance. In case you need support to correct the DOI in CGSPACE, ' +
           'please contact the librarian of your Center.',
@@ -540,7 +540,7 @@ export class ResultsKnowledgeProductsService {
     const wosMetadata = response.metadata.find((m) => m.source !== 'CGSpace');
 
     if ((cgspaceMetadata?.issue_year ?? 0) !== (wosMetadata?.issue_year ?? 0)) {
-      response.warnings.push(
+      warnings.push(
         'The year of publication is automatically retrieved from an external service (Web ' +
           'of Science or Scopus). In case of inconsistencies, the CGIAR Quality Assurance ' +
           'team will manually validate the record. We remind you that only knowledge products ' +
@@ -549,7 +549,7 @@ export class ResultsKnowledgeProductsService {
     }
 
     if ((wosMetadata?.issue_year ?? 0) < 1) {
-      response.warnings.push(
+      warnings.push(
         'The year of publication is automatically retrieved from an external service (Web ' +
           'of Science or Scopus). If the year does not show, it might be due to a delay in ' +
           'the indexing. The CGIAR Quality Assurance team will validate this information at ' +

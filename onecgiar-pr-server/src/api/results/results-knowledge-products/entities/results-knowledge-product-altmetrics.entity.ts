@@ -30,7 +30,9 @@ export class ResultsKnowledgeProductAltmetric {
   altmetric_id: string;
 
   get detail_url(): string {
-    return `https://www.altmetric.com/details/${this.altmetric_id}`;
+    return this.altmetric_id
+      ? `https://www.altmetric.com/details/${this.altmetric_id}`
+      : undefined;
   }
 
   @Column({

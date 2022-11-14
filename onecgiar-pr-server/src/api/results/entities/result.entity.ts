@@ -5,6 +5,7 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -15,6 +16,7 @@ import { Year } from '../years/entities/year.entity';
 import { ResultLevel } from '../result_levels/entities/result_level.entity';
 import { LegacyResult } from '../legacy-result/entities/legacy-result.entity';
 import { ClarisaGeographicScope } from '../../../clarisa/clarisa-geographic-scopes/entities/clarisa-geographic-scope.entity';
+import { ResultsKnowledgeProduct } from '../results-knowledge-products/entities/results-knowledge-product.entity';
 
 @Entity()
 export class Result {
@@ -166,4 +168,7 @@ export class Result {
 
   // helpers??
   initiative_id!: number;
+
+  @OneToMany(() => ResultsKnowledgeProduct, (rkp) => rkp.result_object)
+  result_knowledge_product_array: ResultsKnowledgeProduct[];
 }
