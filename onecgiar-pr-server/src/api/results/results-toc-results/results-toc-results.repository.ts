@@ -440,7 +440,7 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
         last_updated_by = ?
       where is_active > 0 
         and results_id = ?
-        and initiative_id = not in (${initiative.toString()});
+        and initiative_id not in (${initiative.toString()});
     `;
 
     const upDateActive = `
@@ -449,7 +449,7 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
         last_updated_date = NOW(),
         last_updated_by = ?
       where results_id = ?
-        and initiative_id = in (${initiative.toString()});
+        and initiative_id in (${initiative.toString()});
     `;
 
     const upDateAllInactive = `
