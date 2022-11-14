@@ -54,6 +54,13 @@ export class ResultsKnowledgeProduct {
   description: string;
 
   @Column({
+    name: 'doi',
+    type: 'text',
+    nullable: true,
+  })
+  doi: string;
+
+  @Column({
     name: 'knowledge_product_type',
     type: 'text',
     nullable: true,
