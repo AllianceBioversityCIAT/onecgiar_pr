@@ -19,7 +19,7 @@ export class TocInitiativeOutputSectionComponent {
   outcomeList = [];
   outputList = [];
   outcomeLevelValue = 3;
-  @Input() result_toc_result: resultToResultInterfaceToc = new resultToResultInterfaceToc();
+  @Input() result_toc_result = new resultToResultInterfaceToc();
   @Input() contributors_result_toc_result: any;
   constructor(private api: ApiService, public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService) {}
   ngOnInit(): void {
@@ -34,7 +34,7 @@ export class TocInitiativeOutputSectionComponent {
         console.log(this.result_toc_result?.planned_result ? 1 : 2);
         this.result_toc_result.planned_result ? (this.outputList = response) : (this.outcomeList = response);
         this.result_toc_result.planned_result ? console.log('%cOutput list', 'background: #222; color: #aaeaf5') : console.log('%cOutcomes list', 'background: #222; color: #aaeaf5');
-        console.log(this.outputList);
+        console.log(response);
       },
       err => {
         this.outcomeList = [];

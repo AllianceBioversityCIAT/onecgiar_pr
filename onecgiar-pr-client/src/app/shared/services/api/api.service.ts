@@ -25,7 +25,7 @@ export class ApiService {
         // this.rolesSE.roles = GET_allRolesByUser.response;
         //?
         this.dataControlSE.myInitiativesList = GET_initiativesByUser?.response;
-        console.log(this.dataControlSE.myInitiativesList);
+        // console.log(this.dataControlSE.myInitiativesList);
         this.dataControlSE.myInitiativesList.map(myInit => {
           myInit.role = GET_allRolesByUser?.response?.initiative?.find(initRole => initRole?.initiative_id == myInit?.initiative_id)?.description;
           myInit.name = myInit.official_code;
