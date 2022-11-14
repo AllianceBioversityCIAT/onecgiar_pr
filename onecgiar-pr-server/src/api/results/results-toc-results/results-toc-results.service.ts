@@ -237,6 +237,18 @@ export class ResultsTocResultsService {
         resTocRes = await this._resultsTocResultRepository.getRTRPrimary(resultId, true);
         if(resTocRes){
           resTocRes['inititiative_id'] = resultInit.id;
+          resTocRes['official_code'] = resultInit.official_code;
+          resTocRes['short_name'] = resultInit.short_name;
+        }else{
+          resTocRes = {
+            action_area_outcome_id: null,
+            toc_result_id: null,
+            planned_result: null,
+            results_id: resultId,
+            inititiative_id: resultInit.id,
+            short_name: resultInit.short_name,
+            official_code: resultInit.official_code
+          }
         }
         conResTocRes = await this._resultsTocResultRepository.getRTRPrimary(resultId, false);
         
@@ -250,13 +262,7 @@ export class ResultsTocResultsService {
           contributing_initiatives: conInit,
           contributing_np_projects: npProject,
           contributing_center: resCenters,
-          result_toc_result: resTocRes || {
-            action_area_outcome_id: null,
-            toc_result_id: null,
-            planned_result: null,
-            results_id: resultId,
-            inititiative_id: resultInit.id,
-          },
+          result_toc_result: resTocRes,
           contributors_result_toc_result: conResTocRes
         },
         message: 'The toc data is successfully created',

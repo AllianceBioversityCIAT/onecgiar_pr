@@ -64,6 +64,7 @@ export class ResultByInitiativesRepository extends Repository<ResultsByInititiat
     	ci.id,
       ci.official_code,
       ci.name as initiative_name,
+      ci.short_name,
       rbi.initiative_role_id,
       rbi.version_id,
       rbi.is_active 
