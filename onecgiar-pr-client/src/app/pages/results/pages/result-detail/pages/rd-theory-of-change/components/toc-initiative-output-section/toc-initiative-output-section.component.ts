@@ -9,32 +9,39 @@ import { TocInitiativeOutcomeListsService } from '../toc-initiative-outcome-sect
   styleUrls: ['./toc-initiative-output-section.component.scss']
 })
 export class TocInitiativeOutputSectionComponent {
-  inits = [{ name: 'INIT-17 SAPLING', yesornotValue: true, select: null }];
-  otherContributorsList = [
-    { name: 'INIT-10 F2R-CWANA', yesornotValue: true, select: null },
-    { name: 'INIT-22 TAFS-WCA', yesornotValue: false, select: null }
-  ];
-  name;
-  select = 3;
   outcomeList = [];
   outputList = [];
-  outcomeLevelValue = 3;
   @Input() result_toc_result = new resultToResultInterfaceToc();
   @Input() contributors_result_toc_result: any;
   constructor(private api: ApiService, public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService) {}
   ngOnInit(): void {
-    this.GET_tocLevelsByresultId();
+    this.GET_outcomeList();
+    this.GET_outputList();
     this.GET_fullInitiativeToc();
   }
-  GET_tocLevelsByresultId() {
-    this.api.tocApiSE.GET_tocLevelsByresultId(this.api.resultsSE.currentResultId, this.result_toc_result?.planned_result ? 1 : 2).subscribe(
+
+  GET_outcomeList() {
+    this.api.tocApiSE.GET_tocLevelsByresultId(this.api.resultsSE.currentResultId, 1).subscribe(
+      ({ response }) => {
+        this.outputList = [];
+        // this.outputList = response;
+        // console.log(response);
+        // console.log('%cOutcomes list', 'background: #222; color: #aaeaf5');
+      },
+      err => {
+        this.outputList = [];
+        console.log(err);
+      }
+    );
+  }
+
+  GET_outputList() {
+    this.api.tocApiSE.GET_tocLevelsByresultId(this.api.resultsSE.currentResultId, 2).subscribe(
       ({ response }) => {
         this.outcomeList = [];
-        this.outputList = [];
-        console.log(this.result_toc_result?.planned_result ? 1 : 2);
-        this.result_toc_result.planned_result ? (this.outputList = response) : (this.outcomeList = response);
-        this.result_toc_result.planned_result ? console.log('%cOutput list', 'background: #222; color: #aaeaf5') : console.log('%cOutcomes list', 'background: #222; color: #aaeaf5');
-        console.log(response);
+        this.outcomeList = response;
+        // console.log(response);
+        // console.log('%cOutput list', 'background: #222; color: #aaeaf5');
       },
       err => {
         this.outcomeList = [];
@@ -43,11 +50,12 @@ export class TocInitiativeOutputSectionComponent {
       }
     );
   }
+
   GET_fullInitiativeToc() {
     this.api.tocApiSE.GET_fullInitiativeToc(this.api.resultsSE.currentResultId).subscribe(
       ({ response }) => {
-        console.log('%cFull initiative toc', 'background: #222; color: #d84242');
-        console.log(response);
+        // console.log('%cFull initiative toc', 'background: #222; color: #d84242');
+        // console.log(response);
       },
       err => {
         console.log(err);

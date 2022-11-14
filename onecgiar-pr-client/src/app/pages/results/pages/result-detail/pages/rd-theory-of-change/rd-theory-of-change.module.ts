@@ -9,9 +9,10 @@ import { TocActionAreaOutcomeSectionComponent } from './components/toc-action-ar
 import { TocInitiativeOutcomeSectionComponent } from './components/toc-initiative-outcome-section/toc-initiative-outcome-section.component';
 import { TocInitiativeOutputSectionComponent } from './components/toc-initiative-output-section/toc-initiative-output-section.component';
 import { RadioButtonModule } from 'primeng/radiobutton';
+import { OutcomeLevelFilterPipe } from './outcome-level-filter.pipe';
 
 @NgModule({
-  declarations: [RdTheoryOfChangeComponent, TocImpactSectionComponent, TocActionAreaOutcomeSectionComponent, TocInitiativeOutcomeSectionComponent, TocInitiativeOutputSectionComponent],
+  declarations: [RdTheoryOfChangeComponent, TocImpactSectionComponent, TocActionAreaOutcomeSectionComponent, TocInitiativeOutcomeSectionComponent, TocInitiativeOutputSectionComponent, OutcomeLevelFilterPipe],
   imports: [CommonModule, RdTheoryOfChangeRoutingModule, CustomFieldsModule, RadioButtonModule]
 })
 export class RdTheoryOfChangeModule {}

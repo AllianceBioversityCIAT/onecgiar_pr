@@ -10,6 +10,7 @@
         selectedOptionLabel="full_name" [(ngModel)]="this.theoryOfChangeBody.contributing_initiatives" placeholder="Select initiative(s)
         ">
     </app-pr-multi-select>
+    <!-- TODO  -->
     <app-pr-field-header label="Contributing non-pooled projects" [required]="false"></app-pr-field-header>
     <app-alert-status
         description="If you don't find the funder you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. ">
@@ -50,11 +51,13 @@
     </div>
     <div class="medal_selector selected_container">
         <div class="centers chips_container">
-            <div class="center pr_chip_selected" *ngFor="let center of this.theoryOfChangeBody.contributing_center">
+            <div class="center pr_chip_selected"
+                *ngFor="let center of this.theoryOfChangeBody.contributing_center; let i=index">
                 <i class="material-icons-round medal" [ngClass]="{'primary': center.primary}"
                     (click)="addPrimary(center)">workspace_premium</i>
                 <!--TODO add primary text  -->
-                <div class="name">{{center?.name}}</div><i class="material-icons-round">cancel</i>
+                <div class="name">{{center?.name}}</div><i class="material-icons-round"
+                    (click)="deletContributingCenter(i)">cancel</i>
             </div>
         </div>
     </div>
@@ -66,7 +69,9 @@
             <app-toc-action-area-outcome-section></app-toc-action-area-outcome-section>
         </div>
         <div *ngSwitchCase="3">
-            <app-toc-initiative-outcome-section></app-toc-initiative-outcome-section>
+            <app-toc-initiative-outcome-section [result_toc_result]="this.theoryOfChangeBody.result_toc_result"
+                [contributors_result_toc_result]="this.theoryOfChangeBody.contributors_result_toc_result">>
+            </app-toc-initiative-outcome-section>
         </div>
         <div *ngSwitchCase="4">
             <app-toc-initiative-output-section [result_toc_result]="this.theoryOfChangeBody.result_toc_result"

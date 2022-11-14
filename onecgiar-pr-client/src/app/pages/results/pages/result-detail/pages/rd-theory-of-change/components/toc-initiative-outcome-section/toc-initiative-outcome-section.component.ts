@@ -1,6 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { TocInitiativeOutcomeListsService } from './services/toc-initiative-outcome-lists.service';
+import { resultToResultInterfaceToc } from '../../model/theoryOfChangeBody';
 
 @Component({
   selector: 'app-toc-initiative-outcome-section',
@@ -9,34 +10,48 @@ import { TocInitiativeOutcomeListsService } from './services/toc-initiative-outc
 })
 export class TocInitiativeOutcomeSectionComponent {
   constructor(private api: ApiService, public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService) {}
-
-  inits = [{ name: 'INIT-17 SAPLING', yesornotValue: false, select: null }];
-  outcomeLevelValue = null;
-  otherContributorsList = [
-    { name: 'INIT-10 F2R-CWANA', yesornotValue: true, select: null },
-    { name: 'INIT-22 TAFS-WCA', yesornotValue: false, select: null }
-  ];
-  yesornotValue;
-  name;
   outcomeList = [];
+  outputList = [];
+  @Input() result_toc_result = new resultToResultInterfaceToc();
+  @Input() contributors_result_toc_result: any;
 
-  onSelectOutcomeLevel(outcomeLevelId) {
-    console.log(outcomeLevelId);
-    this.api.tocApiSE.GET_tocLevelsByresultId(5, outcomeLevelId).subscribe(
+  ngOnInit(): void {
+    this.GET_outcomeList();
+    this.GET_outputList();
+  }
+
+  GET_outcomeList() {
+    this.api.tocApiSE.GET_tocLevelsByresultId(this.api.resultsSE.currentResultId, 1).subscribe(
       ({ response }) => {
-        console.log(outcomeLevelId);
+        this.outputList = [];
+        this.outputList = response;
+        // console.log(response);
+        // console.log('%cOutcomes list', 'background: #222; color: #aaeaf5');
+      },
+      err => {
+        this.outputList = [];
+        console.log(err);
+      }
+    );
+  }
+
+  GET_outputList() {
+    this.api.tocApiSE.GET_tocLevelsByresultId(this.api.resultsSE.currentResultId, 2).subscribe(
+      ({ response }) => {
         this.outcomeList = response;
-        console.log(this.outcomeList);
+        // console.log(response);
+        // console.log('%cOutput list', 'background: #222; color: #aaeaf5');
       },
       err => {
         this.outcomeList = [];
+        this.outputList = [];
         console.log(err);
       }
     );
   }
 
   valdiateEOI() {
-    console.log(this.yesornotValue);
-    if (this.yesornotValue == false) this.outcomeLevelValue = 3;
+    //   console.log(this.yesornotValue);
+    //   if (this.yesornotValue == false) this.outcomeLevelValue = 3;
   }
 }

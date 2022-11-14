@@ -11,8 +11,8 @@ export class TocInitiativeOutcomeListsService {
     //Add 'implements OnInit' to the class.
     this.api.tocApiSE.GET_AllTocLevels().subscribe(
       ({ response }) => {
-        console.log('%cOutcome level list', 'background: #222; color: #bada55');
-        console.log(response);
+        // console.log('%cOutcome level list', 'background: #222; color: #bada55');
+        // console.log(response);
         this.outcomeLevelList = response;
         // this.allLevels =
       },

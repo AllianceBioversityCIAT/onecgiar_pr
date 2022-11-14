@@ -28,7 +28,7 @@ export class RdTheoryOfChangeComponent {
   getSectionInformation() {
     this.api.resultsSE.GET_toc().subscribe(
       ({ response }) => {
-        console.log(response);
+        // console.log(response);
         this.theoryOfChangeBody = response;
       },
       err => {
@@ -58,6 +58,11 @@ export class RdTheoryOfChangeComponent {
   addPrimary(center) {
     this.theoryOfChangeBody.contributing_center.map(center => (center.primary = false));
     center.primary = true;
+  }
+
+  deletContributingCenter(index) {
+    console.log(index);
+    this.theoryOfChangeBody?.contributing_center.splice(index, 1);
   }
 
   deleteEvidence(index) {
