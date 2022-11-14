@@ -78,6 +78,25 @@ export class newUsers1668453246675 implements MigrationInterface {
                     1,
                     null
             );`);
+
+        await queryRunner.query(`INSERT INTO
+                \`prdb\`.\`users\` (
+                id,
+                    first_name,
+                    last_name,
+                    email,
+                    is_cgiar,
+                    password
+                )
+            VALUES
+                (
+                    322,
+                    'Valentina',
+                    'De Col',
+                    'v.decol@cgiar.org',
+                    1,
+                    null
+            );`);
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
