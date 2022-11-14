@@ -33,4 +33,5 @@ interface resultToResultInterfaceToc{
     action_area_outcome_id?: number;
     results_id: number;
     planned_result: boolean;
+    initiative_id: number;
 }

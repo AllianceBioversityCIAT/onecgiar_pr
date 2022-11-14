@@ -2,6 +2,7 @@ import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGenerat
 import { Result } from '../../entities/result.entity';
 import { User } from '../../../../auth/modules/user/entities/user.entity';
 import { ClarisaInstitution } from '../../../../clarisa/clarisa-institutions/entities/clarisa-institution.entity';
+import { ClarisaCenter } from '../../../../clarisa/clarisa-centers/entities/clarisa-center.entity';
 
 @Entity('non_pooled_project')
 export class NonPooledProject {
@@ -29,7 +30,7 @@ export class NonPooledProject {
     })
     results_id: number;
 
-    @ManyToOne(() => ClarisaInstitution, ci => ci.id, { nullable: true })
+    @ManyToOne(() => ClarisaCenter, ci => ci.code, { nullable: true })
     @JoinColumn({
         name: 'lead_center_id'
     })

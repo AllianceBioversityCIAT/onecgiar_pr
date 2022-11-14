@@ -128,7 +128,7 @@ export class ResultsTocResultsService {
       }
 
       if (result.result_level_id != 2) {
-        let RtR = await this._resultsTocResultRepository.getRTRById(result_toc_result?.result_toc_result_id, result_id);
+        let RtR = await this._resultsTocResultRepository.getRTRById(result_toc_result?.result_toc_result_id, result_id, result_toc_result?.initiative_id);
         if(await this._tocResultsRepository.isTocResoultByInitiative(result.id, result_toc_result?.toc_result_id)){
           if (RtR) {
             RtR.toc_result_id = result_toc_result?.toc_result_id ?? null;
@@ -137,6 +137,7 @@ export class ResultsTocResultsService {
           } else if(result_toc_result) {
             const newRtR = new ResultsTocResult();
             newRtR.version_id = vrs.id;
+            newRtR.initiative_id = result_toc_result?.initiative_id;
             newRtR.created_by = user.id;
             newRtR.last_updated_by = user.id;
             newRtR.results_id = result.id;
@@ -156,7 +157,7 @@ export class ResultsTocResultsService {
         if (result.result_level_id != 2) {
           let RtRArray: ResultsTocResult[] = [];
           for (let index = 0; index < contributors_result_toc_result.length; index++) {
-            let RtR = await this._resultsTocResultRepository.getRTRByIdNotInit(contributors_result_toc_result[index].result_toc_result_id, result_id);
+            let RtR = await this._resultsTocResultRepository.getRTRById(contributors_result_toc_result[index].result_toc_result_id, result_id, contributors_result_toc_result[index].initiative_id );
             if (RtR) {
               RtR.toc_result_id = contributors_result_toc_result[index]?.toc_result_id ?? null;
               RtR.last_updated_by = user.id;
@@ -167,6 +168,7 @@ export class ResultsTocResultsService {
               newRtR.created_by = user.id;
               newRtR.last_updated_by = user.id;
               newRtR.results_id = result.id;
+              newRtR.initiative_id = contributors_result_toc_result[index]?.initiative_id ?? null;
               newRtR.toc_result_id = contributors_result_toc_result[index]?.toc_result_id ?? null;
               newRtR.planned_result = contributors_result_toc_result[index]?.planned_result ?? null;
               RtRArray.push(newRtR);
