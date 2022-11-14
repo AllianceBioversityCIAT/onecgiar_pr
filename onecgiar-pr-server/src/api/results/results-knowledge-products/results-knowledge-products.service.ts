@@ -486,8 +486,9 @@ export class ResultsKnowledgeProductsService {
       }
 
       const knowledgeProduct =
-        await this._resultsKnowledgeProductRepository.findOneBy({
-          results_id: result.id,
+        await this._resultsKnowledgeProductRepository.findOne({
+          where: { results_id: result.id },
+          relations: this._resultsKnowledgeProductRelations,
         });
 
       if (!knowledgeProduct) {
