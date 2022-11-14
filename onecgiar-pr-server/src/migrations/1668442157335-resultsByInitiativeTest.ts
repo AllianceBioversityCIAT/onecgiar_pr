@@ -3,27 +3,6 @@ import { MigrationInterface, QueryRunner } from "typeorm"
 export class resultsByInitiativeTest1668442157335 implements MigrationInterface {
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`INSERT INTO
-                                    \`prdb\`.\`result\` (
-                                        id,
-                                        version_id,
-                                        result_type_id,
-                                        created_by,
-                                        result_level_id,
-                                        title,
-                                        reported_year_id
-                                    )
-                                VALUES
-                                    (
-                                        54,
-                                        1,
-                                        1,
-                                        307,
-                                        2,
-                                        'Set of training manuals for improving the quality and safety of informal dairy and pork value chains in Assam (India)',
-                                        2022
-                                    );
-        `);
         await queryRunner.query(`INSERT INTO \`results_by_inititiative\` (result_id,inititiative_id,initiative_role_id,version_id,created_by) VALUES (1,1,1,1,307)`);
         await queryRunner.query(`INSERT INTO \`results_by_inititiative\` (result_id,inititiative_id,initiative_role_id,version_id,created_by) VALUES (2,1,1,1,307)`);
         await queryRunner.query(`INSERT INTO \`results_by_inititiative\` (result_id,inititiative_id,initiative_role_id,version_id,created_by) VALUES (3,2,1,1,307)`);
@@ -91,8 +70,7 @@ export class resultsByInitiativeTest1668442157335 implements MigrationInterface 
         await queryRunner.query(`INSERT INTO \`results_by_inititiative\` (result_id,inititiative_id,initiative_role_id,version_id,created_by) VALUES (65,33,1,1,307)`);
         await queryRunner.query(`INSERT INTO \`results_by_inititiative\` (result_id,inititiative_id,initiative_role_id,version_id,created_by) VALUES (66,34,1,1,307)`);
         await queryRunner.query(`INSERT INTO \`results_by_inititiative\` (result_id,inititiative_id,initiative_role_id,version_id,created_by) VALUES (67,34,1,1,307)`);
-        await queryRunner.query(`INSERT INTO \`results_by_inititiative\` (result_id,inititiative_id,initiative_role_id,version_id,created_by) VALUES (69,34,1,1,307)`);
-        await queryRunner.query(`INSERT INTO \`results_by_inititiative\` (result_id,inititiative_id,initiative_role_id,version_id,created_by) VALUES (69,34,1,1,307)`);
+        await queryRunner.query(`INSERT INTO \`results_by_inititiative\` (result_id,inititiative_id,initiative_role_id,version_id,created_by) VALUES (68,34,1,1,307)`);
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {

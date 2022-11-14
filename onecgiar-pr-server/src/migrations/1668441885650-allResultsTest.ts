@@ -1127,6 +1127,28 @@ export class allResultsTest1668441885650 implements MigrationInterface {
 
         await queryRunner.query(`INSERT INTO
                                     \`prdb\`.\`result\` (
+                                        id,
+                                        version_id,
+                                        result_type_id,
+                                        created_by,
+                                        result_level_id,
+                                        title,
+                                        reported_year_id
+                                    )
+                                VALUES
+                                    (
+                                        54,
+                                        1,
+                                        1,
+                                        307,
+                                        2,
+                                        'Set of training manuals for improving the quality and safety of informal dairy and pork value chains in Assam (India)',
+                                        2022
+                                    );
+        `);
+        
+        await queryRunner.query(`INSERT INTO
+                                    \`prdb\`.\`result\` (
                                        id,
                                         version_id,
                                         result_type_id,
@@ -1423,7 +1445,7 @@ export class allResultsTest1668441885650 implements MigrationInterface {
                                     )
                                 VALUES
                                     (
-                                        69,
+                                        68,
                                         1,
                                         9,
                                         307,
