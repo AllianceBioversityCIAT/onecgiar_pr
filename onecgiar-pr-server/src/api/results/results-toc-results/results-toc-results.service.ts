@@ -218,12 +218,8 @@ export class ResultsTocResultsService {
       let resTocRes: any = {};
       let conResTocRes: any = [];
       if(result.result_level_id != 2){
-        resTocRes = await this._resultsTocResultRepository.getRTRPrimary(resultId, true);
-        if(resTocRes){
-          resTocRes['inititiative_id'] = resultInit.id;
-          resTocRes['official_code'] = resultInit.official_code;
-          resTocRes['short_name'] = resultInit.short_name;
-        }else{
+        resTocRes = await this._resultsTocResultRepository.getRTRPrimary(resultId, [resultInit.id], true);
+        if(!resTocRes){
           resTocRes = {
             action_area_outcome_id: null,
             toc_result_id: null,
@@ -234,15 +230,11 @@ export class ResultsTocResultsService {
             official_code: resultInit.official_code
           }
         }
-        conResTocRes = await this._resultsTocResultRepository.getRTRPrimary(resultId, false);
+        conResTocRes = await this._resultsTocResultRepository.getRTRPrimary(resultId, conInit.map(el => el.id), false);
         
       }else if(result.result_level_id == 2){
-        resTocRes = await this._resultsTocResultRepository.getRTRPrimary(resultId, true);
-        if(resTocRes){
-          resTocRes['inititiative_id'] = resultInit.id;
-          resTocRes['official_code'] = resultInit.official_code;
-          resTocRes['short_name'] = resultInit.short_name;
-        }else{
+        resTocRes = await this._resultsTocResultRepository.getRTRPrimaryActionArea(resultId, [resultInit.id], false);
+        if(!resTocRes){
           resTocRes = {
             action_area_outcome_id: null,
             toc_result_id: null,
@@ -253,7 +245,7 @@ export class ResultsTocResultsService {
             official_code: resultInit.official_code
           }
         }
-        conResTocRes = await this._resultsTocResultRepository.getRTRPrimary(resultId, false);
+        conResTocRes = await this._resultsTocResultRepository.getRTRPrimaryActionArea(resultId, conInit.map(el => el.id), false);
       }
       return {
         response: {

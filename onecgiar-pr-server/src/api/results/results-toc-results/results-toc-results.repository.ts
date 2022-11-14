@@ -117,7 +117,7 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
     }
   }
 
-  async getRTRPrimary(resultId: number, isPrimary: boolean) {
+  async getRTRPrimary(resultId: number, initiativeId: number[], isPrimary: boolean) {
 
     const queryData = `
     SELECT
@@ -132,24 +132,62 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       rtr.version_id ,
       rtr.created_by ,
       rtr.last_updated_by,
-      rbi.inititiative_id,
+      ci.id as inititiative_id,
       ci.official_code,
       ci.name,
       ci.short_name,
       tr.toc_level_id
     FROM
-      results_toc_result rtr
-      inner join results_by_inititiative rbi on rbi.result_id = rtr.results_id 	
-      inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
+      results_toc_result rtr	
       inner JOIN toc_result tr on tr.toc_result_id = rtr.toc_result_id
-      						and tr.inititiative_id = rbi.inititiative_id 
+      and tr.inititiative_id = rtr.initiative_id  
+      inner join clarisa_initiatives ci on ci.id = tr.inititiative_id  
     where rtr.results_id = ?
-      and rbi.initiative_role_id = ?
+      and rtr.initiative_id ${isPrimary?'':'not'} in (${initiativeId.toString()})
       and rtr.is_active > 0;
     `;
     try {
-      const resultTocResult: ResultsTocResult[] = await this.query(queryData, [resultId, isPrimary?1:2]);
-      return isPrimary?  (resultTocResult?.length?resultTocResult[0]:undefined): resultTocResult;
+      const resultTocResult: ResultsTocResult[] = await this.query(queryData, [resultId]);
+      return resultTocResult?.length?resultTocResult[0]:undefined;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsTocResultRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async getRTRPrimaryActionArea(resultId: number, initiativeId: number[], isPrimary: boolean) {
+
+    const queryData = `
+    SELECT
+      rtr.result_toc_result_id,
+      rtr.planned_result ,
+      rtr.is_active ,
+      rtr.created_date ,
+      rtr.last_updated_date ,
+      rtr.toc_result_id ,
+      rtr.results_id ,
+      rtr.action_area_outcome_id ,
+      rtr.version_id ,
+      rtr.created_by ,
+      rtr.last_updated_by,
+      ci.id as inititiative_id,
+      ci.official_code,
+      ci.name,
+      ci.short_name,
+      4 as toc_level_id
+    FROM
+      results_toc_result rtr	
+      inner join clarisa_initiatives ci on ci.id = rtr.initiative_id 
+    where rtr.results_id = ?
+      and rtr.initiative_id ${isPrimary?'':'not'} in (${initiativeId.toString()})
+      and rtr.is_active > 0;
+    `;
+    try {
+      const resultTocResult: ResultsTocResult[] = await this.query(queryData, [resultId]);
+      return resultTocResult?.length?resultTocResult[0]:undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
