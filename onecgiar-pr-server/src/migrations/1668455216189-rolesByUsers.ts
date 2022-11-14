@@ -92,6 +92,31 @@ export class rolesByUsers1668455216189 implements MigrationInterface {
                                     \`prdb\`.\`role_by_user\` (role, initiative_id, user, created_by)
                                 VALUES
                                     (1, null, 294, 307);`);
+
+        await queryRunner.query(`INSERT INTO
+                                    \`prdb\`.\`role_by_user\` (role, initiative_id, user, created_by)
+                                VALUES
+                                    (1, null, 101, 307);`);
+
+        await queryRunner.query(`INSERT INTO
+                                    \`prdb\`.\`role_by_user\` (role, initiative_id, user, created_by)
+                                VALUES
+                                    (1, null, 322, 307);`);
+
+        await queryRunner.query(`INSERT INTO
+                                    \`prdb\`.\`role_by_user\` (role, initiative_id, user, created_by)
+                                VALUES
+                                    (1, null, 96, 307);`);
+
+        await queryRunner.query(`INSERT INTO
+                                    \`prdb\`.\`role_by_user\` (role, initiative_id, user, created_by)
+                                VALUES
+                                    (1, null, 98, 307);`);
+
+        await queryRunner.query(`INSERT INTO
+                                    \`prdb\`.\`role_by_user\` (role, initiative_id, user, created_by)
+                                VALUES
+                                    (1, null, 86, 307);`);
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
