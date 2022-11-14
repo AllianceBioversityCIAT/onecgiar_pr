@@ -4,13 +4,14 @@ export class resultsByInitiativeTest1668442157335 implements MigrationInterface 
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`INSERT INTO
-        \`prdb\`.\`result\` (
-                                       id,
+                                    \`prdb\`.\`result\` (
+                                        id,
                                         version_id,
                                         result_type_id,
                                         created_by,
                                         result_level_id,
-                                        title
+                                        title,
+                                        reported_year_id
                                     )
                                 VALUES
                                     (
@@ -19,7 +20,8 @@ export class resultsByInitiativeTest1668442157335 implements MigrationInterface 
                                         1,
                                         307,
                                         2,
-                                        'Set of training manuals for improving the quality and safety of informal dairy and pork value chains in Assam (India)'
+                                        'Set of training manuals for improving the quality and safety of informal dairy and pork value chains in Assam (India)',
+                                        2022
                                     );
         `);
         await queryRunner.query(`INSERT INTO \`results_by_inititiative\` (result_id,inititiative_id,initiative_role_id,version_id,created_by) VALUES (1,1,1,1,307)`);
