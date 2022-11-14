@@ -32,8 +32,10 @@
           type="text" [(ngModel)]="this.resultLevelSE.resultBody.handler">
         </app-pr-input>
 
-        <div (click)="GET_mqapValidation()" class="sync_button" *ngIf="isKnowledgeProduct">
-          <app-pr-button padding="medium" text="Sync" icon="sync"></app-pr-button>
+        <div (click)="GET_mqapValidation()" class="sync_button" *ngIf="isKnowledgeProduct"
+          [ngClass]="{'globalDisabled': validating}">
+          <app-pr-button padding="medium" [text]="validating?'Fetching metadata from CGSpace' : 'Sync'" icon="sync"
+            [rotating]="validating"></app-pr-button>
         </div>
       </div>
       <app-pr-input [disabled]="isKnowledgeProduct" [readOnly]="isKnowledgeProduct" [isStatic]="true"

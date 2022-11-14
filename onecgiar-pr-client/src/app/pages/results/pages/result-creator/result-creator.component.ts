@@ -15,6 +15,7 @@ export class ResultCreatorComponent implements OnInit {
   depthSearchList: any[] = [];
   exactTitleFound = false;
   mqapJson: {};
+  validating = false;
   constructor(public api: ApiService, public resultLevelSE: ResultLevelService, private router: Router) {}
 
   ngOnInit(): void {
@@ -101,12 +102,23 @@ export class ResultCreatorComponent implements OnInit {
   validateKnowledgeProductFields() {}
 
   GET_mqapValidation() {
-    this.api.resultsSE.GET_mqapValidation(this.resultLevelSE.resultBody.handler).subscribe(resp => {
-      console.log(resp);
-      console.log(resp.response);
-      this.mqapJson = resp.response;
-      this.resultLevelSE.resultBody.result_name = resp.response.name;
-      // TODO validate creater
-    });
+    this.validating = true;
+    this.api.resultsSE.GET_mqapValidation(this.resultLevelSE.resultBody.handler).subscribe(
+      resp => {
+        console.log(resp);
+        console.log(resp.response);
+        this.mqapJson = resp.response;
+        this.resultLevelSE.resultBody.result_name = resp.response.title;
+        // console.log(first);
+        // TODO validate create
+        this.validating = false;
+        this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Metadata found successfully', description: 'Title: ' + this.resultLevelSE.resultBody.result_name, status: 'success' });
+      },
+      err => {
+        console.log(err.error.message);
+        this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
+        this.validating = false;
+      }
+    );
   }
 }
