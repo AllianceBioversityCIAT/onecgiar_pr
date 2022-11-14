@@ -320,8 +320,7 @@ export class ResultsKnowledgeProductsService {
         newKnowledgeProduct,
       );
 
-      resultsKnowledgeProductDto.id =
-        newKnowledgeProduct.result_knowledge_product_id;
+      resultsKnowledgeProductDto.id = newResult.id;
 
       newKnowledgeProduct =
         this._resultsKnowledgeProductMapper.fillOutRelations(
