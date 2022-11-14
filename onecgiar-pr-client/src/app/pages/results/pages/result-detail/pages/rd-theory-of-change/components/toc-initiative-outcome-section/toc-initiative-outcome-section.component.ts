@@ -21,7 +21,8 @@ export class TocInitiativeOutcomeSectionComponent {
   outcomeList = [];
 
   onSelectOutcomeLevel(outcomeLevelId) {
-    this.api.tocApiSE.GET_tocLevelsByresultId(this.api.resultsSE.currentResultId, outcomeLevelId).subscribe(
+    console.log(outcomeLevelId);
+    this.api.tocApiSE.GET_tocLevelsByresultId(5, outcomeLevelId).subscribe(
       ({ response }) => {
         console.log(outcomeLevelId);
         this.outcomeList = response;

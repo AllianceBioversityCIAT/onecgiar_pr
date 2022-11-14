@@ -22,13 +22,24 @@
       <app-pr-radio-button [options]="this.resultLevelSE.currentResultTypeList" [isStatic]="true" optionLabel="name"
         optionValue='id' [(ngModel)]="this.resultLevelSE.resultBody.result_type_id" (ngModelChange)="cleanTitle()">
       </app-pr-radio-button>
-      <app-pr-input *ngIf="resultLevelSE.resultBody.result_type_id == 6" [isStatic]="true" placeholder="Handle..."
-        label="CGSpace link" type="text" [(ngModel)]="this.resultLevelSE.resultBody.result_name">
-      </app-pr-input>
-      <app-pr-input *ngIf="resultLevelSE.resultBody.result_type_id != 6 || this.resultLevelSE.resultBody.result_name"
-        [readOnly]="resultLevelSE.resultBody.result_type_id == 6" [isStatic]="true" [placeholder]="resultTypeName+ ''"
-        label="Title" type="text" [maxWords]="30"
-        [description]="resultLevelSE.resultBody.result_type_id == 6 ? 'Title fetched from CGSpace' :'To search for results that have already been reported, enter key words into the title box below. If your result has not already been reported, you can add it here.'"
+
+      <app-alert-status *ngIf="isKnowledgeProduct"
+        description="Only knowledge products for 2022 will be accepted in this reporting cycle. In case you need support to correct the publication year of this knowledge product, please contact the librarian of your Center. ">
+      </app-alert-status>
+
+      <div [ngClass]="{'mqap_sync_title': isKnowledgeProduct}">
+        <app-pr-input *ngIf="isKnowledgeProduct" [isStatic]="true" placeholder="Handle..." label="CGSpace link"
+          type="text" [(ngModel)]="this.resultLevelSE.resultBody.handler">
+        </app-pr-input>
+
+        <div (click)="GET_mqapValidation()" class="sync_button" *ngIf="isKnowledgeProduct">
+          <app-pr-button padding="medium" text="Sync" icon="sync"></app-pr-button>
+        </div>
+      </div>
+      <app-pr-input [disabled]="isKnowledgeProduct" [readOnly]="isKnowledgeProduct" [isStatic]="true"
+        [placeholder]="resultTypeName+ ''" label="Title" type="text" [maxWords]="30"
+        [required]="resultLevelSE.resultBody.result_type_id != 6"
+        [description]="isKnowledgeProduct ? 'Title retrieved from CGSpace' :'To search for results that have already been reported, enter key words into the title box below. If your result has not already been reported, you can add it here.'"
         [(ngModel)]="this.resultLevelSE.resultBody.result_name"
         (ngModelChange)="depthSearch(this.resultLevelSE.resultBody.result_name)">
       </app-pr-input>
@@ -36,11 +47,12 @@
       <app-similar-results *ngIf="resultLevelSE.resultBody.result_type_id != 6" [options]="this.depthSearchList">
       </app-similar-results>
     </div>
-    <div class="save_button_container"
-      [ngClass]="{'globalDisabled': ((!this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody)) || exactTitleFound) || this.api.wordCounterSE.counter(this.resultLevelSE.resultBody.result_name) > 30  }">
-      <div (click)="onSaveSection()">
-        <app-pr-button padding="medium" text="Save and continue" icon="save"></app-pr-button>
-      </div>
+    <div (click)="onSaveSection()" class="save_and_continue"
+      [ngClass]="{'globalDisabled': (valdiateNormalFields() || exactTitleFound) || this.api.wordCounterSE.counter(this.resultLevelSE.resultBody.result_name) > 30   }">
+      <app-pr-button padding="medium" text="Save and continue" icon="save"></app-pr-button>
     </div>
+
   </div>
 </div>
+
+<!-- [ngClass]="{'globalDisabled': ((!this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody)) || exactTitleFound) || this.api.wordCounterSE.counter(this.resultLevelSE.resultBody.result_name) > 30  }" -->

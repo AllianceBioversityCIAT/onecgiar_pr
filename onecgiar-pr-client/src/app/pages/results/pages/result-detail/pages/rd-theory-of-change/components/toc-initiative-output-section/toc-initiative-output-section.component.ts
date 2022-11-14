@@ -1,6 +1,6 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
-import { resultToResultInterfaceToc, contributorsResultToResultInterfaceToc } from '../../model/theoryOfChangeBody';
+import { resultToResultInterfaceToc } from '../../model/theoryOfChangeBody';
 import { TocInitiativeOutcomeListsService } from '../toc-initiative-outcome-section/services/toc-initiative-outcome-lists.service';
 
 @Component({
@@ -20,7 +20,7 @@ export class TocInitiativeOutputSectionComponent {
   outputList = [];
   outcomeLevelValue = 3;
   @Input() result_toc_result: resultToResultInterfaceToc = new resultToResultInterfaceToc();
-  @Input() contributors_result_toc_result: any = new contributorsResultToResultInterfaceToc();
+  @Input() contributors_result_toc_result: any;
   constructor(private api: ApiService, public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService) {}
   ngOnInit(): void {
     this.GET_tocLevelsByresultId();

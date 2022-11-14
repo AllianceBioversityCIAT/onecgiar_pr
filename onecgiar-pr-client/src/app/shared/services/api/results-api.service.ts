@@ -149,6 +149,14 @@ export class ResultsApiService {
     return this.http.post<any>(`${this.apiBaseUrl}toc/create/toc/result/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
+  GET_mqapValidation(handle) {
+    return this.http.get<any>(`${this.apiBaseUrl}results-knowledge-products/mqap?handle=${handle}`);
+  }
+
+  POST_createWithHandle(body) {
+    return this.http.post<any>(`${this.apiBaseUrl}results-knowledge-products/create/from-handle`, body);
+  }
+
   GET_toc() {
     return this.http.get<any>(`${this.apiBaseUrl}toc/get/result/${this.currentResultId}`).pipe(
       map(resp => {
@@ -159,3 +167,6 @@ export class ResultsApiService {
     );
   }
 }
+
+// 200 no existe
+// 201 ya existte en bd
