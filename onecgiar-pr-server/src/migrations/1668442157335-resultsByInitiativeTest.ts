@@ -89,8 +89,8 @@ export class resultsByInitiativeTest1668442157335 implements MigrationInterface 
         await queryRunner.query(`INSERT INTO \`results_by_inititiative\` (result_id,inititiative_id,initiative_role_id,version_id,created_by) VALUES (65,33,1,1,307)`);
         await queryRunner.query(`INSERT INTO \`results_by_inititiative\` (result_id,inititiative_id,initiative_role_id,version_id,created_by) VALUES (66,34,1,1,307)`);
         await queryRunner.query(`INSERT INTO \`results_by_inititiative\` (result_id,inititiative_id,initiative_role_id,version_id,created_by) VALUES (67,34,1,1,307)`);
-        await queryRunner.query(`INSERT INTO \`results_by_inititiative\` (result_id,inititiative_id,initiative_role_id,version_id,created_by) VALUES (69,35,1,1,307)`);
-        await queryRunner.query(`INSERT INTO \`results_by_inititiative\` (result_id,inititiative_id,initiative_role_id,version_id,created_by) VALUES (69,35,1,1,307)`);
+        await queryRunner.query(`INSERT INTO \`results_by_inititiative\` (result_id,inititiative_id,initiative_role_id,version_id,created_by) VALUES (69,34,1,1,307)`);
+        await queryRunner.query(`INSERT INTO \`results_by_inititiative\` (result_id,inititiative_id,initiative_role_id,version_id,created_by) VALUES (69,34,1,1,307)`);
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
