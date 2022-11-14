@@ -168,6 +168,7 @@ FROM
 WHERE
     r.is_active > 0
     AND rbi.is_active > 0
+    AND rbi.initiative_role_id = 1
     AND ci.active > 0;
     `;
 
