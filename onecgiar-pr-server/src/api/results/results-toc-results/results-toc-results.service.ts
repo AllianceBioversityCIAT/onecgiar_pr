@@ -37,6 +37,7 @@ export class ResultsTocResultsService {
       const { contributing_np_projects, result_id, contributing_center, contributing_initiatives, result_toc_result, contributors_result_toc_result } = createResultsTocResultDto;
       const version = await this._versionsService.findBaseVersion();
       const result = await this._resultRepository.getResultById(result_id);
+      let initiativeArray: number[] = [];
       if (version.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: version });
       }
@@ -48,7 +49,7 @@ export class ResultsTocResultsService {
       }
 
       if (contributing_initiatives?.length) {
-        const initiativeArray = contributing_initiatives.map(el => el.id);
+        initiativeArray = contributing_initiatives.map(el => el.id);
         await this._resultByInitiativesRepository.updateResultByInitiative(result_id, initiativeArray, user.id, false);
         let resultsByInititiativeArray: ResultsByInititiative[] = [];
         for (let index = 0; index < contributing_initiatives.length; index++) {
@@ -126,7 +127,7 @@ export class ResultsTocResultsService {
       } else {
         await this._resultsCenterRepository.updateCenter(result_id, [], user.id);
       }
-
+      await this._resultsTocResultRepository.updateResultByInitiative(result_id, initiativeArray, user.id);
       let RtR = await this._resultsTocResultRepository.getRTRById(result_toc_result?.result_toc_result_id, result_id, result_toc_result?.initiative_id);
       if (RtR) {
         if (result.result_level_id == 2) {
@@ -233,7 +234,7 @@ export class ResultsTocResultsService {
         conResTocRes = await this._resultsTocResultRepository.getRTRPrimary(resultId, conInit.map(el => el.id), false);
         
       }else if(result.result_level_id == 2){
-        resTocRes = await this._resultsTocResultRepository.getRTRPrimaryActionArea(resultId, [resultInit.id], false);
+        resTocRes = await this._resultsTocResultRepository.getRTRPrimaryActionArea(resultId, [resultInit.id], true);
         if(!resTocRes){
           resTocRes = {
             action_area_outcome_id: null,

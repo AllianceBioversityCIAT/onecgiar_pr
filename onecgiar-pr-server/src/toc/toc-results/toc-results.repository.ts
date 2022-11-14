@@ -143,7 +143,8 @@ export class TocResultsRepository extends Repository<TocResult> {
       ci.toc_id 
       from results_by_inititiative rbi 
       inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id
-      where rbi.result_id = ?;
+      where rbi.result_id = ?
+        and rbi.initiative_role_id = 1;
     `;
     try {
       const tocid = await this.query(queryData, [resultId]);
