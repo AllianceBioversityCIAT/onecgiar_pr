@@ -59,9 +59,16 @@ export class ResultsKnowledgeProductsController {
     throw new HttpException({ message, response }, status);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this._resultsKnowledgeProductsService.findOne(+id);
+  @Get('get/:id')
+  getKnowledgeProductById(@Param('id') id: number) {
+    return this._resultsKnowledgeProductsService.findOneByKnowledgeProductId(
+      id,
+    );
+  }
+
+  @Get('get/result/:id')
+  getKnowledgeProductByResultId(@Param('id') id: number) {
+    return this._resultsKnowledgeProductsService.findOneByResultId(id);
   }
 
   @Patch(':id')

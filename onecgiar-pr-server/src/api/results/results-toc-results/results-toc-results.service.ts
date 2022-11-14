@@ -127,39 +127,42 @@ export class ResultsTocResultsService {
         await this._resultsCenterRepository.updateCenter(result_id, [], user.id);
       }
 
-      if (result.result_level_id != 2) {
-        let RtR = await this._resultsTocResultRepository.getRTRById(result_toc_result?.result_toc_result_id, result_id, result_toc_result?.initiative_id);
-        if(await this._tocResultsRepository.isTocResoultByInitiative(result.id, result_toc_result?.toc_result_id)){
-          if (RtR) {
-            RtR.toc_result_id = result_toc_result?.toc_result_id ?? null;
-            RtR.last_updated_by = user.id;
-            await this._resultsTocResultRepository.save(RtR);
-          } else if(result_toc_result) {
-            const newRtR = new ResultsTocResult();
-            newRtR.version_id = vrs.id;
-            newRtR.initiative_id = result_toc_result?.initiative_id;
-            newRtR.created_by = user.id;
-            newRtR.last_updated_by = user.id;
-            newRtR.results_id = result.id;
-            newRtR.toc_result_id = result_toc_result?.toc_result_id ?? null;
-            newRtR.planned_result = result_toc_result?.planned_result ?? null;
-            await this._resultsTocResultRepository.save(newRtR);
-          }
+      let RtR = await this._resultsTocResultRepository.getRTRById(result_toc_result?.result_toc_result_id, result_id, result_toc_result?.initiative_id);
+      if (RtR) {
+        if (result.result_level_id == 2) {
+          RtR.action_area_outcome_id = result_toc_result?.action_area_outcome_id ?? null;
+        }else {
+          RtR.toc_result_id = result_toc_result?.toc_result_id ?? null;
         }
-        
-      } else {
-        /**
-         * !Implementar Action Area
-         */
+        RtR.last_updated_by = user.id;
+        await this._resultsTocResultRepository.save(RtR);
+      } else if(result_toc_result) {
+        const newRtR = new ResultsTocResult();
+        newRtR.version_id = vrs.id;
+        newRtR.initiative_id = result_toc_result?.initiative_id;
+        newRtR.created_by = user.id;
+        newRtR.last_updated_by = user.id;
+        newRtR.results_id = result.id;
+        if (result.result_level_id == 2) {
+          newRtR.action_area_outcome_id = result_toc_result?.action_area_outcome_id ?? null;
+        }else {
+          newRtR.toc_result_id = result_toc_result?.toc_result_id ?? null;
+        }
+        newRtR.planned_result = result_toc_result?.planned_result ?? null;
+        await this._resultsTocResultRepository.save(newRtR);
       }
 
+
       if (contributors_result_toc_result?.length) {
-        if (result.result_level_id != 2) {
-          let RtRArray: ResultsTocResult[] = [];
+        let RtRArray: ResultsTocResult[] = [];
           for (let index = 0; index < contributors_result_toc_result.length; index++) {
             let RtR = await this._resultsTocResultRepository.getRTRById(contributors_result_toc_result[index].result_toc_result_id, result_id, contributors_result_toc_result[index].initiative_id );
             if (RtR) {
-              RtR.toc_result_id = contributors_result_toc_result[index]?.toc_result_id ?? null;
+              if (result.result_level_id == 2) {
+                RtR.action_area_outcome_id = contributors_result_toc_result[index]?.action_area_outcome_id ?? null;
+              }else {
+                RtR.toc_result_id = contributors_result_toc_result[index]?.toc_result_id ?? null;
+              }
               RtR.last_updated_by = user.id;
               RtRArray.push(RtR);
             } else {
@@ -169,37 +172,18 @@ export class ResultsTocResultsService {
               newRtR.last_updated_by = user.id;
               newRtR.results_id = result.id;
               newRtR.initiative_id = contributors_result_toc_result[index]?.initiative_id ?? null;
-              newRtR.toc_result_id = contributors_result_toc_result[index]?.toc_result_id ?? null;
+              if (result.result_level_id == 2) {
+                newRtR.action_area_outcome_id = contributors_result_toc_result[index]?.action_area_outcome_id ?? null;
+              }else {
+                newRtR.toc_result_id = contributors_result_toc_result[index]?.toc_result_id ?? null;
+              }
               newRtR.planned_result = contributors_result_toc_result[index]?.planned_result ?? null;
               RtRArray.push(newRtR);
             }
 
           }
           await this._resultsTocResultRepository.save(RtRArray);
-        } else {
-          /**
-          * !Implementar Action Area
-          */
-        }
       }
-
-
-
-      /*
-      if (this.validResultRocResult(result_toc_result?.planned_result, result_toc_result?.action_area_outcome_id, result_toc_result?.toc_result_id)) {
-        const restulTocResultsave = await this.resultTocResultSave(result_toc_result, result_toc_result.planned_result, user, result_id, vrs.id, result.result_level_id);
-        await this._resultsTocResultRepository.save(restulTocResultsave);
-      }
-      if (contributors_result_toc_result?.length) {
-        let restulTocResultsaveArray: ResultsTocResult[] = [];
-        for (let index = 0; index < contributors_result_toc_result.length; index++) {
-          if (true) {
-            restulTocResultsaveArray.push(await this.resultTocResultSave(contributors_result_toc_result[index], contributors_result_toc_result[index].planned_result, user, contributors_result_toc_result[index]?.results_id, vrs.id, result.result_level_id));
-          }
-        }
-        console.log(restulTocResultsaveArray)
-        await this._resultsTocResultRepository.save(restulTocResultsaveArray);
-      }*/
 
 
       return {
@@ -252,10 +236,24 @@ export class ResultsTocResultsService {
         }
         conResTocRes = await this._resultsTocResultRepository.getRTRPrimary(resultId, false);
         
-      }else{
-        /**
-         * !Implementar Action Area
-         */
+      }else if(result.result_level_id == 2){
+        resTocRes = await this._resultsTocResultRepository.getRTRPrimary(resultId, true);
+        if(resTocRes){
+          resTocRes['inititiative_id'] = resultInit.id;
+          resTocRes['official_code'] = resultInit.official_code;
+          resTocRes['short_name'] = resultInit.short_name;
+        }else{
+          resTocRes = {
+            action_area_outcome_id: null,
+            toc_result_id: null,
+            planned_result: null,
+            results_id: resultId,
+            inititiative_id: resultInit.id,
+            short_name: resultInit.short_name,
+            official_code: resultInit.official_code
+          }
+        }
+        conResTocRes = await this._resultsTocResultRepository.getRTRPrimary(resultId, false);
       }
       return {
         response: {

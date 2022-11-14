@@ -23,6 +23,7 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProductDto.accessible = mqapResponseDto?.FAIR?.score?.A;
     knowledgeProductDto.commodity = null; //TODO TBD
     knowledgeProductDto.description = mqapResponseDto?.Description;
+    knowledgeProductDto.doi = mqapResponseDto?.DOI;
     knowledgeProductDto.findable = mqapResponseDto?.FAIR?.score?.F;
     knowledgeProductDto.handle = mqapResponseDto?.handle;
     knowledgeProductDto.interoperable = mqapResponseDto?.FAIR?.score?.I;
@@ -175,7 +176,7 @@ export class ResultsKnowledgeProductMapper {
     return altmetric;
   }
 
-  private getPublicationYearFromMQAPResponse(dto: MQAPResultDto): number {
+  public getPublicationYearFromMQAPResponse(dto: MQAPResultDto): number {
     const publicationDate = dto?.['Publication Date'] ?? '';
     const isComposed: boolean = publicationDate.indexOf('-') > 0;
     let year: number = 0;
@@ -295,6 +296,7 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProduct.accesible = dto.accessible;
     knowledgeProduct.comodity = dto.commodity;
     knowledgeProduct.description = dto.description;
+    knowledgeProduct.doi = dto.doi;
     knowledgeProduct.findable = dto.findable;
     knowledgeProduct.handle = dto.handle;
     knowledgeProduct.interoperable = dto.interoperable;

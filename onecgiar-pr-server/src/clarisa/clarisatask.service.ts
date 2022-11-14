@@ -79,7 +79,6 @@ export class ClarisaTaskService {
     //count = await this.cloneClarisaImpactArea(count, true);
     //count = await this.cloneClarisaOutcomeIndicators(count, true);
     //count = await this.cloneClarisaRegionsType(count, true);
-    count = await this.cloneClarisaCenterRepository(count);
     count = await this.cloneClarisaRegions(count);
     count = await this.cloneClarisaCountries(count);
     count = await this.cloneClarisaMeliaStudyTypes(count);
@@ -98,7 +97,8 @@ export class ClarisaTaskService {
     count = await this.cloneClarisaInnovationCharacteristicRepository(count);
     count = await this.cloneClarisaActionAreaOutcomeRepository(count);
     count = await this.cloneClarisaGeographicScope(count);
-    count = await this.cloneResultTocRepository(count);
+    //count = await this.cloneResultTocRepository(count);
+    count = await this.cloneClarisaCenterRepository(count);
   }
 
   private async cloneClarisaCountries(position: number, deleteItem = false) {
