@@ -81,7 +81,7 @@ export class NonPooledProjectRepository extends Repository<NonPooledProject> {
       npp.last_updated_date,
       npp.results_id,
       npp.lead_center_id,
-      npp.funder_institution_id,
+      npp.funder_institution_id as institutions_id,
       npp.created_by,
       npp.last_updated_by
       from non_pooled_project npp
