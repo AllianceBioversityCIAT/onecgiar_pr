@@ -38,6 +38,7 @@ import { YearRepository } from '../years/year.repository';
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
 import { ResultTypeRepository } from '../result_types/resultType.repository';
 import { EvidencesRepository } from '../evidences/evidences.repository';
+import { ResultsKnowledgeProductMetadataDto } from './dto/results-knowledge-product-metadata.dto';
 
 @Injectable()
 export class ResultsKnowledgeProductsService {
@@ -223,14 +224,10 @@ export class ResultsKnowledgeProductsService {
         });
 
       if (resultKnowledgeProduct) {
-        response = this._resultsKnowledgeProductMapper.entityToDto(
-          resultKnowledgeProduct,
-        );
-
         return {
-          response: response,
+          response: { title: resultKnowledgeProduct.name },
           message: 'The Result Knowledge Product has already been created.',
-          status: HttpStatus.OK,
+          status: HttpStatus.CONFLICT,
         };
       }
 
@@ -240,8 +237,24 @@ export class ResultsKnowledgeProductsService {
       if (!mqapResponse) {
         throw {
           response: {},
-          message: 'Not a valid handle',
+          message:
+            'Please add a valid handle. Only handles from CGSpace can be reported.',
           status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      if (
+        (this._resultsKnowledgeProductMapper.getPublicationYearFromMQAPResponse(
+          mqapResponse,
+        ) ?? 0) !== 2022
+      ) {
+        throw {
+          response: { title: mqapResponse?.Title },
+          message:
+            'Only knowledge products for 2022 will be accepted in this reporting ' +
+            'cycle. In case you need support to correct the publication year of ' +
+            'this knowledge product, please contact the librarian of your Center.',
+          status: HttpStatus.UNPROCESSABLE_ENTITY,
         };
       }
 
@@ -400,9 +413,10 @@ export class ResultsKnowledgeProductsService {
         };
       }
 
+      const response =
+        this._resultsKnowledgeProductMapper.entityToDto(knowledgeProduct);
       return {
-        response:
-          this._resultsKnowledgeProductMapper.entityToDto(knowledgeProduct),
+        response,
         message: 'The Result Knowledge Product has already been created.',
         status: HttpStatus.OK,
       };
@@ -411,8 +425,139 @@ export class ResultsKnowledgeProductsService {
     }
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} resultsKnowledgeProduct`;
+  async findOneByKnowledgeProductId(id: number) {
+    try {
+      if (id < 1) {
+        throw {
+          response: {},
+          message: 'missing data: id',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const knowledgeProduct =
+        await this._resultsKnowledgeProductRepository.findOneBy({
+          result_knowledge_product_id: id,
+        });
+
+      if (!knowledgeProduct) {
+        throw {
+          response: {},
+          message: `There is not a Knowledge Product with the id ${id}`,
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const response =
+        this._resultsKnowledgeProductMapper.entityToDto(knowledgeProduct);
+
+      // validations
+      response.warnings = this.getWarnings(response);
+
+      return {
+        response,
+        message: 'The Result Knowledge Product has already been created.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async findOneByResultId(id: number) {
+    try {
+      if (id < 1) {
+        throw {
+          response: {},
+          message: 'missing data: id',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const result = await this._resultRepository.findOneBy({
+        id,
+      });
+
+      if (!result) {
+        throw {
+          response: {},
+          message: `There is not a Result with the id ${id}`,
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const knowledgeProduct =
+        await this._resultsKnowledgeProductRepository.findOneBy({
+          results_id: result.id,
+        });
+
+      if (!knowledgeProduct) {
+        throw {
+          response: {},
+          message: `The Result with id ${id} does not have a linked Knowledge Product Details`,
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const response =
+        this._resultsKnowledgeProductMapper.entityToDto(knowledgeProduct);
+
+      // validations
+      response.warnings = this.getWarnings(response);
+
+      return {
+        response,
+        message: 'The Result Knowledge Product has already been created.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  getWarnings(response: ResultsKnowledgeProductDto): string[] {
+    const warnings: string[] = [];
+
+    if (response.doi?.length < 1) {
+      response.warnings.push(
+        'Journal articles without the DOI will directly go to ' +
+          'the Quality Assurance. In case you need support to add the DOI in CGSPACE, ' +
+          'please contact the librarian of your Center.',
+      );
+    }
+
+    if (response.doi?.length > 1 && !response.altmetric_detail_url) {
+      response.warnings.push(
+        'Please make sure the DOI is valid otherwise the journal article will directly go ' +
+          'to the Quality Assurance. In case you need support to correct the DOI in CGSPACE, ' +
+          'please contact the librarian of your Center.',
+      );
+    }
+
+    const cgspaceMetadata = response.metadata.find(
+      (m) => m.source === 'CGSpace',
+    );
+    const wosMetadata = response.metadata.find((m) => m.source !== 'CGSpace');
+
+    if ((cgspaceMetadata?.issue_year ?? 0) !== (wosMetadata?.issue_year ?? 0)) {
+      response.warnings.push(
+        'The year of publication is automatically retrieved from an external service (Web ' +
+          'of Science or Scopus). In case of inconsistencies, the CGIAR Quality Assurance ' +
+          'team will manually validate the record. We remind you that only knowledge products ' +
+          'published in 2022 can be reported.',
+      );
+    }
+
+    if ((wosMetadata?.issue_year ?? 0) < 1) {
+      response.warnings.push(
+        'The year of publication is automatically retrieved from an external service (Web ' +
+          'of Science or Scopus). If the year does not show, it might be due to a delay in ' +
+          'the indexing. The CGIAR Quality Assurance team will validate this information at ' +
+          'the end of the reporting cycle.',
+      );
+    }
+
+    return warnings;
   }
 
   /*async findOnCGSpace(handle: string): Promise<MQAPResultDto> {

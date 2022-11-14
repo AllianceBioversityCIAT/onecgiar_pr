@@ -9,6 +9,7 @@ export class ResultsKnowledgeProductDto {
   id: number;
   title: string;
   description: string;
+  doi?: string;
   institutions: ResultsKnowledgeProductInstitutionDto[];
   metadata: ResultsKnowledgeProductMetadataDto[];
   regions: BasicInfoDto[];
@@ -33,4 +34,5 @@ export class ResultsKnowledgeProductDto {
   melia_previous_submitted?: boolean;
   melia_type_id?: number;
   result_data: CreateResultDto;
+  warnings?: string[];
 }
