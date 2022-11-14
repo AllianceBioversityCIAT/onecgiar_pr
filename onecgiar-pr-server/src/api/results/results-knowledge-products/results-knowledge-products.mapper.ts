@@ -55,7 +55,7 @@ export class ResultsKnowledgeProductMapper {
         new ResultsKnowledgeProductAuthorDto();
 
       author.name = a.name;
-      author.orcid = a.name;
+      author.orcid = a.orcid;
 
       return author;
     });
@@ -192,12 +192,27 @@ export class ResultsKnowledgeProductMapper {
 
   getAuthorsFromMQAPResponse(dto: MQAPResultDto): MQAPAuthor[] {
     const authorDto = dto?.Authors;
-    if (authorDto) {
+    if (!authorDto) {
       return undefined;
     }
 
-    const authorDtos: MQAPAuthor[] = [];
-    //TODO implement the logic :s
+    let authors: string[] = null;
+    if (typeof authorDto === 'string') {
+      authors = [authorDto];
+    } else {
+      authors = authorDto;
+    }
+
+    const authorDtos: MQAPAuthor[] = (authors ?? []).map((a) => {
+      const author = new MQAPAuthor();
+
+      author.name = a;
+      //TODO extract ORCID from the ORCID field
+      author.orcid = null;
+
+      return author;
+    });
+
     return authorDtos;
   }
 
@@ -327,7 +342,7 @@ export class ResultsKnowledgeProductMapper {
         new ResultsKnowledgeProductAuthor();
 
       author.author_name = a.name;
-      author.orcid = a.name;
+      author.orcid = a.orcid;
 
       author.created_by = knowledgeProduct.created_by;
       author.version_id = knowledgeProduct.version_id;
