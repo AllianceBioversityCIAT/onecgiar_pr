@@ -780,7 +780,7 @@ export class ResultsService {
         result.geographic_scope_id == 4
       ) {
         scope = 3;
-      } else if(result.geographic_scope_id = 50) {
+      } else if(result.geographic_scope_id == 50) {
         scope = 4;
       }else{
         scope = null;
