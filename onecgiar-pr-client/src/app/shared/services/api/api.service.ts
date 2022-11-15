@@ -49,4 +49,26 @@ export class ApiService {
       // console.log(this.dataControlSE.resultsList);
     });
   }
+
+  setTWKAttributes(){
+    try {
+      window['Tawk_API'] = window['Tawk_API'] || {}
+
+    window['Tawk_LoadStart'] = new Date()
+
+    // pass attributes to tawk.to on widget load
+    window['Tawk_API'].onLoad = () => {
+        window['Tawk_API'].setAttributes(
+            {
+              'name': this.authSE.localStorageUser.user_name,
+              'email': this.authSE.localStorageUser.email
+            },
+            (err) => {}
+        )
+    }
+      
+    } catch (error) {
+      console.log(error);
+    }
+  }
 }

@@ -25,3 +25,6 @@
     </div>
   </div>
 </div>
+
+<app-tawk *ngIf="this.api.authSE.localStorageUser?.user_name &&  this.api.authSE.localStorageUser?.email"
+[user]="{username: this.api.authSE.localStorageUser.user_name, email:this.api.authSE.localStorageUser.email}"></app-tawk>
