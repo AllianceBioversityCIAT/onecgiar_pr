@@ -20,13 +20,12 @@ export class TocInitiativeOutputSectionComponent {
     this.GET_fullInitiativeToc();
   }
 
-  GET_outcomeList() {
-    this.api.tocApiSE.GET_tocLevelsByresultId(this.api.resultsSE.currentResultId, 1).subscribe(
+  GET_outputList() {
+    this.api.tocApiSE.GET_tocLevelsByresultId(this.result_toc_result.initiative_id, 1).subscribe(
       ({ response }) => {
         this.outputList = [];
-        // this.outputList = response;
-        // console.log(response);
-        // console.log('%cOutcomes list', 'background: #222; color: #aaeaf5');
+        this.outputList = response;
+        console.log(response);
       },
       err => {
         this.outputList = [];
@@ -35,13 +34,12 @@ export class TocInitiativeOutputSectionComponent {
     );
   }
 
-  GET_outputList() {
-    this.api.tocApiSE.GET_tocLevelsByresultId(this.api.resultsSE.currentResultId, 2).subscribe(
+  GET_outcomeList() {
+    this.api.tocApiSE.GET_tocLevelsByresultId(this.result_toc_result.initiative_id, 2).subscribe(
       ({ response }) => {
         this.outcomeList = [];
         this.outcomeList = response;
-        // console.log(response);
-        // console.log('%cOutput list', 'background: #222; color: #aaeaf5');
+        console.log(response);
       },
       err => {
         this.outcomeList = [];
@@ -52,14 +50,18 @@ export class TocInitiativeOutputSectionComponent {
   }
 
   GET_fullInitiativeToc() {
-    this.api.tocApiSE.GET_fullInitiativeToc(this.api.resultsSE.currentResultId).subscribe(
+    this.api.tocApiSE.GET_fullInitiativeToc(this.result_toc_result.initiative_id).subscribe(
       ({ response }) => {
-        // console.log('%cFull initiative toc', 'background: #222; color: #d84242');
-        // console.log(response);
+        console.log(response);
       },
       err => {
         console.log(err);
       }
     );
+  }
+
+  valdiateEOI() {
+    //   console.log(this.yesornotValue);
+    if (this.result_toc_result?.planned_result == false) this.result_toc_result.toc_level_id = 3;
   }
 }

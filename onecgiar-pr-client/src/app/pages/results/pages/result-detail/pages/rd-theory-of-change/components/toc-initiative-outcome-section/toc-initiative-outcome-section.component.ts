@@ -12,21 +12,25 @@ export class TocInitiativeOutcomeSectionComponent {
   constructor(private api: ApiService, public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService) {}
   outcomeList = [];
   outputList = [];
+  eoiList = [];
+  fullInitiativeToc = null;
   @Input() result_toc_result = new resultToResultInterfaceToc();
   @Input() contributors_result_toc_result: any;
 
   ngOnInit(): void {
     this.GET_outcomeList();
     this.GET_outputList();
+    this.GET_fullInitiativeToc();
+    this.GET_eoi();
+    console.log(this.result_toc_result.initiative_id);
   }
 
-  GET_outcomeList() {
-    this.api.tocApiSE.GET_tocLevelsByresultId(this.api.resultsSE.currentResultId, 1).subscribe(
+  GET_outputList() {
+    this.api.tocApiSE.GET_tocLevelsByresultId(this.result_toc_result.initiative_id, 1).subscribe(
       ({ response }) => {
         this.outputList = [];
         this.outputList = response;
-        // console.log(response);
-        // console.log('%cOutcomes list', 'background: #222; color: #aaeaf5');
+        console.log(response);
       },
       err => {
         this.outputList = [];
@@ -35,8 +39,33 @@ export class TocInitiativeOutcomeSectionComponent {
     );
   }
 
-  GET_outputList() {
-    this.api.tocApiSE.GET_tocLevelsByresultId(this.api.resultsSE.currentResultId, 2).subscribe(
+  GET_eoi() {
+    this.api.tocApiSE.GET_tocLevelsByresultId(this.result_toc_result.initiative_id, 3).subscribe(
+      ({ response }) => {
+        this.eoiList = [];
+        this.eoiList = response;
+        console.log(response);
+      },
+      err => {
+        this.eoiList = [];
+        console.log(err);
+      }
+    );
+  }
+
+  GET_fullInitiativeToc() {
+    this.api.tocApiSE.GET_fullInitiativeToc(this.result_toc_result.initiative_id).subscribe(
+      ({ response }) => {
+        this.fullInitiativeToc = response[0]?.toc_id;
+      },
+      err => {
+        console.log(err);
+      }
+    );
+  }
+
+  GET_outcomeList() {
+    this.api.tocApiSE.GET_tocLevelsByresultId(this.result_toc_result.initiative_id, 2).subscribe(
       ({ response }) => {
         this.outcomeList = response;
         // console.log(response);
@@ -52,6 +81,6 @@ export class TocInitiativeOutcomeSectionComponent {
 
   valdiateEOI() {
     //   console.log(this.yesornotValue);
-    //   if (this.yesornotValue == false) this.outcomeLevelValue = 3;
+    if (this.result_toc_result?.planned_result == false) this.result_toc_result.toc_level_id = 3;
   }
 }

@@ -7,7 +7,8 @@
     </app-pr-input>
     <app-pr-multi-select [options]="this.contributingInitiativesList" label="Contributing Initiatives"
         selectedLabel="Contributing Initiatives" optionLabel="full_name" optionValue="id"
-        selectedOptionLabel="full_name" [(ngModel)]="this.theoryOfChangeBody.contributing_initiatives" placeholder="Select initiative(s)
+        (selectOptionEvent)="onSelectContributingInitiative()" selectedOptionLabel="full_name"
+        [(ngModel)]="this.theoryOfChangeBody.contributing_initiatives" placeholder="Select initiative(s)
         ">
     </app-pr-multi-select>
     <!-- TODO  -->
@@ -30,8 +31,8 @@
                     placeholder="e.g. G184">
                 </app-pr-input>
                 <app-pr-select [options]="this.centersSE.centersList" label="Lead/Contract Center" optionLabel="name"
-                    optionValue="code" placeholder="Select donor" [(ngModel)]="donor.lead_center" [required]="false"
-                    placeholder="Lead/Contract Center goes here...">
+                    optionValue="lead_center" placeholder="Select donor" [(ngModel)]="donor.lead_center"
+                    [required]="false" placeholder="Lead/Contract Center goes here...">
                 </app-pr-select>
             </div>
             <app-edit-or-delete-item-button (click)="deleteEvidence(i)"></app-edit-or-delete-item-button>
@@ -56,12 +57,13 @@
                 <i class="material-icons-round medal" [ngClass]="{'primary': center.primary}"
                     (click)="addPrimary(center)">workspace_premium</i>
                 <!--TODO add primary text  -->
-                <div class="name">{{center?.name}}</div><i class="material-icons-round"
-                    (click)="deletContributingCenter(i)">cancel</i>
+                <div class="name" [innerHtml]="center?.name+(center.primary?primaryText:'')"></div><i
+                    class="material-icons-round" (click)="deletContributingCenter(i)">cancel</i>
             </div>
         </div>
     </div>
-    <div [ngSwitch]="this.resultLevelSE.currentResultLevelId">
+    <div [ngSwitch]="this.resultLevelSE.currentResultLevelId"
+        *ngIf="getConsumed && this.theoryOfChangeBody?.result_toc_result.initiative_id">
         <div *ngSwitchCase="1">
             <app-toc-impact-section></app-toc-impact-section>
         </div>

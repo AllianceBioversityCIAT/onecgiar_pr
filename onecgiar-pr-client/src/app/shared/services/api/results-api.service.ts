@@ -108,7 +108,12 @@ export class ResultsApiService {
   }
 
   GET_AllCLARISACenters() {
-    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/centers/get/all`);
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/centers/get/all`).pipe(
+      map(resp => {
+        resp.response.map(institution => (institution.lead_center = institution.code));
+        return resp;
+      })
+    );
   }
 
   GET_AllWithoutResults() {
