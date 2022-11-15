@@ -153,8 +153,12 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}results-knowledge-products/mqap?handle=${handle}`);
   }
 
+  GET_resultknowledgeProducts() {
+    return this.http.get<any>(`${this.apiBaseUrl}results-knowledge-products/get/result/${this.currentResultId}`);
+  }
+
   POST_createWithHandle(body) {
-    return this.http.post<any>(`${this.apiBaseUrl}results-knowledge-products/create/from-handle`, body);
+    return this.http.post<any>(`${this.apiBaseUrl}results-knowledge-products/create`, body);
   }
 
   GET_toc() {
