@@ -193,20 +193,30 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     set is_active = 1, 
     	last_updated_date = NOW(), 
     	last_updated_by = ? 
-    where result_id = ?
+      where result_id = ?
       and institution_roles_id = ?
     	and institutions_id in (${institutions.toString()});
-    `;
+      `;
 
     const upDateAllInactiveRBI = `
-    update results_by_institution 
-    set is_active = 0, 
+      update results_by_institution 
+      set is_active = 0, 
     	last_updated_date = NOW(), 
     	last_updated_by = ? 
-    where is_active > 0 
+      where is_active > 0 
       and result_id = ?
       and institution_roles_id = ?;
-    `;
+      `;
+
+    const removeAllRelationRKPMI = `
+      update results_kp_mqap_institutions rkpmi
+      inner join results_knowledge_product rkp on rkpmi.result_knowledge_product_id = rkp.result_knowledge_product_id
+      set rkpmi.results_by_institutions_id = NULL,
+        rkpmi.last_updated_date = NOW(), 
+        rkpmi.last_updated_by = ? 
+      where rkpmi.is_active > 0 
+        and rkp.results_id = ?
+      `; //TODO validate query
 
     try {
       if (institutions?.length) {
@@ -214,7 +224,9 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
           userId,
           resultId,
           isActor ? 1 : 2,
-        ]);
+        ]).then((res) => {
+          this.query(removeRelationRKPMI, [userId, resultId]);
+        });
 
         return await this.query(upDateActiveRBI, [
           userId,
@@ -223,6 +235,7 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
         ]);
       } else {
         console.log('entro');
+        this.query(removeAllRelationRKPMI, [userId, resultId]);
         return await this.query(upDateAllInactiveRBI, [
           userId,
           resultId,
