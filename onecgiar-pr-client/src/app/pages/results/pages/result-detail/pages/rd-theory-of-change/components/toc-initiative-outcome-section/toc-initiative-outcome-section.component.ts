@@ -22,6 +22,7 @@ export class TocInitiativeOutcomeSectionComponent {
     this.GET_outputList();
     this.GET_fullInitiativeToc();
     this.GET_eoi();
+    this.valdiateEOI();
     console.log(this.result_toc_result.initiative_id);
   }
 
@@ -68,6 +69,7 @@ export class TocInitiativeOutcomeSectionComponent {
     this.api.tocApiSE.GET_tocLevelsByresultId(this.result_toc_result.initiative_id, 2).subscribe(
       ({ response }) => {
         this.outcomeList = response;
+        console.log(response);
         // console.log(response);
         // console.log('%cOutput list', 'background: #222; color: #aaeaf5');
       },

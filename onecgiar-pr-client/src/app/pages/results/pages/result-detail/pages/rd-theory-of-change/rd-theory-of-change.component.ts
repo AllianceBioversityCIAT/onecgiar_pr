@@ -33,6 +33,7 @@ export class RdTheoryOfChangeComponent {
         this.theoryOfChangeBody = response;
         // this.theoryOfChangeBody.result_toc_result['initiative_id'] = this.theoryOfChangeBody.result_toc_result['inititiative_id'];
         console.log(this.theoryOfChangeBody);
+        this.theoryOfChangeBody.result_toc_result.planned_result = Boolean(this.theoryOfChangeBody.result_toc_result.planned_result);
       },
       err => {
         this.getConsumed = true;
@@ -49,6 +50,7 @@ export class RdTheoryOfChangeComponent {
     });
   }
   onSelectContributingInitiative() {
+    console.log('onSelectContributingInitiative');
     this.theoryOfChangeBody.contributing_initiatives?.map((resp: any) => {
       // console.log(resp);
       console.log(this.theoryOfChangeBody.contributors_result_toc_result);

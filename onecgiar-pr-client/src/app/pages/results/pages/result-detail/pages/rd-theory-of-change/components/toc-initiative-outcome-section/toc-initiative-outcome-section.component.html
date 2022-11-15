@@ -21,19 +21,19 @@
         </app-pr-select>
         <div *ngIf="!this.outcomeList?.length"></div>
         <app-pr-select *ngIf="this.outcomeList?.length &&  result_toc_result.toc_level_id == 3" [options]="this.eoiList"
-            [(ngModel)]="result_toc_result.toc_result_id" label="Outcome" optionLabel="title" optionValue="toc_level_id"
-            placeholder="Select outcome">
+            [(ngModel)]="result_toc_result.toc_result_id" label="Outcome" optionLabel="title"
+            optionValue="toc_result_id" placeholder="Select outcome">
         </app-pr-select>
         <app-pr-select *ngIf="this.outcomeList?.length &&  result_toc_result.toc_level_id == 2"
             [options]="this.outcomeList" [(ngModel)]="result_toc_result.toc_result_id" label="Outcome"
-            optionLabel="title" optionValue="toc_level_id" placeholder="Select outcome">
+            optionLabel="title" optionValue="toc_result_id" placeholder="Select outcome">
         </app-pr-select>
     </div>
     <hr class="divider-20">
 </div>
-<app-pr-field-header label="Other contributors" [required]="false" [simpleStyle]="true">
-</app-pr-field-header>
-<div *ngFor="let init of contributors_result_toc_result">
+<!-- <app-pr-field-header label="Other contributors" [required]="false" [simpleStyle]="true">
+</app-pr-field-header> -->
+<!-- <div *ngFor="let init of contributors_result_toc_result">
     <app-pr-yes-or-not
         label="Is this result planned in the <strong>{{init?.official_code}} {{init?.short_name}}</strong> ToC?"
         [required]="false" [(ngModel)]="init.planned_result" [readOnly]="true">
@@ -41,13 +41,13 @@
     <div class="auto_fit_container">
 
         <app-pr-select [options]="this.tocInitiativeOutcomeListsSE.outcomeLevelList|outcomeLevelFilter:2"
-            label="Outcome level" [disabled]="true" optionLabel="name" optionValue="id"
+            label="Outcome level" [disabled]="true" optionLabel="name" optionValue="toc_level_id"
             placeholder="Select outcome level" [(ngModel)]="init.toc_level_id" [required]="false">
         </app-pr-select>
         <app-pr-select [options]="this.outcomeList" label="Outcome" [disabled]="true"
-            optionLabel="official_code_short_name" optionValue="initiative_id" placeholder="Select outcome"
+            optionLabel="official_code_short_name" optionValue="toc_result_id" placeholder="Select outcome"
             [required]="false" [(ngModel)]="init.toc_result_id">
         </app-pr-select>
     </div>
     <hr class="divider-20">
-</div>
+</div> -->
