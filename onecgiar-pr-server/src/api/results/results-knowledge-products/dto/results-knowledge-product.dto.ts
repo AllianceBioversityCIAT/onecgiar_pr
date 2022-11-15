@@ -12,6 +12,8 @@ export class ResultsKnowledgeProductDto {
   doi?: string;
   institutions: ResultsKnowledgeProductInstitutionDto[];
   metadata: ResultsKnowledgeProductMetadataDto[];
+  metadataCG: ResultsKnowledgeProductMetadataDto;
+  metadataWOS: ResultsKnowledgeProductMetadataDto;
   regions: BasicInfoDto[];
   countries: BasicInfoDto[];
   handle: string;

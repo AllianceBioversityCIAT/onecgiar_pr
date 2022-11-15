@@ -83,6 +83,7 @@ export class ResultsKnowledgeProductMapper {
     metadataCGSpace.issue_year = this.getPublicationYearFromMQAPResponse(dto);
 
     metadataHolder.push(metadataCGSpace);
+    knowledgeProductDto.metadataCG = metadataCGSpace;
 
     const mqapDOIData = dto?.DOI_Info;
     if (mqapDOIData) {
@@ -99,6 +100,7 @@ export class ResultsKnowledgeProductMapper {
       metadataWoS.issue_year = mqapDOIData.publication_year;
 
       metadataHolder.push(metadataWoS);
+      knowledgeProductDto.metadataWOS = metadataWoS;
     }
 
     knowledgeProductDto.metadata = metadataHolder;
@@ -269,6 +271,12 @@ export class ResultsKnowledgeProductMapper {
 
       return metadataDto;
     });
+    knowledgeProductDto.metadataCG = knowledgeProductDto.metadata.find(
+      (m) => m.source === 'CGSpace',
+    );
+    knowledgeProductDto.metadataWOS = knowledgeProductDto.metadata.find(
+      (m) => m.source !== 'CGSpace',
+    );
 
     const altmetric =
       entity.result_knowledge_product_altmetric_array[0] ?? undefined;
