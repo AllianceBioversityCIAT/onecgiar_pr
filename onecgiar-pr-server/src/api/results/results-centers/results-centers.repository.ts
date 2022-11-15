@@ -49,8 +49,12 @@ export class ResultsCenterRepository extends Repository<ResultsCenter> {
       rc.result_id,
       rc.created_by,
       rc.last_updated_by,
-      rc.center_id
+      rc.center_id,
+      ci.name,
+      ci.acronym 
       from results_center rc 
+        left join clarisa_center cc on rc.center_id = cc.code 
+      	left join clarisa_institutions ci on ci.id = cc.institutionId 
       WHERE rc.result_id = ?
         and rc.is_active > 0;
     `;

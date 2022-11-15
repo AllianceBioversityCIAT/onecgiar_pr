@@ -115,7 +115,7 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
     }
   }
 
-  async getRTRPrimary(resultId: number, initiativeId: number[], isPrimary: boolean) {
+  async getRTRPrimary(resultId: number, initiativeId: number[], isPrimary: boolean, initiativeArray?: number[]) {
 
     const queryData = `
     SELECT
@@ -139,9 +139,10 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       results_toc_result rtr	
       left JOIN toc_result tr on tr.toc_result_id = rtr.toc_result_id
       and tr.inititiative_id = rtr.initiative_id  
-      left join clarisa_initiatives ci on ci.id = tr.inititiative_id  
+      left join clarisa_initiatives ci on ci.id = rtr.initiative_id  
     where rtr.results_id = ?
       and rtr.initiative_id ${isPrimary?'':'not'} in (${initiativeId.toString()})
+      ${isPrimary?'':`and rtr.initiative_id in (${initiativeArray.toString()})`}
       and rtr.is_active > 0;
     `;
     try {
@@ -157,7 +158,7 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
     }
   }
 
-  async getRTRPrimaryActionArea(resultId: number, initiativeId: number[], isPrimary: boolean) {
+  async getRTRPrimaryActionArea(resultId: number, initiativeId: number[], isPrimary: boolean, initiativeArray?: number[]) {
 
     const queryData = `
     SELECT
@@ -181,7 +182,8 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       results_toc_result rtr	
       inner join clarisa_initiatives ci on ci.id = rtr.initiative_id 
     where rtr.results_id = ?
-      and rtr.initiative_id ${isPrimary?'':'not'} in (${initiativeId.toString()})
+      and rtr.initiative_id ${isPrimary?'':'not'} in (${initiativeId.length?initiativeId.toString():null})
+      ${isPrimary?'':`and rtr.initiative_id in (${initiativeArray.toString()})`}
       and rtr.is_active > 0;
     `;
     try {
@@ -437,6 +439,7 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       update results_toc_result  
       set is_active = 0,
         last_updated_date = NOW(),
+        planned_result = NULL,
         last_updated_by = ?
       where is_active > 0 
         and results_id = ?
@@ -447,6 +450,7 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       update results_toc_result  
       set is_active = 1,
         last_updated_date = NOW(),
+        planned_result = NULL,
         last_updated_by = ?
       where results_id = ?
         and initiative_id in (${initiative.toString()});
@@ -456,6 +460,7 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
     update results_toc_result  
       set is_active = 0,
         last_updated_date = NOW(),
+        planned_result = NULL,
         last_updated_by = ?
       where is_active > 0 
         and results_id = ?;
