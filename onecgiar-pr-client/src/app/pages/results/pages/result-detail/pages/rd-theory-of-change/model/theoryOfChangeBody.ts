@@ -32,4 +32,9 @@ export class resultToResultInterfaceToc {
   action_area_outcome_id?: number = null;
   results_id: number = null;
   planned_result: boolean = null;
+  id: number = null;
+  short_name: string = null;
+  official_code: string = null;
+  initiative_id: number | string = null;
+  toc_level_id?: number | string = null;
 }
