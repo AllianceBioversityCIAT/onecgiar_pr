@@ -15,14 +15,14 @@
     <div class="auto_fit_container">
         <app-pr-input [(ngModel)]="knowledgeProductBody.is_peer_reviewed_CG" [label]="knowledgeProductBody.is_peer_reviewed_WOS? 'Peer reviewed(CGSpace)':'Peer reviewed'" [required]="false" [readOnly]="true">
         </app-pr-input>
-        <app-pr-input *ngIf="knowledgeProductBody.is_peer_reviewed_WOS" [(ngModel)]="knowledgeProductBody.is_peer_reviewed_WOS" label="Peer reviewed(WoS)" [required]="false" [readOnly]="true">
+        <app-pr-input *ngIf="knowledgeProductBody.is_peer_reviewed_WOS != undefined" [(ngModel)]="knowledgeProductBody.is_peer_reviewed_WOS" label="Peer reviewed(WoS)" [required]="false" [readOnly]="true">
         </app-pr-input>
     </div>
     <div class="auto_fit_container">
         <app-pr-input [(ngModel)]="knowledgeProductBody.is_isi_CG" [label]="knowledgeProductBody.is_isi_WOS ? 'Web of Science Core Collection (former ISI) (CGSpace)':'Web of Science Core Collection (former ISI)'"
             [required]="false" [readOnly]="true">
         </app-pr-input>
-        <app-pr-input *ngIf="knowledgeProductBody.is_isi_WOS" [(ngModel)]="knowledgeProductBody.is_isi_WOS" label="Web of Science Core Collection (former ISI) (WoS)"
+        <app-pr-input *ngIf="knowledgeProductBody.is_isi_WOS != undefined" [(ngModel)]="knowledgeProductBody.is_isi_WOS" label="Web of Science Core Collection (former ISI) (WoS)"
             [required]="false" [readOnly]="true">
         </app-pr-input>
     </div>
