@@ -37,6 +37,7 @@ export class ResultsTocResultsService {
       const { contributing_np_projects, result_id, contributing_center, contributing_initiatives, result_toc_result, contributors_result_toc_result } = createResultsTocResultDto;
       const version = await this._versionsService.findBaseVersion();
       const result = await this._resultRepository.getResultById(result_id);
+      let initiativeArray: number[] = [];
       if (version.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: version });
       }
@@ -48,7 +49,7 @@ export class ResultsTocResultsService {
       }
 
       if (contributing_initiatives?.length) {
-        const initiativeArray = contributing_initiatives.map(el => el.id);
+        initiativeArray = contributing_initiatives.map(el => el.id);
         await this._resultByInitiativesRepository.updateResultByInitiative(result_id, initiativeArray, user.id, false);
         let resultsByInititiativeArray: ResultsByInititiative[] = [];
         for (let index = 0; index < contributing_initiatives.length; index++) {
@@ -126,7 +127,7 @@ export class ResultsTocResultsService {
       } else {
         await this._resultsCenterRepository.updateCenter(result_id, [], user.id);
       }
-
+      await this._resultsTocResultRepository.updateResultByInitiative(result_id, initiativeArray, user.id);
       let RtR = await this._resultsTocResultRepository.getRTRById(result_toc_result?.result_toc_result_id, result_id, result_toc_result?.initiative_id);
       if (RtR) {
         if (result.result_level_id == 2) {
@@ -134,6 +135,7 @@ export class ResultsTocResultsService {
         }else {
           RtR.toc_result_id = result_toc_result?.toc_result_id ?? null;
         }
+        RtR.is_active = true;
         RtR.last_updated_by = user.id;
         await this._resultsTocResultRepository.save(RtR);
       } else if(result_toc_result) {
@@ -163,6 +165,7 @@ export class ResultsTocResultsService {
               }else {
                 RtR.toc_result_id = contributors_result_toc_result[index]?.toc_result_id ?? null;
               }
+              RtR.is_active = true;
               RtR.last_updated_by = user.id;
               RtRArray.push(RtR);
             } else {
@@ -215,44 +218,45 @@ export class ResultsTocResultsService {
       const conInit = await this._resultByInitiativesRepository.getContributorInitiativeByResult(resultId);
       const npProject = await this._nonPooledProjectRepository.getAllNPProjectByResultId(resultId);
       const resCenters = await this._resultsCenterRepository.getAllResultsCenterByResultId(resultId);
-      let resTocRes: any = {};
-      let conResTocRes: any = [];
+      let resTocRes: any[] = [];
+      let conResTocRes: any[] = [];
       if(result.result_level_id != 2){
         resTocRes = await this._resultsTocResultRepository.getRTRPrimary(resultId, [resultInit.id], true);
-        if(!resTocRes){
-          resTocRes = {
+        if(!resTocRes?.length){
+          resTocRes = [{
             action_area_outcome_id: null,
             toc_result_id: null,
             planned_result: null,
             results_id: resultId,
-            inititiative_id: resultInit.id,
+            initiative_id: resultInit.id,
             short_name: resultInit.short_name,
             official_code: resultInit.official_code
-          }
+          }]
         }
-        conResTocRes = await this._resultsTocResultRepository.getRTRPrimary(resultId, conInit.map(el => el.id), false);
+        conResTocRes = await this._resultsTocResultRepository.getRTRPrimary(resultId, [resultInit.id], false);
         
       }else if(result.result_level_id == 2){
-        resTocRes = await this._resultsTocResultRepository.getRTRPrimaryActionArea(resultId, [resultInit.id], false);
-        if(!resTocRes){
-          resTocRes = {
+        resTocRes = await this._resultsTocResultRepository.getRTRPrimaryActionArea(resultId, [resultInit.id], true);
+        if(!resTocRes?.length){
+          resTocRes = [{
             action_area_outcome_id: null,
             toc_result_id: null,
             planned_result: null,
             results_id: resultId,
-            inititiative_id: resultInit.id,
+            initiative_id: resultInit.id,
             short_name: resultInit.short_name,
             official_code: resultInit.official_code
-          }
+          }]
         }
-        conResTocRes = await this._resultsTocResultRepository.getRTRPrimaryActionArea(resultId, conInit.map(el => el.id), false);
+        conResTocRes = await this._resultsTocResultRepository.getRTRPrimaryActionArea(resultId, [resultInit.id], false);
       }
+
       return {
         response: {
           contributing_initiatives: conInit,
           contributing_np_projects: npProject,
           contributing_center: resCenters,
-          result_toc_result: resTocRes,
+          result_toc_result: resTocRes[0],
           contributors_result_toc_result: conResTocRes
         },
         message: 'The toc data is successfully created',

@@ -98,15 +98,13 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       tr.toc_level_id
     FROM
       results_toc_result rtr
-      inner join clarisa_initiatives ci on ci.id = rtr.initiative_id 
-      inner JOIN toc_result tr on tr.toc_result_id = rtr.toc_result_id
+      left join clarisa_initiatives ci on ci.id = rtr.initiative_id 
+      left JOIN toc_result tr on tr.toc_result_id = rtr.toc_result_id
     where rtr.results_id = ?
-      and rtr.result_toc_result_id = ?
-      and rtr.initiative_id = ?
-      and rtr.is_active > 0;
+      and rtr.initiative_id = ?;
     `;
     try {
-      const resultTocResult: ResultsTocResult[] = await this.query(queryData, [resultId, RtRId, initiativeId]);
+      const resultTocResult: ResultsTocResult[] = await this.query(queryData, [resultId, initiativeId]);
       return resultTocResult?.length?resultTocResult[0]:undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -139,16 +137,17 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       tr.toc_level_id
     FROM
       results_toc_result rtr	
-      inner JOIN toc_result tr on tr.toc_result_id = rtr.toc_result_id
+      left JOIN toc_result tr on tr.toc_result_id = rtr.toc_result_id
       and tr.inititiative_id = rtr.initiative_id  
-      inner join clarisa_initiatives ci on ci.id = tr.inititiative_id  
+      left join clarisa_initiatives ci on ci.id = tr.inititiative_id  
     where rtr.results_id = ?
       and rtr.initiative_id ${isPrimary?'':'not'} in (${initiativeId.toString()})
       and rtr.is_active > 0;
     `;
     try {
+      console.log(queryData)
       const resultTocResult: ResultsTocResult[] = await this.query(queryData, [resultId]);
-      return resultTocResult?.length?resultTocResult[0]:undefined;
+      return resultTocResult;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
@@ -187,7 +186,7 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
     `;
     try {
       const resultTocResult: ResultsTocResult[] = await this.query(queryData, [resultId]);
-      return resultTocResult?.length?resultTocResult[0]:undefined;
+      return resultTocResult;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
@@ -427,6 +426,59 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
         error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async updateResultByInitiative(resultId: number, initiativeArray: number[], userId: number) {
+    const initiative = initiativeArray??[];
+    const upDateInactive = `
+      update results_toc_result  
+      set is_active = 0,
+        last_updated_date = NOW(),
+        last_updated_by = ?
+      where is_active > 0 
+        and results_id = ?
+        and initiative_id not in (${initiative.toString()});
+    `;
+
+    const upDateActive = `
+      update results_toc_result  
+      set is_active = 1,
+        last_updated_date = NOW(),
+        last_updated_by = ?
+      where results_id = ?
+        and initiative_id in (${initiative.toString()});
+    `;
+
+    const upDateAllInactive = `
+    update results_toc_result  
+      set is_active = 0,
+        last_updated_date = NOW(),
+        last_updated_by = ?
+      where is_active > 0 
+        and results_id = ?;
+    `;
+
+    try {
+      if(initiative?.length){
+        const upDateInactiveResult = await this.query(upDateInactive, [
+          userId, resultId
+        ]);
+  
+        return await this.query(upDateActive, [
+          userId, resultId
+        ]);
+      }else{
+        return await this.query(upDateAllInactive, [
+          userId, resultId
+        ]);
+      }
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsTocResultRepository.name,
+        error: `updateResultByInitiative ${error}`,
         debug: true,
       });
     }
