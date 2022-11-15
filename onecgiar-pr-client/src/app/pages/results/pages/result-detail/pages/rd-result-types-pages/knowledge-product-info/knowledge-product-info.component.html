@@ -1,1 +1,52 @@
-<p>knowledge-product-info works!</p>
+<app-detail-section-title sectionName="Contributors"></app-detail-section-title>
+<div class="detail_container">
+    <app-pr-input [(ngModel)]="knowledgeProductBody.handle" label="Handle" [required]="false" [disabled]="true">
+    </app-pr-input>
+    <app-pr-input [(ngModel)]="knowledgeProductBody.handle" label="Issue date" [required]="false" [readOnly]="true">
+    </app-pr-input>
+    <app-pr-field-header label="Authors"></app-pr-field-header>
+    <app-pr-input [(ngModel)]="knowledgeProductBody.handle" label="Knowledge product type" [required]="false"
+        [readOnly]="true">
+    </app-pr-input>
+    <app-pr-input [(ngModel)]="knowledgeProductBody.handle" label="Peer reviewed" [required]="false" [readOnly]="true">
+    </app-pr-input>
+    <app-pr-input [(ngModel)]="knowledgeProductBody.handle" label="Web of Science Core Collection (former ISI)"
+        [required]="false" [readOnly]="true">
+    </app-pr-input>
+    <app-pr-input [(ngModel)]="knowledgeProductBody.handle" label="DOI" [required]="false" [readOnly]="true">
+    </app-pr-input>
+    <app-pr-input [(ngModel)]="knowledgeProductBody.handle" label="Accessibility" [required]="false" [readOnly]="true">
+    </app-pr-input>
+    <app-pr-input [(ngModel)]="knowledgeProductBody.handle" label="License" [required]="false" [readOnly]="true">
+    </app-pr-input>
+    <app-pr-input [(ngModel)]="knowledgeProductBody.handle" label="Keywords" [required]="false" [readOnly]="true">
+    </app-pr-input>
+    <app-pr-input [(ngModel)]="knowledgeProductBody.handle" label="AGROVOC Keywords" [required]="false"
+        [readOnly]="true">
+    </app-pr-input>
+    <app-pr-input [(ngModel)]="knowledgeProductBody.handle" label="Commodity" [required]="false" [readOnly]="true">
+    </app-pr-input>
+    <app-pr-input [(ngModel)]="knowledgeProductBody.handle" label="Investors / Sponsors" [required]="false"
+        [readOnly]="true">
+    </app-pr-input>
+    <app-pr-field-header label="Altmetrics"></app-pr-field-header>
+    <app-pr-input [(ngModel)]="knowledgeProductBody.handle" label="Reference to other Knowledge products"
+        [required]="false" [readOnly]="true">
+    </app-pr-input>
+    <app-pr-field-header label="FAIR score for this Knowledge product"></app-pr-field-header>
+
+    <app-pr-yes-or-not label="Is this Knowledge product a MELIA Product?" [(ngModel)]="MELIAProduct">
+    </app-pr-yes-or-not>
+
+    <div style="padding-left: 50px;" *ngIf="MELIAProduct === true">
+        <app-pr-yes-or-not label="Was this MELIA product previously submitted in the OST?" [(ngModel)]="intheOST">
+        </app-pr-yes-or-not>
+        <app-pr-select [options]="[]" label="Select MELIA type" optionLabel="code" optionValue="code"
+            placeholder="Select MELIA type" [required]="false" *ngIf="intheOST === false">
+        </app-pr-select>
+        <app-pr-select [options]="[]" label="Select MELIA from OST" optionLabel="code" optionValue="code"
+            placeholder="Select MELIA from OST" [required]="false" *ngIf="intheOST === true">
+        </app-pr-select>
+    </div>
+
+</div>
