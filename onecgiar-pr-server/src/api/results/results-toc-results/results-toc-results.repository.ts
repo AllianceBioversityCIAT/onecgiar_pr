@@ -130,7 +130,7 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       rtr.version_id ,
       rtr.created_by ,
       rtr.last_updated_by,
-      ci.id as inititiative_id,
+      ci.id as initiative_id,
       ci.official_code,
       ci.name,
       ci.short_name,
@@ -141,8 +141,8 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       and tr.inititiative_id = rtr.initiative_id  
       left join clarisa_initiatives ci on ci.id = rtr.initiative_id  
     where rtr.results_id = ?
-      and rtr.initiative_id ${isPrimary?'':'not'} in (${initiativeId.toString()})
-      ${isPrimary?'':`and rtr.initiative_id in (${initiativeArray.toString()})`}
+      and rtr.initiative_id ${isPrimary?'':'not'} in (${initiativeId?initiativeId.toString():null})
+      ${isPrimary?'':`and rtr.initiative_id in (${initiativeArray.length?initiativeArray.toString():null})`}
       and rtr.is_active > 0;
     `;
     try {
@@ -172,7 +172,7 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       rtr.version_id ,
       rtr.created_by ,
       rtr.last_updated_by,
-      ci.id as inititiative_id,
+      ci.id as initiative_id,
       ci.official_code,
       ci.name,
       ci.short_name,
