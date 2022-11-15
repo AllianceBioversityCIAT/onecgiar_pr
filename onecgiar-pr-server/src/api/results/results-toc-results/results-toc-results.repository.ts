@@ -100,11 +100,10 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       results_toc_result rtr
       left join clarisa_initiatives ci on ci.id = rtr.initiative_id 
       left JOIN toc_result tr on tr.toc_result_id = rtr.toc_result_id
-    where rtr.results_id = ?
-      and rtr.initiative_id = ?;
+    where rtr.result_toc_result_id = ?;
     `;
     try {
-      const resultTocResult: ResultsTocResult[] = await this.query(queryData, [resultId, initiativeId]);
+      const resultTocResult: ResultsTocResult[] = await this.query(queryData, [RtRId]);
       return resultTocResult?.length?resultTocResult[0]:undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

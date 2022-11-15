@@ -156,7 +156,6 @@ export class ResultsTocResultsService {
           newRtR.toc_result_id = result_toc_result?.toc_result_id || null;
         }
         newRtR.planned_result = result_toc_result?.planned_result || null;
-        console.log(newRtR);
         await this._resultsTocResultRepository.save(newRtR);
       }
 
