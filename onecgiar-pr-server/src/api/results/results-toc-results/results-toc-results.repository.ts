@@ -98,11 +98,10 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       tr.toc_level_id
     FROM
       results_toc_result rtr
-      inner join clarisa_initiatives ci on ci.id = rtr.initiative_id 
-      inner JOIN toc_result tr on tr.toc_result_id = rtr.toc_result_id
+      left join clarisa_initiatives ci on ci.id = rtr.initiative_id 
+      left JOIN toc_result tr on tr.toc_result_id = rtr.toc_result_id
     where rtr.results_id = ?
-      and rtr.initiative_id = ?
-      and rtr.is_active > 0;
+      and rtr.initiative_id = ?;
     `;
     try {
       const resultTocResult: ResultsTocResult[] = await this.query(queryData, [resultId, initiativeId]);
@@ -138,16 +137,17 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       tr.toc_level_id
     FROM
       results_toc_result rtr	
-      inner JOIN toc_result tr on tr.toc_result_id = rtr.toc_result_id
+      left JOIN toc_result tr on tr.toc_result_id = rtr.toc_result_id
       and tr.inititiative_id = rtr.initiative_id  
-      inner join clarisa_initiatives ci on ci.id = tr.inititiative_id  
+      left join clarisa_initiatives ci on ci.id = tr.inititiative_id  
     where rtr.results_id = ?
       and rtr.initiative_id ${isPrimary?'':'not'} in (${initiativeId.toString()})
       and rtr.is_active > 0;
     `;
     try {
+      console.log(queryData)
       const resultTocResult: ResultsTocResult[] = await this.query(queryData, [resultId]);
-      return resultTocResult?.length?resultTocResult[0]:undefined;
+      return resultTocResult;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
@@ -186,7 +186,7 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
     `;
     try {
       const resultTocResult: ResultsTocResult[] = await this.query(queryData, [resultId]);
-      return resultTocResult?.length?resultTocResult[0]:undefined;
+      return resultTocResult;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
