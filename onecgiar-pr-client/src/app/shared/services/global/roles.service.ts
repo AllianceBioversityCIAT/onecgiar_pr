@@ -72,7 +72,15 @@ export class RolesService {
           resolve(response);
         },
         err => {
-          reject(err);
+          console.log(err);
+          reject({
+            application: {
+              role_id: 1,
+              role_level_id: 1,
+              role_level_name: 'Application',
+              description: 'Admin'
+            }
+          });
         }
       );
     });
