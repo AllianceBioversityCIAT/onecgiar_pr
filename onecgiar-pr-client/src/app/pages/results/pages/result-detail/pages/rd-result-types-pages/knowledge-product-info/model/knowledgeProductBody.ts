@@ -17,13 +17,13 @@ export class KnowledgeProductBody {
   keywords: any[];
   metadata: Metadatum[];
   metadataCG: Metadatum;
+  metadataWOS: Metadatum;
   altmetric_detail_url: string;
   altmetric_image_url: string;
   institutions: Institution[];
   countries?: any;
   regions?: any;
   warnings: string[];
-  metadataWOS: Metadatum;
 }
 
 interface Institution {
@@ -38,7 +38,7 @@ interface Metadatum {
   doi?: any;
   is_isi: boolean;
   is_peer_reviewed: boolean;
-  issue_year: string;
+  issue_year: number;
 }
 
 interface Author {
