@@ -24,7 +24,6 @@ export class TawkComponent implements OnInit {
   }
 
   initializeTawkIo() {
-    // console.log("initializeTawkIo");
     console.log(this.user);
     
     if (this.user != undefined) {
@@ -47,21 +46,6 @@ export class TawkComponent implements OnInit {
       this._renderer.appendChild(document.querySelector('.Tawk_API_container'), this.script);
 
       this.api.setTWKAttributes();
-
-      // try {
-      //   // console.log("setTitle")
-      //   setTimeout(() => {
-      //     window['Tawk_API']?.setAttributes({
-      //       'name': this.user.user_name,
-      //       'email': this.user.email,
-      //     });
-      //   }, 5000);
-        
-
-      // } catch (error) {
-      //   console.log(error)
-      // }
-
 
     }
 
