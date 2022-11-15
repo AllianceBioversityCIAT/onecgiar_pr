@@ -90,7 +90,7 @@ export class ClarisaTaskService {
     count = await this.cloneClarisaOutcomeIndicators(count);
     count = await this.cloneClarisaRegionsType(count);
     count = await this.cloneClarisaInstitutionsType(count);
-    //count = await this.cloneClarisaInstitutions(count);
+    count = await this.cloneClarisaInstitutions(count);
     count = await this.cloneClarisaPolicyStageRepository(count);
     count = await this.cloneClarisaInnovationTypeRepository(count);
     count = await this.cloneClarisaInnovationReadinessLevelRepository(count);
