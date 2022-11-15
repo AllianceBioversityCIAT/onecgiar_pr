@@ -7,9 +7,10 @@ import { PanelMenuComponent } from './panel-menu/panel-menu.component';
 import { PanelMenuPipe } from './panel-menu/pipes/panel-menu.pipe';
 import { PartnersRequestModule } from './components/partners-request/partners-request.module';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
+import { BreadcrumbModule } from '../../../../shared/components/breadcrumb/breadcrumb.module';
 
 @NgModule({
   declarations: [ResultDetailComponent, PanelMenuComponent, PanelMenuPipe],
-  imports: [CommonModule, ResultDetailRoutingModule, PartnersRequestModule, CustomFieldsModule]
+  imports: [CommonModule, ResultDetailRoutingModule, PartnersRequestModule, CustomFieldsModule, BreadcrumbModule]
 })
 export class ResultDetailModule {}
