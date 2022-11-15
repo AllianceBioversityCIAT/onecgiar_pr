@@ -41,6 +41,7 @@ export class RolesService {
   async validateReadOnly(result?) {
     // console.log('%cvalidateReadOnly', 'background: #222; color: #52cd47');
     const updateMyRoles = async roles => {
+      console.log(roles);
       if (!this.roles) await roles;
       if (!this.roles) return (this.readOnly = true);
       const { application, initiative } = this.roles;

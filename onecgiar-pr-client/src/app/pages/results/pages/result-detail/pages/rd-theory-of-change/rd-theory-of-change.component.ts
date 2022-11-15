@@ -15,6 +15,7 @@ export class RdTheoryOfChangeComponent {
   contributingInitiativesList = [];
   primaryText = ' - <strong>Primary</strong> ';
   getConsumed = false;
+  psub = '';
   constructor(private api: ApiService, public resultLevelSE: ResultLevelService, public centersSE: CentersService, public institutionsSE: InstitutionsService) {}
   ngOnInit(): void {
     this.requestEvent();
@@ -34,6 +35,7 @@ export class RdTheoryOfChangeComponent {
         // this.theoryOfChangeBody.result_toc_result['initiative_id'] = this.theoryOfChangeBody.result_toc_result['inititiative_id'];
         console.log(this.theoryOfChangeBody);
         this.theoryOfChangeBody.result_toc_result.planned_result = Boolean(this.theoryOfChangeBody.result_toc_result.planned_result);
+        this.psub = `${this.theoryOfChangeBody.result_toc_result.official_code} ${this.theoryOfChangeBody.result_toc_result.short_name}`;
       },
       err => {
         this.getConsumed = true;
