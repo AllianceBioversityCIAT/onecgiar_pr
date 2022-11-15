@@ -42,7 +42,7 @@ export class ResultsCenterRepository extends Repository<ResultsCenter> {
     const queryData = `
     select
       rc.id,
-      rc.is_primary,
+      rc.is_primary as primary,
       rc.is_active,
       rc.created_date,
       rc.last_updated_date,
