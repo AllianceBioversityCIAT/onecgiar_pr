@@ -49,7 +49,7 @@ export class ResultsCenterRepository extends Repository<ResultsCenter> {
       rc.result_id,
       rc.created_by,
       rc.last_updated_by,
-      rc.center_id,
+      rc.center_id as code,
       ci.name,
       ci.acronym 
       from results_center rc 
