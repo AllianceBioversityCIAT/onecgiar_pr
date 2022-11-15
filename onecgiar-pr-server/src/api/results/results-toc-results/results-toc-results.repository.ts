@@ -146,7 +146,6 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       and rtr.is_active > 0;
     `;
     try {
-      console.log(queryData)
       const resultTocResult: ResultsTocResult[] = await this.query(queryData, [resultId]);
       return resultTocResult;
     } catch (error) {
@@ -241,7 +240,6 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       and rtr.result_toc_result_id = ${RtRId};
     `;
     try {
-      console.log(queryData)
       const resultTocResult: ResultsTocResult[] = await this.query(queryData);
       return resultTocResult?.length?resultTocResult[0]:undefined;
     } catch (error) {
