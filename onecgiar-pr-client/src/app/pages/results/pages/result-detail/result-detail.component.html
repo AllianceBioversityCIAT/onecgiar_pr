@@ -8,11 +8,14 @@
     <app-breadcrumb></app-breadcrumb>
     <div class="section_container">
       <router-outlet></router-outlet>
+      <div class="spinner" *ngIf="this.saveButtonSE.isSavingSection">
+        <div class="info">
+          <i class="material-icons-round icon rotating">sync</i>
+          <div class="text">Loading section...</div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
 <app-partners-request></app-partners-request>
-<div class="spinner">
-
-</div>

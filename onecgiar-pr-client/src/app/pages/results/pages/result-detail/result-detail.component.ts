@@ -5,6 +5,7 @@ import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultLevelService } from '../result-creator/services/result-level.service';
 import { RolesService } from '../../../../shared/services/global/roles.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
+import { SaveButtonService } from '../../../../custom-fields/save-button/save-button.service';
 
 @Component({
   selector: 'app-result-detail',
@@ -12,7 +13,7 @@ import { DataControlService } from '../../../../shared/services/data-control.ser
   styleUrls: ['./result-detail.component.scss']
 })
 export class ResultDetailComponent {
-  constructor(public navigationBarSE: NavigationBarService, private activatedRoute: ActivatedRoute, private api: ApiService, private resultLevelSE: ResultLevelService, private rolesSE: RolesService, private router: Router, private dataControlSE: DataControlService) {}
+  constructor(public navigationBarSE: NavigationBarService, private activatedRoute: ActivatedRoute, private api: ApiService, public saveButtonSE: SaveButtonService, private resultLevelSE: ResultLevelService, private rolesSE: RolesService, private router: Router, private dataControlSE: DataControlService) {}
   ngOnInit(): void {
     this.api.updateUserData();
     this.api.resultsSE.currentResultId = this.activatedRoute.snapshot.paramMap.get('id');
@@ -22,7 +23,7 @@ export class ResultDetailComponent {
   GET_resultById() {
     this.api.resultsSE.GET_resultById().subscribe(
       ({ response }) => {
-        console.log(response);
+        // console.log(response);
         this.rolesSE.validateReadOnly(response);
         this.resultLevelSE.currentResultLevelName = response.result_level_name;
         this.resultLevelSE.currentResultLevelId = response.result_level_id;

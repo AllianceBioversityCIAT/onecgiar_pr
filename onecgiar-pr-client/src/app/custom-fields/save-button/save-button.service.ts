@@ -8,12 +8,27 @@ import { CustomizedAlertsFeService } from '../../shared/services/customized-aler
 })
 export class SaveButtonService {
   isSaving = false;
+  isSavingSection = false;
   constructor(private customizedAlertsFeSE: CustomizedAlertsFeService) {}
   showSaveSpinner() {
     this.isSaving = true;
   }
   hideSaveSpinner() {
     this.isSaving = false;
+  }
+
+  isSavingSectionPipe(): any {
+    this.isSavingSection = true;
+    return pipe(
+      tap(resp => {
+        this.isSavingSection = false;
+      }),
+      catchError(err => {
+        this.isSavingSection = false;
+        return throwError(err);
+      })
+      // ,retry(1)
+    );
   }
 
   isSavingPipe(): any {
