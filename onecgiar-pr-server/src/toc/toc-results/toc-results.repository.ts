@@ -135,6 +135,35 @@ export class TocResultsRepository extends Repository<TocResult> {
     }
   }
 
+  async getAllOutcomeByInitiative(initiativeId: number) {
+    const queryData = `
+    select  
+      DISTINCT caaoi.outcome_id as action_area_outcome_id,
+      ibs.initiativeId as inititiative_id ,
+       caao.id,
+       caao.outcomeSMOcode as title,
+       caao.outcomeStatement as description,
+       4 as toc_level_id,
+        null as work_package_id
+      from ${env.DB_OST}.general_information gi 
+      inner join ${env.DB_OST}.initiatives_by_stages ibs on gi.initvStgId = ibs.id 
+      													and ibs.active > 0
+      inner join ${env.DB_OST}.clarisa_action_areas_outcomes_indicators caaoi on caaoi.action_area_id = gi.action_area_id
+      inner join clarisa_action_area_outcome caao on caao.id = caaoi.outcome_id 
+      where ibs.initiativeId = ?;
+    `;
+    try {
+      const tocResult:TocResult[] = await this.query(queryData, [initiativeId]);
+      return tocResult;
+    } catch (error) {
+      throw {
+        message: `[${TocResultsRepository.name}] => getTocIdFromOst error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
   async getFullInitiativeTocByResult(resultId: number) {
     const queryData = `
     select 
