@@ -74,7 +74,7 @@ export class ResultsTocResultsService {
         await this._nonPooledProjectRepository.updateNPProjectById(result_id, titleArray, user.id);
         let resultTocResultArray: NonPooledProject[] = [];
         for (let index = 0; index < contributing_np_projects.length; index++) {
-          if (contributing_np_projects[index]?.grant_title.length) {
+          if (true/**contributing_np_projects[index]?.grant_title?.length*/) {
             const resultData = await this._nonPooledProjectRepository.getAllNPProjectById(result_id, contributing_np_projects[index].grant_title);
 
             if (resultData) {
