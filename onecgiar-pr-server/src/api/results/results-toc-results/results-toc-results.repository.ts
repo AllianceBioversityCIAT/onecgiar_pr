@@ -74,7 +74,7 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
 
   async getRTRById(RtRId: number, resultId: number, initiativeId: number) {
 
-    if(RtRId){
+    if(!RtRId){
       return undefined;
     }
 
