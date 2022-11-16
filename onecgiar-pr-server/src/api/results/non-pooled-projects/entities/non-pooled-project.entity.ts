@@ -13,7 +13,8 @@ export class NonPooledProject {
     @Column({
         name: 'grant_title',
         type: 'text' ,
-        nullable: false
+        nullable: true,
+        default: null
     })
     grant_title: string;
 

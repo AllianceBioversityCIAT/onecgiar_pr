@@ -90,7 +90,7 @@ export class ResultsTocResultsService {
               newNpProject.center_grant_id = contributing_np_projects[index].center_grant_id;
               newNpProject.funder_institution_id = contributing_np_projects[index].funder;
               newNpProject.lead_center_id = contributing_np_projects[index].lead_center;
-              newNpProject.grant_title = contributing_np_projects[index].grant_title;
+              newNpProject.grant_title = contributing_np_projects[index].grant_title || null;
               newNpProject.created_by = user.id;
               newNpProject.last_updated_by = user.id;
               resultTocResultArray.push(newNpProject);

@@ -59,7 +59,7 @@ export class NonPooledProjectRepository extends Repository<NonPooledProject> {
       	and npp.grant_title = ?;
     `;
     try {
-      const npProject: NonPooledProject[] = await this.query(queryData, [resultId, grantTitle]);
+      const npProject: NonPooledProject[] = await this.query(queryData, [resultId, grantTitle || null]);
       return npProject?.length? npProject[0]: undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
