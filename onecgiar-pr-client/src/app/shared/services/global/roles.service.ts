@@ -41,7 +41,6 @@ export class RolesService {
   async validateReadOnly(result?) {
     // console.log('%cvalidateReadOnly', 'background: #222; color: #52cd47');
     const updateMyRoles = async roles => {
-      console.log(roles);
       if (!this.roles) await roles;
       if (!this.roles) return (this.readOnly = true);
       const { application, initiative } = this.roles;
@@ -74,14 +73,7 @@ export class RolesService {
         },
         err => {
           console.log(err);
-          reject({
-            application: {
-              role_id: 1,
-              role_level_id: 1,
-              role_level_name: 'Application',
-              description: 'Admin'
-            }
-          });
+          reject();
         }
       );
     });

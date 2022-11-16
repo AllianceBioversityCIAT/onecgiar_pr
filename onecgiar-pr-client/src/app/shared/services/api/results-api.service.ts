@@ -63,7 +63,7 @@ export class ResultsApiService {
   }
 
   GET_generalInformationByResultId() {
-    return this.http.get<any>(`${this.apiBaseUrl}get/general-information/result/${this.currentResultId}`);
+    return this.http.get<any>(`${this.apiBaseUrl}get/general-information/result/${this.currentResultId}`).pipe(this.saveButtonSE.isSavingSectionPipe());
   }
 
   PATCH_generalInformation(body: GeneralInfoBody) {
@@ -172,7 +172,8 @@ export class ResultsApiService {
         // console.log(resp.response);
         resp?.response?.contributing_initiatives.map(initiative => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name || ''}</strong> - ${initiative?.initiative_name}`));
         return resp;
-      })
+      }),
+      this.saveButtonSE.isSavingSectionPipe()
     );
   }
 }
