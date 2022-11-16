@@ -34,7 +34,7 @@ export class ResultsTocResultsService {
 
   async create(createResultsTocResultDto: CreateResultsTocResultDto, user: TokenDto) {
     try {
-      const { contributing_np_projects, result_id, contributing_center, contributing_initiatives, result_toc_result, contributors_result_toc_result } = createResultsTocResultDto;
+      let { contributing_np_projects, result_id, contributing_center, contributing_initiatives, result_toc_result, contributors_result_toc_result } = createResultsTocResultDto;
       const version = await this._versionsService.findBaseVersion();
       const result = await this._resultRepository.getResultById(result_id);
       let initiativeArray: number[] = [];
@@ -43,7 +43,6 @@ export class ResultsTocResultsService {
       }
       const vrs: Version = <Version>version.response;
       const titleArray = contributing_np_projects.map(el => el.grant_title);
-
       if (contributing_center.filter(el => el.primary == true).length > 1) {
         contributing_center.map(el => { el.primary = false; });
       }
@@ -160,6 +159,8 @@ export class ResultsTocResultsService {
 
 
       if (contributors_result_toc_result?.length) {
+        contributors_result_toc_result = contributors_result_toc_result.filter(el => initiativeArray.includes(el.initiative_id));
+        console.log(contributors_result_toc_result)
         let RtRArray: ResultsTocResult[] = [];
           for (let index = 0; index < contributors_result_toc_result.length; index++) {
             let RtR = await this._resultsTocResultRepository.getRTRById(contributors_result_toc_result[index].result_toc_result_id, result_id, contributors_result_toc_result[index].initiative_id );
