@@ -181,10 +181,11 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       inner join clarisa_initiatives ci on ci.id = rtr.initiative_id 
     where rtr.results_id = ?
       and rtr.initiative_id ${isPrimary?'':'not'} in (${initiativeId.length?initiativeId.toString():null})
-      ${isPrimary?'':`and rtr.initiative_id in (${initiativeArray.toString()})`}
+      ${isPrimary?'':`and rtr.initiative_id in (${initiativeArray.length?initiativeArray.toString():null})`}
       and rtr.is_active > 0;
     `;
     try {
+      
       const resultTocResult: ResultsTocResult[] = await this.query(queryData, [resultId]);
       return resultTocResult;
     } catch (error) {
