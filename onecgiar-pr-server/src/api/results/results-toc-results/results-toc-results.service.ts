@@ -99,7 +99,6 @@ export class ResultsTocResultsService {
           }
         }
 
-        console.log(resultTocResultArray)
         await this._nonPooledProjectRepository.save(resultTocResultArray);
       } else {
         await this._nonPooledProjectRepository.updateNPProjectById(result_id, [], user.id);
