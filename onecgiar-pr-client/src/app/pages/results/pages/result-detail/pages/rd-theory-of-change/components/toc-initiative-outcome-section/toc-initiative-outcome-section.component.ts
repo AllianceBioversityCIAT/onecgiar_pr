@@ -23,7 +23,7 @@ export class TocInitiativeOutcomeSectionComponent {
     this.GET_fullInitiativeToc();
     this.GET_eoi();
     this.valdiateEOI();
-    console.log(this.result_toc_result.initiative_id);
+    // console.log(this.result_toc_result.initiative_id);
   }
 
   GET_outputList() {

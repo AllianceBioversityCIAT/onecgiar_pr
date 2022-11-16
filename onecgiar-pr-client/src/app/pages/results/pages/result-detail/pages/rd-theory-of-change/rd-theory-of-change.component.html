@@ -7,7 +7,8 @@
     </app-pr-input>
     <app-pr-multi-select [options]="this.contributingInitiativesList" label="Contributing Initiatives"
         selectedLabel="Contributing Initiatives" optionLabel="full_name" optionValue="id"
-        (selectOptionEvent)="onSelectContributingInitiative()" selectedOptionLabel="full_name"
+        (selectOptionEvent)="onSelectContributingInitiative()"
+        (removeOptionEvent)="onRemoveContributingInitiative($event)" selectedOptionLabel="full_name"
         [(ngModel)]="this.theoryOfChangeBody.contributing_initiatives" placeholder="Select initiative(s)
         ">
     </app-pr-multi-select>

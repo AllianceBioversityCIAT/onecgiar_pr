@@ -47,11 +47,12 @@ export class RdTheoryOfChangeComponent {
   onSaveSection() {
     console.log(this.theoryOfChangeBody);
     this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
-      console.log(resp);
+      // console.log(resp);
       this.getSectionInformation();
     });
   }
   onSelectContributingInitiative() {
+    console.log();
     console.log('onSelectContributingInitiative');
     this.theoryOfChangeBody.contributing_initiatives?.map((resp: any) => {
       // console.log(resp);
@@ -65,8 +66,14 @@ export class RdTheoryOfChangeComponent {
       if (!contributorFinded) this.theoryOfChangeBody.contributors_result_toc_result?.push(contributorToPush);
       console.log(contributorFinded);
     });
-    // console.log(this.theoryOfChangeBody.contributing_initiatives);
-    // console.log(this.theoryOfChangeBody.contributors_result_toc_result);
+  }
+
+  onRemoveContributingInitiative(e) {
+    console.clear();
+    console.log(e);
+    const contributorFinded = this.theoryOfChangeBody.contributors_result_toc_result?.findIndex((result: any) => result?.initiative_id == e.remove.id);
+    this.theoryOfChangeBody.contributors_result_toc_result.splice(contributorFinded, 1);
+    console.log(contributorFinded);
   }
   addBilateralContribution() {
     this.theoryOfChangeBody.contributing_np_projects.push(new donorInterfaceToc());
