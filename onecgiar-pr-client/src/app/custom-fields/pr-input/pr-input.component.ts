@@ -27,6 +27,7 @@ export class PrInputComponent implements ControlValueAccessor {
   @Input() underConstruction: boolean;
   @Input() disabled: boolean;
   @Input() hint: string = null;
+  @Input() editable: boolean = false;
 
   private _value: string;
   private beforeValue: string;

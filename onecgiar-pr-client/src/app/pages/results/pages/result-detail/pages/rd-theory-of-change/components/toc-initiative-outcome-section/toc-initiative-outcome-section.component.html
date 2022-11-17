@@ -3,14 +3,17 @@
 
 <div>
     <div class="date"><strong>Updated on:&nbsp;</strong> 6 October, 2022 - 2:00:22 PM - (CET)</div>
-    <app-toc-initiative-out [initiative]="result_toc_result" [editable]="true" [resultLevelId]="2">
+    <app-toc-initiative-out [initiative]="result_toc_result"
+        [editable]="this.rolesSE.validateInitiative(result_toc_result?.initiative_id) || this.rolesSE.isAdmin"
+        [resultLevelId]="2">
     </app-toc-initiative-out>
 </div>
 <app-pr-field-header label="Other contributors" [required]="false" [simpleStyle]="true">
 </app-pr-field-header>
-<div *ngFor="let init of contributors_result_toc_result">
-    <app-toc-initiative-out [initiative]="init"
-        [editable]=" this.rolesSE.validateInitiative(init?.results_id) || this.rolesSE.isAdmin " [resultLevelId]="2">
+<div *ngFor="let initiative of contributors_result_toc_result">
+    <app-toc-initiative-out [initiative]="initiative"
+        [editable]=" this.rolesSE.validateInitiative(initiative?.initiative_id) || this.rolesSE.isAdmin"
+        [resultLevelId]="2">
     </app-toc-initiative-out>
 </div>
 

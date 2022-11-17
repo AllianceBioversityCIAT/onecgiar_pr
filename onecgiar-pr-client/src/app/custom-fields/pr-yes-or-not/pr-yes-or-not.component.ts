@@ -21,6 +21,8 @@ export class PrYesOrNotComponent {
   @Input() isStatic: boolean = false;
   @Input() required: boolean = true;
   @Input() hideOptions: boolean;
+  @Input() editable: boolean = false;
+
   @Output() selectOptionEvent = new EventEmitter();
   private _value: boolean;
 
