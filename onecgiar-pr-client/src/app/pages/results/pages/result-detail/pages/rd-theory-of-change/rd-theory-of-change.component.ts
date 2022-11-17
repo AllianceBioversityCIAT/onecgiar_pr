@@ -16,7 +16,7 @@ export class RdTheoryOfChangeComponent {
   primaryText = ' - <strong>Primary</strong> ';
   getConsumed = false;
   psub = '';
-  constructor(private api: ApiService, public resultLevelSE: ResultLevelService, public centersSE: CentersService, public institutionsSE: InstitutionsService) {}
+  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public centersSE: CentersService, public institutionsSE: InstitutionsService) {}
   ngOnInit(): void {
     this.requestEvent();
     this.getSectionInformation();
