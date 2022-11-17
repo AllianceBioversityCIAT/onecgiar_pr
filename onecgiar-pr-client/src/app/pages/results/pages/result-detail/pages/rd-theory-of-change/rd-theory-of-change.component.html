@@ -1,4 +1,4 @@
-<app-detail-section-title sectionName="Contributors"></app-detail-section-title>
+<app-detail-section-title sectionName="Contributors" title="Theory of Change"></app-detail-section-title>
 <div class="detail_container">
     <app-alert-status
         description="Initiatives and non-pooled projects that you collaborated with to generated this result/contributed to this result.">
@@ -25,7 +25,7 @@
                 [(ngModel)]="donor.funder" [required]="false">
             </app-pr-select>
             <div class="auto_fit_container">
-                <app-pr-input label="Grant title" [required]="false" [(ngModel)]="donor.grant_title"
+                <app-pr-input label="Grant title" [required]="true" [(ngModel)]="donor.grant_title"
                     placeholder="Grant title goes here...">
                 </app-pr-input>
                 <app-pr-input label="Center Grant ID" [required]="false" [(ngModel)]="donor.center_grant_id"
@@ -43,7 +43,7 @@
     </app-no-data-text>
     <app-add-button name="Add non-pooled project" (clickEvent)="addBilateralContribution()"></app-add-button>
     <app-pr-multi-select [options]="this.centersSE.centersList" label="Contributing Centers"
-        (selectOptionEvent)="validatePrimarySelection()" selectedLabel="Center(s) selected" optionLabel="name"
+        (selectOptionEvent)="validatePrimarySelection()" selectedLabel="Center(s) selected" optionLabel="full_name"
         optionValue="code" [(ngModel)]="this.theoryOfChangeBody.contributing_center" placeholder="Select initiative(s)
         ">
     </app-pr-multi-select>

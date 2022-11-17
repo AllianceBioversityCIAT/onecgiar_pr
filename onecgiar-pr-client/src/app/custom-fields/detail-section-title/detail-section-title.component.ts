@@ -9,9 +9,10 @@ import { Title } from '@angular/platform-browser';
 export class DetailSectionTitleComponent implements OnInit {
   @Input() resultId: string;
   @Input() sectionName: string;
+  @Input() title: string;
   constructor(private titleService: Title) {}
 
   ngOnInit(): void {
-    this.titleService.setTitle(this.sectionName);
+    this.titleService.setTitle(this.title ? this.title : this.sectionName);
   }
 }

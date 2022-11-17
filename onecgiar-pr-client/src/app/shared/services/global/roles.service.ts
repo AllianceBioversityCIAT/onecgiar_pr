@@ -79,6 +79,19 @@ export class RolesService {
     });
   }
 
+  get isAdmin() {
+    // console.log('isAdmin');
+    if (this.roles.application.role_id == 1) return true;
+    return false;
+  }
+
+  validateInitiative(initiative_id) {
+    console.log(this.roles.initiative);
+    console.log(initiative_id);
+    console.log(this.roles.initiative.find(item => item.initiative_id == initiative_id));
+    return !!this.roles.initiative.find(item => item.initiative_id == initiative_id);
+  }
+
   //TODO App roles
   /*
   Admin  

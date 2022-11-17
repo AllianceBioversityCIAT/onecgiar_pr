@@ -3,7 +3,18 @@
 
 <div>
     <div class="date"><strong>Updated on:&nbsp;</strong> 6 October, 2022 - 2:00:22 PM - (CET)</div>
-    <div class="editable_field">
+    <app-toc-initiative-out [initiative]="result_toc_result" [editable]="true" [resultLevelId]="2">
+    </app-toc-initiative-out>
+</div>
+<app-pr-field-header label="Other contributors" [required]="false" [simpleStyle]="true">
+</app-pr-field-header>
+<div *ngFor="let init of contributors_result_toc_result">
+    <app-toc-initiative-out [initiative]="init"
+        [editable]=" this.rolesSE.validateInitiative(init?.results_id) || this.rolesSE.isAdmin " [resultLevelId]="2">
+    </app-toc-initiative-out>
+</div>
+
+<!-- <div class="editable_field">
         <app-pr-yes-or-not
             label="Is this result planned in the <strong>{{result_toc_result?.official_code}} {{result_toc_result?.short_name}}</strong> ToC?"
             [(ngModel)]="result_toc_result.planned_result" (selectOptionEvent)="valdiateEOI()"
@@ -13,8 +24,8 @@
                 ToC</span>
             <img src="assets/icons/toc_icon.png" alt="">
         </a>
-    </div>
-    <div class="auto_fit_container">
+    </div> -->
+<!-- <div class="auto_fit_container">
         <app-pr-select [options]="this.tocInitiativeOutcomeListsSE.outcomeLevelList|outcomeLevelFilter:2"
             label="Outcome level" [disabled]="!this.result_toc_result.planned_result" optionLabel="name"
             optionValue="toc_level_id" placeholder="Select outcome level" [(ngModel)]="result_toc_result.toc_level_id">
@@ -28,26 +39,23 @@
             [options]="this.outcomeList" [(ngModel)]="result_toc_result.toc_result_id" label="Outcome"
             optionLabel="title" optionValue="toc_result_id" placeholder="Select outcome">
         </app-pr-select>
-    </div>
-    <hr class="divider-20">
-</div>
-<app-pr-field-header label="Other contributors" [required]="false" [simpleStyle]="true">
-</app-pr-field-header>
-<div *ngFor="let init of contributors_result_toc_result">
-    <app-pr-yes-or-not
-        label="Is this result planned in the <strong>{{init?.official_code}} {{init?.short_name}}</strong> ToC?"
-        [required]="false" [(ngModel)]="init.planned_result" [readOnly]="true">
-    </app-pr-yes-or-not>
-    <div class="auto_fit_container">
+    </div> -->
+<!-- <hr class="divider-20"> -->
 
-        <app-pr-select [options]="this.tocInitiativeOutcomeListsSE.outcomeLevelList|outcomeLevelFilter:2"
-            label="Outcome level" [disabled]="true" optionLabel="name" optionValue="toc_level_id"
-            placeholder="Select outcome level" [(ngModel)]="init.toc_level_id" [required]="false">
-        </app-pr-select>
-        <app-pr-select [options]="this.outcomeList" label="Outcome" [disabled]="true"
-            optionLabel="official_code_short_name" optionValue="toc_result_id" placeholder="Select outcome"
-            [required]="false" [(ngModel)]="init.toc_result_id">
-        </app-pr-select>
-    </div>
-    <hr class="divider-20">
+
+<!-- <app-pr-yes-or-not
+label="Is this result planned in the <strong>{{init?.official_code}} {{init?.short_name}}</strong> ToC?"
+[required]="false" [(ngModel)]="init.planned_result" [readOnly]="true">
+</app-pr-yes-or-not>
+<div class="auto_fit_container">
+
+<app-pr-select [options]="this.tocInitiativeOutcomeListsSE.outcomeLevelList|outcomeLevelFilter:2"
+    label="Outcome level" [disabled]="true" optionLabel="name" optionValue="toc_level_id"
+    placeholder="Select outcome level" [(ngModel)]="init.toc_level_id" [required]="false">
+</app-pr-select>
+<app-pr-select [options]="this.outcomeList" label="Outcome" [disabled]="true"
+    optionLabel="official_code_short_name" optionValue="toc_result_id" placeholder="Select outcome"
+    [required]="false" [(ngModel)]="init.toc_result_id">
+</app-pr-select>
 </div>
+<hr class="divider-20"> -->

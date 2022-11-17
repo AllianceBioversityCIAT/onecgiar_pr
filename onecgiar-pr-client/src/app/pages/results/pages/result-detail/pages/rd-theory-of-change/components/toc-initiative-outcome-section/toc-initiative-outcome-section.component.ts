@@ -2,6 +2,7 @@ import { Component, Input, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { TocInitiativeOutcomeListsService } from './services/toc-initiative-outcome-lists.service';
 import { resultToResultInterfaceToc } from '../../model/theoryOfChangeBody';
+import { RolesService } from '../../../../../../../../shared/services/global/roles.service';
 
 @Component({
   selector: 'app-toc-initiative-outcome-section',
@@ -9,7 +10,7 @@ import { resultToResultInterfaceToc } from '../../model/theoryOfChangeBody';
   styleUrls: ['./toc-initiative-outcome-section.component.scss']
 })
 export class TocInitiativeOutcomeSectionComponent {
-  constructor(private api: ApiService, public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService) {}
+  constructor(private api: ApiService, public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public rolesSE: RolesService) {}
   outcomeList = [];
   outputList = [];
   eoiList = [];
@@ -31,7 +32,7 @@ export class TocInitiativeOutcomeSectionComponent {
       ({ response }) => {
         this.outputList = [];
         this.outputList = response;
-        console.log(response);
+        // console.log(response);
       },
       err => {
         this.outputList = [];
@@ -45,7 +46,7 @@ export class TocInitiativeOutcomeSectionComponent {
       ({ response }) => {
         this.eoiList = [];
         this.eoiList = response;
-        console.log(response);
+        // console.log(response);
       },
       err => {
         this.eoiList = [];
@@ -69,7 +70,7 @@ export class TocInitiativeOutcomeSectionComponent {
     this.api.tocApiSE.GET_tocLevelsByresultId(this.result_toc_result.initiative_id, 2).subscribe(
       ({ response }) => {
         this.outcomeList = response;
-        console.log(response);
+        // console.log(response);
         // console.log(response);
         // console.log('%cOutput list', 'background: #222; color: #aaeaf5');
       },

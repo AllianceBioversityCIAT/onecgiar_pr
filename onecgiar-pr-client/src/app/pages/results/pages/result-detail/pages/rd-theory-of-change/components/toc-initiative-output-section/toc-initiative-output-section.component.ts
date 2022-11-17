@@ -13,11 +13,13 @@ export class TocInitiativeOutputSectionComponent {
   outputList = [];
   @Input() result_toc_result = new resultToResultInterfaceToc();
   @Input() contributors_result_toc_result: any;
+  fullInitiativeToc = null;
   constructor(private api: ApiService, public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService) {}
   ngOnInit(): void {
     this.GET_outcomeList();
     this.GET_outputList();
     this.GET_fullInitiativeToc();
+    this.valdiateEOI();
   }
 
   GET_outputList() {
@@ -25,7 +27,7 @@ export class TocInitiativeOutputSectionComponent {
       ({ response }) => {
         this.outputList = [];
         this.outputList = response;
-        console.log(response);
+        // console.log(response);
       },
       err => {
         this.outputList = [];
@@ -39,7 +41,7 @@ export class TocInitiativeOutputSectionComponent {
       ({ response }) => {
         this.outcomeList = [];
         this.outcomeList = response;
-        console.log(response);
+        // console.log(response);
       },
       err => {
         this.outcomeList = [];
@@ -52,7 +54,8 @@ export class TocInitiativeOutputSectionComponent {
   GET_fullInitiativeToc() {
     this.api.tocApiSE.GET_fullInitiativeToc(this.result_toc_result.initiative_id).subscribe(
       ({ response }) => {
-        console.log(response);
+        // console.log(response);
+        this.fullInitiativeToc = response[0]?.toc_id;
       },
       err => {
         console.log(err);

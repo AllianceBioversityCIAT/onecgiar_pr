@@ -110,7 +110,11 @@ export class ResultsApiService {
   GET_AllCLARISACenters() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/centers/get/all`).pipe(
       map(resp => {
-        resp.response.map(institution => (institution.lead_center = institution.code));
+        console.log(resp);
+        resp.response.map(center => {
+          center.lead_center = center.code;
+          center.full_name = `<strong>${center.acronym} - </strong> ${center.name}`;
+        });
         return resp;
       })
     );

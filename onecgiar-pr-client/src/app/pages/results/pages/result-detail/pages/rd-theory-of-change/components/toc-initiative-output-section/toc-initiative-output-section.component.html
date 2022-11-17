@@ -2,15 +2,25 @@
 </app-pr-field-header>
 
 <div>
-    <div class="date"><strong>Updated on:&nbsp;</strong> 6 October, 2022 - 2:00:22 PM - (CET)</div>
+    <app-toc-initiative-out [initiative]="result_toc_result" [editable]="true" [resultLevelId]="1">
+    </app-toc-initiative-out>
+</div>
+<app-pr-field-header label="Other contributors" [required]="false" [simpleStyle]="true">
+</app-pr-field-header>
+<div *ngFor="let item of contributors_result_toc_result">
+    <app-toc-initiative-out [initiative]="item" [editable]="false" [resultLevelId]="1"></app-toc-initiative-out>
+</div>
+
+
+<!-- <div class="date"><strong>Updated on:&nbsp;</strong> 6 October, 2022 - 2:00:22 PM - (CET)</div>
     <div class="editable_field">
         <app-pr-yes-or-not
             label="Is this result planned in the <strong>{{result_toc_result?.official_code}} {{result_toc_result?.short_name}}</strong> ToC?"
             [description]="result_toc_result?.planned_result === false ? 'Please select the End of Initiative (EOI)-Outcome that most closely matches this result. You will have time during the reflect moment to update your ToC':''"
             [(ngModel)]="result_toc_result.planned_result" (selectOptionEvent)="valdiateEOI()">
         </app-pr-yes-or-not>
-        <a ref="https://toc.mel.cgiar.org/toc/48a4a5df-2b6b-4ff8-a1c6-c709c5ba9c1e" target="_blank"
-            class="toc_button"><span>See ToC</span>
+        <a [href]="'https://toc.mel.cgiar.org/toc/'+this.fullInitiativeToc" target="_blank" class="toc_button"><span>See
+                ToC</span>
             <img src="assets/icons/toc_icon.png" alt="">
         </a>
     </div>
@@ -29,15 +39,16 @@
             optionLabel="title" optionValue="toc_result_id" placeholder="Select outcome" [required]="false"
             [(ngModel)]="result_toc_result.toc_result_id">
         </app-pr-select>
-    </div>
+    </div> -->
 
-    <hr class="divider-20">
-</div>
-<!-- <app-pr-field-header label="Other contributors" [required]="false" [simpleStyle]="true">
-</app-pr-field-header> -->
-<!-- <div *ngFor="let item of contributors_result_toc_result">
-    <app-pr-yes-or-not label="Is this result planned in the <strong>{{item?.name}}</strong> ToC?" [required]="false"
-        [(ngModel)]="item.planned_result" [readOnly]="true">
+<!-- <hr class="divider-20"> -->
+
+
+
+
+<!-- <app-pr-yes-or-not
+        label="Is this result planned in the <strong>{{item?.official_code}} {{item?.short_name}}</strong>  ToC?"
+        [required]="false" [(ngModel)]="item.planned_result" [readOnly]="true">
     </app-pr-yes-or-not>
     <div class="auto_fit_container">
         <app-pr-select *ngIf="item.planned_result" [options]="this.outputList" label="Output" optionLabel="title"
@@ -53,5 +64,4 @@
             [(ngModel)]="item.toc_result_id">
         </app-pr-select>
     </div>
-    <hr class="divider-20">
-</div> -->
+    <hr class="divider-20"> -->
