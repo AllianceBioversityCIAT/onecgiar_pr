@@ -1,15 +1,33 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { CreateClarisaInnovationCharacteristicDto } from './dto/create-clarisa-innovation-characteristic.dto';
 import { UpdateClarisaInnovationCharacteristicDto } from './dto/update-clarisa-innovation-characteristic.dto';
+import { HandlersError } from '../../shared/handlers/error.utils';
+import { ClarisaInnovationCharacteristicRepository } from './clarisa-innovation-characteristics.repository';
 
 @Injectable()
 export class ClarisaInnovationCharacteristicsService {
+
+  constructor(
+    private readonly _handlersError: HandlersError,
+    private readonly _clarisaInnovationCharacteristicRepository : ClarisaInnovationCharacteristicRepository
+  ){}
+
   create(createClarisaInnovationCharacteristicDto: CreateClarisaInnovationCharacteristicDto) {
     return 'This action adds a new clarisaInnovationCharacteristic';
   }
 
-  findAll() {
-    return `This action returns all clarisaInnovationCharacteristics`;
+  async findAll() {
+    try {
+      const InnovationReadinessLevel = await this._clarisaInnovationCharacteristicRepository.find();
+      
+      return {
+        response: InnovationReadinessLevel,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      this._handlersError.returnErrorRes({error, debug: true})
+    }
   }
 
   findOne(id: number) {
