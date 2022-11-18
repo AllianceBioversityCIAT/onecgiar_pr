@@ -83,7 +83,7 @@ export class SummaryService {
       }
 
       if (other?.length) {
-        const measureList = other.map(el => el.unit_of_measure);
+        const measureList = other.filter(el => !!el.result_innovations_use_measure_id).map(d => d.result_innovations_use_measure_id);
         await this._esultsInnovationsUseMeasuresRepository.updateInnovatonUseMeasures(InnovationUse.result_innovation_use_id, measureList, user.id);
         let tesultsInnovationsUseMeasuresList: ResultsInnovationsUseMeasures[] = [];
         for (let index = 0; index < other.length; index++) {
@@ -106,6 +106,8 @@ export class SummaryService {
           }
         }
         await this._esultsInnovationsUseMeasuresRepository.save(tesultsInnovationsUseMeasuresList);
+      }else{
+        await this._esultsInnovationsUseMeasuresRepository.updateInnovatonUseMeasures(InnovationUse.result_innovation_use_id, [], user.id);
       }
 
       return {
