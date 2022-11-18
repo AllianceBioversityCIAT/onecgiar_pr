@@ -1,9 +1,9 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException } from '@nestjs/common';
 import { ClarisaInnovationReadinessLevelsService } from './clarisa-innovation-readiness-levels.service';
 import { CreateClarisaInnovationReadinessLevelDto } from './dto/create-clarisa-innovation-readiness-level.dto';
 import { UpdateClarisaInnovationReadinessLevelDto } from './dto/update-clarisa-innovation-readiness-level.dto';
 
-@Controller('clarisa-innovation-readiness-levels')
+@Controller()
 export class ClarisaInnovationReadinessLevelsController {
   constructor(private readonly clarisaInnovationReadinessLevelsService: ClarisaInnovationReadinessLevelsService) {}
 
@@ -12,9 +12,11 @@ export class ClarisaInnovationReadinessLevelsController {
     return this.clarisaInnovationReadinessLevelsService.create(createClarisaInnovationReadinessLevelDto);
   }
 
-  @Get()
-  findAll() {
-    return this.clarisaInnovationReadinessLevelsService.findAll();
+  @Get('get/all')
+  async findAll() {
+    const { message, response, status } = 
+      await this.clarisaInnovationReadinessLevelsService.findAll();
+    throw new HttpException({ message, response }, status);
   }
 
   @Get(':id')
