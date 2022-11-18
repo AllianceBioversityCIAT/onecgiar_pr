@@ -206,6 +206,8 @@ export class SummaryService {
           }
         }
         await this._resultByIntitutionsRepository.save(institutionsList);
+      }else{
+        await this._resultByIntitutionsRepository.updateGenericIstitutions(resultId, [], 3, user.id);
       }
 
 

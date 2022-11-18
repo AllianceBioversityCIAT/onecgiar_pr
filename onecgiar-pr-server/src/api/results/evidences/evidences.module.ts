@@ -12,10 +12,18 @@ import { EvidencesRepository } from './evidences.repository';
 import { HandlersError } from 'src/shared/handlers/error.utils';
 import { ResultRepository } from '../result.repository';
 import { VersionRepository } from '../versions/version.repository';
+import { ResultsKnowledgeProductsRepository } from '../results-knowledge-products/repositories/results-knowledge-products.repository';
 
 @Module({
   controllers: [EvidencesController],
-  providers: [EvidencesService, EvidencesRepository, HandlersError, ResultRepository, VersionRepository],
+  providers: [
+    EvidencesService,
+    EvidencesRepository,
+    HandlersError,
+    ResultRepository,
+    VersionRepository,
+    ResultsKnowledgeProductsRepository,
+  ],
   imports: [AuthModule],
   exports: [EvidencesRepository],
 })
