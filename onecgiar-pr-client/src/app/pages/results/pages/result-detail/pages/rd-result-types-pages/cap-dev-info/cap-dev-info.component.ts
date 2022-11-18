@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { environment } from 'src/environments/environment';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { InstitutionsService } from '../../../../../../../shared/services/global/institutions.service';
+import { CapDevInfoRoutingBody } from './model/capDevInfoRoutingBody';
 
 @Component({
   selector: 'app-cap-dev-info',
@@ -9,6 +10,7 @@ import { InstitutionsService } from '../../../../../../../shared/services/global
   styleUrls: ['./cap-dev-info.component.scss']
 })
 export class CapDevInfoComponent implements OnInit {
+  capDevInfoRoutingBody = new CapDevInfoRoutingBody();
   longTermOrShortTermValue = null;
   longTermOrShortTermList = [
     { id: 1, name: 'Long-term' },
@@ -32,8 +34,18 @@ export class CapDevInfoComponent implements OnInit {
     this.getSectionInformation();
     this.requestEvent();
   }
-  getSectionInformation() {}
-  onSaveSection() {}
+  getSectionInformation() {
+    this.api.resultsSE.GET_capacityDevelopent().subscribe(({ response }) => {
+      console.log(response);
+      this.capDevInfoRoutingBody = response;
+    });
+  }
+  onSaveSection() {
+    console.log(this.capDevInfoRoutingBody);
+    this.api.resultsSE.PATCH_capacityDevelopent(this.capDevInfoRoutingBody).subscribe(resp => {
+      this.getSectionInformation();
+    });
+  }
 
   deliveryMethodDescription() {
     return `Please go to <a href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultId}/geographic-location" class="open_route" target="_blank">section 4. Geographic Location</a> and specify the location info of where the training took place in case you select the Face to face or Blended option.`;

@@ -8,27 +8,29 @@
         description="In the case where the gender balance of trainees is not known (e.g. online training), assume 50-50 split.">
     </app-pr-field-header>
     <div class="auto_fit_container">
-        <app-pr-input placeholder="Type quantity" label="Female" type="number">
+        <app-pr-input placeholder="Type quantity" label="Female" type="number"
+            [(ngModel)]="this.capDevInfoRoutingBody.female_using">
         </app-pr-input>
-        <app-pr-input placeholder="Type quantity" label="Male" type="number">
+        <app-pr-input placeholder="Type quantity" label="Male" type="number"
+            [(ngModel)]="this.capDevInfoRoutingBody.male_using">
         </app-pr-input>
     </div>
 
     <app-pr-radio-button label="Long-term or short-term"
         description="This should reflect where the outcome has taken place/contributed to benefit."
-        [(ngModel)]="longTermOrShortTermValue" [options]="this.longTermOrShortTermList" optionLabel="name"
-        optionValue='id' [required]="false">
+        [(ngModel)]="this.capDevInfoRoutingBody.capdev_term_id" [options]="this.longTermOrShortTermList"
+        optionLabel="name" optionValue='id' [required]="false">
     </app-pr-radio-button>
 
     <br>
 
-    <app-pr-radio-button *ngIf="longTermOrShortTermValue == 1" [options]="this.longTermSubOptions" optionLabel="name"
-        optionValue='id' [required]="false">
+    <app-pr-radio-button *ngIf="this.capDevInfoRoutingBody.capdev_term_id == 1" [options]="this.longTermSubOptions"
+        optionLabel="name" optionValue='id' [required]="false">
     </app-pr-radio-button>
 
     <app-pr-radio-button label="Delivery Method" [description]="deliveryMethodDescription()"
-        [(ngModel)]="longTermOrShortTermValue" [options]="this.deliveryMethodOptions" optionLabel="name"
-        optionValue='id' [required]="false">
+        [(ngModel)]="this.capDevInfoRoutingBody.capdev_delivery_method_id" [options]="this.deliveryMethodOptions"
+        optionLabel="name" optionValue='id' [required]="false">
     </app-pr-radio-button>
     <br>
     <app-alert-status
@@ -38,7 +40,7 @@
     <app-pr-multi-select [options]="this.institutionsSE.institutionsList"
         label="Where the trainees attending on behalf of an organization?" selectedLabel="Actor(s) selected"
         selectedOptionLabel="institutions_name" optionLabel="full_name" optionValue="institutions_id"
-        placeholder="Select actors">
+        placeholder="Select actors" [(ngModel)]="this.capDevInfoRoutingBody.institutions">
     </app-pr-multi-select>
 
 </div>
