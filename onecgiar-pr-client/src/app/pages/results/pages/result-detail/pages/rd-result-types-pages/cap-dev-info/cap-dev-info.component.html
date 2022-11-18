@@ -17,6 +17,7 @@
     </div>
 
     <app-pr-radio-button label="Long-term or short-term"
+        *ngIf="this.capDevInfoRoutingBody.capdev_term_id == 3 || this.capDevInfoRoutingBody.capdev_term_id == null"
         description="This should reflect where the outcome has taken place/contributed to benefit."
         [(ngModel)]="this.capDevInfoRoutingBody.capdev_term_id" [options]="this.capdevsTerms" optionLabel="name"
         optionValue='capdev_term_id' [required]="false">
