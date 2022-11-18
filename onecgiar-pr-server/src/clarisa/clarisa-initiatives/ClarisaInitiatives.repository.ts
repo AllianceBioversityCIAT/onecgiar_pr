@@ -27,7 +27,15 @@ export class ClarisaInitiativesRepository extends Repository<ClarisaInitiative> 
   }
 
   async getAllInitiatives() {
-    return this.find();
+    try {
+      return this.find();
+    } catch (error) {
+      throw {
+        message: `[${ClarisaInitiativesRepository.name}] => getAllInitiatives error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
   }
 
   async getTocIdFromOst() {

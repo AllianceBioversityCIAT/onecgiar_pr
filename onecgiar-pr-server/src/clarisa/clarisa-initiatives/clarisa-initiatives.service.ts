@@ -39,8 +39,19 @@ export class ClarisaInitiativesService {
     }
   }
 
-  findAll() {
-    return this._clarisaInitiativesRepository.getAllInitiatives();
+  async findAll() {
+    try {
+      const inititatives =
+        await this._clarisaInitiativesRepository.getAllInitiatives();
+      return {
+        response: inititatives,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      console.log(error);
+      return this._handlersError.returnErrorRes({ error });
+    }
   }
 
   findOne(id: number) {
