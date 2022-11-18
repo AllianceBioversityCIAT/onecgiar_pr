@@ -5,6 +5,7 @@ import { UpdateSummaryDto } from './dto/update-summary.dto';
 import { InnovationUseDto } from './dto/create-innovation-use.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
+import { capdevDto } from './dto/create-capacity-developents.dto';
 
 @Controller()
 export class SummaryController {
@@ -39,6 +40,33 @@ export class SummaryController {
     );
     const { message, response, status } =
       await this.summaryService.getInnovationUse(resultId);
+    throw new HttpException({ message, response }, status);
+  }
+
+  @Patch('capacity-developent/create/result/:resultId')
+  async saveCapacityDevelopents(
+    @Param('resultId') resultId: number,
+    @Body() capdevDto: capdevDto,
+    @Headers() auth: HeadersDto
+  ) {
+    const token: TokenDto = <TokenDto>(
+      JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
+    );
+    const { message, response, status } =
+      await this.summaryService.saveCapacityDevelopents(capdevDto, resultId,token);
+    throw new HttpException({ message, response }, status);
+  }
+
+  @Get('capacity-developent/get/result/:resultId')
+  async getCapacityDevelopents(
+    @Param('resultId') resultId: number,
+    @Headers() auth: HeadersDto
+  ) {
+    const token: TokenDto = <TokenDto>(
+      JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
+    );
+    const { message, response, status } =
+      await this.summaryService.getCapacityDevelopents(resultId);
     throw new HttpException({ message, response }, status);
   }
 
