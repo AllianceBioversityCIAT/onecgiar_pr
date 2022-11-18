@@ -18,19 +18,21 @@
 
     <app-pr-radio-button label="Long-term or short-term"
         description="This should reflect where the outcome has taken place/contributed to benefit."
-        [(ngModel)]="this.capDevInfoRoutingBody.capdev_term_id" [options]="this.longTermOrShortTermList"
-        optionLabel="name" optionValue='id' [required]="false">
+        [(ngModel)]="this.capDevInfoRoutingBody.capdev_term_id" [options]="this.capdevsTerms" optionLabel="name"
+        optionValue='capdev_term_id' [required]="false">
     </app-pr-radio-button>
 
     <br>
 
-    <app-pr-radio-button *ngIf="this.capDevInfoRoutingBody.capdev_term_id == 1" [options]="this.longTermSubOptions"
-        optionLabel="name" optionValue='id' [required]="false">
+    <app-pr-radio-button
+        *ngIf="this.capDevInfoRoutingBody.capdev_term_id == 4 ||this.capDevInfoRoutingBody.capdev_term_id == 1||this.capDevInfoRoutingBody.capdev_term_id == 2"
+        [options]="this.capdevsSubTerms" optionLabel="name" optionValue='capdev_term_id' [required]="false"
+        [(ngModel)]="this.capDevInfoRoutingBody.capdev_term_id">
     </app-pr-radio-button>
 
     <app-pr-radio-button label="Delivery Method" [description]="deliveryMethodDescription()"
         [(ngModel)]="this.capDevInfoRoutingBody.capdev_delivery_method_id" [options]="this.deliveryMethodOptions"
-        optionLabel="name" optionValue='id' [required]="false">
+        optionLabel="name" optionValue='capdev_delivery_method_id' [required]="false">
     </app-pr-radio-button>
     <br>
     <app-alert-status

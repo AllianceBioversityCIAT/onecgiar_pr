@@ -4,8 +4,8 @@
     <div class="read-only" *ngSwitchCase="true" [innerHtml]="valueName"></div>
     <div class="radioButtonList" *ngSwitchCase="false" [hidden]="hideOptions">
         <div class="radioButton" *ngFor="let option of this.options; let i=index">
-            <p-radioButton name="groupname" inputId="groupname{{i}}{{this.joinName()}}" [value]="option[optionValue]"
-                [(ngModel)]="value">
+            <p-radioButton (click)="onSelect()" name="groupname" inputId="groupname{{i}}{{this.joinName()}}"
+                [value]="option[optionValue]" [(ngModel)]="value">
             </p-radioButton>
             <label for="groupname{{i}}{{this.joinName()}}" class="name">{{option[this.optionLabel]}}</label>
         </div>

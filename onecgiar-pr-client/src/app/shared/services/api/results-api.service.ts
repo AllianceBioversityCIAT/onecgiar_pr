@@ -196,6 +196,23 @@ export class ResultsApiService {
   GET_capacityDevelopent() {
     return this.http.get<any>(`${this.apiBaseUrl}summary/capacity-developent/get/result/${this.currentResultId}`).pipe(this.saveButtonSE.isSavingSectionPipe());
   }
+
+  GET_capdevsTerms() {
+    return this.http.get<any>(`${this.apiBaseUrl}capdevs-terms/get/all`);
+  }
+
+  GET_capdevsDeliveryMethod() {
+    return this.http.get<any>(`${this.apiBaseUrl}capdevs-delivery-methods/get/all`);
+  }
+
+  GET_AllInitiatives() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/initiatives`).pipe(
+      map(resp => {
+        resp?.response.map(initiative => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name}</strong> - ${initiative?.name}`));
+        return resp;
+      })
+    );
+  }
 }
 
 // 200 no existe

@@ -2,8 +2,7 @@
     <div class="index">{{this.index}}</div>
     <div>
         <div class="link">
-            <app-pr-input [label]="isSuppInfo ? 'Link' :'CGSpace Link'" [(ngModel)]="this.evidence.link"
-                placeholder="Add link"></app-pr-input>
+            <app-pr-input label="Link" [(ngModel)]="this.evidence.link" placeholder="Add link"></app-pr-input>
             <div class="checkboxes" *ngIf="!isSuppInfo">
                 <app-pr-checkbox label="Gender related evidence" [(ngModel)]="this.evidence.gender_related">
                 </app-pr-checkbox>

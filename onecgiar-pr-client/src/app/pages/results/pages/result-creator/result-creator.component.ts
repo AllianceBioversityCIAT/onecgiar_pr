@@ -4,6 +4,7 @@ import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultLevelService } from './services/result-level.service';
 import { Router } from '@angular/router';
 import { ResultBody } from '../../../../shared/interfaces/result.interface';
+import { InitiativesService } from '../../../../shared/services/global/initiatives.service';
 
 @Component({
   selector: 'app-result-creator',
@@ -16,7 +17,7 @@ export class ResultCreatorComponent implements OnInit {
   exactTitleFound = false;
   mqapJson: {};
   validating = false;
-  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, private router: Router) {}
+  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, private router: Router, private initiativesSE: InitiativesService) {}
 
   ngOnInit(): void {
     this.resultLevelSE.resultBody = new ResultBody();
