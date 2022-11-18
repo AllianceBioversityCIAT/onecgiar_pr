@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { AuthService } from '../api/auth.service';
 
 @Injectable({
   providedIn: 'root'
@@ -25,20 +26,70 @@ export class RolesService {
     }
   ];
 
+  constructor(private authSE: AuthService) {}
+
   fieldValidation(restrictionId) {
     const restrictionFinded = this.restrictions.find(restriction => restriction.id == restrictionId);
     console.log(restrictionFinded);
     return Boolean(restrictionFinded.roleIds.find(roleId => roleId == this.currentInitiativeRole));
   }
-
-  validateReadOnly(result) {
-    const { application, initiative } = this.roles;
-    application.role_id = 1;
+  validateApplication(application) {
     this.readOnly = application?.role_id != 1;
-    console.log(this.readOnly);
-    // const initiativeFinded = initiative.find(init => init.initiative_id == 7);
-    // this.readOnly = Boolean(initiativeFinded);
-    // this.currentInitiativeRole = initiativeFinded?.role_id;
+    return { isAdmin: !this.readOnly };
+  }
+
+  async validateReadOnly(result?) {
+    // console.log('%cvalidateReadOnly', 'background: #222; color: #52cd47');
+    const updateMyRoles = async roles => {
+      if (!this.roles) await roles;
+      if (!this.roles) return (this.readOnly = true);
+      const { application, initiative } = this.roles;
+      const { isAdmin } = this.validateApplication(application);
+      if (isAdmin) return null;
+      const { initiative_id } = result;
+      const initiativeFinded = initiative.find(init => init.initiative_id == initiative_id);
+      this.readOnly = Boolean(!initiativeFinded);
+      // this.readOnly ? console.log('%cIs ReadOnly => ' + this.readOnly, 'background: #222; color: #d84242') : console.log('%cNot ReadOnly => ' + this.readOnly, 'background: #222; color: #aaeaf5');
+      // console.log('%c******END OF validateReadOnly*******', 'background: #222; color: #52cd47');
+      return null;
+    };
+    updateMyRoles(this.updateRolesListFromLocalStorage());
+    updateMyRoles(this.updateRolesList());
+  }
+
+  async updateRolesListFromLocalStorage() {
+    this.roles = JSON.parse(localStorage.getItem('roles'));
+  }
+
+  async updateRolesList() {
+    return new Promise((resolve, reject) => {
+      this.authSE.GET_allRolesByUser().subscribe(
+        ({ response }) => {
+          //? Update role list
+          this.roles = response;
+          localStorage.setItem('roles', JSON.stringify(response));
+          //?
+          resolve(response);
+        },
+        err => {
+          console.log(err);
+          reject();
+        }
+      );
+    });
+  }
+
+  get isAdmin() {
+    // console.log('isAdmin');
+    if (this.roles.application.role_id == 1) return true;
+    return false;
+  }
+
+  validateInitiative(initiative_id) {
+    console.log(this.roles.initiative);
+    console.log(initiative_id);
+    console.log(!!this.roles.initiative.find(item => item.initiative_id == initiative_id));
+    return !!this.roles.initiative.find(item => item.initiative_id == initiative_id);
   }
 
   //TODO App roles
@@ -54,6 +105,4 @@ export class RolesService {
   Coordinator
   Member
   */
-
-  constructor() {}
 }

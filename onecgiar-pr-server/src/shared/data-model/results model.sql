@@ -226,7 +226,7 @@ CREATE INDEX `fk_results_legacy_indicators_list1_idx` ON `mydb`.`results` (`lega
 
 CREATE INDEX `fk_results_climate_tag_levels1_idx` ON `mydb`.`results` (`climate_tag_levels_id` ASC) VISIBLE;
 
-CREATE INDEX `fk_results_geographical_scope1_idx` ON `mydb`.`results` ( ASC) VISIBLE;
+CREATE INDEX `fk_results_geographical_scope1_idx` ON `mydb`.`results` () VISIBLE;
 
 CREATE INDEX `fk_results_geographic_scopes1_idx` ON `mydb`.`results` (`geographic_scope_id` ASC) VISIBLE;
 
@@ -505,10 +505,11 @@ CREATE UNIQUE INDEX `uk_results_by_institution_types_idx` ON `mydb`.`results_by_
 CREATE TABLE IF NOT EXISTS `mydb`.`evidences` (
   `id` BIGINT NOT NULL,
   `result_id` BIGINT NOT NULL,
-  `link` VARCHAR(100) NOT NULL,
-  `description` TEXT NULL,
+  `is_supplementary` TINYINT NULL,
   `gender_related` TINYINT NOT NULL,
   `youth_related` TINYINT NOT NULL,
+  `link` VARCHAR(100) NOT NULL,
+  `description` TEXT NULL,
   `knowledge_product_related` BIGINT NULL,
   `is_active` TINYINT NOT NULL,
   `version_id` BIGINT NOT NULL,
@@ -1753,6 +1754,9 @@ CREATE UNIQUE INDEX `uk_results_impact_area_indicators_idx` ON `mydb`.`results_i
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `mydb`.`results_innovations_use` (
   `result_innovation_use_id` BIGINT NOT NULL,
+  `results_id` BIGINT NOT NULL,
+  `male_using` BIGINT NULL,
+  `female_using` BIGINT NULL,
   `is_active` TINYINT NOT NULL,
   `version_id` BIGINT NOT NULL,
   `created_by` BIGINT NOT NULL,
@@ -1760,19 +1764,24 @@ CREATE TABLE IF NOT EXISTS `mydb`.`results_innovations_use` (
   `last_updated_date` DATE NULL,
   `last_updated_by` BIGINT NULL,
   PRIMARY KEY (`result_innovation_use_id`),
-  CONSTRAINT `fk_table1_users16`
+  CONSTRAINT `fk_results_innovations_use_users16`
     FOREIGN KEY (`created_by`)
     REFERENCES `mydb`.`users` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,
-  CONSTRAINT `fk_table1_users26`
+  CONSTRAINT `fk_results_innovations_use_users26`
     FOREIGN KEY (`last_updated_by`)
     REFERENCES `mydb`.`users` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,
-  CONSTRAINT `fk_table1_versions16`
+  CONSTRAINT `fk_results_innovations_use_versions16`
     FOREIGN KEY (`version_id`)
     REFERENCES `mydb`.`versions` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_innovations_use_results1`
+    FOREIGN KEY (`results_id`)
+    REFERENCES `mydb`.`results` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
@@ -1783,12 +1792,40 @@ CREATE INDEX `fk_results_innovations_use_users2_idx` ON `mydb`.`results_innovati
 
 CREATE INDEX `fk_results_innovations_use_versions1_idx` ON `mydb`.`results_innovations_use` (`version_id` ASC) VISIBLE;
 
+CREATE INDEX `fk_results_innovations_use_results1_idx` ON `mydb`.`results_innovations_use` (`results_id` ASC) VISIBLE;
+
+
+-- -----------------------------------------------------
+-- Table `mydb`.`policy_types`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `mydb`.`policy_types` (
+  `policy_type_id` BIGINT NOT NULL,
+  `name` VARCHAR(100) NULL,
+  `description` VARCHAR(500) NULL,
+  PRIMARY KEY (`policy_type_id`))
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Table `mydb`.`policy_stages`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `mydb`.`policy_stages` (
+  `policy_stage_id` BIGINT NOT NULL,
+  `name` VARCHAR(100) NULL,
+  `description` VARCHAR(500) NULL,
+  PRIMARY KEY (`policy_stage_id`))
+ENGINE = InnoDB;
+
 
 -- -----------------------------------------------------
 -- Table `mydb`.`results_policy_changes`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `mydb`.`results_policy_changes` (
   `result_policy_change_id` BIGINT NOT NULL,
+  `result_id` BIGINT NOT NULL,
+  `policy_type_id` BIGINT NOT NULL,
+  `policy_stage_id` BIGINT NOT NULL,
+  `amount` FLOAT NULL,
   `is_active` TINYINT NOT NULL,
   `version_id` BIGINT NOT NULL,
   `created_by` BIGINT NOT NULL,
@@ -1796,28 +1833,49 @@ CREATE TABLE IF NOT EXISTS `mydb`.`results_policy_changes` (
   `last_updated_date` DATE NULL,
   `last_updated_by` BIGINT NULL,
   PRIMARY KEY (`result_policy_change_id`),
-  CONSTRAINT `fk_table1_users160`
+  CONSTRAINT `fk_results_policy_changes_users160`
     FOREIGN KEY (`created_by`)
     REFERENCES `mydb`.`users` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,
-  CONSTRAINT `fk_table1_users260`
+  CONSTRAINT `fk_results_policy_changes_users260`
     FOREIGN KEY (`last_updated_by`)
     REFERENCES `mydb`.`users` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,
-  CONSTRAINT `fk_table1_versions160`
+  CONSTRAINT `fk_results_policy_changes_versions160`
     FOREIGN KEY (`version_id`)
     REFERENCES `mydb`.`versions` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_policy_changes_results1`
+    FOREIGN KEY (`result_id`)
+    REFERENCES `mydb`.`results` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_policy_changes_policy_types1`
+    FOREIGN KEY (`policy_type_id`)
+    REFERENCES `mydb`.`policy_types` (`policy_type_id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_policy_changes_policy_stages1`
+    FOREIGN KEY (`policy_stage_id`)
+    REFERENCES `mydb`.`policy_stages` (`policy_stage_id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
-CREATE INDEX `fk_table1_users1_idx` ON `mydb`.`results_policy_changes` (`created_by` ASC) VISIBLE;
+CREATE INDEX `fk_results_policy_changes_users1_idx` ON `mydb`.`results_policy_changes` (`created_by` ASC) VISIBLE;
 
-CREATE INDEX `fk_table1_users2_idx` ON `mydb`.`results_policy_changes` (`last_updated_by` ASC) VISIBLE;
+CREATE INDEX `fk_results_policy_changes_users2_idx` ON `mydb`.`results_policy_changes` (`last_updated_by` ASC) VISIBLE;
 
-CREATE INDEX `fk_table1_versions1_idx` ON `mydb`.`results_policy_changes` (`version_id` ASC) VISIBLE;
+CREATE INDEX `fk_results_policy_changes_versions1_idx` ON `mydb`.`results_policy_changes` (`version_id` ASC) VISIBLE;
+
+CREATE INDEX `fk_results_policy_changes_results1_idx` ON `mydb`.`results_policy_changes` (`result_id` ASC) VISIBLE;
+
+CREATE INDEX `fk_results_policy_changes_policy_types1_idx` ON `mydb`.`results_policy_changes` (`policy_type_id` ASC) VISIBLE;
+
+CREATE INDEX `fk_results_policy_changes_policy_stages1_idx` ON `mydb`.`results_policy_changes` (`policy_stage_id` ASC) VISIBLE;
 
 
 -- -----------------------------------------------------
@@ -1909,7 +1967,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`results_kp_mqap_institutions` (
   `result_knowledge_product_id` BIGINT NOT NULL,
   `intitution_name` VARCHAR(200) NOT NULL,
   `predicted_institution_id` BIGINT NOT NULL,
-  `confidant` INT NULL,
+  `confidant` FLOAT NULL,
   `results_by_institutions_id` BIGINT NOT NULL,
   `is_active` TINYINT NOT NULL,
   `version_id` BIGINT NOT NULL,
@@ -2046,7 +2104,8 @@ CREATE TABLE IF NOT EXISTS `mydb`.`results_kp_altmetrics` (
   `journal` VARCHAR(200) NULL,
   `score` FLOAT NULL,
   `cited_by_posts` BIGINT NULL,
-  `cited_by_delicious` BIGINT NULL,
+  `cited_by_twitter` BIGINT NULL,
+  `cited_by_msn` BIGINT NULL,
   `cited_by_facebook_pages` BIGINT NULL,
   `cited_by_blogs` BIGINT NULL,
   `cited_by_forum_users` BIGINT NULL,
@@ -2059,10 +2118,10 @@ CREATE TABLE IF NOT EXISTS `mydb`.`results_kp_altmetrics` (
   `cited_by_stack_exchange_resources` BIGINT NULL,
   `cited_by_reddit_users` BIGINT NULL,
   `cited_by_research_highlight_platforms` BIGINT NULL,
-  `cited_by_twitter_users` BIGINT NULL,
   `cited_by_youtube_channels` BIGINT NULL,
   `cited_by_weibo_users` BIGINT NULL,
   `cited_by_wikipedia_pages` BIGINT NULL,
+  `mendeley_readers` BIGINT NULL,
   `last_updated` DATE NULL,
   `image_small` VARCHAR(200) NULL,
   `image_medium` VARCHAR(200) NULL,
@@ -2151,6 +2210,317 @@ CREATE INDEX `fk_results_kp_keywords_users2_idx` ON `mydb`.`results_kp_keywords`
 CREATE INDEX `fk_results_kp_keywords_versions1_idx` ON `mydb`.`results_kp_keywords` (`version_id` ASC) VISIBLE;
 
 CREATE INDEX `fk_results_kp_keywords_results_knowledge_products1_idx` ON `mydb`.`results_kp_keywords` (`result_knowledge_product_id` ASC) VISIBLE;
+
+
+-- -----------------------------------------------------
+-- Table `mydb`.`results_kp_metadata`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `mydb`.`results_kp_metadata` (
+  `result_kp_metadata_id` BIGINT NOT NULL,
+  `result_knowledge_product_id` BIGINT NOT NULL,
+  `source` VARCHAR(45) NOT NULL COMMENT 'WOS/CGSPACE',
+  `is_isi` TINYINT NULL,
+  `accesibility` VARCHAR(100) NULL COMMENT 'Open access\n',
+  `year` INT NULL,
+  `doi` VARCHAR(200) NULL,
+  `is_peer_reviewed` TINYINT NULL,
+  `is_active` TINYINT NOT NULL,
+  `version_id` BIGINT NOT NULL,
+  `created_by` BIGINT NOT NULL,
+  `created_date` DATE NOT NULL,
+  `last_updated_date` DATE NULL,
+  `last_updated_by` BIGINT NULL,
+  PRIMARY KEY (`result_kp_metadata_id`),
+  CONSTRAINT `fk_results_kp_metadata_users1`
+    FOREIGN KEY (`created_by`)
+    REFERENCES `mydb`.`users` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_kp_metadata_users2`
+    FOREIGN KEY (`last_updated_by`)
+    REFERENCES `mydb`.`users` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_kp_metadata_versions110`
+    FOREIGN KEY (`version_id`)
+    REFERENCES `mydb`.`versions` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_kp_metadata_results_knowledge_products1`
+    FOREIGN KEY (`result_knowledge_product_id`)
+    REFERENCES `mydb`.`results_knowledge_products` (`result_knowledge_product_id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
+ENGINE = InnoDB;
+
+CREATE INDEX `fk_results_kp_metadata_users1_idx` ON `mydb`.`results_kp_metadata` (`created_by` ASC) VISIBLE;
+
+CREATE INDEX `fk_results_kp_metadata_users2_idx` ON `mydb`.`results_kp_metadata` (`last_updated_by` ASC) VISIBLE;
+
+CREATE INDEX `fk_results_kp_metadata_versions1_idx` ON `mydb`.`results_kp_metadata` (`version_id` ASC) INVISIBLE;
+
+CREATE UNIQUE INDEX `uk_results_kp_metadata_idx` ON `mydb`.`results_kp_metadata` (`source` ASC, `result_knowledge_product_id` ASC, `version_id` ASC) INVISIBLE;
+
+CREATE INDEX `fk_results_kp_metadata_results_knowledge_products1_idx` ON `mydb`.`results_kp_metadata` (`result_knowledge_product_id` ASC) VISIBLE;
+
+
+-- -----------------------------------------------------
+-- Table `mydb`.`units_of_measure`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `mydb`.`units_of_measure` (
+  `unit_of_measure_id` BIGINT NOT NULL,
+  `name` VARCHAR(100) NULL,
+  `description` VARCHAR(200) NULL,
+  PRIMARY KEY (`unit_of_measure_id`))
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Table `mydb`.`results_innovations_use_measures`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `mydb`.`results_innovations_use_measures` (
+  `result_innovations_use_measure_id` BIGINT NOT NULL,
+  `result_innovation_use_id` BIGINT NOT NULL,
+  `unit_of_measure_id` BIGINT NULL,
+  `unit_of_measure` VARCHAR(100) NULL,
+  `quantity` FLOAT NOT NULL,
+  `is_active` TINYINT NOT NULL,
+  `version_id` BIGINT NOT NULL,
+  `created_by` BIGINT NOT NULL,
+  `created_date` DATE NOT NULL,
+  `last_updated_date` DATE NULL,
+  `last_updated_by` BIGINT NULL,
+  PRIMARY KEY (`result_innovations_use_measure_id`),
+  CONSTRAINT `fk_results_innovations_use_measures_users16`
+    FOREIGN KEY (`created_by`)
+    REFERENCES `mydb`.`users` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_innovations_use_measures_users26`
+    FOREIGN KEY (`last_updated_by`)
+    REFERENCES `mydb`.`users` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_innovations_use_measures_versions16`
+    FOREIGN KEY (`version_id`)
+    REFERENCES `mydb`.`versions` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_innovations_use_measures_results_innovations_use1`
+    FOREIGN KEY (`result_innovation_use_id`)
+    REFERENCES `mydb`.`results_innovations_use` (`result_innovation_use_id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_innovations_use_measures_units_of_measure1`
+    FOREIGN KEY (`unit_of_measure_id`)
+    REFERENCES `mydb`.`units_of_measure` (`unit_of_measure_id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
+ENGINE = InnoDB;
+
+CREATE INDEX `fk_results_innovations_use_measures_users1_idx` ON `mydb`.`results_innovations_use_measures` (`created_by` ASC) VISIBLE;
+
+CREATE INDEX `fk_results_innovations_use_measures_users2_idx` ON `mydb`.`results_innovations_use_measures` (`last_updated_by` ASC) INVISIBLE;
+
+CREATE INDEX `fk_results_innovations_use_measures_versions1_idx` ON `mydb`.`results_innovations_use_measures` (`version_id` ASC) VISIBLE;
+
+CREATE INDEX `fk_results_innovations_use_measures_results_innovations_use_idx` ON `mydb`.`results_innovations_use_measures` (`result_innovation_use_id` ASC) VISIBLE;
+
+CREATE INDEX `fk_results_innovations_use_measures_units_of_measure1_idx` ON `mydb`.`results_innovations_use_measures` (`unit_of_measure_id` ASC) VISIBLE;
+
+
+-- -----------------------------------------------------
+-- Table `mydb`.`innovation_characterizations`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `mydb`.`innovation_characterizations` (
+  `innovation_characterization_id` BIGINT NOT NULL,
+  `name` VARCHAR(100) NULL,
+  `description` VARCHAR(2000) NULL,
+  PRIMARY KEY (`innovation_characterization_id`))
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Table `mydb`.`innovations_natures`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `mydb`.`innovations_natures` (
+  `innovation_nature_id` BIGINT NOT NULL,
+  `name` VARCHAR(100) NULL,
+  `description` VARCHAR(200) NULL,
+  PRIMARY KEY (`innovation_nature_id`))
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Table `mydb`.`innovation_readiness_levels`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `mydb`.`innovation_readiness_levels` (
+  `innovation_readiness_level_id` BIGINT NOT NULL,
+  `level` BIGINT NULL,
+  `name` VARCHAR(100) NULL COMMENT 'Level from 1 to 10',
+  `description` VARCHAR(200) NULL,
+  PRIMARY KEY (`innovation_readiness_level_id`))
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Table `mydb`.`results_innovations_dev`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `mydb`.`results_innovations_dev` (
+  `result_innovation_dev_id` BIGINT NOT NULL,
+  `results_id` BIGINT NOT NULL,
+  `short_title` VARCHAR(100) NULL,
+  `innovation_characterization_id` BIGINT NULL,
+  `innovation_nature_id` BIGINT NULL,
+  `innovation_readiness_level_id` BIGINT NULL,
+  `is_new_variety` TINYINT NULL,
+  `number_of_varieties` BIGINT NULL,
+  `innovation_developers` TEXT NULL,
+  `innovation_collaborators` TEXT NULL,
+  `readiness_level` VARCHAR(45) NULL,
+  `evidences_justification` TEXT NULL,
+  `is_active` TINYINT NOT NULL,
+  `version_id` BIGINT NOT NULL,
+  `created_by` BIGINT NOT NULL,
+  `created_date` DATE NOT NULL,
+  `last_updated_date` DATE NULL,
+  `last_updated_by` BIGINT NULL,
+  PRIMARY KEY (`result_innovation_dev_id`),
+  CONSTRAINT `fk_results_innovations_dev_users16`
+    FOREIGN KEY (`created_by`)
+    REFERENCES `mydb`.`users` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_innovations_dev_users26`
+    FOREIGN KEY (`last_updated_by`)
+    REFERENCES `mydb`.`users` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_innovations_dev_versions16`
+    FOREIGN KEY (`version_id`)
+    REFERENCES `mydb`.`versions` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_innovations_dev_innovation_characterizations1`
+    FOREIGN KEY (`innovation_characterization_id`)
+    REFERENCES `mydb`.`innovation_characterizations` (`innovation_characterization_id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_innovations_dev_innovations_natures1`
+    FOREIGN KEY (`innovation_nature_id`)
+    REFERENCES `mydb`.`innovations_natures` (`innovation_nature_id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_innovations_dev_innovation_readiness_levels1`
+    FOREIGN KEY (`innovation_readiness_level_id`)
+    REFERENCES `mydb`.`innovation_readiness_levels` (`innovation_readiness_level_id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_innovations_dev_results1`
+    FOREIGN KEY (`results_id`)
+    REFERENCES `mydb`.`results` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
+ENGINE = InnoDB;
+
+CREATE INDEX `fk_results_innovations_dev_users1_idx` ON `mydb`.`results_innovations_dev` (`created_by` ASC) VISIBLE;
+
+CREATE INDEX `fk_results_innovations_dev_users2_idx` ON `mydb`.`results_innovations_dev` (`last_updated_by` ASC) VISIBLE;
+
+CREATE INDEX `fk_results_innovations_dev_versions1_idx` ON `mydb`.`results_innovations_dev` (`version_id` ASC) VISIBLE;
+
+CREATE INDEX `fk_results_innovations_dev_innovation_characterizations1_idx` ON `mydb`.`results_innovations_dev` (`innovation_characterization_id` ASC) VISIBLE;
+
+CREATE INDEX `fk_results_innovations_dev_innovations_natures1_idx` ON `mydb`.`results_innovations_dev` (`innovation_nature_id` ASC) VISIBLE;
+
+CREATE INDEX `fk_results_innovations_dev_innovation_readiness_levels1_idx` ON `mydb`.`results_innovations_dev` (`innovation_readiness_level_id` ASC) VISIBLE;
+
+CREATE INDEX `fk_results_innovations_dev_results1_idx` ON `mydb`.`results_innovations_dev` (`results_id` ASC) VISIBLE;
+
+
+-- -----------------------------------------------------
+-- Table `mydb`.`capdevs_delivery_methods`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `mydb`.`capdevs_delivery_methods` (
+  `capdev_delivery_method_id` BIGINT NOT NULL,
+  `name` VARCHAR(100) NULL,
+  `description` VARCHAR(200) NULL,
+  PRIMARY KEY (`capdev_delivery_method_id`))
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Table `mydb`.`capdevs_terms`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `mydb`.`capdevs_terms` (
+  `capdev_term_id` BIGINT NOT NULL,
+  `name` VARCHAR(100) NULL,
+  `term` VARCHAR(100) NULL,
+  `description` VARCHAR(500) NULL,
+  PRIMARY KEY (`capdev_term_id`))
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Table `mydb`.`results_capacity_developents`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `mydb`.`results_capacity_developents` (
+  `result_capacity_developent_id` BIGINT NOT NULL,
+  `result_id` BIGINT NOT NULL,
+  `capdev_delivery_method_id` BIGINT NOT NULL,
+  `capdev_term_id` BIGINT NOT NULL,
+  `is_active` TINYINT NOT NULL,
+  `version_id` BIGINT NOT NULL,
+  `created_by` BIGINT NOT NULL,
+  `created_date` DATE NOT NULL,
+  `last_updated_date` DATE NULL,
+  `last_updated_by` BIGINT NULL,
+  `male_trained` BIGINT NULL,
+  `female_trained` BIGINT NULL,
+  PRIMARY KEY (`result_capacity_developent_id`),
+  CONSTRAINT `fk_results_capacity_developents_users16`
+    FOREIGN KEY (`created_by`)
+    REFERENCES `mydb`.`users` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_capacity_developents_users26`
+    FOREIGN KEY (`last_updated_by`)
+    REFERENCES `mydb`.`users` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_capacity_developents_versions16`
+    FOREIGN KEY (`version_id`)
+    REFERENCES `mydb`.`versions` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_capacity_developents_results1`
+    FOREIGN KEY (`result_id`)
+    REFERENCES `mydb`.`results` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_capacity_developents_capdevs_delivery_methods1`
+    FOREIGN KEY (`capdev_delivery_method_id`)
+    REFERENCES `mydb`.`capdevs_delivery_methods` (`capdev_delivery_method_id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_capacity_developents_capdevs_terms1`
+    FOREIGN KEY (`capdev_term_id`)
+    REFERENCES `mydb`.`capdevs_terms` (`capdev_term_id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
+ENGINE = InnoDB;
+
+CREATE INDEX `fk_results_capacity_developents_users1_idx` ON `mydb`.`results_capacity_developents` (`created_by` ASC) VISIBLE;
+
+CREATE INDEX `fk_results_capacity_developents_users2_idx` ON `mydb`.`results_capacity_developents` (`last_updated_by` ASC) VISIBLE;
+
+CREATE INDEX `fk_results_capacity_developents_versions1_idx` ON `mydb`.`results_capacity_developents` (`version_id` ASC) VISIBLE;
+
+CREATE INDEX `fk_results_capacity_developents_results1_idx` ON `mydb`.`results_capacity_developents` (`result_id` ASC) VISIBLE;
+
+CREATE INDEX `fk_results_capacity_developents_capdevs_delivery_methods1_idx` ON `mydb`.`results_capacity_developents` (`capdev_delivery_method_id` ASC) VISIBLE;
+
+CREATE INDEX `fk_results_capacity_developents_capdevs_terms1_idx` ON `mydb`.`results_capacity_developents` (`capdev_term_id` ASC) VISIBLE;
 
 USE `prdb` ;
 

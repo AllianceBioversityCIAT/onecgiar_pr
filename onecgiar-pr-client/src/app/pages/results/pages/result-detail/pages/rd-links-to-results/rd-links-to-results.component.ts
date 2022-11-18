@@ -47,7 +47,6 @@ export class RdLinksToResultsComponent {
     console.log(this.linksToResultsBody);
     this.api.resultsSE.POST_resultsLinked(this.linksToResultsBody).subscribe(resp => {
       console.log(resp);
-      this.api.alertsFe.show({ id: 'sectionSaved', title: 'Section saved correctly', description: '', status: 'success', closeIn: 500 });
       this.getSectionInformation();
     });
   }

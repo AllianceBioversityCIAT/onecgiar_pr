@@ -24,7 +24,6 @@ export class RdEvidencesComponent {
     console.log(this.evidencesBody);
     this.api.resultsSE.POST_evidences(this.evidencesBody).subscribe(resp => {
       this.getSectionInformation();
-      this.api.alertsFe.show({ id: 'sectionSaved', title: 'Section saved correctly', description: '', status: 'success', closeIn: 500 });
     });
   }
 
@@ -51,4 +50,12 @@ export class RdEvidencesComponent {
     if (gender_related && youth_related) return false;
     return text;
   }
+
+  get validateCGSpaceLinks() {
+    // console.log();
+    return !this.evidencesBody.evidences.every(evidence => evidence?.link?.includes('https://cgspace.cgiar.org') || evidence?.link?.includes('/10568/'));
+  }
+
+  //TODO knowledge_product_related, disable field
+  OpenKp() {}
 }

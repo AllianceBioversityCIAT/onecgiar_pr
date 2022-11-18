@@ -43,5 +43,25 @@ export class TocLevelRepository extends Repository<TocLevel> {
       };
     }
   }
+
+  async getTocLevelByResult() {
+    const queryData = `
+    SELECT  
+      tl.toc_level_id,
+      tl.name,
+      tl.description 
+      from toc_level tl;
+    `;
+    try {
+      const tocResult:TocLevel[] = await this.query(queryData);
+      return tocResult;
+    } catch (error) {
+      throw {
+        message: `[${TocLevelRepository.name}] => getAllTocResults error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
 }
 

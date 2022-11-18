@@ -3,7 +3,7 @@ import { NonPooledProjectsService } from './non-pooled-projects.service';
 import { CreateNonPooledProjectDto } from './dto/create-non-pooled-project.dto';
 import { UpdateNonPooledProjectDto } from './dto/update-non-pooled-project.dto';
 
-@Controller('non-pooled-projects')
+@Controller()
 export class NonPooledProjectsController {
   constructor(private readonly nonPooledProjectsService: NonPooledProjectsService) {}
 

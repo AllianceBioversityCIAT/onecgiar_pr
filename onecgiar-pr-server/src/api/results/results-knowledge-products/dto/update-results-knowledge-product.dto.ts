@@ -1,4 +1,6 @@
 import { PartialType } from '@nestjs/mapped-types';
-import { CreateResultsKnowledgeProductDto } from './create-results-knowledge-product.dto';
+import { CreateResultsKnowledgeProductFromHandleDto } from './create-results-knowledge-product-from-handle.dto';
 
-export class UpdateResultsKnowledgeProductDto extends PartialType(CreateResultsKnowledgeProductDto) {}
+export class UpdateResultsKnowledgeProductDto {
+  resultsKnowledgeProductId: number;
+}

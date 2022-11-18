@@ -4,6 +4,7 @@ import { GeneralInfoBody } from './models/generalInfoBody';
 import { ScoreService } from '../../../../../../shared/services/global/score.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { environment } from '../../../../../../../environments/environment';
+import { RolesService } from '../../../../../../shared/services/global/roles.service';
 
 @Component({
   selector: 'app-rd-general-information',
@@ -13,7 +14,7 @@ import { environment } from '../../../../../../../environments/environment';
 export class RdGeneralInformationComponent {
   generalInfoBody = new GeneralInfoBody();
   toggle = 0;
-  constructor(private api: ApiService, public scoreSE: ScoreService, public institutionsSE: InstitutionsService) {}
+  constructor(private api: ApiService, public scoreSE: ScoreService, public institutionsSE: InstitutionsService, public rolesSE: RolesService) {}
   ngOnInit(): void {
     this.showAlerts();
     this.getSectionInformation();
@@ -34,7 +35,6 @@ export class RdGeneralInformationComponent {
     // console.log(this.generalInfoBody);
     this.api.resultsSE.PATCH_generalInformation(this.generalInfoBody).subscribe(
       resp => {
-        this.api.alertsFe.show({ id: 'sectionSaved', title: 'Section saved correctly', description: '', status: 'success', closeIn: 500 });
         this.getSectionInformation();
       },
       err => {
@@ -67,18 +67,21 @@ export class RdGeneralInformationComponent {
       querySelector: '#climate_change_tag_alert',
       position: 'beforeend'
     });
-    this.api.alertsFs.show({
-      status: 'success',
-      title: 'sd',
-      description: "If you don't find the actor you are looking for, <a class='open_route' id='partnerRequest'>request</a> to have it added to the list.",
-      querySelector: '#parterRequestAlert',
-      position: 'beforeend'
-    });
-
+    this.requestEvent();
     try {
       document.getElementById('partnerRequest').addEventListener('click', e => {
         this.api.dataControlSE.showPartnersRequest = true;
       });
     } catch (error) {}
+  }
+
+  requestEvent() {
+    this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
+      try {
+        document.querySelector('.alert-event').addEventListener('click', e => {
+          this.api.dataControlSE.showPartnersRequest = true;
+        });
+      } catch (error) {}
+    });
   }
 }

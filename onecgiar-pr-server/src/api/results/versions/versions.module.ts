@@ -8,8 +8,8 @@ import { VersionsService } from './versions.service';
 import { VersionsController } from './versions.controller';
 import { VersionRepository } from './version.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
-import { JwtMiddleware } from 'src/auth/Middlewares/jwt.middleware';
-import { AuthModule } from 'src/auth/auth.module';
+import { AuthModule } from '../../../auth/auth.module';
+import { JwtMiddleware } from '../../../auth/Middlewares/jwt.middleware';
 
 @Module({
   controllers: [VersionsController],

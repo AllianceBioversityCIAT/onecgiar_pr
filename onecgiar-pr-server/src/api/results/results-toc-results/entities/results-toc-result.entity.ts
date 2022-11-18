@@ -4,6 +4,7 @@ import { Result } from '../../entities/result.entity';
 import { ClarisaActionAreaOutcome } from '../../../../clarisa/clarisa-action-area-outcome/entities/clarisa-action-area-outcome.entity';
 import { Version } from '../../versions/entities/version.entity';
 import { User } from '../../../../auth/modules/user/entities/user.entity';
+import { ClarisaInitiative } from '../../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 
 @Entity('results_toc_result')
 export class ResultsTocResult {
@@ -14,11 +15,11 @@ export class ResultsTocResult {
     })
     result_toc_result_id: number;
 
-    @ManyToOne(() => TocResult, tr => tr.toc_result_id)
+    @ManyToOne(() => TocResult, tr => tr.toc_result_id, { nullable: true})
     @JoinColumn({
         name: 'toc_result_id'
     })
-    toc_result_id: number;
+    toc_result_id!: number;
 
     @ManyToOne(() => Result, r => r.id)
     @JoinColumn({
@@ -34,11 +35,18 @@ export class ResultsTocResult {
 
     @Column({
         name: 'planned_result',
-        type: 'tinyint',
+        type: 'boolean',
         nullable: true
 
     })
-    planned_result: number;
+    planned_result!: boolean;
+
+    @ManyToOne(() => ClarisaInitiative, ci => ci.id, {nullable: true})
+    @JoinColumn({
+        name: 'initiative_id'
+    })
+    initiative_id!: number;
+
 
     @Column({
         name: 'is_active',

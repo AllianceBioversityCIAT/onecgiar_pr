@@ -66,7 +66,7 @@ export class ResultsService {
     private readonly _resultCountriesService: ResultCountriesService,
     private readonly _genderTagRepository: GenderTagRepository,
     private readonly _resultRegionRepository: ResultRegionRepository,
-    private readonly _resultCountryRepository: ResultCountryRepository
+    private readonly _resultCountryRepository: ResultCountryRepository,
   ) {}
 
   /**
@@ -135,19 +135,6 @@ export class ResultsService {
       const rl: ResultLevel = <ResultLevel>resultLevel;
       const rt: ResultType = <ResultType>resultType.response;
 
-      if (rt.name === 'Knowledge Product') {
-        /** aca va la funcion de QAP */
-        /** funcion para mapear el Knowledge Product */
-        /**
-         * !cambiar esta funcion apenas se tenga MQAP
-         */
-        throw {
-          response: {},
-          message: 'Knowledge Product not working!',
-          status: HttpStatus.INTERNAL_SERVER_ERROR,
-        };
-      }
-
       const version = await this._versionsService.findBaseVersion();
       if (version.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: version });
@@ -196,9 +183,9 @@ export class ResultsService {
 
   /**
    * ! endpoint getAllInstitutions
-   * @returns 
+   * @returns
    */
-  async getAllInstitutions(){
+  async getAllInstitutions() {
     try {
       const entities =
         await this._clarisaInstitutionsRepository.getAllInstitutions();
@@ -222,8 +209,9 @@ export class ResultsService {
 
   async getAllInstitutionsType() {
     try {
-      const entities = await this._clarisaInstitutionsTypeRepository.getInstitutionsType();
-      if(!entities.length){
+      const entities =
+        await this._clarisaInstitutionsTypeRepository.getInstitutionsType();
+      if (!entities.length) {
         throw {
           response: {},
           message: 'Institutions Type Not Found',
@@ -246,8 +234,10 @@ export class ResultsService {
     user: TokenDto,
   ) {
     try {
-      const result = await this._resultRepository.getResultById(resultGeneralInformation.result_id);
-      if(!result){
+      const result = await this._resultRepository.getResultById(
+        resultGeneralInformation.result_id,
+      );
+      if (!result) {
         throw {
           response: {},
           message: 'The result does not exist',
@@ -295,31 +285,40 @@ export class ResultsService {
           status: HttpStatus.NOT_FOUND,
         };
       }
-      if(resultGeneralInformation.institutions.length){
-        const validInstitutions = await this._clarisaInstitutionsRepository.getValidInstitution(resultGeneralInformation.institutions);
-  
-        const isValidInst: any[] = validInstitutions.filter(el => el.valid === '0');
-        if(isValidInst.length){
+      if (resultGeneralInformation.institutions.length) {
+        const validInstitutions =
+          await this._clarisaInstitutionsRepository.getValidInstitution(
+            resultGeneralInformation.institutions,
+          );
+
+        const isValidInst: any[] = validInstitutions.filter(
+          (el) => el.valid === '0',
+        );
+        if (isValidInst.length) {
           throw {
             response: isValidInst,
             message: 'Institutions do not exist that are intended to assign',
             status: HttpStatus.BAD_REQUEST,
           };
         }
-
       }
 
-      if(resultGeneralInformation.institutions_type.length){
-        const validInstitutionType = await this._clarisaInstitutionsTypeRepository.getValidInstitutionType(resultGeneralInformation.institutions_type);
-        const isValidInstType: any[] = validInstitutionType.filter(el => el.valid === '0');
-        if(isValidInstType.length){
+      if (resultGeneralInformation.institutions_type.length) {
+        const validInstitutionType =
+          await this._clarisaInstitutionsTypeRepository.getValidInstitutionType(
+            resultGeneralInformation.institutions_type,
+          );
+        const isValidInstType: any[] = validInstitutionType.filter(
+          (el) => el.valid === '0',
+        );
+        if (isValidInstType.length) {
           throw {
             response: isValidInstType,
-            message: 'Institutions type do not exist that are intended to assign',
+            message:
+              'Institutions type do not exist that are intended to assign',
             status: HttpStatus.BAD_REQUEST,
           };
         }
-        
       }
 
       if (!resultGeneralInformation.is_krs) {
@@ -338,19 +337,38 @@ export class ResultsService {
         result_type_id: resultByLevel.result_type_id,
         result_level_id: resultByLevel.result_level_id,
         description: resultGeneralInformation.result_description,
-        gender_tag_level_id: resultGeneralInformation.gender_tag_id?genderTag.id: null,
-        climate_change_tag_level_id: resultGeneralInformation.climate_change_tag_id?climateTag.id:null,
+        gender_tag_level_id: resultGeneralInformation.gender_tag_id
+          ? genderTag.id
+          : null,
+        climate_change_tag_level_id:
+          resultGeneralInformation.climate_change_tag_id ? climateTag.id : null,
         krs_url: resultGeneralInformation.krs_url,
         is_krs: resultGeneralInformation.is_krs,
         last_updated_by: user.id,
       });
 
-      const institutions = await this._resultByIntitutionsRepository.updateIstitutions(resultGeneralInformation.result_id, resultGeneralInformation.institutions, true, user.id);
+      const institutions =
+        await this._resultByIntitutionsRepository.updateIstitutions(
+          resultGeneralInformation.result_id,
+          resultGeneralInformation.institutions,
+          true,
+          user.id,
+        );
       let saveInstitutions: ResultsByInstitution[] = [];
-      for (let index = 0; index < resultGeneralInformation.institutions.length; index++) {
-        const isInstitutions = await this._resultByIntitutionsRepository.getResultByInstitutionExists(resultGeneralInformation.result_id, resultGeneralInformation.institutions[index].institutions_id, true);
-        if(!isInstitutions){
-          const institutionsNew: ResultsByInstitution = new ResultsByInstitution();
+      for (
+        let index = 0;
+        index < resultGeneralInformation.institutions.length;
+        index++
+      ) {
+        const isInstitutions =
+          await this._resultByIntitutionsRepository.getResultByInstitutionExists(
+            resultGeneralInformation.result_id,
+            resultGeneralInformation.institutions[index].institutions_id,
+            true,
+          );
+        if (!isInstitutions) {
+          const institutionsNew: ResultsByInstitution =
+            new ResultsByInstitution();
           institutionsNew.created_by = user.id;
           institutionsNew.institution_roles_id = 1;
           institutionsNew.institutions_id =
@@ -366,15 +384,35 @@ export class ResultsService {
         saveInstitutions,
       );
 
-      const institutionsType = await this._resultByIntitutionsTypeRepository.updateIstitutionsType(resultGeneralInformation.result_id, resultGeneralInformation.institutions_type, true, user.id);
+      const institutionsType =
+        await this._resultByIntitutionsTypeRepository.updateIstitutionsType(
+          resultGeneralInformation.result_id,
+          resultGeneralInformation.institutions_type,
+          true,
+          user.id,
+        );
       let saveInstitutionsType: ResultsByInstitutionType[] = [];
-      for (let index = 0; index < resultGeneralInformation.institutions_type.length; index++) {
-        const institutionsType = await this._resultByIntitutionsTypeRepository.getResultByInstitutionTypeExists(resultGeneralInformation.result_id, resultGeneralInformation.institutions_type[index].institutions_type_id, true);
-        if(!institutionsType){
-          const institutionsTypeNew: ResultsByInstitutionType = new ResultsByInstitutionType();
+      for (
+        let index = 0;
+        index < resultGeneralInformation.institutions_type.length;
+        index++
+      ) {
+        const institutionsType =
+          await this._resultByIntitutionsTypeRepository.getResultByInstitutionTypeExists(
+            resultGeneralInformation.result_id,
+            resultGeneralInformation.institutions_type[index]
+              .institutions_type_id,
+            true,
+          );
+        if (!institutionsType) {
+          const institutionsTypeNew: ResultsByInstitutionType =
+            new ResultsByInstitutionType();
           institutionsTypeNew.created_by = user.id;
           institutionsTypeNew.institution_roles_id = 1;
-          institutionsTypeNew.institution_types_id = resultGeneralInformation.institutions_type[index].institutions_type_id;
+          institutionsTypeNew.institution_types_id =
+            resultGeneralInformation.institutions_type[
+              index
+            ].institutions_type_id;
           institutionsTypeNew.last_updated_by = user.id;
           institutionsTypeNew.results_id = resultGeneralInformation.result_id;
           institutionsTypeNew.version_id = vrs.id;
@@ -389,15 +427,14 @@ export class ResultsService {
       return {
         response: {
           updateResult,
-          institutions:{
+          institutions: {
             institutions,
-            updateInstitutions
+            updateInstitutions,
           },
-          institutionsType:{
+          institutionsType: {
             institutionsType,
-            saveInstitutionsType
-          }
-
+            saveInstitutionsType,
+          },
         },
         message: `Updated the general information of result ${resultGeneralInformation.result_id}`,
         status: HttpStatus.OK,
@@ -464,8 +501,9 @@ export class ResultsService {
 
   async findResultById(id: number): Promise<returnFormatUser> {
     try {
-      const result: Result =
-        await this._customResultRepository.getResultById(id);
+      const result: Result = await this._customResultRepository.getResultById(
+        id,
+      );
 
       if (!result) {
         throw {
@@ -656,19 +694,30 @@ export class ResultsService {
     }
   }
 
-  async getGeneralInformation(resultId: number){
+  async getGeneralInformation(resultId: number) {
     try {
-      const result = await this._resultRepository.getResultAndLevelTypeById(resultId);
-      if(!result?.id){
+      const result = await this._resultRepository.getResultAndLevelTypeById(
+        resultId,
+      );
+      if (!result?.id) {
         throw {
           response: {},
           message: 'Results Not Found',
           status: HttpStatus.NOT_FOUND,
         };
       }
-      const initiativa = await this._resultByInitiativesRepository.getResultByInitiativeOwnerFull(result.id);
-      const institutions = await this._resultByIntitutionsRepository.getResultByInstitutionActorsFull(result.id);
-      const institutionsType = await this._resultByIntitutionsTypeRepository.getResultByInstitutionTypeActorFull(result.id);
+      const initiativa =
+        await this._resultByInitiativesRepository.getResultByInitiativeOwnerFull(
+          result.id,
+        );
+      const institutions =
+        await this._resultByIntitutionsRepository.getResultByInstitutionActorsFull(
+          result.id,
+        );
+      const institutionsType =
+        await this._resultByIntitutionsTypeRepository.getResultByInstitutionTypeActorFull(
+          result.id,
+        );
 
       return {
         response: {
@@ -683,9 +732,9 @@ export class ResultsService {
           gender_tag_id: result.gender_tag_level_id || null,
           climate_change_tag_id: result.climate_change_tag_level_id || null,
           institutions: institutions,
-          institutions_type:institutionsType,
+          institutions_type: institutionsType,
           krs_url: result.krs_url ?? null,
-          is_krs: result.is_krs? true: false
+          is_krs: result.is_krs ? true : false,
         },
         message: 'Successful response',
         status: HttpStatus.OK,
@@ -695,7 +744,7 @@ export class ResultsService {
     }
   }
 
-  async saveGeoScope(createResultGeo: CreateResultGeoDto){
+  async saveGeoScope(createResultGeo: CreateResultGeoDto) {
     try {
       await this._resultRegionsService.create(createResultGeo);
       await this._resultCountriesService.create(createResultGeo);
@@ -710,26 +759,35 @@ export class ResultsService {
     }
   }
 
-  async getGeoScope(resultId: number){
+  async getGeoScope(resultId: number) {
     try {
-      const regions = await this._resultRegionRepository.getResultRegionByResultId(resultId);
-      const contries = await this._resultCountryRepository.getResultCountriesByResultId(resultId);
+      const regions =
+        await this._resultRegionRepository.getResultRegionByResultId(resultId);
+      const contries =
+        await this._resultCountryRepository.getResultCountriesByResultId(
+          resultId,
+        );
       const result = await this._resultRepository.getResultById(resultId);
       let scope: number = 0;
-      if(result.geographic_scope_id == 1 || result.geographic_scope_id == 2){
+      if (result.geographic_scope_id == 1 || result.geographic_scope_id == 2) {
         scope = result.geographic_scope_id;
-      }else if(result.geographic_scope_id == 3 || result.geographic_scope_id == 4){
+      } else if (
+        result.geographic_scope_id == 3 ||
+        result.geographic_scope_id == 4
+      ) {
         scope = 3;
-      }else{
+      } else if(result.geographic_scope_id == 50) {
         scope = 4;
+      }else{
+        scope = null;
       }
       return {
         response: {
           regions: regions,
           countries: contries,
           scope_id: scope,
-          has_countries: result?.has_countries?true:false ?? null,
-          has_regions: result?.has_regions?true:false ?? null
+          has_countries: result?.has_countries ? true : false ?? null,
+          has_regions: result?.has_regions ? true : false ?? null,
         },
         message: 'Successful response',
         status: HttpStatus.OK,

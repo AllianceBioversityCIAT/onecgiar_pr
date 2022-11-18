@@ -22,9 +22,12 @@ export class PrInputComponent implements ControlValueAccessor {
   @Input() description: string;
   @Input() maxWords: number;
   @Input() readOnly: boolean;
+  @Input() isStatic: boolean = false;
   @Input() required: boolean = true;
   @Input() underConstruction: boolean;
+  @Input() disabled: boolean;
   @Input() hint: string = null;
+  @Input() editable: boolean = false;
 
   private _value: string;
   private beforeValue: string;

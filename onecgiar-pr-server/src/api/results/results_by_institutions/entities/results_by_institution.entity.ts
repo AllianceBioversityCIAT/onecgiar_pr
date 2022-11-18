@@ -5,6 +5,7 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -12,6 +13,7 @@ import { Version } from '../../versions/entities/version.entity';
 import { Result } from '../../entities/result.entity';
 import { InstitutionRole } from '../../institution_roles/entities/institution_role.entity';
 import { ClarisaInstitution } from '../../../../clarisa/clarisa-institutions/entities/clarisa-institution.entity';
+import { ResultsKnowledgeProductInstitution } from '../../results-knowledge-products/entities/results-knowledge-product-institution.entity';
 
 @Entity()
 export class ResultsByInstitution {
@@ -75,4 +77,11 @@ export class ResultsByInstitution {
     type: 'timestamp',
   })
   last_updated_date!: Date;
+
+  //object relations
+  @OneToMany(
+    () => ResultsKnowledgeProductInstitution,
+    (rkpi) => rkpi.results_by_institutions_object,
+  )
+  result_knowledge_product_institution_array: ResultsKnowledgeProductInstitution[];
 }

@@ -18,11 +18,11 @@ export class TocResult {
     toc_internal_id!: string;
 
     @Column({
-        name: 'titel',
+        name: 'title',
         type: 'text',
         nullable: true
     })
-    titel: string;
+    title: string;
 
     @Column({
         name: 'description',

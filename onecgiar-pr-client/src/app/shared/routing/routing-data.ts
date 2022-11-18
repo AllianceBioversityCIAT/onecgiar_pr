@@ -22,20 +22,20 @@ export const resultsOutletRouting: PrRoute[] = [
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'results-list' }
 ];
 export const rdResultTypesPages: PrRoute[] = [
-  { prName: 'CapDev info', path: 'cap-dev-info', prHide: 5, underConstruction: true, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-result-types-pages/cap-dev-info/cap-dev-info.module').then(m => m.CapDevInfoModule) },
-  { prName: 'Innovation Dev info', path: 'innovation-dev-info', prHide: 7, underConstruction: true, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-result-types-pages/innovation-dev-info/innovation-dev-info.module').then(m => m.InnovationDevInfoModule) },
-  { prName: 'Innovation use info', path: 'innovation-use-info', prHide: 2, underConstruction: true, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-result-types-pages/innovation-use-info/innovation-use-info.module').then(m => m.InnovationUseInfoModule) },
-  { prName: 'Knowledge Product info', path: 'knowledge-product-info', prHide: 6, underConstruction: true, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-result-types-pages/knowledge-product-info/knowledge-product-info.module').then(m => m.KnowledgeProductInfoModule) },
-  { prName: 'Policy change info', path: 'policy-change1-info', prHide: 1, underConstruction: true, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-result-types-pages/policy-change-info/policy-change-info.module').then(m => m.PolicyChangeInfoModule) }
+  // { prName: 'CapDev info', path: 'cap-dev-info', prHide: 5, underConstruction: true, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-result-types-pages/cap-dev-info/cap-dev-info.module').then(m => m.CapDevInfoModule) },
+  // { prName: 'Innovation Dev info', path: 'innovation-dev-info', prHide: 7, underConstruction: true, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-result-types-pages/innovation-dev-info/innovation-dev-info.module').then(m => m.InnovationDevInfoModule) },
+  // { prName: 'Innovation use info', path: 'innovation-use-info', prHide: 2, underConstruction: true, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-result-types-pages/innovation-use-info/innovation-use-info.module').then(m => m.InnovationUseInfoModule) },
+  { prName: 'Knowledge Product info', path: 'knowledge-product-info', prHide: 6, underConstruction: true, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-result-types-pages/knowledge-product-info/knowledge-product-info.module').then(m => m.KnowledgeProductInfoModule) }
+  // { prName: 'Policy change info', path: 'policy-change1-info', prHide: 1, underConstruction: true, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-result-types-pages/policy-change-info/policy-change-info.module').then(m => m.PolicyChangeInfoModule) }
 ];
 
 export const resultDetailRouting: PrRoute[] = [
   { prName: 'General information', path: 'general-information', underConstruction: false, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-general-information/rd-general-information.module').then(m => m.RdGeneralInformationModule) },
-  { prName: 'Theory of change', path: 'theory-of-change', underConstruction: true, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-theory-of-change/rd-theory-of-change.module').then(m => m.RdTheoryOfChangeModule) },
+  { prName: 'Theory of change', path: 'theory-of-change', underConstruction: false, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-theory-of-change/rd-theory-of-change.module').then(m => m.RdTheoryOfChangeModule) },
   { prName: 'Partners', path: 'partners', underConstruction: false, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-partners/rd-partners.module').then(m => m.RdPartnersModule) },
   { prName: 'Geographic location', path: 'geographic-location', underConstruction: false, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-geographic-location/rd-geographic-location.module').then(m => m.RdGeographicLocationModule) },
   { prName: 'Links to results', path: 'links-to-results', underConstruction: false, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-links-to-results/rd-links-to-results.module').then(m => m.RdLinksToResultsModule) },
-  { prName: 'Evidence', path: 'evidences', underConstruction: true, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-evidences/rd-evidences.module').then(m => m.RdEvidencesModule) },
+  { prName: 'Evidence', path: 'evidences', underConstruction: false, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-evidences/rd-evidences.module').then(m => m.RdEvidencesModule) },
   ...rdResultTypesPages,
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'general-information' }
 ];

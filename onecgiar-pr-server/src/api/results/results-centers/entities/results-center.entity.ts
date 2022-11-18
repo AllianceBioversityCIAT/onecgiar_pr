@@ -2,6 +2,7 @@ import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGenerat
 import { ClarisaCenter } from '../../../../clarisa/clarisa-centers/entities/clarisa-center.entity';
 import { Result } from '../../entities/result.entity';
 import { User } from '../../../../auth/modules/user/entities/user.entity';
+import { ClarisaInitiative } from '../../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 
 @Entity('results_center')
 export class ResultsCenter {
@@ -15,11 +16,11 @@ export class ResultsCenter {
     })
     is_primary: boolean;
 
-    @ManyToOne(() => ClarisaCenter, cc => cc.id)
+    @ManyToOne(() => ClarisaCenter, cc => cc.code, )
     @JoinColumn({
         name: 'center_id'
     })
-    center_id: number;
+    center_id: string;
 
     @ManyToOne( () => Result, r => r.id)
     @JoinColumn({
@@ -30,7 +31,8 @@ export class ResultsCenter {
     @Column({
         name: 'is_active',
         type: 'boolean',
-        nullable: false
+        nullable: false,
+        default: true
     })
     is_active: boolean;
 

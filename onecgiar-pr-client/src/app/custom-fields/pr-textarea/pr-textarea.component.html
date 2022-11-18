@@ -1,7 +1,8 @@
 <app-pr-field-header [label]="this.label" [description]="this.description" [required]="this.required">
 </app-pr-field-header>
 <div [ngSwitch]="readOnly || this.rolesSE.readOnly">
-    <div class="read-only" *ngSwitchCase="true">{{value}}</div>
+    <div class="read-only" *ngSwitchCase="true" [innerHtml]="value || notProvidedText">
+    </div>
     <div class="p-fluid input_container" *ngSwitchCase="false">
         <!-- <input pInputText [type]="this.type" [placeholder]="this.placeholder" /> -->
         <textarea [rows]="5" [cols]="30" pInputTextarea [autoResize]="true" [(ngModel)]="value"

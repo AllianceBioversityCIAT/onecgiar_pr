@@ -6,34 +6,69 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
+  Headers,
+  HttpException,
 } from '@nestjs/common';
 import { ResultsKnowledgeProductsService } from './results-knowledge-products.service';
-import { CreateResultsKnowledgeProductDto } from './dto/create-results-knowledge-product.dto';
+import { CreateResultsKnowledgeProductFromHandleDto } from './dto/create-results-knowledge-product-from-handle.dto';
 import { UpdateResultsKnowledgeProductDto } from './dto/update-results-knowledge-product.dto';
+import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
+import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
+import { ResultsKnowledgeProductDto } from './dto/results-knowledge-product.dto';
 
 @Controller()
 export class ResultsKnowledgeProductsController {
   constructor(
-    private readonly resultsKnowledgeProductsService: ResultsKnowledgeProductsService,
+    private readonly _resultsKnowledgeProductsService: ResultsKnowledgeProductsService,
   ) {}
 
-  @Post()
-  create(
-    @Body() createResultsKnowledgeProductDto: CreateResultsKnowledgeProductDto,
+  @Post('create')
+  async create(
+    @Body() mqapMappedResponse: ResultsKnowledgeProductDto,
+    @Headers() auth: HeadersDto,
   ) {
-    return this.resultsKnowledgeProductsService.create(
-      createResultsKnowledgeProductDto,
+    const token: TokenDto = <TokenDto>(
+      JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
+    );
+
+    const { message, response, status } =
+      await this._resultsKnowledgeProductsService.create(
+        mqapMappedResponse,
+        token,
+      );
+
+    throw new HttpException({ message, response }, status);
+  }
+
+  @Get('mqap')
+  async getFromMQAPByHandle(@Query('handle') handle: string) {
+    const { message, response, status } =
+      await this._resultsKnowledgeProductsService.findOnCGSpace(handle);
+
+    throw new HttpException({ message, response }, status);
+  }
+
+  @Get('find/by-handle')
+  async findResultKnowledgeProductByHandle(@Query('handle') handle: string) {
+    const { message, response, status } =
+      await this._resultsKnowledgeProductsService.findResultKnowledgeProductByHandle(
+        handle,
+      );
+
+    throw new HttpException({ message, response }, status);
+  }
+
+  @Get('get/:id')
+  getKnowledgeProductById(@Param('id') id: number) {
+    return this._resultsKnowledgeProductsService.findOneByKnowledgeProductId(
+      id,
     );
   }
 
-  @Get()
-  findAll() {
-    return this.resultsKnowledgeProductsService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.resultsKnowledgeProductsService.findOne(+id);
+  @Get('get/result/:id')
+  getKnowledgeProductByResultId(@Param('id') id: number) {
+    return this._resultsKnowledgeProductsService.findOneByResultId(id);
   }
 
   @Patch(':id')
@@ -41,7 +76,7 @@ export class ResultsKnowledgeProductsController {
     @Param('id') id: string,
     @Body() updateResultsKnowledgeProductDto: UpdateResultsKnowledgeProductDto,
   ) {
-    return this.resultsKnowledgeProductsService.update(
+    return this._resultsKnowledgeProductsService.update(
       +id,
       updateResultsKnowledgeProductDto,
     );
@@ -49,6 +84,6 @@ export class ResultsKnowledgeProductsController {
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.resultsKnowledgeProductsService.remove(+id);
+    return this._resultsKnowledgeProductsService.remove(+id);
   }
 }

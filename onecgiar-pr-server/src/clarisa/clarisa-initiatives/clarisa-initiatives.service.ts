@@ -1,11 +1,40 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
 import { CreateClarisaInitiativeDto } from './dto/create-clarisa-initiative.dto';
 import { UpdateClarisaInitiativeDto } from './dto/update-clarisa-initiative.dto';
+import { HandlersError } from '../../shared/handlers/error.utils';
+import { ClarisaInitiativesRepository } from './ClarisaInitiatives.repository';
 
 @Injectable()
 export class ClarisaInitiativesService {
+
+  constructor(
+    private readonly _handlersError: HandlersError,
+    private readonly _clarisaInitiativesRepository: ClarisaInitiativesRepository
+  ){}
   create(createClarisaInitiativeDto: CreateClarisaInitiativeDto) {
     return createClarisaInitiativeDto;
+  }
+
+  async getAllInitiativesWithoutCurrentInitiative(resultId:number){
+    try {
+      const initiative = await this._clarisaInitiativesRepository.getAllInitiativesWithoutCurrentInitiative(resultId);
+      if (!initiative.length) {
+        throw {
+          response: {},
+          message: 'Initiative Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+      
+      return {
+        response: initiative,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      console.log(error)
+      return this._handlersError.returnErrorRes({ error });
+    }
   }
 
   findAll() {

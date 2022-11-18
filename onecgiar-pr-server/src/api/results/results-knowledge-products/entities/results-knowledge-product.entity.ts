@@ -4,6 +4,7 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -11,6 +12,11 @@ import { User } from '../../../../auth/modules/user/entities/user.entity';
 import { ClarisaMeliaStudyType } from '../../../../clarisa/clarisa-melia-study-type/entities/clarisa-melia-study-type.entity';
 import { Result } from '../../entities/result.entity';
 import { Version } from '../../versions/entities/version.entity';
+import { ResultsKnowledgeProductAltmetric } from './results-knowledge-product-altmetrics.entity';
+import { ResultsKnowledgeProductAuthor } from './results-knowledge-product-authors.entity';
+import { ResultsKnowledgeProductInstitution } from './results-knowledge-product-institution.entity';
+import { ResultsKnowledgeProductKeyword } from './results-knowledge-product-keywords.entity';
+import { ResultsKnowledgeProductMetadata } from './results-knowledge-product-metadata.entity';
 
 @Entity()
 export class ResultsKnowledgeProduct {
@@ -20,10 +26,7 @@ export class ResultsKnowledgeProduct {
   })
   result_knowledge_product_id: number;
 
-  @ManyToOne(() => Result, (r) => r.id)
-  @JoinColumn({
-    name: 'results_id',
-  })
+  @Column()
   results_id: number;
 
   @Column({
@@ -34,32 +37,18 @@ export class ResultsKnowledgeProduct {
   handle: string;
 
   @Column({
-    name: 'issue_date',
-    type: 'bigint',
-    nullable: true,
-  })
-  issue_date: number;
-
-  @Column({
-    name: 'knowledge_product_type',
+    name: 'name',
     type: 'text',
     nullable: true,
   })
-  knowledge_product_type: string;
+  name: string;
 
   @Column({
-    name: 'is_peer_reviewed',
-    type: 'boolean',
+    name: 'description',
+    type: 'text',
     nullable: true,
   })
-  is_peer_reviewed: boolean;
-
-  @Column({
-    name: 'is_isi',
-    type: 'boolean',
-    nullable: true,
-  })
-  is_isi: boolean;
+  description: string;
 
   @Column({
     name: 'doi',
@@ -69,11 +58,11 @@ export class ResultsKnowledgeProduct {
   doi: string;
 
   @Column({
-    name: 'accesibility',
+    name: 'knowledge_product_type',
     type: 'text',
     nullable: true,
   })
-  accesibility: string;
+  knowledge_product_type: string;
 
   @Column({
     name: 'licence',
@@ -185,4 +174,41 @@ export class ResultsKnowledgeProduct {
     name: 'last_updated_by',
   })
   last_updated_by: number;
+
+  //object relations
+  @OneToMany(
+    () => ResultsKnowledgeProductAltmetric,
+    (rkpa) => rkpa.result_knowledge_product_object,
+  )
+  result_knowledge_product_altmetric_array: ResultsKnowledgeProductAltmetric[];
+
+  @OneToMany(
+    () => ResultsKnowledgeProductInstitution,
+    (rkpi) => rkpi.result_knowledge_product_object,
+  )
+  result_knowledge_product_institution_array: ResultsKnowledgeProductInstitution[];
+
+  @OneToMany(
+    () => ResultsKnowledgeProductMetadata,
+    (rkpi) => rkpi.result_knowledge_product_object,
+  )
+  result_knowledge_product_metadata_array: ResultsKnowledgeProductMetadata[];
+
+  @OneToMany(
+    () => ResultsKnowledgeProductKeyword,
+    (rkpi) => rkpi.result_knowledge_product_object,
+  )
+  result_knowledge_product_keyword_array: ResultsKnowledgeProductKeyword[];
+
+  @OneToMany(
+    () => ResultsKnowledgeProductAuthor,
+    (rkpi) => rkpi.result_knowledge_product_object,
+  )
+  result_knowledge_product_author_array: ResultsKnowledgeProductAuthor[];
+
+  @ManyToOne(() => Result, (r) => r.id)
+  @JoinColumn({
+    name: 'results_id',
+  })
+  result_object: Result;
 }

@@ -26,6 +26,7 @@ export class PrTextareaComponent implements ControlValueAccessor {
   private _value: string;
   private beforeValue: string;
   public wordCount: number = 0;
+  public notProvidedText = "<div class='not_provided_color'>Not provided</div>";
   constructor(private wordCounterSE: WordCounterService, public rolesSE: RolesService) {}
 
   get value() {

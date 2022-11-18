@@ -1,10 +1,11 @@
 <app-pr-field-header [label]="this.label" [description]="this.description" [required]="this.required">
 </app-pr-field-header>
-<div [ngSwitch]="readOnly || this.rolesSE.readOnly">
+<div [ngSwitch]="editable ? false :(readOnly || this.rolesSE.readOnly && !isStatic)">
     <div class="read-only" *ngSwitchCase="true">{{value}}</div>
     <div class="custom_select" *ngSwitchCase="false">
         <a class="field" tabindex="0" [id]="this.optionValue" [ngClass]="{'select-disable': this.disabled}">
-            <div class="text" [ngClass]="{'select_placeholder': !labelName}">{{labelName? labelName :placeholder}}</div>
+            <div class="text" [ngClass]="{'select_placeholder': !labelName}"
+                [innerHtml]="labelName? labelName :placeholder"></div>
             <i class="pi pi-chevron-down"></i>
             <div class="remove_focus" (click)="removeFocus()"></div>
             <div class="options">
@@ -19,12 +20,12 @@
                     <div *cdkVirtualFor="let option of optionsIntance | listFilterByTextAndAttr:this.optionLabel:this.searchText"
                         class="option"
                         [ngClass]="{'disabled': option?.disabled === true, 'selected':option?.selected === true}"
-                        (click)="this.disabled ? null :onSelectOption(option)">
+                        (click)="this.disabled ? null :onSelectOption(option);removeFocus()">
                         <!-- <p-checkbox [disabled]="option?.disabled" [binary]="true" [(ngModel)]="option.selected">
                         </p-checkbox> -->
                         <img *ngIf="flagsCode" [src]="'https://countryflagsapi.com/png/'+option[this.flagsCode]" alt=""
                             srcset="">
-                        <div class="label">{{option[this.optionLabel]}}</div>
+                        <div class="label" [innerHtml]="option[this.optionLabel]"></div>
                         <div class="event"></div>
                     </div>
                 </cdk-virtual-scroll-viewport>

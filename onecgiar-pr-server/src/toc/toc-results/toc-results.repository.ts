@@ -1,4 +1,5 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { env } from 'process';
 import { DataSource, Repository } from 'typeorm';
 import { TocResult } from './entities/toc-result.entity';
 
@@ -29,7 +30,7 @@ export class TocResultsRepository extends Repository<TocResult> {
     select 
     tr.toc_result_id ,
     tr.toc_internal_id ,
-    tr.titel,
+    tr.title,
     tr.description,
     tr.toc_type_id,
     tr.toc_level_id ,
@@ -49,25 +50,48 @@ export class TocResultsRepository extends Repository<TocResult> {
     }
   }
 
-  async getAllTocResultsByInitiative(resultId: number, tocLevel: number) {
+  async getAllTocResultsByInitiative(initiativeId: number, tocLevel: number) {
     const queryData = `
     select 
       tr.toc_result_id ,
       tr.toc_internal_id ,
-      tr.titel,
+      tr.title,
       tr.description,
       tr.toc_type_id,
       tr.toc_level_id ,
       tr.inititiative_id ,
-      tr.work_package_id 
+      tr.work_package_id ,
+      null as action_area_outcome_id
     from toc_result tr
-    inner join results_by_inititiative rbi on rbi.inititiative_id = tr.inititiative_id 
-										and rbi.initiative_role_id = 1
-	  where rbi.result_id = ?
+	  where tr.inititiative_id = ?
     	and tr.toc_level_id = ?;
+    `,
+    queryOst = `
+    select
+    	null as toc_result_id,
+    	ibs.initiativeId as inititiative_id ,
+    	iaaoi.outcome_id as action_area_outcome_id,
+    	caao.id,
+    	caao.outcomeSMOcode as title,
+    	caao.outcomeStatement as description,
+    	4 as toc_level_id,
+    	null as work_package_id
+    from
+    	${env.DB_OST}.init_action_areas_out_indicators iaaoi
+    inner join ${env.DB_OST}.initiatives_by_stages ibs on
+    	ibs.id = iaaoi.initvStgId
+    inner join ${env.DB_NAME}.clarisa_action_area_outcome caao on
+    	caao.id = iaaoi.outcome_id
+    WHERE
+    	iaaoi.outcome_id is not null
+    	and ibs.initiativeId = ?
+    GROUP by
+    	ibs.initiativeId,
+    	iaaoi.outcome_id;
     `;
+
     try {
-      const tocResult:TocResult[] = await this.query(queryData, [resultId, tocLevel]);
+      const tocResult:TocResult[] = await this.query(tocLevel == 4? queryOst:queryData, [initiativeId, tocLevel]);
       return tocResult;
     } catch (error) {
       throw {
@@ -83,24 +107,53 @@ export class TocResultsRepository extends Repository<TocResult> {
     select 
       r.id as toc_result_id,
       r.toc_result_id as toc_internal_id,
-      r.result_title as titel,
+      r.result_title as title,
       wp.pathway_content as description,
       r.result_type_id as toc_level_id,
       null as toc_type_id,
       i.id as inititiative_id,
       wp.wp_official_code as work_package_id,
       r.active
-      from submissiontooldb.results r
-      left join submissiontooldb.work_packages wp on r.work_package_id = wp.wp_official_code
+      from ${env.DB_OST}.results r
+      left join ${env.DB_OST}.work_packages wp on r.work_package_id = wp.wp_official_code
       											and r.initvStgId = wp.initvStgId
       											and r.active > 0
-      inner join submissiontooldb.initiatives_by_stages ibs on ibs.id = r.initvStgId
-      inner join submissiontooldb.initiatives i on  ibs.initiativeId = i.id
+      inner join ${env.DB_OST}.initiatives_by_stages ibs on ibs.id = r.initvStgId
+      inner join ${env.DB_OST}.initiatives i on  ibs.initiativeId = i.id
       WHERE r.active > 0 
 	      and ibs.active > 0;
     `;
     try {
       const tocResult:TocResult[] = await this.query(queryData);
+      return tocResult;
+    } catch (error) {
+      throw {
+        message: `[${TocResultsRepository.name}] => getTocIdFromOst error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
+  async getAllOutcomeByInitiative(initiativeId: number) {
+    const queryData = `
+    select  
+      DISTINCT caaoi.outcome_id as action_area_outcome_id,
+      ibs.initiativeId as inititiative_id ,
+       caao.id,
+       caao.outcomeSMOcode as title,
+       caao.outcomeStatement as description,
+       4 as toc_level_id,
+        null as work_package_id
+      from ${env.DB_OST}.general_information gi 
+      inner join ${env.DB_OST}.initiatives_by_stages ibs on gi.initvStgId = ibs.id 
+      													and ibs.active > 0
+      inner join ${env.DB_OST}.clarisa_action_areas_outcomes_indicators caaoi on caaoi.action_area_id = gi.action_area_id
+      inner join clarisa_action_area_outcome caao on caao.id = caaoi.outcome_id 
+      where ibs.initiativeId = ?;
+    `;
+    try {
+      const tocResult:TocResult[] = await this.query(queryData, [initiativeId]);
       return tocResult;
     } catch (error) {
       throw {
@@ -119,7 +172,8 @@ export class TocResultsRepository extends Repository<TocResult> {
       ci.toc_id 
       from results_by_inititiative rbi 
       inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id
-      where rbi.result_id = ?;
+      where rbi.result_id = ?
+        and rbi.initiative_role_id = 1;
     `;
     try {
       const tocid = await this.query(queryData, [resultId]);
@@ -127,6 +181,35 @@ export class TocResultsRepository extends Repository<TocResult> {
     } catch (error) {
       throw {
         message: `[${TocResultsRepository.name}] => getTocIdFromOst error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
+  async isTocResoultByInitiative(resultId: number, tResult: number) {
+    const queryData = `
+    select 
+      tr.toc_result_id ,
+      tr.toc_internal_id ,
+      tr.title,
+      tr.description,
+      tr.toc_type_id,
+      tr.toc_level_id ,
+      tr.inititiative_id ,
+      tr.work_package_id 
+      from toc_result tr
+      inner join results_by_inititiative rbi on rbi.inititiative_id = tr.inititiative_id 
+      where rbi.initiative_role_id = 1
+      and rbi.result_id = ${resultId}
+      and tr.toc_result_id = ${tResult};
+    `;
+    try {
+      const tocResult:TocResult[] = await this.query(queryData);
+      return tocResult.length? tocResult[0]: undefined;
+    } catch (error) {
+      throw {
+        message: `[${TocResultsRepository.name}] => getAllTocResults error: ${error}`,
         response: {},
         status: HttpStatus.INTERNAL_SERVER_ERROR,
       };

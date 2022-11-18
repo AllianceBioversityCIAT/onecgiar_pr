@@ -8,6 +8,8 @@ export class DataControlService {
   showPartnersRequest: boolean = false;
   myInitiativesList = [];
   resultsList: ResultItem[];
+  currentResult: any;
+  showSectionSpinner = false;
   constructor() {}
   validateBody(body: any) {
     return Object.entries(body).every((item: any) => item[1]);

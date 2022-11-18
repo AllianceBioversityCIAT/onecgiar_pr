@@ -1,4 +1,6 @@
 import { Component, OnInit, Output, EventEmitter } from '@angular/core';
+import { RolesService } from '../../shared/services/global/roles.service';
+import { SaveButtonService } from './save-button.service';
 
 @Component({
   selector: 'app-save-button',
@@ -7,8 +9,9 @@ import { Component, OnInit, Output, EventEmitter } from '@angular/core';
 })
 export class SaveButtonComponent {
   @Output() clickSave = new EventEmitter();
-  constructor() {}
+  constructor(public rolesSE: RolesService, public saveButtonSE: SaveButtonService) {}
   onClickSave() {
+    if (this.saveButtonSE.isSaving) return;
     this.clickSave.emit();
   }
 }

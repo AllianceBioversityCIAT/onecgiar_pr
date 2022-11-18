@@ -1,5 +1,6 @@
-import { Component, forwardRef, Input } from '@angular/core';
+import { Component, forwardRef, Input, EventEmitter, Output } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { RolesService } from '../../shared/services/global/roles.service';
 
 @Component({
   selector: 'app-pr-yes-or-not',
@@ -17,10 +18,15 @@ export class PrYesOrNotComponent {
   @Input() label: string;
   @Input() description: string;
   @Input() readOnly: boolean;
+  @Input() isStatic: boolean = false;
   @Input() required: boolean = true;
   @Input() hideOptions: boolean;
+  @Input() editable: boolean = false;
 
+  @Output() selectOptionEvent = new EventEmitter();
   private _value: boolean;
+
+  constructor(public rolesSE: RolesService) {}
 
   get value() {
     return this._value;
@@ -49,9 +55,11 @@ export class PrYesOrNotComponent {
 
   onclickYes() {
     this.value = true;
+    this.selectOptionEvent.emit();
   }
 
   onClickNo() {
     this.value = false;
+    this.selectOptionEvent.emit();
   }
 }

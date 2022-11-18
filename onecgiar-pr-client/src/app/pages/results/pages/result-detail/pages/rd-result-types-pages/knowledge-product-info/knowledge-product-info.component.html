@@ -1,1 +1,70 @@
-<p>knowledge-product-info works!</p>
+<app-detail-section-title sectionName="Contributors"></app-detail-section-title>
+<div class="detail_container">
+    <app-pr-input [(ngModel)]="knowledgeProductBody.handle" label="Handle" [required]="false" [disabled]="true">
+    </app-pr-input>
+    <div class="auto_fit_container">
+        <app-pr-input [(ngModel)]="knowledgeProductBody.yearCG" [label]="knowledgeProductBody.year_WOS? 'Issue date(CGSpace)':'Issue date'" [required]="false" [readOnly]="true">
+        </app-pr-input>
+        <app-pr-input *ngIf="knowledgeProductBody.year_WOS" [(ngModel)]="knowledgeProductBody.year_WOS" label="Issue date(WoS)" [required]="false" [readOnly]="true">
+        </app-pr-input>
+    </div>
+    <app-pr-field-header label="Authors"></app-pr-field-header>
+    <app-pr-input [(ngModel)]="knowledgeProductBody.type" label="Knowledge product type" [required]="false"
+        [readOnly]="true">
+    </app-pr-input>
+    <div class="auto_fit_container">
+        <app-pr-input [(ngModel)]="knowledgeProductBody.is_peer_reviewed_CG" [label]="knowledgeProductBody.is_peer_reviewed_WOS? 'Peer reviewed(CGSpace)':'Peer reviewed'" [required]="false" [readOnly]="true">
+        </app-pr-input>
+        <app-pr-input *ngIf="knowledgeProductBody.is_peer_reviewed_WOS != undefined" [(ngModel)]="knowledgeProductBody.is_peer_reviewed_WOS" label="Peer reviewed(WoS)" [required]="false" [readOnly]="true">
+        </app-pr-input>
+    </div>
+    <div class="auto_fit_container">
+        <app-pr-input [(ngModel)]="knowledgeProductBody.is_isi_CG" [label]="knowledgeProductBody.is_isi_WOS ? 'Web of Science Core Collection (former ISI) (CGSpace)':'Web of Science Core Collection (former ISI)'"
+            [required]="false" [readOnly]="true">
+        </app-pr-input>
+        <app-pr-input *ngIf="knowledgeProductBody.is_isi_WOS != undefined" [(ngModel)]="knowledgeProductBody.is_isi_WOS" label="Web of Science Core Collection (former ISI) (WoS)"
+            [required]="false" [readOnly]="true">
+        </app-pr-input>
+    </div>
+    <app-pr-input [(ngModel)]="knowledgeProductBody.doi" label="DOI" [required]="false" [readOnly]="true">
+    </app-pr-input>
+    <div class="auto_fit_container">
+        <app-pr-input [(ngModel)]="knowledgeProductBody.accessibility_CG" [label]="knowledgeProductBody.accessibility_WOS? 'Accessibility(CGSpace)':'Accessibility'" [required]="false" [readOnly]="true">
+        </app-pr-input>
+        <app-pr-input *ngIf="knowledgeProductBody.accessibility_WOS" [(ngModel)]="knowledgeProductBody.accessibility_WOS" label="Accessibility(WoS)" [required]="false" [readOnly]="true">
+        </app-pr-input>
+    </div>
+    <app-pr-input [(ngModel)]="knowledgeProductBody.licence" label="License" [required]="false" [readOnly]="true">
+    </app-pr-input>
+    <app-pr-input [(ngModel)]="knowledgeProductBody.keywords" label="Keywords" [required]="false" [readOnly]="true">
+    </app-pr-input>
+    <app-pr-input [(ngModel)]="knowledgeProductBody.agrovoc_keywords" label="AGROVOC Keywords" [required]="false"
+        [readOnly]="true">
+    </app-pr-input>
+    <app-pr-input [(ngModel)]="knowledgeProductBody.commodity" label="Commodity" [required]="false" [readOnly]="true">
+    </app-pr-input>
+    <app-pr-input [(ngModel)]="knowledgeProductBody.investors" label="Investors / Sponsors" [required]="false"
+        [readOnly]="true">
+    </app-pr-input>
+    <app-pr-field-header label="Altmetrics"></app-pr-field-header>
+    <!-- poner imagen que está en campo altmetric_img_url y que sea clickeable y redirija a la url que está en campo altmetric_details_url... PUEDEN SER NULOS -->
+    <app-pr-input [(ngModel)]="knowledgeProductBody.references" label="Reference to other Knowledge products"
+        [required]="false" [readOnly]="true">
+    </app-pr-input>
+    <app-pr-field-header label="FAIR score for this Knowledge product"></app-pr-field-header>
+    <!-- no sé cómo tenías pensado poner eso, pero la data está en los campos findable, accessible, interoperable, reusable-->
+    <app-pr-yes-or-not label="Is this Knowledge product a MELIA Product?" [(ngModel)]="MELIAProduct">
+    </app-pr-yes-or-not>
+
+    <div style="padding-left: 50px;" *ngIf="MELIAProduct === true">
+        <app-pr-yes-or-not label="Was this MELIA product previously submitted in the OST?" [(ngModel)]="intheOST">
+        </app-pr-yes-or-not>
+        <app-pr-select [options]="[]" label="Select MELIA type" optionLabel="code" optionValue="code"
+            placeholder="Select MELIA type" [required]="false" *ngIf="intheOST === false">
+        </app-pr-select>
+        <app-pr-select [options]="[]" label="Select MELIA from OST" optionLabel="code" optionValue="code"
+            placeholder="Select MELIA from OST" [required]="false" *ngIf="intheOST === true">
+        </app-pr-select>
+    </div>
+
+</div>

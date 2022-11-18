@@ -142,6 +142,7 @@ WHERE
     r.title,
     r.reported_year_id AS reported_year,
     rt.name AS result_type,
+    rl.name AS result_level_name,
     rt.id AS result_type_id,
     r.created_date,
     ci.official_code AS submitter,
@@ -167,6 +168,7 @@ FROM
 WHERE
     r.is_active > 0
     AND rbi.is_active > 0
+    AND rbi.initiative_role_id = 1
     AND ci.active > 0;
     `;
 
@@ -296,6 +298,7 @@ WHERE
     r.legacy_id,
     r.no_applicable_partner,
     r.geographic_scope_id,
+    rbi.inititiative_id as initiative_id,
     rl.name as result_level_name,
     rt.name as result_type_name,
     r.has_regions,
@@ -313,7 +316,7 @@ WHERE
 
     try {
       const results: Result[] = await this.query(queryData, [id]);
-      return results.length? results[0]: undefined;
+      return results.length ? results[0] : undefined;
     } catch (error) {
       throw {
         message: `[${ResultRepository.name}] => completeAllData error: ${error}`,
@@ -362,7 +365,7 @@ WHERE
 
     try {
       const results: ResultLevelType[] = await this.query(queryData, [id]);
-      return results.length? results[0]: new ResultLevelType();
+      return results.length ? results[0] : new ResultLevelType();
     } catch (error) {
       throw {
         message: `[${ResultRepository.name}] => completeAllData error: ${error}`,

@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { PartnersBody } from './models/partnersBody';
+import { RolesService } from '../../../../../../shared/services/global/roles.service';
 
 @Component({
   selector: 'app-rd-partners',
@@ -11,7 +12,7 @@ import { PartnersBody } from './models/partnersBody';
 export class RdPartnersComponent {
   partnersBody = new PartnersBody();
   toggle = 0;
-  constructor(private api: ApiService, public institutionsSE: InstitutionsService) {}
+  constructor(private api: ApiService, public institutionsSE: InstitutionsService, public rolesSE: RolesService) {}
   ngOnInit(): void {
     this.getSectionInformation();
     this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
@@ -36,8 +37,8 @@ export class RdPartnersComponent {
   onSaveSection() {
     console.log(this.partnersBody);
     this.api.resultsSE.PATCH_partnersSection(this.partnersBody).subscribe(resp => {
-      console.log(resp);
-      this.api.alertsFe.show({ id: 'sectionSaved', title: 'Section saved correctly', description: '', status: 'success', closeIn: 500 });
+      // console.log(resp);
+      this.getSectionInformation();
     });
   }
   validateDeliverySelection(deliveries, deliveryId) {

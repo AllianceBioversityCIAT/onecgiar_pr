@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
-import { map } from 'rxjs';
+import { map, tap, catchError, of, retry, throwError } from 'rxjs';
 import { ResultBody } from '../../interfaces/result.interface';
 import { GeneralInfoBody } from '../../../pages/results/pages/result-detail/pages/rd-general-information/models/generalInfoBody';
 import { PartnersBody } from 'src/app/pages/results/pages/result-detail/pages/rd-partners/models/partnersBody';
@@ -9,12 +9,14 @@ import { GeographicLocationBody } from '../../../pages/results/pages/result-deta
 import { LinksToResultsBody } from '../../../pages/results/pages/result-detail/pages/rd-links-to-results/models/linksToResultsBody';
 import { PartnersRequestBody } from '../../../pages/results/pages/result-detail/components/partners-request/models/partnersRequestBody.model';
 import { EvidencesBody } from '../../../pages/results/pages/result-detail/pages/rd-evidences/model/evidencesBody.model';
+import { TheoryOfChangeBody } from '../../../pages/results/pages/result-detail/pages/rd-theory-of-change/model/theoryOfChangeBody';
+import { SaveButtonService } from '../../../custom-fields/save-button/save-button.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ResultsApiService {
-  constructor(public http: HttpClient) {}
+  constructor(public http: HttpClient, private saveButtonSE: SaveButtonService) {}
   apiBaseUrl = environment.apiBaseUrl + 'api/results/';
   currentResultId: number | string = null;
   GET_AllResultLevel() {
@@ -54,18 +56,19 @@ export class ResultsApiService {
   GET_allInstitutions() {
     return this.http.get<any>(`${this.apiBaseUrl}get/institutions/all`).pipe(
       map(resp => {
-        resp.response.map(institution => (institution.full_name = `(Id:${institution?.institutions_id}) ${institution?.institutions_acronym} - ${institution?.institutions_name} - ${institution?.headquarter_name}`));
+        resp.response.map(institution => (institution.full_name = `(Id:${institution?.institutions_id}) <strong>${institution?.institutions_acronym}</strong> - ${institution?.institutions_name} - ${institution?.headquarter_name}`));
         return resp;
       })
     );
   }
 
   GET_generalInformationByResultId() {
-    return this.http.get<any>(`${this.apiBaseUrl}get/general-information/result/${this.currentResultId}`);
+    return this.http.get<any>(`${this.apiBaseUrl}get/general-information/result/${this.currentResultId}`).pipe(this.saveButtonSE.isSavingSectionPipe());
   }
 
   PATCH_generalInformation(body: GeneralInfoBody) {
-    return this.http.patch<any>(`${this.apiBaseUrl}create/general-information`, body);
+    this.saveButtonSE.showSaveSpinner();
+    return this.http.patch<any>(`${this.apiBaseUrl}create/general-information`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
   GET_resultById() {
@@ -77,7 +80,7 @@ export class ResultsApiService {
   }
 
   PATCH_partnersSection(body: PartnersBody) {
-    return this.http.patch<any>(`${this.apiBaseUrl}results-by-institutions/create/partners/${this.currentResultId}`, body);
+    return this.http.patch<any>(`${this.apiBaseUrl}results-by-institutions/create/partners/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
   GET_partnersSection() {
     return this.http.get<any>(`${this.apiBaseUrl}results-by-institutions/partners/result/${this.currentResultId}`);
@@ -104,8 +107,31 @@ export class ResultsApiService {
     );
   }
 
+  GET_AllCLARISACenters() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/centers/get/all`).pipe(
+      map(resp => {
+        console.log(resp);
+        resp.response.map(center => {
+          center.lead_center = center.code;
+          center.full_name = `<strong>${center.acronym} - </strong> ${center.name}`;
+        });
+        return resp;
+      })
+    );
+  }
+
+  GET_AllWithoutResults() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/initiatives/get/all/without/result/${this.currentResultId}`).pipe(
+      map(resp => {
+        // console.log(resp.response);
+        resp.response.map(initiative => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name}</strong> - ${initiative?.name}`));
+        return resp;
+      })
+    );
+  }
+
   PATCH_geographicSection(body: GeographicLocationBody) {
-    return this.http.patch<any>(`${this.apiBaseUrl}update/geographic/${this.currentResultId}`, body);
+    return this.http.patch<any>(`${this.apiBaseUrl}update/geographic/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
   GET_geographicSection() {
@@ -117,7 +143,7 @@ export class ResultsApiService {
   }
 
   POST_resultsLinked(body: LinksToResultsBody) {
-    return this.http.post<any>(`${this.apiBaseUrl}linked/create/${this.currentResultId}`, body);
+    return this.http.post<any>(`${this.apiBaseUrl}linked/create/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
   GET_evidences() {
@@ -125,6 +151,36 @@ export class ResultsApiService {
   }
 
   POST_evidences(body: EvidencesBody) {
-    return this.http.post<any>(`${this.apiBaseUrl}evidences/create/${this.currentResultId}`, body);
+    return this.http.post<any>(`${this.apiBaseUrl}evidences/create/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+  }
+
+  POST_toc(body: TheoryOfChangeBody) {
+    return this.http.post<any>(`${this.apiBaseUrl}toc/create/toc/result/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+  }
+
+  GET_mqapValidation(handle) {
+    return this.http.get<any>(`${this.apiBaseUrl}results-knowledge-products/mqap?handle=${handle}`);
+  }
+
+  GET_resultknowledgeProducts() {
+    return this.http.get<any>(`${this.apiBaseUrl}results-knowledge-products/get/result/${this.currentResultId}`);
+  }
+
+  POST_createWithHandle(body) {
+    return this.http.post<any>(`${this.apiBaseUrl}results-knowledge-products/create`, body);
+  }
+
+  GET_toc() {
+    return this.http.get<any>(`${this.apiBaseUrl}toc/get/result/${this.currentResultId}`).pipe(
+      map(resp => {
+        // console.log(resp.response);
+        resp?.response?.contributing_initiatives.map(initiative => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name || ''}</strong> - ${initiative?.initiative_name}`));
+        return resp;
+      }),
+      this.saveButtonSE.isSavingSectionPipe()
+    );
   }
 }
+
+// 200 no existe
+// 201 ya existte en bd

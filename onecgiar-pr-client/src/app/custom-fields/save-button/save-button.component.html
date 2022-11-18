@@ -1,3 +1,5 @@
-<div class="fixed_button" (click)="onClickSave()">
-    <app-pr-button padding="medium" text="Save" icon="save"></app-pr-button>
+<div class="fixed_button" (click)="onClickSave()" *ngIf="!this.rolesSE.readOnly">
+    <app-pr-button padding="medium" [text]="this.saveButtonSE.isSaving?'Saving':'Save'"
+        [rotating]="this.saveButtonSE.isSaving" [icon]="this.saveButtonSE.isSaving?'loop':'save'"
+        [ngClass]="{'globalDisabled': this.saveButtonSE.isSaving}"></app-pr-button>
 </div>
