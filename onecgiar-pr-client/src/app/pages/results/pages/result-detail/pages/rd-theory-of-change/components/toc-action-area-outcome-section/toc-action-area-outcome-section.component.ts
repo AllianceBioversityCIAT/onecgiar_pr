@@ -1,5 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
+import { resultToResultInterfaceToc } from '../../model/theoryOfChangeBody';
 
 @Component({
   selector: 'app-toc-action-area-outcome-section',
@@ -7,24 +8,7 @@ import { ApiService } from '../../../../../../../../shared/services/api/api.serv
   styleUrls: ['./toc-action-area-outcome-section.component.scss']
 })
 export class TocActionAreaOutcomeSectionComponent {
+  @Input() result_toc_result = new resultToResultInterfaceToc();
+  @Input() contributors_result_toc_result: any;
   constructor(public api: ApiService) {}
-  actionAreasOutcomesList = [];
-  ngOnInit(): void {
-    this.GET_tocLevelsByresultId();
-  }
-
-  value;
-  lista = [{ name: 'Resilient Agrifood Systems - </strong>NARES and Regional Agricultural Research Institutes develop farming system innovations with the potential to increase the food security of smallholders in targeted areas. ' }];
-  listb = [{ name: 'Resilient Agrifood Systems - </strong>NARES and Regional Agricultural Research Institutes develop farming system innovations with the potential to increase the food security of smallholders in targeted areas. ' }];
-  GET_tocLevelsByresultId() {
-    this.api.tocApiSE.GET_tocLevelsByresultId(this.api.resultsSE.currentResultId, 4).subscribe(
-      ({ response }) => {
-        this.actionAreasOutcomesList = response;
-        console.log(response);
-      },
-      err => {
-        console.log(err);
-      }
-    );
-  }
 }

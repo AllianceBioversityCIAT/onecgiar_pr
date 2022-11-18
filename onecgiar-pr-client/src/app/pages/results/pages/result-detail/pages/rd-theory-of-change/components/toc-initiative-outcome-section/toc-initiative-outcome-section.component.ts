@@ -15,6 +15,7 @@ export class TocInitiativeOutcomeSectionComponent {
   outputList = [];
   eoiList = [];
   fullInitiativeToc = null;
+  showe = false;
   @Input() result_toc_result = new resultToResultInterfaceToc();
   @Input() contributors_result_toc_result: any;
 
@@ -23,8 +24,6 @@ export class TocInitiativeOutcomeSectionComponent {
     this.GET_outputList();
     this.GET_fullInitiativeToc();
     this.GET_eoi();
-    this.valdiateEOI();
-    // console.log(this.result_toc_result.initiative_id);
   }
 
   GET_outputList() {
@@ -80,10 +79,5 @@ export class TocInitiativeOutcomeSectionComponent {
         console.log(err);
       }
     );
-  }
-
-  valdiateEOI() {
-    //   console.log(this.yesornotValue);
-    if (this.result_toc_result?.planned_result == false) this.result_toc_result.toc_level_id = 3;
   }
 }

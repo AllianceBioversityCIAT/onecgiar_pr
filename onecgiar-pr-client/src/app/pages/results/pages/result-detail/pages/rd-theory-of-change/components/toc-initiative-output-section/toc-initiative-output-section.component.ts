@@ -19,7 +19,6 @@ export class TocInitiativeOutputSectionComponent {
     this.GET_outcomeList();
     this.GET_outputList();
     this.GET_fullInitiativeToc();
-    this.valdiateEOI();
   }
 
   GET_outputList() {
@@ -61,10 +60,5 @@ export class TocInitiativeOutputSectionComponent {
         console.log(err);
       }
     );
-  }
-
-  valdiateEOI() {
-    //   console.log(this.yesornotValue);
-    if (this.result_toc_result?.planned_result == false) this.result_toc_result.toc_level_id = 3;
   }
 }

@@ -18,13 +18,20 @@ export class SaveButtonService {
   }
 
   isSavingSectionPipe(): any {
-    this.isSavingSection = true;
+    Promise.resolve().then(() => {
+      this.isSavingSection = true;
+    });
+    // this.cd.detectChanges();
     return pipe(
       tap(resp => {
-        this.isSavingSection = false;
+        Promise.resolve().then(() => {
+          this.isSavingSection = false;
+        });
       }),
       catchError(err => {
-        this.isSavingSection = false;
+        Promise.resolve().then(() => {
+          this.isSavingSection = false;
+        });
         return throwError(err);
       })
       // ,retry(1)

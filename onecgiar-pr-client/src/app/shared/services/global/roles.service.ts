@@ -86,9 +86,6 @@ export class RolesService {
   }
 
   validateInitiative(initiative_id) {
-    console.log(this.roles.initiative);
-    console.log(initiative_id);
-    console.log(!!this.roles.initiative.find(item => item.initiative_id == initiative_id));
     return !!this.roles.initiative.find(item => item.initiative_id == initiative_id);
   }
 

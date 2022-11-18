@@ -1,4 +1,5 @@
 import { Component, Input, OnInit } from '@angular/core';
+import { ApiService } from '../../../../../../../../../shared/services/api/api.service';
 
 @Component({
   selector: 'app-toc-initiative-aao',
@@ -8,5 +9,24 @@ import { Component, Input, OnInit } from '@angular/core';
 export class TocInitiativeAaoComponent {
   @Input() readOnly: boolean;
   @Input() initiative: any;
-  constructor() {}
+  @Input() editable: boolean;
+  value = true;
+  actionAreasOutcomesList = [];
+  constructor(public api: ApiService) {}
+
+  ngOnInit(): void {
+    this.GET_tocLevelsByresultId();
+  }
+
+  GET_tocLevelsByresultId() {
+    this.api.tocApiSE.GET_tocLevelsByresultId(this.initiative.initiative_id, 4).subscribe(
+      ({ response }) => {
+        this.actionAreasOutcomesList = response;
+        console.log(response);
+      },
+      err => {
+        console.log(err);
+      }
+    );
+  }
 }

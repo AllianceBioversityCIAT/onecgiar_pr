@@ -1,0 +1,19 @@
+.action_area_items {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+
+    .action_area_item_toc {
+        border: 1px dotted rgb(179, 179, 179);
+        display: grid;
+        grid-template-columns: auto 1fr 50px;
+        gap: 10px;
+        align-items: center;
+        border-radius: 5px;
+        padding: 10px;
+
+        img {
+            width: 50px;
+        }
+    }
+}
