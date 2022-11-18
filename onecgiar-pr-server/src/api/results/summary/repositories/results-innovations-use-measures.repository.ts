@@ -62,7 +62,8 @@ export class ResultsInnovationsUseMeasuresRepository extends Repository<ResultsI
     from
     	results_innovations_use_measures rium
     where
-    	rium.result_innovation_use_id = ?;
+    	rium.result_innovation_use_id = ?
+      and rium.is_active > 0;
 
     `;
     try {
