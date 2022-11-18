@@ -34,9 +34,9 @@ export class ResultsInnovationsUseMeasures{
     @Column({
         name: 'quantity',
         type: 'float',
-        nullable: false
+        nullable: true
     })
-    quantity: number;
+    quantity!: number;
 
     @Column({
         name: 'is_active',

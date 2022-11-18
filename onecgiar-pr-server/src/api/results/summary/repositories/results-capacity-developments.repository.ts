@@ -26,9 +26,13 @@ export class ResultsCapacityDevelopmentsRepository extends Repository<ResultsCap
     	rcd.male_using,
     	rcd.female_using,
     	rcd.capdev_delivery_method_id,
-    	rcd.capdev_term_id
+    	rcd.capdev_term_id,
+    	ct.name as capdev_term_name,
+    	ct.term as capdev_term_term,
+    	ct.description as capdev_term_description
     from
     	results_capacity_developments rcd
+      left join capdevs_term ct on ct.capdev_term_id = rcd.capdev_term_id 
     WHERE 
     	rcd.result_id = ?
     	and rcd.is_active > 0;

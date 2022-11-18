@@ -62,7 +62,8 @@ export class ResultsInnovationsUseMeasuresRepository extends Repository<ResultsI
     from
     	results_innovations_use_measures rium
     where
-    	rium.result_innovation_use_id = ?;
+    	rium.result_innovation_use_id = ?
+      and rium.is_active > 0;
 
     `;
     try {
@@ -77,7 +78,7 @@ export class ResultsInnovationsUseMeasuresRepository extends Repository<ResultsI
     }
   }
 
-  async updateInnovatonUseMeasures(innovationUseId: number, unitOfMeasure: string[], userId: number) {
+  async updateInnovatonUseMeasures(innovationUseId: number, unitOfMeasure: number[], userId: number) {
     const initiative = unitOfMeasure??[];
     const upDateInactive = `
     update results_innovations_use_measures  
@@ -86,7 +87,7 @@ export class ResultsInnovationsUseMeasuresRepository extends Repository<ResultsI
       last_updated_by = ?
     where is_active > 0 
       and result_innovation_use_id = ?
-      and unit_of_measure not in (${`'${unitOfMeasure.toString().replace(/,/g,'\',\'')}'`});
+      and result_innovations_use_measure_id not in (${unitOfMeasure.toString()});
     `;
 
     const upDateActive = `
@@ -95,7 +96,7 @@ export class ResultsInnovationsUseMeasuresRepository extends Repository<ResultsI
       last_updated_date  = NOW(),
       last_updated_by = ?
     where result_innovation_use_id = ?
-      and unit_of_measure in (${`'${unitOfMeasure.toString().replace(/,/g,'\',\'')}'`})
+      and result_innovations_use_measure_id in (${unitOfMeasure.toString()})
     `;
 
     const upDateAllInactive = `
@@ -108,6 +109,8 @@ export class ResultsInnovationsUseMeasuresRepository extends Repository<ResultsI
     `;
 
     try {
+      console.log(upDateInactive)
+      console.log(initiative)
       if(initiative?.length){
         const upDateInactiveResult = await this.query(upDateInactive, [
           userId, innovationUseId

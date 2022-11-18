@@ -19,7 +19,7 @@
     <div class="other_items">
         <div class="auto_fit_container other_item"
             *ngFor="let otherItem of this.innovationUseInfoBody.other; let i=index">
-            <app-pr-input placeholder="e.g. Area" label="Unit of measure" type="number" [required]="false"
+            <app-pr-input placeholder="e.g. Area" label="Unit of measure" [required]="false"
                 [(ngModel)]="otherItem.unit_of_measure">
             </app-pr-input>
             <app-pr-input placeholder="Type quantity" label="Quantity" type="number" [required]="false"
@@ -30,9 +30,10 @@
     </div>
 
     <div style="margin-top: 20px;"></div>
-    <app-no-data-text *ngIf="!this.innovationUseInfoBody.other?.length" title="No links added"></app-no-data-text>
+    <app-no-data-text *ngIf="!this.innovationUseInfoBody.other?.length" title="No quantitative measure added">
+    </app-no-data-text>
 
-    <app-add-button name="Add more" (clickEvent)="onAddMore()"></app-add-button>
+    <app-add-button name="Add quantitative measure" (clickEvent)="onAddMore()"></app-add-button>
 
 </div>
 

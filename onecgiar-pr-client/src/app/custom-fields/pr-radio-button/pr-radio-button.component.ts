@@ -30,7 +30,7 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
     return this._value;
   }
 
-  set value(v: string) {
+  set value(v: any) {
     if (v !== this._value) {
       this._value = v;
       this.onChange(v);
@@ -53,6 +53,12 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
 
   joinName() {
     return this.label?.split(' ')?.join('');
+  }
+
+  currentVal = null;
+  onSelect() {
+    if (this.currentVal == this.value) this.value = null;
+    this.currentVal = this.value;
   }
 
   get valueName() {

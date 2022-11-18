@@ -210,8 +210,11 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     	rbi.version_id,
     	rbi.created_by,
     	rbi.last_updated_date,
-    	rbi.last_updated_by 
+    	rbi.last_updated_by,
+      ci.name as institutions_name,
+		  ci.acronym as institutions_acronym
     from results_by_institution rbi 
+    inner join clarisa_institutions ci on ci.id  = rbi.institutions_id 
     where rbi.result_id = ?
       and rbi.institution_roles_id = ?
       and rbi.is_active > 0;

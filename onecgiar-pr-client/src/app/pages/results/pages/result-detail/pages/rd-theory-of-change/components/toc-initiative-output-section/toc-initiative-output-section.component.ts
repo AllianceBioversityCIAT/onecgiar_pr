@@ -14,7 +14,7 @@ export class TocInitiativeOutputSectionComponent {
   @Input() result_toc_result = new resultToResultInterfaceToc();
   @Input() contributors_result_toc_result: any;
   fullInitiativeToc = null;
-  constructor(private api: ApiService, public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService) {}
+  constructor(public api: ApiService, public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService) {}
   ngOnInit(): void {
     this.GET_outcomeList();
     this.GET_outputList();

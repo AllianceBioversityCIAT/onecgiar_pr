@@ -18,29 +18,31 @@
 
     <app-pr-radio-button label="Long-term or short-term"
         description="This should reflect where the outcome has taken place/contributed to benefit."
-        [(ngModel)]="this.capDevInfoRoutingBody.capdev_term_id" [options]="this.longTermOrShortTermList"
-        optionLabel="name" optionValue='id' [required]="false">
+        [(ngModel)]="this.capDevInfoRoutingBody.capdev_term_id" [options]="this.capdevsTerms" optionLabel="name"
+        optionValue='capdev_term_id' [required]="false">
     </app-pr-radio-button>
 
     <br>
 
-    <app-pr-radio-button *ngIf="this.capDevInfoRoutingBody.capdev_term_id == 1" [options]="this.longTermSubOptions"
-        optionLabel="name" optionValue='id' [required]="false">
+    <app-pr-radio-button
+        *ngIf="this.capDevInfoRoutingBody.capdev_term_id == 4 ||this.capDevInfoRoutingBody.capdev_term_id == 1||this.capDevInfoRoutingBody.capdev_term_id == 2"
+        [options]="this.capdevsSubTerms" optionLabel="name" optionValue='capdev_term_id' [required]="false"
+        [(ngModel)]="this.capDevInfoRoutingBody.capdev_term_id">
     </app-pr-radio-button>
 
     <app-pr-radio-button label="Delivery Method" [description]="deliveryMethodDescription()"
         [(ngModel)]="this.capDevInfoRoutingBody.capdev_delivery_method_id" [options]="this.deliveryMethodOptions"
-        optionLabel="name" optionValue='id' [required]="false">
+        optionLabel="name" optionValue='capdev_delivery_method_id' [required]="false">
     </app-pr-radio-button>
     <br>
     <app-alert-status
-        description="If you don't find the funder you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. ">
+        description="If you don't find the organization you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. ">
     </app-alert-status>
 
     <app-pr-multi-select [options]="this.institutionsSE.institutionsList"
-        label="Where the trainees attending on behalf of an organization?" selectedLabel="Actor(s) selected"
+        label="Where the trainees attending on behalf of an organization?" selectedLabel="organization(s) selected"
         selectedOptionLabel="institutions_name" optionLabel="full_name" optionValue="institutions_id"
-        placeholder="Select actors" [(ngModel)]="this.capDevInfoRoutingBody.institutions">
+        placeholder="Select organizations" [(ngModel)]="this.capDevInfoRoutingBody.institutions">
     </app-pr-multi-select>
 
 </div>

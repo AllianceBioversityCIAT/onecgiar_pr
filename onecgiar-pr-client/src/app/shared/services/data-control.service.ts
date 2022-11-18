@@ -63,6 +63,7 @@ export class DataControlService {
   }
 
   get isKnowledgeProduct() {
-    return this.currentResult?.result_level_id == 4;
+    console.log(this.currentResult);
+    return this.currentResult?.result_type_id == 6;
   }
 }

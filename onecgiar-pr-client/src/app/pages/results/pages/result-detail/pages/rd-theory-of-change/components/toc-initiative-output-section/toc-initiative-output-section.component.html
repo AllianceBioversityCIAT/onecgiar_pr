@@ -8,7 +8,9 @@
 <app-pr-field-header label="Other contributors" [required]="false" [simpleStyle]="true">
 </app-pr-field-header>
 <div *ngFor="let item of contributors_result_toc_result">
-    <app-toc-initiative-out [initiative]="item" [editable]="false" [resultLevelId]="1"></app-toc-initiative-out>
+    <app-toc-initiative-out [initiative]="item"
+        [editable]="this.api.rolesSE.validateInitiative(item?.initiative_id) || this.api.rolesSE.isAdmin"
+        [resultLevelId]="1"></app-toc-initiative-out>
 </div>
 
 
