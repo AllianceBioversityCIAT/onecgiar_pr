@@ -49,7 +49,7 @@ export class ResultsTocResultsService {
 
       if (contributing_initiatives?.length) {
         initiativeArray = contributing_initiatives.map(el => el.id);
-        await this._resultByInitiativesRepository.updateResultByInitiative(result_id, initiativeArray, user.id, false);
+        await this._resultByInitiativesRepository.updateResultByInitiative(result_id, [...initiativeArray, result_toc_result.initiative_id], user.id, false);
         let resultsByInititiativeArray: ResultsByInititiative[] = [];
         for (let index = 0; index < contributing_initiatives.length; index++) {
           const exists = await this._resultByInitiativesRepository.getResultsByInitiativeByResultIdAndInitiativeIdAndRole(result_id, contributing_initiatives[index].id, false);
@@ -127,7 +127,7 @@ export class ResultsTocResultsService {
       } else {
         await this._resultsCenterRepository.updateCenter(result_id, [], user.id);
       }
-      await this._resultsTocResultRepository.updateResultByInitiative(result_id, initiativeArray, user.id);
+      await this._resultsTocResultRepository.updateResultByInitiative(result_id, [...initiativeArray, result_toc_result.initiative_id], user.id);
       let RtR = await this._resultsTocResultRepository.getRTRById(result_toc_result?.result_toc_result_id, result_id, result_toc_result?.initiative_id);
       if (RtR) {
         if (result.result_level_id == 2) {
@@ -240,8 +240,11 @@ export class ResultsTocResultsService {
             official_code: resultInit.official_code
           }]
         }
+        resTocRes[0]['toc_level_id'] = resTocRes[0]['planned_result'] != null && resTocRes[0]['planned_result'] == 0 ?4:resTocRes[0]['toc_level_id'];
         conResTocRes = await this._resultsTocResultRepository.getRTRPrimary(resultId, [resultInit.id], false, conInit.map(el => el.id));
-        
+        conResTocRes.map(el => {
+          el['toc_level_id'] = el['planned_result'] =! 0?el['toc_level_id']:4;
+        })
       }else if(result.result_level_id == 2){
         resTocRes = await this._resultsTocResultRepository.getRTRPrimaryActionArea(resultId, [resultInit.id], true);
         if(!resTocRes?.length){

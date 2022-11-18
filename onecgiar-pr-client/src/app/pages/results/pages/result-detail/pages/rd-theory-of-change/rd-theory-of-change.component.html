@@ -36,10 +36,12 @@
                     [required]="false" placeholder="Lead/Contract Center goes here...">
                 </app-pr-select>
             </div>
-            <app-edit-or-delete-item-button (click)="deleteEvidence(i)"></app-edit-or-delete-item-button>
+            <app-edit-or-delete-item-button (click)="deleteEvidence(i)" *ngIf="!this.api.rolesSE.readOnly">
+            </app-edit-or-delete-item-button>
         </div>
     </div>
-    <app-no-data-text *ngIf="!this.theoryOfChangeBody?.contributing_np_projects?.length" title="No Non-pooled added">
+    <app-no-data-text *ngIf="!this.theoryOfChangeBody?.contributing_np_projects?.length && !this.api.rolesSE.readOnly"
+        title="No Non-pooled added">
     </app-no-data-text>
     <app-add-button name="Add non-pooled project" *ngIf="!this.api.rolesSE.readOnly"
         (clickEvent)="addBilateralContribution()"></app-add-button>
@@ -71,11 +73,13 @@
             <app-toc-impact-section></app-toc-impact-section>
         </div>
         <div *ngSwitchCase="2">
-            <app-toc-action-area-outcome-section></app-toc-action-area-outcome-section>
+            <app-toc-action-area-outcome-section [result_toc_result]="this.theoryOfChangeBody.result_toc_result"
+                [contributors_result_toc_result]="this.theoryOfChangeBody.contributors_result_toc_result"> >
+            </app-toc-action-area-outcome-section>
         </div>
         <div *ngSwitchCase="3">
             <app-toc-initiative-outcome-section [result_toc_result]="this.theoryOfChangeBody.result_toc_result"
-                [contributors_result_toc_result]="this.theoryOfChangeBody.contributors_result_toc_result">>
+                [contributors_result_toc_result]="this.theoryOfChangeBody.contributors_result_toc_result">
             </app-toc-initiative-outcome-section>
         </div>
         <div *ngSwitchCase="4">

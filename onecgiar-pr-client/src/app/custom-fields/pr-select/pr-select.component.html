@@ -1,11 +1,15 @@
 <app-pr-field-header [label]="this.label" [description]="this.description" [required]="this.required">
 </app-pr-field-header>
+
 <div [ngSwitch]="editable ? false :(readOnly || this.rolesSE.readOnly && !isStatic)">
-    <div class="read-only" *ngSwitchCase="true">{{value}}</div>
+    <div class="read-only" *ngSwitchCase="true">{{(this.optionsIntance |
+        labelName:this.value:this.optionValue:this.optionLabel)}}</div>
     <div class="custom_select" *ngSwitchCase="false">
         <a class="field" tabindex="0" [id]="this.optionValue" [ngClass]="{'select-disable': this.disabled}">
-            <div class="text" [ngClass]="{'select_placeholder': !labelName}"
-                [innerHtml]="labelName? labelName :placeholder"></div>
+            <div class="text"
+                [ngClass]="{'select_placeholder': !(this.optionsIntance | labelName:this.value:this.optionValue:this.optionLabel)}"
+                [innerHtml]="(this.optionsIntance | labelName:this.value:this.optionValue:this.optionLabel)? (this.optionsIntance | labelName:this.value:this.optionValue:this.optionLabel) :placeholder">
+            </div>
             <i class="pi pi-chevron-down"></i>
             <div class="remove_focus" (click)="removeFocus()"></div>
             <div class="options">

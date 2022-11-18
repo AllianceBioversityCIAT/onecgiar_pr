@@ -1,9 +1,9 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException } from '@nestjs/common';
 import { CapdevsTermsService } from './capdevs-terms.service';
 import { CreateCapdevsTermDto } from './dto/create-capdevs-term.dto';
 import { UpdateCapdevsTermDto } from './dto/update-capdevs-term.dto';
 
-@Controller('capdevs-terms')
+@Controller()
 export class CapdevsTermsController {
   constructor(private readonly capdevsTermsService: CapdevsTermsService) {}
 
@@ -12,9 +12,11 @@ export class CapdevsTermsController {
     return this.capdevsTermsService.create(createCapdevsTermDto);
   }
 
-  @Get()
-  findAll() {
-    return this.capdevsTermsService.findAll();
+  @Get('get/all')
+  async findAll() {
+    const { message, response, status } =
+      await this.capdevsTermsService.findAll();
+    throw new HttpException({ message, response }, status);
   }
 
   @Get(':id')

@@ -5,6 +5,7 @@ import { ScoreService } from '../../../../../../shared/services/global/score.ser
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { environment } from '../../../../../../../environments/environment';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
+import { DataControlService } from '../../../../../../shared/services/data-control.service';
 
 @Component({
   selector: 'app-rd-general-information',
@@ -14,7 +15,7 @@ import { RolesService } from '../../../../../../shared/services/global/roles.ser
 export class RdGeneralInformationComponent {
   generalInfoBody = new GeneralInfoBody();
   toggle = 0;
-  constructor(private api: ApiService, public scoreSE: ScoreService, public institutionsSE: InstitutionsService, public rolesSE: RolesService) {}
+  constructor(private api: ApiService, public scoreSE: ScoreService, public institutionsSE: InstitutionsService, public rolesSE: RolesService, public dataControlSE: DataControlService) {}
   ngOnInit(): void {
     this.showAlerts();
     this.getSectionInformation();

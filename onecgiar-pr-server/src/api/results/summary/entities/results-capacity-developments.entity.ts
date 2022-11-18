@@ -2,14 +2,16 @@ import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToOne, Prim
 import { Result } from '../../entities/result.entity';
 import { Version } from '../../versions/entities/version.entity';
 import { User } from '../../../../auth/modules/user/entities/user.entity';
+import { CapdevsDeliveryMethod } from '../../capdevs-delivery-methods/entities/capdevs-delivery-method.entity';
+import { CapdevsTerm } from '../../capdevs-terms/entities/capdevs-term.entity';
 
 @Entity('results_capacity_developments')
 export class ResultsCapacityDevelopments{
 
     @PrimaryGeneratedColumn({
-        name: 'result_capacity_developent_id'
+        name: 'result_capacity_development_id'
     })
-    result_capacity_developent_id: number;
+    result_capacity_development_id: number;
 
     @OneToOne(() => Result, r => r.id, { nullable: false })
     @JoinColumn({
@@ -17,9 +19,31 @@ export class ResultsCapacityDevelopments{
     })
     result_id: number;
 
-    /**
-     * !foraneas
-     */
+    @Column({
+        name: 'male_using',
+        type: 'bigint',
+        nullable: true
+    })
+    male_using!: number;
+
+    @Column({
+        name: 'female_using',
+        type: 'bigint',
+        nullable: true
+    })
+    female_using!: number;
+
+    @ManyToOne(() => CapdevsDeliveryMethod, cdm => cdm.capdev_delivery_method_id, {nullable: true})
+    @JoinColumn({
+        name: 'capdev_delivery_method_id'
+    })
+    capdev_delivery_method_id!: number;
+
+    @ManyToOne(() => CapdevsTerm, ct => ct.capdev_term_id, { nullable: true})
+    @JoinColumn({
+        name: 'capdev_term_id'
+    })
+    capdev_term_id!: number
 
     @Column({
         name: 'is_active',

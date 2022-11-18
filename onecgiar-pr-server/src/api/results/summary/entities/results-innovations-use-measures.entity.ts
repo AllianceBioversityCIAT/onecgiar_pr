@@ -12,7 +12,7 @@ export class ResultsInnovationsUseMeasures{
     })
     result_innovations_use_measure_id: number;
 
-    @ManyToOne(() => ResultsInnovationsUse, riu => riu.result_innovations_use_measure_id, {nullable: false})
+    @ManyToOne(() => ResultsInnovationsUse, riu => riu.result_innovation_use_id, {nullable: false})
     @JoinColumn({
         name: 'result_innovation_use_id'
     })

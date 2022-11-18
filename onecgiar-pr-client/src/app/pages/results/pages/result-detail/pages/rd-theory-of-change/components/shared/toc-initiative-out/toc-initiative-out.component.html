@@ -2,7 +2,7 @@
     <div class="editable_field">
         <app-pr-yes-or-not
             label="Is this result planned in the <strong>{{initiative?.official_code}} {{initiative?.short_name}}</strong> ToC?"
-            (selectOptionEvent)="valdiateEOI()" [required]="false" [(ngModel)]="initiative.planned_result"
+            (selectOptionEvent)="valdiateEOI(initiative)" [required]="false" [(ngModel)]="initiative.planned_result"
             [readOnly]="!editable" [editable]="editable">
         </app-pr-yes-or-not>
         <a *ngIf="editable" [href]="'https://toc.mel.cgiar.org/toc/'+this.fullInitiativeToc" target="_blank"
@@ -17,7 +17,8 @@
             label="Output" optionLabel="title" optionValue="toc_result_id" [disabled]="!this.editable"
             [editable]="editable" placeholder="Select output" [(ngModel)]="initiative.toc_result_id">
         </app-pr-select>
-        <app-pr-select *ngIf="resultLevelId == 1 ? this.initiative?.planned_result == false : true"
+        <app-pr-select
+            *ngIf="this.showOutcomeLevel && (resultLevelId == 1 ? this.initiative?.planned_result == false : true)"
             [options]="this.tocInitiativeOutcomeListsSE.outcomeLevelList|outcomeLevelFilter:2" label="Outcome level"
             [editable]="editable"
             [disabled]="(resultLevelId == 1 ? true : this.initiative?.planned_result == false) || !this.editable"
@@ -35,7 +36,7 @@
 
         <app-pr-select
             *ngIf="(resultLevelId == 1 ? this.initiative?.planned_result == false : true) && initiative.toc_level_id == 3"
-            [options]="this.eoiList" label="Outcome EOI" [editable]="editable"
+            [options]="this.eoiList" label="Outcome" [editable]="editable"
             [disabled]="(resultLevelId == 1 ? false : false) || !this.editable" optionLabel="title"
             optionValue="toc_result_id" placeholder="Select outcome" [required]="false"
             [(ngModel)]="initiative.toc_result_id">

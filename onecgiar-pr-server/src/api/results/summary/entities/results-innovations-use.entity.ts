@@ -7,9 +7,9 @@ import { Version } from '../../versions/entities/version.entity';
 export class ResultsInnovationsUse {
 
     @PrimaryGeneratedColumn({
-        name: 'result_innovations_use_measure_id'
+        name: 'result_innovation_use_id'
     })
-    result_innovations_use_measure_id: number;
+    result_innovation_use_id: number;
 
     @OneToOne(() => Result, r => r.id, { nullable: false })
     @JoinColumn({
@@ -22,14 +22,14 @@ export class ResultsInnovationsUse {
         type: 'bigint',
         nullable: true
     })
-    male_using: number;
+    male_using!: number;
 
     @Column({
         name: 'female_using',
         type: 'bigint',
         nullable: true
     })
-    female_using: number;
+    female_using!: number;
 
     @Column({
         name: 'is_active',

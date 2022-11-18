@@ -1,9 +1,9 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException } from '@nestjs/common';
 import { CapdevsDeliveryMethodsService } from './capdevs-delivery-methods.service';
 import { CreateCapdevsDeliveryMethodDto } from './dto/create-capdevs-delivery-method.dto';
 import { UpdateCapdevsDeliveryMethodDto } from './dto/update-capdevs-delivery-method.dto';
 
-@Controller('capdevs-delivery-methods')
+@Controller()
 export class CapdevsDeliveryMethodsController {
   constructor(private readonly capdevsDeliveryMethodsService: CapdevsDeliveryMethodsService) {}
 
@@ -12,9 +12,11 @@ export class CapdevsDeliveryMethodsController {
     return this.capdevsDeliveryMethodsService.create(createCapdevsDeliveryMethodDto);
   }
 
-  @Get()
-  findAll() {
-    return this.capdevsDeliveryMethodsService.findAll();
+  @Get('get/all')
+  async findAll() {
+    const { message, response, status } =
+      await this.capdevsDeliveryMethodsService.findAll();
+    throw new HttpException({ message, response }, status);
   }
 
   @Get(':id')

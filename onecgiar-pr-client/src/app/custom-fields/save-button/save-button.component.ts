@@ -1,4 +1,4 @@
-import { Component, OnInit, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, Output, EventEmitter, Input } from '@angular/core';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { SaveButtonService } from './save-button.service';
 
@@ -8,6 +8,7 @@ import { SaveButtonService } from './save-button.service';
   styleUrls: ['./save-button.component.scss']
 })
 export class SaveButtonComponent {
+  @Input() editable: boolean;
   @Output() clickSave = new EventEmitter();
   constructor(public rolesSE: RolesService, public saveButtonSE: SaveButtonService) {}
   onClickSave() {

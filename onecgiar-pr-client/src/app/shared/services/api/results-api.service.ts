@@ -180,6 +180,22 @@ export class ResultsApiService {
       this.saveButtonSE.isSavingSectionPipe()
     );
   }
+
+  PATCH_innovationUse(body) {
+    return this.http.patch<any>(`${this.apiBaseUrl}summary/innovation-use/create/result/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+  }
+
+  GET_innovationUse() {
+    return this.http.get<any>(`${this.apiBaseUrl}summary/innovation-use/get/result/${this.currentResultId}`).pipe(this.saveButtonSE.isSavingSectionPipe());
+  }
+
+  PATCH_capacityDevelopent(body) {
+    return this.http.patch<any>(`${this.apiBaseUrl}summary/capacity-developent/create/result/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+  }
+
+  GET_capacityDevelopent() {
+    return this.http.get<any>(`${this.apiBaseUrl}summary/capacity-developent/get/result/${this.currentResultId}`).pipe(this.saveButtonSE.isSavingSectionPipe());
+  }
 }
 
 // 200 no existe

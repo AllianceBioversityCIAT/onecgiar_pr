@@ -1,1 +1,18 @@
-<p>toc-initiative-aao works!</p>
+<app-pr-field-header
+    label="Action Area Outcome <strong>{{initiative?.official_code}} {{initiative?.short_name}}</strong>"
+    [required]="false">
+</app-pr-field-header>
+<div class="action_area_items">
+    <div *ngFor="let actionAreaOutcome of this.actionAreasOutcomesList; let i=index">
+        <div class="action_area_item_toc"
+            *ngIf="editable? true:actionAreaOutcome?.action_area_outcome_id == initiative.action_area_outcome_id">
+            <img src="assets/action_areas/1.png" alt="" srcset="">
+            <div class="text"><strong>??? - </strong>{{actionAreaOutcome?.description}}</div>
+            <p-radioButton name="groupname" inputId="action_area_toc{{i}}"
+                *ngIf="editable?true:!this.api.rolesSE.readOnly" [value]="actionAreaOutcome.action_area_outcome_id"
+                [(ngModel)]="initiative.action_area_outcome_id">
+            </p-radioButton>
+        </div>
+    </div>
+
+</div>

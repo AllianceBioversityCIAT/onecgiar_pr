@@ -31,7 +31,7 @@ import { ClarisaCentersRepository } from './clarisa-centers/clarisa-centers.repo
 @Injectable()
 export class ClarisaTaskService {
   private readonly clarisaHost: string =
-    `${env.CLA_URL}api/` ?? env.L_CLA_URL;
+    `${env.CLA_URL}api/`;
   private readonly configAuth = {
     auth: {
       username: env.CLA_USER,
@@ -444,9 +444,10 @@ export class ClarisaTaskService {
           `[${position}]: All CLARISA Institutions type control list data has been deleted`,
         );
       } else {
-        const data = await this._httpService.get(`${env.L_CLA_URL}institution-types`, {auth: {username:env.L_CLA_USER, password: env.L_CLA_PASSWORD }});
+        const data = await this._httpService.get(`${this.clarisaHost}institution-types`, {auth: {username:env.L_CLA_USER, password: env.L_CLA_PASSWORD }});
         await data.subscribe(async el => {
           const {data} = el;
+          data.map(el => {el['code'] = parseInt(el['code'])})
           await this._clarisaInstitutionsTypeRepository.save(
             data,
           );

@@ -61,4 +61,8 @@ export class DataControlService {
     const lastWord = text?.split(' ')[text?.split(' ').length - 1];
     return lastWord[0].toUpperCase() + lastWord.substring(1);
   }
+
+  get isKnowledgeProduct() {
+    return this.currentResult?.result_level_id == 4;
+  }
 }

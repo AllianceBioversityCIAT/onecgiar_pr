@@ -121,7 +121,7 @@ export class ResultsService {
       }
 
       if (resultType.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: resultType });
+        throw this._handlersError.returnErrorRes({ error: resultType, debug: true });
       }
 
       if (!resultByLevel) {
@@ -137,7 +137,7 @@ export class ResultsService {
 
       const version = await this._versionsService.findBaseVersion();
       if (version.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: version });
+        throw this._handlersError.returnErrorRes({ error: version, debug: true });
       }
       const vrs: Version = <Version>version.response;
 
@@ -177,7 +177,7 @@ export class ResultsService {
         status: HttpStatus.CREATED,
       };
     } catch (error) {
-      return this._handlersError.returnErrorRes({ error });
+      return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 
@@ -203,7 +203,7 @@ export class ResultsService {
         status: HttpStatus.OK,
       };
     } catch (error) {
-      return this._handlersError.returnErrorRes({ error });
+      return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 
@@ -225,7 +225,7 @@ export class ResultsService {
         status: HttpStatus.OK,
       };
     } catch (error) {
-      return this._handlersError.returnErrorRes({ error });
+      return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 
@@ -248,7 +248,7 @@ export class ResultsService {
         resultGeneralInformation.result_type_id,
       );
       if (resultType.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: resultType });
+        throw this._handlersError.returnErrorRes({ error: resultType, debug: true });
       }
 
       const resultByLevel =
@@ -327,7 +327,7 @@ export class ResultsService {
 
       const version = await this._versionsService.findBaseVersion();
       if (version.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: version });
+        throw this._handlersError.returnErrorRes({ error: version, debug: true });
       }
       const vrs: Version = <Version>version.response;
 
@@ -440,7 +440,7 @@ export class ResultsService {
         status: HttpStatus.OK,
       };
     } catch (error) {
-      return this._handlersError.returnErrorRes({ error });
+      return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 
@@ -472,7 +472,7 @@ export class ResultsService {
         status: HttpStatus.OK,
       };
     } catch (error) {
-      return this._handlersError.returnErrorRes({ error });
+      return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 
@@ -495,7 +495,7 @@ export class ResultsService {
         status: HttpStatus.OK,
       };
     } catch (error) {
-      return this._handlersError.returnErrorRes({ error });
+      return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 
@@ -519,7 +519,7 @@ export class ResultsService {
         status: HttpStatus.OK,
       };
     } catch (error) {
-      return this._handlersError.returnErrorRes({ error });
+      return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 
@@ -542,7 +542,7 @@ export class ResultsService {
         status: HttpStatus.OK,
       };
     } catch (error) {
-      return this._handlersError.returnErrorRes({ error });
+      return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 
@@ -564,7 +564,7 @@ export class ResultsService {
         status: HttpStatus.OK,
       };
     } catch (error) {
-      return this._handlersError.returnErrorRes({ error });
+      return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 
@@ -627,7 +627,7 @@ export class ResultsService {
       }
 
       if (resultType.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: resultType });
+        throw this._handlersError.returnErrorRes({ error: resultType, debug: true });
       }
 
       if (!resultByLevel) {
@@ -640,7 +640,7 @@ export class ResultsService {
 
       const version = await this._versionsService.findBaseVersion();
       if (version.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: version });
+        throw this._handlersError.returnErrorRes({ error: version, debug: true });
       }
 
       const year: Year = await this._yearRepository.findOne({
@@ -690,7 +690,7 @@ export class ResultsService {
         status: HttpStatus.OK,
       };
     } catch (error) {
-      return this._handlersError.returnErrorRes({ error });
+      return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 
@@ -740,7 +740,7 @@ export class ResultsService {
         status: HttpStatus.OK,
       };
     } catch (error) {
-      return this._handlersError.returnErrorRes({ error });
+      return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 
@@ -755,7 +755,7 @@ export class ResultsService {
         status: HttpStatus.OK,
       };
     } catch (error) {
-      return this._handlersError.returnErrorRes({ error });
+      return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 
@@ -793,7 +793,7 @@ export class ResultsService {
         status: HttpStatus.OK,
       };
     } catch (error) {
-      return this._handlersError.returnErrorRes({ error });
+      return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 

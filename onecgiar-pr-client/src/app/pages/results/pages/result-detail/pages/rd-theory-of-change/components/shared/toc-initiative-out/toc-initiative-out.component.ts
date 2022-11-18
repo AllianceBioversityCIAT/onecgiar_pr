@@ -23,7 +23,7 @@ export class TocInitiativeOutComponent {
     this.GET_fullInitiativeToc();
     this.GET_outputList();
     this.GET_EOIList();
-    this.valdiateEOI();
+    this.valdiateEOI(this.initiative);
   }
 
   GET_outputList() {
@@ -78,8 +78,13 @@ export class TocInitiativeOutComponent {
     );
   }
 
-  valdiateEOI() {
-    //   console.log(this.yesornotValue);
-    if (this.initiative.planned_result == false) this.initiative.toc_level_id = 3;
+  showOutcomeLevel = true;
+
+  valdiateEOI(initiative) {
+    this.showOutcomeLevel = false;
+    if (initiative.planned_result == false) initiative.toc_level_id = 3;
+    setTimeout(() => {
+      this.showOutcomeLevel = true;
+    }, 100);
   }
 }
