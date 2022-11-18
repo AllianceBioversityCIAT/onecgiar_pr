@@ -3,9 +3,12 @@
     <app-pr-input [(ngModel)]="knowledgeProductBody.handle" label="Handle" [required]="false" [disabled]="true">
     </app-pr-input>
     <div class="auto_fit_container">
-        <app-pr-input [(ngModel)]="knowledgeProductBody.yearCG" [label]="knowledgeProductBody.year_WOS? 'Issue date(CGSpace)':'Issue date'" [required]="false" [readOnly]="true">
+        <app-pr-input [(ngModel)]="knowledgeProductBody.yearCG"
+            [label]="knowledgeProductBody.year_WOS? 'Issue date(CGSpace)':'Issue date'" [required]="false"
+            [readOnly]="true">
         </app-pr-input>
-        <app-pr-input *ngIf="knowledgeProductBody.year_WOS" [(ngModel)]="knowledgeProductBody.year_WOS" label="Issue date(WoS)" [required]="false" [readOnly]="true">
+        <app-pr-input *ngIf="knowledgeProductBody.year_WOS" [(ngModel)]="knowledgeProductBody.year_WOS"
+            label="Issue date(WoS)" [required]="false" [readOnly]="true">
         </app-pr-input>
     </div>
     <app-pr-field-header label="Authors"></app-pr-field-header>
@@ -13,25 +16,34 @@
         [readOnly]="true">
     </app-pr-input>
     <div class="auto_fit_container">
-        <app-pr-input [(ngModel)]="knowledgeProductBody.is_peer_reviewed_CG" [label]="knowledgeProductBody.is_peer_reviewed_WOS? 'Peer reviewed(CGSpace)':'Peer reviewed'" [required]="false" [readOnly]="true">
+        <app-pr-input [(ngModel)]="knowledgeProductBody.is_peer_reviewed_CG"
+            [label]="knowledgeProductBody.is_peer_reviewed_WOS? 'Peer reviewed(CGSpace)':'Peer reviewed'"
+            [required]="false" [readOnly]="true">
         </app-pr-input>
-        <app-pr-input *ngIf="knowledgeProductBody.is_peer_reviewed_WOS != undefined" [(ngModel)]="knowledgeProductBody.is_peer_reviewed_WOS" label="Peer reviewed(WoS)" [required]="false" [readOnly]="true">
+        <app-pr-input *ngIf="knowledgeProductBody.is_peer_reviewed_WOS != undefined"
+            [(ngModel)]="knowledgeProductBody.is_peer_reviewed_WOS" label="Peer reviewed(WoS)" [required]="false"
+            [readOnly]="true">
         </app-pr-input>
     </div>
     <div class="auto_fit_container">
-        <app-pr-input [(ngModel)]="knowledgeProductBody.is_isi_CG" [label]="knowledgeProductBody.is_isi_WOS ? 'Web of Science Core Collection (former ISI) (CGSpace)':'Web of Science Core Collection (former ISI)'"
+        <app-pr-input [(ngModel)]="knowledgeProductBody.is_isi_CG"
+            [label]="knowledgeProductBody.is_isi_WOS ? 'Web of Science Core Collection (former ISI) (CGSpace)':'Web of Science Core Collection (former ISI)'"
             [required]="false" [readOnly]="true">
         </app-pr-input>
-        <app-pr-input *ngIf="knowledgeProductBody.is_isi_WOS != undefined" [(ngModel)]="knowledgeProductBody.is_isi_WOS" label="Web of Science Core Collection (former ISI) (WoS)"
-            [required]="false" [readOnly]="true">
+        <app-pr-input *ngIf="knowledgeProductBody.is_isi_WOS != undefined" [(ngModel)]="knowledgeProductBody.is_isi_WOS"
+            label="Web of Science Core Collection (former ISI) (WoS)" [required]="false" [readOnly]="true">
         </app-pr-input>
     </div>
     <app-pr-input [(ngModel)]="knowledgeProductBody.doi" label="DOI" [required]="false" [readOnly]="true">
     </app-pr-input>
     <div class="auto_fit_container">
-        <app-pr-input [(ngModel)]="knowledgeProductBody.accessibility_CG" [label]="knowledgeProductBody.accessibility_WOS? 'Accessibility(CGSpace)':'Accessibility'" [required]="false" [readOnly]="true">
+        <app-pr-input [(ngModel)]="knowledgeProductBody.accessibility_CG"
+            [label]="knowledgeProductBody.accessibility_WOS? 'Accessibility(CGSpace)':'Accessibility'"
+            [required]="false" [readOnly]="true">
         </app-pr-input>
-        <app-pr-input *ngIf="knowledgeProductBody.accessibility_WOS" [(ngModel)]="knowledgeProductBody.accessibility_WOS" label="Accessibility(WoS)" [required]="false" [readOnly]="true">
+        <app-pr-input *ngIf="knowledgeProductBody.accessibility_WOS"
+            [(ngModel)]="knowledgeProductBody.accessibility_WOS" label="Accessibility(WoS)" [required]="false"
+            [readOnly]="true">
         </app-pr-input>
     </div>
     <app-pr-input [(ngModel)]="knowledgeProductBody.licence" label="License" [required]="false" [readOnly]="true">
@@ -46,7 +58,11 @@
     <app-pr-input [(ngModel)]="knowledgeProductBody.investors" label="Investors / Sponsors" [required]="false"
         [readOnly]="true">
     </app-pr-input>
-    <app-pr-field-header label="Altmetrics"></app-pr-field-header>
+    <app-pr-field-header label="Altmetrics" [required]="false"></app-pr-field-header>
+    <a class="altmetric_details_url" [href]="knowledgeProductBody?.altmetric_details_url" target="_blank">
+        <img class="altmetric_image" [src]="knowledgeProductBody?.altmetric_img_url" alt="" srcset="">
+
+    </a>
     <!-- poner imagen que está en campo altmetric_img_url y que sea clickeable y redirija a la url que está en campo altmetric_details_url... PUEDEN SER NULOS -->
     <app-pr-input [(ngModel)]="knowledgeProductBody.references" label="Reference to other Knowledge products"
         [required]="false" [readOnly]="true">
