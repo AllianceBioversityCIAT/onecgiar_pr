@@ -6,18 +6,20 @@ import { ClarisaInitiativesRepository } from './ClarisaInitiatives.repository';
 
 @Injectable()
 export class ClarisaInitiativesService {
-
   constructor(
     private readonly _handlersError: HandlersError,
-    private readonly _clarisaInitiativesRepository: ClarisaInitiativesRepository
-  ){}
+    private readonly _clarisaInitiativesRepository: ClarisaInitiativesRepository,
+  ) {}
   create(createClarisaInitiativeDto: CreateClarisaInitiativeDto) {
     return 'This action adds a new clarisaInitiative';
   }
 
-  async getAllInitiativesWithoutCurrentInitiative(resultId:number){
+  async getAllInitiativesWithoutCurrentInitiative(resultId: number) {
     try {
-      const initiative = await this._clarisaInitiativesRepository.getAllInitiativesWithoutCurrentInitiative(resultId);
+      const initiative =
+        await this._clarisaInitiativesRepository.getAllInitiativesWithoutCurrentInitiative(
+          resultId,
+        );
       if (!initiative.length) {
         throw {
           response: {},
@@ -25,20 +27,20 @@ export class ClarisaInitiativesService {
           status: HttpStatus.NOT_FOUND,
         };
       }
-      
+
       return {
         response: initiative,
         message: 'Successful response',
         status: HttpStatus.OK,
       };
     } catch (error) {
-      console.log(error)
+      console.log(error);
       return this._handlersError.returnErrorRes({ error });
     }
   }
 
   findAll() {
-    return `This action returns all clarisaInitiatives`;
+    return this._clarisaInitiativesRepository.getAllInitiatives();
   }
 
   findOne(id: number) {
