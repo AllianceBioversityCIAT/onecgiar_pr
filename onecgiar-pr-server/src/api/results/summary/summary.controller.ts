@@ -6,7 +6,7 @@ import { InnovationUseDto } from './dto/create-innovation-use.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
 
-@Controller('summary')
+@Controller()
 export class SummaryController {
   constructor(private readonly summaryService: SummaryService) { }
 
