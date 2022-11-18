@@ -180,6 +180,14 @@ export class ResultsApiService {
       this.saveButtonSE.isSavingSectionPipe()
     );
   }
+
+  POST_innovationUse(body) {
+    return this.http.patch<any>(`${this.apiBaseUrl}summary/innovation-use/create/result/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+  }
+
+  GET_innovationUse() {
+    return this.http.get<any>(`${this.apiBaseUrl}summary/innovation-use/get/result/${this.currentResultId}`).pipe(this.saveButtonSE.isSavingSectionPipe());
+  }
 }
 
 // 200 no existe
