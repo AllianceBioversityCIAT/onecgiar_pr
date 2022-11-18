@@ -213,7 +213,8 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     	rbi.last_updated_by 
     from results_by_institution rbi 
     where rbi.result_id = ?
-      and institution_roles_id = ?;
+      and rbi.institution_roles_id = ?
+      and rbi.is_active > 0;
     `;
     try {
       const completeUser: ResultsByInstitution[] = await this.query(queryData, [

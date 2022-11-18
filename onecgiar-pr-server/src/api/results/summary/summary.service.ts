@@ -183,11 +183,12 @@ export class SummaryService {
         newCapDev.result_id = resultId;
         newCapDev.capdev_delivery_method_id = capdev_delivery_method_id;
         newCapDev.capdev_term_id = capdev_term_id;
-        CapDevData = await this._resultsInnovationsUseRepository.save(newCapDev);
+        CapDevData = await this._resultsCapacityDevelopmentsRepository.save(newCapDev);
       }
 
       if(institutions?.length){
         let institutionsList: ResultsByInstitution[] = [];
+        await this._resultByIntitutionsRepository.updateGenericIstitutions(resultId, institutions, 3, user.id);
         for (let index = 0; index < institutions.length; index++) {
           const {institutions_id} = institutions[index];
           const instiExists = await this._resultByIntitutionsRepository.getGenericResultByInstitutionExists(resultId, institutions_id, 3);
@@ -198,6 +199,7 @@ export class SummaryService {
             newInstitution.last_updated_by = user.id;
             newInstitution.version_id = vrs.id;
             newInstitution.institutions_id = institutions_id;
+            newInstitution.result_id = resultId;
             institutionsList.push(newInstitution);
           }
         }

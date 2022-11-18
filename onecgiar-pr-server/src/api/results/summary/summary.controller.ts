@@ -53,7 +53,7 @@ export class SummaryController {
       JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
     );
     const { message, response, status } =
-      await this.summaryService.saveCapacityDevelopents(capdevDto, resultId,token);
+      await this.summaryService.saveCapacityDevelopents(capdevDto, resultId, token);
     throw new HttpException({ message, response }, status);
   }
 
