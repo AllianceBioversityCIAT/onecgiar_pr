@@ -67,7 +67,7 @@ export class ResultsInnovationsUseMeasuresRepository extends Repository<ResultsI
     `;
     try {
       const resultTocResult: ResultsInnovationsUseMeasures[] = await this.query(queryData, [innovationsUseId]);
-      return resultTocResult.length ? resultTocResult[0] : undefined;
+      return resultTocResult;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsInnovationsUseMeasuresRepository.name,
