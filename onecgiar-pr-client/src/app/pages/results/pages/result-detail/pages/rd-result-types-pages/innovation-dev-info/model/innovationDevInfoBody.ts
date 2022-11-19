@@ -10,4 +10,5 @@ export class InnovationDevInfoBody {
   public innovation_collaborators: string; //todo
   // public readiness_level: string; //todo
   public evidences_justification: string; //todo
+  public result = { title: '' };
 }

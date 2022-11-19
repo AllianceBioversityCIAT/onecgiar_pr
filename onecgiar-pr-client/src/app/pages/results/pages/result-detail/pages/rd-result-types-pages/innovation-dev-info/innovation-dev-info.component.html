@@ -2,7 +2,8 @@
 <div class="detail_container">
     <app-alert-status [description]="alertInfoText()">
     </app-alert-status>
-    <app-pr-input label="Long title" [required]="false" [readOnly]="true">
+    <app-pr-input label="Long title" [required]="false" [readOnly]="true"
+        [(ngModel)]="innovationDevInfoBody?.result.title">
     </app-pr-input>
     <app-pr-input label="Provide a short title for the innovation"
         description="Short name facilitates clear communication about the innovation. Avoid abbreviations or (technical) jargon"
