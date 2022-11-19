@@ -371,7 +371,7 @@ export class SummaryService {
       }
       const vrs: Version = <Version>version.response;
       const resultsPolicyChanges = await this._resultsPolicyChangesRepository.ResultsPolicyChangesExists(resultId);
-      const { amount,institutions,policy_stage_id,policy_type_id} = policyChangesDto;
+      const { amount,institutions,policy_stage_id,policy_type_id, status_amount} = policyChangesDto;
 
       let policyChangesData:ResultsPolicyChanges = undefined;
       if (resultsPolicyChanges) {
@@ -379,6 +379,7 @@ export class SummaryService {
         resultsPolicyChanges.last_updated_by = user.id;
         resultsPolicyChanges.policy_stage_id = policy_stage_id;
         resultsPolicyChanges.policy_type_id = policy_type_id;
+        resultsPolicyChanges.status_amount = status_amount;
         policyChangesData = await this._resultsPolicyChangesRepository.save(resultsPolicyChanges);
       } else {
         const newResultsPolicyChanges = new ResultsPolicyChanges();
@@ -389,9 +390,10 @@ export class SummaryService {
         newResultsPolicyChanges.result_id = resultId;
         newResultsPolicyChanges.created_by = user.id;
         newResultsPolicyChanges.last_updated_by = user.id;
+        newResultsPolicyChanges.status_amount = status_amount;
         policyChangesData = await this._resultsPolicyChangesRepository.save(newResultsPolicyChanges);
       }
-      
+
       if (institutions?.length) {
         let institutionsList: ResultsByInstitution[] = [];
         await this._resultByIntitutionsRepository.updateGenericIstitutions(resultId, institutions, 4, user.id);

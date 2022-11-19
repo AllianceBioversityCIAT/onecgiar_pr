@@ -39,6 +39,13 @@ export class ResultsPolicyChanges{
     amount!:number;
 
     @Column({
+        name: 'status_amount',
+        type: 'text',
+        nullable: true
+    })
+    status_amount!:string;
+
+    @Column({
         name: 'is_active',
         type: 'boolean',
         nullable: false,
