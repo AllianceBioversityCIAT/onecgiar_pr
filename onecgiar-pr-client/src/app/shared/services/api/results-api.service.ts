@@ -233,4 +233,20 @@ export class ResultsApiService {
   GET_innovationDev() {
     return this.http.get<any>(`${this.apiBaseUrl}summary/innovation-dev/get/result/${this.currentResultId}`).pipe(this.saveButtonSE.isSavingSectionPipe());
   }
+
+  PATCH_policyChanges(body) {
+    return this.http.patch<any>(`${this.apiBaseUrl}summary/policy-changes/create/result/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+  }
+
+  GET_policyChanges() {
+    return this.http.get<any>(`${this.apiBaseUrl}summary/policy-changes/get/result/${this.currentResultId}`).pipe(this.saveButtonSE.isSavingSectionPipe());
+  }
+
+  GET_clarisaPolicyTypes() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/policy-types/get/all`);
+  }
+
+  GET_clarisaPolicyStages() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/policy-stages/get/all`);
+  }
 }

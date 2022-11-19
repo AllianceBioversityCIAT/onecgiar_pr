@@ -10,7 +10,7 @@ export class InstitutionsService {
   constructor(private api: ApiService) {
     this.api.resultsSE.GET_allInstitutions().subscribe(({ response }) => {
       this.institutionsList = response;
-      // console.log(this.institutionsList);
+      console.log(this.institutionsList);
     });
     this.api.resultsSE.GET_institutionTypes().subscribe(({ response }) => {
       this.institutionsTypesList = response;
