@@ -104,6 +104,7 @@ export class MQAPResultDto {
   Type: string;
   ISI: string;
   'Peer-reviewed': string;
+  'Funding source': Affiliation[];
   Citation: string;
   Language: string;
   Journal: string;
