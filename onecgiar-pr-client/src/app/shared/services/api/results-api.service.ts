@@ -213,7 +213,24 @@ export class ResultsApiService {
       })
     );
   }
-}
 
-// 200 no existe
-// 201 ya existte en bd
+  GET_clarisaInnovationType() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/innovation-type/get/all`);
+  }
+
+  GET_clarisaInnovationCharacteristics() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/innovation-characteristics/get/all`);
+  }
+
+  GET_clarisaInnovationReadinessLevels() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/innovation-readiness-levels/get/all`);
+  }
+
+  PATCH_innovationDev(body) {
+    return this.http.patch<any>(`${this.apiBaseUrl}summary/innovation-dev/create/result/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+  }
+
+  GET_innovationDev() {
+    return this.http.get<any>(`${this.apiBaseUrl}summary/innovation-dev/get/result/${this.currentResultId}`).pipe(this.saveButtonSE.isSavingSectionPipe());
+  }
+}

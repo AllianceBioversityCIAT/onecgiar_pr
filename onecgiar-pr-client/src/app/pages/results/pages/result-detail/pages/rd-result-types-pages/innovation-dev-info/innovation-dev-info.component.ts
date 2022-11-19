@@ -1,5 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { InnovationDevInfoBody } from './model/innovationDevInfoBody';
+import { InnovationControlListService } from '../../../../../../../shared/services/global/innovation-control-list.service';
+import { ApiService } from '../../../../../../../shared/services/api/api.service';
 
 @Component({
   selector: 'app-innovation-dev-info',
@@ -9,13 +11,34 @@ import { InnovationDevInfoBody } from './model/innovationDevInfoBody';
 export class InnovationDevInfoComponent implements OnInit {
   innovationDevInfoBody = new InnovationDevInfoBody();
   range = 5;
-  constructor() {}
+  constructor(private api: ApiService, public innovationControlListSE: InnovationControlListService) {}
 
   ngOnInit(): void {
     this.getSectionInformation();
   }
-  getSectionInformation() {}
-  onSaveSection() {}
+  getSectionInformation() {
+    this.api.resultsSE.GET_innovationDev().subscribe(
+      ({ response }) => {
+        console.log(response);
+        this.innovationDevInfoBody = response;
+      },
+      err => {
+        console.log(err);
+      }
+    );
+  }
+  onSaveSection() {
+    console.log(this.innovationDevInfoBody);
+    this.api.resultsSE.PATCH_innovationDev(this.innovationDevInfoBody).subscribe(
+      ({ response }) => {
+        console.log(response);
+        this.getSectionInformation();
+      },
+      err => {
+        console.log(err);
+      }
+    );
+  }
   alertInfoText() {
     return `Innovations are new, improved, or adapted technologies or products, capacity development tools and services, and policies or institutional arrangements with high potential to contribute to positive impacts when used at scale. Innovations may be at early stages of readiness (ideation or basic research) or at more mature stages of readiness (delivery and scaling)<br><br>The specific number of new or improved lines/ varieties can be specified under Innovation Typology.`;
   }

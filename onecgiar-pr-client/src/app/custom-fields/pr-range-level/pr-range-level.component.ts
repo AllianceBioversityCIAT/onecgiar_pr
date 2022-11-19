@@ -15,6 +15,9 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 })
 export class PrRangeLevelComponent {
   @Input() size: number = 9;
+  @Input() optionLabel: string;
+  @Input() optionValue: string;
+  @Input() options: any;
   public list = [];
   constructor() {}
 
