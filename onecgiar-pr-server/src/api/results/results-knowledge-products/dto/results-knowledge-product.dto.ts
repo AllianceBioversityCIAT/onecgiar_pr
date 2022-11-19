@@ -22,8 +22,8 @@ export class ResultsKnowledgeProductDto {
   licence: string;
   keywords: string[];
   agrovoc_keywords: string[];
-  commodity: any;
-  sponsor: any;
+  commodity: string;
+  sponsor: string;
   altmetric_detail_url: string;
   altmetric_image_url: string;
   altmetric_full_data: ResultsKnowledgeProductAltmetricDto;
