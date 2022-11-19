@@ -7,6 +7,7 @@ import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
 import { capdevDto } from './dto/create-capacity-developents.dto';
 import { CreateInnovationDevDto } from './dto/create-innovation-dev.dto';
+import { PolicyChangesDto } from './dto/create-policy-changes.dto';
 
 @Controller()
 export class SummaryController {
@@ -87,6 +88,29 @@ export class SummaryController {
   ) {
     const { message, response, status } =
       await this.summaryService.getInnovationDev(resultId);
+    throw new HttpException({ message, response }, status);
+  }
+
+  @Patch('policy-changes/create/result/:resultId')
+  async savePolicyChanges(
+    @Param('resultId') resultId: number,
+    @Body() policyChangesDto: PolicyChangesDto,
+    @Headers() auth: HeadersDto
+  ) {
+    const token: TokenDto = <TokenDto>(
+      JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
+    );
+    const { message, response, status } =
+      await this.summaryService.savePolicyChanges(policyChangesDto, resultId, token);
+    throw new HttpException({ message, response }, status);
+  }
+
+  @Get('policy-changes/get/result/:resultId')
+  async getPolicyChanges(
+    @Param('resultId') resultId: number
+  ) {
+    const { message, response, status } =
+      await this.summaryService.getPolicyChanges(resultId);
     throw new HttpException({ message, response }, status);
   }
 

@@ -2,6 +2,8 @@ import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToOne, Prim
 import { Result } from '../../entities/result.entity';
 import { Version } from '../../versions/entities/version.entity';
 import { User } from '../../../../auth/modules/user/entities/user.entity';
+import { ClarisaPolicyStage } from '../../../../clarisa/clarisa-policy-stages/entities/clarisa-policy-stage.entity';
+import { ClarisaPolicyType } from '../../../../clarisa/clarisa-policy-types/entities/clarisa-policy-type.entity';
 
 @Entity('results_policy_changes')
 export class ResultsPolicyChanges{
@@ -17,9 +19,17 @@ export class ResultsPolicyChanges{
     })
     result_id: number;
 
-    /**
-     * !foraneas
-     */
+    @ManyToOne(() => ClarisaPolicyStage, cps => cps.id, {nullable: true})
+    @JoinColumn({
+        name: 'policy_stage_id'
+    })
+    policy_stage_id!: number;
+
+    @ManyToOne(() => ClarisaPolicyType, cpt => cpt.id, { nullable: true})
+    @JoinColumn({
+        name: 'policy_type_id'
+    })
+    policy_type_id!: number;
 
     @Column({
         name: 'amount',

@@ -10,6 +10,7 @@ import { ResultsCapacityDevelopmentsRepository } from './repositories/results-ca
 import { ResultByIntitutionsRepository } from '../results_by_institutions/result_by_intitutions.repository';
 import { ResultsInnovationsDevRepository } from './repositories/results-innovations-dev.repository';
 import { ResultRepository } from '../result.repository';
+import { ResultsPolicyChangesRepository } from './repositories/results-policy-changes.repository';
 
 @Module({
   controllers: [SummaryController],
@@ -22,6 +23,7 @@ import { ResultRepository } from '../result.repository';
     ResultsCapacityDevelopmentsRepository,
     ResultByIntitutionsRepository,
     ResultsInnovationsDevRepository,
+    ResultsPolicyChangesRepository,
     ResultRepository,
     VersionsService,
     VersionRepository

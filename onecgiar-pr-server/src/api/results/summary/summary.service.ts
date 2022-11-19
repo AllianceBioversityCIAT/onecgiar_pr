@@ -19,6 +19,9 @@ import { CreateInnovationDevDto } from './dto/create-innovation-dev.dto';
 import { ResultsInnovationsDevRepository } from './repositories/results-innovations-dev.repository';
 import { ResultsInnovationsDev } from './entities/results-innovations-dev.entity';
 import { ResultRepository } from '../result.repository';
+import { PolicyChangesDto } from './dto/create-policy-changes.dto';
+import { ResultsPolicyChanges } from './entities/results-policy-changes.entity';
+import { ResultsPolicyChangesRepository } from './repositories/results-policy-changes.repository';
 
 @Injectable()
 export class SummaryService {
@@ -29,6 +32,7 @@ export class SummaryService {
     private readonly _resultsCapacityDevelopmentsRepository: ResultsCapacityDevelopmentsRepository,
     private readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
     private readonly _resultsInnovationsDevRepository: ResultsInnovationsDevRepository,
+    private readonly _resultsPolicyChangesRepository: ResultsPolicyChangesRepository,
     private readonly _resultRepository: ResultRepository,
     private readonly _versionsService: VersionsService,
     private readonly _handlersError: HandlersError
@@ -343,6 +347,104 @@ export class SummaryService {
         response: {
           ...innDevExists,
           result: result
+        },
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  /**
+   * 
+   * @param policyChangesDto 
+   * @param resultId 
+   * @param user 
+   * @returns 
+   */
+  async savePolicyChanges(policyChangesDto: PolicyChangesDto, resultId: number, user: TokenDto) {
+    try {
+      const version = await this._versionsService.findBaseVersion();
+      if (version.status >= 300) {
+        throw this._handlersError.returnErrorRes({ error: version });
+      }
+      const vrs: Version = <Version>version.response;
+      const resultsPolicyChanges = await this._resultsPolicyChangesRepository.ResultsPolicyChangesExists(resultId);
+      const { amount,institutions,policy_stage_id,policy_type_id} = policyChangesDto;
+
+      let policyChangesData:ResultsPolicyChanges = undefined;
+      if (resultsPolicyChanges) {
+        resultsPolicyChanges.amount = amount;
+        resultsPolicyChanges.last_updated_by = user.id;
+        resultsPolicyChanges.policy_stage_id = policy_stage_id;
+        resultsPolicyChanges.policy_type_id = policy_type_id;
+        policyChangesData = await this._resultsPolicyChangesRepository.save(resultsPolicyChanges);
+      } else {
+        const newResultsPolicyChanges = new ResultsPolicyChanges();
+        newResultsPolicyChanges.amount = amount;
+        newResultsPolicyChanges.policy_stage_id = policy_stage_id;
+        newResultsPolicyChanges.policy_type_id = policy_type_id;
+        newResultsPolicyChanges.version_id = vrs.id;
+        newResultsPolicyChanges.result_id = resultId;
+        newResultsPolicyChanges.created_by = user.id;
+        newResultsPolicyChanges.last_updated_by = user.id;
+        policyChangesData = await this._resultsPolicyChangesRepository.save(newResultsPolicyChanges);
+      }
+      
+      if (institutions?.length) {
+        let institutionsList: ResultsByInstitution[] = [];
+        await this._resultByIntitutionsRepository.updateGenericIstitutions(resultId, institutions, 4, user.id);
+        for (let index = 0; index < institutions.length; index++) {
+          const { institutions_id } = institutions[index];
+          const instiExists = await this._resultByIntitutionsRepository.getGenericResultByInstitutionExists(resultId, institutions_id, 4);
+          if (!instiExists) {
+            const newInstitution = new ResultsByInstitution();
+            newInstitution.institution_roles_id = 4;
+            newInstitution.created_by = user.id;
+            newInstitution.last_updated_by = user.id;
+            newInstitution.version_id = vrs.id;
+            newInstitution.institutions_id = institutions_id;
+            newInstitution.result_id = resultId;
+            institutionsList.push(newInstitution);
+          }
+        }
+        await this._resultByIntitutionsRepository.save(institutionsList);
+      } else {
+        await this._resultByIntitutionsRepository.updateGenericIstitutions(resultId, [], 4, user.id);
+      }
+
+
+      return {
+        response: policyChangesData,
+        message: 'Results Policy Changes has been created successfully',
+        status: HttpStatus.CREATED,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  /**
+   * 
+   * @param resultId 
+   * @returns 
+   */
+  async getPolicyChanges(resultId: number) {
+    try {
+      const policyChangesExists = await this._resultsPolicyChangesRepository.ResultsPolicyChangesExists(resultId);
+      if (!policyChangesExists) {
+        throw {
+          response: {},
+          message: 'Results Innovations Dev not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+      const policyChangesInstitutions = await this._resultByIntitutionsRepository.getGenericAllResultByInstitutionByRole(resultId, 4);
+      return {
+        response: {
+          ...policyChangesExists,
+          institutions: policyChangesInstitutions
         },
         message: 'Successful response',
         status: HttpStatus.OK,
