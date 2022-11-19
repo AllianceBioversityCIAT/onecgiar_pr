@@ -25,7 +25,8 @@ export class ResultsPolicyChangesRepository extends Repository<ResultsPolicyChan
     	rpc.created_by,
     	rpc.last_updated_by,
     	rpc.policy_stage_id,
-    	rpc.policy_type_id
+    	rpc.policy_type_id,
+      rpc.status_amount
     FROM
     	results_policy_changes rpc
     WHERE 
