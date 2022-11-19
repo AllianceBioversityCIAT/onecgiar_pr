@@ -10,7 +10,11 @@
                 [ngClass]="{'select_placeholder': !(this.optionsIntance | labelName:this.value:this.optionValue:this.optionLabel)}"
                 [innerHtml]="(this.optionsIntance | labelName:this.value:this.optionValue:this.optionLabel)? (this.optionsIntance | labelName:this.value:this.optionValue:this.optionLabel) :placeholder">
             </div>
-            <i class="pi pi-chevron-down"></i>
+
+            <div class="icon_container" [ngClass]="{'icon_container_active': disabled}">
+            </div>
+            <i class="pi pi-chevron-down icon_dropdown"></i>
+
             <div class="remove_focus" (click)="removeFocus()"></div>
             <div class="options">
                 <div class="search_input_container">

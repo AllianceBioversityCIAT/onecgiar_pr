@@ -19,7 +19,7 @@ export class PartnersRequestComponent {
     console.log(application);
     const { id, email, user_name } = this.api.authSE.localStorageUser;
     let initiatives = '';
-    this.api.rolesSE.roles.initiative.map((init, index) => (initiatives += `<strong>Init: ${init?.initiative_id}</strong> - (${init?.description})${index < this.api.rolesSE.roles.initiative.length - 1 ? ', ' : ''}`));
+    this.api.rolesSE.roles.initiative.map((init, index) => (initiatives += `Init: ${init?.initiative_id} - (${init?.description})${index < this.api.rolesSE.roles.initiative.length - 1 ? ', ' : ''}`));
     this.partnersRequestBody.externalUserName = user_name;
     this.partnersRequestBody.externalUserMail = email;
     this.partnersRequestBody.externalUserComments = `

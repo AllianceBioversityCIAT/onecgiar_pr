@@ -197,3 +197,27 @@ input::placeholder,
 .position-relative {
     position: relative;
 }
+
+
+.icon_container_active {
+    background-color: gray !important;
+}
+
+.icon_dropdown {
+    position: relative;
+    z-index: 2;
+    pointer-events: none;
+    color: white !important;
+}
+
+
+.icon_container {
+    position: absolute;
+    right: 0;
+    background-color: var(--pr-color-primary);
+    width: 43px;
+    height: 100%;
+    z-index: 1;
+    pointer-events: none;
+    border-radius: 3px;
+}
