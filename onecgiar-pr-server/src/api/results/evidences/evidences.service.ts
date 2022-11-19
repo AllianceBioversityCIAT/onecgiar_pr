@@ -67,9 +67,15 @@ export class EvidencesService {
             newEvidence.result_id = result.id;
             newEvidence.version_id = vr.id;
 
+            const hasQuery = (evidence.link ?? '').indexOf('?');
+            const linkSplit = (evidence.link ?? '')
+              .slice(0, hasQuery != -1 ? hasQuery : 0)
+              .split('/');
+            const handleId = linkSplit.slice(linkSplit.length - 2).join('/');
+
             const knowledgeProduct =
               await this._resultsKnowledgeProductsRepository.findOne({
-                where: { handle: Like(evidence.link) },
+                where: { handle: Like(handleId) },
               });
 
             if (knowledgeProduct) {
