@@ -30,6 +30,7 @@ import { ClarisaGeographicScopeRepository } from './clarisa-geographic-scopes/cl
 import { ClarisaActionAreaOutcomeRepository } from './clarisa-action-area-outcome/clarisa-action-area-outcome.repository';
 import { TocResultsRepository } from '../toc/toc-results/toc-results.repository';
 import { ClarisaCentersRepository } from './clarisa-centers/clarisa-centers.repository';
+import { ClarisaPolicyTypeRepository } from './clarisa-policy-types/clarisa-policy-types.repository';
 
 @Injectable()
 export class ClarisaTaskService {
@@ -62,6 +63,7 @@ export class ClarisaTaskService {
     private readonly _clarisaGeographicScopeRepository: ClarisaGeographicScopeRepository,
     private readonly _clarisaActionAreaOutcomeRepository: ClarisaActionAreaOutcomeRepository,
     private readonly _tocResultsRepository: TocResultsRepository,
+    private readonly _clarisaPolicyTypeRepository: ClarisaPolicyTypeRepository,
     private readonly _clarisaCentersRepository : ClarisaCentersRepository,
     private readonly _httpService: HttpService
   ) {}
@@ -99,6 +101,7 @@ export class ClarisaTaskService {
     count = await this.cloneClarisaGeographicScope(count);
     //count = await this.cloneResultTocRepository(count);
     count = await this.cloneClarisaCenterRepository(count);
+    count = await this.cloneClarisaPolicyTypeRepository(count)
   }
 
   private async cloneClarisaCountries(position: number, deleteItem = false) {
@@ -520,7 +523,7 @@ export class ClarisaTaskService {
           `${this.clarisaHost}policy-stages`,
           this.configAuth,
         );
-        await this._clarisaPolicyStageRepository.save<ClarisaRegionType>(data);
+        await this._clarisaPolicyStageRepository.save(data);
         this._logger.verbose(
           `[${position}]: All CLARISA Policy Stage control list data has been created`,
         );
@@ -529,6 +532,34 @@ export class ClarisaTaskService {
     } catch (error) {
       this._logger.error(
         `[${position}]: Error in manipulating the data of CLARISA Policy Stage`,
+      );
+      this._logger.error(error);
+      return ++position;
+    }
+  }
+
+  private async cloneClarisaPolicyTypeRepository(position: number, deleteItem = false) {
+    try {
+      if (deleteItem) {
+        const deleteData =
+          await this._clarisaPolicyTypeRepository.deleteAllData();
+        this._logger.warn(
+          `[${position}]: All CLARISA Policy Type control list data has been deleted`,
+        );
+      } else {
+        const { data } = await axios.get(
+          `${this.clarisaHost}policy-types`,
+          this.configAuth,
+        );
+        await this._clarisaPolicyTypeRepository.save(data);
+        this._logger.verbose(
+          `[${position}]: All CLARISA Policy Type control list data has been created`,
+        );
+      }
+      return ++position;
+    } catch (error) {
+      this._logger.error(
+        `[${position}]: Error in manipulating the data of CLARISA Policy Type`,
       );
       this._logger.error(error);
       return ++position;

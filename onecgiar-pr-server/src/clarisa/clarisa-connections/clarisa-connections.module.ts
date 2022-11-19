@@ -26,6 +26,7 @@ import { ResultByInitiativesRepository } from '../../api/results/results_by_init
 import { ClarisaActionAreaOutcomeRepository } from '../clarisa-action-area-outcome/clarisa-action-area-outcome.repository';
 import { TocResultsRepository } from '../../toc/toc-results/toc-results.repository';
 import { ClarisaCentersRepository } from '../clarisa-centers/clarisa-centers.repository';
+import { ClarisaPolicyTypeRepository } from '../clarisa-policy-types/clarisa-policy-types.repository';
 
 @Module({
   controllers: [ClarisaConnectionsController],
@@ -50,7 +51,8 @@ import { ClarisaCentersRepository } from '../clarisa-centers/clarisa-centers.rep
     ResultByInitiativesRepository,
     ClarisaActionAreaOutcomeRepository,
     TocResultsRepository,
-    ClarisaCentersRepository
+    ClarisaCentersRepository,
+    ClarisaPolicyTypeRepository,
   ],
   imports:[
     HttpModule
