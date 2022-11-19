@@ -15,6 +15,10 @@ import { ResultsCapacityDevelopmentsRepository } from './repositories/results-ca
 import { ResultsCapacityDevelopments } from './entities/results-capacity-developments.entity';
 import { ResultByIntitutionsRepository } from '../results_by_institutions/result_by_intitutions.repository';
 import { ResultsByInstitution } from '../results_by_institutions/entities/results_by_institution.entity';
+import { CreateInnovationDevDto } from './dto/create-innovation-dev.dto';
+import { ResultsInnovationsDevRepository } from './repositories/results-innovations-dev.repository';
+import { ResultsInnovationsDev } from './entities/results-innovations-dev.entity';
+import { ResultRepository } from '../result.repository';
 
 @Injectable()
 export class SummaryService {
@@ -24,6 +28,8 @@ export class SummaryService {
     private readonly _esultsInnovationsUseMeasuresRepository: ResultsInnovationsUseMeasuresRepository,
     private readonly _resultsCapacityDevelopmentsRepository: ResultsCapacityDevelopmentsRepository,
     private readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
+    private readonly _resultsInnovationsDevRepository: ResultsInnovationsDevRepository,
+    private readonly _resultRepository: ResultRepository,
     private readonly _versionsService: VersionsService,
     private readonly _handlersError: HandlersError
   ) { }
@@ -106,7 +112,7 @@ export class SummaryService {
           }
         }
         await this._esultsInnovationsUseMeasuresRepository.save(tesultsInnovationsUseMeasuresList);
-      }else{
+      } else {
         await this._esultsInnovationsUseMeasuresRepository.updateInnovatonUseMeasures(InnovationUse.result_innovation_use_id, [], user.id);
       }
 
@@ -188,14 +194,14 @@ export class SummaryService {
         CapDevData = await this._resultsCapacityDevelopmentsRepository.save(newCapDev);
       }
 
-      if(institutions?.length){
+      if (institutions?.length) {
         let institutionsList: ResultsByInstitution[] = [];
         await this._resultByIntitutionsRepository.updateGenericIstitutions(resultId, institutions, 3, user.id);
         for (let index = 0; index < institutions.length; index++) {
-          const {institutions_id} = institutions[index];
+          const { institutions_id } = institutions[index];
           const instiExists = await this._resultByIntitutionsRepository.getGenericResultByInstitutionExists(resultId, institutions_id, 3);
-          if(!instiExists){
-            const newInstitution = new  ResultsByInstitution();
+          if (!instiExists) {
+            const newInstitution = new ResultsByInstitution();
             newInstitution.institution_roles_id = 3;
             newInstitution.created_by = user.id;
             newInstitution.last_updated_by = user.id;
@@ -206,7 +212,7 @@ export class SummaryService {
           }
         }
         await this._resultByIntitutionsRepository.save(institutionsList);
-      }else{
+      } else {
         await this._resultByIntitutionsRepository.updateGenericIstitutions(resultId, [], 3, user.id);
       }
 
@@ -226,7 +232,7 @@ export class SummaryService {
    * @param resultId 
    * @returns 
    */
-  async getCapacityDevelopents(resultId: number){
+  async getCapacityDevelopents(resultId: number) {
     try {
       const capDevExists = await this._resultsCapacityDevelopmentsRepository.capDevExists(resultId);
       const capDepInstitutions = await this._resultByIntitutionsRepository.getGenericAllResultByInstitutionByRole(resultId, 3);
@@ -246,6 +252,100 @@ export class SummaryService {
         },
         message: 'Capacity Developents has been created successfully',
         status: HttpStatus.CREATED,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  /**
+   * 
+   * @param createInnovationDevDto 
+   * @param resultId 
+   * @param user 
+   * @returns 
+   */
+  async saveInnovationDev(createInnovationDevDto: CreateInnovationDevDto, resultId: number, user: TokenDto) {
+    try {
+      const version = await this._versionsService.findBaseVersion();
+      if (version.status >= 300) {
+        throw this._handlersError.returnErrorRes({ error: version });
+      }
+      const vrs: Version = <Version>version.response;
+      const innDevExists = await this._resultsInnovationsDevRepository.InnovationDevExists(resultId);
+      const { evidences_justification, innovation_characterization_id,
+        innovation_collaborators, innovation_developers, innovation_nature_id,
+        innovation_readiness_level_id, is_new_variety, number_of_varieties, readiness_level,
+        result_innovation_dev_id, short_title } = createInnovationDevDto;
+
+      let InnDevRes:ResultsInnovationsDev = undefined;
+      if (innDevExists) {
+        innDevExists.short_title = short_title;
+        innDevExists.last_updated_by = user.id;
+        innDevExists.is_new_variety = is_new_variety;
+        innDevExists.readiness_level = readiness_level;
+        innDevExists.number_of_varieties = number_of_varieties;
+        innDevExists.innovation_nature_id = innovation_nature_id;
+        innDevExists.innovation_developers = innovation_developers;
+        innDevExists.evidences_justification = evidences_justification;
+        innDevExists.innovation_collaborators = innovation_collaborators;
+        innDevExists.result_innovation_dev_id = result_innovation_dev_id;
+        innDevExists.innovation_readiness_level_id = innovation_readiness_level_id;
+        innDevExists.innovation_characterization_id = innovation_characterization_id;
+        InnDevRes = await this._resultsInnovationsDevRepository.save(innDevExists);
+      } else {
+        const newInnDev = new ResultsInnovationsDev();
+        newInnDev.version_id = vrs.id;
+        newInnDev.created_by = user.id;
+        newInnDev.results_id = resultId;
+        newInnDev.last_updated_by = user.id;
+        newInnDev.short_title = short_title;
+        newInnDev.is_new_variety = is_new_variety;
+        newInnDev.readiness_level = readiness_level;
+        newInnDev.number_of_varieties = number_of_varieties;
+        newInnDev.innovation_nature_id = innovation_nature_id;
+        newInnDev.innovation_developers = innovation_developers;
+        newInnDev.evidences_justification = evidences_justification;
+        newInnDev.innovation_collaborators = innovation_collaborators;
+        newInnDev.result_innovation_dev_id = result_innovation_dev_id;
+        newInnDev.innovation_readiness_level_id = innovation_readiness_level_id;
+        newInnDev.innovation_characterization_id = innovation_characterization_id;
+        InnDevRes = await this._resultsInnovationsDevRepository.save(newInnDev);
+      }
+
+      return {
+        response: InnDevRes,
+        message: 'Results Innovations Dev has been created successfully',
+        status: HttpStatus.CREATED,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  /**
+   * 
+   * @param resultId 
+   * @returns 
+   */
+  async getInnovationDev(resultId: number) {
+    try {
+      const innDevExists = await this._resultsInnovationsDevRepository.InnovationDevExists(resultId);
+      if (!innDevExists) {
+        throw {
+          response: {},
+          message: 'Results Innovations Dev not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+      const result = await this._resultRepository.getResultById(resultId);
+      return {
+        response: {
+          ...innDevExists,
+          result: result
+        },
+        message: 'Successful response',
+        status: HttpStatus.OK,
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });

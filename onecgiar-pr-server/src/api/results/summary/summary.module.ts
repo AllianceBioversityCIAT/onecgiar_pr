@@ -8,6 +8,8 @@ import { VersionsService } from '../versions/versions.service';
 import { VersionRepository } from '../versions/version.repository';
 import { ResultsCapacityDevelopmentsRepository } from './repositories/results-capacity-developments.repository';
 import { ResultByIntitutionsRepository } from '../results_by_institutions/result_by_intitutions.repository';
+import { ResultsInnovationsDevRepository } from './repositories/results-innovations-dev.repository';
+import { ResultRepository } from '../result.repository';
 
 @Module({
   controllers: [SummaryController],
@@ -19,6 +21,8 @@ import { ResultByIntitutionsRepository } from '../results_by_institutions/result
     ResultsInnovationsUseMeasuresRepository,
     ResultsCapacityDevelopmentsRepository,
     ResultByIntitutionsRepository,
+    ResultsInnovationsDevRepository,
+    ResultRepository,
     VersionsService,
     VersionRepository
   ],

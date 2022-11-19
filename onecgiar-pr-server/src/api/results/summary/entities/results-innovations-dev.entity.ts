@@ -2,6 +2,9 @@ import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToOne, Prim
 import { Result } from '../../entities/result.entity';
 import { Version } from '../../versions/entities/version.entity';
 import { User } from '../../../../auth/modules/user/entities/user.entity';
+import { ClarisaInnovationCharacteristic } from '../../../../clarisa/clarisa-innovation-characteristics/entities/clarisa-innovation-characteristic.entity';
+import { ClarisaInnovationType } from '../../../../clarisa/clarisa-innovation-type/entities/clarisa-innovation-type.entity';
+import { ClarisaInnovationReadinessLevel } from '../../../../clarisa/clarisa-innovation-readiness-levels/entities/clarisa-innovation-readiness-level.entity';
 
 @Entity('results_innovations_dev')
 export class ResultsInnovationsDev {
@@ -22,11 +25,25 @@ export class ResultsInnovationsDev {
         nullable: true,
         type: 'text'
     })
-    short_title: string;
+    short_title!: string;
 
-    /**
-     * !foraneas
-     */
+    @ManyToOne(() => ClarisaInnovationCharacteristic, cic => cic.id, { nullable: true})
+    @JoinColumn({
+        name: 'innovation_characterization_id'
+    })
+    innovation_characterization_id!: number;
+
+    @ManyToOne(() => ClarisaInnovationType, cit => cit.code, { nullable: true})
+    @JoinColumn({
+        name: 'innovation_nature_id'
+    })
+    innovation_nature_id!: number;
+
+    @ManyToOne(() => ClarisaInnovationReadinessLevel, cir => cir.id, { nullable: true})
+    @JoinColumn({
+        name: 'innovation_readiness_level_id'
+    })
+    innovation_readiness_level_id!: number;
 
     @Column({
         name: 'is_new_variety',
