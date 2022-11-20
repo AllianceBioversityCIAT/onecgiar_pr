@@ -75,11 +75,14 @@ export class TocResultsRepository extends Repository<TocResult> {
     	caao.outcomeSMOcode as title,
     	caao.outcomeStatement as description,
     	4 as toc_level_id,
-    	null as work_package_id
+    	null as work_package_id,
+    	gi.action_area_id,
+      gi.action_area_description as action_area_name
     from
     	${env.DB_OST}.init_action_areas_out_indicators iaaoi
     inner join ${env.DB_OST}.initiatives_by_stages ibs on
     	ibs.id = iaaoi.initvStgId
+    inner join ${env.DB_OST}.general_information gi on gi.initvStgId = ibs.id 
     inner join ${env.DB_NAME}.clarisa_action_area_outcome caao on
     	caao.id = iaaoi.outcome_id
     WHERE
@@ -87,7 +90,9 @@ export class TocResultsRepository extends Repository<TocResult> {
     	and ibs.initiativeId = ?
     GROUP by
     	ibs.initiativeId,
-    	iaaoi.outcome_id;
+    	iaaoi.outcome_id,
+    	gi.action_area_id,
+    	gi.action_area_description;
     `;
 
     try {
@@ -144,7 +149,9 @@ export class TocResultsRepository extends Repository<TocResult> {
        caao.outcomeSMOcode as title,
        caao.outcomeStatement as description,
        4 as toc_level_id,
-        null as work_package_id
+        null as work_package_id,
+        gi.action_area_id,
+       gi.action_area_description as action_area_name
       from ${env.DB_OST}.general_information gi 
       inner join ${env.DB_OST}.initiatives_by_stages ibs on gi.initvStgId = ibs.id 
       													and ibs.active > 0
