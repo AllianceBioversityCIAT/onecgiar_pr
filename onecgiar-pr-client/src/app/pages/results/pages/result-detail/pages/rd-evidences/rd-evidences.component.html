@@ -13,7 +13,8 @@
         </div>
     </div>
     <app-no-data-text *ngIf="!this.evidencesBody?.evidences?.length" title="No evidence added"></app-no-data-text>
-    <app-add-button name="Add evidence" (clickEvent)="addEvidence()" *ngIf="this.evidencesBody?.evidences?.length <3">
+    <app-add-button name="Add evidence" (clickEvent)="addEvidence()"
+        *ngIf="this.evidencesBody?.evidences?.length <3 && !this.api.dataControlSE.isKnowledgeProduct">
     </app-add-button>
 
     <br><br>
@@ -28,7 +29,8 @@
         </div>
     </div>
     <app-no-data-text *ngIf="!this.evidencesBody?.supplementary?.length" title="No links added"></app-no-data-text>
-    <app-add-button name="Add link" (clickEvent)="addLink()" *ngIf="this.evidencesBody?.supplementary?.length < 2">
+    <app-add-button name="Add link" (clickEvent)="addLink()"
+        *ngIf="this.evidencesBody?.supplementary?.length < 2 && !this.api.dataControlSE.isKnowledgeProduct">
     </app-add-button>
 </div>
 

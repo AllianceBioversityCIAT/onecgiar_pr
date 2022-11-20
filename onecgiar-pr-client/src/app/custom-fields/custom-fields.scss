@@ -214,14 +214,15 @@ input::placeholder,
     color: white !important;
 }
 
-
-.icon_container {
-    position: absolute;
-    right: 0;
-    background-color: var(--pr-color-primary);
-    width: 43px;
-    height: 100%;
-    z-index: 1;
-    pointer-events: none;
-    border-radius: 3px;
+.custom_select {
+    .icon_container {
+        position: absolute;
+        right: 0;
+        background-color: var(--pr-color-primary);
+        width: 43px;
+        height: 100%;
+        z-index: 1;
+        pointer-events: none;
+        border-radius: 3px;
+    }
 }

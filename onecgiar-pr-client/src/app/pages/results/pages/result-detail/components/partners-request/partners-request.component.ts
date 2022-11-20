@@ -11,9 +11,11 @@ import { InstitutionsService } from '../../../../../../shared/services/global/in
 })
 export class PartnersRequestComponent {
   partnersRequestBody = new PartnersRequestBody();
+  requesting = false;
   constructor(public api: ApiService, public regionsCountriesSE: RegionsCountriesService, public institutionsService: InstitutionsService) {}
 
   onRequestPartner() {
+    this.requesting = true;
     console.log(this.api.rolesSE.roles);
     const { application, initiative } = this.api.rolesSE.roles;
     console.log(application);
@@ -31,23 +33,20 @@ export class PartnersRequestComponent {
     App role: ${application?.description}`;
     console.log(this.partnersRequestBody);
 
-    //TODO
-    //     initiative role
-    //
-    // result
-    // section
-    // (editado)
-    // marca_de_verificación_blanca
-    // ojos
-    // manos_levantadas
+    this.api.resultsSE.POST_partnerRequest(this.partnersRequestBody).subscribe(
+      resp => {
+        this.requesting = false;
+        console.log(resp);
+        this.partnersRequestBody = this.partnersRequestBody = new PartnersRequestBody();
+        this.api.dataControlSE.showPartnersRequest = false;
+        if (resp.status == 500) return this.api.alertsFe.show({ id: 'partners-error', title: 'Error when requesting partner', description: 'Server problems', status: 'error' });
 
-    // 18:27
-    // + app role
-    this.api.resultsSE.POST_partnerRequest(this.partnersRequestBody).subscribe(resp => {
-      console.log(resp);
-      this.api.alertsFe.show({ id: 'sectionSaved', title: `Partner "${this.partnersRequestBody.name}" has been requested.`, description: 'The partner request was sent successfully. You will receive a confirmation message as soon as it has been processed. The validation process usually takes 1 business day. In case of any questions, please contact the technical support.', status: 'success' });
-      this.partnersRequestBody = this.partnersRequestBody = new PartnersRequestBody();
-      this.api.dataControlSE.showPartnersRequest = false;
-    });
+        this.api.alertsFe.show({ id: 'partners', title: `Partner "${this.partnersRequestBody.name}" has been requested.`, description: 'The partner request was sent successfully. You will receive a confirmation message as soon as it has been processed. The validation process usually takes 1 business day. In case of any questions, please contact the technical support.', status: 'success' });
+      },
+      err => {
+        this.api.alertsFe.show({ id: 'partners-error', title: 'Error when requesting partner', description: '', status: 'error' });
+        this.requesting = false;
+      }
+    );
   }
 }

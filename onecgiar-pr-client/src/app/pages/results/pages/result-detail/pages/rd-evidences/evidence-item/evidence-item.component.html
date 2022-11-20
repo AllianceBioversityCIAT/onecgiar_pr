@@ -2,15 +2,18 @@
     <div class="index">{{this.index}}</div>
     <div>
         <div class="link">
-            <app-pr-input label="Link" [(ngModel)]="this.evidence.link" placeholder="Add link"></app-pr-input>
+            <app-pr-input label="Link" [(ngModel)]="this.evidence.link" placeholder="Add link"
+                [readOnly]="this.dataControlSE.isKnowledgeProduct"></app-pr-input>
             <div class="checkboxes" *ngIf="!isSuppInfo">
-                <app-pr-checkbox label="Gender related evidence" [(ngModel)]="this.evidence.gender_related">
+                <app-pr-checkbox label="Gender related evidence" [(ngModel)]="this.evidence.gender_related"
+                    [readOnly]="this.dataControlSE.isKnowledgeProduct">
                 </app-pr-checkbox>
-                <app-pr-checkbox label="Climate related evidence" [(ngModel)]="this.evidence.youth_related">
+                <app-pr-checkbox label="Climate related evidence" [(ngModel)]="this.evidence.youth_related"
+                    [readOnly]="this.dataControlSE.isKnowledgeProduct">
                 </app-pr-checkbox>
             </div>
         </div>
-        <app-pr-textarea
+        <app-pr-textarea [readOnly]="this.dataControlSE.isKnowledgeProduct"
             [label]="'Please provide details of where' + (isSuppInfo ? ' supplementary information ' :' evidence ') +'can be found within the source link (e.g. page number, slide number, table number)'"
             [required]="false" [(ngModel)]="this.evidence.description" [maxWords]="50" placeholder="Add description">
         </app-pr-textarea>

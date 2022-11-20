@@ -1,5 +1,6 @@
 import { Component, Input, OnInit, EventEmitter, Output } from '@angular/core';
 import { EvidencesCreateInterface } from '../model/evidencesBody.model';
+import { DataControlService } from '../../../../../../../shared/services/data-control.service';
 
 @Component({
   selector: 'app-evidence-item',
@@ -11,5 +12,5 @@ export class EvidenceItemComponent {
   @Input() index: number;
   @Input() isSuppInfo: boolean;
   @Output() deleteEvent = new EventEmitter();
-  constructor() {}
+  constructor(public dataControlSE: DataControlService) {}
 }

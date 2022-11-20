@@ -43,11 +43,11 @@ export class SaveButtonService {
     return pipe(
       tap(resp => {
         this.hideSaveSpinner();
-        this.customizedAlertsFeSE.show({ id: 'sectionSaved', title: 'Section saved correctly', description: '', status: 'success', closeIn: 500 });
+        this.customizedAlertsFeSE.show({ id: 'save-button', title: 'Section saved correctly', description: '', status: 'success', closeIn: 500 });
       }),
       catchError(err => {
         this.hideSaveSpinner();
-        this.customizedAlertsFeSE.show({ id: 'sectionSaved', title: 'There was an error saving the section', description: '', status: 'error', closeIn: 500 });
+        this.customizedAlertsFeSE.show({ id: 'save-button', title: 'There was an error saving the section', description: '', status: 'error', closeIn: 500 });
         return throwError(err);
       })
       // ,retry(1)
