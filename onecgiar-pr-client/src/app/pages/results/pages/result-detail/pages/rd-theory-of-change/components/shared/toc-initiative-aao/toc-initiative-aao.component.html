@@ -11,8 +11,10 @@
                 [(ngModel)]="initiative.action_area_outcome_id">
             </p-radioButton>
             <div *ngIf="!(editable?true:!this.api.rolesSE.readOnly)"></div>
-            <img src="assets/action_areas/1.png" alt="" srcset="">
-            <div class="text"><strong>??? - </strong>{{actionAreaOutcome?.description}}</div>
+            <img [src]="'assets/action_areas/'+actionAreaOutcome?.action_area_id+'.png'" alt="" srcset="">
+            <div class="text"><strong>{{actionAreaOutcome?.action_area_name}} -
+                </strong>{{actionAreaOutcome?.description}}
+            </div>
         </div>
     </div>
 
