@@ -88,8 +88,6 @@ export class LinkedResultRepository extends Repository<LinkedResult> {
     r.has_countries 
   from linked_result lr 
   	inner join \`result\` r on r.id  = lr.linked_results_id 
-    inner join results_by_inititiative rbi ON rbi.result_id = r.id 
-    									and rbi.is_active > 0
     inner join result_level rl on rl.id = r.result_level_id 
     inner join result_type rt on rt.id = r.result_type_id  
     where lr.origin_result_id = ?
