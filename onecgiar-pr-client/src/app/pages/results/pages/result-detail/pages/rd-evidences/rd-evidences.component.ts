@@ -61,9 +61,15 @@ export class RdEvidencesComponent {
   get validateCGSpaceLinks() {
     for (const iterator of this.evidencesBody.evidences) {
       const evidencesFinded = this.evidencesBody.evidences.filter(evidence => evidence.link == iterator.link);
-
       if (evidencesFinded.length >= 2) {
         return evidencesFinded.length >= 2;
+      }
+    }
+
+    for (const iterator of this.evidencesBody.supplementary) {
+      const supplementaryFinded = this.evidencesBody.supplementary.filter(evidence => evidence.link == iterator.link);
+      if (supplementaryFinded.length >= 2) {
+        return supplementaryFinded.length >= 2;
       }
     }
     return false;
