@@ -16,18 +16,23 @@
         </app-pr-input>
     </div>
 
-    <app-pr-radio-button label="Long-term or short-term"
+
+    <app-pr-field-header label="Number of people trained"
+        description="In the case where the gender balance of trainees is not known (e.g. online training), assume 50-50 split.">
+    </app-pr-field-header>
+
+
+    <app-pr-radio-button label="Long-term or short-term" (selectOptionEvent)="clean_capdev_term_2()"
         description="This should reflect where the outcome has taken place/contributed to benefit."
-        [(ngModel)]="this.capDevInfoRoutingBody.capdev_term_id" [options]="this.capdevsTerms" optionLabel="name"
+        [(ngModel)]="this.capdev_term_id_1" [options]="this.capdevsTerms" optionLabel="name"
         optionValue='capdev_term_id' [required]="false">
     </app-pr-radio-button>
 
     <br>
 
-    <app-pr-radio-button
-        *ngIf="this.capDevInfoRoutingBody.capdev_term_id == 4 ||this.capDevInfoRoutingBody.capdev_term_id == 1||this.capDevInfoRoutingBody.capdev_term_id == 2"
+    <app-pr-radio-button *ngIf="this.capdev_term_id_1 == 4 ||this.capdev_term_id_1 == 1||this.capdev_term_id_1 == 2"
         [options]="this.capdevsSubTerms" optionLabel="name" optionValue='capdev_term_id' [required]="false"
-        [(ngModel)]="this.capDevInfoRoutingBody.capdev_term_id">
+        [(ngModel)]="this.capdev_term_id_2">
     </app-pr-radio-button>
 
     <app-pr-radio-button label="Delivery Method" [description]="deliveryMethodDescription()"

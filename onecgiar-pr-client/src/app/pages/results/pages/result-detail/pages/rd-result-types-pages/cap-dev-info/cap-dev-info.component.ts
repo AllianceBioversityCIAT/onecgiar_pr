@@ -15,6 +15,8 @@ export class CapDevInfoComponent implements OnInit {
   capdevsTerms = [];
   capdevsSubTerms = [];
   deliveryMethodOptions = [];
+  capdev_term_id_1 = null;
+  capdev_term_id_2 = null;
   constructor(public api: ApiService, public institutionsSE: InstitutionsService) {}
 
   ngOnInit(): void {
@@ -43,10 +45,36 @@ export class CapDevInfoComponent implements OnInit {
     this.api.resultsSE.GET_capacityDevelopent().subscribe(({ response }) => {
       console.log(response);
       this.capDevInfoRoutingBody = response;
+      this.get_capdev_term_id();
     });
   }
+
+  clean_capdev_term_2() {
+    if (this.capdev_term_id_1 == 3) this.capdev_term_id_2 = null;
+  }
+
+  get_capdev_term_id() {
+    console.log(this.capDevInfoRoutingBody.capdev_term_id);
+    if (this.capDevInfoRoutingBody.capdev_term_id == 3) {
+      return (this.capdev_term_id_1 = 3);
+    }
+
+    if (this.capDevInfoRoutingBody.capdev_term_id == 1 || this.capDevInfoRoutingBody.capdev_term_id == 2) {
+      this.capdev_term_id_1 = 4;
+      this.capdev_term_id_2 = this.capDevInfoRoutingBody.capdev_term_id;
+    }
+    return null;
+  }
+
+  validate_capdev_term_id() {
+    console.log(this.capdev_term_id_1);
+    console.log(this.capdev_term_id_2);
+    this.capDevInfoRoutingBody.capdev_term_id = this.capdev_term_id_2 ? this.capdev_term_id_2 : this.capdev_term_id_1;
+  }
+
   onSaveSection() {
     console.log(this.capDevInfoRoutingBody);
+    this.validate_capdev_term_id();
     this.api.resultsSE.PATCH_capacityDevelopent(this.capDevInfoRoutingBody).subscribe(resp => {
       this.getSectionInformation();
     });

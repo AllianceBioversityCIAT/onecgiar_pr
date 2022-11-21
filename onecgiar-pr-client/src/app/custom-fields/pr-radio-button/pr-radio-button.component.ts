@@ -1,4 +1,4 @@
-import { Component, forwardRef, Input } from '@angular/core';
+import { Component, forwardRef, Input, Output, EventEmitter } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
 @Component({
@@ -23,6 +23,7 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
   @Input() hideOptions: boolean;
   @Input() readOnly: boolean;
   @Input() isStatic: boolean = false;
+  @Output() selectOptionEvent = new EventEmitter<any>();
   private _value: string;
   constructor(public rolesSE: RolesService) {}
 
@@ -57,6 +58,7 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
 
   currentVal = null;
   onSelect() {
+    this.selectOptionEvent.emit();
     if (this.currentVal == this.value) this.value = null;
     this.currentVal = this.value;
   }
