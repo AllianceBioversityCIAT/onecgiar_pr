@@ -119,6 +119,7 @@ export class ResultCreatorComponent implements OnInit {
         console.log(err.error.message);
         this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
         this.validating = false;
+        this.resultLevelSE.resultBody.result_name = '';
       }
     );
   }

@@ -39,4 +39,5 @@
         <!-- flagsCode="iso_alpha_2" -->
     </div>
 </div>
-<app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>
+<app-save-button class="position_sticky" (clickSave)="onSaveSection()"
+    *ngIf="!this.api.dataControlSE.isKnowledgeProduct"></app-save-button>
