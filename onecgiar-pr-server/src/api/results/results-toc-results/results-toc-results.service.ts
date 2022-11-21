@@ -138,7 +138,6 @@ export class ResultsTocResultsService {
         RtR.is_active = true;
         RtR.last_updated_by = user.id;
         RtR.planned_result = result_toc_result.planned_result;
-        console.log(RtR);
         await this._resultsTocResultRepository.save(RtR);
       } else if(result_toc_result) {
         const newRtR = new ResultsTocResult();
@@ -160,7 +159,6 @@ export class ResultsTocResultsService {
 
       if (contributors_result_toc_result?.length) {
         contributors_result_toc_result = contributors_result_toc_result.filter(el => initiativeArray.includes(el.initiative_id));
-        console.log(contributors_result_toc_result)
         let RtRArray: ResultsTocResult[] = [];
           for (let index = 0; index < contributors_result_toc_result.length; index++) {
             let RtR = await this._resultsTocResultRepository.getRTRById(contributors_result_toc_result[index].result_toc_result_id, result_id, contributors_result_toc_result[index].initiative_id );

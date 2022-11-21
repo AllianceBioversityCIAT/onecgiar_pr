@@ -335,13 +335,7 @@ export class SummaryService {
   async getInnovationDev(resultId: number) {
     try {
       const innDevExists = await this._resultsInnovationsDevRepository.InnovationDevExists(resultId);
-      if (!innDevExists) {
-        throw {
-          response: {},
-          message: 'Results Innovations Dev not found',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
+
       const result = await this._resultRepository.getResultById(resultId);
       return {
         response: {

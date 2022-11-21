@@ -19,6 +19,7 @@ export class AuthService {
   constructor(
     private readonly _jwtService: JwtService,
     private readonly _userService: UserService,
+    private readonly _userRepository: UserRepository,
     private readonly _bcryptPasswordEncoder: BcryptPasswordEncoder,
     private readonly _customUserRepository: UserRepository,
     private readonly _handlersError: HandlersError,
@@ -84,6 +85,7 @@ export class AuthService {
         }
 
         if (valid) {
+          const userData = await this._userRepository.updateLastLoginUserByEmail(userLogin.email);
           return {
             message: 'Successful login',
             response: {

@@ -109,8 +109,6 @@ export class ResultsInnovationsUseMeasuresRepository extends Repository<ResultsI
     `;
 
     try {
-      console.log(upDateInactive)
-      console.log(initiative)
       if(initiative?.length){
         const upDateInactiveResult = await this.query(upDateInactive, [
           userId, innovationUseId
