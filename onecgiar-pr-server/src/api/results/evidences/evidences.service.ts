@@ -69,7 +69,7 @@ export class EvidencesService {
 
             const hasQuery = (evidence.link ?? '').indexOf('?');
             const linkSplit = (evidence.link ?? '')
-              .slice(0, hasQuery != -1 ? hasQuery : 0)
+              .slice(0, hasQuery != -1 ? hasQuery : evidence.link?.length)
               .split('/');
             const handleId = linkSplit.slice(linkSplit.length - 2).join('/');
 

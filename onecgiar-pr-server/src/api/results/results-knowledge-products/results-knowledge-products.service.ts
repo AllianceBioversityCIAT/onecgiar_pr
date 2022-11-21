@@ -216,7 +216,7 @@ export class ResultsKnowledgeProductsService {
 
       const hasQuery = (handle ?? '').indexOf('?');
       const linkSplit = (handle ?? '')
-        .slice(0, hasQuery != -1 ? hasQuery : 0)
+        .slice(0, hasQuery != -1 ? hasQuery : handle.length)
         .split('/');
       const handleId = linkSplit.slice(linkSplit.length - 2).join('/');
 
