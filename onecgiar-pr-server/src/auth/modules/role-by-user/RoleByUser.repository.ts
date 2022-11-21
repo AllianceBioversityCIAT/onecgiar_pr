@@ -81,8 +81,6 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
         config.initiative_id,
         config.action_area_id,
       ]);
-      console.log(getSpecificRole);
-      console.log(config);
       return getSpecificRole[0];
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

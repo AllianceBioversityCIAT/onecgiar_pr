@@ -100,7 +100,6 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       or (rtr.initiative_id = ${initiativeId} and rtr.results_id = ${resultId});
     `;
     try {
-      console.log(queryData)
       const resultTocResult: ResultsTocResult[] = await this.query(queryData);
       return resultTocResult?.length?resultTocResult[0]:undefined;
     } catch (error) {
@@ -183,7 +182,7 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       and rtr.is_active > 0;
     `;
     try {
-      
+
       const resultTocResult: ResultsTocResult[] = await this.query(queryData, [resultId]);
       return resultTocResult;
     } catch (error) {

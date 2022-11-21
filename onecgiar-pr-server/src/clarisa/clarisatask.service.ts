@@ -667,7 +667,6 @@ export class ClarisaTaskService {
           el['id'] = el.outcomeId;
         })
         const newData = this.removeDuplicates(data, 'id');
-        console.log(newData)
         await this._clarisaActionAreaOutcomeRepository.save(newData);
         this._logger.verbose(
           `[${position}]: All CLARISA Action Area Outcome control list data has been created`,

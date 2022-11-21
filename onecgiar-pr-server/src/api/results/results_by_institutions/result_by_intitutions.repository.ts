@@ -311,7 +311,6 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
           isActor ? 1 : 2,
         ]);
       } else {
-        console.log('entro');
         this.query(removeAllRelationRKPMI, [userId, resultId]);
         return await this.query(upDateAllInactiveRBI, [
           userId,
