@@ -39,7 +39,8 @@
                 <td class="actions">
                     <div class="link_button view" (click)="openInNewPage('/result/result-detail/' + result?.id)">View
                     </div>
-                    <div class="link_button" [ngClass]="{'globalDisabled': result.selected}"
+                    <div class="link_button" *ngIf="!this.api.dataControlSE.isKnowledgeProduct"
+                        [ngClass]="{'globalDisabled': result.selected}"
                         (click)="!result.selected ? onLinkResult(result) : null">{{result.selected ? 'Selected' :
                         'Link'}}</div>
                 </td>
@@ -66,5 +67,6 @@
             <i class=" material-icons-round icon" (click)="this.onRemove(i)">clear</i>
         </div>
     </div>
-    <app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>
+    <app-save-button class="position_sticky" (clickSave)="onSaveSection()"
+        *ngIf="!this.api.dataControlSE.isKnowledgeProduct"></app-save-button>
 </div>

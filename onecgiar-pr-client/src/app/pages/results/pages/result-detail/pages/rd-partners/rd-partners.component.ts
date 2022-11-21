@@ -12,7 +12,7 @@ import { RolesService } from '../../../../../../shared/services/global/roles.ser
 export class RdPartnersComponent {
   partnersBody = new PartnersBody();
   toggle = 0;
-  constructor(private api: ApiService, public institutionsSE: InstitutionsService, public rolesSE: RolesService) {}
+  constructor(public api: ApiService, public institutionsSE: InstitutionsService, public rolesSE: RolesService) {}
   ngOnInit(): void {
     this.getSectionInformation();
     this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
