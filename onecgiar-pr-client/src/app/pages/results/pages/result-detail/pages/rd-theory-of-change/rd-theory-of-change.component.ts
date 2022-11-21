@@ -32,7 +32,7 @@ export class RdTheoryOfChangeComponent {
       ({ response }) => {
         this.getConsumed = true;
         this.theoryOfChangeBody = response;
-        console.log(this.theoryOfChangeBody);
+        // console.log(this.theoryOfChangeBody);
         this.psub = `${this.theoryOfChangeBody.result_toc_result.official_code} ${this.theoryOfChangeBody.result_toc_result.short_name}`;
         // this.theoryOfChangeBody.result_toc_result;
       },
@@ -44,7 +44,7 @@ export class RdTheoryOfChangeComponent {
   }
 
   get validateGranTitle() {
-    console.log(this.theoryOfChangeBody.contributing_np_projects);
+    // console.log(this.theoryOfChangeBody.contributing_np_projects);
     for (const iterator of this.theoryOfChangeBody.contributing_np_projects) {
       const evidencesFinded = this.theoryOfChangeBody.contributing_np_projects.filter(evidence => evidence.grant_title == iterator.grant_title);
       if (evidencesFinded.length >= 2) {
@@ -65,8 +65,8 @@ export class RdTheoryOfChangeComponent {
     });
   }
   onSelectContributingInitiative() {
-    console.log();
-    console.log('onSelectContributingInitiative');
+    // console.log();
+    // console.log('onSelectContributingInitiative');
     this.theoryOfChangeBody.contributing_initiatives?.map((resp: any) => {
       // console.log(resp);
       console.log(this.theoryOfChangeBody.contributors_result_toc_result);
@@ -82,15 +82,15 @@ export class RdTheoryOfChangeComponent {
   }
 
   onRemoveContributingInitiative(e) {
-    console.clear();
-    console.log(e);
+    // console.clear();
+    // console.log(e);
     const contributorFinded = this.theoryOfChangeBody.contributors_result_toc_result?.findIndex((result: any) => result?.initiative_id == e.remove.id);
     this.theoryOfChangeBody.contributors_result_toc_result.splice(contributorFinded, 1);
-    console.log(contributorFinded);
+    // console.log(contributorFinded);
   }
   addBilateralContribution() {
     this.theoryOfChangeBody.contributing_np_projects.push(new donorInterfaceToc());
-    console.log(this.theoryOfChangeBody.contributing_np_projects);
+    // console.log(this.theoryOfChangeBody.contributing_np_projects);
   }
   requestEvent() {
     this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {

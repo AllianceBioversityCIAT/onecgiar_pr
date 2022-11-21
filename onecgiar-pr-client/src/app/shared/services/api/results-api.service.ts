@@ -110,7 +110,7 @@ export class ResultsApiService {
   GET_AllCLARISACenters() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/centers/get/all`).pipe(
       map(resp => {
-        console.log(resp);
+        // console.log(resp);
         resp.response.map(center => {
           center.lead_center = center.code;
           center.full_name = `<strong>${center.acronym} - </strong> ${center.name}`;
@@ -194,7 +194,13 @@ export class ResultsApiService {
   }
 
   GET_capacityDevelopent() {
-    return this.http.get<any>(`${this.apiBaseUrl}summary/capacity-developent/get/result/${this.currentResultId}`).pipe(this.saveButtonSE.isSavingSectionPipe());
+    return this.http.get<any>(`${this.apiBaseUrl}summary/capacity-developent/get/result/${this.currentResultId}`).pipe(
+      this.saveButtonSE.isSavingSectionPipe(),
+      map((resp: any) => {
+        resp?.response?.institutions?.map(institution => (institution.full_name = `<strong>${institution?.institutions_acronym}</strong> - ${institution?.institutions_name}`));
+        return resp;
+      })
+    );
   }
 
   GET_capdevsTerms() {
