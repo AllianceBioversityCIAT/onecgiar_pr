@@ -22,13 +22,13 @@
         [(ngModel)]="this.innovationDevInfoBody.innovation_nature_id">
     </app-pr-select>
     <!-- Todo only for Technological innovation -->
-    <div>
+    <div *ngIf="this.innovationDevInfoBody.innovation_nature_id == 12">
         <app-pr-yes-or-not label="Are you profiling a new or improved variety or breed?"
             [(ngModel)]="innovationDevInfoBody.is_new_variety">
         </app-pr-yes-or-not>
-        <app-pr-input *ngIf="innovationDevInfoBody.number_of_varieties"
+        <app-pr-input *ngIf="innovationDevInfoBody.is_new_variety"
             label="Indicate the number of individual new or improved lines/ varieties" [required]="false" type="number"
-            placeholder="0">
+            placeholder="0" [(ngModel)]="innovationDevInfoBody.number_of_varieties">
         </app-pr-input>
     </div>
     <!-- Todo -->
