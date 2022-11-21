@@ -22,7 +22,7 @@
             <app-pr-field-header [label]="'Non-pooled project No. ' + (i+1)" [required]="false"></app-pr-field-header>
             <app-pr-select class="segment_title_margin" [options]="this.institutionsSE?.institutionsList"
                 label="Funder name" optionLabel="full_name" optionValue="institutions_id" placeholder="Select funder"
-                [(ngModel)]="donor.funder" [required]="false">
+                [(ngModel)]="donor.funder">
             </app-pr-select>
             <div class="auto_fit_container">
                 <app-pr-input label="Grant title" [required]="true" [(ngModel)]="donor.grant_title"
@@ -33,7 +33,7 @@
                 </app-pr-input>
                 <app-pr-select [options]="this.centersSE.centersList" label="Lead/Contract Center" optionLabel="name"
                     optionValue="lead_center" placeholder="Select donor" [(ngModel)]="donor.lead_center"
-                    [required]="false" placeholder="Lead/Contract Center goes here...">
+                    placeholder="Lead/Contract Center goes here...">
                 </app-pr-select>
             </div>
             <app-edit-or-delete-item-button (click)="deleteEvidence(i)" *ngIf="!this.api.rolesSE.readOnly">
