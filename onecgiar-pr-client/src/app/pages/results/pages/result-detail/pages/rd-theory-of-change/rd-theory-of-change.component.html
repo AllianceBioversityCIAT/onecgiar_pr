@@ -94,4 +94,5 @@
 
 </div>
 
-<app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>
+<app-save-button class="position_sticky" [ngClass]="{'globalDisabled': this.validateGranTitle}"
+    (clickSave)="onSaveSection()"></app-save-button>

@@ -43,6 +43,18 @@ export class RdTheoryOfChangeComponent {
     );
   }
 
+  get validateGranTitle() {
+    console.log(this.theoryOfChangeBody.contributing_np_projects);
+    for (const iterator of this.theoryOfChangeBody.contributing_np_projects) {
+      const evidencesFinded = this.theoryOfChangeBody.contributing_np_projects.filter(evidence => evidence.grant_title == iterator.grant_title);
+      if (evidencesFinded.length >= 2) {
+        return evidencesFinded.length >= 2;
+      }
+    }
+
+    return !!this.theoryOfChangeBody.contributing_np_projects.find(evidence => !evidence.grant_title);
+  }
+
   onSaveSection() {
     console.log(this.theoryOfChangeBody);
     this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
