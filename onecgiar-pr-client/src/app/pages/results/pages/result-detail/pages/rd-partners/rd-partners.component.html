@@ -2,7 +2,7 @@
 
 <div class="detail_container">
     <app-alert-status
-        description="Partner organization that you collaborated with to generate this result or that contributed to this result.">
+        description="Partner organization that you collaborated with or are currently collaborating with to generate this result">
     </app-alert-status>
     <div [ngSwitch]="this.rolesSE.readOnly">
         <div *ngSwitchCase="true">{{this.partnersBody.no_applicable_partner?'Marked as not applicable':''}}</div>
