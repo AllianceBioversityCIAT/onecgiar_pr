@@ -16,12 +16,6 @@
         </app-pr-input>
     </div>
 
-
-    <app-pr-field-header label="Number of people trained"
-        description="In the case where the gender balance of trainees is not known (e.g. online training), assume 50-50 split.">
-    </app-pr-field-header>
-
-
     <app-pr-radio-button label="Long-term or short-term" (selectOptionEvent)="clean_capdev_term_2()"
         description="This should reflect where the outcome has taken place/contributed to benefit."
         [(ngModel)]="this.capdev_term_id_1" [options]="this.capdevsTerms" optionLabel="name"

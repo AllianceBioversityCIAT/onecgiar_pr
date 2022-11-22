@@ -55,6 +55,7 @@ export class CapDevInfoComponent implements OnInit {
 
   get_capdev_term_id() {
     console.log(this.capDevInfoRoutingBody.capdev_term_id);
+    if (this.capDevInfoRoutingBody.capdev_term_id == 4) return (this.capdev_term_id_1 = 4);
     if (this.capDevInfoRoutingBody.capdev_term_id == 3) {
       return (this.capdev_term_id_1 = 3);
     }
