@@ -22,7 +22,7 @@ export class ResultsKnowledgeProductMapper {
 
     knowledgeProductDto.accessible = mqapResponseDto?.FAIR?.score?.A;
     knowledgeProductDto.commodity = (mqapResponseDto?.Commodities ?? []).join(
-      ', ',
+      '; ',
     );
     knowledgeProductDto.description = mqapResponseDto?.Description;
     knowledgeProductDto.doi = mqapResponseDto?.DOI;
@@ -37,7 +37,7 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProductDto.reusable = mqapResponseDto?.FAIR?.score?.R;
     knowledgeProductDto.sponsor = (mqapResponseDto?.['Funding source'] ?? [])
       .map((f) => f.name)
-      .join(', ');
+      .join('; ');
     knowledgeProductDto.type = mqapResponseDto?.Type;
 
     knowledgeProductDto = this.fillRelatedMetadata(
