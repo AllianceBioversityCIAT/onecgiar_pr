@@ -2,7 +2,7 @@
     (onHide)="cleanObject()" [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false"
     [dismissableMask]="true" [style]="{padding: '0px'}">
     <div class="modal_title">Partners Request</div>
-    <div class="modal_container" *ngIf="showForm">
+    <div class="modal_container partners-request-container" *ngIf="showForm">
 
         <app-pr-input placeholder="Write some..." label="Acronym" type="text" [required]="false"
             [(ngModel)]="this.partnersRequestBody.acronym" name="acronym">

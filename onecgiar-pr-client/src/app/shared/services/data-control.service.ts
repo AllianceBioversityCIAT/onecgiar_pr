@@ -68,9 +68,16 @@ export class DataControlService {
     return this.currentResult?.result_type_id == 6;
   }
 
-  someMandatoryFieldIncomplete() {
-    let inputs = Array.prototype.slice.call(document.querySelectorAll('.pr-input.mandatory input')).some(field => !Boolean(field.value));
-    let selects = Array.prototype.slice.call(document.querySelectorAll('.pr-select.mandatory')).some((field: HTMLElement) => !field.classList.contains('complete'));
+  someMandatoryFieldIncomplete(container) {
+    // console.log('-  ');
+    const htmlContainer = document.querySelector(container);
+    if (!htmlContainer) return true;
+    let inputs;
+    let selects;
+    try {
+      inputs = Array.prototype.slice.call(htmlContainer.querySelectorAll('.pr-input.mandatory input')).some(field => !Boolean(field.value));
+      selects = Array.prototype.slice.call(htmlContainer.querySelectorAll('.pr-select.mandatory')).some((field: HTMLElement) => !field.classList.contains('complete'));
+    } catch (error) {}
     return inputs || selects;
   }
 }

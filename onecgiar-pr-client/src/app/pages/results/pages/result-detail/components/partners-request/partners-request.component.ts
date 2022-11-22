@@ -62,6 +62,6 @@ export class PartnersRequestComponent {
   }
 
   ngDoCheck(): void {
-    this.formIsInvalid = this.api.dataControlSE.someMandatoryFieldIncomplete();
+    this.formIsInvalid = this.api.dataControlSE.someMandatoryFieldIncomplete('.partners-request-container');
   }
 }
