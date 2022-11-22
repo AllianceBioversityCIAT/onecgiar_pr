@@ -40,8 +40,15 @@ export class RdLinksToResultsComponent {
   getSectionInformation() {
     this.api.resultsSE.GET_resultsLinked().subscribe(({ response }) => {
       console.log(response);
-      this.linksToResultsBody.links = response;
+      this.linksToResultsBody = response;
     });
+  }
+  addLegacy_link() {
+    this.linksToResultsBody.legacy_link.push({});
+  }
+
+  deleteLegacy_link(index) {
+    this.linksToResultsBody.legacy_link.splice(index, 1);
   }
   onSaveSection() {
     console.log(this.linksToResultsBody);

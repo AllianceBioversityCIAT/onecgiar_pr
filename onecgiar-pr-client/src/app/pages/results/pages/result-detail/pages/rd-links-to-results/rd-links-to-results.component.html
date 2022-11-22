@@ -67,6 +67,27 @@
             <i class=" material-icons-round icon" (click)="this.onRemove(i)">clear</i>
         </div>
     </div>
+
+    <app-pr-field-header label="Results from previous portfolio" [required]="false">
+    </app-pr-field-header>
+
+    <div class="evidence_item" *ngFor="let result of this.linksToResultsBody.legacy_link; let i=index">
+        <div class="index">{{i+1}}</div>
+        <div>
+            <div class="link">
+                <app-pr-input [required]="false" [(ngModel)]="result.legacy_link" placeholder="Add link"></app-pr-input>
+            </div>
+        </div>
+        <app-edit-or-delete-item-button (click)="deleteLegacy_link(i)">
+        </app-edit-or-delete-item-button>
+
+    </div>
+
+    <app-no-data-text *ngIf="!this.linksToResultsBody.legacy_link.length"
+        title="No results from previous portfolio added"></app-no-data-text>
+    <app-add-button name="Add results from previous portfolio" (clickEvent)="addLegacy_link()">
+    </app-add-button>
+
     <app-save-button class="position_sticky" (clickSave)="onSaveSection()"
         *ngIf="!this.api.dataControlSE.isKnowledgeProduct"></app-save-button>
 </div>

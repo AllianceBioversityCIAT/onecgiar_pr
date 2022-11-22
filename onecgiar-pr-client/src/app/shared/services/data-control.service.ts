@@ -5,7 +5,7 @@ import { ResultItem } from '../interfaces/result.interface';
   providedIn: 'root'
 })
 export class DataControlService {
-  showPartnersRequest: boolean = true;
+  showPartnersRequest: boolean = false;
   myInitiativesList = [];
   resultsList: ResultItem[];
   currentResult: any;
