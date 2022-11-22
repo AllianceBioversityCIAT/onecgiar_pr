@@ -33,14 +33,17 @@ export class LinkedResultsService {
           status: HttpStatus.NOT_FOUND,
         };
       }
-
+      
       let isExistsNew:number[] =[];
-
+      let isExistsNewLegacy:string[] =[];
+      createLinkedResultDto.links = createLinkedResultDto.links ?? [];
+      createLinkedResultDto.legacy_link = createLinkedResultDto.legacy_link ?? [];
+      const links: interfaceLinkResults[]  = createLinkedResultDto.links;
+      const legacyLinks: interfaceLinkResults[]  = createLinkedResultDto.legacy_link;
       if(createLinkedResultDto?.links?.length){
-        const links: interfaceLinkResults[]  = createLinkedResultDto.links;
         const newLinks: LinkedResult[] = [];
+        await this._linkedResultRepository.updateLink(createLinkedResultDto.result_id,links.map(e => e.id), legacyLinks.map(e => e.legacy_link),user.id);
         for (let index = 0; index < links.length; index++) {
-          await this._linkedResultRepository.updateLink(createLinkedResultDto.result_id,links.map(e => e.id),user.id);
           const linkExists = await this._linkedResultRepository.getLinkResultByIdResultAndLinkId(result.id, links[index].id);
           if(!linkExists && !isExistsNew.includes(links[index].id)){
             const newLink = new LinkedResult();
@@ -52,10 +55,33 @@ export class LinkedResultsService {
             newLinks.push(newLink);
           }
         }
+        console.log(newLinks);
+        await this._linkedResultRepository.save(newLinks);
+        
+      }else{
+        await this._linkedResultRepository.updateLink(createLinkedResultDto.result_id,[], legacyLinks.map(e => e.legacy_link),user.id);
+      }
+      console.log("esto es",legacyLinks)
+      if(createLinkedResultDto?.legacy_link?.length){
+        const newLinks: LinkedResult[] = [];
+        await this._linkedResultRepository.updateLink(createLinkedResultDto.result_id,links.map(e => e.id), legacyLinks.map(e => e.legacy_link),user.id);
+        for (let index = 0; index < legacyLinks.length; index++) {
+          const linkExists = await this._linkedResultRepository.getLinkResultByIdResultAndLegacyLinkId(result.id, legacyLinks[index].legacy_link);
+          if(!linkExists && !isExistsNewLegacy.includes(legacyLinks[index].legacy_link)){
+            const newLink = new LinkedResult();
+            newLink.created_by = user.id;
+            newLink.last_updated_by = user.id;
+            newLink.origin_result_id = result.id;
+            newLink.legacy_link = legacyLinks[index].legacy_link;
+            isExistsNewLegacy.push(legacyLinks[index].legacy_link);
+            newLinks.push(newLink);
+          }
+        }
+        console.log(newLinks);
         await this._linkedResultRepository.save(newLinks);
 
       }else{
-        await this._linkedResultRepository.updateLink(createLinkedResultDto.result_id,[],user.id);
+        await this._linkedResultRepository.updateLink(createLinkedResultDto.result_id,links.map(e => e.id), [],user.id);
       }
       return {
         response: {},
@@ -69,16 +95,13 @@ export class LinkedResultsService {
 
   async findAllLinksByResult(resultId: number) {
     try {
-      const linsk = await this._linkedResultRepository.getLinkResultByIdResult(resultId);
-      if(!linsk.length){
-        throw {
-          response: {},
-          message: 'Links Results Not Found',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
+      const links = await this._linkedResultRepository.getLinkResultByIdResult(resultId);
+
       return {
-        response: linsk,
+        response: {
+          links: links.filter(el => !!el.id),
+          legacy_link: links.filter(el => !el.id)
+        },
         message: 'The data was updated correctly',
         status: HttpStatus.OK,
       };
@@ -101,5 +124,6 @@ export class LinkedResultsService {
 }
 
 interface interfaceLinkResults{
-  id: number;
+  id?: number;
+  legacy_link?: string;
 }
