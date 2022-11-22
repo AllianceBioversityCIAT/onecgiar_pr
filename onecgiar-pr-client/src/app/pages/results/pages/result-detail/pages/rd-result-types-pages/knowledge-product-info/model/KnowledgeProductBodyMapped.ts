@@ -3,8 +3,8 @@ export class KnowledgeProductBodyMapped {
   authors: string[];
   type: string;
   doi: string;
-  keywords: string[];
-  agrovoc_keywords: string[];
+  keywords: string;
+  agrovoc_keywords: string;
   commodity: string;
   investors: string;
   altmetric_img_url: string;
