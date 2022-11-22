@@ -1,7 +1,8 @@
 <app-pr-field-header [label]="this.label" [description]="this.description" [required]="this.required">
 </app-pr-field-header>
-
-<div [ngSwitch]="editable ? false :(readOnly || this.rolesSE.readOnly && !isStatic)">
+<input type="text" [hidden]="true" [(ngModel)]="this.value">
+<div [ngSwitch]="editable ? false :(readOnly || this.rolesSE.readOnly && !isStatic)" class="pr-select"
+    [ngClass]="{'mandatory': this.required, 'complete': (this.optionsIntance | labelName:this.value:this.optionValue:this.optionLabel)}">
     <div class="read-only" *ngSwitchCase="true">{{(this.optionsIntance |
         labelName:this.value:this.optionValue:this.optionLabel)}}</div>
     <div class="custom_select" *ngSwitchCase="false">

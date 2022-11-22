@@ -1,11 +1,14 @@
-<p-dialog class="support_information" header="Title" *ngIf="this.api.dataControlSE.showPartnersRequest"
-    [(visible)]="this.api.dataControlSE.showPartnersRequest" [draggable]="false" [modal]="true" [closeOnEscape]="true"
-    [showHeader]="false" [dismissableMask]="true" [style]="{padding: '0px'}">
+<p-dialog class="support_information" header="Title" [(visible)]="this.api.dataControlSE.showPartnersRequest"
+    (onHide)="cleanObject()" [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false"
+    [dismissableMask]="true" [style]="{padding: '0px'}">
     <div class="modal_title">Partners Request</div>
-    <div class="modal_container">
+    <div class="modal_container" *ngIf="showForm">
+
         <app-pr-input placeholder="Write some..." label="Acronym" type="text" [required]="false"
-            [(ngModel)]="this.partnersRequestBody.acronym">
+            [(ngModel)]="this.partnersRequestBody.acronym" name="acronym">
         </app-pr-input>
+
+
         <app-pr-input placeholder="Write some..." label="Name" type="text" [(ngModel)]="this.partnersRequestBody.name">
         </app-pr-input>
         <app-pr-select class="segment_title_margin" [options]="this.institutionsService.institutionsTypesList"
@@ -23,11 +26,12 @@
         <!-- flagsCode="iso_alpha_2" -->
     </div>
     <div class="buttons">
-        <app-pr-button padding="medium" text="Cancel" icon="cancel_schedule_send"
-            (click)="this.api.dataControlSE.showPartnersRequest = false;" colorType="secondary"></app-pr-button>
-        <app-pr-button [ngClass]="{'globalDisabled': this.requesting}" [text]="this.requesting?'Saving':'Requesting'"
-            [rotating]="this.requesting" [icon]="this.requesting?'loop':'send'" padding="medium"
-            (click)="onRequestPartner()"></app-pr-button>
+        <app-pr-button padding="medium" text="Cancel" icon="cancel_schedule_send" colorType="secondary"
+            (click)="this.api.dataControlSE.showPartnersRequest = false">
+        </app-pr-button>
+        <app-pr-button [ngClass]="{'globalDisabled': this.requesting || formIsInvalid}"
+            [text]="this.requesting?'Saving':'Requesting'" [rotating]="this.requesting"
+            [icon]="this.requesting?'loop':'send'" padding="medium" (click)="onRequestPartner()"></app-pr-button>
     </div>
 
 </p-dialog>

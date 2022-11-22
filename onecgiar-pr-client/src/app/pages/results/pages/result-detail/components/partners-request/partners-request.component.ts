@@ -3,6 +3,7 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { PartnersRequestBody } from './models/partnersRequestBody.model';
 import { RegionsCountriesService } from '../../../../../../shared/services/global/regions-countries.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
+import { FormGroup } from '@angular/forms';
 
 @Component({
   selector: 'app-partners-request',
@@ -12,34 +13,40 @@ import { InstitutionsService } from '../../../../../../shared/services/global/in
 export class PartnersRequestComponent {
   partnersRequestBody = new PartnersRequestBody();
   requesting = false;
+  form: FormGroup;
+  formIsInvalid = false;
   constructor(public api: ApiService, public regionsCountriesSE: RegionsCountriesService, public institutionsService: InstitutionsService) {}
 
+  showForm = true;
+
+  cleanObject() {
+    console.log('cleanForm');
+    this.showForm = false;
+    this.partnersRequestBody = new PartnersRequestBody();
+    setTimeout(() => {
+      this.showForm = true;
+    }, 0);
+  }
   onRequestPartner() {
     this.requesting = true;
-    console.log(this.api.rolesSE.roles);
     const { application, initiative } = this.api.rolesSE.roles;
-    console.log(application);
     const { id, email, user_name } = this.api.authSE.localStorageUser;
-    let initiatives = '';
-    this.api.rolesSE.roles.initiative.map((init, index) => (initiatives += `Init: ${init?.initiative_id} - (${init?.description})${index < this.api.rolesSE.roles.initiative.length - 1 ? ', ' : ''}`));
+    const { initiative_official_code, initiative_short_name, initiative_name, initiative_id } = this.api.dataControlSE.currentResult;
+    const initiativeFinded = this.api.rolesSE.roles.initiative.find(initiative => (initiative.initiative_id = initiative_id));
     this.partnersRequestBody.externalUserName = user_name;
     this.partnersRequestBody.externalUserMail = email;
     this.partnersRequestBody.externalUserComments = `
-    Result ID: ${this.api.resultsSE.currentResultId},
-    initiatives: ${initiatives}
-    User Id: ${id},
-    Result Name: ${this.api.dataControlSE.currentResult?.title},
-    App role: ${application?.description}`;
+    User: (Id: ${id}) - ${user_name} - ${email},
+    Result: [Role: ${initiativeFinded.description}] - (Id: ${this.api.resultsSE.currentResultId}) - ${this.api.dataControlSE.currentResult?.title},
+    Initiative: (Id: ${initiative_official_code}) - ${initiative_short_name} - ${initiative_name},
+    App role: ${application?.description},
+    Section: ${this.api.dataControlSE.currentSectionName}`;
     console.log(this.partnersRequestBody);
-    console.log(this.api.dataControlSE.currentResult);
-
-    // Section: ???,
 
     this.api.resultsSE.POST_partnerRequest(this.partnersRequestBody).subscribe(
       resp => {
         this.requesting = false;
         console.log(resp);
-        this.partnersRequestBody = this.partnersRequestBody = new PartnersRequestBody();
         this.api.dataControlSE.showPartnersRequest = false;
         if (resp.status == 500) return this.api.alertsFe.show({ id: 'partners-error', title: 'Error when requesting partner', description: 'Server problems', status: 'error' });
         // "${this.partnersRequestBody.name}"
@@ -49,7 +56,12 @@ export class PartnersRequestComponent {
       err => {
         this.api.alertsFe.show({ id: 'partners-error', title: 'Error when requesting partner', description: '', status: 'error' });
         this.requesting = false;
+        this.api.dataControlSE.showPartnersRequest = false;
       }
     );
+  }
+
+  ngDoCheck(): void {
+    this.formIsInvalid = this.api.dataControlSE.someMandatoryFieldIncomplete();
   }
 }

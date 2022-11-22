@@ -5,11 +5,12 @@ import { ResultItem } from '../interfaces/result.interface';
   providedIn: 'root'
 })
 export class DataControlService {
-  showPartnersRequest: boolean = false;
+  showPartnersRequest: boolean = true;
   myInitiativesList = [];
   resultsList: ResultItem[];
   currentResult: any;
   showSectionSpinner = false;
+  currentSectionName = '';
   constructor() {}
   validateBody(body: any) {
     return Object.entries(body).every((item: any) => item[1]);
@@ -65,5 +66,11 @@ export class DataControlService {
   get isKnowledgeProduct() {
     // console.log(this.currentResult);
     return this.currentResult?.result_type_id == 6;
+  }
+
+  someMandatoryFieldIncomplete() {
+    let inputs = Array.prototype.slice.call(document.querySelectorAll('.pr-input.mandatory input')).some(field => !Boolean(field.value));
+    let selects = Array.prototype.slice.call(document.querySelectorAll('.pr-select.mandatory')).some((field: HTMLElement) => !field.classList.contains('complete'));
+    return inputs || selects;
   }
 }
