@@ -52,10 +52,10 @@
     </div>
     <div (click)="onSaveSection()" class="save_and_continue"
       [ngClass]="{'globalDisabled': (valdiateNormalFields() || exactTitleFound) || this.api.wordCounterSE.counter(this.resultLevelSE.resultBody.result_name) > 30   }">
-      <app-pr-button padding="medium" text="Save and continue" icon="save"></app-pr-button>
+      <app-pr-button padding="medium" text="Save and continue" [rotating]="this.isSaving"
+        [icon]="this.isSaving?'loop':'save'" [ngClass]="{'globalDisabled ':this.isSaving}">
+      </app-pr-button>
     </div>
 
   </div>
 </div>
-
-<!-- [ngClass]="{'globalDisabled': ((!this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody)) || exactTitleFound) || this.api.wordCounterSE.counter(this.resultLevelSE.resultBody.result_name) > 30  }" -->

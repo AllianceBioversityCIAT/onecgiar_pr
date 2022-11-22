@@ -17,6 +17,7 @@ export class ResultCreatorComponent implements OnInit {
   exactTitleFound = false;
   mqapJson: {};
   validating = false;
+  isSaving = false;
   constructor(public api: ApiService, public resultLevelSE: ResultLevelService, private router: Router, private initiativesSE: InitiativesService) {}
 
   ngOnInit(): void {
@@ -65,6 +66,7 @@ export class ResultCreatorComponent implements OnInit {
   }
 
   onSaveSection() {
+    this.isSaving = true;
     if (this.resultLevelSE.resultBody.result_type_id != 6) {
       this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody);
       console.log(this.resultLevelSE.resultBody);
@@ -72,9 +74,11 @@ export class ResultCreatorComponent implements OnInit {
         resp => {
           this.router.navigate([`/result/result-detail/${resp?.response?.id}/general-information`]);
           this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
+          this.isSaving = true;
         },
         err => {
           this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
+          this.isSaving = true;
         }
       );
     } else {
@@ -84,9 +88,11 @@ export class ResultCreatorComponent implements OnInit {
           console.log(resp);
           this.router.navigate([`/result/result-detail/${resp?.response?.id}/general-information`]);
           this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
+          this.isSaving = true;
         },
         err => {
           this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
+          this.isSaving = true;
         }
       );
     }
