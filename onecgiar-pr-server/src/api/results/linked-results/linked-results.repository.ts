@@ -147,7 +147,7 @@ export class LinkedResultRepository extends Repository<LinkedResult> {
         last_updated_by = ?
       where is_active > 0 
         and origin_result_id = ?
-        and linked_results_id not in (${results.toString()})
+        and linked_results_id not in (${!results.length?`''`: results.toString()})
         or legacy_link not in (${`'${legacy.toString().replace(/,/g,'\',\'')}'`});
     `;
 
@@ -157,7 +157,7 @@ export class LinkedResultRepository extends Repository<LinkedResult> {
         last_updated_date = NOW(),
         last_updated_by = ?
       where origin_result_id = ?
-        and linked_results_id in (${results.toString()})
+        and linked_results_id in (${!results.length?`''`: results.toString()})
         or legacy_link in (${`'${legacy.toString().replace(/,/g,'\',\'')}'`});
     `;
 
@@ -171,9 +171,6 @@ export class LinkedResultRepository extends Repository<LinkedResult> {
     `;
 
     try {
-      console.log(upDateInactive)
-      console.log(upDateActive)
-      console.log(upDateAllInactive)
       if(results?.length || legacy?.length){
         const upDateInactiveResult = await this.query(upDateInactive, [
           userId, resultId

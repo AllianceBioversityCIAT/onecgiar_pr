@@ -55,13 +55,11 @@ export class LinkedResultsService {
             newLinks.push(newLink);
           }
         }
-        console.log(newLinks);
         await this._linkedResultRepository.save(newLinks);
         
       }else{
         await this._linkedResultRepository.updateLink(createLinkedResultDto.result_id,[], legacyLinks.map(e => e.legacy_link),user.id);
       }
-      console.log("esto es",legacyLinks)
       if(createLinkedResultDto?.legacy_link?.length){
         const newLinks: LinkedResult[] = [];
         await this._linkedResultRepository.updateLink(createLinkedResultDto.result_id,links.map(e => e.id), legacyLinks.map(e => e.legacy_link),user.id);
