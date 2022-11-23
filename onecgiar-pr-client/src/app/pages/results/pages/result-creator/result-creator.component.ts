@@ -107,7 +107,9 @@ export class ResultCreatorComponent implements OnInit {
   }
 
   validateKnowledgeProductFields() {}
-
+  ngDoCheck(): void {
+    this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.local_container');
+  }
   GET_mqapValidation() {
     this.validating = true;
     this.api.resultsSE.GET_mqapValidation(this.resultLevelSE.resultBody.handler).subscribe(

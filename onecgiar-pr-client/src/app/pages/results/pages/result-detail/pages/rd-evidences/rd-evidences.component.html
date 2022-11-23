@@ -34,5 +34,5 @@
     </app-add-button>
 </div>
 
-<app-save-button class="position_sticky" [ngClass]="{'globalDisabled': this.validateCGSpaceLinks}"
+<app-save-button class="position_sticky" [disabled]="this.validateCGSpaceLinks"
     *ngIf="!this.api.dataControlSE.isKnowledgeProduct" (clickSave)="onSaveSection()"></app-save-button>

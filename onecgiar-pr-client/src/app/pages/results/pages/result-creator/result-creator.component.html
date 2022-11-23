@@ -16,11 +16,12 @@
 
 
       <app-result-level-buttons></app-result-level-buttons>
-      <div class="segment_title segment_title_margin" *ngIf="this.resultLevelSE?.currentResultTypeList?.length">Result
+      <!-- <div class="segment_title segment_title_margin" *ngIf="this.resultLevelSE?.currentResultTypeList?.length">Result
         type
-      </div>
-      <app-pr-radio-button [options]="this.resultLevelSE.currentResultTypeList" [isStatic]="true" optionLabel="name"
-        optionValue='id' [(ngModel)]="this.resultLevelSE.resultBody.result_type_id" (ngModelChange)="cleanTitle()">
+      </div> -->
+      <app-pr-radio-button label="Result type" *ngIf="this.resultLevelSE?.currentResultTypeList?.length"
+        [options]="this.resultLevelSE.currentResultTypeList" [isStatic]="true" optionLabel="name" optionValue='id'
+        [(ngModel)]="this.resultLevelSE.resultBody.result_type_id" (ngModelChange)="cleanTitle()">
       </app-pr-radio-button>
 
       <app-alert-status *ngIf="isKnowledgeProduct" description="Dear user, please add the handle generated in CGSpace for the knowledge product you wish to report. All metadata will be automatically retrieved by the system and will not be possible to edit in the PRMS. The handle will be checked for validity, and only knowledge products for 2022 will be accepted.<br><br> 
@@ -50,12 +51,17 @@
       <app-similar-results *ngIf="resultLevelSE.resultBody.result_type_id != 6" [options]="this.depthSearchList">
       </app-similar-results>
     </div>
-    <div (click)="onSaveSection()" class="save_and_continue"
+
+    <!-- <div (click)="onSaveSection()" class="save_and_continue"
       [ngClass]="{'globalDisabled': (valdiateNormalFields() || exactTitleFound) || this.api.wordCounterSE.counter(this.resultLevelSE.resultBody.result_name) > 30   }">
       <app-pr-button padding="medium" text="Save and continue" [rotating]="this.isSaving"
         [icon]="this.isSaving?'loop':'save'" [ngClass]="{'globalDisabled ':this.isSaving}">
       </app-pr-button>
-    </div>
+    </div> -->
+
+    <app-save-button [editable]="true" (clickSave)="onSaveSection()" text="Save and continue"
+      [disabled]="(valdiateNormalFields() || exactTitleFound) || this.api.wordCounterSE.counter(this.resultLevelSE.resultBody.result_name) > 30  ">
+    </app-save-button>
 
   </div>
 </div>

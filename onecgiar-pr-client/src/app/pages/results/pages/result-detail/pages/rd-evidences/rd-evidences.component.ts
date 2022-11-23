@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { EvidencesBody } from './model/evidencesBody.model';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
+import { empty } from 'rxjs';
 
 @Component({
   selector: 'app-rd-evidences',
@@ -60,6 +61,7 @@ export class RdEvidencesComponent {
 
   get validateCGSpaceLinks() {
     for (const iterator of this.evidencesBody.evidences) {
+      if (this.evidencesBody.evidences.find(evidence => !Boolean(evidence.link))) return true;
       const evidencesFinded = this.evidencesBody.evidences.filter(evidence => evidence.link == iterator.link);
       if (evidencesFinded.length >= 2) {
         return evidencesFinded.length >= 2;
@@ -67,6 +69,7 @@ export class RdEvidencesComponent {
     }
 
     for (const iterator of this.evidencesBody.supplementary) {
+      if (this.evidencesBody.supplementary.find(evidence => !Boolean(evidence.link))) return true;
       const supplementaryFinded = this.evidencesBody.supplementary.filter(evidence => evidence.link == iterator.link);
       if (supplementaryFinded.length >= 2) {
         return supplementaryFinded.length >= 2;
