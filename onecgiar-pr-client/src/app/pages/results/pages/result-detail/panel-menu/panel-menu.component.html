@@ -10,6 +10,7 @@
       <div class="name">Sections</div>
       <div class="sections">
         <a *ngFor="let navOption of navigationOptions | panelMenu:this.resultLevelSE.currentResultTypeId; let i=index"
+          [hidden]="hideKP(navOption)"
           [routerLink]="'/result/result-detail/'+this.resultsListSE.currentResultId+'/' + navOption.path"
           routerLinkActive="section_active">{{i+1}}.
           {{navOption.prName }} <img *ngIf="navOption.underConstruction === true" class="under_construction"
