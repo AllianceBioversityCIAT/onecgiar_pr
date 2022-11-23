@@ -23,4 +23,30 @@ export class ClarisaImpactAreaInticatorsRepository extends Repository<ClarisaImp
       };
     }
   }
+
+  async getAllImpactAreaIndicators() {
+    const queryData = `
+    SELECT
+    	ciai.id,
+    	ciai.indicator_statement,
+    	ciai.target_year,
+    	ciai.target_unit,
+    	ciai.value,
+    	ciai.is_aplicable_projected_benefits,
+    	ciai.impact_area_id,
+    	ciai.name
+    FROM
+    	clarisa_impact_area_indicator ciai ;
+    `;
+    try {
+      const AllImpactAreaIndicators = await this.query(queryData);
+      return AllImpactAreaIndicators;
+    } catch (error) {
+      throw {
+        message: `[${ClarisaImpactAreaInticatorsRepository.name}] => getAllImpactAreaIndicators error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
 }

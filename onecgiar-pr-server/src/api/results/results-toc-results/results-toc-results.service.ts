@@ -16,6 +16,10 @@ import { Version } from '../versions/entities/version.entity';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 import { ResultRepository } from '../result.repository';
 import { TocResultsRepository } from '../../../toc/toc-results/toc-results.repository';
+import { ResultsImpactAreaTargetRepository } from '../results-impact-area-target/results-impact-area-target.repository';
+import { ResultsImpactAreaIndicatorRepository } from '../results-impact-area-indicators/results-impact-area-indicators.repository';
+import { ResultsImpactAreaIndicator } from '../results-impact-area-indicators/entities/results-impact-area-indicator.entity';
+import { ResultsImpactAreaTarget } from '../results-impact-area-target/entities/results-impact-area-target.entity';
 
 @Injectable()
 export class ResultsTocResultsService {
@@ -29,12 +33,14 @@ export class ResultsTocResultsService {
     private readonly _versionsService: VersionsService,
     private readonly _userRepository: UserRepository,
     private readonly _resultRepository: ResultRepository,
-    private readonly _tocResultsRepository: TocResultsRepository
+    private readonly _tocResultsRepository: TocResultsRepository,
+    private readonly _resultsImpactAreaTargetRepository: ResultsImpactAreaTargetRepository,
+    private readonly _resultsImpactAreaIndicatorRepository: ResultsImpactAreaIndicatorRepository
   ) { }
 
   async create(createResultsTocResultDto: CreateResultsTocResultDto, user: TokenDto) {
     try {
-      let { contributing_np_projects, result_id, contributing_center, contributing_initiatives, result_toc_result, contributors_result_toc_result } = createResultsTocResultDto;
+      let { contributing_np_projects, result_id, contributing_center, contributing_initiatives, result_toc_result, contributors_result_toc_result, impacts } = createResultsTocResultDto;
       const version = await this._versionsService.findBaseVersion();
       const result = await this._resultRepository.getResultById(result_id);
       let initiativeArray: number[] = [];
@@ -127,45 +133,87 @@ export class ResultsTocResultsService {
       } else {
         await this._resultsCenterRepository.updateCenter(result_id, [], user.id);
       }
-      await this._resultsTocResultRepository.updateResultByInitiative(result_id, [...initiativeArray, result_toc_result.initiative_id], user.id);
-      let RtR = await this._resultsTocResultRepository.getRTRById(result_toc_result?.result_toc_result_id, result_id, result_toc_result?.initiative_id);
-      if (RtR) {
-        if (result.result_level_id == 2) {
-          RtR.action_area_outcome_id = result_toc_result?.action_area_outcome_id || null;
-        }else {
-          RtR.toc_result_id = result_toc_result?.toc_result_id || null;
+
+      if (result.result_level_id == 1) {
+        impacts.forEach(async ({id, indicators, target}) => {
+          if(indicators?.length){
+            await this._resultsImpactAreaIndicatorRepository.updateResultImpactAreaIndicators(result_id, id, indicators?.map(el => el.targetId), user.id);
+            let IndicatorArray: ResultsImpactAreaIndicator[] = [];
+            for (let index = 0; index < indicators.length; index++) {
+              const {targetId} = indicators[index];
+              const resultsImpactAreaIndicatorData = await this._resultsImpactAreaIndicatorRepository.ResultsImpactAreaIndicatorExists(result_id, targetId);
+              if(!resultsImpactAreaIndicatorData){
+                const newIndicator = new ResultsImpactAreaIndicator();
+                newIndicator.created_by = user.id;
+                newIndicator.last_updated_by = user.id;
+                newIndicator.result_id = result.id;
+                newIndicator.impact_area_indicator_id = targetId;
+                newIndicator.version_id = vrs.id;
+                IndicatorArray.push(newIndicator);
+              }
+            }
+            await this._resultsImpactAreaIndicatorRepository.save(IndicatorArray);
+          }
+
+          if(target?.length){
+            await this._resultsImpactAreaTargetRepository.updateResultImpactAreaTarget(result_id, id, target?.map(el => el.id), user.id);
+            let TargetArray: ResultsImpactAreaTarget[] = [];
+            for (let index = 0; index < target.length; index++) {
+              const {id} = target[index];
+              const resultsImpactAreaTargetData = await this._resultsImpactAreaTargetRepository.resultsImpactAreaTargetExists(result_id, id);
+              if(!resultsImpactAreaTargetData){
+                const newTarget = new ResultsImpactAreaTarget();
+                newTarget.created_by = user.id;
+                newTarget.last_updated_by = user.id;
+                newTarget.result_id = result.id;
+                newTarget.impact_area_target_id = id;
+                newTarget.version_id = vrs.id;
+                TargetArray.push(newTarget);
+              }
+            }
+            await this._resultsImpactAreaTargetRepository.save(TargetArray);
+          }
+        });
+      } else {
+        await this._resultsTocResultRepository.updateResultByInitiative(result_id, [...initiativeArray, result_toc_result.initiative_id], user.id);
+        let RtR = await this._resultsTocResultRepository.getRTRById(result_toc_result?.result_toc_result_id, result_id, result_toc_result?.initiative_id);
+        if (RtR) {
+          if (result.result_level_id == 2) {
+            RtR.action_area_outcome_id = result_toc_result?.action_area_outcome_id || null;
+          } else {
+            RtR.toc_result_id = result_toc_result?.toc_result_id || null;
+          }
+          RtR.is_active = true;
+          RtR.last_updated_by = user.id;
+          RtR.planned_result = result_toc_result.planned_result;
+          await this._resultsTocResultRepository.save(RtR);
+        } else if (result_toc_result) {
+          const newRtR = new ResultsTocResult();
+          newRtR.version_id = vrs.id;
+          newRtR.initiative_id = result_toc_result?.initiative_id;
+          newRtR.created_by = user.id;
+          newRtR.last_updated_by = user.id;
+          newRtR.results_id = result.id;
+          newRtR.planned_result = result_toc_result.planned_result;
+          if (result.result_level_id == 2) {
+            newRtR.action_area_outcome_id = result_toc_result?.action_area_outcome_id || null;
+          } else {
+            newRtR.toc_result_id = result_toc_result?.toc_result_id || null;
+          }
+          newRtR.planned_result = result_toc_result?.planned_result || null;
+          await this._resultsTocResultRepository.save(newRtR);
         }
-        RtR.is_active = true;
-        RtR.last_updated_by = user.id;
-        RtR.planned_result = result_toc_result.planned_result;
-        await this._resultsTocResultRepository.save(RtR);
-      } else if(result_toc_result) {
-        const newRtR = new ResultsTocResult();
-        newRtR.version_id = vrs.id;
-        newRtR.initiative_id = result_toc_result?.initiative_id;
-        newRtR.created_by = user.id;
-        newRtR.last_updated_by = user.id;
-        newRtR.results_id = result.id;
-        newRtR.planned_result = result_toc_result.planned_result;
-        if (result.result_level_id == 2) {
-          newRtR.action_area_outcome_id = result_toc_result?.action_area_outcome_id || null;
-        }else {
-          newRtR.toc_result_id = result_toc_result?.toc_result_id || null;
-        }
-        newRtR.planned_result = result_toc_result?.planned_result || null;
-        await this._resultsTocResultRepository.save(newRtR);
-      }
 
 
-      if (contributors_result_toc_result?.length) {
-        contributors_result_toc_result = contributors_result_toc_result.filter(el => initiativeArray.includes(el.initiative_id));
-        let RtRArray: ResultsTocResult[] = [];
+        if (contributors_result_toc_result?.length) {
+          contributors_result_toc_result = contributors_result_toc_result.filter(el => initiativeArray.includes(el.initiative_id));
+          let RtRArray: ResultsTocResult[] = [];
           for (let index = 0; index < contributors_result_toc_result.length; index++) {
-            let RtR = await this._resultsTocResultRepository.getRTRById(contributors_result_toc_result[index].result_toc_result_id, result_id, contributors_result_toc_result[index].initiative_id );
+            let RtR = await this._resultsTocResultRepository.getRTRById(contributors_result_toc_result[index].result_toc_result_id, result_id, contributors_result_toc_result[index].initiative_id);
             if (RtR) {
               if (result.result_level_id == 2) {
                 RtR.action_area_outcome_id = contributors_result_toc_result[index]?.action_area_outcome_id || null;
-              }else {
+              } else {
                 RtR.toc_result_id = contributors_result_toc_result[index]?.toc_result_id || null;
               }
               RtR.is_active = true;
@@ -182,7 +230,7 @@ export class ResultsTocResultsService {
               newRtR.initiative_id = contributors_result_toc_result[index]?.initiative_id || null;
               if (result.result_level_id == 2) {
                 newRtR.action_area_outcome_id = contributors_result_toc_result[index]?.action_area_outcome_id || null;
-              }else {
+              } else {
                 newRtR.toc_result_id = contributors_result_toc_result[index]?.toc_result_id || null;
               }
               newRtR.planned_result = contributors_result_toc_result[index]?.planned_result || null;
@@ -191,8 +239,8 @@ export class ResultsTocResultsService {
 
           }
           await this._resultsTocResultRepository.save(RtRArray);
+        }
       }
-
 
       return {
         response: {},
@@ -225,9 +273,9 @@ export class ResultsTocResultsService {
       const resCenters = await this._resultsCenterRepository.getAllResultsCenterByResultId(resultId);
       let resTocRes: any[] = [];
       let conResTocRes: any[] = [];
-      if(result.result_level_id != 2){
+      if (result.result_level_id != 2) {
         resTocRes = await this._resultsTocResultRepository.getRTRPrimary(resultId, [resultInit.id], true);
-        if(!resTocRes?.length){
+        if (!resTocRes?.length) {
           resTocRes = [{
             action_area_outcome_id: null,
             toc_result_id: null,
@@ -238,14 +286,14 @@ export class ResultsTocResultsService {
             official_code: resultInit.official_code
           }]
         }
-        resTocRes[0]['toc_level_id'] = resTocRes[0]['planned_result'] != null && resTocRes[0]['planned_result'] == 0 ?3:resTocRes[0]['toc_level_id'];
+        resTocRes[0]['toc_level_id'] = resTocRes[0]['planned_result'] != null && resTocRes[0]['planned_result'] == 0 ? 3 : resTocRes[0]['toc_level_id'];
         conResTocRes = await this._resultsTocResultRepository.getRTRPrimary(resultId, [resultInit.id], false, conInit.map(el => el.id));
         conResTocRes.map(el => {
-          el['toc_level_id'] = el['planned_result'] == 0 && el['planned_result'] != null?3:el['toc_level_id'];
+          el['toc_level_id'] = el['planned_result'] == 0 && el['planned_result'] != null ? 3 : el['toc_level_id'];
         })
-      }else if(result.result_level_id == 2){
+      } else if (result.result_level_id == 2) {
         resTocRes = await this._resultsTocResultRepository.getRTRPrimaryActionArea(resultId, [resultInit.id], true);
-        if(!resTocRes?.length){
+        if (!resTocRes?.length) {
           resTocRes = [{
             action_area_outcome_id: null,
             toc_result_id: null,

@@ -23,4 +23,25 @@ export class ClarisaImpactAreaRepository extends Repository<ClarisaImpactArea> {
       };
     }
   }
+
+  async getAllImpactArea() {
+    const queryData = `
+    SELECT
+    	cia.id,
+    	cia.name,
+    	cia.description
+    FROM
+    	clarisa_impact_areas cia;
+    `;
+    try {
+      const getImpactArea: ClarisaImpactArea[] = await this.query(queryData);
+      return getImpactArea;
+    } catch (error) {
+      throw {
+        message: `[${ClarisaImpactAreaRepository.name}] => getAllImpactArea error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
 }

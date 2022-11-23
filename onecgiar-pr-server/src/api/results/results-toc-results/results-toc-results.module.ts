@@ -11,6 +11,8 @@ import { VersionRepository } from '../versions/version.repository';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 import { ResultRepository } from '../result.repository';
 import { TocResultsRepository } from '../../../toc/toc-results/toc-results.repository';
+import { ResultsImpactAreaTargetRepository } from '../results-impact-area-target/results-impact-area-target.repository';
+import { ResultsImpactAreaIndicatorRepository } from '../results-impact-area-indicators/results-impact-area-indicators.repository';
 
 @Module({
   controllers: [ResultsTocResultsController],
@@ -24,7 +26,9 @@ import { TocResultsRepository } from '../../../toc/toc-results/toc-results.repos
     VersionRepository,
     UserRepository,
     ResultRepository,
-    TocResultsRepository
+    TocResultsRepository,
+    ResultsImpactAreaTargetRepository,
+    ResultsImpactAreaIndicatorRepository
   ],
   exports: [
     ResultsTocResultRepository

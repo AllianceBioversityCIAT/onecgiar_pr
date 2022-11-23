@@ -414,15 +414,8 @@ export class ClarisaTaskService {
           `${this.clarisaHost}global-targets`,
           this.configAuth,
         );
-        const transformData = data.map((el) => {
-          return {
-            id: el.targetId,
-            target: el.target,
-            impact_area_id: el.impactAreasId,
-          };
-        });
         await this._clarisaGobalTargetRepository.save<ClarisaGlobalTarget>(
-          transformData,
+          data,
         );
         this._logger.verbose(
           `[${position}]: All CLARISA Global Target control list data has been created`,

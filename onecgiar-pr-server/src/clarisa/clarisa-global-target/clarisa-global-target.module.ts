@@ -4,10 +4,11 @@ import { ClarisaGlobalTargetController } from './clarisa-global-target.controlle
 import { RouterModule } from '@nestjs/core';
 import { ClarisaGlobalTargetRoutes } from './clarisaGlobalTarget.routes';
 import { ClarisaGobalTargetRepository } from './ClariasaGlobalTarget.repository';
+import { HandlersError } from '../../shared/handlers/error.utils';
 
 @Module({
   controllers: [ClarisaGlobalTargetController],
-  providers: [ClarisaGlobalTargetService, ClarisaGobalTargetRepository],
+  providers: [ClarisaGlobalTargetService, ClarisaGobalTargetRepository, HandlersError],
   imports: [],
   exports: [ClarisaGobalTargetRepository],
 })

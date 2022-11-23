@@ -19,6 +19,8 @@ import { ResultsTocResultsModule } from './results-toc-results/results-toc-resul
 import { CapdevsDeliveryMethodsModule } from './capdevs-delivery-methods/capdevs-delivery-methods.module';
 import { CapdevsTermsModule } from './capdevs-terms/capdevs-terms.module';
 import { SummaryModule } from './summary/summary.module';
+import { ResultsImpactAreaIndicatorsModule } from './results-impact-area-indicators/results-impact-area-indicators.module';
+import { ResultsImpactAreaTargetModule } from './results-impact-area-target/results-impact-area-target.module';
 
 export const ResultsRoutes: Routes = [
   {
@@ -100,5 +102,13 @@ export const ResultsRoutes: Routes = [
   {
     path: 'summary',
     module: SummaryModule
+  },
+  {
+    path: 'impact-area-indicators',
+    module: ResultsImpactAreaIndicatorsModule
+  },
+  {
+    path: 'impact-area-target',
+    module: ResultsImpactAreaTargetModule
   }
 ];

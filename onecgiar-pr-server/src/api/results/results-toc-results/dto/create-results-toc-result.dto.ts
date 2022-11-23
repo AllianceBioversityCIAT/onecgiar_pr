@@ -5,7 +5,26 @@ export class CreateResultsTocResultDto {
     contributing_center: centerInterfacesToc[];
     result_toc_result: resultToResultInterfaceToc;
     contributors_result_toc_result: resultToResultInterfaceToc[];
+    impacts: ResultTocImpactsInterface[];
 
+}
+
+interface ResultTocImpactsInterface{
+    id: number;
+    name: string;
+    description: string;
+    target: indicatorsTocInterface[];
+    indicators: targetTocInterface[];
+}
+
+interface targetTocInterface{
+    targetId: number;
+    target?: string;
+}
+
+interface indicatorsTocInterface{
+    id: number;
+    indicator_statement?: string;
 }
 
 interface initiativeInterfaces{

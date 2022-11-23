@@ -58,7 +58,8 @@ import { ClarisaPolicyTypesModule } from './clarisa-policy-types/clarisa-policy-
     ClarisaActionAreaOutcomeModule,
     ClarisaActionAreaOutcomesActionAreaModule,
     ClarisaCentersModule,
-    ClarisaPolicyTypesModule
+    ClarisaPolicyTypesModule,
+    
   ],
   controllers: [],
   providers: [ClarisaCronsService, ClarisaTaskService, TocResultsRepository],
