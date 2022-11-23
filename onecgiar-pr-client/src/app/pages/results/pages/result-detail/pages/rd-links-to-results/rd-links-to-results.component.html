@@ -91,6 +91,6 @@
         *ngIf="!this.api.dataControlSE.isKnowledgeProduct">
     </app-add-button>
 
-    <app-save-button class="position_sticky" (clickSave)="onSaveSection()"
+    <app-save-button [disabled]="validateCGSpaceLinks" class="position_sticky" (clickSave)="onSaveSection()"
         *ngIf="!this.api.dataControlSE.isKnowledgeProduct"></app-save-button>
 </div>
