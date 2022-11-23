@@ -142,7 +142,7 @@ export class ResultsKnowledgeProductMapper {
   private getAltmetricInfoFromMQAPResponse(
     dto: MQAPResultDto,
   ): ResultsKnowledgeProductAltmetricDto {
-    const altmetricDto = dto?.handle_altmetric;
+    const altmetricDto = dto?.DOI_Info?.altmetric;
     if (!altmetricDto) {
       return undefined;
     }
