@@ -18,7 +18,7 @@ export class ResultCreatorComponent implements OnInit {
   exactTitleFound = false;
   mqapJson: {};
   validating = false;
-  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, private router: Router, private initiativesSE: InitiativesService, public saveButtonSE: SaveButtonService) {}
+  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, private router: Router, private initiativesSE: InitiativesService) {}
 
   ngOnInit(): void {
     this.resultLevelSE.resultBody = new ResultBody();
@@ -77,33 +77,28 @@ export class ResultCreatorComponent implements OnInit {
   }
 
   onSaveSection() {
-    this.saveButtonSE.isSaving = true;
     if (this.resultLevelSE.resultBody.result_type_id != 6) {
       this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody);
       console.log(this.resultLevelSE.resultBody);
       this.api.resultsSE.POST_resultCreateHeader(this.resultLevelSE.resultBody).subscribe(
-        resp => {
+        (resp: any) => {
           this.router.navigate([`/result/result-detail/${resp?.response?.id}/general-information`]);
           this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
-          this.saveButtonSE.isSaving = true;
         },
         err => {
           this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
-          this.saveButtonSE.isSaving = true;
         }
       );
     } else {
       console.log({ ...this.mqapJson, result_data: this.resultLevelSE.resultBody });
       this.api.resultsSE.POST_createWithHandle({ ...this.mqapJson, result_data: this.resultLevelSE.resultBody }).subscribe(
-        resp => {
+        (resp: any) => {
           console.log(resp);
           this.router.navigate([`/result/result-detail/${resp?.response?.id}/general-information`]);
           this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
-          this.saveButtonSE.isSaving = true;
         },
         err => {
           this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
-          this.saveButtonSE.isSaving = true;
         }
       );
     }

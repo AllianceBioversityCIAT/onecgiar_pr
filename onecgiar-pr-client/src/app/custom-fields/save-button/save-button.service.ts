@@ -53,4 +53,18 @@ export class SaveButtonService {
       // ,retry(1)
     );
   }
+
+  isCreatingPipe(): any {
+    this.showSaveSpinner();
+    return pipe(
+      tap(resp => {
+        this.hideSaveSpinner();
+      }),
+      catchError(err => {
+        this.hideSaveSpinner();
+        return throwError(err);
+      })
+      // ,retry(1)
+    );
+  }
 }

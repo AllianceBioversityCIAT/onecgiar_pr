@@ -37,7 +37,7 @@ export class ResultsApiService {
     );
   }
   POST_resultCreateHeader(body: ResultBody) {
-    return this.http.post<any>(`${this.apiBaseUrl}create/header`, body);
+    return this.http.post<any>(`${this.apiBaseUrl}create/header`, body).pipe(this.saveButtonSE.isCreatingPipe());
   }
 
   GET_allGenderTag() {
@@ -167,7 +167,7 @@ export class ResultsApiService {
   }
 
   POST_createWithHandle(body) {
-    return this.http.post<any>(`${this.apiBaseUrl}results-knowledge-products/create`, body);
+    return this.http.post<any>(`${this.apiBaseUrl}results-knowledge-products/create`, body).pipe(this.saveButtonSE.isCreatingPipe());
   }
 
   GET_toc() {
