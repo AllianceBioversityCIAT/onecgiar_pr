@@ -10,6 +10,7 @@ import {
 import { ClarisaImpactAreaService } from './clarisa-impact-area.service';
 import { CreateClarisaImpactAreaDto } from './dto/create-clarisa-impact-area.dto';
 import { UpdateClarisaImpactAreaDto } from './dto/update-clarisa-impact-area.dto';
+import { HttpException } from '@nestjs/common';
 
 @Controller()
 export class ClarisaImpactAreaController {
@@ -22,9 +23,11 @@ export class ClarisaImpactAreaController {
     return this.clarisaImpactAreaService.create(createClarisaImpactAreaDto);
   }
 
-  @Get()
-  findAll() {
-    return this.clarisaImpactAreaService.findAll();
+  @Get('get/all')
+  async findAll() {
+    const { message, response, status } =
+      await this.clarisaImpactAreaService.findAll();
+    throw new HttpException({ message, response }, status);
   }
 
   @Get(':id')

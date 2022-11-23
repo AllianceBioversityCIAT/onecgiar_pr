@@ -45,7 +45,7 @@ export class ResultsController {
     return this.resultsService.findAll() + resultName;
   }
   
-  @Get('get/all')
+  @Get('get/all/data')
   async findAllResults() {
     const { message, response, status } = await this.resultsService.findAll();
     throw new HttpException({ message, response }, status);

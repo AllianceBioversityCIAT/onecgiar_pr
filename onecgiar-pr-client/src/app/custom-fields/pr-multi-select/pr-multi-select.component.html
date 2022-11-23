@@ -3,7 +3,9 @@
 <div class="custom_select">
     <a class="field" tabindex="0" [id]="this.optionValue" *ngIf="!(readOnly || this.rolesSE.readOnly) || (isStatic)">
         <div class="text select_placeholder">{{placeholder}}</div>
-        <i class="pi pi-chevron-down"></i>
+        <div class="icon_container">
+        </div>
+        <i class="pi pi-chevron-down icon_dropdown"></i>
         <div class="remove_focus" (click)="removeFocus()"></div>
         <div class="options">
             <div class="search_input_container">

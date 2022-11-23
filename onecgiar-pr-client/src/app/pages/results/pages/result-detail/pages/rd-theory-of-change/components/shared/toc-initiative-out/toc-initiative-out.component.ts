@@ -67,9 +67,9 @@ export class TocInitiativeOutComponent {
   }
 
   GET_fullInitiativeToc() {
-    this.api.tocApiSE.GET_fullInitiativeToc(this.initiative.initiative_id).subscribe(
+    this.api.tocApiSE.GET_fullInitiativeToc(this.api.resultsSE.currentResultId).subscribe(
       ({ response }) => {
-        // console.log(response);
+        console.log(response);
         this.fullInitiativeToc = response[0]?.toc_id;
       },
       err => {

@@ -40,6 +40,62 @@ export class UserRepository extends Repository<User> {
     }
   }
 
+  async getUserByEmail(email: string) {
+    const queryData = `
+    SELECT
+    	u.id,
+    	u.first_name,
+    	u.last_name,
+    	u.email,
+    	u.is_cgiar,
+    	u.password,
+    	u.last_login,
+    	u.active,
+    	u.created_date,
+    	u.created_by,
+    	u.last_updated_date,
+    	u.last_updated_by
+    FROM
+    	users u
+    WHERE
+    	u.active > 0
+    	and u.email = ?
+    `;
+    try {
+      const completeUser: User[] = await this.query(queryData, [
+        email,
+      ]);
+      return completeUser?.length? completeUser[0]: undefined;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: UserRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async updateLastLoginUserByEmail(email: string) {
+    const queryData = `
+    UPDATE users 
+    	set last_login = NOW()
+    WHERE email = ?
+    	and active > 0;
+    `;
+    try {
+      const completeUser: User[] = await this.query(queryData, [
+        email,
+      ]);
+      return completeUser;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: UserRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async AllUsers() {
     const queryData = `
     SELECT  u.id,

@@ -36,6 +36,7 @@ export class ResultsListComponent implements OnInit {
   constructor(public api: ApiService, public resultsListService: ResultsListService, private ResultLevelSE: ResultLevelService) {}
 
   ngOnInit(): void {
+    this.api.rolesSE.validateReadOnly();
     this.api.updateResultsList();
     this.items;
     this.api.alertsFs.show({

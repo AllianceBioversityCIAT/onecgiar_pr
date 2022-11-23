@@ -41,14 +41,12 @@ export class ClarisaConnectionsService {
         console.log(res.data)
       });
       
-      console.log(data)
       return {
         response: data.response,
         message: data.message,
         status: data.status,
       };
     } catch (error) {
-      console.log(error)
       return this._handlersError.returnErrorRes({ error });
     }
 

@@ -19,7 +19,6 @@ export class KnowledgeProductInfoComponent implements OnInit {
   }
   getSectionInformation() {
     this.api.resultsSE.GET_resultknowledgeProducts().subscribe(({ response }) => {
-      console.log(response);
       this.knowledgeProductBody = this._mapFields(response as KnowledgeProductBody);
     });
   }
@@ -33,8 +32,8 @@ export class KnowledgeProductInfoComponent implements OnInit {
     mapped.type = response.type;
     mapped.doi = response.metadataCG?.doi;
     mapped.licence = response.licence;
-    mapped.keywords = response.keywords;
-    mapped.agrovoc_keywords = response.agrovoc_keywords;
+    mapped.keywords = (response.keywords ?? []).join('; ');
+    mapped.agrovoc_keywords = (response.agrovoc_keywords ?? []).join('; ');
     mapped.commodity = response.commodity;
     mapped.investors = response.sponsor;
     mapped.altmetric_details_url = response.altmetric_detail_url;
@@ -47,25 +46,18 @@ export class KnowledgeProductInfoComponent implements OnInit {
 
     const journalArticle: boolean = (response.type ?? '').toLocaleLowerCase().includes('journal article');
     if (journalArticle) {
-      console.log('is journal');
       if (response.metadataCG?.doi) {
-        console.log('has valid doi');
         if (response.metadataWOS) {
-          console.log('has doi info');
           this.getMetadataFromWoS(mapped, response);
           this.getMetadataFromCGSpace(mapped, response);
         } else {
-          console.log('has no doi info');
           this.getMetadataFromCGSpace(mapped, response);
         }
       } else {
-        console.log('has not valid doi');
         this.getMetadataFromCGSpace(mapped, response);
       }
     } else {
-      console.log('is not journal');
       if (response.metadataCG?.issue_year == 2022) {
-        console.log('is 2022 other kp');
         this.getMetadataFromCGSpace(mapped, response);
       }
     }
@@ -78,7 +70,6 @@ export class KnowledgeProductInfoComponent implements OnInit {
     mapped.is_isi_CG = response.metadataCG?.is_isi;
     mapped.accessibility_CG = response.metadataCG?.accessibility;
     mapped.yearCG = response.metadataCG?.issue_year;
-    console.log(mapped.is_peer_reviewed_CG, mapped.is_isi_CG, mapped.accessibility_CG, mapped.yearCG);
   }
 
   private getMetadataFromWoS(mapped: KnowledgeProductBodyMapped, response: KnowledgeProductBody) {
@@ -86,7 +77,6 @@ export class KnowledgeProductInfoComponent implements OnInit {
     mapped.is_isi_WOS = response.metadataWOS?.is_isi;
     mapped.accessibility_WOS = response.metadataWOS?.accessibility;
     mapped.year_WOS = response.metadataWOS?.issue_year;
-    console.log(mapped.is_peer_reviewed_WOS, mapped.is_isi_WOS, mapped.accessibility_WOS, mapped.year_WOS);
   }
 
   onSaveSection() {

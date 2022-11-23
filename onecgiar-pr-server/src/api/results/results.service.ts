@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { ConsoleLogger, HttpStatus, Injectable } from '@nestjs/common';
 import { returnFormatUser } from 'src/auth/modules/user/dto/return-create-user.dto';
 import { CreateResultDto } from './dto/create-result.dto';
 import { FullResultsRequestDto } from './dto/full-results-request.dto';
@@ -476,9 +476,9 @@ export class ResultsService {
     }
   }
 
-  async findAll(): Promise<returnFormatUser> {
+  async findAll() {
     try {
-      const result: FullResultsRequestDto[] =
+      const result =
         await this._customResultRepository.AllResults();
 
       if (!result.length) {

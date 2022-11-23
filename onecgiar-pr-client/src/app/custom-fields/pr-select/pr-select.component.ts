@@ -95,8 +95,8 @@ export class PrSelectComponent implements ControlValueAccessor {
     this.fullValue = option;
     this.value = option[this.optionValue];
     option.selected = true;
-    console.log(option);
-    console.log(this._optionsIntance);
+    // console.log(option);
+    // console.log(this._optionsIntance);
     this.selectOptionEvent.emit();
   }
 

@@ -6,12 +6,15 @@
     <div *ngFor="let actionAreaOutcome of this.actionAreasOutcomesList; let i=index">
         <div class="action_area_item_toc"
             *ngIf="editable? true:actionAreaOutcome?.action_area_outcome_id == initiative.action_area_outcome_id">
-            <img src="assets/action_areas/1.png" alt="" srcset="">
-            <div class="text"><strong>??? - </strong>{{actionAreaOutcome?.description}}</div>
             <p-radioButton name="groupname" inputId="action_area_toc{{i}}"
                 *ngIf="editable?true:!this.api.rolesSE.readOnly" [value]="actionAreaOutcome.action_area_outcome_id"
                 [(ngModel)]="initiative.action_area_outcome_id">
             </p-radioButton>
+            <div *ngIf="!(editable?true:!this.api.rolesSE.readOnly)"></div>
+            <img [src]="'assets/action_areas/'+actionAreaOutcome?.action_area_id+'.png'" alt="" srcset="">
+            <div class="text"><strong>{{actionAreaOutcome?.action_area_name}} -
+                </strong>{{actionAreaOutcome?.description}}
+            </div>
         </div>
     </div>
 

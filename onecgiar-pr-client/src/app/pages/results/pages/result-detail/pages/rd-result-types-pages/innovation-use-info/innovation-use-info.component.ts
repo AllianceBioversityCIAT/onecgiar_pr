@@ -27,6 +27,7 @@ export class InnovationUseInfoComponent implements OnInit {
     );
   }
   onSaveSection() {
+    console.log(this.innovationUseInfoBody);
     this.api.resultsSE.PATCH_innovationUse(this.innovationUseInfoBody).subscribe(
       resp => {
         this.getSectionInformation();

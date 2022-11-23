@@ -10,6 +10,7 @@ import {
 import { ClarisaGlobalTargetService } from './clarisa-global-target.service';
 import { CreateClarisaGlobalTargetDto } from './dto/create-clarisa-global-target.dto';
 import { UpdateClarisaGlobalTargetDto } from './dto/update-clarisa-global-target.dto';
+import { HttpException } from '@nestjs/common';
 
 @Controller()
 export class ClarisaGlobalTargetController {
@@ -22,9 +23,11 @@ export class ClarisaGlobalTargetController {
     return this.clarisaGlobalTargetService.create(createClarisaGlobalTargetDto);
   }
 
-  @Get()
-  findAll() {
-    return this.clarisaGlobalTargetService.findAll();
+  @Get('get/all')
+  async findAll() {
+    const { message, response, status } =
+      await this.clarisaGlobalTargetService.findAll();
+    throw new HttpException({ message, response }, status);
   }
 
   @Get(':id')

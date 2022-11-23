@@ -2,7 +2,8 @@
     <div class="editable_field">
         <app-pr-yes-or-not
             label="Is this result planned in the <strong>{{initiative?.official_code}} {{initiative?.short_name}}</strong> ToC?"
-            (selectOptionEvent)="valdiateEOI(initiative)" [required]="false" [(ngModel)]="initiative.planned_result"
+            (selectOptionEvent)="valdiateEOI(initiative)" [(ngModel)]="initiative.planned_result"
+            [description]=" !initiative.planned_result? 'Please select the End of Initiative (EOI)-Outcome that most closely matches this result. You will have time during the reflect moment to update your ToC':''"
             [readOnly]="!editable" [editable]="editable">
         </app-pr-yes-or-not>
         <a *ngIf="editable" [href]="'https://toc.mel.cgiar.org/toc/'+this.fullInitiativeToc" target="_blank"

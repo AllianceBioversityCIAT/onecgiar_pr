@@ -21,7 +21,9 @@ export class ResultsKnowledgeProductMapper {
     let knowledgeProductDto = new ResultsKnowledgeProductDto();
 
     knowledgeProductDto.accessible = mqapResponseDto?.FAIR?.score?.A;
-    knowledgeProductDto.commodity = null; //TODO TBD
+    knowledgeProductDto.commodity = (mqapResponseDto?.Commodities ?? []).join(
+      '; ',
+    );
     knowledgeProductDto.description = mqapResponseDto?.Description;
     knowledgeProductDto.doi = mqapResponseDto?.DOI;
     knowledgeProductDto.findable = mqapResponseDto?.FAIR?.score?.F;
@@ -33,7 +35,9 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProductDto.melia_type_id = null; //null, as this info is mapped by the user
     knowledgeProductDto.title = mqapResponseDto?.Title;
     knowledgeProductDto.reusable = mqapResponseDto?.FAIR?.score?.R;
-    knowledgeProductDto.sponsor = null; //TODO TBD
+    knowledgeProductDto.sponsor = (mqapResponseDto?.['Funding source'] ?? [])
+      .map((f) => f.name)
+      .join('; ');
     knowledgeProductDto.type = mqapResponseDto?.Type;
 
     knowledgeProductDto = this.fillRelatedMetadata(
@@ -76,7 +80,7 @@ export class ResultsKnowledgeProductMapper {
       new ResultsKnowledgeProductMetadataDto();
 
     metadataCGSpace.source = 'CGSpace';
-    metadataCGSpace.accessibility = dto?.['Open Access'];
+    metadataCGSpace.accessibility = dto?.['Open Access'] === 'Open Access';
     metadataCGSpace.doi = dto?.DOI;
     metadataCGSpace.is_isi = dto?.ISI === 'ISI Journal';
     metadataCGSpace.is_peer_reviewed = dto?.['Peer-reviewed'] === 'Peer Review';
@@ -91,12 +95,14 @@ export class ResultsKnowledgeProductMapper {
         new ResultsKnowledgeProductMetadataDto();
 
       metadataWoS.source = mqapDOIData.source;
-      metadataWoS.accessibility = mqapDOIData.is_oa;
+      metadataWoS.accessibility = mqapDOIData.is_oa
+        ?.toLocaleLowerCase()
+        ?.includes('yes');
       metadataWoS.doi = mqapDOIData.doi;
       metadataWoS.is_isi = mqapDOIData.is_isi
         ?.toLocaleLowerCase()
         ?.includes('yes');
-      metadataWoS.is_peer_reviewed = null; //TODO implement the convoluted logic regarding this field
+      metadataWoS.is_peer_reviewed = metadataWoS.is_isi; //TODO implement the convoluted logic regarding this field
       metadataWoS.issue_year = mqapDOIData.publication_year;
 
       metadataHolder.push(metadataWoS);
@@ -136,7 +142,7 @@ export class ResultsKnowledgeProductMapper {
   private getAltmetricInfoFromMQAPResponse(
     dto: MQAPResultDto,
   ): ResultsKnowledgeProductAltmetricDto {
-    const altmetricDto = dto?.handle_altmetric;
+    const altmetricDto = dto?.DOI_Info?.altmetric;
     if (!altmetricDto) {
       return undefined;
     }
@@ -225,7 +231,7 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProductDto.id = entity.result_knowledge_product_id;
 
     knowledgeProductDto.accessible = entity.accesible;
-    knowledgeProductDto.commodity = null; //TODO TBD
+    knowledgeProductDto.commodity = entity.comodity;
     knowledgeProductDto.description = entity.description;
     knowledgeProductDto.findable = entity.findable;
     knowledgeProductDto.handle = entity.handle;
@@ -234,7 +240,7 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProductDto.title = entity.name;
     knowledgeProductDto.references_other_knowledge_products = null; //TODO TBD
     knowledgeProductDto.reusable = entity.reusable;
-    knowledgeProductDto.sponsor = null; //TODO TBD
+    knowledgeProductDto.sponsor = entity.sponsors;
     knowledgeProductDto.type = entity.knowledge_product_type;
 
     const authors = entity.result_knowledge_product_author_array;
@@ -263,7 +269,7 @@ export class ResultsKnowledgeProductMapper {
 
       metadataDto.source = m.source;
 
-      metadataDto.accessibility = m.accesibility;
+      metadataDto.accessibility = m.accesibility === 'yes';
       metadataDto.doi = m.doi;
       metadataDto.is_isi = m.is_isi;
       metadataDto.is_peer_reviewed = m.is_peer_reviewed;
@@ -393,7 +399,7 @@ export class ResultsKnowledgeProductMapper {
         new ResultsKnowledgeProductMetadata();
 
       metadata.source = m.source;
-      metadata.accesibility = m.accessibility;
+      metadata.accesibility = m.accessibility ? 'yes' : 'no';
       metadata.doi = m.doi;
       metadata.is_isi = m.is_isi;
       metadata.is_peer_reviewed = m.is_peer_reviewed;

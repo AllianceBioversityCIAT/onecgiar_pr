@@ -13,5 +13,6 @@ export class PrButtonComponent {
   @Input() showBackground: boolean = true;
   @Input() colorType: 'primary' | 'danger' | 'secondary' = 'primary';
   @Input() padding: 'small' | 'medium' | 'big' = 'small';
+  @Input() pulse: boolean = false;
   constructor() {}
 }

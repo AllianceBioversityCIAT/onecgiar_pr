@@ -6,6 +6,7 @@ import { InstitutionsService } from '../../../../../../shared/services/global/in
 import { environment } from '../../../../../../../environments/environment';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
+import { CustomizedAlertsFeService } from '../../../../../../shared/services/customized-alerts-fe.service';
 
 @Component({
   selector: 'app-rd-general-information',
@@ -15,7 +16,7 @@ import { DataControlService } from '../../../../../../shared/services/data-contr
 export class RdGeneralInformationComponent {
   generalInfoBody = new GeneralInfoBody();
   toggle = 0;
-  constructor(private api: ApiService, public scoreSE: ScoreService, public institutionsSE: InstitutionsService, public rolesSE: RolesService, public dataControlSE: DataControlService) {}
+  constructor(private api: ApiService, public scoreSE: ScoreService, public institutionsSE: InstitutionsService, public rolesSE: RolesService, public dataControlSE: DataControlService, private customizedAlertsFeSE: CustomizedAlertsFeService) {}
   ngOnInit(): void {
     this.showAlerts();
     this.getSectionInformation();

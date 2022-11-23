@@ -3,8 +3,8 @@ export class KnowledgeProductBodyMapped {
   authors: string[];
   type: string;
   doi: string;
-  keywords: string[];
-  agrovoc_keywords: string[];
+  keywords: string;
+  agrovoc_keywords: string;
   commodity: string;
   investors: string;
   altmetric_img_url: string;
@@ -17,11 +17,11 @@ export class KnowledgeProductBodyMapped {
   yearCG: number;
   is_peer_reviewed_CG: boolean;
   is_isi_CG: boolean;
-  accessibility_CG: string;
+  accessibility_CG: boolean;
   year_WOS: number;
   is_peer_reviewed_WOS: boolean;
   is_isi_WOS: boolean;
-  accessibility_WOS: string;
+  accessibility_WOS: boolean;
   licence: string;
   warnings?: string[];
 }

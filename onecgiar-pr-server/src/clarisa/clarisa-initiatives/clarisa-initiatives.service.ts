@@ -34,7 +34,6 @@ export class ClarisaInitiativesService {
         status: HttpStatus.OK,
       };
     } catch (error) {
-      console.log(error);
       return this._handlersError.returnErrorRes({ error });
     }
   }
@@ -49,7 +48,6 @@ export class ClarisaInitiativesService {
         status: HttpStatus.OK,
       };
     } catch (error) {
-      console.log(error);
       return this._handlersError.returnErrorRes({ error });
     }
   }

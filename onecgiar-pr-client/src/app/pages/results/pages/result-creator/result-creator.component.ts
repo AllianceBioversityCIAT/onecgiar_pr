@@ -4,6 +4,8 @@ import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultLevelService } from './services/result-level.service';
 import { Router } from '@angular/router';
 import { ResultBody } from '../../../../shared/interfaces/result.interface';
+import { InitiativesService } from '../../../../shared/services/global/initiatives.service';
+import { SaveButtonService } from '../../../../custom-fields/save-button/save-button.service';
 
 @Component({
   selector: 'app-result-creator',
@@ -16,7 +18,7 @@ export class ResultCreatorComponent implements OnInit {
   exactTitleFound = false;
   mqapJson: {};
   validating = false;
-  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, private router: Router) {}
+  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, private router: Router, private initiativesSE: InitiativesService) {}
 
   ngOnInit(): void {
     this.resultLevelSE.resultBody = new ResultBody();
@@ -34,6 +36,17 @@ export class ResultCreatorComponent implements OnInit {
       position: 'beforebegin'
     });
     // this.getInitiativesByUser();
+    this.api.rolesSE.validateReadOnly().then(() => {
+      this.GET_AllInitiatives();
+    });
+  }
+  allInitiatives = [];
+  GET_AllInitiatives() {
+    console.log(this.api.rolesSE.isAdmin);
+    if (!this.api.rolesSE.isAdmin) return;
+    this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
+      this.allInitiatives = response;
+    });
   }
 
   get isKnowledgeProduct() {
@@ -68,7 +81,7 @@ export class ResultCreatorComponent implements OnInit {
       this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody);
       console.log(this.resultLevelSE.resultBody);
       this.api.resultsSE.POST_resultCreateHeader(this.resultLevelSE.resultBody).subscribe(
-        resp => {
+        (resp: any) => {
           this.router.navigate([`/result/result-detail/${resp?.response?.id}/general-information`]);
           this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
         },
@@ -79,7 +92,7 @@ export class ResultCreatorComponent implements OnInit {
     } else {
       console.log({ ...this.mqapJson, result_data: this.resultLevelSE.resultBody });
       this.api.resultsSE.POST_createWithHandle({ ...this.mqapJson, result_data: this.resultLevelSE.resultBody }).subscribe(
-        resp => {
+        (resp: any) => {
           console.log(resp);
           this.router.navigate([`/result/result-detail/${resp?.response?.id}/general-information`]);
           this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
@@ -100,7 +113,9 @@ export class ResultCreatorComponent implements OnInit {
   }
 
   validateKnowledgeProductFields() {}
-
+  ngDoCheck(): void {
+    this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.local_container');
+  }
   GET_mqapValidation() {
     this.validating = true;
     this.api.resultsSE.GET_mqapValidation(this.resultLevelSE.resultBody.handler).subscribe(
@@ -118,6 +133,7 @@ export class ResultCreatorComponent implements OnInit {
         console.log(err.error.message);
         this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
         this.validating = false;
+        this.resultLevelSE.resultBody.result_name = '';
       }
     );
   }

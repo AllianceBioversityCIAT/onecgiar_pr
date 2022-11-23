@@ -1,9 +1,9 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException } from '@nestjs/common';
 import { ClarisaInnovationCharacteristicsService } from './clarisa-innovation-characteristics.service';
 import { CreateClarisaInnovationCharacteristicDto } from './dto/create-clarisa-innovation-characteristic.dto';
 import { UpdateClarisaInnovationCharacteristicDto } from './dto/update-clarisa-innovation-characteristic.dto';
 
-@Controller('clarisa-innovation-characteristics')
+@Controller()
 export class ClarisaInnovationCharacteristicsController {
   constructor(private readonly clarisaInnovationCharacteristicsService: ClarisaInnovationCharacteristicsService) {}
 
@@ -12,9 +12,11 @@ export class ClarisaInnovationCharacteristicsController {
     return this.clarisaInnovationCharacteristicsService.create(createClarisaInnovationCharacteristicDto);
   }
 
-  @Get()
-  findAll() {
-    return this.clarisaInnovationCharacteristicsService.findAll();
+  @Get('get/all')
+  async findAll() {
+    const { message, response, status } = 
+      await this.clarisaInnovationCharacteristicsService.findAll();
+    throw new HttpException({ message, response }, status);
   }
 
   @Get(':id')

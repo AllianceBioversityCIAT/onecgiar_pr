@@ -1,4 +1,5 @@
-<div class="pr_button {{padding}}" [ngClass]="{ reverse: this.reverse, show_background: this.showBackground }"
+<div class="pr_button {{padding}}"
+  [ngClass]="{ reverse: this.reverse, show_background: this.showBackground, 'animate__pulse_infinite':this.pulse ||  this.rotating}"
   [ngStyle]="this.showBackground ? { 'background-color': 'var(--pr-color-' + this.colorType + ')' } : {}">
   <div class="text">{{ this.text }}</div>
   <i class="material-icons-round" [ngClass]="{'rotating': this.rotating}" *ngIf="this.icon">{{ this.icon }}</i>

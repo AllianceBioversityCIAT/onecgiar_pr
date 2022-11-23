@@ -12,6 +12,11 @@ import { ClarisaRegionsModule } from './clarisa-regions/clarisa-regions.module';
 import { ClarisaGeographicScopesModule } from './clarisa-geographic-scopes/clarisa-geographic-scopes.module';
 import { ClarisaCentersModule } from './clarisa-centers/clarisa-centers.module';
 import { ClarisaInitiativesModule } from './clarisa-initiatives/clarisa-initiatives.module';
+import { ClarisaInnovationTypeModule } from './clarisa-innovation-type/clarisa-innovation-type.module';
+import { ClarisaInnovationReadinessLevelsModule } from './clarisa-innovation-readiness-levels/clarisa-innovation-readiness-levels.module';
+import { ClarisaInnovationCharacteristicsModule } from './clarisa-innovation-characteristics/clarisa-innovation-characteristics.module';
+import { ClarisaPolicyStagesModule } from './clarisa-policy-stages/clarisa-policy-stages.module';
+import { ClarisaPolicyTypesModule } from './clarisa-policy-types/clarisa-policy-types.module';
 
 export const ClarisaRoutes: Routes = [
   {
@@ -65,5 +70,25 @@ export const ClarisaRoutes: Routes = [
   {
     path: 'initiatives',
     module: ClarisaInitiativesModule
+  },
+  {
+    path:'innovation-type',
+    module: ClarisaInnovationTypeModule
+  },
+  {
+    path:'innovation-readiness-levels',
+    module: ClarisaInnovationReadinessLevelsModule
+  },
+  {
+    path:'innovation-characteristics',
+    module: ClarisaInnovationCharacteristicsModule
+  },
+  {
+    path: 'policy-stages',
+    module: ClarisaPolicyStagesModule
+  },
+  {
+    path: 'policy-types',
+    module: ClarisaPolicyTypesModule
   }
 ];

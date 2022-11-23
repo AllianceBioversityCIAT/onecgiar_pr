@@ -7,17 +7,24 @@ export class ClarisaImpactArea {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: 'name', type: 'text' })
-  name: string;
+  @Column({ 
+    name: 'name', 
+    type: 'text',
+    nullable: true
+  })
+  name!: string;
 
-  @Column({ name: 'description', type: 'text' })
-  description: string;
+  @Column({ 
+    name: 'description', 
+    type: 'text',
+    nullable: true
+   })
+  description!: string;
 
-  /**     RELATIONS       **/
-
-  @OneToMany(() => ClarisaGlobalTarget, (cgt) => cgt.id)
-  globalTarget: number[];
-
-  @OneToMany(() => ClarisaImpactAreaIndicator, (ciai) => ciai.id)
-  impactAreaIndicators: number[];
+  @Column({ 
+    name: 'financialCode', 
+    type: 'text',
+    nullable: true
+   })
+   financialCode!: string;
 }

@@ -214,11 +214,17 @@ export class ResultsKnowledgeProductsService {
         };
       }
 
+      const hasQuery = (handle ?? '').indexOf('?');
+      const linkSplit = (handle ?? '')
+        .slice(0, hasQuery != -1 ? hasQuery : handle.length)
+        .split('/');
+      const handleId = linkSplit.slice(linkSplit.length - 2).join('/');
+
       let response: ResultsKnowledgeProductDto = null;
       const resultKnowledgeProduct: ResultsKnowledgeProduct =
         await this._resultsKnowledgeProductRepository.findOne({
           where: {
-            handle: Like(handle),
+            handle: Like(handleId),
           },
           relations: this._resultsKnowledgeProductRelations,
         });

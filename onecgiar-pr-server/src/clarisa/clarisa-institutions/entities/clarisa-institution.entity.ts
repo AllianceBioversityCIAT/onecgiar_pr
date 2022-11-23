@@ -5,6 +5,7 @@ import {
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { ClarisaInstitutionsType } from '../../clarisa-institutions-type/entities/clarisa-institutions-type.entity';
 import { ClarisaRegion } from '../../clarisa-regions/entities/clarisa-region.entity';
@@ -55,4 +56,11 @@ export class ClarisaInstitution {
     (rkpi) => rkpi.predicted_institution_object,
   )
   result_knowledge_product_institution_array: ResultsKnowledgeProductInstitution[];
+
+  @UpdateDateColumn({
+    name: 'last_updated_date',
+    type: 'timestamp',
+    nullable: true,
+  })
+  last_updated_date: Date;
 }

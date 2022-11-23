@@ -37,7 +37,7 @@ export class ResultsApiService {
     );
   }
   POST_resultCreateHeader(body: ResultBody) {
-    return this.http.post<any>(`${this.apiBaseUrl}create/header`, body);
+    return this.http.post<any>(`${this.apiBaseUrl}create/header`, body).pipe(this.saveButtonSE.isCreatingPipe());
   }
 
   GET_allGenderTag() {
@@ -110,7 +110,7 @@ export class ResultsApiService {
   GET_AllCLARISACenters() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/centers/get/all`).pipe(
       map(resp => {
-        console.log(resp);
+        // console.log(resp);
         resp.response.map(center => {
           center.lead_center = center.code;
           center.full_name = `<strong>${center.acronym} - </strong> ${center.name}`;
@@ -167,7 +167,7 @@ export class ResultsApiService {
   }
 
   POST_createWithHandle(body) {
-    return this.http.post<any>(`${this.apiBaseUrl}results-knowledge-products/create`, body);
+    return this.http.post<any>(`${this.apiBaseUrl}results-knowledge-products/create`, body).pipe(this.saveButtonSE.isCreatingPipe());
   }
 
   GET_toc() {
@@ -194,9 +194,73 @@ export class ResultsApiService {
   }
 
   GET_capacityDevelopent() {
-    return this.http.get<any>(`${this.apiBaseUrl}summary/capacity-developent/get/result/${this.currentResultId}`).pipe(this.saveButtonSE.isSavingSectionPipe());
+    return this.http.get<any>(`${this.apiBaseUrl}summary/capacity-developent/get/result/${this.currentResultId}`).pipe(
+      this.saveButtonSE.isSavingSectionPipe(),
+      map((resp: any) => {
+        resp?.response?.institutions?.map(institution => (institution.full_name = `(Id:${institution?.institutions_id}) <strong>${institution?.institutions_acronym}</strong> - ${institution?.institutions_name}`));
+        return resp;
+      })
+    );
+  }
+
+  GET_capdevsTerms() {
+    return this.http.get<any>(`${this.apiBaseUrl}capdevs-terms/get/all`);
+  }
+
+  GET_capdevsDeliveryMethod() {
+    return this.http.get<any>(`${this.apiBaseUrl}capdevs-delivery-methods/get/all`);
+  }
+
+  GET_AllInitiatives() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/initiatives`).pipe(
+      map(resp => {
+        console.log(resp);
+        resp?.response.map(initiative => (initiative.initiative_id = initiative?.id));
+        resp?.response.map(initiative => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name}</strong> - ${initiative?.name}`));
+        return resp;
+      })
+    );
+  }
+
+  GET_clarisaInnovationType() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/innovation-type/get/all`);
+  }
+
+  GET_clarisaInnovationCharacteristics() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/innovation-characteristics/get/all`);
+  }
+
+  GET_clarisaInnovationReadinessLevels() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/innovation-readiness-levels/get/all`);
+  }
+
+  PATCH_innovationDev(body) {
+    return this.http.patch<any>(`${this.apiBaseUrl}summary/innovation-dev/create/result/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+  }
+
+  GET_innovationDev() {
+    return this.http.get<any>(`${this.apiBaseUrl}summary/innovation-dev/get/result/${this.currentResultId}`).pipe(this.saveButtonSE.isSavingSectionPipe());
+  }
+
+  PATCH_policyChanges(body) {
+    return this.http.patch<any>(`${this.apiBaseUrl}summary/policy-changes/create/result/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+  }
+
+  GET_policyChanges() {
+    return this.http.get<any>(`${this.apiBaseUrl}summary/policy-changes/get/result/${this.currentResultId}`).pipe(
+      this.saveButtonSE.isSavingSectionPipe(),
+      map((resp: any) => {
+        resp?.response?.institutions?.map(institution => (institution.full_name = `(Id:${institution?.institutions_id}) <strong>${institution?.institutions_acronym}</strong> - ${institution?.institutions_name}`));
+        return resp;
+      })
+    );
+  }
+
+  GET_clarisaPolicyTypes() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/policy-types/get/all`);
+  }
+
+  GET_clarisaPolicyStages() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/policy-stages/get/all`);
   }
 }
-
-// 200 no existe
-// 201 ya existte en bd

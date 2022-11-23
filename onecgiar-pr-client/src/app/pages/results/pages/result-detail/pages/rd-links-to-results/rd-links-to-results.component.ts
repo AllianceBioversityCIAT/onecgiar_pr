@@ -40,8 +40,15 @@ export class RdLinksToResultsComponent {
   getSectionInformation() {
     this.api.resultsSE.GET_resultsLinked().subscribe(({ response }) => {
       console.log(response);
-      this.linksToResultsBody.links = response;
+      this.linksToResultsBody = response;
     });
+  }
+  addLegacy_link() {
+    this.linksToResultsBody.legacy_link.push({});
+  }
+
+  deleteLegacy_link(index) {
+    this.linksToResultsBody.legacy_link.splice(index, 1);
   }
   onSaveSection() {
     console.log(this.linksToResultsBody);
@@ -52,5 +59,16 @@ export class RdLinksToResultsComponent {
   }
   openInNewPage(link) {
     window.open(link, '_blank');
+  }
+
+  get validateCGSpaceLinks() {
+    for (const iterator of this.linksToResultsBody.legacy_link) {
+      if (this.linksToResultsBody.legacy_link.find(evidence => !Boolean(evidence.legacy_link))) return true;
+      const evidencesFinded = this.linksToResultsBody.legacy_link.filter(evidence => evidence.legacy_link == iterator.legacy_link);
+      if (evidencesFinded.length >= 2) {
+        return evidencesFinded.length >= 2;
+      }
+    }
+    return false;
   }
 }
