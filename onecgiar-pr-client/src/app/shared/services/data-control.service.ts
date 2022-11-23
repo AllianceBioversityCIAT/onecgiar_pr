@@ -93,7 +93,7 @@ export class DataControlService {
       inputs = Array.prototype.slice.call(htmlContainer.querySelectorAll('.pr-input.mandatory input')).filter(field => {
         const tagValue = field?.parentElement?.parentElement?.parentElement?.querySelector('.pr_label')?.innerText;
         const isEmpty = !Boolean(field.value);
-        console.log(tagValue);
+        // console.log(tagValue);
 
         if (tagValue && isEmpty) this.fieldFeedbackList.push(tagValue);
 

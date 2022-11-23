@@ -197,7 +197,7 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}summary/capacity-developent/get/result/${this.currentResultId}`).pipe(
       this.saveButtonSE.isSavingSectionPipe(),
       map((resp: any) => {
-        resp?.response?.institutions?.map(institution => (institution.full_name = `<strong>${institution?.institutions_acronym}</strong> - ${institution?.institutions_name}`));
+        resp?.response?.institutions?.map(institution => (institution.full_name = `(Id:${institution?.institutions_id}) <strong>${institution?.institutions_acronym}</strong> - ${institution?.institutions_name}`));
         return resp;
       })
     );
@@ -245,7 +245,13 @@ export class ResultsApiService {
   }
 
   GET_policyChanges() {
-    return this.http.get<any>(`${this.apiBaseUrl}summary/policy-changes/get/result/${this.currentResultId}`).pipe(this.saveButtonSE.isSavingSectionPipe());
+    return this.http.get<any>(`${this.apiBaseUrl}summary/policy-changes/get/result/${this.currentResultId}`).pipe(
+      this.saveButtonSE.isSavingSectionPipe(),
+      map((resp: any) => {
+        resp?.response?.institutions?.map(institution => (institution.full_name = `(Id:${institution?.institutions_id}) <strong>${institution?.institutions_acronym}</strong> - ${institution?.institutions_name}`));
+        return resp;
+      })
+    );
   }
 
   GET_clarisaPolicyTypes() {
