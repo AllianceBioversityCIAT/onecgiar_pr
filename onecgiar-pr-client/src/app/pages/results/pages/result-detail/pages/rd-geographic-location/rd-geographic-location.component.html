@@ -15,7 +15,8 @@
             [label]="this.geographicLocationBody.scope_id != 2 ? 'Are there any regions that you wish to specify for this '+this.api.dataControlSE.getLastWord(this.resultLevelSE.currentResultLevelName)+'?':'Select regions'"
             [description]="this.geographicLocationBody.has_regions  !== false || this.geographicLocationBody.scope_id == 2 ? thereAnyRegionText() : null"
             [hideOptions]="this.geographicLocationBody.scope_id != 1"
-            [(ngModel)]="this.geographicLocationBody.has_regions" [required]="false">
+            [(ngModel)]="this.geographicLocationBody.has_regions"
+            [required]="!(this.geographicLocationBody.scope_id != 2)">
         </app-pr-yes-or-not>
         <app-pr-multi-select
             *ngIf="this.geographicLocationBody.has_regions  !== false && this.geographicLocationBody.scope_id != 3 && !!this.geographicLocationBody.has_regions || this.geographicLocationBody.scope_id == 2"
