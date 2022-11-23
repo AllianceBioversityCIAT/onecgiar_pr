@@ -20,6 +20,7 @@ import { ResultsImpactAreaTargetRepository } from '../results-impact-area-target
 import { ResultsImpactAreaIndicatorRepository } from '../results-impact-area-indicators/results-impact-area-indicators.repository';
 import { ResultsImpactAreaIndicator } from '../results-impact-area-indicators/entities/results-impact-area-indicator.entity';
 import { ResultsImpactAreaTarget } from '../results-impact-area-target/entities/results-impact-area-target.entity';
+import { ClarisaImpactAreaRepository } from '../../../clarisa/clarisa-impact-area/ClarisaImpactArea.repository';
 
 @Injectable()
 export class ResultsTocResultsService {
@@ -35,7 +36,8 @@ export class ResultsTocResultsService {
     private readonly _resultRepository: ResultRepository,
     private readonly _tocResultsRepository: TocResultsRepository,
     private readonly _resultsImpactAreaTargetRepository: ResultsImpactAreaTargetRepository,
-    private readonly _resultsImpactAreaIndicatorRepository: ResultsImpactAreaIndicatorRepository
+    private readonly _resultsImpactAreaIndicatorRepository: ResultsImpactAreaIndicatorRepository,
+    private readonly _clarisaImpactAreaRepository: ClarisaImpactAreaRepository
   ) { }
 
   async create(createResultsTocResultDto: CreateResultsTocResultDto, user: TokenDto) {
@@ -273,7 +275,7 @@ export class ResultsTocResultsService {
       const resCenters = await this._resultsCenterRepository.getAllResultsCenterByResultId(resultId);
       let resTocRes: any[] = [];
       let conResTocRes: any[] = [];
-      if (result.result_level_id != 2) {
+      if (result.result_level_id != 2 && result.result_level_id != 1) {
         resTocRes = await this._resultsTocResultRepository.getRTRPrimary(resultId, [resultInit.id], true);
         if (!resTocRes?.length) {
           resTocRes = [{
@@ -305,6 +307,8 @@ export class ResultsTocResultsService {
           }]
         }
         conResTocRes = await this._resultsTocResultRepository.getRTRPrimaryActionArea(resultId, [resultInit.id], false, conInit.map(el => el.id));
+      }else if (result.result_level_id == 1) {
+
       }
 
       return {

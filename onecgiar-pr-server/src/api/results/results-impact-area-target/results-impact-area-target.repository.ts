@@ -43,6 +43,36 @@ export class ResultsImpactAreaTargetRepository extends Repository<ResultsImpactA
     }
   }
 
+
+  async resultsImpactAreaTargetByInstitutions(resultId: number) {
+    const queryData = `
+    SELECT
+      riat.result_impact_area_target_id,
+      riat.is_active,
+      riat.created_date,
+      riat.last_updated_date,
+      riat.result_id,
+      riat.impact_area_target_id,
+      riat.version_id,
+      riat.created_by,
+      riat.last_updated_by
+    FROM
+      results_impact_area_target riat
+    WHERE
+      riat.result_id = ?;
+    `;
+    try {
+      const resultTocResult: ResultsImpactAreaTarget[] = await this.query(queryData, [resultId]);
+      return resultTocResult;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsImpactAreaTargetRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async updateResultImpactAreaTarget(resultId: number, impactId: number, targetId: number[], userId: number) {
     const target = targetId??[];
     const upDateInactive = `

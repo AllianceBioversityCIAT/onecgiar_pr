@@ -414,6 +414,7 @@ export class ClarisaTaskService {
           `${this.clarisaHost}global-targets`,
           this.configAuth,
         );
+        
         await this._clarisaGobalTargetRepository.save<ClarisaGlobalTarget>(
           data,
         );
@@ -443,17 +444,15 @@ export class ClarisaTaskService {
           `[${position}]: All CLARISA Institutions type control list data has been deleted`,
         );
       } else {
-        const data = await this._httpService.get(
-          `${this.clarisaHost}institution-types`,
+        const data = await lastValueFrom(await this._httpService.get(
+          `${this.clarisaHost}institution-types?type=legacy`,
           { auth: { username: env.L_CLA_USER, password: env.L_CLA_PASSWORD } },
-        );
-        await data.subscribe(async (el) => {
-          const { data } = el;
-          data.map((el) => {
-            el['code'] = parseInt(el['code']);
-          });
-          await this._clarisaInstitutionsTypeRepository.save(data);
-        }).closed;
+        ).pipe(map((resp) => resp.data)));
+        data.map((el) => {
+          el['code'] = parseInt(el['code']);
+        });
+        const datasss = await this._clarisaInstitutionsTypeRepository.save(data);
+        console.log(datasss)
         this._logger.verbose(
           `[${position}]: All CLARISA Institutions type control list data has been created`,
         );
