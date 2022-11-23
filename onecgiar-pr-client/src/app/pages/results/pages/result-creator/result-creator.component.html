@@ -10,7 +10,13 @@
     <div class="report_container">
 
       <app-pr-select class="segment_title_margin" [options]="this.api.dataControlSE.myInitiativesList"
-        label="Report for" [isStatic]="true" optionLabel="full_name" optionValue="initiative_id"
+        *ngIf="!this.api.rolesSE.isAdmin" label="Report for" [isStatic]="true" optionLabel="full_name"
+        optionValue="initiative_id" placeholder="Select initiative"
+        [(ngModel)]="this.resultLevelSE.resultBody.initiative_id">
+      </app-pr-select>
+
+      <app-pr-select class="segment_title_margin" [options]="this.allInitiatives" label="Report for" [isStatic]="true"
+        *ngIf="this.api.rolesSE.isAdmin" optionLabel="full_name" optionValue="initiative_id"
         placeholder="Select initiative" [(ngModel)]="this.resultLevelSE.resultBody.initiative_id">
       </app-pr-select>
 

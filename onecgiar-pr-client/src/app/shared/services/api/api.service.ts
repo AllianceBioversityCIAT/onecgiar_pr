@@ -25,7 +25,7 @@ export class ApiService {
         // this.rolesSE.roles = GET_allRolesByUser.response;
         //?
         this.dataControlSE.myInitiativesList = GET_initiativesByUser?.response;
-        // console.log(this.dataControlSE.myInitiativesList);
+        console.log(this.dataControlSE.myInitiativesList);
         this.dataControlSE.myInitiativesList.map(myInit => {
           myInit.role = GET_allRolesByUser?.response?.initiative?.find(initRole => initRole?.initiative_id == myInit?.initiative_id)?.description;
           myInit.name = myInit.official_code;
@@ -50,23 +50,22 @@ export class ApiService {
     });
   }
 
-  setTWKAttributes(){
+  setTWKAttributes() {
     try {
-      window['Tawk_API'] = window['Tawk_API'] || {}
+      window['Tawk_API'] = window['Tawk_API'] || {};
 
-    window['Tawk_LoadStart'] = new Date()
+      window['Tawk_LoadStart'] = new Date();
 
-    // pass attributes to tawk.to on widget load
-    window['Tawk_API'].onLoad = () => {
+      // pass attributes to tawk.to on widget load
+      window['Tawk_API'].onLoad = () => {
         window['Tawk_API'].setAttributes(
-            {
-              'name': this.authSE.localStorageUser.user_name,
-              'email': this.authSE.localStorageUser.email
-            },
-            (err) => {}
-        )
-    }
-      
+          {
+            name: this.authSE.localStorageUser.user_name,
+            email: this.authSE.localStorageUser.email
+          },
+          err => {}
+        );
+      };
     } catch (error) {
       console.log(error);
     }

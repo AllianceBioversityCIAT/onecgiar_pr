@@ -5,6 +5,7 @@ import { ResultLevelService } from './services/result-level.service';
 import { Router } from '@angular/router';
 import { ResultBody } from '../../../../shared/interfaces/result.interface';
 import { InitiativesService } from '../../../../shared/services/global/initiatives.service';
+import { SaveButtonService } from '../../../../custom-fields/save-button/save-button.service';
 
 @Component({
   selector: 'app-result-creator',
@@ -17,8 +18,7 @@ export class ResultCreatorComponent implements OnInit {
   exactTitleFound = false;
   mqapJson: {};
   validating = false;
-  isSaving = false;
-  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, private router: Router, private initiativesSE: InitiativesService) {}
+  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, private router: Router, private initiativesSE: InitiativesService, public saveButtonSE: SaveButtonService) {}
 
   ngOnInit(): void {
     this.resultLevelSE.resultBody = new ResultBody();
@@ -36,6 +36,17 @@ export class ResultCreatorComponent implements OnInit {
       position: 'beforebegin'
     });
     // this.getInitiativesByUser();
+    this.api.rolesSE.validateReadOnly().then(() => {
+      this.GET_AllInitiatives();
+    });
+  }
+  allInitiatives = [];
+  GET_AllInitiatives() {
+    console.log(this.api.rolesSE.isAdmin);
+    if (!this.api.rolesSE.isAdmin) return;
+    this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
+      this.allInitiatives = response;
+    });
   }
 
   get isKnowledgeProduct() {
@@ -66,7 +77,7 @@ export class ResultCreatorComponent implements OnInit {
   }
 
   onSaveSection() {
-    this.isSaving = true;
+    this.saveButtonSE.isSaving = true;
     if (this.resultLevelSE.resultBody.result_type_id != 6) {
       this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody);
       console.log(this.resultLevelSE.resultBody);
@@ -74,11 +85,11 @@ export class ResultCreatorComponent implements OnInit {
         resp => {
           this.router.navigate([`/result/result-detail/${resp?.response?.id}/general-information`]);
           this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
-          this.isSaving = true;
+          this.saveButtonSE.isSaving = true;
         },
         err => {
           this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
-          this.isSaving = true;
+          this.saveButtonSE.isSaving = true;
         }
       );
     } else {
@@ -88,11 +99,11 @@ export class ResultCreatorComponent implements OnInit {
           console.log(resp);
           this.router.navigate([`/result/result-detail/${resp?.response?.id}/general-information`]);
           this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
-          this.isSaving = true;
+          this.saveButtonSE.isSaving = true;
         },
         err => {
           this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
-          this.isSaving = true;
+          this.saveButtonSE.isSaving = true;
         }
       );
     }

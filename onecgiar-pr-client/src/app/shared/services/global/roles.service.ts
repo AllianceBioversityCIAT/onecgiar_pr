@@ -46,6 +46,7 @@ export class RolesService {
       const { application, initiative } = this.roles;
       const { isAdmin } = this.validateApplication(application);
       if (isAdmin) return null;
+      if (!result) return null;
       const { initiative_id } = result;
       const initiativeFinded = initiative.find(init => init.initiative_id == initiative_id);
       this.readOnly = Boolean(!initiativeFinded);
@@ -55,6 +56,7 @@ export class RolesService {
     };
     updateMyRoles(this.updateRolesListFromLocalStorage());
     updateMyRoles(this.updateRolesList());
+    // console.log(this.roles);
   }
 
   async updateRolesListFromLocalStorage() {
@@ -81,7 +83,8 @@ export class RolesService {
 
   get isAdmin() {
     // console.log('isAdmin');
-    if (this.roles.application.role_id == 1) return true;
+    // console.log(this.roles);
+    if (this.roles?.application.role_id == 1) return true;
     return false;
   }
 
