@@ -1266,7 +1266,8 @@ CREATE INDEX `fk_table1_versions1_idx` ON `mydb`.`example` (`version_id` ASC) VI
 CREATE TABLE IF NOT EXISTS `mydb`.`linked_results` (
   `linked_result_id` VARCHAR(45) NOT NULL,
   `origin_result_id` BIGINT NOT NULL,
-  `dest_result_id` BIGINT NOT NULL,
+  `legacy_link` VARCHAR(100) NULL,
+  `dest_result_id` BIGINT NULL,
   `is_active` TINYINT NOT NULL,
   `version_id` BIGINT NOT NULL,
   `created_by` BIGINT NOT NULL,
@@ -1826,6 +1827,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`results_policy_changes` (
   `policy_type_id` BIGINT NOT NULL,
   `policy_stage_id` BIGINT NOT NULL,
   `amount` FLOAT NULL,
+  `amount_status` VARCHAR(45) NULL COMMENT 'Confirmed/Estimated/Unknown',
   `is_active` TINYINT NOT NULL,
   `version_id` BIGINT NOT NULL,
   `created_by` BIGINT NOT NULL,
@@ -2462,6 +2464,25 @@ ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
+-- Table `mydb`.`capdevs_degrees`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `mydb`.`capdevs_degrees` (
+  `capdev_degree_id` BIGINT NOT NULL,
+  `capdev_term_id` BIGINT NOT NULL,
+  `name` VARCHAR(100) NULL,
+  `description` VARCHAR(500) NULL,
+  PRIMARY KEY (`capdev_degree_id`),
+  CONSTRAINT `fk_capdev_degrees_capdevs_terms1`
+    FOREIGN KEY (`capdev_term_id`)
+    REFERENCES `mydb`.`capdevs_terms` (`capdev_term_id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
+ENGINE = InnoDB;
+
+CREATE INDEX `fk_capdev_degrees_capdevs_terms1_idx` ON `mydb`.`capdevs_degrees` (`capdev_term_id` ASC) VISIBLE;
+
+
+-- -----------------------------------------------------
 -- Table `mydb`.`results_capacity_developents`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `mydb`.`results_capacity_developents` (
@@ -2469,6 +2490,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`results_capacity_developents` (
   `result_id` BIGINT NOT NULL,
   `capdev_delivery_method_id` BIGINT NOT NULL,
   `capdev_term_id` BIGINT NOT NULL,
+  `capdev_degree_id` BIGINT NOT NULL,
   `is_active` TINYINT NOT NULL,
   `version_id` BIGINT NOT NULL,
   `created_by` BIGINT NOT NULL,
@@ -2507,6 +2529,11 @@ CREATE TABLE IF NOT EXISTS `mydb`.`results_capacity_developents` (
     FOREIGN KEY (`capdev_term_id`)
     REFERENCES `mydb`.`capdevs_terms` (`capdev_term_id`)
     ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_results_capacity_developents_capdev_degrees1`
+    FOREIGN KEY (`capdev_degree_id`)
+    REFERENCES `mydb`.`capdevs_degrees` (`capdev_degree_id`)
+    ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
@@ -2521,6 +2548,95 @@ CREATE INDEX `fk_results_capacity_developents_results1_idx` ON `mydb`.`results_c
 CREATE INDEX `fk_results_capacity_developents_capdevs_delivery_methods1_idx` ON `mydb`.`results_capacity_developents` (`capdev_delivery_method_id` ASC) VISIBLE;
 
 CREATE INDEX `fk_results_capacity_developents_capdevs_terms1_idx` ON `mydb`.`results_capacity_developents` (`capdev_term_id` ASC) VISIBLE;
+
+CREATE INDEX `fk_results_capacity_developents_capdev_degrees1_idx` ON `mydb`.`results_capacity_developents` (`capdev_degree_id` ASC) VISIBLE;
+
+
+-- -----------------------------------------------------
+-- Table `mydb`.`request_statuses`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `mydb`.`request_statuses` (
+  `request_status_id` BIGINT NOT NULL,
+  `name` VARCHAR(100) NOT NULL,
+  `description` VARCHAR(50) NOT NULL,
+  PRIMARY KEY (`request_status_id`))
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Table `mydb`.`share_results_requests`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `mydb`.`share_results_requests` (
+  `share_result_request_id` BIGINT NOT NULL,
+  `result_id` BIGINT NOT NULL,
+  `owner_initiative_id` BIGINT NOT NULL,
+  `shared_inititiative_id` BIGINT NOT NULL,
+  `approving_inititiative_id` BIGINT NOT NULL,
+  `toc_result_id` BIGINT NULL,
+  `request_status_id` BIGINT NOT NULL,
+  `is_active` TINYINT NOT NULL,
+  `requested_by` BIGINT NOT NULL,
+  `requested_date` DATE NOT NULL,
+  `approved_by` BIGINT NULL,
+  `aprovaed_date` DATE NULL,
+  PRIMARY KEY (`share_result_request_id`),
+  CONSTRAINT `fk_share_results_requests_users16`
+    FOREIGN KEY (`requested_by`)
+    REFERENCES `mydb`.`users` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_share_results_requests_users26`
+    FOREIGN KEY (`approved_by`)
+    REFERENCES `mydb`.`users` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_share_results_requests_results1`
+    FOREIGN KEY (`result_id`)
+    REFERENCES `mydb`.`results` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_share_results_requests_inititiatives1`
+    FOREIGN KEY (`owner_initiative_id`)
+    REFERENCES `mydb`.`inititiatives` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_share_results_requests_inititiatives2`
+    FOREIGN KEY (`shared_inititiative_id`)
+    REFERENCES `mydb`.`inititiatives` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_share_results_requests_inititiatives3`
+    FOREIGN KEY (`approving_inititiative_id`)
+    REFERENCES `mydb`.`inititiatives` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_share_results_requests_toc_results1`
+    FOREIGN KEY (`toc_result_id`)
+    REFERENCES `mydb`.`toc_results` (`toc_result_id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_share_results_requests_request_statuses1`
+    FOREIGN KEY (`request_status_id`)
+    REFERENCES `mydb`.`request_statuses` (`request_status_id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
+ENGINE = InnoDB;
+
+CREATE INDEX `fk_share_results_requests_users1_idx` ON `mydb`.`share_results_requests` (`requested_by` ASC) VISIBLE;
+
+CREATE INDEX `fk_share_results_requests_users2_idx` ON `mydb`.`share_results_requests` (`approved_by` ASC) VISIBLE;
+
+CREATE INDEX `fk_share_results_requests_results1_idx` ON `mydb`.`share_results_requests` (`result_id` ASC) VISIBLE;
+
+CREATE INDEX `fk_share_results_requests_inititiatives1_idx` ON `mydb`.`share_results_requests` (`owner_initiative_id` ASC) VISIBLE;
+
+CREATE INDEX `fk_share_results_requests_inititiatives2_idx` ON `mydb`.`share_results_requests` (`shared_inititiative_id` ASC) VISIBLE;
+
+CREATE INDEX `fk_share_results_requests_inititiatives3_idx` ON `mydb`.`share_results_requests` (`approving_inititiative_id` ASC) VISIBLE;
+
+CREATE INDEX `fk_share_results_requests_toc_results1_idx` ON `mydb`.`share_results_requests` (`toc_result_id` ASC) VISIBLE;
+
+CREATE INDEX `fk_share_results_requests_request_statuses1_idx` ON `mydb`.`share_results_requests` (`request_status_id` ASC) VISIBLE;
 
 USE `prdb` ;
 
