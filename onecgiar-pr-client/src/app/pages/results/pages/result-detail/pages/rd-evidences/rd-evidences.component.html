@@ -4,7 +4,8 @@
     <!-- <app-pr-field-header label="Evidence"></app-pr-field-header> -->
     <app-alert-status [description]="alertStatus()">
     </app-alert-status>
-    <app-alert-status *ngIf="validateCheckBoxes()" [description]="validateCheckBoxes()" status="warning">
+    <app-alert-status *ngIf="validateCheckBoxes() && !this.api.dataControlSE.isKnowledgeProduct"
+        [description]="validateCheckBoxes()" status="warning">
     </app-alert-status>
     <div class="evidences">
         <div class="evidence evidenceItem" *ngFor="let evidence of this.evidencesBody.evidences; let i=index">
@@ -12,14 +13,16 @@
             </app-evidence-item>
         </div>
     </div>
-    <app-no-data-text *ngIf="!this.evidencesBody?.evidences?.length" title="No evidence added"></app-no-data-text>
+    <app-no-data-text *ngIf="!this.evidencesBody?.evidences?.length"
+        [title]="this.api.dataControlSE.isKnowledgeProduct ? 'No evidence' :'No evidence added'"></app-no-data-text>
     <app-add-button name="Add evidence" (clickEvent)="addEvidence()"
         *ngIf="this.evidencesBody?.evidences?.length <3 && !this.api.dataControlSE.isKnowledgeProduct">
     </app-add-button>
 
     <br><br>
-    <app-pr-field-header label="Supplementary information" [required]="false"></app-pr-field-header>
-    <app-alert-status description="<ul>
+    <app-pr-field-header *ngIf="!this.api.dataControlSE.isKnowledgeProduct" label="Supplementary information"
+        [required]="false"></app-pr-field-header>
+    <app-alert-status *ngIf="!this.api.dataControlSE.isKnowledgeProduct" description="<ul>
         <li>Submit a maximum of 2 links for supplementary information. This is not QAed.</li></ul> ">
     </app-alert-status>
     <div class="evidences">
@@ -28,11 +31,12 @@
             </app-evidence-item>
         </div>
     </div>
-    <app-no-data-text *ngIf="!this.evidencesBody?.supplementary?.length" title="No links added"></app-no-data-text>
+    <app-no-data-text *ngIf="!this.evidencesBody?.supplementary?.length&& !this.api.dataControlSE.isKnowledgeProduct"
+        title="No links added"></app-no-data-text>
     <app-add-button name="Add link" (clickEvent)="addLink()"
         *ngIf="this.evidencesBody?.supplementary?.length < 2 && !this.api.dataControlSE.isKnowledgeProduct">
     </app-add-button>
 </div>
 
-<app-save-button class="position_sticky" [disabled]="this.validateCGSpaceLinks"
-    *ngIf="!this.api.dataControlSE.isKnowledgeProduct" (clickSave)="onSaveSection()"></app-save-button>
+<app-save-button class="position_sticky" [disabled]="this.validateCGSpaceLinks" (clickSave)="onSaveSection()">
+</app-save-button>

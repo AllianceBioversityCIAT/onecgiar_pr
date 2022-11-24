@@ -7,6 +7,7 @@ export class PartnersBody {
 }
 
 class InstitutionsInterface {
+  // mapped_mqap_institutions: number | string = null;
   institutions_id: number;
   institutions_name: string;
   institutions_type_name: string;
