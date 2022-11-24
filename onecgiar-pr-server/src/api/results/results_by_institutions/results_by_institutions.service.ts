@@ -204,7 +204,7 @@ export class ResultsByInstitutionsService {
 
       if (data.mqap_institutions?.length) {
         data.institutions = data.mqap_institutions
-          .filter((ma) => ma.user_matched_institution)
+          .filter((ma) => ma.user_matched_institution?.institutions_id)
           .map((ma) => ma.user_matched_institution);
       }
 
