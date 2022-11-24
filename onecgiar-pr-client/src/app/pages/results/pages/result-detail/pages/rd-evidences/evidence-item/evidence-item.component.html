@@ -3,7 +3,7 @@
     <div>
         <div class="link">
             <app-pr-input label="Link" [(ngModel)]="this.evidence.link" placeholder="Add link"
-                [readOnly]="this.dataControlSE.isKnowledgeProduct"></app-pr-input>
+                [disabled]="this.dataControlSE.isKnowledgeProduct"></app-pr-input>
             <div class="checkboxes" *ngIf="!isSuppInfo">
                 <app-pr-checkbox label="Gender related evidence" [(ngModel)]="this.evidence.gender_related">
                 </app-pr-checkbox>
