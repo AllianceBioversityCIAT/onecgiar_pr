@@ -11,11 +11,20 @@ import { UserRepository } from './modules/user/repositories/user.repository';
 import { FullUserRequestDto } from './modules/user/dto/full-user-request.dto';
 import { User } from './modules/user/entities/user.entity';
 import { HandlersError } from '../shared/handlers/error.utils';
+import { pusherAuthDot } from './dto/pusher-auth.dto';
+import { TokenDto } from '../shared/globalInterfaces/token.dto';
+import Pusher, { UserChannelData } from 'pusher';
 
 @Injectable()
 export class AuthService {
   private readonly _logger: Logger = new Logger(AuthService.name);
-
+  private pusher = new Pusher({
+    appId: `${env.PUSHER_APP_ID}`,
+    key: `${env.PUSHER_API_KEY}`,
+    cluster: `${env.PUSHER_APP_CLUSTER}`,
+    secret: `${env.PUSHER_API_SECRET}`,
+    useTLS: true
+  });
   constructor(
     private readonly _jwtService: JwtService,
     private readonly _userService: UserService,
@@ -23,7 +32,9 @@ export class AuthService {
     private readonly _bcryptPasswordEncoder: BcryptPasswordEncoder,
     private readonly _customUserRepository: UserRepository,
     private readonly _handlersError: HandlersError,
-  ) {}
+    
+  ) {
+  }
   create(createAuthDto: CreateAuthDto) {
     return createAuthDto;
   }
@@ -42,6 +53,32 @@ export class AuthService {
 
   remove(id: number) {
     return `This action removes a #${id} auth`;
+  }
+
+  async puserAuth(pusherAuthDot: pusherAuthDot, resultId: number, user: TokenDto){
+    try {
+      const uPusher = await this._userRepository.userDataPusher(user.id, resultId);
+      const name = `${uPusher.first_name} ${uPusher.last_name}`;
+      const presenceData = {
+        id: `${uPusher.user_id}`,
+        user_info: {
+          name: name,
+          aplication_role: uPusher.aplication_role,
+          initiative_role: uPusher?.initiative_role?'1': null,
+          today: new Date()
+        }
+      };
+
+      const auth = this.pusher.authenticateUser(pusherAuthDot.socket_id, presenceData);
+      return {
+        response: auth,
+        message: 'Successful login pusher',
+        status: HttpStatus.ACCEPTED,
+      };
+
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
   }
 
   async singIn(userLogin: UserLoginDto): Promise<any> {

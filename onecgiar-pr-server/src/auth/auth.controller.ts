@@ -9,6 +9,7 @@ import {
   Res,
   HttpException,
   UseFilters,
+  Headers,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateAuthDto } from './dto/create-auth.dto';
@@ -16,6 +17,9 @@ import { UpdateAuthDto } from './dto/update-auth.dto';
 import { UserLoginDto } from './dto/login-user.dto';
 import { Response } from 'express';
 import { HttpExceptionFilter } from '../shared/handlers/error.exception';
+import { pusherAuthDot } from './dto/pusher-auth.dto';
+import { HeadersDto } from '../shared/globalInterfaces/headers.dto';
+import { TokenDto } from '../shared/globalInterfaces/token.dto';
 
 @Controller()
 @UseFilters(new HttpExceptionFilter())
@@ -36,6 +40,23 @@ export class AuthController {
   async singIn(@Body() userLogin: UserLoginDto, @Res() res: Response) {
     const { message, response, status } = await this.authService.singIn(
       userLogin,
+    );
+    throw new HttpException({ message, response }, status);
+  }
+
+  @Post('/singin/pusher/result/:resultId')
+  async singInPusher(
+    @Body() pusherAuthDot: pusherAuthDot,
+    @Param('resultId') resultId: number,
+    @Headers() auth: HeadersDto,
+    ) {
+      const token: TokenDto = <TokenDto>(
+        JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
+      );
+    const { message, response, status } = await this.authService.puserAuth(
+      pusherAuthDot,
+      resultId,
+      token
     );
     throw new HttpException({ message, response }, status);
   }
