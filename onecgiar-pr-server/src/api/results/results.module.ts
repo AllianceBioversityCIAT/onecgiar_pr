@@ -42,6 +42,12 @@ import { ResultsCentersModule } from './results-centers/results-centers.module';
 import { ResultsKnowledgeProductsModule } from './results-knowledge-products/results-knowledge-products.module';
 import { TocResult } from '../../toc/toc-results/entities/toc-result.entity';
 import { TocLevel } from '../../toc/toc-level/entities/toc-level.entity';
+import { SummaryModule } from './summary/summary.module';
+import { UnitsOfMeasureModule } from './units-of-measure/units-of-measure.module';
+import { CapdevsTermsModule } from './capdevs-terms/capdevs-terms.module';
+import { CapdevsDeliveryMethodsModule } from './capdevs-delivery-methods/capdevs-delivery-methods.module';
+import { ResultsImpactAreaTargetModule } from './results-impact-area-target/results-impact-area-target.module';
+import { ResultsImpactAreaIndicatorsModule } from './results-impact-area-indicators/results-impact-area-indicators.module';
 
 @Module({
   controllers: [ResultsController],
@@ -71,7 +77,13 @@ import { TocLevel } from '../../toc/toc-level/entities/toc-level.entity';
     ResultsTocResultsModule,
     NonPooledProjectsModule,
     ResultsCentersModule,
-    ResultsKnowledgeProductsModule
+    ResultsKnowledgeProductsModule,
+    SummaryModule,
+    UnitsOfMeasureModule,
+    CapdevsTermsModule,
+    CapdevsDeliveryMethodsModule,
+    ResultsImpactAreaTargetModule,
+    ResultsImpactAreaIndicatorsModule,
   ],
   providers: [
     ResultsService,
@@ -81,7 +93,7 @@ import { TocLevel } from '../../toc/toc-level/entities/toc-level.entity';
     ClarisaInitiativesRepository,
     RoleByUserRepository,
     ClarisaInstitutionsRepository,
-    ClarisaInstitutionsTypeRepository
+    ClarisaInstitutionsTypeRepository,
   ],
   exports: [ResultRepository, JwtMiddleware],
 })
@@ -95,7 +107,7 @@ export class ResultsModule implements NestModule {
       {
         path: '/api/clarisa/*',
         method: RequestMethod.ALL,
-      }
+      },
     );
   }
 }

@@ -4,6 +4,8 @@ import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultLevelService } from './services/result-level.service';
 import { Router } from '@angular/router';
 import { ResultBody } from '../../../../shared/interfaces/result.interface';
+import { InitiativesService } from '../../../../shared/services/global/initiatives.service';
+import { SaveButtonService } from '../../../../custom-fields/save-button/save-button.service';
 
 @Component({
   selector: 'app-result-creator',
@@ -14,7 +16,9 @@ export class ResultCreatorComponent implements OnInit {
   naratives = internationalizationData.reportNewResult;
   depthSearchList: any[] = [];
   exactTitleFound = false;
-  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, private router: Router) {}
+  mqapJson: {};
+  validating = false;
+  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, private router: Router, private initiativesSE: InitiativesService) {}
 
   ngOnInit(): void {
     this.resultLevelSE.resultBody = new ResultBody();
@@ -32,6 +36,21 @@ export class ResultCreatorComponent implements OnInit {
       position: 'beforebegin'
     });
     // this.getInitiativesByUser();
+    this.api.rolesSE.validateReadOnly().then(() => {
+      this.GET_AllInitiatives();
+    });
+  }
+  allInitiatives = [];
+  GET_AllInitiatives() {
+    console.log(this.api.rolesSE.isAdmin);
+    if (!this.api.rolesSE.isAdmin) return;
+    this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
+      this.allInitiatives = response;
+    });
+  }
+
+  get isKnowledgeProduct() {
+    return this.resultLevelSE.resultBody.result_type_id == 6;
   }
 
   get resultTypeName(): string {
@@ -58,15 +77,63 @@ export class ResultCreatorComponent implements OnInit {
   }
 
   onSaveSection() {
-    this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody);
-    console.log(this.resultLevelSE.resultBody);
-    this.api.resultsSE.POST_resultCreateHeader(this.resultLevelSE.resultBody).subscribe(
+    if (this.resultLevelSE.resultBody.result_type_id != 6) {
+      this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody);
+      console.log(this.resultLevelSE.resultBody);
+      this.api.resultsSE.POST_resultCreateHeader(this.resultLevelSE.resultBody).subscribe(
+        (resp: any) => {
+          this.router.navigate([`/result/result-detail/${resp?.response?.id}/general-information`]);
+          this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
+        },
+        err => {
+          this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
+        }
+      );
+    } else {
+      console.log({ ...this.mqapJson, result_data: this.resultLevelSE.resultBody });
+      this.api.resultsSE.POST_createWithHandle({ ...this.mqapJson, result_data: this.resultLevelSE.resultBody }).subscribe(
+        (resp: any) => {
+          console.log(resp);
+          this.router.navigate([`/result/result-detail/${resp?.response?.id}/general-information`]);
+          this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
+        },
+        err => {
+          this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
+        }
+      );
+    }
+  }
+
+  valdiateNormalFields() {
+    if (!this.resultLevelSE.resultBody.initiative_id) return true;
+    if (!this.resultLevelSE.resultBody.result_type_id) return true;
+    if (!this.resultLevelSE.resultBody.result_level_id) return true;
+    if (!this.resultLevelSE.resultBody.result_name) return true;
+    return false;
+  }
+
+  validateKnowledgeProductFields() {}
+  ngDoCheck(): void {
+    this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.local_container');
+  }
+  GET_mqapValidation() {
+    this.validating = true;
+    this.api.resultsSE.GET_mqapValidation(this.resultLevelSE.resultBody.handler).subscribe(
       resp => {
-        this.router.navigate([`/result/result-detail/${resp?.response?.id}/general-information`]);
-        this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
+        console.log(resp);
+        console.log(resp.response);
+        this.mqapJson = resp.response;
+        this.resultLevelSE.resultBody.result_name = resp.response.title;
+        // console.log(first);
+        // TODO validate create
+        this.validating = false;
+        this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Metadata found successfully', description: 'Title: ' + this.resultLevelSE.resultBody.result_name, status: 'success' });
       },
       err => {
+        console.log(err.error.message);
         this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
+        this.validating = false;
+        this.resultLevelSE.resultBody.result_name = '';
       }
     );
   }

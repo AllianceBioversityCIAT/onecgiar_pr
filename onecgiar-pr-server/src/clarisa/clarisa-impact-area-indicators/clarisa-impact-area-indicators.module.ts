@@ -4,12 +4,13 @@ import { ClarisaImpactAreaIndicatorsController } from './clarisa-impact-area-ind
 import { RouterModule } from '@nestjs/core';
 import { ClarisaImpactAreaIndicatorsRoutes } from './clarisaImpactAreaIndicators.routes';
 import { ClarisaImpactAreaInticatorsRepository } from './ClarisaImpactAreaIndicators.repository';
+import { HandlersError } from '../../shared/handlers/error.utils';
 
 @Module({
   controllers: [ClarisaImpactAreaIndicatorsController],
   providers: [
     ClarisaImpactAreaIndicatorsService,
-    ClarisaImpactAreaInticatorsRepository,
+    ClarisaImpactAreaInticatorsRepository,HandlersError
   ],
   imports: [RouterModule.register(ClarisaImpactAreaIndicatorsRoutes)],
   exports: [ClarisaImpactAreaInticatorsRepository],

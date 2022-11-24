@@ -29,7 +29,8 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   @Input() isStatic: boolean = false;
   @Input() required: boolean = true;
   @Input() flagsCode: string;
-  @Output() selectOptionEvent = new EventEmitter();
+  @Output() selectOptionEvent = new EventEmitter<any>();
+  @Output() removeOptionEvent = new EventEmitter<any>();
   private _optionsIntance: any[];
   private _value: any[] = [];
   private _beforeValueLength: number = 0;
@@ -121,7 +122,7 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
     this.value.splice(optionFinded, 1);
     // let itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == option[this.optionValue]);
     // if (itemFinded) itemFinded.selected = false;
-    this.selectOptionEvent.emit();
+    this.removeOptionEvent.emit({ remove: option });
   }
 
   selectBySavedList(savedList: any[]) {

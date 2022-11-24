@@ -10,24 +10,42 @@ import { InnovationUseInfoBody } from './model/innovationUseInfoBody';
 })
 export class InnovationUseInfoComponent implements OnInit {
   innovationUseInfoBody = new InnovationUseInfoBody();
-  otherList: any[] = [];
   constructor(private api: ApiService) {}
 
   ngOnInit(): void {
     this.getSectionInformation();
-    window.scrollTo(100, 0);
   }
-  getSectionInformation() {}
-  onSaveSection() {}
+  getSectionInformation() {
+    this.api.resultsSE.GET_innovationUse().subscribe(
+      ({ response }) => {
+        this.innovationUseInfoBody = response;
+        console.log(response);
+      },
+      err => {
+        console.log(err);
+      }
+    );
+  }
+  onSaveSection() {
+    console.log(this.innovationUseInfoBody);
+    this.api.resultsSE.PATCH_innovationUse(this.innovationUseInfoBody).subscribe(
+      resp => {
+        this.getSectionInformation();
+      },
+      err => {
+        console.log(err);
+      }
+    );
+  }
   alertInfoText() {
     return `Please fill in the following fields that are required based on the result type. <br>
     Please provide evidence of use claims in the <a href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultId}/general-information" class="open_route" target="_blank">General information</a> section. `;
   }
   onAddMore() {
     console.log('onAddMore');
-    this.otherList.push({});
+    this.innovationUseInfoBody.other.push({});
   }
   onRemoveOne(index) {
-    this.otherList.splice(index, 1);
+    this.innovationUseInfoBody.other.splice(index, 1);
   }
 }

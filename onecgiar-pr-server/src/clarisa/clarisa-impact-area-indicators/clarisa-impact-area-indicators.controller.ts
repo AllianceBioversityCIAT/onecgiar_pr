@@ -10,6 +10,7 @@ import {
 import { ClarisaImpactAreaIndicatorsService } from './clarisa-impact-area-indicators.service';
 import { CreateClarisaImpactAreaIndicatorDto } from './dto/create-clarisa-impact-area-indicator.dto';
 import { UpdateClarisaImpactAreaIndicatorDto } from './dto/update-clarisa-impact-area-indicator.dto';
+import { HttpException } from '@nestjs/common';
 
 @Controller()
 export class ClarisaImpactAreaIndicatorsController {
@@ -27,9 +28,11 @@ export class ClarisaImpactAreaIndicatorsController {
     );
   }
 
-  @Get()
-  findAll() {
-    return this.clarisaImpactAreaIndicatorsService.findAll();
+  @Get('get/all')
+  async findAll() {
+    const { message, response, status } =
+      await this.clarisaImpactAreaIndicatorsService.findAll();
+    throw new HttpException({ message, response }, status);
   }
 
   @Get(':id')

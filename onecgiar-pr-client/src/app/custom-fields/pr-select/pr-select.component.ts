@@ -1,4 +1,4 @@
-import { Component, forwardRef, Input, Output, EventEmitter } from '@angular/core';
+import { Component, forwardRef, Input, Output, EventEmitter, SimpleChanges } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
 
@@ -28,10 +28,11 @@ export class PrSelectComponent implements ControlValueAccessor {
   @Input() flagsCode: string;
   @Input() disableOptions: any;
   @Input() disabled: any = false;
+  @Input() editable: boolean = false;
 
   @Output() selectOptionEvent = new EventEmitter();
   private _optionsIntance: any[];
-  private _value: string;
+  @Input() _value: string;
   public fullValue: any = {};
   public searchText: string;
 
@@ -94,22 +95,15 @@ export class PrSelectComponent implements ControlValueAccessor {
     this.fullValue = option;
     this.value = option[this.optionValue];
     option.selected = true;
-    console.log(option);
-    // this.value = this.valueAsObject ? option : this.value;
-    // console.log(this.value);
-    // const optionFinded = this.value.findIndex(valueItem => valueItem[this.optionValue] == option[this.optionValue]);
-
+    // console.log(option);
+    // console.log(this._optionsIntance);
     this.selectOptionEvent.emit();
   }
 
-  get labelName() {
-    if (!this.value) return '';
-    const id = typeof this.value == 'object' ? this.value[this.optionValue] : this.value;
-    const itemFinded = this._optionsIntance?.find(listItem => listItem[this.optionValue] == id);
-    if (!itemFinded) return '';
-
-    return itemFinded[this.optionLabel];
+  labelName(value) {
+    return '';
   }
+
   // toggleSelectOption(option) {
   //   if (option?.disabled === true) return;
   //   console.log('toggleSelectOption');

@@ -4,4 +4,53 @@
     bottom: 0;
     margin-right: 100px;
     margin-bottom: 50px;
+
+    &:hover {
+        .fields-feedback-list {
+            opacity: 1 !important;
+            transform: translateY(-100%) scale(1) !important;
+            background-color: #7385eee8;
+            color: white;
+
+            .status {
+                background-color: rgb(255, 74, 74) !important;
+            }
+        }
+    }
+}
+
+.fields-feedback-list {
+    pointer-events: none;
+    opacity: .7;
+    transition: all ease-in-out .3s;
+    background-color: #7385ee46;
+    position: absolute;
+    // top: -100px;
+    transform: translateY(-100%) scale(1);
+    right: 0;
+    // height: 120px;
+    width: 300px;
+    padding: 15px 20px;
+    border-radius: 10px;
+
+    .item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+
+        .status {
+
+            width: 10px;
+            height: 10px;
+            border-radius: 50px;
+            background-color: rgb(255, 51, 0);
+
+
+        }
+
+        .text {
+            font-size: .9em;
+        }
+    }
+
 }

@@ -5,21 +5,33 @@
         description="Please fill in the following fields that are required based on the type of this result.">
     </app-alert-status>
     <div class="auto_fit_container">
-        <app-pr-select [options]="[{}]" label="Policy type" description="Select policy type"
-            optionLabel="official_code_short_name" optionValue="initiative_id" placeholder="Select policy type">
+        <app-pr-select [options]="this.policyControlListSE.policyTypesList" label="Policy type"
+            description="Select policy type" optionLabel="name" optionValue="id" placeholder="Select policy type"
+            [(ngModel)]="innovationUseInfoBody.policy_type_id">
         </app-pr-select>
-        <app-pr-input label="Unit of measure" type="number" description="USD amount" placeholder="0">
+        <app-pr-input label="USD amount" type="number" description="USD amount" placeholder="0"
+            *ngIf="innovationUseInfoBody.policy_type_id == 1" [required]="false">
         </app-pr-input>
+        <app-pr-select [options]="[{id:1,name:'Confirmed'},{id:2,name:'Estimated'},{id:3,name:'Unknown'}]"
+            *ngIf="innovationUseInfoBody.policy_type_id == 1" label="Status" description="Select Sttus"
+            optionLabel="name" optionValue="id" placeholder="Select stage" [required]="false">
+        </app-pr-select>
     </div>
 
-    <app-pr-select [options]="[{}]" label="Stage" description="Select stage" optionLabel="official_code_short_name"
-        optionValue="initiative_id" placeholder="Select stage">
+    <app-pr-select [options]="this.policyControlListSE.policyStages" label="Stage" description="Select stage"
+        optionLabel="name" optionValue="id" placeholder="Select stage"
+        [(ngModel)]="innovationUseInfoBody.policy_stage_id">
     </app-pr-select>
-    <app-pr-multi-select [options]="[{}]" label="Whose policy is this? (Implementing organizations)" selectedLabel=""
+
+    <app-pr-multi-select [options]="this.institutionsService.institutionsList"
+        label="Whose policy is this? (Implementing organizations)" selectedLabel="Organization"
+        selectedOptionLabel="full_name"
         description="Select min 1, max 3 organizations <br> If you don't find the organization you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list."
-        selectedOptionLabel="institutions_name" optionLabel="full_name" optionValue="institutions_id"
-        placeholder="Select organization(s)">
+        optionLabel="full_name" optionValue="institutions_id" placeholder="Select organization(s)"
+        [(ngModel)]="this.innovationUseInfoBody.institutions">
     </app-pr-multi-select>
+
+
 </div>
 
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>

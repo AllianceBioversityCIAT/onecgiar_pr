@@ -12,8 +12,8 @@ export class TocApiService {
     return this.http.get<any>(`${this.apiBaseUrl}level/get/all`);
   }
 
-  GET_tocLevelsByresultId(resultId, levelId) {
-    return this.http.get<any>(`${this.apiBaseUrl}result/get/all/result/${resultId}/level/${levelId}`);
+  GET_tocLevelsByresultId(initiativeId, levelId) {
+    return this.http.get<any>(`${this.apiBaseUrl}result/get/all/initiative/${initiativeId}/level/${levelId}`);
   }
 
   GET_fullInitiativeToc(resultId) {

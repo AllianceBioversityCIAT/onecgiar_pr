@@ -23,4 +23,27 @@ export class ClarisaGobalTargetRepository extends Repository<ClarisaGlobalTarget
       };
     }
   }
+
+  async getAllGlobalTarget() {
+    const queryData = `
+    SELECT
+    	cgt.target,
+    	cgt.targetId,
+    	cgt.impactAreaId
+    FROM
+    	clarisa_global_targets cgt;
+    `;
+    try {
+      const deleteData = await this.query(queryData);
+      return deleteData;
+    } catch (error) {
+      throw {
+        message: `[${ClarisaGobalTargetRepository.name}] => deleteAllData error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
 }
+
+

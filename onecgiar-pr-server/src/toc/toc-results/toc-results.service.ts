@@ -22,7 +22,11 @@ export class TocResultsService {
 
   async findAllByinitiativeId(initiativeId: number, levelId: number) {
     try {
-      const tocResults = await this._tocResultsRepository.getAllTocResultsByInitiative(initiativeId, levelId);
+      let tocResults = await this._tocResultsRepository.getAllTocResultsByInitiative(initiativeId, levelId);
+
+      if(!tocResults.length && levelId == 4){
+        tocResults = await this._tocResultsRepository.getAllOutcomeByInitiative(initiativeId);
+      }
       if(!tocResults.length){
         throw {
           response: {},

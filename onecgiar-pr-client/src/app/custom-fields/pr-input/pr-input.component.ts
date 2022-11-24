@@ -25,9 +25,11 @@ export class PrInputComponent implements ControlValueAccessor {
   @Input() isStatic: boolean = false;
   @Input() required: boolean = true;
   @Input() underConstruction: boolean;
+  @Input() disabled: boolean;
   @Input() hint: string = null;
+  @Input() editable: boolean = false;
 
-  private _value: string;
+  private _value: any;
   private beforeValue: string;
   public wordCount: number = 0;
   constructor(private wordCounterSE: WordCounterService, public rolesSE: RolesService) {}
@@ -41,6 +43,7 @@ export class PrInputComponent implements ControlValueAccessor {
   set value(v: string) {
     if (v !== this._value) {
       this._value = v;
+      if (Number(v) < 0) this._value = 0;
       this.onChange(v);
     }
   }

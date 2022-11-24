@@ -10,12 +10,14 @@ import { Auditable } from '../../../shared/entities/auditableEntity';
 
 @Entity('clarisa_global_targets')
 export class ClarisaGlobalTarget {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn({
+    name:'targetId'
+  })
+  targetId: number;
 
   @ManyToOne(() => ClarisaImpactArea, (cia) => cia.id)
-  @JoinColumn({ name: 'impact_area_id' })
-  impact_area_id: number;
+  @JoinColumn({ name: 'impactAreaId' })
+  impactAreaId: number;
 
   @Column({ name: 'target', type: 'text' })
   target: number;

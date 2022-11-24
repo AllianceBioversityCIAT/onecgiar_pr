@@ -10,11 +10,19 @@ export class LinkedResult {
     })
     id: number;
 
-    @ManyToOne(() => Result, rs => rs.id)
+    @ManyToOne(() => Result, rs => rs.id, {nullable: true})
     @JoinColumn({
         name: 'linked_results_id'
     })
-    linked_results_id: number;
+    linked_results_id!: number;
+
+    @Column({
+      name: 'legacy_link',
+      type: 'text',
+      nullable: true
+    })
+    legacy_link!: string;
+
 
     @ManyToOne(() => Result, rs => rs.id)
     @JoinColumn({

@@ -8,6 +8,7 @@ import { CustomizedAlertsFeService } from '../../shared/services/customized-aler
 })
 export class SaveButtonService {
   isSaving = false;
+  isSavingSection = false;
   constructor(private customizedAlertsFeSE: CustomizedAlertsFeService) {}
   showSaveSpinner() {
     this.isSaving = true;
@@ -16,16 +17,51 @@ export class SaveButtonService {
     this.isSaving = false;
   }
 
+  isSavingSectionPipe(): any {
+    Promise.resolve().then(() => {
+      this.isSavingSection = true;
+    });
+    // this.cd.detectChanges();
+    return pipe(
+      tap(resp => {
+        Promise.resolve().then(() => {
+          this.isSavingSection = false;
+        });
+      }),
+      catchError(err => {
+        Promise.resolve().then(() => {
+          this.isSavingSection = false;
+        });
+        return throwError(err);
+      })
+      // ,retry(1)
+    );
+  }
+
   isSavingPipe(): any {
     this.showSaveSpinner();
     return pipe(
       tap(resp => {
         this.hideSaveSpinner();
-        this.customizedAlertsFeSE.show({ id: 'sectionSaved', title: 'Section saved correctly', description: '', status: 'success', closeIn: 500 });
+        this.customizedAlertsFeSE.show({ id: 'save-button', title: 'Section saved correctly', description: '', status: 'success', closeIn: 500 });
       }),
       catchError(err => {
         this.hideSaveSpinner();
-        this.customizedAlertsFeSE.show({ id: 'sectionSaved', title: 'There was an error saving the section', description: '', status: 'error', closeIn: 500 });
+        this.customizedAlertsFeSE.show({ id: 'save-button', title: 'There was an error saving the section', description: '', status: 'error', closeIn: 500 });
+        return throwError(err);
+      })
+      // ,retry(1)
+    );
+  }
+
+  isCreatingPipe(): any {
+    this.showSaveSpinner();
+    return pipe(
+      tap(resp => {
+        this.hideSaveSpinner();
+      }),
+      catchError(err => {
+        this.hideSaveSpinner();
         return throwError(err);
       })
       // ,retry(1)

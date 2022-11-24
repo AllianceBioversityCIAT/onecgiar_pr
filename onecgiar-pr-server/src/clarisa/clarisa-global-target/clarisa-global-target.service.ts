@@ -1,15 +1,33 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
 import { CreateClarisaGlobalTargetDto } from './dto/create-clarisa-global-target.dto';
 import { UpdateClarisaGlobalTargetDto } from './dto/update-clarisa-global-target.dto';
+import { HandlersError } from '../../shared/handlers/error.utils';
+import { ClarisaGobalTargetRepository } from './ClariasaGlobalTarget.repository';
 
 @Injectable()
 export class ClarisaGlobalTargetService {
+
+  constructor(
+    private readonly _handlersError: HandlersError,
+    private readonly _clarisaGobalTargetRepository: ClarisaGobalTargetRepository
+  ){}
+
   create(createClarisaGlobalTargetDto: CreateClarisaGlobalTargetDto) {
     return 'This action adds a new clarisaGlobalTarget';
   }
 
-  findAll() {
-    return `This action returns all clarisaGlobalTarget`;
+  async findAll() {
+    try {
+      const globalTarget = await this._clarisaGobalTargetRepository.getAllGlobalTarget();
+
+      return {
+        response: globalTarget,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({error, debug: true});
+    }
   }
 
   findOne(id: number) {

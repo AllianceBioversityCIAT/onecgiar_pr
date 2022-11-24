@@ -15,6 +15,7 @@ import { CreateResultsKnowledgeProductFromHandleDto } from './dto/create-results
 import { UpdateResultsKnowledgeProductDto } from './dto/update-results-knowledge-product.dto';
 import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
+import { ResultsKnowledgeProductDto } from './dto/results-knowledge-product.dto';
 
 @Controller()
 export class ResultsKnowledgeProductsController {
@@ -22,10 +23,9 @@ export class ResultsKnowledgeProductsController {
     private readonly _resultsKnowledgeProductsService: ResultsKnowledgeProductsService,
   ) {}
 
-  @Post('create/from-handle')
+  @Post('create')
   async create(
-    @Body()
-    createResultsKnowledgeProductDto: CreateResultsKnowledgeProductFromHandleDto,
+    @Body() mqapMappedResponse: ResultsKnowledgeProductDto,
     @Headers() auth: HeadersDto,
   ) {
     const token: TokenDto = <TokenDto>(
@@ -34,26 +34,41 @@ export class ResultsKnowledgeProductsController {
 
     const { message, response, status } =
       await this._resultsKnowledgeProductsService.create(
-        createResultsKnowledgeProductDto,
+        mqapMappedResponse,
         token,
       );
 
     throw new HttpException({ message, response }, status);
   }
 
-  @Get()
-  findAll() {
-    return this._resultsKnowledgeProductsService.findAll();
+  @Get('mqap')
+  async getFromMQAPByHandle(@Query('handle') handle: string) {
+    const { message, response, status } =
+      await this._resultsKnowledgeProductsService.findOnCGSpace(handle);
+
+    throw new HttpException({ message, response }, status);
   }
 
-  @Get('/by-handle')
-  findOnCGSpace(@Query('handle') handle: string) {
-    return this._resultsKnowledgeProductsService.findOnCGSpace(handle);
+  @Get('find/by-handle')
+  async findResultKnowledgeProductByHandle(@Query('handle') handle: string) {
+    const { message, response, status } =
+      await this._resultsKnowledgeProductsService.findResultKnowledgeProductByHandle(
+        handle,
+      );
+
+    throw new HttpException({ message, response }, status);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this._resultsKnowledgeProductsService.findOne(+id);
+  @Get('get/:id')
+  getKnowledgeProductById(@Param('id') id: number) {
+    return this._resultsKnowledgeProductsService.findOneByKnowledgeProductId(
+      id,
+    );
+  }
+
+  @Get('get/result/:id')
+  getKnowledgeProductByResultId(@Param('id') id: number) {
+    return this._resultsKnowledgeProductsService.findOneByResultId(id);
   }
 
   @Patch(':id')

@@ -18,6 +18,7 @@ export class ResultBody {
   public result_type_id: number = null;
   public result_name: string = '';
   public result_level_id: string | number = '';
+  public handler: string = null;
 }
 
 export interface ResultItem {

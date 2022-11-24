@@ -1,11 +1,12 @@
 <app-pr-field-header [label]="this.label" [description]="this.description" [required]="this.required">
 </app-pr-field-header>
-<div [ngSwitch]="(readOnly || this.rolesSE.readOnly) && (!isStatic)">
+<div [ngSwitch]="(readOnly || this.rolesSE.readOnly) && (!isStatic)" class="pr-field"
+    [ngClass]="{'mandatory': this.required,'complete': value}">
     <div class="read-only" *ngSwitchCase="true" [innerHtml]="valueName"></div>
     <div class="radioButtonList" *ngSwitchCase="false" [hidden]="hideOptions">
         <div class="radioButton" *ngFor="let option of this.options; let i=index">
-            <p-radioButton name="groupname" inputId="groupname{{i}}{{this.joinName()}}" [value]="option[optionValue]"
-                [(ngModel)]="value">
+            <p-radioButton (click)="onSelect()" name="groupname" inputId="groupname{{i}}{{this.joinName()}}"
+                [value]="option[optionValue]" [(ngModel)]="value">
             </p-radioButton>
             <label for="groupname{{i}}{{this.joinName()}}" class="name">{{option[this.optionLabel]}}</label>
         </div>

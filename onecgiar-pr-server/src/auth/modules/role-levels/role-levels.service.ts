@@ -42,8 +42,6 @@ export class RoleLevelsService {
           status: HttpStatus.NOT_FOUND,
         };
       }
-      console.log(rolesLevels);
-      console.log(roles);
 
       rolesLevels.map((rl) => {
         rl['roles'] = roles.filter((r) => r.role_level_id == rl.id);

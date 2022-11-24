@@ -13,12 +13,14 @@
     <app-pr-input [attr.attribute-you-are-targeting]="'expression'" placeholder="Write some..." label="Result type"
         type="text" [required]="false" [readOnly]="true" [(ngModel)]="this.generalInfoBody.result_type_name">
     </app-pr-input>
-    <app-pr-input placeholder="Write some..." label="Title" type="text" [(ngModel)]="this.generalInfoBody.result_name"
+    <app-pr-input placeholder="Write some..." label="Title" type="text"
+        [readOnly]="this.dataControlSE.isKnowledgeProduct" [(ngModel)]="this.generalInfoBody.result_name"
         [maxWords]="30">
     </app-pr-input>
 
     <app-pr-textarea placeholder="Write some..." label="Description" type="text"
-        [(ngModel)]="this.generalInfoBody.result_description" [maxWords]="150"></app-pr-textarea>
+        [readOnly]="this.dataControlSE.isKnowledgeProduct" [(ngModel)]="this.generalInfoBody.result_description"
+        [maxWords]="150"></app-pr-textarea>
 
     <div class="radio_grid">
         <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"

@@ -14,6 +14,13 @@ import { ResultsByInititiative } from '../results_by_inititiatives/entities/resu
 import { VersionsService } from '../versions/versions.service';
 import { Version } from '../versions/entities/version.entity';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
+import { ResultRepository } from '../result.repository';
+import { TocResultsRepository } from '../../../toc/toc-results/toc-results.repository';
+import { ResultsImpactAreaTargetRepository } from '../results-impact-area-target/results-impact-area-target.repository';
+import { ResultsImpactAreaIndicatorRepository } from '../results-impact-area-indicators/results-impact-area-indicators.repository';
+import { ResultsImpactAreaIndicator } from '../results-impact-area-indicators/entities/results-impact-area-indicator.entity';
+import { ResultsImpactAreaTarget } from '../results-impact-area-target/entities/results-impact-area-target.entity';
+import { ClarisaImpactAreaRepository } from '../../../clarisa/clarisa-impact-area/ClarisaImpactArea.repository';
 
 @Injectable()
 export class ResultsTocResultsService {
@@ -25,26 +32,32 @@ export class ResultsTocResultsService {
     private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
     private readonly _handlersError: HandlersError,
     private readonly _versionsService: VersionsService,
-    private readonly _userRepository: UserRepository
+    private readonly _userRepository: UserRepository,
+    private readonly _resultRepository: ResultRepository,
+    private readonly _tocResultsRepository: TocResultsRepository,
+    private readonly _resultsImpactAreaTargetRepository: ResultsImpactAreaTargetRepository,
+    private readonly _resultsImpactAreaIndicatorRepository: ResultsImpactAreaIndicatorRepository,
+    private readonly _clarisaImpactAreaRepository: ClarisaImpactAreaRepository,
   ) { }
 
   async create(createResultsTocResultDto: CreateResultsTocResultDto, user: TokenDto) {
     try {
-      const { contributing_np_projects, result_id, contributing_center, contributing_initiatives, result_toc_result, contributors_result_toc_result } = createResultsTocResultDto;
+      let { contributing_np_projects, result_id, contributing_center, contributing_initiatives, result_toc_result, contributors_result_toc_result, impacts } = createResultsTocResultDto;
       const version = await this._versionsService.findBaseVersion();
+      const result = await this._resultRepository.getResultById(result_id);
+      let initiativeArray: number[] = [];
       if (version.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: version });
       }
       const vrs: Version = <Version>version.response;
       const titleArray = contributing_np_projects.map(el => el.grant_title);
-
       if (contributing_center.filter(el => el.primary == true).length > 1) {
         contributing_center.map(el => { el.primary = false; });
       }
 
       if (contributing_initiatives?.length) {
-        const initiativeArray = contributing_initiatives.map(el => el.id);
-        await this._resultByInitiativesRepository.updateResultByInitiative(result_id, initiativeArray, user.id, false);
+        initiativeArray = contributing_initiatives.map(el => el.id);
+        await this._resultByInitiativesRepository.updateResultByInitiative(result_id, [...initiativeArray, result_toc_result.initiative_id], user.id, false);
         let resultsByInititiativeArray: ResultsByInititiative[] = [];
         for (let index = 0; index < contributing_initiatives.length; index++) {
           const exists = await this._resultByInitiativesRepository.getResultsByInitiativeByResultIdAndInitiativeIdAndRole(result_id, contributing_initiatives[index].id, false);
@@ -69,12 +82,12 @@ export class ResultsTocResultsService {
         await this._nonPooledProjectRepository.updateNPProjectById(result_id, titleArray, user.id);
         let resultTocResultArray: NonPooledProject[] = [];
         for (let index = 0; index < contributing_np_projects.length; index++) {
-          if (contributing_np_projects[index]?.grant_title.length) {
+          if (contributing_np_projects[index]?.grant_title?.length) {
             const resultData = await this._nonPooledProjectRepository.getAllNPProjectById(result_id, contributing_np_projects[index].grant_title);
 
             if (resultData) {
               resultData.center_grant_id = contributing_np_projects[index].center_grant_id;
-              resultData.funder_institution_id = contributing_np_projects[index].funder.institutions_id;
+              resultData.funder_institution_id = contributing_np_projects[index].funder;
               resultData.lead_center_id = contributing_np_projects[index].lead_center;
               resultData.is_active = true;
               resultData.last_updated_by = user.id;
@@ -83,15 +96,16 @@ export class ResultsTocResultsService {
               const newNpProject = new NonPooledProject();
               newNpProject.results_id = result_id;
               newNpProject.center_grant_id = contributing_np_projects[index].center_grant_id;
-              newNpProject.funder_institution_id = contributing_np_projects[index].funder.institutions_id;
+              newNpProject.funder_institution_id = contributing_np_projects[index].funder;
               newNpProject.lead_center_id = contributing_np_projects[index].lead_center;
-              newNpProject.grant_title = contributing_np_projects[index].grant_title;
+              newNpProject.grant_title = contributing_np_projects[index].grant_title || null;
               newNpProject.created_by = user.id;
               newNpProject.last_updated_by = user.id;
               resultTocResultArray.push(newNpProject);
             }
           }
         }
+
         await this._nonPooledProjectRepository.save(resultTocResultArray);
       } else {
         await this._nonPooledProjectRepository.updateNPProjectById(result_id, [], user.id);
@@ -122,22 +136,117 @@ export class ResultsTocResultsService {
         await this._resultsCenterRepository.updateCenter(result_id, [], user.id);
       }
 
-      if (this.validResultRocResult(result_toc_result?.planned_result, result_toc_result?.outcome_id, result_toc_result?.toc_result_id)) {
-        const restulTocResultsave = await this.resultTocResultSave(result_toc_result, result_toc_result.planned_result, user, result_id, vrs.id);
-        await this._resultsTocResultRepository.save(restulTocResultsave);
-      }
-
-      if (contributors_result_toc_result?.length) {
-        let restulTocResultsaveArray: ResultsTocResult[] = [];
-        for (let index = 0; index < contributors_result_toc_result.length; index++) {
-          const { result_toc_result: resTocRes } = contributors_result_toc_result[index];
-          if (await this._userRepository.isUserInInitiative(resTocRes?.results_id, user.id) || this.validResultRocResult(resTocRes?.planned_result, resTocRes?.outcome_id, resTocRes?.toc_result_id)) {
-            restulTocResultsaveArray.push(await this.resultTocResultSave(resTocRes, resTocRes.planned_result, user, resTocRes?.results_id, vrs.id));
+      if (result.result_level_id == 1) {
+        impacts.forEach(async ({id, indicators, target}) => {
+          if(indicators?.length){
+            await this._resultsImpactAreaIndicatorRepository.updateResultImpactAreaIndicators(result_id, id, indicators?.map(el => el.id), user.id);
+            let IndicatorArray: ResultsImpactAreaIndicator[] = [];
+            for (let index = 0; index < indicators.length; index++) {
+              const {id: indicatorId} = indicators[index];
+              const resultsImpactAreaIndicatorData = await this._resultsImpactAreaIndicatorRepository.ResultsImpactAreaIndicatorExists(result_id, indicatorId);
+              if(!resultsImpactAreaIndicatorData){
+                const newIndicator = new ResultsImpactAreaIndicator();
+                newIndicator.created_by = user.id;
+                newIndicator.last_updated_by = user.id;
+                newIndicator.result_id = result.id;
+                newIndicator.impact_area_indicator_id = indicatorId;
+                newIndicator.version_id = vrs.id;
+                IndicatorArray.push(newIndicator);
+              }
+            }
+            await this._resultsImpactAreaIndicatorRepository.save(IndicatorArray);
+          }else{
+            await this._resultsImpactAreaIndicatorRepository.updateResultImpactAreaIndicators(result_id, id, [], user.id);
           }
-        }
-        await this._resultsTocResultRepository.save(restulTocResultsaveArray);
-      }
 
+          if(target?.length){
+            await this._resultsImpactAreaTargetRepository.updateResultImpactAreaTarget(result_id, id, target?.map(el => el.targetId), user.id);
+            let TargetArray: ResultsImpactAreaTarget[] = [];
+            for (let index = 0; index < target.length; index++) {
+              const {targetId} = target[index];
+              const resultsImpactAreaTargetData = await this._resultsImpactAreaTargetRepository.resultsImpactAreaTargetExists(result_id, targetId);
+              if(!resultsImpactAreaTargetData){
+                const newTarget = new ResultsImpactAreaTarget();
+                newTarget.created_by = user.id;
+                newTarget.last_updated_by = user.id;
+                newTarget.result_id = result.id;
+                newTarget.impact_area_target_id = targetId;
+                newTarget.version_id = vrs.id;
+                TargetArray.push(newTarget);
+              }
+            }
+            await this._resultsImpactAreaTargetRepository.save(TargetArray);
+          }else{
+            await this._resultsImpactAreaTargetRepository.updateResultImpactAreaTarget(result_id, id, [], user.id);
+          }
+        });
+      } else {
+        await this._resultsTocResultRepository.updateResultByInitiative(result_id, [...initiativeArray, result_toc_result.initiative_id], user.id);
+        let RtR = await this._resultsTocResultRepository.getRTRById(result_toc_result?.result_toc_result_id, result_id, result_toc_result?.initiative_id);
+        if (RtR) {
+          if (result.result_level_id == 2) {
+            RtR.action_area_outcome_id = result_toc_result?.action_area_outcome_id || null;
+          } else {
+            RtR.toc_result_id = result_toc_result?.toc_result_id || null;
+          }
+          RtR.is_active = true;
+          RtR.last_updated_by = user.id;
+          RtR.planned_result = result_toc_result.planned_result;
+          await this._resultsTocResultRepository.save(RtR);
+        } else if (result_toc_result) {
+          const newRtR = new ResultsTocResult();
+          newRtR.version_id = vrs.id;
+          newRtR.initiative_id = result_toc_result?.initiative_id;
+          newRtR.created_by = user.id;
+          newRtR.last_updated_by = user.id;
+          newRtR.results_id = result.id;
+          newRtR.planned_result = result_toc_result.planned_result;
+          if (result.result_level_id == 2) {
+            newRtR.action_area_outcome_id = result_toc_result?.action_area_outcome_id || null;
+          } else {
+            newRtR.toc_result_id = result_toc_result?.toc_result_id || null;
+          }
+          newRtR.planned_result = result_toc_result?.planned_result || null;
+          await this._resultsTocResultRepository.save(newRtR);
+        }
+
+
+        if (contributors_result_toc_result?.length) {
+          contributors_result_toc_result = contributors_result_toc_result.filter(el => initiativeArray.includes(el.initiative_id));
+          let RtRArray: ResultsTocResult[] = [];
+          for (let index = 0; index < contributors_result_toc_result.length; index++) {
+            let RtR = await this._resultsTocResultRepository.getRTRById(contributors_result_toc_result[index].result_toc_result_id, result_id, contributors_result_toc_result[index].initiative_id);
+            if (RtR) {
+              if (result.result_level_id == 2) {
+                RtR.action_area_outcome_id = contributors_result_toc_result[index]?.action_area_outcome_id || null;
+              } else {
+                RtR.toc_result_id = contributors_result_toc_result[index]?.toc_result_id || null;
+              }
+              RtR.is_active = true;
+              RtR.planned_result = contributors_result_toc_result[index]?.planned_result;
+              RtR.last_updated_by = user.id;
+              RtRArray.push(RtR);
+            } else {
+              const newRtR = new ResultsTocResult();
+              newRtR.version_id = vrs.id;
+              newRtR.created_by = user.id;
+              newRtR.last_updated_by = user.id;
+              newRtR.planned_result = contributors_result_toc_result[index]?.planned_result;
+              newRtR.results_id = result.id;
+              newRtR.initiative_id = contributors_result_toc_result[index]?.initiative_id || null;
+              if (result.result_level_id == 2) {
+                newRtR.action_area_outcome_id = contributors_result_toc_result[index]?.action_area_outcome_id || null;
+              } else {
+                newRtR.toc_result_id = contributors_result_toc_result[index]?.toc_result_id || null;
+              }
+              newRtR.planned_result = contributors_result_toc_result[index]?.planned_result || null;
+              RtRArray.push(newRtR);
+            }
+
+          }
+          await this._resultsTocResultRepository.save(RtRArray);
+        }
+      }
 
       return {
         response: {},
@@ -151,41 +260,8 @@ export class ResultsTocResultsService {
   }
 
   private validResultRocResult(planned_result?: boolean, outcome_id?: number, toc_result_id?: number) {
-    return !((!planned_result && !outcome_id) ||
-      (planned_result && !toc_result_id));
-  }
-
-  private async resultTocResultSave(result_toc_result: resultToResultInterfaceToc, result_planned: boolean, user: TokenDto, result_id: number, versionId: number) {
-    const resultTocExists = await this._resultsTocResultRepository.getAllResultTocResultByResultId(result_id);
-
-    if (resultTocExists) {
-      resultTocExists.last_updated_by = user.id
-      resultTocExists.planned_result = result_planned;
-      if (result_planned) {
-        resultTocExists.toc_result_id = result_toc_result.toc_result_id;
-        resultTocExists.action_area_outcome_id = null;
-      } else {
-        resultTocExists.toc_result_id = null;
-        resultTocExists.action_area_outcome_id = result_toc_result.outcome_id;
-
-      }
-      return resultTocExists;
-    } else {
-      const newResltTocResult = new ResultsTocResult();
-      newResltTocResult.planned_result = result_planned;
-      if (result_planned) {
-        newResltTocResult.toc_result_id = result_toc_result.toc_result_id;
-        newResltTocResult.action_area_outcome_id = null;
-      } else {
-        newResltTocResult.toc_result_id = null;
-        newResltTocResult.action_area_outcome_id = result_toc_result.outcome_id;
-      }
-      newResltTocResult.results_id = result_id;
-      newResltTocResult.last_updated_by = user.id;
-      newResltTocResult.created_by = user.id;
-      newResltTocResult.version_id = versionId;
-      return newResltTocResult;
-    }
+    return ((!planned_result && outcome_id) ||
+      (planned_result && toc_result_id));
   }
 
 
@@ -195,34 +271,65 @@ export class ResultsTocResultsService {
 
   async getTocByResult(resultId: number) {
     try {
+
+      const result = await this._resultRepository.getResultById(resultId);
+      const resultInit = await this._resultByInitiativesRepository.getOwnerInitiativeByResult(resultId);
       const conInit = await this._resultByInitiativesRepository.getContributorInitiativeByResult(resultId);
       const npProject = await this._nonPooledProjectRepository.getAllNPProjectByResultId(resultId);
       const resCenters = await this._resultsCenterRepository.getAllResultsCenterByResultId(resultId);
-      let resTocRes = await this._resultsTocResultRepository.getAllResultTocResultByResultId(resultId);
-      let conResTocRes = await this._resultsTocResultRepository.getAllResultTocResultContributorsByResultIdAndInitId(resultId, conInit.map(el => el.id));
-      if (resTocRes) {
-        resTocRes.planned_result = !!resTocRes?.planned_result || null;
-      } else {
-        resTocRes = null;
+      let impactAreaArray = await this._clarisaImpactAreaRepository.getAllImpactArea();
+      let resTocRes: any[] = [];
+      let conResTocRes: any[] = [];
+      if (result.result_level_id != 2 && result.result_level_id != 1) {
+        resTocRes = await this._resultsTocResultRepository.getRTRPrimary(resultId, [resultInit.id], true);
+        if (!resTocRes?.length) {
+          resTocRes = [{
+            action_area_outcome_id: null,
+            toc_result_id: null,
+            planned_result: null,
+            results_id: resultId,
+            initiative_id: resultInit.id,
+            short_name: resultInit.short_name,
+            official_code: resultInit.official_code
+          }]
+        }
+        resTocRes[0]['toc_level_id'] = resTocRes[0]['planned_result'] != null && resTocRes[0]['planned_result'] == 0 ? 3 : resTocRes[0]['toc_level_id'];
+        conResTocRes = await this._resultsTocResultRepository.getRTRPrimary(resultId, [resultInit.id], false, conInit.map(el => el.id));
+        conResTocRes.map(el => {
+          el['toc_level_id'] = el['planned_result'] == 0 && el['planned_result'] != null ? 3 : el['toc_level_id'];
+        })
+      } else if (result.result_level_id == 2) {
+        resTocRes = await this._resultsTocResultRepository.getRTRPrimaryActionArea(resultId, [resultInit.id], true);
+        if (!resTocRes?.length) {
+          resTocRes = [{
+            action_area_outcome_id: null,
+            toc_result_id: null,
+            planned_result: null,
+            results_id: resultId,
+            initiative_id: resultInit.id,
+            short_name: resultInit.short_name,
+            official_code: resultInit.official_code
+          }]
+        }
+        conResTocRes = await this._resultsTocResultRepository.getRTRPrimaryActionArea(resultId, [resultInit.id], false, conInit.map(el => el.id));
+      }else if (result.result_level_id == 1) {
+        const resultsImpactAreaIndicator = await this._resultsImpactAreaIndicatorRepository.ResultsImpactAreaIndicatorByResultId(resultId);
+        const resultsImpactAreaTarget = await this._resultsImpactAreaTargetRepository.resultsImpactAreaTargetByResultId(resultId);
+        impactAreaArray.map(el => {
+          el['target'] = resultsImpactAreaTarget.filter(t => t.impact_area_id == el.id);
+          el['indicators'] = resultsImpactAreaIndicator.filter(t => t.impact_area_id == el.id)
+        })
+
       }
 
-      if (conResTocRes.length) {
-        conResTocRes.map(el => { el.planned_result = !!el?.planned_result || null });
-      } else {
-        conResTocRes = [];
-      }
       return {
         response: {
           contributing_initiatives: conInit,
           contributing_np_projects: npProject,
           contributing_center: resCenters,
-          result_toc_result: resTocRes || {
-            action_area_outcome_id: null,
-            toc_result_id: null,
-            planned_result: null,
-            results_id: resultId
-          },
-          contributors_result_toc_result: conResTocRes
+          result_toc_result: result.result_level_id == 1?null:resTocRes[0],
+          contributors_result_toc_result: result.result_level_id == 1?null:conResTocRes,
+          impacts: result.result_level_id == 1?impactAreaArray:null
         },
         message: 'The toc data is successfully created',
         status: HttpStatus.OK,
@@ -244,6 +351,6 @@ export class ResultsTocResultsService {
 interface resultToResultInterfaceToc {
   toc_result_id?: number;
   results_id: number;
-  outcome_id?: number;
+  action_area_outcome_id?: number;
   planned_result: boolean;
 }

@@ -87,7 +87,7 @@ export interface FAIR {
 
 export class MQAPResultDto {
   Title: string;
-  Authors: string[];
+  Authors: string | string[];
   Handle: string;
   Keywords: string[];
   Description: string;
@@ -95,15 +95,16 @@ export class MQAPResultDto {
   'Open Access': string;
   DOI: string;
   'Publication Date': string;
-  Countries: string;
+  Countries: string | string[];
   'Action Area': string;
   Affiliation: Affiliation[];
   'Impact Area': string;
   ORCID: string;
-  'Region of the research': string;
+  'Region of the research': string | string[];
   Type: string;
   ISI: string;
   'Peer-reviewed': string;
+  'Funding source': Affiliation[];
   Citation: string;
   Language: string;
   Journal: string;

@@ -8,6 +8,33 @@ export class ClarisaInstitutionsRepository extends Repository<ClarisaInstitution
     super(ClarisaInstitution, dataSource.createEntityManager());
   }
 
+  async getMostRecentLastUpdated() {
+    const query = `
+    select
+      cast(
+        truncate(
+          unix_timestamp(
+            max(ci.last_updated_date)
+          ), 3
+        ) * 1000 as unsigned integer
+      ) as most_recent
+    from
+      clarisa_institutions ci
+    order by
+      ci.last_updated_date
+    `;
+    try {
+      const queryResult = this.query(query);
+      return queryResult;
+    } catch (error) {
+      throw {
+        message: `[${ClarisaInstitutionsRepository.name}] => getMostRecentLastUpdated error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
   async deleteAllData() {
     const queryData = `
     DELETE FROM clarisa_institutions;
@@ -51,13 +78,13 @@ export class ClarisaInstitutionsRepository extends Repository<ClarisaInstitution
   }
 
   async getValidInstitution(institutions: institutionsInterface[]) {
-    const id = institutions.map(el => el.institutions_id);
+    const id = institutions.map((el) => el.institutions_id);
     let values = '';
     for (let index = 0; index < id.length; index++) {
-      if(!values){
-        values = `values row(${id[index]})`
-      }else{
-        values += `, row(${id[index]})`
+      if (!values) {
+        values = `values row(${id[index]})`;
+      } else {
+        values += `, row(${id[index]})`;
       }
     }
     const queryData = `
@@ -84,6 +111,6 @@ export class ClarisaInstitutionsRepository extends Repository<ClarisaInstitution
   }
 }
 
-interface institutionsInterface{
+interface institutionsInterface {
   institutions_id: number;
 }

@@ -13,10 +13,14 @@ import { ResultCountry } from './result-countries/entities/result-country.entity
 import { LinkedResultsModule } from './linked-results/linked-results.module';
 import { EvidencesModule } from './evidences/evidences.module';
 import { ResultsKnowledgeProductsModule } from './results-knowledge-products/results-knowledge-products.module';
-import { TocResult } from '../../toc/toc-results/entities/toc-result.entity';
 import { NonPooledProjectsModule } from './non-pooled-projects/non-pooled-projects.module';
 import { ResultsCentersModule } from './results-centers/results-centers.module';
 import { ResultsTocResultsModule } from './results-toc-results/results-toc-results.module';
+import { CapdevsDeliveryMethodsModule } from './capdevs-delivery-methods/capdevs-delivery-methods.module';
+import { CapdevsTermsModule } from './capdevs-terms/capdevs-terms.module';
+import { SummaryModule } from './summary/summary.module';
+import { ResultsImpactAreaIndicatorsModule } from './results-impact-area-indicators/results-impact-area-indicators.module';
+import { ResultsImpactAreaTargetModule } from './results-impact-area-target/results-impact-area-target.module';
 
 export const ResultsRoutes: Routes = [
   {
@@ -86,5 +90,25 @@ export const ResultsRoutes: Routes = [
   {
     path: 'toc',
     module: ResultsTocResultsModule
+  },
+  {
+    path: 'capdevs-delivery-methods',
+    module: CapdevsDeliveryMethodsModule
+  },
+  {
+    path: 'capdevs-terms',
+    module: CapdevsTermsModule
+  },
+  {
+    path: 'summary',
+    module: SummaryModule
+  },
+  {
+    path: 'impact-area-indicators',
+    module: ResultsImpactAreaIndicatorsModule
+  },
+  {
+    path: 'impact-area-target',
+    module: ResultsImpactAreaTargetModule
   }
 ];

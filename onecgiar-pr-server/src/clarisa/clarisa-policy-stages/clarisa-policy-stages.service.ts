@@ -1,15 +1,33 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { CreateClarisaPolicyStageDto } from './dto/create-clarisa-policy-stage.dto';
 import { UpdateClarisaPolicyStageDto } from './dto/update-clarisa-policy-stage.dto';
+import { HandlersError } from '../../shared/handlers/error.utils';
+import { ClarisaPolicyStageRepository } from './clarisa-policy-stages.repository';
 
 @Injectable()
 export class ClarisaPolicyStagesService {
+
+  constructor(
+    private readonly _handlersError: HandlersError,
+    private readonly _clarisaPolicyStageRepository: ClarisaPolicyStageRepository
+  ){}
+
   create(createClarisaPolicyStageDto: CreateClarisaPolicyStageDto) {
     return 'This action adds a new clarisaPolicyStage';
   }
 
-  findAll() {
-    return `This action returns all clarisaPolicyStages`;
+  async findAll() {
+    try {
+      const clarisaPolicyStage = await this._clarisaPolicyStageRepository.find();
+      
+      return {
+        response: clarisaPolicyStage,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      this._handlersError.returnErrorRes({error, debug: true})
+    }
   }
 
   findOne(id: number) {

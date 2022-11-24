@@ -26,6 +26,18 @@ export class ClarisaInitiativesRepository extends Repository<ClarisaInitiative> 
     }
   }
 
+  async getAllInitiatives() {
+    try {
+      return this.find();
+    } catch (error) {
+      throw {
+        message: `[${ClarisaInitiativesRepository.name}] => getAllInitiatives error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
   async getTocIdFromOst() {
     const queryData = `
     select 
@@ -75,7 +87,9 @@ export class ClarisaInitiativesRepository extends Repository<ClarisaInitiative> 
       		and rbi2.initiative_role_id = 1);
     `;
     try {
-      const initiative: ClarisaInitiative[] = await this.query(queryData, [resultId]);
+      const initiative: ClarisaInitiative[] = await this.query(queryData, [
+        resultId,
+      ]);
       return initiative;
     } catch (error) {
       throw {

@@ -59,7 +59,7 @@ export class NonPooledProjectRepository extends Repository<NonPooledProject> {
       	and npp.grant_title = ?;
     `;
     try {
-      const npProject: NonPooledProject[] = await this.query(queryData, [resultId, grantTitle]);
+      const npProject: NonPooledProject[] = await this.query(queryData, [resultId, grantTitle || null]);
       return npProject?.length? npProject[0]: undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -80,8 +80,8 @@ export class NonPooledProjectRepository extends Repository<NonPooledProject> {
       npp.created_date,
       npp.last_updated_date,
       npp.results_id,
-      npp.lead_center_id,
-      npp.funder_institution_id,
+      npp.lead_center_id as lead_center,
+      npp.funder_institution_id as funder,
       npp.created_by,
       npp.last_updated_by
       from non_pooled_project npp

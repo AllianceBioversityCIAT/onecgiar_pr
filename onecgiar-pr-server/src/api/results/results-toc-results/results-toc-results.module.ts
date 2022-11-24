@@ -9,10 +9,29 @@ import { ResultByInitiativesRepository } from '../results_by_inititiatives/resul
 import { VersionsService } from '../versions/versions.service';
 import { VersionRepository } from '../versions/version.repository';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
+import { ResultRepository } from '../result.repository';
+import { TocResultsRepository } from '../../../toc/toc-results/toc-results.repository';
+import { ResultsImpactAreaTargetRepository } from '../results-impact-area-target/results-impact-area-target.repository';
+import { ResultsImpactAreaIndicatorRepository } from '../results-impact-area-indicators/results-impact-area-indicators.repository';
+import { ClarisaImpactAreaRepository } from '../../../clarisa/clarisa-impact-area/ClarisaImpactArea.repository';
 
 @Module({
   controllers: [ResultsTocResultsController],
-  providers: [ResultsTocResultsService, HandlersError, ResultsTocResultRepository, NonPooledProjectRepository, ResultsCenterRepository, ResultByInitiativesRepository, VersionsService, VersionRepository, UserRepository],
+  providers: [ResultsTocResultsService,
+    HandlersError,
+    ResultsTocResultRepository,
+    NonPooledProjectRepository,
+    ResultsCenterRepository,
+    ResultByInitiativesRepository,
+    VersionsService,
+    VersionRepository,
+    UserRepository,
+    ResultRepository,
+    TocResultsRepository,
+    ResultsImpactAreaTargetRepository,
+    ResultsImpactAreaIndicatorRepository,
+    ClarisaImpactAreaRepository
+  ],
   exports: [
     ResultsTocResultRepository
   ]

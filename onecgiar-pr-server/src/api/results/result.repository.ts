@@ -65,25 +65,40 @@ export class ResultRepository extends Repository<Result> {
     const queryData = `
     SELECT
     r.id,
-    r.title,
-    r.reported_year_id AS reported_year,
-    rt.name AS result_type,
-    r.created_date,
-    ci.official_code AS submitter,
-    ci.id AS submitter_id,
+    r.description,
+    r.is_active,
+    r.last_updated_date,
+    r.gender_tag_level_id,
+    r.version_id,
+    r.result_type_id,
     r.status,
-    IF(r.status = 0, 'Editing', 'Submitted') AS status_name,
+    r.created_by,
+    r.last_updated_by,
+    r.reported_year_id,
+    r.created_date,
+    r.result_level_id,
+    r.title,
+    r.legacy_id,
     r.no_applicable_partner,
-    if(r.geographic_scope_id in (3, 4), 3, r.geographic_scope_id ) as geographic_scope_id
+    r.geographic_scope_id,
+    rbi.inititiative_id as initiative_id,
+    rl.name as result_level_name,
+    rt.name as result_type_name,
+    r.has_regions,
+    r.has_countries,
+    ci.name as initiative_name,
+    ci.short_name as initiative_short_name,
+    ci.official_code as initiative_official_code
 FROM
     result r
-    INNER JOIN result_type rt ON rt.id = r.result_type_id
-    INNER JOIN results_by_inititiative rbi ON rbi.result_id = r.id
-    INNER JOIN clarisa_initiatives ci ON ci.id = rbi.inititiative_id
+    inner join results_by_inititiative rbi ON rbi.result_id = r.id 
+    									and rbi.is_active > 0
+                      and rbi.initiative_role_id = 1
+    inner join result_level rl on rl.id = r.result_level_id 
+    inner join result_type rt on rt.id = r.result_type_id 
+    inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
 WHERE
-    r.is_active > 0
-    AND rbi.is_active > 0
-    AND ci.active > 0;
+    r.is_active > 0;
     `;
 
     try {
@@ -168,6 +183,7 @@ FROM
 WHERE
     r.is_active > 0
     AND rbi.is_active > 0
+    AND rbi.initiative_role_id = 1
     AND ci.active > 0;
     `;
 
@@ -301,13 +317,18 @@ WHERE
     rl.name as result_level_name,
     rt.name as result_type_name,
     r.has_regions,
-    r.has_countries 
+    r.has_countries,
+    ci.name as initiative_name,
+    ci.short_name as initiative_short_name,
+    ci.official_code as initiative_official_code
 FROM
     result r
     inner join results_by_inititiative rbi ON rbi.result_id = r.id 
     									and rbi.is_active > 0
+                      and rbi.initiative_role_id = 1
     inner join result_level rl on rl.id = r.result_level_id 
     inner join result_type rt on rt.id = r.result_type_id 
+    inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
 WHERE
     r.is_active > 0
     and r.id = ?;

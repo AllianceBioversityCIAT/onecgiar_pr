@@ -4,30 +4,37 @@ export class TheoryOfChangeBody {
   contributing_np_projects: donorInterfaceToc[] = [];
   contributing_center: centerInterfacesToc[] = [];
   result_toc_result: resultToResultInterfaceToc = new resultToResultInterfaceToc();
-  contributors_result_toc_result: contributorsResultToResultInterfaceToc[] = [];
+  contributors_result_toc_result: resultToResultInterfaceToc[] = [];
 }
 interface initiativeInterfaces {
   id: number;
 }
+
 interface institutionsInterfaceToc {
   institutions_id: number;
 }
+
 export class donorInterfaceToc {
-  funder?: institutionsInterfaceToc;
-  grant_title?: string = '';
-  center_grant_id?: string = '';
-  lead_center?: centerInterfacesToc = null;
+  funder: institutionsInterfaceToc;
+  grant_title: string;
+  center_grant_id: string;
+  lead_center: string;
 }
 interface centerInterfacesToc {
   code: string;
   primary?: boolean;
+  name: string;
 }
+
 export class resultToResultInterfaceToc {
+  result_toc_result_id?: number = null;
   toc_result_id?: number = null;
-  outcome_id?: number = null;
+  action_area_outcome_id?: number = null;
   results_id: number = null;
   planned_result: boolean = null;
-}
-export class contributorsResultToResultInterfaceToc {
-  result_toc_result: resultToResultInterfaceToc;
+  id: number = null;
+  short_name: string = null;
+  official_code: string = null;
+  initiative_id: number | string = null;
+  toc_level_id?: number | string = null;
 }
