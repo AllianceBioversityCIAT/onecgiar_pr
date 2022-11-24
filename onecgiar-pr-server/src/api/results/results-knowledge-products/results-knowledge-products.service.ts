@@ -370,7 +370,10 @@ export class ResultsKnowledgeProductsService {
             re.map((e) => {
               this._evidenceRepository.update(
                 { id: e.id },
-                { knowledge_product_related: newResult.id },
+                {
+                  knowledge_product_related: newResult.id,
+                  result_id: newResult.id,
+                },
               );
             }),
           );
