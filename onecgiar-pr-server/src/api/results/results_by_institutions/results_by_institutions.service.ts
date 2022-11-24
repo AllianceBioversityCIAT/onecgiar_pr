@@ -128,9 +128,10 @@ export class ResultsByInstitutionsService {
                 rkpi.predicted_institution_id;
               mqapInstitution.result_kp_mqap_institution_id =
                 rkpi.result_kp_mqap_institution_id;
-              mqapInstitution.user_matched_institution = institutions.find(
-                (i) => i.id === rkpi.results_by_institutions_id,
-              );
+              mqapInstitution.user_matched_institution =
+                institutions.find(
+                  (i) => i.id === rkpi.results_by_institutions_id,
+                ) ?? new ResultsByInstitution();
 
               return mqapInstitution;
             });
