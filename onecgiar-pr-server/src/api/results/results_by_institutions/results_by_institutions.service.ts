@@ -16,6 +16,7 @@ import { UserRepository } from '../../../auth/modules/user/repositories/user.rep
 import { ResultsKnowledgeProductsRepository } from '../results-knowledge-products/repositories/results-knowledge-products.repository';
 import { ResultsKnowledgeProductInstitutionRepository } from '../results-knowledge-products/repositories/results-knowledge-product-institution.repository';
 import { IsNull } from 'typeorm';
+import { MQAPInstitutionDto } from './dto/mqap-institutions.dto';
 
 @Injectable()
 export class ResultsByInstitutionsService {
@@ -96,20 +97,25 @@ export class ResultsByInstitutionsService {
             result_knowledge_product_institution_array: true,
           },
         });
-      let unmapped_mqap_institutions = null;
+      let mqap_institutions: MQAPInstitutionDto[] = null;
 
       if (knowledgeProduct) {
-        unmapped_mqap_institutions =
-          knowledgeProduct.result_knowledge_product_institution_array.filter(
-            (rkpi) => rkpi.results_by_institutions_id == null,
-          );
-        // mapped institution
-        institutions.map((inst) => {
-          inst['mapped_mqap_institutions'] =
-            knowledgeProduct.result_knowledge_product_institution_array
-              .filter((rkpi) => rkpi.results_by_institutions_id == inst.id)
-              .map((rkpi) => rkpi.result_kp_mqap_institution_id);
-        });
+        mqap_institutions =
+          knowledgeProduct.result_knowledge_product_institution_array
+            .filter((rkpi) => rkpi.is_active)
+            .map((rkpi) => {
+              const mqapInstitution: MQAPInstitutionDto =
+                new MQAPInstitutionDto();
+
+              mqapInstitution.confidant = rkpi.confidant;
+              mqapInstitution.intitution_name = rkpi.intitution_name;
+              mqapInstitution.predicted_institution_id =
+                rkpi.predicted_institution_id;
+              mqapInstitution.result_kp_mqap_institution_id =
+                rkpi.result_kp_mqap_institution_id;
+
+              return mqapInstitution;
+            });
       }
 
       if (institutions.length) {
@@ -129,7 +135,7 @@ export class ResultsByInstitutionsService {
         response: {
           no_applicable_partner: result.no_applicable_partner ? true : false,
           institutions,
-          unmapped_mqap_institutions,
+          mqap_institutions,
         },
         message: 'Successful response',
         status: HttpStatus.OK,
