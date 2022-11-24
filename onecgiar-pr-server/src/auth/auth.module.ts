@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtModule, JwtService } from '@nestjs/jwt';
@@ -45,4 +45,14 @@ import { RestrictionsModule } from './modules/restrictions/restrictions.module';
   ],
   exports: [BcryptPasswordEncoder, JwtMiddleware, AuthService, JwtService],
 })
-export class AuthModule {}
+export class AuthModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(JwtMiddleware).forRoutes(
+      {
+        path: '/auth/singin/pusher/result/:resultId',
+        method: RequestMethod.POST,
+      }
+    );
+  }
+}
+
