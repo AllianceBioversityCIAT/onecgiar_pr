@@ -12,6 +12,12 @@
         </app-pr-input>
     </div>
     <app-pr-field-header label="Authors" [required]="false"></app-pr-field-header>
+    <div class="custom_chips">
+        <div class="author" *ngFor="let item of knowledgeProductBody.authors">
+            {{item}}
+        </div>
+    </div>
+
     <app-pr-input [(ngModel)]="knowledgeProductBody.type" label="Knowledge product type" [required]="false"
         [readOnly]="true">
     </app-pr-input>

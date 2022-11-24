@@ -20,6 +20,7 @@ export class KnowledgeProductInfoComponent implements OnInit {
   getSectionInformation() {
     this.api.resultsSE.GET_resultknowledgeProducts().subscribe(({ response }) => {
       this.knowledgeProductBody = this._mapFields(response as KnowledgeProductBody);
+      console.log(this.knowledgeProductBody);
     });
   }
 
@@ -77,11 +78,5 @@ export class KnowledgeProductInfoComponent implements OnInit {
     mapped.is_isi_WOS = response.metadataWOS?.is_isi;
     mapped.accessibility_WOS = response.metadataWOS?.accessibility;
     mapped.year_WOS = response.metadataWOS?.issue_year;
-  }
-
-  onSaveSection() {
-    // this.api.resultsSE.GET_resultknowledgeProducts().subscribe(resp => {
-    //   console.log(resp);
-    // });
   }
 }
