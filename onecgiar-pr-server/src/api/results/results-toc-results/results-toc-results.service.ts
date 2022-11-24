@@ -37,7 +37,7 @@ export class ResultsTocResultsService {
     private readonly _tocResultsRepository: TocResultsRepository,
     private readonly _resultsImpactAreaTargetRepository: ResultsImpactAreaTargetRepository,
     private readonly _resultsImpactAreaIndicatorRepository: ResultsImpactAreaIndicatorRepository,
-    private readonly _clarisaImpactAreaRepository: ClarisaImpactAreaRepository
+    private readonly _clarisaImpactAreaRepository: ClarisaImpactAreaRepository,
   ) { }
 
   async create(createResultsTocResultDto: CreateResultsTocResultDto, user: TokenDto) {
@@ -139,41 +139,45 @@ export class ResultsTocResultsService {
       if (result.result_level_id == 1) {
         impacts.forEach(async ({id, indicators, target}) => {
           if(indicators?.length){
-            await this._resultsImpactAreaIndicatorRepository.updateResultImpactAreaIndicators(result_id, id, indicators?.map(el => el.targetId), user.id);
+            await this._resultsImpactAreaIndicatorRepository.updateResultImpactAreaIndicators(result_id, id, indicators?.map(el => el.id), user.id);
             let IndicatorArray: ResultsImpactAreaIndicator[] = [];
             for (let index = 0; index < indicators.length; index++) {
-              const {targetId} = indicators[index];
-              const resultsImpactAreaIndicatorData = await this._resultsImpactAreaIndicatorRepository.ResultsImpactAreaIndicatorExists(result_id, targetId);
+              const {id: indicatorId} = indicators[index];
+              const resultsImpactAreaIndicatorData = await this._resultsImpactAreaIndicatorRepository.ResultsImpactAreaIndicatorExists(result_id, indicatorId);
               if(!resultsImpactAreaIndicatorData){
                 const newIndicator = new ResultsImpactAreaIndicator();
                 newIndicator.created_by = user.id;
                 newIndicator.last_updated_by = user.id;
                 newIndicator.result_id = result.id;
-                newIndicator.impact_area_indicator_id = targetId;
+                newIndicator.impact_area_indicator_id = indicatorId;
                 newIndicator.version_id = vrs.id;
                 IndicatorArray.push(newIndicator);
               }
             }
             await this._resultsImpactAreaIndicatorRepository.save(IndicatorArray);
+          }else{
+            await this._resultsImpactAreaIndicatorRepository.updateResultImpactAreaIndicators(result_id, id, [], user.id);
           }
 
           if(target?.length){
-            await this._resultsImpactAreaTargetRepository.updateResultImpactAreaTarget(result_id, id, target?.map(el => el.id), user.id);
+            await this._resultsImpactAreaTargetRepository.updateResultImpactAreaTarget(result_id, id, target?.map(el => el.targetId), user.id);
             let TargetArray: ResultsImpactAreaTarget[] = [];
             for (let index = 0; index < target.length; index++) {
-              const {id} = target[index];
-              const resultsImpactAreaTargetData = await this._resultsImpactAreaTargetRepository.resultsImpactAreaTargetExists(result_id, id);
+              const {targetId} = target[index];
+              const resultsImpactAreaTargetData = await this._resultsImpactAreaTargetRepository.resultsImpactAreaTargetExists(result_id, targetId);
               if(!resultsImpactAreaTargetData){
                 const newTarget = new ResultsImpactAreaTarget();
                 newTarget.created_by = user.id;
                 newTarget.last_updated_by = user.id;
                 newTarget.result_id = result.id;
-                newTarget.impact_area_target_id = id;
+                newTarget.impact_area_target_id = targetId;
                 newTarget.version_id = vrs.id;
                 TargetArray.push(newTarget);
               }
             }
             await this._resultsImpactAreaTargetRepository.save(TargetArray);
+          }else{
+            await this._resultsImpactAreaTargetRepository.updateResultImpactAreaTarget(result_id, id, [], user.id);
           }
         });
       } else {
@@ -273,6 +277,7 @@ export class ResultsTocResultsService {
       const conInit = await this._resultByInitiativesRepository.getContributorInitiativeByResult(resultId);
       const npProject = await this._nonPooledProjectRepository.getAllNPProjectByResultId(resultId);
       const resCenters = await this._resultsCenterRepository.getAllResultsCenterByResultId(resultId);
+      let impactAreaArray = await this._clarisaImpactAreaRepository.getAllImpactArea();
       let resTocRes: any[] = [];
       let conResTocRes: any[] = [];
       if (result.result_level_id != 2 && result.result_level_id != 1) {
@@ -308,6 +313,12 @@ export class ResultsTocResultsService {
         }
         conResTocRes = await this._resultsTocResultRepository.getRTRPrimaryActionArea(resultId, [resultInit.id], false, conInit.map(el => el.id));
       }else if (result.result_level_id == 1) {
+        const resultsImpactAreaIndicator = await this._resultsImpactAreaIndicatorRepository.ResultsImpactAreaIndicatorByResultId(resultId);
+        const resultsImpactAreaTarget = await this._resultsImpactAreaTargetRepository.resultsImpactAreaTargetByResultId(resultId);
+        impactAreaArray.map(el => {
+          el['target'] = resultsImpactAreaTarget.filter(t => t.impact_area_id == el.id);
+          el['indicators'] = resultsImpactAreaIndicator.filter(t => t.impact_area_id == el.id)
+        })
 
       }
 
@@ -316,8 +327,9 @@ export class ResultsTocResultsService {
           contributing_initiatives: conInit,
           contributing_np_projects: npProject,
           contributing_center: resCenters,
-          result_toc_result: resTocRes[0],
-          contributors_result_toc_result: conResTocRes
+          result_toc_result: result.result_level_id == 1?null:resTocRes[0],
+          contributors_result_toc_result: result.result_level_id == 1?null:conResTocRes,
+          impacts: result.result_level_id == 1?impactAreaArray:null
         },
         message: 'The toc data is successfully created',
         status: HttpStatus.OK,

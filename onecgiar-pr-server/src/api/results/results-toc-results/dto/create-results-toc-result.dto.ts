@@ -13,8 +13,8 @@ interface ResultTocImpactsInterface{
     id: number;
     name: string;
     description: string;
-    target: indicatorsTocInterface[];
-    indicators: targetTocInterface[];
+    target: targetTocInterface[];
+    indicators: indicatorsTocInterface[];
 }
 
 interface targetTocInterface{

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultsImpactAreaTarget } from './entities/results-impact-area-target.entity';
+import { GetImpactTargetAreaDto } from './dto/get-impact-target-area.dto';
 
 
 @Injectable()
@@ -44,7 +45,7 @@ export class ResultsImpactAreaTargetRepository extends Repository<ResultsImpactA
   }
 
 
-  async resultsImpactAreaTargetByInstitutions(resultId: number) {
+  async resultsImpactAreaTargetByResultId(resultId: number) {
     const queryData = `
     SELECT
       riat.result_impact_area_target_id,
@@ -55,14 +56,17 @@ export class ResultsImpactAreaTargetRepository extends Repository<ResultsImpactA
       riat.impact_area_target_id,
       riat.version_id,
       riat.created_by,
-      riat.last_updated_by
+      riat.last_updated_by,
+      cgt.impactAreaId as impact_area_id
     FROM
       results_impact_area_target riat
+      inner join clarisa_global_targets cgt ON cgt.targetId = riat.impact_area_target_id 
     WHERE
-      riat.result_id = ?;
+      riat.result_id = ?
+      and riat.is_active > 0;
     `;
     try {
-      const resultTocResult: ResultsImpactAreaTarget[] = await this.query(queryData, [resultId]);
+      const resultTocResult: GetImpactTargetAreaDto[] = await this.query(queryData, [resultId]);
       return resultTocResult;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -92,7 +96,7 @@ export class ResultsImpactAreaTargetRepository extends Repository<ResultsImpactA
     update results_impact_area_target riat
     inner join clarisa_global_targets cgt on cgt.targetId = riat.impact_area_target_id  
     inner join clarisa_impact_areas cia on cia.id = cgt.impactAreaId 
-      set riat.is_active  = 0,
+      set riat.is_active  = 1,
         riat.last_updated_date  = NOW(),
         riat.last_updated_by  = ?
       where riat.result_id  = ?
