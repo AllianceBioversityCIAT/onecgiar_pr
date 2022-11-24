@@ -1,7 +1,7 @@
 export class GetImpactTargetAreaDto{
     public result_impact_area_target_id: number;
     public result_id: number;
-    public impact_area_target_id: number;
+    public targetId: number;
     public is_active: boolean;
     public version_id: number;
     public created_by: number;

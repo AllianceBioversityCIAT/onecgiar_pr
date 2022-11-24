@@ -53,11 +53,12 @@ export class ResultsImpactAreaTargetRepository extends Repository<ResultsImpactA
       riat.created_date,
       riat.last_updated_date,
       riat.result_id,
-      riat.impact_area_target_id,
+      riat.impact_area_target_id as targetId,
       riat.version_id,
       riat.created_by,
       riat.last_updated_by,
-      cgt.impactAreaId as impact_area_id
+      cgt.impactAreaId as impact_area_id,
+      cgt.target 
     FROM
       results_impact_area_target riat
       inner join clarisa_global_targets cgt ON cgt.targetId = riat.impact_area_target_id 

@@ -51,12 +51,13 @@ export class ResultsImpactAreaIndicatorRepository extends Repository<ResultsImpa
     	riai.is_active,
     	riai.created_date,
     	riai.last_updated_date,
-    	riai.impact_area_indicator_id,
+    	riai.impact_area_indicator_id as id,
     	riai.result_id,
     	riai.version_id,
     	riai.created_by,
     	riai.last_updated_by,
-    	ciai.impact_area_id
+    	ciai.impact_area_id,
+    	ciai.indicator_statement 
     FROM
     	results_impact_area_indicators riai
     	inner join clarisa_impact_area_indicator ciai on ciai.id = riai.impact_area_indicator_id 

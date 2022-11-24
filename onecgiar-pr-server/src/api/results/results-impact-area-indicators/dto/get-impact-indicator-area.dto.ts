@@ -3,7 +3,7 @@ export class GetImpactIndicatorAreaDto{
     public is_active: boolean;
     public created_date: Date;
     public last_updated_date: Date;
-    public impact_area_indicator_id: number;
+    public id: number;
     public result_id: number;
     public version_id: number;
     public created_by: number;
