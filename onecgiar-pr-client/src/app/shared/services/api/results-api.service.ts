@@ -263,4 +263,16 @@ export class ResultsApiService {
   GET_clarisaPolicyStages() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/policy-stages/get/all`);
   }
+
+  GET_AllClarisaImpactAreaIndicators() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/impact-area-indicators/get/all`);
+  }
+
+  GET_AllLarisaImpactArea() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/impact-area/get/all`);
+  }
+
+  GET_AllglobalTarget() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/global-target/get/all`);
+  }
 }
