@@ -88,6 +88,20 @@ export class ResultsByInstitutionsService {
           id,
         );
       const result = await this._resultRepository.getResultById(id);
+
+      if (institutions.length) {
+        const institutionsId: number[] = institutions.map((el) => el.id);
+        const delivery =
+          await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByResultByInstitution(
+            institutionsId,
+          );
+        institutions.map((inst) => {
+          inst['deliveries'] = delivery
+            .filter((dl) => dl.result_by_institution_id == inst.id)
+            .map((res) => res.partner_delivery_type_id);
+        });
+      }
+
       const knowledgeProduct =
         await this._resultKnowledgeProductRepository.findOne({
           where: {
@@ -97,6 +111,7 @@ export class ResultsByInstitutionsService {
             result_knowledge_product_institution_array: true,
           },
         });
+
       let mqap_institutions: MQAPInstitutionDto[] = null;
 
       if (knowledgeProduct) {
@@ -113,22 +128,12 @@ export class ResultsByInstitutionsService {
                 rkpi.predicted_institution_id;
               mqapInstitution.result_kp_mqap_institution_id =
                 rkpi.result_kp_mqap_institution_id;
+              mqapInstitution.user_matched_institution = institutions.find(
+                (i) => i.id === rkpi.results_by_institutions_id,
+              );
 
               return mqapInstitution;
             });
-      }
-
-      if (institutions.length) {
-        const institutionsId: number[] = institutions.map((el) => el.id);
-        const delivery =
-          await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByResultByInstitution(
-            institutionsId,
-          );
-        institutions.map((inst) => {
-          inst['deliveries'] = delivery
-            .filter((dl) => dl.result_by_institution_id == inst.id)
-            .map((res) => res.partner_delivery_type_id);
-        });
       }
 
       return {
@@ -179,6 +184,13 @@ export class ResultsByInstitutionsService {
       if (version.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: version });
       }
+
+      if (data.mqap_institutions?.length) {
+        data.institutions = data.mqap_institutions
+          .filter((ma) => ma.user_matched_institution)
+          .map((ma) => ma.user_matched_institution);
+      }
+
       const result =
         await this._resultByIntitutionsRepository.updateIstitutions(
           data.result_id,
