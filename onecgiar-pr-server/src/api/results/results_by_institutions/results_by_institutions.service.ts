@@ -131,7 +131,7 @@ export class ResultsByInstitutionsService {
               mqapInstitution.user_matched_institution =
                 institutions.find(
                   (i) => i.id === rkpi.results_by_institutions_id,
-                ) ?? new ResultsByInstitution();
+                ) || this.getEmptyResultByInstitution();
 
               return mqapInstitution;
             });
@@ -149,6 +149,22 @@ export class ResultsByInstitutionsService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
+  }
+
+  private getEmptyResultByInstitution(): ResultsByInstitution {
+    const resultByInstitution = new ResultsByInstitution();
+
+    resultByInstitution['id'] = null;
+    resultByInstitution['institutions_id'] = null;
+    resultByInstitution['institutions_name'] = null;
+    resultByInstitution['institutions_acronym'] = null;
+    resultByInstitution['institution_roles_id'] = null;
+    resultByInstitution['version_id'] = null;
+    resultByInstitution['institutions_type_id'] = null;
+    resultByInstitution['institutions_type_name'] = null;
+    resultByInstitution['deliveries'] = [];
+
+    return resultByInstitution;
   }
 
   async savePartnersInstitutionsByResult(
