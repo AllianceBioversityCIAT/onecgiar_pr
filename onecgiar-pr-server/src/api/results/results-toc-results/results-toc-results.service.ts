@@ -319,6 +319,15 @@ export class ResultsTocResultsService {
           el['target'] = resultsImpactAreaTarget.filter(t => t.impact_area_id == el.id);
           el['indicators'] = resultsImpactAreaIndicator.filter(t => t.impact_area_id == el.id)
         })
+        resTocRes = [{
+          action_area_outcome_id: null,
+          toc_result_id: null,
+          planned_result: null,
+          results_id: resultId,
+          initiative_id: resultInit.id,
+          short_name: resultInit.short_name,
+          official_code: resultInit.official_code
+        }]
 
       }
 
@@ -327,7 +336,7 @@ export class ResultsTocResultsService {
           contributing_initiatives: conInit,
           contributing_np_projects: npProject,
           contributing_center: resCenters,
-          result_toc_result: result.result_level_id == 1?null:resTocRes[0],
+          result_toc_result: resTocRes[0],
           contributors_result_toc_result: result.result_level_id == 1?null:conResTocRes,
           impacts: result.result_level_id == 1?impactAreaArray:null
         },
