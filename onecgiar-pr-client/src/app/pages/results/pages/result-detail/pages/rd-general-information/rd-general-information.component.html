@@ -1,6 +1,7 @@
 <app-detail-section-title sectionName="General information"></app-detail-section-title>
 <div class="detail_container">
     <div class="general_header">
+        <h1>COunter: {{this.pusherSE.presenceChannel?.members?.count}}</h1>
         <app-pr-input placeholder="Write some..." label="Result level" type="text" [required]="false" [readOnly]="true"
             [(ngModel)]="this.generalInfoBody.result_level_name">
         </app-pr-input>
