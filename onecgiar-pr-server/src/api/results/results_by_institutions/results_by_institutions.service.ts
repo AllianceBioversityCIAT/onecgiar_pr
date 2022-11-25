@@ -205,7 +205,12 @@ export class ResultsByInstitutionsService {
       if (data.mqap_institutions?.length) {
         data.institutions = data.mqap_institutions
           .filter((ma) => ma.user_matched_institution?.institutions_id)
-          .map((ma) => ma.user_matched_institution);
+          .map((ma) => {
+            const institution = ma.user_matched_institution;
+            institution['institution_mqap_id'] =
+              ma.result_kp_mqap_institution_id;
+            return institution;
+          });
       }
 
       const result =
@@ -243,10 +248,12 @@ export class ResultsByInstitutionsService {
 
             if (knowledgeProduct) {
               const kpInstitution =
-                this._resultsKnowledgeProductInstitutionRepository.findOneBy({
-                  result_kp_mqap_institution_id:
-                    data.institutions[index].institution_mqap_id ?? 0,
-                });
+                await this._resultsKnowledgeProductInstitutionRepository.findOneBy(
+                  {
+                    result_kp_mqap_institution_id:
+                      data.institutions[index].institution_mqap_id ?? 0,
+                  },
+                );
 
               if (kpInstitution) {
                 this._resultsKnowledgeProductInstitutionRepository.update(
@@ -280,6 +287,25 @@ export class ResultsByInstitutionsService {
               );
             }
           } else {
+            if (knowledgeProduct) {
+              const kpInstitution =
+                await this._resultsKnowledgeProductInstitutionRepository.findOneBy(
+                  {
+                    result_kp_mqap_institution_id:
+                      data.institutions[index].institution_mqap_id ?? 0,
+                  },
+                );
+
+              if (kpInstitution) {
+                this._resultsKnowledgeProductInstitutionRepository.update(
+                  {
+                    result_kp_mqap_institution_id:
+                      data.institutions[index].institution_mqap_id,
+                  },
+                  { results_by_institutions_id: isInstitutions.id },
+                );
+              }
+            }
             const delivery = data.institutions[index].deliveries;
             await this._resultByInstitutionsByDeliveriesTypeRepository.inactiveResultDeLivery(
               isInstitutions.id,
