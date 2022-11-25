@@ -13,9 +13,10 @@ import { GeneralInterceptorService } from './shared/interceptors/general-interce
 import { TestEnvironmentLabelComponent } from './shared/components/test-environment-label/test-environment-label.component';
 import { CustomFieldsModule } from './custom-fields/custom-fields.module';
 import { TawkComponent } from './shared/components/tawk/tawk.component';
+import { GoogleAnalyticsComponent } from './shared/components/external-tools/components/google-analytics/google-analytics.component';
 
 @NgModule({
-  declarations: [AppComponent, NavigationBarComponent, FooterComponent, HeaderPanelComponent, ExternalToolsComponent, TestEnvironmentLabelComponent, TawkComponent],
+  declarations: [AppComponent, NavigationBarComponent, FooterComponent, HeaderPanelComponent, ExternalToolsComponent, TestEnvironmentLabelComponent, TawkComponent, GoogleAnalyticsComponent],
   imports: [BrowserModule, AppRoutingModule, BrowserAnimationsModule, HttpClientModule, CustomFieldsModule],
   providers: [{ provide: HTTP_INTERCEPTORS, useClass: GeneralInterceptorService, multi: true }],
   bootstrap: [AppComponent]
