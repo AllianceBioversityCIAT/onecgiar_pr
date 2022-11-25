@@ -11,7 +11,6 @@ export class GoogleAnalyticsComponent implements OnInit {
 
   ngOnInit(): void {
     try {
-      console.log('GTAG');
       var script = document.createElement('script');
       script.src = `https://www.googletagmanager.com/gtag/js?id=${environment.googleAnalyticsId}`;
       document.getElementsByTagName('head')[0].appendChild(script);
