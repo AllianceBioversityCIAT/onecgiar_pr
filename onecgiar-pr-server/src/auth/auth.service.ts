@@ -55,27 +55,36 @@ export class AuthService {
     return `This action removes a #${id} auth`;
   }
 
-  async puserAuth(pusherAuthDot: pusherAuthDot, resultId: number, user: TokenDto){
+  async puserAuth(
+    pusherAuthDot: pusherAuthDot,
+    resultId: number,
+    user: TokenDto,
+  ) {
     try {
-      const uPusher = await this._userRepository.userDataPusher(user.id, resultId);
+      const uPusher = await this._userRepository.userDataPusher(
+        user.id,
+        resultId,
+      );
       const name = `${uPusher.first_name} ${uPusher.last_name}`;
+      const today = new Date();
+      const roles = uPusher.aplication_role;
+      const initiativeRoles = uPusher?.initiative_role ? '1' : null;
+
       const presenceData = {
-        user_id: `${uPusher.user_id}`,
-        user_info: {
-          name: name,
-          aplication_role: uPusher.aplication_role,
-          initiative_role: uPusher?.initiative_role?'1': null,
-          today: new Date()
-        }
+        user_id: user.id,
+        user_info: { name, roles, initiativeRoles, today },
       };
 
-      const auth = this.pusher.authenticate(pusherAuthDot.socket_id,pusherAuthDot.channel_name, presenceData);
+      const auth = this.pusher.authenticate(
+        pusherAuthDot.socket_id,
+        pusherAuthDot.channel_name,
+        presenceData,
+      );
       return {
         response: auth,
         message: 'Successful login pusher',
         status: HttpStatus.ACCEPTED,
       };
-
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
