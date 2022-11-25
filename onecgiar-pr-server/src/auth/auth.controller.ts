@@ -44,19 +44,18 @@ export class AuthController {
     throw new HttpException({ message, response }, status);
   }
 
-  @Post('/singin/pusher/result/:resultId')
+  @Post('/singin/pusher/result/:resultId/:userId')
   async singInPusher(
     @Body() pusherAuthDot: pusherAuthDot,
     @Param('resultId') resultId: number,
-    @Headers() auth: HeadersDto,
+    @Param('userId') userId: number,
+
     ) {
-      const token: TokenDto = <TokenDto>(
-        JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
-      );
+ 
     const { message, response, status } = await this.authService.puserAuth(
       pusherAuthDot,
       resultId,
-      token
+      userId
     );
     throw new HttpException({ message, response }, status);
   }
