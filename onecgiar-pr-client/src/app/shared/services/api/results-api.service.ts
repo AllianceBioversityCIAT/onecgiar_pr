@@ -83,7 +83,16 @@ export class ResultsApiService {
     return this.http.patch<any>(`${this.apiBaseUrl}results-by-institutions/create/partners/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
   GET_partnersSection() {
-    return this.http.get<any>(`${this.apiBaseUrl}results-by-institutions/partners/result/${this.currentResultId}`);
+    return this.http.get<any>(`${this.apiBaseUrl}results-by-institutions/partners/result/${this.currentResultId}`).pipe(
+      map(resp => {
+        resp?.response?.mqap_institutions.map(resp => {
+          console.log(resp?.user_matched_institution?.deliveries);
+          if (!resp?.user_matched_institution?.deliveries?.length) resp.user_matched_institution.deliveries = [3];
+        });
+        return resp;
+      }),
+      this.saveButtonSE.isSavingSectionPipe()
+    );
   }
 
   GET_AllPrmsGeographicScope() {
@@ -163,7 +172,7 @@ export class ResultsApiService {
   }
 
   GET_resultknowledgeProducts() {
-    return this.http.get<any>(`${this.apiBaseUrl}results-knowledge-products/get/result/${this.currentResultId}`);
+    return this.http.get<any>(`${this.apiBaseUrl}results-knowledge-products/get/result/${this.currentResultId}`).pipe(this.saveButtonSE.isSavingSectionPipe());
   }
 
   POST_createWithHandle(body) {
@@ -173,7 +182,7 @@ export class ResultsApiService {
   GET_toc() {
     return this.http.get<any>(`${this.apiBaseUrl}toc/get/result/${this.currentResultId}`).pipe(
       map(resp => {
-        // console.log(resp.response);
+        console.log(resp.response);
         resp?.response?.contributing_initiatives.map(initiative => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name || ''}</strong> - ${initiative?.initiative_name}`));
         return resp;
       }),
