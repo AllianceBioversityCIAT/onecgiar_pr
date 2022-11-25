@@ -122,7 +122,10 @@ export class ResultsService {
       }
 
       if (resultType.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: resultType, debug: true });
+        throw this._handlersError.returnErrorRes({
+          error: resultType,
+          debug: true,
+        });
       }
 
       if (!resultByLevel) {
@@ -138,7 +141,10 @@ export class ResultsService {
 
       const version = await this._versionsService.findBaseVersion();
       if (version.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: version, debug: true });
+        throw this._handlersError.returnErrorRes({
+          error: version,
+          debug: true,
+        });
       }
       const vrs: Version = <Version>version.response;
 
@@ -250,7 +256,10 @@ export class ResultsService {
         resultGeneralInformation.result_type_id,
       );
       if (resultType.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: resultType, debug: true });
+        throw this._handlersError.returnErrorRes({
+          error: resultType,
+          debug: true,
+        });
       }
 
       const resultByLevel =
@@ -329,7 +338,10 @@ export class ResultsService {
 
       const version = await this._versionsService.findBaseVersion();
       if (version.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: version, debug: true });
+        throw this._handlersError.returnErrorRes({
+          error: version,
+          debug: true,
+        });
       }
       const vrs: Version = <Version>version.response;
 
@@ -480,8 +492,63 @@ export class ResultsService {
 
   async findAll() {
     try {
+      const result = await this._customResultRepository.AllResults();
+
+      if (!result.length) {
+        throw {
+          response: {},
+          message: 'Results Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      return {
+        response: result,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async findAllForElasticSearch(documentName: string) {
+    try {
       const result =
-        await this._customResultRepository.AllResults();
+        await this._customResultRepository.allResultsForElasticSearch();
+
+      if (!result.length) {
+        throw {
+          response: {},
+          message: 'Results Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      let elasticJson: string = '';
+
+      result.forEach((r) => {
+        elasticJson += `{ "index": { "_index": "${documentName}",  "_id": "${
+          r.id
+        }" } }
+        ${JSON.stringify(r)}
+        `;
+      });
+
+      return {
+        response: elasticJson,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async findAllSimplified() {
+    try {
+      const result =
+        await this._customResultRepository.allResultsForElasticSearch();
 
       if (!result.length) {
         throw {
@@ -629,7 +696,10 @@ export class ResultsService {
       }
 
       if (resultType.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: resultType, debug: true });
+        throw this._handlersError.returnErrorRes({
+          error: resultType,
+          debug: true,
+        });
       }
 
       if (!resultByLevel) {
@@ -642,7 +712,10 @@ export class ResultsService {
 
       const version = await this._versionsService.findBaseVersion();
       if (version.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: version, debug: true });
+        throw this._handlersError.returnErrorRes({
+          error: version,
+          debug: true,
+        });
       }
 
       const year: Year = await this._yearRepository.findOne({
@@ -780,9 +853,9 @@ export class ResultsService {
         result.geographic_scope_id == 4
       ) {
         scope = 3;
-      } else if(result.geographic_scope_id == 50) {
+      } else if (result.geographic_scope_id == 50) {
         scope = 4;
-      }else{
+      } else {
         scope = null;
       }
       return {
