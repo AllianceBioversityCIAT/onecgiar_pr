@@ -382,10 +382,11 @@ export class ResultsKnowledgeProductsService {
 
       //creating own evidence linking it to itself
       this._evidenceRepository.save({
-        link: resultsKnowledgeProductDto.handle,
+        link: `https://cgspace.cgiar.org/handle/${resultsKnowledgeProductDto.handle}`,
         result_id: newResult.id,
         created_by: user.id,
         version_id: currentVersion.id,
+        is_supplementary: false,
       });
 
       return {
