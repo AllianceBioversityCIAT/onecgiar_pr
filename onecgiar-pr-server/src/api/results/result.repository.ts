@@ -5,6 +5,7 @@ import { HandlersError } from '../../shared/handlers/error.utils';
 import { DepthSearch } from './dto/depth-search.dto';
 import { DepthSearchOne } from './dto/depth-search-one.dto';
 import { ResultLevelType } from './dto/result-level-type.dto';
+import { ResultSimpleDto } from './dto/result-simple.dto';
 
 @Injectable()
 export class ResultRepository extends Repository<Result> {
@@ -54,6 +55,81 @@ export class ResultRepository extends Repository<Result> {
         error: error,
         debug: true,
       });
+    }
+  }
+
+  /**
+   * !reported_year revisar
+   * @returns
+   */
+  async allResultsForElasticSearch(): Promise<ResultSimpleDto[]> {
+    const queryData = `
+    select
+      concat(r.id, '') as id,
+      r.title,
+      r.description,
+      concat(ci.official_code, '-', ci.short_name) as crp,
+      group_concat(distinct cc.name separator ';') as countries,
+      group_concat(distinct cr.name separator ';') as regions,
+      r.reported_year_id as year,
+      rt.name as type,
+      'false' as is_legacy
+    from
+      result r
+    inner join results_by_inititiative rbi on
+      rbi.result_id = r.id
+      and rbi.is_active > 0
+      and rbi.initiative_role_id = 1
+    inner join result_type rt on
+      rt.id = r.result_type_id 
+    inner join clarisa_initiatives ci on
+      ci.id = rbi.inititiative_id
+    left join result_region rr on 
+      rr.result_id  = r.id
+      and rr.is_active > 0
+    left join clarisa_regions cr on
+      cr.um49Code = rr.region_id 
+    left join result_country rc on 
+      rc.result_id = r.id
+      and rc.is_active > 0
+    left join clarisa_countries cc on
+      cc.id = rc.country_id 
+    where
+      r.is_active > 0
+    group by r.id, r.title, r.description, ci.official_code, ci.short_name, r.reported_year_id, rt.name, is_legacy
+    union
+    select 
+      lr.legacy_id as id,
+      lr.title,
+      lr.description,
+      lr.crp,
+      group_concat(distinct cc.name separator ';') as countries,
+      group_concat(distinct cr.name separator ';') as regions,
+      lr.year,
+      lr.indicator_type as type,
+      'true' as is_legacy
+    from legacy_result lr
+    left join legacy_indicators_locations lil_country on
+      lil_country.legacy_id = lr.legacy_id
+    left join clarisa_countries cc on
+      cc.iso_alpha_2 = lil_country.iso_alpha_2 
+    left join legacy_indicators_locations lil_region on
+      lil_region.legacy_id = lr.legacy_id
+    left join clarisa_regions cr on
+      cr.um49Code = lil_region.um49_code 
+    group by lr.legacy_id, lr.title, lr.description, lr.crp, lr.year, lr.indicator_type, is_legacy
+    ;
+    `;
+
+    try {
+      const results: any[] = await this.query(queryData);
+      return results;
+    } catch (error) {
+      throw {
+        message: `[${ResultRepository.name}] => allResultsForElasticSearch error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
     }
   }
 

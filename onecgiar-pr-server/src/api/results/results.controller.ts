@@ -35,19 +35,33 @@ export class ResultsController {
 
   @Get('get/:id')
   async findResultById(@Param('id') id: number) {
-    const { message, response, status } = await this.resultsService.findResultById(id);
+    const { message, response, status } =
+      await this.resultsService.findResultById(id);
     throw new HttpException({ message, response }, status);
-
   }
 
   @Get('get/name/:name')
   findAll(@Param('name') resultName: string) {
     return this.resultsService.findAll() + resultName;
   }
-  
+
   @Get('get/all/data')
   async findAllResults() {
     const { message, response, status } = await this.resultsService.findAll();
+    throw new HttpException({ message, response }, status);
+  }
+
+  @Get('get/all/simplified')
+  async findAllResultsForElasticSearch() {
+    const { message, response, status } =
+      await this.resultsService.findAllSimplified();
+    throw new HttpException({ message, response }, status);
+  }
+
+  @Get('get/all/elastic')
+  async findAllResultsSimplified() {
+    const { message, response, status } =
+      await this.resultsService.findAllForElasticSearch('results');
     throw new HttpException({ message, response }, status);
   }
 
@@ -99,19 +113,23 @@ export class ResultsController {
 
   @Patch('create/general-information')
   async createGeneralInformation(
-    @Body() CreateGeneralInformationResultDto: CreateGeneralInformationResultDto,
+    @Body()
+    CreateGeneralInformationResultDto: CreateGeneralInformationResultDto,
     @Headers() auth: HeadersDto,
-  ){
+  ) {
     const token: TokenDto = <TokenDto>(
       JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
     );
-    const { message, response, status }
-       = await this.resultsService.createResultGeneralInformation(CreateGeneralInformationResultDto, token);
+    const { message, response, status } =
+      await this.resultsService.createResultGeneralInformation(
+        CreateGeneralInformationResultDto,
+        token,
+      );
     throw new HttpException({ message, response }, status);
   }
 
   @Get('get/general-information/result/:id')
-  async getGeneralInformationByResult(@Param('id') id: number){
+  async getGeneralInformationByResult(@Param('id') id: number) {
     const { message, response, status } =
       await this.resultsService.getGeneralInformation(id);
     throw new HttpException({ message, response }, status);
@@ -127,20 +145,19 @@ export class ResultsController {
   @Patch('update/geographic/:resiltId')
   async saveGeographic(
     @Body() createResultGeoDto: CreateResultGeoDto,
-    @Param('resiltId') resiltId: number
-    ){
-      createResultGeoDto.result_id = resiltId;
+    @Param('resiltId') resiltId: number,
+  ) {
+    createResultGeoDto.result_id = resiltId;
     const { message, response, status } =
       await this.resultsService.saveGeoScope(createResultGeoDto);
     throw new HttpException({ message, response }, status);
   }
 
   @Get('get/geographic/:resiltId')
-  async getGeographic(
-    @Param('resiltId') resiltId: number
-    ){
-    const { message, response, status } =
-      await this.resultsService.getGeoScope(resiltId);
+  async getGeographic(@Param('resiltId') resiltId: number) {
+    const { message, response, status } = await this.resultsService.getGeoScope(
+      resiltId,
+    );
     throw new HttpException({ message, response }, status);
   }
 }
