@@ -4,8 +4,8 @@
 
 <br>
 
-<div *ngFor="let item of ['INIT-17 SAPLING','INIT-10 F2R-CWANA','INIT-22 TAFS-WCA']">
-    Is this result planned in the <strong>{{item}}</strong> SAPLING ToC?: <strong>No</strong>
+<div *ngFor="let item of this.contributing_initiatives">
+    Is this result planned in the <span [innerHTML]="item?.full_name"></span> SAPLING ToC?: <strong>No</strong>
 </div>
 
 <br>
