@@ -58,11 +58,11 @@ export class AuthService {
   async puserAuth(
     pusherAuthDot: pusherAuthDot,
     resultId: number,
-    user: TokenDto,
+    userId: number,
   ) {
     try {
       const uPusher = await this._userRepository.userDataPusher(
-        user.id,
+        userId,
         resultId,
       );
       const name = `${uPusher.first_name} ${uPusher.last_name}`;
@@ -71,7 +71,7 @@ export class AuthService {
       const initiativeRoles = uPusher?.initiative_role ? '1' : null;
 
       const presenceData = {
-        user_id: user.id,
+        user_id: `${uPusher.user_id}`,
         user_info: { name, roles, initiativeRoles, today },
       };
 
