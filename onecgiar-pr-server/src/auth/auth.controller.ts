@@ -44,7 +44,7 @@ export class AuthController {
     throw new HttpException({ message, response }, status);
   }
 
-  @Post('/singin/pusher/result/:resultId/:userId)
+  @Post('/singin/pusher/result/:resultId/:userId')
   async singInPusher(
     @Body() pusherAuthDot: pusherAuthDot,
     @Param('resultId') resultId: number,

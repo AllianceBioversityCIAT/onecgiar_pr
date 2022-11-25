@@ -13,7 +13,7 @@ import { User } from './modules/user/entities/user.entity';
 import { HandlersError } from '../shared/handlers/error.utils';
 import { pusherAuthDot } from './dto/pusher-auth.dto';
 import { TokenDto } from '../shared/globalInterfaces/token.dto';
-import Pusher, { UserChannelData } from 'pusher';
+import Pusher from 'pusher';
 
 @Injectable()
 export class AuthService {
