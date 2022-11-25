@@ -60,7 +60,7 @@ export class AuthService {
       const uPusher = await this._userRepository.userDataPusher(user.id, resultId);
       const name = `${uPusher.first_name} ${uPusher.last_name}`;
       const presenceData = {
-        id: `${uPusher.user_id}`,
+        user_id: `${uPusher.user_id}`,
         user_info: {
           name: name,
           aplication_role: uPusher.aplication_role,
@@ -69,7 +69,7 @@ export class AuthService {
         }
       };
 
-      const auth = this.pusher.authenticateUser(pusherAuthDot.socket_id, presenceData);
+      const auth = this.pusher.authenticate(pusherAuthDot.socket_id,pusherAuthDot.channel_name, presenceData);
       return {
         response: auth,
         message: 'Successful login pusher',
