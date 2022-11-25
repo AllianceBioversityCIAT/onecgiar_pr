@@ -5,6 +5,5 @@
     <app-normal-selector *ngIf="!this.api.dataControlSE.isKnowledgeProduct"></app-normal-selector>
     <app-knowledge-product-selector *ngIf="this.api.dataControlSE.isKnowledgeProduct"></app-knowledge-product-selector>
 
-    <app-save-button class="position_sticky" (clickSave)="onSaveSection()"
-        *ngIf="!this.api.dataControlSE.isKnowledgeProduct"></app-save-button>
+    <app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>
 </div>

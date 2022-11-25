@@ -14,7 +14,7 @@ export class PanelMenuComponent {
 
   hideKP(navOption) {
     if (!this.api.dataControlSE.isKnowledgeProduct) return false;
-    const hideInKP = ['partners'];
+    const hideInKP = [];
     return Boolean(hideInKP.find(option => option == navOption.path));
   }
 
