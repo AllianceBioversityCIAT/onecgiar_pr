@@ -14,6 +14,8 @@ import { TocResultsRepository } from '../../../toc/toc-results/toc-results.repos
 import { ResultsImpactAreaTargetRepository } from '../results-impact-area-target/results-impact-area-target.repository';
 import { ResultsImpactAreaIndicatorRepository } from '../results-impact-area-indicators/results-impact-area-indicators.repository';
 import { ClarisaImpactAreaRepository } from '../../../clarisa/clarisa-impact-area/ClarisaImpactArea.repository';
+import { ShareResultRequestService } from '../share-result-request/share-result-request.service';
+import { ShareResultRequestRepository } from '../share-result-request/share-result-request.repository';
 
 @Module({
   controllers: [ResultsTocResultsController],
@@ -30,7 +32,9 @@ import { ClarisaImpactAreaRepository } from '../../../clarisa/clarisa-impact-are
     TocResultsRepository,
     ResultsImpactAreaTargetRepository,
     ResultsImpactAreaIndicatorRepository,
-    ClarisaImpactAreaRepository
+    ClarisaImpactAreaRepository,
+    ShareResultRequestService,
+    ShareResultRequestRepository
   ],
   exports: [
     ResultsTocResultRepository

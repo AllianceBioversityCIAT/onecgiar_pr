@@ -21,6 +21,7 @@ import { CapdevsTermsModule } from './capdevs-terms/capdevs-terms.module';
 import { SummaryModule } from './summary/summary.module';
 import { ResultsImpactAreaIndicatorsModule } from './results-impact-area-indicators/results-impact-area-indicators.module';
 import { ResultsImpactAreaTargetModule } from './results-impact-area-target/results-impact-area-target.module';
+import { ShareResultRequestModule } from './share-result-request/share-result-request.module';
 
 export const ResultsRoutes: Routes = [
   {
@@ -110,5 +111,9 @@ export const ResultsRoutes: Routes = [
   {
     path: 'impact-area-target',
     module: ResultsImpactAreaTargetModule
+  },
+  {
+    path: 'request',
+    module: ShareResultRequestModule
   }
 ];

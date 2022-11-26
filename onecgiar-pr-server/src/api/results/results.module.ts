@@ -48,6 +48,7 @@ import { CapdevsTermsModule } from './capdevs-terms/capdevs-terms.module';
 import { CapdevsDeliveryMethodsModule } from './capdevs-delivery-methods/capdevs-delivery-methods.module';
 import { ResultsImpactAreaTargetModule } from './results-impact-area-target/results-impact-area-target.module';
 import { ResultsImpactAreaIndicatorsModule } from './results-impact-area-indicators/results-impact-area-indicators.module';
+import { ShareResultRequestModule } from './share-result-request/share-result-request.module';
 
 @Module({
   controllers: [ResultsController],
@@ -84,6 +85,7 @@ import { ResultsImpactAreaIndicatorsModule } from './results-impact-area-indicat
     CapdevsDeliveryMethodsModule,
     ResultsImpactAreaTargetModule,
     ResultsImpactAreaIndicatorsModule,
+    ShareResultRequestModule,
   ],
   providers: [
     ResultsService,

@@ -60,20 +60,22 @@ export class ResultByInitiativesRepository extends Repository<ResultsByInititiat
 
   async getOwnerInitiativeByResult(resultId: number) {
     const queryData = `
-    select 
+    SELECT
     	ci.id,
-      ci.official_code,
-      ci.name as initiative_name,
-      ci.short_name,
-      rbi.initiative_role_id,
-      rbi.version_id,
-      rbi.is_active 
-    from results_by_inititiative rbi 
-    	inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
-        									and ci.active > 0
-    where rbi.result_id = ?
-      and rbi.initiative_role_id = 1
-      and rbi.is_active > 0;
+    	ci.official_code,
+    	ci.name as initiative_name,
+    	ci.short_name,
+    	null as initiative_role_id,
+    	null as version_id,  
+	    srr.request_status_id,
+    	1 as is_active
+    FROM
+    	share_result_request srr
+    inner join clarisa_initiatives ci on
+    	ci.id = srr.shared_inititiative_id
+    	and srr.request_status_id = 1
+    WHERE
+    	srr.result_id = ?;
     `;
     try {
       const completeUser: InitiativeByResultDTO[] = await this.query(
@@ -99,7 +101,7 @@ export class ResultByInitiativesRepository extends Repository<ResultsByInititiat
       ci.short_name,
       rbi.initiative_role_id,
       rbi.version_id,
-      rbi.is_active 
+      rbi.is_active
     from results_by_inititiative rbi 
     	inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
         									and ci.active > 0
@@ -113,6 +115,39 @@ export class ResultByInitiativesRepository extends Repository<ResultsByInititiat
         [resultId],
       );
       return getInitiative;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultByInitiativesRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async getContributorInitiativeByResultAndInit(resultId: number, initiativeId: number) {
+    const queryData = `
+    select 
+    	ci.id,
+      ci.official_code,
+      ci.name as initiative_name,
+      ci.short_name,
+      rbi.initiative_role_id,
+      rbi.version_id,
+      rbi.is_active
+    from results_by_inititiative rbi 
+    	inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
+        									and ci.active > 0
+    where rbi.result_id = ?
+      and ci.id = ?
+      and rbi.initiative_role_id = 2
+      and rbi.is_active > 0;
+    `;
+    try {
+      const getInitiative: InitiativeByResultDTO[] = await this.query(
+        queryData,
+        [resultId, initiativeId],
+      );
+      return getInitiative?.length? getInitiative[0]: undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByInitiativesRepository.name,
