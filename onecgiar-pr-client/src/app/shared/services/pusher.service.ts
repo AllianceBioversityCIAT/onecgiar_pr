@@ -102,7 +102,7 @@ export class PusherService {
   pusherToc: any;
   instancePusher() {
     this.pusherToc = new Pusher(environment.pusher.key, {
-      authEndpoint: `${environment.apiBaseUrl}/auth/singin/pusher/result/${this.api.resultsSE.currentResultId}`,
+      authEndpoint: `${environment.apiBaseUrl}/auth/signin/pusher/result/${this.api.resultsSE.currentResultId}`,
       cluster: environment.pusher.cluster,
       encrypted: true
     });
@@ -111,7 +111,7 @@ export class PusherService {
   start(OSTRoute: string, resultId) {
     const pusherBlocked = new PusherBlocked(OSTRoute);
     this.isTOC = pusherBlocked.blockedRoute();
-    if (this.beforeRoute) this.pusher.unsubscribe('presence-ost' + this.beforeRoute);
+    if (this.beforeRoute) this.pusher.unsubscribe('presence-prms' + this.beforeRoute);
     // if (pusherBlocked.blockedRoute()) return;
 
     OSTRoute = OSTRoute.split('/').join('').split('-').join('');
@@ -119,17 +119,21 @@ export class PusherService {
       cluster: environment.pusher.cluster,
       encrypted: true,
       channelAuthorization: {
-        endpoint: `${environment.apiBaseUrl}auth/singin/pusher/result/${resultId}`,
-        headers: {
+       endpoint: `${environment.apiBaseUrl}auth/signin/pusher/result/${resultId}/71`,
+      //endpoint: `http://localhost:3000/api/auth/pusherauth/9/72`,
+        /*headers: {
           auth: this.api.authSE.localStorageToken
-        }
+        }*/
       }
     });
-    console.log('presence-ost' + OSTRoute);
-    this.presenceChannel = this.pusher.subscribe('presence-ost' + OSTRoute);
-    this.beforeRoute = OSTRoute;
-    console.log(this.presenceChannel);
-    console.log(this.presenceChannel?.members);
+      console.log('presence-prms' + OSTRoute);
+    
+      this.presenceChannel = this.pusher.subscribe('presence-prms' + OSTRoute);
+      this.beforeRoute = OSTRoute;
+      console.log(this.presenceChannel);
+      console.log(this.presenceChannel?.members);
+
+
   }
 
   // stop() {

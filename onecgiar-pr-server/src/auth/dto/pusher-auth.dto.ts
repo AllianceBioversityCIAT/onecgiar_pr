@@ -1,4 +1,4 @@
-export class pusherAuthDot{
-    public socket_id: string;
-    public channel_name: string;
+export class pusherAuthDot {
+  public socket_id: any;
+  public channel_name: any;
 }
