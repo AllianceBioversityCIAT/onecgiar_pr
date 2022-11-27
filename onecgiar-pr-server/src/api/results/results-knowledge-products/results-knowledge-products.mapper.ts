@@ -334,15 +334,13 @@ export class ResultsKnowledgeProductMapper {
     return knowledgeProductDto;
   }
 
-  dtoToEntity(
+  updateEntity(
+    knowledgeProduct: ResultsKnowledgeProduct,
     dto: ResultsKnowledgeProductDto,
     userId: number,
     resultId: number,
     versionId: number,
   ): ResultsKnowledgeProduct {
-    let knowledgeProduct: ResultsKnowledgeProduct =
-      new ResultsKnowledgeProduct();
-
     knowledgeProduct.accesible = dto.accessible;
     knowledgeProduct.comodity = dto.commodity;
     knowledgeProduct.description = dto.description;
@@ -359,7 +357,12 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProduct.reusable = dto.reusable;
     knowledgeProduct.sponsors = dto.sponsor;
 
-    knowledgeProduct.created_by = userId;
+    if (!knowledgeProduct.result_knowledge_product_id) {
+      knowledgeProduct.created_by = userId;
+    } else {
+      knowledgeProduct.last_updated_by = userId;
+    }
+
     knowledgeProduct.results_id = resultId;
     knowledgeProduct.version_id = versionId;
 
@@ -370,58 +373,115 @@ export class ResultsKnowledgeProductMapper {
     return knowledgeProduct;
   }
 
-  fillOutRelations(
-    dto: ResultsKnowledgeProductDto,
+  populateKPRelations(
     knowledgeProduct: ResultsKnowledgeProduct,
+    dto: ResultsKnowledgeProductDto,
   ): ResultsKnowledgeProduct {
-    knowledgeProduct.result_knowledge_product_author_array = (
-      dto.authors ?? []
-    ).map((a) => {
-      const author: ResultsKnowledgeProductAuthor =
-        new ResultsKnowledgeProductAuthor();
+    this.patchAuthors(knowledgeProduct, dto);
+    this.patchKeywords(knowledgeProduct, dto);
+    this.patchMetadata(knowledgeProduct, dto);
+    this.patchAltmetricData(knowledgeProduct, dto);
+    this.patchInstitutions(knowledgeProduct, dto);
+    //TODO map country and region information to results relation
 
-      author.author_name = a.name;
-      author.orcid = a.orcid;
+    return knowledgeProduct;
+  }
 
-      author.created_by = knowledgeProduct.created_by;
-      author.version_id = knowledgeProduct.version_id;
-      author.result_knowledge_product_id =
+  public patchInstitutions(
+    knowledgeProduct: ResultsKnowledgeProduct,
+    dto: ResultsKnowledgeProductDto,
+    upsert: boolean = false,
+  ) {
+    const institutions = (dto.institutions ?? []).map((i) => {
+      let institution: ResultsKnowledgeProductInstitution;
+      if (upsert) {
+        institution = (
+          knowledgeProduct.result_knowledge_product_institution_array ?? []
+        ).find((oi) => oi.intitution_name == i.source_name);
+        if (institution) {
+          institution['matched'] = true;
+        }
+      }
+
+      institution ??= new ResultsKnowledgeProductInstitution();
+
+      institution.intitution_name = i.source_name;
+      institution.confidant = i.confidence_percentage;
+      institution.predicted_institution_id = i.possible_matched_institution_id;
+
+      if (!knowledgeProduct.last_updated_by) {
+        institution.created_by = knowledgeProduct.created_by;
+      } else {
+        institution.last_updated_by = knowledgeProduct.last_updated_by;
+      }
+
+      institution.version_id = knowledgeProduct.version_id;
+      institution.result_knowledge_product_id =
         knowledgeProduct.result_knowledge_product_id;
 
-      return author;
+      return institution;
     });
 
-    const keywords: { keyword: string; agrovoc: boolean }[] = [
-      ...(dto.agrovoc_keywords ?? []).map((ag) => {
-        return { keyword: ag, agrovoc: true };
-      }),
-      ...(dto.keywords ?? []).map((ag) => {
-        return { keyword: ag, agrovoc: false };
-      }),
-    ];
+    knowledgeProduct.result_knowledge_product_institution_array =
+      institutions.map((i) => {
+        if (!i['matched']) {
+          i.is_active = false;
+          delete i['matched'];
+        }
+        return i;
+      });
+  }
 
-    knowledgeProduct.result_knowledge_product_keyword_array = keywords.map(
-      (k) => {
-        const keyword: ResultsKnowledgeProductKeyword =
-          new ResultsKnowledgeProductKeyword();
+  public patchAltmetricData(
+    knowledgeProduct: ResultsKnowledgeProduct,
+    dto: ResultsKnowledgeProductDto,
+    upsert: boolean = false,
+  ) {
+    let altmetric: ResultsKnowledgeProductAltmetric;
+    if (upsert) {
+      altmetric =
+        knowledgeProduct.result_knowledge_product_altmetric_array?.[0] ??
+        new ResultsKnowledgeProductAltmetric();
+    } else {
+      altmetric = new ResultsKnowledgeProductAltmetric();
+    }
 
-        keyword.keyword = k.keyword;
-        keyword.is_agrovoc = k.agrovoc;
+    altmetric = Object.assign(altmetric, dto.altmetric_full_data);
 
-        keyword.created_by = knowledgeProduct.created_by;
-        keyword.version_id = knowledgeProduct.version_id;
-        keyword.result_knowledge_product_id =
-          knowledgeProduct.result_knowledge_product_id;
+    if (!knowledgeProduct.last_updated_by) {
+      altmetric.created_by = knowledgeProduct.created_by;
+    } else {
+      altmetric.last_updated_by = knowledgeProduct.last_updated_by;
+    }
 
-        return keyword;
-      },
-    );
+    altmetric.version_id = knowledgeProduct.version_id;
+    altmetric.result_knowledge_product_id =
+      knowledgeProduct.result_knowledge_product_id;
 
-    knowledgeProduct.result_knowledge_product_metadata_array = (
-      dto.metadata ?? []
-    ).map((m) => {
-      const metadata: ResultsKnowledgeProductMetadata =
-        new ResultsKnowledgeProductMetadata();
+    /*FIXME Beware of this line, as this will mean that in future reporting
+    periods all previous altmetric data will be removed. I did not fix this
+    as I have no clue what will be the future filters to get only
+    */
+    knowledgeProduct.result_knowledge_product_altmetric_array = [altmetric];
+  }
+
+  public patchMetadata(
+    knowledgeProduct: ResultsKnowledgeProduct,
+    dto: ResultsKnowledgeProductDto,
+    upsert: boolean = false,
+  ) {
+    const metadataArray = (dto.metadata ?? []).map((m) => {
+      let metadata: ResultsKnowledgeProductMetadata;
+      if (upsert) {
+        metadata = (
+          knowledgeProduct.result_knowledge_product_metadata_array ?? []
+        ).find((om) => om.source == m.source);
+        if (metadata) {
+          metadata['matched'] = true;
+        }
+      }
+
+      metadata ??= new ResultsKnowledgeProductMetadata();
 
       metadata.source = m.source;
       metadata.accesibility = m.accessibility ? 'yes' : 'no';
@@ -430,7 +490,12 @@ export class ResultsKnowledgeProductMapper {
       metadata.is_peer_reviewed = m.is_peer_reviewed;
       metadata.year = m.issue_year;
 
-      metadata.created_by = knowledgeProduct.created_by;
+      if (!knowledgeProduct.last_updated_by) {
+        metadata.created_by = knowledgeProduct.created_by;
+      } else {
+        metadata.last_updated_by = knowledgeProduct.last_updated_by;
+      }
+
       metadata.version_id = knowledgeProduct.version_id;
       metadata.result_knowledge_product_id =
         knowledgeProduct.result_knowledge_product_id;
@@ -438,38 +503,111 @@ export class ResultsKnowledgeProductMapper {
       return metadata;
     });
 
-    let altmetric: ResultsKnowledgeProductAltmetric =
-      new ResultsKnowledgeProductAltmetric();
-    altmetric = Object.assign(altmetric, dto.altmetric_full_data);
+    knowledgeProduct.result_knowledge_product_metadata_array =
+      metadataArray.map((m) => {
+        if (!m['matched']) {
+          m.is_active = false;
+          delete m['matched'];
+        }
+        return m;
+      });
+  }
 
-    altmetric.created_by = knowledgeProduct.created_by;
-    altmetric.version_id = knowledgeProduct.version_id;
-    altmetric.result_knowledge_product_id =
-      knowledgeProduct.result_knowledge_product_id;
+  public patchKeywords(
+    knowledgeProduct: ResultsKnowledgeProduct,
+    dto: ResultsKnowledgeProductDto,
+    upsert: boolean = false,
+  ) {
+    const incomingKeywords: { keyword: string; agrovoc: boolean }[] = [
+      ...(dto.agrovoc_keywords ?? []).map((ag) => {
+        return { keyword: ag, agrovoc: true };
+      }),
+      ...(dto.keywords ?? []).map((ag) => {
+        return { keyword: ag, agrovoc: false };
+      }),
+    ];
 
-    knowledgeProduct.result_knowledge_product_altmetric_array = [altmetric];
+    let keywordArray = incomingKeywords.map((k) => {
+      let keyword: ResultsKnowledgeProductKeyword;
+      if (upsert) {
+        keyword = (
+          knowledgeProduct.result_knowledge_product_keyword_array ?? []
+        ).find((ok) => ok.keyword == k.keyword);
+        if (keyword) {
+          keyword['matched'] = true;
+        }
+      }
 
-    knowledgeProduct.result_knowledge_product_institution_array = (
-      dto.institutions ?? []
-    ).map((i) => {
-      const institution: ResultsKnowledgeProductInstitution =
-        new ResultsKnowledgeProductInstitution();
+      keyword ??= new ResultsKnowledgeProductKeyword();
 
-      institution.intitution_name = i.source_name;
+      keyword.keyword = k.keyword;
+      keyword.is_agrovoc = k.agrovoc;
 
-      institution.confidant = i.confidence_percentage;
-      institution.predicted_institution_id = i.possible_matched_institution_id;
+      if (!knowledgeProduct.last_updated_by) {
+        keyword.created_by = knowledgeProduct.created_by;
+      } else {
+        keyword.last_updated_by = knowledgeProduct.last_updated_by;
+      }
 
-      institution.created_by = knowledgeProduct.created_by;
-      institution.version_id = knowledgeProduct.version_id;
-      institution.result_knowledge_product_id =
+      keyword.version_id = knowledgeProduct.version_id;
+      keyword.result_knowledge_product_id =
         knowledgeProduct.result_knowledge_product_id;
 
-      return institution;
+      return keyword;
     });
 
-    //TODO map country and region information to results relation
+    knowledgeProduct.result_knowledge_product_keyword_array = keywordArray.map(
+      (k) => {
+        if (!k['matched']) {
+          k.is_active = false;
+          delete k['matched'];
+        }
+        return k;
+      },
+    );
+  }
 
-    return knowledgeProduct;
+  public patchAuthors(
+    knowledgeProduct: ResultsKnowledgeProduct,
+    dto: ResultsKnowledgeProductDto,
+    upsert: boolean = false,
+  ) {
+    let authors = (dto.authors ?? []).map((a) => {
+      let author: ResultsKnowledgeProductAuthor;
+      if (upsert) {
+        author = (
+          knowledgeProduct.result_knowledge_product_author_array ?? []
+        ).find((oa) => oa.author_name == a.name);
+        if (author) {
+          author['matched'] = true;
+        }
+      }
+      author ??= new ResultsKnowledgeProductAuthor();
+
+      author.author_name = a.name;
+      author.orcid = a.orcid;
+
+      if (!knowledgeProduct.last_updated_by) {
+        author.created_by = knowledgeProduct.created_by;
+      } else {
+        author.last_updated_by = knowledgeProduct.last_updated_by;
+      }
+
+      author.version_id = knowledgeProduct.version_id;
+      author.result_knowledge_product_id =
+        knowledgeProduct.result_knowledge_product_id;
+
+      return author;
+    });
+
+    knowledgeProduct.result_knowledge_product_author_array = authors.map(
+      (a) => {
+        if (!a['matched']) {
+          a.is_active = false;
+          delete a['matched'];
+        }
+        return a;
+      },
+    );
   }
 }

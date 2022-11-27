@@ -204,7 +204,116 @@ export class ResultsKnowledgeProductsService {
     }
   }
 
-  async findOnCGSpace(handle: string) {
+  async syncAgain(resultId: number, user: TokenDto) {
+    try {
+      const resultKnowledgeProduct: ResultsKnowledgeProduct =
+        await this._resultsKnowledgeProductRepository.findOne({
+          where: {
+            results_id: resultId,
+          },
+          relations: this._resultsKnowledgeProductRelations,
+        });
+
+      if (!resultKnowledgeProduct) {
+        return {
+          response: { title: resultKnowledgeProduct.name },
+          message: `A Result Knowledge Product with result_id '${resultId}' does not exist.`,
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const cgspaceResponse = await this.findOnCGSpace(
+        resultKnowledgeProduct.handle,
+        false,
+      );
+
+      if (cgspaceResponse.status !== HttpStatus.OK) {
+        throw this._handlersError.returnErrorRes({ error: cgspaceResponse });
+      }
+
+      const newMetadata =
+        cgspaceResponse.response as ResultsKnowledgeProductDto;
+
+      let updatedKnowledgeProduct =
+        this._resultsKnowledgeProductMapper.updateEntity(
+          resultKnowledgeProduct,
+          newMetadata,
+          user.id,
+          resultKnowledgeProduct.results_id,
+          resultKnowledgeProduct.version_id,
+        );
+      updatedKnowledgeProduct.result_knowledge_product_id =
+        resultKnowledgeProduct.result_knowledge_product_id;
+
+      this._resultsKnowledgeProductMapper.patchAltmetricData(
+        updatedKnowledgeProduct,
+        newMetadata,
+        true,
+      );
+      this._resultsKnowledgeProductMapper.patchAuthors(
+        updatedKnowledgeProduct,
+        newMetadata,
+        true,
+      );
+      this._resultsKnowledgeProductMapper.patchInstitutions(
+        updatedKnowledgeProduct,
+        newMetadata,
+        true,
+      );
+      this._resultsKnowledgeProductMapper.patchKeywords(
+        updatedKnowledgeProduct,
+        newMetadata,
+        true,
+      );
+      this._resultsKnowledgeProductMapper.patchMetadata(
+        updatedKnowledgeProduct,
+        newMetadata,
+        true,
+      );
+
+      updatedKnowledgeProduct =
+        await this._resultsKnowledgeProductRepository.save(
+          updatedKnowledgeProduct,
+        );
+
+      //updating general result tables
+      this._resultRepository.update(
+        { id: resultId },
+        {
+          title: newMetadata.title,
+          description: newMetadata.description,
+        },
+      );
+
+      //updating relations
+      await this._resultsKnowledgeProductAltmetricRepository.save(
+        updatedKnowledgeProduct.result_knowledge_product_altmetric_array ?? [],
+      );
+      await this._resultsKnowledgeProductAuthorRepository.save(
+        updatedKnowledgeProduct.result_knowledge_product_author_array ?? [],
+      );
+      await this._resultsKnowledgeProductInstitutionRepository.save(
+        updatedKnowledgeProduct.result_knowledge_product_institution_array ??
+          {},
+      );
+      await this._resultsKnowledgeProductKeywordRepository.save(
+        updatedKnowledgeProduct.result_knowledge_product_keyword_array ?? [],
+      );
+      await this._resultsKnowledgeProductMetadataRepository.save(
+        updatedKnowledgeProduct.result_knowledge_product_metadata_array ?? [],
+      );
+
+      return {
+        response: updatedKnowledgeProduct,
+        message: 'The Result Knowledge Product has been updated successfully',
+        status: HttpStatus.CREATED,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async findOnCGSpace(handle: string, validateExisting: boolean = true) {
     try {
       if (!handle) {
         throw {
@@ -221,20 +330,22 @@ export class ResultsKnowledgeProductsService {
       const handleId = linkSplit.slice(linkSplit.length - 2).join('/');
 
       let response: ResultsKnowledgeProductDto = null;
-      const resultKnowledgeProduct: ResultsKnowledgeProduct =
-        await this._resultsKnowledgeProductRepository.findOne({
-          where: {
-            handle: Like(handleId),
-          },
-          relations: this._resultsKnowledgeProductRelations,
-        });
+      if (validateExisting) {
+        const resultKnowledgeProduct: ResultsKnowledgeProduct =
+          await this._resultsKnowledgeProductRepository.findOne({
+            where: {
+              handle: Like(handleId),
+            },
+            relations: this._resultsKnowledgeProductRelations,
+          });
 
-      if (resultKnowledgeProduct) {
-        return {
-          response: { title: resultKnowledgeProduct.name },
-          message: 'The Result Knowledge Product has already been created.',
-          status: HttpStatus.CONFLICT,
-        };
+        if (resultKnowledgeProduct) {
+          return {
+            response: { title: resultKnowledgeProduct.name },
+            message: 'The Result Knowledge Product has already been created.',
+            status: HttpStatus.CONFLICT,
+          };
+        }
       }
 
       const mqapResponse: MQAPResultDto =
@@ -271,7 +382,9 @@ export class ResultsKnowledgeProductsService {
 
       return {
         response: response,
-        message: 'The Result Knowledge Product is yet to be created',
+        message: `The Result Knowledge Product ${
+          !validateExisting ? 'is yet to be created' : 'can be updated'
+        }`,
         status: HttpStatus.OK,
       };
     } catch (error) {
@@ -315,12 +428,14 @@ export class ResultsKnowledgeProductsService {
       const newResult = newResultResponse.response as Result;
 
       let newKnowledgeProduct: ResultsKnowledgeProduct =
-        this._resultsKnowledgeProductMapper.dtoToEntity(
-          resultsKnowledgeProductDto,
-          user.id,
-          newResult.id,
-          currentVersion.id,
-        );
+        new ResultsKnowledgeProduct();
+      newKnowledgeProduct = this._resultsKnowledgeProductMapper.updateEntity(
+        newKnowledgeProduct,
+        resultsKnowledgeProductDto,
+        user.id,
+        newResult.id,
+        currentVersion.id,
+      );
 
       newKnowledgeProduct = await this._resultsKnowledgeProductRepository.save(
         newKnowledgeProduct,
@@ -329,9 +444,9 @@ export class ResultsKnowledgeProductsService {
       resultsKnowledgeProductDto.id = newResult.id;
 
       newKnowledgeProduct =
-        this._resultsKnowledgeProductMapper.fillOutRelations(
-          resultsKnowledgeProductDto,
+        this._resultsKnowledgeProductMapper.populateKPRelations(
           newKnowledgeProduct,
+          resultsKnowledgeProductDto,
         );
 
       //updating relations

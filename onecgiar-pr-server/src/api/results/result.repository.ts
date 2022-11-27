@@ -58,10 +58,6 @@ export class ResultRepository extends Repository<Result> {
     }
   }
 
-  /**
-   * !reported_year revisar
-   * @returns
-   */
   async allResultsForElasticSearch(): Promise<ResultSimpleDto[]> {
     const queryData = `
     select
