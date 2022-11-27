@@ -78,8 +78,8 @@
 
         <div class="item">
             <circle-progress [percent]="knowledgeProductBody.findable * 100" subtitle="F" subtitleFontSize="30"
-                [radius]="60" [outerStrokeWidth]="8" [innerStrokeWidth]="6" [outerStrokeColor]="'#78C000'"
-                [innerStrokeColor]="'#C7E596'" [animation]="true" [animationDuration]="300">
+                [radius]="50" [outerStrokeWidth]="8" [innerStrokeWidth]="0" [outerStrokeColor]="calculateBorderColor(knowledgeProductBody.findable)"
+                [innerStrokeColor]="calculateInnerColor(knowledgeProductBody.findable)" [animation]="true" [animationDuration]="300">
             </circle-progress>
             <div class="texts">
                 F1 - The Knowledge product is retrievable through its handle<br>
@@ -90,8 +90,8 @@
 
         <div class="item">
             <circle-progress [percent]="knowledgeProductBody.accessible * 100" subtitle="A" subtitleFontSize="30"
-                [radius]="60" [outerStrokeWidth]="8" [innerStrokeWidth]="6" [outerStrokeColor]="'#78C000'"
-                [innerStrokeColor]="'#C7E596'" [animation]="true" [animationDuration]="300">
+                [radius]="50" [outerStrokeWidth]="8" [innerStrokeWidth]="0" [outerStrokeColor]="calculateBorderColor(knowledgeProductBody.accessible)"
+                [innerStrokeColor]="calculateInnerColor(knowledgeProductBody.accessible)" [animation]="true" [animationDuration]="300">
             </circle-progress>
             <div class="texts">
                 A1 - Metadata are retrievable through the handle
@@ -101,8 +101,8 @@
 
         <div class="item">
             <circle-progress [percent]="knowledgeProductBody.interoperable * 100" subtitle="I" subtitleFontSize="30"
-                [radius]="60" [outerStrokeWidth]="8" [innerStrokeWidth]="6" [outerStrokeColor]="'#78C000'"
-                [innerStrokeColor]="'#C7E596'" [animation]="true" [animationDuration]="300">
+                [radius]="50" [outerStrokeWidth]="8" [innerStrokeWidth]="0" [outerStrokeColor]="calculateBorderColor(knowledgeProductBody.interoperable)"
+                [innerStrokeColor]="calculateInnerColor(knowledgeProductBody.interoperable)" [animation]="true" [animationDuration]="300">
             </circle-progress>
             <div class="texts">
                 I1 - Metadata contain AGROVOC keywords<br>
@@ -113,8 +113,8 @@
 
         <div class="item">
             <circle-progress [percent]="knowledgeProductBody.reusable * 100" subtitle="R" subtitleFontSize="30"
-                [radius]="60" [outerStrokeWidth]="8" [innerStrokeWidth]="6" [outerStrokeColor]="'#78C000'"
-                [innerStrokeColor]="'#C7E596'" [animation]="true" [animationDuration]="300">
+                [radius]="50" [outerStrokeWidth]="8" [innerStrokeWidth]="0" [outerStrokeColor]="calculateBorderColor(knowledgeProductBody.reusable)"
+                [innerStrokeColor]="calculateInnerColor(knowledgeProductBody.reusable)" [animation]="true" [animationDuration]="300">
             </circle-progress>
             <div class="texts">
                 R1 - Data asset is Open Access (OA) and has a clear and accessible usage license
