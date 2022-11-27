@@ -148,10 +148,7 @@ export class ResultsKnowledgeProduct {
   cgspace_countries: string;
 
   //versioning field
-  @ManyToOne(() => Version, (v) => v.id, { nullable: false })
-  @JoinColumn({
-    name: 'version_id',
-  })
+  @Column()
   version_id: number;
 
   //audit fields
@@ -163,10 +160,7 @@ export class ResultsKnowledgeProduct {
   })
   is_active: boolean;
 
-  @ManyToOne(() => User, (u) => u.id, { nullable: false })
-  @JoinColumn({
-    name: 'created_by',
-  })
+  @Column()
   created_by: number;
 
   @CreateDateColumn({
@@ -183,10 +177,7 @@ export class ResultsKnowledgeProduct {
   })
   last_updated_date: Date;
 
-  @ManyToOne(() => User, (u) => u.id, { nullable: true })
-  @JoinColumn({
-    name: 'last_updated_by',
-  })
+  @Column()
   last_updated_by: number;
 
   //object relations
@@ -225,4 +216,22 @@ export class ResultsKnowledgeProduct {
     name: 'results_id',
   })
   result_object: Result;
+
+  @ManyToOne(() => Version, (v) => v.id, { nullable: false })
+  @JoinColumn({
+    name: 'version_id',
+  })
+  version_object: number;
+
+  @ManyToOne(() => User, (u) => u.id, { nullable: false })
+  @JoinColumn({
+    name: 'created_by',
+  })
+  created_by_object: User;
+
+  @ManyToOne(() => User, (u) => u.id, { nullable: true })
+  @JoinColumn({
+    name: 'last_updated_by',
+  })
+  last_updated_by_object: User;
 }

@@ -412,7 +412,11 @@ export class ResultsKnowledgeProductMapper {
       if (!knowledgeProduct.last_updated_by) {
         institution.created_by = knowledgeProduct.created_by;
       } else {
-        institution.last_updated_by = knowledgeProduct.last_updated_by;
+        if (!institution.result_kp_mqap_institution_id) {
+          institution.created_by = knowledgeProduct.created_by;
+        } else {
+          institution.last_updated_by = knowledgeProduct.last_updated_by;
+        }
       }
 
       institution.version_id = knowledgeProduct.version_id;
@@ -422,14 +426,21 @@ export class ResultsKnowledgeProductMapper {
       return institution;
     });
 
-    knowledgeProduct.result_knowledge_product_institution_array =
-      institutions.map((i) => {
-        if (!i['matched']) {
-          i.is_active = false;
-          delete i['matched'];
+    (knowledgeProduct.result_knowledge_product_institution_array ?? []).forEach(
+      (oi) => {
+        if (!oi['matched']) {
+          if (!oi.results_by_institutions_id) {
+            oi.is_active = false;
+          }
+
+          institutions.push(oi);
+        } else {
+          delete oi['matched'];
         }
-        return i;
-      });
+      },
+    );
+
+    knowledgeProduct.result_knowledge_product_institution_array = institutions;
   }
 
   public patchAltmetricData(
@@ -451,7 +462,11 @@ export class ResultsKnowledgeProductMapper {
     if (!knowledgeProduct.last_updated_by) {
       altmetric.created_by = knowledgeProduct.created_by;
     } else {
-      altmetric.last_updated_by = knowledgeProduct.last_updated_by;
+      if (!altmetric.result_kp_altmetrics_id) {
+        altmetric.created_by = knowledgeProduct.created_by;
+      } else {
+        altmetric.last_updated_by = knowledgeProduct.last_updated_by;
+      }
     }
 
     altmetric.version_id = knowledgeProduct.version_id;
@@ -493,7 +508,11 @@ export class ResultsKnowledgeProductMapper {
       if (!knowledgeProduct.last_updated_by) {
         metadata.created_by = knowledgeProduct.created_by;
       } else {
-        metadata.last_updated_by = knowledgeProduct.last_updated_by;
+        if (!metadata.result_kp_metadata_id) {
+          metadata.created_by = knowledgeProduct.created_by;
+        } else {
+          metadata.last_updated_by = knowledgeProduct.last_updated_by;
+        }
       }
 
       metadata.version_id = knowledgeProduct.version_id;
@@ -503,14 +522,18 @@ export class ResultsKnowledgeProductMapper {
       return metadata;
     });
 
-    knowledgeProduct.result_knowledge_product_metadata_array =
-      metadataArray.map((m) => {
-        if (!m['matched']) {
-          m.is_active = false;
-          delete m['matched'];
+    (knowledgeProduct.result_knowledge_product_metadata_array ?? []).forEach(
+      (om) => {
+        if (!om['matched']) {
+          om.is_active = false;
+          metadataArray.push(om);
+        } else {
+          delete om['matched'];
         }
-        return m;
-      });
+      },
+    );
+
+    knowledgeProduct.result_knowledge_product_metadata_array = metadataArray;
   }
 
   public patchKeywords(
@@ -527,7 +550,7 @@ export class ResultsKnowledgeProductMapper {
       }),
     ];
 
-    let keywordArray = incomingKeywords.map((k) => {
+    const keywordArray = incomingKeywords.map((k) => {
       let keyword: ResultsKnowledgeProductKeyword;
       if (upsert) {
         keyword = (
@@ -546,7 +569,11 @@ export class ResultsKnowledgeProductMapper {
       if (!knowledgeProduct.last_updated_by) {
         keyword.created_by = knowledgeProduct.created_by;
       } else {
-        keyword.last_updated_by = knowledgeProduct.last_updated_by;
+        if (!keyword.result_kp_keyword_id) {
+          keyword.created_by = knowledgeProduct.created_by;
+        } else {
+          keyword.last_updated_by = knowledgeProduct.last_updated_by;
+        }
       }
 
       keyword.version_id = knowledgeProduct.version_id;
@@ -556,15 +583,18 @@ export class ResultsKnowledgeProductMapper {
       return keyword;
     });
 
-    knowledgeProduct.result_knowledge_product_keyword_array = keywordArray.map(
-      (k) => {
-        if (!k['matched']) {
-          k.is_active = false;
-          delete k['matched'];
+    (knowledgeProduct.result_knowledge_product_keyword_array ?? []).forEach(
+      (ok) => {
+        if (!ok['matched']) {
+          ok.is_active = false;
+          keywordArray.push(ok);
+        } else {
+          delete ok['matched'];
         }
-        return k;
       },
     );
+
+    knowledgeProduct.result_knowledge_product_keyword_array = keywordArray;
   }
 
   public patchAuthors(
@@ -572,7 +602,7 @@ export class ResultsKnowledgeProductMapper {
     dto: ResultsKnowledgeProductDto,
     upsert: boolean = false,
   ) {
-    let authors = (dto.authors ?? []).map((a) => {
+    const authors = (dto.authors ?? []).map((a) => {
       let author: ResultsKnowledgeProductAuthor;
       if (upsert) {
         author = (
@@ -590,7 +620,11 @@ export class ResultsKnowledgeProductMapper {
       if (!knowledgeProduct.last_updated_by) {
         author.created_by = knowledgeProduct.created_by;
       } else {
-        author.last_updated_by = knowledgeProduct.last_updated_by;
+        if (!author.result_kp_author_id) {
+          author.created_by = knowledgeProduct.created_by;
+        } else {
+          author.last_updated_by = knowledgeProduct.last_updated_by;
+        }
       }
 
       author.version_id = knowledgeProduct.version_id;
@@ -600,14 +634,17 @@ export class ResultsKnowledgeProductMapper {
       return author;
     });
 
-    knowledgeProduct.result_knowledge_product_author_array = authors.map(
-      (a) => {
-        if (!a['matched']) {
-          a.is_active = false;
-          delete a['matched'];
+    (knowledgeProduct.result_knowledge_product_author_array ?? []).forEach(
+      (oa) => {
+        if (!oa['matched']) {
+          oa.is_active = false;
+          authors.push(oa);
+        } else {
+          delete oa['matched'];
         }
-        return a;
       },
     );
+
+    knowledgeProduct.result_knowledge_product_author_array = authors;
   }
 }
