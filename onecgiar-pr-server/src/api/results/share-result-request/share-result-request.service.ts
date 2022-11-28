@@ -42,7 +42,7 @@ export class ShareResultRequestService {
           const shareInitId = initiativeShareId[index];
           const initExist = await this._resultByInitiativesRepository.getContributorInitiativeByResultAndInit(resultId, shareInitId);
           const requestExist = await this._shareResultRequestRepository.shareResultRequestExists(resultId, result.initiative_id, shareInitId);
-          if (requestExist && !initExist) {
+          if (!requestExist && !(requestExist?.request_status_id == 1 || requestExist?.request_status_id == 2)  && !initExist) {
             const newShare = new ShareResultRequest();
             newShare.result_id = resultId;
             newShare.request_status_id = 1;
