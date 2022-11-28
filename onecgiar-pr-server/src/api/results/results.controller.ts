@@ -7,6 +7,7 @@ import {
   Param,
   Headers,
   HttpException,
+  Query,
 } from '@nestjs/common';
 import { ResultsService } from './results.service';
 import { CreateResultDto } from './dto/create-result.dto';
@@ -59,9 +60,9 @@ export class ResultsController {
   }
 
   @Get('get/all/elastic')
-  async findAllResultsSimplified() {
+  async findAllResultsSimplified(@Query('collection') collection: string) {
     const { message, response, status } =
-      await this.resultsService.findAllForElasticSearch('results');
+      await this.resultsService.findAllForElasticSearch(collection);
     throw new HttpException({ message, response }, status);
   }
 
