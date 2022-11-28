@@ -6,6 +6,7 @@ import { Router } from '@angular/router';
 import { ResultBody } from '../../../../shared/interfaces/result.interface';
 import { InitiativesService } from '../../../../shared/services/global/initiatives.service';
 import { SaveButtonService } from '../../../../custom-fields/save-button/save-button.service';
+import { Source } from '../../../../shared/interfaces/elastic.interface';
 
 @Component({
   selector: 'app-result-creator',
@@ -14,7 +15,7 @@ import { SaveButtonService } from '../../../../custom-fields/save-button/save-bu
 })
 export class ResultCreatorComponent implements OnInit {
   naratives = internationalizationData.reportNewResult;
-  depthSearchList: any[] = [];
+  depthSearchList: (Source & { probability: number })[] = [];
   exactTitleFound = false;
   mqapJson: {};
   validating = false;
@@ -64,8 +65,8 @@ export class ResultCreatorComponent implements OnInit {
 
   depthSearch(title: string) {
     const cleanSpaces = text => text?.replaceAll(' ', '')?.toLowerCase();
-    this.api.resultsSE.GET_depthSearch(title).subscribe(
-      ({ response }) => {
+    this.api.resultsSE.GET_FindResultsElastic(title).subscribe(
+      response => {
         this.depthSearchList = response;
         this.exactTitleFound = !!this.depthSearchList.find(result => cleanSpaces(result.title) === cleanSpaces(title));
       },

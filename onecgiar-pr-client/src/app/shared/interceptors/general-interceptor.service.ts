@@ -12,6 +12,11 @@ export class GeneralInterceptorService implements HttpInterceptor {
 
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
     if (!this.authService?.localStorageToken && !req.url.indexOf(environment.apiBaseUrl)) return next.handle(req.clone());
+
+    if (req.url.includes(environment.elastic.baseUrl)) {
+      return next.handle(req.clone());
+    }
+
     const headers = new HttpHeaders({
       auth: this.authService?.localStorageToken
     });

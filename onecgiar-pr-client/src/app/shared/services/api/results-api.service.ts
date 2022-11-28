@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParamsOptions } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
 import { map, tap, catchError, of, retry, throwError } from 'rxjs';
 import { ResultBody } from '../../interfaces/result.interface';
@@ -11,6 +11,7 @@ import { PartnersRequestBody } from '../../../pages/results/pages/result-detail/
 import { EvidencesBody } from '../../../pages/results/pages/result-detail/pages/rd-evidences/model/evidencesBody.model';
 import { TheoryOfChangeBody } from '../../../pages/results/pages/result-detail/pages/rd-theory-of-change/model/theoryOfChangeBody';
 import { SaveButtonService } from '../../../custom-fields/save-button/save-button.service';
+import { ElasticResult, Source } from '../../interfaces/elastic.interface';
 
 @Injectable({
   providedIn: 'root'
@@ -19,6 +20,7 @@ export class ResultsApiService {
   constructor(public http: HttpClient, private saveButtonSE: SaveButtonService) {}
   apiBaseUrl = environment.apiBaseUrl + 'api/results/';
   currentResultId: number | string = null;
+  private readonly elasicCredentials = `Basic ${btoa(`${environment.elastic.username}:${environment.elastic.password}`)}`;
   GET_AllResultLevel() {
     return this.http.get<any>(`${this.apiBaseUrl}levels/all`);
   }
@@ -36,6 +38,23 @@ export class ResultsApiService {
       })
     );
   }
+
+  GET_FindResultsElastic(search?: string) {
+    const elasticSearchString = (search ?? '')
+      .split(' ')
+      .map(s => `${s}*`)
+      .join(' ');
+    const searchQuery = `?q=${elasticSearchString?.length > 0 ? elasticSearchString : '*'}`;
+    const options = { headers: new HttpHeaders({ Authorization: this.elasicCredentials }) };
+    return this.http.get<ElasticResult>(`${environment.elastic.baseUrl}${searchQuery}`, options).pipe(
+      map(resp =>
+        (resp?.hits?.hits ?? []).map(h => {
+          return { probability: h._score, ...h._source } as Source & { probability: number };
+        })
+      )
+    );
+  }
+
   POST_resultCreateHeader(body: ResultBody) {
     return this.http.post<any>(`${this.apiBaseUrl}create/header`, body).pipe(this.saveButtonSE.isCreatingPipe());
   }
