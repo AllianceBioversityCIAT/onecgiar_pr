@@ -15,16 +15,12 @@ import { pusherAuthDot } from './dto/pusher-auth.dto';
 import { TokenDto } from '../shared/globalInterfaces/token.dto';
 import Pusher from 'pusher';
 
+
 @Injectable()
 export class AuthService {
   private readonly _logger: Logger = new Logger(AuthService.name);
-  private pusher = new Pusher({
-    appId: `${env.PUSHER_APP_ID}`,
-    key: `${env.PUSHER_API_KEY}`,
-    cluster: `${env.PUSHER_APP_CLUSTER}`,
-    secret: `${env.PUSHER_API_SECRET}`,
-    useTLS: true
-  });
+  private readonly pusher: Pusher;
+
   constructor(
     private readonly _jwtService: JwtService,
     private readonly _userService: UserService,
@@ -32,8 +28,14 @@ export class AuthService {
     private readonly _bcryptPasswordEncoder: BcryptPasswordEncoder,
     private readonly _customUserRepository: UserRepository,
     private readonly _handlersError: HandlersError,
-    
   ) {
+    this.pusher = new Pusher({
+      appId: `${env.PUSHER_APP_ID}`,
+      key: `${env.PUSHER_API_KEY}`,
+      secret: `${env.PUSHER_API_SECRET}`,
+      cluster: `${env.PUSHER_APP_CLUSTER}`,
+      useTLS: true
+    });
   }
   create(createAuthDto: CreateAuthDto) {
     return createAuthDto;
@@ -55,7 +57,7 @@ export class AuthService {
     return `This action removes a #${id} auth`;
   }
 
-  async puserAuth(
+  async pusherAuth(
     pusherAuthDot: pusherAuthDot,
     resultId: number,
     userId: number,
@@ -65,28 +67,26 @@ export class AuthService {
         userId,
         resultId,
       );
-      const name = `${uPusher.first_name} ${uPusher.last_name}`;
+
       const today = new Date();
       const roles = uPusher.aplication_role;
       const initiativeRoles = uPusher?.initiative_role ? '1' : null;
+      const socketId = pusherAuthDot.socket_id;
+      const channel = pusherAuthDot.channel_name;
+      const name = `${uPusher.first_name} ${uPusher.last_name}`;
 
       const presenceData = {
         user_id: `${uPusher.user_id}`,
         user_info: { name, roles, initiativeRoles, today },
       };
 
-      const auth = this.pusher.authenticate(
-        pusherAuthDot.socket_id,
-        pusherAuthDot.channel_name,
-        presenceData,
-      );
+      const auth = this.pusher.authenticate(socketId, channel, presenceData);
+
       return {
-        response: auth,
-        message: 'Successful login pusher',
-        status: HttpStatus.ACCEPTED,
+        auth,
       };
     } catch (error) {
-      return this._handlersError.returnErrorRes({ error, debug: true });
+      return error;
     }
   }
 

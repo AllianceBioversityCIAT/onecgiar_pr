@@ -10,6 +10,7 @@ import {
   HttpException,
   UseFilters,
   Headers,
+  HttpCode,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateAuthDto } from './dto/create-auth.dto';
@@ -44,20 +45,19 @@ export class AuthController {
     throw new HttpException({ message, response }, status);
   }
 
-  @Post('/singin/pusher/result/:resultId/:userId')
-  async singInPusher(
+  @Post('/signin/pusher/result/:resultId/:userId')
+  @HttpCode(200)
+  async signInPusher(
     @Body() pusherAuthDot: pusherAuthDot,
     @Param('resultId') resultId: number,
     @Param('userId') userId: number,
-
-    ) {
- 
-    const { message, response, status } = await this.authService.puserAuth(
+  ) {
+    const response = await this.authService.pusherAuth(
       pusherAuthDot,
       resultId,
-      userId
+      userId,
     );
-    throw new HttpException({ message, response }, status);
+    return response.auth;
   }
 
   @Patch(':id')
@@ -70,3 +70,11 @@ export class AuthController {
     return this.authService.remove(+id);
   }
 }
+function PusherSocketId(arg0: string) {
+  throw new Error('Function not implemented.');
+}
+
+function PusherChannel(arg0: string) {
+  throw new Error('Function not implemented.');
+}
+

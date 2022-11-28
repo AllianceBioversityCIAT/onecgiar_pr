@@ -25,6 +25,7 @@ export class PusherService {
   firstUser = false;
   secondUser = null;
   validaeFirstUserToEdit() {
+    // console.log(this.presenceChannel?.members);
     if (!this.presenceChannel?.members) return false;
     let { members, myID } = this.presenceChannel?.members;
 
@@ -64,7 +65,6 @@ export class PusherService {
 
     sortByDate(membersList);
     this.membersList = membersList;
-    // console.log(this.membersList)
     this.firstUser = membersList[0]?.userId == myID;
     // console.log(this.firstUser +' - '+this.secondUser)
     if (!this.firstUser) this.secondUser = true;
@@ -76,8 +76,8 @@ export class PusherService {
         }, 100);
       });
     }
-    // membersList[0]?.userId == myID || (!this._initiativesService.initiative.userRoleName && !this._authService.lsUserRoles.name) || (!this._initiativesService.initiative.userRoleName && this._authService.lsUserRoles.name == 'Guest') || this._initiativesService.initiative.readonly;
-    return true;
+    // console.log(membersList);
+    return membersList[0]?.userId == myID;
   }
 
   textToinitials(text) {
@@ -87,60 +87,35 @@ export class PusherService {
       .join('');
   }
 
-  // beforeTocChanel = ''
-  // listenTocChange(sectionName: string, callback, subItemId?: string | number) {
-  //   if (this.pusherToc) this.pusherToc.disconnect();
-
-  //   this.instancePusher();
-  //   const channelName = `${sectionName}-${this._initiativesService.initiative.id}${subItemId ? `-${subItemId}` : ``}`;
-  //   const channel = this.pusherToc.subscribe(channelName);
-  //   console.log(`In: ${channelName}`);
-  //   channel.bind('updateToc', data => {
-  //     callback();
-  //   });
-  // }
   pusherToc: any;
   instancePusher() {
     this.pusherToc = new Pusher(environment.pusher.key, {
-      authEndpoint: `${environment.apiBaseUrl}/auth/singin/pusher/result/${this.api.resultsSE.currentResultId}`,
+      authEndpoint: `${environment.apiBaseUrl}/auth/signin/pusher/result/${this.api.resultsSE.currentResultId}`,
       cluster: environment.pusher.cluster,
       encrypted: true
     });
   }
 
-  start(OSTRoute: string, resultId) {
-    const pusherBlocked = new PusherBlocked(OSTRoute);
-    this.isTOC = pusherBlocked.blockedRoute();
-    if (this.beforeRoute) this.pusher.unsubscribe('presence-ost' + this.beforeRoute);
+  start(PRRoute: string, resultId) {
+    // const pusherBlocked = new PusherBlocked(OSTRoute);
+    // this.isTOC = pusherBlocked.blockedRoute();
+    if (this.beforeRoute) this.pusher.unsubscribe('presence-prms' + this.beforeRoute);
     // if (pusherBlocked.blockedRoute()) return;
 
-    OSTRoute = OSTRoute.split('/').join('').split('-').join('');
+    PRRoute = PRRoute.split('/').join('').split('-').join('');
+    console.log(this.api.authSE.localStorageUser.id);
     this.pusher = new Pusher(environment.pusher.key, {
       cluster: environment.pusher.cluster,
       encrypted: true,
       channelAuthorization: {
-        endpoint: `${environment.apiBaseUrl}auth/singin/pusher/result/${resultId}`,
-        headers: {
-          auth: this.api.authSE.localStorageToken
-        }
+        endpoint: `${environment.apiBaseUrl}auth/signin/pusher/result/${resultId}/${this.api.authSE.localStorageUser.id}`
       }
     });
-    console.log('presence-ost' + OSTRoute);
-    this.presenceChannel = this.pusher.subscribe('presence-ost' + OSTRoute);
-    this.beforeRoute = OSTRoute;
+    console.log('presence-prms' + PRRoute);
+
+    this.presenceChannel = this.pusher.subscribe('presence-prms' + PRRoute);
+    this.beforeRoute = PRRoute;
     console.log(this.presenceChannel);
     console.log(this.presenceChannel?.members);
   }
-
-  // stop() {
-  //   // this.pusher.unsubscribe('presence-ost'+OSTRoute);
-  // }
-
-  // updateStatus(tocStatus) {
-  //   this.http
-  //     .post(`${environment.apiBaseUrl}/auth/pusher/update`, {
-  //       tocStatus: tocStatus
-  //     })
-  //     .subscribe(data => {});
-  // }
 }
