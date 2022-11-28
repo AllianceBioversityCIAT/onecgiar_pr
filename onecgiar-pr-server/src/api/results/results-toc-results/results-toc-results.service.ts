@@ -21,6 +21,8 @@ import { ResultsImpactAreaIndicatorRepository } from '../results-impact-area-ind
 import { ResultsImpactAreaIndicator } from '../results-impact-area-indicators/entities/results-impact-area-indicator.entity';
 import { ResultsImpactAreaTarget } from '../results-impact-area-target/entities/results-impact-area-target.entity';
 import { ClarisaImpactAreaRepository } from '../../../clarisa/clarisa-impact-area/ClarisaImpactArea.repository';
+import { ShareResultRequestService } from '../share-result-request/share-result-request.service';
+import { CreateTocShareResult } from '../share-result-request/dto/create-toc-share-result.dto';
 
 @Injectable()
 export class ResultsTocResultsService {
@@ -38,6 +40,7 @@ export class ResultsTocResultsService {
     private readonly _resultsImpactAreaTargetRepository: ResultsImpactAreaTargetRepository,
     private readonly _resultsImpactAreaIndicatorRepository: ResultsImpactAreaIndicatorRepository,
     private readonly _clarisaImpactAreaRepository: ClarisaImpactAreaRepository,
+    private readonly _shareResultRequestService: ShareResultRequestService
   ) { }
 
   async create(createResultsTocResultDto: CreateResultsTocResultDto, user: TokenDto) {
@@ -58,27 +61,18 @@ export class ResultsTocResultsService {
       if (contributing_initiatives?.length) {
         initiativeArray = contributing_initiatives.map(el => el.id);
         await this._resultByInitiativesRepository.updateResultByInitiative(result_id, [...initiativeArray, result_toc_result.initiative_id], user.id, false);
-        let resultsByInititiativeArray: ResultsByInititiative[] = [];
-        for (let index = 0; index < contributing_initiatives.length; index++) {
-          const exists = await this._resultByInitiativesRepository.getResultsByInitiativeByResultIdAndInitiativeIdAndRole(result_id, contributing_initiatives[index].id, false);
-          if (!exists) {
-            const newResultByInitiative = new ResultsByInititiative();
-            newResultByInitiative.initiative_id = contributing_initiatives[index].id;
-            newResultByInitiative.initiative_role_id = 2;
-            newResultByInitiative.result_id = result_id;
-            newResultByInitiative.last_updated_by = user.id;
-            newResultByInitiative.created_by = user.id;
-            newResultByInitiative.version_id = vrs.id;
-            resultsByInititiativeArray.push(newResultByInitiative);
-          }
+        const dataRequst: CreateTocShareResult = {
+          isToc: true,
+          initiativeShareId: initiativeArray,
+          action_area_outcome_id: null,
+          toc_result_id: null
         }
-        await this._resultByInitiativesRepository.save(resultsByInititiativeArray);
+        await this._shareResultRequestService.resultRequest(dataRequst, result_id, user);
       } else {
         await this._resultByInitiativesRepository.updateResultByInitiative(result_id, [], user.id, false);
       }
 
       if (contributing_np_projects?.length) {
-
         await this._nonPooledProjectRepository.updateNPProjectById(result_id, titleArray, user.id);
         let resultTocResultArray: NonPooledProject[] = [];
         for (let index = 0; index < contributing_np_projects.length; index++) {
@@ -275,6 +269,7 @@ export class ResultsTocResultsService {
       const result = await this._resultRepository.getResultById(resultId);
       const resultInit = await this._resultByInitiativesRepository.getOwnerInitiativeByResult(resultId);
       const conInit = await this._resultByInitiativesRepository.getContributorInitiativeByResult(resultId);
+      const conPending = await this._resultByInitiativesRepository.getOwnerInitiativeByResult(resultId);
       const npProject = await this._nonPooledProjectRepository.getAllNPProjectByResultId(resultId);
       const resCenters = await this._resultsCenterRepository.getAllResultsCenterByResultId(resultId);
       let impactAreaArray = await this._clarisaImpactAreaRepository.getAllImpactArea();
@@ -334,6 +329,7 @@ export class ResultsTocResultsService {
       return {
         response: {
           contributing_initiatives: conInit,
+          pending_contributing_initiatives: conPending,
           contributing_np_projects: npProject,
           contributing_center: resCenters,
           result_toc_result: resTocRes[0],

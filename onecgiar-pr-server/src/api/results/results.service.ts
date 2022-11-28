@@ -42,6 +42,9 @@ import { ResultRegionsService } from './result-regions/result-regions.service';
 import { ResultCountriesService } from './result-countries/result-countries.service';
 import { ResultRegionRepository } from './result-regions/result-regions.repository';
 import { ResultCountryRepository } from './result-countries/result-countries.repository';
+import { ResultsKnowledgeProductsRepository } from './results-knowledge-products/repositories/results-knowledge-products.repository';
+import { ResultCountry } from './result-countries/entities/result-country.entity';
+import { ResultRegion } from './result-regions/entities/result-region.entity';
 
 @Injectable()
 export class ResultsService {
@@ -68,6 +71,7 @@ export class ResultsService {
     private readonly _genderTagRepository: GenderTagRepository,
     private readonly _resultRegionRepository: ResultRegionRepository,
     private readonly _resultCountryRepository: ResultCountryRepository,
+    private readonly _resultKnowledgeProductRepository: ResultsKnowledgeProductsRepository,
   ) {}
 
   /**
@@ -838,13 +842,33 @@ export class ResultsService {
 
   async getGeoScope(resultId: number) {
     try {
-      const regions =
+      const result = await this._resultRepository.getResultById(resultId);
+
+      if (!result?.id) {
+        throw {
+          response: {},
+          message: 'Results Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      let regions: (ResultRegion | string)[] =
         await this._resultRegionRepository.getResultRegionByResultId(resultId);
-      const contries =
+      let contries: (ResultCountry | string)[] =
         await this._resultCountryRepository.getResultCountriesByResultId(
           resultId,
         );
-      const result = await this._resultRepository.getResultById(resultId);
+
+      const knowledgeProduct =
+        await this._resultKnowledgeProductRepository.findOneBy({
+          results_id: resultId,
+        });
+
+      if (knowledgeProduct) {
+        contries = knowledgeProduct.cgspace_countries?.split('; ') ?? [];
+        regions = knowledgeProduct.cgspace_regions?.split('; ') ?? [];
+      }
+
       let scope: number = 0;
       if (result.geographic_scope_id == 1 || result.geographic_scope_id == 2) {
         scope = result.geographic_scope_id;

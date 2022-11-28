@@ -40,6 +40,24 @@ export class ResultsKnowledgeProductMapper {
       .join('; ');
     knowledgeProductDto.type = mqapResponseDto?.Type;
 
+    //TODO remove when this mapping is done
+    if (typeof mqapResponseDto?.Countries === 'string') {
+      knowledgeProductDto.cgspace_countries = mqapResponseDto?.Countries;
+    } else {
+      knowledgeProductDto.cgspace_countries = (
+        mqapResponseDto?.Countries ?? []
+      ).join('; ');
+    }
+
+    if (typeof mqapResponseDto?.['Region of the research'] === 'string') {
+      knowledgeProductDto.cgspace_regions =
+        mqapResponseDto?.['Region of the research'];
+    } else {
+      knowledgeProductDto.cgspace_regions = (
+        mqapResponseDto?.['Region of the research'] ?? []
+      ).join('; ');
+    }
+
     knowledgeProductDto = this.fillRelatedMetadata(
       mqapResponseDto,
       knowledgeProductDto,
@@ -242,6 +260,9 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProductDto.reusable = entity.reusable;
     knowledgeProductDto.sponsor = entity.sponsors;
     knowledgeProductDto.type = entity.knowledge_product_type;
+    //TODO remove when this mapping is done
+    knowledgeProductDto.cgspace_countries = entity.cgspace_countries;
+    knowledgeProductDto.cgspace_regions = entity.cgspace_regions;
 
     const authors = entity.result_knowledge_product_author_array;
     knowledgeProductDto.authors = (authors ?? []).map((a) => {
@@ -341,6 +362,10 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProduct.created_by = userId;
     knowledgeProduct.results_id = resultId;
     knowledgeProduct.version_id = versionId;
+
+    //TODO remove when mapping of countries and regions is done
+    knowledgeProduct.cgspace_countries = dto.cgspace_countries;
+    knowledgeProduct.cgspace_regions = dto.cgspace_regions;
 
     return knowledgeProduct;
   }
@@ -443,7 +468,7 @@ export class ResultsKnowledgeProductMapper {
       return institution;
     });
 
-    //TODO map country and region information
+    //TODO map country and region information to results relation
 
     return knowledgeProduct;
   }

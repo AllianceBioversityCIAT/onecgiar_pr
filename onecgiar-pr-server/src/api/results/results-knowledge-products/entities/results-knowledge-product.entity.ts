@@ -133,6 +133,20 @@ export class ResultsKnowledgeProduct {
   })
   melia_type_id: number;
 
+  //TODO to be extracted in result_region when the mapping is done
+  @Column({
+    type: 'text',
+    nullable: true,
+  })
+  cgspace_regions: string;
+
+  //TODO to be extracted in result_country when the mapping is done
+  @Column({
+    type: 'text',
+    nullable: true,
+  })
+  cgspace_countries: string;
+
   //versioning field
   @ManyToOne(() => Version, (v) => v.id, { nullable: false })
   @JoinColumn({
