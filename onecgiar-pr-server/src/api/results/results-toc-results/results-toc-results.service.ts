@@ -65,6 +65,7 @@ export class ResultsTocResultsService {
           isToc: true,
           initiativeShareId: initiativeArray,
           action_area_outcome_id: null,
+          planned_result: null,
           toc_result_id: null
         }
         await this._shareResultRequestService.resultRequest(dataRequst, result_id, user);
@@ -357,5 +358,5 @@ interface resultToResultInterfaceToc {
   toc_result_id?: number;
   results_id: number;
   action_area_outcome_id?: number;
-  planned_result: boolean;
+  planned_result?: boolean;
 }

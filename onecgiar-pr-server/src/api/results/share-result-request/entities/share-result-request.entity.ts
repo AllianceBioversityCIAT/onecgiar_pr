@@ -55,6 +55,13 @@ export class ShareResultRequest {
         name: 'request_status_id'
     })
     request_status_id: number;
+ 
+    @Column({
+        name: 'planned_result',
+        type: 'boolean',
+        nullable: true 
+    })
+    planned_result!: boolean;
 
     @Column({
         name: 'is_active',
