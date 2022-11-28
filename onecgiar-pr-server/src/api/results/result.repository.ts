@@ -6,6 +6,7 @@ import { DepthSearch } from './dto/depth-search.dto';
 import { DepthSearchOne } from './dto/depth-search-one.dto';
 import { ResultLevelType } from './dto/result-level-type.dto';
 import { ResultSimpleDto } from './dto/result-simple.dto';
+import { ResultDataToMapDto } from './dto/result-data-to-map.dto';
 
 @Injectable()
 export class ResultRepository extends Repository<Result> {
@@ -123,6 +124,38 @@ export class ResultRepository extends Repository<Result> {
     } catch (error) {
       throw {
         message: `[${ResultRepository.name}] => allResultsForElasticSearch error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
+  async getResultInfoToMap(resultId: number): Promise<ResultDataToMapDto> {
+    const query = `
+      select
+        r.title as result_title,
+        rt.name as result_type,
+        r.id as result_id,
+        ci.id as result_primary_submitter_id,
+        ci.official_code as result_primary_submitter_official_code
+      from
+        result r
+      inner join result_type rt on
+        r.result_type_id = rt.id
+      inner join results_by_inititiative rbi on
+        rbi.result_id = r.id
+        and rbi.initiative_role_id = 1
+      inner join clarisa_initiatives ci on
+        rbi.inititiative_id = ci.id
+      where
+        r.id = ?
+    `;
+    try {
+      const result = await this.query(query, [resultId]);
+      return result?.[0] as ResultDataToMapDto;
+    } catch (error) {
+      throw {
+        message: `[${ResultRepository.name}] => getResultInfoToMap error: ${error}`,
         response: {},
         status: HttpStatus.INTERNAL_SERVER_ERROR,
       };

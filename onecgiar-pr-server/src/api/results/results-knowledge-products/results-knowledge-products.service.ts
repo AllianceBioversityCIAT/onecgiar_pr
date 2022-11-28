@@ -340,8 +340,11 @@ export class ResultsKnowledgeProductsService {
           });
 
         if (resultKnowledgeProduct) {
+          const infoToMap = await this._resultRepository.getResultInfoToMap(
+            resultKnowledgeProduct.results_id,
+          );
           return {
-            response: { title: resultKnowledgeProduct.name },
+            response: infoToMap,
             message: 'The Result Knowledge Product has already been created.',
             status: HttpStatus.CONFLICT,
           };
