@@ -24,6 +24,8 @@ export class RdPartnersComponent {
     });
   }
 
+  onSyncSection() {}
+
   onSaveSection() {
     console.log(this.rdPartnersSE.partnersBody);
     this.api.resultsSE.PATCH_partnersSection(this.rdPartnersSE.partnersBody).subscribe(resp => {
