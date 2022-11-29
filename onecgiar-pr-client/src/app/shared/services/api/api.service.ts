@@ -66,6 +66,13 @@ export class ApiService {
           err => {}
         );
       };
+
+      window['Tawk_API'].onChatEnded = function(){
+        window['Tawk_API'].hideWidget();
+        window['Tawk_API'].minimize();
+        console.log('ENDING CHAT');
+        
+    };
     } catch (error) {
       console.log(error);
     }
