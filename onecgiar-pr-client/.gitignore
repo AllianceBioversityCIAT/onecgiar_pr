@@ -43,3 +43,7 @@ Thumbs.db
 
 # environments
 /src/environments/*.ts
+package-lock.json
+
+.vscode/*
+.angular

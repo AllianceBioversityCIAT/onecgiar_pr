@@ -33,3 +33,16 @@ lerna-debug.log*
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+
+.env
+
+#Lambda
+.build
+.serverless
+
+#aws_secret_access_key
+.aws
+
+src/config/*
+
+package-lock.json

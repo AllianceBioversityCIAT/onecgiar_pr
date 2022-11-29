@@ -1,0 +1,56 @@
+.section_container {
+    background-color: white;
+    @extend %global-shadow-1;
+    border-radius: 15px;
+
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.detail_container {
+    padding: 0px 80px 100px 80px;
+}
+
+.save_button_container {
+    margin-top: 20px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.auto_fit_container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 20px;
+}
+
+.shadow-1 {
+    @extend %global-shadow-1;
+}
+
+
+%global-shadow-1 {
+    box-shadow: 0px 2px 5px 2px rgb(0 0 0 / 8%);
+}
+
+.center_flex_100 {
+    @extend .center_flex;
+    width: 100%;
+}
+
+.center_flex {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@media only screen and (max-width: 1400px) {
+    .section_container {
+        width: 97%;
+    }
+}
+
+@media only screen and (min-width: 1400px) {
+    .section_container {
+        width: 90%;
+    }
+}

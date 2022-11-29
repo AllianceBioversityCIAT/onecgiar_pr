@@ -28,9 +28,19 @@
               "src/assets"
             ],
             "styles": [
-              "src/styles.scss"
+              "node_modules/primeng/resources/themes/tailwind-light/theme.css",
+              "node_modules/primeng/resources/primeng.min.css",
+              "node_modules/primeicons/primeicons.css",
+              "src/styles.scss",
+              "src/styles/fonts.scss",
+              "src/styles/colors.scss",
+              "src/styles/transitions.scss",
+              "src/styles/primeng-custom-styles.scss",
+              "src/styles/containers.scss",
+              "src/app/custom-fields/custom-fields.scss",
+              "src/styles/custom-alert.scss"
             ],
-            "scripts": []
+            "scripts": ["node_modules/pusher-js/dist/web/pusher.min.js"]
           },
           "configurations": {
             "production": {
@@ -100,8 +110,23 @@
             ],
             "scripts": []
           }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "src/**/*.ts",
+              "src/**/*.html"
+            ]
+          }
         }
       }
     }
+  },
+  "cli": {
+    "schematicCollections": [
+      "@angular-eslint/schematics"
+    ],
+    "analytics": false
   }
 }

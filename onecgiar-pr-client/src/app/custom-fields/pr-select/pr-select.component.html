@@ -1,0 +1,44 @@
+<app-pr-field-header [label]="this.label" [description]="this.description" [required]="this.required">
+</app-pr-field-header>
+<input type="text" [hidden]="true" [(ngModel)]="this.value">
+<div [ngSwitch]="editable ? false :(readOnly || this.rolesSE.readOnly && !isStatic)" class="pr-field"
+    [ngClass]="{'mandatory': this.required, 'complete': (this.optionsIntance | labelName:this.value:this.optionValue:this.optionLabel)}">
+    <div class="read-only" *ngSwitchCase="true">{{(this.optionsIntance |
+        labelName:this.value:this.optionValue:this.optionLabel)}}</div>
+    <div class="custom_select" *ngSwitchCase="false">
+        <a class="field" tabindex="0" [id]="this.optionValue" [ngClass]="{'select-disable': this.disabled}">
+            <div class="text"
+                [ngClass]="{'select_placeholder': !(this.optionsIntance | labelName:this.value:this.optionValue:this.optionLabel)}"
+                [innerHtml]="(this.optionsIntance | labelName:this.value:this.optionValue:this.optionLabel)? (this.optionsIntance | labelName:this.value:this.optionValue:this.optionLabel) :placeholder">
+            </div>
+
+            <div class="icon_container" [ngClass]="{'icon_container_active': disabled}">
+            </div>
+            <i class="pi pi-chevron-down icon_dropdown"></i>
+
+            <div class="remove_focus" (click)="removeFocus()"></div>
+            <div class="options">
+                <div class="search_input_container">
+                    <div class="p-input-icon-left p-fluid">
+                        <i class="pi pi-search"></i>
+                        <input type="text" pInputText placeholder="Search" [(ngModel)]="this.searchText" />
+                    </div>
+                </div>
+
+                <cdk-virtual-scroll-viewport itemSize="7" class="custom_scroll virtual_scroll">
+                    <div *cdkVirtualFor="let option of optionsIntance | listFilterByTextAndAttr:this.optionLabel:this.searchText"
+                        class="option"
+                        [ngClass]="{'disabled': option?.disabled === true, 'selected':option?.selected === true}"
+                        (click)="this.disabled ? null :onSelectOption(option);removeFocus()">
+                        <!-- <p-checkbox [disabled]="option?.disabled" [binary]="true" [(ngModel)]="option.selected">
+                        </p-checkbox> -->
+                        <img *ngIf="flagsCode" [src]="'https://countryflagsapi.com/png/'+option[this.flagsCode]" alt=""
+                            srcset="">
+                        <div class="label" [innerHtml]="option[this.optionLabel]"></div>
+                        <div class="event"></div>
+                    </div>
+                </cdk-virtual-scroll-viewport>
+            </div>
+        </a>
+    </div>
+</div>

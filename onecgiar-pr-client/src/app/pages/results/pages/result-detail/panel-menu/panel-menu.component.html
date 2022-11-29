@@ -1,0 +1,24 @@
+<div class="panel_menu shadow-1">
+  <div>
+    <div class="back_button">
+      <a routerLink="/result/results-list" class="open_link_in_new_page">
+        <app-pr-button text="Back to results" icon="arrow_back" [reverse]="true" [showBackground]="false">
+        </app-pr-button>
+      </a>
+    </div>
+    <div class="segment">
+      <div class="name">Sections</div>
+      <div class="sections">
+        <a *ngFor="let navOption of navigationOptions | panelMenu:this.resultLevelSE.currentResultTypeId; let i=index"
+          [hidden]="hideKP(navOption)"
+          [routerLink]="'/result/result-detail/'+this.resultsListSE.currentResultId+'/' + navOption.path"
+          routerLinkActive="section_active">{{i+1}}.
+          {{navOption.prName }} <img *ngIf="navOption.underConstruction === true" class="under_construction"
+            src="assets/work-in-progress.png" alt="" srcset=""> </a>
+      </div>
+    </div>
+  </div>
+  <div class="submit_button" *ngIf="false">
+    <app-pr-button [ngClass]="{'globalDisabled': true}" text="Submit"></app-pr-button>
+  </div>
+</div>

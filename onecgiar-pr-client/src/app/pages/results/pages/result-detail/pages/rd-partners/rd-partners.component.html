@@ -1,0 +1,10 @@
+<app-detail-section-title sectionName="Partners"></app-detail-section-title>
+
+<div class="detail_container">
+
+    <app-normal-selector *ngIf="!this.api.dataControlSE.isKnowledgeProduct"></app-normal-selector>
+    <app-knowledge-product-selector *ngIf="this.api.dataControlSE.isKnowledgeProduct"></app-knowledge-product-selector>
+
+    <app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>
+    <app-sync-button (clickSave)="onSyncSection()"></app-sync-button>
+</div>

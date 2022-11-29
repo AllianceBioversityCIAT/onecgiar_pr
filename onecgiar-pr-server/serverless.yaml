@@ -1,0 +1,30 @@
+org: juankcadavid
+app: prtest
+service: prtesting
+
+useDotenv: true
+
+plugins:
+ - serverless-plugin-optimize
+ - serverless-offline
+
+provider:
+ name: aws
+ runtime: nodejs14.x
+ environment:
+    PORT: ${env:PORT}
+    DB_PORT: ${env:DB_PORT}
+    DB_HOST: ${env:DB_HOST}
+    DB_NAME: ${env:DB_NAME}
+    DB_USER_NAME: ${env:DB_USER_NAME}
+    DB_USER_PASS: ${env:DB_USER_PASS}
+    JWT_SKEY: ${env:JWT_SKEY}
+    JWT_EXPIRES: ${env:JWT_EXPIRES}
+
+functions:
+ main: 
+   handler: dist/lambda.handler
+   events:
+     - http:
+         method: any
+         path: /{any+}

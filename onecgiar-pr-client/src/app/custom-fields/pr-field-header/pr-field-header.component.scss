@@ -1,0 +1,11 @@
+.required::after {
+    content: '*';
+    color: rgb(255, 92, 92);
+    margin-left: 2px;
+}
+
+.simpleStyle {
+    color: var(--pr-color-primary) !important;
+    opacity: .8;
+    // margin-bottom: -10px;
+}

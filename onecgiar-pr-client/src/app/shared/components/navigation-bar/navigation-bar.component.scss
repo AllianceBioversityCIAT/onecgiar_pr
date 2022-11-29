@@ -1,0 +1,42 @@
+.navigation_bar {
+    background-color: var(--pr-color-secondary);
+    display: flex;
+    gap: 10px;
+    padding: 10px 100px;
+
+    .section_active {
+        background-color: white;
+        font-weight: 700;
+        color: var(--pr-color-tertiary);
+    }
+
+    a {
+        text-decoration: none;
+        color: white;
+        padding: 8px 15px;
+        border-radius: 7px;
+        font-weight: 300;
+        position: relative;
+        padding-right: 40px;
+
+        img {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            height: 30px;
+        }
+    }
+}
+
+.navbar_fixed {
+    width: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 4;
+}
+
+.block {
+    height: 55px;
+}

@@ -1,0 +1,5 @@
+<div class="word_counter">
+    Max {{maxWords}} words:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <div [ngClass]="{'limitBreaker': wordCount>maxWords}">
+        {{wordCount}}</div> /
+    {{maxWords}}
+</div>

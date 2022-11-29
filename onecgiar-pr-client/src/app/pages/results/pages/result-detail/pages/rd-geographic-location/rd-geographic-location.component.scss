@@ -1,0 +1,11 @@
+.custom_chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+
+    .geoscope {
+        border-radius: 100px;
+        background-color: #E8EBFF;
+        padding: 5px 15px;
+    }
+}

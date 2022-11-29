@@ -1,0 +1,204 @@
+.header {
+    position: relative;
+    text-align: center;
+    background: linear-gradient(60deg, rgb(147, 155, 204) 0%, #5569DD 100%);
+    color: white;
+
+    .inner-header {
+        height: calc(100vh - 20vh);
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+
+        .success_padding {
+            width: 220px !important;
+            // height: 150px !important;
+            padding: 25px !important;
+            // box-sizing: border-box;
+        }
+
+        .login_card {
+            background-color: #ffffff;
+            border-radius: 10px;
+            width: 550px;
+            transition: all ease-in-out .15s;
+            transition-delay: .3s;
+            margin-top: 50px;
+
+            .successText {
+                text-align: center;
+                color: var(--pr-color-primary);
+                white-space: nowrap;
+                font-weight: 500;
+                font-size: 1.2em;
+            }
+
+            .form {
+                transition: all ease-in-out .4s;
+                height: 450px;
+                padding: 30px 40px 50px 40px;
+
+                .question_container {
+                    margin-top: 20px;
+                    transition: all ease-in-out .3s;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    padding: 5px 0px;
+
+                    &:hover {
+                        background-color: #e1e3f5;
+                    }
+
+                    .question {
+                        color: var(--pr-color-primary);
+                        text-decoration: underline;
+                        font-weight: 500;
+                    }
+                }
+
+            }
+
+            .successLogin {
+                overflow: hidden;
+                height: 0px !important;
+                padding: 0px !important;
+            }
+
+            .title {
+                color: var(--pr-color-primary);
+                font-size: 2em;
+                font-weight: 600;
+            }
+
+            .welcome {
+                color: var(--pr-color-primary);
+                font-size: 1.5em;
+                font-weight: 600;
+                margin-bottom: 50px;
+            }
+
+            .field {
+                margin-top: 40px;
+            }
+        }
+    }
+
+    .waves {
+        position: relative;
+        width: 100%;
+        height: 15vh;
+        margin-bottom: -7px;
+        /*Fix for safari gap*/
+        min-height: 100px;
+        max-height: 150px;
+    }
+
+}
+
+
+.modal_container {
+    position: relative;
+    padding: 80px 80px;
+
+    .close_icon {
+        position: absolute;
+        color: var(--pr-color-primary);
+        right: 0;
+        top: 8px;
+        margin-right: 20px;
+        cursor: pointer;
+    }
+
+    .email {
+        margin-bottom: 8px;
+
+        a {
+            color: var(--pr-color-primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+    }
+
+    .title {
+        font-size: 1.8em;
+        font-weight: 600;
+        margin-bottom: 20px;
+    }
+
+    .line:nth-child(1) {
+        width: 15px;
+        height: 100%;
+        background-color: var(--pr-color-primary);
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+
+    .line:nth-child(2) {
+        width: 15px;
+        height: 100%;
+        background-color: var(--pr-color-primary);
+        position: absolute;
+        top: 0;
+        right: 0;
+
+    }
+}
+
+
+
+/* Animation */
+
+.parallax>use {
+    animation: move-forever 25s cubic-bezier(.55, .5, .45, .5) infinite;
+}
+
+.parallax>use:nth-child(1) {
+    animation-delay: -2s;
+    animation-duration: 7s;
+}
+
+.parallax>use:nth-child(2) {
+    animation-delay: -3s;
+    animation-duration: 10s;
+}
+
+.parallax>use:nth-child(3) {
+    animation-delay: -4s;
+    animation-duration: 13s;
+}
+
+.parallax>use:nth-child(4) {
+    animation-delay: -5s;
+    animation-duration: 20s;
+}
+
+@keyframes move-forever {
+    0% {
+        transform: translate3d(-90px, 0, 0);
+    }
+
+    100% {
+        transform: translate3d(85px, 0, 0);
+    }
+}
+
+/*Shrinking for mobile*/
+@media (max-width: 768px) {
+    .waves {
+        height: 40px;
+        min-height: 40px;
+    }
+
+    .content {
+        height: 30vh;
+    }
+
+    h1 {
+        font-size: 24px;
+    }
+}

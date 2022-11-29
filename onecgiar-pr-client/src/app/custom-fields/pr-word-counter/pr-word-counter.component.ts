@@ -1,0 +1,12 @@
+import { Component, Input, OnInit } from '@angular/core';
+
+@Component({
+  selector: 'app-pr-word-counter',
+  templateUrl: './pr-word-counter.component.html',
+  styleUrls: ['./pr-word-counter.component.scss']
+})
+export class PrWordCounterComponent {
+  @Input() wordCount: number;
+  @Input() maxWords: number;
+  constructor() {}
+}
