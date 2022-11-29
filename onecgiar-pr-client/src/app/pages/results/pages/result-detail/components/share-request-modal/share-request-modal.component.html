@@ -1,0 +1,44 @@
+<p-dialog class="support_information" header="Title" [(visible)]="this.api.dataControlSE.showShareRequest"
+    (onHide)="cleanObject()" [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false"
+    [dismissableMask]="true" [style]="{padding: '0px'}">
+    <div class="modal_title">Please submit a request to the primary submitter of the result to add your initiative as
+        contributor.
+    </div>
+    <div class="modal_container partners-request-container" *ngIf="showForm">
+
+        <div class="information">
+            {{this.api?.dataControlSE?.currentResult?.result_type}} -
+            <strong>{{this.api?.dataControlSE?.currentResult?.title}}</strong> has been
+            recorded for <strong>{{this.api?.dataControlSE?.currentResult?.submitter}} </strong> and your initiative was
+            not added as
+            contributor.
+        </div>
+
+        <app-pr-select class="segment_title_margin" [options]="this.api.dataControlSE.myInitiativesList"
+            *ngIf="!this.api.rolesSE.isAdmin" label="Select initiative" [isStatic]="true" optionLabel="full_name"
+            optionValue="initiative_id" placeholder="Select initiative"
+            [(ngModel)]="this.shareRequestBody.initiative_id">
+        </app-pr-select>
+
+        <app-pr-select class="segment_title_margin" [options]="this.allInitiatives" label="Select initiative"
+            [isStatic]="true" *ngIf="this.api.rolesSE.isAdmin" optionLabel="full_name" optionValue="initiative_id"
+            placeholder="Select initiative" [(ngModel)]="this.shareRequestBody.initiative_id">
+        </app-pr-select>
+
+        <app-toc-initiative-out *ngIf="shareRequestBody?.initiative_id" [initiative]="shareRequestBody"
+            [editable]="this.rolesSE.validateInitiative(shareRequestBody?.initiative_id) || this.rolesSE.isAdmin"
+            [resultLevelId]="2">
+        </app-toc-initiative-out>
+
+        <!-- flagsCode="iso_alpha_2" -->
+    </div>
+    <div class="buttons">
+        <app-pr-button padding="medium" text="Cancel" icon="cancel_schedule_send" colorType="secondary"
+            (click)="this.api.dataControlSE.showShareRequest = false">
+        </app-pr-button>
+        <app-pr-button [ngClass]="{'globalDisabled': this.requesting}" [text]="this.requesting?'Saving':'Requesting'"
+            [rotating]="this.requesting" [icon]="this.requesting?'loop':'send'" padding="medium" (click)="onRequest()">
+        </app-pr-button>
+    </div>
+
+</p-dialog>

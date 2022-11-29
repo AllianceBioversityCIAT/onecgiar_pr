@@ -26,6 +26,9 @@ export class ResultsListComponent implements OnInit {
       label: 'Map to TOC',
       icon: 'pi pi-fw pi-sitemap',
       command: () => {
+        console.log('showShareRequest');
+        this.api.dataControlSE.showShareRequest = true;
+        console.log(this.api.resultsSE.currentResultId);
         // event
       }
     },
@@ -47,5 +50,10 @@ export class ResultsListComponent implements OnInit {
       querySelector: '.alert',
       position: 'beforebegin'
     });
+  }
+  onPressAction(result) {
+    console.log(result);
+    this.api.resultsSE.currentResultId = result?.id;
+    this.api.dataControlSE.currentResult = result;
   }
 }

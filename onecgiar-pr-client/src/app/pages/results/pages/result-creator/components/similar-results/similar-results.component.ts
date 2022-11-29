@@ -21,4 +21,9 @@ export class SimilarResultsComponent {
       }
     }
   ];
+  onPressAction(result) {
+    console.log(result);
+    // this.api.resultsSE.currentResultId = result?.id;
+    // this.api.dataControlSE.currentResult = result;
+  }
 }

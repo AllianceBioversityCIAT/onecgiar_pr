@@ -16,8 +16,8 @@ export class ExternalToolsComponent implements OnInit {
   ngOnInit(): void {
     this.router.events.subscribe((event: NavigationEvent) => {
       if (event instanceof NavigationStart) {
-        console.log(this.api.resultsSE.currentResultId);
-        console.log(event.url);
+        // console.log(this.api.resultsSE.currentResultId);
+        // console.log(event.url);
         window.scrollTo(0, 0);
         this.pusherSE.start(event.url, event.url.split('/')[3]);
         this.pusherSE.membersList = [];

@@ -14,10 +14,11 @@ import { TestEnvironmentLabelComponent } from './shared/components/test-environm
 import { CustomFieldsModule } from './custom-fields/custom-fields.module';
 import { TawkComponent } from './shared/components/tawk/tawk.component';
 import { GoogleAnalyticsComponent } from './shared/components/external-tools/components/google-analytics/google-analytics.component';
+import { ShareRequestModalModule } from './pages/results/pages/result-detail/components/share-request-modal/share-request-modal.module';
 
 @NgModule({
   declarations: [AppComponent, NavigationBarComponent, FooterComponent, HeaderPanelComponent, ExternalToolsComponent, TestEnvironmentLabelComponent, TawkComponent, GoogleAnalyticsComponent],
-  imports: [BrowserModule, AppRoutingModule, BrowserAnimationsModule, HttpClientModule, CustomFieldsModule],
+  imports: [BrowserModule, AppRoutingModule, BrowserAnimationsModule, HttpClientModule, CustomFieldsModule, ShareRequestModalModule],
   providers: [{ provide: HTTP_INTERCEPTORS, useClass: GeneralInterceptorService, multi: true }],
   bootstrap: [AppComponent]
 })

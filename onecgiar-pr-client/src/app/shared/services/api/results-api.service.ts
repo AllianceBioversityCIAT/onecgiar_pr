@@ -104,10 +104,12 @@ export class ResultsApiService {
   GET_partnersSection() {
     return this.http.get<any>(`${this.apiBaseUrl}results-by-institutions/partners/result/${this.currentResultId}`).pipe(
       map(resp => {
-        resp?.response?.mqap_institutions.map(resp => {
-          console.log(resp?.user_matched_institution?.deliveries);
-          if (!resp?.user_matched_institution?.deliveries?.length) resp.user_matched_institution.deliveries = [3];
-        });
+        if (resp?.response?.mqap_institutions) {
+          resp?.response?.mqap_institutions.map(resp => {
+            console.log(resp?.user_matched_institution?.deliveries);
+            if (!resp?.user_matched_institution?.deliveries?.length) resp.user_matched_institution.deliveries = [3];
+          });
+        }
         return resp;
       }),
       this.saveButtonSE.isSavingSectionPipe()
@@ -302,5 +304,21 @@ export class ResultsApiService {
 
   GET_AllglobalTarget() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/global-target/get/all`);
+  }
+  POST_createRequest(body) {
+    console.log(this.currentResultId);
+    return this.http.post<any>(`${this.apiBaseUrl}request/create/${this.currentResultId}`, body);
+  }
+
+  GET_allRequest() {
+    return this.http.get<any>(`${this.apiBaseUrl}request/get/all`);
+  }
+
+  POST_updateRequest(body) {
+    return this.http.patch<any>(`${this.apiBaseUrl}request/update`, body);
+  }
+
+  GET_requestStatus() {
+    return this.http.get<any>(`${this.apiBaseUrl}request/get/status`);
   }
 }

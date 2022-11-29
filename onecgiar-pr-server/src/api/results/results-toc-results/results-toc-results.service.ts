@@ -270,7 +270,7 @@ export class ResultsTocResultsService {
       const result = await this._resultRepository.getResultById(resultId);
       const resultInit = await this._resultByInitiativesRepository.getOwnerInitiativeByResult(resultId);
       const conInit = await this._resultByInitiativesRepository.getContributorInitiativeByResult(resultId);
-      const conPending = await this._resultByInitiativesRepository.getOwnerInitiativeByResult(resultId);
+      const conPending = await this._resultByInitiativesRepository.getPendingInit(resultId);
       const npProject = await this._nonPooledProjectRepository.getAllNPProjectByResultId(resultId);
       const resCenters = await this._resultsCenterRepository.getAllResultsCenterByResultId(resultId);
       let impactAreaArray = await this._clarisaImpactAreaRepository.getAllImpactArea();
