@@ -68,7 +68,15 @@ export class ResultsApiService {
     );
   }
 
-  GET_institutionTypes() {
+  GET_newInstitutionTypes() {
+    return this.http.get<any>(`${this.apiBaseUrl}get/institutions-type/new`);
+  }
+
+  GET_legacyInstitutionTypes() {
+    return this.http.get<any>(`${this.apiBaseUrl}get/institutions-type/legacy`);
+  }
+
+  GET_allInstitutionTypes() {
     return this.http.get<any>(`${this.apiBaseUrl}get/institutions-type/all`);
   }
 
@@ -104,10 +112,12 @@ export class ResultsApiService {
   GET_partnersSection() {
     return this.http.get<any>(`${this.apiBaseUrl}results-by-institutions/partners/result/${this.currentResultId}`).pipe(
       map(resp => {
-        resp?.response?.mqap_institutions.map(resp => {
-          console.log(resp?.user_matched_institution?.deliveries);
-          if (!resp?.user_matched_institution?.deliveries?.length) resp.user_matched_institution.deliveries = [3];
-        });
+        if (resp?.response?.mqap_institutions) {
+          resp?.response?.mqap_institutions.map(resp => {
+            console.log(resp?.user_matched_institution?.deliveries);
+            if (!resp?.user_matched_institution?.deliveries?.length) resp.user_matched_institution.deliveries = [3];
+          });
+        }
         return resp;
       }),
       this.saveButtonSE.isSavingSectionPipe()
@@ -192,6 +202,10 @@ export class ResultsApiService {
 
   GET_resultknowledgeProducts() {
     return this.http.get<any>(`${this.apiBaseUrl}results-knowledge-products/get/result/${this.currentResultId}`).pipe(this.saveButtonSE.isSavingSectionPipe());
+  }
+
+  PATCH_resyncKnowledgeProducts() {
+    return this.http.patch<any>(`${this.apiBaseUrl}results-knowledge-products/resync/${this.currentResultId}`, null).pipe(this.saveButtonSE.isSavingSectionPipe());
   }
 
   POST_createWithHandle(body) {

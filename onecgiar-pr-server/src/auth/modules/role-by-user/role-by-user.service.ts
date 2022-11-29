@@ -156,7 +156,7 @@ export class RoleByUserService {
   }
 
   update(id: number, updateRoleByUserDto: UpdateRoleByUserDto) {
-    return `This action updates a #${id} roleByUser`;
+    return `This action updates a #${id} roleByUser ${updateRoleByUserDto}`;
   }
 
   remove(id: number) {

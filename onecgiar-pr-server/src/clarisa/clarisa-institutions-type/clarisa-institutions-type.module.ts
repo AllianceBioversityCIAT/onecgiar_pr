@@ -7,10 +7,11 @@ import { ClarisaInstitutionsTypeRepository } from './ClariasaInstitutionsType.re
 
 @Module({
   controllers: [ClarisaInstitutionsTypeController],
-  providers: [ClarisaInstitutionsTypeService, ClarisaInstitutionsTypeRepository],
+  providers: [
+    ClarisaInstitutionsTypeService,
+    ClarisaInstitutionsTypeRepository,
+  ],
   imports: [RouterModule.register(ClarisaInstitutionsTypeRoutes)],
-  exports: [
-    ClarisaInstitutionsTypeRepository
-  ]
+  exports: [ClarisaInstitutionsTypeRepository],
 })
 export class ClarisaInstitutionsTypeModule {}

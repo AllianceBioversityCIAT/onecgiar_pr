@@ -1,4 +1,5 @@
 import { Component, OnInit, Output, EventEmitter, Input } from '@angular/core';
+import { DataControlService } from '../../shared/services/data-control.service';
 
 @Component({
   selector: 'app-sync-button',
@@ -8,7 +9,7 @@ import { Component, OnInit, Output, EventEmitter, Input } from '@angular/core';
 export class SyncButtonComponent {
   @Input() text: string = 'Sync';
   @Output() clickSave = new EventEmitter();
-  constructor() {}
+  constructor(public dataControlSE: DataControlService) {}
 
   onClickSave() {
     this.clickSave.emit();

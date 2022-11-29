@@ -1,48 +1,132 @@
-import { TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { testModule, usePipes } from '../../test.module';
+import { CreateResultDto } from 'src/api/results/dto/create-result.dto';
 
 describe('Results Controller (e2e)', () => {
-  let app: INestApplication;
+  const app = 'http://localhost:3400';
+  let token: string;
 
-  beforeAll(async () => {
-    const moduleFixture: TestingModule = await testModule.compile();
-    app = moduleFixture.createNestApplication();
-    usePipes(app);
-    await app.init();
-  });
+  const createResultData: CreateResultDto = {
+    initiative_id: 20,
+    result_type_id: 1,
+    result_name: 'Test creating a result',
+    handler: '',
+    result_level_id: 1,
+  };
 
-  it('/auth/user/:id (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/auth/user/' + 30)
-      .expect(200)
-      .expect((res) => {
-        const data = res.body;
-        expect(data).toHaveProperty('message');
-        expect(data).toHaveProperty('response');
-        expect(data).toHaveProperty('statusCode');
-        const response = data.response;
-        expect(response).toHaveProperty('email');
-      });
-  });
-
+  // * Successfull login test & obtaine the token
   it('/auth/singin (POST)', async () => {
-    return await request(app.getHttpServer())
+    const createUser = await request(app)
       .post('/auth/singin')
       .send({
-        email: 'test@jest.com',
-        password: '12345678',
+        email: 'juan@gmail.com',
+        password: '1234567',
       })
       .set('Content-Type', 'application/json')
-      .set('Accept', 'application/json')
-      .expect(202)
+      .expect(202);
+
+    console.log(
+      'Successfully login to take the token',
+      createUser.body.response.token,
+    );
+    token = createUser.body.response.token;
+  });
+
+  // * Success fetch all results with valid token
+  it('/api/results/get/all (GET)', async () => {
+    return await request(app)
+      .get('/api/results/get/all')
+      .set('Content-Type', 'application/json')
+      .set('auth', token)
+      .expect(200)
       .expect((res) => {
-        console.log(res);
+        console.log('Success fetch all results with valid token:', res.text);
       });
   });
 
-  afterAll(async () => {
-    await app.close();
+  // * Success fetch all results-roles by user ID
+  it('/api/results/get/all/roles/<id> (GET)', async () => {
+    return await request(app)
+      .get('/api/results/get/all/roles/' + 1)
+      .set('Content-Type', 'application/json')
+      .set('auth', token)
+      .expect(200)
+      .expect((res) => {
+        console.log('Success fetch all results-roles by user ID:', res.text);
+      });
+  });
+
+  // * Success fetch result by result name
+  it('/api/results/get/name/<id> (GET)', async () => {
+    return await request(app)
+      .get('/api/results/get/name/' + 'test')
+      .set('Content-Type', 'application/json')
+      .set('auth', token)
+      .expect(200)
+      .expect((res) => {
+        console.log('Success fetch result by result name:', res.text);
+      });
+  });
+
+  // ! Error create result without valid token
+  it('/api/results/create/header (POST)', async () => {
+    return await request(app)
+      .post('/api/results/create/header')
+      .send(createResultData)
+      .set('Content-Type', 'application/json')
+      .set('auth', '')
+      .expect(401)
+      .expect((res) => {
+        console.log('Error create result without valid token:', res.text);
+      });
+  });
+
+  // ! Error create result without name
+  it('/api/results/create/header (POST)', async () => {
+    return await request(app)
+      .post('/api/results/create/header')
+      .send({
+        initiative_id: 30,
+        result_type_id: 2,
+        result_name: '',
+      })
+      .set('Content-Type', 'application/json')
+      .set('auth', token)
+      .expect(400)
+      .expect((res) => {
+        console.log('Error create result without name:', res.text);
+      });
+  });
+
+  // ! Error create result without a valid result type
+  it('/api/results/create/header (POST)', async () => {
+    return await request(app)
+      .post('/api/results/create/header')
+      .send({
+        initiative_id: 30,
+        result_type_id: 100,
+        result_name: 'Test',
+      })
+      .set('Content-Type', 'application/json')
+      .set('auth', token)
+      .expect(404)
+      .expect((res) => {
+        console.log(
+          'Error create result without a valid result type:',
+          res.text,
+        );
+      });
+  });
+
+  // * Success create result
+  it('/api/results/create/header (POST)', async () => {
+    return await request(app)
+      .post('/api/results/create/header')
+      .send(createResultData)
+      .set('Content-Type', 'application/json')
+      .set('auth', token)
+      .expect(201)
+      .expect((res) => {
+        console.log('Success create result:', res.text);
+      });
   });
 });

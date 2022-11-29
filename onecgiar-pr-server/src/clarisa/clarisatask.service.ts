@@ -1,14 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { env } from 'process';
-import axios, { AxiosRequestConfig } from 'axios';
-import { ClarisaMeliaStudyType } from './clarisa-melia-study-type/entities/clarisa-melia-study-type.entity';
+import axios from 'axios';
 import { ClarisaMeliaStudyTypeRepository } from './clarisa-melia-study-type/ClariasaMeliasStudyType.repository';
-import { ClarisaActionArea } from './clarisa-action-areas/entities/clarisa-action-area.entity';
 import { ClariasaActionAreaRepository } from './clarisa-action-areas/ClariasaActionArea.repository';
 import { ClarisaInitiativesRepository } from './clarisa-initiatives/ClarisaInitiatives.repository';
 import { ClarisaImpactAreaRepository } from './clarisa-impact-area/ClarisaImpactArea.repository';
 import { ClarisaImpactAreaInticatorsRepository } from './clarisa-impact-area-indicators/ClarisaImpactAreaIndicators.repository';
-import { ClarisaImpactAreaIndicator } from './clarisa-impact-area-indicators/entities/clarisa-impact-area-indicator.entity';
 import { ClarisaCountry } from './clarisa-countries/entities/clarisa-country.entity';
 import { ClarisaOutcomeIndicatorsRepository } from './clarisa-outcome-indicators/ClariasaOutcomeIndicators.repository';
 import { ClarisaOutcomeIndicator } from './clarisa-outcome-indicators/entities/clarisa-outcome-indicator.entity';
@@ -414,7 +411,7 @@ export class ClarisaTaskService {
           `${this.clarisaHost}global-targets`,
           this.configAuth,
         );
-        
+
         await this._clarisaGobalTargetRepository.save<ClarisaGlobalTarget>(
           data,
         );
@@ -444,15 +441,32 @@ export class ClarisaTaskService {
           `[${position}]: All CLARISA Institutions type control list data has been deleted`,
         );
       } else {
-        const data = await lastValueFrom(await this._httpService.get(
-          `${this.clarisaHost}institution-types?type=legacy`,
-          { auth: { username: env.L_CLA_USER, password: env.L_CLA_PASSWORD } },
-        ).pipe(map((resp) => resp.data)));
-        data.map((el) => {
+        const dataLegacy = await lastValueFrom(
+          await this._httpService
+            .get(`${this.clarisaHost}institution-types?type=legacy`, {
+              auth: { username: env.L_CLA_USER, password: env.L_CLA_PASSWORD },
+            })
+            .pipe(map((resp) => resp.data)),
+        );
+        dataLegacy.map((el) => {
           el['code'] = parseInt(el['code']);
+          el['is_legacy'] = true;
         });
-        const datasss = await this._clarisaInstitutionsTypeRepository.save(data);
-        console.log(datasss)
+        const dataNew = await lastValueFrom(
+          await this._httpService
+            .get(`${this.clarisaHost}institution-types?type=one-cgiar`, {
+              auth: { username: env.L_CLA_USER, password: env.L_CLA_PASSWORD },
+            })
+            .pipe(map((resp) => resp.data)),
+        );
+        dataNew.map((el) => {
+          el['code'] = parseInt(el['code']);
+          el['is_legacy'] = false;
+        });
+        const datasss = await this._clarisaInstitutionsTypeRepository.save(
+          (dataLegacy ?? []).concat(dataNew ?? []),
+        );
+        console.log(datasss);
         this._logger.verbose(
           `[${position}]: All CLARISA Institutions type control list data has been created`,
         );

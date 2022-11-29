@@ -21,6 +21,7 @@ export class ResultTypesController {
     return this.resultTypesService.create(createResultTypeDto);
   }
 
+  // * Fetch all result types
   @Get('all')
   async findAll() {
     const { message, response, status } =
@@ -28,6 +29,7 @@ export class ResultTypesController {
     throw new HttpException({ message, response }, status);
   }
 
+  // * Fetch a result type by ID
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.resultTypesService.findOneResultType(+id);

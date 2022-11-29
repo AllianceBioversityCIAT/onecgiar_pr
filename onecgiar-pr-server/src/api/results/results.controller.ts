@@ -71,6 +71,7 @@ export class ResultsController {
     return `aja ${userId}`;
   }
 
+  // * Get all results-roles by user ID
   @Get('get/all/roles/:userId')
   async findAllResultRoles(@Param('userId') userId: number) {
     const { message, response, status } =
@@ -92,8 +93,22 @@ export class ResultsController {
     throw new HttpException({ message, response }, status);
   }
 
+  @Get('get/institutions-type/new')
+  async getNewInstitutionsType() {
+    const { message, response, status } =
+      await this.resultsService.getAllInstitutionsType(false);
+    throw new HttpException({ message, response }, status);
+  }
+
+  @Get('get/institutions-type/legacy')
+  async getLegacyInstitutionsType() {
+    const { message, response, status } =
+      await this.resultsService.getAllInstitutionsType(true);
+    throw new HttpException({ message, response }, status);
+  }
+
   @Get('get/institutions-type/all')
-  async getInstitutionsType() {
+  async getAllInstitutionsType() {
     const { message, response, status } =
       await this.resultsService.getAllInstitutionsType();
     throw new HttpException({ message, response }, status);

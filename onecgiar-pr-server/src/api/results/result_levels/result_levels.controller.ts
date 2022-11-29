@@ -21,6 +21,7 @@ export class ResultLevelsController {
     return this.resultLevelsService.create(createResultLevelDto);
   }
 
+  // * Fetch all result levels with their respective result type
   @Get('all')
   async findAll() {
     const { message, response, status } =

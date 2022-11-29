@@ -117,7 +117,7 @@ export class ResultByIntitutionsTypeRepository extends Repository<ResultsByInsti
         queryData,
         [resultId, isActor?1:2, institutionsTypeId],
       );
-      return completeUser?.length?completeUser[0]:undefined;
+      return completeUser?.length ? completeUser[0] : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByIntitutionsTypeRepository.name,

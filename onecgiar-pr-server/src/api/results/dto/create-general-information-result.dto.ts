@@ -9,9 +9,8 @@ export class CreateGeneralInformationResultDto {
   public climate_change_tag_id: number;
   public institutions: institutionsInterface[];
   public institutions_type: institutionsTypeInterface[];
-  public krs_url!: string
+  public krs_url!: string;
   public is_krs!: boolean;
-
 }
 
 interface institutionsInterface{
