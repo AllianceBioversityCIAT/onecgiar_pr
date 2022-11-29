@@ -177,7 +177,7 @@ export class ResultsKnowledgeProduct {
   })
   last_updated_date: Date;
 
-  @Column()
+  @Column({ nullable: true })
   last_updated_by: number;
 
   //object relations
@@ -229,7 +229,7 @@ export class ResultsKnowledgeProduct {
   })
   created_by_object: User;
 
-  @ManyToOne(() => User, (u) => u.id, { nullable: true })
+  @ManyToOne(() => User, (u) => u.id)
   @JoinColumn({
     name: 'last_updated_by',
   })
