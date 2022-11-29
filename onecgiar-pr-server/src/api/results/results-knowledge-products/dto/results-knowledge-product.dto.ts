@@ -16,9 +16,6 @@ export class ResultsKnowledgeProductDto {
   metadataWOS: ResultsKnowledgeProductMetadataDto;
   regions: BasicInfoDto[];
   countries: BasicInfoDto[];
-  //TODO remove when mapping is done
-  cgspace_regions: string;
-  cgspace_countries: string;
   handle: string;
   authors: ResultsKnowledgeProductAuthorDto[];
   type: string;

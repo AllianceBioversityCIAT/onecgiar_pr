@@ -4,7 +4,7 @@
         *ngIf="this.dataControlSE.fieldFeedbackList?.length">
         <div class="item" *ngFor="let item of this.dataControlSE.fieldFeedbackList">
             <div class="status"></div>
-            <div class="text"><strong>{{item}}</strong> is missing</div>
+            <div class="text"><strong>{{item}}</strong> is mandatory</div>
         </div>
     </div>
     <app-pr-button padding="medium" [text]="this.saveButtonSE.isSaving?'Saving':text"

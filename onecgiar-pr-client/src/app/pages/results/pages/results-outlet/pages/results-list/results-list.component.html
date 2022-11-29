@@ -16,7 +16,7 @@
         <th pSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder">
           <p-sortIcon field="{{column.attr}}"></p-sortIcon>{{column.title}}
         </th>
-        <th>Action</th>
+        <!-- <th>Action</th> -->
       </tr>
     </ng-template>
     <ng-template pTemplate="body" let-result>
@@ -33,10 +33,9 @@
             {{ result[column.attr] }}
           </div>
         </td>
-        <td>
-          <div class="icon_container"><i class="pi pi-ellipsis-v"
-              (click)="menu.toggle($event);onPressAction(result)"></i></div>
-        </td>
+        <!-- <td>
+          <div class="icon_container"><i class="pi pi-ellipsis-v" (click)="menu.toggle($event)"></i></div>
+        </td> -->
       </tr>
     </ng-template>
   </p-table>

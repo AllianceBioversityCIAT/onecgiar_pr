@@ -29,48 +29,8 @@ export class AuthService {
   }
 
   logout() {
-    this.logOutTawtkTo();
     this.router.navigate(['/login']);
     localStorage.clear();
-  }
-
-  private logOutTawtkTo() {
-    console.log(window.hasOwnProperty('Tawk_API'))
-    if (window.hasOwnProperty('Tawk_API')) {
-      try {
-        window['Tawk_API'].endChat();
-        window['Tawk_API'].visitor = {
-          name: null,
-          email: null
-        };
-        this.cleanTWKCookies();
-      } catch (error) {
-        console.log(error)
-      }
-      // if (window['Tawk_API'].isChatMaximized()) {
-      // }
-    }
-  }
-
-  cleanTWKCookies() {
-    console.log('cleanTWKCookies');
-    // window['Tawk_API'].endChat()
-
-    var cookies = document.cookie.split(';');
-    for (let i = 0; i < cookies.length; i++) {
-      let cookie = cookies[i];
-
-      if (cookie?.split('=')[0]?.includes('twk')) {
-        const eqPos = cookie.indexOf('=');
-        console.log(cookie + ' ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^');
-        let name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
-        document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT';
-      }
-    }
-
-    setTimeout(() => {
-      window.location.reload();
-    }, 100);
   }
 
   userAuth(body: UserAuth) {

@@ -7,7 +7,6 @@ import {
   Param,
   Headers,
   HttpException,
-  Query,
 } from '@nestjs/common';
 import { ResultsService } from './results.service';
 import { CreateResultDto } from './dto/create-result.dto';
@@ -36,33 +35,19 @@ export class ResultsController {
 
   @Get('get/:id')
   async findResultById(@Param('id') id: number) {
-    const { message, response, status } =
-      await this.resultsService.findResultById(id);
+    const { message, response, status } = await this.resultsService.findResultById(id);
     throw new HttpException({ message, response }, status);
+
   }
 
   @Get('get/name/:name')
   findAll(@Param('name') resultName: string) {
     return this.resultsService.findAll() + resultName;
   }
-
+  
   @Get('get/all/data')
   async findAllResults() {
     const { message, response, status } = await this.resultsService.findAll();
-    throw new HttpException({ message, response }, status);
-  }
-
-  @Get('get/all/simplified')
-  async findAllResultsForElasticSearch() {
-    const { message, response, status } =
-      await this.resultsService.findAllSimplified();
-    throw new HttpException({ message, response }, status);
-  }
-
-  @Get('get/all/elastic')
-  async findAllResultsSimplified(@Query('collection') collection: string) {
-    const { message, response, status } =
-      await this.resultsService.findAllForElasticSearch(collection);
     throw new HttpException({ message, response }, status);
   }
 
@@ -93,22 +78,8 @@ export class ResultsController {
     throw new HttpException({ message, response }, status);
   }
 
-  @Get('get/institutions-type/new')
-  async getNewInstitutionsType() {
-    const { message, response, status } =
-      await this.resultsService.getAllInstitutionsType(false);
-    throw new HttpException({ message, response }, status);
-  }
-
-  @Get('get/institutions-type/legacy')
-  async getLegacyInstitutionsType() {
-    const { message, response, status } =
-      await this.resultsService.getAllInstitutionsType(true);
-    throw new HttpException({ message, response }, status);
-  }
-
   @Get('get/institutions-type/all')
-  async getAllInstitutionsType() {
+  async getInstitutionsType() {
     const { message, response, status } =
       await this.resultsService.getAllInstitutionsType();
     throw new HttpException({ message, response }, status);
@@ -145,7 +116,7 @@ export class ResultsController {
   }
 
   @Get('get/general-information/result/:id')
-  async getGeneralInformationByResult(@Param('id') id: number) {
+  async getGeneralInformationByResult(@Param('id') id: number){
     const { message, response, status } =
       await this.resultsService.getGeneralInformation(id);
     throw new HttpException({ message, response }, status);
@@ -161,19 +132,20 @@ export class ResultsController {
   @Patch('update/geographic/:resiltId')
   async saveGeographic(
     @Body() createResultGeoDto: CreateResultGeoDto,
-    @Param('resiltId') resiltId: number,
-  ) {
-    createResultGeoDto.result_id = resiltId;
+    @Param('resiltId') resiltId: number
+    ){
+      createResultGeoDto.result_id = resiltId;
     const { message, response, status } =
       await this.resultsService.saveGeoScope(createResultGeoDto);
     throw new HttpException({ message, response }, status);
   }
 
   @Get('get/geographic/:resiltId')
-  async getGeographic(@Param('resiltId') resiltId: number) {
-    const { message, response, status } = await this.resultsService.getGeoScope(
-      resiltId,
-    );
+  async getGeographic(
+    @Param('resiltId') resiltId: number
+    ){
+    const { message, response, status } =
+      await this.resultsService.getGeoScope(resiltId);
     throw new HttpException({ message, response }, status);
   }
 }

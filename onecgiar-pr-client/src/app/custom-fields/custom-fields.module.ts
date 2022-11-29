@@ -29,9 +29,8 @@ import { NoDataTextComponent } from './no-data-text/no-data-text.component';
 import { PrRangeLevelComponent } from './pr-range-level/pr-range-level.component';
 import { UnderConstructionPointComponent } from './under-construction-point/under-construction-point.component';
 import { LabelNamePipe } from './pr-select/label-name.pipe';
-import { SyncButtonComponent } from './sync-button/sync-button.component';
 
-const fieldComponents = [PrInputComponent, PrSelectComponent, PrRadioButtonComponent, DetailSectionTitleComponent, PrMultiSelectComponent, PrFieldHeaderComponent, PrYesOrNotComponent, PrTextareaComponent, PrCheckboxComponent, SaveButtonComponent, PrButtonComponent, AlertStatusComponent, EditOrDeleteItemButtonComponent, NoDataTextComponent, AddButtonComponent, PrRangeLevelComponent, SyncButtonComponent];
+const fieldComponents = [PrInputComponent, PrSelectComponent, PrRadioButtonComponent, DetailSectionTitleComponent, PrMultiSelectComponent, PrFieldHeaderComponent, PrYesOrNotComponent, PrTextareaComponent, PrCheckboxComponent, SaveButtonComponent, PrButtonComponent, AlertStatusComponent, EditOrDeleteItemButtonComponent, NoDataTextComponent, AddButtonComponent, PrRangeLevelComponent];
 
 @NgModule({
   declarations: [...fieldComponents, PrFieldValidationsComponent, PrWordCounterComponent, ListFilterByTextAndAttrPipe, UnderConstructionPointComponent, LabelNamePipe],

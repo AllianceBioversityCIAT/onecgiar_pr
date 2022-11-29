@@ -40,7 +40,7 @@
               "src/app/custom-fields/custom-fields.scss",
               "src/styles/custom-alert.scss"
             ],
-            "scripts": ["node_modules/pusher-js/dist/web/pusher.min.js"]
+            "scripts": []
           },
           "configurations": {
             "production": {

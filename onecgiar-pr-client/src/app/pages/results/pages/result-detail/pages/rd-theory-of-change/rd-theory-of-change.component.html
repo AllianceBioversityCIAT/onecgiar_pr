@@ -68,10 +68,9 @@
         </div>
     </div>
     <div [ngSwitch]="this.resultLevelSE.currentResultLevelId"
-        *ngIf="getConsumed && this.theoryOfChangeBody?.result_toc_result?.initiative_id || getConsumed && this.theoryOfChangeBody?.impacts">
+        *ngIf="getConsumed && this.theoryOfChangeBody?.result_toc_result.initiative_id">
         <div *ngSwitchCase="1">
-            <app-toc-impact-section [contributing_initiatives]="this.theoryOfChangeBody.contributing_initiatives"
-                [impacts]="this.theoryOfChangeBody.impacts"></app-toc-impact-section>
+            <app-toc-impact-section></app-toc-impact-section>
         </div>
         <div *ngSwitchCase="2">
             <app-toc-action-area-outcome-section [result_toc_result]="this.theoryOfChangeBody.result_toc_result"

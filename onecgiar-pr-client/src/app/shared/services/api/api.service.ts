@@ -25,7 +25,7 @@ export class ApiService {
         // this.rolesSE.roles = GET_allRolesByUser.response;
         //?
         this.dataControlSE.myInitiativesList = GET_initiativesByUser?.response;
-        // console.log(this.dataControlSE.myInitiativesList);
+        console.log(this.dataControlSE.myInitiativesList);
         this.dataControlSE.myInitiativesList.map(myInit => {
           myInit.role = GET_allRolesByUser?.response?.initiative?.find(initRole => initRole?.initiative_id == myInit?.initiative_id)?.description;
           myInit.name = myInit.official_code;
@@ -66,13 +66,6 @@ export class ApiService {
           err => {}
         );
       };
-
-      window['Tawk_API'].onChatEnded = function(){
-        window['Tawk_API'].hideWidget();
-        window['Tawk_API'].minimize();
-        console.log('ENDING CHAT');
-        
-    };
     } catch (error) {
       console.log(error);
     }

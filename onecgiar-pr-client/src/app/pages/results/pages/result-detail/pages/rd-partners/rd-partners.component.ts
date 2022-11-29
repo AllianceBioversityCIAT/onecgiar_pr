@@ -3,7 +3,6 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { PartnersBody } from './models/partnersBody';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
-import { RdPartnersService } from './rd-partners.service';
 
 @Component({
   selector: 'app-rd-partners',
@@ -11,10 +10,11 @@ import { RdPartnersService } from './rd-partners.service';
   styleUrls: ['./rd-partners.component.scss']
 })
 export class RdPartnersComponent {
-  constructor(public api: ApiService, public institutionsSE: InstitutionsService, public rolesSE: RolesService, private rdPartnersSE: RdPartnersService) {}
+  partnersBody = new PartnersBody();
+  toggle = 0;
+  constructor(public api: ApiService, public institutionsSE: InstitutionsService, public rolesSE: RolesService) {}
   ngOnInit(): void {
-    this.rdPartnersSE.partnersBody = new PartnersBody();
-    this.rdPartnersSE.getSectionInformation();
+    this.getSectionInformation();
     this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
       try {
         document.querySelector('.alert-event').addEventListener('click', e => {
@@ -23,14 +23,40 @@ export class RdPartnersComponent {
       } catch (error) {}
     });
   }
-
-  onSyncSection() {}
-
+  getSectionInformation(no_applicable_partner?) {
+    this.api.resultsSE.GET_partnersSection().subscribe(
+      ({ response }) => {
+        this.partnersBody = response;
+        if (no_applicable_partner === true || no_applicable_partner === false) this.partnersBody.no_applicable_partner = no_applicable_partner;
+      },
+      err => {
+        if (no_applicable_partner === true || no_applicable_partner === false) this.partnersBody.no_applicable_partner = no_applicable_partner;
+      }
+    );
+  }
   onSaveSection() {
-    console.log(this.rdPartnersSE.partnersBody);
-    this.api.resultsSE.PATCH_partnersSection(this.rdPartnersSE.partnersBody).subscribe(resp => {
+    console.log(this.partnersBody);
+    this.api.resultsSE.PATCH_partnersSection(this.partnersBody).subscribe(resp => {
       // console.log(resp);
-      this.rdPartnersSE.getSectionInformation();
+      this.getSectionInformation();
     });
+  }
+  validateDeliverySelection(deliveries, deliveryId) {
+    if (!(typeof deliveries == 'object')) return false;
+    const index = deliveries.indexOf(deliveryId);
+    return index < 0 ? false : true;
+  }
+  onSelectDelivery(option, deliveryId) {
+    if (!(typeof option?.deliveries == 'object')) option.deliveries = [];
+    const index = option?.deliveries.indexOf(deliveryId);
+    index < 0 ? option?.deliveries.push(deliveryId) : option?.deliveries.splice(index, 1);
+  }
+  removePartner(index) {
+    this.partnersBody.institutions.splice(index, 1);
+    this.toggle++;
+  }
+  cleanBody() {
+    if (this.partnersBody.no_applicable_partner === true) this.partnersBody = new PartnersBody(true);
+    if (this.partnersBody.no_applicable_partner === false) this.getSectionInformation(false);
   }
 }

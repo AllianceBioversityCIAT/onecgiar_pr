@@ -20,9 +20,6 @@ import { ResultsImpactAreaTargetRepository } from '../results-impact-area-target
 import { ResultsImpactAreaIndicatorRepository } from '../results-impact-area-indicators/results-impact-area-indicators.repository';
 import { ResultsImpactAreaIndicator } from '../results-impact-area-indicators/entities/results-impact-area-indicator.entity';
 import { ResultsImpactAreaTarget } from '../results-impact-area-target/entities/results-impact-area-target.entity';
-import { ClarisaImpactAreaRepository } from '../../../clarisa/clarisa-impact-area/ClarisaImpactArea.repository';
-import { ShareResultRequestService } from '../share-result-request/share-result-request.service';
-import { CreateTocShareResult } from '../share-result-request/dto/create-toc-share-result.dto';
 
 @Injectable()
 export class ResultsTocResultsService {
@@ -38,9 +35,7 @@ export class ResultsTocResultsService {
     private readonly _resultRepository: ResultRepository,
     private readonly _tocResultsRepository: TocResultsRepository,
     private readonly _resultsImpactAreaTargetRepository: ResultsImpactAreaTargetRepository,
-    private readonly _resultsImpactAreaIndicatorRepository: ResultsImpactAreaIndicatorRepository,
-    private readonly _clarisaImpactAreaRepository: ClarisaImpactAreaRepository,
-    private readonly _shareResultRequestService: ShareResultRequestService
+    private readonly _resultsImpactAreaIndicatorRepository: ResultsImpactAreaIndicatorRepository
   ) { }
 
   async create(createResultsTocResultDto: CreateResultsTocResultDto, user: TokenDto) {
@@ -61,19 +56,27 @@ export class ResultsTocResultsService {
       if (contributing_initiatives?.length) {
         initiativeArray = contributing_initiatives.map(el => el.id);
         await this._resultByInitiativesRepository.updateResultByInitiative(result_id, [...initiativeArray, result_toc_result.initiative_id], user.id, false);
-        const dataRequst: CreateTocShareResult = {
-          isToc: true,
-          initiativeShareId: initiativeArray,
-          action_area_outcome_id: null,
-          planned_result: null,
-          toc_result_id: null
+        let resultsByInititiativeArray: ResultsByInititiative[] = [];
+        for (let index = 0; index < contributing_initiatives.length; index++) {
+          const exists = await this._resultByInitiativesRepository.getResultsByInitiativeByResultIdAndInitiativeIdAndRole(result_id, contributing_initiatives[index].id, false);
+          if (!exists) {
+            const newResultByInitiative = new ResultsByInititiative();
+            newResultByInitiative.initiative_id = contributing_initiatives[index].id;
+            newResultByInitiative.initiative_role_id = 2;
+            newResultByInitiative.result_id = result_id;
+            newResultByInitiative.last_updated_by = user.id;
+            newResultByInitiative.created_by = user.id;
+            newResultByInitiative.version_id = vrs.id;
+            resultsByInititiativeArray.push(newResultByInitiative);
+          }
         }
-        await this._shareResultRequestService.resultRequest(dataRequst, result_id, user);
+        await this._resultByInitiativesRepository.save(resultsByInititiativeArray);
       } else {
         await this._resultByInitiativesRepository.updateResultByInitiative(result_id, [], user.id, false);
       }
 
       if (contributing_np_projects?.length) {
+
         await this._nonPooledProjectRepository.updateNPProjectById(result_id, titleArray, user.id);
         let resultTocResultArray: NonPooledProject[] = [];
         for (let index = 0; index < contributing_np_projects.length; index++) {
@@ -134,45 +137,41 @@ export class ResultsTocResultsService {
       if (result.result_level_id == 1) {
         impacts.forEach(async ({id, indicators, target}) => {
           if(indicators?.length){
-            await this._resultsImpactAreaIndicatorRepository.updateResultImpactAreaIndicators(result_id, id, indicators?.map(el => el.id), user.id);
+            await this._resultsImpactAreaIndicatorRepository.updateResultImpactAreaIndicators(result_id, id, indicators?.map(el => el.targetId), user.id);
             let IndicatorArray: ResultsImpactAreaIndicator[] = [];
             for (let index = 0; index < indicators.length; index++) {
-              const {id: indicatorId} = indicators[index];
-              const resultsImpactAreaIndicatorData = await this._resultsImpactAreaIndicatorRepository.ResultsImpactAreaIndicatorExists(result_id, indicatorId);
+              const {targetId} = indicators[index];
+              const resultsImpactAreaIndicatorData = await this._resultsImpactAreaIndicatorRepository.ResultsImpactAreaIndicatorExists(result_id, targetId);
               if(!resultsImpactAreaIndicatorData){
                 const newIndicator = new ResultsImpactAreaIndicator();
                 newIndicator.created_by = user.id;
                 newIndicator.last_updated_by = user.id;
                 newIndicator.result_id = result.id;
-                newIndicator.impact_area_indicator_id = indicatorId;
+                newIndicator.impact_area_indicator_id = targetId;
                 newIndicator.version_id = vrs.id;
                 IndicatorArray.push(newIndicator);
               }
             }
             await this._resultsImpactAreaIndicatorRepository.save(IndicatorArray);
-          }else{
-            await this._resultsImpactAreaIndicatorRepository.updateResultImpactAreaIndicators(result_id, id, [], user.id);
           }
 
           if(target?.length){
-            await this._resultsImpactAreaTargetRepository.updateResultImpactAreaTarget(result_id, id, target?.map(el => el.targetId), user.id);
+            await this._resultsImpactAreaTargetRepository.updateResultImpactAreaTarget(result_id, id, target?.map(el => el.id), user.id);
             let TargetArray: ResultsImpactAreaTarget[] = [];
             for (let index = 0; index < target.length; index++) {
-              const {targetId} = target[index];
-              const resultsImpactAreaTargetData = await this._resultsImpactAreaTargetRepository.resultsImpactAreaTargetExists(result_id, targetId);
+              const {id} = target[index];
+              const resultsImpactAreaTargetData = await this._resultsImpactAreaTargetRepository.resultsImpactAreaTargetExists(result_id, id);
               if(!resultsImpactAreaTargetData){
                 const newTarget = new ResultsImpactAreaTarget();
                 newTarget.created_by = user.id;
                 newTarget.last_updated_by = user.id;
                 newTarget.result_id = result.id;
-                newTarget.impact_area_target_id = targetId;
+                newTarget.impact_area_target_id = id;
                 newTarget.version_id = vrs.id;
                 TargetArray.push(newTarget);
               }
             }
             await this._resultsImpactAreaTargetRepository.save(TargetArray);
-          }else{
-            await this._resultsImpactAreaTargetRepository.updateResultImpactAreaTarget(result_id, id, [], user.id);
           }
         });
       } else {
@@ -270,13 +269,11 @@ export class ResultsTocResultsService {
       const result = await this._resultRepository.getResultById(resultId);
       const resultInit = await this._resultByInitiativesRepository.getOwnerInitiativeByResult(resultId);
       const conInit = await this._resultByInitiativesRepository.getContributorInitiativeByResult(resultId);
-      const conPending = await this._resultByInitiativesRepository.getPendingInit(resultId);
       const npProject = await this._nonPooledProjectRepository.getAllNPProjectByResultId(resultId);
       const resCenters = await this._resultsCenterRepository.getAllResultsCenterByResultId(resultId);
-      let impactAreaArray = await this._clarisaImpactAreaRepository.getAllImpactArea();
       let resTocRes: any[] = [];
       let conResTocRes: any[] = [];
-      if (result.result_level_id != 2 && result.result_level_id != 1) {
+      if (result.result_level_id != 2) {
         resTocRes = await this._resultsTocResultRepository.getRTRPrimary(resultId, [resultInit.id], true);
         if (!resTocRes?.length) {
           resTocRes = [{
@@ -308,34 +305,15 @@ export class ResultsTocResultsService {
           }]
         }
         conResTocRes = await this._resultsTocResultRepository.getRTRPrimaryActionArea(resultId, [resultInit.id], false, conInit.map(el => el.id));
-      }else if (result.result_level_id == 1) {
-        const resultsImpactAreaIndicator = await this._resultsImpactAreaIndicatorRepository.ResultsImpactAreaIndicatorByResultId(resultId);
-        const resultsImpactAreaTarget = await this._resultsImpactAreaTargetRepository.resultsImpactAreaTargetByResultId(resultId);
-        impactAreaArray.map(el => {
-          el['target'] = resultsImpactAreaTarget.filter(t => t.impact_area_id == el.id);
-          el['indicators'] = resultsImpactAreaIndicator.filter(t => t.impact_area_id == el.id)
-        })
-        resTocRes = [{
-          action_area_outcome_id: null,
-          toc_result_id: null,
-          planned_result: null,
-          results_id: resultId,
-          initiative_id: resultInit.id,
-          short_name: resultInit.short_name,
-          official_code: resultInit.official_code
-        }]
-
       }
 
       return {
         response: {
           contributing_initiatives: conInit,
-          pending_contributing_initiatives: conPending,
           contributing_np_projects: npProject,
           contributing_center: resCenters,
           result_toc_result: resTocRes[0],
-          contributors_result_toc_result: result.result_level_id == 1?null:conResTocRes,
-          impacts: result.result_level_id == 1?impactAreaArray:null
+          contributors_result_toc_result: conResTocRes
         },
         message: 'The toc data is successfully created',
         status: HttpStatus.OK,
@@ -358,5 +336,5 @@ interface resultToResultInterfaceToc {
   toc_result_id?: number;
   results_id: number;
   action_area_outcome_id?: number;
-  planned_result?: boolean;
+  planned_result: boolean;
 }

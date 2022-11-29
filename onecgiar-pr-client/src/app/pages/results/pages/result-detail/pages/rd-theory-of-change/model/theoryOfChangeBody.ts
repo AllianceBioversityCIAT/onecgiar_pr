@@ -5,27 +5,11 @@ export class TheoryOfChangeBody {
   contributing_center: centerInterfacesToc[] = [];
   result_toc_result: resultToResultInterfaceToc = new resultToResultInterfaceToc();
   contributors_result_toc_result: resultToResultInterfaceToc[] = [];
-  impacts: ResultTocImpactsInterface[];
-}
-interface ResultTocImpactsInterface {
-  id: number;
-  name: string;
-  description: string;
-  target: targetTocInterface[];
-  indicators: indicatorsTocInterface[];
 }
 interface initiativeInterfaces {
   id: number;
 }
-interface targetTocInterface {
-  targetId: number;
-  target?: string;
-}
 
-interface indicatorsTocInterface {
-  id: number;
-  indicator_statement?: string;
-}
 interface institutionsInterfaceToc {
   institutions_id: number;
 }

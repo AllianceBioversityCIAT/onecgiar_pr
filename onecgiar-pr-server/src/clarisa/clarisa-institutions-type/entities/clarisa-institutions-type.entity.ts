@@ -10,12 +10,4 @@ export class ClarisaInstitutionsType {
     type: 'text',
   })
   name: string;
-
-  @Column({
-    name: 'is_legacy',
-    type: 'boolean',
-    default: false,
-  })
-  is_legacy: boolean;
-
 }

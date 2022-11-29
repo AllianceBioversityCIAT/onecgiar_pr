@@ -11,7 +11,7 @@
 
         <app-pr-input placeholder="Write some..." label="Name" type="text" [(ngModel)]="this.partnersRequestBody.name">
         </app-pr-input>
-        <app-pr-select class="segment_title_margin" [options]="this.institutionsService.institutionsTypesPartnerRequestList"
+        <app-pr-select class="segment_title_margin" [options]="this.institutionsService.institutionsTypesList"
             label="Type" optionLabel="institutions_type_name" optionValue="institutions_type_id"
             [(ngModel)]="this.partnersRequestBody.institutionTypeCode" placeholder="Select type">
         </app-pr-select>

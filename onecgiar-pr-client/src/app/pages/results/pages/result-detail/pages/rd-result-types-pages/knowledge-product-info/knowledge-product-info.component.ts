@@ -1,5 +1,3 @@
-import chroma from 'chroma-js';
-
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { KnowledgeProductBody } from './model/knowledgeProductBody';
@@ -14,7 +12,6 @@ export class KnowledgeProductInfoComponent implements OnInit {
   knowledgeProductBody = new KnowledgeProductBodyMapped();
   MELIAProduct = null;
   intheOST = null;
-  private readonly kpGradientScale = chroma.scale(['#f44444', '#dcdf38', '#38df7b']).mode('hcl');
   constructor(private api: ApiService) {}
 
   ngOnInit(): void {
@@ -23,7 +20,6 @@ export class KnowledgeProductInfoComponent implements OnInit {
   getSectionInformation() {
     this.api.resultsSE.GET_resultknowledgeProducts().subscribe(({ response }) => {
       this.knowledgeProductBody = this._mapFields(response as KnowledgeProductBody);
-      console.log(this.knowledgeProductBody);
     });
   }
 
@@ -69,14 +65,6 @@ export class KnowledgeProductInfoComponent implements OnInit {
     return mapped;
   }
 
-  public calculateInnerColor(value: number) {
-    return this.kpGradientScale(value).brighten().hex();
-  }
-
-  public calculateBorderColor(value: number) {
-    return this.kpGradientScale(value).hex();
-  }
-
   private getMetadataFromCGSpace(mapped: KnowledgeProductBodyMapped, response: KnowledgeProductBody) {
     mapped.is_peer_reviewed_CG = response.metadataCG?.is_peer_reviewed;
     mapped.is_isi_CG = response.metadataCG?.is_isi;
@@ -89,5 +77,11 @@ export class KnowledgeProductInfoComponent implements OnInit {
     mapped.is_isi_WOS = response.metadataWOS?.is_isi;
     mapped.accessibility_WOS = response.metadataWOS?.accessibility;
     mapped.year_WOS = response.metadataWOS?.issue_year;
+  }
+
+  onSaveSection() {
+    // this.api.resultsSE.GET_resultknowledgeProducts().subscribe(resp => {
+    //   console.log(resp);
+    // });
   }
 }

@@ -24,17 +24,15 @@ export class ClarisaInstitutionsTypeRepository extends Repository<ClarisaInstitu
     }
   }
 
-  async getInstitutionsType(legacy: boolean) {
+  async getInstitutionsType() {
     const queryData = `
     select 
     cit.code as institutions_type_id,
-    cit.name as institutions_type_name,
-    cit.is_legacy
-    from clarisa_institution_types cit
-    ${legacy == undefined ? '' : 'where is_legacy=?'};
+    cit.name as institutions_type_name
+    from clarisa_institution_types cit;
     `;
     try {
-      const institutionsType = await this.query(queryData, [legacy]);
+      const institutionsType = await this.query(queryData);
       return institutionsType;
     } catch (error) {
       throw {
@@ -45,14 +43,15 @@ export class ClarisaInstitutionsTypeRepository extends Repository<ClarisaInstitu
     }
   }
 
+  
   async getValidInstitutionType(institutionsType: institutionsTypeInterface[]) {
-    const id = institutionsType.map((el) => el.institutions_type_id);
+    const id = institutionsType.map(el => el.institutions_type_id);
     let values = '';
     for (let index = 0; index < id.length; index++) {
-      if (!values) {
-        values = `values row(${id[index]})`;
-      } else {
-        values += `, row(${id[index]})`;
+      if(!values){
+        values = `values row(${id[index]})`
+      }else{
+        values += `, row(${id[index]})`
       }
     }
     const queryData = `
@@ -79,6 +78,6 @@ export class ClarisaInstitutionsTypeRepository extends Repository<ClarisaInstitu
   }
 }
 
-interface institutionsTypeInterface {
+interface institutionsTypeInterface{
   institutions_type_id: number;
 }

@@ -41,9 +41,6 @@ import { ResultRegionsService } from './result-regions/result-regions.service';
 import { ResultCountriesService } from './result-countries/result-countries.service';
 import { ResultRegionRepository } from './result-regions/result-regions.repository';
 import { ResultCountryRepository } from './result-countries/result-countries.repository';
-import { ResultsKnowledgeProductsRepository } from './results-knowledge-products/repositories/results-knowledge-products.repository';
-import { ResultCountry } from './result-countries/entities/result-country.entity';
-import { ResultRegion } from './result-regions/entities/result-region.entity';
 
 @Injectable()
 export class ResultsService {
@@ -70,7 +67,6 @@ export class ResultsService {
     private readonly _genderTagRepository: GenderTagRepository,
     private readonly _resultRegionRepository: ResultRegionRepository,
     private readonly _resultCountryRepository: ResultCountryRepository,
-    private readonly _resultKnowledgeProductRepository: ResultsKnowledgeProductsRepository,
   ) {}
 
   /**
@@ -125,10 +121,7 @@ export class ResultsService {
       }
 
       if (resultType.status >= 300) {
-        throw this._handlersError.returnErrorRes({
-          error: resultType,
-          debug: true,
-        });
+        throw this._handlersError.returnErrorRes({ error: resultType, debug: true });
       }
 
       if (!resultByLevel) {
@@ -144,10 +137,7 @@ export class ResultsService {
 
       const version = await this._versionsService.findBaseVersion();
       if (version.status >= 300) {
-        throw this._handlersError.returnErrorRes({
-          error: version,
-          debug: true,
-        });
+        throw this._handlersError.returnErrorRes({ error: version, debug: true });
       }
       const vrs: Version = <Version>version.response;
 
@@ -217,12 +207,10 @@ export class ResultsService {
     }
   }
 
-  async getAllInstitutionsType(legacy?: boolean) {
+  async getAllInstitutionsType() {
     try {
       const entities =
-        await this._clarisaInstitutionsTypeRepository.getInstitutionsType(
-          legacy,
-        );
+        await this._clarisaInstitutionsTypeRepository.getInstitutionsType();
       if (!entities.length) {
         throw {
           response: {},
@@ -260,10 +248,7 @@ export class ResultsService {
         resultGeneralInformation.result_type_id,
       );
       if (resultType.status >= 300) {
-        throw this._handlersError.returnErrorRes({
-          error: resultType,
-          debug: true,
-        });
+        throw this._handlersError.returnErrorRes({ error: resultType, debug: true });
       }
 
       const resultByLevel =
@@ -342,10 +327,7 @@ export class ResultsService {
 
       const version = await this._versionsService.findBaseVersion();
       if (version.status >= 300) {
-        throw this._handlersError.returnErrorRes({
-          error: version,
-          debug: true,
-        });
+        throw this._handlersError.returnErrorRes({ error: version, debug: true });
       }
       const vrs: Version = <Version>version.response;
 
@@ -496,64 +478,8 @@ export class ResultsService {
 
   async findAll() {
     try {
-      const result = await this._customResultRepository.AllResults();
-
-      if (!result.length) {
-        throw {
-          response: {},
-          message: 'Results Not Found',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
-
-      return {
-        response: result,
-        message: 'Successful response',
-        status: HttpStatus.OK,
-      };
-    } catch (error) {
-      return this._handlersError.returnErrorRes({ error, debug: true });
-    }
-  }
-
-  async findAllForElasticSearch(documentName: string) {
-    try {
       const result =
-        await this._customResultRepository.allResultsForElasticSearch();
-
-      if (!result.length) {
-        throw {
-          response: {},
-          message: 'Results Not Found',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
-
-      let elasticJson: string = '';
-
-      result.forEach((r) => {
-        r.is_legacy = <unknown>r.is_legacy == 'true';
-        elasticJson += `{ "index": { "_index": "${documentName}",  "_id": "${
-          r.id
-        }" } }
-        ${JSON.stringify(r)}
-        `;
-      });
-
-      return {
-        response: elasticJson,
-        message: 'Successful response',
-        status: HttpStatus.OK,
-      };
-    } catch (error) {
-      return this._handlersError.returnErrorRes({ error, debug: true });
-    }
-  }
-
-  async findAllSimplified() {
-    try {
-      const result =
-        await this._customResultRepository.allResultsForElasticSearch();
+        await this._customResultRepository.AllResults();
 
       if (!result.length) {
         throw {
@@ -701,10 +627,7 @@ export class ResultsService {
       }
 
       if (resultType.status >= 300) {
-        throw this._handlersError.returnErrorRes({
-          error: resultType,
-          debug: true,
-        });
+        throw this._handlersError.returnErrorRes({ error: resultType, debug: true });
       }
 
       if (!resultByLevel) {
@@ -717,10 +640,7 @@ export class ResultsService {
 
       const version = await this._versionsService.findBaseVersion();
       if (version.status >= 300) {
-        throw this._handlersError.returnErrorRes({
-          error: version,
-          debug: true,
-        });
+        throw this._handlersError.returnErrorRes({ error: version, debug: true });
       }
 
       const year: Year = await this._yearRepository.findOne({
@@ -841,33 +761,13 @@ export class ResultsService {
 
   async getGeoScope(resultId: number) {
     try {
-      const result = await this._resultRepository.getResultById(resultId);
-
-      if (!result?.id) {
-        throw {
-          response: {},
-          message: 'Results Not Found',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
-
-      let regions: (ResultRegion | string)[] =
+      const regions =
         await this._resultRegionRepository.getResultRegionByResultId(resultId);
-      let contries: (ResultCountry | string)[] =
+      const contries =
         await this._resultCountryRepository.getResultCountriesByResultId(
           resultId,
         );
-
-      const knowledgeProduct =
-        await this._resultKnowledgeProductRepository.findOneBy({
-          results_id: resultId,
-        });
-
-      if (knowledgeProduct) {
-        contries = knowledgeProduct.cgspace_countries?.split('; ') ?? [];
-        regions = knowledgeProduct.cgspace_regions?.split('; ') ?? [];
-      }
-
+      const result = await this._resultRepository.getResultById(resultId);
       let scope: number = 0;
       if (result.geographic_scope_id == 1 || result.geographic_scope_id == 2) {
         scope = result.geographic_scope_id;
@@ -876,9 +776,9 @@ export class ResultsService {
         result.geographic_scope_id == 4
       ) {
         scope = 3;
-      } else if (result.geographic_scope_id == 50) {
+      } else if(result.geographic_scope_id == 50) {
         scope = 4;
-      } else {
+      }else{
         scope = null;
       }
       return {

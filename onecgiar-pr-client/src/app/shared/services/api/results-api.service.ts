@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders, HttpParamsOptions } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
 import { map, tap, catchError, of, retry, throwError } from 'rxjs';
 import { ResultBody } from '../../interfaces/result.interface';
@@ -11,7 +11,6 @@ import { PartnersRequestBody } from '../../../pages/results/pages/result-detail/
 import { EvidencesBody } from '../../../pages/results/pages/result-detail/pages/rd-evidences/model/evidencesBody.model';
 import { TheoryOfChangeBody } from '../../../pages/results/pages/result-detail/pages/rd-theory-of-change/model/theoryOfChangeBody';
 import { SaveButtonService } from '../../../custom-fields/save-button/save-button.service';
-import { ElasticResult, Source } from '../../interfaces/elastic.interface';
 
 @Injectable({
   providedIn: 'root'
@@ -20,7 +19,6 @@ export class ResultsApiService {
   constructor(public http: HttpClient, private saveButtonSE: SaveButtonService) {}
   apiBaseUrl = environment.apiBaseUrl + 'api/results/';
   currentResultId: number | string = null;
-  private readonly elasicCredentials = `Basic ${btoa(`${environment.elastic.username}:${environment.elastic.password}`)}`;
   GET_AllResultLevel() {
     return this.http.get<any>(`${this.apiBaseUrl}levels/all`);
   }
@@ -38,23 +36,6 @@ export class ResultsApiService {
       })
     );
   }
-
-  GET_FindResultsElastic(search?: string) {
-    const elasticSearchString = (search ?? '')
-      .split(' ')
-      .map(s => `${s}*`)
-      .join(' ');
-    const searchQuery = `?q=${elasticSearchString?.length > 0 ? elasticSearchString : '*'}`;
-    const options = { headers: new HttpHeaders({ Authorization: this.elasicCredentials }) };
-    return this.http.get<ElasticResult>(`${environment.elastic.baseUrl}${searchQuery}`, options).pipe(
-      map(resp =>
-        (resp?.hits?.hits ?? []).map(h => {
-          return { probability: h._score, ...h._source } as Source & { probability: number };
-        })
-      )
-    );
-  }
-
   POST_resultCreateHeader(body: ResultBody) {
     return this.http.post<any>(`${this.apiBaseUrl}create/header`, body).pipe(this.saveButtonSE.isCreatingPipe());
   }
@@ -68,15 +49,7 @@ export class ResultsApiService {
     );
   }
 
-  GET_newInstitutionTypes() {
-    return this.http.get<any>(`${this.apiBaseUrl}get/institutions-type/new`);
-  }
-
-  GET_legacyInstitutionTypes() {
-    return this.http.get<any>(`${this.apiBaseUrl}get/institutions-type/legacy`);
-  }
-
-  GET_allInstitutionTypes() {
+  GET_institutionTypes() {
     return this.http.get<any>(`${this.apiBaseUrl}get/institutions-type/all`);
   }
 
@@ -110,18 +83,7 @@ export class ResultsApiService {
     return this.http.patch<any>(`${this.apiBaseUrl}results-by-institutions/create/partners/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
   GET_partnersSection() {
-    return this.http.get<any>(`${this.apiBaseUrl}results-by-institutions/partners/result/${this.currentResultId}`).pipe(
-      map(resp => {
-        if (resp?.response?.mqap_institutions) {
-          resp?.response?.mqap_institutions.map(resp => {
-            console.log(resp?.user_matched_institution?.deliveries);
-            if (!resp?.user_matched_institution?.deliveries?.length) resp.user_matched_institution.deliveries = [3];
-          });
-        }
-        return resp;
-      }),
-      this.saveButtonSE.isSavingSectionPipe()
-    );
+    return this.http.get<any>(`${this.apiBaseUrl}results-by-institutions/partners/result/${this.currentResultId}`);
   }
 
   GET_AllPrmsGeographicScope() {
@@ -201,11 +163,7 @@ export class ResultsApiService {
   }
 
   GET_resultknowledgeProducts() {
-    return this.http.get<any>(`${this.apiBaseUrl}results-knowledge-products/get/result/${this.currentResultId}`).pipe(this.saveButtonSE.isSavingSectionPipe());
-  }
-
-  PATCH_resyncKnowledgeProducts() {
-    return this.http.patch<any>(`${this.apiBaseUrl}results-knowledge-products/resync/${this.currentResultId}`, null).pipe(this.saveButtonSE.isSavingSectionPipe());
+    return this.http.get<any>(`${this.apiBaseUrl}results-knowledge-products/get/result/${this.currentResultId}`);
   }
 
   POST_createWithHandle(body) {
@@ -215,7 +173,7 @@ export class ResultsApiService {
   GET_toc() {
     return this.http.get<any>(`${this.apiBaseUrl}toc/get/result/${this.currentResultId}`).pipe(
       map(resp => {
-        console.log(resp.response);
+        // console.log(resp.response);
         resp?.response?.contributing_initiatives.map(initiative => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name || ''}</strong> - ${initiative?.initiative_name}`));
         return resp;
       }),
@@ -304,33 +262,5 @@ export class ResultsApiService {
 
   GET_clarisaPolicyStages() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/policy-stages/get/all`);
-  }
-
-  GET_AllClarisaImpactAreaIndicators() {
-    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/impact-area-indicators/get/all`);
-  }
-
-  GET_AllLarisaImpactArea() {
-    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/impact-area/get/all`);
-  }
-
-  GET_AllglobalTarget() {
-    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/global-target/get/all`);
-  }
-  POST_createRequest(body) {
-    console.log(this.currentResultId);
-    return this.http.post<any>(`${this.apiBaseUrl}request/create/${this.currentResultId}`, body);
-  }
-
-  GET_allRequest() {
-    return this.http.get<any>(`${this.apiBaseUrl}request/get/all`);
-  }
-
-  POST_updateRequest(body) {
-    return this.http.patch<any>(`${this.apiBaseUrl}request/update`, body);
-  }
-
-  GET_requestStatus() {
-    return this.http.get<any>(`${this.apiBaseUrl}request/get/status`);
   }
 }

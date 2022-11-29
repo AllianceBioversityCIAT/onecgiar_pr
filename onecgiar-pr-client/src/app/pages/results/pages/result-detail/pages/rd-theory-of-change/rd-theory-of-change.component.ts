@@ -27,16 +27,13 @@ export class RdTheoryOfChangeComponent {
       this.contributingInitiativesList = response;
     });
   }
-  async getSectionInformation() {
-    await this.api.resultsSE.GET_toc().subscribe(
+  getSectionInformation() {
+    this.api.resultsSE.GET_toc().subscribe(
       ({ response }) => {
+        this.getConsumed = true;
         this.theoryOfChangeBody = response;
-        console.log(this.theoryOfChangeBody);
-        setTimeout(() => {
-          this.getConsumed = true;
-        }, 100);
-        if (this.theoryOfChangeBody?.result_toc_result) this.psub = `${this.theoryOfChangeBody?.result_toc_result.official_code} ${this.theoryOfChangeBody?.result_toc_result.short_name}`;
-
+        // console.log(this.theoryOfChangeBody);
+        this.psub = `${this.theoryOfChangeBody.result_toc_result.official_code} ${this.theoryOfChangeBody.result_toc_result.short_name}`;
         // this.theoryOfChangeBody.result_toc_result;
       },
       err => {
@@ -63,6 +60,7 @@ export class RdTheoryOfChangeComponent {
     this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
       // console.log(resp);
       this.getConsumed = false;
+
       this.getSectionInformation();
     });
   }

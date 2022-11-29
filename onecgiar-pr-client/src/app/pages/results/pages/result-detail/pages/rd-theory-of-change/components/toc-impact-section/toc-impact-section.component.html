@@ -4,8 +4,8 @@
 
 <br>
 
-<div *ngFor="let item of this.contributing_initiatives">
-    Is this result planned in the <span [innerHTML]="item?.full_name"></span> SAPLING ToC?: <strong>No</strong>
+<div *ngFor="let item of ['INIT-17 SAPLING','INIT-10 F2R-CWANA','INIT-22 TAFS-WCA']">
+    Is this result planned in the <strong>{{item}}</strong> SAPLING ToC?: <strong>No</strong>
 </div>
 
 <br>
@@ -14,27 +14,108 @@
     description="At least one impact area should be indicated." [required]="false"></app-pr-field-header>
 
 <div class="impact_areas">
-    <div class="impact_area" *ngFor="let impact of this.impacts">
+    <div class="impact_area">
         <div class="impact_area_title">
-            <img class="icon" [src]="'assets/impact_areas/'+impact?.id+'.png'" alt="" srcset="">
-            <div class="title">{{impact?.name}}</div>
+            <img class="icon" src="assets/impact_areas/1.png" alt="" srcset="">
+            <div class="title">Nutrition, health and food security</div>
         </div>
 
         <div class="auto_fit_container">
-            <app-pr-multi-select [required]="false" selectedOptionLabel="target"
-                [options]="this.impactAreasSE.globalTarget | filterTargets:impact?.id" label="Target"
-                selectedLabel="target(s) selected" optionLabel="target" optionValue="targetId"
-                placeholder="Select target(s)" [(ngModel)]="impact.target">
+            <app-pr-multi-select [required]="false" [options]="[{},{},{}]" label="Target"
+                selectedLabel="target(s) selected" optionLabel="Target(s) selected" optionValue="institutions_type_id"
+                placeholder="Select target(s)
+            ">
             </app-pr-multi-select>
-            <app-pr-multi-select [required]="false" selectedOptionLabel="indicator_statement"
-                [options]="this.impactAreasSE.impactAreaIndicators | filterIndicators:impact?.id" label="Indicators"
-                selectedLabel="Indicators(s) selected" optionLabel="indicator_statement" optionValue="id"
-                placeholder="Select indicator(s)" [(ngModel)]="impact.indicators">
+            <app-pr-multi-select [required]="false" [options]="[{},{},{}]" label="Indicators"
+                selectedLabel="Indicators(s) selected" optionLabel="Indicators(s) selected"
+                optionValue="institutions_type_id" placeholder="Select indicator(s)
+        ">
             </app-pr-multi-select>
         </div>
-        <hr class="divider-50">
     </div>
 
+    <hr class="divider-50">
 
+    <div class="impact_area">
+        <div class="impact_area_title">
+            <img class="icon" src="assets/impact_areas/2.png" alt="" srcset="">
+            <div class="title">Poverty reduction, livehoods and jobs</div>
+        </div>
+        <div class="auto_fit_container">
+            <app-pr-multi-select [required]="false" [options]="[{},{},{}]" label="Target"
+                selectedLabel="Target(s) selected" optionLabel="Target(s) selected" optionValue="institutions_type_id"
+                placeholder="Select target(s)
+            ">
+            </app-pr-multi-select>
+            <app-pr-multi-select [required]="false" [options]="[{},{},{}]" label="Indicators"
+                selectedLabel="Indicators(s) selected" optionLabel="Indicators(s) selected"
+                optionValue="institutions_type_id" placeholder="Select indicator(s)
+        ">
+            </app-pr-multi-select>
+        </div>
+    </div>
 
+    <hr class="divider-50">
+
+    <div class="impact_area">
+        <div class="impact_area_title">
+            <img class="icon" src="assets/impact_areas/3.png" alt="" srcset="">
+            <div class="title">Gender quality, youth and social inclusion</div>
+        </div>
+        <div class="auto_fit_container">
+            <app-pr-multi-select [required]="false" [options]="[{},{},{}]" label="Target"
+                selectedLabel="Target(s) selected" optionLabel="Target(s) selected" optionValue="institutions_type_id"
+                placeholder="Select target(s)
+            ">
+            </app-pr-multi-select>
+            <app-pr-multi-select [required]="false" [options]="[{},{},{}]" label="Indicators"
+                selectedLabel="Indicators(s) selected" optionLabel="Indicators(s) selected"
+                optionValue="institutions_type_id" placeholder="Select indicator(s)
+        ">
+            </app-pr-multi-select>
+        </div>
+
+    </div>
+
+    <hr class="divider-50">
+
+    <div class="impact_area">
+        <div class="impact_area_title">
+            <img class="icon" src="assets/impact_areas/4.png" alt="" srcset="">
+            <div class="title">Climate adaption and mitigation</div>
+        </div>
+        <div class="auto_fit_container">
+            <app-pr-multi-select [required]="false" [options]="[{},{},{}]" label="Target"
+                selectedLabel="Target(s) selected" optionLabel="Target(s) selected" optionValue="institutions_type_id"
+                placeholder="Select target(s)
+            ">
+            </app-pr-multi-select>
+            <app-pr-multi-select [required]="false" [options]="[{},{},{}]" label="Indicators"
+                selectedLabel="Indicators(s) selected" optionLabel="Indicators(s) selected"
+                optionValue="institutions_type_id" placeholder="Select indicator(s)
+        ">
+            </app-pr-multi-select>
+        </div>
+    </div>
+
+    <hr class="divider-50">
+
+    <div class="impact_area">
+        <div class="impact_area_title">
+            <img class="icon" src="assets/impact_areas/5.png" alt="" srcset="">
+            <div class="title">Environmental health and biodiversity</div>
+        </div>
+        <div class="auto_fit_container">
+            <app-pr-multi-select [required]="false" [options]="[{},{},{}]" label="Target"
+                selectedLabel="Target(s) selected" optionLabel="Target(s) selected" optionValue="institutions_type_id"
+                placeholder="Select target(s)
+            ">
+            </app-pr-multi-select>
+            <app-pr-multi-select [required]="false" [options]="[{},{},{}]" label="Indicators"
+                selectedLabel="Indicators(s) selected" optionLabel="Indicators(s) selected"
+                optionValue="institutions_type_id" placeholder="Select indicator(s)
+        ">
+            </app-pr-multi-select>
+        </div>
+    </div>
 </div>

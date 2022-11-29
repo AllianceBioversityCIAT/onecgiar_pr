@@ -47,6 +47,5 @@ import { EvidencesRepository } from '../evidences/evidences.repository';
     ResultByInitiativesRepository,
     EvidencesRepository,
   ],
-  exports: [ResultsKnowledgeProductsRepository],
 })
 export class ResultsKnowledgeProductsModule {}
