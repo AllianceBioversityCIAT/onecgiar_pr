@@ -26,6 +26,12 @@ export class ShareResultRequest {
     })
     owner_initiative_id: number;
 
+    @ManyToOne(() => ClarisaInitiative, ci => ci.id, { nullable: true})
+    @JoinColumn({
+        name: 'requester_initiative_id'
+    })
+    requester_initiative_id!: number;
+
     @ManyToOne(() => ClarisaInitiative, ci => ci.id, { nullable: false})
     @JoinColumn({
         name: 'shared_inititiative_id'
