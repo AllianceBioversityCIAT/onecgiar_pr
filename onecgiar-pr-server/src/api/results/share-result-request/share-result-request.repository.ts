@@ -112,7 +112,8 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     		rbu.\`user\` = ?
     		and rbu.initiative_id is not null
     		and rbu.action_area_id is null
-    	);
+    	)
+	order by srr.request_status_id ASC;
     `;
     try {
       const shareResultRequest: ShareResultRequest[] = await this.query(queryData, [userId]);

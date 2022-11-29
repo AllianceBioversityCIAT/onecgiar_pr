@@ -219,7 +219,7 @@ export class ResultsService {
     }
   }
 
-  async getAllInstitutionsType(legacy: boolean) {
+  async getAllInstitutionsType(legacy?: boolean) {
     try {
       const entities =
         await this._clarisaInstitutionsTypeRepository.getInstitutionsType(
@@ -534,6 +534,7 @@ export class ResultsService {
       let elasticJson: string = '';
 
       result.forEach((r) => {
+        r.is_legacy = <unknown>r.is_legacy == 'true';
         elasticJson += `{ "index": { "_index": "${documentName}",  "_id": "${
           r.id
         }" } }
