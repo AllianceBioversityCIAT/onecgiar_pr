@@ -219,10 +219,12 @@ export class ResultsService {
     }
   }
 
-  async getAllInstitutionsType() {
+  async getAllInstitutionsType(legacy: boolean) {
     try {
       const entities =
-        await this._clarisaInstitutionsTypeRepository.getInstitutionsType();
+        await this._clarisaInstitutionsTypeRepository.getInstitutionsType(
+          legacy,
+        );
       if (!entities.length) {
         throw {
           response: {},

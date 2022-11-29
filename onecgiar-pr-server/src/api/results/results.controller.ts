@@ -92,10 +92,17 @@ export class ResultsController {
     throw new HttpException({ message, response }, status);
   }
 
-  @Get('get/institutions-type/all')
-  async getInstitutionsType() {
+  @Get('get/institutions-type/new')
+  async getNewInstitutionsType() {
     const { message, response, status } =
-      await this.resultsService.getAllInstitutionsType();
+      await this.resultsService.getAllInstitutionsType(false);
+    throw new HttpException({ message, response }, status);
+  }
+
+  @Get('get/institutions-type/legacy')
+  async getLegacyInstitutionsType() {
+    const { message, response, status } =
+      await this.resultsService.getAllInstitutionsType(true);
     throw new HttpException({ message, response }, status);
   }
 

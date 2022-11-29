@@ -12,4 +12,10 @@ export class ClarisaInstitutionsType {
   })
   name: string;
 
+  @Column({
+    name: 'is_legacy',
+    type: 'boolean',
+    default: false,
+  })
+  is_legacy: boolean;
 }
