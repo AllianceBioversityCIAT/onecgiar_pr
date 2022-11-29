@@ -1,7 +1,11 @@
 import {
   Controller,
+  Get,
   Post,
   Body,
+  Patch,
+  Param,
+  Delete,
   Res,
   HttpException,
   UseFilters,
@@ -9,6 +13,8 @@ import {
   HttpCode,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { CreateAuthDto } from './dto/create-auth.dto';
+import { UpdateAuthDto } from './dto/update-auth.dto';
 import { UserLoginDto } from './dto/login-user.dto';
 import { Response } from 'express';
 import { HttpExceptionFilter } from '../shared/handlers/error.exception';
@@ -21,7 +27,16 @@ import { TokenDto } from '../shared/globalInterfaces/token.dto';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  // * Method to SignIn into PRMS Reporting
+  @Post()
+  create(@Body() createAuthDto: CreateAuthDto) {
+    return this.authService.create(createAuthDto);
+  }
+
+  @Get()
+  findAll() {
+    return this.authService.findAll();
+  }
+
   @Post('/singin')
   async singIn(@Body() userLogin: UserLoginDto, @Res() res: Response) {
     const { message, response, status } = await this.authService.singIn(
@@ -54,7 +69,6 @@ export class AuthController {
   remove(@Param('id') id: string) {
     return this.authService.remove(+id);
   }
-
 }
 function PusherSocketId(arg0: string) {
   throw new Error('Function not implemented.');

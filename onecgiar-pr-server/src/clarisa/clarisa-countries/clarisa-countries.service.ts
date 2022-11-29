@@ -14,7 +14,7 @@ export class ClarisaCountriesService {
   ){}
 
   create(createClarisaCountryDto: CreateClarisaCountryDto) {
-    return createClarisaCountryDto;
+    return 'This action adds a new clarisaCountry';
   }
 
   async findAllCountries() {
@@ -35,7 +35,7 @@ export class ClarisaCountriesService {
   }
 
   update(id: number, updateClarisaCountryDto: UpdateClarisaCountryDto) {
-    return `This action updates a #${id} clarisaCountry ${updateClarisaCountryDto}`;
+    return `This action updates a #${id} clarisaCountry`;
   }
 
   remove(id: number) {

@@ -13,7 +13,7 @@ export class ClarisaRegionsService {
   ){}
 
   create(createClarisaRegionDto: CreateClarisaRegionDto) {
-    return createClarisaRegionDto;
+    return 'This action adds a new clarisaRegion';
   }
 
   async findAllNoParent() {
@@ -34,7 +34,7 @@ export class ClarisaRegionsService {
   }
 
   update(id: number, updateClarisaRegionDto: UpdateClarisaRegionDto) {
-    return `This action updates a #${id} clarisaRegion ${updateClarisaRegionDto}`;
+    return `This action updates a #${id} clarisaRegion`;
   }
 
   remove(id: number) {

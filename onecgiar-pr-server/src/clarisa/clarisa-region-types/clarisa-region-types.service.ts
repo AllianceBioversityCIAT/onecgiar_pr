@@ -5,7 +5,7 @@ import { UpdateRegionTypeDto } from './dto/update-region-type.dto';
 @Injectable()
 export class ClarisaRegionTypesService {
   create(createRegionTypeDto: CreateRegionTypeDto) {
-    return createRegionTypeDto;
+    return 'This action adds a new regionType';
   }
 
   findAll() {
@@ -17,7 +17,7 @@ export class ClarisaRegionTypesService {
   }
 
   update(id: number, updateRegionTypeDto: UpdateRegionTypeDto) {
-    return `This action updates a #${id} regionType ${updateRegionTypeDto}`;
+    return `This action updates a #${id} regionType`;
   }
 
   remove(id: number) {

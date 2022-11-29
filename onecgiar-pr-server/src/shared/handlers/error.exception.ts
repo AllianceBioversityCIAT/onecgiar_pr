@@ -6,6 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { Interface } from 'readline';
 
 @Catch(HttpException)
 export class HttpExceptionFilter implements ExceptionFilter {

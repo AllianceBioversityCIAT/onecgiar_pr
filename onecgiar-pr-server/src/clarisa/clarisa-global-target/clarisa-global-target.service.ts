@@ -13,7 +13,7 @@ export class ClarisaGlobalTargetService {
   ){}
 
   create(createClarisaGlobalTargetDto: CreateClarisaGlobalTargetDto) {
-    return createClarisaGlobalTargetDto;
+    return 'This action adds a new clarisaGlobalTarget';
   }
 
   async findAll() {
@@ -38,7 +38,7 @@ export class ClarisaGlobalTargetService {
     id: number,
     updateClarisaGlobalTargetDto: UpdateClarisaGlobalTargetDto,
   ) {
-    return `This action updates a #${id} clarisaGlobalTarget ${updateClarisaGlobalTargetDto}`;
+    return `This action updates a #${id} clarisaGlobalTarget`;
   }
 
   remove(id: number) {

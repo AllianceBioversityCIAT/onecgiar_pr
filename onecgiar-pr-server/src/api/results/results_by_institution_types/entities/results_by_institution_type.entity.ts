@@ -26,11 +26,9 @@ export class ResultsByInstitutionType {
   })
   results_id: number;
 
-  @ManyToOne(() => ClarisaInstitutionsType, (cit) => cit.code, {
-    nullable: true,
-  })
+  @ManyToOne(() => ClarisaInstitutionsType, cit => cit.code, {nullable: true})
   @JoinColumn({
-    name: 'institution_types_id',
+    name: 'institution_types_id'
   })
   institution_types_id!: number;
 

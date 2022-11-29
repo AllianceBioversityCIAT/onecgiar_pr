@@ -1,4 +1,11 @@
-import { Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+// import { User } from "../../auth/modules/user/entities/user.entity";
+import {
+  Column,
+  CreateDateColumn,
+  JoinColumn,
+  ManyToOne,
+  UpdateDateColumn,
+} from 'typeorm';
 
 export abstract class Auditable {
   @CreateDateColumn({

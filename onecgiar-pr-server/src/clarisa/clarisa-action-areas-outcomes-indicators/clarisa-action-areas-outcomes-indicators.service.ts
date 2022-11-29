@@ -7,7 +7,7 @@ export class ClarisaActionAreasOutcomesIndicatorsService {
   create(
     createClarisaActionAreasOutcomesIndicatorDto: CreateClarisaActionAreasOutcomesIndicatorDto,
   ) {
-    return createClarisaActionAreasOutcomesIndicatorDto;
+    return 'This action adds a new clarisaActionAreasOutcomesIndicator';
   }
 
   findAll() {
@@ -22,7 +22,7 @@ export class ClarisaActionAreasOutcomesIndicatorsService {
     id: number,
     updateClarisaActionAreasOutcomesIndicatorDto: UpdateClarisaActionAreasOutcomesIndicatorDto,
   ) {
-    return `This action updates a #${id} clarisaActionAreasOutcomesIndicator ${updateClarisaActionAreasOutcomesIndicatorDto}`;
+    return `This action updates a #${id} clarisaActionAreasOutcomesIndicator`;
   }
 
   remove(id: number) {

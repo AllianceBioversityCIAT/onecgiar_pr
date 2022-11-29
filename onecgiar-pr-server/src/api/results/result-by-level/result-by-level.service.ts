@@ -5,6 +5,7 @@ import { ResultByLevelRepository } from './result-by-level.repository';
 import { ResultLevelRepository } from '../result_levels/resultLevel.repository';
 import { ResultTypeRepository } from '../result_types/resultType.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
+import { MessageResponse } from '../../../shared/constants/Responses.constant';
 
 @Injectable()
 export class ResultByLevelService {
@@ -16,7 +17,7 @@ export class ResultByLevelService {
   ) {}
 
   create(createResultByLevelDto: CreateResultByLevelDto) {
-    return createResultByLevelDto;
+    return 'This action adds a new resultByLevel';
   }
 
   async findAll() {
@@ -49,7 +50,7 @@ export class ResultByLevelService {
   }
 
   update(id: number, updateResultByLevelDto: UpdateResultByLevelDto) {
-    return `This action updates a #${id} resultByLevel ${updateResultByLevelDto}`;
+    return `This action updates a #${id} resultByLevel`;
   }
 
   remove(id: number) {

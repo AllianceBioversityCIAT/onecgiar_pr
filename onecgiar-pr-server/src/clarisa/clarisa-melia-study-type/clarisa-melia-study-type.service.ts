@@ -5,7 +5,7 @@ import { UpdateClarisaMeliaStudyTypeDto } from './dto/update-clarisa-melia-study
 @Injectable()
 export class ClarisaMeliaStudyTypeService {
   create(createClarisaMeliaStudyTypeDto: CreateClarisaMeliaStudyTypeDto) {
-    return createClarisaMeliaStudyTypeDto;
+    return 'This action adds a new clarisaMeliaStudyType';
   }
 
   findAll() {
@@ -20,7 +20,7 @@ export class ClarisaMeliaStudyTypeService {
     id: number,
     updateClarisaMeliaStudyTypeDto: UpdateClarisaMeliaStudyTypeDto,
   ) {
-    return `This action updates a #${id} clarisaMeliaStudyType ${updateClarisaMeliaStudyTypeDto}`;
+    return `This action updates a #${id} clarisaMeliaStudyType`;
   }
 
   remove(id: number) {

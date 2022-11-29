@@ -47,7 +47,7 @@ export class ResultTypesService {
     id: number,
   ): Promise<returnFormatResultType | returnErrorDto> {
     try {
-      if (!id) {
+      if(!id){
         throw {
           response: {},
           message: 'Invalid Result Type Id',

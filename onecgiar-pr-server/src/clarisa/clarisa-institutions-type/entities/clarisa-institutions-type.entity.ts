@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Auditable } from '../../../shared/entities/auditableEntity';
 
 @Entity('clarisa_institution_types')
 export class ClarisaInstitutionsType {
@@ -17,5 +18,4 @@ export class ClarisaInstitutionsType {
     default: false,
   })
   is_legacy: boolean;
-
 }

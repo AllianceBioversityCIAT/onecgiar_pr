@@ -13,7 +13,7 @@ export class ClarisaImpactAreaService {
   ){}
 
   create(createClarisaImpactAreaDto: CreateClarisaImpactAreaDto) {
-    return createClarisaImpactAreaDto;
+    return 'This action adds a new clarisaImpactArea';
   }
 
   async findAll() {
@@ -35,7 +35,7 @@ export class ClarisaImpactAreaService {
   }
 
   update(id: number, updateClarisaImpactAreaDto: UpdateClarisaImpactAreaDto) {
-    return `This action updates a #${id} clarisaImpactArea ${updateClarisaImpactAreaDto}`;
+    return `This action updates a #${id} clarisaImpactArea`;
   }
 
   remove(id: number) {

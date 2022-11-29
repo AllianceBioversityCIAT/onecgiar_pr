@@ -1,4 +1,5 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Auditable } from '../../../shared/entities/auditableEntity';
 
 @Entity('clarisa_outcome_indicators')
 export class ClarisaOutcomeIndicator {

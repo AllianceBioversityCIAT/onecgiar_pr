@@ -6,10 +6,11 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 
 @Injectable()
 export class ResultsByInstitutionTypesService {
+
   constructor(
     private readonly _resultByIntitutionsTypeRepository: ResultByIntitutionsTypeRepository,
-    private readonly _handlersError: HandlersError,
-  ) {}
+    private readonly _handlersError: HandlersError
+  ){}
 
   create(createResultsByInstitutionTypeDto: CreateResultsByInstitutionTypeDto) {
     return createResultsByInstitutionTypeDto;
@@ -19,13 +20,10 @@ export class ResultsByInstitutionTypesService {
     return `This action returns all resultsByInstitutionTypes`;
   }
 
-  async getGetInstitutionsTypeByResultId(id: number) {
+  async getGetInstitutionsTypeByResultId(id: number){
     try {
-      const intitutionsType =
-        await this._resultByIntitutionsTypeRepository.getResultByInstitutionTypeFull(
-          id,
-        );
-      if (!intitutionsType.length) {
+      const intitutionsType =  await this._resultByIntitutionsTypeRepository.getResultByInstitutionTypeFull(id);
+      if(!intitutionsType.length){
         throw {
           response: {},
           message: 'Institutions Type Not Found',

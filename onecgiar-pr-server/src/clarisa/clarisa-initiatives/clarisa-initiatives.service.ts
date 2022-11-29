@@ -11,7 +11,7 @@ export class ClarisaInitiativesService {
     private readonly _clarisaInitiativesRepository: ClarisaInitiativesRepository,
   ) {}
   create(createClarisaInitiativeDto: CreateClarisaInitiativeDto) {
-    return createClarisaInitiativeDto;
+    return 'This action adds a new clarisaInitiative';
   }
 
   async getAllInitiativesWithoutCurrentInitiative(resultId: number) {
@@ -57,7 +57,7 @@ export class ClarisaInitiativesService {
   }
 
   update(id: number, updateClarisaInitiativeDto: UpdateClarisaInitiativeDto) {
-    return `This action updates a #${id} clarisaInitiative ${updateClarisaInitiativeDto}`;
+    return `This action updates a #${id} clarisaInitiative`;
   }
 
   remove(id: number) {

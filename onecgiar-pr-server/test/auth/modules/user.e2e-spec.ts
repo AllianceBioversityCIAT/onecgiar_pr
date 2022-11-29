@@ -3,17 +3,19 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { testModule, usePipes } from '../../test.module';
 
-describe('Results Controller (e2e)', () => {
+describe('UserController (e2e)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await testModule.compile();
+
     app = moduleFixture.createNestApplication();
     usePipes(app);
     await app.init();
   });
 
-  it('/auth/user/:id (GET)', () => {
+  // Deberia retornar un status 200 y como minimo deberia email al enviar un id de tipo number
+  it('/auth/user/:id', () => {
     return request(app.getHttpServer())
       .get('/auth/user/' + 30)
       .expect(200)
@@ -27,18 +29,14 @@ describe('Results Controller (e2e)', () => {
       });
   });
 
-  it('/auth/singin (POST)', async () => {
-    return await request(app.getHttpServer())
-      .post('/auth/singin')
-      .send({
-        email: 'test@jest.com',
-        password: '12345678',
-      })
-      .set('Content-Type', 'application/json')
-      .set('Accept', 'application/json')
-      .expect(202)
+  // Deberia retornar un status 404 si el id es de tipo string o deberia retornar un mensaje de error
+  it('/auth/user/:id', () => {
+    return request(app.getHttpServer())
+      .get('/auth/user/' + 0)
+      .expect(200)
       .expect((res) => {
-        console.log(res);
+        const data = res.body;
+        expect(data.response).toEqual({});
       });
   });
 

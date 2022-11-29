@@ -1,6 +1,7 @@
-import { TestingModule } from '@nestjs/testing';
+import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
+import { AppModule } from './../src/app.module';
 import { testModule, usePipes } from './test.module';
 
 describe('AppController (e2e)', () => {
