@@ -28,9 +28,10 @@ export class ClarisaInstitutionsTypeRepository extends Repository<ClarisaInstitu
     const queryData = `
     select 
     cit.code as institutions_type_id,
-    cit.name as institutions_type_name
+    cit.name as institutions_type_name,
+    cit.is_legacy
     from clarisa_institution_types cit
-    where is_legacy=?;
+    ${legacy == undefined ? '' : 'where is_legacy=?'};
     `;
     try {
       const institutionsType = await this.query(queryData, [legacy]);
