@@ -303,4 +303,20 @@ export class ResultsApiService {
   GET_AllglobalTarget() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/global-target/get/all`);
   }
+  POST_createRequest(body) {
+    console.log(this.currentResultId);
+    return this.http.post<any>(`${this.apiBaseUrl}request/create/${this.currentResultId}`, body);
+  }
+
+  GET_allRequest() {
+    return this.http.get<any>(`${this.apiBaseUrl}request/get/all`);
+  }
+
+  POST_updateRequest(body) {
+    return this.http.patch<any>(`${this.apiBaseUrl}request/update`, body);
+  }
+
+  GET_requestStatus() {
+    return this.http.get<any>(`${this.apiBaseUrl}request/get/status`);
+  }
 }

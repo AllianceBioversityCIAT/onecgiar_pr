@@ -16,6 +16,8 @@ import { PusherService } from '../../../../shared/services/pusher.service';
 export class ResultDetailComponent {
   constructor(public navigationBarSE: NavigationBarService, private activatedRoute: ActivatedRoute, private api: ApiService, public saveButtonSE: SaveButtonService, private resultLevelSE: ResultLevelService, private rolesSE: RolesService, private router: Router, private dataControlSE: DataControlService, private pusherService: PusherService) {}
   ngOnInit(): void {
+    this.dataControlSE.currentResult = null;
+    this.api.resultsSE.currentResultId = null;
     this.api.updateUserData();
     this.api.resultsSE.currentResultId = this.activatedRoute.snapshot.paramMap.get('id');
     this.GET_resultById();

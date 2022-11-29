@@ -103,7 +103,7 @@ export class PusherService {
     // if (pusherBlocked.blockedRoute()) return;
 
     PRRoute = PRRoute.split('/').join('').split('-').join('');
-    console.log(this.api.authSE.localStorageUser.id);
+    // console.log(this.api.authSE.localStorageUser.id);
     this.pusher = new Pusher(environment.pusher.key, {
       cluster: environment.pusher.cluster,
       encrypted: true,
@@ -111,11 +111,11 @@ export class PusherService {
         endpoint: `${environment.apiBaseUrl}auth/signin/pusher/result/${resultId}/${this.api.authSE.localStorageUser.id}`
       }
     });
-    console.log('presence-prms' + PRRoute);
+    // console.log('presence-prms' + PRRoute);
 
     this.presenceChannel = this.pusher.subscribe('presence-prms' + PRRoute);
     this.beforeRoute = PRRoute;
-    console.log(this.presenceChannel);
-    console.log(this.presenceChannel?.members);
+    // console.log(this.presenceChannel);
+    // console.log(this.presenceChannel?.members);
   }
 }
