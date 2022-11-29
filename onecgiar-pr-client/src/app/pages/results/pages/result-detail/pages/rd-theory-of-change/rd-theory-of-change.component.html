@@ -6,12 +6,28 @@
     <app-pr-input label="Primary submitter" [required]="false" [readOnly]="true" [(ngModel)]="psub">
     </app-pr-input>
     <app-pr-multi-select [options]="this.contributingInitiativesList" label="Contributing Initiatives"
+        [disableOptions]="this.theoryOfChangeBody?.pending_contributing_initiatives"
         selectedLabel="Contributing Initiatives" optionLabel="full_name" optionValue="id"
         (selectOptionEvent)="onSelectContributingInitiative()" [required]="false"
         (removeOptionEvent)="onRemoveContributingInitiative($event)" selectedOptionLabel="full_name"
         [(ngModel)]="this.theoryOfChangeBody.contributing_initiatives" placeholder="Select initiative(s)
         ">
     </app-pr-multi-select>
+
+
+    <div class="selected_container custom_scroll">
+        <app-pr-field-header
+            [description]="'Initiatives to be added as contributor('+this.theoryOfChangeBody?.pending_contributing_initiatives?.length+')'">
+        </app-pr-field-header>
+        <div class="chips_container">
+            <div class="pr_chip_selected pending" *ngFor="let item of this.theoryOfChangeBody?.pending_contributing_initiatives
+             let i=index">
+                <div class="name" [innerHtml]="item.initiative_name"></div>
+            </div>
+        </div>
+    </div>
+
+
     <!-- TODO  -->
     <app-pr-field-header label="Contributing non-pooled projects" [required]="false"></app-pr-field-header>
     <app-alert-status *ngIf="!this.api.rolesSE.readOnly"
@@ -95,5 +111,5 @@
 
 </div>
 
-<app-save-button class="position_sticky" [ngClass]="{'globalDisabled': this.validateGranTitle}"
-    (clickSave)="onSaveSection()"></app-save-button>
+<app-save-button class="position_sticky" [disabled]="this.validateGranTitle" (clickSave)="onSaveSection()">
+</app-save-button>

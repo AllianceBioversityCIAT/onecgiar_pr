@@ -16,4 +16,4 @@
         </div>
     </div>
 </div>
-<p-menu #menu [popup]="true" [model]="items"></p-menu>
+<p-menu #menu [popup]="true" [model]="this.api.dataControlSE.currentResult?.is_legacy?legacyItems:resultItems"></p-menu>

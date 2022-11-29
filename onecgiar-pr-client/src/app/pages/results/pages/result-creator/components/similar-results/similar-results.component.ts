@@ -11,19 +11,24 @@ import { MenuItem } from 'primeng/api';
 export class SimilarResultsComponent {
   @Input() options: any[];
   constructor(public api: ApiService, public resultLevelSE: ResultLevelService) {}
-  items: MenuItem[] = [
+  resultItems: MenuItem[] = [
     { label: 'See detail', icon: 'pi pi-fw pi-external-link' },
     {
       label: 'Map to TOC',
       icon: 'pi pi-fw pi-sitemap',
       command: () => {
-        // event
+        this.api.dataControlSE.showShareRequest = true;
       }
     }
   ];
+
+  legacyItems: MenuItem[] = [{ label: 'See detail', icon: 'pi pi-fw pi-external-link' }];
+
   onPressAction(result) {
-    console.log(result);
-    // this.api.resultsSE.currentResultId = result?.id;
-    // this.api.dataControlSE.currentResult = result;
+    this.api.resultsSE.currentResultId = result?.id;
+    this.api.dataControlSE.currentResult = result;
+    this.api.dataControlSE.currentResult.is_legacy = this.api.dataControlSE.currentResult.is_legacy == 'true' ? true : false;
+    this.api.dataControlSE.currentResult.result_type = this.api.dataControlSE.currentResult.type;
+    console.log(this.api.dataControlSE.currentResult);
   }
 }

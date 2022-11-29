@@ -61,6 +61,10 @@ input::placeholder,
     }
 }
 
+.pr_chip_selected.pending {
+    background-color: #f4dbdb !important;
+}
+
 .custom_select {
     .field {
         display: flex;
