@@ -534,6 +534,7 @@ export class ResultsService {
       let elasticJson: string = '';
 
       result.forEach((r) => {
+        r.is_legacy = <unknown>r.is_legacy == 'true';
         elasticJson += `{ "index": { "_index": "${documentName}",  "_id": "${
           r.id
         }" } }
