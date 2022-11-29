@@ -20,6 +20,7 @@ export class RoleLevelsController {
     return this.roleLevelsService.create(createRoleLevelDto);
   }
 
+  // * Fetch all role levels
   @Get()
   findAll() {
     return this.roleLevelsService.findAll();

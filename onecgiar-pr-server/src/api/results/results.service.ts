@@ -34,7 +34,6 @@ import { MapLegacy } from './dto/map-legacy.dto';
 import { ClarisaInstitutionsRepository } from '../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
 import { ClarisaInstitutionsTypeRepository } from '../../clarisa/clarisa-institutions-type/ClariasaInstitutionsType.repository';
 import { GenderTagRepository } from './gender_tag_levels/genderTag.repository';
-import { In } from 'typeorm';
 import { ResultsByInstitution } from './results_by_institutions/entities/results_by_institution.entity';
 import { ResultsByInstitutionType } from './results_by_institution_types/entities/results_by_institution_type.entity';
 import { CreateResultGeoDto } from './dto/create-result-geo-scope.dto';
@@ -155,6 +154,7 @@ export class ResultsService {
       const year: Year = await this._yearRepository.findOne({
         where: { active: true },
       });
+
       if (!year) {
         throw {
           response: {},
@@ -173,15 +173,13 @@ export class ResultsService {
         result_level_id: rl.id,
       });
 
-      const resultByInitiative = await this._resultByInitiativesRepository.save(
-        {
-          created_by: newResultHeader.created_by,
-          initiative_id: initiative.id,
-          initiative_role_id: 1,
-          result_id: newResultHeader.id,
-          version_id: vrs.id,
-        },
-      );
+      await this._resultByInitiativesRepository.save({
+        created_by: newResultHeader.created_by,
+        initiative_id: initiative.id,
+        initiative_role_id: 1,
+        result_id: newResultHeader.id,
+        version_id: vrs.id,
+      });
 
       return {
         response: newResultHeader,
@@ -756,15 +754,13 @@ export class ResultsService {
         legacy_id: legacyResult.legacy_id,
       });
 
-      const resultByInitiative = await this._resultByInitiativesRepository.save(
-        {
-          created_by: newResultHeader.created_by,
-          initiative_id: initiative.id,
-          initiative_role_id: 1,
-          result_id: newResultHeader.id,
-          version_id: vrs.id,
-        },
-      );
+      await this._resultByInitiativesRepository.save({
+        created_by: newResultHeader.created_by,
+        initiative_id: initiative.id,
+        initiative_role_id: 1,
+        result_id: newResultHeader.id,
+        version_id: vrs.id,
+      });
 
       await this._resultLegacyRepository.save(legacyResult);
 

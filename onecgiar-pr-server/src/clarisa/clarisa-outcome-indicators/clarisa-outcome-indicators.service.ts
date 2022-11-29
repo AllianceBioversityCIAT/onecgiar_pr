@@ -5,7 +5,7 @@ import { UpdateClarisaOutcomeIndicatorDto } from './dto/update-clarisa-outcome-i
 @Injectable()
 export class ClarisaOutcomeIndicatorsService {
   create(createClarisaOutcomeIndicatorDto: CreateClarisaOutcomeIndicatorDto) {
-    return 'This action adds a new clarisaOutcomeIndicator';
+    return createClarisaOutcomeIndicatorDto;
   }
 
   findAll() {
@@ -20,7 +20,7 @@ export class ClarisaOutcomeIndicatorsService {
     id: number,
     updateClarisaOutcomeIndicatorDto: UpdateClarisaOutcomeIndicatorDto,
   ) {
-    return `This action updates a #${id} clarisaOutcomeIndicator`;
+    return `This action updates a #${id} clarisaOutcomeIndicator ${updateClarisaOutcomeIndicatorDto}`;
   }
 
   remove(id: number) {

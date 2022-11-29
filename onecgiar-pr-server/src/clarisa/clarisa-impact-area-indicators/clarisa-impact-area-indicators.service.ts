@@ -15,7 +15,7 @@ export class ClarisaImpactAreaIndicatorsService {
   create(
     createClarisaImpactAreaIndicatorDto: CreateClarisaImpactAreaIndicatorDto,
   ) {
-    return 'This action adds a new clarisaImpactAreaIndicator';
+    return createClarisaImpactAreaIndicatorDto;
   }
 
   async findAll() {
@@ -40,7 +40,7 @@ export class ClarisaImpactAreaIndicatorsService {
     id: number,
     updateClarisaImpactAreaIndicatorDto: UpdateClarisaImpactAreaIndicatorDto,
   ) {
-    return `This action updates a #${id} clarisaImpactAreaIndicator`;
+    return `This action updates a #${id} clarisaImpactAreaIndicator ${updateClarisaImpactAreaIndicatorDto}`;
   }
 
   remove(id: number) {

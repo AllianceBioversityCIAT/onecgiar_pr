@@ -71,6 +71,7 @@ export class ResultsController {
     return `aja ${userId}`;
   }
 
+  // * Get all results-roles by user ID
   @Get('get/all/roles/:userId')
   async findAllResultRoles(@Param('userId') userId: number) {
     const { message, response, status } =

@@ -5,7 +5,7 @@ import { UpdateClarisaInstitutionDto } from './dto/update-clarisa-institution.dt
 @Injectable()
 export class ClarisaInstitutionsService {
   create(createClarisaInstitutionDto: CreateClarisaInstitutionDto) {
-    return 'This action adds a new clarisaInstitution';
+    return createClarisaInstitutionDto;
   }
 
   findAll() {
@@ -17,7 +17,7 @@ export class ClarisaInstitutionsService {
   }
 
   update(id: number, updateClarisaInstitutionDto: UpdateClarisaInstitutionDto) {
-    return `This action updates a #${id} clarisaInstitution`;
+    return `This action updates a #${id} clarisaInstitution ${updateClarisaInstitutionDto}`;
   }
 
   remove(id: number) {
