@@ -84,7 +84,8 @@ export class ClarisaInitiativesRepository extends Repository<ClarisaInitiative> 
       		results_by_inititiative rbi2
       	where
       		rbi2.result_id = ?
-      		and rbi2.initiative_role_id = 1);
+      		and rbi2.initiative_role_id = 1)
+        and ci.active > 0;
     `;
     try {
       const initiative: ClarisaInitiative[] = await this.query(queryData, [
