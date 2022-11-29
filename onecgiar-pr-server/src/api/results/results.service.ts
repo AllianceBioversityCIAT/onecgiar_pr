@@ -219,7 +219,7 @@ export class ResultsService {
     }
   }
 
-  async getAllInstitutionsType(legacy: boolean) {
+  async getAllInstitutionsType(legacy?: boolean) {
     try {
       const entities =
         await this._clarisaInstitutionsTypeRepository.getInstitutionsType(
