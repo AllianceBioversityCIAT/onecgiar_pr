@@ -1,4 +1,3 @@
-<div class="fixed_button" (click)="onClickSave()">
-
+<div class="fixed_button" (click)="onClickSave()" *ngIf="this.dataControlSE.isKnowledgeProduct">
     <app-pr-button padding="medium" [text]="text" icon="loop"></app-pr-button>
 </div>
