@@ -45,13 +45,13 @@ export class ShareResultRequestController {
   @Patch('update')
   async updateRequest(
     @Headers() auth: HeadersDto,
-    @Body() updateShareResultRequestDto: UpdateShareResultRequestDto
+    @Body() updateShareResultRequestDto: ShareResultRequest
   ) {
     const token: TokenDto = <TokenDto>(
       JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
     );
     const { message, response, status } =
-      await this.shareResultRequestService.getResultRequestByUser(token);
+      await this.shareResultRequestService.updateResultRequestByUser(updateShareResultRequestDto, token);
     throw new HttpException({ message, response }, status);
   }
 

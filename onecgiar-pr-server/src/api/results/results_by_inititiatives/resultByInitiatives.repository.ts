@@ -114,7 +114,7 @@ export class ResultByInitiativesRepository extends Repository<ResultsByInititiat
         queryData,
         [resultId],
       );
-      return completeUser?.length?completeUser[0]: undefined;
+      return completeUser;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByInitiativesRepository.name,
