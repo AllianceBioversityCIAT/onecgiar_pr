@@ -149,7 +149,11 @@ export class ShareResultRequestService {
           }
 
           await this._resultByInitiativesRepository.save(newResultByInitiative);
-          await this._resultsTocResultRepository.save(newRtR);
+          const resultTocResult = await this._resultsTocResultRepository.findOne({where:newRtR});
+          console.log(resultTocResult)
+          if(!resultTocResult){
+            await this._resultsTocResultRepository.save(newRtR);
+          }
         }
       }
 
