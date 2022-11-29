@@ -12,6 +12,7 @@ export class DataControlService {
   showSectionSpinner = false;
   currentSectionName = '';
   fieldFeedbackList = [];
+  showShareRequest = false;
   constructor() {}
   validateBody(body: any) {
     return Object.entries(body).every((item: any) => item[1]);

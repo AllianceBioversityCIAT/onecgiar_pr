@@ -3,9 +3,11 @@ import { CommonModule } from '@angular/common';
 
 import { ResultsNotificationsRoutingModule } from './results-notifications-routing.module';
 import { ResultsNotificationsComponent } from './results-notifications.component';
+import { NotificationItemComponent } from './components/notification-item/notification-item.component';
+import { ButtonModule } from 'primeng/button';
 
 @NgModule({
-  declarations: [ResultsNotificationsComponent],
-  imports: [CommonModule, ResultsNotificationsRoutingModule]
+  declarations: [ResultsNotificationsComponent, NotificationItemComponent],
+  imports: [CommonModule, ResultsNotificationsRoutingModule, ButtonModule]
 })
 export class ResultsNotificationsModule {}

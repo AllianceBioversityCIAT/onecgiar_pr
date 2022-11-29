@@ -11,10 +11,15 @@ import { UserRepository } from './modules/user/repositories/user.repository';
 import { FullUserRequestDto } from './modules/user/dto/full-user-request.dto';
 import { User } from './modules/user/entities/user.entity';
 import { HandlersError } from '../shared/handlers/error.utils';
+import { pusherAuthDot } from './dto/pusher-auth.dto';
+import { TokenDto } from '../shared/globalInterfaces/token.dto';
+import Pusher from 'pusher';
+
 
 @Injectable()
 export class AuthService {
   private readonly _logger: Logger = new Logger(AuthService.name);
+  private readonly pusher: Pusher;
 
   constructor(
     private readonly _jwtService: JwtService,
@@ -23,7 +28,15 @@ export class AuthService {
     private readonly _bcryptPasswordEncoder: BcryptPasswordEncoder,
     private readonly _customUserRepository: UserRepository,
     private readonly _handlersError: HandlersError,
-  ) {}
+  ) {
+    this.pusher = new Pusher({
+      appId: `${env.PUSHER_APP_ID}`,
+      key: `${env.PUSHER_API_KEY}`,
+      secret: `${env.PUSHER_API_SECRET}`,
+      cluster: `${env.PUSHER_APP_CLUSTER}`,
+      useTLS: true
+    });
+  }
   create(createAuthDto: CreateAuthDto) {
     return createAuthDto;
   }
@@ -43,6 +56,40 @@ export class AuthService {
   remove(id: number) {
     return `This action removes a #${id} auth`;
   }
+
+  async pusherAuth(
+    pusherAuthDot: pusherAuthDot,
+    resultId: number,
+    userId: number,
+  ) {
+    try {
+      const uPusher = await this._userRepository.userDataPusher(
+        userId,
+        resultId,
+      );
+
+      const today = new Date();
+      const roles = uPusher.aplication_role;
+      const initiativeRoles = uPusher?.initiative_role ? '1' : null;
+      const socketId = pusherAuthDot.socket_id;
+      const channel = pusherAuthDot.channel_name;
+      const name = `${uPusher.first_name} ${uPusher.last_name}`;
+
+      const presenceData = {
+        user_id: `${uPusher.user_id}`,
+        user_info: { name, roles, initiativeRoles, today },
+      };
+
+      const auth = this.pusher.authenticate(socketId, channel, presenceData);
+
+      return {
+        auth,
+      };
+    } catch (error) {
+      return error;
+    }
+  }
+
   async singIn(userLogin: UserLoginDto): Promise<any> {
     try {
       if (!(userLogin.email && userLogin.password)) {

@@ -6,6 +6,7 @@ import { ResultLevelService } from '../result-creator/services/result-level.serv
 import { RolesService } from '../../../../shared/services/global/roles.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { SaveButtonService } from '../../../../custom-fields/save-button/save-button.service';
+import { PusherService } from '../../../../shared/services/pusher.service';
 
 @Component({
   selector: 'app-result-detail',
@@ -13,8 +14,10 @@ import { SaveButtonService } from '../../../../custom-fields/save-button/save-bu
   styleUrls: ['./result-detail.component.scss']
 })
 export class ResultDetailComponent {
-  constructor(public navigationBarSE: NavigationBarService, private activatedRoute: ActivatedRoute, private api: ApiService, public saveButtonSE: SaveButtonService, private resultLevelSE: ResultLevelService, private rolesSE: RolesService, private router: Router, private dataControlSE: DataControlService) {}
+  constructor(public navigationBarSE: NavigationBarService, private activatedRoute: ActivatedRoute, private api: ApiService, public saveButtonSE: SaveButtonService, private resultLevelSE: ResultLevelService, private rolesSE: RolesService, private router: Router, private dataControlSE: DataControlService, private pusherService: PusherService) {}
   ngOnInit(): void {
+    this.dataControlSE.currentResult = null;
+    this.api.resultsSE.currentResultId = null;
     this.api.updateUserData();
     this.api.resultsSE.currentResultId = this.activatedRoute.snapshot.paramMap.get('id');
     this.GET_resultById();

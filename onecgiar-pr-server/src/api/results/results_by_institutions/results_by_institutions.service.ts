@@ -16,6 +16,7 @@ import { UserRepository } from '../../../auth/modules/user/repositories/user.rep
 import { ResultsKnowledgeProductsRepository } from '../results-knowledge-products/repositories/results-knowledge-products.repository';
 import { ResultsKnowledgeProductInstitutionRepository } from '../results-knowledge-products/repositories/results-knowledge-product-institution.repository';
 import { IsNull } from 'typeorm';
+import { MQAPInstitutionDto } from './dto/mqap-institutions.dto';
 
 @Injectable()
 export class ResultsByInstitutionsService {
@@ -87,30 +88,6 @@ export class ResultsByInstitutionsService {
           id,
         );
       const result = await this._resultRepository.getResultById(id);
-      const knowledgeProduct =
-        await this._resultKnowledgeProductRepository.findOne({
-          where: {
-            results_id: id,
-          },
-          relations: {
-            result_knowledge_product_institution_array: true,
-          },
-        });
-      let unmapped_mqap_institutions = null;
-
-      if (knowledgeProduct) {
-        unmapped_mqap_institutions =
-          knowledgeProduct.result_knowledge_product_institution_array.filter(
-            (rkpi) => rkpi.results_by_institutions_id == null,
-          );
-        // mapped institution
-        institutions.map((inst) => {
-          inst['mapped_mqap_institutions'] =
-            knowledgeProduct.result_knowledge_product_institution_array
-              .filter((rkpi) => rkpi.results_by_institutions_id == inst.id)
-              .map((rkpi) => rkpi.result_kp_mqap_institution_id);
-        });
-      }
 
       if (institutions.length) {
         const institutionsId: number[] = institutions.map((el) => el.id);
@@ -125,11 +102,46 @@ export class ResultsByInstitutionsService {
         });
       }
 
+      const knowledgeProduct =
+        await this._resultKnowledgeProductRepository.findOne({
+          where: {
+            results_id: id,
+          },
+          relations: {
+            result_knowledge_product_institution_array: true,
+          },
+        });
+
+      let mqap_institutions: MQAPInstitutionDto[] = null;
+
+      if (knowledgeProduct) {
+        mqap_institutions =
+          knowledgeProduct.result_knowledge_product_institution_array
+            .filter((rkpi) => rkpi.is_active)
+            .map((rkpi) => {
+              const mqapInstitution: MQAPInstitutionDto =
+                new MQAPInstitutionDto();
+
+              mqapInstitution.confidant = rkpi.confidant;
+              mqapInstitution.intitution_name = rkpi.intitution_name;
+              mqapInstitution.predicted_institution_id =
+                rkpi.predicted_institution_id;
+              mqapInstitution.result_kp_mqap_institution_id =
+                rkpi.result_kp_mqap_institution_id;
+              mqapInstitution.user_matched_institution =
+                institutions.find(
+                  (i) => i.id === rkpi.results_by_institutions_id,
+                ) || this.getEmptyResultByInstitution();
+
+              return mqapInstitution;
+            });
+      }
+
       return {
         response: {
           no_applicable_partner: result.no_applicable_partner ? true : false,
           institutions,
-          unmapped_mqap_institutions,
+          mqap_institutions,
         },
         message: 'Successful response',
         status: HttpStatus.OK,
@@ -137,6 +149,22 @@ export class ResultsByInstitutionsService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
+  }
+
+  private getEmptyResultByInstitution(): ResultsByInstitution {
+    const resultByInstitution = new ResultsByInstitution();
+
+    resultByInstitution['id'] = null;
+    resultByInstitution['institutions_id'] = null;
+    resultByInstitution['institutions_name'] = null;
+    resultByInstitution['institutions_acronym'] = null;
+    resultByInstitution['institution_roles_id'] = null;
+    resultByInstitution['version_id'] = null;
+    resultByInstitution['institutions_type_id'] = null;
+    resultByInstitution['institutions_type_name'] = null;
+    resultByInstitution['deliveries'] = [];
+
+    return resultByInstitution;
   }
 
   async savePartnersInstitutionsByResult(
@@ -173,6 +201,18 @@ export class ResultsByInstitutionsService {
       if (version.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: version });
       }
+
+      if (data.mqap_institutions?.length) {
+        data.institutions = data.mqap_institutions
+          .filter((ma) => ma.user_matched_institution?.institutions_id)
+          .map((ma) => {
+            const institution = ma.user_matched_institution;
+            institution['institution_mqap_id'] =
+              ma.result_kp_mqap_institution_id;
+            return institution;
+          });
+      }
+
       const result =
         await this._resultByIntitutionsRepository.updateIstitutions(
           data.result_id,
@@ -208,10 +248,12 @@ export class ResultsByInstitutionsService {
 
             if (knowledgeProduct) {
               const kpInstitution =
-                this._resultsKnowledgeProductInstitutionRepository.findOneBy({
-                  result_kp_mqap_institution_id:
-                    data.institutions[index].institution_mqap_id ?? 0,
-                });
+                await this._resultsKnowledgeProductInstitutionRepository.findOneBy(
+                  {
+                    result_kp_mqap_institution_id:
+                      data.institutions[index].institution_mqap_id ?? 0,
+                  },
+                );
 
               if (kpInstitution) {
                 this._resultsKnowledgeProductInstitutionRepository.update(
@@ -245,6 +287,25 @@ export class ResultsByInstitutionsService {
               );
             }
           } else {
+            if (knowledgeProduct) {
+              const kpInstitution =
+                await this._resultsKnowledgeProductInstitutionRepository.findOneBy(
+                  {
+                    result_kp_mqap_institution_id:
+                      data.institutions[index].institution_mqap_id ?? 0,
+                  },
+                );
+
+              if (kpInstitution) {
+                this._resultsKnowledgeProductInstitutionRepository.update(
+                  {
+                    result_kp_mqap_institution_id:
+                      data.institutions[index].institution_mqap_id,
+                  },
+                  { results_by_institutions_id: isInstitutions.id },
+                );
+              }
+            }
             const delivery = data.institutions[index].deliveries;
             await this._resultByInstitutionsByDeliveriesTypeRepository.inactiveResultDeLivery(
               isInstitutions.id,

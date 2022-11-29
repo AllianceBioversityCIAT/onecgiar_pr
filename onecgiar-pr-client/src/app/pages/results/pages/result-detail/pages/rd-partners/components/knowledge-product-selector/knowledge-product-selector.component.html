@@ -1,0 +1,73 @@
+<app-alert-status
+    description="Partner organization that you collaborated with to generate this result/who contributed to this result.">
+</app-alert-status>
+
+<app-alert-status *ngIf="!this.api.rolesSE.readOnly"
+    description="If you don't find the partner you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list.">
+</app-alert-status>
+
+<div class="local_grid">
+    <div>
+        <div class="column_title">
+            Author affiliations
+        </div>
+        <div class="pr_description">
+            Please match each author affiliation with a CLARISA partner.
+        </div>
+
+    </div>
+    <div class="column_title">
+        CLARISA Partners
+    </div>
+
+</div>
+
+<div class="partners_map">
+    <div class="partner_map" *ngFor="let partner of this.rdPartnersSE.partnersBody.mqap_institutions">
+        <div>
+            {{partner.intitution_name}}
+        </div>
+        <div>
+            <!-- <app-pr-select class="segment_title_margin" [options]="this.institutionsService.institutionsTypesList"
+            label="Type" optionLabel="institutions_type_name" optionValue="institutions_type_id"
+            [(ngModel)]="this.partnersRequestBody.institutionTypeCode" placeholder="Select type">
+        </app-pr-select> -->
+            <app-pr-select [options]="this.institutionsSE.institutionsList" [required]="false" label="Partners"
+                optionLabel="full_name" optionValue="institutions_id" placeholder="Select Partners"
+                (selectOptionEvent)="this.rdPartnersSE.toggle = this.rdPartnersSE.toggle+1"
+                [(ngModel)]="partner.user_matched_institution.institutions_id">
+            </app-pr-select>
+            <div class="partners_selected_header" [style]="this.rolesSE.readOnly?'margin-top: -15px':''">
+                <app-pr-field-header [description]="'Partner selected:'">
+                </app-pr-field-header>
+            </div>
+
+            <div class="chips_container  custom_scroll partners_selected">
+
+                <div class="pr_chip_selected">
+                    <!-- <div class="name">{{institutions_name(partner.user_matched_institution.institutions_id)}}</div> -->
+                    <div class="type"> <strong>Institution type:</strong>
+                        <!-- {{this.institutions_institutions_type_name(partner.user_matched_institution.institutions_id)}} -->
+                    </div>
+                    <div class="deliveries" [ngClass]="{'readOnly_deliveries': this.rolesSE.readOnly}">
+                        <div class="delivery"
+                            *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelection(partner.user_matched_institution.deliveries,1) : true"
+                            [ngClass]="{'active': this.rdPartnersSE.validateDeliverySelection(partner.user_matched_institution.deliveries,1)}"
+                            (click)="this.rdPartnersSE.onSelectDelivery(partner.user_matched_institution,1)">
+                            Scaling</div>
+                        <div class="delivery"
+                            *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelection(partner.user_matched_institution.deliveries,2) : true"
+                            [ngClass]="{'active': this.rdPartnersSE.validateDeliverySelection(partner.user_matched_institution.deliveries,2)}"
+                            (click)="this.rdPartnersSE.onSelectDelivery(partner.user_matched_institution,2)">
+                            Demand</div>
+                        <div class="delivery"
+                            *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelection(partner.user_matched_institution.deliveries,3) : true"
+                            [ngClass]="{'active': this.rdPartnersSE.validateDeliverySelection(partner.user_matched_institution.deliveries,3)}"
+                            (click)="this.rdPartnersSE.onSelectDelivery(partner.user_matched_institution,3)">
+                            Innovation</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

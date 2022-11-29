@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
+import { ImpactAreasService } from '../../../../../../../../shared/services/global/impact-areas.service';
 
 @Component({
   selector: 'app-toc-impact-section',
@@ -6,5 +7,7 @@ import { Component, OnInit } from '@angular/core';
   styleUrls: ['./toc-impact-section.component.scss']
 })
 export class TocImpactSectionComponent {
-  constructor() {}
+  @Input() impacts: any;
+  @Input() contributing_initiatives: any = [];
+  constructor(public impactAreasSE: ImpactAreasService) {}
 }

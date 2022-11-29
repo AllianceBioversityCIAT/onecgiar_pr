@@ -133,11 +133,22 @@ export class ResultsKnowledgeProduct {
   })
   melia_type_id: number;
 
-  //versioning field
-  @ManyToOne(() => Version, (v) => v.id, { nullable: false })
-  @JoinColumn({
-    name: 'version_id',
+  //TODO to be extracted in result_region when the mapping is done
+  @Column({
+    type: 'text',
+    nullable: true,
   })
+  cgspace_regions: string;
+
+  //TODO to be extracted in result_country when the mapping is done
+  @Column({
+    type: 'text',
+    nullable: true,
+  })
+  cgspace_countries: string;
+
+  //versioning field
+  @Column()
   version_id: number;
 
   //audit fields
@@ -149,10 +160,7 @@ export class ResultsKnowledgeProduct {
   })
   is_active: boolean;
 
-  @ManyToOne(() => User, (u) => u.id, { nullable: false })
-  @JoinColumn({
-    name: 'created_by',
-  })
+  @Column()
   created_by: number;
 
   @CreateDateColumn({
@@ -169,10 +177,7 @@ export class ResultsKnowledgeProduct {
   })
   last_updated_date: Date;
 
-  @ManyToOne(() => User, (u) => u.id, { nullable: true })
-  @JoinColumn({
-    name: 'last_updated_by',
-  })
+  @Column({ nullable: true })
   last_updated_by: number;
 
   //object relations
@@ -211,4 +216,22 @@ export class ResultsKnowledgeProduct {
     name: 'results_id',
   })
   result_object: Result;
+
+  @ManyToOne(() => Version, (v) => v.id, { nullable: false })
+  @JoinColumn({
+    name: 'version_id',
+  })
+  version_object: number;
+
+  @ManyToOne(() => User, (u) => u.id, { nullable: false })
+  @JoinColumn({
+    name: 'created_by',
+  })
+  created_by_object: User;
+
+  @ManyToOne(() => User, (u) => u.id)
+  @JoinColumn({
+    name: 'last_updated_by',
+  })
+  last_updated_by_object: User;
 }

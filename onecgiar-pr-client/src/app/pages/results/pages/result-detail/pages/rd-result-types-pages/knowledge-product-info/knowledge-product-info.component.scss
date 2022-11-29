@@ -14,3 +14,15 @@
         gap: 20px;
     }
 }
+
+.custom_chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+
+    .author {
+        border-radius: 100px;
+        background-color: #E8EBFF;
+        padding: 5px 15px;
+    }
+}

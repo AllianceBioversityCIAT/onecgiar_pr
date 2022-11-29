@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultsImpactAreaTarget } from './entities/results-impact-area-target.entity';
+import { GetImpactTargetAreaDto } from './dto/get-impact-target-area.dto';
 
 
 @Injectable()
@@ -43,6 +44,40 @@ export class ResultsImpactAreaTargetRepository extends Repository<ResultsImpactA
     }
   }
 
+
+  async resultsImpactAreaTargetByResultId(resultId: number) {
+    const queryData = `
+    SELECT
+      riat.result_impact_area_target_id,
+      riat.is_active,
+      riat.created_date,
+      riat.last_updated_date,
+      riat.result_id,
+      riat.impact_area_target_id as targetId,
+      riat.version_id,
+      riat.created_by,
+      riat.last_updated_by,
+      cgt.impactAreaId as impact_area_id,
+      cgt.target 
+    FROM
+      results_impact_area_target riat
+      inner join clarisa_global_targets cgt ON cgt.targetId = riat.impact_area_target_id 
+    WHERE
+      riat.result_id = ?
+      and riat.is_active > 0;
+    `;
+    try {
+      const resultTocResult: GetImpactTargetAreaDto[] = await this.query(queryData, [resultId]);
+      return resultTocResult;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsImpactAreaTargetRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async updateResultImpactAreaTarget(resultId: number, impactId: number, targetId: number[], userId: number) {
     const target = targetId??[];
     const upDateInactive = `
@@ -62,7 +97,7 @@ export class ResultsImpactAreaTargetRepository extends Repository<ResultsImpactA
     update results_impact_area_target riat
     inner join clarisa_global_targets cgt on cgt.targetId = riat.impact_area_target_id  
     inner join clarisa_impact_areas cia on cia.id = cgt.impactAreaId 
-      set riat.is_active  = 0,
+      set riat.is_active  = 1,
         riat.last_updated_date  = NOW(),
         riat.last_updated_by  = ?
       where riat.result_id  = ?

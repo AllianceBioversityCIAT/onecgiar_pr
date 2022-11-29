@@ -95,7 +95,7 @@ export class ClarisaTaskService {
     count = await this.cloneClarisaInnovationCharacteristicRepository(count);
     count = await this.cloneClarisaActionAreaOutcomeRepository(count);
     count = await this.cloneClarisaGeographicScope(count);
-    //count = await this.cloneResultTocRepository(count);
+    count = await this.cloneResultTocRepository(count);
     count = await this.cloneClarisaCenterRepository(count);
     count = await this.cloneClarisaPolicyTypeRepository(count);
   }
@@ -411,6 +411,7 @@ export class ClarisaTaskService {
           `${this.clarisaHost}global-targets`,
           this.configAuth,
         );
+
         await this._clarisaGobalTargetRepository.save<ClarisaGlobalTarget>(
           data,
         );
@@ -440,17 +441,32 @@ export class ClarisaTaskService {
           `[${position}]: All CLARISA Institutions type control list data has been deleted`,
         );
       } else {
-        const data = await this._httpService.get(
-          `${this.clarisaHost}institution-types`,
-          { auth: { username: env.L_CLA_USER, password: env.L_CLA_PASSWORD } },
+        const dataLegacy = await lastValueFrom(
+          await this._httpService
+            .get(`${this.clarisaHost}institution-types?type=legacy`, {
+              auth: { username: env.L_CLA_USER, password: env.L_CLA_PASSWORD },
+            })
+            .pipe(map((resp) => resp.data)),
         );
-        await data.subscribe(async (el) => {
-          const { data } = el;
-          data.map((el) => {
-            el['code'] = parseInt(el['code']);
-          });
-          await this._clarisaInstitutionsTypeRepository.save(data);
-        }).closed;
+        dataLegacy.map((el) => {
+          el['code'] = parseInt(el['code']);
+          el['is_legacy'] = true;
+        });
+        const dataNew = await lastValueFrom(
+          await this._httpService
+            .get(`${this.clarisaHost}institution-types?type=one-cgiar`, {
+              auth: { username: env.L_CLA_USER, password: env.L_CLA_PASSWORD },
+            })
+            .pipe(map((resp) => resp.data)),
+        );
+        dataNew.map((el) => {
+          el['code'] = parseInt(el['code']);
+          el['is_legacy'] = false;
+        });
+        const datasss = await this._clarisaInstitutionsTypeRepository.save(
+          (dataLegacy ?? []).concat(dataNew ?? []),
+        );
+        console.log(datasss);
         this._logger.verbose(
           `[${position}]: All CLARISA Institutions type control list data has been created`,
         );

@@ -71,15 +71,16 @@ export class ResultsKnowledgeProductsController {
     return this._resultsKnowledgeProductsService.findOneByResultId(id);
   }
 
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateResultsKnowledgeProductDto: UpdateResultsKnowledgeProductDto,
-  ) {
-    return this._resultsKnowledgeProductsService.update(
-      +id,
-      updateResultsKnowledgeProductDto,
+  @Patch('resync/:resultId')
+  async update(@Param('resultId') id: number, @Headers() auth: HeadersDto) {
+    const token: TokenDto = <TokenDto>(
+      JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
     );
+
+    const { message, response, status } =
+      await this._resultsKnowledgeProductsService.syncAgain(id, token);
+
+    throw new HttpException({ message, response }, status);
   }
 
   @Delete(':id')

@@ -5,11 +5,16 @@ import {
   Res,
   HttpException,
   UseFilters,
+  Headers,
+  HttpCode,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UserLoginDto } from './dto/login-user.dto';
 import { Response } from 'express';
 import { HttpExceptionFilter } from '../shared/handlers/error.exception';
+import { pusherAuthDot } from './dto/pusher-auth.dto';
+import { HeadersDto } from '../shared/globalInterfaces/headers.dto';
+import { TokenDto } from '../shared/globalInterfaces/token.dto';
 
 @Controller()
 @UseFilters(new HttpExceptionFilter())
@@ -24,4 +29,38 @@ export class AuthController {
     );
     throw new HttpException({ message, response }, status);
   }
+
+  @Post('/signin/pusher/result/:resultId/:userId')
+  @HttpCode(200)
+  async signInPusher(
+    @Body() pusherAuthDot: pusherAuthDot,
+    @Param('resultId') resultId: number,
+    @Param('userId') userId: number,
+  ) {
+    const response = await this.authService.pusherAuth(
+      pusherAuthDot,
+      resultId,
+      userId,
+    );
+    return response.auth;
+  }
+
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() updateAuthDto: UpdateAuthDto) {
+    return this.authService.update(+id, updateAuthDto);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.authService.remove(+id);
+  }
+
 }
+function PusherSocketId(arg0: string) {
+  throw new Error('Function not implemented.');
+}
+
+function PusherChannel(arg0: string) {
+  throw new Error('Function not implemented.');
+}
+
