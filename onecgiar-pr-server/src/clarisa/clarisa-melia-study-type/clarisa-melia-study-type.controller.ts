@@ -26,7 +26,7 @@ export class ClarisaMeliaStudyTypeController {
     );
   }
 
-  @Get()
+  @Get('get/all')
   findAll() {
     return this.clarisaMeliaStudyTypeService.findAll();
   }
