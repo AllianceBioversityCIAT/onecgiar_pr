@@ -3,7 +3,6 @@ import { ClarisaConnectionsService } from './clarisa-connections.service';
 import { ClarisaConnectionsController } from './clarisa-connections.controller';
 import { HttpModule } from '@nestjs/axios';
 import { HandlersError } from '../../shared/handlers/error.utils';
-import { ClarisaCronsService } from '../clarisaCron.service';
 import { ClarisaTaskService } from '../clarisatask.service';
 import { ClarisaMeliaStudyTypeRepository } from '../clarisa-melia-study-type/ClariasaMeliasStudyType.repository';
 import { ClariasaActionAreaRepository } from '../clarisa-action-areas/ClariasaActionArea.repository';
@@ -30,7 +29,7 @@ import { ClarisaPolicyTypeRepository } from '../clarisa-policy-types/clarisa-pol
 
 @Module({
   controllers: [ClarisaConnectionsController],
-  providers: [ClarisaConnectionsService, HandlersError, ClarisaCronsService, ClarisaTaskService,
+  providers: [ClarisaConnectionsService, HandlersError, ClarisaTaskService,
     ClarisaMeliaStudyTypeRepository,
     ClariasaActionAreaRepository,
     ClarisaInitiativesRepository,
