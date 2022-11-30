@@ -45,6 +45,10 @@ import { ResultCountryRepository } from './result-countries/result-countries.rep
 import { ResultsKnowledgeProductsRepository } from './results-knowledge-products/repositories/results-knowledge-products.repository';
 import { ResultCountry } from './result-countries/entities/result-country.entity';
 import { ResultRegion } from './result-regions/entities/result-region.entity';
+import { ResultSimpleDto } from './dto/result-simple.dto';
+import { ElasticService } from '../../elastic/elastic.service';
+import { ElasticOperationDto } from '../../elastic/dto/elastic-operation.dto';
+import process from 'process';
 
 @Injectable()
 export class ResultsService {
@@ -72,7 +76,8 @@ export class ResultsService {
     private readonly _resultRegionRepository: ResultRegionRepository,
     private readonly _resultCountryRepository: ResultCountryRepository,
     private readonly _resultKnowledgeProductRepository: ResultsKnowledgeProductsRepository,
-  ) { }
+    private readonly _elasticService: ElasticService,
+  ) {}
 
   /**
    * !endpoint createOwnerResult
@@ -365,6 +370,7 @@ export class ResultsService {
         krs_url: resultGeneralInformation.krs_url,
         is_krs: resultGeneralInformation.is_krs,
         last_updated_by: user.id,
+        lead_contact_person: resultGeneralInformation.lead_contact_person,
       });
 
       const institutions =
@@ -518,12 +524,12 @@ export class ResultsService {
     }
   }
 
-  async findAllForElasticSearch(documentName: string) {
+  async findForElasticSearch(documentName: string, id?: string) {
     try {
-      const result =
-        await this._customResultRepository.allResultsForElasticSearch();
+      const queryResult =
+        await this._customResultRepository.resultsForElasticSearch(id);
 
-      if (!result.length) {
+      if (!queryResult.length) {
         throw {
           response: {},
           message: 'Results Not Found',
@@ -531,15 +537,14 @@ export class ResultsService {
         };
       }
 
-      let elasticJson: string = '';
+      const operations: ElasticOperationDto<ResultSimpleDto>[] =
+        queryResult.map((r) => new ElasticOperationDto('POST', r));
 
-      result.forEach((r) => {
-        r.is_legacy = <unknown>r.is_legacy == 'true';
-        elasticJson += `{ "index": { "_index": "${documentName}",  "_id": "${r.id
-          }" } }
-        ${JSON.stringify(r)}
-        `;
-      });
+      const elasticJson: string =
+        this._elasticService.getBulkElasticOperationResults(
+          documentName,
+          operations,
+        );
 
       return {
         response: elasticJson,
@@ -551,10 +556,11 @@ export class ResultsService {
     }
   }
 
-  async findAllSimplified() {
+  async findAllSimplified(id?: string) {
     try {
-      const result =
-        await this._customResultRepository.allResultsForElasticSearch();
+      const result = await this._customResultRepository.resultsForElasticSearch(
+        id,
+      );
 
       if (!result.length) {
         throw {
@@ -655,20 +661,11 @@ export class ResultsService {
         await this._customResultRepository.findResultsLegacyNewById(
           mapLegacy.legacy_id,
         );
-      console.log("🚀 ~ file: results.service.ts ~ line 654 ~ ResultsService ~ mapResultLegacy ~ results", results)
       if (!results.id) {
         throw {
           response: {},
-          message: 'Result already migrate or was not found',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
-
-      if (results.id == '0') {
-        throw {
-          response: {},
           message: 'This result is already part of the PRMS reporting',
-          status: HttpStatus.BAD_REQUEST,
+          status: HttpStatus.NOT_FOUND,
         };
       }
 
@@ -745,10 +742,9 @@ export class ResultsService {
       });
       legacyResult.is_migrated = true;
 
-      const partner =
-        await this._customResultRepository.findLegacyPartner(
-          mapLegacy.legacy_id,
-        );
+      const partner = await this._customResultRepository.findLegacyPartner(
+        mapLegacy.legacy_id,
+      );
 
       const newResultHeader: Result = await this._resultRepository.save({
         created_by: user.id,
@@ -756,10 +752,11 @@ export class ResultsService {
         result_type_id: rt.id,
         version_id: vrs.id,
         title: legacyResult.title,
+        description: legacyResult.description,
         reported_year_id: year.year,
         result_level_id: rl.id,
         legacy_id: legacyResult.legacy_id,
-        is_retrieved: true
+        is_retrieved: true,
       });
 
       const resultByInitiative = await this._resultByInitiativesRepository.save(
@@ -775,11 +772,7 @@ export class ResultsService {
       await this._resultLegacyRepository.save(legacyResult);
 
       let saveInstitutions: ResultsByInstitution[] = [];
-      for (
-        let index = 0;
-        index < partner.length;
-        index++
-      ) {
+      for (let index = 0; index < partner.length; index++) {
         const isInstitutions =
           await this._resultByIntitutionsRepository.getResultByInstitutionExists(
             newResultHeader.id,
@@ -791,8 +784,7 @@ export class ResultsService {
             new ResultsByInstitution();
           institutionsNew.created_by = user.id;
           institutionsNew.institution_roles_id = 1;
-          institutionsNew.institutions_id =
-            partner[index].clarisa_id;
+          institutionsNew.institutions_id = partner[index].clarisa_id;
           institutionsNew.last_updated_by = user.id;
           institutionsNew.result_id = newResultHeader.id;
           institutionsNew.version_id = vrs.id;
@@ -804,10 +796,15 @@ export class ResultsService {
         saveInstitutions,
       );
 
+      const elasticUpdate = await this.findForElasticSearch(
+        process.env.ELASTIC_DOCUMENT_NAME,
+        results.id,
+      );
+
       return {
         response: {
-          results,
-          newInstitutions
+          newResultHeader,
+          newInstitutions,
         },
         message: 'Successful response',
         status: HttpStatus.OK,
@@ -841,7 +838,7 @@ export class ResultsService {
         await this._resultByIntitutionsTypeRepository.getResultByInstitutionTypeActorFull(
           result.id,
         );
-
+      console.log(result);
       return {
         response: {
           result_id: result.id,
@@ -858,6 +855,7 @@ export class ResultsService {
           institutions_type: institutionsType,
           krs_url: result.krs_url ?? null,
           is_krs: result.is_krs ? true : false,
+          lead_contact_person: result.lead_contact_person ?? null,
         },
         message: 'Successful response',
         status: HttpStatus.OK,

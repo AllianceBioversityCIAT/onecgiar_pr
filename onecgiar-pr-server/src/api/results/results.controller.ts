@@ -62,7 +62,7 @@ export class ResultsController {
   @Get('get/all/elastic')
   async findAllResultsSimplified(@Query('collection') collection: string) {
     const { message, response, status } =
-      await this.resultsService.findAllForElasticSearch(collection);
+      await this.resultsService.findForElasticSearch(collection);
     throw new HttpException({ message, response }, status);
   }
 

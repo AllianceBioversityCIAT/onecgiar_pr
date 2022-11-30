@@ -43,7 +43,7 @@ export class ResultCreatorComponent implements OnInit {
   }
   allInitiatives = [];
   GET_AllInitiatives() {
-    console.log(this.api.rolesSE.isAdmin);
+    // console.log(this.api.rolesSE.isAdmin);
     if (!this.api.rolesSE.isAdmin) return;
     this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
       this.allInitiatives = response;
@@ -67,6 +67,7 @@ export class ResultCreatorComponent implements OnInit {
     const cleanSpaces = text => text?.replaceAll(' ', '')?.toLowerCase();
     this.api.resultsSE.GET_FindResultsElastic(title).subscribe(
       response => {
+        console.log(response);
         this.depthSearchList = response;
         this.exactTitleFound = !!this.depthSearchList.find(result => cleanSpaces(result.title) === cleanSpaces(title));
       },

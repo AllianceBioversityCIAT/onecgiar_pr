@@ -53,7 +53,11 @@ export class ResultsApiService {
         (resp?.hits?.hits ?? []).map(h => {
           return { probability: h._score, ...h._source } as Source & { probability: number };
         })
-      )
+      ),
+      map(resp => {
+        resp.map((result: any) => (result.is_legacy = result?.is_legacy == 'true' ? true : false));
+        return resp;
+      })
     );
   }
 
@@ -222,7 +226,7 @@ export class ResultsApiService {
   GET_toc() {
     return this.http.get<any>(`${this.apiBaseUrl}toc/get/result/${this.currentResultId}`).pipe(
       map(resp => {
-        console.log(resp.response);
+        // console.log(resp.response);
         resp?.response?.contributing_initiatives.map(initiative => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name || ''}</strong> - ${initiative?.initiative_name}`));
         return resp;
       }),
@@ -344,5 +348,9 @@ export class ResultsApiService {
 
   GET_requestStatus() {
     return this.http.get<any>(`${this.apiBaseUrl}request/get/status`);
+  }
+
+  POST_updateRequest(body) {
+    return this.http.post<any>(`${this.apiBaseUrl}map/legacy`, body);
   }
 }

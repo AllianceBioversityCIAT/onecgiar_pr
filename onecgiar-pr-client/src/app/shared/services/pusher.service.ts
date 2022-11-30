@@ -37,8 +37,8 @@ export class PusherService {
 
     Object.keys(members).map(item => {
       const date = new Date(members[item]?.today);
-      let initiativeRoles: any[] = [];
-      initiativeRoles = members[item]?.initiativeRoles;
+      // let initiativeRoles: any[] = [];
+      // initiativeRoles = members[item]?.initiativeRoles;
 
       let generalRoles: any[] = [];
       generalRoles = members[item]?.roles;
@@ -49,7 +49,8 @@ export class PusherService {
 
       membersList.push({
         userId: item,
-        date: initiativeRoles?.length ? (initiativeRoles[0]?.name !== 'Guest' ? date : oldDate) : generalRoles?.length ? (generalRoles[0]?.name == 'Admin' ? date : oldDate) : oldDate,
+        date: date,
+        // initiativeRoles?.length ? (initiativeRoles[0]?.name !== 'Guest' ? date : oldDate) : generalRoles?.length ? (generalRoles[0]?.name == 'Admin' ? date : oldDate) : oldDate
         // role: this._initiativesService.initiative.status == 'Approved' ? 'Guest' : initiativeRoles?.length ? initiativeRoles[0]?.name : generalRoles?.length ? (generalRoles[0]?.name == 'Admin' ? generalRoles[0]?.name : 'Guest') : 'Guest',
         name: members[item]?.name,
         nameinitials: this.textToinitials(members[item]?.name)
@@ -70,10 +71,13 @@ export class PusherService {
     if (!this.firstUser) this.secondUser = true;
     if (this.firstUser && this.secondUser) {
       let currentUrl = this.router.url;
+      console.log(currentUrl);
       this.router.navigateByUrl(`/result/result-detail/${this.api.resultsSE.currentResultId}`).then(() => {
         setTimeout(() => {
+          console.log('volver');
+          console.log(currentUrl);
           this.router.navigateByUrl(currentUrl);
-        }, 100);
+        }, 1000);
       });
     }
     // console.log(membersList);
@@ -111,7 +115,7 @@ export class PusherService {
         endpoint: `${environment.apiBaseUrl}auth/signin/pusher/result/${resultId}/${this.api.authSE.localStorageUser.id}`
       }
     });
-    // console.log('presence-prms' + PRRoute);
+    console.log('presence-prms' + PRRoute);
 
     this.presenceChannel = this.pusher.subscribe('presence-prms' + PRRoute);
     this.beforeRoute = PRRoute;

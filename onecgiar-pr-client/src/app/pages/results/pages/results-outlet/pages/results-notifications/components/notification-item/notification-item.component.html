@@ -6,10 +6,18 @@
         <div class="title" *ngIf="!notification?.action_area_outcome_id && !notification?.toc_result_id">Request from
             INIT-{{notification?.requester_initiative_id}} to add INIT-{{notification?.approving_inititiative_id}} as a
             contributor to the result:</div>
-        <div class="title" *ngIf="notification?.action_area_outcome_id || notification?.toc_result_id">Requests
-            INIT-{{notification?.requester_initiative_id}} to be added as a contributor to
+        <div class="title" *ngIf="notification?.action_area_outcome_id || notification?.toc_result_id">
+            INIT-{{notification?.requester_initiative_id}} requests
+            to be added as a contributor to
             the result: </div>
-        <div class="sub_title">{{notification?.result_type_name}} - {{notification?.title}}</div>
+        <div class="sub_title" *ngIf="!notification?.action_area_outcome_id && !notification?.toc_result_id">
+            <strong>(INIT-{{notification?.requester_initiative_id}})</strong>
+            -{{notification?.result_type_name}} - {{notification?.title}}
+        </div>
+        <div class="sub_title" *ngIf="notification?.action_area_outcome_id || notification?.toc_result_id">
+            <strong>(INIT-{{notification?.approving_inititiative_id}})</strong>
+            -{{notification?.result_type_name}} - {{notification?.title}}
+        </div>
         <div class="buttons">
             <button pButton type="button" label="Map and accept" class="p-button-success"
                 *ngIf="!notification?.action_area_outcome_id && !notification?.toc_result_id"
@@ -23,9 +31,12 @@
 
     </div>
     <div *ngSwitchCase="2">
-        <div class="title">Requests INIT-{{notification?.requester_initiative_id}} to be added as a contributor to
+        <div class="title">INIT-{{notification?.requester_initiative_id}} requests
+            to be added as a contributor to
             the result: </div>
-        <div class="sub_title">{{notification?.result_type_name}} - {{notification?.title}}</div>
+        <div class="sub_title"><strong>(INIT-{{notification?.approving_inititiative_id}})</strong>
+            -{{notification?.result_type_name}} - {{notification?.title}}
+        </div>
 
         <div class="text_icon accepted">Accepted by {{notification?.first_name}}
             <i class="material-icons-round">
@@ -34,9 +45,12 @@
         </div>
     </div>
     <div *ngSwitchCase="3">
-        <div class="title">Requests INIT-{{notification?.requester_initiative_id}} to be added as a contributor to
+        <div class="title">INIT-{{notification?.requester_initiative_id}} requests
+            to be added as a contributor to
             the result: </div>
-        <div class="sub_title">{{notification?.result_type_name}} - {{notification?.title}}</div>
+        <div class="sub_title"><strong>(INIT-{{notification?.approving_inititiative_id}})</strong>
+            - {{notification?.result_type_name}} - {{notification?.title}}
+        </div>
 
         <div class="text_icon rejected">Rejected by {{notification?.first_name}}
             <i class="material-icons-round">

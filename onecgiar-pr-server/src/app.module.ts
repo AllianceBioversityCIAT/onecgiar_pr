@@ -27,6 +27,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { TocResultsModule } from './toc/toc-results/toc-results.module';
 import { TocLevelModule } from './toc/toc-level/toc-level.module';
 import { MQAPModule } from './api/m-qap/m-qap.module';
+import { ElasticModule } from './elastic/elastic.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { MQAPModule } from './api/m-qap/m-qap.module';
     TocLevelModule,
     TocResultsModule,
     RouterModule.register(MainRoutes),
+    ElasticModule,
   ],
   controllers: [AppController],
   providers: [

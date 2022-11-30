@@ -18,7 +18,10 @@ export class NotificationItemComponent {
     this.api.resultsSE.currentResultId = notification?.result_id;
     // this.api.dataControlSE.currentResult = result;
     // this.api.dataControlSE.currentResult.is_legacy = this.api.dataControlSE.currentResult.is_legacy == 'true' ? true : false;
-    // this.api.dataControlSE.currentResult.result_type = this.api.dataControlSE.currentResult.type;
+    console.log(this.api.dataControlSE.currentResult);
+    if (!this.api.dataControlSE.currentResult) this.api.dataControlSE.currentResult = {};
+
+    this.api.dataControlSE.currentResult.result_type = notification.result_type_name;
     this.api.dataControlSE.currentNotification = notification;
     this.shareRequestModalSE.shareRequestBody.initiative_id = notification.approving_inititiative_id;
     console.log(this.api.dataControlSE.currentResult);

@@ -13,7 +13,6 @@ export class InitiativesService {
   GET_AllWithoutResults() {
     this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
       this.allInitiativesList = response;
-      console.log(response);
     });
   }
 }
