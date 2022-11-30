@@ -32,7 +32,9 @@ export class ResultsInnovationsDevRepository extends Repository<ResultsInnovatio
     	rid.last_updated_by,
     	rid.innovation_characterization_id,
     	rid.innovation_nature_id,
-    	rid.innovation_readiness_level_id
+    	rid.innovation_readiness_level_id,
+      rid.innovation_acknowledgement,
+      rid.innovation_pdf
     FROM
     	results_innovations_dev rid 
     WHERE 

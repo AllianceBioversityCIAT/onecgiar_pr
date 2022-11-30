@@ -10,4 +10,6 @@ export class CreateInnovationDevDto{
     public innovation_collaborators: string;
     public readiness_level: string;
     public evidences_justification: string;
+    public innovation_acknowledgement: string;
+    public innovation_pdf!: boolean;
 }

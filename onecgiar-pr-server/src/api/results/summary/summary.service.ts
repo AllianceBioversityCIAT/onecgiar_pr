@@ -280,7 +280,7 @@ export class SummaryService {
       const { evidences_justification, innovation_characterization_id,
         innovation_collaborators, innovation_developers, innovation_nature_id,
         innovation_readiness_level_id, is_new_variety, number_of_varieties, readiness_level,
-        result_innovation_dev_id, short_title } = createInnovationDevDto;
+        result_innovation_dev_id, short_title, innovation_acknowledgement, innovation_pdf } = createInnovationDevDto;
 
       let InnDevRes:ResultsInnovationsDev = undefined;
       if (innDevExists) {
@@ -296,6 +296,8 @@ export class SummaryService {
         innDevExists.result_innovation_dev_id = result_innovation_dev_id;
         innDevExists.innovation_readiness_level_id = innovation_readiness_level_id;
         innDevExists.innovation_characterization_id = innovation_characterization_id;
+        innDevExists.innovation_acknowledgement = innovation_acknowledgement;
+        innDevExists.innovation_pdf = innovation_pdf;
         InnDevRes = await this._resultsInnovationsDevRepository.save(innDevExists);
       } else {
         const newInnDev = new ResultsInnovationsDev();
@@ -314,6 +316,8 @@ export class SummaryService {
         newInnDev.result_innovation_dev_id = result_innovation_dev_id;
         newInnDev.innovation_readiness_level_id = innovation_readiness_level_id;
         newInnDev.innovation_characterization_id = innovation_characterization_id;
+        newInnDev.innovation_acknowledgement = innovation_acknowledgement;
+        newInnDev.innovation_pdf = innovation_pdf;
         InnDevRes = await this._resultsInnovationsDevRepository.save(newInnDev);
       }
 

@@ -74,6 +74,13 @@ export class ResultsInnovationsDev {
     innovation_collaborators!: string;
 
     @Column({
+        name: 'innovation_acknowledgement',
+        type: 'text',
+        nullable: true
+    })
+    innovation_acknowledgement!: string;
+
+    @Column({
         name: 'readiness_level',
         type: 'text',
         nullable: true
@@ -86,6 +93,13 @@ export class ResultsInnovationsDev {
         nullable: true
     })
     evidences_justification!: string;
+
+    @Column({
+        name: 'innovation_pdf',
+        type: 'boolean',
+        nullable: true
+    })
+    innovation_pdf!: boolean;
 
     @Column({
         name: 'is_active',

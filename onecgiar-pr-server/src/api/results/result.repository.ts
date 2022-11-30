@@ -470,7 +470,8 @@ WHERE
     r.has_countries,
     ci.name as initiative_name,
     ci.short_name as initiative_short_name,
-    ci.official_code as initiative_official_code
+    ci.official_code as initiative_official_code,
+    r.lead_contact_person
 FROM
     result r
     inner join results_by_inititiative rbi ON rbi.result_id = r.id 
@@ -521,6 +522,7 @@ WHERE
     r.krs_url,
     r.no_applicable_partner,
     r.geographic_scope_id,
+    r.lead_contact_person,
     if(r.geographic_scope_id in (3, 4), 3, r.geographic_scope_id ) as geographic_scope_id
 FROM
     result r

@@ -11,6 +11,7 @@ export class CreateGeneralInformationResultDto {
   public institutions_type: institutionsTypeInterface[];
   public krs_url!: string
   public is_krs!: boolean;
+  public lead_contact_person!: boolean;
 
 }
 
