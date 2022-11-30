@@ -35,8 +35,9 @@
             <app-pr-multi-select
                 *ngIf="this.geographicLocationBody.has_countries !== false && !!this.geographicLocationBody.has_countries  || this.geographicLocationBody.scope_id == 3"
                 [options]="this.regionsCountriesSE.countriesList" selectedLabel="Countries selected"
-                [readOnly]="this.api.dataControlSE.isKnowledgeProduct" selectedOptionLabel="name" optionLabel="full_name"
-                optionValue="id" placeholder="Select countries" [(ngModel)]="this.geographicLocationBody.countries">
+                [readOnly]="this.api.dataControlSE.isKnowledgeProduct" selectedOptionLabel="name"
+                optionLabel="full_name" optionValue="id" placeholder="Select countries"
+                [(ngModel)]="this.geographicLocationBody.countries">
             </app-pr-multi-select>
             <!-- flagsCode="iso_alpha_2" -->
         </div>
@@ -58,3 +59,5 @@
 </div>
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()"
     *ngIf="!this.api.dataControlSE.isKnowledgeProduct"></app-save-button>
+
+<app-sync-button (clickSave)="onSyncSection()"></app-sync-button>

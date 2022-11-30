@@ -345,4 +345,8 @@ export class ResultsApiService {
   GET_requestStatus() {
     return this.http.get<any>(`${this.apiBaseUrl}request/get/status`);
   }
+
+  POST_updateRequest(body) {
+    return this.http.post<any>(`${this.apiBaseUrl}map/legacy`, body);
+  }
 }

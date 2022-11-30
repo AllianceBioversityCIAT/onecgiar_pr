@@ -1,0 +1,46 @@
+<p-dialog class="support_information" header="Title" [(visible)]="this.api.dataControlSE.showRetrieveRequest"
+    (onHide)="cleanObject()" [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false"
+    [dismissableMask]="true" [style]="{padding: '0px'}">
+    <div class="modal_title">Partners Request</div>
+    <div class="modal_container partners-request-container" *ngIf="showForm">
+
+
+        <app-pr-select class="segment_title_margin" [options]="this.api.dataControlSE.myInitiativesList"
+            *ngIf="!this.api.rolesSE.isAdmin" label="Select the initiative where the result will be retrieved"
+            [isStatic]="true" optionLabel="full_name" optionValue="initiative_id" placeholder="Select initiative"
+            [(ngModel)]="this.retrieveModalSE.retrieveRequestBody.initiative_id">
+        </app-pr-select>
+
+        <app-pr-select class="segment_title_margin" [options]="this.allInitiatives"
+            label="Select the initiative where the result will be retrieved" [isStatic]="true"
+            *ngIf="this.api.rolesSE.isAdmin" optionLabel="full_name" optionValue="initiative_id"
+            placeholder="Select initiative" [(ngModel)]="this.retrieveModalSE.retrieveRequestBody.initiative_id">
+        </app-pr-select>
+
+        <div class="information" style="margin-top: 50px;">
+            Please note that this result will be created at the <strong>???</strong> level with <strong>???</strong> as
+            result
+            type.
+            In case you want to change the result type, please contact us at <strong
+                class="email">PRMSTechSupport@cgiar.org</strong>
+
+        </div>
+
+        <div class="information">
+            As this result has not been recovered by anyone else, you will be the new submitter.
+        </div>
+
+
+        <!-- flagsCode="iso_alpha_2" -->
+    </div>
+    <div class="buttons">
+        <app-pr-button padding="medium" text="Cancel" icon="cancel_schedule_send" colorType="secondary"
+            (click)="this.api.dataControlSE.showRetrieveRequest = false">
+        </app-pr-button>
+        <app-pr-button
+            [ngClass]="{'globalDisabled': this.requesting || !this.retrieveModalSE.retrieveRequestBody.initiative_id}"
+            [text]="this.requesting?'Requesting':'Send request'" [rotating]="this.requesting"
+            [icon]="this.requesting?'loop':'send'" padding="medium" (click)="onRequestRetrieve()"></app-pr-button>
+    </div>
+
+</p-dialog>

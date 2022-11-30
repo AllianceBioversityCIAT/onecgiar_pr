@@ -49,6 +49,11 @@ export class RdGeographicLocationComponent {
       this.getSectionInformation();
     });
   }
+  onSyncSection() {
+    this.api.resultsSE.PATCH_resyncKnowledgeProducts().subscribe(resp => {
+      this.getSectionInformation();
+    });
+  }
   showAlerts() {
     this.api.alertsFs.show({
       status: 'success',

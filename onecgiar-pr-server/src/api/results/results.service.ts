@@ -654,19 +654,19 @@ export class ResultsService {
    */
   async mapResultLegacy(mapLegacy: MapLegacy, user: TokenDto) {
     try {
-      const results: DepthSearchOne =
+      const results =
         await this._customResultRepository.findResultsLegacyNewById(
           mapLegacy.legacy_id,
         );
-      if (!results?.id) {
+      if (!results.id) {
         throw {
           response: {},
-          message: 'Results Not Found',
+          message: 'Result already migrate or was not found',
           status: HttpStatus.NOT_FOUND,
         };
       }
 
-      if (results.legacy == '0') {
+      if (results.id == '0') {
         throw {
           response: {},
           message: 'This result is already part of the PRMS reporting',
@@ -747,6 +747,10 @@ export class ResultsService {
       });
       legacyResult.is_migrated = true;
 
+      const partner = await this._customResultRepository.findLegacyPartner(
+        mapLegacy.legacy_id,
+      );
+
       const newResultHeader: Result = await this._resultRepository.save({
         created_by: user.id,
         last_updated_by: user.id,
@@ -756,6 +760,7 @@ export class ResultsService {
         reported_year_id: year.year,
         result_level_id: rl.id,
         legacy_id: legacyResult.legacy_id,
+        is_retrieved: true,
       });
 
       const resultByInitiative = await this._resultByInitiativesRepository.save(
@@ -770,8 +775,36 @@ export class ResultsService {
 
       await this._resultLegacyRepository.save(legacyResult);
 
+      let saveInstitutions: ResultsByInstitution[] = [];
+      for (let index = 0; index < partner.length; index++) {
+        const isInstitutions =
+          await this._resultByIntitutionsRepository.getResultByInstitutionExists(
+            newResultHeader.id,
+            partner[index].clarisa_id,
+            true,
+          );
+        if (!isInstitutions) {
+          const institutionsNew: ResultsByInstitution =
+            new ResultsByInstitution();
+          institutionsNew.created_by = user.id;
+          institutionsNew.institution_roles_id = 1;
+          institutionsNew.institutions_id = partner[index].clarisa_id;
+          institutionsNew.last_updated_by = user.id;
+          institutionsNew.result_id = newResultHeader.id;
+          institutionsNew.version_id = vrs.id;
+          institutionsNew.is_active = true;
+          saveInstitutions.push(institutionsNew);
+        }
+      }
+      const newInstitutions = await this._resultByIntitutionsRepository.save(
+        saveInstitutions,
+      );
+
       return {
-        response: results,
+        response: {
+          newResultHeader,
+          newInstitutions,
+        },
         message: 'Successful response',
         status: HttpStatus.OK,
       };
