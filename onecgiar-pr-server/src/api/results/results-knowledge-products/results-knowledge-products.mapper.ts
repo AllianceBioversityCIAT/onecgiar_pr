@@ -58,6 +58,14 @@ export class ResultsKnowledgeProductMapper {
       ).join('; ');
     }
 
+    if ((knowledgeProductDto.cgspace_countries ?? '').length < 1) {
+      knowledgeProductDto.cgspace_countries = null;
+    }
+
+    if ((knowledgeProductDto.cgspace_regions ?? '').length < 1) {
+      knowledgeProductDto.cgspace_regions = null;
+    }
+
     knowledgeProductDto = this.fillRelatedMetadata(
       mqapResponseDto,
       knowledgeProductDto,
@@ -263,6 +271,10 @@ export class ResultsKnowledgeProductMapper {
     //TODO remove when this mapping is done
     knowledgeProductDto.cgspace_countries = entity.cgspace_countries;
     knowledgeProductDto.cgspace_regions = entity.cgspace_regions;
+    knowledgeProductDto.is_melia = entity.is_melia;
+    knowledgeProductDto.melia_previous_submitted =
+      entity.melia_previous_submitted;
+    knowledgeProductDto.melia_type_id = entity.melia_type_id;
 
     const authors = entity.result_knowledge_product_author_array;
     knowledgeProductDto.authors = (authors ?? []).map((a) => {

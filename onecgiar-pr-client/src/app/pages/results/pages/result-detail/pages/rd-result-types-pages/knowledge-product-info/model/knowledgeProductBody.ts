@@ -23,6 +23,9 @@ export class KnowledgeProductBody {
   institutions: Institution[];
   countries?: any;
   regions?: any;
+  is_melia: boolean;
+  melia_previous_submitted: boolean;
+  melia_type_id: number;
   warnings: string[];
 }
 
