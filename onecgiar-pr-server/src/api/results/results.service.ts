@@ -655,7 +655,6 @@ export class ResultsService {
         await this._customResultRepository.findResultsLegacyNewById(
           mapLegacy.legacy_id,
         );
-      console.log("🚀 ~ file: results.service.ts ~ line 654 ~ ResultsService ~ mapResultLegacy ~ results", results)
       if (!results.id) {
         throw {
           response: {},
@@ -806,7 +805,7 @@ export class ResultsService {
 
       return {
         response: {
-          results,
+          newResultHeader,
           newInstitutions
         },
         message: 'Successful response',
