@@ -1,5 +1,5 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { ResultSimpleDto } from '../api/results/dto/result-simple.dto';
 import { HandlersError } from '../shared/handlers/error.utils';
 import { ElasticOperationDto } from './dto/elastic-operation.dto';
@@ -10,6 +10,14 @@ import { lastValueFrom } from 'rxjs';
 export class ElasticService {
   private readonly _logger: Logger = new Logger(ElasticService.name);
   private readonly _bulkElasticUrl = `${env.ELASTIC_URL}_bulk`;
+  private readonly _headers = {
+    headers: {
+      Authorization: `Basic ${Buffer.from(
+        `${env.ELASTIC_USERNAME}:${env.ELASTIC_PASSWORD}`,
+      ).toString('base64')}`,
+      'Content-Type': 'application/x-ndjson',
+    },
+  };
 
   constructor(
     private readonly _http: HttpService,
@@ -81,11 +89,19 @@ export class ElasticService {
   public async sendBulkOperationToElastic(elasticJson: string) {
     try {
       let { data } = await lastValueFrom(
-        this._http.post(this._bulkElasticUrl, elasticJson),
+        this._http.post(this._bulkElasticUrl, elasticJson, this._headers),
       );
-      this._logger.debug(data);
+
+      return {
+        response: data,
+        message: 'Successfully updated the elastic',
+        status: HttpStatus.OK,
+      };
     } catch (error) {
-      return this._handlersError.returnErrorRes({ error, debug: true });
+      return this._handlersError.returnErrorRes({
+        error: error.response?.data,
+        debug: true,
+      });
     }
   }
 }
