@@ -41,7 +41,7 @@ export class SimilarResultsComponent {
     //! DElete this
     // this.api.dataControlSE.currentResult.is_legacy = false;
     //!'''''''''''''''''''''''''''''''''''''''''''
-    this.api.dataControlSE.currentResult.is_legacy = this.api.dataControlSE.currentResult.is_legacy == 'true' ? true : false;
+    // this.api.dataControlSE.currentResult.is_legacy = this.api.dataControlSE.currentResult.is_legacy == 'true' ? true : false;
     this.api.dataControlSE.currentResult.result_type = this.api.dataControlSE.currentResult.type;
 
     //? For LEGACY

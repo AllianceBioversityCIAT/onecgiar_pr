@@ -53,7 +53,11 @@ export class ResultsApiService {
         (resp?.hits?.hits ?? []).map(h => {
           return { probability: h._score, ...h._source } as Source & { probability: number };
         })
-      )
+      ),
+      map(resp => {
+        resp.map((result: any) => (result.is_legacy = result?.is_legacy == 'true' ? true : false));
+        return resp;
+      })
     );
   }
 
