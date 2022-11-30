@@ -29,11 +29,16 @@ export class KnowledgeProductInfoComponent implements OnInit {
       this.sectionData.isMeliaProduct = response.is_melia;
       //this.sectionData.ostMeliaId = this.knowledgeProductBody.melia_type_id;
       this.sectionData.ostSubmitted = response.melia_previous_submitted;
-      //console.log(response);
     });
     this.api.resultsSE.GET_AllMeliaStudies().subscribe(({ response }) => {
       this.meliaTypes = response;
       //console.log(this.meliaTypes);
+    });
+  }
+
+  onSyncSection() {
+    this.api.resultsSE.PATCH_resyncKnowledgeProducts().subscribe(resp => {
+      this.getSectionInformation();
     });
   }
 

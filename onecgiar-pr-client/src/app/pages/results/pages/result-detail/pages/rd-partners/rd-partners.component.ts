@@ -25,9 +25,7 @@ export class RdPartnersComponent {
   }
 
   onSyncSection() {
-    console.log(this.api?.dataControlSE?.currentResult?.id);
     this.api.resultsSE.PATCH_resyncKnowledgeProducts().subscribe(resp => {
-      //console.log(resp);
       this.rdPartnersSE.getSectionInformation();
     });
   }

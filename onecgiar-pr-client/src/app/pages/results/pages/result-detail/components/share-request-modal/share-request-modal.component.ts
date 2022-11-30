@@ -32,16 +32,23 @@ export class ShareRequestModalComponent {
   }
 
   onRequest() {
+    this.requesting = true;
     this.shareRequestModalSE.shareRequestBody.initiativeShareId.push(this.shareRequestModalSE.shareRequestBody.initiative_id);
     console.log(this.shareRequestModalSE.shareRequestBody);
     this.api.resultsSE.POST_createRequest(this.shareRequestModalSE.shareRequestBody).subscribe(
       resp => {
         console.log(resp);
-        this.api.alertsFe.show({ id: 'requesqshared', title: `Requested.`, description: ``, status: 'success' });
+        this.api.dataControlSE.showShareRequest = false;
+
+        this.api.alertsFe.show({ id: 'requesqshared', title: `Request sent`, description: `Once your request is accepted, the result can be mapped to your Initiative's ToC.`, status: 'success' });
+        this.requesting = false;
       },
       err => {
         console.log(err);
+        this.api.dataControlSE.showShareRequest = false;
+
         this.api.alertsFe.show({ id: 'requesqsharederror', title: 'Error when requesting', description: '', status: 'error' });
+        this.requesting = false;
       }
     );
   }
@@ -58,14 +65,19 @@ export class ShareRequestModalComponent {
     let body = { ...this.api.dataControlSE.currentNotification, ...this.shareRequestModalSE.shareRequestBody, request_status_id: 2 };
     console.log(body);
     // console.log(this.shareRequestModalSE.shareRequestBody);
+    this.requesting = true;
 
     this.api.resultsSE.PATCH_updateRequest(body).subscribe(
       resp => {
         console.log(resp);
-        this.api.alertsFe.show({ id: 'noti', title: `requested.`, description: `d`, status: 'success' });
+        this.api.dataControlSE.showShareRequest = false;
+        this.api.alertsFe.show({ id: 'noti', title: `Request sent`, description: `Once your request is accepted, the result can be mapped to your Initiative's ToC.`, status: 'success' });
+        this.requesting = false;
       },
       err => {
+        this.api.dataControlSE.showShareRequest = false;
         this.api.alertsFe.show({ id: 'noti-error', title: 'Error when requesting ', description: '', status: 'error' });
+        this.requesting = false;
       }
     );
   }
