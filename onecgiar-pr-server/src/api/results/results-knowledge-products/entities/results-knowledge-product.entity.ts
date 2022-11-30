@@ -127,10 +127,7 @@ export class ResultsKnowledgeProduct {
   })
   melia_previous_submitted: boolean;
 
-  @ManyToOne(() => ClarisaMeliaStudyType, (cmst) => cmst.id)
-  @JoinColumn({
-    name: 'melia_type_id',
-  })
+  @Column({ nullable: true })
   melia_type_id: number;
 
   //TODO to be extracted in result_region when the mapping is done
@@ -234,4 +231,10 @@ export class ResultsKnowledgeProduct {
     name: 'last_updated_by',
   })
   last_updated_by_object: User;
+
+  @ManyToOne(() => ClarisaMeliaStudyType, (cmst) => cmst.id)
+  @JoinColumn({
+    name: 'melia_type_id',
+  })
+  melia_type_object: ClarisaMeliaStudyType;
 }
