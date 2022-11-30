@@ -31,7 +31,7 @@ export class RdTheoryOfChangeComponent {
     await this.api.resultsSE.GET_toc().subscribe(
       ({ response }) => {
         this.theoryOfChangeBody = response;
-        console.log(this.theoryOfChangeBody);
+        // console.log(this.theoryOfChangeBody);
         setTimeout(() => {
           this.getConsumed = true;
         }, 100);
