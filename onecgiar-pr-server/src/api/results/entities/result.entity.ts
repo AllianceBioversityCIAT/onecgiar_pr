@@ -160,6 +160,13 @@ export class Result {
   has_regions: boolean;
 
   @Column({
+    name: 'lead_contact_person',
+    type: 'boolean',
+    nullable: true
+  })
+  lead_contact_person!: boolean;
+
+  @Column({
     name: 'has_countries',
     nullable: true,
     type: 'boolean',

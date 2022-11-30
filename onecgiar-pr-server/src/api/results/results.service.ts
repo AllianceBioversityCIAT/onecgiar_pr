@@ -370,6 +370,7 @@ export class ResultsService {
         krs_url: resultGeneralInformation.krs_url,
         is_krs: resultGeneralInformation.is_krs,
         last_updated_by: user.id,
+        lead_contact_person: resultGeneralInformation.lead_contact_person
       });
 
       const institutions =
@@ -837,7 +838,7 @@ export class ResultsService {
         await this._resultByIntitutionsTypeRepository.getResultByInstitutionTypeActorFull(
           result.id,
         );
-
+          console.log(result)
       return {
         response: {
           result_id: result.id,
@@ -854,6 +855,7 @@ export class ResultsService {
           institutions_type: institutionsType,
           krs_url: result.krs_url ?? null,
           is_krs: result.is_krs ? true : false,
+          lead_contact_person:result.lead_contact_person || null
         },
         message: 'Successful response',
         status: HttpStatus.OK,
