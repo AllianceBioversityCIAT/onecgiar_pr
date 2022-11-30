@@ -9,7 +9,9 @@
         <div class="information">
             {{this.api?.dataControlSE?.currentResult?.result_type}} -
             <strong>{{this.api?.dataControlSE?.currentResult?.title}}</strong> has been
-            recorded for <strong>{{this.api?.dataControlSE?.currentResult?.submitter}} </strong> and your initiative was
+            recorded for
+            <strong>{{this.api?.dataControlSE?.currentResult?.submitter?this.api?.dataControlSE?.currentResult?.submitter:'???'}}
+            </strong> and your initiative was
             not added as
             contributor.
         </div>

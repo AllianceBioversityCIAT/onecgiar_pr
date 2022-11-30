@@ -1,8 +1,16 @@
 <p-dialog class="support_information" header="Title" [(visible)]="this.api.dataControlSE.showRetrieveRequest"
     (onHide)="cleanObject()" [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false"
     [dismissableMask]="true" [style]="{padding: '0px'}">
-    <div class="modal_title">Partners Request</div>
+    <div class="modal_title">Retrieve result from previous portfolio</div>
     <div class="modal_container partners-request-container" *ngIf="showForm">
+
+        <div class="information">{{this.api.dataControlSE?.currentResult?.result_type}}
+            <strong>{{this.api.dataControlSE?.currentResult?.title}}
+            </strong> has been recorded for <strong>{{this.api.dataControlSE?.currentResult?.crp}}</strong> (CRP) before
+            2022 and currently does not have a
+            submitter
+            in the tool
+        </div>
 
 
         <app-pr-select class="segment_title_margin" [options]="this.api.dataControlSE.myInitiativesList"
@@ -39,7 +47,7 @@
         </app-pr-button>
         <app-pr-button
             [ngClass]="{'globalDisabled': this.requesting || !this.retrieveModalSE.retrieveRequestBody.initiative_id}"
-            [text]="this.requesting?'Requesting':'Send request'" [rotating]="this.requesting"
+            [text]="this.requesting?'Requesting':'Retrieve'" [rotating]="this.requesting"
             [icon]="this.requesting?'loop':'send'" padding="medium" (click)="onRequestRetrieve()"></app-pr-button>
     </div>
 

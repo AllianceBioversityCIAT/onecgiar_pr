@@ -46,10 +46,11 @@ export class RetrieveModalComponent implements OnInit {
         console.log(resp?.response?.newResultHeader?.id);
         this.api.alertsFe.show({ id: 'partners', title: `The Legacy Result was retrieved successfully!`, description: `The selected result is already list in the reported results.`, status: 'success' });
         this.requesting = false;
+        this.api.dataControlSE.showRetrieveRequest = false;
         this.router.navigate([`/result/result-detail/${resp?.response?.newResultHeader?.id}/general-information`]);
       },
       err => {
-        this.api.alertsFe.show({ id: 'partners-error', title: 'Error when requesting', description: '', status: 'error' });
+        this.api.alertsFe.show({ id: 'partners-error', title: 'Error trying to retrieve result from previous portfolio', description: '', status: 'error' });
         this.requesting = false;
       }
     );

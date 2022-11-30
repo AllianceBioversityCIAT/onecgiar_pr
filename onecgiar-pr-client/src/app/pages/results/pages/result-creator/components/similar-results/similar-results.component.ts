@@ -35,9 +35,13 @@ export class SimilarResultsComponent {
   ];
 
   onPressAction(result) {
+    console.log(result);
     this.api.resultsSE.currentResultId = result?.id;
     this.api.dataControlSE.currentResult = result;
-    this.api.dataControlSE.currentResult.is_legacy = this.api.dataControlSE.currentResult.is_legacy == 'true' ? true : false;
+    //! DElete this
+    this.api.dataControlSE.currentResult.is_legacy = false;
+    //!'''''''''''''''''''''''''''''''''''''''''''
+    // this.api.dataControlSE.currentResult.is_legacy = this.api.dataControlSE.currentResult.is_legacy == 'true' ? true : false;
     this.api.dataControlSE.currentResult.result_type = this.api.dataControlSE.currentResult.type;
 
     //? For LEGACY

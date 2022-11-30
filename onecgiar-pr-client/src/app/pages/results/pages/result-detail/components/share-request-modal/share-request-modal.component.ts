@@ -3,6 +3,7 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ShareRequestBody } from './model/shareRequestBody.model';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { ShareRequestModalService } from './share-request-modal.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-share-request-modal',
@@ -13,8 +14,8 @@ export class ShareRequestModalComponent {
   requesting = false;
   allInitiatives = [];
   showForm = true;
-  showTocOut = false;
-  constructor(public api: ApiService, public rolesSE: RolesService, public shareRequestModalSE: ShareRequestModalService) {}
+  showTocOut = true;
+  constructor(public api: ApiService, public rolesSE: RolesService, public shareRequestModalSE: ShareRequestModalService, private router: Router) {}
   ngOnInit(): void {
     this.shareRequestModalSE.shareRequestBody = new ShareRequestBody();
     //Called after the constructor, initializing input properties, and the first call to ngOnChanges.
@@ -42,6 +43,7 @@ export class ShareRequestModalComponent {
 
         this.api.alertsFe.show({ id: 'requesqshared', title: `Request sent`, description: `Once your request is accepted, the result can be mapped to your Initiative's ToC.`, status: 'success' });
         this.requesting = false;
+        this.router.navigate([`/result/results-outlet/results-list`]);
       },
       err => {
         console.log(err);
