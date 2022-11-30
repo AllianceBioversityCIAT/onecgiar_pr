@@ -32,9 +32,9 @@ export class ResultsListComponent implements OnInit {
         // event
       }
     },
-    { label: 'Edit', icon: 'pi pi-fw pi-pencil' },
-    { label: 'Delete', icon: 'pi pi-fw pi-trash' },
-    { label: 'Submit', icon: 'pi pi-fw pi-reply' }
+    // { label: 'Edit', icon: 'pi pi-fw pi-pencil' },
+    { label: 'Delete', icon: 'pi pi-fw pi-trash' }
+    // { label: 'Submit', icon: 'pi pi-fw pi-reply' }
   ];
   constructor(public api: ApiService, public resultsListService: ResultsListService, private ResultLevelSE: ResultLevelService) {}
 

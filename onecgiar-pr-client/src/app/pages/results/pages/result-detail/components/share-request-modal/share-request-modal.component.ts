@@ -12,8 +12,8 @@ import { ShareRequestModalService } from './share-request-modal.service';
 export class ShareRequestModalComponent {
   requesting = false;
   allInitiatives = [];
-
   showForm = true;
+  showTocOut = false;
   constructor(public api: ApiService, public rolesSE: RolesService, public shareRequestModalSE: ShareRequestModalService) {}
   ngOnInit(): void {
     this.shareRequestModalSE.shareRequestBody = new ShareRequestBody();
@@ -21,6 +21,7 @@ export class ShareRequestModalComponent {
     //Add 'implements OnInit' to the class.
     this.GET_AllInitiatives();
   }
+
   cleanObject() {
     console.log('cleanForm');
     this.showForm = false;
@@ -29,6 +30,7 @@ export class ShareRequestModalComponent {
       this.showForm = true;
     }, 0);
   }
+
   onRequest() {
     this.shareRequestModalSE.shareRequestBody.initiativeShareId.push(this.shareRequestModalSE.shareRequestBody.initiative_id);
     console.log(this.shareRequestModalSE.shareRequestBody);
@@ -42,6 +44,14 @@ export class ShareRequestModalComponent {
         this.api.alertsFe.show({ id: 'requesqsharederror', title: 'Error when requesting', description: '', status: 'error' });
       }
     );
+  }
+
+  modelChange() {
+    console.log('modelChange');
+    this.showTocOut = false;
+    setTimeout(() => {
+      this.showTocOut = true;
+    }, 500);
   }
 
   acceptOrReject() {
