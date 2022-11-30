@@ -48,6 +48,7 @@ import { ResultRegion } from './result-regions/entities/result-region.entity';
 import { ResultSimpleDto } from './dto/result-simple.dto';
 import { ElasticService } from '../../elastic/elastic.service';
 import { ElasticOperationDto } from '../../elastic/dto/elastic-operation.dto';
+import process from 'process';
 
 @Injectable()
 export class ResultsService {
@@ -76,7 +77,7 @@ export class ResultsService {
     private readonly _resultCountryRepository: ResultCountryRepository,
     private readonly _resultKnowledgeProductRepository: ResultsKnowledgeProductsRepository,
     private readonly _elasticService: ElasticService,
-  ) {}
+  ) { }
 
   /**
    * !endpoint createOwnerResult
@@ -661,16 +662,8 @@ export class ResultsService {
       if (!results.id) {
         throw {
           response: {},
-          message: 'Result already migrate or was not found',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
-
-      if (results.id == '0') {
-        throw {
-          response: {},
           message: 'This result is already part of the PRMS reporting',
-          status: HttpStatus.BAD_REQUEST,
+          status: HttpStatus.NOT_FOUND,
         };
       }
 
@@ -757,6 +750,7 @@ export class ResultsService {
         result_type_id: rt.id,
         version_id: vrs.id,
         title: legacyResult.title,
+        description: legacyResult.description,
         reported_year_id: year.year,
         result_level_id: rl.id,
         legacy_id: legacyResult.legacy_id,
@@ -799,6 +793,12 @@ export class ResultsService {
       const newInstitutions = await this._resultByIntitutionsRepository.save(
         saveInstitutions,
       );
+
+      const elasticUpdate =
+        await this.findForElasticSearch(
+          process.env.ELASTIC_DOCUMENT_NAME,
+          results.id,
+        );
 
       return {
         response: {
