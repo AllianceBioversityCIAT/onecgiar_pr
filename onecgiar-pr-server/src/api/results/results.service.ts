@@ -45,6 +45,9 @@ import { ResultCountryRepository } from './result-countries/result-countries.rep
 import { ResultsKnowledgeProductsRepository } from './results-knowledge-products/repositories/results-knowledge-products.repository';
 import { ResultCountry } from './result-countries/entities/result-country.entity';
 import { ResultRegion } from './result-regions/entities/result-region.entity';
+import { ResultSimpleDto } from './dto/result-simple.dto';
+import { ElasticService } from '../../elastic/elastic.service';
+import { ElasticOperationDto } from '../../elastic/dto/elastic-operation.dto';
 
 @Injectable()
 export class ResultsService {
@@ -72,6 +75,7 @@ export class ResultsService {
     private readonly _resultRegionRepository: ResultRegionRepository,
     private readonly _resultCountryRepository: ResultCountryRepository,
     private readonly _resultKnowledgeProductRepository: ResultsKnowledgeProductsRepository,
+    private readonly _elasticService: ElasticService,
   ) {}
 
   /**
@@ -518,12 +522,12 @@ export class ResultsService {
     }
   }
 
-  async findAllForElasticSearch(documentName: string) {
+  async findForElasticSearch(documentName: string, id?: string) {
     try {
-      const result =
-        await this._customResultRepository.allResultsForElasticSearch();
+      const queryResult =
+        await this._customResultRepository.resultsForElasticSearch(id);
 
-      if (!result.length) {
+      if (!queryResult.length) {
         throw {
           response: {},
           message: 'Results Not Found',
@@ -531,16 +535,14 @@ export class ResultsService {
         };
       }
 
-      let elasticJson: string = '';
+      const operations: ElasticOperationDto<ResultSimpleDto>[] =
+        queryResult.map((r) => new ElasticOperationDto('POST', r));
 
-      result.forEach((r) => {
-        r.is_legacy = <unknown>r.is_legacy == 'true';
-        elasticJson += `{ "index": { "_index": "${documentName}",  "_id": "${
-          r.id
-        }" } }
-        ${JSON.stringify(r)}
-        `;
-      });
+      const elasticJson: string =
+        this._elasticService.getBulkElasticOperationResults(
+          documentName,
+          operations,
+        );
 
       return {
         response: elasticJson,
@@ -555,7 +557,7 @@ export class ResultsService {
   async findAllSimplified() {
     try {
       const result =
-        await this._customResultRepository.allResultsForElasticSearch();
+        await this._customResultRepository.resultsForElasticSearch();
 
       if (!result.length) {
         throw {

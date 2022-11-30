@@ -734,7 +734,7 @@ export class ResultsKnowledgeProductsService {
         sectionSevenData.ostMeliaId = null;
       }
 
-      const updatedData = await this._resultsKnowledgeProductRepository.update(
+      await this._resultsKnowledgeProductRepository.update(
         {
           result_knowledge_product_id:
             knowledgeProduct.result_knowledge_product_id,
