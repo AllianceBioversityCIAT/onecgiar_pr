@@ -52,6 +52,8 @@ import { ShareResultRequestModule } from './share-result-request/share-result-re
 import { LegacyIndicatorsLocationsModule } from './legacy_indicators_locations/legacy_indicators_locations.module';
 import { LegacyIndicatorsPartnersModule } from './legacy_indicators_partners/legacy_indicators_partners.module';
 import { ResultLegacyRepository } from './legacy-result/legacy-result.repository';
+import { ElasticModule } from '../../elastic/elastic.module';
+import { ElasticService } from '../../elastic/elastic.service';
 
 @Module({
   controllers: [ResultsController],
@@ -91,6 +93,7 @@ import { ResultLegacyRepository } from './legacy-result/legacy-result.repository
     ShareResultRequestModule,
     LegacyIndicatorsLocationsModule,
     LegacyIndicatorsPartnersModule,
+    ElasticModule,
   ],
   providers: [
     ResultsService,
@@ -101,7 +104,8 @@ import { ResultLegacyRepository } from './legacy-result/legacy-result.repository
     RoleByUserRepository,
     ClarisaInstitutionsRepository,
     ClarisaInstitutionsTypeRepository,
-    ResultLegacyRepository
+    ResultLegacyRepository,
+    ElasticService,
   ],
   exports: [ResultRepository, JwtMiddleware],
 })
