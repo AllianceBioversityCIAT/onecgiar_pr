@@ -77,7 +77,7 @@ export class ResultsService {
     private readonly _resultCountryRepository: ResultCountryRepository,
     private readonly _resultKnowledgeProductRepository: ResultsKnowledgeProductsRepository,
     private readonly _elasticService: ElasticService,
-  ) { }
+  ) {}
 
   /**
    * !endpoint createOwnerResult
@@ -370,7 +370,7 @@ export class ResultsService {
         krs_url: resultGeneralInformation.krs_url,
         is_krs: resultGeneralInformation.is_krs,
         last_updated_by: user.id,
-        lead_contact_person: resultGeneralInformation.lead_contact_person
+        lead_contact_person: resultGeneralInformation.lead_contact_person,
       });
 
       const institutions =
@@ -556,10 +556,11 @@ export class ResultsService {
     }
   }
 
-  async findAllSimplified() {
+  async findAllSimplified(id?: string) {
     try {
-      const result =
-        await this._customResultRepository.resultsForElasticSearch();
+      const result = await this._customResultRepository.resultsForElasticSearch(
+        id,
+      );
 
       if (!result.length) {
         throw {
@@ -795,11 +796,10 @@ export class ResultsService {
         saveInstitutions,
       );
 
-      const elasticUpdate =
-        await this.findForElasticSearch(
-          process.env.ELASTIC_DOCUMENT_NAME,
-          results.id,
-        );
+      const elasticUpdate = await this.findForElasticSearch(
+        process.env.ELASTIC_DOCUMENT_NAME,
+        results.id,
+      );
 
       return {
         response: {
@@ -838,7 +838,7 @@ export class ResultsService {
         await this._resultByIntitutionsTypeRepository.getResultByInstitutionTypeActorFull(
           result.id,
         );
-          console.log(result)
+      console.log(result);
       return {
         response: {
           result_id: result.id,
@@ -855,7 +855,7 @@ export class ResultsService {
           institutions_type: institutionsType,
           krs_url: result.krs_url ?? null,
           is_krs: result.is_krs ? true : false,
-          lead_contact_person:result.lead_contact_person ?? null
+          lead_contact_person: result.lead_contact_person ?? null,
         },
         message: 'Successful response',
         status: HttpStatus.OK,
