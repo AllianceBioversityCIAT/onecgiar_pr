@@ -12,5 +12,5 @@
     </div>
 </div>
 
-<app-no-data-text title="No notifications" *ngIf="interactiveNotisList.length && staticNotisList.length">
+<app-no-data-text title="No notifications" *ngIf="!interactiveNotisList?.length && !staticNotisList?.length">
 </app-no-data-text>
