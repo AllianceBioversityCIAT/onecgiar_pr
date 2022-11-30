@@ -50,7 +50,7 @@ export class RetrieveModalComponent implements OnInit {
         this.router.navigate([`/result/result-detail/${resp?.response?.newResultHeader?.id}/general-information`]);
       },
       err => {
-        this.api.alertsFe.show({ id: 'partners-error', title: 'Error trying to retrieve result from previous portfolio', description: '', status: 'error' });
+        this.api.alertsFe.show({ id: 'partners-error', title: err.error.message, description: '', status: 'error' });
         this.requesting = false;
       }
     );
