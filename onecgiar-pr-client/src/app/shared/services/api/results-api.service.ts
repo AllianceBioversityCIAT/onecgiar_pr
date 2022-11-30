@@ -12,6 +12,8 @@ import { EvidencesBody } from '../../../pages/results/pages/result-detail/pages/
 import { TheoryOfChangeBody } from '../../../pages/results/pages/result-detail/pages/rd-theory-of-change/model/theoryOfChangeBody';
 import { SaveButtonService } from '../../../custom-fields/save-button/save-button.service';
 import { ElasticResult, Source } from '../../interfaces/elastic.interface';
+import { KnowledgeProductBodyMapped } from '../../../pages/results/pages/result-detail/pages/rd-result-types-pages/knowledge-product-info/model/KnowledgeProductBodyMapped';
+import { KnowledgeProductSaveDto } from '../../../pages/results/pages/result-detail/pages/rd-result-types-pages/knowledge-product-info/model/knowledge-product-save.dto';
 
 @Injectable({
   providedIn: 'root'
@@ -109,6 +111,11 @@ export class ResultsApiService {
   PATCH_partnersSection(body: PartnersBody) {
     return this.http.patch<any>(`${this.apiBaseUrl}results-by-institutions/create/partners/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
+
+  PATCH_knowledgeProductSection(body: KnowledgeProductSaveDto) {
+    return this.http.patch<any>(`${this.apiBaseUrl}results-knowledge-products/upsert/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+  }
+
   GET_partnersSection() {
     return this.http.get<any>(`${this.apiBaseUrl}results-by-institutions/partners/result/${this.currentResultId}`).pipe(
       map(resp => {
@@ -317,6 +324,11 @@ export class ResultsApiService {
   GET_AllglobalTarget() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/global-target/get/all`);
   }
+
+  GET_AllMeliaStudies() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/melia-study-type/get/all`);
+  }
+
   POST_createRequest(body) {
     console.log(this.currentResultId);
     return this.http.post<any>(`${this.apiBaseUrl}request/create/${this.currentResultId}`, body);

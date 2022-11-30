@@ -24,7 +24,11 @@ export class RdPartnersComponent {
     });
   }
 
-  onSyncSection() {}
+  onSyncSection() {
+    this.api.resultsSE.PATCH_resyncKnowledgeProducts().subscribe(resp => {
+      this.rdPartnersSE.getSectionInformation();
+    });
+  }
 
   onSaveSection() {
     console.log(this.rdPartnersSE.partnersBody);

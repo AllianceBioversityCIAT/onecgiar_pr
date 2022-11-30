@@ -72,7 +72,7 @@ export class ResultsService {
     private readonly _resultRegionRepository: ResultRegionRepository,
     private readonly _resultCountryRepository: ResultCountryRepository,
     private readonly _resultKnowledgeProductRepository: ResultsKnowledgeProductsRepository,
-  ) {}
+  ) { }
 
   /**
    * !endpoint createOwnerResult
@@ -535,9 +535,8 @@ export class ResultsService {
 
       result.forEach((r) => {
         r.is_legacy = <unknown>r.is_legacy == 'true';
-        elasticJson += `{ "index": { "_index": "${documentName}",  "_id": "${
-          r.id
-        }" } }
+        elasticJson += `{ "index": { "_index": "${documentName}",  "_id": "${r.id
+          }" } }
         ${JSON.stringify(r)}
         `;
       });
@@ -652,19 +651,20 @@ export class ResultsService {
    */
   async mapResultLegacy(mapLegacy: MapLegacy, user: TokenDto) {
     try {
-      const results: DepthSearchOne =
+      const results =
         await this._customResultRepository.findResultsLegacyNewById(
           mapLegacy.legacy_id,
         );
-      if (!results?.id) {
+      console.log("🚀 ~ file: results.service.ts ~ line 654 ~ ResultsService ~ mapResultLegacy ~ results", results)
+      if (!results.id) {
         throw {
           response: {},
-          message: 'Results Not Found',
+          message: 'Result already migrate or was not found',
           status: HttpStatus.NOT_FOUND,
         };
       }
 
-      if (results.legacy == '0') {
+      if (results.id == '0') {
         throw {
           response: {},
           message: 'This result is already part of the PRMS reporting',
@@ -745,6 +745,11 @@ export class ResultsService {
       });
       legacyResult.is_migrated = true;
 
+      const partner =
+        await this._customResultRepository.findLegacyPartner(
+          mapLegacy.legacy_id,
+        );
+
       const newResultHeader: Result = await this._resultRepository.save({
         created_by: user.id,
         last_updated_by: user.id,
@@ -754,6 +759,7 @@ export class ResultsService {
         reported_year_id: year.year,
         result_level_id: rl.id,
         legacy_id: legacyResult.legacy_id,
+        is_retrieved: true
       });
 
       const resultByInitiative = await this._resultByInitiativesRepository.save(
@@ -768,8 +774,41 @@ export class ResultsService {
 
       await this._resultLegacyRepository.save(legacyResult);
 
+      let saveInstitutions: ResultsByInstitution[] = [];
+      for (
+        let index = 0;
+        index < partner.length;
+        index++
+      ) {
+        const isInstitutions =
+          await this._resultByIntitutionsRepository.getResultByInstitutionExists(
+            newResultHeader.id,
+            partner[index].clarisa_id,
+            true,
+          );
+        if (!isInstitutions) {
+          const institutionsNew: ResultsByInstitution =
+            new ResultsByInstitution();
+          institutionsNew.created_by = user.id;
+          institutionsNew.institution_roles_id = 1;
+          institutionsNew.institutions_id =
+            partner[index].clarisa_id;
+          institutionsNew.last_updated_by = user.id;
+          institutionsNew.result_id = newResultHeader.id;
+          institutionsNew.version_id = vrs.id;
+          institutionsNew.is_active = true;
+          saveInstitutions.push(institutionsNew);
+        }
+      }
+      const newInstitutions = await this._resultByIntitutionsRepository.save(
+        saveInstitutions,
+      );
+
       return {
-        response: results,
+        response: {
+          results,
+          newInstitutions
+        },
         message: 'Successful response',
         status: HttpStatus.OK,
       };

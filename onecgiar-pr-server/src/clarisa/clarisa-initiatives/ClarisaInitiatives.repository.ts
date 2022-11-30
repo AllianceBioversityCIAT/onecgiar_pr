@@ -28,7 +28,7 @@ export class ClarisaInitiativesRepository extends Repository<ClarisaInitiative> 
 
   async getAllInitiatives() {
     try {
-      return this.find();
+      return this.find({where:{active: true}});
     } catch (error) {
       throw {
         message: `[${ClarisaInitiativesRepository.name}] => getAllInitiatives error: ${error}`,
@@ -40,16 +40,36 @@ export class ClarisaInitiativesRepository extends Repository<ClarisaInitiative> 
 
   async getTocIdFromOst() {
     const queryData = `
-    select 
-    ibs.initiativeId,
-    t.initvStgId,
-    t.toc_id
-    from ${env.DB_OST}.tocs t
-    left join ${env.DB_OST}.initiatives_by_stages ibs
-        on t.initvStgId = ibs.id
-       where t.active > 0
-        and t.type = 1
-      order by ibs.initiativeId;
+        select
+        	ibs.initiativeId,
+        	t.initvStgId,
+        	t.toc_id
+        from
+        	${env.DB_OST}.tocs t
+        inner join (
+        	select
+        		max(t2.updated_at) as max_date,
+        		t2.initvStgId
+        	from
+        		${env.DB_OST}.tocs t2
+        	inner join ${env.DB_OST}.initiatives_by_stages ibs2
+                on
+        		t2.initvStgId = ibs2.id
+        	where
+        		t2.active > 0
+        		and t2.type = 1
+        	GROUP by
+        		t2.initvStgId) tr on
+        	tr.initvStgId = t.initvStgId
+        	and tr.max_date = t.updated_at
+        inner join ${env.DB_OST}.initiatives_by_stages ibs
+                on
+        	t.initvStgId = ibs.id
+        where
+        	t.active > 0
+        	and t.type = 1
+        order by
+        	ibs.initiativeId;
     `;
     try {
       const tocid: OstTocIdDto[] = await this.query(queryData);

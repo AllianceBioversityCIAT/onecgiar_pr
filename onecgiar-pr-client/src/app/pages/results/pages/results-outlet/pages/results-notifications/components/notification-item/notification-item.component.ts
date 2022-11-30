@@ -32,7 +32,7 @@ export class NotificationItemComponent {
     this.api.resultsSE.PATCH_updateRequest(body).subscribe(
       resp => {
         console.log(resp);
-        this.api.alertsFe.show({ id: 'noti', title: `requested.`, description: `d`, status: 'success' });
+        this.api.alertsFe.show({ id: 'noti', title: response ? 'Request accepted' : 'Request rejected', status: 'success' });
         this.requestEvent.emit();
       },
       err => {

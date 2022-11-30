@@ -4,6 +4,7 @@ import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { KnowledgeProductBody } from './model/knowledgeProductBody';
 import { KnowledgeProductBodyMapped } from './model/KnowledgeProductBodyMapped';
+import { KnowledgeProductSaveDto } from './model/knowledge-product-save.dto';
 
 @Component({
   selector: 'app-knowledge-product-info',
@@ -12,18 +13,32 @@ import { KnowledgeProductBodyMapped } from './model/KnowledgeProductBodyMapped';
 })
 export class KnowledgeProductInfoComponent implements OnInit {
   knowledgeProductBody = new KnowledgeProductBodyMapped();
-  MELIAProduct = null;
-  intheOST = null;
+  sectionData: KnowledgeProductSaveDto = new KnowledgeProductSaveDto();
+  meliaTypes = [];
   private readonly kpGradientScale = chroma.scale(['#f44444', '#dcdf38', '#38df7b']).mode('hcl');
-  constructor(private api: ApiService) {}
+  constructor(public api: ApiService) {}
 
   ngOnInit(): void {
     this.getSectionInformation();
   }
+
   getSectionInformation() {
     this.api.resultsSE.GET_resultknowledgeProducts().subscribe(({ response }) => {
       this.knowledgeProductBody = this._mapFields(response as KnowledgeProductBody);
-      console.log(this.knowledgeProductBody);
+      this.sectionData.clarisaMeliaTypeId = response.melia_type_id;
+      this.sectionData.isMeliaProduct = response.is_melia;
+      //this.sectionData.ostMeliaId = this.knowledgeProductBody.melia_type_id;
+      this.sectionData.ostSubmitted = response.melia_previous_submitted;
+    });
+    this.api.resultsSE.GET_AllMeliaStudies().subscribe(({ response }) => {
+      this.meliaTypes = response;
+      //console.log(this.meliaTypes);
+    });
+  }
+
+  onSyncSection() {
+    this.api.resultsSE.PATCH_resyncKnowledgeProducts().subscribe(resp => {
+      this.getSectionInformation();
     });
   }
 
@@ -89,5 +104,12 @@ export class KnowledgeProductInfoComponent implements OnInit {
     mapped.is_isi_WOS = response.metadataWOS?.is_isi;
     mapped.accessibility_WOS = response.metadataWOS?.accessibility;
     mapped.year_WOS = response.metadataWOS?.issue_year;
+  }
+
+  onSaveSection() {
+    //console.log(this.sectionData);
+    this.api.resultsSE.PATCH_knowledgeProductSection(this.sectionData).subscribe(({ response }) => {
+      this.getSectionInformation();
+    });
   }
 }

@@ -55,6 +55,12 @@ export class RdGeneralInformationComponent {
     if (this.generalInfoBody.is_krs === false) this.generalInfoBody.krs_url = null;
   }
 
+  onSyncSection() {
+    this.api.resultsSE.PATCH_resyncKnowledgeProducts().subscribe(resp => {
+      this.getSectionInformation();
+    });
+  }
+
   showAlerts() {
     this.api.alertsFs.show({
       status: 'success',

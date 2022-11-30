@@ -16,6 +16,7 @@ import { UpdateResultsKnowledgeProductDto } from './dto/update-results-knowledge
 import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResultsKnowledgeProductDto } from './dto/results-knowledge-product.dto';
+import { ResultsKnowledgeProductSaveDto } from './dto/results-knowledge-product-save.dto';
 
 @Controller()
 export class ResultsKnowledgeProductsController {
@@ -83,8 +84,20 @@ export class ResultsKnowledgeProductsController {
     throw new HttpException({ message, response }, status);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this._resultsKnowledgeProductsService.remove(+id);
+  @Patch('upsert/:resultId')
+  remove(
+    @Param('resultId') id: number,
+    @Headers() auth: HeadersDto,
+    @Body() sectionSevenData: ResultsKnowledgeProductSaveDto,
+  ) {
+    const token: TokenDto = <TokenDto>(
+      JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
+    );
+
+    return this._resultsKnowledgeProductsService.upsert(
+      id,
+      token,
+      sectionSevenData,
+    );
   }
 }

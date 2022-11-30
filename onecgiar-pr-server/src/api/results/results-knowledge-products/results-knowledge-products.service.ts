@@ -39,6 +39,7 @@ import { ResultByInitiativesRepository } from '../results_by_inititiatives/resul
 import { ResultTypeRepository } from '../result_types/resultType.repository';
 import { EvidencesRepository } from '../evidences/evidences.repository';
 import { ResultsKnowledgeProductMetadataDto } from './dto/results-knowledge-product-metadata.dto';
+import { ResultsKnowledgeProductSaveDto } from './dto/results-knowledge-product-save.dto';
 
 @Injectable()
 export class ResultsKnowledgeProductsService {
@@ -688,18 +689,77 @@ export class ResultsKnowledgeProductsService {
     return warnings;
   }
 
-  /*async findOnCGSpace(handle: string): Promise<MQAPResultDto> {
-    return this._mqapService.getDataFromCGSpaceHandle(handle);
-  }*/
-
-  update(
+  async upsert(
     id: number,
-    updateResultsKnowledgeProductDto: UpdateResultsKnowledgeProductDto,
+    user: TokenDto,
+    sectionSevenData: ResultsKnowledgeProductSaveDto,
   ) {
-    return `This action updates a #${id} resultsKnowledgeProduct`;
-  }
+    try {
+      if (id < 1) {
+        throw {
+          response: {},
+          message: 'missing data: id',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
 
-  remove(id: number) {
-    return `This action removes a #${id} resultsKnowledgeProduct`;
+      const result = await this._resultRepository.findOneBy({
+        id,
+      });
+
+      if (!result) {
+        throw {
+          response: {},
+          message: `There is not a Result with the id ${id}`,
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      let knowledgeProduct =
+        await this._resultsKnowledgeProductRepository.findOne({
+          where: { results_id: result.id },
+        });
+
+      if (!knowledgeProduct) {
+        throw {
+          response: {},
+          message: `The Result with id ${id} does not have a linked Knowledge Product Details`,
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      if (sectionSevenData.ostSubmitted) {
+        sectionSevenData.clarisaMeliaTypeId = null;
+      } else {
+        sectionSevenData.ostMeliaId = null;
+      }
+
+      const updatedData = await this._resultsKnowledgeProductRepository.update(
+        {
+          result_knowledge_product_id:
+            knowledgeProduct.result_knowledge_product_id,
+        },
+        {
+          last_updated_by: user.id,
+          is_melia: sectionSevenData.isMeliaProduct,
+          melia_previous_submitted: sectionSevenData.ostSubmitted,
+          melia_type_id: sectionSevenData.clarisaMeliaTypeId,
+          //ost_melia_id: sectionSevenData.ostMeliaId,
+        },
+      );
+
+      knowledgeProduct = await this._resultsKnowledgeProductRepository.findOne({
+        where: { results_id: result.id },
+        relations: this._resultsKnowledgeProductRelations,
+      });
+
+      return {
+        response: {},
+        message: 'The section has been updated successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
   }
 }
