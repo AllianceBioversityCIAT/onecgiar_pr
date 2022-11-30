@@ -855,7 +855,7 @@ export class ResultsService {
           institutions_type: institutionsType,
           krs_url: result.krs_url ?? null,
           is_krs: result.is_krs ? true : false,
-          lead_contact_person:result.lead_contact_person || null
+          lead_contact_person:result.lead_contact_person ?? null
         },
         message: 'Successful response',
         status: HttpStatus.OK,
