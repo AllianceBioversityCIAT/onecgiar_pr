@@ -7,6 +7,7 @@ import { DepthSearchOne } from './dto/depth-search-one.dto';
 import { ResultLevelType } from './dto/result-level-type.dto';
 import { ResultSimpleDto } from './dto/result-simple.dto';
 import { ResultDataToMapDto } from './dto/result-data-to-map.dto';
+import { LegacyIndicatorsPartner } from './legacy_indicators_partners/entities/legacy_indicators_partner.entity';
 
 @Injectable()
 export class ResultRepository extends Repository<Result> {
@@ -392,6 +393,23 @@ WHERE
     } catch (error) {
       throw {
         message: `[${ResultRepository.name}] => completeAllData error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
+  async findLegacyPartner(id: string) {
+    const queryData = `
+    select * from legacy_indicators_partners where legacy_id = ?
+    `;
+
+    try {
+      const partners: LegacyIndicatorsPartner[] = await this.query(queryData, [id, id]);
+      return partners;
+    } catch (error) {
+      throw {
+        message: `[${LegacyIndicatorsPartner.name}] => completeAllData error: ${error}`,
         response: {},
         status: HttpStatus.INTERNAL_SERVER_ERROR,
       };
