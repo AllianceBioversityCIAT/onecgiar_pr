@@ -13,6 +13,8 @@ export class DataControlService {
   currentSectionName = '';
   fieldFeedbackList = [];
   showShareRequest = false;
+  inNotifications = false;
+  currentNotification = null;
   constructor() {}
   validateBody(body: any) {
     return Object.entries(body).every((item: any) => item[1]);

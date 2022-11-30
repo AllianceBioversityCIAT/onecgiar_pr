@@ -263,7 +263,7 @@ export class ResultsApiService {
   GET_AllInitiatives() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/initiatives`).pipe(
       map(resp => {
-        console.log(resp);
+        // console.log(resp);
         resp?.response.map(initiative => (initiative.initiative_id = initiative?.id));
         resp?.response.map(initiative => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name}</strong> - ${initiative?.name}`));
         return resp;
@@ -338,7 +338,7 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}request/get/all`);
   }
 
-  POST_updateRequest(body) {
+  PATCH_updateRequest(body) {
     return this.http.patch<any>(`${this.apiBaseUrl}request/update`, body);
   }
 

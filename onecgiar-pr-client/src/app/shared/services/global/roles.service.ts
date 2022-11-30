@@ -89,7 +89,7 @@ export class RolesService {
   }
 
   validateInitiative(initiative_id) {
-    return !!this.roles.initiative.find(item => item.initiative_id == initiative_id);
+    return !!this.roles?.initiative?.find(item => item.initiative_id == initiative_id);
   }
 
   //TODO App roles

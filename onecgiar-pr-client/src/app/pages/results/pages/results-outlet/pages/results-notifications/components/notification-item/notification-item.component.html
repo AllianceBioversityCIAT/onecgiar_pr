@@ -1,17 +1,58 @@
-<div [ngSwitch]="notification?.type" class="noti_container">
-    <i class="material-icons-round direction_icon" [style]="'rotate:'+ (notification?.type == 1 ? '130deg' : '320deg')">
+<div [ngSwitch]="notification?.request_status_id" class="noti_container">
+    <i class="material-icons-round direction_icon" [style]="'rotate:'+ (this.comes ? '130deg' : '320deg')">
         arrow_right_alt
     </i>
-    <div class="title">{{notification?.title}}</div>
-    <div class="sub_title">{{notification?.result_type_name}} - {{notification?.title}}</div>
-    <div *ngSwitchCase="1" class="buttons">
-        <button pButton type="button" label="Accept" class="p-button-success"></button><button pButton type="button"
-            label="Reject" class="p-button-danger"></button>
+    <div *ngSwitchCase="1">
+        <div class="title" *ngIf="!notification?.action_area_outcome_id && !notification?.toc_result_id">Request from
+            INIT-{{notification?.requester_initiative_id}} to add INIT-{{notification?.approving_inititiative_id}} as a
+            contributor to the result:</div>
+        <div class="title" *ngIf="notification?.action_area_outcome_id || notification?.toc_result_id">Requests
+            INIT-{{notification?.requester_initiative_id}} to be added as a contributor to
+            the result: </div>
+        <div class="sub_title">{{notification?.result_type_name}} - {{notification?.title}}</div>
+        <div class="buttons">
+            <button pButton type="button" label="Map and accept" class="p-button-success"
+                *ngIf="!notification?.action_area_outcome_id && !notification?.toc_result_id"
+                (click)="mapAndAccept(notification)"></button>
+            <button pButton type="button" label="Accept" class="p-button-success"
+                *ngIf="notification?.action_area_outcome_id || notification?.toc_result_id"
+                (click)="acceptOrReject(true)"></button>
+            <button pButton type="button" label="Reject" class="p-button-danger"
+                (click)="acceptOrReject(false)"></button>
+        </div>
+
     </div>
-    <div *ngSwitchCase="2" class="text_icon pending">Pending <i class="material-icons-round">
-            watch_later
-        </i></div>
-    <div *ngSwitchCase="3" class="text_icon accepted">Accepted by Ana<i class="material-icons-round">
-            check_circle
-        </i></div>
+    <div *ngSwitchCase="2">
+        <div class="title">Requests INIT-{{notification?.requester_initiative_id}} to be added as a contributor to
+            the result: </div>
+        <div class="sub_title">{{notification?.result_type_name}} - {{notification?.title}}</div>
+
+        <div class="text_icon accepted">Accepted by {{notification?.first_name}}
+            <i class="material-icons-round">
+                check_circle
+            </i>
+        </div>
+    </div>
+    <div *ngSwitchCase="3">
+        <div class="title">Requests INIT-{{notification?.requester_initiative_id}} to be added as a contributor to
+            the result: </div>
+        <div class="sub_title">{{notification?.result_type_name}} - {{notification?.title}}</div>
+
+        <div class="text_icon rejected">Rejected by {{notification?.first_name}}
+            <i class="material-icons-round">
+                check_circle
+            </i>
+        </div>
+    </div>
+    <div *ngSwitchCase="4">
+        <div class="title">Request from INIT-{{notification?.requester_initiative_id}} to
+            INIT-{{notification?.approving_inititiative_id}} to be added as a contributor to the result:</div>
+        <div class="sub_title">{{notification?.result_type_name}} - {{notification?.title}}</div>
+
+        <div class="text_icon pending"> Pending
+            <i class="material-icons-round">
+                watch_later
+            </i>
+        </div>
+    </div>
 </div>
