@@ -123,19 +123,21 @@
 
     </div>
 
-    <app-pr-yes-or-not *ngIf="false" label="Is this Knowledge product a MELIA Product?" [(ngModel)]="MELIAProduct">
+    <app-pr-yes-or-not label="Is this Knowledge product a MELIA Product?" [(ngModel)]="this.sectionData.isMeliaProduct">
     </app-pr-yes-or-not>
 
-    <div style="padding-left: 50px;" *ngIf="MELIAProduct === true && false">
-        <app-pr-yes-or-not label="Was this MELIA product previously submitted in the OST?" [(ngModel)]="intheOST">
+    <div style="padding-left: 50px;" *ngIf="this.sectionData.isMeliaProduct === true">
+        <app-pr-yes-or-not label="Was this MELIA product previously submitted in the OST?" [(ngModel)]="this.sectionData.ostSubmitted">
         </app-pr-yes-or-not>
-        <app-pr-select [options]="[]" label="Select MELIA type" optionLabel="code" optionValue="code"
-            placeholder="Select MELIA type" [required]="false" *ngIf="intheOST === false">
+        <app-pr-select [options]="this.meliaTypes" label="Select MELIA type" optionLabel="name" optionValue="id"
+            placeholder="Select MELIA type" [required]="false" [(ngModel)]="this.sectionData.clarisaMeliaTypeId" *ngIf="this.sectionData.ostSubmitted === false">
         </app-pr-select>
         <app-pr-select [options]="[]" label="Select MELIA from OST" optionLabel="code" optionValue="code"
-            placeholder="Select MELIA from OST" [required]="false" *ngIf="intheOST === true">
+            placeholder="Select MELIA from OST" [required]="false" *ngIf="this.sectionData.ostSubmitted === true">
         </app-pr-select>
     </div>
 
 
 </div>
+<app-save-button class="position_sticky" (clickSave)="onSaveSection()"
+    *ngIf="this.api.dataControlSE.isKnowledgeProduct"></app-save-button>
