@@ -29,6 +29,7 @@ export class PrSelectComponent implements ControlValueAccessor {
   @Input() disableOptions: any;
   @Input() disabled: any = false;
   @Input() editable: boolean = false;
+  @Input() extraInformation: boolean = false;
 
   @Output() selectOptionEvent = new EventEmitter();
   private _optionsIntance: any[];

@@ -25,9 +25,9 @@
                     </div>
                 </div>
 
-                <cdk-virtual-scroll-viewport itemSize="7" class="custom_scroll virtual_scroll">
+                <cdk-virtual-scroll-viewport [itemSize]="extraInformation?14:7" class="custom_scroll virtual_scroll">
                     <div *cdkVirtualFor="let option of optionsIntance | listFilterByTextAndAttr:this.optionLabel:this.searchText"
-                        class="option"
+                        class="option" [style]="extraInformation?'height: 50px;':''"
                         [ngClass]="{'disabled': option?.disabled === true, 'selected':option?.selected === true}"
                         (click)="this.disabled ? null :onSelectOption(option);removeFocus()">
                         <!-- <p-checkbox [disabled]="option?.disabled" [binary]="true" [(ngModel)]="option.selected">
