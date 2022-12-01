@@ -22,6 +22,7 @@ import { ResultByLevelRepository } from '../result-by-level/result-by-level.repo
 import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { ResultTypeRepository } from '../result_types/resultType.repository';
 import { EvidencesRepository } from '../evidences/evidences.repository';
+import { KnowledgeProductFairBaselineRepository } from '../knowledge_product_fair_baseline/knowledge_product_fair_baseline.repository';
 
 @Module({
   imports: [HttpModule],
@@ -46,6 +47,7 @@ import { EvidencesRepository } from '../evidences/evidences.repository';
     YearRepository,
     ResultByInitiativesRepository,
     EvidencesRepository,
+    KnowledgeProductFairBaselineRepository,
   ],
   exports: [ResultsKnowledgeProductsRepository],
 })

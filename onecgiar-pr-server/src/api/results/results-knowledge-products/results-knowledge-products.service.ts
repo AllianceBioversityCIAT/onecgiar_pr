@@ -40,6 +40,8 @@ import { ResultTypeRepository } from '../result_types/resultType.repository';
 import { EvidencesRepository } from '../evidences/evidences.repository';
 import { ResultsKnowledgeProductMetadataDto } from './dto/results-knowledge-product-metadata.dto';
 import { ResultsKnowledgeProductSaveDto } from './dto/results-knowledge-product-save.dto';
+import { KnowledgeProductFairBaseline } from '../knowledge_product_fair_baseline/entities/knowledge_product_fair_baseline.entity';
+import { KnowledgeProductFairBaselineRepository } from '../knowledge_product_fair_baseline/knowledge_product_fair_baseline.repository';
 
 @Injectable()
 export class ResultsKnowledgeProductsService {
@@ -93,6 +95,7 @@ export class ResultsKnowledgeProductsService {
     private readonly _versionRepository: VersionRepository,
     private readonly _yearRepository: YearRepository,
     private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
+    private readonly _knowledgeProductFairBaselineRepository: KnowledgeProductFairBaselineRepository,
   ) {}
 
   private async createOwnerResult(
@@ -469,6 +472,18 @@ export class ResultsKnowledgeProductsService {
       await this._resultsKnowledgeProductMetadataRepository.save(
         newKnowledgeProduct.result_knowledge_product_metadata_array ?? [],
       );
+
+      const fairBaseline = new KnowledgeProductFairBaseline();
+
+      fairBaseline.findable = newKnowledgeProduct.findable;
+      fairBaseline.accesible = newKnowledgeProduct.accesible;
+      fairBaseline.interoperable = newKnowledgeProduct.interoperable;
+      fairBaseline.reusable = newKnowledgeProduct.reusable;
+      fairBaseline.created_by = newKnowledgeProduct.created_by;
+      fairBaseline.knowledge_product_id =
+        newKnowledgeProduct.result_knowledge_product_id;
+
+      await this._knowledgeProductFairBaselineRepository.save(fairBaseline);
 
       //updating general result tables
       this._resultRepository.update(
