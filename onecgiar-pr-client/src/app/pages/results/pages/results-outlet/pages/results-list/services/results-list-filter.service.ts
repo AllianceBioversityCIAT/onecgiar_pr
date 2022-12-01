@@ -35,7 +35,8 @@ export class ResultsListFilterService {
       init.attr = init.name;
       init.id = init.initiative_id;
     });
-    this.filters.general[0].options = [{ name: 'All results', selected: false, cleanAll: true }, ...initiatives, { attr: 'is_legacy', name: 'Pre-2022 results' }];
+    this.filters.general[0].options = [{ name: 'All results', selected: false, cleanAll: true }, ...initiatives];
+    // { attr: 'is_legacy', name: 'Pre-2022 results' }
     // , { attr: '', name: 'Other submitters' }
   }
 

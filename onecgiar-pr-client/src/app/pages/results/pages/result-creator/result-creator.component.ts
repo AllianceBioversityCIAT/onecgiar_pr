@@ -67,7 +67,7 @@ export class ResultCreatorComponent implements OnInit {
     const cleanSpaces = text => text?.replaceAll(' ', '')?.toLowerCase();
     this.api.resultsSE.GET_FindResultsElastic(title).subscribe(
       response => {
-        console.log(response);
+        // console.log(response);
         this.depthSearchList = response;
         this.exactTitleFound = !!this.depthSearchList.find(result => cleanSpaces(result.title) === cleanSpaces(title));
       },

@@ -36,7 +36,7 @@ export class ResultsListFilterPipe implements PipeTransform {
     for (const option of submitter?.options) if (option?.selected === true && option?.cleanAll !== true) resultsFilters.push(option);
     if (!resultsFilters.length) return resultList;
     resultList = resultList.filter(result => {
-      console.log(result);
+      // console.log(result);
       for (const filter of resultsFilters) if (filter?.id == result?.submitter_id || (filter?.attr == 'is_legacy' && result.is_legacy)) return true;
       return false;
     });
