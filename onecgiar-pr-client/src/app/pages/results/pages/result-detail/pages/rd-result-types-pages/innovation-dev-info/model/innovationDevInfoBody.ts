@@ -10,5 +10,7 @@ export class InnovationDevInfoBody {
   public innovation_collaborators: string; //todo
   // public readiness_level: string; //todo
   public evidences_justification: string; //todo
+  public innovation_acknowledgement: string;
   public result = { title: '' };
+  public innovation_pdf: boolean;
 }

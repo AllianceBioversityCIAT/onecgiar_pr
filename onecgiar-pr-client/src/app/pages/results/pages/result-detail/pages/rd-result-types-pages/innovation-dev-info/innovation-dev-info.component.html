@@ -46,6 +46,10 @@
         [(ngModel)]="innovationDevInfoBody.innovation_collaborators">
     </app-pr-textarea>
 
+    <app-pr-textarea placeholder="Contact persons info goes here..." [required]="false"
+        label="Innovation acknowledgement" [description]="acknowledgementDescription()"
+        [(ngModel)]="innovationDevInfoBody.innovation_acknowledgement">
+    </app-pr-textarea>
 
     <app-pr-field-header label="How would you assess the current readiness of this innovation?"
         description="Please provide a single readiness score to the innovation, irrespectively of the specific geo-location where the innovation is being designed, tested and/or scaled. Geo-location-specific scoring will be part of subsequent innovation package design and assessment. Be realistic in assessing the readiness level of the innovation and keep in mind that the claimed readiness level needs to be supported by evidence documentation.">
@@ -67,6 +71,11 @@
         label="Please provide a brief explanation that explains how the provided evidence (inputted in the general information section) justifies the chosen innovation readiness level"
         description="<strong>Example:</strong> We chose readiness level 6 (semi-controlled testing) for the genetically improved farm tilapia (GIFT) because it is currently being tested under semi-controlled conditions in the multiplication center and hatchery in the selected countries as shown in the provided evidence. ">
     </app-pr-textarea>
+
+    <app-pr-radio-button label="Would you like this innovation to be published as a CGIAR IPSR Innovation Profile PDF?"
+        [description]="pdfDescription()" [options]="this.pdfOptions" [isStatic]="true" optionLabel="name"
+        optionValue='value' [(ngModel)]="this.innovationDevInfoBody.innovation_pdf">
+    </app-pr-radio-button>
 
 </div>
 
