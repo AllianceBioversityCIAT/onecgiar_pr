@@ -161,10 +161,10 @@ export class Result {
 
   @Column({
     name: 'lead_contact_person',
-    type: 'boolean',
+    type: 'text',
     nullable: true
   })
-  lead_contact_person!: boolean;
+  lead_contact_person!: string;
 
   @Column({
     name: 'has_countries',

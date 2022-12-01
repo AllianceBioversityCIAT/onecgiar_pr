@@ -26,10 +26,18 @@ export class ResultsListFilterPipe implements PipeTransform {
   filterByInitsAndYear(resultList: any[]) {
     const [submitter, reported_year] = this.resultsListFilterSE.filters.general;
     const resultsFilters = [];
+    console.log();
+    // if (this.resultsListFilterSE?.filters?.general?.length) {
+    //   const preResultFilter = this.resultsListFilterSE.filters?.general[0]?.options?.find(filterItem => filterItem.name == 'Pre-2022 results');
+    //   console.log(preResultFilter);
+    //   // if (preResultFilter) return false;
+    // }
+
     for (const option of submitter?.options) if (option?.selected === true && option?.cleanAll !== true) resultsFilters.push(option);
     if (!resultsFilters.length) return resultList;
     resultList = resultList.filter(result => {
-      for (const filter of resultsFilters) if (filter?.id == result?.submitter_id) return true;
+      // console.log(result);
+      for (const filter of resultsFilters) if (filter?.id == result?.submitter_id || (filter?.attr == 'is_legacy' && result.is_legacy)) return true;
       return false;
     });
 
