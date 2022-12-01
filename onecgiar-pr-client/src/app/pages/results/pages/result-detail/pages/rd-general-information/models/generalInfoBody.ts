@@ -14,6 +14,7 @@ export class GeneralInfoBody {
   public krs_url: string = null;
   public is_krs: boolean = null;
   public reporting_year: string = null;
+  public lead_contact_person: string = null;
 }
 
 interface institutionsInterface {
