@@ -28,11 +28,11 @@ export class ElasticService {
     documentName: string,
     operation: ElasticOperationDto<T>,
   ): string {
-    let isPost: boolean = operation.operation === 'POST';
+    let isPatch: boolean = operation.operation === 'PATCH';
     let elasticOperation = `{ "${
-      isPost ? 'create' : 'delete'
+      isPatch ? 'create' : 'delete'
     }" : { "_index" : "${documentName}", "_id" : "${operation.data['id']}"  } }
-    ${isPost ? JSON.stringify(operation.data) : ''}`;
+    ${isPatch ? JSON.stringify(operation.data) : ''}`;
 
     return elasticOperation;
   }
@@ -41,13 +41,13 @@ export class ElasticService {
     documentName: string,
     operation: ElasticOperationDto<ResultSimpleDto>,
   ): string {
-    let isPost: boolean = operation.operation === 'POST';
+    let isPatch: boolean = operation.operation === 'PATCH';
     operation.data['is_legacy'] =
       <unknown>operation.data['is_legacy'] === 'true';
     let elasticOperation = `{ "${
-      isPost ? 'create' : 'delete'
+      isPatch ? 'index' : 'delete'
     }" : { "_index" : "${documentName}", "_id" : "${operation.data['id']}"  } }
-    ${isPost ? JSON.stringify(operation.data) : ''}`;
+    ${isPatch ? JSON.stringify(operation.data) : ''}`;
 
     return elasticOperation;
   }

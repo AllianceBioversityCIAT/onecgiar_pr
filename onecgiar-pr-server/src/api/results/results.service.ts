@@ -538,7 +538,7 @@ export class ResultsService {
       }
 
       const operations: ElasticOperationDto<ResultSimpleDto>[] =
-        queryResult.map((r) => new ElasticOperationDto('POST', r));
+        queryResult.map((r) => new ElasticOperationDto('PATCH', r));
 
       const elasticJson: string =
         this._elasticService.getBulkElasticOperationResults(
