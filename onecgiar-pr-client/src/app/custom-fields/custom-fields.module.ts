@@ -30,11 +30,12 @@ import { PrRangeLevelComponent } from './pr-range-level/pr-range-level.component
 import { UnderConstructionPointComponent } from './under-construction-point/under-construction-point.component';
 import { LabelNamePipe } from './pr-select/label-name.pipe';
 import { SyncButtonComponent } from './sync-button/sync-button.component';
+import { YesOrNotByBooleanPipe } from './pipes/yes-or-not-by-boolean.pipe';
 
 const fieldComponents = [PrInputComponent, PrSelectComponent, PrRadioButtonComponent, DetailSectionTitleComponent, PrMultiSelectComponent, PrFieldHeaderComponent, PrYesOrNotComponent, PrTextareaComponent, PrCheckboxComponent, SaveButtonComponent, PrButtonComponent, AlertStatusComponent, EditOrDeleteItemButtonComponent, NoDataTextComponent, AddButtonComponent, PrRangeLevelComponent, SyncButtonComponent];
 
 @NgModule({
-  declarations: [...fieldComponents, PrFieldValidationsComponent, PrWordCounterComponent, ListFilterByTextAndAttrPipe, UnderConstructionPointComponent, LabelNamePipe],
+  declarations: [...fieldComponents, PrFieldValidationsComponent, PrWordCounterComponent, ListFilterByTextAndAttrPipe, UnderConstructionPointComponent, LabelNamePipe, YesOrNotByBooleanPipe],
   exports: [...fieldComponents, FormsModule],
   imports: [CommonModule, FormsModule, InputTextModule, DropdownModule, RadioButtonModule, MultiSelectModule, InputTextareaModule, CheckboxModule, ScrollingModule]
 })
