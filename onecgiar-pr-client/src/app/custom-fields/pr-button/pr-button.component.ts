@@ -14,5 +14,6 @@ export class PrButtonComponent {
   @Input() colorType: 'primary' | 'danger' | 'secondary' | 'success' = 'primary';
   @Input() padding: 'small' | 'medium' | 'big' = 'small';
   @Input() pulse: boolean = false;
+  @Input() verticalMargin: number = 10;
   constructor() {}
 }

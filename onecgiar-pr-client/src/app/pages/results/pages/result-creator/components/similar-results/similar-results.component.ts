@@ -12,27 +12,27 @@ import { RetrieveModalService } from '../../../result-detail/components/retrieve
 export class SimilarResultsComponent {
   @Input() options: any[];
   constructor(public api: ApiService, public resultLevelSE: ResultLevelService, private retrieveModalSE: RetrieveModalService) {}
-  resultItems: MenuItem[] = [
-    // { label: 'See detail', icon: 'pi pi-fw pi-external-link' },
-    {
-      label: 'Map to TOC',
-      icon: 'pi pi-fw pi-sitemap',
-      command: () => {
-        this.api.dataControlSE.showShareRequest = true;
-      }
-    }
-  ];
+  // resultItems: MenuItem[] = [
+  //   // { label: 'See detail', icon: 'pi pi-fw pi-external-link' },
+  //   {
+  //     label: 'Map to TOC',
+  //     icon: 'pi pi-fw pi-sitemap',
+  //     command: () => {
+  //       this.api.dataControlSE.showShareRequest = true;
+  //     }
+  //   }
+  // ];
 
-  legacyItems: MenuItem[] = [
-    {
-      label: 'Retrieve',
-      icon: 'pi pi-fw pi-sort-alt',
-      command: () => {
-        console.log('showRetrieveRequest');
-        this.api.dataControlSE.showRetrieveRequest = true;
-      }
-    }
-  ];
+  // legacyItems: MenuItem[] = [
+  //   {
+  //     label: 'Retrieve',
+  //     icon: 'pi pi-fw pi-sort-alt',
+  //     command: () => {
+  //       console.log('showRetrieveRequest');
+  //       this.api.dataControlSE.showRetrieveRequest = true;
+  //     }
+  //   }
+  // ];
 
   onPressAction(result) {
     console.log(result);
