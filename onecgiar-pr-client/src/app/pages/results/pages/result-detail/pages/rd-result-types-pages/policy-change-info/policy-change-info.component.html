@@ -4,6 +4,8 @@
     <app-alert-status
         description="Please fill in the following fields that are required based on the type of this result.">
     </app-alert-status>
+    <app-alert-status [description]="policyTypeDescriptions()">
+    </app-alert-status>
     <div class="auto_fit_container">
         <app-pr-select [options]="this.policyControlListSE.policyTypesList" label="Policy type"
             description="Select policy type" optionLabel="name" optionValue="id" placeholder="Select policy type"
