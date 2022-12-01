@@ -19,14 +19,28 @@
             -{{notification?.result_type_name}} - {{notification?.title}}
         </div>
         <div class="buttons">
-            <button pButton type="button" label="Map and accept" class="p-button-success"
+            <app-pr-button text="Map and accept" colorType="success" (click)="mapAndAccept(notification)"
+                [rotating]="this.requesting" [icon]="this.requesting?'loop':''"
+                [ngClass]="{'globalDisabled': this.requesting}"
+                *ngIf="!notification?.action_area_outcome_id && !notification?.toc_result_id"></app-pr-button>
+
+            <app-pr-button text="Accept" colorType="success" (click)="acceptOrReject(true)" [rotating]="this.requesting"
+                [icon]="this.requesting?'loop':''" [ngClass]="{'globalDisabled': this.requesting}"
+                *ngIf="notification?.action_area_outcome_id || notification?.toc_result_id"></app-pr-button>
+
+            <app-pr-button text="Reject" colorType="danger" (click)="acceptOrReject(false)" [rotating]="this.requesting"
+                [icon]="this.requesting?'loop':''" [ngClass]="{'globalDisabled': this.requesting}"></app-pr-button>
+
+            <!-- <button pButton type="button" label="Accept" class="p-button-success"
                 *ngIf="!notification?.action_area_outcome_id && !notification?.toc_result_id"
                 (click)="mapAndAccept(notification)"></button>
+
             <button pButton type="button" label="Accept" class="p-button-success"
                 *ngIf="notification?.action_area_outcome_id || notification?.toc_result_id"
                 (click)="acceptOrReject(true)"></button>
+
             <button pButton type="button" label="Reject" class="p-button-danger"
-                (click)="acceptOrReject(false)"></button>
+                (click)="acceptOrReject(false)"></button> -->
         </div>
 
     </div>

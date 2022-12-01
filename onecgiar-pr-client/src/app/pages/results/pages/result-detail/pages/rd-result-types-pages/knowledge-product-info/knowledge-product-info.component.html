@@ -76,7 +76,12 @@
     <app-pr-input [(ngModel)]="knowledgeProductBody.references" label="Reference to other Knowledge products"
         [required]="false" [readOnly]="true">
     </app-pr-input>
-    <app-pr-field-header label="FAIR score for this Knowledge product" [required]="false"></app-pr-field-header>
+
+
+
+    <app-pr-field-header label="FAIR score for this Knowledge product"
+        description="FAIR (findability, accessibility, interoperability, and reusability) scores are calculated based on the presence or absence of metadata in the CGSpace repository. If you wish to improve these scores, please liaise with your Center librarian."
+        [required]="false"></app-pr-field-header>
 
     <div class="circle-progress-group">
 

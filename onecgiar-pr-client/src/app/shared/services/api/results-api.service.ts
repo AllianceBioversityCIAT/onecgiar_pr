@@ -272,11 +272,23 @@ export class ResultsApiService {
   }
 
   GET_clarisaInnovationType() {
-    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/innovation-type/get/all`);
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/innovation-type/get/all`).pipe(
+      map(resp => {
+        resp?.response.map(innovation => (innovation.extraInformation = `<strong>${innovation.name}</strong> <br> <div class="select_item_description">${innovation.definition}</div>`));
+        console.log(resp.response);
+        return resp;
+      })
+    );
   }
 
   GET_clarisaInnovationCharacteristics() {
-    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/innovation-characteristics/get/all`);
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/innovation-characteristics/get/all`).pipe(
+      map(resp => {
+        resp?.response.map(innovation => (innovation.extraInformation = `<strong>${innovation.name}</strong> <br> <div class="select_item_description">${innovation.definition}</div>`));
+        console.log(resp.response);
+        return resp;
+      })
+    );
   }
 
   GET_clarisaInnovationReadinessLevels() {

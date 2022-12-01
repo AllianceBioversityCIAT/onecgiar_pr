@@ -15,7 +15,7 @@ export class InnovationControlListService {
   }
   GET_clarisaInnovationType() {
     this.api.resultsSE.GET_clarisaInnovationType().subscribe(({ response }) => {
-      // console.log(response);
+      console.log(response);
       this.typeList = response;
     });
   }

@@ -11,14 +11,14 @@
         [(ngModel)]="innovationDevInfoBody.short_title">
     </app-pr-input>
     <app-pr-select [options]="this.innovationControlListSE.characteristicsList"
-        label="What would be the best way to characterize this innovation?" optionLabel="name" optionValue="id"
-        placeholder="Select innovation characteristics"
+        label="What would be the best way to characterize this innovation?" optionLabel="extraInformation"
+        optionValue="id" placeholder="Select innovation characteristics" [extraInformation]="true"
         [(ngModel)]="innovationDevInfoBody.innovation_characterization_id">
     </app-pr-select>
     <app-pr-select [options]="this.innovationControlListSE.typeList"
         label="Which of the below typologies best fits the nature of the innovation?"
         description="Choose ‘other’ if you feel the Innovation does not fit well with the proposed categories. "
-        optionLabel="name" optionValue="code" placeholder="Select innovation type"
+        optionLabel="extraInformation" optionValue="code" placeholder="Select innovation type" [extraInformation]="true"
         [(ngModel)]="this.innovationDevInfoBody.innovation_nature_id">
     </app-pr-select>
     <!-- Todo only for Technological innovation -->
