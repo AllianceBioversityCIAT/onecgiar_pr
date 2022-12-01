@@ -78,13 +78,13 @@ export class ResultRepository extends Repository<Result> {
         'false' as is_legacy
       from
         result r
-      inner join results_by_inititiative rbi on
+      left join results_by_inititiative rbi on
         rbi.result_id = r.id
         and rbi.is_active > 0
         and rbi.initiative_role_id = 1
-      inner join result_type rt on
+      left join result_type rt on
         rt.id = r.result_type_id
-      inner join clarisa_initiatives ci on
+      left join clarisa_initiatives ci on
         ci.id = rbi.inititiative_id
       left join result_region rr on
         rr.result_id = r.id
@@ -302,7 +302,8 @@ WHERE
     if(y.\`year\` = r.reported_year_id, 'New', '') as is_new,
     r.result_level_id,
     r.no_applicable_partner,
-    if(r.geographic_scope_id in (3, 4), 3, r.geographic_scope_id ) as geographic_scope_id
+    if(r.geographic_scope_id in (3, 4), 3, r.geographic_scope_id ) as geographic_scope_id,
+    r.legacy_id
 FROM
     \`result\` r
     INNER JOIN result_type rt ON rt.id = r.result_type_id
@@ -432,7 +433,10 @@ WHERE
     `;
 
     try {
-      const partners: LegacyIndicatorsPartner[] = await this.query(queryData, [id, id]);
+      const partners: LegacyIndicatorsPartner[] = await this.query(queryData, [
+        id,
+        id,
+      ]);
       return partners;
     } catch (error) {
       throw {

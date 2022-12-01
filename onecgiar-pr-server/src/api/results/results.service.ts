@@ -1,4 +1,4 @@
-import { ConsoleLogger, HttpStatus, Injectable } from '@nestjs/common';
+import { ConsoleLogger, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { returnFormatUser } from 'src/auth/modules/user/dto/return-create-user.dto';
 import { CreateResultDto } from './dto/create-result.dto';
 import { FullResultsRequestDto } from './dto/full-results-request.dto';
@@ -52,6 +52,7 @@ import process from 'process';
 
 @Injectable()
 export class ResultsService {
+  private readonly _logger: Logger = new Logger(ResultsService.name);
   constructor(
     private readonly _resultRepository: ResultRepository,
     private readonly _clarisaInitiativesRepository: ClarisaInitiativesRepository,
@@ -177,6 +178,36 @@ export class ResultsService {
         reported_year_id: year.year,
         result_level_id: rl.id,
       });
+
+      const toAddFromElastic = await this.findAllSimplified(
+        newResultHeader.id.toString(),
+      );
+
+      if (toAddFromElastic.status !== HttpStatus.OK) {
+        this._logger.warn(
+          `the result #${newResultHeader.id} could not be found to be inserted in the elastic search`,
+        );
+      } else {
+        try {
+          const elasticOperations = [
+            new ElasticOperationDto('PATCH', toAddFromElastic.response[0]),
+          ];
+
+          const elasticJson =
+            this._elasticService.getBulkElasticOperationResults(
+              process.env.ELASTIC_DOCUMENT_NAME,
+              elasticOperations,
+            );
+
+          const bulk = await this._elasticService.sendBulkOperationToElastic(
+            elasticJson,
+          );
+        } catch (error) {
+          this._logger.warn(
+            `the elastic upload failed for the result #${newResultHeader.id}`,
+          );
+        }
+      }
 
       const resultByInitiative = await this._resultByInitiativesRepository.save(
         {
@@ -373,6 +404,36 @@ export class ResultsService {
         lead_contact_person: resultGeneralInformation.lead_contact_person,
       });
 
+      const toAddFromElastic = await this.findAllSimplified(
+        updateResult.id.toString(),
+      );
+
+      if (toAddFromElastic.status !== HttpStatus.OK) {
+        this._logger.warn(
+          `the result #${updateResult.id} could not be found to be updated in the elastic search`,
+        );
+      } else {
+        try {
+          const elasticOperations = [
+            new ElasticOperationDto('PATCH', toAddFromElastic.response[0]),
+          ];
+
+          const elasticJson =
+            this._elasticService.getBulkElasticOperationResults(
+              process.env.ELASTIC_DOCUMENT_NAME,
+              elasticOperations,
+            );
+
+          const bulk = await this._elasticService.sendBulkOperationToElastic(
+            elasticJson,
+          );
+        } catch (error) {
+          this._logger.warn(
+            `the elastic update failed for the result #${updateResult.id}`,
+          );
+        }
+      }
+
       const institutions =
         await this._resultByIntitutionsRepository.updateIstitutions(
           resultGeneralInformation.result_id,
@@ -538,7 +599,7 @@ export class ResultsService {
       }
 
       const operations: ElasticOperationDto<ResultSimpleDto>[] =
-        queryResult.map((r) => new ElasticOperationDto('POST', r));
+        queryResult.map((r) => new ElasticOperationDto('PATCH', r));
 
       const elasticJson: string =
         this._elasticService.getBulkElasticOperationResults(
@@ -796,10 +857,35 @@ export class ResultsService {
         saveInstitutions,
       );
 
-      const elasticUpdate = await this.findForElasticSearch(
-        process.env.ELASTIC_DOCUMENT_NAME,
-        results.id,
+      const toRemoveFromElastic = await this.findAllSimplified(
+        legacyResult.legacy_id,
       );
+
+      if (toRemoveFromElastic.status !== HttpStatus.OK) {
+        this._logger.warn(
+          `the result #${legacyResult.legacy_id} could not be found to be updated in the elastic search`,
+        );
+      } else {
+        try {
+          const elasticOperations = [
+            new ElasticOperationDto('DELETE', toRemoveFromElastic.response[0]),
+          ];
+
+          const elasticJson =
+            this._elasticService.getBulkElasticOperationResults(
+              process.env.ELASTIC_DOCUMENT_NAME,
+              elasticOperations,
+            );
+
+          const bulk = await this._elasticService.sendBulkOperationToElastic(
+            elasticJson,
+          );
+        } catch (error) {
+          this._logger.warn(
+            `the elastic update failed for the result #${legacyResult.legacy_id}`,
+          );
+        }
+      }
 
       return {
         response: {

@@ -54,6 +54,7 @@ import { LegacyIndicatorsPartnersModule } from './legacy_indicators_partners/leg
 import { ResultLegacyRepository } from './legacy-result/legacy-result.repository';
 import { ElasticModule } from '../../elastic/elastic.module';
 import { ElasticService } from '../../elastic/elastic.service';
+import { KnowledgeProductFairBaselineModule } from './knowledge_product_fair_baseline/knowledge_product_fair_baseline.module';
 
 @Module({
   controllers: [ResultsController],
@@ -94,6 +95,7 @@ import { ElasticService } from '../../elastic/elastic.service';
     LegacyIndicatorsLocationsModule,
     LegacyIndicatorsPartnersModule,
     ElasticModule,
+    KnowledgeProductFairBaselineModule,
   ],
   providers: [
     ResultsService,
