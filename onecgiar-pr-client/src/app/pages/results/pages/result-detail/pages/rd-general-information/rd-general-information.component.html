@@ -26,6 +26,11 @@
         [readOnly]="this.dataControlSE.isKnowledgeProduct" [(ngModel)]="this.generalInfoBody.lead_contact_person">
     </app-pr-input>
 
+
+    <app-alert-status [description]="genderAndClimateInformation()">
+    </app-alert-status>
+
+
     <div class="radio_grid">
         <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
             label="Gender tag" [(ngModel)]="this.generalInfoBody.gender_tag_id">
