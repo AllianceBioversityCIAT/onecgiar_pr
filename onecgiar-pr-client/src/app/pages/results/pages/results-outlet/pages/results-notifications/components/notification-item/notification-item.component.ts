@@ -11,6 +11,7 @@ export class NotificationItemComponent {
   @Input() notification: any;
   @Input() comes: boolean;
   @Output() requestEvent = new EventEmitter<any>();
+  requesting = false;
   constructor(public api: ApiService, private shareRequestModalSE: ShareRequestModalService) {}
 
   mapAndAccept(notification) {
@@ -32,13 +33,16 @@ export class NotificationItemComponent {
     let body = { ...this.notification, request_status_id: response ? 2 : 3 };
     console.log(body);
     console.log(response);
+    this.requesting = true;
     this.api.resultsSE.PATCH_updateRequest(body).subscribe(
       resp => {
+        this.requesting = false;
         console.log(resp);
         this.api.alertsFe.show({ id: 'noti', title: response ? 'Request accepted' : 'Request rejected', status: 'success' });
         this.requestEvent.emit();
       },
       err => {
+        this.requesting = false;
         this.api.alertsFe.show({ id: 'noti-error', title: 'Error when requesting ', description: '', status: 'error' });
         this.requestEvent.emit();
       }

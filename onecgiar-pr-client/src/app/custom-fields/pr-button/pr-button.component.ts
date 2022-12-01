@@ -11,7 +11,7 @@ export class PrButtonComponent {
   @Input() reverse: boolean = false;
   @Input() rotating: boolean = false;
   @Input() showBackground: boolean = true;
-  @Input() colorType: 'primary' | 'danger' | 'secondary' = 'primary';
+  @Input() colorType: 'primary' | 'danger' | 'secondary' | 'success' = 'primary';
   @Input() padding: 'small' | 'medium' | 'big' = 'small';
   @Input() pulse: boolean = false;
   constructor() {}
