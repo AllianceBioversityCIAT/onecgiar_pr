@@ -800,6 +800,10 @@ export class ResultsService {
         process.env.ELASTIC_DOCUMENT_NAME,
         results.id,
       );
+      console.log("🚀 ~ file: results.service.ts:803 ~ ResultsService ~ mapResultLegacy ~ elasticUpdate", elasticUpdate)
+
+      const bulk = await this._elasticService.sendBulkOperationToElastic(elasticUpdate.response[0] + '\\n');
+      console.log("🚀 ~ file: results.service.ts:807 ~ ResultsService ~ mapResultLegacy ~ bulk", bulk)
 
       return {
         response: {
