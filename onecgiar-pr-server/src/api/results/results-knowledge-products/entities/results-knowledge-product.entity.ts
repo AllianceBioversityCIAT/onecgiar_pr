@@ -11,6 +11,7 @@ import {
 import { User } from '../../../../auth/modules/user/entities/user.entity';
 import { ClarisaMeliaStudyType } from '../../../../clarisa/clarisa-melia-study-type/entities/clarisa-melia-study-type.entity';
 import { Result } from '../../entities/result.entity';
+import { KnowledgeProductFairBaseline } from '../../knowledge_product_fair_baseline/entities/knowledge_product_fair_baseline.entity';
 import { Version } from '../../versions/entities/version.entity';
 import { ResultsKnowledgeProductAltmetric } from './results-knowledge-product-altmetrics.entity';
 import { ResultsKnowledgeProductAuthor } from './results-knowledge-product-authors.entity';
@@ -207,6 +208,12 @@ export class ResultsKnowledgeProduct {
     (rkpi) => rkpi.result_knowledge_product_object,
   )
   result_knowledge_product_author_array: ResultsKnowledgeProductAuthor[];
+
+  @OneToMany(
+    () => KnowledgeProductFairBaseline,
+    (kpfi) => kpfi.result_knowledge_product_object,
+  )
+  knowledge_product_fair_baseline_array: KnowledgeProductFairBaseline[];
 
   @ManyToOne(() => Result, (r) => r.id)
   @JoinColumn({

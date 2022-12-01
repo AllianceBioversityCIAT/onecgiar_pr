@@ -37,7 +37,7 @@ export class PartnersRequestComponent {
     this.partnersRequestBody.externalUserMail = email;
     this.partnersRequestBody.externalUserComments = `
     User: (Id: ${id}) - ${user_name} - ${email},
-    Result: [Role: ${initiativeFinded.description}] - (Id: ${this.api.resultsSE.currentResultId}) - ${this.api.dataControlSE.currentResult?.title},
+    Result: [Role: ${initiativeFinded?.description}] - (Id: ${this.api.resultsSE?.currentResultId}) - ${this.api.dataControlSE?.currentResult?.title},
     Initiative: (Id: ${initiative_official_code}) - ${initiative_short_name} - ${initiative_name},
     App role: ${application?.description},
     Section: ${this.api.dataControlSE.currentSectionName}`;
