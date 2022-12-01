@@ -161,4 +161,4 @@
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()"
     *ngIf="this.api.dataControlSE.isKnowledgeProduct"></app-save-button>
 
-<app-sync-button (clickSave)="onSyncSection()"></app-sync-button>
+<app-sync-button (clickSave)="onSyncSection()" *ngIf="knowledgeProductBody.type != 'Journal Article'"></app-sync-button>
