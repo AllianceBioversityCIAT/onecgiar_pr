@@ -693,6 +693,7 @@ export class ResultsKnowledgeProductsService {
     id: number,
     user: TokenDto,
     sectionSevenData: ResultsKnowledgeProductSaveDto,
+    isAdmin: boolean = false,
   ) {
     try {
       if (id < 1) {
@@ -726,6 +727,16 @@ export class ResultsKnowledgeProductsService {
           message: `The Result with id ${id} does not have a linked Knowledge Product Details`,
           status: HttpStatus.NOT_FOUND,
         };
+      }
+
+      if (!isAdmin) {
+        if (knowledgeProduct.knowledge_product_type == 'Journal Article') {
+          throw {
+            response: {},
+            message: `The Result with id ${id} cannot be manually updated right now`,
+            status: HttpStatus.PRECONDITION_FAILED,
+          };
+        }
       }
 
       if (sectionSevenData.ostSubmitted) {

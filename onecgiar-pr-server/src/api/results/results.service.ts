@@ -796,14 +796,36 @@ export class ResultsService {
         saveInstitutions,
       );
 
-      const elasticUpdate = await this.findForElasticSearch(
-        process.env.ELASTIC_DOCUMENT_NAME,
-        results.id,
+      const toRemoveFromElastic = await this.findAllSimplified(
+        legacyResult.legacy_id,
       );
-      console.log("🚀 ~ file: results.service.ts:803 ~ ResultsService ~ mapResultLegacy ~ elasticUpdate", elasticUpdate)
 
-      const bulk = await this._elasticService.sendBulkOperationToElastic(elasticUpdate.response[0] + '\\n');
-      console.log("🚀 ~ file: results.service.ts:807 ~ ResultsService ~ mapResultLegacy ~ bulk", bulk)
+      const toAddFromElastic = await this.findAllSimplified(
+        newResultHeader.id.toString(),
+      );
+
+      if (toRemoveFromElastic.status !== HttpStatus.OK) {
+        throw this._handlersError.returnErrorRes({
+          error: toRemoveFromElastic,
+        });
+      }
+
+      if (toAddFromElastic.status !== HttpStatus.OK) {
+        throw this._handlersError.returnErrorRes({ error: toAddFromElastic });
+      }
+
+      const elasticOperations = [
+        new ElasticOperationDto('DELETE', toRemoveFromElastic.response[0]),
+        new ElasticOperationDto('PATCH', toAddFromElastic.response[0]),
+      ];
+      const elasticJson = this._elasticService.getBulkElasticOperationResults(
+        process.env.ELASTIC_DOCUMENT_NAME,
+        elasticOperations,
+      );
+
+      const bulk = await this._elasticService.sendBulkOperationToElastic(
+        elasticJson,
+      );
 
       return {
         response: {

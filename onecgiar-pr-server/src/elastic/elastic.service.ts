@@ -27,12 +27,16 @@ export class ElasticService {
   public getSingleElasticOperation<T>(
     documentName: string,
     operation: ElasticOperationDto<T>,
+    fromBulk: boolean = false,
   ): string {
     let isPatch: boolean = operation.operation === 'PATCH';
     let elasticOperation = `{ "${
       isPatch ? 'create' : 'delete'
     }" : { "_index" : "${documentName}", "_id" : "${operation.data['id']}"  } }
     ${isPatch ? JSON.stringify(operation.data) : ''}`;
+    if (!fromBulk) {
+      elasticOperation = elasticOperation.concat('\n');
+    }
 
     return elasticOperation;
   }
@@ -40,14 +44,19 @@ export class ElasticService {
   public getSingleElasticOperationResult(
     documentName: string,
     operation: ElasticOperationDto<ResultSimpleDto>,
+    fromBulk: boolean = false,
   ): string {
     let isPatch: boolean = operation.operation === 'PATCH';
     operation.data['is_legacy'] =
       <unknown>operation.data['is_legacy'] === 'true';
+
     let elasticOperation = `{ "${
       isPatch ? 'index' : 'delete'
     }" : { "_index" : "${documentName}", "_id" : "${operation.data['id']}"  } }
     ${isPatch ? JSON.stringify(operation.data) : ''}`;
+    if (!fromBulk) {
+      elasticOperation = elasticOperation.concat('\n');
+    }
 
     return elasticOperation;
   }
@@ -63,8 +72,10 @@ export class ElasticService {
         (bulkElasticOperations += this.getSingleElasticOperationResult(
           documentName,
           o,
+          true,
         )),
     );
+    bulkElasticOperations = bulkElasticOperations.concat('\n');
 
     return bulkElasticOperations;
   }
@@ -80,8 +91,10 @@ export class ElasticService {
         (bulkElasticOperations += this.getSingleElasticOperation(
           documentName,
           o,
+          true,
         )),
     );
+    bulkElasticOperations = bulkElasticOperations.concat('\n');
 
     return bulkElasticOperations;
   }
