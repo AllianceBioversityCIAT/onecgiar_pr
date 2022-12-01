@@ -302,7 +302,8 @@ WHERE
     if(y.\`year\` = r.reported_year_id, 'New', '') as is_new,
     r.result_level_id,
     r.no_applicable_partner,
-    if(r.geographic_scope_id in (3, 4), 3, r.geographic_scope_id ) as geographic_scope_id
+    if(r.geographic_scope_id in (3, 4), 3, r.geographic_scope_id ) as geographic_scope_id,
+    r.legacy_id
 FROM
     \`result\` r
     INNER JOIN result_type rt ON rt.id = r.result_type_id
