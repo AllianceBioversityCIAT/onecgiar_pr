@@ -12,8 +12,13 @@
             <div class="title">
                 {{item?.title}}</div>
         </div>
-        <div class="icon_container"><i class="pi pi-ellipsis-v" (click)="onPressAction(item);menu.toggle($event);"></i>
-        </div>
+        <app-pr-button text="Map to TOC" icon="account_tree" [verticalMargin]="0" *ngIf="!item.is_legacy"
+            (click)="onPressAction(item);this.api.dataControlSE.showShareRequest = true">
+        </app-pr-button>
+        <app-pr-button text="Retrieve" icon="account_tree" [verticalMargin]="0" *ngIf="item.is_legacy"
+            (click)="onPressAction(item);this.api.dataControlSE.showRetrieveRequest = true"></app-pr-button>
+        <!-- <div class="icon_container"><i class="pi pi-ellipsis-v" (click)="onPressAction(item);menu.toggle($event);"></i>
+        </div> -->
     </div>
 </div>
-<p-menu #menu [popup]="true" [model]="this.api.dataControlSE.currentResult?.is_legacy?legacyItems:resultItems"></p-menu>
+<!-- <p-menu #menu [popup]="true" [model]="this.api.dataControlSE.currentResult?.is_legacy?legacyItems:resultItems"></p-menu> -->
