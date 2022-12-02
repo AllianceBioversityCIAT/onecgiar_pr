@@ -30,6 +30,9 @@ export class ResultsKnowledgeProduct {
   @Column()
   results_id: number;
 
+  @Column({ nullable: true, type: 'bigint' })
+  ost_melia_study_id: number;
+
   @Column({
     name: 'handle',
     type: 'text',

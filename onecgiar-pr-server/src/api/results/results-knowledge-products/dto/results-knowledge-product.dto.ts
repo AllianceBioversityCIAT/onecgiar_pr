@@ -38,6 +38,7 @@ export class ResultsKnowledgeProductDto {
   is_melia?: boolean;
   melia_previous_submitted?: boolean;
   melia_type_id?: number;
+  ost_melia_study_id?: number;
   result_data: CreateResultDto;
   warnings?: string[];
 }

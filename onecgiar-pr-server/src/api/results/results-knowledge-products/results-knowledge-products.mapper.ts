@@ -33,6 +33,7 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProductDto.licence = mqapResponseDto?.Rights;
     knowledgeProductDto.melia_previous_submitted = null; //null, as this info is mapped by the user
     knowledgeProductDto.melia_type_id = null; //null, as this info is mapped by the user
+    knowledgeProductDto.ost_melia_study_id = null; //null, as this info is mapped by the user
     knowledgeProductDto.title = mqapResponseDto?.Title;
     knowledgeProductDto.reusable = mqapResponseDto?.FAIR?.score?.R;
     knowledgeProductDto.sponsor = (mqapResponseDto?.['Funding source'] ?? [])
@@ -275,6 +276,7 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProductDto.melia_previous_submitted =
       entity.melia_previous_submitted;
     knowledgeProductDto.melia_type_id = entity.melia_type_id;
+    knowledgeProductDto.ost_melia_study_id = entity.ost_melia_study_id;
 
     const authors = entity.result_knowledge_product_author_array;
     knowledgeProductDto.authors = (authors ?? []).map((a) => {
@@ -365,6 +367,7 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProduct.licence = dto.licence;
     knowledgeProduct.melia_previous_submitted = null;
     knowledgeProduct.melia_type_id = null;
+    knowledgeProduct.ost_melia_study_id = null;
     knowledgeProduct.name = dto.title;
     knowledgeProduct.reusable = dto.reusable;
     knowledgeProduct.sponsors = dto.sponsor;

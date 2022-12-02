@@ -770,7 +770,7 @@ export class ResultsKnowledgeProductsService {
           is_melia: sectionSevenData.isMeliaProduct,
           melia_previous_submitted: sectionSevenData.ostSubmitted,
           melia_type_id: sectionSevenData.clarisaMeliaTypeId,
-          //ost_melia_id: sectionSevenData.ostMeliaId,
+          ost_melia_study_id: sectionSevenData.ostMeliaId,
         },
       );
 
