@@ -137,7 +137,6 @@
                 R1 - Data asset is Open Access (OA) and has a clear and accessible usage license
             </div>
         </div>
-
     </div>
 
     <app-pr-yes-or-not label="Is this Knowledge product a MELIA Product?" [(ngModel)]="this.sectionData.isMeliaProduct">
@@ -151,8 +150,9 @@
             placeholder="Select MELIA type" [required]="false" [(ngModel)]="this.sectionData.clarisaMeliaTypeId"
             *ngIf="this.sectionData.ostSubmitted === false">
         </app-pr-select>
-        <app-pr-select [options]="[]" label="Select MELIA from OST" optionLabel="code" optionValue="code"
-            placeholder="Select MELIA from OST" [required]="false" *ngIf="this.sectionData.ostSubmitted === true">
+        <app-pr-select [options]="this.ostMeliaStudies" label="Select MELIA from OST" optionLabel="melia_study_title" optionValue="melia_id"
+            placeholder="Select MELIA from OST" [required]="false" [(ngModel)]="this.sectionData.ostMeliaId"
+            *ngIf="this.sectionData.ostSubmitted === true">
         </app-pr-select>
     </div>
 

@@ -22,6 +22,7 @@ import { SummaryModule } from './summary/summary.module';
 import { ResultsImpactAreaIndicatorsModule } from './results-impact-area-indicators/results-impact-area-indicators.module';
 import { ResultsImpactAreaTargetModule } from './results-impact-area-target/results-impact-area-target.module';
 import { ShareResultRequestModule } from './share-result-request/share-result-request.module';
+import { OstMeliaStudiesModule } from './ost-melia-studies/ost-melia-studies.module';
 
 export const ResultsRoutes: Routes = [
   {
@@ -82,38 +83,42 @@ export const ResultsRoutes: Routes = [
   },
   {
     path: 'non-pooled-projects',
-    module: NonPooledProjectsModule
+    module: NonPooledProjectsModule,
   },
   {
     path: 'centers',
-    module: ResultsCentersModule
+    module: ResultsCentersModule,
   },
   {
     path: 'toc',
-    module: ResultsTocResultsModule
+    module: ResultsTocResultsModule,
   },
   {
     path: 'capdevs-delivery-methods',
-    module: CapdevsDeliveryMethodsModule
+    module: CapdevsDeliveryMethodsModule,
   },
   {
     path: 'capdevs-terms',
-    module: CapdevsTermsModule
+    module: CapdevsTermsModule,
   },
   {
     path: 'summary',
-    module: SummaryModule
+    module: SummaryModule,
   },
   {
     path: 'impact-area-indicators',
-    module: ResultsImpactAreaIndicatorsModule
+    module: ResultsImpactAreaIndicatorsModule,
   },
   {
     path: 'impact-area-target',
-    module: ResultsImpactAreaTargetModule
+    module: ResultsImpactAreaTargetModule,
   },
   {
     path: 'request',
-    module: ShareResultRequestModule
-  }
+    module: ShareResultRequestModule,
+  },
+  {
+    path: 'melia-studies',
+    module: OstMeliaStudiesModule,
+  },
 ];

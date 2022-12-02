@@ -153,6 +153,40 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
     }
   }
 
+  async existsResultTocResult(resultId: number, initiativeId: number) {
+
+    const queryData = `
+    SELECT
+      rtr.result_toc_result_id,
+      rtr.planned_result ,
+      rtr.is_active ,
+      rtr.created_date ,
+      rtr.last_updated_date ,
+      rtr.toc_result_id ,
+      rtr.results_id ,
+      rtr.action_area_outcome_id ,
+      rtr.version_id ,
+      rtr.created_by ,
+      rtr.last_updated_by,
+      rtr.initiative_id 
+    FROM
+      results_toc_result rtr
+    where rtr.results_id = ?
+    and rtr.initiative_id = ?
+      and rtr.is_active > 0;
+    `;
+    try {
+      const resultTocResult: ResultsTocResult[] = await this.query(queryData, [resultId, initiativeId]);
+      return resultTocResult?.length? resultTocResult[0]: undefined;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsTocResultRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async getRTRPrimaryActionArea(resultId: number, initiativeId: number[], isPrimary: boolean, initiativeArray?: number[]) {
 
     const queryData = `

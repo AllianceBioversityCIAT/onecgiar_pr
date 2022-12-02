@@ -55,6 +55,7 @@ import { ResultLegacyRepository } from './legacy-result/legacy-result.repository
 import { ElasticModule } from '../../elastic/elastic.module';
 import { ElasticService } from '../../elastic/elastic.service';
 import { KnowledgeProductFairBaselineModule } from './knowledge_product_fair_baseline/knowledge_product_fair_baseline.module';
+import { OstMeliaStudiesModule } from './ost-melia-studies/ost-melia-studies.module';
 
 @Module({
   controllers: [ResultsController],
@@ -96,6 +97,7 @@ import { KnowledgeProductFairBaselineModule } from './knowledge_product_fair_bas
     LegacyIndicatorsPartnersModule,
     ElasticModule,
     KnowledgeProductFairBaselineModule,
+    OstMeliaStudiesModule,
   ],
   providers: [
     ResultsService,

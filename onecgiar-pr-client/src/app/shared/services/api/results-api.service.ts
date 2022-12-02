@@ -108,6 +108,10 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}get/depth-search/${title}`);
   }
 
+  GET_ostMeliaStudiesByResultId() {
+    return this.http.get<any>(`${this.apiBaseUrl}melia-studies/get/all/result/${this.currentResultId}`);
+  }
+
   PATCH_partnersSection(body: PartnersBody) {
     return this.http.patch<any>(`${this.apiBaseUrl}results-by-institutions/create/partners/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
@@ -337,7 +341,7 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/global-target/get/all`);
   }
 
-  GET_AllMeliaStudies() {
+  GET_allClarisaMeliaStudyTypes() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/melia-study-type/get/all`);
   }
 

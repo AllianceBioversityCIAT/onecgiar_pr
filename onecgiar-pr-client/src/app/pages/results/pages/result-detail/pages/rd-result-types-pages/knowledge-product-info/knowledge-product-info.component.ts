@@ -15,6 +15,7 @@ export class KnowledgeProductInfoComponent implements OnInit {
   knowledgeProductBody = new KnowledgeProductBodyMapped();
   sectionData: KnowledgeProductSaveDto = new KnowledgeProductSaveDto();
   meliaTypes = [];
+  ostMeliaStudies = [];
   private readonly kpGradientScale = chroma.scale(['#f44444', '#dcdf38', '#38df7b']).mode('hcl');
   constructor(public api: ApiService) {}
 
@@ -27,11 +28,15 @@ export class KnowledgeProductInfoComponent implements OnInit {
       this.knowledgeProductBody = this._mapFields(response as KnowledgeProductBody);
       this.sectionData.clarisaMeliaTypeId = response.melia_type_id;
       this.sectionData.isMeliaProduct = response.is_melia;
-      //this.sectionData.ostMeliaId = this.knowledgeProductBody.melia_type_id;
+      this.sectionData.ostMeliaId = response.ost_melia_study_id;
       this.sectionData.ostSubmitted = response.melia_previous_submitted;
     });
-    this.api.resultsSE.GET_AllMeliaStudies().subscribe(({ response }) => {
+    this.api.resultsSE.GET_allClarisaMeliaStudyTypes().subscribe(({ response }) => {
       this.meliaTypes = response;
+      //console.log(this.meliaTypes);
+    });
+    this.api.resultsSE.GET_ostMeliaStudiesByResultId().subscribe(({ response }) => {
+      this.ostMeliaStudies = response;
       //console.log(this.meliaTypes);
     });
   }
