@@ -72,6 +72,9 @@ export class ResultsListComponent implements OnInit {
       querySelector: '.alert',
       position: 'beforebegin'
     });
+    this.api.resultsSE.GET_reportingList().subscribe(resp => {
+      console.log(resp);
+    });
   }
   onPressAction(result) {
     console.log(result);

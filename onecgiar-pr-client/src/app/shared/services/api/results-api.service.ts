@@ -356,6 +356,12 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}request/get/all`);
   }
 
+  GET_reportingList(initDate: string = '2022-12-01') {
+    const init = new Date(initDate);
+    const today = new Date();
+    return this.http.get<any>(`${this.apiBaseUrl}get/reporting/list/date/${init.toISOString()}/${today.toISOString()}`);
+  }
+
   PATCH_updateRequest(body) {
     return this.http.patch<any>(`${this.apiBaseUrl}request/update`, body);
   }
