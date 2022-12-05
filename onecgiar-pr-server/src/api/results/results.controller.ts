@@ -175,4 +175,15 @@ export class ResultsController {
     );
     throw new HttpException({ message, response }, status);
   }
+
+  @Get('get/reporting/list/date/:initDate/:lastDate')
+  async getReportingList(
+    @Param('initDate') initDate: Date,
+    @Param('lastDate') lastDate: Date
+    ) {
+    const { message, response, status } = await this.resultsService.reportingList(
+      initDate, lastDate
+    );
+    throw new HttpException({ message, response }, status);
+  }
 }

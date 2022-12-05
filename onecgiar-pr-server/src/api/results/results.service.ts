@@ -1024,6 +1024,20 @@ export class ResultsService {
     }
   }
 
+  async reportingList(initDate: Date, endDate: Date) {
+    try {
+      const result = await this._resultRepository.reportingResultList(initDate, endDate);
+
+      return {
+        response: result,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
   update(id: number, updateResultDto: UpdateResultDto) {
     return `This action updates a #${id} result ${updateResultDto}`;
   }
