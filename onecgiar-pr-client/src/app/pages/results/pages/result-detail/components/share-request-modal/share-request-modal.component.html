@@ -18,8 +18,10 @@
 
         <app-pr-select class="segment_title_margin" [options]="this.api.dataControlSE.myInitiativesList"
             *ngIf="!this.api.rolesSE.isAdmin" label="Select initiative" [isStatic]="true" optionLabel="full_name"
-            optionValue="initiative_id" placeholder="Select initiative"
-            [disabled]="this.api.dataControlSE.inNotifications"
+            disableOptionsText="<strong class='init-mapped'>Mapped</strong> " optionValue="initiative_id"
+            placeholder="Select initiative" [disableOptions]="[{  
+                initiative_id: this.api?.dataControlSE?.currentResult?.submitter_id
+              }]" [disabled]="this.api.dataControlSE.inNotifications"
             [(ngModel)]="this.shareRequestModalSE.shareRequestBody.initiative_id" (selectOptionEvent)="modelChange()">
         </app-pr-select>
 
