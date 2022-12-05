@@ -40,7 +40,9 @@ export class ResultsApiService {
       })
     );
   }
-
+  PATCH_DeleteResult(resultIdToDelete: string | number) {
+    return this.http.patch<any>(`${this.apiBaseUrl}delete/${resultIdToDelete}`, null);
+  }
   GET_FindResultsElastic(search?: string) {
     const elasticSearchString = (search ?? '')
       .split(' ')
