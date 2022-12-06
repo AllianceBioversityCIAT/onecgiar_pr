@@ -85,7 +85,8 @@
     </app-pr-input> -->
 
 
-    <app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>
+    <app-save-button class="position_sticky" (clickSave)="onSaveSection()"
+        [disabled]="!this.generalInfoBody.result_name"></app-save-button>
     <app-sync-button (clickSave)="onSyncSection()"></app-sync-button>
 
 
