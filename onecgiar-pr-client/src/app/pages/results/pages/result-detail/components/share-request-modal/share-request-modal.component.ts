@@ -15,6 +15,11 @@ export class ShareRequestModalComponent {
   allInitiatives = [];
   showForm = true;
   showTocOut = true;
+  disabledOptions = [
+    {
+      initiative_id: 10
+    }
+  ];
   constructor(public api: ApiService, public rolesSE: RolesService, public shareRequestModalSE: ShareRequestModalService, private router: Router) {}
   ngOnInit(): void {
     this.shareRequestModalSE.shareRequestBody = new ShareRequestBody();

@@ -40,7 +40,9 @@ export class ResultsApiService {
       })
     );
   }
-
+  PATCH_DeleteResult(resultIdToDelete: string | number) {
+    return this.http.patch<any>(`${this.apiBaseUrl}delete/${resultIdToDelete}`, null);
+  }
   GET_FindResultsElastic(search?: string) {
     const elasticSearchString = (search ?? '')
       .split(' ')
@@ -352,6 +354,12 @@ export class ResultsApiService {
 
   GET_allRequest() {
     return this.http.get<any>(`${this.apiBaseUrl}request/get/all`);
+  }
+
+  GET_reportingList(initDate: string = '2022-12-01') {
+    const init = new Date(initDate);
+    const today = new Date();
+    return this.http.get<any>(`${this.apiBaseUrl}get/reporting/list/date/${init.toISOString()}/${today.toISOString()}`);
   }
 
   PATCH_updateRequest(body) {

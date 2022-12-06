@@ -29,12 +29,13 @@
                     <div *cdkVirtualFor="let option of optionsIntance | listFilterByTextAndAttr:this.optionLabel:this.searchText"
                         class="option" [style]="extraInformation?'height: 50px;':''"
                         [ngClass]="{'disabled': option?.disabled === true, 'selected':option?.selected === true}"
-                        (click)="this.disabled ? null :onSelectOption(option);removeFocus()">
+                        (click)="this.disabled ? null :onSelectOption(option);removeFocus(option)">
                         <!-- <p-checkbox [disabled]="option?.disabled" [binary]="true" [(ngModel)]="option.selected">
                         </p-checkbox> -->
                         <img *ngIf="flagsCode" [src]="'https://countryflagsapi.com/png/'+option[this.flagsCode]" alt=""
                             srcset="">
-                        <div class="label" [innerHtml]="option[this.optionLabel]"></div>
+                        <div class="label"
+                            [innerHtml]="(option?.disabled?disableOptionsText:'')+option[this.optionLabel]"></div>
                         <div class="event"></div>
                     </div>
                 </cdk-virtual-scroll-viewport>

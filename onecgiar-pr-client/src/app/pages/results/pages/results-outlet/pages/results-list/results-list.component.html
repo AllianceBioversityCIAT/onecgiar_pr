@@ -54,4 +54,6 @@
 
 
 
-<p-menu #menu [popup]="true" [model]="items"></p-menu>
+<p-menu #menu [popup]="true"
+  [model]="this.api.dataControlSE?.currentResult?.role_id || this.api.rolesSE.isAdmin?  itemsWithDelete:items">
+</p-menu>

@@ -63,6 +63,7 @@ export class CustomizedAlertsFeService {
       this.closeAction(id);
     });
     document.getElementById(`confirm-${id}`).addEventListener('click', () => {
+      this.closeAction(id);
       callback();
     });
     if (closeIn)

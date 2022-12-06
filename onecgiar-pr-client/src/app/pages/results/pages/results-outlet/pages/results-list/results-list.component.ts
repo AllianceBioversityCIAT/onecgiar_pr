@@ -33,9 +33,31 @@ export class ResultsListComponent implements OnInit {
       }
     }
     // { label: 'Edit', icon: 'pi pi-fw pi-pencil' },
-    // { label: 'Delete', icon: 'pi pi-fw pi-trash' }
     // { label: 'Submit', icon: 'pi pi-fw pi-reply' }
   ];
+
+  itemsWithDelete: MenuItem[] = [
+    {
+      label: 'Map to TOC',
+      icon: 'pi pi-fw pi-sitemap',
+      command: () => {
+        console.log('showShareRequest');
+        this.api.dataControlSE.showShareRequest = true;
+        console.log(this.api.resultsSE.currentResultId);
+        // event
+      }
+    },
+    // { label: 'Edit', icon: 'pi pi-fw pi-pencil' },
+    {
+      label: 'Delete',
+      icon: 'pi pi-fw pi-trash',
+      command: () => {
+        this.onDeleteREsult();
+      }
+    }
+    // { label: 'Submit', icon: 'pi pi-fw pi-reply' }
+  ];
+
   constructor(public api: ApiService, public resultsListService: ResultsListService, private ResultLevelSE: ResultLevelService) {}
 
   ngOnInit(): void {
@@ -50,10 +72,31 @@ export class ResultsListComponent implements OnInit {
       querySelector: '.alert',
       position: 'beforebegin'
     });
+    this.api.resultsSE.GET_reportingList().subscribe(resp => {
+      console.log(resp);
+    });
   }
   onPressAction(result) {
     console.log(result);
     this.api.resultsSE.currentResultId = result?.id;
     this.api.dataControlSE.currentResult = result;
+  }
+
+  onDeleteREsult() {
+    console.log(this.api.dataControlSE.currentResult);
+    this.api.alertsFe.show({ id: 'confirm-delete-result', title: `Are you sure you want to delete the result "${this.api.dataControlSE?.currentResult?.title}"?`, description: `If you delete this result it will no longer be displayed in the list of results.`, status: 'success', confirmText: 'Yes, delete' }, () => {
+      console.log('delete');
+      this.api.resultsSE.PATCH_DeleteResult(this.api.dataControlSE.currentResult.id).subscribe(
+        resp => {
+          console.log(resp);
+          this.api.alertsFe.show({ id: 'confirm-delete-result-su', title: `The result "${this.api.dataControlSE?.currentResult?.title}" was deleted`, description: ``, status: 'success' });
+          this.api.updateResultsList();
+        },
+        err => {
+          console.log(err);
+          this.api.alertsFe.show({ id: 'delete-error', title: 'Error when delete result', description: '', status: 'error' });
+        }
+      );
+    });
   }
 }

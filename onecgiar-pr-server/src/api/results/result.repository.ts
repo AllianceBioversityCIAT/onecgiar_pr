@@ -8,6 +8,7 @@ import { ResultLevelType } from './dto/result-level-type.dto';
 import { ResultSimpleDto } from './dto/result-simple.dto';
 import { ResultDataToMapDto } from './dto/result-data-to-map.dto';
 import { LegacyIndicatorsPartner } from './legacy_indicators_partners/entities/legacy_indicators_partner.entity';
+import { env } from 'process';
 
 @Injectable()
 export class ResultRepository extends Repository<Result> {
@@ -323,6 +324,87 @@ WHERE
 
     try {
       const results = await this.query(queryData, [userid]);
+      return results;
+    } catch (error) {
+      throw {
+        message: `[${ResultRepository.name}] => completeAllData error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
+  async reportingResultList(initDate: Date, endDate: Date) {
+    const queryData = `
+    SELECT
+    	r.id as \`Result id\`,
+    	r.reported_year_id as \`Reporting year\`,
+    	r.title as \`Result title\`,
+    	CONCAT(rl.name, ' - ', rt.name) as \`Result type\`,
+    	ci.official_code as \`Submitter\` ,
+    	if(r.status = 0,
+    	'Editing',
+    	'Submitted') as \`Status\`,
+    	DATE_FORMAT(r.created_date, "%Y-%m-%d") as \`Creatio date\`,
+    	tr.work_package_id as \`Work package id\`,
+    	wp.name as \`Work package title\`,
+    	rtr.toc_result_id as \`Toc result id\`,
+    	tr.title as \`ToC result\`,
+    	rtr.action_area_outcome_id as \`Action area outcome id\`,
+    	caao.outcomeStatement as \`Action area outcome name\`,
+    	GROUP_CONCAT(CONCAT('[', cc.code, ': ', ci2.acronym, ' - ', ci2.name, ']') SEPARATOR ', ') as \`Centers\`
+    from
+    	\`result\` r
+    inner join result_type rt on
+    	rt.id = r.result_type_id
+    inner join result_level rl on
+    	rl.id = r.result_level_id
+    inner join results_by_inititiative rbi on
+    	rbi.result_id = r.id
+    	and rbi.initiative_role_id = 1
+    	and rbi.is_active > 0
+    inner join clarisa_initiatives ci on
+    	ci.id = rbi.inititiative_id
+    left join results_toc_result rtr on
+    	rtr.results_id = r.id
+    	and rtr.initiative_id = rbi.inititiative_id
+    	and rtr.is_active > 0
+    left join results_center rc on
+    	rc.result_id = r.id
+    	and rc.is_active > 0
+    left join clarisa_center cc on
+    	cc.code = rc.center_id
+    left join clarisa_institutions ci2 on
+    	ci2.id = cc.institutionId
+    left join toc_result tr on
+    	tr.toc_result_id = rtr.toc_result_id
+    left join clarisa_action_area_outcome caao ON
+    	caao.id = rtr.action_area_outcome_id
+    left join ${env.DB_OST}.work_packages wp on
+    	wp.id = tr.work_package_id
+    	and wp.active > 0
+    WHERE
+    	r.created_date >= ?
+    	and r.created_date <= ?
+    GROUP by
+    	r.id,
+    	r.reported_year_id,
+    	r.title,
+    	rl.name,
+    	rt.name,
+    	ci.official_code,
+    	r.status,
+    	r.created_date,
+    	tr.work_package_id,
+    	wp.name,
+    	rtr.toc_result_id,
+    	tr.title,
+    	rtr.action_area_outcome_id,
+    	caao.outcomeStatement
+    order by r.created_date DESC;`;
+
+    try {
+      const results = await this.query(queryData, [initDate, endDate]);
       return results;
     } catch (error) {
       throw {

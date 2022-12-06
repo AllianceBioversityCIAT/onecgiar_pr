@@ -27,6 +27,7 @@ export class PrSelectComponent implements ControlValueAccessor {
   @Input() required: boolean = true;
   @Input() flagsCode: string;
   @Input() disableOptions: any;
+  @Input() disableOptionsText: any = '';
   @Input() disabled: any = false;
   @Input() editable: boolean = false;
   @Input() extraInformation: boolean = false;
@@ -62,8 +63,8 @@ export class PrSelectComponent implements ControlValueAccessor {
     this.onTouch = fn;
   }
   //? Extra
-  removeFocus() {
-    // console.log('removeFocus');
+  removeFocus(option?) {
+    if (option?.disabled) return;
     const element: any = document.getElementById(this.optionValue);
     element.blur();
   }
@@ -93,6 +94,7 @@ export class PrSelectComponent implements ControlValueAccessor {
     return this._optionsIntance;
   }
   onSelectOption(option) {
+    if (option?.disabled) return;
     this.fullValue = option;
     this.value = option[this.optionValue];
     option.selected = true;
