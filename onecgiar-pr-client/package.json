@@ -23,12 +23,14 @@
     "@angular/platform-browser-dynamic": "^14.1.0",
     "@angular/router": "^14.1.0",
     "chroma-js": "^2.4.2",
+    "file-saver": "^2.0.5",
     "ng-circle-progress": "^1.6.0",
     "primeicons": "^5.0.0",
     "primeng": "^14.0.2",
     "pusher-js": "^7.1.0-beta",
     "rxjs": "~7.5.0",
     "tslib": "^2.3.0",
+    "xlsx": "^0.18.5",
     "zone.js": "~0.11.4"
   },
   "devDependencies": {

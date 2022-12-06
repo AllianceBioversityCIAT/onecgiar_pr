@@ -4,6 +4,7 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { internationalizationData } from '../../../../../../shared/data/internationalizationData';
 import { ResultsListService } from './services/results-list.service';
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
+import { ExportTablesService } from '../../../../../../shared/services/export-tables.service';
 
 @Component({
   selector: 'app-results-list',
@@ -11,6 +12,7 @@ import { ResultLevelService } from '../../../result-creator/services/result-leve
   styleUrls: ['./results-list.component.scss', './results-list.responsive.scss']
 })
 export class ResultsListComponent implements OnInit {
+  gettingReport = false;
   columnOrder = [
     { title: 'ID', attr: 'id' },
     { title: 'Title', attr: 'title', class: 'notCenter' },
@@ -58,7 +60,7 @@ export class ResultsListComponent implements OnInit {
     // { label: 'Submit', icon: 'pi pi-fw pi-reply' }
   ];
 
-  constructor(public api: ApiService, public resultsListService: ResultsListService, private ResultLevelSE: ResultLevelService) {}
+  constructor(public api: ApiService, public resultsListService: ResultsListService, private ResultLevelSE: ResultLevelService, private exportTablesSE: ExportTablesService) {}
 
   ngOnInit(): void {
     this.api.rolesSE.validateReadOnly();
@@ -72,14 +74,26 @@ export class ResultsListComponent implements OnInit {
       querySelector: '.alert',
       position: 'beforebegin'
     });
-    this.api.resultsSE.GET_reportingList().subscribe(resp => {
-      console.log(resp);
-    });
   }
   onPressAction(result) {
     console.log(result);
     this.api.resultsSE.currentResultId = result?.id;
     this.api.dataControlSE.currentResult = result;
+  }
+
+  onDownLoadTableAsExcel() {
+    this.gettingReport = true;
+    this.api.resultsSE.GET_reportingList().subscribe(
+      ({ response }) => {
+        console.log(response);
+        this.exportTablesSE.exportExcel(response);
+        this.gettingReport = false;
+      },
+      err => {
+        console.log(err);
+        this.gettingReport = false;
+      }
+    );
   }
 
   onDeleteREsult() {
