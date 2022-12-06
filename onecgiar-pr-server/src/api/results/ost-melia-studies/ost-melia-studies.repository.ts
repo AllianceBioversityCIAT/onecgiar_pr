@@ -16,10 +16,10 @@ export class OstMeliaStudiesRepository {
         msa.id as melia_id ,
         concat('(', msa.anticipated_year_completion, ') - ' , msa.result_title) as melia_study_title
     FROM
-        submissiontooldb.melia_studies_activities msa
-    LEFT JOIN submissiontooldb.initiatives_by_stages ibs on
+        ${env.DB_OST}.melia_studies_activities msa
+    LEFT JOIN ${env.DB_OST}.initiatives_by_stages ibs on
         ibs.id = msa.initvStgId
-    LEFT JOIN submissiontooldb.initiatives i on
+    LEFT JOIN ${env.DB_OST}.initiatives i on
         i.id = ibs.initiativeId
     LEFT JOIN prdb.results_by_inititiative rbi on i.id = rbi.inititiative_id 
     WHERE
