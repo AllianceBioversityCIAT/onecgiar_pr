@@ -180,9 +180,9 @@ export class ResultsTocResultsService {
         let RtR = await this._resultsTocResultRepository.getRTRById(result_toc_result?.result_toc_result_id, result_id, result_toc_result?.initiative_id);
         if (RtR) {
           if (result.result_level_id == 2) {
-            RtR.action_area_outcome_id = result_toc_result?.action_area_outcome_id || null;
+            RtR.action_area_outcome_id = result_toc_result?.action_area_outcome_id ?? null;
           } else {
-            RtR.toc_result_id = result_toc_result?.toc_result_id || null;
+            RtR.toc_result_id = result_toc_result?.toc_result_id ?? null;
           }
           RtR.is_active = true;
           RtR.last_updated_by = user.id;
@@ -197,11 +197,11 @@ export class ResultsTocResultsService {
           newRtR.results_id = result.id;
           newRtR.planned_result = result_toc_result.planned_result;
           if (result.result_level_id == 2) {
-            newRtR.action_area_outcome_id = result_toc_result?.action_area_outcome_id || null;
+            newRtR.action_area_outcome_id = result_toc_result?.action_area_outcome_id ?? null;
           } else {
-            newRtR.toc_result_id = result_toc_result?.toc_result_id || null;
+            newRtR.toc_result_id = result_toc_result?.toc_result_id ?? null;
           }
-          newRtR.planned_result = result_toc_result?.planned_result || null;
+          newRtR.planned_result = result_toc_result?.planned_result ?? null;
           await this._resultsTocResultRepository.save(newRtR);
         }
 
