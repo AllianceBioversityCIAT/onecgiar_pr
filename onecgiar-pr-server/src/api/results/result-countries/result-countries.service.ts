@@ -56,8 +56,11 @@ export class ResultCountriesService {
             }
           }
         }
-        
-        result.has_countries = createResultCountryDto.has_countries;
+        if(createResultCountryDto.scope_id == 3){
+          result.has_countries = true;
+        }else{
+          result.has_countries = createResultCountryDto.has_countries;
+        }
       }
 
       if (countries && createResultCountryDto.scope_id == 3) {
