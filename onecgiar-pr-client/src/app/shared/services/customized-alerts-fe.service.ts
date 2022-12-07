@@ -12,7 +12,7 @@ interface alertOptions {
 })
 export class CustomizedAlertsFeService {
   //TODO customized alerts for events
-  showed = false;
+  // showed = false;
   statusIcons = [];
   constructor() {
     this.statusIcons['error'] = 'close';
@@ -22,14 +22,14 @@ export class CustomizedAlertsFeService {
 
   show(alertOptions: alertOptions, callback?) {
     let { id, title, description = '', closeIn, status, confirmText } = alertOptions;
-    this.showed = true;
+    // this.showed = true;
     let alert = document.getElementById(id);
 
     let appRoot = document.getElementsByTagName('app-root')[0];
     appRoot.insertAdjacentHTML(
       'beforeend',
       `
-      <div class="custom_modal_container" id="${id}">
+      <div class="custom_modal_container active" id="${id}">
         <div class="custom-alert animate__animated animate__bounceIn"  id="alert-${id}">
           <div class="top-line ${status}"></div>
           <div class="alert-content ${status}">
@@ -72,7 +72,9 @@ export class CustomizedAlertsFeService {
       }, 3000);
 
     alert.addEventListener('animationend', () => {
-      if (!this.showed) {
+      console.log('animationend');
+      if (alert.classList.contains('delete')) {
+        console.log('remove');
         alert.classList.remove('animate__animated', 'animate__bounceIn', 'animate__bounceOut');
         alert.style.display = 'none';
         alert.parentNode.removeChild(alert);
@@ -81,8 +83,9 @@ export class CustomizedAlertsFeService {
   }
 
   closeAction(id) {
-    this.showed = false;
-    let alert: any = document.getElementById(`alert-${id}`);
-    if (alert) alert.classList.add('animate__animated', 'animate__bounceOut');
+    let alertModal: any = document.getElementById(`alert-${id}`);
+    if (alertModal) alertModal.classList.add('animate__animated', 'animate__bounceOut');
+    let alert: any = document.getElementById(`${id}`);
+    if (alert) alert.classList.add('delete');
   }
 }
