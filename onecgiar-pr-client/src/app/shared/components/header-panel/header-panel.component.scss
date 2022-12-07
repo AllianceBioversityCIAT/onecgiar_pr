@@ -56,6 +56,12 @@
             padding: 5px 10px;
             font-size: 13px;
 
+            .admin_tag {
+                background-color: var(--pr-color-primary);
+                padding: 3px 10px;
+                border-radius: 3px;
+            }
+
             .icon {
                 color: white;
             }

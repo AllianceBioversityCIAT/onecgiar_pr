@@ -26,7 +26,9 @@
         </app-pr-select>
 
         <div class="information" style="margin-top: 50px;">
-            Please note that this result will be created at the <strong>???</strong> level with <strong>???</strong> as
+            Please note that this result will be created at the
+            <strong>{{this.api.dataControlSE.currentResult?.result_level_name}}</strong> level with
+            <strong>{{this.api.dataControlSE.currentResult?.result_type_name}}</strong> as
             result
             type.
             In case you want to change the result type, please contact us at <strong

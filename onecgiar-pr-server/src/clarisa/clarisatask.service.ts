@@ -466,12 +466,11 @@ export class ClarisaTaskService {
           el['code'] = parseInt(el['code']);
           el['is_legacy'] = false;
         });
-        console.log("dataLegacy", dataLegacy)
-        console.log("dataNew", dataNew)
+
         const datasss = await this._clarisaInstitutionsTypeRepository.save(
           (dataLegacy ?? []).concat(dataNew ?? []),
         );
-        console.log(datasss);
+
         this._logger.verbose(
           `[${position}]: All CLARISA Institutions type control list data has been created`,
         );
@@ -760,6 +759,12 @@ export class ClarisaTaskService {
         data.map((dat) => {
           dat['id'] = dat.code;
           dat['description'] = dat.definition;
+        });
+
+        data.push({
+          id: 50,
+          description: '',
+          name: 'This is yet to be determined'
         });
 
         await this._clarisaGeographicScopeRepository.save(data);

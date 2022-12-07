@@ -4,6 +4,10 @@
   <div class="alert"></div>
   <app-results-list-filters></app-results-list-filters>
 </div>
+<div class="download_button_container">
+  <app-pr-button text="Download" (click)="onDownLoadTableAsExcel()" [rotating]="this.gettingReport"
+    [icon]="this.gettingReport?'loop':'file_download'"></app-pr-button>
+</div>
 <div class="table">
   <p-table sortField="id" [sortOrder]="-1"
     [value]="(this.api.dataControlSE.resultsList | resultsListFilter:this.resultsListService.text_to_search:this.api.resultsListFilterSE.filterJoin)"

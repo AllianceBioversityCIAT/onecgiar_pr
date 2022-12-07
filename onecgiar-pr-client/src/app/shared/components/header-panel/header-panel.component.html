@@ -10,6 +10,9 @@
     <div class="user_tag">
       <i class="material-icons-round icon">account_circle</i>
       <div class="title">{{ this.api.authSE?.localStorageUser?.user_name }}</div>
+      <div class="admin_tag" *ngIf="this.api.rolesSE.isAdmin">
+        Admin
+      </div>
     </div>
     <div class="my_initiatives" *ngIf="this.api.dataControlSE?.myInitiativesList?.length">
       <div class="title">My initiatives:</div>
@@ -27,4 +30,5 @@
 </div>
 
 <app-tawk *ngIf="this.api.authSE.localStorageUser?.user_name &&  this.api.authSE.localStorageUser?.email"
-[user]="{username: this.api.authSE.localStorageUser.user_name, email:this.api.authSE.localStorageUser.email}"></app-tawk>
+  [user]="{username: this.api.authSE.localStorageUser.user_name, email:this.api.authSE.localStorageUser.email}">
+</app-tawk>

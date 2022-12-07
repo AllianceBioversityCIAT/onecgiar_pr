@@ -38,13 +38,19 @@ export class SimilarResultsComponent {
     console.log(result);
     this.api.resultsSE.currentResultId = result?.id;
     this.api.dataControlSE.currentResult = result;
-    //! DElete this
-    // this.api.dataControlSE.currentResult.is_legacy = false;
-    //!'''''''''''''''''''''''''''''''''''''''''''
-    // this.api.dataControlSE.currentResult.is_legacy = this.api.dataControlSE.currentResult.is_legacy == 'true' ? true : false;
     this.api.dataControlSE.currentResult.result_type = this.api.dataControlSE.currentResult.type;
-
+    const resultLevelFinded = this.resultLevelSE.resultLevelList.find(resultLevel => resultLevel.id == this.resultLevelSE.resultBody.result_level_id);
+    this.api.dataControlSE.currentResult.result_level_name = resultLevelFinded?.name;
+    this.api.dataControlSE.currentResult.result_type_name = this.getResultTypeName();
     //? For LEGACY
     this.retrieveModalSE.retrieveRequestBody.legacy_id = result?.id;
+  }
+
+  getResultTypeName() {
+    const resultLevelFinded = this.resultLevelSE.resultLevelList.find(resultLevel => resultLevel.id == this.resultLevelSE.resultBody.result_level_id);
+    const resultTypeFinded = resultLevelFinded?.result_type?.find(resultType => resultType.name.indexOf('Other') >= 0);
+    if (resultTypeFinded) return resultTypeFinded.name;
+    const impactFinded = resultLevelFinded?.result_type?.find(resultType => resultType.id == 9);
+    return impactFinded.name;
   }
 }

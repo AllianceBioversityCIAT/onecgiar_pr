@@ -85,7 +85,7 @@ export class ResultsKnowledgeProductsController {
   }
 
   @Patch('upsert/:resultId')
-  remove(
+  async remove(
     @Param('resultId') id: number,
     @Headers() auth: HeadersDto,
     @Body() sectionSevenData: ResultsKnowledgeProductSaveDto,
@@ -94,10 +94,11 @@ export class ResultsKnowledgeProductsController {
       JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
     );
 
-    return this._resultsKnowledgeProductsService.upsert(
+    const {message, response, status} = await this._resultsKnowledgeProductsService.upsert(
       id,
       token,
       sectionSevenData,
     );
+    throw new HttpException({ message, response }, status);
   }
 }

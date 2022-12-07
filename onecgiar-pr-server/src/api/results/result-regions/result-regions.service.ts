@@ -58,7 +58,11 @@ export class ResultRegionsService {
             }
           }
         }
-        result.has_regions = createResultRegionDto.has_regions;
+        if(createResultRegionDto.scope_id == 2){
+          result.has_regions = true;
+        }else{
+          result.has_regions = createResultRegionDto.has_regions;
+        }
       }
       
       if(createResultRegionDto.scope_id == 4 || createResultRegionDto.scope_id == 50){
