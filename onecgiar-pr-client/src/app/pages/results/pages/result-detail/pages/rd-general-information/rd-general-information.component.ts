@@ -46,6 +46,19 @@ export class RdGeneralInformationComponent {
       }
     );
   }
+  titleTextInfo() {
+    return `<ul>
+    <li>Provide a clear, informative name of the output, for a non-specialist reader and without acronyms.</li>
+    <li>Avoid abbreviations or (technical) jargon.</li>
+    </ul>`;
+  }
+  descriptionTextInfo() {
+    return `<ul>
+    <li>Ensure the description is understandable for a non-specialist reader.</li>
+    <li>Avoid acronyms and technical jargon.</li>
+    <li>Avoid repetition of the title.</li>
+    </ul>`;
+  }
   genderAndClimateInformation() {
     return `<strong>Gender tag and Climate change tag scoring guidance</strong> <ul>
     <li><strong>0 : not targeted</strong> The activity has been screened against the marker but has not been found to target gender equality or climate.</li>
