@@ -21,8 +21,9 @@ import { CapdevsTermsModule } from './capdevs-terms/capdevs-terms.module';
 import { SummaryModule } from './summary/summary.module';
 import { ResultsImpactAreaIndicatorsModule } from './results-impact-area-indicators/results-impact-area-indicators.module';
 import { ResultsImpactAreaTargetModule } from './results-impact-area-target/results-impact-area-target.module';
-import { ShareResultRequestModule } from './share-result-request/share-result-request.module';
 import { OstMeliaStudiesModule } from './ost-melia-studies/ost-melia-studies.module';
+import { ResultsValidationModuleModule } from './results-validation-module/results-validation-module.module';
+import { ShareResultRequestModule } from './share-result-request/share-result-request.module';
 
 export const ResultsRoutes: Routes = [
   {
@@ -121,4 +122,8 @@ export const ResultsRoutes: Routes = [
     path: 'melia-studies',
     module: OstMeliaStudiesModule,
   },
+  {
+    path: 'results-validation',
+    module: ResultsValidationModuleModule
+  }
 ];

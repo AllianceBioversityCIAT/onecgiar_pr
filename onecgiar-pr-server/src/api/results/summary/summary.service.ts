@@ -76,8 +76,8 @@ export class SummaryService {
       }
       const vrs: Version = <Version>version.response;
       if (innExists) {
-        innExists.female_using = female_using;
-        innExists.male_using = male_using;
+        innExists.female_using = female_using || null;
+        innExists.male_using = male_using || null;
         innExists.last_updated_by = user.id;
         InnovationUse = await this._resultsInnovationsUseRepository.save(innExists);
       } else {
@@ -179,8 +179,8 @@ export class SummaryService {
       }
       const vrs: Version = <Version>version.response;
       if (capDevExists) {
-        capDevExists.female_using = female_using;
-        capDevExists.male_using = male_using;
+        capDevExists.female_using = female_using || null;
+        capDevExists.male_using = male_using || null;
         capDevExists.last_updated_by = user.id;
         capDevExists.capdev_delivery_method_id = capdev_delivery_method_id;
         capDevExists.capdev_term_id = capdev_term_id;
@@ -189,8 +189,8 @@ export class SummaryService {
         const newCapDev = new ResultsCapacityDevelopments();
         newCapDev.created_by = user.id;
         newCapDev.last_updated_by = user.id;
-        newCapDev.female_using = female_using;
-        newCapDev.male_using = male_using;
+        newCapDev.female_using = female_using || null;
+        newCapDev.male_using = male_using || null;
         newCapDev.version_id = vrs.id;
         newCapDev.result_id = resultId;
         newCapDev.capdev_delivery_method_id = capdev_delivery_method_id;
@@ -373,7 +373,7 @@ export class SummaryService {
 
       let policyChangesData:ResultsPolicyChanges = undefined;
       if (resultsPolicyChanges) {
-        resultsPolicyChanges.amount = amount;
+        resultsPolicyChanges.amount = amount || null;
         resultsPolicyChanges.last_updated_by = user.id;
         resultsPolicyChanges.policy_stage_id = policy_stage_id;
         resultsPolicyChanges.policy_type_id = policy_type_id;
@@ -381,7 +381,7 @@ export class SummaryService {
         policyChangesData = await this._resultsPolicyChangesRepository.save(resultsPolicyChanges);
       } else {
         const newResultsPolicyChanges = new ResultsPolicyChanges();
-        newResultsPolicyChanges.amount = amount;
+        newResultsPolicyChanges.amount = amount || null;
         newResultsPolicyChanges.policy_stage_id = policy_stage_id;
         newResultsPolicyChanges.policy_type_id = policy_type_id;
         newResultsPolicyChanges.version_id = vrs.id;
