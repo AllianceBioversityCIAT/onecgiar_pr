@@ -23,6 +23,8 @@ import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiativ
 import { ResultTypeRepository } from '../result_types/resultType.repository';
 import { EvidencesRepository } from '../evidences/evidences.repository';
 import { KnowledgeProductFairBaselineRepository } from '../knowledge_product_fair_baseline/knowledge_product_fair_baseline.repository';
+import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
+import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 
 @Module({
   imports: [HttpModule],
@@ -48,6 +50,7 @@ import { KnowledgeProductFairBaselineRepository } from '../knowledge_product_fai
     ResultByInitiativesRepository,
     EvidencesRepository,
     KnowledgeProductFairBaselineRepository,
+    RoleByUserRepository,
   ],
   exports: [ResultsKnowledgeProductsRepository],
 })

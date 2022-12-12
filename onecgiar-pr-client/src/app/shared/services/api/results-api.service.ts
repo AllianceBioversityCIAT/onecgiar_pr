@@ -373,4 +373,8 @@ export class ResultsApiService {
   POST_updateRequest(body) {
     return this.http.post<any>(`${this.apiBaseUrl}map/legacy`, body);
   }
+
+  GET_greenChecksByResultId() {
+    return this.http.get<any>(`${this.apiBaseUrl}results-validation/get/green-checks/${this.currentResultId}`);
+  }
 }

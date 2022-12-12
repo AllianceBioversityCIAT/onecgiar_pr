@@ -5,7 +5,6 @@ import { ResultLevelService } from './services/result-level.service';
 import { Router } from '@angular/router';
 import { ResultBody } from '../../../../shared/interfaces/result.interface';
 import { InitiativesService } from '../../../../shared/services/global/initiatives.service';
-import { SaveButtonService } from '../../../../custom-fields/save-button/save-button.service';
 import { Source } from '../../../../shared/interfaces/elastic.interface';
 
 @Component({

@@ -16,6 +16,7 @@ export class DataControlService {
   showShareRequest = false;
   inNotifications = false;
   currentNotification = null;
+  green_checks = null;
   constructor() {}
   validateBody(body: any) {
     return Object.entries(body).every((item: any) => item[1]);
