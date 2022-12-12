@@ -355,6 +355,9 @@ export class ResultsKnowledgeProductsService {
           await this._resultsKnowledgeProductRepository.findOne({
             where: {
               handle: Like(handleId),
+              result_object: {
+                is_active: true,
+              },
             },
             relations: this._resultsKnowledgeProductRelations,
           });
