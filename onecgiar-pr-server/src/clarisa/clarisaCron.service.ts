@@ -12,4 +12,9 @@ export class ClarisaCronsService {
   handleCron() {
     this._clarisaTaskService.clarisaBootstrap();
   }
+
+  @Cron(CronExpression.EVERY_HOUR)
+  importantHandleCron() {
+    this._clarisaTaskService.clarisaBootstrap();
+  }
 }

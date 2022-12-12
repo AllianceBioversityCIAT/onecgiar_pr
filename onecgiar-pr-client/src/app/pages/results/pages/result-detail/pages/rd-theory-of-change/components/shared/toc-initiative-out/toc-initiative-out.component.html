@@ -17,7 +17,8 @@
     <div class="auto_fit_container" *ngIf="initiative.planned_result == true || initiative.planned_result == false ">
         <app-pr-select *ngIf="this.initiative?.planned_result && resultLevelId == 1" [options]="this.outputList"
             label="Output" optionLabel="title" optionValue="toc_result_id" [disabled]="!this.editable"
-            [editable]="editable" placeholder="Select output" [(ngModel)]="initiative.toc_result_id">
+            [editable]="editable" placeholder="Select output" [(ngModel)]="initiative.toc_result_id"
+            [extraInformation]="true">
         </app-pr-select>
         <app-pr-select
             *ngIf="this.showOutcomeLevel && (resultLevelId == 1 ? this.initiative?.planned_result == false : true)"

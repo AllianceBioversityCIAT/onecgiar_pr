@@ -91,7 +91,6 @@ export class ClarisaTaskService {
     count = await this.cloneClarisaOutcomeIndicators(count);
     count = await this.cloneClarisaRegionsType(count);
     count = await this.cloneClarisaInstitutionsType(count);
-    count = await this.cloneClarisaInstitutions(count);
     count = await this.cloneClarisaPolicyStageRepository(count);
     count = await this.cloneClarisaInnovationTypeRepository(count);
     count = await this.cloneClarisaInnovationReadinessLevelRepository(count);
@@ -101,6 +100,12 @@ export class ClarisaTaskService {
     count = await this.cloneResultTocRepository(count);
     count = await this.cloneClarisaCenterRepository(count);
     count = await this.cloneClarisaPolicyTypeRepository(count);
+  }
+
+  public async clarisaBootstrapImportantData(){
+    this._logger.debug(`Cloning of CLARISA important control lists`);
+    let count = 1;
+    count = await this.cloneClarisaInstitutions(count);
   }
 
   private async cloneClarisaCountries(position: number, deleteItem = false) {
@@ -790,6 +795,7 @@ export class ClarisaTaskService {
           `[${position}]: All ToC Results control list data has been deleted`,
         );
       } else {
+        await this._tocResultsRepository.inactiveTocResult();
         const data = await this._tocResultsRepository.getAllTocResultsFromOst();
         await this._tocResultsRepository.save(data);
         this._logger.verbose(

@@ -355,6 +355,9 @@ export class ResultsKnowledgeProductsService {
           await this._resultsKnowledgeProductRepository.findOne({
             where: {
               handle: Like(handleId),
+              result_object: {
+                is_active: true,
+              },
             },
             relations: this._resultsKnowledgeProductRelations,
           });
@@ -459,6 +462,8 @@ export class ResultsKnowledgeProductsService {
         newResult.id,
         currentVersion.id,
       );
+
+      newKnowledgeProduct.is_melia = false;
 
       newKnowledgeProduct = await this._resultsKnowledgeProductRepository.save(
         newKnowledgeProduct,

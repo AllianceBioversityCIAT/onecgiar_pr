@@ -30,6 +30,7 @@ export class KnowledgeProductInfoComponent implements OnInit {
       this.sectionData.isMeliaProduct = response.is_melia;
       this.sectionData.ostMeliaId = response.ost_melia_study_id;
       this.sectionData.ostSubmitted = response.melia_previous_submitted;
+      if (!this.sectionData.isMeliaProduct) this.sectionData.isMeliaProduct = false;
     });
     this.api.resultsSE.GET_allClarisaMeliaStudyTypes().subscribe(({ response }) => {
       this.meliaTypes = response;
