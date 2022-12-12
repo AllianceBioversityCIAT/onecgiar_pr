@@ -21,6 +21,7 @@ export class ResultDetailComponent {
     this.api.updateUserData();
     this.api.resultsSE.currentResultId = this.activatedRoute.snapshot.paramMap.get('id');
     this.GET_resultById();
+    this.api.updateGreenChecks();
   }
 
   GET_resultById() {

@@ -11,6 +11,7 @@ import { ApiService } from '../../../../../shared/services/api/api.service';
 })
 export class PanelMenuComponent {
   navigationOptions: PrRoute[] = resultDetailRouting;
+  constructor(public resultLevelSE: ResultLevelService, public resultsListSE: ResultsApiService, private api: ApiService) {}
 
   hideKP(navOption) {
     if (!this.api.dataControlSE.isKnowledgeProduct) return false;
@@ -18,5 +19,7 @@ export class PanelMenuComponent {
     return Boolean(hideInKP.find(option => option == navOption.path));
   }
 
-  constructor(public resultLevelSE: ResultLevelService, public resultsListSE: ResultsApiService, private api: ApiService) {}
+  get green_checks_string() {
+    return JSON.stringify(this.api.dataControlSE.green_checks);
+  }
 }
