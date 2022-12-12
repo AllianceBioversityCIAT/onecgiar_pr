@@ -13,6 +13,30 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
     super(RoleByUser, dataSource.createEntityManager());
   }
 
+  async isUserAdmin(userId: number) {
+    const queryData = `
+    SELECT
+      if(rbu.role = 1, 1, 0) as is_admin
+    from
+      role_by_user rbu
+    WHERE
+      rbu.user = ?
+      and rbu.initiative_id is null
+      and rbu.action_area_id is null
+      and rbu.active > 0;
+    `;
+    try {
+      const isAdmin = await this.query(queryData, [userId]);
+      return isAdmin?.length ? isAdmin[0] : undefined;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: RoleByUserRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async deleteAllData() {
     const queryData = `
     DELETE FROM role_by_user;

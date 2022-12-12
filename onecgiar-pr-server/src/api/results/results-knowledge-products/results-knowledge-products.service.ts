@@ -42,6 +42,7 @@ import { ResultsKnowledgeProductMetadataDto } from './dto/results-knowledge-prod
 import { ResultsKnowledgeProductSaveDto } from './dto/results-knowledge-product-save.dto';
 import { KnowledgeProductFairBaseline } from '../knowledge_product_fair_baseline/entities/knowledge_product_fair_baseline.entity';
 import { KnowledgeProductFairBaselineRepository } from '../knowledge_product_fair_baseline/knowledge_product_fair_baseline.repository';
+import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 
 @Injectable()
 export class ResultsKnowledgeProductsService {
@@ -94,6 +95,7 @@ export class ResultsKnowledgeProductsService {
     private readonly _resultTypeRepository: ResultTypeRepository,
     private readonly _versionRepository: VersionRepository,
     private readonly _yearRepository: YearRepository,
+    private readonly _roleByUseRepository: RoleByUserRepository,
     private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
     private readonly _knowledgeProductFairBaselineRepository: KnowledgeProductFairBaselineRepository,
   ) {}
@@ -224,6 +226,20 @@ export class ResultsKnowledgeProductsService {
           message: `A Result Knowledge Product with result_id '${resultId}' does not exist.`,
           status: HttpStatus.BAD_REQUEST,
         };
+      }
+
+      let isAdmin: any = await this._roleByUseRepository.isUserAdmin(user.id);
+
+      if (isAdmin.is_admin == false) {
+        if (
+          resultKnowledgeProduct.knowledge_product_type == 'Journal Article'
+        ) {
+          throw {
+            response: {},
+            message: `The Result with id ${resultId} cannot be manually updated right now`,
+            status: HttpStatus.PRECONDITION_FAILED,
+          };
+        }
       }
 
       const cgspaceResponse = await this.findOnCGSpace(
@@ -708,7 +724,6 @@ export class ResultsKnowledgeProductsService {
     id: number,
     user: TokenDto,
     sectionSevenData: ResultsKnowledgeProductSaveDto,
-    isAdmin: boolean = false,
   ) {
     try {
       if (id < 1) {
@@ -742,16 +757,6 @@ export class ResultsKnowledgeProductsService {
           message: `The Result with id ${id} does not have a linked Knowledge Product Details`,
           status: HttpStatus.NOT_FOUND,
         };
-      }
-
-      if (!isAdmin) {
-        if (knowledgeProduct.knowledge_product_type == 'Journal Article') {
-          throw {
-            response: {},
-            message: `The Result with id ${id} cannot be manually updated right now`,
-            status: HttpStatus.PRECONDITION_FAILED,
-          };
-        }
       }
 
       if (sectionSevenData.ostSubmitted) {
