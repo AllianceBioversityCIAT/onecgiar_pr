@@ -61,8 +61,10 @@ export class TocResultsRepository extends Repository<TocResult> {
       tr.toc_level_id ,
       tr.inititiative_id ,
       tr.work_package_id ,
+      wp.acronym as wp_short_name,
       null as action_area_outcome_id
     from toc_result tr
+    left join ${env.DB_OST}.work_packages wp on wp.id  = tr.work_package_id
 	  where tr.inititiative_id = ?
     	and tr.toc_level_id = ?
       and tr.is_active > 0
