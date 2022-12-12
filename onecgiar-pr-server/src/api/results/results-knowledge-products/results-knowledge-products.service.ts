@@ -460,6 +460,8 @@ export class ResultsKnowledgeProductsService {
         currentVersion.id,
       );
 
+      newKnowledgeProduct.is_melia = false;
+
       newKnowledgeProduct = await this._resultsKnowledgeProductRepository.save(
         newKnowledgeProduct,
       );
