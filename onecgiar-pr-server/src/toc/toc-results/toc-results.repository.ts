@@ -64,7 +64,8 @@ export class TocResultsRepository extends Repository<TocResult> {
       null as action_area_outcome_id
     from toc_result tr
 	  where tr.inititiative_id = ?
-    	and tr.toc_level_id = ?;
+    	and tr.toc_level_id = ?
+    order by tr.title ASC;
     `,
     queryOst = `
     select
@@ -92,7 +93,8 @@ export class TocResultsRepository extends Repository<TocResult> {
     	ibs.initiativeId,
     	iaaoi.outcome_id,
     	gi.action_area_id,
-    	gi.action_area_description;
+    	gi.action_area_description
+    order by caao.outcomeSMOcode ASC;
     `;
 
     try {
