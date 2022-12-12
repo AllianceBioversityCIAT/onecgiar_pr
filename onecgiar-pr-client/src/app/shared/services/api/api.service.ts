@@ -50,14 +50,6 @@ export class ApiService {
     });
   }
 
-  updateGreenChecks() {
-    console.log('updateGreenChecks');
-    this.resultsSE.GET_greenChecksByResultId().subscribe(({ response }) => {
-      console.log(response?.green_checks);
-      this.dataControlSE.green_checks = response?.green_checks;
-    });
-  }
-
   setTWKAttributes() {
     try {
       window['Tawk_API'] = window['Tawk_API'] || {};
