@@ -790,6 +790,7 @@ export class ClarisaTaskService {
           `[${position}]: All ToC Results control list data has been deleted`,
         );
       } else {
+        await this._tocResultsRepository.inactiveTocResult();
         const data = await this._tocResultsRepository.getAllTocResultsFromOst();
         await this._tocResultsRepository.save(data);
         this._logger.verbose(

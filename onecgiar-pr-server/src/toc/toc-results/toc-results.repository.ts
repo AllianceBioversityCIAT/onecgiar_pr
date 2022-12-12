@@ -65,6 +65,7 @@ export class TocResultsRepository extends Repository<TocResult> {
     from toc_result tr
 	  where tr.inititiative_id = ?
     	and tr.toc_level_id = ?
+      and tr.is_active > 0
     order by tr.title ASC;
     `,
     queryOst = `
@@ -120,7 +121,7 @@ export class TocResultsRepository extends Repository<TocResult> {
       null as toc_type_id,
       i.id as inititiative_id,
       wp.wp_official_code as work_package_id,
-      r.active
+      r.active as is_active
       from ${env.DB_OST}.results r
       left join ${env.DB_OST}.work_packages wp on r.work_package_id = wp.wp_official_code
       											and r.initvStgId = wp.initvStgId
@@ -136,6 +137,23 @@ export class TocResultsRepository extends Repository<TocResult> {
     } catch (error) {
       throw {
         message: `[${TocResultsRepository.name}] => getTocIdFromOst error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
+  async inactiveTocResult(){
+    const queryData = `
+      UPDATE toc_result 
+        set is_active = 0;
+    `;
+    try {
+      const tocResult:TocResult[] = await this.query(queryData);
+      return tocResult;
+    } catch (error) {
+      throw {
+        message: `[${TocResultsRepository.name}] => inactiveTocResult error: ${error}`,
         response: {},
         status: HttpStatus.INTERNAL_SERVER_ERROR,
       };
