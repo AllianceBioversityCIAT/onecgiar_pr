@@ -377,6 +377,42 @@ export class resultValidationRepository{
     }
   }
 
+  async knowledgeProductValidation(resultId: number) {
+    const queryData = `
+	select
+			'knowledge-product-info' as section_name,
+			CASE
+				when (if(rkp.is_melia = 1,
+			if(rkp.melia_previous_submitted = 1,
+			rkp.ost_melia_study_id is not null
+			and rkp.ost_melia_study_id <> '',
+			rkp.melia_type_id is not null
+			and rkp.melia_type_id <> '') ,
+			if(rkp.is_melia is not null,
+			true,
+			false))) then true
+			else false
+		END as validation
+	from
+			\`result\` r
+	left join results_knowledge_product rkp on
+		rkp.results_id = r.id
+	WHERE
+			r.id = ?
+		and r.is_active > 0;
+    `;
+    try {
+      const shareResultRequest: GetValidationSectionDto[] = await this._queryRunner.query(queryData, [resultId]);
+      return shareResultRequest.length ? shareResultRequest[0] : undefined;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: resultValidationRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async capDevValidation(resultId: number) {
     const queryData = `
 	SELECT
