@@ -29,7 +29,6 @@ export class GeneralInterceptorService implements HttpInterceptor {
 
     return next.handle(reqClone).pipe(
       tap((resp: any) => {
-        console.log(resp);
         if (req.method == 'PATCH' || req.method == 'POST') this.greenChecksSE.updateGreenChecks();
       })
     );

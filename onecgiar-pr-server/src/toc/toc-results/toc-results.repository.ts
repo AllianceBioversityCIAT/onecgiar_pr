@@ -162,6 +162,33 @@ export class TocResultsRepository extends Repository<TocResult> {
     }
   }
 
+  async updateDeprecateDataToc(){
+    const queryData = `
+    update
+        results_toc_result rtr
+      left join toc_result tr on
+        tr.toc_result_id = rtr.toc_result_id
+      left join toc_result tr2 on
+        tr2.title = tr.title
+        and tr2.is_active > 0
+        and tr2.inititiative_id = tr.inititiative_id 
+         set
+        rtr.toc_result_id = IFNULL(tr2.toc_result_id, NULL)
+      WHERE
+        tr.is_active = 0;
+    `;
+    try {
+      const tocResult:TocResult[] = await this.query(queryData);
+      return tocResult;
+    } catch (error) {
+      throw {
+        message: `[${TocResultsRepository.name}] => inactiveTocResult error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
   async getAllOutcomeByInitiative(initiativeId: number) {
     const queryData = `
     select  
