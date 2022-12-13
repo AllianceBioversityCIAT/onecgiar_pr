@@ -119,9 +119,9 @@ export class resultValidationRepository{
 			AND 
 			((
 			select
-				sum(if(npp.funder_institution_id is not null and npp.funder_institution_id <> '' AND 
+			IFNULL(sum(if(npp.funder_institution_id is not null and npp.funder_institution_id <> '' AND 
 							npp.grant_title is not null and npp.grant_title <> '' AND
-							npp.lead_center_id is not null and npp.lead_center_id <> '', 1, 0)) - COUNT(npp.id)
+							npp.lead_center_id is not null and npp.lead_center_id <> '', 1, 0)), 0) - IFNULL(COUNT(npp.id), 0)
 			from
 				non_pooled_project npp
 			WHERE
@@ -192,36 +192,40 @@ export class resultValidationRepository{
 
   async geoLocationValidation(resultId: number) {
     const queryData = `
-    select
-		'geographic-location' as section_name,
-		CASE
-			when ((if(r.has_regions = 1 ,
-			((
+	select
+			'geographic-location' as section_name,
+			CASE
+				when ((if(r.has_regions = 1 ,
+				((
 			select
-						count(rr.result_region_id)
+							count(rr.result_region_id)
 			from
-						result_region rr
+							result_region rr
 			WHERE
-						rr.result_id = r.id
+							rr.result_id = r.id
 				and rr.is_active > 0) > 0),
-			1))
+				if(r.has_regions is null,
+			false,
+			true)))
 			AND 
-					(if(r.has_countries = 1 ,
-			((
+						(if(r.has_countries = 1 ,
+				((
 			select
-						count(rc.result_country_id)
+							count(rc.result_country_id)
 			from
-						result_country rc
+							result_country rc
 			WHERE
-						rc.result_id = r.id
+							rc.result_id = r.id
 				and rc.is_active > 0) > 0),
-			1))) then true
+				if(r.has_countries is null,
+			false,
+			true)))) then true
 			else false
 		END as validation
 	from
-		\`result\` r
+			\`result\` r
 	WHERE
-		r.id = ?
+			r.id = ?
 		and r.is_active > 0;
     `;
     try {
