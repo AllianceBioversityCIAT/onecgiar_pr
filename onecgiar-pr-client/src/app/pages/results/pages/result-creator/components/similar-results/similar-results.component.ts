@@ -37,7 +37,7 @@ export class SimilarResultsComponent {
   onPressAction(result) {
     console.log(result);
     this.api.resultsSE.currentResultId = result?.id;
-    this.api.dataControlSE.currentResult = result;
+    this.api.dataControlSE.currentResult = JSON.parse(JSON.stringify(result));
     this.api.dataControlSE.currentResult.result_type = this.api.dataControlSE.currentResult.type;
     const resultLevelFinded = this.resultLevelSE.resultLevelList.find(resultLevel => resultLevel.id == this.resultLevelSE.resultBody.result_level_id);
     this.api.dataControlSE.currentResult.result_level_name = resultLevelFinded?.name;
@@ -48,9 +48,7 @@ export class SimilarResultsComponent {
 
   getResultTypeName() {
     const resultLevelFinded = this.resultLevelSE.resultLevelList.find(resultLevel => resultLevel.id == this.resultLevelSE.resultBody.result_level_id);
-    const resultTypeFinded = resultLevelFinded?.result_type?.find(resultType => resultType.name.indexOf('Other') >= 0);
-    if (resultTypeFinded) return resultTypeFinded.name;
-    const impactFinded = resultLevelFinded?.result_type?.find(resultType => resultType.id == 9);
-    return impactFinded.name;
+    const resultTypeFinded = resultLevelFinded?.result_type?.find(resultType => resultType.id == this.resultLevelSE.resultBody.result_type_id);
+    return resultTypeFinded?.name || '???';
   }
 }
