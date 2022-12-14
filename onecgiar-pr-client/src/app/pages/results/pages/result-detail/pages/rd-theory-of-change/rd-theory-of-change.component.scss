@@ -27,17 +27,27 @@
         display: flex;
         flex-wrap: wrap;
         position: relative;
-        gap: 5px;
+        gap: 3px;
+
+        .pending {
+            padding-right: 5px !important;
+
+            .text_inactive {
+                text-decoration: line-through;
+            }
+
+        }
 
         .pr_chip_selected {
             background-color: var(--pr-color-primary-2);
             color: var(--pr-color-secondary);
             font-size: .95em;
-            padding: 8px 13px;
+            padding: 6px 13px;
             border-radius: 10px;
             display: grid;
             grid-template-columns: auto 1fr auto;
             gap: 10px;
+            align-items: center;
 
             .medal {
                 // font-size: 2em;

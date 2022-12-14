@@ -31,7 +31,7 @@ export class RdTheoryOfChangeComponent {
     await this.api.resultsSE.GET_toc().subscribe(
       ({ response }) => {
         this.theoryOfChangeBody = response;
-        // console.log(this.theoryOfChangeBody);
+        console.log(this.theoryOfChangeBody);
         setTimeout(() => {
           this.getConsumed = true;
         }, 100);
@@ -81,6 +81,10 @@ export class RdTheoryOfChangeComponent {
       if (!contributorFinded) this.theoryOfChangeBody.contributors_result_toc_result?.push(contributorToPush);
       console.log(contributorFinded);
     });
+  }
+
+  toggleActiveContributor(item) {
+    item.is_active = !item.is_active;
   }
 
   onRemoveContributingInitiative(e) {
