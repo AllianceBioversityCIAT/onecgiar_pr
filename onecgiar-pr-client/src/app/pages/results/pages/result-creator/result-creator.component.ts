@@ -39,6 +39,7 @@ export class ResultCreatorComponent implements OnInit {
     this.api.rolesSE.validateReadOnly().then(() => {
       this.GET_AllInitiatives();
     });
+    if (this.api.dataControlSE.myInitiativesList.length == 1) this.resultLevelSE.resultBody.initiative_id = this.api.dataControlSE.myInitiativesList[0].id;
   }
   allInitiatives = [];
   GET_AllInitiatives() {
