@@ -61,9 +61,9 @@ export class RdGeneralInformationComponent {
   }
   genderInformation() {
     return `<strong>Gender tag guidance</strong> <ul>
-    <li><strong>0 : not targeted</strong> The activity has been screened against the marker but has not been found to target gender equality.</li>
-    <li><strong>1 : significant</strong> Significant Gender equality is an important and deliberate objective, but not the principal reason for undertaking the activity.</li>
-    <li><strong>2 : principal</strong> Gender equality is the main objective of the activity and is fundamental in its design and expected results. The activity would not have been undertaken without this gender equality objective.</li>
+    <li><strong>0 : Not targeted</strong> The activity has been screened against the marker but has not been found to target gender equality.</li>
+    <li><strong>1 : Significant</strong> Significant Gender equality is an important and deliberate objective, but not the principal reason for undertaking the activity.</li>
+    <li><strong>2 : Principal</strong> Gender equality is the main objective of the activity and is fundamental in its design and expected results. The activity would not have been undertaken without this gender equality objective.</li>
     </ul>`;
   }
 
@@ -76,9 +76,9 @@ export class RdGeneralInformationComponent {
     <br>Climate scores should be determined based on the following:
     <ul>
     <strong>Climate scores should be determined based on the following:</strong>
-    <li><strong>0 : not targeted</strong> The activity does not target the climate mitigation, adaptation and climate policy objectives of CGIAR as put forward in its strategy.</li>
-    <li><strong>1 : significant</strong> The activity contributes in a significant way to any of the three CGIAR climate-related strategy objectives – namely, climate mitigation, climate adaptation and climate policy, even though it is not the principal focus of the activity.</li>
-    <li><strong>2 : principal</strong> The activity is principally about meeting any of the three CGIAR climate-related strategy objectives – namely, climate mitigation, climate adaptation and climate policy, and would not have been undertaken without this objective.</li>
+    <li><strong>0 : Not targeted</strong> The activity does not target the climate mitigation, adaptation and climate policy objectives of CGIAR as put forward in its strategy.</li>
+    <li><strong>1 : Significant</strong> The activity contributes in a significant way to any of the three CGIAR climate-related strategy objectives – namely, climate mitigation, climate adaptation and climate policy, even though it is not the principal focus of the activity.</li>
+    <li><strong>2 : Principal</strong> The activity is principally about meeting any of the three CGIAR climate-related strategy objectives – namely, climate mitigation, climate adaptation and climate policy, and would not have been undertaken without this objective.</li>
     </ul>`;
   }
 
