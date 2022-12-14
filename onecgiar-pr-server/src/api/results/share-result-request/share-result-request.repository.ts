@@ -114,7 +114,7 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     		and rbu.initiative_id is not null
     		and rbu.action_area_id is null
     	)
-		and srr.is_active > 0;
+		and srr.is_active > 0
 	order by srr.request_status_id ASC;
     `;
     try {
