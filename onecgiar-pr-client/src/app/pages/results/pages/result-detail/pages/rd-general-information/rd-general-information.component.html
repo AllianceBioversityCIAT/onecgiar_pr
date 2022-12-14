@@ -23,33 +23,39 @@
         [maxWords]="150"></app-pr-textarea>
 
     <app-pr-input placeholder="Write some..." label="Lead contact person" type="text" [required]="false"
-        [readOnly]="this.dataControlSE.isKnowledgeProduct" [(ngModel)]="this.generalInfoBody.lead_contact_person">
+        [(ngModel)]="this.generalInfoBody.lead_contact_person">
     </app-pr-input>
 
+    <div class="block_container">
+        <app-alert-status [description]="genderInformation()">
+        </app-alert-status>
 
-    <app-alert-status [description]="genderAndClimateInformation()">
-    </app-alert-status>
 
-
-    <div class="radio_grid">
-        <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
-            label="Gender tag" [(ngModel)]="this.generalInfoBody.gender_tag_id">
-        </app-pr-radio-button>
-        <div id="gender_tag_alert" [hidden]="this.generalInfoBody.gender_tag_id != 3"></div>
+        <div class="radio_grid">
+            <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
+                label="Gender tag" [(ngModel)]="this.generalInfoBody.gender_tag_id">
+            </app-pr-radio-button>
+            <div id="gender_tag_alert" [hidden]="this.generalInfoBody.gender_tag_id != 3"></div>
+        </div>
     </div>
-    <div class="radio_grid" id="climate_change_tag">
-        <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
-            label="Climate change tag" [(ngModel)]="this.generalInfoBody.climate_change_tag_id">
-        </app-pr-radio-button>
-        <div id="climate_change_tag_alert" [hidden]="this.generalInfoBody.climate_change_tag_id != 3"></div>
+    <div class="block_container">
+        <app-alert-status [description]="climateInformation()">
+        </app-alert-status>
+        <div class="radio_grid" id="climate_change_tag">
+            <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
+                label="Climate change tag" [(ngModel)]="this.generalInfoBody.climate_change_tag_id">
+            </app-pr-radio-button>
+            <div id="climate_change_tag_alert" [hidden]="this.generalInfoBody.climate_change_tag_id != 3"></div>
+        </div>
     </div>
+
 
     <app-pr-field-header *ngIf="this.generalInfoBody?.result_level_id !== 4" label="Actors"
         [required]="this.generalInfoBody?.result_level_id !== 1"
         description="An actor is an individual, organization or network operating within or beyond the system the Initiative or intervention aims to influence and whose actions can advance or impede the Initiative’s aims.">
     </app-pr-field-header>
     <app-alert-status [hidden]="this.generalInfoBody?.result_level_id === 4 || this.rolesSE.readOnly"
-        description="If you don't find the funder you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. ">
+        description="If you don't find the funder you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list ">
     </app-alert-status>
     <div class="auto_fit_container" *ngIf="this.generalInfoBody?.result_level_id !== 4">
         <app-pr-multi-select [options]="this.institutionsSE.institutionsList" selectedLabel="Actor(s) selected"

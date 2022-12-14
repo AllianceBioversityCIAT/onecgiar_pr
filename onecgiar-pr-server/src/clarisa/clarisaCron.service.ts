@@ -15,6 +15,6 @@ export class ClarisaCronsService {
 
   @Cron(CronExpression.EVERY_HOUR)
   importantHandleCron() {
-    this._clarisaTaskService.clarisaBootstrap();
+    this._clarisaTaskService.clarisaBootstrapImportantData();
   }
 }

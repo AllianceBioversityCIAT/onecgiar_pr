@@ -42,6 +42,7 @@ export class PartnersRequestComponent {
     App role: ${application?.description},
     Section: ${this.api.dataControlSE.currentSectionName}`;
     console.log(this.partnersRequestBody);
+    this.api.alertsFe.show({ id: 'partners', title: `Partner has been requested.`, description: `The partner request was sent successfully. You will receive a confirmation message as soon as it has been processed. <strong>Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list</strong>. In case of any questions, please contact the technical support.`, status: 'success' });
 
     this.api.resultsSE.POST_partnerRequest(this.partnersRequestBody).subscribe(
       resp => {
@@ -51,7 +52,6 @@ export class PartnersRequestComponent {
         if (resp.status == 500) return this.api.alertsFe.show({ id: 'partners-error', title: 'Error when requesting partner', description: 'Server problems', status: 'error' });
         // "${this.partnersRequestBody.name}"
         console.log(this.partnersRequestBody.name);
-        this.api.alertsFe.show({ id: 'partners', title: `Partner has been requested.`, description: `The partner request was sent successfully. You will receive a confirmation message as soon as it has been processed. The validation process usually takes 1 business day. In case of any questions, please contact the technical support.`, status: 'success' });
       },
       err => {
         this.api.alertsFe.show({ id: 'partners-error', title: 'Error when requesting partner', description: '', status: 'error' });
