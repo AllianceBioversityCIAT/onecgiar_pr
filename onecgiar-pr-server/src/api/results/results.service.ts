@@ -535,6 +535,7 @@ export class ResultsService {
     try {
       const result: Result = await this._resultRepository.findOne({
         where: { id: resultId },
+        relations: {legacy_id: true}
       });
       if (!result) {
         throw {
@@ -546,6 +547,11 @@ export class ResultsService {
       result.is_active = false;
 
       await this._resultRepository.save(result);
+
+      if(result?.legacy_id){
+        await this._resultLegacyRepository.update(result.legacy_id['legacy_id'], {is_migrated: false});
+      }
+
       await this._resultByInitiativesRepository.logicalElimination(resultId);
       await this._resultByIntitutionsTypeRepository.logicalElimination(
         result.id,
