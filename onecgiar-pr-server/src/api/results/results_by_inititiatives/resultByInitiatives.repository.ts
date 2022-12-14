@@ -116,6 +116,9 @@ export class ResultByInitiativesRepository extends Repository<ResultsByInititiat
         queryData,
         [resultId],
       );
+      completeUser?.map(e => {
+        e['is_active'] = e['is_active'] == 1? 1:0;
+      })
       return completeUser;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

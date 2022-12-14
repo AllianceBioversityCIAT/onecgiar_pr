@@ -304,7 +304,10 @@ WHERE
     r.result_level_id,
     r.no_applicable_partner,
     if(r.geographic_scope_id in (3, 4), 3, r.geographic_scope_id ) as geographic_scope_id,
-    r.legacy_id
+    r.legacy_id,
+    r.created_by,
+    u.first_name as create_first_name,
+    u.last_name as create_last_name
 FROM
     \`result\` r
     INNER JOIN result_type rt ON rt.id = r.result_type_id
@@ -315,6 +318,7 @@ FROM
     							and rbu.\`user\`  = ?
     left join \`role\` r2 on r2.id  = rbu.\`role\` 
     left join \`year\` y ON y.active > 0
+    left join users u on u.id = r.created_by
 WHERE
     r.is_active > 0
     AND rbi.is_active > 0
