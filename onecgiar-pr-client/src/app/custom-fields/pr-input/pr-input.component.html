@@ -4,7 +4,8 @@
     </app-pr-field-header>
     <div [ngSwitch]="(readOnly || this.rolesSE.readOnly) && (!isStatic)" [ngClass]="{'mandatory': this.required}"
         class="pr-input position-relative">
-        <div class="read-only" *ngSwitchCase="true">{{(value|yesOrNotByBoolean) || 'Not provided'}}</div>
+        <div class="read-only" *ngSwitchCase="true">{{(value|yesOrNotByBoolean) || (this.required ? 'Not provided' :
+            'Not applicable')}}</div>
         <div class="p-fluid input_container" *ngSwitchCase="false">
             <input [disabled]="this.disabled" pInputText [type]="this.type" [placeholder]="this.placeholder"
                 [(ngModel)]="value" [attr.prValid]="true" [ngClass]="{'pr-valid': true}" />

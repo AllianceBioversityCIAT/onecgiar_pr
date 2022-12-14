@@ -23,6 +23,7 @@ import { ResultsImpactAreaTarget } from '../results-impact-area-target/entities/
 import { ClarisaImpactAreaRepository } from '../../../clarisa/clarisa-impact-area/ClarisaImpactArea.repository';
 import { ShareResultRequestService } from '../share-result-request/share-result-request.service';
 import { CreateTocShareResult } from '../share-result-request/dto/create-toc-share-result.dto';
+import { ShareResultRequestRepository } from '../share-result-request/share-result-request.repository';
 
 @Injectable()
 export class ResultsTocResultsService {
@@ -40,12 +41,13 @@ export class ResultsTocResultsService {
     private readonly _resultsImpactAreaTargetRepository: ResultsImpactAreaTargetRepository,
     private readonly _resultsImpactAreaIndicatorRepository: ResultsImpactAreaIndicatorRepository,
     private readonly _clarisaImpactAreaRepository: ClarisaImpactAreaRepository,
-    private readonly _shareResultRequestService: ShareResultRequestService
+    private readonly _shareResultRequestService: ShareResultRequestService,
+    private readonly _shareResultRequestRepository: ShareResultRequestRepository
   ) { }
 
   async create(createResultsTocResultDto: CreateResultsTocResultDto, user: TokenDto) {
     try {
-      let { contributing_np_projects, result_id, contributing_center, contributing_initiatives, result_toc_result, contributors_result_toc_result, impacts } = createResultsTocResultDto;
+      let { contributing_np_projects, result_id, contributing_center, contributing_initiatives, result_toc_result, contributors_result_toc_result, impacts, pending_contributing_initiatives } = createResultsTocResultDto;
       const version = await this._versionsService.findBaseVersion();
       const result = await this._resultRepository.getResultById(result_id);
       let initiativeArray: number[] = [];
@@ -71,6 +73,10 @@ export class ResultsTocResultsService {
         await this._shareResultRequestService.resultRequest(dataRequst, result_id, user);
       } else {
         await this._resultByInitiativesRepository.updateResultByInitiative(result_id, [], user.id, false);
+      }
+      const cancelRequest = pending_contributing_initiatives?.filter(e => e.is_active == false);
+      if(cancelRequest?.length){
+        await this._shareResultRequestRepository.cancelRequest(cancelRequest.map(e => e.share_result_request_id));
       }
 
       if (contributing_np_projects?.length) {
