@@ -35,7 +35,8 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     	srr.result_id = ?
     	and srr.owner_initiative_id = ?
     	and srr.shared_inititiative_id = ?
-      and srr.request_status_id in (1, 2);
+      and srr.request_status_id in (1, 2)
+	  and srr.is_active > 0;
     `;
     try {
       const shareResultRequest: ShareResultRequest[] = await this.query(queryData, [resultId, ownerInitId, shareInitId]);
@@ -113,6 +114,7 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     		and rbu.initiative_id is not null
     		and rbu.action_area_id is null
     	)
+		and srr.is_active > 0;
 	order by srr.request_status_id ASC;
     `;
     try {
@@ -166,7 +168,8 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     		rbu.\`user\` = ?
     		and rbu.initiative_id is not null
     		and rbu.action_area_id is null
-    	);
+    	)
+		and srr.is_active > 0;
     `;
     try {
       const shareResultRequest: ShareResultRequest[] = await this.query(queryData, [userId]);
@@ -216,7 +219,8 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     		rbu.\`user\` = ?
     		and rbu.initiative_id is not null
     		and rbu.action_area_id is null
-    	);
+    	)
+		and srr.is_active > 0;
     `;
     try {
       const shareResultRequest: ShareResultRequest[] = await this.query(queryData, [userId]);
@@ -251,11 +255,31 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     WHERE
     	srr.result_id = ?
     	and srr.owner_initiative_id = ?
-    	and srr.shared_inititiative_id = ?;
+    	and srr.shared_inititiative_id = ?
+		and srr.is_active > 0;
     `;
     try {
       const shareResultRequest: ShareResultRequest[] = await this.query(queryData, [userId]);
       return shareResultRequest.length ? shareResultRequest[0] : undefined;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ShareResultRequestRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async cancelRequest(requestIds: number[]) {
+    const queryData = `
+    update share_result_request 
+	set is_active = FALSE 
+	where is_active > 0
+		and share_result_request_id in (${requestIds.toString()})
+    `;
+    try {
+      const shareResultRequest = await this.query(queryData);
+      return shareResultRequest;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ShareResultRequestRepository.name,

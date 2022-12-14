@@ -100,14 +100,16 @@ export class ResultByInitiativesRepository extends Repository<ResultsByInititiat
     	null as initiative_role_id,
     	null as version_id,  
 	    srr.request_status_id,
-    	1 as is_active
+      srr.share_result_request_id,
+    	srr.is_active
     FROM
     	share_result_request srr
     inner join clarisa_initiatives ci on
     	ci.id = srr.shared_inititiative_id
     	and srr.request_status_id = 1
     WHERE
-    	srr.result_id = ?;
+    	srr.result_id = ?
+      and srr.is_active > 0;
     `;
     try {
       const completeUser: InitiativeByResultDTO[] = await this.query(

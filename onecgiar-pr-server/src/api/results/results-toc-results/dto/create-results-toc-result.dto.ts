@@ -6,6 +6,7 @@ export class CreateResultsTocResultDto {
     result_toc_result: resultToResultInterfaceToc;
     contributors_result_toc_result: resultToResultInterfaceToc[];
     impacts: ResultTocImpactsInterface[];
+    pending_contributing_initiatives: shareResultRequestInterface[];
 
 }
 
@@ -53,4 +54,9 @@ interface resultToResultInterfaceToc{
     results_id: number;
     planned_result: boolean;
     initiative_id: number;
+}
+
+interface shareResultRequestInterface{
+    share_result_request_id: number;
+    is_active: boolean;
 }
