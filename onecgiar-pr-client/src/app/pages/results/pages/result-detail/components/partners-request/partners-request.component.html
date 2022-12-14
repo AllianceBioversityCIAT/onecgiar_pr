@@ -3,7 +3,9 @@
     [dismissableMask]="true" [style]="{padding: '0px'}">
     <div class="modal_title">Partners Request</div>
     <div class="modal_container partners-request-container" *ngIf="showForm">
-
+        <app-alert-status
+            description="Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list">
+        </app-alert-status>
         <app-pr-input placeholder="Write some..." label="Acronym" type="text" [required]="false"
             [(ngModel)]="this.partnersRequestBody.acronym" name="acronym">
         </app-pr-input>
@@ -11,8 +13,9 @@
 
         <app-pr-input placeholder="Write some..." label="Name" type="text" [(ngModel)]="this.partnersRequestBody.name">
         </app-pr-input>
-        <app-pr-select class="segment_title_margin" [options]="this.institutionsService.institutionsTypesPartnerRequestList"
-            label="Type" optionLabel="institutions_type_name" optionValue="institutions_type_id"
+        <app-pr-select class="segment_title_margin"
+            [options]="this.institutionsService.institutionsTypesPartnerRequestList" label="Type"
+            optionLabel="institutions_type_name" optionValue="institutions_type_id"
             [(ngModel)]="this.partnersRequestBody.institutionTypeCode" placeholder="Select type">
         </app-pr-select>
         <app-pr-select class="segment_title_margin" [options]="this.regionsCountriesSE.countriesList"

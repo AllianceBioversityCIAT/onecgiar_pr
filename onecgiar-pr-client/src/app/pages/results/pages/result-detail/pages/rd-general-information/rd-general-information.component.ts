@@ -59,13 +59,22 @@ export class RdGeneralInformationComponent {
     <li>Avoid repetition of the title.</li>
     </ul>`;
   }
-  genderAndClimateInformation() {
-    return `<strong>Gender tag and Climate change tag scoring guidance</strong> <ul>
-    <li><strong>0 : not targeted</strong> The activity has been screened against the marker but has not been found to target gender equality or climate.</li>
-    <li><strong>1 : significant</strong> Gender equality or climate is an important and deliberate objective, but not the principal reason for undertaking the activity.</li>
-    <li><strong>2 : principal</strong> Gender equality or climate is the main objective of the activity and is fundamental in its design and expected results. The activity would not have been undertaken without this gender equality or climate objective.</li>
+  genderInformation() {
+    return `<strong>Gender tag guidance</strong> <ul>
+    <li><strong>0 : not targeted</strong> The activity has been screened against the marker but has not been found to target gender equality.</li>
+    <li><strong>1 : significant</strong> Significant Gender equality is an important and deliberate objective, but not the principal reason for undertaking the activity.</li>
+    <li><strong>2 : principal</strong> Gender equality is the main objective of the activity and is fundamental in its design and expected results. The activity would not have been undertaken without this gender equality objective.</li>
     </ul>`;
   }
+
+  climateInformation() {
+    return `<strong>Gender tag and Climate change tag scoring guidance</strong> <ul>
+    <li><strong>0 : not targeted</strong> The activity has been screened against the marker but has not been found to target gender equality.</li>
+    <li><strong>1 : significant</strong> Significant Gender equality is an important and deliberate objective, but not the principal reason for undertaking the activity.</li>
+    <li><strong>2 : principal</strong> Gender equality is the main objective of the activity and is fundamental in its design and expected results. The activity would not have been undertaken without this gender equality objective.</li>
+    </ul>`;
+  }
+
   sendIntitutionsTypes() {
     // console.log(this.generalInfoBody.institutions_type);
     this.generalInfoBody.institutions_type = this.generalInfoBody.institutions_type.filter(inst => !inst.hasOwnProperty('institutions_id'));
