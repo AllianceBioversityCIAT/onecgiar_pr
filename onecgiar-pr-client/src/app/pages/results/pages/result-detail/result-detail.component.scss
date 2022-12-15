@@ -23,6 +23,20 @@
     .section_container {
         width: 95% !important;
         position: relative;
+
+        .metadata {
+            position: absolute;
+            top: 0;
+            right: 0;
+            margin-right: 20px;
+
+            .item {
+                background-color: var(--pr-color-primary);
+                color: white;
+                padding: 5px 10px;
+                border-radius: 0px 0px 10px 10px;
+            }
+        }
     }
 }
 
