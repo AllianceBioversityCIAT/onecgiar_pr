@@ -1,6 +1,7 @@
 <div class="all_notifications">
     <div *ngFor="let notification of interactiveNotisList">
-        <app-notification-item [comes]="true" (requestEvent)="get_section_information()" [notification]="notification">
+        <app-notification-item [comes]="true" [readOnly]="notification.readOnly"
+            (requestEvent)="get_section_information()" [notification]="notification">
         </app-notification-item>
     </div>
 </div>

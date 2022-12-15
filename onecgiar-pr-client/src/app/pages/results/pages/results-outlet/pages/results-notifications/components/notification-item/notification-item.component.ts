@@ -10,6 +10,7 @@ import { ShareRequestModalService } from '../../../../../result-detail/component
 export class NotificationItemComponent {
   @Input() notification: any;
   @Input() comes: boolean;
+  @Input() readOnly: boolean;
   @Output() requestEvent = new EventEmitter<any>();
   requesting = false;
   constructor(public api: ApiService, private shareRequestModalSE: ShareRequestModalService) {}

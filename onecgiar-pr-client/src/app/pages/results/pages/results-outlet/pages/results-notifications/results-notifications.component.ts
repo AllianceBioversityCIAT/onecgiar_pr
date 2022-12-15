@@ -13,8 +13,9 @@ export class ResultsNotificationsComponent {
   ngOnInit(): void {
     //Called after the constructor, initializing input properties, and the first call to ngOnChanges.
     //Add 'implements OnInit' to the class.
-    this.api.updateUserData();
-    this.get_section_information();
+    this.api.updateUserData(() => {
+      this.get_section_information();
+    });
   }
 
   get_section_information() {
@@ -26,6 +27,14 @@ export class ResultsNotificationsComponent {
         this.staticNotisList = requestPendingData;
         this.staticNotisList.map(item => {
           if (item.request_status_id == 1) item.request_status_id = 4;
+        });
+        this.api.dataControlSE.myInitiativesList.map(myInit => {
+          console.log(myInit);
+          console.log(myInit?.role == 'Member');
+          if (myInit?.role == 'Member') {
+            let notiFinded = this.interactiveNotisList.find(noti => noti.approving_inititiative_id == myInit.initiative_id);
+            if (notiFinded) notiFinded.readOnly = true;
+          }
         });
       }
     });
