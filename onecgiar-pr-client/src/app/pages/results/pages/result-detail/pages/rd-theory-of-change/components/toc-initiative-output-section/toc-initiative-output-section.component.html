@@ -5,7 +5,8 @@
     <app-toc-initiative-out [initiative]="result_toc_result" [editable]="true" [resultLevelId]="1">
     </app-toc-initiative-out>
 </div>
-<app-pr-field-header label="Other contributors" [required]="false" [simpleStyle]="true">
+<app-pr-field-header label="Other contributors" [required]="false" [simpleStyle]="true"
+    *ngIf="contributors_result_toc_result?.legnth">
 </app-pr-field-header>
 <div *ngFor="let item of contributors_result_toc_result">
     <app-toc-initiative-out [initiative]="item"
