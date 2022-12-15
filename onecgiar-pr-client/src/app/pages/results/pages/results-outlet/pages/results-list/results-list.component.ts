@@ -20,7 +20,8 @@ export class ResultsListComponent implements OnInit {
     { title: 'Result type', attr: 'result_type' },
     { title: 'Submitter', attr: 'submitter' },
     { title: 'Status', attr: 'status_name' },
-    { title: 'Creation date	', attr: 'created_date' }
+    { title: 'Creation date	', attr: 'created_date' },
+    { title: 'Created by	', attr: 'full_name' }
   ];
 
   items: MenuItem[] = [
