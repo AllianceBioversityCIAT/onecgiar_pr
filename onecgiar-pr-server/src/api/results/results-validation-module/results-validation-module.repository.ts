@@ -4,24 +4,10 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 
 @Injectable()
 export class resultValidationRepository{
-	private readonly _queryRunner = this.dataSource.createQueryRunner();
   constructor(
     private dataSource: DataSource,
     private _handlersError: HandlersError
   ) {
-  }
-
-  async connectionTest(){
-	try {
-		await this._queryRunner.getCurrentSchema();
-		console.log('Connection: ok');
-		return true;
-	} catch (error) {
-		console.log('Connection: lost');
-	 await this._queryRunner.connect();
-	 console.log('Reconnection: ok');
-	 return true;
-	}
   }
 
   async generalInformationValidation(resultId: number, resultLevel: number) {
@@ -62,8 +48,7 @@ export class resultValidationRepository{
 		and r.is_active > 0;
     `;
     try {
-		await this.connectionTest();
-      const shareResultRequest: GetValidationSectionDto[] = await this._queryRunner.query(queryData, [resultId]); 
+      const shareResultRequest: GetValidationSectionDto[] = await this.dataSource.query(queryData, [resultId]); 
 	  return shareResultRequest.length ? shareResultRequest[0] : undefined;
     } catch (error) {
 		throw this._handlersError.returnErrorRepository({
@@ -154,8 +139,7 @@ export class resultValidationRepository{
 		and r.is_active > 0;
     `;
     try {
-		await this.connectionTest();
-      const shareResultRequest: GetValidationSectionDto[] = await this._queryRunner.query(queryData, [resultId]); 
+      const shareResultRequest: GetValidationSectionDto[] = await this.dataSource.query(queryData, [resultId]); 
 	  return shareResultRequest.length ? shareResultRequest[0] : undefined;
     } catch (error) {
 		throw this._handlersError.returnErrorRepository({
@@ -194,8 +178,7 @@ export class resultValidationRepository{
 
     `;
     try {
-		await this.connectionTest();
-      const shareResultRequest: GetValidationSectionDto[] = await this._queryRunner.query(queryData, [resultId]); 
+      const shareResultRequest: GetValidationSectionDto[] = await this.dataSource.query(queryData, [resultId]); 
 	  return shareResultRequest.length ? shareResultRequest[0] : undefined;
     } catch (error) {
 		throw this._handlersError.returnErrorRepository({
@@ -245,8 +228,7 @@ export class resultValidationRepository{
 		and r.is_active > 0;
     `;
     try {
-		await this.connectionTest();
-      const shareResultRequest: GetValidationSectionDto[] = await this._queryRunner.query(queryData, [resultId]); 
+      const shareResultRequest: GetValidationSectionDto[] = await this.dataSource.query(queryData, [resultId]); 
 	  return shareResultRequest.length ? shareResultRequest[0] : undefined;
     } catch (error) {
 		throw this._handlersError.returnErrorRepository({
@@ -262,8 +244,7 @@ export class resultValidationRepository{
 	
     `;
     try {
-		await this.connectionTest();
-      const shareResultRequest: GetValidationSectionDto[] = await this._queryRunner.query(queryData, [resultId]); 
+      const shareResultRequest: GetValidationSectionDto[] = await this.dataSource.query(queryData, [resultId]); 
 	  return shareResultRequest.length ? shareResultRequest[0] : undefined;
     } catch (error) {
 		throw this._handlersError.returnErrorRepository({
@@ -312,8 +293,7 @@ export class resultValidationRepository{
 		and r.is_active > 0;
     `;
     try {
-		await this.connectionTest();
-      const shareResultRequest: GetValidationSectionDto[] = await this._queryRunner.query(queryData, [resultId]); 
+      const shareResultRequest: GetValidationSectionDto[] = await this.dataSource.query(queryData, [resultId]); 
 	  return shareResultRequest.length ? shareResultRequest[0] : undefined;
     } catch (error) {
 		throw this._handlersError.returnErrorRepository({
@@ -347,8 +327,7 @@ export class resultValidationRepository{
 		and r.is_active > 0;
     `;
     try {
-		await this.connectionTest();
-      const shareResultRequest: GetValidationSectionDto[] = await this._queryRunner.query(queryData, [resultId]); 
+      const shareResultRequest: GetValidationSectionDto[] = await this.dataSource.query(queryData, [resultId]); 
 	  return shareResultRequest.length ? shareResultRequest[0] : undefined;
     } catch (error) {
 		throw this._handlersError.returnErrorRepository({
@@ -390,8 +369,7 @@ export class resultValidationRepository{
 		and r.is_active > 0;
     `;
     try {
-		await this.connectionTest();
-      const shareResultRequest: GetValidationSectionDto[] = await this._queryRunner.query(queryData, [resultId]); 
+      const shareResultRequest: GetValidationSectionDto[] = await this.dataSource.query(queryData, [resultId]); 
 	  return shareResultRequest.length ? shareResultRequest[0] : undefined;
     } catch (error) {
 		throw this._handlersError.returnErrorRepository({
@@ -427,8 +405,7 @@ export class resultValidationRepository{
 		and r.is_active > 0;
     `;
     try {
-		await this.connectionTest();
-      const shareResultRequest: GetValidationSectionDto[] = await this._queryRunner.query(queryData, [resultId]); 
+      const shareResultRequest: GetValidationSectionDto[] = await this.dataSource.query(queryData, [resultId]); 
 	  return shareResultRequest.length ? shareResultRequest[0] : undefined;
     } catch (error) {
 		throw this._handlersError.returnErrorRepository({
@@ -474,8 +451,7 @@ export class resultValidationRepository{
 		and r.is_active > 0;
     `;
     try {
-		await this.connectionTest();
-      const shareResultRequest: GetValidationSectionDto[] = await this._queryRunner.query(queryData, [resultId]); 
+      const shareResultRequest: GetValidationSectionDto[] = await this.dataSource.query(queryData, [resultId]); 
 	  return shareResultRequest.length ? shareResultRequest[0] : undefined;
     } catch (error) {
 		throw this._handlersError.returnErrorRepository({
@@ -519,8 +495,7 @@ export class resultValidationRepository{
 		and r.is_active > 0;
     `;
     try {
-		await this.connectionTest();
-      const shareResultRequest: GetValidationSectionDto[] = await this._queryRunner.query(queryData, [resultId]); 
+      const shareResultRequest: GetValidationSectionDto[] = await this.dataSource.query(queryData, [resultId]); 
 	  return shareResultRequest.length ? shareResultRequest[0] : undefined;
     } catch (error) {
 		throw this._handlersError.returnErrorRepository({
