@@ -764,6 +764,12 @@ export class ResultsKnowledgeProductsService {
         };
       }
 
+      if (!sectionSevenData.isMeliaProduct) {
+        sectionSevenData.ostSubmitted = null;
+        sectionSevenData.ostMeliaId = null;
+        sectionSevenData.clarisaMeliaTypeId = null;
+      }
+
       if (sectionSevenData.ostSubmitted) {
         sectionSevenData.clarisaMeliaTypeId = null;
       } else {
