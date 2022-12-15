@@ -16,7 +16,7 @@ import { TocApiService } from './toc-api.service';
 export class ApiService {
   constructor(public resultsSE: ResultsApiService, public alertsFs: CustomizedAlertsFsService, public authSE: AuthService, public alertsFe: CustomizedAlertsFeService, public dataControlSE: DataControlService, public resultsListFilterSE: ResultsListFilterService, public wordCounterSE: WordCounterService, public rolesSE: RolesService, public tocApiSE: TocApiService) {}
 
-  updateUserData() {
+  updateUserData(callback?) {
     if (!this.authSE?.localStorageUser?.id) return;
     forkJoin([this.authSE.GET_allRolesByUser(), this.authSE.GET_initiativesByUser()]).subscribe(
       resp => {
@@ -32,6 +32,7 @@ export class ApiService {
           myInit.official_code_short_name = myInit.official_code + ' ' + myInit.short_name;
         });
         this.resultsListFilterSE.updateMyInitiatives(this.dataControlSE.myInitiativesList);
+        callback();
       },
       err => {
         this.resultsListFilterSE.updateMyInitiatives(this.dataControlSE.myInitiativesList);

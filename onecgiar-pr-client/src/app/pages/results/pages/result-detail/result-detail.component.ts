@@ -15,11 +15,13 @@ import { GreenChecksService } from '../../../../shared/services/global/green-che
   styleUrls: ['./result-detail.component.scss']
 })
 export class ResultDetailComponent {
-  constructor(public navigationBarSE: NavigationBarService, private activatedRoute: ActivatedRoute, private api: ApiService, public saveButtonSE: SaveButtonService, private resultLevelSE: ResultLevelService, private rolesSE: RolesService, private router: Router, private dataControlSE: DataControlService, private pusherService: PusherService, private greenChecksSE: GreenChecksService) {}
+  constructor(public navigationBarSE: NavigationBarService, private activatedRoute: ActivatedRoute, private api: ApiService, public saveButtonSE: SaveButtonService, private resultLevelSE: ResultLevelService, private rolesSE: RolesService, private router: Router, public dataControlSE: DataControlService, private pusherService: PusherService, private greenChecksSE: GreenChecksService) {}
   ngOnInit(): void {
     this.dataControlSE.currentResult = null;
     this.api.resultsSE.currentResultId = null;
-    this.api.updateUserData();
+    this.api.updateUserData(() => {
+      console.log(this.dataControlSE.currentResult);
+    });
     this.api.resultsSE.currentResultId = this.activatedRoute.snapshot.paramMap.get('id');
     this.GET_resultById();
     this.greenChecksSE.updateGreenChecks();

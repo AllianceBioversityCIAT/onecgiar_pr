@@ -7,6 +7,11 @@
   <div>
     <app-breadcrumb></app-breadcrumb>
     <div class="section_container">
+      <div class="metadata">
+        <div class="item">
+          {{this.dataControlSE.currentResult?.initiative_official_code}}
+        </div>
+      </div>
       <router-outlet></router-outlet>
       <div class="spinner" *ngIf="this.saveButtonSE.isSavingSection">
         <div class="info">

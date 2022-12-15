@@ -32,8 +32,14 @@ export class ResultsValidationModuleService {
 
       response.push(await this._resultValidationRepository.generalInformationValidation(result.id, result.result_level_id));
       response.push(await this._resultValidationRepository.tocValidation(result.id));
-      response.push(await this._resultValidationRepository.partnersValidation(result.id));
-      response.push(await this._resultValidationRepository.geoLocationValidation(result.id));
+      
+      if(result.result_type_id == 6){
+        response.push({section_name: 'geographic-location', validation: 1 });
+        response.push({section_name: 'partners', validation: 1 });
+      }else{
+        response.push(await this._resultValidationRepository.partnersValidation(result.id));
+        response.push(await this._resultValidationRepository.geoLocationValidation(result.id));
+      }
       response.push({section_name: 'links-to-results', validation: 1 });
       response.push(await this._resultValidationRepository.evidenceValidation(result.id));
 
