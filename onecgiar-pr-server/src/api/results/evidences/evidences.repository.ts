@@ -75,46 +75,40 @@ export class EvidencesRepository extends Repository<Evidence> {
       update evidence 
       set is_active = 0, 
         last_updated_date  = NOW(),
-        last_updated_by  = ?
+        last_updated_by  = ${userId}
       where is_active  > 0 
-        and result_id = ?
+        and result_id = ${resultId}
         and link not in (${`'${evidences.toString().replace(/,/g,'\',\'')}'`})
-        and is_supplementary = ?;
+        and is_supplementary = ${is_supplementary};
     `;
 
     const upDateActive = `
       update evidence 
       set is_active = 1, 
         last_updated_date  = NOW(),
-        last_updated_by  = ?
-      where result_id = ?
+        last_updated_by  = ${userId}
+      where result_id = ${resultId}
         and link in (${`'${evidences.toString().replace(/,/g,'\',\'')}'`})
-        and is_supplementary = ?;
+        and is_supplementary = ${is_supplementary};
     `;
 
     const upDateAllInactive = `
       update evidence 
       set is_active = 0, 
         last_updated_date  = NOW(),
-        last_updated_by  = ?
+        last_updated_by  = ${userId}
       where is_active  > 0 
-      and result_id = ?
-      and is_supplementary = ?;
+      and result_id = ${resultId}
+      and is_supplementary = ${is_supplementary};
     `;
 
     try {
       if(evidences?.length){
-        const upDateInactiveResult = await this.query(upDateInactive, [
-          userId, resultId, is_supplementary
-        ]);
+        const upDateInactiveResult = await this.query(upDateInactive);
   
-        return await this.query(upDateActive, [
-          userId, resultId, is_supplementary
-        ]);
+        return await this.query(upDateActive);
       }else{
-        return await this.query(upDateAllInactive, [
-          userId, resultId, is_supplementary
-        ]);
+        return await this.query(upDateAllInactive);
       }
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
