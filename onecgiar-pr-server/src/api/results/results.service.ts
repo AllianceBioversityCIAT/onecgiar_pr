@@ -535,7 +535,7 @@ export class ResultsService {
     try {
       const result: Result = await this._resultRepository.findOne({
         where: { id: resultId },
-        relations: {legacy_id: true}
+        relations: { legacy_id: true },
       });
       if (!result) {
         throw {
@@ -548,8 +548,11 @@ export class ResultsService {
 
       await this._resultRepository.save(result);
 
-      if(result?.legacy_id){
-        await this._resultLegacyRepository.update(result.legacy_id['legacy_id'], {is_migrated: false});
+      if (result?.legacy_id) {
+        await this._resultLegacyRepository.update(
+          result.legacy_id['legacy_id'],
+          { is_migrated: false },
+        );
       }
 
       await this._resultByInitiativesRepository.logicalElimination(resultId);
@@ -867,14 +870,23 @@ export class ResultsService {
         legacyResult.legacy_id,
       );
 
+      const toAddFromElastic = await this.findAllSimplified(
+        newResultHeader.id.toString(),
+      );
+
       if (toRemoveFromElastic.status !== HttpStatus.OK) {
         this._logger.warn(
-          `the result #${legacyResult.legacy_id} could not be found to be updated in the elastic search`,
+          `the result #${legacyResult.legacy_id} could not be found to be removed in the elastic search`,
+        );
+      } else if (toAddFromElastic.status !== HttpStatus.OK) {
+        this._logger.warn(
+          `the result #${newResultHeader.id} could not be found to be added in the elastic search`,
         );
       } else {
         try {
           const elasticOperations = [
             new ElasticOperationDto('DELETE', toRemoveFromElastic.response[0]),
+            new ElasticOperationDto('PATCH', toAddFromElastic.response[0]),
           ];
 
           const elasticJson =
@@ -1032,7 +1044,10 @@ export class ResultsService {
 
   async reportingList(initDate: Date, endDate: Date) {
     try {
-      const result = await this._resultRepository.reportingResultList(initDate, endDate);
+      const result = await this._resultRepository.reportingResultList(
+        initDate,
+        endDate,
+      );
 
       return {
         response: result,
