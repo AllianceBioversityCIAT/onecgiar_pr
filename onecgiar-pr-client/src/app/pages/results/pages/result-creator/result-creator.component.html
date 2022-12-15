@@ -71,7 +71,7 @@
     <br><br><br><br><br><br><br><br><br><br>
 
     <app-save-button [editable]="true" (clickSave)="onSaveSection()" text="Save and continue"
-      [disabled]="(valdiateNormalFields() || exactTitleFound) || this.api.wordCounterSE.counter(this.resultLevelSE.resultBody.result_name) > 30  ">
+      [disabled]="(valdiateNormalFields() || exactTitleFound) || (isKnowledgeProduct ? false:this.api.wordCounterSE.counter(this.resultLevelSE.resultBody.result_name) > 30)  ">
     </app-save-button>
 
   </div>
