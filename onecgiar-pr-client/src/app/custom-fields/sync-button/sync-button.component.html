@@ -1,3 +1,4 @@
-<div class="fixed_button" (click)="onClickSave()" *ngIf="this.dataControlSE.isKnowledgeProduct && this.rolesSE.isAdmin">
+<div class="fixed_button" (click)="onClickSave()"
+    *ngIf="this.dataControlSE.isKnowledgeProduct && !this.rolesSE.readOnly">
     <app-pr-button colorType="secondary" padding="medium" [text]="text" icon="loop"></app-pr-button>
 </div>

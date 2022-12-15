@@ -5,6 +5,7 @@ import { ApiService } from '../../../../../../../shared/services/api/api.service
 import { KnowledgeProductBody } from './model/knowledgeProductBody';
 import { KnowledgeProductBodyMapped } from './model/KnowledgeProductBodyMapped';
 import { KnowledgeProductSaveDto } from './model/knowledge-product-save.dto';
+import { RolesService } from '../../../../../../../shared/services/global/roles.service';
 
 @Component({
   selector: 'app-knowledge-product-info',
@@ -17,7 +18,7 @@ export class KnowledgeProductInfoComponent implements OnInit {
   meliaTypes = [];
   ostMeliaStudies = [];
   private readonly kpGradientScale = chroma.scale(['#f44444', '#dcdf38', '#38df7b']).mode('hcl');
-  constructor(public api: ApiService) {}
+  constructor(public api: ApiService, public rolesSE: RolesService) {}
 
   ngOnInit(): void {
     this.getSectionInformation();

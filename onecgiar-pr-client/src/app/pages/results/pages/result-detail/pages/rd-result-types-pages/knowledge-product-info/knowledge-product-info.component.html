@@ -150,9 +150,9 @@
             placeholder="Select MELIA type" [required]="false" [(ngModel)]="this.sectionData.clarisaMeliaTypeId"
             *ngIf="this.sectionData.ostSubmitted === false">
         </app-pr-select>
-        <app-pr-select [options]="this.ostMeliaStudies" label="Select MELIA from OST" optionLabel="melia_study_title" optionValue="melia_id"
-            placeholder="Select MELIA from OST" [required]="false" [(ngModel)]="this.sectionData.ostMeliaId"
-            *ngIf="this.sectionData.ostSubmitted === true">
+        <app-pr-select [options]="this.ostMeliaStudies" label="Select MELIA from OST" optionLabel="melia_study_title"
+            optionValue="melia_id" placeholder="Select MELIA from OST" [required]="false"
+            [(ngModel)]="this.sectionData.ostMeliaId" *ngIf="this.sectionData.ostSubmitted === true">
         </app-pr-select>
     </div>
 
@@ -161,4 +161,5 @@
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()"
     *ngIf="this.api.dataControlSE.isKnowledgeProduct"></app-save-button>
 
-<app-sync-button (clickSave)="onSyncSection()" *ngIf="knowledgeProductBody.type != 'Journal Article'"></app-sync-button>
+<app-sync-button (clickSave)="onSyncSection()"
+    *ngIf="knowledgeProductBody.type != 'Journal Article' ||this.rolesSE.isAdmin"></app-sync-button>
