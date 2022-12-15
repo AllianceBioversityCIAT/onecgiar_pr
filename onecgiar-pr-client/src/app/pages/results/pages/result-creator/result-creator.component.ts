@@ -26,7 +26,9 @@ export class ResultCreatorComponent implements OnInit {
     this.resultLevelSE.resultLevelList?.map(reLevel => (reLevel.selected = false));
     this.api.updateResultsList();
     this.resultLevelSE.cleanData();
-    this.api.updateUserData();
+    this.api.updateUserData(() => {
+      if (this.api.dataControlSE.myInitiativesList.length == 1) this.resultLevelSE.resultBody.initiative_id = this.api.dataControlSE.myInitiativesList[0].id;
+    });
     this.api.alertsFs.show({
       id: 'indoasd',
       status: 'success',
@@ -39,7 +41,6 @@ export class ResultCreatorComponent implements OnInit {
     this.api.rolesSE.validateReadOnly().then(() => {
       this.GET_AllInitiatives();
     });
-    if (this.api.dataControlSE.myInitiativesList.length == 1) this.resultLevelSE.resultBody.initiative_id = this.api.dataControlSE.myInitiativesList[0].id;
   }
   allInitiatives = [];
   GET_AllInitiatives() {
