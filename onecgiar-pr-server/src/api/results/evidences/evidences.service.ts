@@ -47,7 +47,7 @@ export class EvidencesService {
           evidencesArray.length > 3 ? 3 : evidencesArray.length;
         let newsEvidencesArray: Evidence[] = [];
         for (let index = 0; index < long; index++) {
-          const evidence = evidencesArray[index];
+          let evidence = evidencesArray[index];
           let eExists =
             await this._evidencesRepository.getEvidencesByResultIdAndLink(
               result.id,
