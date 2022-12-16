@@ -50,6 +50,14 @@ export class ClarisaInstitution {
   })
   headquarter_country_iso2: number;
 
+  @Column({
+    nullable: true,
+    name: 'is_active',
+    type: 'boolean',
+    default: true
+  })
+  is_active: boolean;
+
   //object relations
   @OneToMany(
     () => ResultsKnowledgeProductInstitution,

@@ -63,7 +63,9 @@ export class ClarisaInstitutionsRepository extends Repository<ClarisaInstitution
       cc.name as  headquarter_name
     from clarisa_institutions ci 
     inner join clarisa_institution_types cit on cit.code = ci.institution_type_code
-    left join clarisa_countries cc on cc.iso_alpha_2 = ci.headquarter_country_iso2 ;
+    left join clarisa_countries cc on cc.iso_alpha_2 = ci.headquarter_country_iso2 
+    where 
+    ci.is_active > 0;
     `;
     try {
       const deleteData: ClarisaInstitution[] = await this.query(queryData);

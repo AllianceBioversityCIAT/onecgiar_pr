@@ -380,6 +380,7 @@ WHERE
     	cc.code = rc.center_id
     left join clarisa_institutions ci2 on
     	ci2.id = cc.institutionId
+      and ci2.is_active > 0
     left join toc_result tr on
     	tr.toc_result_id = rtr.toc_result_id
     left join clarisa_action_area_outcome caao ON
