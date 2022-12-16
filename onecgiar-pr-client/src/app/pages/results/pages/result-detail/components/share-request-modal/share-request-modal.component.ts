@@ -4,6 +4,7 @@ import { ShareRequestBody } from './model/shareRequestBody.model';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { ShareRequestModalService } from './share-request-modal.service';
 import { Router } from '@angular/router';
+import { RetrieveModalService } from '../retrieve-modal/retrieve-modal.service';
 
 @Component({
   selector: 'app-share-request-modal',
@@ -20,7 +21,7 @@ export class ShareRequestModalComponent {
       initiative_id: 10
     }
   ];
-  constructor(public api: ApiService, public rolesSE: RolesService, public shareRequestModalSE: ShareRequestModalService, private router: Router) {}
+  constructor(public retrieveModalSE: RetrieveModalService, public api: ApiService, public rolesSE: RolesService, public shareRequestModalSE: ShareRequestModalService, private router: Router) {}
   ngOnInit(): void {
     this.shareRequestModalSE.shareRequestBody = new ShareRequestBody();
     //Called after the constructor, initializing input properties, and the first call to ngOnChanges.

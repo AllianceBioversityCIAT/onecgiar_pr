@@ -5,6 +5,7 @@ import { ShareRequestBody } from './model/shareRequestBody.model';
   providedIn: 'root'
 })
 export class ShareRequestModalService {
+  inNotifications = false;
   shareRequestBody = new ShareRequestBody();
   constructor() {}
 }
