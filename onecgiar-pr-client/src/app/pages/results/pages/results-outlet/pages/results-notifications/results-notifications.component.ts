@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
+import { ShareRequestModalService } from '../../../result-detail/components/share-request-modal/share-request-modal.service';
 
 @Component({
   selector: 'app-results-notifications',
@@ -9,13 +10,14 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 export class ResultsNotificationsComponent {
   interactiveNotisList = [];
   staticNotisList = [];
-  constructor(public api: ApiService) {}
+  constructor(public api: ApiService, private shareRequestModalSE: ShareRequestModalService) {}
   ngOnInit(): void {
     //Called after the constructor, initializing input properties, and the first call to ngOnChanges.
     //Add 'implements OnInit' to the class.
     this.api.updateUserData(() => {
       this.get_section_information();
     });
+    this.shareRequestModalSE.inNotifications = true;
   }
 
   get_section_information() {
