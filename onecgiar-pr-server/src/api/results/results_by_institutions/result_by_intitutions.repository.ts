@@ -50,6 +50,7 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     	cit.name as institutions_type_name
     from results_by_institution rbi 
     inner join clarisa_institutions ci on ci.id  = rbi.institutions_id 
+              and ci.is_active > 0
     inner join clarisa_institution_types cit on cit.code = ci.institution_type_code 
     where rbi.result_id = ?
       and rbi.institution_roles_id = 1
@@ -82,6 +83,7 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     	cit.name as institutions_type_name
     from results_by_institution rbi 
     inner join clarisa_institutions ci on ci.id  = rbi.institutions_id 
+    and ci.is_active > 0
     inner join clarisa_institution_types cit on cit.code = ci.institution_type_code 
     where rbi.result_id = ?
       and rbi.institution_roles_id = 2
@@ -215,6 +217,7 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
 		  ci.acronym as institutions_acronym
     from results_by_institution rbi 
     inner join clarisa_institutions ci on ci.id  = rbi.institutions_id 
+    and ci.is_active > 0
     where rbi.result_id = ?
       and rbi.institution_roles_id = ?
       and rbi.is_active > 0;

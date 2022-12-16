@@ -505,8 +505,8 @@ export class ClarisaTaskService {
         const data = await lastValueFrom(
           this._httpService
             .get(
-              `${this.clarisaHost}institutions${
-                lastUpdated ? `?from=${lastUpdated}` : ''
+              `${this.clarisaHost}institutions?show=all${
+                lastUpdated ? `&from=${lastUpdated}` : ''
               }`,
               {
                 auth: {
