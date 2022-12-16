@@ -42,7 +42,7 @@ export class ShareResultRequestService {
           const shareInitId = initiativeShareId[index];
           const initExist = await this._resultByInitiativesRepository.getContributorInitiativeByResultAndInit(resultId, shareInitId);
           const requestExist = await this._shareResultRequestRepository.shareResultRequestExists(resultId, result.initiative_id, shareInitId);
-          if (!requestExist && !(requestExist?.request_status_id == 1 || requestExist?.request_status_id == 2) && !initExist) {
+          if (!requestExist && !(requestExist?.request_status_id == 1) && !initExist?.is_active) {
             const newShare = new ShareResultRequest();
             newShare.result_id = resultId;
             newShare.request_status_id = 1;
@@ -56,6 +56,8 @@ export class ShareResultRequestService {
             }
             newShare.requested_by = user.id;
             newShare.planned_result = createTocShareResult.planned_result;
+            console.log(createTocShareResult)
+            console.log(newShare)
             saredInit.push(newShare);
           }
 
@@ -154,6 +156,37 @@ export class ShareResultRequestService {
           const resultTocResult = await this._resultsTocResultRepository.existsResultTocResult(result.id, shared_inititiative_id);
           if(!resultTocResult){
             await this._resultsTocResultRepository.save(newRtR);
+          }
+        }else{
+          exists.is_active = true;
+          const result = await this._resultRepository.getResultById(result_id);
+          await this._resultByInitiativesRepository.save(exists);
+
+          const resultTocResult = await this._resultsTocResultRepository.existsResultTocResult(result.id, shared_inititiative_id);
+          if(!resultTocResult){
+            const newRtR = new ResultsTocResult();
+            newRtR.version_id = vrs.id;
+            newRtR.planned_result = planned_result;
+            newRtR.created_by = user.id;
+            newRtR.last_updated_by = user.id;
+            newRtR.planned_result = null;
+            newRtR.results_id = result.id;
+            newRtR.initiative_id = shared_inititiative_id;
+            if (result.result_level_id == 2) {
+              newRtR.action_area_outcome_id = action_area_outcome_id || null;
+            } else {
+              newRtR.toc_result_id = toc_result_id || null;
+            }
+            await this._resultsTocResultRepository.save(newRtR);
+          }else{
+            resultTocResult.is_active = true;
+            if (result.result_level_id == 2) {
+              resultTocResult.action_area_outcome_id = action_area_outcome_id || null;
+            } else {
+              resultTocResult.toc_result_id = toc_result_id || null;
+            }
+            await this._resultByInitiativesRepository.save(resultTocResult);
+            
           }
         }
       }

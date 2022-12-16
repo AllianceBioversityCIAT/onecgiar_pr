@@ -35,7 +35,7 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     	srr.result_id = ?
     	and srr.owner_initiative_id = ?
     	and srr.shared_inititiative_id = ?
-      and srr.request_status_id in (1, 2)
+      and srr.request_status_id in (1)
 	  and srr.is_active > 0;
     `;
     try {

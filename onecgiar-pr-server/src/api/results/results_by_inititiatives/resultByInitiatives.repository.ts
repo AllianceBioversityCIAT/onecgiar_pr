@@ -273,8 +273,7 @@ export class ResultByInitiativesRepository extends Repository<ResultsByInititiat
       rbi.last_updated_by,
       rbi.created_date
       from results_by_inititiative rbi
-      where rbi.is_active > 0
-      	and rbi.result_id = ?
+      where rbi.result_id = ?
       	and rbi.inititiative_id = ?
       	and rbi.initiative_role_id = ?;
     `;
@@ -348,13 +347,13 @@ export class ResultByInitiativesRepository extends Repository<ResultsByInititiat
 
     try {
       if(initiative?.length){
-        const upDateInactiveResult = await this.query(upDateInactive, [
+        return await this.query(upDateInactive, [
           userId, resultId, isOwner?1:2
         ]);
   
-        return await this.query(upDateActive, [
+        /*return await this.query(upDateActive, [
           userId, resultId, isOwner?1:2
-        ]);
+        ]);*/
       }else{
         return await this.query(upDateAllInactive, [
           userId, resultId, isOwner?1:2
