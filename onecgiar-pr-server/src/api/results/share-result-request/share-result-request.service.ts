@@ -55,6 +55,7 @@ export class ShareResultRequestService {
               newShare.toc_result_id = createTocShareResult?.toc_result_id;
             }
             newShare.requested_by = user.id;
+            newShare.planned_result = createTocShareResult.planned_result;
             saredInit.push(newShare);
           }
 
@@ -122,7 +123,7 @@ export class ShareResultRequestService {
       data.aprovaed_date = new Date();
       const requestData = await this._shareResultRequestRepository.save(data);
 
-      const { shared_inititiative_id, result_id, request_status_id, toc_result_id, action_area_outcome_id } = requestData;
+      const { shared_inititiative_id, result_id, request_status_id, toc_result_id, action_area_outcome_id, planned_result } = requestData;
       if (request_status_id == 2) {
         const exists = await this._resultByInitiativesRepository.getResultsByInitiativeByResultIdAndInitiativeIdAndRole(result_id, shared_inititiative_id, false);
         if (!exists) {
@@ -133,10 +134,11 @@ export class ShareResultRequestService {
           newResultByInitiative.last_updated_by = user.id;
           newResultByInitiative.created_by = user.id;
           newResultByInitiative.version_id = vrs.id;
-          
+          newResultByInitiative.version_id = vrs.id;
           const result = await this._resultRepository.getResultById(result_id);
           const newRtR = new ResultsTocResult();
           newRtR.version_id = vrs.id;
+          newRtR.planned_result = planned_result;
           newRtR.created_by = user.id;
           newRtR.last_updated_by = user.id;
           newRtR.planned_result = null;
