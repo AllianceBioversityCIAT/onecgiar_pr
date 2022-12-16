@@ -1,6 +1,7 @@
 import { Component, forwardRef, Input, Output, EventEmitter } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
+import { CustomizedAlertsFeService } from '../../shared/services/customized-alerts-fe.service';
 
 @Component({
   selector: 'app-pr-multi-select',
@@ -15,7 +16,7 @@ import { RolesService } from '../../shared/services/global/roles.service';
   ]
 })
 export class PrMultiSelectComponent implements ControlValueAccessor {
-  constructor(public rolesSE: RolesService) {}
+  constructor(public rolesSE: RolesService, private customizedAlertsFeSE: CustomizedAlertsFeService) {}
   @Input() optionLabel: string;
   @Input() optionValue: string;
   @Input() options: any;
@@ -29,8 +30,10 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   @Input() isStatic: boolean = false;
   @Input() required: boolean = true;
   @Input() flagsCode: string;
+  @Input() confirmDeletion: boolean;
   @Output() selectOptionEvent = new EventEmitter<any>();
   @Output() removeOptionEvent = new EventEmitter<any>();
+
   private _optionsIntance: any[];
   private _value: any[] = [];
   private _beforeValueLength: number = 0;
@@ -99,6 +102,12 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
     const id = (this.optionValue + this.optionLabel + this.label).replace(' ', '');
     // console.log(id);
     return id;
+  }
+
+  confirmDeletionEvent(option) {
+    this.customizedAlertsFeSE.show({ id: 'confirm-delete-item', title: `Are you sure you want to remove this initiative from the contributors?`, description: `This will remove the ToC match made by the initiative and in case you want to add it again, you will need to submit a new request.`, status: 'warning', confirmText: 'Yes, delete' }, () => {
+      this.removeOption(option);
+    });
   }
 
   onSelectOption(option) {

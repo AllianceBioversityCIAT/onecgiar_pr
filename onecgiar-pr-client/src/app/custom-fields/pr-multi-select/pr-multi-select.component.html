@@ -35,7 +35,7 @@
             <div class="pr_chip_selected" *ngFor="let option of value; let i=index">
                 <div class="name" [innerHtml]="option[this.selectedOptionLabel]"></div><i
                     *ngIf="!(readOnly || this.rolesSE.readOnly) || (isStatic)" class="material-icons-round"
-                    (click)="removeOption(option)">remove_circle </i>
+                    (click)="confirmDeletion?confirmDeletionEvent(option):removeOption(option)">remove_circle </i>
             </div>
         </div>
     </div>

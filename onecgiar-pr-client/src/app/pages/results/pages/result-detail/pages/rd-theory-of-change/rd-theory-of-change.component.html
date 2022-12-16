@@ -10,7 +10,7 @@
         selectedLabel="Contributing Initiatives" optionLabel="full_name" optionValue="id"
         (selectOptionEvent)="onSelectContributingInitiative()" [required]="false"
         (removeOptionEvent)="onRemoveContributingInitiative($event)" selectedOptionLabel="full_name"
-        [(ngModel)]="this.theoryOfChangeBody.contributing_initiatives" placeholder="Select initiative(s)
+        [(ngModel)]="this.theoryOfChangeBody.contributing_initiatives" [confirmDeletion]="true" placeholder="Select initiative(s)
         ">
     </app-pr-multi-select>
 
