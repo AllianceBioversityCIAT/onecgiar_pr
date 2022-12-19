@@ -16,6 +16,7 @@ import { GreenChecksService } from '../../../../shared/services/global/green-che
 })
 export class ResultDetailComponent {
   constructor(public navigationBarSE: NavigationBarService, private activatedRoute: ActivatedRoute, private api: ApiService, public saveButtonSE: SaveButtonService, private resultLevelSE: ResultLevelService, private rolesSE: RolesService, private router: Router, public dataControlSE: DataControlService, private pusherService: PusherService, private greenChecksSE: GreenChecksService) {}
+  closeInfo = false;
   ngOnInit(): void {
     this.dataControlSE.currentResult = null;
     this.api.resultsSE.currentResultId = null;

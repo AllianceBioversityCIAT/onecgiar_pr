@@ -1,3 +1,8 @@
+<div class="global_information" *ngIf="!closeInfo">Please be aware that the PRMS technical team will not be available
+  during the coming Christmas season from December 22nd, 2022 to January 3rd, 2023.<i
+    class="material-icons-round close_icon" (click)="closeInfo = true;">
+    close
+  </i></div>
 <div class="local_grid">
   <div>
     <div class="panel_menu" [ngClass]="{'expand_menu': this.navigationBarSE.navbar_fixed }">
