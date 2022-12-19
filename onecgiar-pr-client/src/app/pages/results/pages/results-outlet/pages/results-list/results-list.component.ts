@@ -6,6 +6,7 @@ import { ResultsListService } from './services/results-list.service';
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
 import { ExportTablesService } from '../../../../../../shared/services/export-tables.service';
 import { ShareRequestModalService } from '../../../result-detail/components/share-request-modal/share-request-modal.service';
+import { RetrieveModalService } from '../../../result-detail/components/retrieve-modal/retrieve-modal.service';
 
 @Component({
   selector: 'app-results-list',
@@ -62,7 +63,7 @@ export class ResultsListComponent implements OnInit {
     // { label: 'Submit', icon: 'pi pi-fw pi-reply' }
   ];
 
-  constructor(public api: ApiService, public resultsListService: ResultsListService, private ResultLevelSE: ResultLevelService, private exportTablesSE: ExportTablesService, private shareRequestModalSE: ShareRequestModalService) {}
+  constructor(public api: ApiService, public resultsListService: ResultsListService, private ResultLevelSE: ResultLevelService, private exportTablesSE: ExportTablesService, private shareRequestModalSE: ShareRequestModalService, private retrieveModalSE: RetrieveModalService) {}
 
   ngOnInit(): void {
     this.api.rolesSE.validateReadOnly();
@@ -80,6 +81,7 @@ export class ResultsListComponent implements OnInit {
   }
   onPressAction(result) {
     console.log(result);
+    this.retrieveModalSE.title = result?.title;
     this.api.resultsSE.currentResultId = result?.id;
     this.api.dataControlSE.currentResult = result;
   }
