@@ -258,38 +258,58 @@ export class resultValidationRepository{
   async evidenceValidation(resultId: number) {
     const queryData = `
 	SELECT
-		'evidences' as section_name,
-		CASE
-			when ((
+			'evidences' as section_name,
+			CASE
+				when ((
 			SELECT
-				if((sum(if(e.link is not null and e.link <> '', 1, 0)) - count(e.id)) is null,
-				0,
-				(sum(if(e.link is not null and e.link <> '', 1, 0)) - count(e.id)))
+					if((sum(if(e.link is not null and e.link <> '', 1, 0)) - count(e.id)) is null,
+					0,
+					(sum(if(e.link is not null and e.link <> '', 1, 0)) - count(e.id)))
 			from
-				evidence e
+					evidence e
 			where
-				e.result_id = r.id 
+					e.result_id = r.id
 				and e.is_supplementary = 0
 				and e.is_active > 0) = 0)
 			and
-		((
+			((
 			SELECT
-				if((sum(if(e.link is not null and e.link <> '', 1, 0)) - count(e.id)) is null,
-				0,
-				(sum(if(e.link is not null and e.link <> '', 1, 0)) - count(e.id)))
+				sum(if(r.gender_tag_level_id = 3 and e.gender_related = 1, 0, if(r.gender_tag_level_id in (1, 2), 0, if(r.gender_tag_level_id  is null,0,1))))
 			from
 				evidence e
 			where
-				e.result_id = r.id 
+				e.result_id = r.id
+				and e.is_supplementary = 0
+				and e.is_active > 0) = 0)
+			and
+			((
+			SELECT
+				sum(if(r.climate_change_tag_level_id = 3 and e.youth_related = 1, 0, if(r.climate_change_tag_level_id in (1, 2), 0, if(r.climate_change_tag_level_id is null,0,1))))
+			from
+				evidence e
+			where
+				e.result_id = r.id
+				and e.is_supplementary = 0
+				and e.is_active > 0) = 0)
+			and
+			((
+			SELECT
+					if((sum(if(e.link is not null and e.link <> '', 1, 0)) - count(e.id)) is null,
+					0,
+					(sum(if(e.link is not null and e.link <> '', 1, 0)) - count(e.id)))
+			from
+					evidence e
+			where
+					e.result_id = r.id
 				and e.is_supplementary = 1
 				and e.is_active > 0) = 0)
-		then TRUE
+			then TRUE
 			else false
 		END as validation
 	from
-		\`result\` r
+			\`result\` r
 	WHERE
-		r.id = ?
+			r.id = ?
 		and r.is_active > 0;
     `;
     try {

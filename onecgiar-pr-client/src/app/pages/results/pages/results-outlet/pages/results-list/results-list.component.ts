@@ -5,6 +5,7 @@ import { internationalizationData } from '../../../../../../shared/data/internat
 import { ResultsListService } from './services/results-list.service';
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
 import { ExportTablesService } from '../../../../../../shared/services/export-tables.service';
+import { ShareRequestModalService } from '../../../result-detail/components/share-request-modal/share-request-modal.service';
 
 @Component({
   selector: 'app-results-list',
@@ -20,7 +21,8 @@ export class ResultsListComponent implements OnInit {
     { title: 'Result type', attr: 'result_type' },
     { title: 'Submitter', attr: 'submitter' },
     { title: 'Status', attr: 'status_name' },
-    { title: 'Creation date	', attr: 'created_date' }
+    { title: 'Creation date	', attr: 'created_date' },
+    { title: 'Created by	', attr: 'full_name' }
   ];
 
   items: MenuItem[] = [
@@ -60,7 +62,7 @@ export class ResultsListComponent implements OnInit {
     // { label: 'Submit', icon: 'pi pi-fw pi-reply' }
   ];
 
-  constructor(public api: ApiService, public resultsListService: ResultsListService, private ResultLevelSE: ResultLevelService, private exportTablesSE: ExportTablesService) {}
+  constructor(public api: ApiService, public resultsListService: ResultsListService, private ResultLevelSE: ResultLevelService, private exportTablesSE: ExportTablesService, private shareRequestModalSE: ShareRequestModalService) {}
 
   ngOnInit(): void {
     this.api.rolesSE.validateReadOnly();
@@ -74,6 +76,7 @@ export class ResultsListComponent implements OnInit {
       querySelector: '.alert',
       position: 'beforebegin'
     });
+    this.shareRequestModalSE.inNotifications = false;
   }
   onPressAction(result) {
     console.log(result);

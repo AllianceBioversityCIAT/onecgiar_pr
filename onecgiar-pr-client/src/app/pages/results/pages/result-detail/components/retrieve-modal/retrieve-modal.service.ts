@@ -5,6 +5,7 @@ import { RetrieveRequestBody } from './models/RetrieveRequestBody.model';
   providedIn: 'root'
 })
 export class RetrieveModalService {
+  title = '';
   retrieveRequestBody = new RetrieveRequestBody();
   constructor() {}
 }

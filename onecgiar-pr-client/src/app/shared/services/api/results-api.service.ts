@@ -37,6 +37,10 @@ export class ResultsApiService {
       map(resp => {
         resp.response.map(result => (result.id = Number(result.id)));
         return resp;
+      }),
+      map(resp => {
+        resp.response.map(result => (result.full_name = `${result.create_last_name} ${result.create_first_name}`));
+        return resp;
       })
     );
   }
