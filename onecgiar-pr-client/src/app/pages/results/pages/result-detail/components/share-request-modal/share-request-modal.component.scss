@@ -16,11 +16,14 @@
 }
 
 .buttons {
+    position: absolute;
+    right: 0;
+    bottom: 0;
     display: flex;
     justify-content: flex-end;
     gap: 10px;
     width: 100%;
-    margin-top: -50px;
+    margin-top: 0px;
     padding-right: 50px;
     padding-bottom: 10px;
 }
