@@ -1,0 +1,15 @@
+.global_information {
+    position: relative;
+    z-index: 2;
+    background-color: var(--pr-color-primary);
+    color: white;
+    padding: 10px 100px;
+    text-align: center;
+
+    .close_icon {
+        position: absolute;
+        right: 0;
+        margin-right: 10px;
+        cursor: pointer;
+    }
+}
