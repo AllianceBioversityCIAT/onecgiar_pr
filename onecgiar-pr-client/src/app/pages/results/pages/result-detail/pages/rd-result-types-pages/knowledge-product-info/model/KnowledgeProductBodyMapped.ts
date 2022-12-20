@@ -17,11 +17,11 @@ export class KnowledgeProductBodyMapped {
   yearCG: number;
   is_peer_reviewed_CG: boolean;
   is_isi_CG: boolean;
-  accessibility_CG: boolean;
+  accessibility_CG: string;
   year_WOS: number;
   is_peer_reviewed_WOS: boolean;
   is_isi_WOS: boolean;
-  accessibility_WOS: boolean;
+  accessibility_WOS: string;
   licence: string;
   warnings?: string[];
 }

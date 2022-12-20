@@ -17,7 +17,7 @@ import { PusherService } from '../../../../../../shared/services/pusher.service'
 export class RdGeneralInformationComponent {
   generalInfoBody = new GeneralInfoBody();
   toggle = 0;
-  constructor(private api: ApiService, public scoreSE: ScoreService, public institutionsSE: InstitutionsService, public rolesSE: RolesService, public dataControlSE: DataControlService, private customizedAlertsFeSE: CustomizedAlertsFeService, public pusherSE: PusherService) {}
+  constructor(public api: ApiService, public scoreSE: ScoreService, public institutionsSE: InstitutionsService, public rolesSE: RolesService, public dataControlSE: DataControlService, private customizedAlertsFeSE: CustomizedAlertsFeService, public pusherSE: PusherService) {}
   ngOnInit(): void {
     this.showAlerts();
     this.getSectionInformation();

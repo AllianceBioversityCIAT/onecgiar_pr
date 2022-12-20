@@ -102,14 +102,14 @@ export class KnowledgeProductInfoComponent implements OnInit {
   private getMetadataFromCGSpace(mapped: KnowledgeProductBodyMapped, response: KnowledgeProductBody) {
     mapped.is_peer_reviewed_CG = response.metadataCG?.is_peer_reviewed;
     mapped.is_isi_CG = response.metadataCG?.is_isi;
-    mapped.accessibility_CG = response.metadataCG?.accessibility;
+    mapped.accessibility_CG = response.metadataCG?.accessibility == true ? 'Open Access' : 'Limited Access';
     mapped.yearCG = response.metadataCG?.issue_year;
   }
 
   private getMetadataFromWoS(mapped: KnowledgeProductBodyMapped, response: KnowledgeProductBody) {
     mapped.is_peer_reviewed_WOS = response.metadataWOS?.is_peer_reviewed;
     mapped.is_isi_WOS = response.metadataWOS?.is_isi;
-    mapped.accessibility_WOS = response.metadataWOS?.accessibility;
+    mapped.accessibility_WOS = response.metadataWOS?.accessibility == true ? 'Open Access' : 'Limited Access';
     mapped.year_WOS = response.metadataWOS?.issue_year;
   }
 

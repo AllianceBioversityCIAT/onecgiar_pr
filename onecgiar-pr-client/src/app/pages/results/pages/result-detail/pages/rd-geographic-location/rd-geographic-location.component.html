@@ -43,18 +43,24 @@
         </div>
     </div>
     <ng-template #kpBlock>
+        <app-alert-status
+            description="In case some of the metadata fields are incorrect, please get in touch with the library staff of your Center to update them in the repository. Before the end of the reporting period, metadata will be automatically refreshed on this page.">
+        </app-alert-status>
         <app-pr-field-header label="Regions" [required]="false"></app-pr-field-header>
-        <div class="custom_chips">
+        <div *ngIf="geographicLocationBody.regions?.length;else notProvided" class="custom_chips">
             <div class="geoscope" *ngFor="let item of geographicLocationBody.regions">
                 {{item}}
             </div>
         </div>
         <app-pr-field-header label="Countries" [required]="false"></app-pr-field-header>
-        <div class="custom_chips">
+        <div *ngIf="geographicLocationBody.countries?.length;else notProvided" class="custom_chips">
             <div class="geoscope" *ngFor="let item of geographicLocationBody.countries">
                 {{item}}
             </div>
         </div>
+        <ng-template #notProvided>
+            <div class="read-only">Not Provided</div>
+        </ng-template>
     </ng-template>
 </div>
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()"
