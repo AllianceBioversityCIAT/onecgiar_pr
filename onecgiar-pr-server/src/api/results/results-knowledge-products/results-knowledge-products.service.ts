@@ -704,22 +704,26 @@ export class ResultsKnowledgeProductsService {
     );
     const wosMetadata = response.metadata.find((m) => m.source !== 'CGSpace');
 
-    if ((cgspaceMetadata?.issue_year ?? 0) !== (wosMetadata?.issue_year ?? 0)) {
-      warnings.push(
-        'The year of publication is automatically retrieved from an external service (Web ' +
-          'of Science or Scopus). In case of inconsistencies, the CGIAR Quality Assurance ' +
-          'team will manually validate the record. We remind you that only knowledge products ' +
-          'published in 2022 can be reported.',
-      );
-    }
+    if (response.type == 'Journal Article') {
+      if (
+        (cgspaceMetadata?.issue_year ?? 0) !== (wosMetadata?.issue_year ?? 0)
+      ) {
+        warnings.push(
+          'The year of publication is automatically retrieved from an external service (Web ' +
+            'of Science or Scopus). In case of inconsistencies, the CGIAR Quality Assurance ' +
+            'team will manually validate the record. We remind you that only knowledge products ' +
+            'published in 2022 can be reported.',
+        );
+      }
 
-    if ((wosMetadata?.issue_year ?? 0) < 1) {
-      warnings.push(
-        'The year of publication is automatically retrieved from an external service (Web ' +
-          'of Science or Scopus). If the year does not show, it might be due to a delay in ' +
-          'the indexing. The CGIAR Quality Assurance team will validate this information at ' +
-          'the end of the reporting cycle.',
-      );
+      if ((wosMetadata?.issue_year ?? 0) < 1) {
+        warnings.push(
+          'The year of publication is automatically retrieved from an external service (Web ' +
+            'of Science or Scopus). If the year does not show, it might be due to a delay in ' +
+            'the indexing. The CGIAR Quality Assurance team will validate this information at ' +
+            'the end of the reporting cycle.',
+        );
+      }
     }
 
     return warnings;

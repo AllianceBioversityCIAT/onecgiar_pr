@@ -3,16 +3,19 @@
 
     <app-alert-status [description]="warning" *ngFor="let warning of this.knowledgeProductBody?.warnings">
     </app-alert-status>
+    <app-alert-status
+        description="In case some of the metadata fields are incorrect, please get in touch with the library staff of your Center to update them in the repository. Before the end of the reporting period, metadata will be automatically refreshed on this page.">
+    </app-alert-status>
 
     <app-pr-input [(ngModel)]="knowledgeProductBody.handle" label="Handle" [required]="false" [disabled]="true">
     </app-pr-input>
     <div class="auto_fit_container">
         <app-pr-input [(ngModel)]="knowledgeProductBody.yearCG"
-            [label]="knowledgeProductBody.year_WOS? 'Issue date(CGSpace)':'Issue date'" [required]="false"
+            label="Issue date (CGSpace)" [required]="false"
             [readOnly]="true">
         </app-pr-input>
         <app-pr-input *ngIf="knowledgeProductBody.year_WOS" [(ngModel)]="knowledgeProductBody.year_WOS"
-            label="Issue date(WoS)" [required]="false" [readOnly]="true">
+            label="Issue date (WoS)" [required]="false" [readOnly]="true">
         </app-pr-input>
     </div>
     <app-pr-field-header label="Authors" [required]="false"></app-pr-field-header>
@@ -27,17 +30,17 @@
     </app-pr-input>
     <div class="auto_fit_container">
         <app-pr-input [(ngModel)]="knowledgeProductBody.is_peer_reviewed_CG"
-            [label]="knowledgeProductBody.is_peer_reviewed_WOS? 'Peer reviewed(CGSpace)':'Peer reviewed'"
+            label="Peer reviewed (CGSpace)"
             [required]="false" [readOnly]="true">
         </app-pr-input>
         <app-pr-input *ngIf="knowledgeProductBody.is_peer_reviewed_WOS != undefined"
-            [(ngModel)]="knowledgeProductBody.is_peer_reviewed_WOS" label="Peer reviewed(WoS)" [required]="false"
+            [(ngModel)]="knowledgeProductBody.is_peer_reviewed_WOS" label="Peer reviewed (WoS)" [required]="false"
             [readOnly]="true">
         </app-pr-input>
     </div>
     <div class="auto_fit_container">
         <app-pr-input [(ngModel)]="knowledgeProductBody.is_isi_CG"
-            [label]="knowledgeProductBody.is_isi_WOS ? 'Web of Science Core Collection (former ISI) (CGSpace)':'Web of Science Core Collection (former ISI)'"
+            label="Web of Science Core Collection (former ISI) (CGSpace)"
             [required]="false" [readOnly]="true">
         </app-pr-input>
         <app-pr-input *ngIf="knowledgeProductBody.is_isi_WOS != undefined" [(ngModel)]="knowledgeProductBody.is_isi_WOS"
@@ -48,11 +51,11 @@
     </app-pr-input>
     <div class="auto_fit_container">
         <app-pr-input [(ngModel)]="knowledgeProductBody.accessibility_CG"
-            [label]="knowledgeProductBody.accessibility_WOS? 'Accessibility(CGSpace)':'Accessibility'"
+            label="Accessibility (CGSpace)"
             [required]="false" [readOnly]="true">
         </app-pr-input>
         <app-pr-input *ngIf="knowledgeProductBody.accessibility_WOS"
-            [(ngModel)]="knowledgeProductBody.accessibility_WOS" label="Accessibility(WoS)" [required]="false"
+            [(ngModel)]="knowledgeProductBody.accessibility_WOS" label="Accessibility (Unpaywall)" [required]="false"
             [readOnly]="true">
         </app-pr-input>
     </div>
@@ -68,10 +71,11 @@
     <app-pr-input [(ngModel)]="knowledgeProductBody.investors" label="Investors / Sponsors" [required]="false"
         [readOnly]="true">
     </app-pr-input>
-    <app-pr-field-header label="Altmetrics" [required]="false"></app-pr-field-header>
-    <a class="altmetric_details_url" [href]="knowledgeProductBody?.altmetric_details_url" target="_blank">
+    <app-pr-field-header label="Altmetrics" 
+        description="<i>The Altmetric score might vary over time. Before the end of the reporting period, this information will be automatically refreshed on this page to reflect the latest score.</i>"
+        [required]="false"></app-pr-field-header>
+    <a *ngIf="knowledgeProductBody?.altmetric_details_url;else notAvailable" class="altmetric_details_url" [href]="knowledgeProductBody?.altmetric_details_url" target="_blank">
         <img class="altmetric_image" [src]="knowledgeProductBody?.altmetric_img_url" alt="" srcset="">
-
     </a>
     <app-pr-input [(ngModel)]="knowledgeProductBody.references" label="Reference to other Knowledge products"
         [required]="false" [readOnly]="true">
@@ -87,9 +91,9 @@
 
         <div class="item">
             <circle-progress [percent]="knowledgeProductBody.findable * 100" subtitle="F" subtitleFontSize="30"
-                [radius]="50" [outerStrokeWidth]="8" [innerStrokeWidth]="0"
+                [radius]="50" [outerStrokeWidth]="7" [innerStrokeWidth]="7"
                 [outerStrokeColor]="calculateBorderColor(knowledgeProductBody.findable)"
-                [innerStrokeColor]="calculateInnerColor(knowledgeProductBody.findable)" [animation]="true"
+                innerStrokeColor="#F0F0F0" [space]="$any(-7)" [animation]="true"
                 [animationDuration]="300">
             </circle-progress>
             <div class="texts">
@@ -101,9 +105,9 @@
 
         <div class="item">
             <circle-progress [percent]="knowledgeProductBody.accessible * 100" subtitle="A" subtitleFontSize="30"
-                [radius]="50" [outerStrokeWidth]="8" [innerStrokeWidth]="0"
+                [radius]="50" [outerStrokeWidth]="7" [innerStrokeWidth]="7"
                 [outerStrokeColor]="calculateBorderColor(knowledgeProductBody.accessible)"
-                [innerStrokeColor]="calculateInnerColor(knowledgeProductBody.accessible)" [animation]="true"
+                innerStrokeColor="#F0F0F0" [space]="$any(-7)" [animation]="true"
                 [animationDuration]="300">
             </circle-progress>
             <div class="texts">
@@ -114,9 +118,9 @@
 
         <div class="item">
             <circle-progress [percent]="knowledgeProductBody.interoperable * 100" subtitle="I" subtitleFontSize="30"
-                [radius]="50" [outerStrokeWidth]="8" [innerStrokeWidth]="0"
+                [radius]="50" [outerStrokeWidth]="7" [innerStrokeWidth]="7"
                 [outerStrokeColor]="calculateBorderColor(knowledgeProductBody.interoperable)"
-                [innerStrokeColor]="calculateInnerColor(knowledgeProductBody.interoperable)" [animation]="true"
+                innerStrokeColor="#F0F0F0" [space]="$any(-7)" [animation]="true"
                 [animationDuration]="300">
             </circle-progress>
             <div class="texts">
@@ -128,9 +132,9 @@
 
         <div class="item">
             <circle-progress [percent]="knowledgeProductBody.reusable * 100" subtitle="R" subtitleFontSize="30"
-                [radius]="50" [outerStrokeWidth]="8" [innerStrokeWidth]="0"
+                [radius]="50" [outerStrokeWidth]="7" [innerStrokeWidth]="7"
                 [outerStrokeColor]="calculateBorderColor(knowledgeProductBody.reusable)"
-                [innerStrokeColor]="calculateInnerColor(knowledgeProductBody.reusable)" [animation]="true"
+                innerStrokeColor="#F0F0F0" [space]="$any(-7)" [animation]="true"
                 [animationDuration]="300">
             </circle-progress>
             <div class="texts">
@@ -155,6 +159,9 @@
             [(ngModel)]="this.sectionData.ostMeliaId" *ngIf="this.sectionData.ostSubmitted === true">
         </app-pr-select>
     </div>
+    <ng-template #notAvailable>
+        <div class="read-only">Not Available</div>
+    </ng-template>
 
 
 </div>
