@@ -6,6 +6,7 @@ import { RetrieveRequestBody } from './models/RetrieveRequestBody.model';
 })
 export class RetrieveModalService {
   title = '';
+  requester_initiative_id = '';
   retrieveRequestBody = new RetrieveRequestBody();
   constructor() {}
 }
