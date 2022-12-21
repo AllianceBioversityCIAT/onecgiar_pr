@@ -43,13 +43,13 @@
             (click)="this.api.dataControlSE.showShareRequest = false" *ngIf="!this.api.dataControlSE.inNotifications">
         </app-pr-button>
         <app-pr-button
-            [ngClass]="{'globalDisabled': this.requesting  || !this.shareRequestModalSE.shareRequestBody.initiative_id  || !this.shareRequestModalSE.shareRequestBody.toc_result_id || !this.shareRequestModalSE.shareRequestBody.toc_level_id}"
+            [ngClass]="{'globalDisabled': this.requesting  || !this.shareRequestModalSE.shareRequestBody.initiative_id  || !this.shareRequestModalSE.shareRequestBody.toc_result_id}"
             [text]="this.requesting?'Saving':'Send Request'" [rotating]="this.requesting"
             [icon]="this.requesting?'loop':'send'" padding="medium" (click)="onRequest()"
             *ngIf="!this.api.dataControlSE.inNotifications ">
         </app-pr-button>
         <app-pr-button
-            [ngClass]="{'globalDisabled': this.requesting  || !this.shareRequestModalSE.shareRequestBody.initiative_id  || !this.shareRequestModalSE.shareRequestBody.toc_result_id || !this.shareRequestModalSE.shareRequestBody.toc_level_id}"
+            [ngClass]="{'globalDisabled': this.requesting  || !this.shareRequestModalSE.shareRequestBody.initiative_id  || !this.shareRequestModalSE.shareRequestBody.toc_result_id}"
             [text]="this.requesting?'Saving':'Accept'" [rotating]="this.requesting"
             [icon]="this.requesting?'loop':'send'" padding="medium" (click)="acceptOrReject()"
             *ngIf="this.api.dataControlSE.inNotifications">
