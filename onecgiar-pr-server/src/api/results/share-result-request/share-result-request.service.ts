@@ -155,9 +155,8 @@ export class ShareResultRequestService {
             await this._resultsTocResultRepository.save(newRtR);
           }
         }else{
-          exists.is_active = true;
           const result = await this._resultRepository.getResultById(result_id);
-          await this._resultByInitiativesRepository.save(exists);
+          await this._resultByInitiativesRepository.update(exists.id, {is_active: true, last_updated_by: user.id});
 
           const resultTocResult = await this._resultsTocResultRepository.existsResultTocResult(result.id, shared_inititiative_id);
           if(!resultTocResult){
@@ -176,12 +175,13 @@ export class ShareResultRequestService {
             await this._resultsTocResultRepository.save(newRtR);
           }else{
             resultTocResult.is_active = true;
+            resultTocResult.planned_result = planned_result;
             if (result.result_level_id == 2) {
               resultTocResult.action_area_outcome_id = action_area_outcome_id || null;
             } else {
               resultTocResult.toc_result_id = toc_result_id || null;
             }
-            await this._resultByInitiativesRepository.save(resultTocResult);
+            await this._resultsTocResultRepository.save(resultTocResult);
             
           }
         }
