@@ -56,8 +56,6 @@ export class ShareResultRequestService {
             }
             newShare.requested_by = user.id;
             newShare.planned_result = createTocShareResult.planned_result;
-            console.log(createTocShareResult)
-            console.log(newShare)
             saredInit.push(newShare);
           }
 
@@ -143,7 +141,6 @@ export class ShareResultRequestService {
           newRtR.planned_result = planned_result;
           newRtR.created_by = user.id;
           newRtR.last_updated_by = user.id;
-          newRtR.planned_result = null;
           newRtR.results_id = result.id;
           newRtR.initiative_id = shared_inititiative_id;
           if (result.result_level_id == 2) {
@@ -169,7 +166,6 @@ export class ShareResultRequestService {
             newRtR.planned_result = planned_result;
             newRtR.created_by = user.id;
             newRtR.last_updated_by = user.id;
-            newRtR.planned_result = null;
             newRtR.results_id = result.id;
             newRtR.initiative_id = shared_inititiative_id;
             if (result.result_level_id == 2) {
