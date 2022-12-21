@@ -8,9 +8,7 @@ export class GreenChecksService {
   constructor(private api: ApiService) {}
 
   updateGreenChecks() {
-    console.log('updateGreenChecks');
     this.api.resultsSE.GET_greenChecksByResultId().subscribe(({ response }) => {
-      console.log(response?.green_checks);
       this.api.dataControlSE.green_checks = response?.green_checks;
     });
   }

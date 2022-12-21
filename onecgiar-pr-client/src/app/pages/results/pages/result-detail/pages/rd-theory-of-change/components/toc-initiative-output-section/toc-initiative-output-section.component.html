@@ -2,7 +2,9 @@
 </app-pr-field-header>
 
 <div>
-    <app-toc-initiative-out [initiative]="result_toc_result" [editable]="true" [resultLevelId]="1">
+    <app-toc-initiative-out [initiative]="result_toc_result"
+        [editable]="this.api.rolesSE.validateInitiative(result_toc_result?.initiative_id) || this.api.rolesSE.isAdmin"
+        [resultLevelId]="1">
     </app-toc-initiative-out>
 </div>
 <app-pr-field-header label="Other contributors" [required]="false" [simpleStyle]="true"

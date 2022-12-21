@@ -1,6 +1,7 @@
 import { Component, Input, OnInit, Output, EventEmitter } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { ShareRequestModalService } from '../../../../../result-detail/components/share-request-modal/share-request-modal.service';
+import { RetrieveModalService } from '../../../../../result-detail/components/retrieve-modal/retrieve-modal.service';
 
 @Component({
   selector: 'app-notification-item',
@@ -13,10 +14,12 @@ export class NotificationItemComponent {
   @Input() readOnly: boolean;
   @Output() requestEvent = new EventEmitter<any>();
   requesting = false;
-  constructor(public api: ApiService, private shareRequestModalSE: ShareRequestModalService) {}
+  constructor(public api: ApiService, private shareRequestModalSE: ShareRequestModalService,  private retrieveModalSE: RetrieveModalService) {}
 
   mapAndAccept(notification) {
     console.log(notification);
+    this.retrieveModalSE.title = notification?.title;
+    this.retrieveModalSE.requester_initiative_id = notification?.requester_initiative_id;
     this.api.resultsSE.currentResultId = notification?.result_id;
     // this.api.dataControlSE.currentResult = result;
     // this.api.dataControlSE.currentResult.is_legacy = this.api.dataControlSE.currentResult.is_legacy == 'true' ? true : false;
