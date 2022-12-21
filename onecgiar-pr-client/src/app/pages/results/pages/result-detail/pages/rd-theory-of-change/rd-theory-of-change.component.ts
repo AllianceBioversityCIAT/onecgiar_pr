@@ -66,6 +66,10 @@ export class RdTheoryOfChangeComponent {
       this.getSectionInformation();
     });
   }
+
+  someEditable() {
+    return Boolean(document.querySelector('.global-editable'));
+  }
   onSelectContributingInitiative() {
     // console.log();
     // console.log('onSelectContributingInitiative');

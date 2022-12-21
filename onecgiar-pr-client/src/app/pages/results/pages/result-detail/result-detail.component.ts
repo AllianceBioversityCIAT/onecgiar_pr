@@ -8,6 +8,7 @@ import { DataControlService } from '../../../../shared/services/data-control.ser
 import { SaveButtonService } from '../../../../custom-fields/save-button/save-button.service';
 import { PusherService } from '../../../../shared/services/pusher.service';
 import { GreenChecksService } from '../../../../shared/services/global/green-checks.service';
+import { ShareRequestModalService } from './components/share-request-modal/share-request-modal.service';
 
 @Component({
   selector: 'app-result-detail',
@@ -15,7 +16,7 @@ import { GreenChecksService } from '../../../../shared/services/global/green-che
   styleUrls: ['./result-detail.component.scss']
 })
 export class ResultDetailComponent {
-  constructor(public navigationBarSE: NavigationBarService, private activatedRoute: ActivatedRoute, private api: ApiService, public saveButtonSE: SaveButtonService, private resultLevelSE: ResultLevelService, private rolesSE: RolesService, private router: Router, public dataControlSE: DataControlService, private pusherService: PusherService, private greenChecksSE: GreenChecksService) {}
+  constructor(private shareRequestModalSE: ShareRequestModalService, public navigationBarSE: NavigationBarService, private activatedRoute: ActivatedRoute, private api: ApiService, public saveButtonSE: SaveButtonService, private resultLevelSE: ResultLevelService, private rolesSE: RolesService, private router: Router, public dataControlSE: DataControlService, private pusherService: PusherService, private greenChecksSE: GreenChecksService) {}
   closeInfo = false;
   ngOnInit(): void {
     this.dataControlSE.currentResult = null;
@@ -26,6 +27,7 @@ export class ResultDetailComponent {
     this.api.resultsSE.currentResultId = this.activatedRoute.snapshot.paramMap.get('id');
     this.GET_resultById();
     this.greenChecksSE.updateGreenChecks();
+    this.shareRequestModalSE.inNotifications = false;
   }
 
   GET_resultById() {
@@ -36,6 +38,7 @@ export class ResultDetailComponent {
         this.resultLevelSE.currentResultLevelName = response.result_level_name;
         this.resultLevelSE.currentResultLevelId = response.result_level_id;
         this.resultLevelSE.currentResultTypeId = response.result_type_id;
+        console.log(response);
         this.dataControlSE.currentResult = response;
       },
       err => {

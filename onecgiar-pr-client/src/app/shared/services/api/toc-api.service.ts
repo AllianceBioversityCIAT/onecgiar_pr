@@ -16,9 +16,7 @@ export class TocApiService {
   GET_tocLevelsByresultId(initiativeId, levelId) {
     return this.http.get<any>(`${this.apiBaseUrl}result/get/all/initiative/${initiativeId}/level/${levelId}`).pipe(
       map(resp => {
-        console.log(resp?.response);
         resp?.response.map(innovation => (innovation.extraInformation = `<strong>${innovation.wp_short_name}</strong> <br> <div class="select_item_description">${innovation.title}</div>`));
-        console.log(resp.response);
         return resp;
       })
     );

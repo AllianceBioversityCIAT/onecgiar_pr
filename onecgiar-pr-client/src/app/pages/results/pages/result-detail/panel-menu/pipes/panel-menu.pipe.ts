@@ -8,7 +8,6 @@ import { DataControlService } from '../../../../../../shared/services/data-contr
 export class PanelMenuPipe implements PipeTransform {
   constructor(private dataControlSE: DataControlService) {}
   transform(list: any[], resultTypeId: string, toggle) {
-    console.log('sdsdsdsdsd');
     this.dataControlSE?.green_checks?.map(green_check => {
       let optionFinded = list.find(item => item.path == green_check.section_name);
       optionFinded.validation = Number(green_check.validation);

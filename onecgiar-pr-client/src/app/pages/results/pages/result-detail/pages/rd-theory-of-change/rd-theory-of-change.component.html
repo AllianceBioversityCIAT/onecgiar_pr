@@ -114,5 +114,6 @@
 
 </div>
 
-<app-save-button class="position_sticky" [disabled]="this.validateGranTitle" (clickSave)="onSaveSection()">
+<app-save-button class="position_sticky" [disabled]="this.validateGranTitle" [editable]="someEditable()"
+    (clickSave)="onSaveSection()">
 </app-save-button>
