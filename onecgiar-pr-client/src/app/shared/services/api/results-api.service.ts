@@ -332,7 +332,13 @@ export class ResultsApiService {
   }
 
   GET_clarisaPolicyStages() {
-    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/policy-stages/get/all`);
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/policy-stages/get/all`).pipe(
+      map(resp => {
+        console.log(resp.response);
+        resp?.response.map(stage => (stage.full_name = `<strong>${stage.name}</strong> - ${stage.definition}`));
+        return resp;
+      })
+    );
   }
 
   GET_AllClarisaImpactAreaIndicators() {
