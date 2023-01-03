@@ -53,6 +53,14 @@ export class CapDevInfoComponent implements OnInit {
     if (this.capdev_term_id_1 == 3) this.capdev_term_id_2 = null;
   }
 
+  length_of_training() {
+    return `<ul>
+    <li>Long-term training refers to training that goes for 3 or more months.</li>
+    <li>Short-term training refers to training that goes for less than 3 months.</li>
+    <li>Both long-term and short-term training programs must be completed before reporting (to avoid reporting the same trainee multiple times across years).</li>
+    </ul>`;
+  }
+
   get_capdev_term_id() {
     console.log(this.capDevInfoRoutingBody.capdev_term_id);
     if (this.capDevInfoRoutingBody.capdev_term_id == 4) return (this.capdev_term_id_1 = 4);

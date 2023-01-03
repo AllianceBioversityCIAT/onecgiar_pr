@@ -16,10 +16,9 @@
         </app-pr-input>
     </div>
 
-    <app-pr-radio-button label="Long-term or short-term" (selectOptionEvent)="clean_capdev_term_2()"
-        description="This should reflect where the outcome has taken place/contributed to benefit."
-        [(ngModel)]="this.capdev_term_id_1" [options]="this.capdevsTerms" optionLabel="name"
-        optionValue='capdev_term_id' [required]="false">
+    <app-pr-radio-button label="Length of training" (selectOptionEvent)="clean_capdev_term_2()"
+        [description]="this.length_of_training()" [(ngModel)]="this.capdev_term_id_1" [options]="this.capdevsTerms"
+        optionLabel="name" optionValue='capdev_term_id' [required]="false">
     </app-pr-radio-button>
 
     <br>
