@@ -10,6 +10,10 @@
             [readOnly]="this.api.dataControlSE.isKnowledgeProduct" [(ngModel)]="this.geographicLocationBody.scope_id"
             [required]="false">
         </app-pr-radio-button>
+        <div class="geographic_focus_description">
+            <app-pr-field-header
+                [description]="geographic_focus_description(this.geographicLocationBody.scope_id)"></app-pr-field-header>
+        </div>
         <div *ngIf="this.geographicLocationBody.scope_id != 4 && !!this.geographicLocationBody.scope_id">
             <app-pr-yes-or-not *ngIf="this.geographicLocationBody.scope_id != 3"
                 [readOnly]="this.api.dataControlSE.isKnowledgeProduct"
