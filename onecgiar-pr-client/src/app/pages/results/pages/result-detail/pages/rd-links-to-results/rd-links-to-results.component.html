@@ -51,7 +51,7 @@
         Total:
         {{(this.api.dataControlSE.resultsList | filterResultNotLinked:this.linksToResultsBody.links:
         counterPipe:this.text_to_search)?.length}} /
-        {{this.api.dataControlSE.resultsList?.length+1}}</div>
+        {{this.api.dataControlSE.resultsList?.length-1}}</div>
     <div class="noDataText"
         *ngIf="!(this.api.dataControlSE.resultsList | filterResultNotLinked:this.linksToResultsBody.links: counterPipe:this.text_to_search)?.length">
         There are no results for the selected filters.
