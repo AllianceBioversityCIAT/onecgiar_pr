@@ -52,7 +52,7 @@
     </app-pr-textarea>
 
     <app-pr-field-header label="How would you assess the current readiness of this innovation?"
-        description="Please provide a single readiness score to the innovation, irrespectively of the specific geo-location where the innovation is being designed, tested and/or scaled. Geo-location-specific scoring will be part of subsequent innovation package design and assessment. Be realistic in assessing the readiness level of the innovation and keep in mind that the claimed readiness level needs to be supported by evidence documentation.">
+        [description]="readiness_of_this_innovation_description()">
     </app-pr-field-header>
 
     <app-pr-range-level [(ngModel)]="innovationDevInfoBody.innovation_readiness_level_id" optionLabel="name"
@@ -66,7 +66,7 @@
     <app-alert-status [description]="alertInfoText2()">
     </app-alert-status>
 
-    <app-pr-textarea placeholder="Provide a brief explanation here..."
+    <app-pr-textarea placeholder="Provide a brief explanation here..." [maxWords]="50"
         [(ngModel)]="innovationDevInfoBody.evidences_justification"
         label="Please provide a brief explanation that explains how the provided evidence (inputted in the general information section) justifies the chosen innovation readiness level"
         description="<strong>Example:</strong> We chose readiness level 6 (semi-controlled testing) for the genetically improved farm tilapia (GIFT) because it is currently being tested under semi-controlled conditions in the multiplication center and hatchery in the selected countries as shown in the provided evidence. ">

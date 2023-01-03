@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Headers } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Headers, HttpException } from '@nestjs/common';
 import { ClarisaConnectionsService } from './clarisa-connections.service';
 import { CreateClarisaConnectionDto } from './dto/create-clarisa-connection.dto';
 import { UpdateClarisaConnectionDto } from './dto/update-clarisa-connection.dto';
@@ -27,9 +27,16 @@ export class ClarisaConnectionsController {
     return 1;
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.clarisaConnectionsService.findOne(+id);
+  @Get('qa/token')
+  async findOne(
+    @Headers() auth: HeadersDto
+    ) {
+    const token: TokenDto = <TokenDto>(
+      JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
+    );
+    const {message, response, status} = 
+      await this.clarisaConnectionsService.clarisaQaToken(token);
+    throw new HttpException({ message, response }, status);
   }
 
   @Patch(':id')

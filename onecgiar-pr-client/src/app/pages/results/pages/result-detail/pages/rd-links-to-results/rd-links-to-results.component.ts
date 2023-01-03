@@ -61,6 +61,13 @@ export class RdLinksToResultsComponent {
     window.open(link, '_blank');
   }
 
+  results_portfolio_description() {
+    const cgiar_innovation_dashboard_url = 'https://results.cgiar.org/innovations?embed=true&hostOrigin=https%3A%2F%2Fwww.cgiar.org&displayNav=true&year=2020';
+    const here_url = 'https://cgiar.sharepoint.com/:b:/s/ScalingReadiness/ESnzThAALolIrSwH95WSHAoBYiqsOM7DLXLSlyw4szpwWg?e=QFVg9L';
+    return `If an innovation development result can be linked to a result that has been previously reported under CGIAR Research Programs (CRPs) and/or projects, and has been documented in the <a href='${cgiar_innovation_dashboard_url}' target="_blank" class='open_route'>CGIAR Innovation Dashboard</a> , a link to this result should be provided in the section ‘Results from previous portfolio’.
+    <ul><li>Step-by-step guidance on how to browse the CGIAR Innovation Dashboard can be found <a href='${here_url}' target="_blank" class='open_route'>here</a>.</li></ul>`;
+  }
+
   get validateCGSpaceLinks() {
     for (const iterator of this.linksToResultsBody.legacy_link) {
       if (this.linksToResultsBody.legacy_link.find(evidence => !Boolean(evidence.legacy_link))) return true;

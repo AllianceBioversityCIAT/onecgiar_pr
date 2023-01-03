@@ -10,5 +10,6 @@ export class PrFieldHeaderComponent {
   @Input() label: string;
   @Input() description: string;
   @Input() required: boolean = true;
+  @Input() readOnly: boolean;
   constructor() {}
 }

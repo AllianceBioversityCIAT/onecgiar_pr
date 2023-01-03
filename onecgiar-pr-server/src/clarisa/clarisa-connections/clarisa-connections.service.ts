@@ -78,8 +78,28 @@ export class ClarisaConnectionsService {
     return 1;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} clarisaConnection`;
+  async clarisaQaToken(user: TokenDto) {
+    try {
+      const config = {
+        name: `${user.first_name} ${user.last_name}`,
+        username: user.email?.split('@')[0],
+        email: user.email,
+        misAcronym: 'PRMS',
+        appUser: user.id
+    }
+    const token = await this.getClarisaToken();
+      const data = await lastValueFrom(this._httpService.post(`${this.clarisaHost}api/qa-token`, config,  {headers:{Authorization: `Bearer ${token.response}`}}).pipe(
+        map(resp => resp.data)
+      ));
+      return {
+        response: data,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
   }
 
   update(id: number, updateClarisaConnectionDto: UpdateClarisaConnectionDto) {

@@ -37,6 +37,19 @@ export class RdGeographicLocationComponent {
     this.showAlerts();
     this.getSectionInformation();
   }
+  geographic_focus_description(id) {
+    let tags = '';
+    switch (id) {
+      case 2:
+        tags += 'For region, multiple regions can be selected, unless the selection adds up to every region, in which case global should be selected.';
+        break;
+      case 3:
+        tags += 'For country, multiple countries can be selected, unless the selection adds up to a specific region, or set of regions, or global, in which case, region or global should be selected.';
+        break;
+    }
+    tags += '';
+    return tags;
+  }
   getSectionInformation() {
     this.api.resultsSE.GET_geographicSection().subscribe(({ response }) => {
       this.geographicLocationBody = response;
