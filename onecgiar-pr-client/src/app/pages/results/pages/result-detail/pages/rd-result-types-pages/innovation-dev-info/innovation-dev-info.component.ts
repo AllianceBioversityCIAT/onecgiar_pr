@@ -65,4 +65,11 @@ export class InnovationDevInfoComponent implements OnInit {
     <br><br>
     Examples of evidence documentation for different CGIAR innovations and readiness levels can be found <a target="_blank" href="https://drive.google.com/file/d/1rWGC0VfxazlzdZ1htcfBSw1jO7GmVQbq/view" class='open_route alert-event'>here</a>`;
   }
+  readiness_of_this_innovation_description() {
+    return `<ul>
+    <li>In case the innovation readiness level differs across countries or regions, we advise to assign the highest current innovation readiness level that can be supported by the evidence provided.</li>
+    <li>Be realistic in assessing the readiness level of the innovation and keep in mind that the claimed readiness level needs to be supported by evidence documentation.</li>
+    <li>The innovation readiness level will be quality assessed.</li>
+    </ul>`;
+  }
 }

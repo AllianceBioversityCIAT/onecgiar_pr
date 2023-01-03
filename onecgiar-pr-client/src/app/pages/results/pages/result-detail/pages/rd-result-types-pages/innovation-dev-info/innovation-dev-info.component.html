@@ -52,7 +52,7 @@
     </app-pr-textarea>
 
     <app-pr-field-header label="How would you assess the current readiness of this innovation?"
-        description="Please provide a single readiness score to the innovation, irrespectively of the specific geo-location where the innovation is being designed, tested and/or scaled. Geo-location-specific scoring will be part of subsequent innovation package design and assessment. Be realistic in assessing the readiness level of the innovation and keep in mind that the claimed readiness level needs to be supported by evidence documentation.">
+        [description]="readiness_of_this_innovation_description()">
     </app-pr-field-header>
 
     <app-pr-range-level [(ngModel)]="innovationDevInfoBody.innovation_readiness_level_id" optionLabel="name"
