@@ -5,7 +5,7 @@
     <div *ngIf="(!this.api.dataControlSE.isKnowledgeProduct); else kpBlock">
         <app-pr-radio-button
             [label]="'What is the main geographic focus of the ' + this.api.dataControlSE.getLastWord(this.resultLevelSE.currentResultLevelName)+'?'"
-            description="This should reflect where the outcome has taken place/contributed to benefit."
+            [description]="'This should reflect where the <strong>'+this.api.dataControlSE.getLastWord(this.resultLevelSE.currentResultLevelName)+'</strong> has taken place/contributed to benefit.'"
             [options]="this.geographic_focus" optionLabel="name" optionValue='id'
             [readOnly]="this.api.dataControlSE.isKnowledgeProduct" [(ngModel)]="this.geographicLocationBody.scope_id"
             [required]="false">
