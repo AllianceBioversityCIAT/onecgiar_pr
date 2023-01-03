@@ -67,7 +67,8 @@
         </div>
     </div>
 
-    <app-pr-field-header label="Results from previous portfolio" [required]="false">
+    <app-pr-field-header label="Results from previous portfolio" [description]="results_portfolio_description()"
+        [required]="false">
     </app-pr-field-header>
 
     <div class="evidence_item" *ngFor="let result of this.linksToResultsBody.legacy_link; let i=index">
