@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../shared/services/api/api.service';
 import { ResultLevelService } from '../results/pages/result-creator/services/result-level.service';
+import { DomSanitizer } from '@angular/platform-browser';
 
 @Component({
   selector: 'app-quality-assurance',
@@ -8,10 +9,20 @@ import { ResultLevelService } from '../results/pages/result-creator/services/res
   styleUrls: ['./quality-assurance.component.scss']
 })
 export class QualityAssuranceComponent implements OnInit {
-  constructor(public api: ApiService, public resultLevelSE: ResultLevelService) {}
+  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, private sanitizer: DomSanitizer) {}
   allInitiatives = [];
+  clarisaQaToken = null;
+  official_code = null;
+  showIframe = false;
   ngOnInit(): void {
     this.GET_AllInitiatives();
+    this.GET_ClarisaQaToken();
+  }
+
+  sanitizeUrl() {
+    // console.log(url); 'https://qatest.ciat.cgiar.org/crp?crp_id=INIT-15&token='+this.clarisaQaToken
+    console.log(`https://qatest.ciat.cgiar.org/crp?crp_id=${this.official_code}&token=${this.clarisaQaToken}`);
+    return this.sanitizer.bypassSecurityTrustResourceUrl(`https://qatest.ciat.cgiar.org/crp?crp_id=${this.official_code}&token=908d3eb6aebbf496a37d82f2e0f9f452`);
   }
 
   GET_AllInitiatives() {
@@ -21,5 +32,22 @@ export class QualityAssuranceComponent implements OnInit {
       console.log(response);
       this.allInitiatives = response;
     });
+  }
+
+  GET_ClarisaQaToken() {
+    this.api.resultsSE.GET_ClarisaQaToken().subscribe(resp => {
+      console.log(resp?.response?.token);
+      this.clarisaQaToken = resp?.response?.token;
+      this.clarisaQaToken = '908d3eb6aebbf496a37d82f2e0f9f452';
+    });
+  }
+
+  selectOptionEvent(option) {
+    console.log(option);
+    this.official_code = option?.official_code;
+    this.showIframe = false;
+    setTimeout(() => {
+      this.showIframe = true;
+    }, 100);
   }
 }
