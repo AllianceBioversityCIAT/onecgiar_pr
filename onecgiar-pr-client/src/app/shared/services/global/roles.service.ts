@@ -82,8 +82,6 @@ export class RolesService {
   }
 
   get isAdmin() {
-    // console.log('isAdmin');
-    // console.log(this.roles);
     if (this.roles?.application.role_id == 1) return true;
     return false;
   }

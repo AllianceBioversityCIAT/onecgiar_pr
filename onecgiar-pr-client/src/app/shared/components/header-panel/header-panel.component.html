@@ -10,7 +10,7 @@
     <div class="user_tag">
       <i class="material-icons-round icon">account_circle</i>
       <div class="title">{{ this.api.authSE?.localStorageUser?.user_name }}</div>
-      <div class="admin_tag" *ngIf="this.api.rolesSE.isAdmin">
+      <div class="admin_tag" *ngIf="this.api?.rolesSE?.isAdmin">
         Admin
       </div>
     </div>

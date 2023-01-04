@@ -131,7 +131,7 @@ export class ResultsApiService {
       map(resp => {
         if (resp?.response?.mqap_institutions) {
           resp?.response?.mqap_institutions.map(resp => {
-            console.log(resp?.user_matched_institution?.deliveries);
+            // console.log(resp?.user_matched_institution?.deliveries);
             if (!resp?.user_matched_institution?.deliveries?.length) resp.user_matched_institution.deliveries = [3];
           });
         }
