@@ -1,4 +1,4 @@
 <div class="pr_label segment_title" [ngClass]="{'required': this.required, 'simpleStyle':simpleStyle}"
     *ngIf="this.label" [innerHTML]="this.label + ':'"></div>
-<div class="pr_description" [ngClass]="{'readOnly': readOnly}" *ngIf="this.description" [innerHTML]="this.description">
+<div class="pr_description readOnly" *ngIf="this.description" [innerHTML]="this.description">
 </div>
