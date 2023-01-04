@@ -31,7 +31,7 @@ export class ResultsValidationModuleService {
       let response: GetValidationSectionDto[] = [];
 
       response.push(await this._resultValidationRepository.generalInformationValidation(result.id, result.result_level_id));
-      response.push(await this._resultValidationRepository.tocValidation(result.id));
+      response.push(await this._resultValidationRepository.tocValidation(result.id, result.result_level_id));
       
       if(result.result_type_id == 6){
         response.push({section_name: 'geographic-location', validation: 1 });
@@ -41,7 +41,16 @@ export class ResultsValidationModuleService {
         response.push(await this._resultValidationRepository.geoLocationValidation(result.id));
       }
       response.push({section_name: 'links-to-results', validation: 1 });
-      response.push(await this._resultValidationRepository.evidenceValidation(result.id));
+
+      switch (result.result_type_id){
+        case 5:
+            response.push({section_name: 'evidences', validation: 1 });
+          break;
+
+        default:
+            response.push(await this._resultValidationRepository.evidenceValidation(result.id));
+          break;
+      }
 
       switch (result.result_type_id) {
         case 1:
