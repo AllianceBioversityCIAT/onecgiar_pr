@@ -5,10 +5,12 @@ import { ApiService } from '../api/api.service';
   providedIn: 'root'
 })
 export class GreenChecksService {
+  submit = null;
   constructor(private api: ApiService) {}
 
   updateGreenChecks() {
     this.api.resultsSE.GET_greenChecksByResultId().subscribe(({ response }) => {
+      this.submit = Boolean(response?.submit);
       this.api.dataControlSE.green_checks = response?.green_checks;
     });
   }
