@@ -42,14 +42,10 @@ export class ResultsValidationModuleService {
       }
       response.push({section_name: 'links-to-results', validation: 1 });
 
-      switch (result.result_type_id){
-        case 5:
-            response.push({section_name: 'evidences', validation: 1 });
-          break;
-
-        default:
-            response.push(await this._resultValidationRepository.evidenceValidation(result.id));
-          break;
+      if(result.result_type_id == 5){
+        response.push({section_name: 'evidences', validation: 1 });
+      }else{
+        response.push(await this._resultValidationRepository.evidenceValidation(result.id));
       }
 
       switch (result.result_type_id) {
