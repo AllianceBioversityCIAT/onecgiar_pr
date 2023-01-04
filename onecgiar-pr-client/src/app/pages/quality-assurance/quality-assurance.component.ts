@@ -22,7 +22,7 @@ export class QualityAssuranceComponent implements OnInit {
   sanitizeUrl() {
     // console.log(url); 'https://qatest.ciat.cgiar.org/crp?crp_id=INIT-15&token='+this.clarisaQaToken
     console.log(`https://qatest.ciat.cgiar.org/crp?crp_id=${this.official_code}&token=${this.clarisaQaToken}`);
-    return this.sanitizer.bypassSecurityTrustResourceUrl(`https://qatest.ciat.cgiar.org/crp?crp_id=${this.official_code}&token=908d3eb6aebbf496a37d82f2e0f9f452`);
+    return this.sanitizer.bypassSecurityTrustResourceUrl(`https://qatest.ciat.cgiar.org/crp?crp_id=${this.official_code}&token=${this.clarisaQaToken}`);
   }
 
   GET_AllInitiatives() {

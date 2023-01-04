@@ -6,10 +6,14 @@
         [(ngModel)]="this.resultLevelSE.resultBody.initiative_id">
     </app-pr-select>
 
-    <!-- <app-pr-select class="segment_title_margin" [options]="this.allInitiatives" label="Report for" [isStatic]="true"
-    *ngIf="this.api.rolesSE.isAdmin" optionLabel="full_name" optionValue="initiative_id" placeholder="Select initiative"
-    [(ngModel)]="this.resultLevelSE.resultBody.initiative_id">
-</app-pr-select> -->
+    <app-pr-select class="segment_title_margin" [options]="this.allInitiatives" label="Report for" [isStatic]="true"
+        *ngIf="this.api.rolesSE.isAdmin" optionLabel="full_name" optionValue="initiative_id"
+        (selectOptionEvent)="selectOptionEvent($event)" placeholder="Select initiative"
+        [(ngModel)]="this.resultLevelSE.resultBody.initiative_id">
+    </app-pr-select>
+
+
+    <app-no-data-text *ngIf="!this.showIframe" title="Select an initiative to display the content"></app-no-data-text>
 
 
 
