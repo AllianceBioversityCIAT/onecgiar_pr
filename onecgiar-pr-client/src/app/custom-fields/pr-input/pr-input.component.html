@@ -3,7 +3,8 @@
     <app-pr-field-header [label]="this.label" [description]="this.description" [required]="this.required"
         [readOnly]="(readOnly || this.rolesSE.readOnly) && (!isStatic)">
     </app-pr-field-header>
-    <div [ngSwitch]="(readOnly || this.rolesSE.readOnly) && (!isStatic)" [ngClass]="{'mandatory': this.required}"
+    <div [ngSwitch]="(readOnly || this.rolesSE.readOnly) && (!isStatic)"
+        [ngClass]="{'mandatory': this.required,'readOnly':(readOnly || this.rolesSE.readOnly) && (!isStatic)}"
         class="pr-input position-relative">
         <div class="read-only" *ngSwitchCase="true">{{(value|yesOrNotByBoolean) || (this.required ? 'Not provided' :
             'Not applicable')}}</div>

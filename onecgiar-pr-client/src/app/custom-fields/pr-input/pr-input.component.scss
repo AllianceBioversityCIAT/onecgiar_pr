@@ -9,3 +9,10 @@ input::-webkit-inner-spin-button {
 input[type=number] {
     -moz-appearance: textfield;
 }
+
+.pr-input.readOnly {
+    padding: 8px 10px;
+    // border: 1px solid #ebebeb;
+    box-shadow: 0px 0px 14px 0px #f0f0f0;
+    border-radius: 5px;
+}
