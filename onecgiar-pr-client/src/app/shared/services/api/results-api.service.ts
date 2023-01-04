@@ -145,6 +145,10 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/geographic-scope/get/all/prms`);
   }
 
+  GET_ClarisaQaToken() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/clarisa/qa/token`);
+  }
+
   GET_AllCLARISARegions() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/regions/get/all`);
   }
