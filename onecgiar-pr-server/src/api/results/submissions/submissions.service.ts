@@ -85,7 +85,7 @@ export class SubmissionsService {
       await this._submissionRepository.save(newSubmissions);
       return {
         response: data,
-        message: 'the result has been submitted successfully',
+        message: 'the result has been unsubmitted successfully',
         status: HttpStatus.OK,
       };
     } catch (error) {
