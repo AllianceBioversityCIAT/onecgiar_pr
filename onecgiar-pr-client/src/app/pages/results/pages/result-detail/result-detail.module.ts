@@ -10,9 +10,10 @@ import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.modu
 import { BreadcrumbModule } from '../../../../shared/components/breadcrumb/breadcrumb.module';
 import { NoEditContainerComponent } from './components/no-edit-container/no-edit-container.component';
 import { ButtonModule } from 'primeng/button';
+import { ResultTitleComponent } from './components/result-title/result-title.component';
 
 @NgModule({
-  declarations: [ResultDetailComponent, PanelMenuComponent, PanelMenuPipe, NoEditContainerComponent],
+  declarations: [ResultDetailComponent, PanelMenuComponent, PanelMenuPipe, NoEditContainerComponent, ResultTitleComponent],
   imports: [CommonModule, ResultDetailRoutingModule, PartnersRequestModule, CustomFieldsModule, BreadcrumbModule, ButtonModule]
 })
 export class ResultDetailModule {}
