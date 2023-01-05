@@ -576,5 +576,30 @@ export class resultValidationRepository extends Repository<Validation>{
     }
   }
 
+  async resultIsValid(resultId: number) {
+    const queryData = `
+	SELECT
+		IFNULL(v.section_seven, 1) *
+  		v.general_information *
+  		v.theory_of_change *
+  		v.partners *
+  		v.geographic_location *
+  		v.links_to_results *
+  		v.evidence as validation
+  	from validation v 
+  		WHERE v.results_id = ?;
+    `;
+    try {
+      const shareResultRequest: Array<{validation:number}> = await this.dataSource.query(queryData, [resultId]); 
+	  return shareResultRequest.length ? shareResultRequest[0].validation : null;
+    } catch (error) {
+		throw this._handlersError.returnErrorRepository({
+        className: resultValidationRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
 }
 
