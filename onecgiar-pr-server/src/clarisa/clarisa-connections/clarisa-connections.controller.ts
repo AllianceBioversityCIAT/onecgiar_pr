@@ -27,16 +27,16 @@ export class ClarisaConnectionsController {
     return 1;
   }
 
-  @Get('qa/token/:resultId')
+  @Get('qa/token/:officialCode')
   async findOne(
-    @Param('resultId') resultId: number,
+    @Param('officialCode') officialCode: string,
     @Headers() auth: HeadersDto
     ) {
     const token: TokenDto = <TokenDto>(
       JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
     );
     const {message, response, status} = 
-      await this.clarisaConnectionsService.clarisaQaToken(resultId, token);
+      await this.clarisaConnectionsService.clarisaQaToken(officialCode, token);
     throw new HttpException({ message, response }, status);
   }
 
