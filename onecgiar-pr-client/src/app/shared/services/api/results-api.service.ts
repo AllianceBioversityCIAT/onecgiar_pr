@@ -387,4 +387,8 @@ export class ResultsApiService {
   GET_greenChecksByResultId() {
     return this.http.get<any>(`${this.apiBaseUrl}results-validation/get/green-checks/${this.currentResultId}`);
   }
+
+  PATCH_greenChecksByResultId() {
+    return this.http.patch<any>(`${this.apiBaseUrl}results-validation/save/green-checks/${this.currentResultId}`, {});
+  }
 }
