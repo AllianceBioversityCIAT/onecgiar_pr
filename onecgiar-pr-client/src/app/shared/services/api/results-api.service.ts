@@ -131,7 +131,7 @@ export class ResultsApiService {
       map(resp => {
         if (resp?.response?.mqap_institutions) {
           resp?.response?.mqap_institutions.map(resp => {
-            console.log(resp?.user_matched_institution?.deliveries);
+            // console.log(resp?.user_matched_institution?.deliveries);
             if (!resp?.user_matched_institution?.deliveries?.length) resp.user_matched_institution.deliveries = [3];
           });
         }
@@ -386,5 +386,9 @@ export class ResultsApiService {
 
   GET_greenChecksByResultId() {
     return this.http.get<any>(`${this.apiBaseUrl}results-validation/get/green-checks/${this.currentResultId}`);
+  }
+
+  PATCH_greenChecksByResultId() {
+    return this.http.patch<any>(`${this.apiBaseUrl}results-validation/save/green-checks/${this.currentResultId}`, {});
   }
 }

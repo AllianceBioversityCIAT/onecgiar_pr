@@ -29,7 +29,8 @@ export class GeneralInterceptorService implements HttpInterceptor {
 
     return next.handle(reqClone).pipe(
       tap((resp: any) => {
-        if (req.method == 'PATCH' || req.method == 'POST') this.greenChecksSE.updateGreenChecks();
+        const validateGreenCheckRoute = req.url.indexOf('green-checks') > 0;
+        if ((req.method == 'PATCH' || req.method == 'POST') && !validateGreenCheckRoute) this.greenChecksSE.updateGreenChecks();
       })
     );
     // .pipe(catchError(this.manageError))

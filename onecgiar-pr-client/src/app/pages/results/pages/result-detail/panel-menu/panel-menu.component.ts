@@ -3,6 +3,7 @@ import { PrRoute, resultDetailRouting } from '../../../../../shared/routing/rout
 import { ResultLevelService } from '../../result-creator/services/result-level.service';
 import { ResultsApiService } from '../../../../../shared/services/api/results-api.service';
 import { ApiService } from '../../../../../shared/services/api/api.service';
+import { GreenChecksService } from '../../../../../shared/services/global/green-checks.service';
 
 @Component({
   selector: 'app-panel-menu',
@@ -11,7 +12,7 @@ import { ApiService } from '../../../../../shared/services/api/api.service';
 })
 export class PanelMenuComponent {
   navigationOptions: PrRoute[] = resultDetailRouting;
-  constructor(public resultLevelSE: ResultLevelService, public resultsListSE: ResultsApiService, private api: ApiService) {}
+  constructor(public resultLevelSE: ResultLevelService, public resultsListSE: ResultsApiService, private api: ApiService, public greenChecksSE: GreenChecksService) {}
 
   hideKP(navOption) {
     if (!this.api.dataControlSE.isKnowledgeProduct) return false;

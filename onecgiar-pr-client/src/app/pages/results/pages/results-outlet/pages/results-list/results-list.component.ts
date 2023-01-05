@@ -16,7 +16,7 @@ import { RetrieveModalService } from '../../../result-detail/components/retrieve
 export class ResultsListComponent implements OnInit {
   gettingReport = false;
   columnOrder = [
-    { title: 'ID', attr: 'id' },
+    { title: 'Result code', attr: 'result_code' },
     { title: 'Title', attr: 'title', class: 'notCenter' },
     { title: 'Reporting year', attr: 'reported_year' },
     { title: 'Result type', attr: 'result_type' },

@@ -169,6 +169,7 @@ export class ResultsService {
         };
       }
 
+      const last_code = await this._resultRepository.getLastResultCode();
       const newResultHeader: Result = await this._resultRepository.save({
         created_by: user.id,
         last_updated_by: user.id,
@@ -177,6 +178,7 @@ export class ResultsService {
         title: createResultDto.result_name,
         reported_year_id: year.year,
         result_level_id: rl.id,
+        result_code: (last_code + 1)
       });
 
       const toAddFromElastic = await this.findAllSimplified(

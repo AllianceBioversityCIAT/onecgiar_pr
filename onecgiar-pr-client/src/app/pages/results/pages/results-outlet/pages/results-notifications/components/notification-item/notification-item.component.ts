@@ -14,13 +14,19 @@ export class NotificationItemComponent {
   @Input() readOnly: boolean;
   @Output() requestEvent = new EventEmitter<any>();
   requesting = false;
-  constructor(public api: ApiService, private shareRequestModalSE: ShareRequestModalService,  private retrieveModalSE: RetrieveModalService) {}
+  constructor(public api: ApiService, private shareRequestModalSE: ShareRequestModalService, private retrieveModalSE: RetrieveModalService) {}
 
   mapAndAccept(notification) {
     console.log(notification);
     this.retrieveModalSE.title = notification?.title;
     this.retrieveModalSE.requester_initiative_id = notification?.requester_initiative_id;
     this.api.resultsSE.currentResultId = notification?.result_id;
+    console.log(this.api.dataControlSE.currentResult);
+    if (this.api.dataControlSE.currentResult == undefined) {
+      this.api.dataControlSE.currentResult = { result_level_id: notification?.result_level_id };
+    } else {
+      this.api.dataControlSE.currentResult.result_level_id = notification?.result_level_id;
+    }
     // this.api.dataControlSE.currentResult = result;
     // this.api.dataControlSE.currentResult.is_legacy = this.api.dataControlSE.currentResult.is_legacy == 'true' ? true : false;
     console.log(this.api.dataControlSE.currentResult);
