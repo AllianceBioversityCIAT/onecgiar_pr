@@ -398,7 +398,7 @@ export class resultValidationRepository extends Repository<Validation>{
 			(rid.innovation_nature_id is not null
 			and rid.innovation_nature_id <> '')
 			AND 
-			(rid.is_new_variety in (1,0))
+			(if(rid.innovation_nature_id = 12, rid.is_new_variety in (1,0), true))
 			AND 
 			(rid.innovation_readiness_level_id is not null
 			and rid.innovation_readiness_level_id <> '')
