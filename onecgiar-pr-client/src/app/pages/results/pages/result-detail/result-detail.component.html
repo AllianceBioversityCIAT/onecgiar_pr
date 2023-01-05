@@ -5,9 +5,19 @@
     </div>
   </div>
   <div>
-    <app-breadcrumb></app-breadcrumb>
+    <!-- <app-breadcrumb></app-breadcrumb> -->
+    <app-result-title></app-result-title>
     <div class="section_container">
       <div class="metadata">
+        <div class="item">
+          Result level: <strong>{{this.dataControlSE.currentResult?.result_level_name}}</strong>
+        </div>
+        <div class="item">
+          Result type: <strong>{{this.dataControlSE.currentResult?.result_type_name}}</strong>
+        </div>
+        <div class="item">
+          Result code: <strong>{{this.dataControlSE.currentResult?.result_code}}</strong>
+        </div>
         <div class="item">
           {{this.dataControlSE.currentResult?.initiative_official_code}}
         </div>

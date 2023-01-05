@@ -13,6 +13,7 @@ export class SaveButtonComponent {
   @Input() disabled: boolean;
   @Input() text: string = 'Save';
   @Output() clickSave = new EventEmitter();
+  expand = false;
   constructor(public rolesSE: RolesService, public saveButtonSE: SaveButtonService, public dataControlSE: DataControlService) {}
   onClickSave() {
     if (this.saveButtonSE.isSaving) return;

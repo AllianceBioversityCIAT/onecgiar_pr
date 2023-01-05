@@ -1,13 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, Repository, QueryRunner } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
+import { Validation } from './entities/validation.entity';
 
 @Injectable()
-export class resultValidationRepository{
+export class resultValidationRepository extends Repository<Validation>{
   constructor(
     private dataSource: DataSource,
     private _handlersError: HandlersError
   ) {
+	super(Validation, dataSource.createEntityManager());
   }
 
   async generalInformationValidation(resultId: number, resultLevel: number) {
@@ -28,8 +30,8 @@ export class resultValidationRepository{
 			and r.climate_change_tag_level_id <> '')
 			and 
 		 	(r.is_krs in (0, 1))
-			${resultLevel != 4?`and 
-		 	((
+			${resultLevel != 4 && resultLevel != 1?`and 
+		 	(((
 			select
 				COUNT(rbi.id)
 			from
@@ -37,7 +39,17 @@ export class resultValidationRepository{
 			WHERE
 				rbi.institution_roles_id = 1
 				and rbi.result_id = r.id
-				and rbi.is_active > 0) > 0)`:``}
+				and rbi.is_active > 0) > 0)
+			or
+			((
+			   select
+			   COUNT(rbit.id)
+			   from
+			   results_by_institution_type rbit
+			   WHERE
+				   rbit.institution_roles_id = 1
+			   and rbit.results_id = r.id
+			   and rbit.is_active > 0) > 0))`:``}
 		 then true
 			else false
 		END as validation
@@ -59,7 +71,7 @@ export class resultValidationRepository{
     }
   }
 
-  async tocValidation(resultId: number) {
+  async tocValidation(resultId: number, resultLevel: number) {
     const queryData = `
     SELECT 
 		'theory-of-change' as section_name,
@@ -73,7 +85,7 @@ export class resultValidationRepository{
 			WHERE
 				rc.is_active > 0
 				and rc.result_id = r.id) > 0)
-			AND 
+			${resultLevel != 2 && resultLevel != 1? `AND 
 			((
 			SELECT
 				rtr.planned_result
@@ -82,8 +94,8 @@ export class resultValidationRepository{
 			WHERE
 				rtr.initiative_id in (rbi.inititiative_id)
 					and rtr.results_id = r.id
-					and rtr.is_active > 0) is not null)
-			AND 
+					and rtr.is_active > 0) is not null)`:``}
+			${resultLevel != 1?`AND 
 			((
 			select
 				if(rtr.toc_result_id is not null
@@ -114,7 +126,21 @@ export class resultValidationRepository{
 			WHERE
 				rbi.result_id = r.id
 				and rbi.initiative_role_id = 2
-				and rbi.is_active > 0)) = 0)
+				and rbi.is_active > 0)) = 0)`:`AND
+				((SELECT count(DISTINCT cgt.impactAreaId)
+				from results_impact_area_target riat 
+				inner join clarisa_global_targets cgt on cgt.targetId = riat.impact_area_target_id 
+				where riat.result_id = r.id
+					and riat.impact_area_target_id is not null
+					and riat.is_active > 0) = 5)
+				AND
+				((SELECT count(DISTINCT ciai.impact_area_id)
+				from results_impact_area_indicators riai 
+				inner join clarisa_impact_area_indicator ciai on ciai.id = riai.impact_area_indicator_id 
+				where riai.result_id = r.id
+					and riai.impact_area_indicator_id is not null
+					and riai.is_active > 0) = 5)
+				`}
 			AND 
 			((
 			select
@@ -372,11 +398,13 @@ export class resultValidationRepository{
 			(rid.innovation_nature_id is not null
 			and rid.innovation_nature_id <> '')
 			AND 
-			(rid.is_new_variety is not null
-			and rid.is_new_variety <> '')
+			(if(rid.innovation_nature_id = 12, rid.is_new_variety in (1,0), true))
 			AND 
 			(rid.innovation_readiness_level_id is not null
-			and rid.innovation_readiness_level_id <> '')then true
+			and rid.innovation_readiness_level_id <> '')
+			AND 
+			(rid.innovation_pdf in (1,0))
+			then true
 			else false
 		END as validation
 	from
@@ -448,17 +476,10 @@ export class resultValidationRepository{
 			and rcd.male_using <> '')
 			AND 
 			(rcd.capdev_term_id is not null
-			and rcd.capdev_term_id <> '')
+			and rcd.capdev_term_id <> '') 
 			AND 
-			((
-			SELECT
-				count(rbi.id)
-			from
-				results_by_institution rbi
-			WHERE
-				rbi.result_id = r.id
-				and rbi.institution_roles_id = 3
-				and rbi.is_active > 0) > 0)then true
+			(rcd.capdev_delivery_method_id  is not null
+			and rcd.capdev_delivery_method_id <> '') then true
 			else false
 		END as validation
 	from
@@ -517,6 +538,60 @@ export class resultValidationRepository{
     try {
       const shareResultRequest: GetValidationSectionDto[] = await this.dataSource.query(queryData, [resultId]); 
 	  return shareResultRequest.length ? shareResultRequest[0] : undefined;
+    } catch (error) {
+		throw this._handlersError.returnErrorRepository({
+        className: resultValidationRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async validationResultExist(resultId: number) {
+    const queryData = `
+	SELECT
+		v.id,
+		v.section_seven,
+		v.general_information,
+		v.theory_of_change,
+		v.partners,
+		v.geographic_location,
+		v.links_to_results,
+		v.evidence,
+		v.results_id
+	from
+		validation v
+	WHERE
+		v.results_id = ?;
+    `;
+    try {
+      const shareResultRequest: Validation[] = await this.dataSource.query(queryData, [resultId]); 
+	  return shareResultRequest.length ? shareResultRequest[0] : null;
+    } catch (error) {
+		throw this._handlersError.returnErrorRepository({
+        className: resultValidationRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async resultIsValid(resultId: number) {
+    const queryData = `
+	SELECT
+		IFNULL(v.section_seven, 1) *
+  		v.general_information *
+  		v.theory_of_change *
+  		v.partners *
+  		v.geographic_location *
+  		v.links_to_results *
+  		v.evidence as validation
+  	from validation v 
+  		WHERE v.results_id = ?;
+    `;
+    try {
+      const shareResultRequest: Array<{validation:number}> = await this.dataSource.query(queryData, [resultId]); 
+	  return shareResultRequest.length ? shareResultRequest[0].validation : null;
     } catch (error) {
 		throw this._handlersError.returnErrorRepository({
         className: resultValidationRepository.name,

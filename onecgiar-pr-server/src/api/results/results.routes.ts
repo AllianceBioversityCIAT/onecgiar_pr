@@ -24,6 +24,7 @@ import { ResultsImpactAreaTargetModule } from './results-impact-area-target/resu
 import { OstMeliaStudiesModule } from './ost-melia-studies/ost-melia-studies.module';
 import { ResultsValidationModuleModule } from './results-validation-module/results-validation-module.module';
 import { ShareResultRequestModule } from './share-result-request/share-result-request.module';
+import { SubmissionsModule } from './submissions/submissions.module';
 
 export const ResultsRoutes: Routes = [
   {
@@ -125,5 +126,9 @@ export const ResultsRoutes: Routes = [
   {
     path: 'results-validation',
     module: ResultsValidationModuleModule
+  },
+  {
+    path: 'submissions',
+    module: SubmissionsModule
   }
 ];

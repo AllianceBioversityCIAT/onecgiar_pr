@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Result } from '../../entities/result.entity';
 
 @Entity('validation')
 export class Validation{
@@ -6,52 +7,59 @@ export class Validation{
     @PrimaryGeneratedColumn()
     id: number;
 
+    @ManyToOne(() => Result, r => r.id)
+    @JoinColumn({
+        name: 'results_id'
+    })
+    results_id: number;
+
     @Column({
         type: 'boolean',
         nullable: true,
         name:'section_seven'
     })
-    section_seven: boolean;
+    section_seven: number;
     
     @Column({
         type: 'boolean',
         nullable: true,
         name:'general_information'
     })
-    general_information: boolean;
+    general_information: number;
     
     @Column({
         type: 'boolean',
         nullable: true,
         name:'theory_of_change'
     })
-    theory_of_change: boolean;
+    theory_of_change: number;
     
     @Column({
         type: 'boolean',
         nullable: true,
         name:'partners'
     })
-    partners: boolean;
+    partners: number;
     
     @Column({
         type: 'boolean',
         nullable: true,
         name:'geographic_location'
     })
-    geographic_location: boolean;
+    geographic_location: number;
     
     @Column({
         type: 'boolean',
         nullable: true,
         name:'links_to_results'
     })
-    links_to_results: boolean;
+    links_to_results: number;
     
     @Column({
         type: 'boolean',
         nullable: true,
         name:'evidence'
     })
-    evidence: boolean;
+    evidence: number;
+
 }

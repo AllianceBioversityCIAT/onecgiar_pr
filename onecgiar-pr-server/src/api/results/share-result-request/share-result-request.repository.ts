@@ -91,6 +91,8 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
 		srr.planned_result,
     	r.description,
     	r.title,
+		r.result_level_id,
+		r.result_type_id,
     	rt.name as result_type_name,
     	rl.name as result_level_name,
 		false as is_requester,
@@ -149,6 +151,8 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
 		srr.planned_result,
     	r.description,
     	r.title,
+		r.result_level_id,
+		r.result_type_id,
     	rt.name as result_type_name,
     	rl.name as result_level_name,
 		true as is_requester

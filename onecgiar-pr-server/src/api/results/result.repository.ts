@@ -43,7 +43,8 @@ export class ResultRepository extends Repository<Result> {
     	inner join result_level rl on rl.id = rt.result_level_id 
     where r.is_active > 0
     	and r.title like '%\?%'
-    	and rt.id = ?;
+    	and rt.id = ?
+      and r.version_id = 1;
     `;
     try {
       const completeUser: any[] = await this.query(queryData, [
@@ -69,6 +70,7 @@ export class ResultRepository extends Repository<Result> {
       (
       select
         concat(r.id, '') as id,
+        r.result_code,
         r.title,
         r.description,
         concat(ci.official_code, '-', ci.short_name) as crp,
@@ -99,6 +101,7 @@ export class ResultRepository extends Repository<Result> {
         cc.id = rc.country_id
       where
         r.is_active > 0
+        and r.version_id = 1
       group by
         r.id,
         r.title,
@@ -111,6 +114,7 @@ export class ResultRepository extends Repository<Result> {
     union
       select
         lr.legacy_id as id,
+        lr.legacy_id as result_code,
         lr.title,
         lr.description,
         lr.crp,
@@ -178,6 +182,7 @@ export class ResultRepository extends Repository<Result> {
         rbi.inititiative_id = ci.id
       where
         r.id = ?
+        and r.version_id = 1;
     `;
     try {
       const result = await this.query(query, [resultId]);
@@ -199,6 +204,7 @@ export class ResultRepository extends Repository<Result> {
     const queryData = `
     SELECT
     r.id,
+    r.result_code,
     r.description,
     r.is_active,
     r.last_updated_date,
@@ -232,7 +238,8 @@ FROM
     inner join result_type rt on rt.id = r.result_type_id 
     inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
 WHERE
-    r.is_active > 0;
+    r.is_active > 0
+    and r.version_id = 1;
     `;
 
     try {
@@ -288,6 +295,7 @@ WHERE
     const queryData = `
     SELECT
     r.id,
+    r.result_code,
     r.title,
     r.reported_year_id AS reported_year,
     rt.name AS result_type,
@@ -323,7 +331,8 @@ WHERE
     r.is_active > 0
     AND rbi.is_active > 0
     AND rbi.initiative_role_id = 1
-    AND ci.active > 0;
+    AND ci.active > 0
+    AND r.version_id = 1;
     `;
 
     try {
@@ -341,7 +350,7 @@ WHERE
   async reportingResultList(initDate: Date, endDate: Date) {
     const queryData = `
     SELECT
-    	r.id as \`Result id\`,
+      r.result_code as \`Result id\`,
     	r.reported_year_id as \`Reporting year\`,
     	r.title as \`Result title\`,
     	CONCAT(rl.name, ' - ', rt.name) as \`Result type\`,
@@ -391,6 +400,7 @@ WHERE
     WHERE
     	r.created_date >= ?
     	and r.created_date <= ?
+      and r.version_id = 1
     GROUP by
     	r.id,
     	r.reported_year_id,
@@ -424,6 +434,7 @@ WHERE
     const queryData = `
     (select 
       lr.legacy_id as id,
+      lr.legacy_id as result_code,
       lr.title,
       lr.description,
       lr.crp,
@@ -437,6 +448,7 @@ WHERE
     union
     (select 
       r.id,
+      r.result_code,
       r.title,
       r.description,
       ci.official_code as crp,
@@ -452,7 +464,8 @@ WHERE
                           and ci.active > 0
       inner join result_type rt on rt.id = r.result_type_id 
     where r.is_active > 0
-      and r.title like ?)
+      and r.title like ?
+      and r.version_id = 1)
     `;
 
     try {
@@ -474,6 +487,7 @@ WHERE
     const queryData = `
     (select 
       lr.legacy_id as id,
+      lr.legacy_id as result_code,
       lr.title,
       lr.description,
       lr.crp,
@@ -486,6 +500,7 @@ WHERE
     union
     (select 
       r.id,
+      r.result_code
       r.title,
       r.description,
       ci.official_code as crp,
@@ -499,7 +514,8 @@ WHERE
       inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id
                           and ci.active > 0
     where r.is_active > 0
-    and r.id = ?)
+    and r.id = ?
+    and r.version_id = 1)
     `;
 
     try {
@@ -538,6 +554,7 @@ WHERE
     const queryData = `
     SELECT
     r.id,
+    r.result_code,
     r.description,
     r.is_active,
     r.last_updated_date,
@@ -573,7 +590,8 @@ FROM
     inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
 WHERE
     r.is_active > 0
-    and r.id = ?;
+    and r.id = ?
+    and r.version_id = 1;
     `;
 
     try {
@@ -592,6 +610,7 @@ WHERE
     const queryData = `
     SELECT
     r.id,
+    r.result_code,
     r.description,
     r.is_active,
     r.last_updated_date,
@@ -623,7 +642,8 @@ FROM
     inner join result_type rt on rt.id = r.result_type_id 
 WHERE
     r.is_active > 0
-    and r.id = ?;
+    and r.id = ?
+    and r.version_id = 1;
     `;
 
     try {
@@ -632,6 +652,23 @@ WHERE
     } catch (error) {
       throw {
         message: `[${ResultRepository.name}] => completeAllData error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
+  async getLastResultCode(): Promise<number> {
+    const queryData = `
+    SELECT max(r.result_code) as last_code from \`result\` r WHERE version_id = 1;
+    `;
+
+    try {
+      const results: Array<{last_code}> = await this.query(queryData);
+      return results.length ? parseInt(results[0].last_code) : null;
+    } catch (error) {
+      throw {
+        message: `[${ResultRepository.name}] => getLastResultCode error: ${error}`,
         response: {},
         status: HttpStatus.INTERNAL_SERVER_ERROR,
       };

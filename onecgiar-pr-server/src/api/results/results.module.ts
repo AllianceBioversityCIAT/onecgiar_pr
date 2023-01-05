@@ -57,6 +57,7 @@ import { ElasticService } from '../../elastic/elastic.service';
 import { KnowledgeProductFairBaselineModule } from './knowledge_product_fair_baseline/knowledge_product_fair_baseline.module';
 import { OstMeliaStudiesModule } from './ost-melia-studies/ost-melia-studies.module';
 import { ResultsValidationModuleModule } from './results-validation-module/results-validation-module.module';
+import { SubmissionsModule } from './submissions/submissions.module';
 
 @Module({
   controllers: [ResultsController],
@@ -100,6 +101,7 @@ import { ResultsValidationModuleModule } from './results-validation-module/resul
     KnowledgeProductFairBaselineModule,
     OstMeliaStudiesModule,
     ResultsValidationModuleModule,
+    SubmissionsModule,
   ],
   providers: [
     ResultsService,

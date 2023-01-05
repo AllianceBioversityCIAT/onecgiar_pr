@@ -1,13 +1,24 @@
-<div class="fixed_button" (click)="this.saveButtonSE.isSaving || disabled ? null:onClickSave()"
-    *ngIf="!this.rolesSE.readOnly || editable">
-    <div class="fields-feedback-list" [ngClass]="{'show-fields-feedback-list-opacity': disabled}"
+<div class="fixed_button" *ngIf="!this.rolesSE.readOnly || editable">
+    <div class="fields-feedback-list" [ngClass]="{'show-fields-feedback-list-opacity': disabled,'expand':expand}"
         *ngIf="this.dataControlSE.fieldFeedbackList?.length">
-        <div class="item" *ngFor="let item of this.dataControlSE.fieldFeedbackList">
-            <div class="status"></div>
-            <div class="text"><strong>{{item}}</strong> is missing</div>
+        <div class="back_icon" (click)="expand = !expand;">
+            <i class="material-icons-round">
+                arrow_back_ios
+            </i>
+        </div>
+        <div class="items">
+            <div class="item" *ngFor="let item of this.dataControlSE.fieldFeedbackList">
+                <!-- <div class="status"></div> -->
+                <i class="material-icons-round">
+                    warning
+                </i>
+                <div class="text"><strong>{{item}}</strong> is missing</div>
+            </div>
         </div>
     </div>
-    <app-pr-button padding="medium" [text]="this.saveButtonSE.isSaving?'Saving':text"
-        [rotating]="this.saveButtonSE.isSaving" [icon]="this.saveButtonSE.isSaving?'loop':'save'"
-        [ngClass]="{'globalDisabled': this.saveButtonSE.isSaving || disabled}"></app-pr-button>
+    <div (click)="this.saveButtonSE.isSaving || disabled ? null:onClickSave()">
+        <app-pr-button padding="medium" [text]="this.saveButtonSE.isSaving?'Saving':text"
+            [rotating]="this.saveButtonSE.isSaving" [icon]="this.saveButtonSE.isSaving?'loop':'save'"
+            [ngClass]="{'globalDisabled': this.saveButtonSE.isSaving || disabled}"></app-pr-button>
+    </div>
 </div>

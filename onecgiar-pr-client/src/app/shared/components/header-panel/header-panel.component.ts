@@ -12,6 +12,6 @@ export class HeaderPanelComponent implements OnInit {
   internationalizationData = internationalizationData;
   constructor(public api: ApiService) {}
   ngOnInit(): void {
-    this.api.updateUserData();
+    this.api.updateUserData(() => {});
   }
 }

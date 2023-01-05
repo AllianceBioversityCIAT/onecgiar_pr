@@ -3,6 +3,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   OneToMany,
@@ -19,12 +20,19 @@ import { ClarisaGeographicScope } from '../../../clarisa/clarisa-geographic-scop
 import { ResultsKnowledgeProduct } from '../results-knowledge-products/entities/results-knowledge-product.entity';
 
 @Entity()
+@Index(['result_code', 'version_id'], {unique: true})
 export class Result {
   @PrimaryGeneratedColumn({
     name: 'id',
     type: 'bigint',
   })
   id: number;
+
+  @Column({
+    name: 'result_code',
+    type: 'bigint'
+  })
+  result_code: number;
 
   @Column({
     name: 'title',

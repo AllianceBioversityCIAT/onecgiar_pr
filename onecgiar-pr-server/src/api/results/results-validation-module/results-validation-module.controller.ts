@@ -18,9 +18,10 @@ export class ResultsValidationModuleController {
     throw new HttpException({ message, response }, status);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.resultsValidationModuleService.findOne(+id);
+  @Patch('save/green-checks/:resultId')
+  async saveGreenChecks(@Param('resultId') resultId: number) {
+    const {message, response, status} = await this.resultsValidationModuleService.saveGreenCheck(resultId);
+    throw new HttpException({ message, response }, status);
   }
 
   @Patch(':id')
