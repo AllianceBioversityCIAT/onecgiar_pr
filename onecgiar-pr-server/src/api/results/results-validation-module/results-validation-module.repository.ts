@@ -1,13 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, Repository, QueryRunner } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
+import { Validation } from './entities/validation.entity';
 
 @Injectable()
-export class resultValidationRepository{
+export class resultValidationRepository extends Repository<Validation>{
   constructor(
     private dataSource: DataSource,
     private _handlersError: HandlersError
   ) {
+	super(Validation, dataSource.createEntityManager());
   }
 
   async generalInformationValidation(resultId: number, resultLevel: number) {
@@ -536,6 +538,35 @@ export class resultValidationRepository{
     try {
       const shareResultRequest: GetValidationSectionDto[] = await this.dataSource.query(queryData, [resultId]); 
 	  return shareResultRequest.length ? shareResultRequest[0] : undefined;
+    } catch (error) {
+		throw this._handlersError.returnErrorRepository({
+        className: resultValidationRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async validationResultExist(resultId: number) {
+    const queryData = `
+	SELECT
+		v.id,
+		v.section_seven,
+		v.general_information,
+		v.theory_of_change,
+		v.partners,
+		v.geographic_location,
+		v.links_to_results,
+		v.evidence,
+		v.results_id
+	from
+		validation v
+	WHERE
+		v.results_id = ?;
+    `;
+    try {
+      const shareResultRequest: Validation[] = await this.dataSource.query(queryData, [resultId]); 
+	  return shareResultRequest.length ? shareResultRequest[0] : null;
     } catch (error) {
 		throw this._handlersError.returnErrorRepository({
         className: resultValidationRepository.name,
