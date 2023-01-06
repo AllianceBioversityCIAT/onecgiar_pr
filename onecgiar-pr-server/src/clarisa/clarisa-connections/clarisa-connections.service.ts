@@ -78,25 +78,15 @@ export class ClarisaConnectionsService {
     return 1;
   }
 
-  async clarisaQaToken(resultId: number, user: TokenDto) {
+  async clarisaQaToken(officialCode: string, user: TokenDto) {
     try {
-
-      const result = await this._resultByInitiativesRepository.getOwnerInitiativeByResult(resultId);
-      if (!result) {
-        throw {
-          response: {},
-          message: 'Result Level not found',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
-
       const config = {
         name: `${user.first_name} ${user.last_name}`,
         username: user.email?.split('@')[0],
         email: user.email,
         misAcronym: 'PRMS',
         appUser: user.id,
-        official_code: result.official_code
+        official_code: officialCode
     }
     const token = await this.getClarisaToken();
       const data = await lastValueFrom(this._httpService.post(`${this.clarisaHost}api/qa-token`, config,  {headers:{Authorization: `Bearer ${token.response}`}}).pipe(
