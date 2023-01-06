@@ -818,6 +818,7 @@ export class ResultsService {
         mapLegacy.legacy_id,
       );
 
+      const last_code = await this._resultRepository.getLastResultCode();
       const newResultHeader: Result = await this._resultRepository.save({
         created_by: user.id,
         last_updated_by: user.id,
@@ -829,6 +830,7 @@ export class ResultsService {
         result_level_id: rl.id,
         legacy_id: legacyResult.legacy_id,
         is_retrieved: true,
+        result_code: (last_code + 1)
       });
 
       const resultByInitiative = await this._resultByInitiativesRepository.save(
