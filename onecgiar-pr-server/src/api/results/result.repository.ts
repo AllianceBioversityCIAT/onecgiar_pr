@@ -688,11 +688,11 @@ WHERE
       const results: Array<{id}> = await this.query(queryData);
       return results;
     } catch (error) {
-      throw {
-        message: `[${ResultRepository.name}] => getLastResultCode error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error: error,
+        debug: true,
+      });
     }
   }
 }

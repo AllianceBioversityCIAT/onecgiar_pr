@@ -275,15 +275,11 @@ export class ResultsValidationModuleService {
   async saveAllGreenCheck(){
     try {
       const results = await this._resultRepository.getAllResultId();
-      for (let index = 0; index < results.length; index++)  {
-        const {id: resultId} = results[index];
+      for (const iterator of results) {
+        const {id: resultId} = iterator;
         const result = await this._resultRepository.getResultById(resultId);
       if (!result) {
-        throw {
-          response: {},
-          message: 'Results Not Found',
-          status: HttpStatus.NOT_FOUND,
-        };
+        continue;
       }
       let response: GetValidationSectionDto[] = [];
       const validation = await this._resultValidationRepository.validationResultExist(result.id);
@@ -364,7 +360,7 @@ export class ResultsValidationModuleService {
       await this._resultValidationRepository.save(newValidation);
       this._logger.verbose(`The validations of the result with id ${resultId} have been saved correctly.`);
 
-      const submit = response.reduce((previousValue, currentValue:any) => (previousValue * parseInt(currentValue.validation)), 1 );
+      response.reduce((previousValue, currentValue:any) => (previousValue * parseInt(currentValue.validation)), 1 );
       }
 
       return {
