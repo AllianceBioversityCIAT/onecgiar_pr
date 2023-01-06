@@ -10,16 +10,18 @@ import { resultValidationRepository } from '../results-validation-module/results
 
 @Injectable()
 export class SubmissionsService {
-
   constructor(
     private readonly _handlersError: HandlersError,
     private readonly _submissionRepository: submissionRepository,
     private readonly _resultRepository: ResultRepository,
-    private readonly _resultValidationRepository: resultValidationRepository
+    private readonly _resultValidationRepository: resultValidationRepository,
+  ) {}
 
-  ){}
-
-  async submitFunction(resultId: number, user: TokenDto, createSubmissionDto: CreateSubmissionDto){
+  async submitFunction(
+    resultId: number,
+    user: TokenDto,
+    createSubmissionDto: CreateSubmissionDto,
+  ) {
     try {
       const result = await this._resultRepository.getResultById(resultId);
       if (!result) {
@@ -30,18 +32,27 @@ export class SubmissionsService {
         };
       }
 
-      const isValid = await this._resultValidationRepository.resultIsValid(result.id);
-
-      if(!isValid){
+      const isValid = await this._resultValidationRepository.resultIsValid(
+        result.id,
+      );
+      console.log(isValid);
+      console.log(!isValid);
+      console.log(Boolean(isValid));
+      console.log(isValid + 1);
+      console.log(typeof isValid);
+      if (!isValid) {
         throw {
           response: {},
-          message: 'This result cannot be submit, sections are missing to complete',
+          message:
+            'This result cannot be submit, sections are missing to complete',
           status: HttpStatus.NOT_ACCEPTABLE,
         };
       }
 
-      const data = await this._resultRepository.update(result.id, {status: 1});
-      let newSubmissions = new Submission();
+      const data = await this._resultRepository.update(result.id, {
+        status: 1,
+      });
+      const newSubmissions = new Submission();
       newSubmissions.user_id = user.id;
       newSubmissions.status = true;
       newSubmissions.comment = createSubmissionDto.comment;
@@ -57,7 +68,11 @@ export class SubmissionsService {
     }
   }
 
-  async unsubmitFunction(resultId: number, user: TokenDto, createSubmissionDto: CreateSubmissionDto){
+  async unsubmitFunction(
+    resultId: number,
+    user: TokenDto,
+    createSubmissionDto: CreateSubmissionDto,
+  ) {
     try {
       const result = await this._resultRepository.getResultById(resultId);
       if (!result) {
@@ -76,8 +91,10 @@ export class SubmissionsService {
         };
       }
 
-      const data = await this._resultRepository.update(result.id, {status: 0});
-      let newSubmissions = new Submission();
+      const data = await this._resultRepository.update(result.id, {
+        status: 0,
+      });
+      const newSubmissions = new Submission();
       newSubmissions.user_id = user.id;
       newSubmissions.status = false;
       newSubmissions.comment = createSubmissionDto.comment;

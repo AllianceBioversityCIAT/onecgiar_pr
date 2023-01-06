@@ -20,6 +20,7 @@ export class PrTextareaComponent implements ControlValueAccessor {
   @Input() description: string;
   @Input() maxWords: number;
   @Input() readOnly: boolean;
+  @Input() isStatic: boolean = false;
   @Input() required: boolean = true;
   @Input() hint: string = null;
 

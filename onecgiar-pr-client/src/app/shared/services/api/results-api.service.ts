@@ -391,4 +391,11 @@ export class ResultsApiService {
   PATCH_greenChecksByResultId() {
     return this.http.patch<any>(`${this.apiBaseUrl}results-validation/save/green-checks/${this.currentResultId}`, {});
   }
+
+  PATCH_submit(comment) {
+    return this.http.patch<any>(`${this.apiBaseUrl}submissions/submit/${this.currentResultId}`, { comment });
+  }
+  PATCH_unsubmit(comment) {
+    return this.http.patch<any>(`${this.apiBaseUrl}submissions/unsubmit/${this.currentResultId}`, { comment });
+  }
 }
