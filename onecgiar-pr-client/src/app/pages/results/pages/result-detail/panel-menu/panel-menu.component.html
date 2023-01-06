@@ -24,7 +24,7 @@
       </div>
     </div>
   </div>
-  <div class="submit_button" *ngIf="this.rolesSE.roles?.application?.role_id != 6">
+  <div class="submit_button" *ngIf="this.rolesSE.roles?.application?.role_id != 6  && !this.api.rolesSE.readOnly">
     <app-pr-button [ngClass]="{'globalDisabled': !this.greenChecksSE.submit}"
       (click)="this.submissionModalSE.showModal = true;" text="Submit"
       *ngIf="this.dataControlSE?.currentResult?.status == 0"></app-pr-button>

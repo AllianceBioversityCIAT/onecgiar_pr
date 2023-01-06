@@ -1,6 +1,8 @@
 import { Component, forwardRef, Input, Output, EventEmitter } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
+import { GreenChecksService } from '../../shared/services/global/green-checks.service';
+import { DataControlService } from '../../shared/services/data-control.service';
 @Component({
   selector: 'app-pr-radio-button',
   templateUrl: './pr-radio-button.component.html',
@@ -25,7 +27,7 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
   @Input() isStatic: boolean = false;
   @Output() selectOptionEvent = new EventEmitter<any>();
   private _value: string;
-  constructor(public rolesSE: RolesService) {}
+  constructor(public rolesSE: RolesService, public dataControlSE: DataControlService) {}
 
   get value() {
     return this._value;

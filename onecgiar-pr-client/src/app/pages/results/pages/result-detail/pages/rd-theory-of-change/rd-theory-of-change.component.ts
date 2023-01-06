@@ -4,6 +4,7 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
+import { GreenChecksService } from '../../../../../../shared/services/global/green-checks.service';
 
 @Component({
   selector: 'app-rd-theory-of-change',
@@ -16,7 +17,7 @@ export class RdTheoryOfChangeComponent {
   primaryText = ' - <strong>Primary</strong> ';
   getConsumed = false;
   psub = '';
-  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public centersSE: CentersService, public institutionsSE: InstitutionsService) {}
+  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public centersSE: CentersService, public institutionsSE: InstitutionsService, public greenChecksSE: GreenChecksService) {}
   ngOnInit(): void {
     this.requestEvent();
     this.getSectionInformation();

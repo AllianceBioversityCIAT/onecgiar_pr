@@ -1,4 +1,4 @@
-<div class="fixed_button" *ngIf="!this.rolesSE.readOnly || editable">
+<div class="fixed_button" *ngIf="!this.rolesSE.readOnly && !this.dataControlSE?.currentResult?.status || editable">
     <div class="fields-feedback-list" [ngClass]="{'show-fields-feedback-list-opacity': disabled,'expand':expand}"
         *ngIf="this.dataControlSE.fieldFeedbackList?.length">
         <div class="back_icon" (click)="expand = !expand;">

@@ -16,7 +16,7 @@ import { RolesService } from '../../../../../shared/services/global/roles.servic
 })
 export class PanelMenuComponent {
   navigationOptions: PrRoute[] = resultDetailRouting;
-  constructor(public rolesSE: RolesService, public resultLevelSE: ResultLevelService, public resultsListSE: ResultsApiService, private api: ApiService, public greenChecksSE: GreenChecksService, public submissionModalSE: SubmissionModalService, public unsubmitModalSE: UnsubmitModalService, public dataControlSE: DataControlService) {}
+  constructor(public rolesSE: RolesService, public resultLevelSE: ResultLevelService, public resultsListSE: ResultsApiService, public api: ApiService, public greenChecksSE: GreenChecksService, public submissionModalSE: SubmissionModalService, public unsubmitModalSE: UnsubmitModalService, public dataControlSE: DataControlService) {}
 
   hideKP(navOption) {
     if (!this.api.dataControlSE.isKnowledgeProduct) return false;
