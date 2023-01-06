@@ -7,6 +7,7 @@ import { ResultRepository } from '../result.repository';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { Submission } from './entities/submission.entity';
 import { resultValidationRepository } from '../results-validation-module/results-validation-module.repository';
+import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 
 @Injectable()
 export class SubmissionsService {
@@ -15,7 +16,9 @@ export class SubmissionsService {
     private readonly _submissionRepository: submissionRepository,
     private readonly _resultRepository: ResultRepository,
     private readonly _resultValidationRepository: resultValidationRepository,
-  ) {}
+    private readonly _roleByUserRepository: RoleByUserRepository
+
+  ){}
 
   async submitFunction(
     resultId: number,
@@ -24,6 +27,15 @@ export class SubmissionsService {
   ) {
     try {
       const result = await this._resultRepository.getResultById(resultId);
+      const role = await this._roleByUserRepository.validationRolePermissions(user.id, result.id, [3,4,5]);
+      if(!role){
+        throw {
+          response: {},
+          message: 'The user does not have the necessary role for this action.',
+          status: HttpStatus.UNAUTHORIZED,
+        };
+      }
+
       if (!result) {
         throw {
           response: {},
@@ -32,15 +44,8 @@ export class SubmissionsService {
         };
       }
 
-      const isValid = await this._resultValidationRepository.resultIsValid(
-        result.id,
-      );
-      console.log(isValid);
-      console.log(!isValid);
-      console.log(Boolean(isValid));
-      console.log(isValid + 1);
-      console.log(typeof isValid);
-      if (!isValid) {
+      const isValid = await this._resultValidationRepository.resultIsValid(result.id);
+      if(!isValid){
         throw {
           response: {},
           message:
@@ -75,6 +80,14 @@ export class SubmissionsService {
   ) {
     try {
       const result = await this._resultRepository.getResultById(resultId);
+      const role = await this._roleByUserRepository.validationRolePermissions(user.id, result.id, [3,4,5]);
+      if(!role){
+        throw {
+          response: {},
+          message: 'The user does not have the necessary role for this action.',
+          status: HttpStatus.UNAUTHORIZED,
+        };
+      }
       if (!result) {
         throw {
           response: {},
