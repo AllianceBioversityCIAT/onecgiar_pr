@@ -16,7 +16,6 @@ export class QualityAssuranceComponent implements OnInit {
   showIframe = false;
   ngOnInit(): void {
     this.GET_AllInitiatives();
-    this.GET_ClarisaQaToken();
   }
 
   sanitizeUrl() {
@@ -35,16 +34,16 @@ export class QualityAssuranceComponent implements OnInit {
   }
 
   GET_ClarisaQaToken() {
-    this.api.resultsSE.GET_ClarisaQaToken().subscribe(resp => {
-      console.log(resp?.response?.token);
+    this.api.resultsSE.GET_ClarisaQaToken(this.official_code).subscribe(resp => {
+      console.log(resp);
       this.clarisaQaToken = resp?.response?.token;
-      this.clarisaQaToken = '908d3eb6aebbf496a37d82f2e0f9f452';
     });
   }
 
   selectOptionEvent(option) {
     console.log(option);
     this.official_code = option?.official_code;
+    this.GET_ClarisaQaToken();
     this.showIframe = false;
     setTimeout(() => {
       this.showIframe = true;
