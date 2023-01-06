@@ -500,7 +500,7 @@ WHERE
     union
     (select 
       r.id,
-      r.result_code
+      r.result_code,
       r.title,
       r.description,
       ci.official_code as crp,
