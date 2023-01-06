@@ -55,14 +55,17 @@
                     placeholder="Lead/Contract Center goes here...">
                 </app-pr-select>
             </div>
-            <app-edit-or-delete-item-button (click)="deleteEvidence(i)" *ngIf="!this.api.rolesSE.readOnly">
+            <app-edit-or-delete-item-button (click)="deleteEvidence(i)"
+                *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status">
             </app-edit-or-delete-item-button>
         </div>
     </div>
-    <app-no-data-text *ngIf="!this.theoryOfChangeBody?.contributing_np_projects?.length && !this.api.rolesSE.readOnly"
+    <app-no-data-text
+        *ngIf="!this.theoryOfChangeBody?.contributing_np_projects?.length && !this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"
         title="No Non-pooled added">
     </app-no-data-text>
-    <app-add-button name="Add non-pooled project" *ngIf="!this.api.rolesSE.readOnly"
+    <app-add-button name="Add non-pooled project"
+        *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"
         (clickEvent)="addBilateralContribution()"></app-add-button>
     <app-pr-multi-select [options]="this.centersSE.centersList" label="Contributing Centers"
         (selectOptionEvent)="validatePrimarySelection()" selectedLabel="Center(s) selected" optionLabel="full_name"
@@ -78,11 +81,11 @@
             <div class="center pr_chip_selected"
                 *ngFor="let center of this.theoryOfChangeBody.contributing_center; let i=index">
                 <i class="material-icons-round medal" [ngClass]="{'primary': center.primary}"
-                    (click)="this.api.rolesSE.readOnly?null:addPrimary(center)">workspace_premium</i>
+                    (click)="this.api.rolesSE.readOnly && this.api.dataControlSE?.currentResult?.status?null:addPrimary(center)">workspace_premium</i>
                 <!--TODO add primary text  -->
                 <div class="name" [innerHtml]="center?.name+(center.primary?primaryText:'')"></div><i
-                    *ngIf="!this.api.rolesSE.readOnly" class="material-icons-round"
-                    (click)="deletContributingCenter(i)">cancel</i>
+                    *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"
+                    class="material-icons-round" (click)="deletContributingCenter(i)">cancel</i>
             </div>
         </div>
     </div>

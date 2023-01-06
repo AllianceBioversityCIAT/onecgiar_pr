@@ -2,6 +2,7 @@ import { Component, forwardRef, Input, Output, EventEmitter } from '@angular/cor
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { CustomizedAlertsFeService } from '../../shared/services/customized-alerts-fe.service';
+import { DataControlService } from '../../shared/services/data-control.service';
 
 @Component({
   selector: 'app-pr-multi-select',
@@ -16,7 +17,7 @@ import { CustomizedAlertsFeService } from '../../shared/services/customized-aler
   ]
 })
 export class PrMultiSelectComponent implements ControlValueAccessor {
-  constructor(public rolesSE: RolesService, private customizedAlertsFeSE: CustomizedAlertsFeService) {}
+  constructor(public rolesSE: RolesService, private customizedAlertsFeSE: CustomizedAlertsFeService, public dataControlSE: DataControlService) {}
   @Input() optionLabel: string;
   @Input() optionValue: string;
   @Input() options: any;

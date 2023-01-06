@@ -2,6 +2,8 @@ import { Component } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ResultsListService } from '../../../results-outlet/pages/results-list/services/results-list.service';
 import { LinksToResultsBody } from './models/linksToResultsBody';
+import { RolesService } from '../../../../../../shared/services/global/roles.service';
+import { GreenChecksService } from '../../../../../../shared/services/global/green-checks.service';
 
 @Component({
   selector: 'app-rd-links-to-results',
@@ -9,7 +11,7 @@ import { LinksToResultsBody } from './models/linksToResultsBody';
   styleUrls: ['./rd-links-to-results.component.scss']
 })
 export class RdLinksToResultsComponent {
-  constructor(public api: ApiService, public resultsListService: ResultsListService) {}
+  constructor(public api: ApiService, public resultsListService: ResultsListService, public rolesSE: RolesService, public greenChecksSE: GreenChecksService) {}
   linksToResultsBody = new LinksToResultsBody();
   text_to_search: string = '';
   counterPipe = 0;
