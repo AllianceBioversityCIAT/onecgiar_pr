@@ -4,6 +4,10 @@ import { ResultLevelService } from '../../result-creator/services/result-level.s
 import { ResultsApiService } from '../../../../../shared/services/api/results-api.service';
 import { ApiService } from '../../../../../shared/services/api/api.service';
 import { GreenChecksService } from '../../../../../shared/services/global/green-checks.service';
+import { SubmissionModalService } from '../components/submission-modal/submission-modal.service';
+import { DataControlService } from '../../../../../shared/services/data-control.service';
+import { UnsubmitModalService } from '../components/unsubmit-modal/unsubmit-modal.service';
+import { RolesService } from '../../../../../shared/services/global/roles.service';
 
 @Component({
   selector: 'app-panel-menu',
@@ -12,7 +16,7 @@ import { GreenChecksService } from '../../../../../shared/services/global/green-
 })
 export class PanelMenuComponent {
   navigationOptions: PrRoute[] = resultDetailRouting;
-  constructor(public resultLevelSE: ResultLevelService, public resultsListSE: ResultsApiService, private api: ApiService, public greenChecksSE: GreenChecksService) {}
+  constructor(public rolesSE: RolesService, public resultLevelSE: ResultLevelService, public resultsListSE: ResultsApiService, private api: ApiService, public greenChecksSE: GreenChecksService, public submissionModalSE: SubmissionModalService, public unsubmitModalSE: UnsubmitModalService, public dataControlSE: DataControlService) {}
 
   hideKP(navOption) {
     if (!this.api.dataControlSE.isKnowledgeProduct) return false;

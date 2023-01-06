@@ -11,9 +11,12 @@ import { BreadcrumbModule } from '../../../../shared/components/breadcrumb/bread
 import { NoEditContainerComponent } from './components/no-edit-container/no-edit-container.component';
 import { ButtonModule } from 'primeng/button';
 import { ResultTitleComponent } from './components/result-title/result-title.component';
+import { SubmissionModalComponent } from './components/submission-modal/submission-modal.component';
+import { SubmissionModalModule } from './components/submission-modal/submission-modal.module';
+import { UnsubmitModalModule } from './components/unsubmit-modal/unsubmit-modal.module';
 
 @NgModule({
   declarations: [ResultDetailComponent, PanelMenuComponent, PanelMenuPipe, NoEditContainerComponent, ResultTitleComponent],
-  imports: [CommonModule, ResultDetailRoutingModule, PartnersRequestModule, CustomFieldsModule, BreadcrumbModule, ButtonModule]
+  imports: [CommonModule, ResultDetailRoutingModule, PartnersRequestModule, CustomFieldsModule, BreadcrumbModule, ButtonModule, SubmissionModalModule, UnsubmitModalModule]
 })
 export class ResultDetailModule {}

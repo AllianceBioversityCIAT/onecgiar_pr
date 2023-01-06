@@ -1,6 +1,6 @@
 <app-pr-field-header [label]="this.label" [description]="this.description" [required]="this.required">
 </app-pr-field-header>
-<div [ngSwitch]="readOnly || this.rolesSE.readOnly" class="pr-field"
+<div [ngSwitch]="(readOnly || this.rolesSE.readOnly) && (!isStatic)" class="pr-field"
     [ngClass]="{'mandatory': this.required,'complete': value}">
     <div class="read-only" *ngSwitchCase="true" [innerHtml]="value || notProvidedText">
     </div>
