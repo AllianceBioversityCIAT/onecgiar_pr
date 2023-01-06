@@ -590,8 +590,8 @@ export class resultValidationRepository extends Repository<Validation>{
   		WHERE v.results_id = ?;
     `;
     try {
-      const shareResultRequest: Array<{validation:number}> = await this.dataSource.query(queryData, [resultId]); 
-	  return shareResultRequest.length ? shareResultRequest[0].validation : null;
+      const shareResultRequest: Array<{validation:string}> = await this.dataSource.query(queryData, [resultId]); 
+	  return shareResultRequest.length ? parseInt(shareResultRequest[0].validation) : 0;
     } catch (error) {
 		throw this._handlersError.returnErrorRepository({
         className: resultValidationRepository.name,
