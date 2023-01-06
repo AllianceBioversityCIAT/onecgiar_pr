@@ -24,9 +24,10 @@ export class ResultsValidationModuleController {
     throw new HttpException({ message, response }, status);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateResultsValidationModuleDto: UpdateResultsValidationModuleDto) {
-    return this.resultsValidationModuleService.update(+id, updateResultsValidationModuleDto);
+  @Get('bulk')
+  async bulk() {
+    const {message, response, status} = await this.resultsValidationModuleService.saveAllGreenCheck();
+    throw new HttpException({ message, response }, status);
   }
 
   @Delete(':id')
