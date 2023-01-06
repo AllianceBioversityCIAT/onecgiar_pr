@@ -9,7 +9,7 @@
 </app-alert-status>
 
 <app-toc-initiative-aao [initiative]="result_toc_result"
-    [editable]="this.api.rolesSE.validateInitiative(result_toc_result?.initiative_id) || this.api.rolesSE.isAdmin">
+    [editable]="(this.api.rolesSE.validateInitiative(result_toc_result?.initiative_id) || this.api.rolesSE.isAdmin) && !this.dataControlSE?.currentResult?.status">
 </app-toc-initiative-aao>
 
 <app-pr-field-header label="Other contributors" [required]="false" [simpleStyle]="true"
@@ -18,6 +18,6 @@
 
 <div *ngFor="let initiative of contributors_result_toc_result">
     <app-toc-initiative-aao [initiative]="initiative"
-        [editable]="this.api.rolesSE.validateInitiative(initiative?.initiative_id) || this.api.rolesSE.isAdmin">
+        [editable]="(this.api.rolesSE.validateInitiative(initiative?.initiative_id) || this.api.rolesSE.isAdmin) && !this.dataControlSE?.currentResult?.status">
     </app-toc-initiative-aao>
 </div>
