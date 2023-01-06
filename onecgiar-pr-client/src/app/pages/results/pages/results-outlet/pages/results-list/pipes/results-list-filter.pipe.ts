@@ -17,7 +17,8 @@ export class ResultsListFilterPipe implements PipeTransform {
     resultList.map(item => {
       item.joinAll = '';
       Object.keys(item).map(attr => {
-        item.joinAll += (item[attr] ? item[attr] : '') + ' ';
+        // console.log(attr);
+        if (attr != 'created_date') item.joinAll += (item[attr] ? item[attr] : '') + ' ';
       });
     });
     return resultList.filter(item => item.joinAll.toUpperCase().indexOf(word?.toUpperCase()) > -1);
