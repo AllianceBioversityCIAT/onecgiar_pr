@@ -180,6 +180,7 @@ export class ResultsKnowledgeProductsService {
         };
       }
 
+      const last_code = await this._resultRepository.getLastResultCode();
       const newResultHeader: Result = await this._resultRepository.save({
         created_by: user.id,
         last_updated_by: user.id,
@@ -188,6 +189,7 @@ export class ResultsKnowledgeProductsService {
         title: createResultDto.result_name,
         reported_year_id: year.year,
         result_level_id: rl.id,
+        result_code: (last_code + 1)
       });
 
       const resultByInitiative = await this._resultByInitiativesRepository.save(
