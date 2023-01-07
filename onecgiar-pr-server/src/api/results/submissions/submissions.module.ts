@@ -5,10 +5,11 @@ import { submissionRepository } from './submissions.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultRepository } from '../result.repository';
 import { resultValidationRepository } from '../results-validation-module/results-validation-module.repository';
+import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 
 @Module({
   controllers: [SubmissionsController],
-  providers: [SubmissionsService, submissionRepository, ResultRepository, resultValidationRepository, HandlersError],
+  providers: [SubmissionsService, submissionRepository, ResultRepository, resultValidationRepository, RoleByUserRepository, HandlersError],
   exports: [
     submissionRepository
   ]

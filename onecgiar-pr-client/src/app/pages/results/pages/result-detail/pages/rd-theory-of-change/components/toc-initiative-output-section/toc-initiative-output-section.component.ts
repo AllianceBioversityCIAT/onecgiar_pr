@@ -2,6 +2,7 @@ import { Component, Input, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { resultToResultInterfaceToc } from '../../model/theoryOfChangeBody';
 import { TocInitiativeOutcomeListsService } from '../toc-initiative-outcome-section/services/toc-initiative-outcome-lists.service';
+import { DataControlService } from '../../../../../../../../shared/services/data-control.service';
 
 @Component({
   selector: 'app-toc-initiative-output-section',
@@ -14,7 +15,7 @@ export class TocInitiativeOutputSectionComponent {
   @Input() result_toc_result = new resultToResultInterfaceToc();
   @Input() contributors_result_toc_result: any;
   fullInitiativeToc = null;
-  constructor(public api: ApiService, public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService) {}
+  constructor(public api: ApiService, public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public dataControlSE: DataControlService) {}
   ngOnInit(): void {
     this.GET_outcomeList();
     this.GET_outputList();
