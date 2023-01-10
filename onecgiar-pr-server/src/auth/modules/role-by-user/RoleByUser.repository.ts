@@ -130,7 +130,9 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
 	    		u.active > 0
 	    		and u.id = ?
 	    		and rbu.action_area_id is NULL
-	    		and rbu.initiative_id is null) = 1) then true
+	    		and rbu.initiative_id is null
+        order by rbu.\`role\` asc
+	    	LIMIT 1) = 1) then true
 	    	else CASE 
 	    		WHEN ((
 	    		SELECT
