@@ -14,7 +14,9 @@ export class UnsubmitModalComponent {
   comment = null;
   requesting = false;
   constructor(public api: ApiService, public dataControlSE: DataControlService, public unsubmitModalSE: UnsubmitModalService, private currentResultSE: CurrentResultService) {}
-  cleanObject() {}
+  cleanObject() {
+    this.comment = null;
+  }
   onSubmit() {
     this.api.resultsSE.PATCH_unsubmit(this.comment).subscribe(
       resp => {
