@@ -39,6 +39,10 @@ export class NotificationItemComponent {
     this.api.dataControlSE.showShareRequest = true;
   }
 
+  resultUrl(resultId) {
+    return `/result/result-detail/${resultId}`;
+  }
+
   acceptOrReject(response) {
     let body = { ...this.notification, request_status_id: response ? 2 : 3 };
     console.log(body);

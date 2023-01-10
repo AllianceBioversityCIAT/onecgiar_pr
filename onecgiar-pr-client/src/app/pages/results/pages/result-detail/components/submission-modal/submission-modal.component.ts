@@ -13,7 +13,9 @@ export class SubmissionModalComponent {
   comment = null;
   requesting = false;
   constructor(public api: ApiService, public dataControlSE: DataControlService, public submissionModalSE: SubmissionModalService, private currentResultSE: CurrentResultService) {}
-  cleanObject() {}
+  cleanObject() {
+    this.comment = null;
+  }
   onSubmit() {
     this.api.resultsSE.PATCH_submit(this.comment).subscribe(
       resp => {

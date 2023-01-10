@@ -1,0 +1,34 @@
+<div class="local_container section_container">
+
+    <app-pr-select class="segment_title_margin" [options]="this.api.dataControlSE.myInitiativesList"
+        *ngIf="!this.api.rolesSE.isAdmin" label="Select initiative" [isStatic]="true" optionLabel="full_name"
+        optionValue="initiative_id" placeholder="Select initiative" (selectOptionEvent)="selectOptionEvent($event)"
+        [(ngModel)]="this.resultLevelSE.resultBody.initiative_id">
+    </app-pr-select>
+
+    <app-pr-select class="segment_title_margin" [options]="this.allInitiatives" label="Report for" [isStatic]="true"
+        *ngIf="this.api.rolesSE.isAdmin" optionLabel="full_name" optionValue="initiative_id"
+        (selectOptionEvent)="selectOptionEvent($event)" placeholder="Select initiative"
+        [(ngModel)]="this.resultLevelSE.resultBody.initiative_id">
+    </app-pr-select>
+
+
+    <app-no-data-text *ngIf="!this.showIframe || !this.official_code || !this.clarisaQaToken"
+        title="Select an initiative to display the content"></app-no-data-text>
+
+    <br>
+
+    <div [ngClass]="{'expand': this.api.dataControlSE.show_qa_full_screen}" class="iframe_container"
+        *ngIf="this.showIframe && this.clarisaQaToken && this.official_code">
+        <div class="expand_icon"
+            (click)="this.api.dataControlSE.show_qa_full_screen = !this.api.dataControlSE.show_qa_full_screen">
+            <i class="material-icons-round">
+                {{this.api.dataControlSE.show_qa_full_screen?'close_fullscreen':'open_in_full'}}
+            </i>
+            {{this.api.dataControlSE.show_qa_full_screen?'Minimize ':'Open in full screen'}}
+        </div>
+
+        <iframe onload="resizeIframe(this)" class="embedded" [src]="this.sanitizeUrl()" frameborder="0"></iframe>
+    </div>
+    <br>
+</div>

@@ -6,8 +6,6 @@ import { DataControlService } from '../../../../../../shared/services/data-contr
   templateUrl: './result-title.component.html',
   styleUrls: ['./result-title.component.scss']
 })
-export class ResultTitleComponent implements OnInit {
+export class ResultTitleComponent {
   constructor(public dataControlSE: DataControlService) {}
-
-  ngOnInit(): void {}
 }

@@ -17,7 +17,6 @@
         border-radius: 7px;
         font-weight: 300;
         position: relative;
-        padding-right: 40px;
 
         img {
             position: absolute;
@@ -27,6 +26,10 @@
             height: 30px;
         }
     }
+}
+
+.padding-right-40 {
+    padding-right: 40px !important;
 }
 
 .navbar_fixed {
