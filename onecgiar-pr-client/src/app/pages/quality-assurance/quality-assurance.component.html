@@ -13,11 +13,22 @@
     </app-pr-select>
 
 
-    <app-no-data-text *ngIf="!this.showIframe && this.official_code && this.clarisaQaToken "
+    <app-no-data-text *ngIf="!this.showIframe || !this.official_code || !this.clarisaQaToken"
         title="Select an initiative to display the content"></app-no-data-text>
 
+    <br>
 
+    <div [ngClass]="{'expand': this.api.dataControlSE.show_qa_full_screen}" class="iframe_container"
+        *ngIf="this.showIframe && this.clarisaQaToken && this.official_code">
+        <div class="expand_icon"
+            (click)="this.api.dataControlSE.show_qa_full_screen = !this.api.dataControlSE.show_qa_full_screen">
+            <i class="material-icons-round">
+                {{this.api.dataControlSE.show_qa_full_screen?'close_fullscreen':'open_in_full'}}
+            </i>
+            {{this.api.dataControlSE.show_qa_full_screen?'Minimize ':'Open in full screen'}}
+        </div>
 
-    <iframe *ngIf="this.showIframe" class="embedded" [src]="this.sanitizeUrl()" frameborder="0"></iframe>
-
+        <iframe onload="resizeIframe(this)" class="embedded" [src]="this.sanitizeUrl()" frameborder="0"></iframe>
+    </div>
+    <br>
 </div>

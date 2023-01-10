@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../shared/services/api/api.service';
 import { ResultLevelService } from '../results/pages/result-creator/services/result-level.service';
 import { DomSanitizer } from '@angular/platform-browser';
+import { environment } from 'src/environments/environment';
 
 @Component({
   selector: 'app-quality-assurance',
@@ -14,14 +15,14 @@ export class QualityAssuranceComponent implements OnInit {
   clarisaQaToken = null;
   official_code = null;
   showIframe = false;
+  qaUrl = environment.qaUrl;
   ngOnInit(): void {
     this.GET_AllInitiatives();
   }
 
   sanitizeUrl() {
-    // console.log(url); 'https://qatest.ciat.cgiar.org/crp?crp_id=INIT-15&token='+this.clarisaQaToken
-    console.log(`https://qatest.ciat.cgiar.org/crp?crp_id=${this.official_code}&token=${this.clarisaQaToken}`);
-    return this.sanitizer.bypassSecurityTrustResourceUrl(`https://qatest.ciat.cgiar.org/crp?crp_id=${this.official_code}&token=${this.clarisaQaToken}`);
+    // console.log(`${this.qaUrl}/crp?crp_id=${this.official_code}&token=${this.clarisaQaToken}`);
+    return this.sanitizer.bypassSecurityTrustResourceUrl(`${this.qaUrl}/crp?crp_id=${this.official_code}&token=${this.clarisaQaToken}`);
   }
 
   GET_AllInitiatives() {
@@ -32,7 +33,6 @@ export class QualityAssuranceComponent implements OnInit {
       this.allInitiatives = response;
     });
   }
-
   GET_ClarisaQaToken() {
     this.api.resultsSE.GET_ClarisaQaToken(this.official_code).subscribe(resp => {
       console.log(resp);
