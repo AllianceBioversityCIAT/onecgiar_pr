@@ -1,5 +1,6 @@
 <div [ngSwitch]="notification?.request_status_id" class="noti_container">
-    <i class="material-icons-round direction_icon" [style]="'rotate:'+ (this.comes ? '130deg' : '320deg')">
+    <i class="material-icons-round direction_icon" *ngIf="notification?.request_status_id != 4"
+        [style]="'rotate:'+ (this.comes ? '130deg' : '320deg')">
         arrow_right_alt
     </i>
     <div *ngSwitchCase="1">
@@ -58,7 +59,8 @@
                 {{notification?.title}}</a>
         </div>
 
-        <div class="text_icon accepted">Accepted by {{notification?.first_name}}
+        <div class="text_icon accepted">Accepted by <strong>{{notification?.approved_last_name}}
+                {{notification?.approved_first_name}}</strong>
             <i class="material-icons-round">
                 check_circle
             </i>
@@ -74,7 +76,8 @@
                 {{notification?.title}}</a>
         </div>
 
-        <div class="text_icon rejected">Rejected by {{notification?.first_name}}
+        <div class="text_icon rejected">Rejected by <strong>{{notification?.approved_last_name}}
+                {{notification?.approved_first_name}}</strong>
             <i class="material-icons-round">
                 check_circle
             </i>
