@@ -34,9 +34,9 @@
     box-shadow: 0px 0px 9px 4px #00000021;
     // top: -100px;
     transform: translateY(-100%) scale(1);
-    right: -50px;
+    right: -80px;
     // height: 120px;
-    width: 90px;
+    width: 130px;
     border-radius: 10px;
     display: flex;
     overflow: hidden;
@@ -51,6 +51,25 @@
 
         i {
             transform: rotate(0deg);
+        }
+    }
+
+    .counter {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 15px 10px;
+        font-weight: 600;
+        color: var(--pr-color-primary);
+        font-size: 1.1em;
+
+        .text {
+            font-size: .9em;
+        }
+
+        i {
+            color: #ff8a00;
+            margin-bottom: 3px;
         }
     }
 

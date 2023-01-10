@@ -6,7 +6,7 @@
                 arrow_back_ios
             </i>
         </div>
-        <div class="items">
+        <div class="items" *ngIf="expand">
             <div class="item" *ngFor="let item of this.dataControlSE.fieldFeedbackList">
                 <!-- <div class="status"></div> -->
                 <i class="material-icons-round">
@@ -14,6 +14,12 @@
                 </i>
                 <div class="text"><strong>{{item}}</strong> is missing</div>
             </div>
+        </div>
+        <div class="counter" *ngIf="!expand">
+            <i class="material-icons-round">
+                warning
+            </i>
+            {{this.dataControlSE?.fieldFeedbackList?.length}} <div class="text">alerts</div>
         </div>
     </div>
     <div (click)="this.saveButtonSE.isSaving || disabled ? null:onClickSave()">
