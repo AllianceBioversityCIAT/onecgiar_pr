@@ -52,7 +52,7 @@ export class TocResultsRepository extends Repository<TocResult> {
 
   async getAllTocResultsByInitiative(initiativeId: number, tocLevel: number) {
     const queryData = `
-    select 
+    select DISTINCT
       tr.toc_result_id ,
       tr.toc_internal_id ,
       tr.title,
@@ -64,7 +64,7 @@ export class TocResultsRepository extends Repository<TocResult> {
       wp.acronym as wp_short_name,
       null as action_area_outcome_id
     from toc_result tr
-    left join ${env.DB_OST}.work_packages wp on wp.id  = tr.work_package_id
+    left join ${env.DB_OST}.work_packages wp on wp.wp_official_code = tr.work_package_id
 	  where tr.inititiative_id = ?
     	and tr.toc_level_id = ?
       and tr.is_active > 0
