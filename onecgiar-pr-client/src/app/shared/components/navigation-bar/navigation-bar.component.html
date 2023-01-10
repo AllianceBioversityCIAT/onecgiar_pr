@@ -1,7 +1,8 @@
 <div class="navigation_bar" [ngClass]="{ navbar_fixed: this._navigationBarService.navbar_fixed }">
   <a *ngFor="let navOption of navigationOptions" [hidden]="navOption.prHide" [routerLink]="navOption.path"
-    routerLinkActive="section_active transition-all">{{ navOption.prName }} <img src="assets/work-in-progress.png"
-      alt="" srcset=""> </a>
+    routerLinkActive="section_active transition-all" [ngClass]="{'padding-right-40': navOption?.underConstruction}">{{
+    navOption.prName }} <img *ngIf="navOption?.underConstruction" src="assets/work-in-progress.png" alt="" srcset="">
+  </a>
 </div>
 
 <div class="block" *ngIf="this._navigationBarService.navbar_fixed"></div>
