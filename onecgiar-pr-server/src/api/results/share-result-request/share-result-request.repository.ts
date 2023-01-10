@@ -87,7 +87,11 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     	srr.action_area_outcome_id,
     	srr.request_status_id,
     	srr.requested_by,
+		u.first_name as requested_first_name,
+    	u.last_name as requested_last_name,
     	srr.approved_by,
+    	u2.first_name as approved_first_name,
+    	u2.last_name as approved_last_name,
 		srr.planned_result,
     	r.description,
     	r.title,
@@ -95,16 +99,15 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
 		r.result_type_id,
     	rt.name as result_type_name,
     	rl.name as result_level_name,
-		false as is_requester,
-    	u.first_name,
-    	u.last_name
+		false as is_requester
     FROM
     	share_result_request srr
     	inner join \`result\` r on r.id = srr.result_id 
     						and r.is_active > 0
     	inner join result_level rl on rl.id = r.result_level_id 
     	inner join result_type rt on rt.id = r.result_type_id 
-		LEFT  join users u on u.id = srr.approved_by 
+		left join users u on u.id = srr.requested_by 
+    	left join users u2 on u2.id = srr.approved_by 
     WHERE 
     	srr.approving_inititiative_id in (
     	SELECT
@@ -147,7 +150,11 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     	srr.action_area_outcome_id,
     	srr.request_status_id,
     	srr.requested_by,
+		u.first_name as requested_first_name,
+    	u.last_name as requested_last_name,
     	srr.approved_by,
+    	u2.first_name as approved_first_name,
+    	u2.last_name as approved_last_name,
 		srr.planned_result,
     	r.description,
     	r.title,
@@ -162,6 +169,8 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     						and r.is_active > 0
     	inner join result_level rl on rl.id = r.result_level_id 
     	inner join result_type rt on rt.id = r.result_type_id 
+		left join users u on u.id = srr.requested_by 
+    	left join users u2 on u2.id = srr.approved_by  
     WHERE 
     	srr.requester_initiative_id in (
     	SELECT
