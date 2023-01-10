@@ -3,6 +3,7 @@ import { ApiService } from '../../../../../../../../shared/services/api/api.serv
 import { TocInitiativeOutcomeListsService } from './services/toc-initiative-outcome-lists.service';
 import { resultToResultInterfaceToc } from '../../model/theoryOfChangeBody';
 import { RolesService } from '../../../../../../../../shared/services/global/roles.service';
+import { DataControlService } from '../../../../../../../../shared/services/data-control.service';
 
 @Component({
   selector: 'app-toc-initiative-outcome-section',
@@ -10,7 +11,7 @@ import { RolesService } from '../../../../../../../../shared/services/global/rol
   styleUrls: ['./toc-initiative-outcome-section.component.scss']
 })
 export class TocInitiativeOutcomeSectionComponent {
-  constructor(private api: ApiService, public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public rolesSE: RolesService) {}
+  constructor(private api: ApiService, public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public rolesSE: RolesService, public dataControlSE: DataControlService) {}
   outcomeList = [];
   outputList = [];
   eoiList = [];

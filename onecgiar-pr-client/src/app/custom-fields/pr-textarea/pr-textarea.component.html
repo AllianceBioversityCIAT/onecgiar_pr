@@ -1,7 +1,7 @@
 <app-pr-field-header [label]="this.label" [description]="this.description" [required]="this.required">
 </app-pr-field-header>
-<div [ngSwitch]="readOnly || this.rolesSE.readOnly" class="pr-field"
-    [ngClass]="{'mandatory': this.required,'complete': value}">
+<div [ngSwitch]="(readOnly || this.rolesSE.readOnly || this.dataControlSE?.currentResult?.status) && (!isStatic)"
+    class="pr-field" [ngClass]="{'mandatory': this.required,'complete': value}">
     <div class="read-only" *ngSwitchCase="true" [innerHtml]="value || notProvidedText">
     </div>
     <div class="p-fluid input_container" *ngSwitchCase="false">

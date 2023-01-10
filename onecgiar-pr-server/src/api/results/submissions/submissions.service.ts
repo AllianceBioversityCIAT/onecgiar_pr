@@ -7,21 +7,35 @@ import { ResultRepository } from '../result.repository';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { Submission } from './entities/submission.entity';
 import { resultValidationRepository } from '../results-validation-module/results-validation-module.repository';
+import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 
 @Injectable()
 export class SubmissionsService {
-
   constructor(
     private readonly _handlersError: HandlersError,
     private readonly _submissionRepository: submissionRepository,
     private readonly _resultRepository: ResultRepository,
-    private readonly _resultValidationRepository: resultValidationRepository
+    private readonly _resultValidationRepository: resultValidationRepository,
+    private readonly _roleByUserRepository: RoleByUserRepository
 
   ){}
 
-  async submitFunction(resultId: number, user: TokenDto, createSubmissionDto: CreateSubmissionDto){
+  async submitFunction(
+    resultId: number,
+    user: TokenDto,
+    createSubmissionDto: CreateSubmissionDto,
+  ) {
     try {
       const result = await this._resultRepository.getResultById(resultId);
+      const role = await this._roleByUserRepository.validationRolePermissions(user.id, result.id, [3,4,5]);
+      if(!role){
+        throw {
+          response: {},
+          message: 'The user does not have the necessary role for this action.',
+          status: HttpStatus.UNAUTHORIZED,
+        };
+      }
+
       if (!result) {
         throw {
           response: {},
@@ -31,17 +45,19 @@ export class SubmissionsService {
       }
 
       const isValid = await this._resultValidationRepository.resultIsValid(result.id);
-
       if(!isValid){
         throw {
           response: {},
-          message: 'This result cannot be submit, sections are missing to complete',
+          message:
+            'This result cannot be submit, sections are missing to complete',
           status: HttpStatus.NOT_ACCEPTABLE,
         };
       }
 
-      const data = await this._resultRepository.update(result.id, {status: 1});
-      let newSubmissions = new Submission();
+      const data = await this._resultRepository.update(result.id, {
+        status: 1,
+      });
+      const newSubmissions = new Submission();
       newSubmissions.user_id = user.id;
       newSubmissions.status = true;
       newSubmissions.comment = createSubmissionDto.comment;
@@ -57,9 +73,21 @@ export class SubmissionsService {
     }
   }
 
-  async unsubmitFunction(resultId: number, user: TokenDto, createSubmissionDto: CreateSubmissionDto){
+  async unsubmitFunction(
+    resultId: number,
+    user: TokenDto,
+    createSubmissionDto: CreateSubmissionDto,
+  ) {
     try {
       const result = await this._resultRepository.getResultById(resultId);
+      const role = await this._roleByUserRepository.validationRolePermissions(user.id, result.id, [3,4,5]);
+      if(!role){
+        throw {
+          response: {},
+          message: 'The user does not have the necessary role for this action.',
+          status: HttpStatus.UNAUTHORIZED,
+        };
+      }
       if (!result) {
         throw {
           response: {},
@@ -76,8 +104,10 @@ export class SubmissionsService {
         };
       }
 
-      const data = await this._resultRepository.update(result.id, {status: 0});
-      let newSubmissions = new Submission();
+      const data = await this._resultRepository.update(result.id, {
+        status: 0,
+      });
+      const newSubmissions = new Submission();
       newSubmissions.user_id = user.id;
       newSubmissions.status = false;
       newSubmissions.comment = createSubmissionDto.comment;

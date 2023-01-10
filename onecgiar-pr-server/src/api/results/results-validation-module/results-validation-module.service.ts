@@ -1,4 +1,4 @@
-import { Injectable, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpStatus, Logger } from '@nestjs/common';
 import { CreateResultsValidationModuleDto } from './dto/create-results-validation-module.dto';
 import { UpdateResultsValidationModuleDto } from './dto/update-results-validation-module.dto';
 import { resultValidationRepository } from './results-validation-module.repository';
@@ -8,11 +8,11 @@ import { Validation } from './entities/validation.entity';
 
 @Injectable()
 export class ResultsValidationModuleService {
-
+  private readonly _logger: Logger = new Logger(ResultsValidationModuleService.name);
   constructor(
     private readonly _resultValidationRepository: resultValidationRepository,
     private readonly _resultRepository: ResultRepository,
-    private readonly _handlersError: HandlersError
+    private readonly _handlersError: HandlersError,
   ){}
 
   create(createResultsValidationModuleDto: CreateResultsValidationModuleDto) {
@@ -262,6 +262,110 @@ export class ResultsValidationModuleService {
         response: {
           green_checks: response,
           submit: submit
+        },
+        message: 'Sections have been successfully validated',
+        status: HttpStatus.OK,
+      };
+
+    } catch (error) {
+      return this._handlersError.returnErrorRes({error});
+    }
+  }
+
+  async saveAllGreenCheck(){
+    try {
+      const results = await this._resultRepository.getAllResultId();
+      for (const iterator of results) {
+        const {id: resultId} = iterator;
+        const result = await this._resultRepository.getResultById(resultId);
+      if (!result) {
+        continue;
+      }
+      let response: GetValidationSectionDto[] = [];
+      const validation = await this._resultValidationRepository.validationResultExist(result.id);
+      let newValidation = new Validation();
+
+      if(validation){
+        newValidation.id = validation.id;
+        newValidation.results_id =  validation.results_id;
+      }else{
+        newValidation.results_id = result.id;
+      }
+
+      const vGeneral = await this._resultValidationRepository.generalInformationValidation(result.id, result.result_level_id);
+      newValidation.general_information = vGeneral.validation;
+      response.push(vGeneral);
+      const vToc = await this._resultValidationRepository.tocValidation(result.id, result.result_level_id);
+      newValidation.theory_of_change = vToc.validation;
+      response.push(vToc);
+      
+      if(result.result_type_id == 6){
+        newValidation.geographic_location = 1;
+        response.push({section_name: 'geographic-location', validation: newValidation.geographic_location });
+        newValidation.partners = 1;
+        response.push({section_name: 'partners', validation: newValidation.partners });
+      }else{
+        const vPartners = await this._resultValidationRepository.partnersValidation(result.id);
+        newValidation.partners = vPartners.validation;
+        response.push(vPartners);
+        const vGeoLocation = await this._resultValidationRepository.geoLocationValidation(result.id);
+        newValidation.geographic_location = vGeoLocation.validation;
+        response.push(vGeoLocation);
+      }
+
+      newValidation.links_to_results = 1;
+      response.push({section_name: 'links-to-results', validation: newValidation.links_to_results });
+
+      if(result.result_type_id == 5){
+        newValidation.evidence = 1;
+        response.push({section_name: 'evidences', validation: newValidation.evidence });
+      }else{
+        const vEvidence = await this._resultValidationRepository.evidenceValidation(result.id)
+        newValidation.evidence = vEvidence.validation;
+        response.push(vEvidence);
+      }
+
+      switch (result.result_type_id) {
+        case 1:
+          const vSection71 = await this._resultValidationRepository.policyChangeValidation(result.id);
+          newValidation.section_seven = vSection71.validation;
+          response.push(vSection71);
+          break;
+
+        case 2:
+          const vSection72 = await this._resultValidationRepository.innovationUseValidation(result.id);
+          newValidation.section_seven = vSection72.validation;
+          response.push(vSection72);
+          break;
+        
+        case 5:
+          const vSection75 = await this._resultValidationRepository.capDevValidation(result.id);
+          newValidation.section_seven = vSection75.validation;
+          response.push(vSection75);
+          break;
+
+        case 6:
+          const vSection76 = await this._resultValidationRepository.knowledgeProductValidation(result.id);
+          newValidation.section_seven = vSection76.validation;
+          response.push(vSection76);
+          break;
+
+        case 7:
+          const vSection77 = await this._resultValidationRepository.innovationDevValidation(result.id);
+          newValidation.section_seven = vSection77.validation;
+          response.push(vSection77);
+          break;
+      }
+
+      await this._resultValidationRepository.save(newValidation);
+      this._logger.verbose(`The validations of the result with id ${resultId} have been saved correctly.`);
+
+      response.reduce((previousValue, currentValue:any) => (previousValue * parseInt(currentValue.validation)), 1 );
+      }
+
+      return {
+        response: {
+          results
         },
         message: 'Sections have been successfully validated',
         status: HttpStatus.OK,

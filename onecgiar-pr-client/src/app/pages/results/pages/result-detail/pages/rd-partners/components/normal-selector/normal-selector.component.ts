@@ -3,6 +3,8 @@ import { RolesService } from '../../../../../../../../shared/services/global/rol
 import { PartnersBody } from '../../models/partnersBody';
 import { RdPartnersService } from '../../rd-partners.service';
 import { InstitutionsService } from '../../../../../../../../shared/services/global/institutions.service';
+import { GreenChecksService } from '../../../../../../../../shared/services/global/green-checks.service';
+import { DataControlService } from '../../../../../../../../shared/services/data-control.service';
 
 @Component({
   selector: 'app-normal-selector',
@@ -10,5 +12,5 @@ import { InstitutionsService } from '../../../../../../../../shared/services/glo
   styleUrls: ['./normal-selector.component.scss']
 })
 export class NormalSelectorComponent {
-  constructor(public rolesSE: RolesService, public rdPartnersSE: RdPartnersService, public institutionsSE: InstitutionsService) {}
+  constructor(public rolesSE: RolesService, public rdPartnersSE: RdPartnersService, public institutionsSE: InstitutionsService, public greenChecksSE: GreenChecksService, public dataControlSE: DataControlService) {}
 }

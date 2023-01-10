@@ -24,7 +24,11 @@
       </div>
     </div>
   </div>
-  <div class="submit_button">
-    <app-pr-button [ngClass]="{'globalDisabled': !this.greenChecksSE.submit}" text="Submit"></app-pr-button>
+  <div class="submit_button" *ngIf="this.rolesSE.roles?.application?.role_id != 6  && !this.api.rolesSE.readOnly">
+    <app-pr-button [ngClass]="{'globalDisabled': !this.greenChecksSE.submit}"
+      (click)="this.submissionModalSE.showModal = true;" text="Submit"
+      *ngIf="this.dataControlSE?.currentResult?.status == 0"></app-pr-button>
+    <app-pr-button text="Unsubmit" *ngIf="this.dataControlSE?.currentResult?.status == 1"
+      (click)="this.unsubmitModalSE.showModal = true;"></app-pr-button>
   </div>
 </div>

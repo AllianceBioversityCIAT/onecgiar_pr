@@ -1,6 +1,8 @@
 import { Component, forwardRef, Input, EventEmitter, Output } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
+import { GreenChecksService } from '../../shared/services/global/green-checks.service';
+import { DataControlService } from '../../shared/services/data-control.service';
 
 @Component({
   selector: 'app-pr-yes-or-not',
@@ -26,7 +28,7 @@ export class PrYesOrNotComponent {
   @Output() selectOptionEvent = new EventEmitter();
   private _value: boolean;
 
-  constructor(public rolesSE: RolesService) {}
+  constructor(public rolesSE: RolesService, public dataControlSE: DataControlService) {}
 
   get value() {
     return this._value;

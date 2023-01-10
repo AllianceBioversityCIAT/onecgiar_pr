@@ -114,4 +114,55 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
       });
     }
   }
+
+  async validationRolePermissions(userId: number, resultId: number, rolesToValidate: number[]) {
+    const queryData = `
+    SELECT
+	    CASE
+	    	when ((
+	    	SELECT
+	    		rbu.\`role\`
+	    	FROM
+	    		users u
+	    	left join role_by_user rbu on
+	    		rbu.\`user\` = u.id
+	    	WHERE
+	    		u.active > 0
+	    		and u.id = ?
+	    		and rbu.action_area_id is NULL
+	    		and rbu.initiative_id is null) = 1) then true
+	    	else CASE 
+	    		WHEN ((
+	    		SELECT
+	    			rbu.\`role\`
+	    		FROM
+	    			users u
+	    		left join role_by_user rbu on
+	    			rbu.\`user\` = u.id
+	    		WHERE
+	    			u.active > 0
+	    			and u.id = ?
+	    			and rbu.initiative_id = (
+	    			SELECT
+	    				rbi.inititiative_id
+	    			from
+	    				results_by_inititiative rbi
+	    			where
+	    				rbi.result_id = ?
+	    				and rbi.initiative_role_id = 1)) in (${rolesToValidate?.toString() || 'NAN'})) THEN TRUE
+	    		else false
+	    	END
+	    END as validation;
+    `;
+    try {
+      const getSpecificRole: Array<{validation: string}> = await this.query(queryData, [userId,userId, resultId]);
+      return getSpecificRole?.length? parseInt(getSpecificRole[0].validation): 0;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: RoleByUserRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
 }

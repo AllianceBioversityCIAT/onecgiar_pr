@@ -674,4 +674,25 @@ WHERE
       };
     }
   }
+
+  async getAllResultId(): Promise<Array<{id}>> {
+    const queryData = `
+    SELECT 
+    r.id
+    FROM 
+    \`result\` r 
+    WHERE r.is_active > 0
+      and r.version_id = 1;
+    `;
+    try {
+      const results: Array<{id}> = await this.query(queryData);
+      return results;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
 }
