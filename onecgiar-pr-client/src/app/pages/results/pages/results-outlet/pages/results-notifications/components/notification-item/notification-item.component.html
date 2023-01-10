@@ -12,11 +12,15 @@
             the result: </div>
         <div class="sub_title" *ngIf="!notification?.action_area_outcome_id && !notification?.toc_result_id">
             <strong>(INIT-{{notification?.requester_initiative_id}})</strong>
-            -{{notification?.result_type_name}} - {{notification?.title}}
+            -{{notification?.result_type_name}} - <a class="open_route" target="_blank"
+                [href]="resultUrl(notification?.result_id)">(Result id: {{notification?.result_id}})
+                {{notification?.title}}</a>
         </div>
         <div class="sub_title" *ngIf="notification?.action_area_outcome_id || notification?.toc_result_id">
             <strong>(INIT-{{notification?.approving_inititiative_id}})</strong>
-            -{{notification?.result_type_name}} - {{notification?.title}}
+            -{{notification?.result_type_name}} - <a class="open_route" target="_blank"
+                [href]="resultUrl(notification?.result_id)">(Result id: {{notification?.result_id}})
+                {{notification?.title}}</a>
         </div>
         <div class="buttons">
             <app-pr-button text="Map and accept" colorType="success" (click)="mapAndAccept(notification)"
@@ -49,7 +53,9 @@
             to be added as a contributor to
             the result: </div>
         <div class="sub_title"><strong>(INIT-{{notification?.approving_inititiative_id}})</strong>
-            -{{notification?.result_type_name}} - {{notification?.title}}
+            -{{notification?.result_type_name}} - <a class="open_route" target="_blank"
+                [href]="resultUrl(notification?.result_id)">(Result id: {{notification?.result_id}})
+                {{notification?.title}}</a>
         </div>
 
         <div class="text_icon accepted">Accepted by {{notification?.first_name}}
@@ -63,7 +69,9 @@
             to be added as a contributor to
             the result: </div>
         <div class="sub_title"><strong>(INIT-{{notification?.approving_inititiative_id}})</strong>
-            - {{notification?.result_type_name}} - {{notification?.title}}
+            - {{notification?.result_type_name}} - <a class="open_route" target="_blank"
+                [href]="resultUrl(notification?.result_id)">(Result id: {{notification?.result_id}})
+                {{notification?.title}}</a>
         </div>
 
         <div class="text_icon rejected">Rejected by {{notification?.first_name}}
@@ -75,7 +83,9 @@
     <div *ngSwitchCase="4">
         <div class="title">Request from INIT-{{notification?.requester_initiative_id}} to
             INIT-{{notification?.approving_inititiative_id}} to be added as a contributor to the result:</div>
-        <div class="sub_title">{{notification?.result_type_name}} - {{notification?.title}}</div>
+        <div class="sub_title">{{notification?.result_type_name}} - <a class="open_route" target="_blank"
+                [href]="resultUrl(notification?.result_id)">(Result id: {{notification?.result_id}})
+                {{notification?.title}}</a></div>
 
         <div class="text_icon pending"> Pending
             <i class="material-icons-round">
