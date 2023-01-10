@@ -2,7 +2,7 @@
 </app-pr-field-header>
 <div class="custom_select">
     <a class="field" tabindex="0" [id]="this.optionValue"
-        *ngIf="!(readOnly || this.rolesSE.readOnly|| this.dataControlSE?.currentResult?.status ) || (isStatic)">
+        *ngIf="!(readOnly || this.rolesSE.readOnly|| !!this.dataControlSE?.currentResult?.status ) || (isStatic)">
         <div class="text select_placeholder">{{placeholder}}</div>
         <div class="icon_container">
         </div>
@@ -35,7 +35,7 @@
         <div class="chips_container" *ngIf="this.selectedOptionLabel">
             <div class="pr_chip_selected" *ngFor="let option of value; let i=index">
                 <div class="name" [innerHtml]="option[this.selectedOptionLabel]"></div><i
-                    *ngIf="!(readOnly || this.rolesSE.readOnly || this.dataControlSE?.currentResult?.status) || (isStatic)"
+                    *ngIf="!(readOnly || this.rolesSE.readOnly || !!this.dataControlSE?.currentResult?.status) || (isStatic)"
                     class="material-icons-round"
                     (click)="confirmDeletion?confirmDeletionEvent(option):removeOption(option)">remove_circle </i>
             </div>

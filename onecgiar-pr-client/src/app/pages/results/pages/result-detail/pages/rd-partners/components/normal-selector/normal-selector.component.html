@@ -1,7 +1,7 @@
 <app-alert-status
     description="Partner organization that you collaborated with or are currently collaborating with to generate this result">
 </app-alert-status>
-<div [ngSwitch]="this.rolesSE.readOnly || this.dataControlSE?.currentResult?.status">
+<div [ngSwitch]="this.rolesSE.readOnly || !!this.dataControlSE?.currentResult?.status">
     <div *ngSwitchCase="true">{{this.rdPartnersSE.partnersBody.no_applicable_partner?'Marked as not applicable':''}}
     </div>
     <div *ngSwitchCase="false">
