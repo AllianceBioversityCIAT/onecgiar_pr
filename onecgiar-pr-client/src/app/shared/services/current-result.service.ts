@@ -14,12 +14,12 @@ export class CurrentResultService {
   GET_resultById() {
     this.api.resultsSE.GET_resultById().subscribe(
       ({ response }) => {
-        console.log(response);
+        // console.log(response);
         this.rolesSE.validateReadOnly(response);
         this.resultLevelSE.currentResultLevelName = response.result_level_name;
         this.resultLevelSE.currentResultLevelId = response.result_level_id;
         this.resultLevelSE.currentResultTypeId = response.result_type_id;
-        console.log(response);
+        // console.log(response);
         this.dataControlSE.currentResult = response;
       },
       err => {
