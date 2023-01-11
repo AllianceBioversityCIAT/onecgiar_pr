@@ -27,4 +27,9 @@ export class PanelMenuComponent {
   get green_checks_string() {
     return JSON.stringify(this.api.dataControlSE.green_checks);
   }
+
+  validateMember(myInitiativesList) {
+    const initFinded = myInitiativesList.find(init => init?.initiative_id == this.dataControlSE?.currentResult?.initiative_id);
+    return initFinded?.role === 'Member' ? 6 : 1;
+  }
 }
