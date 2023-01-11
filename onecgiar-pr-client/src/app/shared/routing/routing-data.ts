@@ -6,7 +6,7 @@ export const routingApp: PrRoute[] = [
   { prName: 'Results', underConstruction: false, canActivate: [CheckLoginGuard], path: 'result', loadChildren: () => import('../../pages/results/results.module').then(m => m.ResultsModule) },
   { prName: 'Type one report', prHide: true, canActivate: [CheckLoginGuard], path: 'type-one-report', loadChildren: () => import('../../pages/type-one-report/type-one-report.module').then(m => m.TypeOneReportModule) },
   { prName: 'login', prHide: true, path: 'login', loadChildren: () => import('../../pages/login/login.module').then(m => m.LoginModule) },
-  { prName: 'Quality Assurance', underConstruction: false, canActivate: [CheckLoginGuard], path: 'quality-assurance', loadChildren: () => import('../../pages/quality-assurance/quality-assurance.module').then(m => m.QualityAssuranceModule) },
+  // { prName: 'Quality Assurance', underConstruction: false, canActivate: [CheckLoginGuard], path: 'quality-assurance', loadChildren: () => import('../../pages/quality-assurance/quality-assurance.module').then(m => m.QualityAssuranceModule) },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'result', prHide: true }
 ];
 
