@@ -300,23 +300,23 @@ export class resultValidationRepository extends Repository<Validation>{
 			and
 			((
 			SELECT
-				sum(if(r.gender_tag_level_id = 3 and e.gender_related = 1, 0, if(r.gender_tag_level_id in (1, 2), 0, if(r.gender_tag_level_id  is null,0,1))))
+				sum(if(r.gender_tag_level_id = 3 and e.gender_related = 1, 1, if(r.gender_tag_level_id in (1, 2), 1, if(r.gender_tag_level_id  is null,1,0))))
 			from
 				evidence e
 			where
 				e.result_id = r.id
 				and e.is_supplementary = 0
-				and e.is_active > 0) = 0)
+				and e.is_active > 0) > 0)
 			and
 			((
 			SELECT
-				sum(if(r.climate_change_tag_level_id = 3 and e.youth_related = 1, 0, if(r.climate_change_tag_level_id in (1, 2), 0, if(r.climate_change_tag_level_id is null,0,1))))
+				sum(if(r.climate_change_tag_level_id = 3 and e.youth_related = 1, 1, if(r.climate_change_tag_level_id in (1, 2), 1, if(r.climate_change_tag_level_id is null,1,0))))
 			from
 				evidence e
 			where
 				e.result_id = r.id
 				and e.is_supplementary = 0
-				and e.is_active > 0) = 0)
+				and e.is_active > 0) > 0)
 			and
 			((
 			SELECT
@@ -470,10 +470,10 @@ export class resultValidationRepository extends Repository<Validation>{
 		'cap-dev-info' as section_name,
 		CASE
 			when (rcd.female_using is not null
-			and rcd.female_using <> '')
+			and rcd.female_using >= 0)
 			AND 
 			(rcd.male_using is not null
-			and rcd.male_using <> '')
+			and rcd.male_using >= 0)
 			AND 
 			(rcd.capdev_term_id is not null
 			and rcd.capdev_term_id <> '') 
