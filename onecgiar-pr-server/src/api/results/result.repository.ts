@@ -366,7 +366,7 @@ WHERE
     	rtr.action_area_outcome_id as \`Action area outcome id\`,
     	caao.outcomeStatement as \`Action area outcome name\`,
     	GROUP_CONCAT(CONCAT('[', cc.code, ': ', ci2.acronym, ' - ', ci2.name, ']') SEPARATOR ', ') as \`Centers\`,
-      GROUP_CONCAT(cin2.official_code SEPARATOR ', ') as \`Contributing Initiatives\` 
+      GROUP_CONCAT(DISTINCT cin2.official_code SEPARATOR ', ') as \`Contributing Initiatives\` 
     from
     	\`result\` r
     inner join result_type rt on
