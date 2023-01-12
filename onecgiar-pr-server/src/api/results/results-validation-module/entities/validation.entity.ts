@@ -62,4 +62,12 @@ export class Validation{
     })
     evidence: number;
 
+    @Column({
+        name: 'is_active',
+        nullable: false,
+        type: 'boolean',
+        default: true
+    })
+    is_active!: boolean;
+
 }

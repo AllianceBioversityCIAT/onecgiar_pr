@@ -180,6 +180,7 @@ export class ResultsValidationModuleService {
       }
       let response: GetValidationSectionDto[] = [];
       const validation = await this._resultValidationRepository.validationResultExist(result.id);
+      await this._resultValidationRepository.inactiveOldInserts(result.id);
       let newValidation = new Validation();
 
       if(validation){
@@ -189,6 +190,7 @@ export class ResultsValidationModuleService {
         newValidation.results_id = result.id;
       }
 
+      newValidation.is_active =  true;
       const vGeneral = await this._resultValidationRepository.generalInformationValidation(result.id, result.result_level_id);
       newValidation.general_information = vGeneral.validation;
       response.push(vGeneral);
@@ -283,6 +285,7 @@ export class ResultsValidationModuleService {
       }
       let response: GetValidationSectionDto[] = [];
       const validation = await this._resultValidationRepository.validationResultExist(result.id);
+      await this._resultValidationRepository.inactiveOldInserts(result.id);
       let newValidation = new Validation();
 
       if(validation){
@@ -291,7 +294,8 @@ export class ResultsValidationModuleService {
       }else{
         newValidation.results_id = result.id;
       }
-
+      
+      newValidation.is_active =  true;
       const vGeneral = await this._resultValidationRepository.generalInformationValidation(result.id, result.result_level_id);
       newValidation.general_information = vGeneral.validation;
       response.push(vGeneral);
