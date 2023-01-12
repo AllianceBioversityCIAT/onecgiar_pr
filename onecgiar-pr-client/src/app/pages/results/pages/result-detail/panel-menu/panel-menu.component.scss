@@ -88,7 +88,21 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        flex-direction: column;
         scale: 1.2;
         margin-bottom: 20px;
+        padding: 15px;
+
+        .button_access_information {
+            font-size: .8em;
+            text-align: center;
+            color: var(--pr-color-primary);
+            background-color: #556add17;
+            box-shadow: 0px 0px 5px 1px #e0e4f7;
+            padding: 10px;
+            border-radius: 3px;
+            margin-top: 10px;
+
+        }
     }
 }

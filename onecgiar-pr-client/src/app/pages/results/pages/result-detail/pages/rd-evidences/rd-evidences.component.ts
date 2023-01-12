@@ -26,7 +26,7 @@ export class RdEvidencesComponent {
   getSectionInformation() {
     this.api.resultsSE.GET_evidences().subscribe(({ response }) => {
       this.evidencesBody = response;
-      // console.log(this.evidencesBody);
+      console.log(this.evidencesBody);
     });
   }
   onSaveSection() {

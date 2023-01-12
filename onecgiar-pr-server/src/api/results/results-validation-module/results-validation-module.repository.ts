@@ -562,7 +562,8 @@ export class resultValidationRepository extends Repository<Validation>{
 	from
 		validation v
 	WHERE
-		v.results_id = ?;
+		v.results_id = ?
+		and v.is_active > 0;
     `;
     try {
       const shareResultRequest: Validation[] = await this.dataSource.query(queryData, [resultId]); 
@@ -592,6 +593,24 @@ export class resultValidationRepository extends Repository<Validation>{
     try {
       const shareResultRequest: Array<{validation:string}> = await this.dataSource.query(queryData, [resultId]); 
 	  return shareResultRequest.length ? parseInt(shareResultRequest[0].validation) : 0;
+    } catch (error) {
+		throw this._handlersError.returnErrorRepository({
+        className: resultValidationRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async inactiveOldInserts(resultId: number) {
+    const queryData = `
+		UPDATE validation 
+			set is_active = 0
+		WHERE results_id = ?;
+    `;
+    try {
+      const shareResultRequest = await this.dataSource.query(queryData, [resultId]); 
+	  return shareResultRequest;
     } catch (error) {
 		throw this._handlersError.returnErrorRepository({
         className: resultValidationRepository.name,
