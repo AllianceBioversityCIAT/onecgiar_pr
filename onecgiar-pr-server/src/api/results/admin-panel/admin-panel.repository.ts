@@ -1,0 +1,109 @@
+import { Injectable } from '@nestjs/common';
+import { DataSource, Repository, QueryRunner } from 'typeorm';
+import { HandlersError } from '../../../shared/handlers/error.utils';
+
+@Injectable()
+export class AdminPanelRepository{
+  constructor(
+    private dataSource: DataSource,
+    private _handlersError: HandlersError
+  ) {}
+
+  async reportResultCompleteness() {
+    const queryData = `
+    SELECT
+    v.id,
+    r.result_code,
+    r.id as results_id,
+    ci.official_code,
+    r.title as result_title,
+    rt.name as result_type_name,
+    JSON_OBJECT('name',
+    'General Information',
+    'value',
+    v.general_information) as general_information,
+    JSON_OBJECT('name',
+    'Theory of change',
+    'value',
+    v.theory_of_change) as theory_of_change,
+    JSON_OBJECT('name',
+    'Geographic location',
+    'value',
+    v.geographic_location) as geographic_location,
+    JSON_OBJECT('name',
+    'Partners',
+    'value',
+    v.partners) as partners,
+    JSON_OBJECT('name',
+    'Evidence',
+    'value',
+    v.evidence) as evidence,
+    JSON_OBJECT('name',
+    'Links to results',
+    'value',
+    v.links_to_results) as links_to_results,
+    JSON_OBJECT('name',
+    if(r.result_type_id = 5,
+    'CapDev Info',
+    if(r.result_type_id = 7,
+    'Innovation Dev Info',
+    if(r.result_type_id = 2,
+    'Innovation Use Info',
+    if(r.result_type_id = 6,
+    'Knowledge Product Info',
+    if(r.result_type_id = 1,
+    'Policy Change Info',
+    null)))
+    )
+    ),
+    'value',
+    v.section_seven) as section_seven,
+    r.is_active,
+    (IFNULL(v.section_seven, 1) *
+    v.general_information *
+    v.theory_of_change *
+    v.partners *
+    v.geographic_location *
+    v.links_to_results *
+    v.evidence) as validation,
+    r.status as is_submitted,
+    ROUND(((IF(v.section_seven is null, 0, 1) +
+    v.general_information +
+    v.theory_of_change +
+    v.partners +
+    v.geographic_location +
+    v.links_to_results +
+    v.evidence)* 100) / if(v.section_seven is null, 6, 7)) as completeness
+  FROM
+  \`result\` r
+  left join validation v on
+    r.id = v.results_id
+    and r.is_active > 0
+    and v.is_active > 0
+  inner JOIN results_by_inititiative rbi on
+    rbi.result_id = r.id
+    and rbi.is_active > 0
+    and rbi.initiative_role_id = 1
+  INNER JOIN clarisa_initiatives ci on
+    ci.id = rbi.inititiative_id
+  inner join result_type rt on
+    rt.id = r.result_type_id
+  WHERE r.is_active > 0
+  order by
+    r.result_code ASC;
+    `;
+    try {
+      const submissionsByResult: any = await this.dataSource.query(queryData); 
+	  return submissionsByResult;
+    } catch (error) {
+		throw this._handlersError.returnErrorRepository({
+        className: AdminPanelRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+
+}
+

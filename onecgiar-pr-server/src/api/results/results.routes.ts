@@ -25,6 +25,7 @@ import { OstMeliaStudiesModule } from './ost-melia-studies/ost-melia-studies.mod
 import { ResultsValidationModuleModule } from './results-validation-module/results-validation-module.module';
 import { ShareResultRequestModule } from './share-result-request/share-result-request.module';
 import { SubmissionsModule } from './submissions/submissions.module';
+import { AdminPanelModule } from './admin-panel/admin-panel.module';
 
 export const ResultsRoutes: Routes = [
   {
@@ -130,5 +131,9 @@ export const ResultsRoutes: Routes = [
   {
     path: 'submissions',
     module: SubmissionsModule
+  },
+  {
+    path: 'admin-panel',
+    module: AdminPanelModule
   }
 ];
