@@ -10,8 +10,7 @@
     <app-pr-input [(ngModel)]="knowledgeProductBody.handle" label="Handle" [required]="false" [disabled]="true">
     </app-pr-input>
     <div class="auto_fit_container">
-        <app-pr-input [(ngModel)]="knowledgeProductBody.yearCG"
-            label="Issue date (CGSpace)" [required]="false"
+        <app-pr-input [(ngModel)]="knowledgeProductBody.yearCG" label="Issue date (CGSpace)" [required]="false"
             [readOnly]="true">
         </app-pr-input>
         <app-pr-input *ngIf="knowledgeProductBody.year_WOS" [(ngModel)]="knowledgeProductBody.year_WOS"
@@ -29,8 +28,7 @@
         [readOnly]="true">
     </app-pr-input>
     <div class="auto_fit_container">
-        <app-pr-input [(ngModel)]="knowledgeProductBody.is_peer_reviewed_CG"
-            label="Peer reviewed (CGSpace)"
+        <app-pr-input [(ngModel)]="knowledgeProductBody.is_peer_reviewed_CG" label="Peer reviewed (CGSpace)"
             [required]="false" [readOnly]="true">
         </app-pr-input>
         <app-pr-input *ngIf="knowledgeProductBody.is_peer_reviewed_WOS != undefined"
@@ -40,8 +38,7 @@
     </div>
     <div class="auto_fit_container">
         <app-pr-input [(ngModel)]="knowledgeProductBody.is_isi_CG"
-            label="Web of Science Core Collection (former ISI) (CGSpace)"
-            [required]="false" [readOnly]="true">
+            label="Web of Science Core Collection (former ISI) (CGSpace)" [required]="false" [readOnly]="true">
         </app-pr-input>
         <app-pr-input *ngIf="knowledgeProductBody.is_isi_WOS != undefined" [(ngModel)]="knowledgeProductBody.is_isi_WOS"
             label="Web of Science Core Collection (former ISI) (WoS)" [required]="false" [readOnly]="true">
@@ -50,8 +47,7 @@
     <app-pr-input [(ngModel)]="knowledgeProductBody.doi" label="DOI" [required]="false" [readOnly]="true">
     </app-pr-input>
     <div class="auto_fit_container">
-        <app-pr-input [(ngModel)]="knowledgeProductBody.accessibility_CG"
-            label="Accessibility (CGSpace)"
+        <app-pr-input [(ngModel)]="knowledgeProductBody.accessibility_CG" label="Accessibility (CGSpace)"
             [required]="false" [readOnly]="true">
         </app-pr-input>
         <app-pr-input *ngIf="knowledgeProductBody.accessibility_WOS"
@@ -71,19 +67,20 @@
     <app-pr-input [(ngModel)]="knowledgeProductBody.investors" label="Investors / Sponsors" [required]="false"
         [readOnly]="true">
     </app-pr-input>
-    <app-pr-field-header label="Altmetrics" 
+    <app-pr-field-header label="Altmetrics"
         description="<i>The Altmetric score might vary over time. Before the end of the reporting period, this information will be automatically refreshed on this page to reflect the latest score.</i>"
         [required]="false"></app-pr-field-header>
-    <a *ngIf="knowledgeProductBody?.altmetric_details_url;else notAvailable" class="altmetric_details_url" [href]="knowledgeProductBody?.altmetric_details_url" target="_blank">
+    <a *ngIf="knowledgeProductBody?.altmetric_details_url;else notAvailable" class="altmetric_details_url"
+        [href]="knowledgeProductBody?.altmetric_details_url" target="_blank">
         <img class="altmetric_image" [src]="knowledgeProductBody?.altmetric_img_url" alt="" srcset="">
     </a>
-    <app-pr-input [(ngModel)]="knowledgeProductBody.references" label="Reference to other Knowledge products"
+    <app-pr-input [(ngModel)]="knowledgeProductBody.references" label="Reference to other knowledge products"
         [required]="false" [readOnly]="true">
     </app-pr-input>
 
 
 
-    <app-pr-field-header label="FAIR score for this Knowledge product"
+    <app-pr-field-header label="FAIR score for this knowledge product"
         description="FAIR (findability, accessibility, interoperability, and reusability) scores are calculated based on the presence or absence of metadata in the CGSpace repository. If you wish to improve these scores, please liaise with your Center librarian."
         [required]="false"></app-pr-field-header>
 
@@ -92,13 +89,12 @@
         <div class="item">
             <circle-progress [percent]="knowledgeProductBody.findable * 100" subtitle="F" subtitleFontSize="30"
                 [radius]="50" [outerStrokeWidth]="7" [innerStrokeWidth]="7"
-                [outerStrokeColor]="calculateBorderColor(knowledgeProductBody.findable)"
-                innerStrokeColor="#F0F0F0" [space]="$any(-7)" [animation]="true"
-                [animationDuration]="300">
+                [outerStrokeColor]="calculateBorderColor(knowledgeProductBody.findable)" innerStrokeColor="#F0F0F0"
+                [space]="$any(-7)" [animation]="true" [animationDuration]="300">
             </circle-progress>
             <div class="texts">
-                F1 - The Knowledge product is retrievable through its handle<br>
-                F2 - The Knowledge product is described by rich metadata<br>
+                F1 - The knowledge product is retrievable through its handle<br>
+                F2 - The knowledge product is described by rich metadata<br>
                 F3 - At least one author is linked through their ORCID
             </div>
         </div>
@@ -106,9 +102,8 @@
         <div class="item">
             <circle-progress [percent]="knowledgeProductBody.accessible * 100" subtitle="A" subtitleFontSize="30"
                 [radius]="50" [outerStrokeWidth]="7" [innerStrokeWidth]="7"
-                [outerStrokeColor]="calculateBorderColor(knowledgeProductBody.accessible)"
-                innerStrokeColor="#F0F0F0" [space]="$any(-7)" [animation]="true"
-                [animationDuration]="300">
+                [outerStrokeColor]="calculateBorderColor(knowledgeProductBody.accessible)" innerStrokeColor="#F0F0F0"
+                [space]="$any(-7)" [animation]="true" [animationDuration]="300">
             </circle-progress>
             <div class="texts">
                 A1 - Metadata are retrievable through the handle
@@ -119,9 +114,8 @@
         <div class="item">
             <circle-progress [percent]="knowledgeProductBody.interoperable * 100" subtitle="I" subtitleFontSize="30"
                 [radius]="50" [outerStrokeWidth]="7" [innerStrokeWidth]="7"
-                [outerStrokeColor]="calculateBorderColor(knowledgeProductBody.interoperable)"
-                innerStrokeColor="#F0F0F0" [space]="$any(-7)" [animation]="true"
-                [animationDuration]="300">
+                [outerStrokeColor]="calculateBorderColor(knowledgeProductBody.interoperable)" innerStrokeColor="#F0F0F0"
+                [space]="$any(-7)" [animation]="true" [animationDuration]="300">
             </circle-progress>
             <div class="texts">
                 I1 - Metadata contain AGROVOC keywords<br>
@@ -133,17 +127,16 @@
         <div class="item">
             <circle-progress [percent]="knowledgeProductBody.reusable * 100" subtitle="R" subtitleFontSize="30"
                 [radius]="50" [outerStrokeWidth]="7" [innerStrokeWidth]="7"
-                [outerStrokeColor]="calculateBorderColor(knowledgeProductBody.reusable)"
-                innerStrokeColor="#F0F0F0" [space]="$any(-7)" [animation]="true"
-                [animationDuration]="300">
+                [outerStrokeColor]="calculateBorderColor(knowledgeProductBody.reusable)" innerStrokeColor="#F0F0F0"
+                [space]="$any(-7)" [animation]="true" [animationDuration]="300">
             </circle-progress>
             <div class="texts">
-                R1 - Data asset is Open Access (OA) and has a clear and accessible usage license
+                R1 - The knowledge product is Open Access (OA) and has a clear and accessible usage license
             </div>
         </div>
     </div>
 
-    <app-pr-yes-or-not label="Is this Knowledge product a MELIA Product?" [(ngModel)]="this.sectionData.isMeliaProduct">
+    <app-pr-yes-or-not label="Is this knowledge product a MELIA Product?" [(ngModel)]="this.sectionData.isMeliaProduct">
     </app-pr-yes-or-not>
 
     <div style="padding-left: 50px;" *ngIf="this.sectionData.isMeliaProduct === true">

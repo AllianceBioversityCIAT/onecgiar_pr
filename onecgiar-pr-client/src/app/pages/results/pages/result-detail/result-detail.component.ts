@@ -23,7 +23,7 @@ export class ResultDetailComponent {
     this.dataControlSE.currentResult = null;
     this.api.resultsSE.currentResultId = null;
     this.api.updateUserData(() => {
-      console.log(this.dataControlSE.currentResult);
+      // console.log(this.dataControlSE.currentResult);
     });
     this.api.resultsSE.currentResultId = this.activatedRoute.snapshot.paramMap.get('id');
     this.currentResultSE.GET_resultById();

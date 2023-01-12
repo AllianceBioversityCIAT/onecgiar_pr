@@ -365,7 +365,8 @@ WHERE
     	tr.title as \`ToC result\`,
     	rtr.action_area_outcome_id as \`Action area outcome id\`,
     	caao.outcomeStatement as \`Action area outcome name\`,
-    	GROUP_CONCAT(CONCAT('[', cc.code, ': ', ci2.acronym, ' - ', ci2.name, ']') SEPARATOR ', ') as \`Centers\`
+    	GROUP_CONCAT(CONCAT('[', cc.code, ': ', ci2.acronym, ' - ', ci2.name, ']') SEPARATOR ', ') as \`Centers\`,
+      GROUP_CONCAT(DISTINCT cin2.official_code SEPARATOR ', ') as \`Contributing Initiatives\` 
     from
     	\`result\` r
     inner join result_type rt on
@@ -376,8 +377,14 @@ WHERE
     	rbi.result_id = r.id
     	and rbi.initiative_role_id = 1
     	and rbi.is_active > 0
+    left join results_by_inititiative rbi2 on
+    	rbi2.result_id = r.id
+    	and rbi2.initiative_role_id = 2
+    	and rbi2.is_active > 0
     inner join clarisa_initiatives ci on
     	ci.id = rbi.inititiative_id
+    left join clarisa_initiatives cin2 on
+    	cin2.id = rbi2.inititiative_id
     left join results_toc_result rtr on
     	rtr.results_id = r.id
     	and rtr.initiative_id = rbi.inititiative_id
@@ -559,6 +566,7 @@ WHERE
     r.is_active,
     r.last_updated_date,
     r.gender_tag_level_id,
+    r.climate_change_tag_level_id,
     r.version_id,
     r.result_type_id,
     r.status,

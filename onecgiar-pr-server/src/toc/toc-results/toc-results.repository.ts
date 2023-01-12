@@ -65,8 +65,11 @@ export class TocResultsRepository extends Repository<TocResult> {
       null as action_area_outcome_id
     from toc_result tr
     left join ${env.DB_OST}.work_packages wp on wp.wp_official_code = tr.work_package_id
+                                            and wp.active > 0
+    left join ${env.DB_OST}.initiatives_by_stages ibs on ibs.id = wp.initvStgId
 	  where tr.inititiative_id = ?
     	and tr.toc_level_id = ?
+      ${tocLevel != 3?`and ibs.stageId = 4`:``}
       and tr.is_active > 0
     order by tr.title ASC;
     `,
