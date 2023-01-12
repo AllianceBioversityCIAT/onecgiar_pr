@@ -2,6 +2,7 @@ import { HttpService } from '@nestjs/axios';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { env } from 'process';
 import { lastValueFrom, map } from 'rxjs';
+import { CredentialsClarisaBi } from './bi-reports/dto/crendentials-clarisa.dto';
 
 @Injectable()
 export class ClarisaCredentialsBiService {
@@ -37,7 +38,7 @@ export class ClarisaCredentialsBiService {
 
     async getCredentialsBi(){
         const token = await this.getClarisaToken();
-        const dataCredentials: any = await lastValueFrom(
+        const dataCredentials: CredentialsClarisaBi = await lastValueFrom(
             await this._httpService
               .get(`${this.clarisaHost}api/bi-parameters/getUnitAll`, {headers:{Authorization: `Bearer ${token.response}`}})
               .pipe(map((resp) => resp.data)),
