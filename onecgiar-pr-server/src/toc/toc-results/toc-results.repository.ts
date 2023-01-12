@@ -69,7 +69,7 @@ export class TocResultsRepository extends Repository<TocResult> {
     left join ${env.DB_OST}.initiatives_by_stages ibs on ibs.id = wp.initvStgId
 	  where tr.inititiative_id = ?
     	and tr.toc_level_id = ?
-      and ibs.stageId = 4
+      ${tocLevel != 3?`and ibs.stageId = 4`:``}
       and tr.is_active > 0
     order by tr.title ASC;
     `,
