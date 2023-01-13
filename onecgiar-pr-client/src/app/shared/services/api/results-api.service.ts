@@ -407,4 +407,8 @@ export class ResultsApiService {
   GET_reportSesultsCompleteness() {
     return this.http.get<any>(`${this.apiBaseUrl}admin-panel/report/results/completeness`);
   }
+
+  GET_historicalByResultId(resultId) {
+    return this.http.get<any>(`${this.apiBaseUrl}admin-panel/report/results/${resultId}/submissions`);
+  }
 }

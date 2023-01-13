@@ -1,0 +1,15 @@
+<p-dialog class="support_information" header="Title"
+    [(visible)]="this.api.dataControlSE.showResultHistoryOfChangesModal" (onHide)="cleanObject()" [draggable]="false"
+    [modal]="true" [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true" [style]="{padding: '0px'}">
+    <div class="modal_title">History of changes</div>
+    <div class="modal_container partners-request-container">
+
+
+    </div>
+    <div class="buttons">
+        <app-pr-button padding="medium" text="Close" icon="expand_more" colorType="secondary"
+            (click)="this.api.dataControlSE.showResultHistoryOfChangesModal = false">
+        </app-pr-button>
+    </div>
+
+</p-dialog>
