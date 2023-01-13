@@ -31,7 +31,7 @@ export class ResultsValidationModuleService {
       }
       let response: GetValidationSectionDto[] = [];
 
-      response.push(await this._resultValidationRepository.generalInformationValidation(result.id, result.result_level_id));
+      response.push(await this._resultValidationRepository.generalInformationValidation(result.id, result.result_level_id, result.result_type_id));
       response.push(await this._resultValidationRepository.tocValidation(result.id, result.result_level_id));
       
       if(result.result_type_id == 6){
@@ -191,7 +191,7 @@ export class ResultsValidationModuleService {
       }
 
       newValidation.is_active =  true;
-      const vGeneral = await this._resultValidationRepository.generalInformationValidation(result.id, result.result_level_id);
+      const vGeneral = await this._resultValidationRepository.generalInformationValidation(result.id, result.result_level_id, result.result_type_id);
       newValidation.general_information = vGeneral.validation;
       response.push(vGeneral);
       const vToc = await this._resultValidationRepository.tocValidation(result.id, result.result_level_id);
@@ -296,7 +296,7 @@ export class ResultsValidationModuleService {
       }
       
       newValidation.is_active =  true;
-      const vGeneral = await this._resultValidationRepository.generalInformationValidation(result.id, result.result_level_id);
+      const vGeneral = await this._resultValidationRepository.generalInformationValidation(result.id, result.result_level_id, result.result_type_id);
       newValidation.general_information = vGeneral.validation;
       response.push(vGeneral);
       const vToc = await this._resultValidationRepository.tocValidation(result.id, result.result_level_id);

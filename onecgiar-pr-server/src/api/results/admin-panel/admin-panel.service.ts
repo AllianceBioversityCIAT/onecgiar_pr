@@ -42,6 +42,19 @@ export class AdminPanelService {
     }
   }
 
+  async userReport() {
+    try {
+      const users =  await this._adminPanelRepository.userReport();
+      return {
+        response: users,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
   findOne(id: number) {
     return `This action returns a #${id} adminPanel`;
   }

@@ -28,18 +28,10 @@ export class AdminPanelController {
     throw new HttpException({ message, response }, status);
   }
 
-  @Get('report/user')
-  findOne(@Param('id') id: string) {
-    return this.adminPanelService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateAdminPanelDto: UpdateAdminPanelDto) {
-    return this.adminPanelService.update(+id, updateAdminPanelDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.adminPanelService.remove(+id);
+  @Get('report/users')
+  async userReport() {
+    const {message, response, status} = 
+      await this.adminPanelService.userReport();
+    throw new HttpException({ message, response }, status);
   }
 }
