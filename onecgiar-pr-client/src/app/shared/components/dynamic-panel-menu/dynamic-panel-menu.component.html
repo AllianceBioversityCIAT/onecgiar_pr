@@ -3,9 +3,10 @@
         Admin module
     </div>
     <div class="options">
-        <div class="option" *ngFor="let option of options">
+        <div class="option" *ngFor="let option of options" [routerLink]="'/admin-module/'+option.path"
+            routerLinkActive="active">
             <i class="material-icons-round">
-                check_circle
+                {{option?.icon}}
             </i>
             {{option?.name}}
         </div>

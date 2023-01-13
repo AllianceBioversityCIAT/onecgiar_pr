@@ -4,6 +4,28 @@
     <div class="modal_title">History of changes</div>
     <div class="modal_container partners-request-container">
 
+        <p-table [value]="this.resultHistoryOfChangesModalSE.historyOfChangesList">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th>Comment</th>
+                    <th>User name</th>
+                    <th>Updated at</th>
+                    <th>Status</th>
+
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-product>
+                <tr>
+                    <td>
+                        <div *ngIf="product.comment">{{product.comment}}</div>
+                        <div class="not_provided_text" *ngIf="!product.comment">Not provided</div>
+                    </td>
+                    <td>{{product.user_last_name}} {{product.user_first_name}}</td>
+                    <td>{{product.created_date}}</td>
+                    <td>{{product.is_submit == 0 ? 'Un-submit':'Submit'}}</td>
+                </tr>
+            </ng-template>
+        </p-table>
 
     </div>
     <div class="buttons">

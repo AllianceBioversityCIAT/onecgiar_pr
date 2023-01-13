@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../shared/services/api/api.service';
+import { ResultHistoryOfChangesModalService } from './components/result-history-of-changes-modal/result-history-of-changes-modal.service';
 
 @Component({
   selector: 'app-completeness-status',
@@ -8,7 +9,7 @@ import { ApiService } from '../../../../shared/services/api/api.service';
 })
 export class CompletenessStatusComponent {
   resultsList: any[];
-  constructor(private api: ApiService) {}
+  constructor(private api: ApiService, public resultHistoryOfChangesModalSE: ResultHistoryOfChangesModalService) {}
   ngOnInit(): void {
     this.GET_reportSesultsCompleteness();
   }
@@ -23,7 +24,13 @@ export class CompletenessStatusComponent {
     return value == 0 ? 'Pending' : 'Completed';
   }
 
-  openInformationModal() {
+  openInformationModal(resultId) {
     this.api.dataControlSE.showResultHistoryOfChangesModal = true;
+    this.resultHistoryOfChangesModalSE.historyOfChangesList = [];
+    this.api.resultsSE.GET_historicalByResultId(resultId).subscribe(({ response }) => {
+      console.log(response);
+      this.resultHistoryOfChangesModalSE.historyOfChangesList = response;
+    });
+    console.log(resultId);
   }
 }

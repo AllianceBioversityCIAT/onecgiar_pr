@@ -6,6 +6,9 @@ import { Component, OnInit } from '@angular/core';
   styleUrls: ['./admin-section.component.scss']
 })
 export class AdminSectionComponent {
-  sections = [{ name: 'Completeness status', icon: '', path: 'd' }];
+  sections = [
+    { name: 'Completeness status', icon: 'check_circle', path: 'completeness-status' },
+    { name: 'Users', icon: 'people', path: 'd' }
+  ];
   constructor() {}
 }

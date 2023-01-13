@@ -29,43 +29,43 @@
                 <th pSortableColumn="filter9">Section seven <p-sortIcon field="filter9"></p-sortIcon></th>
             </tr>
         </ng-template>
-        <ng-template pTemplate="body" let-product>
+        <ng-template pTemplate="body" let-result>
             <tr>
-                <td style="min-width:200px">{{product.result_code}}</td>
-                <td style="min-width:500px">{{product.result_title}}</td>
-                <td style="min-width:150px">{{product.official_code}}</td>
-                <td style="min-width:180px">{{product.result_type_name}}</td>
-                <td style="min-width:150px">{{product.completeness}}%</td>
+                <td style="min-width:200px">{{result.result_code}}</td>
+                <td style="min-width:500px">{{result.result_title}}</td>
+                <td style="min-width:150px">{{result.official_code}}</td>
+                <td style="min-width:180px">{{result.result_type_name}}</td>
+                <td style="min-width:150px">{{result.completeness}}%</td>
                 <td style="min-width:180px">
                     <div style="z-index: 0"><app-pr-button text="Open information"
-                            (click)="openInformationModal()"></app-pr-button>
+                            (click)="openInformationModal(result?.results_id)"></app-pr-button>
                     </div>
                 </td>
                 <td>
-                    <div [class]="parseCheck(product?.general_information?.value)">
-                        {{parseCheck(product?.general_information?.value)}}</div>
+                    <div [class]="parseCheck(result?.general_information?.value)">
+                        {{parseCheck(result?.general_information?.value)}}</div>
                 </td>
                 <td>
-                    <div [class]="parseCheck(product?.theory_of_change?.value)">
-                        {{parseCheck(product?.theory_of_change?.value)}}</div>
+                    <div [class]="parseCheck(result?.theory_of_change?.value)">
+                        {{parseCheck(result?.theory_of_change?.value)}}</div>
                 </td>
                 <td>
-                    <div [class]="parseCheck(product?.partners?.value)">{{parseCheck(product?.partners?.value)}}</div>
+                    <div [class]="parseCheck(result?.partners?.value)">{{parseCheck(result?.partners?.value)}}</div>
                 </td>
                 <td>
-                    <div [class]="parseCheck(product?.geographic_location?.value)">
-                        {{parseCheck(product?.geographic_location?.value)}}</div>
+                    <div [class]="parseCheck(result?.geographic_location?.value)">
+                        {{parseCheck(result?.geographic_location?.value)}}</div>
                 </td>
                 <td>
-                    <div [class]="parseCheck(product?.links_to_results?.value)">
-                        {{parseCheck(product?.links_to_results?.value)}}</div>
+                    <div [class]="parseCheck(result?.links_to_results?.value)">
+                        {{parseCheck(result?.links_to_results?.value)}}</div>
                 </td>
                 <td>
-                    <div [class]="parseCheck(product?.evidence?.value)">{{parseCheck(product?.evidence?.value)}}</div>
+                    <div [class]="parseCheck(result?.evidence?.value)">{{parseCheck(result?.evidence?.value)}}</div>
                 </td>
                 <td>
-                    <div [class]="parseCheck(product?.section_seven?.value)">
-                        {{parseCheck(product?.section_seven?.value)}}</div>
+                    <div [class]="parseCheck(result?.section_seven?.value)">
+                        {{parseCheck(result?.section_seven?.value)}}</div>
                 </td>
             </tr>
         </ng-template>
