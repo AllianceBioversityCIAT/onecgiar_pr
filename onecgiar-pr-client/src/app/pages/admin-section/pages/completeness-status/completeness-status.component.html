@@ -1,0 +1,28 @@
+<div class="table_container">
+    <p-table [value]="this.resultsList">
+        <ng-template pTemplate="header">
+            <tr>
+                <th pSortableColumn="code" style="width:10%">Result code <p-sortIcon field="code"></p-sortIcon></th>
+                <th pSortableColumn="name" style="width:20%">Title <p-sortIcon field="name"></p-sortIcon></th>
+                <th pSortableColumn="category" style="width:20%">Submitter <p-sortIcon field="category"></p-sortIcon>
+                </th>
+                <th pSortableColumn="quantity" style="width:20%">Result type <p-sortIcon field="quantity"></p-sortIcon>
+                </th>
+                <th pSortableColumn="price1" style="width:20%">Progress <p-sortIcon field="price1"></p-sortIcon></th>
+                <th pSortableColumn="price2" style="width:20%">Sections <p-sortIcon field="price2"></p-sortIcon></th>
+                <th pSortableColumn="price3" style="width:20%">Historical <p-sortIcon field="price3"></p-sortIcon></th>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-product>
+            <tr>
+                <td>{{product.result_code}}</td>
+                <td>{{product.result_title}}</td>
+                <td>{{product.official_code}}</td>
+                <td>{{product.result_type_name}}</td>
+                <td>{{product.quantity}}</td>
+                <td>{{product.category}}</td>
+                <td>{{product.category}}</td>
+            </tr>
+        </ng-template>
+    </p-table>
+</div>
