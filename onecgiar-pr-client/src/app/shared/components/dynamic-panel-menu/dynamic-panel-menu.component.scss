@@ -1,0 +1,27 @@
+.dynamic_panel_menu {
+    background-color: var(--pr-color-secondary);
+    width: 250px;
+    height: calc(100vh - 127px);
+
+    .section_title {
+        font-size: 1.2em;
+        font-weight: 500;
+        color: white;
+        text-align: center;
+        padding-top: 30px;
+        padding-bottom: 30px;
+        background-color: rgba(0, 0, 0, 0.315);
+        margin-bottom: 15px;
+    }
+
+    .options {
+        .option {
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+    }
+}

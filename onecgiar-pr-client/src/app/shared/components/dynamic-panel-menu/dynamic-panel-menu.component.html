@@ -1,0 +1,13 @@
+<div class="dynamic_panel_menu">
+    <div class="section_title">
+        Admin module
+    </div>
+    <div class="options">
+        <div class="option" *ngFor="let option of options">
+            <i class="material-icons-round">
+                check_circle
+            </i>
+            {{option?.name}}
+        </div>
+    </div>
+</div>
