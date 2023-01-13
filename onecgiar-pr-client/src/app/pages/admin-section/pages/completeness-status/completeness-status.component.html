@@ -1,0 +1,75 @@
+<div class="table_container">
+    <p-table [value]="this.resultsList" [scrollable]="true" scrollHeight="calc(100vh - 135px)" style="min-width:200px">
+        <ng-template pTemplate="header">
+            <tr>
+                <th pSortableColumn="result_code" style="min-width:200px">Result code <p-sortIcon
+                        field="result_code"></p-sortIcon>
+                </th>
+                <th pSortableColumn="name" style="min-width:500px">Title <p-sortIcon field="name"></p-sortIcon></th>
+                <th pSortableColumn="category" style="min-width:150px">Submitter <p-sortIcon
+                        field="category"></p-sortIcon>
+                </th>
+                <th pSortableColumn="quantity" style="min-width:180px">Result type <p-sortIcon
+                        field="quantity"></p-sortIcon>
+                </th>
+                <th pSortableColumn="filter1" style="min-width:150px">Progress <p-sortIcon field="filter1"></p-sortIcon>
+                </th>
+                <th pSortableColumn="filter2" style="min-width:180px">Historical <p-sortIcon
+                        field="filter2"></p-sortIcon>
+                </th>
+
+                <th pSortableColumn="filter3">General information <p-sortIcon field="filter3"></p-sortIcon></th>
+                <th pSortableColumn="filter4">Theory of change <p-sortIcon field="filter4"></p-sortIcon>
+                </th>
+                <th pSortableColumn="filter5">Partners <p-sortIcon field="filter5"></p-sortIcon></th>
+                <th pSortableColumn="filter6">Geographic location <p-sortIcon field="filter6"></p-sortIcon></th>
+                <th pSortableColumn="filter7">Links to results <p-sortIcon field="filter7"></p-sortIcon>
+                </th>
+                <th pSortableColumn="filter8">Evidence <p-sortIcon field="filter8"></p-sortIcon></th>
+                <th pSortableColumn="filter9">Section seven <p-sortIcon field="filter9"></p-sortIcon></th>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-result>
+            <tr>
+                <td style="min-width:200px">{{result.result_code}}</td>
+                <td style="min-width:500px">{{result.result_title}}</td>
+                <td style="min-width:150px">{{result.official_code}}</td>
+                <td style="min-width:180px">{{result.result_type_name}}</td>
+                <td style="min-width:150px">{{result.completeness}}%</td>
+                <td style="min-width:180px">
+                    <div style="z-index: 0"><app-pr-button text="Open information"
+                            (click)="openInformationModal(result?.results_id)"></app-pr-button>
+                    </div>
+                </td>
+                <td>
+                    <div [class]="parseCheck(result?.general_information?.value)">
+                        {{parseCheck(result?.general_information?.value)}}</div>
+                </td>
+                <td>
+                    <div [class]="parseCheck(result?.theory_of_change?.value)">
+                        {{parseCheck(result?.theory_of_change?.value)}}</div>
+                </td>
+                <td>
+                    <div [class]="parseCheck(result?.partners?.value)">{{parseCheck(result?.partners?.value)}}</div>
+                </td>
+                <td>
+                    <div [class]="parseCheck(result?.geographic_location?.value)">
+                        {{parseCheck(result?.geographic_location?.value)}}</div>
+                </td>
+                <td>
+                    <div [class]="parseCheck(result?.links_to_results?.value)">
+                        {{parseCheck(result?.links_to_results?.value)}}</div>
+                </td>
+                <td>
+                    <div [class]="parseCheck(result?.evidence?.value)">{{parseCheck(result?.evidence?.value)}}</div>
+                </td>
+                <td>
+                    <div [class]="parseCheck(result?.section_seven?.value)">
+                        {{parseCheck(result?.section_seven?.value)}}</div>
+                </td>
+            </tr>
+        </ng-template>
+    </p-table>
+</div>
+
+<app-result-history-of-changes-modal></app-result-history-of-changes-modal>

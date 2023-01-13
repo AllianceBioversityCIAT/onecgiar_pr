@@ -7,6 +7,7 @@ export const routingApp: PrRoute[] = [
   { prName: 'Type one report', prHide: true, canActivate: [CheckLoginGuard], path: 'type-one-report', loadChildren: () => import('../../pages/type-one-report/type-one-report.module').then(m => m.TypeOneReportModule) },
   { prName: 'login', prHide: true, path: 'login', loadChildren: () => import('../../pages/login/login.module').then(m => m.LoginModule) },
   // { prName: 'Quality Assurance', underConstruction: false, canActivate: [CheckLoginGuard], path: 'quality-assurance', loadChildren: () => import('../../pages/quality-assurance/quality-assurance.module').then(m => m.QualityAssuranceModule) },
+  { prName: 'Admin module', prHide: false, path: 'admin-module', loadChildren: () => import('../../pages/admin-section/admin-section.module').then(m => m.AdminSectionModule) },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'result', prHide: true }
 ];
 
@@ -15,6 +16,12 @@ export const resultRouting: PrRoute[] = [
   { prName: 'Result detail', path: 'result-detail/:id', loadChildren: () => import('../../pages/results/pages/result-detail/result-detail.module').then(m => m.ResultDetailModule) },
   { prName: '', path: 'results-outlet', loadChildren: () => import('../../pages/results/pages/results-outlet/results-outlet.module').then(m => m.ResultsOutletModule) },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'results-outlet' }
+];
+
+export const adminModuleRouting: PrRoute[] = [
+  { prName: 'Completeness status', path: 'completeness-status', loadChildren: () => import('../../pages/admin-section/pages/completeness-status/completeness-status.module').then(m => m.CompletenessStatusModule) },
+  { prName: 'User report', path: 'user-report', loadChildren: () => import('../../pages/admin-section/pages/user-report/user-report.module').then(m => m.UserReportModule) },
+  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'completeness-status' }
 ];
 
 export const resultsOutletRouting: PrRoute[] = [

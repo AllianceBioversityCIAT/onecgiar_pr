@@ -399,7 +399,20 @@ export class ResultsApiService {
   PATCH_submit(comment) {
     return this.http.patch<any>(`${this.apiBaseUrl}submissions/submit/${this.currentResultId}`, { comment });
   }
+
   PATCH_unsubmit(comment) {
     return this.http.patch<any>(`${this.apiBaseUrl}submissions/unsubmit/${this.currentResultId}`, { comment });
+  }
+
+  GET_reportSesultsCompleteness() {
+    return this.http.get<any>(`${this.apiBaseUrl}admin-panel/report/results/completeness`);
+  }
+
+  GET_historicalByResultId(resultId) {
+    return this.http.get<any>(`${this.apiBaseUrl}admin-panel/report/results/${resultId}/submissions`);
+  }
+
+  GET_reportUsers() {
+    return this.http.get<any>(`${this.apiBaseUrl}admin-panel/report/users`);
   }
 }
