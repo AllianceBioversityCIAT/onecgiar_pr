@@ -4,8 +4,7 @@
     <!-- <app-pr-field-header label="Evidence"></app-pr-field-header> -->
     <app-alert-status [description]="alertStatus()">
     </app-alert-status>
-    <app-alert-status *ngIf="validateCheckBoxes() && !this.api.dataControlSE.isKnowledgeProduct"
-        [description]="validateCheckBoxes()" status="warning">
+    <app-alert-status *ngIf="validateCheckBoxes()" [description]="validateCheckBoxes()" status="warning">
     </app-alert-status>
     <div class="evidences">
         <div class="evidence evidenceItem" *ngFor="let evidence of this.evidencesBody.evidences; let i=index">
