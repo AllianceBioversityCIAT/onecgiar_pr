@@ -9,6 +9,7 @@ import { Evidence } from './entities/evidence.entity';
 import { VersionRepository } from '../versions/version.repository';
 import { ResultsKnowledgeProductsRepository } from '../results-knowledge-products/repositories/results-knowledge-products.repository';
 import { Like } from 'typeorm';
+import { Result } from '../entities/result.entity';
 
 @Injectable()
 export class EvidencesService {
@@ -166,6 +167,15 @@ export class EvidencesService {
 
   async findAll(resultId: number) {
     try {
+      const result: Result = await this._resultRepository.getResultById(resultId);
+      if (!result) {
+        throw {
+          response: {},
+          message: 'Results Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
       const evidences = await this._evidencesRepository.getEvidencesByResultId(
         resultId,
         false,
@@ -185,6 +195,9 @@ export class EvidencesService {
 
       return {
         response: {
+          result_id: result.id,
+          gender_tag_level: result.gender_tag_level_id,
+          climate_change_tag_level: result.climate_change_tag_level_id,
           evidences,
           supplementary,
         },
