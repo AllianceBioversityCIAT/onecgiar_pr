@@ -35,11 +35,11 @@ export class ResultsApiService {
   GET_AllResultsWithUseRole(userId) {
     return this.http.get<any>(`${this.apiBaseUrl}get/all/roles/${userId}`).pipe(
       map(resp => {
-        resp.response.map(result => (result.id = Number(result.id)));
-        return resp;
-      }),
-      map(resp => {
-        resp.response.map(result => (result.full_name = `${result.create_last_name} ${result.create_first_name}`));
+        resp.response.map(result => {
+          result.id = Number(result.id);
+          result.result_code = Number(result.result_code);
+          result.full_name = `${result.create_last_name} ${result.create_first_name}`;
+        });
         return resp;
       })
     );
