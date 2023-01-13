@@ -27,6 +27,7 @@ export class RdEvidencesComponent {
     this.api.resultsSE.GET_evidences().subscribe(({ response }) => {
       this.evidencesBody = response;
       console.log(this.evidencesBody);
+      console.log(this.evidencesBody?.gender_tag_level);
     });
   }
   onSaveSection() {
@@ -50,11 +51,12 @@ export class RdEvidencesComponent {
     this.evidencesBody.supplementary.splice(index, 1);
   }
   validateCheckBoxes() {
+    if (this.evidencesBody?.gender_tag_level != '3' && this.evidencesBody?.climate_change_tag_level != '3') return false;
     let text = '<ul>';
     const gender_related = this.evidencesBody.evidences.some(evidence => evidence.gender_related === true);
     const youth_related = this.evidencesBody.evidences.some(evidence => evidence.youth_related === true);
-    if (!gender_related) text += '<li>At least one of the evidence sources must have the gender checkbox marked if the gender tag has a score of 2.</li>';
-    if (!youth_related) text += '<li>At least one of the evidence sources must have the climate checkbox marked if the climate change tag has a score of 2.</li>';
+    if (!gender_related && this.evidencesBody?.gender_tag_level == '3') text += '<li>At least one of the evidence sources must have the gender checkbox marked if the gender tag has a score of 2.</li>';
+    if (!youth_related && this.evidencesBody?.climate_change_tag_level == '3') text += '<li>At least one of the evidence sources must have the climate checkbox marked if the climate change tag has a score of 2.</li>';
     text += '</ul>';
     if (gender_related && youth_related) return false;
     return text;
