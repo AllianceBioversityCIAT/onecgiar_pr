@@ -4,12 +4,13 @@ import { CommonModule } from '@angular/common';
 import { CompletenessStatusRoutingModule } from './completeness-status-routing.module';
 import { CompletenessStatusComponent } from './completeness-status.component';
 import { TableModule } from 'primeng/table';
-import { ProgressBarModule } from 'primeng/progressbar';
 import { FormsModule } from '@angular/forms';
+import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
+import { ResultHistoryOfChangesModalModule } from './components/result-history-of-changes-modal/result-history-of-changes-modal.module';
 
 @NgModule({
   declarations: [CompletenessStatusComponent],
   exports: [CompletenessStatusComponent],
-  imports: [CommonModule, CompletenessStatusRoutingModule, ProgressBarModule, TableModule, FormsModule]
+  imports: [CommonModule, CompletenessStatusRoutingModule, TableModule, FormsModule, CustomFieldsModule, ResultHistoryOfChangesModalModule]
 })
 export class CompletenessStatusModule {}

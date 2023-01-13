@@ -18,4 +18,12 @@ export class CompletenessStatusComponent {
       console.log(response);
     });
   }
+
+  parseCheck(value) {
+    return value == 0 ? 'Pending' : 'Completed';
+  }
+
+  openInformationModal() {
+    this.api.dataControlSE.showResultHistoryOfChangesModal = true;
+  }
 }

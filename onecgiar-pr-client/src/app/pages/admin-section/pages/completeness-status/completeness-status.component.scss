@@ -1,4 +1,29 @@
 .table_container {
-    width: 100%;
-    padding: 20px;
+    display: grid;
+    grid-template-columns: 1fr;
+    padding: 10px;
+    overflow: hidden;
+}
+
+.Pending {
+    color: rgb(182, 182, 182);
+}
+
+.Completed {
+    color: #23ac67;
+    font-weight: 500;
+    // border: 1px solid #23ac67;
+    padding: 5px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    &::after {
+        content: '';
+        width: 10px;
+        height: 10px;
+        border-radius: 100px;
+        background-color: #23ac67;
+    }
 }
