@@ -140,6 +140,46 @@ export class AdminPanelRepository{
     }
   }
 
+  async userReport() {
+    const queryData = `
+    select
+    	u.id as user_id,
+    	u.first_name as user_first_name,
+    	u.last_name as user_last_name,
+    	u.email as user_email,
+    	rbu.initiative_id,
+    	ci.official_code,
+    	ci.name as initiative_name,
+    	rbu.\`role\` as initiative_role,
+    	rbu2.\`role\` as app_role
+    FROM
+    	users u
+    left join role_by_user rbu ON
+    	rbu.\`user\` = u.id
+    	and rbu.active > 0
+    	and rbu.action_area_id is NULL
+    	and rbu.initiative_id is not null
+    left join clarisa_initiatives ci on
+    	ci.id = rbu.initiative_id
+    left join role_by_user rbu2 ON
+    	rbu2.\`user\` = u.id
+    	and rbu2.active > 0
+    	and rbu2.action_area_id is NULL
+    	and rbu2.initiative_id is null
+    where
+    	u.active > 0;
+    `;
+    try {
+      const users = await this.dataSource.query(queryData); 
+	  return users;
+    } catch (error) {
+		throw this._handlersError.returnErrorRepository({
+        className: AdminPanelRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
 
 }
 
