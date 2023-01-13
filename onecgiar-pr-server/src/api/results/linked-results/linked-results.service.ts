@@ -95,20 +95,9 @@ export class LinkedResultsService {
   async findAllLinksByResult(resultId: number) {
     try {
       const links = await this._linkedResultRepository.getLinkResultByIdResult(resultId);
-      const result: Result = await this._resultRepository.getResultById(resultId);
-      if (!result) {
-        throw {
-          response: {},
-          message: 'Results Not Found',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
 
       return {
         response: {
-          result_id: result.id,
-          gender_tag_level: result.gender_tag_level_id || null,
-          climate_change_tag_level: result.climate_change_tag_level_id || null,
           links: links.filter(el => !!el.id),
           legacy_link: links.filter(el => !el.id)
         },

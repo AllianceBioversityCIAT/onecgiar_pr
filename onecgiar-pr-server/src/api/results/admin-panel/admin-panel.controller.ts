@@ -19,6 +19,15 @@ export class AdminPanelController {
     throw new HttpException({ message, response }, status);
   }
 
+  @Get('report/results/:resultId/submissions')
+  async submissionsByResults(
+    @Param('resultId') resultId: number
+  ) {
+    const {message, response, status} = 
+      await this.adminPanelService.submissionsByResults(resultId);
+    throw new HttpException({ message, response }, status);
+  }
+
   @Get('report/user')
   findOne(@Param('id') id: string) {
     return this.adminPanelService.findOne(+id);

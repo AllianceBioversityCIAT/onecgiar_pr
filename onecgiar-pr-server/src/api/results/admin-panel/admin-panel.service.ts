@@ -18,9 +18,22 @@ export class AdminPanelService {
 
   async reportResultCompleteness() {
     try {
-      const capdevsTerm =  await this._adminPanelRepository.reportResultCompleteness();
+      const results =  await this._adminPanelRepository.reportResultCompleteness();
       return {
-        response: capdevsTerm,
+        response: results,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async submissionsByResults(resultId: number) {
+    try {
+      const submissions =  await this._adminPanelRepository.submissionsByResults(resultId);
+      return {
+        response: submissions,
         message: 'Successful response',
         status: HttpStatus.OK,
       };

@@ -104,6 +104,42 @@ export class AdminPanelRepository{
     }
   }
 
+  async submissionsByResults(resultId: number) {
+    const queryData = `
+    SELECT
+    	s.id,
+    	s.status as is_submit,
+    	s.comment,
+    	s.created_date,
+    	r.id as results_id,
+    	r.result_code,
+    	r.title,
+    	u.id as user_id,
+    	u.first_name as user_first_name,
+    	u.last_name as user_last_name
+    FROM
+    	submission s
+    inner join \`result\` r on
+    	r.id = s.results_id
+    inner join users u on
+    	u.id = s.user_id
+    WHERE
+      r.id = ?
+    ORDER BY
+    	s.created_date DESC;
+    `;
+    try {
+      const submissionsByResult = await this.dataSource.query(queryData, [resultId]); 
+	  return submissionsByResult;
+    } catch (error) {
+		throw this._handlersError.returnErrorRepository({
+        className: AdminPanelRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
 
 }
 
