@@ -20,6 +20,7 @@ export const resultRouting: PrRoute[] = [
 
 export const adminModuleRouting: PrRoute[] = [
   { prName: 'Completeness status', path: 'completeness-status', loadChildren: () => import('../../pages/admin-section/pages/completeness-status/completeness-status.module').then(m => m.CompletenessStatusModule) },
+  { prName: 'User report', path: 'user-report', loadChildren: () => import('../../pages/admin-section/pages/user-report/user-report.module').then(m => m.UserReportModule) },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'completeness-status' }
 ];
 

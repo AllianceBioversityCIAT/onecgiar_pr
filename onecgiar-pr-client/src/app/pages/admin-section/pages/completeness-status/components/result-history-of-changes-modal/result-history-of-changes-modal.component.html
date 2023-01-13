@@ -4,7 +4,8 @@
     <div class="modal_title">History of changes</div>
     <div class="modal_container partners-request-container">
 
-        <p-table [value]="this.resultHistoryOfChangesModalSE.historyOfChangesList">
+        <p-table [value]="this.resultHistoryOfChangesModalSE.historyOfChangesList"
+            *ngIf="this.resultHistoryOfChangesModalSE.historyOfChangesList.length">
             <ng-template pTemplate="header">
                 <tr>
                     <th>Comment</th>
@@ -26,6 +27,10 @@
                 </tr>
             </ng-template>
         </p-table>
+
+
+        <app-no-data-text title="No history"
+            *ngIf="!this.resultHistoryOfChangesModalSE.historyOfChangesList.length"></app-no-data-text>
 
     </div>
     <div class="buttons">

@@ -1,0 +1,12 @@
+.table_container {
+    display: grid;
+    grid-template-columns: 1fr;
+    padding: 10px;
+    overflow: hidden;
+}
+
+.not_provided_text {
+    color: rgb(187, 187, 187);
+    font-style: italic;
+    font-size: .8em;
+}
