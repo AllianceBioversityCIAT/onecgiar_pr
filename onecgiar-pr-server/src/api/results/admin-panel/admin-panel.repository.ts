@@ -150,8 +150,8 @@ export class AdminPanelRepository{
     	rbu.initiative_id,
     	ci.official_code,
     	ci.name as initiative_name,
-    	rbu.\`role\` as initiative_role,
-    	rbu2.\`role\` as app_role
+    	r.description as initiative_role_name,
+    	r2.description as app_role_name
     FROM
     	users u
     left join role_by_user rbu ON
@@ -166,6 +166,8 @@ export class AdminPanelRepository{
     	and rbu2.active > 0
     	and rbu2.action_area_id is NULL
     	and rbu2.initiative_id is null
+    LEFT join \`role\` r on r.id = rbu.\`role\` 
+    LEFT join \`role\` r2 on r2.id = rbu2.\`role\` 
     where
     	u.active > 0;
     `;
