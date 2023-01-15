@@ -10,7 +10,7 @@ export class BiReportsService {
   constructor(private biReportRepository: BiReportRepository){}
 
   create(createBiReportDto: CreateBiReportDto,) {
-    return 'This action adds a new biReport';
+    return this.biReportRepository.createNewRegisterBi(createBiReportDto);
   }
 
   findAll() {
@@ -21,11 +21,7 @@ export class BiReportsService {
     return `This action returns a #${id} biReport`;
   }
 
-  update(id: number, updateBiReportDto: UpdateBiReportDto) {
-    return `This action updates a #${id} biReport`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} biReport`;
+  findAllReports(){
+    return this.biReportRepository.getReportsBi();
   }
 }

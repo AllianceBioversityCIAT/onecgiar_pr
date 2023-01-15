@@ -5,7 +5,8 @@ import { HttpService } from '@nestjs/axios';
 import { ClarisaCredentialsBiService } from 'src/result-dashboard-bi/clarisa-credentials-bi.service';
 import { CredentialsClarisaBi } from '../dto/crendentials-clarisa.dto';
 import { lastValueFrom, map } from 'rxjs';
-import { EmbedCredentialsDTO } from '../dto/embed-credentials.dto';
+import { BodyPowerBiDTO, EmbedCredentialsDTO, ReportInformation } from '../dto/embed-credentials.dto';
+import { CreateBiReportDto } from '../dto/create-bi-report.dto';
 
 @Injectable()
 export class BiReportRepository extends Repository<BiReport> {
@@ -44,6 +45,24 @@ export class BiReportRepository extends Repository<BiReport> {
   async getTokenPowerBi(){
     const barerTokenAzure = await this.getBarerTokenAzure();
 
+    const reportsBi: BiReport[] = await this.getReportsBi();
+
+    let datasets: BodyPowerBiDTO[] = [];
+    let reportsId: BodyPowerBiDTO[] = [];
+
+    reportsBi.map((resp) =>{
+      let auxIdReportBi: BodyPowerBiDTO = new BodyPowerBiDTO;
+      let auxIdDataSetsBi: BodyPowerBiDTO = new BodyPowerBiDTO;
+      auxIdReportBi.id = resp.report_id;
+      reportsId.push(auxIdReportBi);
+      auxIdDataSetsBi.id = resp.dataset_id;
+      datasets.push(auxIdDataSetsBi);
+    })
+
+    const bodyRequestPowerBi = {
+      datasets: datasets,
+      reports:reportsId
+    }
     const bodyPowerBi = {
         datasets: [
             {
@@ -63,16 +82,35 @@ export class BiReportRepository extends Repository<BiReport> {
           .pipe(map((resp) => resp.data)),
       );
 
-    const informationEmbedBi: EmbedCredentialsDTO = new EmbedCredentialsDTO;
-
+    let informationEmbedBi: EmbedCredentialsDTO = new EmbedCredentialsDTO;
     informationEmbedBi.embed_token = tokenPowerBi.token;
-    informationEmbedBi.embed_url_base = this.credentialsBi.embed_url_base;
-    informationEmbedBi.report_id = bodyPowerBi.reports;
-    informationEmbedBi.group_id = 'c121c4f2-ab5c-4135-962b-2f601bb7df52';
-    informationEmbedBi.config = this.credentialsBi.config_id;
-    informationEmbedBi.tenant_id = this.credentialsBi.tenant_id;
+    let auxReportsInfo: ReportInformation[] = []
+    reportsBi.map((resp)=>{
+      let reportsInfo: ReportInformation = new ReportInformation;
 
-      return informationEmbedBi;
+      reportsInfo.resport_id = resp.report_id;
+      reportsInfo.name = resp.report_name;
+      reportsInfo.description = resp.report_description;
+      reportsInfo.embed_url = this.credentialsBi.embed_url_base+resp.report_id+'&groupId='+resp.group_id+'&config='+this.credentialsBi.config_id;
+      auxReportsInfo.push(reportsInfo)
+    })
+    informationEmbedBi.reportsInformation = auxReportsInfo;
+    
+   return informationEmbedBi;
+  }
+
+  async getReportsBi(){
+    const getResportBi: BiReport[] = await this.find({where:{
+      is_active: true
+    }});
+
+    return getResportBi;
+  }
+
+  async createNewRegisterBi(createBiReport: CreateBiReportDto){
+    let returnReportBi = this.save(createBiReport);
+    return returnReportBi;
   }
 
 }
+

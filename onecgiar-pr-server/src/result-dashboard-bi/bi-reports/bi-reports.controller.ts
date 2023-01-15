@@ -17,18 +17,17 @@ export class BiReportsController {
     return this.biReportsService.findAll();
   }
 
+  @Get('/reports')
+  findAllReports() {
+    return this.biReportsService.findAllReports();
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.biReportsService.findOne(+id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateBiReportDto: UpdateBiReportDto) {
-    return this.biReportsService.update(+id, updateBiReportDto);
-  }
+  
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.biReportsService.remove(+id);
-  }
+  
 }
