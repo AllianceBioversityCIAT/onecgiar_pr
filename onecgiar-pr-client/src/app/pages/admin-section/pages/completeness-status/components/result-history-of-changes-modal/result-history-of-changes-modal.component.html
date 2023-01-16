@@ -10,9 +10,11 @@
                 <tr>
                     <th>Comment</th>
                     <th>Name</th>
+                    <th>Email</th>
+                    <th>Initiative role</th>
+                    <th>Application Role</th>
                     <th>Updated at</th>
                     <th>Status</th>
-
                 </tr>
             </ng-template>
             <ng-template pTemplate="body" let-product>
@@ -22,6 +24,9 @@
                         <div class="not_provided_text" *ngIf="!product.comment">Not provided</div>
                     </td>
                     <td>{{product.user_last_name}} {{product.user_first_name}}</td>
+                    <td>{{product.email}}</td>
+                    <td>{{product.initiative_role}}</td>
+                    <td>{{product.app_role}}</td>
                     <td>{{product.created_date}}</td>
                     <td>{{product.is_submit == 0 ? 'Un-submit':'Submit'}}</td>
                 </tr>
@@ -34,7 +39,7 @@
 
     </div>
     <div class="buttons">
-        <app-pr-button padding="medium" text="Close" icon="expand_more" colorType="secondary"
+        <app-pr-button padding="medium" text="Close" colorType="secondary"
             (click)="this.api.dataControlSE.showResultHistoryOfChangesModal = false">
         </app-pr-button>
     </div>
