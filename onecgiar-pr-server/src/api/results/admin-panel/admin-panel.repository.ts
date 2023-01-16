@@ -116,13 +116,27 @@ export class AdminPanelRepository{
     	r.title,
     	u.id as user_id,
     	u.first_name as user_first_name,
-    	u.last_name as user_last_name
+    	u.last_name as user_last_name,
+      u.email,
+    	r2.description as initiative_role,
+    	r3.description as app_role
     FROM
     	submission s
     inner join \`result\` r on
     	r.id = s.results_id
     inner join users u on
     	u.id = s.user_id
+    LEFT join results_by_inititiative rbi on rbi.result_id = r.id 
+    left join role_by_user rbu on rbu.\`user\` = u.id
+                  and rbu.initiative_id = rbi.inititiative_id  
+                  and rbu.action_area_id is NULL 
+                  and rbu.active > 0
+    left join \`role\` r2 on r2.id = rbu.\`role\` 
+    left join role_by_user rbu2 on rbu2.\`user\` = u.id
+                  and rbu2.initiative_id is NULL 
+                  and rbu2.action_area_id is NULL 
+                  and rbu2.active > 0
+    left join \`role\` r3 on r3.id = rbu2.\`role\` 
     WHERE
       r.id = ?
     ORDER BY
