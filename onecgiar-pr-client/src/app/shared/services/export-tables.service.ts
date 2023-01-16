@@ -11,7 +11,7 @@ export class ExportTablesService {
       const worksheet = xlsx.utils.json_to_sheet(list);
       const workbook = { Sheets: { data: worksheet }, SheetNames: ['data'] };
       const excelBuffer: any = xlsx.write(workbook, { bookType: 'xlsx', type: 'array' });
-      this.saveAsExcelFile(excelBuffer, 'products');
+      this.saveAsExcelFile(excelBuffer, 'file');
     });
   }
   private saveAsExcelFile(buffer: any, fileName: string): void {

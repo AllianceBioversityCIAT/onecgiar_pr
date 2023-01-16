@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ResultHistoryOfChangesModalService } from './result-history-of-changes-modal.service';
+import { ExportTablesService } from '../../../../../../shared/services/export-tables.service';
 
 @Component({
   selector: 'app-result-history-of-changes-modal',
@@ -8,6 +9,6 @@ import { ResultHistoryOfChangesModalService } from './result-history-of-changes-
   styleUrls: ['./result-history-of-changes-modal.component.scss']
 })
 export class ResultHistoryOfChangesModalComponent {
-  constructor(public api: ApiService, public resultHistoryOfChangesModalSE: ResultHistoryOfChangesModalService) {}
+  constructor(public api: ApiService, public resultHistoryOfChangesModalSE: ResultHistoryOfChangesModalService, public exportTablesSE: ExportTablesService) {}
   cleanObject() {}
 }
