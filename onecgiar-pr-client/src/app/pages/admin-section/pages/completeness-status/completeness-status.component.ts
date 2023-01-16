@@ -12,11 +12,12 @@ export class CompletenessStatusComponent {
   constructor(private api: ApiService, public resultHistoryOfChangesModalSE: ResultHistoryOfChangesModalService) {}
   ngOnInit(): void {
     this.GET_reportSesultsCompleteness();
+    this.api.rolesSE.validateReadOnly();
   }
   GET_reportSesultsCompleteness() {
     this.api.resultsSE.GET_reportSesultsCompleteness().subscribe(({ response }) => {
       this.resultsList = response;
-      console.log(response);
+      // console.log(response);
     });
   }
 
