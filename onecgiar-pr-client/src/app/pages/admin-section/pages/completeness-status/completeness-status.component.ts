@@ -8,6 +8,7 @@ import { ResultHistoryOfChangesModalService } from './components/result-history-
   styleUrls: ['./completeness-status.component.scss']
 })
 export class CompletenessStatusComponent {
+  textToFind = '';
   resultsList: any[];
   constructor(private api: ApiService, public resultHistoryOfChangesModalSE: ResultHistoryOfChangesModalService) {}
   ngOnInit(): void {

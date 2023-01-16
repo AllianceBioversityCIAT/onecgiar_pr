@@ -405,7 +405,24 @@ export class ResultsApiService {
   }
 
   GET_reportSesultsCompleteness() {
-    return this.http.get<any>(`${this.apiBaseUrl}admin-panel/report/results/completeness`);
+    return this.http.get<any>(`${this.apiBaseUrl}admin-panel/report/results/completeness`).pipe(
+      map(resp => {
+        // console.log(resp.response);
+        resp?.response.map(result => {
+          result.full_name = `${result.result_title}`;
+          result.result_code = Number(result.result_code);
+          result.completeness = Number(result.completeness);
+          result.general_information_value = Number(result?.general_information?.value);
+          result.theory_of_change_value = Number(result?.theory_of_change.value);
+          result.partners_value = Number(result?.partners.value);
+          result.geographic_location_value = Number(result?.geographic_location.value);
+          result.links_to_results_value = Number(result?.links_to_results.value);
+          result.evidence_value = Number(result?.evidence.value);
+          result.section_seven_value = Number(result?.section_seven.value);
+        });
+        return resp;
+      })
+    );
   }
 
   GET_historicalByResultId(resultId) {
