@@ -537,7 +537,7 @@ export class ResultsService {
     try {
       const result: Result = await this._resultRepository.findOne({
         where: { id: resultId },
-        //relations: { legacy_id: true },
+        relations: { legacy_id: true },
       });
       if (!result) {
         throw {

@@ -51,7 +51,7 @@ export class UserService {
 
       if (!createUserDto.is_cgiar) {
         if (!('password' in createUserDto)) {
-          if (!createUserDto['password']) {
+          if (!createUserDto.password) {
             throw {
               response: {},
               message: 'No password provider',

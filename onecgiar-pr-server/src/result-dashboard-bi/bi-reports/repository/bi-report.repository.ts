@@ -63,22 +63,10 @@ export class BiReportRepository extends Repository<BiReport> {
       datasets: datasets,
       reports:reportsId
     }
-    const bodyPowerBi = {
-        datasets: [
-            {
-              id: "81afea2f-c93c-4f55-8c3e-617b87e469b9"
-            }
-          ],
-          reports: [
-            {
-              id: "de3d27cc-2849-4459-aec4-fe4cbe47b451"
-            }
-          ]
-    }
 
     const tokenPowerBi = await lastValueFrom(
         await this._httpService
-          .post(`${this.credentialsBi.api_token_url}`,bodyPowerBi ,{headers:{Authorization: `Bearer ${barerTokenAzure.access_token}`}})
+          .post(`${this.credentialsBi.api_token_url}`,bodyRequestPowerBi ,{headers:{Authorization: `Bearer ${barerTokenAzure.access_token}`}})
           .pipe(map((resp) => resp.data)),
       );
 
