@@ -23,6 +23,16 @@ export class CompletenessStatusComponent {
     });
   }
 
+  exportExcel(resultsList) {
+    console.log(resultsList);
+    let resultsListMapped = [];
+    resultsList.map(result => {
+      const { result_code, result_title, official_code, completeness, general_information, theory_of_change, partners, geographic_location, links_to_results, evidence, section_seven } = result;
+      resultsListMapped.push({ result_code, result_title, official_code, completeness, general_information: general_information.value, theory_of_change: theory_of_change.value, partners: partners.value, geographic_location: geographic_location.value, links_to_results: links_to_results.value, evidence: evidence.value, section_seven: section_seven.value });
+    });
+    this.exportTablesSE.exportExcel(resultsListMapped);
+  }
+
   parseCheck(value) {
     return value == 0 ? 'Pending' : 'Completed';
   }

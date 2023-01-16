@@ -5,7 +5,7 @@
             <input type="text" placeholder="Find result..." [(ngModel)]="this.textToFind">
         </div>
         <app-pr-button text="Download .xlsx" icon="file_download"
-            (click)="this.exportTablesSE.exportExcel(this.resultsList )"></app-pr-button>
+            (click)="exportExcel(this.resultsList)"></app-pr-button>
     </div>
 
     <p-table [value]="this.resultsList | filterByText:this.textToFind" [scrollable]="true" [paginator]="true"
