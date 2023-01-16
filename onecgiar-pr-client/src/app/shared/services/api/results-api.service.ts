@@ -430,6 +430,14 @@ export class ResultsApiService {
   }
 
   GET_reportUsers() {
-    return this.http.get<any>(`${this.apiBaseUrl}admin-panel/report/users`);
+    return this.http.get<any>(`${this.apiBaseUrl}admin-panel/report/users`).pipe(
+      map(resp => {
+        console.log(resp.response);
+        resp?.response.map(user => {
+          user.full_name = `${user.user_first_name}${user.user_last_name}${user.user_email}${user.initiative_name}`;
+        });
+        return resp;
+      })
+    );
   }
 }

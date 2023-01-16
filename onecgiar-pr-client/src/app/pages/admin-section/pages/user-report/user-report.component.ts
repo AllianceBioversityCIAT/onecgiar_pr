@@ -7,6 +7,7 @@ import { ApiService } from '../../../../shared/services/api/api.service';
   styleUrls: ['./user-report.component.scss']
 })
 export class UserReportComponent implements OnInit {
+  textToFind = '';
   usersList = [];
   constructor(private api: ApiService) {}
 
@@ -16,7 +17,7 @@ export class UserReportComponent implements OnInit {
 
   GET_reportUsers() {
     this.api.resultsSE.GET_reportUsers().subscribe(({ response }) => {
-      console.log(response);
+      // console.log(response);
       this.usersList = response;
     });
   }

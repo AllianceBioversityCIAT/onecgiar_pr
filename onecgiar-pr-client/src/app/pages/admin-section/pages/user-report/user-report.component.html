@@ -1,13 +1,19 @@
 <div class="table_container">
-    <p-table [value]="this.usersList" [scrollable]="true" scrollHeight="calc(100vh - 235px)" style="min-width:200px">
+    <div class="search_input">
+        <i class="material-icons-round">search</i>
+        <input type="text" placeholder="Find result..." [(ngModel)]="this.textToFind">
+    </div>
+    <p-table [value]="this.usersList | filterByText:this.textToFind" [scrollable]="true" [paginator]="true"
+        [rowsPerPageOptions]="[20,50,100]" [rows]="20" scrollHeight="calc(100vh - 235px)" style="min-width:200px">
         <ng-template pTemplate="header">
             <tr>
-                <th pSortableColumn="filter3" style="min-width:150px">User id <p-sortIcon field="filter3"></p-sortIcon>
+                <th pSortableColumn="user_id" style="min-width:150px">User id <p-sortIcon field="user_id"></p-sortIcon>
                 </th>
-                <th pSortableColumn="filter5">Initiative name <p-sortIcon field="filter5"></p-sortIcon></th>
-                <th pSortableColumn="filter6">Email <p-sortIcon field="filter6"></p-sortIcon></th>
-                <th pSortableColumn="filter8">User name <p-sortIcon field="filter8"></p-sortIcon></th>
-                <th pSortableColumn="filter9">Official code <p-sortIcon field="filter9"></p-sortIcon></th>
+                <th pSortableColumn="initiative_name">Initiative name <p-sortIcon field="initiative_name"></p-sortIcon>
+                </th>
+                <th pSortableColumn="user_email">Email <p-sortIcon field="user_email"></p-sortIcon></th>
+                <th pSortableColumn="user_first_name">User name <p-sortIcon field="user_first_name"></p-sortIcon></th>
+                <th pSortableColumn="official_code">Official code <p-sortIcon field="official_code"></p-sortIcon></th>
             </tr>
         </ng-template>
         <ng-template pTemplate="body" let-user>
