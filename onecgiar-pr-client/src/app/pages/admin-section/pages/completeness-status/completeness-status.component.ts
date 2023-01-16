@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultHistoryOfChangesModalService } from './components/result-history-of-changes-modal/result-history-of-changes-modal.service';
+import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 
 @Component({
   selector: 'app-completeness-status',
@@ -10,7 +11,7 @@ import { ResultHistoryOfChangesModalService } from './components/result-history-
 export class CompletenessStatusComponent {
   textToFind = '';
   resultsList: any[];
-  constructor(private api: ApiService, public resultHistoryOfChangesModalSE: ResultHistoryOfChangesModalService) {}
+  constructor(private api: ApiService, public resultHistoryOfChangesModalSE: ResultHistoryOfChangesModalService, public exportTablesSE: ExportTablesService) {}
   ngOnInit(): void {
     this.GET_reportSesultsCompleteness();
     this.api.rolesSE.validateReadOnly();

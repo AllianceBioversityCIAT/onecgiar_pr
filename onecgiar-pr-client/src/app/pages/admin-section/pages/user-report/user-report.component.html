@@ -1,7 +1,11 @@
 <div class="table_container">
-    <div class="search_input">
-        <i class="material-icons-round">search</i>
-        <input type="text" placeholder="Find result..." [(ngModel)]="this.textToFind">
+    <div class="options">
+        <div class="search_input">
+            <i class="material-icons-round">search</i>
+            <input type="text" placeholder="Find result..." [(ngModel)]="this.textToFind">
+        </div>
+        <app-pr-button text="Download .xlsx" icon="file_download"
+            (click)="this.exportTablesSE.exportExcel(this.usersList)"></app-pr-button>
     </div>
     <p-table [value]="this.usersList | filterByText:this.textToFind" [scrollable]="true" [paginator]="true"
         [rowsPerPageOptions]="[20,50,100]" [rows]="20" scrollHeight="calc(100vh - 235px)" style="min-width:200px">

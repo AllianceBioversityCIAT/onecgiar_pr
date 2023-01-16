@@ -5,6 +5,11 @@
     overflow: hidden;
     position: relative;
 
+    .options {
+        display: flex;
+        justify-content: space-between;
+    }
+
     .counter {
         font-size: 1.1em;
         position: absolute;

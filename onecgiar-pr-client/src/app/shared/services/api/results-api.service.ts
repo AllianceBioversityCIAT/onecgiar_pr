@@ -435,7 +435,7 @@ export class ResultsApiService {
         // console.log(resp.response);
         resp?.response.map(user => {
           user.full_name = `${user.user_id}${user.user_first_name}${user.user_last_name}${user.user_email}${user.initiative_name}${user.official_code}${user.initiative_role_name}`;
-          user.init_name_official_code = `${user?.official_code ? '<strong> (' + user?.official_code + ') </strong>' : ''}${user?.initiative_name}`;
+          user.init_name_official_code = `${user?.official_code ? '(' + user?.official_code + ') ' : ''}${user?.initiative_name}`;
         });
         return resp;
       })
