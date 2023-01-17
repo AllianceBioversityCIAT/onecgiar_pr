@@ -5,20 +5,20 @@
     </i>
     <div *ngSwitchCase="1">
         <div class="title" *ngIf="!notification?.action_area_outcome_id && !notification?.toc_result_id">Request from
-            INIT-{{notification?.requester_initiative_id}} to add INIT-{{notification?.approving_inititiative_id}} as a
+            {{notification?.requester_official_code}} to add {{notification?.approving_official_code}} as a
             contributor to the result:</div>
         <div class="title" *ngIf="notification?.action_area_outcome_id || notification?.toc_result_id">
-            INIT-{{notification?.requester_initiative_id}} requests
+            {{notification?.requester_official_code}} requests
             to be added as a contributor to
             the result: </div>
         <div class="sub_title" *ngIf="!notification?.action_area_outcome_id && !notification?.toc_result_id">
-            <strong>(INIT-{{notification?.requester_initiative_id}})</strong>
+            <strong>({{notification?.requester_official_code}})</strong>
             -{{notification?.result_type_name}} - <a class="open_route" target="_blank"
                 [href]="resultUrl(notification?.result_id)">(Result id: {{notification?.result_id}})
                 {{notification?.title}}</a>
         </div>
         <div class="sub_title" *ngIf="notification?.action_area_outcome_id || notification?.toc_result_id">
-            <strong>(INIT-{{notification?.approving_inititiative_id}})</strong>
+            <strong>({{notification?.approving_official_code}})</strong>
             -{{notification?.result_type_name}} - <a class="open_route" target="_blank"
                 [href]="resultUrl(notification?.result_id)">(Result id: {{notification?.result_id}})
                 {{notification?.title}}</a>
@@ -50,10 +50,10 @@
 
     </div>
     <div *ngSwitchCase="2">
-        <div class="title">INIT-{{notification?.requester_initiative_id}} requests
+        <div class="title">{{notification?.requester_official_code}} requests
             to be added as a contributor to
             the result: </div>
-        <div class="sub_title"><strong>(INIT-{{notification?.approving_inititiative_id}})</strong>
+        <div class="sub_title"><strong>({{notification?.approving_official_code}})</strong>
             -{{notification?.result_type_name}} - <a class="open_route" target="_blank"
                 [href]="resultUrl(notification?.result_id)">(Result id: {{notification?.result_id}})
                 {{notification?.title}}</a>
@@ -67,10 +67,10 @@
         </div>
     </div>
     <div *ngSwitchCase="3">
-        <div class="title">INIT-{{notification?.requester_initiative_id}} requests
+        <div class="title">{{notification?.requester_official_code}} requests
             to be added as a contributor to
             the result: </div>
-        <div class="sub_title"><strong>(INIT-{{notification?.approving_inititiative_id}})</strong>
+        <div class="sub_title"><strong>({{notification?.approving_official_code}})</strong>
             - {{notification?.result_type_name}} - <a class="open_route" target="_blank"
                 [href]="resultUrl(notification?.result_id)">(Result id: {{notification?.result_id}})
                 {{notification?.title}}</a>
@@ -84,8 +84,8 @@
         </div>
     </div>
     <div *ngSwitchCase="4">
-        <div class="title">Request from INIT-{{notification?.requester_initiative_id}} to
-            INIT-{{notification?.approving_inititiative_id}} to be added as a contributor to the result:</div>
+        <div class="title">Request from {{notification?.requester_official_code}} to
+            {{notification?.approving_official_code}} to be added as a contributor to the result:</div>
         <div class="sub_title">{{notification?.result_type_name}} - <a class="open_route" target="_blank"
                 [href]="resultUrl(notification?.result_id)">(Result id: {{notification?.result_id}})
                 {{notification?.title}}</a></div>
