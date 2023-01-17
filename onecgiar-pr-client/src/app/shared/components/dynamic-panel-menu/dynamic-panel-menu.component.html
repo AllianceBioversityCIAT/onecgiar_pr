@@ -1,0 +1,14 @@
+<div class="dynamic_panel_menu">
+    <div class="section_title">
+        Admin module
+    </div>
+    <div class="options">
+        <div class="option" *ngFor="let option of options" [routerLink]="'/admin-module/'+option.path"
+            routerLinkActive="active">
+            <i class="material-icons-round">
+                {{option?.icon}}
+            </i>
+            {{option?.name}}
+        </div>
+    </div>
+</div>

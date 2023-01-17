@@ -71,7 +71,7 @@ export class TocResultsRepository extends Repository<TocResult> {
     	and tr.toc_level_id = ?
       ${tocLevel != 3?`and ibs.stageId = 4`:``}
       and tr.is_active > 0
-    order by tr.title ASC;
+    order by wp.acronym, tr.title ASC;
     `,
     queryOst = `
     select

@@ -67,6 +67,7 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
     						and r.active > 0
     	inner join role_levels rl on rl.id = r.role_level_id 
     where rbu.\`user\` = ?
+      and rbu.active > 0;
     `;
     try {
       const deleteData = await this.query(queryData, [userId]);
@@ -97,6 +98,7 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
       and rbu.\`role\` = ?
       and rbu.initiative_id = ?
     	or rbu.action_area_id = ?
+      and rbu.active > 0;
     `;
     try {
       const getSpecificRole = await this.query(queryData, [

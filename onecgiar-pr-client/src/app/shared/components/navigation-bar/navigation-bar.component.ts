@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { PrRoute, routingApp } from '../../routing/routing-data';
 import { NavigationBarService } from '../../services/navigation-bar.service';
+import { RolesService } from '../../services/global/roles.service';
 
 @Component({
   selector: 'app-navigation-bar',
@@ -9,7 +10,7 @@ import { NavigationBarService } from '../../services/navigation-bar.service';
 })
 export class NavigationBarComponent implements OnInit {
   navigationOptions: PrRoute[] = routingApp;
-  constructor(public _navigationBarService: NavigationBarService) {}
+  constructor(public _navigationBarService: NavigationBarService, private rolesSE: RolesService) {}
 
   ngOnInit(): void {
     window.addEventListener('scroll', e => {
@@ -20,5 +21,13 @@ export class NavigationBarComponent implements OnInit {
         this._navigationBarService.navbar_fixed = false;
       }
     });
+  }
+
+  validateAdminModuleAndRole(path) {
+    // console.log(path);
+    // console.log(this.rolesSE.isAdmin);
+    if (path != 'admin-module') return false;
+    if (this.rolesSE.isAdmin) return false;
+    return true;
   }
 }

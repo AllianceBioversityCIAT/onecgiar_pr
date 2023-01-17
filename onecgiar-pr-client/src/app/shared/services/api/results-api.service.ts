@@ -35,11 +35,11 @@ export class ResultsApiService {
   GET_AllResultsWithUseRole(userId) {
     return this.http.get<any>(`${this.apiBaseUrl}get/all/roles/${userId}`).pipe(
       map(resp => {
-        resp.response.map(result => (result.id = Number(result.id)));
-        return resp;
-      }),
-      map(resp => {
-        resp.response.map(result => (result.full_name = `${result.create_last_name} ${result.create_first_name}`));
+        resp.response.map(result => {
+          result.id = Number(result.id);
+          result.result_code = Number(result.result_code);
+          result.full_name = `${result.create_last_name} ${result.create_first_name}`;
+        });
         return resp;
       })
     );
@@ -399,7 +399,46 @@ export class ResultsApiService {
   PATCH_submit(comment) {
     return this.http.patch<any>(`${this.apiBaseUrl}submissions/submit/${this.currentResultId}`, { comment });
   }
+
   PATCH_unsubmit(comment) {
     return this.http.patch<any>(`${this.apiBaseUrl}submissions/unsubmit/${this.currentResultId}`, { comment });
+  }
+
+  GET_reportSesultsCompleteness() {
+    return this.http.get<any>(`${this.apiBaseUrl}admin-panel/report/results/completeness`).pipe(
+      map(resp => {
+        // console.log(resp.response);
+        resp?.response.map(result => {
+          result.full_name = `${result.result_title}${result.result_code}${result.official_code}${result.result_type_name}`;
+          result.result_code = Number(result.result_code);
+          result.completeness = Number(result.completeness);
+          result.general_information_value = Number(result?.general_information?.value);
+          result.theory_of_change_value = Number(result?.theory_of_change.value);
+          result.partners_value = Number(result?.partners.value);
+          result.geographic_location_value = Number(result?.geographic_location.value);
+          result.links_to_results_value = Number(result?.links_to_results.value);
+          result.evidence_value = Number(result?.evidence.value);
+          result.section_seven_value = Number(result?.section_seven.value);
+        });
+        return resp;
+      })
+    );
+  }
+
+  GET_historicalByResultId(resultId) {
+    return this.http.get<any>(`${this.apiBaseUrl}admin-panel/report/results/${resultId}/submissions`);
+  }
+
+  GET_reportUsers() {
+    return this.http.get<any>(`${this.apiBaseUrl}admin-panel/report/users`).pipe(
+      map(resp => {
+        // console.log(resp.response);
+        resp?.response.map(user => {
+          user.full_name = `${user.user_id}${user.user_first_name}${user.user_last_name}${user.user_email}${user.initiative_name}${user.official_code}${user.initiative_role_name}`;
+          user.init_name_official_code = `${user?.official_code ? '(' + user?.official_code + ') ' : ''}${user?.initiative_name}`;
+        });
+        return resp;
+      })
+    );
   }
 }
