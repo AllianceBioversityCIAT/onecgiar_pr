@@ -4,7 +4,8 @@
     <div class="modal_title">History of changes</div>
     <div class="modal_container partners-request-container">
         <app-pr-button text="Download .xlsx" icon="file_download"
-            (click)="this.exportTablesSE.exportExcel(this.resultHistoryOfChangesModalSE.historyOfChangesList)"></app-pr-button>
+            (click)="this.exportTablesSE.exportExcel(this.resultHistoryOfChangesModalSE.historyOfChangesList)"
+            *ngIf="this.resultHistoryOfChangesModalSE.historyOfChangesList.length"></app-pr-button>
         <p-table [value]="this.resultHistoryOfChangesModalSE.historyOfChangesList"
             *ngIf="this.resultHistoryOfChangesModalSE.historyOfChangesList.length">
             <ng-template pTemplate="header">
