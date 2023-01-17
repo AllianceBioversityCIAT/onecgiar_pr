@@ -81,10 +81,10 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     	srr.result_id,
     	srr.owner_initiative_id,
     	srr.shared_inititiative_id,
-    	ci2.official_code as shared_official_code,
     	srr.approving_inititiative_id,
     	ci.official_code as approving_official_code,
 		srr.requester_initiative_id,
+		ci2.official_code as requester_official_code,
     	srr.toc_result_id,
     	srr.action_area_outcome_id,
     	srr.request_status_id,
@@ -111,7 +111,7 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
 		left join users u on u.id = srr.requested_by 
     	left join users u2 on u2.id = srr.approved_by 
 		left join clarisa_initiatives ci on ci.id = srr.approving_inititiative_id 
-    	left join clarisa_initiatives ci2 on ci2.id = srr.shared_inititiative_id 
+    	left join clarisa_initiatives ci2 on ci2.id = srr.requester_initiative_id 
     WHERE 
     	srr.approving_inititiative_id in (
     	SELECT
@@ -148,10 +148,10 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     	srr.result_id,
     	srr.owner_initiative_id,
     	srr.shared_inititiative_id,
-		ci2.official_code as shared_official_code,
     	srr.approving_inititiative_id,
     	ci.official_code as approving_official_code,
 		srr.requester_initiative_id,
+		ci2.official_code as requester_official_code,
     	srr.toc_result_id,
     	srr.action_area_outcome_id,
     	srr.request_status_id,
@@ -178,7 +178,7 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
 		left join users u on u.id = srr.requested_by 
     	left join users u2 on u2.id = srr.approved_by  
 		left join clarisa_initiatives ci on ci.id = srr.approving_inititiative_id 
-    	left join clarisa_initiatives ci2 on ci2.id = srr.shared_inititiative_id 
+    	left join clarisa_initiatives ci2 on ci2.id = srr.requester_initiative_id 
     WHERE 
     	srr.requester_initiative_id in (
     	SELECT
