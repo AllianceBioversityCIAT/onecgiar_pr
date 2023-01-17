@@ -137,7 +137,7 @@ export class LinkedResultRepository extends Repository<LinkedResult> {
     }
   }
 
-  async updateLink(resultId: number, resultsArray: number[], legacyLinkArray: string[], userId: number) {
+  async updateLink(resultId: number, resultsArray: number[], legacyLinkArray: string[], userId: number, isLegacy: boolean) {
     const results = resultsArray??[];
     const legacy = legacyLinkArray??[];
     const upDateInactive = `
@@ -147,8 +147,10 @@ export class LinkedResultRepository extends Repository<LinkedResult> {
         last_updated_by = ?
       where is_active > 0 
         and origin_result_id = ?
-        and linked_results_id not in (${!results.length?`''`: results.toString()})
-        or legacy_link not in (${`'${legacy.toString().replace(/,/g,'\',\'')}'`});
+        ${resultsArray?.reduce((acum, val) => acum + val, 0) > 0 && !isLegacy?
+            `and linked_results_id not in (${!results.length?`''`: results.toString()})`:
+            `and legacy_link not in (${`'${legacy.toString().replace(/,/g,'\',\'')}'`})`}
+        ;
     `;
 
     const upDateActive = `
@@ -157,8 +159,10 @@ export class LinkedResultRepository extends Repository<LinkedResult> {
         last_updated_date = NOW(),
         last_updated_by = ?
       where origin_result_id = ?
-        and linked_results_id in (${!results.length?`''`: results.toString()})
-        or legacy_link in (${`'${legacy.toString().replace(/,/g,'\',\'')}'`});
+      ${resultsArray?.reduce((acum, val) => acum + val, 0) > 0 && !isLegacy?
+        `and linked_results_id in (${!results.length?`''`: results.toString()})`:
+        `and legacy_link in (${`'${legacy.toString().replace(/,/g,'\',\'')}'`})`}
+        ;
     `;
 
     const upDateAllInactive = `
@@ -171,6 +175,8 @@ export class LinkedResultRepository extends Repository<LinkedResult> {
     `;
 
     try {
+      console.log(upDateInactive)
+      console.log(upDateActive)
       if(results?.length || legacy?.length){
         const upDateInactiveResult = await this.query(upDateInactive, [
           userId, resultId
