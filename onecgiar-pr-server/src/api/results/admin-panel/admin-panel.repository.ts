@@ -157,6 +157,7 @@ export class AdminPanelRepository{
   async userReport() {
     const queryData = `
     select
+    DISTINCT
     	u.id as user_id,
     	u.first_name as user_first_name,
     	u.last_name as user_last_name,
