@@ -8,7 +8,7 @@ import { Component, OnInit } from '@angular/core';
 export class AdminSectionComponent {
   sections = [
     { name: 'Completeness status', icon: 'check_circle', path: 'completeness-status' },
-    { name: 'Users', icon: 'people', path: 'user-report' }
+    { name: 'User roles', icon: 'people', path: 'user-report' }
   ];
   constructor() {}
 }

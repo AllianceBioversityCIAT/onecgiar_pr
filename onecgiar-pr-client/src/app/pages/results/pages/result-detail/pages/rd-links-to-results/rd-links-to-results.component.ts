@@ -16,7 +16,7 @@ export class RdLinksToResultsComponent {
   text_to_search: string = '';
   counterPipe = 0;
   columnOrder = [
-    { title: 'ID', attr: 'id' },
+    { title: 'Result code', attr: 'result_code' },
     { title: 'Title', attr: 'title', class: 'notCenter' },
     // { title: 'Reporting year', attr: 'reported_year' },
     { title: 'Result type', attr: 'result_type' },
