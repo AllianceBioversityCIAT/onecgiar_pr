@@ -26,7 +26,10 @@
                 <th pSortableColumn="completeness" style="min-width:150px">Progress <p-sortIcon
                         field="completeness"></p-sortIcon>
                 </th>
-                <th style="min-width:180px">Historical
+                <th pSortableColumn="is_submitted" style="min-width:150px">Submitted <p-sortIcon
+                        field="is_submitted"></p-sortIcon>
+                </th>
+                <th style="min-width:180px">Submissions
                 </th>
 
                 <th pSortableColumn="general_information_value">General information <p-sortIcon
@@ -52,6 +55,7 @@
                 <td style="min-width:150px">{{result.official_code}}</td>
                 <td style="min-width:180px">{{result.result_type_name}}</td>
                 <td style="min-width:150px">{{result.completeness}}%</td>
+                <td style="min-width:150px">{{result.is_submitted ?'Yes':'No'}}</td>
                 <td style="min-width:180px">
                     <div style="z-index: 0"><app-pr-button text="See more"
                             (click)="openInformationModal(result?.results_id)"></app-pr-button>
