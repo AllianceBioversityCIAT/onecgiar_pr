@@ -4,7 +4,7 @@
     <div class="modal_title">History of changes</div>
     <div class="modal_container partners-request-container">
         <app-pr-button text="Download .xlsx" icon="file_download"
-            (click)="this.exportTablesSE.exportExcel(this.resultHistoryOfChangesModalSE.historyOfChangesList)"
+            (click)="exportExcel(this.resultHistoryOfChangesModalSE.historyOfChangesList);"
             *ngIf="this.resultHistoryOfChangesModalSE.historyOfChangesList.length"></app-pr-button>
         <p-table [value]="this.resultHistoryOfChangesModalSE.historyOfChangesList"
             *ngIf="this.resultHistoryOfChangesModalSE.historyOfChangesList.length">
@@ -27,7 +27,10 @@
                     </td>
                     <td>{{product.user_last_name}} {{product.user_first_name}}</td>
                     <td>{{product.email}}</td>
-                    <td>{{product.initiative_role}}</td>
+                    <td>
+                        <div *ngIf="product.initiative_role">{{product.initiative_role}}</div>
+                        <div class="not_provided_text" *ngIf="!product.initiative_role">Not applicable</div>
+                    </td>
                     <td>{{product.app_role}}</td>
                     <td>{{product.created_date | date:'d MMMM, y - h:mm:ss a'}}</td>
                     <td>{{product.is_submit == 0 ? 'Un-submit':'Submit'}}</td>

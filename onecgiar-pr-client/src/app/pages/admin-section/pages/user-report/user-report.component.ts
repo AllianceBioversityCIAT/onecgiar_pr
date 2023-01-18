@@ -22,4 +22,40 @@ export class UserReportComponent implements OnInit {
       this.usersList = response;
     });
   }
+
+  exportExcel(usersList) {
+    console.log(usersList);
+    let usersListMapped = [];
+    usersListMapped.push({
+      user_id: 'User id',
+      init_name_official_code: 'Initiative name',
+      user_email: 'Email',
+      user_first_name: 'First name',
+      user_last_name: 'Last name',
+      initiative_role_name: 'Initiative role',
+      app_role_name: 'Application role'
+    });
+    usersList.map(result => {
+      const { user_id, init_name_official_code, user_email, user_first_name, user_last_name, app_role_name, initiative_role_name } = result;
+      // console.log(is_submitted);
+      usersListMapped.push({
+        user_id: this.convertToNodata(user_id),
+        init_name_official_code: this.convertToNodata(init_name_official_code),
+        user_email: this.convertToNodata(user_email),
+        user_first_name: this.convertToNodata(user_first_name),
+        user_last_name: this.convertToNodata(user_last_name),
+        app_role_name: this.convertToNodata(app_role_name),
+        initiative_role_name: this.convertToNodata(initiative_role_name)
+      });
+    });
+    // console.table(resultsListMapped);
+    const wscols = [{ wpx: 70 }, { wpx: 600 }, { wpx: 200 }, { wpx: 100 }, { wpx: 120 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }];
+    this.exportTablesSE.exportExcel(usersListMapped, 'user_report', wscols);
+  }
+
+  convertToNodata(value, nullOptionindex?) {
+    if (value && value != 'null') return value;
+    const nullOptions = ['Not applicable', 'Not provided'];
+    return nullOptions[nullOptionindex ? nullOptionindex : 0];
+  }
 }

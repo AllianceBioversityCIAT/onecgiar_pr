@@ -5,7 +5,7 @@
             <input type="text" placeholder="Find result..." [(ngModel)]="this.textToFind">
         </div>
         <app-pr-button text="Download .xlsx" icon="file_download"
-            (click)="this.exportTablesSE.exportExcel(this.usersList)"></app-pr-button>
+            (click)="this.exportExcel(this.usersList)"></app-pr-button>
     </div>
     <p-table [value]="this.usersList | filterByText:this.textToFind" [scrollable]="true" [paginator]="true"
         [rowsPerPageOptions]="[20,50,100]" [rows]="20" scrollHeight="calc(100vh - 235px)" style="min-width:200px">
@@ -16,7 +16,7 @@
                 <th pSortableColumn="initiative_name">Initiative name <p-sortIcon field="initiative_name"></p-sortIcon>
                 </th>
                 <th pSortableColumn="user_email">Email <p-sortIcon field="user_email"></p-sortIcon></th>
-                <th pSortableColumn="user_first_name">User name <p-sortIcon field="user_first_name"></p-sortIcon></th>
+                <th pSortableColumn="user_first_name">Name <p-sortIcon field="user_first_name"></p-sortIcon></th>
                 <th pSortableColumn="initiative_role_name">Role <p-sortIcon field="initiative_role_name"></p-sortIcon>
                 </th>
             </tr>

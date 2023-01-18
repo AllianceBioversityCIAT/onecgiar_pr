@@ -91,7 +91,7 @@ export class ResultsListComponent implements OnInit {
     this.api.resultsSE.GET_reportingList().subscribe(
       ({ response }) => {
         console.log(response);
-        this.exportTablesSE.exportExcel(response);
+        this.exportTablesSE.exportExcel(response, 'results_list');
         this.gettingReport = false;
       },
       err => {

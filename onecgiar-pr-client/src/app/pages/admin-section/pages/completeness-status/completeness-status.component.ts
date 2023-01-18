@@ -24,13 +24,54 @@ export class CompletenessStatusComponent {
   }
 
   exportExcel(resultsList) {
-    console.log(resultsList);
+    console.table(resultsList);
     let resultsListMapped = [];
-    resultsList.map(result => {
-      const { result_code, result_title, official_code, completeness, general_information, theory_of_change, partners, geographic_location, links_to_results, evidence, section_seven, is_submitted } = result;
-      resultsListMapped.push({ result_code, result_title, official_code, completeness, general_information: general_information.value, theory_of_change: theory_of_change.value, partners: partners.value, geographic_location: geographic_location.value, links_to_results: links_to_results.value, evidence: evidence.value, section_seven: section_seven.value, is_submitted: is_submitted.value });
+    //header
+    resultsListMapped.push({
+      result_code: 'Result code',
+      result_title: 'Title',
+      official_code: 'Submitter',
+      result_type_name: 'Result type',
+      completeness: 'Progress',
+      is_submitted: 'Submitted',
+      general_information: 'General information',
+      theory_of_change: 'Theory of Change',
+      partners: 'Partners',
+      geographic_location: 'Geographic location',
+      links_to_results: 'Links to results',
+      evidence: 'Evidence',
+      section_seven: 'Section seven'
     });
-    this.exportTablesSE.exportExcel(resultsListMapped);
+    resultsList.map(result => {
+      const { result_code, result_title, official_code, completeness, result_type_name, general_information, theory_of_change, partners, geographic_location, links_to_results, evidence, section_seven, is_submitted } = result;
+      console.log(is_submitted);
+      // content
+      resultsListMapped.push({
+        result_code,
+        result_title,
+        official_code,
+        result_type_name,
+        completeness: completeness + '%',
+        is_submitted: this.convertToYesOrNot(is_submitted),
+        general_information: this.convertToYesOrNot(general_information.value),
+        theory_of_change: this.convertToYesOrNot(theory_of_change.value),
+        partners: this.convertToYesOrNot(partners.value),
+        geographic_location: this.convertToYesOrNot(geographic_location.value),
+        links_to_results: this.convertToYesOrNot(links_to_results.value),
+        evidence: this.convertToYesOrNot(evidence.value),
+        section_seven: this.convertToYesOrNot(section_seven.value)
+      });
+    });
+    // console.table(resultsListMapped);
+    const wscols = [{ wpx: 70 }, { wpx: 800 }, { wpx: 100 }, { wpx: 130 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }];
+    this.exportTablesSE.exportExcel(resultsListMapped, 'completeness_status', wscols);
+  }
+
+  convertToYesOrNot(value, nullOptionindex?) {
+    if (value == 0) return 'No';
+    if (value == 1) return 'Yes';
+    const nullOptions = ['Not applicable', 'Not provided'];
+    return nullOptions[nullOptionindex ? nullOptionindex : 0];
   }
 
   parseCheck(value) {
