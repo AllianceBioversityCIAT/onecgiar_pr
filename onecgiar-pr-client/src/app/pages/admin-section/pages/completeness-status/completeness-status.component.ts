@@ -27,12 +27,13 @@ export class CompletenessStatusComponent {
     console.table(resultsList);
     let resultsListMapped = [];
     resultsList.map(result => {
-      const { result_code, result_title, official_code, completeness, general_information, theory_of_change, partners, geographic_location, links_to_results, evidence, section_seven, is_submitted } = result;
+      const { result_code, result_title, official_code, completeness, result_type_name, general_information, theory_of_change, partners, geographic_location, links_to_results, evidence, section_seven, is_submitted } = result;
       console.log(is_submitted);
       resultsListMapped.push({
         result_code,
         result_title,
         official_code,
+        result_type_name,
         completeness: completeness + '%',
         general_information: this.convertToYesOrNot(general_information.value),
         theory_of_change: this.convertToYesOrNot(theory_of_change.value),
@@ -45,7 +46,7 @@ export class CompletenessStatusComponent {
       });
     });
     // console.table(resultsListMapped);
-    const wscols = [{ wpx: 70 }, { wpx: 800 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }];
+    const wscols = [{ wpx: 70 }, { wpx: 800 }, { wpx: 100 }, { wpx: 130 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }];
     this.exportTablesSE.exportExcel(resultsListMapped, 'completeness_status', wscols);
   }
 
