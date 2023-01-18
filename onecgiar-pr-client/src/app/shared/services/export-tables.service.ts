@@ -8,13 +8,13 @@ interface Wscols {
 })
 export class ExportTablesService {
   constructor() {}
-  exportExcel(list, wscols?: Wscols[]) {
+  exportExcel(list, fileName: string, wscols?: Wscols[]) {
     import('xlsx').then(xlsx => {
       const worksheet = xlsx.utils.json_to_sheet(list);
       if (wscols) worksheet['!cols'] = wscols as any;
       const workbook = { Sheets: { data: worksheet }, SheetNames: ['data'] };
       const excelBuffer: any = xlsx.write(workbook, { bookType: 'xlsx', type: 'array' });
-      this.saveAsExcelFile(excelBuffer, 'file');
+      this.saveAsExcelFile(excelBuffer, fileName);
     });
   }
   private saveAsExcelFile(buffer: any, fileName: string): void {
@@ -23,6 +23,6 @@ export class ExportTablesService {
     const data: Blob = new Blob([buffer], {
       type: EXCEL_TYPE
     });
-    FileSaver.saveAs(data, fileName + '_export_' + new Date().getTime() + EXCEL_EXTENSION);
+    FileSaver.saveAs(data, fileName + '_' + new Date().getTime() + EXCEL_EXTENSION);
   }
 }
