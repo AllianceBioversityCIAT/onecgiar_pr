@@ -978,6 +978,36 @@ export class ResultsService {
       await this._resultRegionsService.create(createResultGeo);
       await this._resultCountriesService.create(createResultGeo);
 
+      const toUpdateFromElastic = await this.findAllSimplified(
+        createResultGeo.result_id.toString(),
+      );
+
+      if (toUpdateFromElastic.status !== HttpStatus.OK) {
+        this._logger.warn(
+          `the result #${createResultGeo.result_id} could not be found to be updated in the elastic search`,
+        );
+      } else {
+        try {
+          const elasticOperations = [
+            new ElasticOperationDto('PATCH', toUpdateFromElastic.response[0]),
+          ];
+
+          const elasticJson =
+            this._elasticService.getBulkElasticOperationResults(
+              process.env.ELASTIC_DOCUMENT_NAME,
+              elasticOperations,
+            );
+
+          const bulk = await this._elasticService.sendBulkOperationToElastic(
+            elasticJson,
+          );
+        } catch (error) {
+          this._logger.warn(
+            `the elastic update of the geoscope failed for the result #${createResultGeo.result_id}`,
+          );
+        }
+      }
+
       return {
         response: createResultGeo,
         message: 'Successful response',
