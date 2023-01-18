@@ -26,7 +26,7 @@
                     </div>
                 </div>
 
-                <cdk-virtual-scroll-viewport [itemSize]="extraInformation?14:7" class="custom_scroll virtual_scroll">
+                <cdk-virtual-scroll-viewport [itemSize]="7" class="custom_scroll virtual_scroll">
                     <div *cdkVirtualFor="let option of optionsIntance | listFilterByTextAndAttr:this.optionLabel:this.searchText"
                         class="option" [style]="extraInformation?'height: 50px;':''"
                         [ngClass]="{'disabled': option?.disabled === true, 'selected':option?.selected === true}"
@@ -44,3 +44,5 @@
         </a>
     </div>
 </div>
+
+<!-- 30878 -->
