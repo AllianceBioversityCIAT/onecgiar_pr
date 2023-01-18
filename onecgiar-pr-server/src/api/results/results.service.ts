@@ -564,6 +564,37 @@ export class ResultsService {
       await this._resultByIntitutionsRepository.logicalElimination(result.id);
       await this._resultByEvidencesRepository.logicalElimination(result.id);
 
+      const toUpdateFromElastic = await this.findAllSimplified(
+        result.id.toString(),
+        true,
+      );
+
+      if (toUpdateFromElastic.status !== HttpStatus.OK) {
+        this._logger.warn(
+          `the result #${result.id} could not be found to be deleted in the elastic search`,
+        );
+      } else {
+        try {
+          const elasticOperations = [
+            new ElasticOperationDto('DELETE', toUpdateFromElastic.response[0]),
+          ];
+
+          const elasticJson =
+            this._elasticService.getBulkElasticOperationResults(
+              process.env.ELASTIC_DOCUMENT_NAME,
+              elasticOperations,
+            );
+
+          const bulk = await this._elasticService.sendBulkOperationToElastic(
+            elasticJson,
+          );
+        } catch (error) {
+          this._logger.warn(
+            `the elastic removal failed for the result #${result.id}`,
+          );
+        }
+      }
+
       return {
         response: result,
         message: 'The result has been successfully deleted',
@@ -628,10 +659,11 @@ export class ResultsService {
     }
   }
 
-  async findAllSimplified(id?: string) {
+  async findAllSimplified(id?: string, allowDeleted: boolean = false) {
     try {
       const result = await this._customResultRepository.resultsForElasticSearch(
         id,
+        allowDeleted,
       );
 
       if (!result.length) {
