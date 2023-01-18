@@ -45,7 +45,7 @@ export class CompletenessStatusComponent {
       });
     });
     // console.table(resultsListMapped);
-    const wscols = [{ wpx: 70, alignment: { wrapText: true } }, { wpx: 800, alignment: { wrapText: true } }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }];
+    const wscols = [{ wpx: 70 }, { wpx: 800 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }];
     this.exportTablesSE.exportExcel(resultsListMapped, 'completeness_status', wscols);
   }
 
