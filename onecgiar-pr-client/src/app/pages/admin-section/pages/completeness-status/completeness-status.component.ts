@@ -24,13 +24,36 @@ export class CompletenessStatusComponent {
   }
 
   exportExcel(resultsList) {
-    console.log(resultsList);
+    console.table(resultsList);
     let resultsListMapped = [];
     resultsList.map(result => {
       const { result_code, result_title, official_code, completeness, general_information, theory_of_change, partners, geographic_location, links_to_results, evidence, section_seven, is_submitted } = result;
-      resultsListMapped.push({ result_code, result_title, official_code, completeness, general_information: general_information.value, theory_of_change: theory_of_change.value, partners: partners.value, geographic_location: geographic_location.value, links_to_results: links_to_results.value, evidence: evidence.value, section_seven: section_seven.value, is_submitted: is_submitted.value });
+      console.log(is_submitted);
+      resultsListMapped.push({
+        result_code,
+        result_title,
+        official_code,
+        completeness: completeness + '%',
+        general_information: this.convertToYesOrNot(general_information.value),
+        theory_of_change: this.convertToYesOrNot(theory_of_change.value),
+        partners: this.convertToYesOrNot(partners.value),
+        geographic_location: this.convertToYesOrNot(geographic_location.value),
+        links_to_results: this.convertToYesOrNot(links_to_results.value),
+        evidence: this.convertToYesOrNot(evidence.value),
+        section_seven: this.convertToYesOrNot(section_seven.value),
+        is_submitted: this.convertToYesOrNot(is_submitted)
+      });
     });
-    this.exportTablesSE.exportExcel(resultsListMapped);
+    // console.table(resultsListMapped);
+    const wscols = [{ wpx: 70, alignment: { wrapText: true } }, { wpx: 800, alignment: { wrapText: true } }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }];
+    this.exportTablesSE.exportExcel(resultsListMapped, wscols);
+  }
+
+  convertToYesOrNot(value, nullOptionindex?) {
+    if (value == 0) return 'No';
+    if (value == 1) return 'Yes';
+    const nullOptions = ['Not applicable', 'Not provided'];
+    return nullOptions[nullOptionindex ? nullOptionindex : 0];
   }
 
   parseCheck(value) {

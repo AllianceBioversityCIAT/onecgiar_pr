@@ -1,14 +1,17 @@
 import { Injectable } from '@angular/core';
 import * as FileSaver from 'file-saver';
-
+interface Wscols {
+  wpx: number;
+}
 @Injectable({
   providedIn: 'root'
 })
 export class ExportTablesService {
   constructor() {}
-  exportExcel(list) {
+  exportExcel(list, wscols?: Wscols[]) {
     import('xlsx').then(xlsx => {
       const worksheet = xlsx.utils.json_to_sheet(list);
+      if (wscols) worksheet['!cols'] = wscols as any;
       const workbook = { Sheets: { data: worksheet }, SheetNames: ['data'] };
       const excelBuffer: any = xlsx.write(workbook, { bookType: 'xlsx', type: 'array' });
       this.saveAsExcelFile(excelBuffer, 'file');

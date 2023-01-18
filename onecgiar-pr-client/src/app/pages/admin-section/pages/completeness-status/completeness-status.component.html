@@ -85,8 +85,13 @@
                     <div [class]="parseCheck(result?.evidence?.value)">{{parseCheck(result?.evidence?.value)}}</div>
                 </td>
                 <td>
-                    <div [class]="parseCheck(result?.section_seven?.value)">
+                    <div [class]="parseCheck(result?.section_seven?.value)"
+                        *ngIf="result?.section_seven?.value == 1 || result?.section_seven?.value == 0">
                         {{parseCheck(result?.section_seven?.value)}}</div>
+                    <div class="not_provided_text"
+                        *ngIf="result?.section_seven?.value != 1 && result?.section_seven?.value != 0">Not
+                        applicable
+                    </div>
                 </td>
             </tr>
         </ng-template>
