@@ -26,6 +26,15 @@ export class UserReportComponent implements OnInit {
   exportExcel(usersList) {
     console.log(usersList);
     let usersListMapped = [];
+    usersListMapped.push({
+      user_id: 'User id',
+      init_name_official_code: 'Initiative name',
+      user_email: 'Email',
+      user_first_name: 'First name',
+      user_last_name: 'Last name',
+      initiative_role_name: 'Initiative role',
+      app_role_name: 'Application role'
+    });
     usersList.map(result => {
       const { user_id, init_name_official_code, user_email, user_first_name, user_last_name, app_role_name, initiative_role_name } = result;
       // console.log(is_submitted);
