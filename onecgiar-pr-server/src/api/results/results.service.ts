@@ -178,8 +178,18 @@ export class ResultsService {
         title: createResultDto.result_name,
         reported_year_id: year.year,
         result_level_id: rl.id,
-        result_code: (last_code + 1)
+        result_code: last_code + 1,
       });
+
+      const resultByInitiative = await this._resultByInitiativesRepository.save(
+        {
+          created_by: newResultHeader.created_by,
+          initiative_id: initiative.id,
+          initiative_role_id: 1,
+          result_id: newResultHeader.id,
+          version_id: vrs.id,
+        },
+      );
 
       const toAddFromElastic = await this.findAllSimplified(
         newResultHeader.id.toString(),
@@ -210,16 +220,6 @@ export class ResultsService {
           );
         }
       }
-
-      const resultByInitiative = await this._resultByInitiativesRepository.save(
-        {
-          created_by: newResultHeader.created_by,
-          initiative_id: initiative.id,
-          initiative_role_id: 1,
-          result_id: newResultHeader.id,
-          version_id: vrs.id,
-        },
-      );
 
       return {
         response: newResultHeader,
@@ -830,7 +830,7 @@ export class ResultsService {
         result_level_id: rl.id,
         legacy_id: legacyResult.legacy_id,
         is_retrieved: true,
-        result_code: (last_code + 1)
+        result_code: last_code + 1,
       });
 
       const resultByInitiative = await this._resultByInitiativesRepository.save(
