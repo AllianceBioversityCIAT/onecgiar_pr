@@ -35,13 +35,14 @@ export class SimilarResultsComponent {
   // ];
 
   onPressAction(result) {
-    console.log(result);
+    // console.log(result);
     this.api.resultsSE.currentResultId = result?.id;
     this.api.dataControlSE.currentResult = JSON.parse(JSON.stringify(result));
     this.api.dataControlSE.currentResult.result_type = this.api.dataControlSE.currentResult.type;
     const resultLevelFinded = this.resultLevelSE.resultLevelList.find(resultLevel => resultLevel.id == this.resultLevelSE.resultBody.result_level_id);
     this.api.dataControlSE.currentResult.result_level_name = resultLevelFinded?.name;
     this.api.dataControlSE.currentResult.result_type_name = this.getResultTypeName();
+    this.api.dataControlSE.currentResult.submitter = result?.crp;
     //? For LEGACY
     this.retrieveModalSE.retrieveRequestBody.legacy_id = result?.id;
   }
