@@ -9,7 +9,7 @@
     [icon]="this.gettingReport?'loop':'file_download'"></app-pr-button>
 </div>
 <div class="table">
-  <p-table sortField="id" [sortOrder]="-1"
+  <p-table sortField="result_code" [sortOrder]="-1"
     [value]="(this.api.dataControlSE.resultsList | resultsListFilter:this.resultsListService.text_to_search:this.api.resultsListFilterSE.filterJoin)"
     responsiveLayout="scroll"
     [paginator]="(this.api.dataControlSE.resultsList | resultsListFilter:this.resultsListService.text_to_search:this.api.resultsListFilterSE.filterJoin)?.length"
