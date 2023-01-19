@@ -3,6 +3,7 @@ import { CreateAdminPanelDto } from './dto/create-admin-panel.dto';
 import { UpdateAdminPanelDto } from './dto/update-admin-panel.dto';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { AdminPanelRepository } from './admin-panel.repository';
+import { FilterInitiativesDto } from './dto/filter-initiatives.dto';
 
 @Injectable()
 export class AdminPanelService {
@@ -16,9 +17,9 @@ export class AdminPanelService {
     return 'This action adds a new adminPanel';
   }
 
-  async reportResultCompleteness() {
+  async reportResultCompleteness(filterIntiatives:FilterInitiativesDto) {
     try {
-      const results =  await this._adminPanelRepository.reportResultCompleteness();
+      const results =  await this._adminPanelRepository.reportResultCompleteness(filterIntiatives);
       return {
         response: results,
         message: 'Successful response',
