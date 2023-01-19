@@ -10,7 +10,7 @@ export class ExportTablesService {
   constructor() {}
   exportExcel(list, fileName: string, wscols?: Wscols[]) {
     import('xlsx').then(xlsx => {
-      const worksheet = xlsx.utils.json_to_sheet(list, { skipHeader: true });
+      const worksheet = xlsx.utils.json_to_sheet(list, { skipHeader: Boolean(wscols?.length) });
       if (wscols) worksheet['!cols'] = wscols as any;
       const workbook = { Sheets: { data: worksheet }, SheetNames: ['data'] };
       const excelBuffer: any = xlsx.write(workbook, { bookType: 'xlsx', type: 'array' });
