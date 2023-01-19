@@ -356,7 +356,7 @@ WHERE
   async reportingResultList(initDate: Date, endDate: Date) {
     const queryData = `
     SELECT
-      r.result_code as \`Result id\`,
+      r.result_code as \`Result code\`,
     	r.reported_year_id as \`Reporting year\`,
     	r.title as \`Result title\`,
     	CONCAT(rl.name, ' - ', rt.name) as \`Result type\`,
