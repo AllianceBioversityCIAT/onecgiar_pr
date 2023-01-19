@@ -3,8 +3,7 @@
         Admin module
     </div>
     <div class="options">
-        <div class="option" *ngFor="let option of options" [routerLink]="'/admin-module/'+option.path"
-            routerLinkActive="active">
+        <div class="option" *ngFor="let option of options" [routerLink]="option.path" routerLinkActive="active">
             <i class="material-icons-round">
                 {{option?.icon}}
             </i>
