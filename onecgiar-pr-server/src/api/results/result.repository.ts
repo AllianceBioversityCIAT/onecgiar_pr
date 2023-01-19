@@ -136,6 +136,9 @@ export class ResultRepository extends Repository<Result> {
         lil_region.legacy_id = lr.legacy_id
       left join clarisa_regions cr on
         cr.um49Code = lil_region.um49_code
+      left join result r on
+        r.legacy_id = lr.legacy_id
+      where lr.indicator_type != 'MELIA'
       group by
         lr.legacy_id,
         lr.title,
