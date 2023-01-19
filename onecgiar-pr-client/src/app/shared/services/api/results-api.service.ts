@@ -407,7 +407,7 @@ export class ResultsApiService {
   POST_reportSesultsCompleteness(initiatives: any[], rol_user?) {
     return this.http.post<any>(`${this.apiBaseUrl}admin-panel/report/results/completeness`, { rol_user, initiatives }).pipe(
       map(resp => {
-        // console.log(resp.response);
+        // console.log(resp.responee);
         resp?.response.map(result => {
           result.full_name = `${result.result_title} ${result.result_code} ${result.official_code} ${result.result_type_name}`;
           result.result_code = Number(result.result_code);

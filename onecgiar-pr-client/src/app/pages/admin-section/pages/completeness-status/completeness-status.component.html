@@ -15,8 +15,9 @@
 ">
     </app-pr-multi-select> -->
 
-    <p-table [value]="this.resultsList | filterByText:this.textToFind" [scrollable]="true" [paginator]="true"
-        [rowsPerPageOptions]="[10,50,100]" [rows]="10" scrollHeight="calc(100vh - 235px)" style="min-width: 200px">
+    <p-table sortField="result_code" [sortOrder]="-1" [value]="this.resultsList | filterByText:this.textToFind"
+        [scrollable]="true" [paginator]="true" [rowsPerPageOptions]="[10,50,100]" [rows]="10"
+        scrollHeight="calc(100vh - 235px)" style="min-width: 200px">
         <ng-template pTemplate="header">
             <tr>
                 <th pSortableColumn="result_code" style="min-width:200px">Result code <p-sortIcon
