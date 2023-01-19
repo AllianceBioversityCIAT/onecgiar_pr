@@ -1,8 +1,8 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { routingApp } from './shared/routing/routing-data';
+import { extraRoutingApp, routingApp } from './shared/routing/routing-data';
 
-const routes: Routes = routingApp;
+const routes: Routes = [...extraRoutingApp, ...routingApp];
 
 @NgModule({
   imports: [RouterModule.forRoot(routes)],
