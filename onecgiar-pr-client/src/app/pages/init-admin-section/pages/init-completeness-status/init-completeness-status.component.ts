@@ -13,11 +13,11 @@ export class InitCompletenessStatusComponent implements OnInit {
   resultsList: any[];
   constructor(private api: ApiService, public resultHistoryOfChangesModalSE: ResultHistoryOfChangesModalService, public exportTablesSE: ExportTablesService) {}
   ngOnInit(): void {
-    this.GET_reportSesultsCompleteness();
+    this.POST_reportSesultsCompleteness();
     this.api.rolesSE.validateReadOnly();
   }
-  GET_reportSesultsCompleteness() {
-    this.api.resultsSE.GET_reportSesultsCompleteness().subscribe(({ response }) => {
+  POST_reportSesultsCompleteness() {
+    this.api.resultsSE.POST_reportSesultsCompleteness([], 1).subscribe(({ response }) => {
       this.resultsList = response;
       console.log(response);
     });

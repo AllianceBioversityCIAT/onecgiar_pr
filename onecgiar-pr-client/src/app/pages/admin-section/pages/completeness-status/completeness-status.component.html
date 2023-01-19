@@ -8,6 +8,13 @@
             (click)="exportExcel(this.resultsList)"></app-pr-button>
     </div>
 
+    <!-- <app-pr-multi-select [options]="this.api.dataControlSE.myInitiativesList" label="Contributing Initiatives"
+        selectedLabel="Contributing Initiatives" optionLabel="full_name" optionValue="id"
+        (selectOptionEvent)="onSelectInit()" [required]="false" (removeOptionEvent)="onRemoveinit($event)"
+        selectedOptionLabel="full_name" [(ngModel)]="this.initiativesSelected" [confirmDeletion]="true" placeholder="Select initiative(s)
+">
+    </app-pr-multi-select> -->
+
     <p-table [value]="this.resultsList | filterByText:this.textToFind" [scrollable]="true" [paginator]="true"
         [rowsPerPageOptions]="[10,50,100]" [rows]="10" scrollHeight="calc(100vh - 235px)" style="min-width: 200px">
         <ng-template pTemplate="header">

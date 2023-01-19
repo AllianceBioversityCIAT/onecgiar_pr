@@ -404,8 +404,8 @@ export class ResultsApiService {
     return this.http.patch<any>(`${this.apiBaseUrl}submissions/unsubmit/${this.currentResultId}`, { comment });
   }
 
-  GET_reportSesultsCompleteness() {
-    return this.http.get<any>(`${this.apiBaseUrl}admin-panel/report/results/completeness`).pipe(
+  POST_reportSesultsCompleteness(initiatives: any[], rol_user?) {
+    return this.http.post<any>(`${this.apiBaseUrl}admin-panel/report/results/completeness`, { rol_user, initiatives }).pipe(
       map(resp => {
         // console.log(resp.response);
         resp?.response.map(result => {
