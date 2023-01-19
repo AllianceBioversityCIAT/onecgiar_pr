@@ -45,6 +45,26 @@
         align-items: center;
         gap: 50px;
 
+        .admin_module {
+
+
+            .admin_module_btn {
+                color: white;
+                padding: 7px 10px;
+                border-radius: 4px;
+                background-color: var(--pr-color-primary);
+                display: flex;
+                align-items: center;
+                gap: 2px;
+                cursor: pointer;
+                transition: all ease .3s;
+
+                &:hover {
+                    background-color: #4557bb;
+                }
+            }
+        }
+
         .user_tag {
             background-color: var(--pr-color-secondary);
             border-radius: 5px;

@@ -7,9 +7,11 @@ export const routingApp: PrRoute[] = [
   { prName: 'Type one report', prHide: true, canActivate: [CheckLoginGuard], path: 'type-one-report', loadChildren: () => import('../../pages/type-one-report/type-one-report.module').then(m => m.TypeOneReportModule) },
   { prName: 'login', prHide: true, path: 'login', loadChildren: () => import('../../pages/login/login.module').then(m => m.LoginModule) },
   { prName: 'Quality Assurance', onlytest: true, underConstruction: false, canActivate: [CheckLoginGuard], path: 'quality-assurance', loadChildren: () => import('../../pages/quality-assurance/quality-assurance.module').then(m => m.QualityAssuranceModule) },
-  { prName: 'Admin module', onlytest: false, prHide: false, path: 'admin-module', loadChildren: () => import('../../pages/admin-section/admin-section.module').then(m => m.AdminSectionModule) },
+  // { prName: 'Init Admin module', onlytest: false, prHide: false, path: 'init-admin-module', loadChildren: () => import('../../pages/init-admin-section/init-admin-section.module').then(m => m.InitAdminSectionModule) },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'result', prHide: true }
 ];
+
+export const extraRoutingApp: PrRoute[] = [{ prName: 'Admin module', onlytest: true, prHide: false, path: 'admin-module', loadChildren: () => import('../../pages/admin-section/admin-section.module').then(m => m.AdminSectionModule) }];
 
 export const resultRouting: PrRoute[] = [
   { prName: 'Result Creator', path: 'result-creator', loadChildren: () => import('../../pages/results/pages/result-creator/result-creator.module').then(m => m.ResultCreatorModule) },
@@ -22,6 +24,11 @@ export const adminModuleRouting: PrRoute[] = [
   { prName: 'Completeness status', path: 'completeness-status', loadChildren: () => import('../../pages/admin-section/pages/completeness-status/completeness-status.module').then(m => m.CompletenessStatusModule) },
   { prName: 'User report', path: 'user-report', loadChildren: () => import('../../pages/admin-section/pages/user-report/user-report.module').then(m => m.UserReportModule) },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'completeness-status' }
+];
+
+export const initadminModuleRouting: PrRoute[] = [
+  { prName: 'Completeness status', path: 'init-completeness-status', loadChildren: () => import('../../pages/init-admin-section/pages/init-completeness-status/init-completeness-status.module').then(m => m.InitCompletenessStatusModule) },
+  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'init-completeness-status' }
 ];
 
 export const resultsOutletRouting: PrRoute[] = [
