@@ -57,9 +57,12 @@
                 <td style="min-width:150px">{{result.completeness}}%</td>
                 <td style="min-width:150px">{{result.is_submitted ?'Yes':'No'}}</td>
                 <td style="min-width:180px">
-                    <div style="z-index: 0">
+                    <div style="z-index: 0" *ngIf="result.is_submitted">
                         <app-pr-button [ngClass]="{'globalDisabled': !result.is_submitted}" text="See more"
                             (click)="openInformationModal(result?.results_id)"></app-pr-button>
+                    </div>
+                    <div *ngIf="!result.is_submitted" class="not_provided_text">
+                        There are no submissions yet
                     </div>
                 </td>
                 <td>
