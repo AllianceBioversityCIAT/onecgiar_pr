@@ -58,6 +58,7 @@ import { KnowledgeProductFairBaselineModule } from './knowledge_product_fair_bas
 import { OstMeliaStudiesModule } from './ost-melia-studies/ost-melia-studies.module';
 import { ResultsValidationModuleModule } from './results-validation-module/results-validation-module.module';
 import { SubmissionsModule } from './submissions/submissions.module';
+import { AdminPanelModule } from './admin-panel/admin-panel.module';
 
 @Module({
   controllers: [ResultsController],
@@ -102,6 +103,7 @@ import { SubmissionsModule } from './submissions/submissions.module';
     OstMeliaStudiesModule,
     ResultsValidationModuleModule,
     SubmissionsModule,
+    AdminPanelModule,
   ],
   providers: [
     ResultsService,

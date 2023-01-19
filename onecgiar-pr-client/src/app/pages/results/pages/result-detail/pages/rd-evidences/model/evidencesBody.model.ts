@@ -2,6 +2,8 @@ export class EvidencesBody {
   public result_id: number;
   public evidences: EvidencesCreateInterface[] = [];
   public supplementary: EvidencesCreateInterface[] = [];
+  public gender_tag_level: string;
+  public climate_change_tag_level: string;
 }
 
 export interface EvidencesCreateInterface {

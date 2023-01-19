@@ -62,7 +62,10 @@ export class ResultRepository extends Repository<Result> {
     }
   }
 
-  async resultsForElasticSearch(id?: string): Promise<ResultSimpleDto[]> {
+  async resultsForElasticSearch(
+    id?: string,
+    allowDeleted: boolean = false,
+  ): Promise<ResultSimpleDto[]> {
     const queryData = `
     select
       q1.*
@@ -100,8 +103,8 @@ export class ResultRepository extends Repository<Result> {
       left join clarisa_countries cc on
         cc.id = rc.country_id
       where
-        r.is_active > 0
-        and r.version_id = 1
+        r.version_id = 1
+        ${!allowDeleted ? 'and r.is_active > 0' : ''}
       group by
         r.id,
         r.title,
@@ -133,6 +136,9 @@ export class ResultRepository extends Repository<Result> {
         lil_region.legacy_id = lr.legacy_id
       left join clarisa_regions cr on
         cr.um49Code = lil_region.um49_code
+      left join result r on
+        r.legacy_id = lr.legacy_id
+      where lr.indicator_type != 'MELIA'
       group by
         lr.legacy_id,
         lr.title,
@@ -672,7 +678,7 @@ WHERE
     `;
 
     try {
-      const results: Array<{last_code}> = await this.query(queryData);
+      const results: Array<{ last_code }> = await this.query(queryData);
       return results.length ? parseInt(results[0].last_code) : null;
     } catch (error) {
       throw {
@@ -683,7 +689,7 @@ WHERE
     }
   }
 
-  async getAllResultId(): Promise<Array<{id}>> {
+  async getAllResultId(): Promise<Array<{ id }>> {
     const queryData = `
     SELECT 
     r.id
@@ -693,7 +699,7 @@ WHERE
       and r.version_id = 1;
     `;
     try {
-      const results: Array<{id}> = await this.query(queryData);
+      const results: Array<{ id }> = await this.query(queryData);
       return results;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

@@ -42,7 +42,7 @@ export class LinkedResultsService {
       let legacyLinks: interfaceLinkResults[]  = createLinkedResultDto.legacy_link;
       if(createLinkedResultDto?.links?.length){
         const newLinks: LinkedResult[] = [];
-        await this._linkedResultRepository.updateLink(createLinkedResultDto.result_id,links.map(e => e.id), legacyLinks.map(e => e.legacy_link),user.id);
+        await this._linkedResultRepository.updateLink(createLinkedResultDto.result_id,links.map(e => e.id), legacyLinks.map(e => e.legacy_link),user.id, false);
         for (let index = 0; index < links.length; index++) {
           const linkExists = await this._linkedResultRepository.getLinkResultByIdResultAndLinkId(result.id, links[index].id);
           if(!linkExists && !isExistsNew.includes(links[index].id)){
@@ -58,12 +58,12 @@ export class LinkedResultsService {
         await this._linkedResultRepository.save(newLinks);
         
       }else{
-        await this._linkedResultRepository.updateLink(createLinkedResultDto.result_id,[], legacyLinks.map(e => e.legacy_link),user.id);
+        await this._linkedResultRepository.updateLink(createLinkedResultDto.result_id,[], legacyLinks.map(e => e.legacy_link),user.id, false);
       }
       if(createLinkedResultDto?.legacy_link?.length){
         const newLinks: LinkedResult[] = [];
         legacyLinks = legacyLinks.filter(el => el.legacy_link?.length > 0);
-        await this._linkedResultRepository.updateLink(createLinkedResultDto.result_id,links.map(e => e.id), legacyLinks.map(e => e.legacy_link),user.id);
+        await this._linkedResultRepository.updateLink(createLinkedResultDto.result_id,links.map(e => e.id), legacyLinks.map(e => e.legacy_link),user.id, true);
         for (let index = 0; index < legacyLinks.length; index++) {
           const linkExists = await this._linkedResultRepository.getLinkResultByIdResultAndLegacyLinkId(result.id, legacyLinks[index].legacy_link);
           if(!linkExists && !isExistsNewLegacy.includes(legacyLinks[index].legacy_link)){
@@ -80,7 +80,7 @@ export class LinkedResultsService {
         await this._linkedResultRepository.save(newLinks);
 
       }else{
-        await this._linkedResultRepository.updateLink(createLinkedResultDto.result_id,links.map(e => e.id), [],user.id);
+        await this._linkedResultRepository.updateLink(createLinkedResultDto.result_id,links.map(e => e.id), [],user.id, true);
       }
       return {
         response: {},
@@ -95,20 +95,9 @@ export class LinkedResultsService {
   async findAllLinksByResult(resultId: number) {
     try {
       const links = await this._linkedResultRepository.getLinkResultByIdResult(resultId);
-      const result: Result = await this._resultRepository.getResultById(resultId);
-      if (!result) {
-        throw {
-          response: {},
-          message: 'Results Not Found',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
 
       return {
         response: {
-          result_id: result.id,
-          gender_tag_level: result.gender_tag_level_id || null,
-          climate_change_tag_level: result.climate_change_tag_level_id || null,
           links: links.filter(el => !!el.id),
           legacy_link: links.filter(el => !el.id)
         },

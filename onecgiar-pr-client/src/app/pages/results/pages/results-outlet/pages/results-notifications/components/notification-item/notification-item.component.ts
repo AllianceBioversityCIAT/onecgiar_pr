@@ -16,6 +16,12 @@ export class NotificationItemComponent {
   requesting = false;
   constructor(public api: ApiService, private shareRequestModalSE: ShareRequestModalService, private retrieveModalSE: RetrieveModalService) {}
 
+  ngOnInit(): void {
+    //Called after the constructor, initializing input properties, and the first call to ngOnChanges.
+    //Add 'implements OnInit' to the class.
+    console.log(this.notification);
+  }
+
   mapAndAccept(notification) {
     console.log(notification);
     this.retrieveModalSE.title = notification?.title;

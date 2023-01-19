@@ -12,16 +12,16 @@ export class resultValidationRepository extends Repository<Validation>{
 	super(Validation, dataSource.createEntityManager());
   }
 
-  async generalInformationValidation(resultId: number, resultLevel: number) {
+  async generalInformationValidation(resultId: number, resultLevel: number, resultType: number) {
     const queryData = `
     SELECT
 		'general-information' as section_name,
 		CASE
 			when (r.title is not null
 			and r.title <> '')
-			and 
+			${resultType != 6?`and 
 		 	(r.description is not null
-			and r.description <> '')
+			and r.description <> '')`:``}
 			and 
 		 	(r.gender_tag_level_id is not null
 			and r.gender_tag_level_id <> '')
@@ -588,7 +588,8 @@ export class resultValidationRepository extends Repository<Validation>{
   		v.links_to_results *
   		v.evidence as validation
   	from validation v 
-  		WHERE v.results_id = ?;
+  		WHERE v.results_id = ?
+		  and v.is_active > 0;
     `;
     try {
       const shareResultRequest: Array<{validation:string}> = await this.dataSource.query(queryData, [resultId]); 
