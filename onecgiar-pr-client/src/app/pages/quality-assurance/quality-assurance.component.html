@@ -28,7 +28,7 @@
             {{this.api.dataControlSE.show_qa_full_screen?'Minimize ':'Open in full screen'}}
         </div>
 
-        <iframe onload="resizeIframe(this)" class="embedded" [src]="this.sanitizeUrl()" frameborder="0"></iframe>
+        <iframe onload="resizeIframe(this)" class="embedded" [src]="this.sanitizedUrl" frameborder="0"></iframe>
     </div>
     <br>
 </div>
