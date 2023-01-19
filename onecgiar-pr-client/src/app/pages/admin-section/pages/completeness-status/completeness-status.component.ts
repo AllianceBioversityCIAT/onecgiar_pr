@@ -18,7 +18,7 @@ export class CompletenessStatusComponent {
     this.api.rolesSE.validateReadOnly();
   }
   POST_reportSesultsCompleteness() {
-    this.api.resultsSE.POST_reportSesultsCompleteness([1]).subscribe(({ response }) => {
+    this.api.resultsSE.POST_reportSesultsCompleteness([], 1).subscribe(({ response }) => {
       this.resultsList = response;
       console.log(response);
     });
