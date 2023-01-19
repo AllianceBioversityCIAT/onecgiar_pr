@@ -1,7 +1,7 @@
 <p-dialog class="support_information" header="Title"
     [(visible)]="this.api.dataControlSE.showResultHistoryOfChangesModal" (onHide)="cleanObject()" [draggable]="false"
     [modal]="true" [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true" [style]="{padding: '0px'}">
-    <div class="modal_title">History of changes</div>
+    <div class="modal_title">history of submissions</div>
     <div class="modal_container partners-request-container">
         <app-pr-button text="Download .xlsx" icon="file_download"
             (click)="exportExcel(this.resultHistoryOfChangesModalSE.historyOfChangesList);"
