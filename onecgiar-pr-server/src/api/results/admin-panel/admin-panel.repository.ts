@@ -20,8 +20,6 @@ export class AdminPanelRepository{
     ci.official_code,
     r.title as result_title,
     rt.name as result_type_name,
-    (Select gtl2.description from gender_tag_level gtl2 where id = r.gender_tag_level_id) as gender_tag, /*Agregar esta columna*/
-	(Select gtl2.description from gender_tag_level gtl2 where id = r.climate_change_tag_level_id) as climate_tag,/*Agregar esta columna*/
     JSON_OBJECT('name',
     'General Information',
     'value',
