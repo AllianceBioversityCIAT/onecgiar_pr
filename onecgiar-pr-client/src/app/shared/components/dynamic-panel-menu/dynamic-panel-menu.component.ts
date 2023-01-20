@@ -7,5 +7,6 @@ import { Component, OnInit, Input } from '@angular/core';
 })
 export class DynamicPanelMenuComponent {
   @Input() options: any;
+  @Input() panelName: string;
   constructor() {}
 }
