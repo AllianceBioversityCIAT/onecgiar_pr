@@ -189,7 +189,7 @@ export class ResultsKnowledgeProductsService {
         title: createResultDto.result_name,
         reported_year_id: year.year,
         result_level_id: rl.id,
-        result_code: (last_code + 1)
+        result_code: last_code + 1,
       });
 
       const resultByInitiative = await this._resultByInitiativesRepository.save(
@@ -391,12 +391,12 @@ export class ResultsKnowledgeProductsService {
       if (
         (this._resultsKnowledgeProductMapper.getPublicationYearFromMQAPResponse(
           mqapResponse,
-        ) ?? 0) !== 2022
+        ) ?? 0) < 2022
       ) {
         throw {
           response: { title: mqapResponse?.Title },
           message:
-            'Only knowledge products for 2022 will be accepted in this reporting ' +
+            'Only knowledge products for 2022 and newer will be accepted in this reporting ' +
             'cycle. In case you need support to correct the publication year of ' +
             'this knowledge product, please contact the librarian of your Center.',
           status: HttpStatus.UNPROCESSABLE_ENTITY,
