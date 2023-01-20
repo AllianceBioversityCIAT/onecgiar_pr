@@ -1,6 +1,6 @@
 <div class="dynamic_panel_menu">
     <div class="section_title">
-        Admin module
+        {{this.panelName}}
     </div>
     <div class="options">
         <div class="option" *ngFor="let option of options" [routerLink]="option.path" routerLinkActive="active">
