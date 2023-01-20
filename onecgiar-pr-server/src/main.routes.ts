@@ -8,6 +8,7 @@ import { AuthModulesRoutes } from './auth/modules/auth-modules.routes';
 import { ModulesRoutes } from './api/modules.routes';
 import { TocRoutes } from './toc/toc.routes';
 import { TocModule } from './toc/toc.module';
+import { ResultDashboardBIRoutes } from './result-dashboard-bi/result-dashboard-bi.routes';
 
 export const MainRoutes: Routes = [
   {
@@ -26,5 +27,9 @@ export const MainRoutes: Routes = [
   {
     path: 'toc',
     children: TocRoutes,
+  },
+  {
+    path:'result-dashboard-bi',
+    children:ResultDashboardBIRoutes
   }
 ];

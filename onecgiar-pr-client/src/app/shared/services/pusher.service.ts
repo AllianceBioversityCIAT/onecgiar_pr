@@ -103,6 +103,8 @@ export class PusherService {
   start(PRRoute: string, resultId) {
     // const pusherBlocked = new PusherBlocked(OSTRoute);
     // this.isTOC = pusherBlocked.blockedRoute();
+    // this.pusher.disconnect();
+    if (this.beforeRoute) this.pusher.disconnect();
     if (this.beforeRoute) this.pusher.unsubscribe('presence-prms' + this.beforeRoute);
     // if (pusherBlocked.blockedRoute()) return;
 

@@ -1,18 +1,17 @@
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../shared/services/api/api.service';
-import { ResultHistoryOfChangesModalService } from './components/result-history-of-changes-modal/result-history-of-changes-modal.service';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
+import { ResultHistoryOfChangesModalService } from '../../../admin-section/pages/completeness-status/components/result-history-of-changes-modal/result-history-of-changes-modal.service';
 
 @Component({
-  selector: 'app-completeness-status',
-  templateUrl: './completeness-status.component.html',
-  styleUrls: ['./completeness-status.component.scss']
+  selector: 'app-init-completeness-status',
+  templateUrl: './init-completeness-status.component.html',
+  styleUrls: ['./init-completeness-status.component.scss']
 })
-export class CompletenessStatusComponent {
+export class InitCompletenessStatusComponent implements OnInit {
   textToFind = '';
   resultsList: any[];
-  initiativesSelected = [];
-  constructor(public api: ApiService, public resultHistoryOfChangesModalSE: ResultHistoryOfChangesModalService, public exportTablesSE: ExportTablesService) {}
+  constructor(private api: ApiService, public resultHistoryOfChangesModalSE: ResultHistoryOfChangesModalService, public exportTablesSE: ExportTablesService) {}
   ngOnInit(): void {
     this.POST_reportSesultsCompleteness();
     this.api.rolesSE.validateReadOnly();
@@ -23,9 +22,6 @@ export class CompletenessStatusComponent {
       console.log(response);
     });
   }
-
-  onSelectInit() {}
-  onRemoveinit(option) {}
 
   exportExcel(resultsList) {
     console.table(resultsList);

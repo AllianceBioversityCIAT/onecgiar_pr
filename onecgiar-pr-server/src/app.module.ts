@@ -29,6 +29,9 @@ import { TocLevelModule } from './toc/toc-level/toc-level.module';
 import { MQAPModule } from './api/m-qap/m-qap.module';
 import { ElasticModule } from './elastic/elastic.module';
 
+import { ResultDashboardBIdModule } from './result-dashboard-bi/result-dashboard.module';
+
+
 @Module({
   imports: [
     TocModule,
@@ -52,6 +55,7 @@ import { ElasticModule } from './elastic/elastic.module';
     TocResultsModule,
     RouterModule.register(MainRoutes),
     ElasticModule,
+    ResultDashboardBIdModule
   ],
   controllers: [AppController],
   providers: [

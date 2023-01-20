@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, Repository, QueryRunner } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
+import { FilterInitiativesDto } from './dto/filter-initiatives.dto';
 
 @Injectable()
 export class AdminPanelRepository{
@@ -9,7 +10,8 @@ export class AdminPanelRepository{
     private _handlersError: HandlersError
   ) {}
 
-  async reportResultCompleteness() {
+  async reportResultCompleteness(filterIntiatives:FilterInitiativesDto) {
+    const complement = filterIntiatives.rol_user != 1 ? 'and rbi.inititiative_id in ('+filterIntiatives.initiatives+')':'';
     const queryData = `
     SELECT
     v.id,
@@ -75,7 +77,7 @@ export class AdminPanelRepository{
     v.links_to_results +
     v.evidence)* 100) / if(v.section_seven is null, 6, 7)) as completeness
   FROM
-  \`result\` r
+  result r
   left join validation v on
     r.id = v.results_id
     and r.is_active > 0
@@ -88,12 +90,14 @@ export class AdminPanelRepository{
     ci.id = rbi.inititiative_id
   inner join result_type rt on
     rt.id = r.result_type_id
-  WHERE r.is_active > 0
+  WHERE r.is_active > 0 ${complement}
   order by
-    r.result_code ASC;
+     rbi.inititiative_id ASC,r.result_code ASC;
     `;
+
     try {
-      const submissionsByResult: any = await this.dataSource.query(queryData); 
+      let submissionsByResult: any = await this.dataSource.query(queryData); 
+
 	  return submissionsByResult;
     } catch (error) {
 		throw this._handlersError.returnErrorRepository({

@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException } from
 import { AdminPanelService } from './admin-panel.service';
 import { CreateAdminPanelDto } from './dto/create-admin-panel.dto';
 import { UpdateAdminPanelDto } from './dto/update-admin-panel.dto';
+import { FilterInitiativesDto } from './dto/filter-initiatives.dto';
 
 @Controller()
 export class AdminPanelController {
@@ -12,10 +13,10 @@ export class AdminPanelController {
     return this.adminPanelService.create(createAdminPanelDto);
   }
 
-  @Get('report/results/completeness')
-  async reportResultCompleteness() {
+  @Post('report/results/completeness')
+  async reportResultCompleteness(@Body() filterIntiatives: FilterInitiativesDto) {
     const {message, response, status} = 
-      await this.adminPanelService.reportResultCompleteness();
+      await this.adminPanelService.reportResultCompleteness(filterIntiatives);
     throw new HttpException({ message, response }, status);
   }
 
