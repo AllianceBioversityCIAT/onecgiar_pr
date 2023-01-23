@@ -77,6 +77,7 @@ export class EvidencesService {
             const knowledgeProduct =
               await this._resultsKnowledgeProductsRepository.findOne({
                 where: { handle: Like(handleId) },
+                relations: {result_object: true}
               });
 
             if (knowledgeProduct) {
