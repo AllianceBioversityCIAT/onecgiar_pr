@@ -172,8 +172,7 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
     FROM
       results_toc_result rtr
     where rtr.results_id = ?
-    and rtr.initiative_id = ?
-      and rtr.is_active > 0;
+    and rtr.initiative_id = ?;
     `;
     try {
       const resultTocResult: ResultsTocResult[] = await this.query(queryData, [resultId, initiativeId]);
