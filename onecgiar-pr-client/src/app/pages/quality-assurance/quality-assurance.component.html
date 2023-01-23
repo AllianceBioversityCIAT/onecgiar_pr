@@ -1,15 +1,13 @@
 <div class="local_container section_container">
-
     <app-pr-select class="segment_title_margin" [options]="this.api.dataControlSE.myInitiativesList"
         *ngIf="!this.api.rolesSE.isAdmin" label="Select initiative" [isStatic]="true" optionLabel="full_name"
-        optionValue="initiative_id" placeholder="Select initiative" (selectOptionEvent)="selectOptionEvent($event)"
-        [(ngModel)]="this.resultLevelSE.resultBody.initiative_id">
+        optionValue="official_code" placeholder="Select initiative" (selectOptionEvent)="selectOptionEvent($event)"
+        [(ngModel)]="official_code">
     </app-pr-select>
 
     <app-pr-select class="segment_title_margin" [options]="this.allInitiatives" label="Select initiative"
-        [isStatic]="true" *ngIf="this.api.rolesSE.isAdmin" optionLabel="full_name" optionValue="initiative_id"
-        (selectOptionEvent)="selectOptionEvent($event)" placeholder="Select initiative"
-        [(ngModel)]="this.resultLevelSE.resultBody.initiative_id">
+        [isStatic]="true" *ngIf="this.api.rolesSE.isAdmin" optionLabel="full_name" optionValue="official_code"
+        (selectOptionEvent)="selectOptionEvent($event)" placeholder="Select initiative" [(ngModel)]="official_code">
     </app-pr-select>
 
 
