@@ -22,7 +22,7 @@ export class InitCompletenessStatusComponent implements OnInit {
     this.api.authSE.GET_initiativesByUser().subscribe(({ response }) => {
       let inits = [];
       response.map(init => {
-        console.log(init);
+        // console.log(init);
         inits.push(init.initiative_id);
         this.initiativesSelected.push({ id: init.initiative_id, full_name: init.full_name });
       });
@@ -30,11 +30,11 @@ export class InitCompletenessStatusComponent implements OnInit {
     });
   }
   POST_reportSesultsCompleteness(inits: any[]) {
-    console.log(inits);
+    // console.log(inits);
     this.resultsList = [];
     this.api.resultsSE.POST_reportSesultsCompleteness(inits).subscribe(({ response }) => {
       this.resultsList = response;
-      console.log(response);
+      // console.log(response);
     });
   }
 
