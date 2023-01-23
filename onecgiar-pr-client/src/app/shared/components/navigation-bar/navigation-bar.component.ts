@@ -27,8 +27,8 @@ export class NavigationBarComponent implements OnInit {
 
   validateAdminModuleAndRole(option) {
     if (option.onlytest && environment.production) return true;
-    if (option?.path == 'init-admin-module') return this.validateCoordAndLead();
     if (this.rolesSE.isAdmin) return false;
+    if (option?.path == 'init-admin-module') return this.validateCoordAndLead();
     return false;
   }
 
