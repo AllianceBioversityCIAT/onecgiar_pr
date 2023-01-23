@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../shared/services/api/api.service';
 import { ResultLevelService } from '../results/pages/result-creator/services/result-level.service';
-import { DomSanitizer } from '@angular/platform-browser';
+import { DomSanitizer, Title } from '@angular/platform-browser';
 import { environment } from 'src/environments/environment';
 
 @Component({
@@ -10,7 +10,7 @@ import { environment } from 'src/environments/environment';
   styleUrls: ['./quality-assurance.component.scss']
 })
 export class QualityAssuranceComponent implements OnInit {
-  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public sanitizer: DomSanitizer) {}
+  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public sanitizer: DomSanitizer, private titleService: Title) {}
   allInitiatives = [];
   clarisaQaToken = null;
   official_code = null;
@@ -19,6 +19,7 @@ export class QualityAssuranceComponent implements OnInit {
   sanitizedUrl: any = null;
   ngOnInit(): void {
     this.GET_AllInitiatives();
+    this.titleService.setTitle('Quality Assurance');
   }
 
   sanitizeUrl() {
