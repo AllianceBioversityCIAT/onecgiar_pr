@@ -14,13 +14,13 @@
         <div class="sub_title" *ngIf="!notification?.action_area_outcome_id && !notification?.toc_result_id">
             <strong>({{notification?.requester_official_code}})</strong>
             -{{notification?.result_type_name}} - <a class="open_route" target="_blank"
-                [href]="resultUrl(notification?.result_id)">(Result id: {{notification?.result_id}})
+                [href]="resultUrl(notification?.result_id)">(Result code: {{notification?.result_code}})
                 {{notification?.title}}</a>
         </div>
         <div class="sub_title" *ngIf="notification?.action_area_outcome_id || notification?.toc_result_id">
             <strong>({{notification?.approving_official_code}})</strong>
             -{{notification?.result_type_name}} - <a class="open_route" target="_blank"
-                [href]="resultUrl(notification?.result_id)">(Result id: {{notification?.result_id}})
+                [href]="resultUrl(notification?.result_id)">(Result code: {{notification?.result_code}})
                 {{notification?.title}}</a>
         </div>
         <div class="buttons">
@@ -55,7 +55,7 @@
             the result: </div>
         <div class="sub_title"><strong>({{notification?.approving_official_code}})</strong>
             -{{notification?.result_type_name}} - <a class="open_route" target="_blank"
-                [href]="resultUrl(notification?.result_id)">(Result id: {{notification?.result_id}})
+                [href]="resultUrl(notification?.result_id)">(Result code: {{notification?.result_code}})
                 {{notification?.title}}</a>
         </div>
 
@@ -72,7 +72,7 @@
             the result: </div>
         <div class="sub_title"><strong>({{notification?.approving_official_code}})</strong>
             - {{notification?.result_type_name}} - <a class="open_route" target="_blank"
-                [href]="resultUrl(notification?.result_id)">(Result id: {{notification?.result_id}})
+                [href]="resultUrl(notification?.result_id)">(Result code: {{notification?.result_code}})
                 {{notification?.title}}</a>
         </div>
 
@@ -87,7 +87,7 @@
         <div class="title">Request from {{notification?.requester_official_code}} to
             {{notification?.approving_official_code}} to be added as a contributor to the result:</div>
         <div class="sub_title">{{notification?.result_type_name}} - <a class="open_route" target="_blank"
-                [href]="resultUrl(notification?.result_id)">(Result id: {{notification?.result_id}})
+                [href]="resultUrl(notification?.result_id)">(Result code: {{notification?.result_code}})
                 {{notification?.title}}</a></div>
 
         <div class="text_icon pending"> Pending

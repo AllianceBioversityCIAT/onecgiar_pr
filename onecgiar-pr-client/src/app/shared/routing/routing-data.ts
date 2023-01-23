@@ -7,11 +7,11 @@ export const routingApp: PrRoute[] = [
   { prName: 'Type one report', prHide: true, canActivate: [CheckLoginGuard], path: 'type-one-report', loadChildren: () => import('../../pages/type-one-report/type-one-report.module').then(m => m.TypeOneReportModule) },
   { prName: 'login', prHide: true, path: 'login', loadChildren: () => import('../../pages/login/login.module').then(m => m.LoginModule) },
   { prName: 'Quality Assurance', onlytest: true, underConstruction: false, canActivate: [CheckLoginGuard], path: 'quality-assurance', loadChildren: () => import('../../pages/quality-assurance/quality-assurance.module').then(m => m.QualityAssuranceModule) },
-  // { prName: 'Init Admin module', onlytest: false, prHide: false, path: 'init-admin-module', loadChildren: () => import('../../pages/init-admin-section/init-admin-section.module').then(m => m.InitAdminSectionModule) },
+  { prName: 'INIT Admin Module', onlytest: false, prHide: false, path: 'init-admin-module', loadChildren: () => import('../../pages/init-admin-section/init-admin-section.module').then(m => m.InitAdminSectionModule) },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'result', prHide: true }
 ];
 
-export const extraRoutingApp: PrRoute[] = [{ prName: 'Admin module', onlytest: true, prHide: false, path: 'admin-module', loadChildren: () => import('../../pages/admin-section/admin-section.module').then(m => m.AdminSectionModule) }];
+export const extraRoutingApp: PrRoute[] = [{ prName: 'Admin module', onlytest: false, prHide: false, path: 'admin-module', loadChildren: () => import('../../pages/admin-section/admin-section.module').then(m => m.AdminSectionModule) }];
 
 export const resultRouting: PrRoute[] = [
   { prName: 'Result Creator', path: 'result-creator', loadChildren: () => import('../../pages/results/pages/result-creator/result-creator.module').then(m => m.ResultCreatorModule) },

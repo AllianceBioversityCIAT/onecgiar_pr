@@ -11,17 +11,43 @@ import { ResultHistoryOfChangesModalService } from '../../../admin-section/pages
 export class InitCompletenessStatusComponent implements OnInit {
   textToFind = '';
   resultsList: any[];
-  constructor(private api: ApiService, public resultHistoryOfChangesModalSE: ResultHistoryOfChangesModalService, public exportTablesSE: ExportTablesService) {}
+  initiativesSelected = [];
+  show_full_screen = false;
+  constructor(public api: ApiService, public resultHistoryOfChangesModalSE: ResultHistoryOfChangesModalService, public exportTablesSE: ExportTablesService) {}
   ngOnInit(): void {
-    this.POST_reportSesultsCompleteness();
     this.api.rolesSE.validateReadOnly();
+    this.GET_initiativesByUser();
   }
-  POST_reportSesultsCompleteness() {
-    this.api.resultsSE.POST_reportSesultsCompleteness([], 1).subscribe(({ response }) => {
-      this.resultsList = response;
-      console.log(response);
+  GET_initiativesByUser() {
+    this.api.authSE.GET_initiativesByUser().subscribe(({ response }) => {
+      let inits = [];
+      response.map(init => {
+        // console.log(init);
+        inits.push(init.initiative_id);
+        this.initiativesSelected.push({ id: init.initiative_id, full_name: init.full_name });
+      });
+      this.POST_reportSesultsCompleteness(inits);
     });
   }
+  POST_reportSesultsCompleteness(inits: any[]) {
+    // console.log(inits);
+    this.resultsList = [];
+    this.api.resultsSE.POST_reportSesultsCompleteness(inits).subscribe(({ response }) => {
+      this.resultsList = response;
+      // console.log(response);
+    });
+  }
+
+  onSelectInit() {
+    let inits = [];
+    this.initiativesSelected.map(init => {
+      console.log(init);
+      inits.push(init.id);
+    });
+    this.POST_reportSesultsCompleteness(inits);
+  }
+
+  onRemoveinit(option) {}
 
   exportExcel(resultsList) {
     console.table(resultsList);

@@ -37,6 +37,7 @@
               "src/styles/transitions.scss",
               "src/styles/primeng-custom-styles.scss",
               "src/styles/containers.scss",
+              "src/styles/table-custom-styles.scss",
               "src/app/custom-fields/custom-fields.scss",
               "src/styles/custom-alert.scss"
             ],

@@ -12,19 +12,22 @@ export class CompletenessStatusComponent {
   textToFind = '';
   resultsList: any[];
   initiativesSelected = [];
+  show_full_screen = false;
+  allInitiatives = [];
+
   constructor(public api: ApiService, public resultHistoryOfChangesModalSE: ResultHistoryOfChangesModalService, public exportTablesSE: ExportTablesService) {}
   ngOnInit(): void {
-    this.POST_reportSesultsCompleteness();
+    this.POST_reportSesultsCompleteness([], 1);
     this.api.rolesSE.validateReadOnly();
+    this.GET_AllInitiatives();
   }
-  POST_reportSesultsCompleteness() {
-    this.api.resultsSE.POST_reportSesultsCompleteness([], 1).subscribe(({ response }) => {
+  POST_reportSesultsCompleteness(inits: any[], role?: number) {
+    this.api.resultsSE.POST_reportSesultsCompleteness(inits, role).subscribe(({ response }) => {
       this.resultsList = response;
       console.log(response);
     });
   }
 
-  onSelectInit() {}
   onRemoveinit(option) {}
 
   exportExcel(resultsList) {
@@ -69,6 +72,24 @@ export class CompletenessStatusComponent {
     // console.table(resultsListMapped);
     const wscols = [{ wpx: 70 }, { wpx: 800 }, { wpx: 100 }, { wpx: 130 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }];
     this.exportTablesSE.exportExcel(resultsListMapped, 'completeness_status', wscols);
+  }
+
+  GET_AllInitiatives() {
+    // console.log(this.api.rolesSE.isAdmin);
+    if (!this.api.rolesSE.isAdmin) return;
+    this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
+      console.log(response);
+      this.allInitiatives = response;
+    });
+  }
+
+  onSelectInit() {
+    let inits = [];
+    this.initiativesSelected.map(init => {
+      console.log(init);
+      inits.push(init.id);
+    });
+    this.POST_reportSesultsCompleteness(inits, inits?.length ? null : 1);
   }
 
   convertToYesOrNot(value, nullOptionindex?) {
