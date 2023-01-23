@@ -18,9 +18,10 @@ import { ResultLevel } from '../result_levels/entities/result_level.entity';
 import { LegacyResult } from '../legacy-result/entities/legacy-result.entity';
 import { ClarisaGeographicScope } from '../../../clarisa/clarisa-geographic-scopes/entities/clarisa-geographic-scope.entity';
 import { ResultsKnowledgeProduct } from '../results-knowledge-products/entities/results-knowledge-product.entity';
+import { ResultRegion } from '../result-regions/entities/result-region.entity';
 
 @Entity()
-@Index(['result_code', 'version_id'], {unique: true})
+@Index(['result_code', 'version_id'], { unique: true })
 export class Result {
   @PrimaryGeneratedColumn({
     name: 'id',
@@ -30,7 +31,7 @@ export class Result {
 
   @Column({
     name: 'result_code',
-    type: 'bigint'
+    type: 'bigint',
   })
   result_code: number;
 
@@ -170,7 +171,7 @@ export class Result {
   @Column({
     name: 'lead_contact_person',
     type: 'text',
-    nullable: true
+    nullable: true,
   })
   lead_contact_person!: string;
 
@@ -186,4 +187,7 @@ export class Result {
 
   @OneToMany(() => ResultsKnowledgeProduct, (rkp) => rkp.result_object)
   result_knowledge_product_array: ResultsKnowledgeProduct[];
+
+  @OneToMany(() => ResultRegion, (rr) => rr.result_object)
+  result_region_array: ResultRegion[];
 }

@@ -1076,7 +1076,7 @@ export class ResultsService {
 
       if (knowledgeProduct) {
         contries = knowledgeProduct.cgspace_countries?.split('; ') ?? [];
-        regions = knowledgeProduct.cgspace_regions?.split('; ') ?? [];
+        //regions = knowledgeProduct.cgspace_regions?.split('; ') ?? [];
       }
 
       let scope: number = 0;

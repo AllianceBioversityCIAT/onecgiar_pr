@@ -43,6 +43,8 @@ import { ResultsKnowledgeProductSaveDto } from './dto/results-knowledge-product-
 import { KnowledgeProductFairBaseline } from '../knowledge_product_fair_baseline/entities/knowledge_product_fair_baseline.entity';
 import { KnowledgeProductFairBaselineRepository } from '../knowledge_product_fair_baseline/knowledge_product_fair_baseline.repository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
+import { ResultRegionRepository } from '../result-regions/result-regions.repository';
+import { ClarisaRegionsRepository } from '../../../clarisa/clarisa-regions/ClariasaRegions.repository';
 
 @Injectable()
 export class ResultsKnowledgeProductsService {
@@ -55,6 +57,11 @@ export class ResultsKnowledgeProductsService {
       result_knowledge_product_metadata_array: true,
       result_knowledge_product_keyword_array: true,
       result_knowledge_product_author_array: true,
+      result_object: {
+        result_region_array: {
+          region_object: true,
+        },
+      },
     };
 
   private readonly _resultsKnowledgeProductWhere: FindOptionsWhere<ResultsKnowledgeProduct> =
@@ -97,7 +104,9 @@ export class ResultsKnowledgeProductsService {
     private readonly _yearRepository: YearRepository,
     private readonly _roleByUseRepository: RoleByUserRepository,
     private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
+    private readonly _resultRegionRepository: ResultRegionRepository,
     private readonly _knowledgeProductFairBaselineRepository: KnowledgeProductFairBaselineRepository,
+    private readonly _clarisaRegionsRepository: ClarisaRegionsRepository,
   ) {}
 
   private async createOwnerResult(
@@ -264,6 +273,7 @@ export class ResultsKnowledgeProductsService {
           resultKnowledgeProduct.results_id,
           resultKnowledgeProduct.version_id,
         );
+
       updatedKnowledgeProduct.result_knowledge_product_id =
         resultKnowledgeProduct.result_knowledge_product_id;
 
@@ -292,14 +302,18 @@ export class ResultsKnowledgeProductsService {
         newMetadata,
         true,
       );
-
+      this._resultsKnowledgeProductMapper.patchRegions(
+        updatedKnowledgeProduct,
+        newMetadata,
+        true,
+      );
       updatedKnowledgeProduct =
         await this._resultsKnowledgeProductRepository.save(
           updatedKnowledgeProduct,
         );
 
       //updating general result tables
-      this._resultRepository.update(
+      await this._resultRepository.update(
         { id: resultId },
         {
           title: newMetadata.title,
@@ -323,6 +337,17 @@ export class ResultsKnowledgeProductsService {
       );
       await this._resultsKnowledgeProductMetadataRepository.save(
         updatedKnowledgeProduct.result_knowledge_product_metadata_array ?? [],
+      );
+
+      //geolocation
+      await this.updateGeoLocation(
+        updatedKnowledgeProduct.result_object,
+        updatedKnowledgeProduct,
+        newMetadata,
+      );
+
+      await this._resultRegionRepository.save(
+        updatedKnowledgeProduct.result_object.result_region_array ?? [],
       );
 
       return {
@@ -466,6 +491,7 @@ export class ResultsKnowledgeProductsService {
       );
 
       newKnowledgeProduct.is_melia = false;
+      newKnowledgeProduct.result_object = newResult;
 
       newKnowledgeProduct = await this._resultsKnowledgeProductRepository.save(
         newKnowledgeProduct,
@@ -494,6 +520,17 @@ export class ResultsKnowledgeProductsService {
       );
       await this._resultsKnowledgeProductMetadataRepository.save(
         newKnowledgeProduct.result_knowledge_product_metadata_array ?? [],
+      );
+
+      //geolocation
+      await this.updateGeoLocation(
+        newResult,
+        newKnowledgeProduct,
+        resultsKnowledgeProductDto,
+      );
+
+      await this._resultRegionRepository.save(
+        newResult.result_region_array ?? [],
       );
 
       const fairBaseline = new KnowledgeProductFairBaseline();
@@ -554,6 +591,67 @@ export class ResultsKnowledgeProductsService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
+  }
+
+  private async updateGeoLocation(
+    newResult: Result,
+    newKnowledgeProduct: ResultsKnowledgeProduct,
+    resultsKnowledgeProductDto: ResultsKnowledgeProductDto,
+  ) {
+    //cleaning regions
+    const cleanedRegions = (
+      await Promise.all(
+        (newResult.result_region_array ?? []).map(async (r) => {
+          const clarisaRegion = await this._clarisaRegionsRepository.findOne({
+            where: { um49Code: r.region_id },
+            relations: { children_array: true },
+          });
+
+          if ((clarisaRegion.children_array ?? []).length !== 0) {
+            // not a leaf, we do not care about those, so we will discard them
+            return null;
+          }
+
+          return r;
+        }),
+      )
+    ).filter((r) => r);
+
+    newResult.result_region_array = cleanedRegions;
+    newResult.has_regions = (newResult.result_region_array ?? []).length != 0;
+    const country_array = (newKnowledgeProduct.cgspace_countries ?? '').split(
+      '; ',
+    );
+    newResult.has_countries =
+      (newKnowledgeProduct.cgspace_countries ?? '').length != 0;
+    //newResult.has_regions = (newKnowledgeProduct.cgspace_regions??'').length != 0;
+
+    if (resultsKnowledgeProductDto.is_global_geoscope) {
+      newResult.geographic_scope_id = 1;
+    } else if (!newResult.has_countries && !newResult.has_regions) {
+      /*
+      in case we do not explicitly receive "global" as a region from M-QAP,
+      but the countries and regions array is empty, we are going to flag this
+      as "to be determined"
+      */
+      newResult.geographic_scope_id = 50;
+    } else {
+      if (newResult.has_regions) {
+        newResult.geographic_scope_id = 2;
+      } else {
+        newResult.geographic_scope_id = country_array.length > 1 ? 3 : 4;
+      }
+    }
+
+    //updating general result tables
+    this._resultRepository.update(
+      { id: newResult.id },
+      {
+        geographic_scope_id: newResult.geographic_scope_id,
+        has_countries: newResult.has_countries,
+        has_regions: newResult.has_regions,
+      },
+    );
   }
 
   async findResultKnowledgeProductByHandle(handle: string) {
