@@ -908,4 +908,29 @@ export class ResultsKnowledgeProductsService {
       return this._handlersError.returnErrorRes({ error });
     }
   }
+
+  async findAllActiveKps() {
+    try {
+      const kps = await this._resultsKnowledgeProductRepository.find({
+        where: {
+          is_active: true,
+          result_object: {
+            is_active: true,
+          },
+        },
+        relations: {
+          result_object: true,
+        },
+      });
+
+      return {
+        response: kps,
+        message:
+          'The active knowledge products have been retrieved successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
 }
