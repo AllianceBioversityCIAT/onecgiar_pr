@@ -47,7 +47,14 @@ export class ApiService {
   updateResultsList() {
     this.resultsSE.GET_AllResultsWithUseRole(this.authSE.localStorageUser.id).subscribe(resp => {
       this.dataControlSE.resultsList = resp.response;
-      // console.log(this.dataControlSE.resultsList);
+
+      let rere = [];
+      this.dataControlSE.resultsList.map((re: any) => {
+        const { id, result_code } = re;
+        if (id != result_code) rere.push({ id, result_code });
+      });
+
+      console.table(rere);
     });
   }
 
@@ -71,7 +78,7 @@ export class ApiService {
       window['Tawk_API'].onChatEnded = function () {
         window['Tawk_API'].hideWidget();
         window['Tawk_API'].minimize();
-        console.log('ENDING CHAT');
+        // console.log('ENDING CHAT');
       };
     } catch (error) {
       console.log(error);

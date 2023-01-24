@@ -289,7 +289,7 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/innovation-type/get/all`).pipe(
       map(resp => {
         resp?.response.map(innovation => (innovation.extraInformation = `<strong>${innovation.name}</strong> <br> <div class="select_item_description">${innovation.definition}</div>`));
-        console.log(resp.response);
+        // console.log(resp.response);
         return resp;
       })
     );
@@ -299,7 +299,7 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/innovation-characteristics/get/all`).pipe(
       map(resp => {
         resp?.response.map(innovation => (innovation.extraInformation = `<strong>${innovation.name}</strong> <br> <div class="select_item_description">${innovation.definition}</div>`));
-        console.log(resp.response);
+        // console.log(resp.response);
         return resp;
       })
     );
@@ -338,7 +338,7 @@ export class ResultsApiService {
   GET_clarisaPolicyStages() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/policy-stages/get/all`).pipe(
       map(resp => {
-        console.log(resp.response);
+        // console.log(resp.response);
         resp?.response.map(stage => (stage.full_name = `<strong>${stage.name}</strong> - ${stage.definition}`));
         return resp;
       })
@@ -362,7 +362,6 @@ export class ResultsApiService {
   }
 
   POST_createRequest(body) {
-    console.log(this.currentResultId);
     return this.http.post<any>(`${this.apiBaseUrl}request/create/${this.currentResultId}`, body);
   }
 
@@ -440,5 +439,9 @@ export class ResultsApiService {
         return resp;
       })
     );
+  }
+
+  GET_resultIdToCode(resultCode) {
+    return this.http.get<any>(`${this.apiBaseUrl}get/transform/${resultCode}`);
   }
 }

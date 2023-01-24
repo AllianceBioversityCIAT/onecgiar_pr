@@ -17,18 +17,36 @@ import { CurrentResultService } from '../../../../shared/services/current-result
   styleUrls: ['./result-detail.component.scss']
 })
 export class ResultDetailComponent {
-  constructor(private currentResultSE: CurrentResultService, private shareRequestModalSE: ShareRequestModalService, public navigationBarSE: NavigationBarService, private activatedRoute: ActivatedRoute, private api: ApiService, public saveButtonSE: SaveButtonService, private resultLevelSE: ResultLevelService, private rolesSE: RolesService, private router: Router, public dataControlSE: DataControlService, private pusherService: PusherService, private greenChecksSE: GreenChecksService) {}
+  constructor(public currentResultSE: CurrentResultService, private shareRequestModalSE: ShareRequestModalService, public navigationBarSE: NavigationBarService, private activatedRoute: ActivatedRoute, private api: ApiService, public saveButtonSE: SaveButtonService, private resultLevelSE: ResultLevelService, private rolesSE: RolesService, private router: Router, public dataControlSE: DataControlService, private pusherService: PusherService, private greenChecksSE: GreenChecksService) {}
   closeInfo = false;
   ngOnInit(): void {
+    this.getData();
+  }
+
+  async getData() {
     this.dataControlSE.currentResult = null;
     this.api.resultsSE.currentResultId = null;
     this.api.updateUserData(() => {
       // console.log(this.dataControlSE.currentResult);
     });
     this.api.resultsSE.currentResultId = this.activatedRoute.snapshot.paramMap.get('id');
-    this.currentResultSE.GET_resultById();
-    this.greenChecksSE.updateGreenChecks();
+    await this.GET_resultIdToCode();
+    await this.currentResultSE.GET_resultById();
+    await this.greenChecksSE.updateGreenChecks();
+
     this.shareRequestModalSE.inNotifications = false;
+  }
+
+  GET_resultIdToCode() {
+    this.currentResultSE.resultIdIsconverted = false;
+    return new Promise((resolve, reject) => {
+      this.api.resultsSE.GET_resultIdToCode(this.api.resultsSE.currentResultId).subscribe(({ response }) => {
+        this.api.resultsSE.currentResultId = response;
+        // console.log('GET_resultIdToCode');
+        this.currentResultSE.resultIdIsconverted = true;
+        resolve(null);
+      });
+    });
   }
 
   ngDoCheck(): void {

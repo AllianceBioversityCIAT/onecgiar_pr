@@ -26,7 +26,7 @@
     <ng-template pTemplate="body" let-result>
       <tr>
         <td *ngFor="let column of columnOrder; let i=index" class="{{column.attr}}">
-          <a class="{{column.class}}" [routerLink]="'/result/result-detail/' + result?.id">
+          <a class="{{column.class}}" [routerLink]="'/result/result-detail/' + result?.result_code">
             <div class="point" [style.background]="'var(--pr-color-result-level-'+result?.result_level_id+')'"
               *ngIf="column.attr === 'result_type'"></div>
 
