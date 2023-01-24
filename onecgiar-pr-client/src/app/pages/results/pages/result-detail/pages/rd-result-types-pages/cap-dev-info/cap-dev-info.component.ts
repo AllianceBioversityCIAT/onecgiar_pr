@@ -30,8 +30,8 @@ export class CapDevInfoComponent implements OnInit {
     this.api.resultsSE.GET_capdevsTerms().subscribe(({ response }) => {
       this.capdevsSubTerms = response.splice(0, 2);
       this.capdevsTerms = response.splice(0, 2);
-      console.log(this.capdevsSubTerms);
-      console.log(this.capdevsTerms);
+      // console.log(this.capdevsSubTerms);
+      // console.log(this.capdevsTerms);
     });
   }
   GET_capdevsDeliveryMethod() {
@@ -43,7 +43,7 @@ export class CapDevInfoComponent implements OnInit {
 
   getSectionInformation() {
     this.api.resultsSE.GET_capacityDevelopent().subscribe(({ response }) => {
-      console.log(response);
+      // console.log(response);
       this.capDevInfoRoutingBody = response;
       this.get_capdev_term_id();
     });
@@ -62,7 +62,7 @@ export class CapDevInfoComponent implements OnInit {
   }
 
   get_capdev_term_id() {
-    console.log(this.capDevInfoRoutingBody.capdev_term_id);
+    // console.log(this.capDevInfoRoutingBody.capdev_term_id);
     if (this.capDevInfoRoutingBody.capdev_term_id == 4) return (this.capdev_term_id_1 = 4);
     if (this.capDevInfoRoutingBody.capdev_term_id == 3) {
       return (this.capdev_term_id_1 = 3);
@@ -76,13 +76,13 @@ export class CapDevInfoComponent implements OnInit {
   }
 
   validate_capdev_term_id() {
-    console.log(this.capdev_term_id_1);
-    console.log(this.capdev_term_id_2);
+    // console.log(this.capdev_term_id_1);
+    // console.log(this.capdev_term_id_2);
     this.capDevInfoRoutingBody.capdev_term_id = this.capdev_term_id_2 ? this.capdev_term_id_2 : this.capdev_term_id_1;
   }
 
   onSaveSection() {
-    console.log(this.capDevInfoRoutingBody);
+    // console.log(this.capDevInfoRoutingBody);
     this.validate_capdev_term_id();
     this.api.resultsSE.PATCH_capacityDevelopent(this.capDevInfoRoutingBody).subscribe(resp => {
       this.getSectionInformation();

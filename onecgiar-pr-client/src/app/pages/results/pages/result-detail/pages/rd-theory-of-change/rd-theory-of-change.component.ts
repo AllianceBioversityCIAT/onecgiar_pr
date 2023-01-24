@@ -32,7 +32,7 @@ export class RdTheoryOfChangeComponent {
     await this.api.resultsSE.GET_toc().subscribe(
       ({ response }) => {
         this.theoryOfChangeBody = response;
-        console.log(this.theoryOfChangeBody);
+        // console.log(this.theoryOfChangeBody);
         setTimeout(() => {
           this.getConsumed = true;
         }, 100);
@@ -60,7 +60,7 @@ export class RdTheoryOfChangeComponent {
   }
 
   onSaveSection() {
-    console.log(this.theoryOfChangeBody);
+    // console.log(this.theoryOfChangeBody);
     this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
       // console.log(resp);
       this.getConsumed = false;
@@ -76,7 +76,7 @@ export class RdTheoryOfChangeComponent {
     // console.log('onSelectContributingInitiative');
     this.theoryOfChangeBody.contributing_initiatives?.map((resp: any) => {
       // console.log(resp);
-      console.log(this.theoryOfChangeBody.contributors_result_toc_result);
+      // console.log(this.theoryOfChangeBody.contributors_result_toc_result);
       const contributorFinded = this.theoryOfChangeBody.contributors_result_toc_result?.find((result: any) => result?.initiative_id == resp.id);
       // console.log(contributorFinded);
       let contributorToPush = new resultToResultInterfaceToc();
@@ -84,7 +84,7 @@ export class RdTheoryOfChangeComponent {
       contributorToPush.short_name = resp.short_name;
       contributorToPush.official_code = resp.official_code;
       if (!contributorFinded) this.theoryOfChangeBody.contributors_result_toc_result?.push(contributorToPush);
-      console.log(contributorFinded);
+      // console.log(contributorFinded);
     });
   }
 
@@ -118,12 +118,12 @@ export class RdTheoryOfChangeComponent {
   }
 
   deletContributingCenter(index) {
-    console.log(index);
+    // console.log(index);
     this.theoryOfChangeBody?.contributing_center.splice(index, 1);
   }
 
   deleteEvidence(index) {
-    console.log(index);
+    // console.log(index);
     this.theoryOfChangeBody.contributing_np_projects.splice(index, 1);
   }
 

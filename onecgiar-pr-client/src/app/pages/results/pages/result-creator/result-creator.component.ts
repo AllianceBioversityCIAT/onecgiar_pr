@@ -82,7 +82,7 @@ export class ResultCreatorComponent implements OnInit {
   onSaveSection() {
     if (this.resultLevelSE.resultBody.result_type_id != 6) {
       this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody);
-      console.log(this.resultLevelSE.resultBody);
+      // console.log(this.resultLevelSE.resultBody);
       this.api.resultsSE.POST_resultCreateHeader(this.resultLevelSE.resultBody).subscribe(
         (resp: any) => {
           this.router.navigate([`/result/result-detail/${resp?.response?.id}/general-information`]);
@@ -93,10 +93,10 @@ export class ResultCreatorComponent implements OnInit {
         }
       );
     } else {
-      console.log({ ...this.mqapJson, result_data: this.resultLevelSE.resultBody });
+      // console.log({ ...this.mqapJson, result_data: this.resultLevelSE.resultBody });
       this.api.resultsSE.POST_createWithHandle({ ...this.mqapJson, result_data: this.resultLevelSE.resultBody }).subscribe(
         (resp: any) => {
-          console.log(resp);
+          // console.log(resp);
           this.router.navigate([`/result/result-detail/${resp?.response?.id}/general-information`]);
           this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
         },
@@ -123,8 +123,8 @@ export class ResultCreatorComponent implements OnInit {
     this.validating = true;
     this.api.resultsSE.GET_mqapValidation(this.resultLevelSE.resultBody.handler).subscribe(
       resp => {
-        console.log(resp);
-        console.log(resp.response);
+        // console.log(resp);
+        // console.log(resp.response);
         this.mqapJson = resp.response;
         this.resultLevelSE.resultBody.result_name = resp.response.title;
         // console.log(first);

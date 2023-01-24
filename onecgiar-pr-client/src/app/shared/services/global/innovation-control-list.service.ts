@@ -15,7 +15,7 @@ export class InnovationControlListService {
   }
   GET_clarisaInnovationType() {
     this.api.resultsSE.GET_clarisaInnovationType().subscribe(({ response }) => {
-      console.log(response);
+      // console.log(response);
       this.typeList = response;
     });
   }
@@ -27,7 +27,7 @@ export class InnovationControlListService {
   }
   GET_clarisaInnovationReadinessLevels() {
     this.api.resultsSE.GET_clarisaInnovationReadinessLevels().subscribe(({ response }) => {
-      console.log(response);
+      // console.log(response);
       this.readinessLevelsList = response;
     });
   }
