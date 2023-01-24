@@ -711,4 +711,26 @@ WHERE
       });
     }
   }
+
+  async transformResultCode(resultCode: number): Promise<number> {
+    const queryData = `
+    SELECT 
+    r.id
+    FROM 
+    \`result\` r 
+    WHERE r.is_active > 0
+      and r.version_id = 1
+      and r.result_code = ?;
+    `;
+    try {
+      const results: Array<{ id }> = await this.query(queryData, [resultCode]);
+      return results?.length?results[0].id:null;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
 }

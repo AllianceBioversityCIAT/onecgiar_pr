@@ -1125,6 +1125,28 @@ export class ResultsService {
     }
   }
 
+  async transformResultCode(resultCode: number){
+    try {
+      const result = await this._resultRepository.transformResultCode(resultCode);
+
+      if (!result) {
+        throw {
+          response: {},
+          message: 'Results Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      return {
+        response: result,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
   update(id: number, updateResultDto: UpdateResultDto) {
     return `This action updates a #${id} result ${updateResultDto}`;
   }
