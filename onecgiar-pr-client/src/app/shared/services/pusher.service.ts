@@ -71,11 +71,11 @@ export class PusherService {
     if (!this.firstUser) this.secondUser = true;
     if (this.firstUser && this.secondUser) {
       let currentUrl = this.router.url;
-      console.log(currentUrl);
+      // console.log(currentUrl);
       this.router.navigateByUrl(`/result/result-detail/${this.api.resultsSE.currentResultId}`).then(() => {
         setTimeout(() => {
-          console.log('volver');
-          console.log(currentUrl);
+          // console.log('volver');
+          // console.log(currentUrl);
           this.router.navigateByUrl(currentUrl);
         }, 1000);
       });

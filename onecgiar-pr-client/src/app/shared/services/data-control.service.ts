@@ -35,7 +35,7 @@ export class DataControlService {
     let seconds = 0;
     return new Promise((resolve, reject) => {
       const timer = setInterval(() => {
-        console.log('sdsd  ' + seconds);
+        // console.log('sdsd  ' + seconds);
         seconds++;
         if (text) {
           resolve(text);

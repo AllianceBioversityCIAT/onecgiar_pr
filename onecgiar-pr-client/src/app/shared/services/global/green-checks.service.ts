@@ -13,6 +13,7 @@ export class GreenChecksService {
     setTimeout(() => {
       if (this.resultsApiSE.currentResultId) {
         this.api.resultsSE.GET_greenChecksByResultId().subscribe(({ response }) => {
+          // console.log('updateGreenChecks');
           this.submit = Boolean(response?.submit);
           this.api.dataControlSE.green_checks = response?.green_checks;
           this.api.resultsSE.PATCH_greenChecksByResultId().subscribe();

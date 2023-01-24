@@ -31,7 +31,7 @@ export class RdPartnersComponent {
   }
 
   onSaveSection() {
-    console.log(this.rdPartnersSE.partnersBody);
+    // console.log(this.rdPartnersSE.partnersBody);
     this.api.resultsSE.PATCH_partnersSection(this.rdPartnersSE.partnersBody).subscribe(resp => {
       // console.log(resp);
       this.rdPartnersSE.getSectionInformation();

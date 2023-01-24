@@ -32,7 +32,7 @@ export class RolesService {
 
   fieldValidation(restrictionId) {
     const restrictionFinded = this.restrictions.find(restriction => restriction.id == restrictionId);
-    console.log(restrictionFinded);
+    // console.log(restrictionFinded);
     return Boolean(restrictionFinded.roleIds.find(roleId => roleId == this.currentInitiativeRole));
   }
   validateApplication(application) {

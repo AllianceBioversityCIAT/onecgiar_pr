@@ -16,7 +16,7 @@ export class RdPartnersService {
     return index < 0 ? false : true;
   }
   onSelectDelivery(option, deliveryId) {
-    console.log('onSelectDelivery');
+    // console.log('onSelectDelivery');
     if (!(typeof option?.deliveries == 'object')) option.deliveries = [];
     const index = option?.deliveries.indexOf(deliveryId);
     index < 0 ? option?.deliveries.push(deliveryId) : option?.deliveries.splice(index, 1);
@@ -33,7 +33,7 @@ export class RdPartnersService {
   getSectionInformation(no_applicable_partner?) {
     this.api.resultsSE.GET_partnersSection().subscribe(
       ({ response }) => {
-        console.log(response);
+        // console.log(response);
         this.partnersBody = response;
         if (no_applicable_partner === true || no_applicable_partner === false) this.partnersBody.no_applicable_partner = no_applicable_partner;
       },

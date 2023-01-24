@@ -20,7 +20,7 @@ export class QualityAssuranceComponent implements OnInit {
   ngOnInit(): void {
     this.GET_AllInitiatives();
     this.titleService.setTitle('Quality Assurance');
-    this.official_code = this.api.dataControlSE.myInitiativesList[0].official_code;
+    this.official_code = this.api.dataControlSE.myInitiativesList[0]?.official_code;
     if (this.official_code) this.selectOptionEvent({ official_code: this.official_code });
   }
 

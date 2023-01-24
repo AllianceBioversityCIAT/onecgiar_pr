@@ -27,7 +27,7 @@ export class ResultHistoryOfChangesModalComponent {
     });
     resultsList.map(result => {
       const { comment, user_last_name, user_first_name, email, initiative_role, app_role, created_date, is_submit } = result;
-      console.log(initiative_role);
+      // console.log(initiative_role);
       resultsListMapped.push({
         comment: this.convertToNodata(comment, 1),
         user_last_name,
@@ -45,7 +45,7 @@ export class ResultHistoryOfChangesModalComponent {
   }
 
   convertToNodata(value, nullOptionindex?) {
-    console.log(value);
+    // console.log(value);
     if (value && value != 'null') return value;
     const nullOptions = ['Not applicable', 'Not provided'];
     return nullOptions[nullOptionindex ? nullOptionindex : 0];
