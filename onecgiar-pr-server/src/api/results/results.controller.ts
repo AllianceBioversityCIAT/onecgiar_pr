@@ -176,6 +176,14 @@ export class ResultsController {
     throw new HttpException({ message, response }, status);
   }
 
+  @Get('get/transform/:resultCode')
+  async transformResultCode(@Param('resultCode') resultCode: number) {
+    const { message, response, status } = await this.resultsService.transformResultCode(
+      resultCode,
+    );
+    throw new HttpException({ message, response }, status);
+  }
+
   @Get('get/reporting/list/date/:initDate/:lastDate')
   async getReportingList(
     @Param('initDate') initDate: Date,

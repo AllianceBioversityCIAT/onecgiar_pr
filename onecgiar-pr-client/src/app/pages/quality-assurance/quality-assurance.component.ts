@@ -3,6 +3,8 @@ import { ApiService } from '../../shared/services/api/api.service';
 import { ResultLevelService } from '../results/pages/result-creator/services/result-level.service';
 import { DomSanitizer, Title } from '@angular/platform-browser';
 import { environment } from 'src/environments/environment';
+import { Observable } from 'rxjs';
+import { QualityAssuranceService } from './quality-assurance.service';
 
 @Component({
   selector: 'app-quality-assurance',
@@ -10,7 +12,7 @@ import { environment } from 'src/environments/environment';
   styleUrls: ['./quality-assurance.component.scss']
 })
 export class QualityAssuranceComponent implements OnInit {
-  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public sanitizer: DomSanitizer, private titleService: Title) {}
+  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public sanitizer: DomSanitizer, private titleService: Title, private qaSE: QualityAssuranceService) {}
   allInitiatives = [];
   clarisaQaToken = null;
   official_code = null;
@@ -18,10 +20,19 @@ export class QualityAssuranceComponent implements OnInit {
   qaUrl = environment.qaUrl;
   sanitizedUrl: any = null;
   ngOnInit(): void {
-    this.GET_AllInitiatives();
+    this.api.rolesSE.validateReadOnly();
     this.titleService.setTitle('Quality Assurance');
-    this.official_code = this.api.dataControlSE.myInitiativesList[0]?.official_code;
-    if (this.official_code) this.selectOptionEvent({ official_code: this.official_code });
+    new Observable((observer: any) => {
+      observer.next();
+      this.qaSE.$qaFirstInitObserver = observer;
+    }).subscribe(resp => {
+      if (this.api.rolesSE.isAdmin) {
+        this.GET_AllInitiatives();
+      } else {
+        this.official_code = this.api.dataControlSE.myInitiativesList[0]?.official_code;
+        if (this.official_code) this.selectOptionEvent({ official_code: this.official_code });
+      }
+    });
   }
 
   sanitizeUrl() {
@@ -29,10 +40,11 @@ export class QualityAssuranceComponent implements OnInit {
   }
 
   GET_AllInitiatives() {
-    // console.log(this.api.rolesSE.isAdmin);
     if (!this.api.rolesSE.isAdmin) return;
     this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
       this.allInitiatives = response;
+      this.official_code = this.allInitiatives[0]?.official_code;
+      if (this.official_code) this.selectOptionEvent({ official_code: this.official_code });
     });
   }
   GET_ClarisaQaToken(callback) {

@@ -172,7 +172,7 @@ export class TocResultsRepository extends Repository<TocResult> {
       left join toc_result tr on
         tr.toc_result_id = rtr.toc_result_id
       left join toc_result tr2 on
-        tr2.title = tr.title
+        tr2.toc_internal_id = tr.toc_internal_id
         and tr2.is_active > 0
         and tr2.inititiative_id = tr.inititiative_id 
          set
