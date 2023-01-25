@@ -407,8 +407,7 @@ export class ResultsKnowledgeProductsService {
       if (!mqapResponse) {
         throw {
           response: {},
-          message:
-            'Please add a valid handle. Only handles from CGSpace can be reported.',
+          message: `Please add a valid handle (received: ${handle}). Only handles from CGSpace can be reported.`,
           status: HttpStatus.BAD_REQUEST,
         };
       }

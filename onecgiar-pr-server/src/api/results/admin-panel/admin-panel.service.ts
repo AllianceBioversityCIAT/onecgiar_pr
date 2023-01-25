@@ -97,6 +97,7 @@ export class AdminPanelService implements OnModuleInit {
       }
 
       const kps = allKpsResponse.response as ResultsKnowledgeProduct[];
+      //kps = kps.filter((kp) => !kp.isJournalArticle);
 
       const initDate: Date = new Date();
       this._logger.debug(
@@ -105,9 +106,9 @@ export class AdminPanelService implements OnModuleInit {
 
       Promise.allSettled(
         kps.map(async (kp) => {
-          this._logger.debug(
+          /*this._logger.debug(
             `Current KP ID: ${kp.result_knowledge_product_id}; Current Result ID: ${kp.results_id}`,
-          );
+          );*/
           return this._resultsKnowledgeProductsService.syncAgain(
             kp.results_id,
             user,
@@ -115,16 +116,24 @@ export class AdminPanelService implements OnModuleInit {
         }),
       ).then((responses) => {
         const endDate: Date = new Date();
+        let successful = responses.filter(this._isFulfilled);
+        let failed = responses.filter(this._isRejected);
+        let wronglyClassified = successful
+          .filter((wc) => wc.value.status !== HttpStatus.CREATED)
+          .map<PromiseRejectedResult>((wc) => {
+            return { status: 'rejected', reason: wc.value.message };
+          });
+        failed = failed.concat(wronglyClassified);
+
         this._logger.debug(
           `Bulk sync process finished at ${endDate}. Time took: ${
             endDate.getMilliseconds() - initDate.getMilliseconds()
           }ms.`,
         );
         this._logger.debug(
-          `KPs successfully updated: ${
-            responses.filter(this._isFulfilled).length
-          }; KPs re-sync failed: ${responses.filter(this._isRejected).length}`,
+          `KPs successfully updated: ${successful.length}; KPs re-sync failed: ${failed.length}`,
         );
+        failed.forEach((f) => this._logger.error(f.reason));
       });
 
       return {
