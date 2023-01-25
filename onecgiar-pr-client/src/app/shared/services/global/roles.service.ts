@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { AuthService } from '../api/auth.service';
 import { GreenChecksService } from './green-checks.service';
 import { DataControlService } from '../data-control.service';
+import { environment } from 'src/environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -42,6 +43,10 @@ export class RolesService {
 
   async validateReadOnly(result?) {
     // console.log('%cvalidateReadOnly', 'background: #222; color: #52cd47');
+    if (environment?.platformIsClosed) {
+      this.readOnly = true;
+      return null;
+    }
     const updateMyRoles = async roles => {
       if (!this.roles) await roles;
       if (!this.roles) return (this.readOnly = true);
