@@ -9,12 +9,13 @@ import { ResultsListFilterService } from '../../../pages/results/pages/results-o
 import { WordCounterService } from '../word-counter.service';
 import { RolesService } from '../global/roles.service';
 import { TocApiService } from './toc-api.service';
+import { QualityAssuranceService } from '../../../pages/quality-assurance/quality-assurance.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ApiService {
-  constructor(public resultsSE: ResultsApiService, public alertsFs: CustomizedAlertsFsService, public authSE: AuthService, public alertsFe: CustomizedAlertsFeService, public dataControlSE: DataControlService, public resultsListFilterSE: ResultsListFilterService, public wordCounterSE: WordCounterService, public rolesSE: RolesService, public tocApiSE: TocApiService) {}
+  constructor(public resultsSE: ResultsApiService, public alertsFs: CustomizedAlertsFsService, private qaSE: QualityAssuranceService, public authSE: AuthService, public alertsFe: CustomizedAlertsFeService, public dataControlSE: DataControlService, public resultsListFilterSE: ResultsListFilterService, public wordCounterSE: WordCounterService, public rolesSE: RolesService, public tocApiSE: TocApiService) {}
 
   updateUserData(callback) {
     if (!this.authSE?.localStorageUser?.id) return;
@@ -25,7 +26,8 @@ export class ApiService {
         // this.rolesSE.roles = GET_allRolesByUser.response;
         //?
         this.dataControlSE.myInitiativesList = GET_initiativesByUser?.response;
-        // console.log(this.dataControlSE.myInitiativesList);
+        console.log(this.dataControlSE.myInitiativesList);
+        this.qaSE.$qaFirstInitObserver?.next();
         this.dataControlSE.myInitiativesList.map(myInit => {
           myInit.role = GET_allRolesByUser?.response?.initiative?.find(initRole => initRole?.initiative_id == myInit?.initiative_id)?.description;
           myInit.name = myInit.official_code;
