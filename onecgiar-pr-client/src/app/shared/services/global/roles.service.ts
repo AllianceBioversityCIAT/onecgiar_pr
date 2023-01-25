@@ -45,6 +45,8 @@ export class RolesService {
     // console.log('%cvalidateReadOnly', 'background: #222; color: #52cd47');
     if (environment?.platformIsClosed) {
       this.readOnly = true;
+      this.updateRolesListFromLocalStorage();
+      this.updateRolesList();
       return null;
     }
     const updateMyRoles = async roles => {

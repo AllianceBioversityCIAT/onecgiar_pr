@@ -2,12 +2,13 @@
     <div class="first_options">
 
         <div class="initiatives_selector">
-            <app-pr-multi-select *ngIf="!this.api.rolesSE.isAdmin" [options]="this.api.dataControlSE.myInitiativesList"
-                optionLabel="full_name" optionValue="id" (selectOptionEvent)="onSelectInit()" [required]="false"
-                (removeOptionEvent)="onRemoveinit($event)" selectedOptionLabel="full_name"
-                [(ngModel)]="this.initiativesSelected" [confirmDeletion]="true" placeholder="Select initiative(s)">
+            <app-pr-multi-select *ngIf="!this.api.rolesSE.isAdmin" [isStatic]="true"
+                [options]="this.api.dataControlSE.myInitiativesList" optionLabel="full_name" optionValue="id"
+                (selectOptionEvent)="onSelectInit()" [required]="false" (removeOptionEvent)="onRemoveinit($event)"
+                selectedOptionLabel="full_name" [(ngModel)]="this.initiativesSelected" [confirmDeletion]="true"
+                placeholder="Select initiative(s)">
             </app-pr-multi-select>
-            <app-pr-multi-select *ngIf="this.api.rolesSE.isAdmin" [options]="this.allInitiatives"
+            <app-pr-multi-select *ngIf="this.api.rolesSE.isAdmin" [isStatic]="true" [options]="this.allInitiatives"
                 optionLabel="full_name" optionValue="id" (selectOptionEvent)="onSelectInit()" [required]="false"
                 (removeOptionEvent)="onRemoveinit($event)" selectedOptionLabel="full_name"
                 [(ngModel)]="this.initiativesSelected" [confirmDeletion]="true" placeholder="Select initiative(s)">
