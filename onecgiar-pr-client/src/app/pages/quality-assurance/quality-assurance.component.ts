@@ -20,16 +20,18 @@ export class QualityAssuranceComponent implements OnInit {
   qaUrl = environment.qaUrl;
   sanitizedUrl: any = null;
   ngOnInit(): void {
-    this.GET_AllInitiatives();
+    this.api.rolesSE.validateReadOnly();
     this.titleService.setTitle('Quality Assurance');
-
     new Observable((observer: any) => {
       observer.next();
       this.qaSE.$qaFirstInitObserver = observer;
     }).subscribe(resp => {
-      // console.log('$qaFirstInitObserver');
-      this.official_code = this.api.dataControlSE.myInitiativesList[0]?.official_code;
-      if (this.official_code) this.selectOptionEvent({ official_code: this.official_code });
+      if (this.api.rolesSE.isAdmin) {
+        this.GET_AllInitiatives();
+      } else {
+        this.official_code = this.api.dataControlSE.myInitiativesList[0]?.official_code;
+        if (this.official_code) this.selectOptionEvent({ official_code: this.official_code });
+      }
     });
   }
 
@@ -38,10 +40,11 @@ export class QualityAssuranceComponent implements OnInit {
   }
 
   GET_AllInitiatives() {
-    // console.log(this.api.rolesSE.isAdmin);
     if (!this.api.rolesSE.isAdmin) return;
     this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
       this.allInitiatives = response;
+      this.official_code = this.allInitiatives[0]?.official_code;
+      if (this.official_code) this.selectOptionEvent({ official_code: this.official_code });
     });
   }
   GET_ClarisaQaToken(callback) {
