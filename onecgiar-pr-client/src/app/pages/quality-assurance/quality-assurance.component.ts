@@ -3,6 +3,8 @@ import { ApiService } from '../../shared/services/api/api.service';
 import { ResultLevelService } from '../results/pages/result-creator/services/result-level.service';
 import { DomSanitizer, Title } from '@angular/platform-browser';
 import { environment } from 'src/environments/environment';
+import { Observable } from 'rxjs';
+import { QualityAssuranceService } from './quality-assurance.service';
 
 @Component({
   selector: 'app-quality-assurance',
@@ -10,7 +12,7 @@ import { environment } from 'src/environments/environment';
   styleUrls: ['./quality-assurance.component.scss']
 })
 export class QualityAssuranceComponent implements OnInit {
-  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public sanitizer: DomSanitizer, private titleService: Title) {}
+  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public sanitizer: DomSanitizer, private titleService: Title, private qaSE: QualityAssuranceService) {}
   allInitiatives = [];
   clarisaQaToken = null;
   official_code = null;
@@ -20,8 +22,15 @@ export class QualityAssuranceComponent implements OnInit {
   ngOnInit(): void {
     this.GET_AllInitiatives();
     this.titleService.setTitle('Quality Assurance');
-    this.official_code = this.api.dataControlSE.myInitiativesList[0]?.official_code;
-    if (this.official_code) this.selectOptionEvent({ official_code: this.official_code });
+
+    new Observable((observer: any) => {
+      observer.next();
+      this.qaSE.$qaFirstInitObserver = observer;
+    }).subscribe(resp => {
+      // console.log('$qaFirstInitObserver');
+      this.official_code = this.api.dataControlSE.myInitiativesList[0]?.official_code;
+      if (this.official_code) this.selectOptionEvent({ official_code: this.official_code });
+    });
   }
 
   sanitizeUrl() {
