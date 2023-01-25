@@ -566,7 +566,8 @@ export class resultValidationRepository extends Repository<Validation>{
 		validation v
 	WHERE
 		v.results_id = ?
-		and v.is_active > 0;
+		and v.is_active > 0
+	order by v.id desc;
     `;
     try {
       const shareResultRequest: Validation[] = await this.dataSource.query(queryData, [resultId]); 
