@@ -49,14 +49,6 @@ export class ApiService {
   updateResultsList() {
     this.resultsSE.GET_AllResultsWithUseRole(this.authSE.localStorageUser.id).subscribe(resp => {
       this.dataControlSE.resultsList = resp.response;
-
-      let rere = [];
-      this.dataControlSE.resultsList.map((re: any) => {
-        const { id, result_code } = re;
-        if (id != result_code) rere.push({ id, result_code });
-      });
-
-      console.table(rere);
     });
   }
 
