@@ -104,37 +104,39 @@ export class AdminPanelService implements OnModuleInit {
         `Bulk sync process started at ${initDate}. Sync for ${kps.length} kp(s).`,
       );
 
-      Promise.allSettled(
-        kps.map(async (kp) => {
-          /*this._logger.debug(
-            `Current KP ID: ${kp.result_knowledge_product_id}; Current Result ID: ${kp.results_id}`,
-          );*/
-          return this._resultsKnowledgeProductsService.syncAgain(
-            kp.results_id,
-            user,
-          );
-        }),
-      ).then((responses) => {
-        const endDate: Date = new Date();
-        let successful = responses.filter(this._isFulfilled);
-        let failed = responses.filter(this._isRejected);
-        let wronglyClassified = successful
-          .filter((wc) => wc.value.status !== HttpStatus.CREATED)
-          .map<PromiseRejectedResult>((wc) => {
-            return { status: 'rejected', reason: wc.value.message };
-          });
-        failed = failed.concat(wronglyClassified);
+      let responses: { response: any; message: string; status: HttpStatus }[] =
+        [];
 
+      for (const kp of kps) {
         this._logger.debug(
-          `Bulk sync process finished at ${endDate}. Time took: ${
-            endDate.getMilliseconds() - initDate.getMilliseconds()
-          }ms.`,
+          `Current KP ID: ${kp.result_knowledge_product_id}; Current Result ID: ${kp.results_id}`,
         );
-        this._logger.debug(
-          `KPs successfully updated: ${successful.length}; KPs re-sync failed: ${failed.length}`,
+
+        const response = await this._resultsKnowledgeProductsService.syncAgain(
+          kp.results_id,
+          user,
         );
-        failed.forEach((f) => this._logger.error(f.reason));
-      });
+
+        responses.push(response);
+      }
+
+      const endDate: Date = new Date();
+      let successful = responses.filter(
+        (res) => res.status === HttpStatus.CREATED,
+      );
+      let failed = responses.filter((res) => res.status !== HttpStatus.CREATED);
+
+      this._logger.debug(
+        `Bulk sync process finished at ${endDate}. Time took: ${
+          endDate.getMilliseconds() - initDate.getMilliseconds()
+        }ms.`,
+      );
+
+      this._logger.debug(
+        `KPs successfully updated: ${successful.length}; KPs re-sync failed: ${failed.length}`,
+      );
+
+      failed.forEach((f) => this._logger.error(f.message));
 
       return {
         response: '1',
