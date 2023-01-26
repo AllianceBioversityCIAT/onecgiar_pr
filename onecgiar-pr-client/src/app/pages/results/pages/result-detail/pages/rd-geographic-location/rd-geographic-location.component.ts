@@ -53,11 +53,11 @@ export class RdGeographicLocationComponent {
   getSectionInformation() {
     this.api.resultsSE.GET_geographicSection().subscribe(({ response }) => {
       this.geographicLocationBody = response;
-      console.log(response);
+      // console.log(response);
     });
   }
   onSaveSection() {
-    console.log(this.geographicLocationBody);
+    // console.log(this.geographicLocationBody);
     this.api.resultsSE.PATCH_geographicSection(this.geographicLocationBody).subscribe(({ response }) => {
       this.getSectionInformation();
     });
@@ -75,6 +75,17 @@ export class RdGeographicLocationComponent {
       querySelector: '#alert',
       position: 'beforeend'
     });
+
+    if (this.api.dataControlSE.isKnowledgeProduct) {
+      //this should be executed after the page initialization
+      this.api.alertsFs.show({
+        status: 'success',
+        title: 'sd',
+        description: `In case some of the metadata fields are incorrect, please get in touch with the library staff of your Center to update them in the repository. Before the end of the reporting period, metadata will be automatically refreshed on this page.`,
+        querySelector: '#alert',
+        position: 'beforeend'
+      });
+    }
   }
   thereAnyRegionText() {
     return `The list of regions below follows the <a href='${this.UNM49}' class="open_route" target='_blank'>UN (M.49)<a> standard`;

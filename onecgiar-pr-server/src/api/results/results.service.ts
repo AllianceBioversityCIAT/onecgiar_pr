@@ -1076,7 +1076,7 @@ export class ResultsService {
 
       if (knowledgeProduct) {
         contries = knowledgeProduct.cgspace_countries?.split('; ') ?? [];
-        regions = knowledgeProduct.cgspace_regions?.split('; ') ?? [];
+        //regions = knowledgeProduct.cgspace_regions?.split('; ') ?? [];
       }
 
       let scope: number = 0;
@@ -1114,6 +1114,28 @@ export class ResultsService {
         initDate,
         endDate,
       );
+
+      return {
+        response: result,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async transformResultCode(resultCode: number){
+    try {
+      const result = await this._resultRepository.transformResultCode(resultCode);
+
+      if (!result) {
+        throw {
+          response: {},
+          message: 'Results Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
 
       return {
         response: result,

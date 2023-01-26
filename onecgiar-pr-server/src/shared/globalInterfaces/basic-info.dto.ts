@@ -1,4 +1,4 @@
-export interface BasicInfoDto {
+export class BasicInfoDto {
   id: number;
   name: string;
 }

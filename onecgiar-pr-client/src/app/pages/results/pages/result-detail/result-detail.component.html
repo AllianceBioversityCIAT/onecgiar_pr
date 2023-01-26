@@ -22,7 +22,7 @@
           {{this.dataControlSE.currentResult?.initiative_official_code}}
         </div>
       </div>
-      <router-outlet></router-outlet>
+      <router-outlet *ngIf="this.currentResultSE.resultIdIsconverted"></router-outlet>
       <div class="spinner" *ngIf="this.saveButtonSE.isSavingSection">
         <div class="info">
           <i class="material-icons-round icon rotating">sync</i>

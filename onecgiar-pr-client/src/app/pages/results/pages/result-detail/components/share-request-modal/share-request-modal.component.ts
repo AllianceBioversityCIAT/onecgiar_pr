@@ -30,7 +30,7 @@ export class ShareRequestModalComponent {
   }
 
   cleanObject() {
-    console.log('cleanForm');
+    // console.log('cleanForm');
     this.showForm = false;
     this.shareRequestModalSE.shareRequestBody = new ShareRequestBody();
     setTimeout(() => {
@@ -41,10 +41,10 @@ export class ShareRequestModalComponent {
   onRequest() {
     this.requesting = true;
     this.shareRequestModalSE.shareRequestBody.initiativeShareId.push(this.shareRequestModalSE.shareRequestBody.initiative_id);
-    console.log(this.shareRequestModalSE.shareRequestBody);
+    // console.log(this.shareRequestModalSE.shareRequestBody);
     this.api.resultsSE.POST_createRequest(this.shareRequestModalSE.shareRequestBody).subscribe(
       resp => {
-        console.log(resp);
+        // console.log(resp);
         this.api.dataControlSE.showShareRequest = false;
 
         this.api.alertsFe.show({ id: 'requesqshared', title: `Request sent`, description: `Once your request is accepted, the result can be mapped to your Initiative's ToC.`, status: 'success' });
@@ -62,7 +62,7 @@ export class ShareRequestModalComponent {
   }
 
   modelChange() {
-    console.log('modelChange');
+    // console.log('modelChange');
     this.showTocOut = false;
     setTimeout(() => {
       this.showTocOut = true;
@@ -71,13 +71,13 @@ export class ShareRequestModalComponent {
 
   acceptOrReject() {
     let body = { ...this.api.dataControlSE.currentNotification, ...this.shareRequestModalSE.shareRequestBody, request_status_id: 2 };
-    console.log(body);
+    // console.log(body);
     // console.log(this.shareRequestModalSE.shareRequestBody);
     this.requesting = true;
 
     this.api.resultsSE.PATCH_updateRequest(body).subscribe(
       resp => {
-        console.log(resp);
+        // console.log(resp);
         this.api.dataControlSE.showShareRequest = false;
         this.api.alertsFe.show({ id: 'noti', title: `Request sent`, description: `Once your request is accepted, the result can be mapped to your Initiative's ToC.`, status: 'success' });
         this.requesting = false;

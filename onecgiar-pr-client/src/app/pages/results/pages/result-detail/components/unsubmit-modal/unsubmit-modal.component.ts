@@ -20,7 +20,7 @@ export class UnsubmitModalComponent {
   onSubmit() {
     this.api.resultsSE.PATCH_unsubmit(this.comment).subscribe(
       resp => {
-        console.log(resp);
+        // console.log(resp);
         this.api.alertsFe.show({ id: 'unsubmodal', title: `Success`, description: `The result has been unsubmitted.`, status: 'success' });
         this.unsubmitModalSE.showModal = false;
         this.currentResultSE.GET_resultById();

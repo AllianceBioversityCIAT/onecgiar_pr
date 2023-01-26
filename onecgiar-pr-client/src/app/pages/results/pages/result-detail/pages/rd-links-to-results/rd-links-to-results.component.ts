@@ -30,7 +30,7 @@ export class RdLinksToResultsComponent {
     this.getSectionInformation();
   }
   onLinkResult(result) {
-    console.log(result);
+    // console.log(result);
     this.linksToResultsBody.links.push(result);
     this.counterPipe++;
   }
@@ -41,7 +41,7 @@ export class RdLinksToResultsComponent {
 
   getSectionInformation() {
     this.api.resultsSE.GET_resultsLinked().subscribe(({ response }) => {
-      console.log(response);
+      // console.log(response);
       this.linksToResultsBody = response;
     });
   }
@@ -53,9 +53,9 @@ export class RdLinksToResultsComponent {
     this.linksToResultsBody.legacy_link.splice(index, 1);
   }
   onSaveSection() {
-    console.log(this.linksToResultsBody);
+    // console.log(this.linksToResultsBody);
     this.api.resultsSE.POST_resultsLinked(this.linksToResultsBody).subscribe(resp => {
-      console.log(resp);
+      // console.log(resp);
       this.getSectionInformation();
     });
   }

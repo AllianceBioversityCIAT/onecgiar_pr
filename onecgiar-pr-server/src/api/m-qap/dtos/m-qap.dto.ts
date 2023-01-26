@@ -100,7 +100,7 @@ export class MQAPResultDto {
   Affiliation: Affiliation[];
   'Impact Area': string;
   ORCID: string;
-  'Region of the research': string | string[];
+  'Region of the research': CgRegion | CgRegion[];
   Type: string;
   ISI: string;
   'Peer-reviewed': string;
@@ -114,6 +114,7 @@ export class MQAPResultDto {
   handle: string;
   thumbnail: string;
   repo: string;
+  'Geographic location': CgRegion | CgRegion[];
   agrovoc_keywords: AgrovocKeywords;
   Commodities: string[];
   handle_altmetric: AltmetricData;
@@ -184,4 +185,9 @@ export interface GardianData {
   interoperability: string;
   reusability: string;
   title: string;
+}
+
+export interface CgRegion {
+  name: string;
+  clarisa_id: number;
 }
