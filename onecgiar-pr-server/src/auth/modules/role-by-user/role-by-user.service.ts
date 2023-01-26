@@ -10,6 +10,7 @@ import { returnFormatRoleByUser } from './dto/returnFormatRoleByUser.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { UserRepository } from '../user/repositories/user.repository';
 import { User } from '../user/entities/user.entity';
+import { env } from 'process';
 
 @Injectable()
 export class RoleByUserService {
@@ -125,9 +126,21 @@ export class RoleByUserService {
         ),
       };
 
+      const closeApp = {
+        user_id: userId,
+        application: {
+          role_id: 2,
+          role_level_id: 1,
+          role_level_name: "Application",
+          description: "Guest"
+        },
+        initiative: [],
+        action_area: []
+      }
+
       resultRoles = this.cleanRoleData(resultRoles);
       return {
-        response: resultRoles,
+        response: parseInt(env.CLOSE_APP) == 1? closeApp : resultRoles,
         message: 'Successful response',
         status: HttpStatus.OK,
       };
