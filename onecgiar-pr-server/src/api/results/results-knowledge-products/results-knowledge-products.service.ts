@@ -412,16 +412,33 @@ export class ResultsKnowledgeProductsService {
         };
       }
 
-      if (
-        (this._resultsKnowledgeProductMapper.getPublicationYearFromMQAPResponse(
+      const cgYear =
+        this._resultsKnowledgeProductMapper.getPublicationYearFromMQAPResponse(
           mqapResponse,
-        ) ?? 0) < 2022
+        ) ?? 0;
+
+      if (cgYear < 2022) {
+        throw {
+          response: { title: mqapResponse?.Title },
+          message:
+            "You can't report knowledge products older than 2022 for the current reporting " +
+            'cycle. In case you need support to correct the publication year of ' +
+            'this knowledge product, please contact the librarian of your Center.',
+          status: HttpStatus.UNPROCESSABLE_ENTITY,
+        };
+      } else if (
+        cgYear > 2022 &&
+        (mqapResponse?.Type ?? '') != 'Journal Article'
       ) {
         throw {
           response: { title: mqapResponse?.Title },
           message:
-            'Only knowledge products for 2022 and newer will be accepted in this reporting ' +
-            'cycle. In case you need support to correct the publication year of ' +
+            'Only Journal Articles from 2022 and 2023 will be allowed for this ' +
+            "reporting cycle. The knowledge product's type you are trying to create is " +
+            `"${
+              mqapResponse?.Type ?? 'Not Defined'
+            }" and the issue year is "${cgYear}". ` +
+            'In case you need support to correct the issue year of ' +
             'this knowledge product, please contact the librarian of your Center.',
           status: HttpStatus.UNPROCESSABLE_ENTITY,
         };

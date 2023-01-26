@@ -393,12 +393,12 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProduct.findable = dto.findable;
     knowledgeProduct.handle = dto.handle;
     knowledgeProduct.interoperable = dto.interoperable;
-    knowledgeProduct.is_melia = null;
+    //knowledgeProduct.is_melia = null;
     knowledgeProduct.knowledge_product_type = dto.type;
     knowledgeProduct.licence = dto.licence;
-    knowledgeProduct.melia_previous_submitted = null;
-    knowledgeProduct.melia_type_id = null;
-    knowledgeProduct.ost_melia_study_id = null;
+    //knowledgeProduct.melia_previous_submitted = null;
+    //knowledgeProduct.melia_type_id = null;
+    //knowledgeProduct.ost_melia_study_id = null;
     knowledgeProduct.name = dto.title;
     knowledgeProduct.reusable = dto.reusable;
     knowledgeProduct.sponsors = dto.sponsor;
