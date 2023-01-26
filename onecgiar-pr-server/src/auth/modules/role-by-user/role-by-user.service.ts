@@ -126,21 +126,9 @@ export class RoleByUserService {
         ),
       };
 
-      const closeApp = {
-        user_id: userId,
-        application: {
-          role_id: 2,
-          role_level_id: 1,
-          role_level_name: "Application",
-          description: "Guest"
-        },
-        initiative: [],
-        action_area: []
-      }
-
       resultRoles = this.cleanRoleData(resultRoles);
       return {
-        response: parseInt(env.CLOSE_APP) == 1? closeApp : resultRoles,
+        response: resultRoles,
         message: 'Successful response',
         status: HttpStatus.OK,
       };
