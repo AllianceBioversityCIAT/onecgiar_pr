@@ -241,7 +241,7 @@ export class ResultsKnowledgeProductsService {
 
       let isAdmin: any = await this._roleByUseRepository.isUserAdmin(user.id);
 
-      if (isAdmin.is_admin == false) {
+      if (isAdmin?.is_admin == false) {
         if (
           resultKnowledgeProduct.knowledge_product_type == 'Journal Article'
         ) {
