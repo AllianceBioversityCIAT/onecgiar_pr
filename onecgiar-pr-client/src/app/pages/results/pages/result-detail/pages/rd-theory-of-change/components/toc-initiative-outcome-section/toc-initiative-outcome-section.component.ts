@@ -4,6 +4,7 @@ import { TocInitiativeOutcomeListsService } from './services/toc-initiative-outc
 import { resultToResultInterfaceToc } from '../../model/theoryOfChangeBody';
 import { RolesService } from '../../../../../../../../shared/services/global/roles.service';
 import { DataControlService } from '../../../../../../../../shared/services/data-control.service';
+import { environment } from 'src/environments/environment';
 
 @Component({
   selector: 'app-toc-initiative-outcome-section',
@@ -12,6 +13,7 @@ import { DataControlService } from '../../../../../../../../shared/services/data
 })
 export class TocInitiativeOutcomeSectionComponent {
   constructor(private api: ApiService, public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public rolesSE: RolesService, public dataControlSE: DataControlService) {}
+  platformIsClosed = environment.platformIsClosed;
   outcomeList = [];
   outputList = [];
   eoiList = [];

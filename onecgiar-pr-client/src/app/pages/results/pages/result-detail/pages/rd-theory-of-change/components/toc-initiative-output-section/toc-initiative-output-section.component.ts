@@ -3,6 +3,7 @@ import { ApiService } from '../../../../../../../../shared/services/api/api.serv
 import { resultToResultInterfaceToc } from '../../model/theoryOfChangeBody';
 import { TocInitiativeOutcomeListsService } from '../toc-initiative-outcome-section/services/toc-initiative-outcome-lists.service';
 import { DataControlService } from '../../../../../../../../shared/services/data-control.service';
+import { environment } from '../../../../../../../../../environments/environment';
 
 @Component({
   selector: 'app-toc-initiative-output-section',
@@ -12,6 +13,7 @@ import { DataControlService } from '../../../../../../../../shared/services/data
 export class TocInitiativeOutputSectionComponent {
   outcomeList = [];
   outputList = [];
+  platformIsClosed = environment.platformIsClosed;
   @Input() result_toc_result = new resultToResultInterfaceToc();
   @Input() contributors_result_toc_result: any;
   fullInitiativeToc = null;
