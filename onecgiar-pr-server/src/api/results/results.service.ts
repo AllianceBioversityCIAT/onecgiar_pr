@@ -49,6 +49,7 @@ import { ResultSimpleDto } from './dto/result-simple.dto';
 import { ElasticService } from '../../elastic/elastic.service';
 import { ElasticOperationDto } from '../../elastic/dto/elastic-operation.dto';
 import process from 'process';
+import { resultValidationRepository } from './results-validation-module/results-validation-module.repository';
 
 @Injectable()
 export class ResultsService {
@@ -78,6 +79,7 @@ export class ResultsService {
     private readonly _resultCountryRepository: ResultCountryRepository,
     private readonly _resultKnowledgeProductRepository: ResultsKnowledgeProductsRepository,
     private readonly _elasticService: ElasticService,
+    private readonly _resultValidationRepository: resultValidationRepository,
   ) {}
 
   /**
@@ -563,7 +565,7 @@ export class ResultsService {
       );
       await this._resultByIntitutionsRepository.logicalElimination(result.id);
       await this._resultByEvidencesRepository.logicalElimination(result.id);
-
+      await this._resultValidationRepository.inactiveOldInserts(result.id);
       const toUpdateFromElastic = await this.findAllSimplified(
         result.id.toString(),
         true,

@@ -625,5 +625,22 @@ export class resultValidationRepository extends Repository<Validation>{
     }
   }
 
+  async inactiveAllOldInserts() {
+    const queryData = `
+		UPDATE validation 
+			set is_active = 0;
+    `;
+    try {
+      const shareResultRequest = await this.dataSource.query(queryData); 
+	  return shareResultRequest;
+    } catch (error) {
+		throw this._handlersError.returnErrorRepository({
+        className: resultValidationRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
 }
 
