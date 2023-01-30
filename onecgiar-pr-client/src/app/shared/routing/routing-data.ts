@@ -55,6 +55,15 @@ export const resultDetailRouting: PrRoute[] = [
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'general-information' }
 ];
 
+export const TypePneReportRouting: PrRoute[] = [
+  { prName: 'Fact sheet', path: 'fact-sheet', loadChildren: () => import('../../pages/type-one-report/pages/tor-fact-sheet/tor-fact-sheet.module').then(m => m.TorFactSheetModule) },
+  { prName: 'Initiative progress & Key results', path: 'initiative-progress-and-key-results', loadChildren: () => import('../../pages/type-one-report/pages/tor-init-progress-and-key-results/tor-init-progress-and-key-results.module').then(m => m.TorInitProgressAndKeyResultsModule) },
+  { prName: 'Impact pathway integration - External partners', path: 'ipi-external-partners', loadChildren: () => import('../../pages/type-one-report/pages/tor-ipi-cgiar-portfolio-linkages/tor-ipi-cgiar-portfolio-linkages.module').then(m => m.TorIpiCgiarPortfolioLinkagesModule) },
+  { prName: 'Impact pathway integration - CGIAR portfolio linkages', path: 'ipi-cgiar-portfolio-linkages', loadChildren: () => import('../../pages/type-one-report/pages/tor-ipi-cgiar-portfolio-linkages/tor-ipi-cgiar-portfolio-linkages.module').then(m => m.TorIpiCgiarPortfolioLinkagesModule) },
+  { prName: 'Key result story', path: 'key-result-story', loadChildren: () => import('../../pages/type-one-report/pages/tor-key-result-story/tor-key-result-story.module').then(m => m.TorKeyResultStoryModule) },
+  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'fact-sheet' }
+];
+
 export interface PrRoute extends Route {
   prName: string;
   prHide?: boolean | number;

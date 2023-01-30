@@ -8,11 +8,11 @@ import { Title } from '@angular/platform-browser';
 })
 export class TypeOneReportComponent {
   sections = [
-    { path: '1', icon: '', name: 'Fact sheet' },
-    { path: '2', icon: '', name: 'Initiative progress & Key results' },
-    { path: '3', icon: '', name: 'Impact pathway integration - External partners' },
-    { path: '4', icon: '', name: 'Impact pathway integration - CGIAR portfolio linkages' },
-    { path: '5', icon: '', name: 'Key result story' }
+    { path: 'fact-sheet', icon: '', name: 'Fact sheet' },
+    { path: 'initiative-progress-and-key-results', icon: '', name: 'Initiative progress & Key results' },
+    { path: 'ipi-external-partners', icon: '', name: 'Impact pathway integration - External partners' },
+    { path: 'ipi-cgiar-portfolio-linkages', icon: '', name: 'Impact pathway integration - CGIAR portfolio linkages' },
+    { path: 'key-result-story', icon: '', name: 'Key result story' }
   ];
   constructor(private titleService: Title) {}
   ngOnInit(): void {
