@@ -1,0 +1,21 @@
+<div class="box">
+    <div class="copy_to_clipboard_button" (click)="copyTable(tableOne)" pTooltip="Copy to clipboard"
+        tooltipPosition="left">
+        Copy <i class="material-icons-round">
+            content_paste
+        </i>
+    </div>
+    <table #tableOne class="distribution-{{this.distribution}}">
+        <tr class="table_title">
+            <th colspan="2">{{title || 'Untitled'}}</th>
+        </tr>
+        <tr *ngIf="distribution == 'normal'">
+            <th *ngFor="let headerItem of header">{{headerItem?.name}}</th>
+        </tr>
+        <tr *ngFor="let dataItem of data">
+            <td *ngFor="let headerItem of header">{{dataItem[headerItem.attr]}}</td>
+        </tr>
+    </table>
+</div>
+
+<p-toast key="myKey1"></p-toast>
