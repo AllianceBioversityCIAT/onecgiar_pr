@@ -5,11 +5,6 @@ import { Component, OnInit } from '@angular/core';
   templateUrl: './tor-key-result-story.component.html',
   styleUrls: ['./tor-key-result-story.component.scss']
 })
-export class TorKeyResultStoryComponent implements OnInit {
-
-  constructor() { }
-
-  ngOnInit(): void {
-  }
-
+export class TorKeyResultStoryComponent {
+  constructor() {}
 }
