@@ -628,37 +628,77 @@ export class ResultsKnowledgeProductsService {
       });
     let regions = resultRegions.map((rr) => rr.region_object);
 
-    let cleanedRegions: ClarisaRegion[] = [];
-    let cleanedResultRegions: ResultRegion[] = [];
+    let cleanedCGRegions = [];
     for (const region of regions) {
       //1. we check if the region has been added before. if so, we ignore it
-      if (cleanedRegions.some((r) => r.um49Code == region.um49Code)) {
+      if (cleanedCGRegions.some((r) => r.um49Code == region.um49Code)) {
         continue;
       }
 
       //2. we check if the cleanedRegions array at least one descendant.
-      if (cleanedRegions.some((r) => worldTree.isDescendant(r, region))) {
+      if (cleanedCGRegions.some((r) => worldTree.isDescendant(r, region))) {
         //2.a we ignore it, as it has a descendant already in the list
         continue;
       }
 
       //3. we check if the cleanedRegions array has one or multiple ancestors
-      const ancestors = cleanedRegions.filter((r) =>
+      const ancestors = cleanedCGRegions.filter((r) =>
         worldTree.isAncestor(r, region),
       );
       //3.a if there are ancestors, we remove them from the cleanedRegions list
-      cleanedRegions = cleanedRegions.filter((r) =>
-        ancestors.some((a) => (a.um49Code = r.um49Code)),
+      cleanedCGRegions = cleanedCGRegions.filter(
+        (r) => !ancestors.find((a) => a.um49Code == r.um49Code),
       );
 
       //4. we add it to the cleanedRegions list
-      cleanedRegions.push(region);
+      cleanedCGRegions.push(region);
     }
 
-    cleanedResultRegions = resultRegions.filter((rr) =>
-      cleanedRegions.some((cr) => rr.region_id == cr.um49Code),
+    /*
+      now that we have all the "leafs" from the regions coming from CGSpace,
+      we need to verify if the regions are indeed leafs or not. so, using the
+      worldTree, we find the region on the tree and get all the descendants
+      that are leaves. if the region itself is a leaf, it should prevail. if
+      not, the region descendants will be used instead
+    */
+    let processedCleanedRegions: ClarisaRegion[] = cleanedCGRegions.flatMap(
+      (crn) => {
+        const descendants = worldTree.getAllDescendantRegions(crn, true);
+        return descendants.length == 0 ? [crn] : descendants;
+      },
     );
 
+    /* 
+      we check if the region was already mapped to the result. if it was, we 
+      remove it from the processedCleanedRegions and add the mapped region to the
+      final cleanedResultRegions. if not, nothing happens
+    */
+    let cleanedResultRegions: ResultRegion[] = [];
+    for (const rr of resultRegions) {
+      const inProcessed = processedCleanedRegions.findIndex(
+        (cr) => rr.region_id == cr.um49Code,
+      );
+      if (inProcessed > -1) {
+        cleanedResultRegions.push(rr);
+        processedCleanedRegions.splice(inProcessed, 1);
+      } else {
+        if (rr.result_region_id) {
+          rr.is_active = false;
+          cleanedResultRegions.push(rr);
+        }
+      }
+    }
+
+    /*
+      if there are still regions that are not mapped to the result, we create them
+    */
+    for (const pcr of processedCleanedRegions) {
+      const newResultRegion = new ResultRegion();
+      newResultRegion.result_id = newResult.id;
+      newResultRegion.region_id = pcr.um49Code;
+
+      cleanedResultRegions.push(newResultRegion);
+    }
     //end cleaning regions
 
     newResult.result_region_array = cleanedResultRegions;
