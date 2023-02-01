@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable, OnModuleInit } from '@nestjs/common';
-import { FindOptionsRelations, FindOptionsWhere, Like } from 'typeorm';
+import { FindOptionsRelations, FindOptionsWhere, IsNull, Like } from 'typeorm';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import {
   HandlersError,
@@ -45,6 +45,8 @@ import { KnowledgeProductFairBaselineRepository } from '../knowledge_product_fai
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { ResultRegionRepository } from '../result-regions/result-regions.repository';
 import { ClarisaRegionsRepository } from '../../../clarisa/clarisa-regions/ClariasaRegions.repository';
+import { ClarisaRegion } from '../../../clarisa/clarisa-regions/entities/clarisa-region.entity';
+import { ResultRegion } from '../result-regions/entities/result-region.entity';
 
 @Injectable()
 export class ResultsKnowledgeProductsService {
@@ -412,16 +414,33 @@ export class ResultsKnowledgeProductsService {
         };
       }
 
-      if (
-        (this._resultsKnowledgeProductMapper.getPublicationYearFromMQAPResponse(
+      const cgYear =
+        this._resultsKnowledgeProductMapper.getPublicationYearFromMQAPResponse(
           mqapResponse,
-        ) ?? 0) < 2022
+        ) ?? 0;
+
+      if (cgYear < 2022) {
+        throw {
+          response: { title: mqapResponse?.Title },
+          message:
+            "You can't report knowledge products older than 2022 for the current reporting " +
+            'cycle. In case you need support to correct the publication year of ' +
+            'this knowledge product, please contact the librarian of your Center.',
+          status: HttpStatus.UNPROCESSABLE_ENTITY,
+        };
+      } else if (
+        cgYear > 2022 &&
+        (mqapResponse?.Type ?? '') != 'Journal Article'
       ) {
         throw {
           response: { title: mqapResponse?.Title },
           message:
-            'Only knowledge products for 2022 and newer will be accepted in this reporting ' +
-            'cycle. In case you need support to correct the publication year of ' +
+            'Only Journal Articles from 2022 and 2023 will be allowed for this ' +
+            "reporting cycle. The knowledge product's type you are trying to create is " +
+            `"${
+              mqapResponse?.Type ?? 'Not Defined'
+            }" and the issue year is "${cgYear}". ` +
+            'In case you need support to correct the issue year of ' +
             'this knowledge product, please contact the librarian of your Center.',
           status: HttpStatus.UNPROCESSABLE_ENTITY,
         };
@@ -597,26 +616,52 @@ export class ResultsKnowledgeProductsService {
     newKnowledgeProduct: ResultsKnowledgeProduct,
     resultsKnowledgeProductDto: ResultsKnowledgeProductDto,
   ) {
+    //load up the world region tree
+    const worldTree = await this._clarisaRegionsRepository.loadWorldTree();
+
     //cleaning regions
-    const cleanedRegions = (
-      await Promise.all(
-        (newResult.result_region_array ?? []).map(async (r) => {
-          const clarisaRegion = await this._clarisaRegionsRepository.findOne({
-            where: { um49Code: r.region_id },
-            relations: { children_array: true },
-          });
+    let resultRegions = (newResult.result_region_array ?? [])
+      .filter((rr) => rr.region_id)
+      .map((rr) => {
+        rr.region_object = worldTree.findById(rr.region_id)?.data;
+        return rr;
+      });
+    let regions = resultRegions.map((rr) => rr.region_object);
 
-          if ((clarisaRegion.children_array ?? []).length !== 0) {
-            // not a leaf, we do not care about those, so we will discard them
-            return null;
-          }
+    let cleanedRegions: ClarisaRegion[] = [];
+    let cleanedResultRegions: ResultRegion[] = [];
+    for (const region of regions) {
+      //1. we check if the region has been added before. if so, we ignore it
+      if (cleanedRegions.some((r) => r.um49Code == region.um49Code)) {
+        continue;
+      }
 
-          return r;
-        }),
-      )
-    ).filter((r) => r);
+      //2. we check if the cleanedRegions array at least one descendant.
+      if (cleanedRegions.some((r) => worldTree.isDescendant(r, region))) {
+        //2.a we ignore it, as it has a descendant already in the list
+        continue;
+      }
 
-    newResult.result_region_array = cleanedRegions;
+      //3. we check if the cleanedRegions array has one or multiple ancestors
+      const ancestors = cleanedRegions.filter((r) =>
+        worldTree.isAncestor(r, region),
+      );
+      //3.a if there are ancestors, we remove them from the cleanedRegions list
+      cleanedRegions = cleanedRegions.filter((r) =>
+        ancestors.some((a) => (a.um49Code = r.um49Code)),
+      );
+
+      //4. we add it to the cleanedRegions list
+      cleanedRegions.push(region);
+    }
+
+    cleanedResultRegions = resultRegions.filter((rr) =>
+      cleanedRegions.some((cr) => rr.region_id == cr.um49Code),
+    );
+
+    //end cleaning regions
+
+    newResult.result_region_array = cleanedResultRegions;
     newResult.has_regions = (newResult.result_region_array ?? []).length != 0;
     const country_array = (newKnowledgeProduct.cgspace_countries ?? '').split(
       '; ',

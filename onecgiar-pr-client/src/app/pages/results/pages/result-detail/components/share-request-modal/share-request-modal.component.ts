@@ -5,6 +5,7 @@ import { RolesService } from '../../../../../../shared/services/global/roles.ser
 import { ShareRequestModalService } from './share-request-modal.service';
 import { Router } from '@angular/router';
 import { RetrieveModalService } from '../retrieve-modal/retrieve-modal.service';
+import { environment } from 'src/environments/environment';
 
 @Component({
   selector: 'app-share-request-modal',
@@ -12,6 +13,7 @@ import { RetrieveModalService } from '../retrieve-modal/retrieve-modal.service';
   styleUrls: ['./share-request-modal.component.scss']
 })
 export class ShareRequestModalComponent {
+  platformIsClosed = environment.platformIsClosed;
   requesting = false;
   allInitiatives = [];
   showForm = true;
