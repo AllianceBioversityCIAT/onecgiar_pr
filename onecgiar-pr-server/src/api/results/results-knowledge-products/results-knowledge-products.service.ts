@@ -616,7 +616,7 @@ export class ResultsKnowledgeProductsService {
     newKnowledgeProduct: ResultsKnowledgeProduct,
     resultsKnowledgeProductDto: ResultsKnowledgeProductDto,
   ) {
-    //load up the world region tree
+    //loading the world tree. this will help us immensely in the following steps
     const worldTree = await this._clarisaRegionsRepository.loadWorldTree();
 
     //cleaning regions
@@ -628,7 +628,7 @@ export class ResultsKnowledgeProductsService {
       });
     let regions = resultRegions.map((rr) => rr.region_object);
 
-    let cleanedCGRegions = [];
+    let cleanedCGRegions: ClarisaRegion[] = [];
     for (const region of regions) {
       //1. we check if the region has been added before. if so, we ignore it
       if (cleanedCGRegions.some((r) => r.um49Code == region.um49Code)) {
@@ -655,16 +655,20 @@ export class ResultsKnowledgeProductsService {
     }
 
     /*
-      now that we have all the "leafs" from the regions coming from CGSpace,
-      we need to verify if the regions are indeed leafs or not. so, using the
-      worldTree, we find the region on the tree and get all the descendants
-      that are leaves. if the region itself is a leaf, it should prevail. if
-      not, the region descendants will be used instead
+      now that we have all the "leaves" from the regions coming from CGSpace,
+      we need to verify if the regions are not roots. so, using the worldTree, 
+      we find the region on the tree and get the parent of the region.
+      if the region itself is not a root, it should be preserved. 
+      if it is, the region children will be used instead.
     */
     let processedCleanedRegions: ClarisaRegion[] = cleanedCGRegions.flatMap(
       (crn) => {
-        const descendants = worldTree.getAllDescendantRegions(crn, true);
-        return descendants.length == 0 ? [crn] : descendants;
+        const regionNode = worldTree.find(crn);
+        const regionLevel = regionNode.data?.['level'] ?? 0;
+        if (regionLevel == 0) {
+          return []; // should not happen
+        }
+        return regionLevel == 1 ? regionNode.childrenData : [crn];
       },
     );
 

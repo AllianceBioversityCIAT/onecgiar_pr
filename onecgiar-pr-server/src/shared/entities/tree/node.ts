@@ -20,4 +20,12 @@ export class Node<T> {
   get hasChildren() {
     return !this.isLeaf;
   }
+
+  get parentData(): T {
+    return this.parent?.data;
+  }
+
+  get childrenData(): T[] {
+    return this.children.map((c) => c.data);
+  }
 }
