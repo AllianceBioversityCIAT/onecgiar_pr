@@ -84,6 +84,12 @@ export class ResultsKnowledgeProductsService {
       result_knowledge_product_author_array: {
         is_active: true,
       },
+      result_object: {
+        is_active: true,
+        result_region_array: {
+          is_active: true,
+        },
+      },
     };
 
   constructor(
@@ -840,7 +846,10 @@ export class ResultsKnowledgeProductsService {
 
       const knowledgeProduct =
         await this._resultsKnowledgeProductRepository.findOne({
-          where: { results_id: result.id },
+          where: {
+            results_id: result.id,
+            ...this._resultsKnowledgeProductWhere,
+          },
           relations: this._resultsKnowledgeProductRelations,
         });
 
