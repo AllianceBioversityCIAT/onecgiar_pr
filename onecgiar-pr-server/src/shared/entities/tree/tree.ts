@@ -6,7 +6,7 @@ import { Node } from './node';
  */
 export class Tree<T> {
   private _root: Node<T>;
-  private readonly _logger: Logger = new Logger(Tree.name);
+  protected readonly _logger: Logger = new Logger(Tree.name);
   constructor(data: T) {
     let node = new Node(data);
     this._root = node;
@@ -33,7 +33,7 @@ export class Tree<T> {
     }
   }
 
-  public find(data: T, node = this._root): Node<T> {
+  public find(data: T, node: Node<T> = this._root): Node<T> {
     //if the current node matches the data, return it
     if (this.dataEquals(node.data, data)) {
       return node;
@@ -93,7 +93,7 @@ export class Tree<T> {
     }
 
     let currentNode = nodeDescendant.parent;
-    while (currentNode) {
+    while (currentNode && !currentNode.isRoot) {
       if (this.dataEquals(currentNode.data, ancestor)) {
         return true;
       }
@@ -102,5 +102,25 @@ export class Tree<T> {
     }
 
     return false;
+  }
+
+  /**
+   *    gets all descendants of the node, flattened in an array
+   * @param node the starting node. by default is this tree's root
+   */
+  public getAllDescendants(node: Node<T> = this._root): Node<T>[] {
+    let nodeDescendants: Node<T>[] = [];
+
+    if (node.hasChildren) {
+      for (let child of node.children) {
+        const descendants = this.getAllDescendants(child);
+
+        nodeDescendants = nodeDescendants.concat(
+          descendants.length == 0 ? child : descendants,
+        );
+      }
+    }
+
+    return nodeDescendants;
   }
 }

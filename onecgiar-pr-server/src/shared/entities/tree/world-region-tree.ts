@@ -23,4 +23,25 @@ export class WorldRegionTree extends Tree<ClarisaRegion> {
 
     return this.find(toFind);
   }
+
+  public getAllDescendantRegions(
+    region: ClarisaRegion,
+    onlyLeafs: boolean = false,
+  ): ClarisaRegion[] {
+    const nodeRegion = this.find(region);
+    if (!nodeRegion) {
+      this._logger.error(
+        `The region with code ${region.um49Code} does not exist`,
+      );
+      return [];
+    }
+
+    let descendantNodes = this.getAllDescendants(nodeRegion);
+
+    if (onlyLeafs) {
+      descendantNodes = descendantNodes.filter((dn) => dn.isLeaf);
+    }
+
+    return descendantNodes.map((n) => n.data);
+  }
 }

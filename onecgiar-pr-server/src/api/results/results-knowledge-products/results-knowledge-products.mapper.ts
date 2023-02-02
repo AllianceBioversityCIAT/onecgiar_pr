@@ -516,7 +516,7 @@ export class ResultsKnowledgeProductMapper {
 
     (knowledgeProduct.result_object.result_region_array ?? []).forEach((or) => {
       if (!or['matched']) {
-        if (!or.result_region_id) {
+        if (or.result_region_id) {
           or.is_active = false;
         }
 

@@ -84,6 +84,12 @@ export class ResultsKnowledgeProductsService {
       result_knowledge_product_author_array: {
         is_active: true,
       },
+      result_object: {
+        is_active: true,
+        result_region_array: {
+          is_active: true,
+        },
+      },
     };
 
   constructor(
@@ -616,7 +622,7 @@ export class ResultsKnowledgeProductsService {
     newKnowledgeProduct: ResultsKnowledgeProduct,
     resultsKnowledgeProductDto: ResultsKnowledgeProductDto,
   ) {
-    //load up the world region tree
+    //loading the world tree. this will help us immensely in the following steps
     const worldTree = await this._clarisaRegionsRepository.loadWorldTree();
 
     //cleaning regions
@@ -628,37 +634,81 @@ export class ResultsKnowledgeProductsService {
       });
     let regions = resultRegions.map((rr) => rr.region_object);
 
-    let cleanedRegions: ClarisaRegion[] = [];
-    let cleanedResultRegions: ResultRegion[] = [];
+    let cleanedCGRegions: ClarisaRegion[] = [];
     for (const region of regions) {
       //1. we check if the region has been added before. if so, we ignore it
-      if (cleanedRegions.some((r) => r.um49Code == region.um49Code)) {
+      if (cleanedCGRegions.some((r) => r.um49Code == region.um49Code)) {
         continue;
       }
 
       //2. we check if the cleanedRegions array at least one descendant.
-      if (cleanedRegions.some((r) => worldTree.isDescendant(r, region))) {
+      if (cleanedCGRegions.some((r) => worldTree.isDescendant(r, region))) {
         //2.a we ignore it, as it has a descendant already in the list
         continue;
       }
 
       //3. we check if the cleanedRegions array has one or multiple ancestors
-      const ancestors = cleanedRegions.filter((r) =>
+      const ancestors = cleanedCGRegions.filter((r) =>
         worldTree.isAncestor(r, region),
       );
       //3.a if there are ancestors, we remove them from the cleanedRegions list
-      cleanedRegions = cleanedRegions.filter((r) =>
-        ancestors.some((a) => (a.um49Code = r.um49Code)),
+      cleanedCGRegions = cleanedCGRegions.filter(
+        (r) => !ancestors.find((a) => a.um49Code == r.um49Code),
       );
 
       //4. we add it to the cleanedRegions list
-      cleanedRegions.push(region);
+      cleanedCGRegions.push(region);
     }
 
-    cleanedResultRegions = resultRegions.filter((rr) =>
-      cleanedRegions.some((cr) => rr.region_id == cr.um49Code),
+    /*
+      now that we have all the "leaves" from the regions coming from CGSpace,
+      we need to verify if the regions are not roots. so, using the worldTree, 
+      we find the region on the tree and get the parent of the region.
+      if the region itself is not a root, it should be preserved. 
+      if it is, the region children will be used instead.
+    */
+    let processedCleanedRegions: ClarisaRegion[] = cleanedCGRegions.flatMap(
+      (crn) => {
+        const regionNode = worldTree.find(crn);
+        const regionLevel = regionNode.data?.['level'] ?? 0;
+        if (regionLevel == 0) {
+          return []; // should not happen
+        }
+        return regionLevel == 1 ? regionNode.childrenData : [crn];
+      },
     );
 
+    /* 
+      we check if the region was already mapped to the result. if it was, we 
+      remove it from the processedCleanedRegions and add the mapped region to the
+      final cleanedResultRegions. if not, nothing happens
+    */
+    let cleanedResultRegions: ResultRegion[] = [];
+    for (const rr of resultRegions) {
+      const inProcessed = processedCleanedRegions.findIndex(
+        (cr) => rr.region_id == cr.um49Code,
+      );
+      if (inProcessed > -1) {
+        cleanedResultRegions.push(rr);
+        processedCleanedRegions.splice(inProcessed, 1);
+      } else {
+        if (rr.result_region_id) {
+          rr.is_active = false;
+          cleanedResultRegions.push(rr);
+        }
+      }
+    }
+
+    /*
+      if there are still regions that are not mapped to the result, we create them
+    */
+    for (const pcr of processedCleanedRegions) {
+      const newResultRegion = new ResultRegion();
+      newResultRegion.result_id = newResult.id;
+      newResultRegion.region_id = pcr.um49Code;
+
+      cleanedResultRegions.push(newResultRegion);
+    }
     //end cleaning regions
 
     newResult.result_region_array = cleanedResultRegions;
@@ -796,7 +846,10 @@ export class ResultsKnowledgeProductsService {
 
       const knowledgeProduct =
         await this._resultsKnowledgeProductRepository.findOne({
-          where: { results_id: result.id },
+          where: {
+            results_id: result.id,
+            ...this._resultsKnowledgeProductWhere,
+          },
           relations: this._resultsKnowledgeProductRelations,
         });
 
