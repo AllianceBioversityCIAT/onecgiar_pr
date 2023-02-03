@@ -15,29 +15,32 @@ export class AdminPanelRepository {
     const resultCodes = (filterResults?.resultCodes ?? []).join(',');
     const query = `
     select 
-    r.result_code,
-    r.id as result_id,
-    rl.name as result_level,
-    rt.name as result_type,
-    r.title as result_titel,
-    r.description as result_description,
-    r.lead_contact_person,
-    gtl.title as gender_tag_level,
-    gtl2.title as climate_change_tag_level,
-    if(r.is_krs is null,null,if(r.is_krs,'True','False')) as key_result_story,
-    ci.official_code as primary_submitter,
-    GROUP_CONCAT(distinct ci2.official_code SEPARATOR ', ') as contributing_initiatives,
-    GROUP_CONCAT(CONCAT('(Funder name: ',ci4.acronym,' - ',ci4.name ,', Grant title: ',npp.grant_title,', Center Grant ID: ',IFNULL(npp.center_grant_id, 'Not applicable'),', Lead/Contract Center: ',ci3.name,')') SEPARATOR ', ') as non_pooled_project,
-    GROUP_CONCAT(CONCAT(if(rc.is_primary,'(Primary: ','('),ci4.acronym,' - ',ci4.name,')') SEPARATOR ', ') as contributing_centers,
-    CONCAT('(',ci.official_code,' - ',ci.short_name,'): ', 'Toc Level: ' ,IFNULL(tl.name , 'Not provider'), ', ToC result title:' ,IFNULL(tr.title, 'Not provider')) as theory_change,
-    GROUP_CONCAT(distinct CONCAT('(',ci6.official_code,' - ',ci6.short_name,'): ', 'Toc Level: ' ,IFNULL(tl2.name , 'Not provider'), ', ToC result title:' ,IFNULL(tr2.title, 'Not provider')) SEPARATOR ', ') as Contributing_theory_change,
-    r.no_applicable_partner,
-    GROUP_CONCAT(DISTINCT concat('(',prt.name, ', Deliveries type: ', prt.deliveries_type,')') SEPARATOR ', ') as delivery_types,
-    cgs.name as result_scope,
-    GROUP_CONCAT(DISTINCT cr.name separator ', ') as regions,
-    if(rt.id<>6, GROUP_CONCAT(DISTINCT cc3.name separator ', '), rkp.cgspace_countries) as countries,
-    GROUP_CONCAT(DISTINCT CONCAT('(',res2.result_code,': ',res2.result_type,' - ', res2.title,')')) as result_links,
-    GROUP_CONCAT(DISTINCT lr2.legacy_link separator ', ') as result_legacy_links
+    r.result_code as "Result Code",
+    rl.name as "Result Level",
+    rt.name as "Result Type",
+    r.title as "Result Title",
+    r.description as "Result Description",
+    r.lead_contact_person as "Lead Contact Person",
+    gtl.title as "Gender Tag Level",
+    gtl2.title as "Climate Tag Level",
+    if(r.is_krs is null,'Not provided',if(r.is_krs,'Yes','No')) as "Is Key Result Story?",
+    -- section 2
+    ci.official_code as "Primary Submitter",
+    GROUP_CONCAT(distinct ci2.official_code SEPARATOR ', ') as "Contributing Initiative(s)",
+    GROUP_CONCAT(CONCAT('(Funder name: ',ci4.acronym,' - ',ci4.name ,', Grant title: ',npp.grant_title,', Center Grant ID: ',IFNULL(npp.center_grant_id, 'Not applicable'),', Lead/Contract Center: ',ci3.name,')') SEPARATOR ', ') as "Non-pooled Project(s)",
+    GROUP_CONCAT(CONCAT(if(rc.is_primary,'(Primary: ','('),ci4.acronym,' - ',ci4.name,')') SEPARATOR ', ') as "Contributing Center(s)",
+    CONCAT('(',ci.official_code,' - ',ci.short_name,'): ', 'Toc Level: ' ,IFNULL(tl.name , 'Not provider'), ', ToC result title:' ,IFNULL(tr.title, 'Not provider')) as "ToC Mapping (Primary submitter)",
+    GROUP_CONCAT(distinct CONCAT('(',ci6.official_code,' - ',ci6.short_name,'): ', 'Toc Level: ' ,IFNULL(tl2.name , 'Not provider'), ', ToC result title:' ,IFNULL(tr2.title, 'Not provider')) SEPARATOR ', ') as "ToC Mapping (Contributting initiatives)",
+    -- section 3
+    if(r.no_applicable_partner=1, "Yes", "No") as "Are partners applicable?",
+    GROUP_CONCAT(DISTINCT concat('(',prt.name, ', Delivery type(s): ', prt.deliveries_type,')') SEPARATOR ', ') as "Partners (with delivery type)",
+    -- section 4
+    if(cgs.name is null, 'Not Provided', (if(cgs.id = 3, 'National', cgs.name))) as "Geographic Focus",
+    GROUP_CONCAT(DISTINCT cr.name separator ', ') as "Regions",
+    if(rt.id<>6, GROUP_CONCAT(DISTINCT cc3.name separator ', '), rkp.cgspace_countries) as "Countries",
+    -- section 5
+    GROUP_CONCAT(DISTINCT CONCAT('(',res2.result_code,': ',res2.result_type,' - ', res2.title,')')) as "Linked Results",
+    GROUP_CONCAT(DISTINCT lr2.legacy_link separator ', ') as "Results from previous portfolio"
     FROM 
     \`result\` r
     left join gender_tag_level gtl on gtl.id = r.gender_tag_level_id 
@@ -119,7 +122,9 @@ export class AdminPanelRepository {
     ci.short_name,
     r.no_applicable_partner,
     rkp.cgspace_countries,
-    cgs.name;
+    cgs.id,
+    cgs.name,
+    rt.id
     `;
 
     try {
