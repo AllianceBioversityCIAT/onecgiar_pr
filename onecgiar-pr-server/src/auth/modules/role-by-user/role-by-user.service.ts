@@ -10,6 +10,7 @@ import { returnFormatRoleByUser } from './dto/returnFormatRoleByUser.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { UserRepository } from '../user/repositories/user.repository';
 import { User } from '../user/entities/user.entity';
+import { env } from 'process';
 
 @Injectable()
 export class RoleByUserService {

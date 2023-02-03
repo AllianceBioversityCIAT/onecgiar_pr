@@ -72,9 +72,9 @@ export class CustomizedAlertsFeService {
       }, 3000);
 
     alert.addEventListener('animationend', () => {
-      console.log('animationend');
+      // console.log('animationend');
       if (alert.classList.contains('delete')) {
-        console.log('remove');
+        // console.log('remove');
         alert.classList.remove('animate__animated', 'animate__bounceIn', 'animate__bounceOut');
         alert.style.display = 'none';
         alert.parentNode.removeChild(alert);

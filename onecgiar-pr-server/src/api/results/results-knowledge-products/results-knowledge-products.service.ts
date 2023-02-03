@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable, OnModuleInit } from '@nestjs/common';
-import { FindOptionsRelations, FindOptionsWhere, Like } from 'typeorm';
+import { FindOptionsRelations, FindOptionsWhere, IsNull, Like } from 'typeorm';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import {
   HandlersError,
@@ -43,6 +43,10 @@ import { ResultsKnowledgeProductSaveDto } from './dto/results-knowledge-product-
 import { KnowledgeProductFairBaseline } from '../knowledge_product_fair_baseline/entities/knowledge_product_fair_baseline.entity';
 import { KnowledgeProductFairBaselineRepository } from '../knowledge_product_fair_baseline/knowledge_product_fair_baseline.repository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
+import { ResultRegionRepository } from '../result-regions/result-regions.repository';
+import { ClarisaRegionsRepository } from '../../../clarisa/clarisa-regions/ClariasaRegions.repository';
+import { ClarisaRegion } from '../../../clarisa/clarisa-regions/entities/clarisa-region.entity';
+import { ResultRegion } from '../result-regions/entities/result-region.entity';
 
 @Injectable()
 export class ResultsKnowledgeProductsService {
@@ -55,6 +59,11 @@ export class ResultsKnowledgeProductsService {
       result_knowledge_product_metadata_array: true,
       result_knowledge_product_keyword_array: true,
       result_knowledge_product_author_array: true,
+      result_object: {
+        result_region_array: {
+          region_object: true,
+        },
+      },
     };
 
   private readonly _resultsKnowledgeProductWhere: FindOptionsWhere<ResultsKnowledgeProduct> =
@@ -74,6 +83,12 @@ export class ResultsKnowledgeProductsService {
       },
       result_knowledge_product_author_array: {
         is_active: true,
+      },
+      result_object: {
+        is_active: true,
+        result_region_array: {
+          is_active: true,
+        },
       },
     };
 
@@ -97,7 +112,9 @@ export class ResultsKnowledgeProductsService {
     private readonly _yearRepository: YearRepository,
     private readonly _roleByUseRepository: RoleByUserRepository,
     private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
+    private readonly _resultRegionRepository: ResultRegionRepository,
     private readonly _knowledgeProductFairBaselineRepository: KnowledgeProductFairBaselineRepository,
+    private readonly _clarisaRegionsRepository: ClarisaRegionsRepository,
   ) {}
 
   private async createOwnerResult(
@@ -189,7 +206,7 @@ export class ResultsKnowledgeProductsService {
         title: createResultDto.result_name,
         reported_year_id: year.year,
         result_level_id: rl.id,
-        result_code: (last_code + 1)
+        result_code: last_code + 1,
       });
 
       const resultByInitiative = await this._resultByInitiativesRepository.save(
@@ -232,7 +249,7 @@ export class ResultsKnowledgeProductsService {
 
       let isAdmin: any = await this._roleByUseRepository.isUserAdmin(user.id);
 
-      if (isAdmin.is_admin == false) {
+      if (isAdmin?.is_admin == false) {
         if (
           resultKnowledgeProduct.knowledge_product_type == 'Journal Article'
         ) {
@@ -264,6 +281,7 @@ export class ResultsKnowledgeProductsService {
           resultKnowledgeProduct.results_id,
           resultKnowledgeProduct.version_id,
         );
+
       updatedKnowledgeProduct.result_knowledge_product_id =
         resultKnowledgeProduct.result_knowledge_product_id;
 
@@ -292,14 +310,18 @@ export class ResultsKnowledgeProductsService {
         newMetadata,
         true,
       );
-
+      this._resultsKnowledgeProductMapper.patchRegions(
+        updatedKnowledgeProduct,
+        newMetadata,
+        true,
+      );
       updatedKnowledgeProduct =
         await this._resultsKnowledgeProductRepository.save(
           updatedKnowledgeProduct,
         );
 
       //updating general result tables
-      this._resultRepository.update(
+      await this._resultRepository.update(
         { id: resultId },
         {
           title: newMetadata.title,
@@ -323,6 +345,17 @@ export class ResultsKnowledgeProductsService {
       );
       await this._resultsKnowledgeProductMetadataRepository.save(
         updatedKnowledgeProduct.result_knowledge_product_metadata_array ?? [],
+      );
+
+      //geolocation
+      await this.updateGeoLocation(
+        updatedKnowledgeProduct.result_object,
+        updatedKnowledgeProduct,
+        newMetadata,
+      );
+
+      await this._resultRegionRepository.save(
+        updatedKnowledgeProduct.result_object.result_region_array ?? [],
       );
 
       return {
@@ -382,22 +415,38 @@ export class ResultsKnowledgeProductsService {
       if (!mqapResponse) {
         throw {
           response: {},
-          message:
-            'Please add a valid handle. Only handles from CGSpace can be reported.',
+          message: `Please add a valid handle (received: ${handle}). Only handles from CGSpace can be reported.`,
           status: HttpStatus.BAD_REQUEST,
         };
       }
 
-      if (
-        (this._resultsKnowledgeProductMapper.getPublicationYearFromMQAPResponse(
+      const cgYear =
+        this._resultsKnowledgeProductMapper.getPublicationYearFromMQAPResponse(
           mqapResponse,
-        ) ?? 0) !== 2022
+        ) ?? 0;
+
+      if (cgYear < 2022) {
+        throw {
+          response: { title: mqapResponse?.Title },
+          message:
+            "You can't report knowledge products older than 2022 for the current reporting " +
+            'cycle. In case you need support to correct the publication year of ' +
+            'this knowledge product, please contact the librarian of your Center.',
+          status: HttpStatus.UNPROCESSABLE_ENTITY,
+        };
+      } else if (
+        cgYear > 2022 &&
+        (mqapResponse?.Type ?? '') != 'Journal Article'
       ) {
         throw {
           response: { title: mqapResponse?.Title },
           message:
-            'Only knowledge products for 2022 will be accepted in this reporting ' +
-            'cycle. In case you need support to correct the publication year of ' +
+            'Only Journal Articles from 2022 and 2023 will be allowed for this ' +
+            "reporting cycle. The knowledge product's type you are trying to create is " +
+            `"${
+              mqapResponse?.Type ?? 'Not Defined'
+            }" and the issue year is "${cgYear}". ` +
+            'In case you need support to correct the issue year of ' +
             'this knowledge product, please contact the librarian of your Center.',
           status: HttpStatus.UNPROCESSABLE_ENTITY,
         };
@@ -466,6 +515,7 @@ export class ResultsKnowledgeProductsService {
       );
 
       newKnowledgeProduct.is_melia = false;
+      newKnowledgeProduct.result_object = newResult;
 
       newKnowledgeProduct = await this._resultsKnowledgeProductRepository.save(
         newKnowledgeProduct,
@@ -494,6 +544,17 @@ export class ResultsKnowledgeProductsService {
       );
       await this._resultsKnowledgeProductMetadataRepository.save(
         newKnowledgeProduct.result_knowledge_product_metadata_array ?? [],
+      );
+
+      //geolocation
+      await this.updateGeoLocation(
+        newResult,
+        newKnowledgeProduct,
+        resultsKnowledgeProductDto,
+      );
+
+      await this._resultRegionRepository.save(
+        newResult.result_region_array ?? [],
       );
 
       const fairBaseline = new KnowledgeProductFairBaseline();
@@ -554,6 +615,137 @@ export class ResultsKnowledgeProductsService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
+  }
+
+  private async updateGeoLocation(
+    newResult: Result,
+    newKnowledgeProduct: ResultsKnowledgeProduct,
+    resultsKnowledgeProductDto: ResultsKnowledgeProductDto,
+  ) {
+    //loading the world tree. this will help us immensely in the following steps
+    const worldTree = await this._clarisaRegionsRepository.loadWorldTree();
+
+    //cleaning regions
+    let resultRegions = (newResult.result_region_array ?? [])
+      .filter((rr) => rr.region_id)
+      .map((rr) => {
+        rr.region_object = worldTree.findById(rr.region_id)?.data;
+        return rr;
+      });
+    let regions = resultRegions.map((rr) => rr.region_object);
+
+    let cleanedCGRegions: ClarisaRegion[] = [];
+    for (const region of regions) {
+      //1. we check if the region has been added before. if so, we ignore it
+      if (cleanedCGRegions.some((r) => r.um49Code == region.um49Code)) {
+        continue;
+      }
+
+      //2. we check if the cleanedRegions array at least one descendant.
+      if (cleanedCGRegions.some((r) => worldTree.isDescendant(r, region))) {
+        //2.a we ignore it, as it has a descendant already in the list
+        continue;
+      }
+
+      //3. we check if the cleanedRegions array has one or multiple ancestors
+      const ancestors = cleanedCGRegions.filter((r) =>
+        worldTree.isAncestor(r, region),
+      );
+      //3.a if there are ancestors, we remove them from the cleanedRegions list
+      cleanedCGRegions = cleanedCGRegions.filter(
+        (r) => !ancestors.find((a) => a.um49Code == r.um49Code),
+      );
+
+      //4. we add it to the cleanedRegions list
+      cleanedCGRegions.push(region);
+    }
+
+    /*
+      now that we have all the "leaves" from the regions coming from CGSpace,
+      we need to verify if the regions are not roots. so, using the worldTree, 
+      we find the region on the tree and get the parent of the region.
+      if the region itself is not a root, it should be preserved. 
+      if it is, the region children will be used instead.
+    */
+    let processedCleanedRegions: ClarisaRegion[] = cleanedCGRegions.flatMap(
+      (crn) => {
+        const regionNode = worldTree.find(crn);
+        const regionLevel = regionNode.data?.['level'] ?? 0;
+        if (regionLevel == 0) {
+          return []; // should not happen
+        }
+        return regionLevel == 1 ? regionNode.childrenData : [crn];
+      },
+    );
+
+    /* 
+      we check if the region was already mapped to the result. if it was, we 
+      remove it from the processedCleanedRegions and add the mapped region to the
+      final cleanedResultRegions. if not, nothing happens
+    */
+    let cleanedResultRegions: ResultRegion[] = [];
+    for (const rr of resultRegions) {
+      const inProcessed = processedCleanedRegions.findIndex(
+        (cr) => rr.region_id == cr.um49Code,
+      );
+      if (inProcessed > -1) {
+        cleanedResultRegions.push(rr);
+        processedCleanedRegions.splice(inProcessed, 1);
+      } else {
+        if (rr.result_region_id) {
+          rr.is_active = false;
+          cleanedResultRegions.push(rr);
+        }
+      }
+    }
+
+    /*
+      if there are still regions that are not mapped to the result, we create them
+    */
+    for (const pcr of processedCleanedRegions) {
+      const newResultRegion = new ResultRegion();
+      newResultRegion.result_id = newResult.id;
+      newResultRegion.region_id = pcr.um49Code;
+
+      cleanedResultRegions.push(newResultRegion);
+    }
+    //end cleaning regions
+
+    newResult.result_region_array = cleanedResultRegions;
+    newResult.has_regions = (newResult.result_region_array ?? []).length != 0;
+    const country_array = (newKnowledgeProduct.cgspace_countries ?? '').split(
+      '; ',
+    );
+    newResult.has_countries =
+      (newKnowledgeProduct.cgspace_countries ?? '').length != 0;
+    //newResult.has_regions = (newKnowledgeProduct.cgspace_regions??'').length != 0;
+
+    if (resultsKnowledgeProductDto.is_global_geoscope) {
+      newResult.geographic_scope_id = 1;
+    } else if (!newResult.has_countries && !newResult.has_regions) {
+      /*
+      in case we do not explicitly receive "global" as a region from M-QAP,
+      but the countries and regions array is empty, we are going to flag this
+      as "to be determined"
+      */
+      newResult.geographic_scope_id = 50;
+    } else {
+      if (newResult.has_regions) {
+        newResult.geographic_scope_id = 2;
+      } else {
+        newResult.geographic_scope_id = country_array.length > 1 ? 3 : 4;
+      }
+    }
+
+    //updating general result tables
+    this._resultRepository.update(
+      { id: newResult.id },
+      {
+        geographic_scope_id: newResult.geographic_scope_id,
+        has_countries: newResult.has_countries,
+        has_regions: newResult.has_regions,
+      },
+    );
   }
 
   async findResultKnowledgeProductByHandle(handle: string) {
@@ -654,7 +846,10 @@ export class ResultsKnowledgeProductsService {
 
       const knowledgeProduct =
         await this._resultsKnowledgeProductRepository.findOne({
-          where: { results_id: result.id },
+          where: {
+            results_id: result.id,
+            ...this._resultsKnowledgeProductWhere,
+          },
           relations: this._resultsKnowledgeProductRelations,
         });
 
@@ -804,6 +999,31 @@ export class ResultsKnowledgeProductsService {
       return {
         response: {},
         message: 'The section has been updated successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async findAllActiveKps() {
+    try {
+      const kps = await this._resultsKnowledgeProductRepository.find({
+        where: {
+          is_active: true,
+          result_object: {
+            is_active: true,
+          },
+        },
+        relations: {
+          result_object: true,
+        },
+      });
+
+      return {
+        response: kps,
+        message:
+          'The active knowledge products have been retrieved successfully',
         status: HttpStatus.OK,
       };
     } catch (error) {

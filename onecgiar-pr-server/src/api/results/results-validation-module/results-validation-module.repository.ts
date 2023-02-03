@@ -286,7 +286,7 @@ export class resultValidationRepository extends Repository<Validation>{
 	SELECT
 			'evidences' as section_name,
 			CASE
-				when ((
+				when if(rid.innovation_readiness_level_id = 11 and r.result_type_id = 7, true,((
 			SELECT
 					if((sum(if(e.link is not null and e.link <> '', 1, 0)) - count(e.id)) is null,
 					0,
@@ -328,12 +328,15 @@ export class resultValidationRepository extends Repository<Validation>{
 			where
 					e.result_id = r.id
 				and e.is_supplementary = 1
-				and e.is_active > 0) = 0)
+				and e.is_active > 0) = 0))
 			then TRUE
 			else false
 		END as validation
 	from
 			\`result\` r
+		left join results_innovations_dev rid on
+		rid.results_id = r.id
+		and rid.is_active > 0
 	WHERE
 			r.id = ?
 		and r.is_active > 0;
@@ -563,7 +566,8 @@ export class resultValidationRepository extends Repository<Validation>{
 		validation v
 	WHERE
 		v.results_id = ?
-		and v.is_active > 0;
+		and v.is_active > 0
+	order by v.id desc;
     `;
     try {
       const shareResultRequest: Validation[] = await this.dataSource.query(queryData, [resultId]); 
@@ -611,6 +615,23 @@ export class resultValidationRepository extends Repository<Validation>{
     `;
     try {
       const shareResultRequest = await this.dataSource.query(queryData, [resultId]); 
+	  return shareResultRequest;
+    } catch (error) {
+		throw this._handlersError.returnErrorRepository({
+        className: resultValidationRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async inactiveAllOldInserts() {
+    const queryData = `
+		UPDATE validation 
+			set is_active = 0;
+    `;
+    try {
+      const shareResultRequest = await this.dataSource.query(queryData); 
 	  return shareResultRequest;
     } catch (error) {
 		throw this._handlersError.returnErrorRepository({

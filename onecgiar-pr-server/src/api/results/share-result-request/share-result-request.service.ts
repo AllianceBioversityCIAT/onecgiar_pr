@@ -153,6 +153,8 @@ export class ShareResultRequestService {
           const resultTocResult = await this._resultsTocResultRepository.existsResultTocResult(result.id, shared_inititiative_id);
           if(!resultTocResult){
             await this._resultsTocResultRepository.save(newRtR);
+          }else{
+            await this._resultsTocResultRepository.update(resultTocResult.result_toc_result_id, {planned_result: planned_result, toc_result_id: toc_result_id, action_area_outcome_id: action_area_outcome_id});
           }
         }else{
           const result = await this._resultRepository.getResultById(result_id);

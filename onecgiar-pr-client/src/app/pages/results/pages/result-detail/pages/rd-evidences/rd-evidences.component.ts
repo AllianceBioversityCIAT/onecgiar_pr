@@ -26,12 +26,12 @@ export class RdEvidencesComponent {
   getSectionInformation() {
     this.api.resultsSE.GET_evidences().subscribe(({ response }) => {
       this.evidencesBody = response;
-      console.log(this.evidencesBody);
-      console.log(this.evidencesBody?.gender_tag_level);
+      // console.log(this.evidencesBody);
+      // console.log(this.evidencesBody?.gender_tag_level);
     });
   }
   onSaveSection() {
-    console.log(this.evidencesBody);
+    // console.log(this.evidencesBody);
     this.api.resultsSE.POST_evidences(this.evidencesBody).subscribe(resp => {
       this.getSectionInformation();
     });

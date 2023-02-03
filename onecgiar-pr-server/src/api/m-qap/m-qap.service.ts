@@ -27,7 +27,11 @@ export class MQAPService {
             }),
           ),
       ).catch((error) => {
-        this._logger.error(`${error}: ${JSON.stringify(error.response?.data)}`);
+        this._logger.error(
+          `${error} (for Handle ${handle}): ${JSON.stringify(
+            error.response?.data,
+          )}`,
+        );
         return null;
       });
     } catch (err) {

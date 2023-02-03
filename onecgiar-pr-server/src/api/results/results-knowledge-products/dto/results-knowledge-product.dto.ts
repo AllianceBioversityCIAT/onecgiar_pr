@@ -14,11 +14,14 @@ export class ResultsKnowledgeProductDto {
   metadata: ResultsKnowledgeProductMetadataDto[];
   metadataCG: ResultsKnowledgeProductMetadataDto;
   metadataWOS: ResultsKnowledgeProductMetadataDto;
-  regions: BasicInfoDto[];
-  countries: BasicInfoDto[];
+  //regions: BasicInfoDto[];
+  //countries: BasicInfoDto[];
   //TODO remove when mapping is done
-  cgspace_regions: string;
+  //cgspace_regions: string;
+  is_global_geoscope: boolean;
   cgspace_countries: string;
+  clarisa_regions: number[];
+  //clarisa_countries: number[];
   handle: string;
   authors: ResultsKnowledgeProductAuthorDto[];
   type: string;

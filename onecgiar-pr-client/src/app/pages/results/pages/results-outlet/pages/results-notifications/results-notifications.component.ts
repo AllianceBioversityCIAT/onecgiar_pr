@@ -22,7 +22,7 @@ export class ResultsNotificationsComponent {
 
   get_section_information() {
     this.api.resultsSE.GET_allRequest().subscribe(({ response }) => {
-      console.log(response);
+      // console.log(response);
       if (response) {
         const { requestData, requestPendingData } = response;
         this.interactiveNotisList = requestData;
@@ -31,8 +31,8 @@ export class ResultsNotificationsComponent {
           if (item.request_status_id == 1) item.request_status_id = 4;
         });
         this.api.dataControlSE.myInitiativesList.map(myInit => {
-          console.log(myInit);
-          console.log(myInit?.role == 'Member');
+          // console.log(myInit);
+          // console.log(myInit?.role == 'Member');
           if (myInit?.role == 'Member') {
             let notiFinded = this.interactiveNotisList.find(noti => noti.approving_inititiative_id == myInit.initiative_id);
             if (notiFinded) notiFinded.readOnly = true;

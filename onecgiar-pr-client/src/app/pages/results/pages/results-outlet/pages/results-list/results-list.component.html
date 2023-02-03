@@ -9,7 +9,7 @@
     [icon]="this.gettingReport?'loop':'file_download'"></app-pr-button>
 </div>
 <div class="table">
-  <p-table sortField="id" [sortOrder]="-1"
+  <p-table sortField="result_code" [sortOrder]="-1"
     [value]="(this.api.dataControlSE.resultsList | resultsListFilter:this.resultsListService.text_to_search:this.api.resultsListFilterSE.filterJoin)"
     responsiveLayout="scroll"
     [paginator]="(this.api.dataControlSE.resultsList | resultsListFilter:this.resultsListService.text_to_search:this.api.resultsListFilterSE.filterJoin)?.length"
@@ -20,13 +20,13 @@
         <th pSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder">
           <p-sortIcon field="{{column.attr}}"></p-sortIcon>{{column.title}}
         </th>
-        <th>Action</th>
+        <th *ngIf="!this.api.dataControlSE.platformIsClosed">Action</th>
       </tr>
     </ng-template>
     <ng-template pTemplate="body" let-result>
       <tr>
         <td *ngFor="let column of columnOrder; let i=index" class="{{column.attr}}">
-          <a class="{{column.class}}" [routerLink]="'/result/result-detail/' + result?.id">
+          <a class="{{column.class}}" [routerLink]="'/result/result-detail/' + result?.result_code">
             <div class="point" [style.background]="'var(--pr-color-result-level-'+result?.result_level_id+')'"
               *ngIf="column.attr === 'result_type'"></div>
 
@@ -38,7 +38,7 @@
             {{ result[column.attr] }}
           </div>
         </td>
-        <td>
+        <td *ngIf="!this.api.dataControlSE.platformIsClosed">
           <div class="icon_container"><i class="pi pi-ellipsis-v"
               (click)="menu.toggle($event);onPressAction(result)"></i></div>
         </td>

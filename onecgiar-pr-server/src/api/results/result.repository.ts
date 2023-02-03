@@ -356,15 +356,17 @@ WHERE
   async reportingResultList(initDate: Date, endDate: Date) {
     const queryData = `
     SELECT
-      r.result_code as \`Result id\`,
+      r.result_code as \`Result code\`,
     	r.reported_year_id as \`Reporting year\`,
     	r.title as \`Result title\`,
     	CONCAT(rl.name, ' - ', rt.name) as \`Result type\`,
+      (Select gtl2.description from gender_tag_level gtl2 where id = r.gender_tag_level_id) as \`Gender tag\`, 
+      (Select gtl2.description from gender_tag_level gtl2 where id = r.climate_change_tag_level_id) as \`Climate tag\`,
     	ci.official_code as \`Submitter\` ,
     	if(r.status = 0,
     	'Editing',
     	'Submitted') as \`Status\`,
-    	DATE_FORMAT(r.created_date, "%Y-%m-%d") as \`Creatio date\`,
+    	DATE_FORMAT(r.created_date, "%Y-%m-%d") as \`Creation date\`,
     	tr.work_package_id as \`Work package id\`,
     	wp.name as \`Work package title\`,
     	rtr.toc_result_id as \`Toc result id\`,
@@ -701,6 +703,28 @@ WHERE
     try {
       const results: Array<{ id }> = await this.query(queryData);
       return results;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async transformResultCode(resultCode: number): Promise<number> {
+    const queryData = `
+    SELECT 
+    r.id
+    FROM 
+    \`result\` r 
+    WHERE r.is_active > 0
+      and r.version_id = 1
+      and r.result_code = ?;
+    `;
+    try {
+      const results: Array<{ id }> = await this.query(queryData, [resultCode]);
+      return results?.length?results[0].id:null;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultRepository.name,

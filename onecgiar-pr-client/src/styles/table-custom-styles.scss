@@ -1,0 +1,31 @@
+.table_container {
+    background-color: white;
+
+    .first_options {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        align-items: center;
+
+        .search_input {
+            margin-bottom: -3px !important;
+        }
+
+    }
+
+    .second_options {
+        display: flex;
+        justify-content: space-between;
+    }
+}
+
+.expand_table {
+    position: fixed !important;
+    z-index: 6;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh !important;
+    display: flex;
+    flex-direction: column;
+}

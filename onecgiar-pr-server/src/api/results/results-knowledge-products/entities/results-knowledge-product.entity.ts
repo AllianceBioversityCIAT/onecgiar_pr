@@ -247,4 +247,10 @@ export class ResultsKnowledgeProduct {
     name: 'melia_type_id',
   })
   melia_type_object: ClarisaMeliaStudyType;
+
+  get isJournalArticle() {
+    return (this.knowledge_product_type ?? '')
+      .toLocaleLowerCase()
+      .includes('journal article');
+  }
 }

@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
+import { BasicInfoDto } from '../../../shared/globalInterfaces/basic-info.dto';
 import { MQAPResultDto } from '../../m-qap/dtos/m-qap.dto';
+import { Result } from '../entities/result.entity';
+import { ResultRegion } from '../result-regions/entities/result-region.entity';
 import { MQAPAuthor } from './dto/mqap-author.dto';
 import { ResultsKnowledgeProductAltmetricDto } from './dto/results-knowledge-product-altmetric.dto';
 import { ResultsKnowledgeProductAuthorDto } from './dto/results-knowledge-product-author.dto';
@@ -50,22 +53,22 @@ export class ResultsKnowledgeProductMapper {
       ).join('; ');
     }
 
-    if (typeof mqapResponseDto?.['Region of the research'] === 'string') {
+    /*if (typeof mqapResponseDto?.['Region of the research'] === 'string') {
       knowledgeProductDto.cgspace_regions =
         mqapResponseDto?.['Region of the research'];
     } else {
       knowledgeProductDto.cgspace_regions = (
         mqapResponseDto?.['Region of the research'] ?? []
       ).join('; ');
-    }
+    }*/
 
     if ((knowledgeProductDto.cgspace_countries ?? '').length < 1) {
       knowledgeProductDto.cgspace_countries = null;
     }
 
-    if ((knowledgeProductDto.cgspace_regions ?? '').length < 1) {
+    /*if ((knowledgeProductDto.cgspace_regions ?? '').length < 1) {
       knowledgeProductDto.cgspace_regions = null;
-    }
+    }*/
 
     knowledgeProductDto = this.fillRelatedMetadata(
       mqapResponseDto,
@@ -161,9 +164,31 @@ export class ResultsKnowledgeProductMapper {
       return institution;
     });
 
-    //TODO map country and region information
+    //TODO map country information
+    let regions = this.getAsArray(dto?.['Region of the research']);
+    knowledgeProductDto.clarisa_regions = regions
+      .filter((r) => r)
+      .map((r) => r.clarisa_id);
+
+    const geoLocation = this.getAsArray(dto?.['Geographic location']);
+    const isGlobal = geoLocation.find((r) => r.clarisa_id === 1);
+    if (isGlobal) {
+      knowledgeProductDto.is_global_geoscope = true;
+      knowledgeProductDto.clarisa_regions =
+        knowledgeProductDto.clarisa_regions.filter((r) => r === 1);
+    }
 
     return knowledgeProductDto;
+  }
+
+  private getAsArray<T>(arg: T | T[]): T[] {
+    if (arg == null) {
+      return [];
+    } else if (!Array.isArray(arg)) {
+      return [arg];
+    } else {
+      return arg;
+    }
   }
 
   private getAltmetricInfoFromMQAPResponse(
@@ -269,14 +294,14 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProductDto.reusable = entity.reusable;
     knowledgeProductDto.sponsor = entity.sponsors;
     knowledgeProductDto.type = entity.knowledge_product_type;
-    //TODO remove when this mapping is done
-    knowledgeProductDto.cgspace_countries = entity.cgspace_countries;
-    knowledgeProductDto.cgspace_regions = entity.cgspace_regions;
     knowledgeProductDto.is_melia = entity.is_melia;
     knowledgeProductDto.melia_previous_submitted =
       entity.melia_previous_submitted;
     knowledgeProductDto.melia_type_id = entity.melia_type_id;
     knowledgeProductDto.ost_melia_study_id = entity.ost_melia_study_id;
+    //TODO remove when this mapping is done
+    knowledgeProductDto.cgspace_countries = entity.cgspace_countries;
+    //knowledgeProductDto.cgspace_regions = entity.cgspace_regions;
 
     const authors = entity.result_knowledge_product_author_array;
     knowledgeProductDto.authors = (authors ?? []).map((a) => {
@@ -342,8 +367,14 @@ export class ResultsKnowledgeProductMapper {
       return institutionDto;
     });
 
-    knowledgeProductDto.countries = null; //TODO TBD
-    knowledgeProductDto.regions = null; //TODO TBD
+    knowledgeProductDto.cgspace_countries = null; //TODO TBD
+
+    const regions = entity.result_object.result_region_array;
+    knowledgeProductDto.clarisa_regions = (regions ?? []).map(
+      (r) => r.region_id,
+    );
+    knowledgeProductDto.is_global_geoscope =
+      entity.result_object.geographic_scope_id === 1;
 
     return knowledgeProductDto;
   }
@@ -362,12 +393,12 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProduct.findable = dto.findable;
     knowledgeProduct.handle = dto.handle;
     knowledgeProduct.interoperable = dto.interoperable;
-    knowledgeProduct.is_melia = null;
+    //knowledgeProduct.is_melia = null;
     knowledgeProduct.knowledge_product_type = dto.type;
     knowledgeProduct.licence = dto.licence;
-    knowledgeProduct.melia_previous_submitted = null;
-    knowledgeProduct.melia_type_id = null;
-    knowledgeProduct.ost_melia_study_id = null;
+    //knowledgeProduct.melia_previous_submitted = null;
+    //knowledgeProduct.melia_type_id = null;
+    //knowledgeProduct.ost_melia_study_id = null;
     knowledgeProduct.name = dto.title;
     knowledgeProduct.reusable = dto.reusable;
     knowledgeProduct.sponsors = dto.sponsor;
@@ -381,9 +412,9 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProduct.results_id = resultId;
     knowledgeProduct.version_id = versionId;
 
-    //TODO remove when mapping of countries and regions is done
+    //TODO remove when mapping of countries is done
     knowledgeProduct.cgspace_countries = dto.cgspace_countries;
-    knowledgeProduct.cgspace_regions = dto.cgspace_regions;
+    //knowledgeProduct.cgspace_regions = dto.cgspace_regions;
 
     return knowledgeProduct;
   }
@@ -397,7 +428,8 @@ export class ResultsKnowledgeProductMapper {
     this.patchMetadata(knowledgeProduct, dto);
     this.patchAltmetricData(knowledgeProduct, dto);
     this.patchInstitutions(knowledgeProduct, dto);
-    //TODO map country and region information to results relation
+    //TODO map country information to results relation
+    this.patchRegions(knowledgeProduct, dto);
 
     return knowledgeProduct;
   }
@@ -456,6 +488,45 @@ export class ResultsKnowledgeProductMapper {
     );
 
     knowledgeProduct.result_knowledge_product_institution_array = institutions;
+  }
+
+  public patchRegions(
+    knowledgeProduct: ResultsKnowledgeProduct,
+    dto: ResultsKnowledgeProductDto,
+    upsert: boolean = false,
+  ) {
+    const regions = (dto.clarisa_regions ?? []).map((r) => {
+      let region: ResultRegion;
+      if (upsert) {
+        region = (
+          knowledgeProduct.result_object.result_region_array ?? []
+        ).find((orr) => orr.region_id == r);
+        if (region) {
+          region['matched'] = true;
+        }
+      }
+
+      region ??= new ResultRegion();
+
+      region.region_id = r;
+      region.result_id = knowledgeProduct.results_id;
+
+      return region;
+    });
+
+    (knowledgeProduct.result_object.result_region_array ?? []).forEach((or) => {
+      if (!or['matched']) {
+        if (or.result_region_id) {
+          or.is_active = false;
+        }
+
+        regions.push(or);
+      } else {
+        delete or['matched'];
+      }
+    });
+
+    knowledgeProduct.result_object.result_region_array = regions;
   }
 
   public patchAltmetricData(

@@ -3,7 +3,7 @@
 
 <div>
     <app-toc-initiative-out [initiative]="result_toc_result"
-        [editable]="(this.api.rolesSE.validateInitiative(result_toc_result?.initiative_id) || this.api.rolesSE.isAdmin) && !this.dataControlSE?.currentResult?.status"
+        [editable]="!platformIsClosed && (this.api.rolesSE.validateInitiative(result_toc_result?.initiative_id) || this.api.rolesSE.isAdmin) && !this.dataControlSE?.currentResult?.status"
         [resultLevelId]="1">
     </app-toc-initiative-out>
 </div>
@@ -12,7 +12,7 @@
 </app-pr-field-header>
 <div *ngFor="let item of contributors_result_toc_result">
     <app-toc-initiative-out [initiative]="item"
-        [editable]="(this.api.rolesSE.validateInitiative(item?.initiative_id) || this.api.rolesSE.isAdmin) && !this.dataControlSE?.currentResult?.status"
+        [editable]="!platformIsClosed && (this.api.rolesSE.validateInitiative(item?.initiative_id) || this.api.rolesSE.isAdmin) && !this.dataControlSE?.currentResult?.status"
         [resultLevelId]="1"></app-toc-initiative-out>
 </div>
 

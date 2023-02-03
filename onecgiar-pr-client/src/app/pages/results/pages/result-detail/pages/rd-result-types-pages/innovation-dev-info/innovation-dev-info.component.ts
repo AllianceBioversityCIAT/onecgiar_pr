@@ -19,7 +19,7 @@ export class InnovationDevInfoComponent implements OnInit {
   getSectionInformation() {
     this.api.resultsSE.GET_innovationDev().subscribe(
       ({ response }) => {
-        console.log(response);
+        // console.log(response);
         this.innovationDevInfoBody = response;
       },
       err => {
@@ -28,15 +28,15 @@ export class InnovationDevInfoComponent implements OnInit {
     );
   }
   onSaveSection() {
-    console.log(this.innovationDevInfoBody);
+    // console.log(this.innovationDevInfoBody);
     if (this.innovationDevInfoBody.innovation_nature_id != 12) {
-      console.log('clean');
+      // console.log('clean');
       this.innovationDevInfoBody.number_of_varieties = null;
       this.innovationDevInfoBody.is_new_variety = null;
     }
     this.api.resultsSE.PATCH_innovationDev(this.innovationDevInfoBody).subscribe(
       ({ response }) => {
-        console.log(response);
+        // console.log(response);
         this.getSectionInformation();
       },
       err => {

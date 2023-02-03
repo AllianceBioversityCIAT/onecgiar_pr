@@ -8,9 +8,10 @@ import { FormsModule } from '@angular/forms';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { ResultHistoryOfChangesModalModule } from '../../../admin-section/pages/completeness-status/components/result-history-of-changes-modal/result-history-of-changes-modal.module';
 import { FilterByTextModule } from '../../../../shared/pipes/filter-by-text.module';
+import { FilterInitWithRoleCoordAndLeadPipe } from '../../pipes/filter-init-with-role-coord-and-lead.pipe';
 
 @NgModule({
-  declarations: [InitCompletenessStatusComponent],
+  declarations: [InitCompletenessStatusComponent, FilterInitWithRoleCoordAndLeadPipe],
   exports: [InitCompletenessStatusComponent],
   imports: [CommonModule, InitCompletenessStatusRoutingModule, TableModule, FormsModule, CustomFieldsModule, ResultHistoryOfChangesModalModule, FilterByTextModule]
 })

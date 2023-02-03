@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { AuthService } from '../api/auth.service';
 import { GreenChecksService } from './green-checks.service';
 import { DataControlService } from '../data-control.service';
+import { environment } from 'src/environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -32,7 +33,7 @@ export class RolesService {
 
   fieldValidation(restrictionId) {
     const restrictionFinded = this.restrictions.find(restriction => restriction.id == restrictionId);
-    console.log(restrictionFinded);
+    // console.log(restrictionFinded);
     return Boolean(restrictionFinded.roleIds.find(roleId => roleId == this.currentInitiativeRole));
   }
   validateApplication(application) {
@@ -42,6 +43,12 @@ export class RolesService {
 
   async validateReadOnly(result?) {
     // console.log('%cvalidateReadOnly', 'background: #222; color: #52cd47');
+    if (environment?.platformIsClosed) {
+      this.readOnly = true;
+      this.updateRolesListFromLocalStorage();
+      this.updateRolesList();
+      return null;
+    }
     const updateMyRoles = async roles => {
       if (!this.roles) await roles;
       if (!this.roles) return (this.readOnly = true);

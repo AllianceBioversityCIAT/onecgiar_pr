@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { Title } from '@angular/platform-browser';
 
 @Component({
   selector: 'app-type-one-report',
@@ -6,5 +7,8 @@ import { Component } from '@angular/core';
   styleUrls: ['./type-one-report.component.scss']
 })
 export class TypeOneReportComponent {
-  constructor() {}
+  constructor(private titleService: Title) {}
+  ngOnInit(): void {
+    this.titleService.setTitle('Type one report');
+  }
 }

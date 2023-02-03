@@ -25,6 +25,8 @@ import { EvidencesRepository } from '../evidences/evidences.repository';
 import { KnowledgeProductFairBaselineRepository } from '../knowledge_product_fair_baseline/knowledge_product_fair_baseline.repository';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
+import { ResultRegionRepository } from '../result-regions/result-regions.repository';
+import { ClarisaRegionsRepository } from '../../../clarisa/clarisa-regions/ClariasaRegions.repository';
 
 @Module({
   imports: [HttpModule],
@@ -51,7 +53,31 @@ import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByU
     EvidencesRepository,
     KnowledgeProductFairBaselineRepository,
     RoleByUserRepository,
+    ResultRegionRepository,
+    ClarisaRegionsRepository,
   ],
-  exports: [ResultsKnowledgeProductsRepository],
+  exports: [
+    ResultsKnowledgeProductsRepository,
+    ResultRepository,
+    MQAPService,
+    VersionRepository,
+    ResultsKnowledgeProductMapper,
+    ResultsKnowledgeProductAltmetricRepository,
+    ResultsKnowledgeProductAuthorRepository,
+    ResultsKnowledgeProductInstitutionRepository,
+    ResultsKnowledgeProductKeywordRepository,
+    ResultsKnowledgeProductMetadataRepository,
+    ClarisaInitiativesRepository,
+    ResultByLevelRepository,
+    ResultLevelRepository,
+    ResultTypeRepository,
+    YearRepository,
+    ResultByInitiativesRepository,
+    EvidencesRepository,
+    KnowledgeProductFairBaselineRepository,
+    RoleByUserRepository,
+    ResultRegionRepository,
+    ClarisaRegionsRepository,
+  ],
 })
 export class ResultsKnowledgeProductsModule {}

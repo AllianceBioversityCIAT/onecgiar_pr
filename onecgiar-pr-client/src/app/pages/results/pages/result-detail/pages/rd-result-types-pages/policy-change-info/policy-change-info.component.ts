@@ -26,7 +26,7 @@ export class PolicyChangeInfoComponent implements OnInit {
   }
   getSectionInformation() {
     this.api.resultsSE.GET_policyChanges().subscribe(({ response }) => {
-      console.log(response);
+      // console.log(response);
       this.innovationUseInfoBody = response;
     });
   }
@@ -39,7 +39,7 @@ export class PolicyChangeInfoComponent implements OnInit {
   }
   onSaveSection() {
     this.api.resultsSE.PATCH_policyChanges(this.innovationUseInfoBody).subscribe(resp => {
-      console.log(resp);
+      // console.log(resp);
       this.getSectionInformation();
     });
   }

@@ -35,7 +35,7 @@ export class RdGeneralInformationComponent {
   }
   onSaveSection() {
     this.generalInfoBody.institutions_type = this.generalInfoBody.institutions_type.filter(inst => !inst.hasOwnProperty('institutions_id'));
-    console.log(this.generalInfoBody);
+    // console.log(this.generalInfoBody);
     this.api.resultsSE.PATCH_generalInformation(this.generalInfoBody).subscribe(
       resp => {
         this.getSectionInformation();

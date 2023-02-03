@@ -35,7 +35,7 @@ export class AuthService {
   }
 
   private logOutTawtkTo() {
-    console.log(window.hasOwnProperty('Tawk_API'))
+    // console.log(window.hasOwnProperty('Tawk_API'))
     if (window.hasOwnProperty('Tawk_API')) {
       try {
         window['Tawk_API'].endChat();
@@ -45,7 +45,7 @@ export class AuthService {
         };
         this.cleanTWKCookies();
       } catch (error) {
-        console.log(error)
+        console.log(error);
       }
       // if (window['Tawk_API'].isChatMaximized()) {
       // }
@@ -53,7 +53,7 @@ export class AuthService {
   }
 
   cleanTWKCookies() {
-    console.log('cleanTWKCookies');
+    // console.log('cleanTWKCookies');
     // window['Tawk_API'].endChat()
 
     var cookies = document.cookie.split(';');
@@ -62,7 +62,7 @@ export class AuthService {
 
       if (cookie?.split('=')[0]?.includes('twk')) {
         const eqPos = cookie.indexOf('=');
-        console.log(cookie + ' ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^');
+        // console.log(cookie + ' ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^');
         let name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
         document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT';
       }

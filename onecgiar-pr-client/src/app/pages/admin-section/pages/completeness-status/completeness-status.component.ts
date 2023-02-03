@@ -12,19 +12,22 @@ export class CompletenessStatusComponent {
   textToFind = '';
   resultsList: any[];
   initiativesSelected = [];
+  show_full_screen = false;
+  allInitiatives = [];
+
   constructor(public api: ApiService, public resultHistoryOfChangesModalSE: ResultHistoryOfChangesModalService, public exportTablesSE: ExportTablesService) {}
   ngOnInit(): void {
-    this.POST_reportSesultsCompleteness();
+    this.POST_reportSesultsCompleteness([], 1);
     this.api.rolesSE.validateReadOnly();
+    this.GET_AllInitiatives();
   }
-  POST_reportSesultsCompleteness() {
-    this.api.resultsSE.POST_reportSesultsCompleteness([1]).subscribe(({ response }) => {
+  POST_reportSesultsCompleteness(inits: any[], role?: number) {
+    this.api.resultsSE.POST_reportSesultsCompleteness(inits, role).subscribe(({ response }) => {
       this.resultsList = response;
-      console.log(response);
+      // console.log(response);
     });
   }
 
-  onSelectInit() {}
   onRemoveinit(option) {}
 
   exportExcel(resultsList) {
@@ -48,7 +51,7 @@ export class CompletenessStatusComponent {
     });
     resultsList.map(result => {
       const { result_code, result_title, official_code, completeness, result_type_name, general_information, theory_of_change, partners, geographic_location, links_to_results, evidence, section_seven, is_submitted } = result;
-      console.log(is_submitted);
+      // console.log(is_submitted);
       // content
       resultsListMapped.push({
         result_code,
@@ -71,6 +74,24 @@ export class CompletenessStatusComponent {
     this.exportTablesSE.exportExcel(resultsListMapped, 'completeness_status', wscols);
   }
 
+  GET_AllInitiatives() {
+    // console.log(this.api.rolesSE.isAdmin);
+    if (!this.api.rolesSE.isAdmin) return;
+    this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
+      // console.log(response);
+      this.allInitiatives = response;
+    });
+  }
+
+  onSelectInit() {
+    let inits = [];
+    this.initiativesSelected.map(init => {
+      // console.log(init);
+      inits.push(init.id);
+    });
+    this.POST_reportSesultsCompleteness(inits, inits?.length ? null : 1);
+  }
+
   convertToYesOrNot(value, nullOptionindex?) {
     if (value == 0) return 'No';
     if (value == 1) return 'Yes';
@@ -86,9 +107,9 @@ export class CompletenessStatusComponent {
     this.api.dataControlSE.showResultHistoryOfChangesModal = true;
     this.resultHistoryOfChangesModalSE.historyOfChangesList = [];
     this.api.resultsSE.GET_historicalByResultId(resultId).subscribe(({ response }) => {
-      console.log(response);
+      // console.log(response);
       this.resultHistoryOfChangesModalSE.historyOfChangesList = response;
     });
-    console.log(resultId);
+    // console.log(resultId);
   }
 }

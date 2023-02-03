@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { ResultItem } from '../interfaces/result.interface';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -19,6 +20,8 @@ export class DataControlService {
   green_checks = null;
   show_qa_full_screen = false;
   showResultHistoryOfChangesModal = false;
+  platformIsClosed = environment.platformIsClosed;
+
   constructor() {}
   validateBody(body: any) {
     return Object.entries(body).every((item: any) => item[1]);
@@ -35,7 +38,7 @@ export class DataControlService {
     let seconds = 0;
     return new Promise((resolve, reject) => {
       const timer = setInterval(() => {
-        console.log('sdsd  ' + seconds);
+        // console.log('sdsd  ' + seconds);
         seconds++;
         if (text) {
           resolve(text);

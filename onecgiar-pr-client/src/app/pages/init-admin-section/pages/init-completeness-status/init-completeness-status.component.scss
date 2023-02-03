@@ -5,11 +5,6 @@
     overflow: hidden;
     position: relative;
 
-    .options {
-        display: flex;
-        justify-content: space-between;
-    }
-
     .counter {
         font-size: 1.1em;
         position: absolute;
@@ -28,6 +23,8 @@
         }
     }
 }
+
+
 
 .not_provided_text {
     color: rgb(187, 187, 187);
