@@ -15,6 +15,7 @@ import { UpdateAdminPanelDto } from './dto/update-admin-panel.dto';
 import { FilterInitiativesDto } from './dto/filter-initiatives.dto';
 import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
+import { FilterResultsDto } from './dto/filter-results.dto';
 
 @Controller()
 export class AdminPanelController {
@@ -31,6 +32,13 @@ export class AdminPanelController {
   ) {
     const { message, response, status } =
       await this.adminPanelService.reportResultCompleteness(filterIntiatives);
+    throw new HttpException({ message, response }, status);
+  }
+
+  @Post('report/results/excel-full-report')
+  async excelFullReportByResultCodes(@Body() filterResults: FilterResultsDto) {
+    const { message, response, status } =
+      await this.adminPanelService.excelFullReportByResultCodes(filterResults);
     throw new HttpException({ message, response }, status);
   }
 

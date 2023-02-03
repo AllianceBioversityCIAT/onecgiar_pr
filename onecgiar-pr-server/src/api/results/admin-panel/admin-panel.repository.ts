@@ -2,16 +2,143 @@ import { Injectable } from '@nestjs/common';
 import { DataSource, Repository, QueryRunner } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { FilterInitiativesDto } from './dto/filter-initiatives.dto';
+import { FilterResultsDto } from './dto/filter-results.dto';
 
 @Injectable()
-export class AdminPanelRepository{
+export class AdminPanelRepository {
   constructor(
     private dataSource: DataSource,
-    private _handlersError: HandlersError
+    private _handlersError: HandlersError,
   ) {}
 
-  async reportResultCompleteness(filterIntiatives:FilterInitiativesDto) {
-    const complement = filterIntiatives.rol_user != 1 ? 'and rbi.inititiative_id in ('+filterIntiatives.initiatives+')':'';
+  async excelFullReportByResultCodes(filterResults: FilterResultsDto) {
+    const resultCodes = (filterResults?.resultCodes ?? []).join(',');
+    const query = `
+    select 
+    r.result_code,
+    r.id as result_id,
+    rl.name as result_level,
+    rt.name as result_type,
+    r.title as result_titel,
+    r.description as result_description,
+    r.lead_contact_person,
+    gtl.title as gender_tag_level,
+    gtl2.title as climate_change_tag_level,
+    if(r.is_krs is null,null,if(r.is_krs,'True','False')) as key_result_story,
+    ci.official_code as primary_submitter,
+    GROUP_CONCAT(distinct ci2.official_code SEPARATOR ', ') as contributing_initiatives,
+    GROUP_CONCAT(CONCAT('(Funder name: ',ci4.acronym,' - ',ci4.name ,', Grant title: ',npp.grant_title,', Center Grant ID: ',IFNULL(npp.center_grant_id, 'Not applicable'),', Lead/Contract Center: ',ci3.name,')') SEPARATOR ', ') as non_pooled_project,
+    GROUP_CONCAT(CONCAT(if(rc.is_primary,'(Primary: ','('),ci4.acronym,' - ',ci4.name,')') SEPARATOR ', ') as contributing_centers,
+    CONCAT('(',ci.official_code,' - ',ci.short_name,'): ', 'Toc Level: ' ,IFNULL(tl.name , 'Not provider'), ', ToC result title:' ,IFNULL(tr.title, 'Not provider')) as theory_change,
+    GROUP_CONCAT(distinct CONCAT('(',ci6.official_code,' - ',ci6.short_name,'): ', 'Toc Level: ' ,IFNULL(tl2.name , 'Not provider'), ', ToC result title:' ,IFNULL(tr2.title, 'Not provider')) SEPARATOR ', ') as Contributing_theory_change,
+    r.no_applicable_partner,
+    GROUP_CONCAT(DISTINCT concat('(',prt.name, ', Deliveries type: ', prt.deliveries_type,')') SEPARATOR ', '),
+    cgs.name as result_scope,
+    GROUP_CONCAT(DISTINCT cr.name separator ', ') as regions,
+    if(rt.id<>6, GROUP_CONCAT(DISTINCT cc3.name separator ', '), rkp.cgspace_countries) as countries,
+    GROUP_CONCAT(DISTINCT CONCAT('(',res2.result_code,': ',res2.result_type,' - ', res2.title,')')) as result_links,
+    GROUP_CONCAT(DISTINCT lr2.legacy_link separator ', ') as result_legacy_links
+    FROM 
+    \`result\` r
+    left join gender_tag_level gtl on gtl.id = r.gender_tag_level_id 
+    left join gender_tag_level gtl2 on gtl2.id = r.climate_change_tag_level_id 
+    left join results_by_inititiative rbi on rbi.result_id = r.id 
+    and rbi.initiative_role_id = 1
+    and rbi.is_active > 0
+    left join clarisa_initiatives ci on ci.id = rbi.inititiative_id
+    left join results_by_inititiative rbi2 on rbi2.result_id = r.id 
+    and rbi2.initiative_role_id = 2
+    and rbi2.is_active > 0
+    left join clarisa_initiatives ci2 on ci2.id = rbi2.inititiative_id 
+    left join result_level rl ON rl.id = r.result_level_id 
+    left join result_type rt on rt.id = r.result_type_id 
+    left join non_pooled_project npp on npp.results_id = r.id 
+    and npp.is_active > 0
+    left JOIN clarisa_center cc on cc.code = npp.lead_center_id 
+    left join clarisa_institutions ci3 on ci3.id = cc.institutionId 
+    left join clarisa_institutions ci4 on ci4.id = npp.funder_institution_id 
+    left join results_center rc on rc.result_id = r.id 
+    and rc.is_active > 0
+    left join clarisa_center cc2 on cc2.code = rc.center_id 
+    left join clarisa_institutions ci5 on ci5.id = cc2.institutionId 
+    left join results_toc_result rtr on rtr.results_id = r.id 
+    and rtr.initiative_id = ci.id 
+    and rtr.is_active > 0
+    left join toc_result tr on tr.toc_result_id = rtr.toc_result_id
+    left join toc_level tl on tl.toc_level_id = tr.toc_level_id 
+    left join results_toc_result rtr2 on rtr2.results_id = r.id 
+    and rtr2.initiative_id <> ci.id 
+    and rtr2.is_active > 0
+    left join clarisa_initiatives ci6 on ci6.id = rtr2.initiative_id 
+    left join toc_result tr2 on tr2.toc_result_id = rtr2.toc_result_id
+    left join toc_level tl2 on tl2.toc_level_id = tr2.toc_level_id
+    left join (select rbi3.result_id, ci7.name, GROUP_CONCAT(pdt.name separator ', ') as deliveries_type  
+    from results_by_institution rbi3 
+    left join result_by_institutions_by_deliveries_type rbibdt on rbibdt.result_by_institution_id = rbi3.id 
+    and rbibdt.is_active > 0
+    left join clarisa_institutions ci7 on ci7.id = rbi3.institutions_id
+    left JOIN partner_delivery_type pdt on pdt.id = rbibdt.partner_delivery_type_id
+    WHERE rbi3.institution_roles_id = 2
+    and rbi3.is_active > 0
+    GROUP by rbi3.result_id, ci7.name) prt on prt.result_id = r.id
+    left join result_region rr ON rr.result_id = r.id 
+    and rr.is_active > 0
+    left join clarisa_regions cr on cr.um49Code = rr.region_id 
+    left join result_country rc2 on rc2.result_id = r.id 
+    and rc2.is_active > 0
+    left join clarisa_countries cc3 on cc3.id = rc2.country_id 
+    left join clarisa_geographic_scope cgs ON cgs.id = r.geographic_scope_id 
+    left join linked_result lr on lr.origin_result_id = r.id
+    and lr.linked_results_id is not NULL 
+    and lr.is_active > 0
+    and lr.legacy_link is NULL 
+    left join (select r2.id, r2.result_code, r2.title, rt2.name as result_type 
+    from \`result\` r2 
+    left join result_type rt2 on rt2.id = r2.result_type_id
+    where r2.is_active > 0) res2 on res2.id = lr.linked_results_id
+    left join linked_result lr2 on lr2.origin_result_id = r.id
+    and lr2.linked_results_id is NULL 
+    and lr2.is_active > 0
+    and lr2.legacy_link is not NULL
+    left join results_knowledge_product rkp on rkp.results_id = r.id and rkp.is_active > 0
+    WHERE r.result_code ${resultCodes.length ? `in (${resultCodes})` : '= 0'}
+    GROUP by 
+    r.result_code,
+    r.id,
+    r.title,
+    r.description,
+    gtl.title,
+    gtl2.title,
+    rl.name,
+    rt.name,
+    r.is_krs,
+    r.lead_contact_person,
+    ci.official_code,
+    rtr.result_toc_result_id,
+    ci.official_code,
+    ci.short_name,
+    r.no_applicable_partner,
+    cgs.name;
+    `;
+
+    try {
+      let report: any = await this.dataSource.query(query);
+
+      return report;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: AdminPanelRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async reportResultCompleteness(filterIntiatives: FilterInitiativesDto) {
+    const complement =
+      filterIntiatives.rol_user != 1
+        ? 'and rbi.inititiative_id in (' + filterIntiatives.initiatives + ')'
+        : '';
     const queryData = `
     SELECT
     v.id,
@@ -96,11 +223,11 @@ export class AdminPanelRepository{
     `;
 
     try {
-      let submissionsByResult: any = await this.dataSource.query(queryData); 
+      let submissionsByResult: any = await this.dataSource.query(queryData);
 
-	  return submissionsByResult;
+      return submissionsByResult;
     } catch (error) {
-		throw this._handlersError.returnErrorRepository({
+      throw this._handlersError.returnErrorRepository({
         className: AdminPanelRepository.name,
         error: error,
         debug: true,
@@ -147,10 +274,12 @@ export class AdminPanelRepository{
     	s.created_date DESC;
     `;
     try {
-      const submissionsByResult = await this.dataSource.query(queryData, [resultId]); 
-	  return submissionsByResult;
+      const submissionsByResult = await this.dataSource.query(queryData, [
+        resultId,
+      ]);
+      return submissionsByResult;
     } catch (error) {
-		throw this._handlersError.returnErrorRepository({
+      throw this._handlersError.returnErrorRepository({
         className: AdminPanelRepository.name,
         error: error,
         debug: true,
@@ -191,16 +320,14 @@ export class AdminPanelRepository{
     	u.active > 0;
     `;
     try {
-      const users = await this.dataSource.query(queryData); 
-	  return users;
+      const users = await this.dataSource.query(queryData);
+      return users;
     } catch (error) {
-		throw this._handlersError.returnErrorRepository({
+      throw this._handlersError.returnErrorRepository({
         className: AdminPanelRepository.name,
         error: error,
         debug: true,
       });
     }
   }
-
 }
-
