@@ -22,7 +22,7 @@ export class BiReportsController {
     return this.biReportsService.findAllReports();
   }
 
-  @Get(':id')
+  @Get('/report/:id')
   findOne(@Param('id') id: string) {
     return this.biReportsService.findOne(+id);
   }

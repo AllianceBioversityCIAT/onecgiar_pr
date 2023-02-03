@@ -28,6 +28,7 @@ export const adminModuleRouting: PrRoute[] = [
 
 export const initadminModuleRouting: PrRoute[] = [
   { prName: 'Completeness status', path: 'init-completeness-status', loadChildren: () => import('../../pages/init-admin-section/pages/init-completeness-status/init-completeness-status.module').then(m => m.InitCompletenessStatusModule) },
+  { prName: 'General results report', path: 'init-general-results-report', loadChildren: () => import('../../pages/init-admin-section/pages/init-general-results-report/init-general-results-report.module').then(m => m.InitGeneralResultsReportModule) },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'init-completeness-status' }
 ];
 

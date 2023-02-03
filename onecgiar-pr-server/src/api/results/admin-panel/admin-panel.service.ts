@@ -16,6 +16,7 @@ import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResultsKnowledgeProductsService } from '../results-knowledge-products/results-knowledge-products.service';
 import { ResultsKnowledgeProduct } from '../results-knowledge-products/entities/results-knowledge-product.entity';
 import { ModuleRef } from '@nestjs/core';
+import { FilterResultsDto } from './dto/filter-results.dto';
 
 @Injectable()
 export class AdminPanelService implements OnModuleInit {
@@ -49,6 +50,23 @@ export class AdminPanelService implements OnModuleInit {
       const results = await this._adminPanelRepository.reportResultCompleteness(
         filterIntiatives,
       );
+      return {
+        response: results,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async excelFullReportByResultCodes(filterResults: FilterResultsDto) {
+    try {
+      const results =
+        await this._adminPanelRepository.excelFullReportByResultCodes(
+          filterResults,
+        );
+
       return {
         response: results,
         message: 'Successful response',

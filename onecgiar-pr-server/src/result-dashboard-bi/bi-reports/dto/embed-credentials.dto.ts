@@ -8,6 +8,7 @@ export class BodyPowerBiDTO {
 }
 
 export class ReportInformation{
+	id:number;
     resport_id: string;
 	name:string;
 	title:string;

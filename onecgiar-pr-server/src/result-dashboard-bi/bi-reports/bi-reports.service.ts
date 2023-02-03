@@ -18,7 +18,7 @@ export class BiReportsService {
   }
 
   findOne(id: number) {
-    return `This action returns a #${id} biReport`;
+    return this.biReportRepository.getTokenAndReportById(id);
   }
 
   findAllReports(){
