@@ -41,11 +41,17 @@ export class BiReportRepository extends Repository<BiReport> {
     this.credentialsBi.azure_api_url = await this.credentialsBi.azure_api_url.replace('{tenantID}', this.credentialsBi.tenant_id );
     
     //Barer token
-    const dataCredentials= await lastValueFrom(
+    let  dataCredentials;
+    
+    try {
+      dataCredentials= await lastValueFrom(
         await this._httpService
           .post(`${this.credentialsBi.azure_api_url}`, params,config)
           .pipe(map((resp) => resp.data)),
       );
+    } catch (error) {
+      return error
+    }
     
 
     return dataCredentials;
@@ -73,12 +79,17 @@ export class BiReportRepository extends Repository<BiReport> {
         datasets: datasets,
         reports:reportsId
       }
-  
-      const tokenPowerBi = await lastValueFrom(
+      let tokenPowerBi;
+      try {
+        tokenPowerBi = await lastValueFrom(
           await this._httpService
             .post(`${this.credentialsBi.api_token_url}`,bodyRequestPowerBi ,{headers:{Authorization: `Bearer ${barerTokenAzure.access_token}`}})
             .pipe(map((resp) => resp.data)),
         );
+      } catch (error) {
+        return error;
+      }
+      
         
       const reportTokenBiDto = new TokenReportBiDto;
       reportTokenBiDto.token_bi = tokenPowerBi.token;
