@@ -118,6 +118,7 @@ export class AdminPanelRepository {
     ci.official_code,
     ci.short_name,
     r.no_applicable_partner,
+    rkp.cgspace_countries,
     cgs.name;
     `;
 
