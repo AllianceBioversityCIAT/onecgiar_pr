@@ -32,7 +32,7 @@ export class AdminPanelRepository {
     CONCAT('(',ci.official_code,' - ',ci.short_name,'): ', 'Toc Level: ' ,IFNULL(tl.name , 'Not provider'), ', ToC result title:' ,IFNULL(tr.title, 'Not provider')) as theory_change,
     GROUP_CONCAT(distinct CONCAT('(',ci6.official_code,' - ',ci6.short_name,'): ', 'Toc Level: ' ,IFNULL(tl2.name , 'Not provider'), ', ToC result title:' ,IFNULL(tr2.title, 'Not provider')) SEPARATOR ', ') as Contributing_theory_change,
     r.no_applicable_partner,
-    GROUP_CONCAT(DISTINCT concat('(',prt.name, ', Deliveries type: ', prt.deliveries_type,')') SEPARATOR ', '),
+    GROUP_CONCAT(DISTINCT concat('(',prt.name, ', Deliveries type: ', prt.deliveries_type,')') SEPARATOR ', ') as delivery_types,
     cgs.name as result_scope,
     GROUP_CONCAT(DISTINCT cr.name separator ', ') as regions,
     if(rt.id<>6, GROUP_CONCAT(DISTINCT cc3.name separator ', '), rkp.cgspace_countries) as countries,
