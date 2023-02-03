@@ -11,7 +11,7 @@ import { CurrentResultService } from '../../../../../../shared/services/current-
   styleUrls: ['./unsubmit-modal.component.scss']
 })
 export class UnsubmitModalComponent {
-  comment = null;
+  comment = 'Unsubmitting result to tackle QA feedback';
   requesting = false;
   constructor(public api: ApiService, public dataControlSE: DataControlService, public unsubmitModalSE: UnsubmitModalService, private currentResultSE: CurrentResultService) {}
   cleanObject() {
