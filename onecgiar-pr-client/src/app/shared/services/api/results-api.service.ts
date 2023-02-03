@@ -444,4 +444,8 @@ export class ResultsApiService {
   GET_resultIdToCode(resultCode) {
     return this.http.get<any>(`${this.apiBaseUrl}get/transform/${resultCode}`);
   }
+
+  POST_excelFullReport(resultCodes: any[]) {
+    return this.http.post<any>(`${this.apiBaseUrl}admin-panel/report/results/excel-full-report`, { resultCodes });
+  }
 }

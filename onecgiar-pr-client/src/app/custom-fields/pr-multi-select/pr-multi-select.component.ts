@@ -124,7 +124,7 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
       // let itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == option[this.optionValue]);
       // if (itemFinded) itemFinded.selected = false;
     }
-    this.selectOptionEvent.emit();
+    this.selectOptionEvent.emit({ option });
   }
 
   removeOption(option) {
