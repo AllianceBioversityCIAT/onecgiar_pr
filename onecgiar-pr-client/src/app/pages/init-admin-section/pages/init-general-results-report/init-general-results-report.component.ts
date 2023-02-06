@@ -7,14 +7,13 @@ import { ExportTablesService } from '../../../../shared/services/export-tables.s
   templateUrl: './init-general-results-report.component.html',
   styleUrls: ['./init-general-results-report.component.scss']
 })
-export class InitGeneralResultsReportComponent implements OnInit {
+export class InitGeneralResultsReportComponent {
   textToFind = '';
   initiativesSelected = [];
   resultsSelected = [];
   resultsList;
+  requesting = false;
   constructor(public api: ApiService, private exportTablesSE: ExportTablesService) {}
-
-  ngOnInit(): void {}
 
   onSelectInit() {
     let inits = [];
@@ -35,6 +34,7 @@ export class InitGeneralResultsReportComponent implements OnInit {
   }
 
   exportExcel(resultsRelected) {
+    this.requesting = true;
     let list = [];
     resultsRelected.forEach(element => {
       list.push(element?.result_code);
@@ -43,6 +43,7 @@ export class InitGeneralResultsReportComponent implements OnInit {
     this.api.resultsSE.POST_excelFullReport(list).subscribe(({ response }) => {
       console.log(response);
       this.exportTablesSE.exportExcel(response, 'results_list');
+      this.requesting = false;
     });
   }
 
