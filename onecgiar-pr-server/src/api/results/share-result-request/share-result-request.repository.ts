@@ -98,6 +98,7 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
 		srr.planned_result,
     	r.description,
     	r.title,
+		r.status,
 		r.result_level_id,
 		r.result_type_id,
     	rt.name as result_type_name,
