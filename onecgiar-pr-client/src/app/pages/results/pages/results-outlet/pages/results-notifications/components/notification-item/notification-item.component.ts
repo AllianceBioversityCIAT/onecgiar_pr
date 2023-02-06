@@ -14,6 +14,7 @@ export class NotificationItemComponent {
   @Input() readOnly: boolean;
   @Output() requestEvent = new EventEmitter<any>();
   requesting = false;
+  submitter = true;
   constructor(public api: ApiService, private shareRequestModalSE: ShareRequestModalService, private retrieveModalSE: RetrieveModalService) {}
 
   mapAndAccept(notification) {
@@ -38,6 +39,10 @@ export class NotificationItemComponent {
     this.shareRequestModalSE.shareRequestBody.initiative_id = notification.approving_inititiative_id;
     // console.log(this.api.dataControlSE.currentResult);
     this.api.dataControlSE.showShareRequest = true;
+  }
+
+  get isSubmitted() {
+    return this.notification?.status == 1;
   }
 
   resultUrl(resultId) {
