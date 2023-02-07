@@ -8,9 +8,8 @@ describe('TocInitiativeAaoComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ TocInitiativeAaoComponent ]
-    })
-    .compileComponents();
+      declarations: [TocInitiativeAaoComponent]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(TocInitiativeAaoComponent);
     component = fixture.componentInstance;

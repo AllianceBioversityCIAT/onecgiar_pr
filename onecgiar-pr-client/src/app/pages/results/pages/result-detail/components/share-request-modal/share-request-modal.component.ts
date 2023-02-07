@@ -63,6 +63,13 @@ export class ShareRequestModalComponent {
     );
   }
 
+  validateDisableAccpetButton(result_level_id) {
+    if (result_level_id != 2) {
+      return this.requesting || !this.shareRequestModalSE.shareRequestBody.initiative_id || !this.shareRequestModalSE.shareRequestBody.toc_result_id;
+    }
+    return !this.shareRequestModalSE?.shareRequestBody?.action_area_outcome_id;
+  }
+
   modelChange() {
     // console.log('modelChange');
     this.showTocOut = false;
