@@ -14,6 +14,8 @@ import { VersionsService } from '../versions/versions.service';
 import { Version } from '../versions/entities/version.entity';
 import { ResultsTocResult } from '../results-toc-results/entities/results-toc-result.entity';
 import { ResultsTocResultRepository } from '../results-toc-results/results-toc-results.repository';
+import { Result } from '../entities/result.entity';
+import { getRepository } from 'typeorm';
 
 @Injectable()
 export class ShareResultRequestService {
@@ -24,7 +26,7 @@ export class ShareResultRequestService {
     private readonly _resultRepository: ResultRepository,
     private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
     private readonly _versionsService: VersionsService,
-    private readonly _resultsTocResultRepository: ResultsTocResultRepository
+    private readonly _resultsTocResultRepository: ResultsTocResultRepository,
   ) { }
 
   create(createShareResultRequestDto: CreateShareResultRequestDto) {

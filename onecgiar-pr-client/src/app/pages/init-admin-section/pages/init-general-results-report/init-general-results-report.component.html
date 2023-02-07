@@ -1,5 +1,5 @@
 <div class="local_container">
-    <app-pr-multi-select label="Initiatives"
+    <app-pr-multi-select label="Initiatives" selectedLabel="Contributing Initiatives"
         [options]="this.api.dataControlSE.myInitiativesList | filterInitWithRoleCoordAndLead" optionLabel="full_name"
         [isStatic]="true" optionValue="id" (selectOptionEvent)="onSelectInit()" [required]="false"
         (removeOptionEvent)="onRemoveinit($event)" selectedOptionLabel="full_name"
@@ -11,22 +11,24 @@
 
 
     <app-pr-multi-select [options]="this.resultsList" label="Results" [isStatic]="true" *ngIf="this.resultsList?.length"
-        optionLabel="full_name" optionValue="id" [required]="false" selectedOptionLabel="full_name"
+        optionLabel="full_name_html" optionValue="id" [required]="false" selectedOptionLabel="full_name"
         [(ngModel)]="this.resultsSelected" [confirmDeletion]="true" placeholder="Select result(s)
         ">
     </app-pr-multi-select>
 
     <div class="results_selected">
         <div class="title">Results selected ({{resultsSelected?.length}}): </div>
-        <div class="result" *ngFor="let result of resultsSelected">
-            {{result.full_name}}
+        <div class="result" *ngFor="let result of resultsSelected; let i=index">
+            <div class="index">{{i+1}}</div>
+            <div [innerHTML]="result.full_name_html"></div>
         </div>
     </div>
     <br>
 
 
-    <app-pr-button text="Download .xlsx" icon="file_download" *ngIf="resultsSelected?.length"
-        (click)="exportExcel(this.resultsSelected)"></app-pr-button>
+    <app-pr-button icon="file_download" *ngIf="resultsSelected?.length" [ngClass]="{'globalDisabled': this.requesting}"
+        [text]="this.requesting?'Downloading .xlsx':'Download .xlsx'" [rotating]="this.requesting"
+        [icon]="this.requesting?'loop':'send'" (click)="exportExcel(this.resultsSelected)"></app-pr-button>
 
 
     <!-- <p-table [value]="this.resultsList | filterByText:this.textToFind" [scrollable]="true" [paginator]="true"
