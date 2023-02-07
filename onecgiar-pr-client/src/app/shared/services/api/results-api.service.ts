@@ -409,6 +409,7 @@ export class ResultsApiService {
         // console.log(resp.responee);
         resp?.response.map(result => {
           result.full_name = `${result.result_title} ${result.result_code} ${result.official_code} ${result.result_type_name}`;
+          result.full_name_html = `${result.result_title} <strong>Result code: (${result.result_code})</strong> - <strong>Official code: (${result.official_code})</strong> - <strong>Result Type: (${result.result_type_name})</strong>`;
           result.result_code = Number(result.result_code);
           result.completeness = Number(result.completeness);
           result.general_information_value = Number(result?.general_information?.value);
@@ -443,5 +444,9 @@ export class ResultsApiService {
 
   GET_resultIdToCode(resultCode) {
     return this.http.get<any>(`${this.apiBaseUrl}get/transform/${resultCode}`);
+  }
+
+  POST_excelFullReport(resultCodes: any[]) {
+    return this.http.post<any>(`${this.apiBaseUrl}admin-panel/report/results/excel-full-report`, { resultCodes });
   }
 }
