@@ -28,9 +28,16 @@
             placeholder="Select initiative" [(ngModel)]="this.shareRequestModalSE.shareRequestBody.initiative_id"
             (selectOptionEvent)="modelChange()">
         </app-pr-select>
-
         <div [ngSwitch]="this.api.dataControlSE?.currentResult?.result_level_id">
             <div *ngSwitchCase="4">
+                <app-toc-initiative-out
+                    *ngIf="shareRequestModalSE.shareRequestBody?.initiative_id && this.showTocOut && (this.api.dataControlSE?.currentResult?.result_level_id==4 || this.api.dataControlSE?.currentResult?.result_level_id==3)"
+                    [initiative]="shareRequestModalSE.shareRequestBody"
+                    [editable]="!platformIsClosed && (this.rolesSE.validateInitiative(shareRequestModalSE.shareRequestBody?.initiative_id) || this.rolesSE.isAdmin || this.api.dataControlSE.inNotifications)"
+                    [resultLevelId]="this.api.dataControlSE?.currentResult?.result_level_id==4?1:2">
+                </app-toc-initiative-out>
+            </div>
+            <div *ngSwitchCase="3">
                 <app-toc-initiative-out
                     *ngIf="shareRequestModalSE.shareRequestBody?.initiative_id && this.showTocOut && (this.api.dataControlSE?.currentResult?.result_level_id==4 || this.api.dataControlSE?.currentResult?.result_level_id==3)"
                     [initiative]="shareRequestModalSE.shareRequestBody"
