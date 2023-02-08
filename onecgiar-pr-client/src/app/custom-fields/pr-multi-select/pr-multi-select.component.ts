@@ -64,6 +64,7 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
     if (this.selectAll === false)
       this._optionsIntance.map((resp: any) => {
         resp.selected = false;
+        this.value = [];
       });
 
     if (this.selectAll === true) {
