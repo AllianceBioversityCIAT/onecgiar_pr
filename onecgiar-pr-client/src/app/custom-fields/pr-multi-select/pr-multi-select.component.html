@@ -16,6 +16,10 @@
                 </div>
             </div>
 
+            <div class="bulk_selector" (click)="this.selectAllF()" *ngIf="this.showSelectAll">
+                {{this.selectAll ?'Unselect all':'Select all'}}
+            </div>
+
             <cdk-virtual-scroll-viewport itemSize="7" class="custom_scroll virtual_scroll">
                 <div *cdkVirtualFor="let option of optionsIntance | listFilterByTextAndAttr:this.optionLabel:this.searchText"
                     class="option" [ngClass]="{'disabled': option?.disabled}" (click)="onSelectOption(option)">

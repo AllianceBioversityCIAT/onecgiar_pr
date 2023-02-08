@@ -1,5 +1,7 @@
 .local_container {
     padding: 20px;
+    max-height: calc(100vh - 127px);
+    overflow-y: scroll;
 }
 
 .table_container {
@@ -68,6 +70,9 @@
     gap: 10px;
     border-radius: 10px;
     padding: 20px;
+    min-height: 200px;
+    max-height: 400px;
+    overflow-y: scroll;
 
     .title {
         color: var(--pr-color-primary);
