@@ -16,6 +16,7 @@ export class InitGeneralResultsReportComponent {
   requesting = false;
   valueToFilter = null;
   yearToFilter = null;
+  requestCounter = 0;
   constructor(public api: ApiService, private exportTablesSE: ExportTablesService, private customAlertService: CustomizedAlertsFeService) {}
 
   onSelectInit() {
@@ -56,11 +57,13 @@ export class InitGeneralResultsReportComponent {
   }
 
   POST_excelFullReportPromise(result, key) {
+    this.requestCounter = 0;
     return new Promise((resolve, reject) => {
       this.api.resultsSE.POST_excelFullReport([result]).subscribe(
         ({ response }) => {
           console.log(response);
           // console.log(response);
+          this.requestCounter++;
           this.dataToExport.push(...response);
           resolve(null);
         },
