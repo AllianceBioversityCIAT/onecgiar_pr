@@ -24,7 +24,7 @@
                 <ng-content select="[util]"></ng-content>
             </div>
 
-            <cdk-virtual-scroll-viewport itemSize="7" class="custom_scroll virtual_scroll">
+            <cdk-virtual-scroll-viewport itemSize="30" class="custom_scroll virtual_scroll">
                 <div *cdkVirtualFor="let option of optionsIntance | listFilterByTextAndAttr:this.optionLabel:this.searchText"
                     class="option" [ngClass]="{'disabled': option?.disabled}" (click)="onSelectOption(option)">
                     <p-checkbox [disabled]="option?.disabled" [binary]="true" [(ngModel)]="option.selected">
