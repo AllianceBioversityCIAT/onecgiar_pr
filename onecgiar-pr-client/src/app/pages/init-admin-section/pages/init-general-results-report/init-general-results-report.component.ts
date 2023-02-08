@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
+import { CustomizedAlertsFeService } from '../../../../shared/services/customized-alerts-fe.service';
 
 @Component({
   selector: 'app-init-general-results-report',
@@ -15,7 +16,7 @@ export class InitGeneralResultsReportComponent {
   requesting = false;
   valueToFilter = null;
   yearToFilter = null;
-  constructor(public api: ApiService, private exportTablesSE: ExportTablesService) {}
+  constructor(public api: ApiService, private exportTablesSE: ExportTablesService, private customAlertService: CustomizedAlertsFeService) {}
 
   onSelectInit() {
     let inits = [];
@@ -43,11 +44,17 @@ export class InitGeneralResultsReportComponent {
       list.push(element?.result_code);
     });
     console.log(list);
-    this.api.resultsSE.POST_excelFullReport(list).subscribe(({ response }) => {
-      console.log(response);
-      this.exportTablesSE.exportExcel(response, 'results_list');
-      this.requesting = false;
-    });
+    this.api.resultsSE.POST_excelFullReport(list).subscribe(
+      ({ response }) => {
+        console.log(response);
+        this.exportTablesSE.exportExcel(response, 'results_list');
+        this.requesting = false;
+      },
+      err => {
+        this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: '', status: 'error' });
+        this.requesting = false;
+      }
+    );
   }
 
   onRemoveinit(e) {}

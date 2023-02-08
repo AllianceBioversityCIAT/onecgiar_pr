@@ -1,5 +1,5 @@
 <div class="local_container">
-    <app-pr-multi-select label="Initiatives" selectedLabel="Contributing Initiatives"
+    <app-pr-multi-select label="Initiatives" selectedLabel="Initiatives selected"
         [options]="this.api.dataControlSE.myInitiativesList | filterInitWithRoleCoordAndLead" optionLabel="full_name"
         [isStatic]="true" optionValue="id" (selectOptionEvent)="onSelectInit()" [required]="false"
         (removeOptionEvent)="onRemoveinit($event)" selectedOptionLabel="full_name"
@@ -13,8 +13,8 @@
     <app-pr-multi-select
         [options]="this.resultsList | filterByAttrWithValue:'is_submitted':valueToFilter |  filterByAttrWithValue:'year':yearToFilter"
         label="Results" [isStatic]="true" *ngIf="this.resultsList?.length" optionLabel="full_name_html" optionValue="id"
-        [required]="false" selectedOptionLabel="full_name" [(ngModel)]="this.resultsSelected" [confirmDeletion]="true"
-        itemSize="15" placeholder="Select result(s)
+        [showSelectAll]="true" [required]="false" selectedOptionLabel="full_name" [(ngModel)]="this.resultsSelected"
+        [confirmDeletion]="true" itemSize="15" placeholder="Select result(s)
         ">
         <div class="filter_submission_buttons" util>
             <div class="option all" [ngClass]="{'active': this.valueToFilter == null}"
@@ -23,19 +23,19 @@
                 (click)="this.valueToFilter = 1">submitted</div>
             <div class="option editing" [ngClass]="{'active': this.valueToFilter == 0}"
                 (click)="this.valueToFilter = 0">Editable</div>
-            <div class="option year" [ngClass]="{'active': this.yearToFilter == 2022}"
+            <!-- <div class="option year" [ngClass]="{'active': this.yearToFilter == 2022}"
                 (click)="this.yearToFilter == 2022 ? this.yearToFilter = null : this.yearToFilter = 2022">
                 2022</div>
             <div class="option year" [ngClass]="{'active': this.yearToFilter == 2023}"
                 (click)="this.yearToFilter == 2023 ? this.yearToFilter = null : this.yearToFilter = 2023">
-                2023</div>
+                2023</div> -->
         </div>
     </app-pr-multi-select>
 
     <div class="alert_status_container" *ngIf="resultsSelected?.length">
         <div [ngClass]="{'animate__pulse_infinite': this.requesting}">
             <app-alert-status
-                description="This report consumes a considerable amount of system resources, therefore, we appreciate it if you do not generate reports too often.">
+                [description]="this.requesting ?'The report may take some time to be generated, please do not close the window.':'This report consumes a considerable amount of system resources, therefore, we appreciate it if you do not generate reports too often.'">
             </app-alert-status>
         </div>
 
@@ -53,10 +53,13 @@
                     [icon]="this.requesting?'loop':'send'" (click)="exportExcel(this.resultsSelected)"></app-pr-button>
             </div>
         </div>
-        <div class="result" *ngFor="let result of resultsSelected; let i=index">
-            <div class="index">{{i+1}}</div>
-            <div [innerHTML]="result.full_name_html"></div>
+        <div class="results">
+            <div class="result" *ngFor="let result of resultsSelected; let i=index">
+                <div class="index">{{i+1}}</div>
+                <div [innerHTML]="result.full_name_html"></div>
+            </div>
         </div>
+
     </div>
     <br>
 
