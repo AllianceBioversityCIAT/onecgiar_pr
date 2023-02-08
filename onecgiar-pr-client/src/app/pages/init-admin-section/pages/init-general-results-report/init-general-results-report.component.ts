@@ -14,6 +14,7 @@ export class InitGeneralResultsReportComponent {
   resultsList;
   requesting = false;
   valueToFilter = null;
+  yearToFilter = null;
   constructor(public api: ApiService, private exportTablesSE: ExportTablesService) {}
 
   onSelectInit() {

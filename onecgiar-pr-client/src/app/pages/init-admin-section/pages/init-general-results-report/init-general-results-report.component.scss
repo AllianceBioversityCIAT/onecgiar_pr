@@ -5,7 +5,7 @@
 
     .filter_submission_buttons {
         display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
+        grid-template-columns: repeat(5, 1fr);
         gap: 10px;
 
         .all {
@@ -35,6 +35,17 @@
 
             &.active {
                 background-color: #eba21b;
+                color: white !important;
+
+            }
+        }
+
+        .year {
+            border: 2px solid #6e6e6e !important;
+            color: #6e6e6e !important;
+
+            &.active {
+                background-color: #6e6e6e;
                 color: white !important;
 
             }

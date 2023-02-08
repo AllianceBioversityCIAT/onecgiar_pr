@@ -10,7 +10,8 @@
     <!-- <div class="table_container"> -->
 
 
-    <app-pr-multi-select [options]="this.resultsList | filterByAttrWithValue:'is_submitted':valueToFilter"
+    <app-pr-multi-select
+        [options]="this.resultsList | filterByAttrWithValue:'is_submitted':valueToFilter |  filterByAttrWithValue:'year':yearToFilter"
         label="Results" [isStatic]="true" *ngIf="this.resultsList?.length" optionLabel="full_name_html" optionValue="id"
         [required]="false" selectedOptionLabel="full_name" [(ngModel)]="this.resultsSelected" [confirmDeletion]="true"
         itemSize="15" placeholder="Select result(s)
@@ -22,6 +23,12 @@
                 (click)="this.valueToFilter = 1">submitted</div>
             <div class="option editing" [ngClass]="{'active': this.valueToFilter == 0}"
                 (click)="this.valueToFilter = 0">Editable</div>
+            <div class="option year" [ngClass]="{'active': this.yearToFilter == 2022}"
+                (click)="this.yearToFilter == 2022 ? this.yearToFilter = null : this.yearToFilter = 2022">
+                2022</div>
+            <div class="option year" [ngClass]="{'active': this.yearToFilter == 2023}"
+                (click)="this.yearToFilter == 2023 ? this.yearToFilter = null : this.yearToFilter = 2023">
+                2023</div>
         </div>
     </app-pr-multi-select>
 
