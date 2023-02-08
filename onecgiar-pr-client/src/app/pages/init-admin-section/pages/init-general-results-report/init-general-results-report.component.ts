@@ -41,23 +41,21 @@ export class InitGeneralResultsReportComponent {
 
   async exportExcel(resultsRelected) {
     this.requesting = true;
+    this.requestCounter = 0;
+
     let list = [];
-    console.log(resultsRelected);
     resultsRelected?.forEach(element => {
       list.push(element?.result_code);
     });
-    console.log(list);
     for (const key in list) {
       console.log();
       await this.POST_excelFullReportPromise(list[key], key);
     }
     this.exportTablesSE.exportExcel(this.dataToExport, 'results_list');
-    console.log('fin');
     this.requesting = false;
   }
 
   POST_excelFullReportPromise(result, key) {
-    this.requestCounter = 0;
     return new Promise((resolve, reject) => {
       this.api.resultsSE.POST_excelFullReport([result]).subscribe(
         ({ response }) => {

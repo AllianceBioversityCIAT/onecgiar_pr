@@ -49,7 +49,7 @@
             <div class="download_button_container">
                 <app-pr-button icon="file_download" *ngIf="resultsSelected?.length"
                     [ngClass]="{'globalDisabled': this.requesting}"
-                    [text]="this.requesting?'Downloading .xlsx result '+(resultsSelected.length+1)+'/'+requestCounter:'Download .xlsx'"
+                    [text]="this.requesting?'Downloading .xlsx - results '+requestCounter+'/'+(resultsSelected.length):'Download .xlsx'"
                     [rotating]="this.requesting" [icon]="this.requesting?'loop':'send'"
                     (click)="exportExcel(this.resultsSelected)"></app-pr-button>
             </div>
