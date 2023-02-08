@@ -52,6 +52,7 @@ export class InitGeneralResultsReportComponent {
     }
     this.exportTablesSE.exportExcel(this.dataToExport, 'results_list');
     console.log('fin');
+    this.requesting = false;
   }
 
   POST_excelFullReportPromise(result, key) {
@@ -62,11 +63,9 @@ export class InitGeneralResultsReportComponent {
           // console.log(response);
           this.dataToExport.push(...response);
           resolve(null);
-          this.requesting = false;
         },
         err => {
           this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: 'There was an error in the system while generating the report. If the issue persists, please contact the technical team.', status: 'error' });
-          this.requesting = false;
         }
       );
     });
