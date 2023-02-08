@@ -1,5 +1,5 @@
 <div class="local_container">
-    <app-pr-multi-select label="Initiatives" selectedLabel="Contributing Initiatives" [showSelectAll]="true"
+    <app-pr-multi-select label="Initiatives" selectedLabel="Contributing Initiatives"
         [options]="this.api.dataControlSE.myInitiativesList | filterInitWithRoleCoordAndLead" optionLabel="full_name"
         [isStatic]="true" optionValue="id" (selectOptionEvent)="onSelectInit()" [required]="false"
         (removeOptionEvent)="onRemoveinit($event)" selectedOptionLabel="full_name"
@@ -10,9 +10,9 @@
     <!-- <div class="table_container"> -->
 
 
-    <app-pr-multi-select [options]="this.resultsList" label="Results" [isStatic]="true" [showSelectAll]="true"
-        *ngIf="this.resultsList?.length" optionLabel="full_name_html" optionValue="id" [required]="false"
-        selectedOptionLabel="full_name" [(ngModel)]="this.resultsSelected" [confirmDeletion]="true" placeholder="Select result(s)
+    <app-pr-multi-select [options]="this.resultsList" label="Results" [isStatic]="true" *ngIf="this.resultsList?.length"
+        optionLabel="full_name_html" optionValue="id" [required]="false" selectedOptionLabel="full_name"
+        [(ngModel)]="this.resultsSelected" [confirmDeletion]="true" placeholder="Select result(s)
         ">
     </app-pr-multi-select>
 
