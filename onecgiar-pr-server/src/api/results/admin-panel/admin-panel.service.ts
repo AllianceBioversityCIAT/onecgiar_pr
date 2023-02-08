@@ -68,12 +68,12 @@ export class AdminPanelService implements OnModuleInit {
   async excelFullReportByResultCodes(filterResults: FilterResultsDto) {
     const resultCodes = filterResults?.resultCodes ?? [];
     try {
-      let fullReport: any;
+      let fullReport: any[];
 
       // gets the base report (sections 1 to 6)
       const baseReport =
         await this._resultRepository.getBasicResultDataForReport(resultCodes);
-      fullReport = { ...baseReport };
+      fullReport = [...baseReport];
 
       let resultTypes: ResultTypeDto[] =
         await this._resultRepository.getTypesOfResultByCodes(resultCodes);
@@ -88,43 +88,82 @@ export class AdminPanelService implements OnModuleInit {
         }
       });
 
+      let policyChanges: any[],
+        innovationUses: any[],
+        capdev: any[],
+        kps: any[],
+        innovationDevelopments: any[];
+
       if (resultsByTypes.get(1)) {
         // has policy changes
-        const policyChanges =
+        policyChanges =
           await this._resultsPolicyChangesRepository.getSectionSevenDataForReport(
             resultsByTypes.get(1).map((r) => r.resultCode),
           );
 
-        fullReport = {
-          ...fullReport,
-          policyChanges,
-        };
+        fullReport = fullReport.map((fr) => {
+          const pc = policyChanges.find(
+            (pc) => pc['Result Code'] == fr['Result Code'],
+          );
+          if (pc) {
+            delete pc['Result Code'];
+            delete pc['Result ID'];
+            fr = {
+              ...fr,
+              ...pc,
+            };
+          }
+
+          return fr;
+        });
       }
 
       if (resultsByTypes.get(2)) {
         // has innovation uses
-        const innovationUses =
+        innovationUses =
           await this._resultsInnovationsUseRepository.getSectionSevenDataForReport(
             resultsByTypes.get(2).map((r) => r.resultCode),
           );
 
-        fullReport = {
-          ...fullReport,
-          innovationUses,
-        };
+        fullReport = fullReport.map((fr) => {
+          const iu = innovationUses.find(
+            (iu) => iu['Result Code'] == fr['Result Code'],
+          );
+          if (iu) {
+            delete iu['Result Code'];
+            delete iu['Result ID'];
+            fr = {
+              ...fr,
+              ...iu,
+            };
+          }
+
+          return fr;
+        });
       }
 
       if (resultsByTypes.get(5)) {
         // has capdev
-        const capdev =
+        capdev =
           await this._resultsCapacityDevelopmentsRepository.getSectionSevenDataForReport(
             resultsByTypes.get(5).map((r) => r.resultCode),
           );
 
-        fullReport = {
-          ...fullReport,
-          capdev,
-        };
+        fullReport = fullReport.map((fr) => {
+          const cd = innovationUses.find(
+            (cd) => cd['Result Code'] == fr['Result Code'],
+          );
+          if (cd) {
+            delete cd['Result Code'];
+            delete cd['Result ID'];
+            fr = {
+              ...fr,
+              ...cd,
+            };
+          }
+
+          return fr;
+        });
       }
 
       if (resultsByTypes.get(6)) {
@@ -135,25 +174,46 @@ export class AdminPanelService implements OnModuleInit {
           );
 
         if (kpsResponse.status < 300) {
-          const kps = kpsResponse.response;
-          fullReport = {
-            ...fullReport,
-            kps,
-          };
+          kps = kpsResponse.response;
+
+          fullReport = fullReport.map((fr) => {
+            const kp = kps.find((kp) => kp['Result Code'] == fr['Result Code']);
+            if (kp) {
+              delete kp['Result Code'];
+              delete kp['Result ID'];
+              fr = {
+                ...fr,
+                ...kp,
+              };
+            }
+
+            return fr;
+          });
         }
       }
 
       if (resultsByTypes.get(7)) {
         // has innovation developments
-        const innovationDevelopments =
+        innovationDevelopments =
           await this._resultsInnovationsDevRepository.getSectionSevenDataForReport(
             resultsByTypes.get(7).map((r) => r.resultCode),
           );
 
-        fullReport = {
-          ...fullReport,
-          innovationDevelopments,
-        };
+        fullReport = fullReport.map((fr) => {
+          const id = innovationDevelopments.find(
+            (id) => id['Result Code'] == fr['Result Code'],
+          );
+          if (id) {
+            delete id['Result Code'];
+            delete id['Result ID'];
+            fr = {
+              ...fr,
+              ...id,
+            };
+          }
+
+          return fr;
+        });
       }
 
       return {
