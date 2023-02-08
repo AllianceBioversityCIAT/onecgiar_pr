@@ -7,7 +7,7 @@ import { ResultsCapacityDevelopments } from '../entities/results-capacity-develo
 export class ResultsCapacityDevelopmentsRepository extends Repository<ResultsCapacityDevelopments> {
   constructor(
     private dataSource: DataSource,
-    private _handlersError: HandlersError
+    private _handlersError: HandlersError,
   ) {
     super(ResultsCapacityDevelopments, dataSource.createEntityManager());
   }
@@ -38,7 +38,10 @@ export class ResultsCapacityDevelopmentsRepository extends Repository<ResultsCap
     	and rcd.is_active > 0;
     `;
     try {
-      const resultTocResult: ResultsCapacityDevelopments[] = await this.query(queryData, [resultId]);
+      const resultTocResult: ResultsCapacityDevelopments[] = await this.query(
+        queryData,
+        [resultId],
+      );
       return resultTocResult.length ? resultTocResult[0] : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -49,4 +52,40 @@ export class ResultsCapacityDevelopmentsRepository extends Repository<ResultsCap
     }
   }
 
+  async getSectionSevenDataForReport(resultCodesArray: number[]) {
+    const resultCodes = (resultCodesArray ?? []).join(',');
+    const queryData = `
+    select 
+      -- result basic data
+      r.id 'Result ID', 
+      r.result_code 'Result Code',
+      -- Initiative Output - Capacity sharing for development specific fields
+      rcd.female_using 'Number of females',
+      rcd.male_using 'Number of males',
+      if(ct.capdev_term_id in (3,4), ct.name, concat(ct.term, ' - ', ct.name)) as 'Lenght of training',
+      cdm.name 'Delivery method',
+      group_concat(distinct concat(if(coalesce(ci.acronym, '') = '', '', concat(ci.acronym, ' - ')), ci.name) separator '; ') as 'Implementing organizations'
+    from results_capacity_developments rcd 
+    left join result r on rcd.result_id = r.id and r.is_active = 1
+    left join capdevs_term ct on rcd.capdev_term_id = ct.capdev_term_id
+    left join capdevs_delivery_methods cdm on rcd.capdev_delivery_method_id = cdm.capdev_delivery_method_id
+    left join results_by_institution rbi on rbi.result_id = r.id and rbi.is_active = 1 and rbi.institution_roles_id = 3
+    left join clarisa_institutions ci on rbi.institutions_id = ci.id and ci.is_active = 1
+    where 
+      rcd.is_active = 1
+      and r.result_code ${resultCodes.length ? `in (${resultCodes})` : '= 0'}
+    group by 1,2,3,4,5,6
+    ;
+    `;
+    try {
+      const resultTocResult = await this.query(queryData);
+      return resultTocResult;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsCapacityDevelopments.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
 }
