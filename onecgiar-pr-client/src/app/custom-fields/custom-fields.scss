@@ -143,6 +143,14 @@ input::placeholder,
                 overflow-y: auto;
                 overflow-x: scroll;
 
+                .no_info {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    height: 180px;
+                    color: var(--pr-color-primary);
+                }
+
                 .option {
                     cursor: pointer;
                     height: 30px;
