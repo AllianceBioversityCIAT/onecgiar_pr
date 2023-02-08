@@ -83,7 +83,6 @@
 
 .download_button_container {
     width: max-content;
-    margin-bottom: 100px;
 }
 
 
@@ -134,6 +133,9 @@
         font-weight: 500;
         font-size: 1.2em;
         margin-bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
 
     .result {

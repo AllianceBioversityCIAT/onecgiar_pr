@@ -25,15 +25,6 @@
         </div>
     </app-pr-multi-select>
 
-    <div class="results_selected">
-        <div class="title">Results selected ({{resultsSelected?.length}}): </div>
-        <div class="result" *ngFor="let result of resultsSelected; let i=index">
-            <div class="index">{{i+1}}</div>
-            <div [innerHTML]="result.full_name_html"></div>
-        </div>
-    </div>
-    <br>
-
     <div class="alert_status_container" *ngIf="resultsSelected?.length">
         <div [ngClass]="{'animate__pulse_infinite': this.requesting}">
             <app-alert-status
@@ -43,12 +34,26 @@
 
     </div>
 
-    <div class="download_button_container">
-        <app-pr-button icon="file_download" *ngIf="resultsSelected?.length"
-            [ngClass]="{'globalDisabled': this.requesting}"
-            [text]="this.requesting?'Downloading .xlsx':'Download .xlsx'" [rotating]="this.requesting"
-            [icon]="this.requesting?'loop':'send'" (click)="exportExcel(this.resultsSelected)"></app-pr-button>
+
+
+    <div class="results_selected">
+        <div class="title">
+            <div>Results selected ({{resultsSelected?.length}}): </div>
+            <div class="download_button_container">
+                <app-pr-button icon="file_download" *ngIf="resultsSelected?.length"
+                    [ngClass]="{'globalDisabled': this.requesting}"
+                    [text]="this.requesting?'Downloading .xlsx':'Download .xlsx'" [rotating]="this.requesting"
+                    [icon]="this.requesting?'loop':'send'" (click)="exportExcel(this.resultsSelected)"></app-pr-button>
+            </div>
+        </div>
+        <div class="result" *ngFor="let result of resultsSelected; let i=index">
+            <div class="index">{{i+1}}</div>
+            <div [innerHTML]="result.full_name_html"></div>
+        </div>
     </div>
+    <br>
+
+
 
 
     <!-- <p-table [value]="this.resultsList | filterByText:this.textToFind" [scrollable]="true" [paginator]="true"
