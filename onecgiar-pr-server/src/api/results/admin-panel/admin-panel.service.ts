@@ -150,7 +150,7 @@ export class AdminPanelService implements OnModuleInit {
           );
 
         fullReport = fullReport.map((fr) => {
-          const cd = innovationUses.find(
+          const cd = capdev.find(
             (cd) => cd['Result Code'] == fr['Result Code'],
           );
           if (cd) {
