@@ -123,3 +123,25 @@ a {
         }
     }
 }
+
+.completeness-state {
+    color: white;
+    display: inline;
+    padding: 0px 10px;
+    border-radius: 3px;
+    font-size: .8em;
+    font-style: italic;
+    font-weight: 500;
+}
+
+.completeness-submitted {
+    background-color: var(--pr-color-primary);
+}
+
+.completeness-editing {
+    background-color: #eba21b;
+}
+
+.completeness-all {
+    background-color: #6e6e6e;
+}
