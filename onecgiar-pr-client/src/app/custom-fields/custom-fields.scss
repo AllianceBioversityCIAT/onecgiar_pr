@@ -105,6 +105,8 @@ input::placeholder,
         &:focus-within {
             .options {
                 display: flex;
+                opacity: 1;
+                transform: scale(1);
             }
 
             .remove_focus {
@@ -113,8 +115,9 @@ input::placeholder,
         }
 
         .options {
-
-            display: none;
+            transform: scale(0);
+            opacity: 0;
+            // pointer-events: none;
             position: absolute;
             background-color: white;
             max-height: 300px;
@@ -139,6 +142,14 @@ input::placeholder,
                 width: 100%;
                 overflow-y: auto;
                 overflow-x: scroll;
+
+                .no_info {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    height: 180px;
+                    color: var(--pr-color-primary);
+                }
 
                 .option {
                     cursor: pointer;

@@ -1,5 +1,63 @@
 .local_container {
     padding: 20px;
+    max-height: calc(100vh - 127px);
+    overflow-y: scroll;
+
+    .filter_submission_buttons {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+
+        .all {
+            border: 2px solid #6e6e6e !important;
+            color: #6e6e6e !important;
+
+            &.active {
+                background-color: #6e6e6e;
+                color: white !important;
+            }
+        }
+
+        .submitted {
+            border: 2px solid var(--pr-color-primary) !important;
+            color: var(--pr-color-primary) !important;
+
+            &.active {
+                background-color: var(--pr-color-primary);
+                color: white !important;
+
+            }
+        }
+
+        .editing {
+            border: 2px solid #eba21b !important;
+            color: #eba21b !important;
+
+            &.active {
+                background-color: #eba21b;
+                color: white !important;
+
+            }
+        }
+
+        .year {
+            border: 2px solid #6e6e6e !important;
+            color: #6e6e6e !important;
+
+            &.active {
+                background-color: #6e6e6e;
+                color: white !important;
+
+            }
+        }
+
+        .option {
+            color: white;
+            text-align: center;
+            border-radius: 2px;
+            padding: 2px 0px;
+        }
+    }
 }
 
 .table_container {
@@ -28,6 +86,15 @@
     }
 }
 
+.alert_status_container {
+    overflow: hidden;
+    width: 100%;
+    padding: 0px 50px;
+}
+
+.download_button_container {
+    width: max-content;
+}
 
 
 .not_provided_text {
@@ -65,33 +132,47 @@
     box-shadow: 0px 0px 5px 5px rgb(238, 238, 238);
     display: flex;
     flex-direction: column;
-    gap: 10px;
     border-radius: 10px;
     padding: 20px;
+
 
     .title {
         color: var(--pr-color-primary);
         font-weight: 500;
         font-size: 1.2em;
         margin-bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
 
-    .result {
-        display: flex;
-        align-items: center;
+    .results {
+        min-height: 200px;
+        max-height: 400px;
+        overflow-y: scroll;
         gap: 10px;
+        display: flex;
+        flex-direction: column;
 
-
-        .index {
-            color: white;
-            font-weight: 500;
-            background-color: var(--pr-color-primary);
-            width: 25px !important;
-            height: 25px !important;
-            border-radius: 100px;
+        .result {
             display: flex;
             align-items: center;
-            justify-content: center;
+            gap: 10px;
+
+
+            .index {
+                color: white;
+                font-weight: 500;
+                background-color: var(--pr-color-primary);
+                width: 25px !important;
+                min-width: 25px;
+                height: 25px !important;
+                border-radius: 100px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
         }
     }
+
 }

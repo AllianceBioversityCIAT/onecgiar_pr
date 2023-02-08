@@ -1075,4 +1075,22 @@ export class ResultsKnowledgeProductsService {
       return this._handlersError.returnErrorRes({ error });
     }
   }
+
+  async getSectionSevenDataForReport(resultCodesArray: number[]) {
+    try {
+      const data =
+        await this._resultsKnowledgeProductRepository.getSectionSevenDataForReport(
+          resultCodesArray,
+        );
+
+      return {
+        response: data,
+        message:
+          'The data for the knowledge products have been retrieved successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
 }
