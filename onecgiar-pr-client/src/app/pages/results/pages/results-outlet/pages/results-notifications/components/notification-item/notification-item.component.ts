@@ -45,8 +45,8 @@ export class NotificationItemComponent {
     return this.notification?.status == 1;
   }
 
-  resultUrl(resultId) {
-    return `/result/result-detail/${resultId}`;
+  resultUrl(resultCode) {
+    return `/result/result-detail/${resultCode}`;
   }
 
   acceptOrReject(response) {
