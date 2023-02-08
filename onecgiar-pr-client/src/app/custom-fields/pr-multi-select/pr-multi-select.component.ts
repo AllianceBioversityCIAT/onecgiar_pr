@@ -41,10 +41,10 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   private _value: any[] = [];
   private _beforeValueLength: number = 0;
   public searchText: string;
+  private currentOptionsLength = 0;
   get optionsIntance() {
-    if (!this._optionsIntance?.length) this._optionsIntance = JSON.parse(JSON.stringify(this.options));
-    // if ((this._beforeValueLength | 0) != (this._value?.length | 0) || this.init) {
-    // console.log('optionsIntance');
+    if (!this._optionsIntance?.length || this.currentOptionsLength != this.options?.length) this._optionsIntance = JSON.parse(JSON.stringify(this.options));
+    this.currentOptionsLength = this.options?.length;
     this._optionsIntance.map((resp: any) => {
       resp.disabled = false;
       resp.selected = false;
@@ -58,7 +58,6 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
       let itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == savedListItem[this.optionValue]);
       if (itemFinded) itemFinded.selected = true;
     });
-    // }
 
     this._beforeValueLength = this._value?.length;
 
@@ -111,7 +110,6 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   }
 
   toggleSelectOption(option) {
-    console.log('toggleSelectOption');
     if (option?.disabled) return;
     option.selected = !option.selected;
   }
@@ -136,7 +134,6 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
 
   onSelectOption(option) {
     this.selectAll = null;
-    console.log('onSelectOption');
     if (option?.disabled) return;
     // this.onChange(null);
     // console.log('onSelectOption');
