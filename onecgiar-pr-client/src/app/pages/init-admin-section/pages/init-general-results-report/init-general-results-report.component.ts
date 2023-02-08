@@ -13,6 +13,7 @@ export class InitGeneralResultsReportComponent {
   resultsSelected = [];
   resultsList;
   requesting = false;
+  valueToFilter = null;
   constructor(public api: ApiService, private exportTablesSE: ExportTablesService) {}
 
   onSelectInit() {
@@ -26,9 +27,9 @@ export class InitGeneralResultsReportComponent {
   }
 
   POST_reportSesultsCompleteness(inits: any[]) {
-    // console.log(inits);
     this.resultsList = [];
     this.api.resultsSE.POST_reportSesultsCompleteness(inits, 2).subscribe(({ response }) => {
+      console.log(response);
       this.resultsList = response;
     });
   }
@@ -36,7 +37,8 @@ export class InitGeneralResultsReportComponent {
   exportExcel(resultsRelected) {
     this.requesting = true;
     let list = [];
-    resultsRelected.forEach(element => {
+    console.log(resultsRelected);
+    resultsRelected?.forEach(element => {
       list.push(element?.result_code);
     });
     console.log(list);

@@ -7,9 +7,10 @@ import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.modu
 import { FilterInitWithRoleCoordAndLeadModule } from '../../pipes/filter-init-with-role-coord-and-lead/filter-init-with-role-coord-and-lead.module';
 import { TableModule } from 'primeng/table';
 import { FilterByTextModule } from '../../../../shared/pipes/filter-by-text.module';
+import { FilterByAttrWithValueModule } from '../../../../shared/pipes/filter-by-attr-with-value/filter-by-attr-with-value.module';
 
 @NgModule({
   declarations: [InitGeneralResultsReportComponent],
-  imports: [CommonModule, InitGeneralResultsReportRoutingModule, CustomFieldsModule, FilterInitWithRoleCoordAndLeadModule, TableModule, FilterByTextModule]
+  imports: [CommonModule, InitGeneralResultsReportRoutingModule, CustomFieldsModule, FilterInitWithRoleCoordAndLeadModule, TableModule, FilterByTextModule, FilterByAttrWithValueModule]
 })
 export class InitGeneralResultsReportModule {}

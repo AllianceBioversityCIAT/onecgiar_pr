@@ -10,10 +10,19 @@
     <!-- <div class="table_container"> -->
 
 
-    <app-pr-multi-select [options]="this.resultsList" label="Results" [isStatic]="true" *ngIf="this.resultsList?.length"
-        optionLabel="full_name_html" optionValue="id" [required]="false" selectedOptionLabel="full_name"
-        [(ngModel)]="this.resultsSelected" [confirmDeletion]="true" placeholder="Select result(s)
+    <app-pr-multi-select [options]="this.resultsList | filterByAttrWithValue:'is_submitted':valueToFilter"
+        label="Results" [isStatic]="true" *ngIf="this.resultsList?.length" optionLabel="full_name_html" optionValue="id"
+        [required]="false" selectedOptionLabel="full_name" [(ngModel)]="this.resultsSelected" [confirmDeletion]="true"
+        itemSize="15" placeholder="Select result(s)
         ">
+        <div class="filter_submission_buttons" util>
+            <div class="option all" [ngClass]="{'active': this.valueToFilter == null}"
+                (click)="this.valueToFilter = null">All</div>
+            <div class="option submitted" [ngClass]="{'active': this.valueToFilter == 1}"
+                (click)="this.valueToFilter = 1">submitted</div>
+            <div class="option editing" [ngClass]="{'active': this.valueToFilter == 0}"
+                (click)="this.valueToFilter = 0">Editable</div>
+        </div>
     </app-pr-multi-select>
 
     <div class="results_selected">
@@ -25,10 +34,21 @@
     </div>
     <br>
 
+    <div class="alert_status_container" *ngIf="resultsSelected?.length">
+        <div [ngClass]="{'animate__pulse_infinite': this.requesting}">
+            <app-alert-status
+                description="This report consumes a considerable amount of system resources, therefore, we appreciate it if you do not generate reports too often.">
+            </app-alert-status>
+        </div>
 
-    <app-pr-button icon="file_download" *ngIf="resultsSelected?.length" [ngClass]="{'globalDisabled': this.requesting}"
-        [text]="this.requesting?'Downloading .xlsx':'Download .xlsx'" [rotating]="this.requesting"
-        [icon]="this.requesting?'loop':'send'" (click)="exportExcel(this.resultsSelected)"></app-pr-button>
+    </div>
+
+    <div class="download_button_container">
+        <app-pr-button icon="file_download" *ngIf="resultsSelected?.length"
+            [ngClass]="{'globalDisabled': this.requesting}"
+            [text]="this.requesting?'Downloading .xlsx':'Download .xlsx'" [rotating]="this.requesting"
+            [icon]="this.requesting?'loop':'send'" (click)="exportExcel(this.resultsSelected)"></app-pr-button>
+    </div>
 
 
     <!-- <p-table [value]="this.resultsList | filterByText:this.textToFind" [scrollable]="true" [paginator]="true"
