@@ -51,7 +51,7 @@ export class InitGeneralResultsReportComponent {
         this.requesting = false;
       },
       err => {
-        this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: '', status: 'error' });
+        this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: 'There was an error in the system while generating the report. If the issue persists, please contact the technical team.', status: 'error' });
         this.requesting = false;
       }
     );
