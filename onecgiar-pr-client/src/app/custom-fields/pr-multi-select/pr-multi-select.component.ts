@@ -29,11 +29,13 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   @Input() description: string;
   @Input() readOnly: boolean;
   @Input() isStatic: boolean = false;
+  @Input() showSelectAll: boolean = false;
   @Input() required: boolean = true;
   @Input() flagsCode: string;
   @Input() confirmDeletion: boolean;
   @Output() selectOptionEvent = new EventEmitter<any>();
   @Output() removeOptionEvent = new EventEmitter<any>();
+  selectAll = null;
 
   private _optionsIntance: any[];
   private _value: any[] = [];
@@ -60,7 +62,27 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
 
     this._beforeValueLength = this._value?.length;
 
+    if (this.selectAll === false)
+      this._optionsIntance.map((resp: any) => {
+        resp.selected = false;
+      });
+
+    if (this.selectAll === true) {
+      this.value = [];
+      this._optionsIntance.map((resp: any) => {
+        resp.selected = true;
+        this.value.push(resp);
+      });
+    }
+
     return this._optionsIntance;
+  }
+
+  selectAllF() {
+    this.selectAll = !this.selectAll;
+    setTimeout(() => {
+      this.selectOptionEvent.emit({});
+    }, 500);
   }
 
   get value(): any[] {
@@ -89,6 +111,7 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   }
 
   toggleSelectOption(option) {
+    console.log('toggleSelectOption');
     if (option?.disabled) return;
     option.selected = !option.selected;
   }
@@ -112,6 +135,8 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   }
 
   onSelectOption(option) {
+    this.selectAll = null;
+    console.log('onSelectOption');
     if (option?.disabled) return;
     // this.onChange(null);
     // console.log('onSelectOption');
