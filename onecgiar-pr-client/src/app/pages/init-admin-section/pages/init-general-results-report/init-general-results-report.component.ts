@@ -36,7 +36,9 @@ export class InitGeneralResultsReportComponent {
     });
   }
 
-  exportExcel(resultsRelected) {
+  dataToExport = [];
+
+  async exportExcel(resultsRelected) {
     this.requesting = true;
     let list = [];
     console.log(resultsRelected);
@@ -44,17 +46,30 @@ export class InitGeneralResultsReportComponent {
       list.push(element?.result_code);
     });
     console.log(list);
-    this.api.resultsSE.POST_excelFullReport(list).subscribe(
-      ({ response }) => {
-        console.log(response);
-        this.exportTablesSE.exportExcel(response, 'results_list');
-        this.requesting = false;
-      },
-      err => {
-        this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: 'There was an error in the system while generating the report. If the issue persists, please contact the technical team.', status: 'error' });
-        this.requesting = false;
-      }
-    );
+    for (const key in list) {
+      console.log();
+      await this.POST_excelFullReportPromise(list[key], key);
+    }
+    this.exportTablesSE.exportExcel(this.dataToExport, 'results_list');
+    console.log('fin');
+  }
+
+  POST_excelFullReportPromise(result, key) {
+    return new Promise((resolve, reject) => {
+      this.api.resultsSE.POST_excelFullReport([result]).subscribe(
+        ({ response }) => {
+          console.log(response);
+          // console.log(response);
+          this.dataToExport.push(...response);
+          resolve(null);
+          this.requesting = false;
+        },
+        err => {
+          this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: 'There was an error in the system while generating the report. If the issue persists, please contact the technical team.', status: 'error' });
+          this.requesting = false;
+        }
+      );
+    });
   }
 
   onRemoveinit(e) {}
