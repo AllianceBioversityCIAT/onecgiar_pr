@@ -42,17 +42,17 @@ export class NotificationItemComponent {
   }
 
   get isSubmitted() {
-    return this.notification?.status == 1;
+    return this.notification?.status == 1 && this.notification?.request_status_id == 1;
   }
 
-  resultUrl(resultId) {
-    return `/result/result-detail/${resultId}`;
+  resultUrl(resultCode) {
+    return `/result/result-detail/${resultCode}`;
   }
 
   acceptOrReject(response) {
     if (this.api.dataControlSE.platformIsClosed) return;
     let body = { ...this.notification, request_status_id: response ? 2 : 3 };
-    // console.log(body);
+    console.log(body);
     // console.log(response);
     this.requesting = true;
     this.api.resultsSE.PATCH_updateRequest(body).subscribe(

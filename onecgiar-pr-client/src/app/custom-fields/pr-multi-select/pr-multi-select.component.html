@@ -16,7 +16,18 @@
                 </div>
             </div>
 
-            <cdk-virtual-scroll-viewport itemSize="7" class="custom_scroll virtual_scroll">
+            <div class="util_container">
+                <ng-content select="[util]"></ng-content>
+            </div>
+
+            <div class="bulk_selector" (click)="this.selectAllF()" *ngIf="this.showSelectAll">
+                {{this.selectAll ?'Unselect all':'Select all'}}
+            </div>
+
+            <cdk-virtual-scroll-viewport itemSize="30" class="custom_scroll virtual_scroll">
+                <div *ngIf="!(optionsIntance | listFilterByTextAndAttr:this.optionLabel:this.searchText)?.length"
+                    class="no_info">No
+                    information found</div>
                 <div *cdkVirtualFor="let option of optionsIntance | listFilterByTextAndAttr:this.optionLabel:this.searchText"
                     class="option" [ngClass]="{'disabled': option?.disabled}" (click)="onSelectOption(option)">
                     <p-checkbox [disabled]="option?.disabled" [binary]="true" [(ngModel)]="option.selected">

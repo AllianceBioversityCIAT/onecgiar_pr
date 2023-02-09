@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
+import { CustomizedAlertsFeService } from '../../../../shared/services/customized-alerts-fe.service';
 
 @Component({
   selector: 'app-init-general-results-report',
@@ -13,7 +14,10 @@ export class InitGeneralResultsReportComponent {
   resultsSelected = [];
   resultsList;
   requesting = false;
-  constructor(public api: ApiService, private exportTablesSE: ExportTablesService) {}
+  valueToFilter = null;
+  yearToFilter = null;
+  requestCounter = 0;
+  constructor(public api: ApiService, private exportTablesSE: ExportTablesService, private customAlertService: CustomizedAlertsFeService) {}
 
   onSelectInit() {
     let inits = [];
@@ -26,24 +30,45 @@ export class InitGeneralResultsReportComponent {
   }
 
   POST_reportSesultsCompleteness(inits: any[]) {
-    // console.log(inits);
     this.resultsList = [];
     this.api.resultsSE.POST_reportSesultsCompleteness(inits, 2).subscribe(({ response }) => {
+      console.log(response);
       this.resultsList = response;
     });
   }
 
-  exportExcel(resultsRelected) {
+  dataToExport = [];
+
+  async exportExcel(resultsRelected) {
     this.requesting = true;
+    this.requestCounter = 0;
+
     let list = [];
-    resultsRelected.forEach(element => {
+    resultsRelected?.forEach(element => {
       list.push(element?.result_code);
     });
-    console.log(list);
-    this.api.resultsSE.POST_excelFullReport(list).subscribe(({ response }) => {
-      console.log(response);
-      this.exportTablesSE.exportExcel(response, 'results_list');
-      this.requesting = false;
+    for (const key in list) {
+      console.log();
+      await this.POST_excelFullReportPromise(list[key], key);
+    }
+    this.exportTablesSE.exportExcel(this.dataToExport, 'results_list');
+    this.requesting = false;
+  }
+
+  POST_excelFullReportPromise(result, key) {
+    return new Promise((resolve, reject) => {
+      this.api.resultsSE.POST_excelFullReport([result]).subscribe(
+        ({ response }) => {
+          console.log(response);
+          // console.log(response);
+          this.requestCounter++;
+          this.dataToExport.push(...response);
+          resolve(null);
+        },
+        err => {
+          this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: 'There was an error in the system while generating the report. If the issue persists, please contact the technical team.', status: 'error' });
+        }
+      );
     });
   }
 

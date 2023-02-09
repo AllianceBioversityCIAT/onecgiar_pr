@@ -17,22 +17,27 @@ import { ResultsKnowledgeProductsService } from '../results-knowledge-products/r
 import { ResultsKnowledgeProduct } from '../results-knowledge-products/entities/results-knowledge-product.entity';
 import { ModuleRef } from '@nestjs/core';
 import { FilterResultsDto } from './dto/filter-results.dto';
+import { ResultRepository } from '../result.repository';
+import { ResultTypeDto } from '../dto/result-types.dto';
+import { ResultsPolicyChangesRepository } from '../summary/repositories/results-policy-changes.repository';
+import { ResultsInnovationsUseRepository } from '../summary/repositories/results-innovations-use.repository';
+import { ResultsCapacityDevelopmentsRepository } from '../summary/repositories/results-capacity-developments.repository';
+import { ResultsInnovationsDevRepository } from '../summary/repositories/results-innovations-dev.repository';
 
 @Injectable()
 export class AdminPanelService implements OnModuleInit {
   private readonly _logger: Logger = new Logger(AdminPanelService.name);
-  private readonly _isFulfilled = <T>(
-    p: PromiseSettledResult<T>,
-  ): p is PromiseFulfilledResult<T> => p.status === 'fulfilled';
-  private readonly _isRejected = <T>(
-    p: PromiseSettledResult<T>,
-  ): p is PromiseRejectedResult => p.status === 'rejected';
   private _resultsKnowledgeProductsService: ResultsKnowledgeProductsService;
 
   constructor(
     private _handlersError: HandlersError,
     private _adminPanelRepository: AdminPanelRepository,
     private _moduleRef: ModuleRef,
+    private _resultRepository: ResultRepository,
+    private _resultsPolicyChangesRepository: ResultsPolicyChangesRepository,
+    private _resultsInnovationsUseRepository: ResultsInnovationsUseRepository,
+    private _resultsCapacityDevelopmentsRepository: ResultsCapacityDevelopmentsRepository,
+    private _resultsInnovationsDevRepository: ResultsInnovationsDevRepository,
   ) {}
 
   async onModuleInit() {
@@ -61,14 +66,158 @@ export class AdminPanelService implements OnModuleInit {
   }
 
   async excelFullReportByResultCodes(filterResults: FilterResultsDto) {
+    const resultCodes = filterResults?.resultCodes ?? [];
     try {
-      const results =
-        await this._adminPanelRepository.excelFullReportByResultCodes(
-          filterResults,
-        );
+      let fullReport: any[];
+
+      // gets the base report (sections 1 to 6)
+      const baseReport =
+        await this._resultRepository.getBasicResultDataForReport(resultCodes);
+      fullReport = [...baseReport];
+
+      let resultTypes: ResultTypeDto[] =
+        await this._resultRepository.getTypesOfResultByCodes(resultCodes);
+
+      let resultsByTypes = new Map<number, ResultTypeDto[]>();
+      resultTypes.forEach((rt) => {
+        const results = resultsByTypes.get(rt.typeId);
+        if (!results) {
+          resultsByTypes.set(rt.typeId, [rt]);
+        } else {
+          resultsByTypes.set(rt.typeId, [rt, ...results]);
+        }
+      });
+
+      let policyChanges: any[],
+        innovationUses: any[],
+        capdev: any[],
+        kps: any[],
+        innovationDevelopments: any[];
+
+      if (resultsByTypes.get(1)) {
+        // has policy changes
+        policyChanges =
+          await this._resultsPolicyChangesRepository.getSectionSevenDataForReport(
+            resultsByTypes.get(1).map((r) => r.resultCode),
+          );
+
+        fullReport = fullReport.map((fr) => {
+          const pc = policyChanges.find(
+            (pc) => pc['Result Code'] == fr['Result Code'],
+          );
+          if (pc) {
+            delete pc['Result Code'];
+            delete pc['Result ID'];
+            fr = {
+              ...fr,
+              ...pc,
+            };
+          }
+
+          return fr;
+        });
+      }
+
+      if (resultsByTypes.get(2)) {
+        // has innovation uses
+        innovationUses =
+          await this._resultsInnovationsUseRepository.getSectionSevenDataForReport(
+            resultsByTypes.get(2).map((r) => r.resultCode),
+          );
+
+        fullReport = fullReport.map((fr) => {
+          const iu = innovationUses.find(
+            (iu) => iu['Result Code'] == fr['Result Code'],
+          );
+          if (iu) {
+            delete iu['Result Code'];
+            delete iu['Result ID'];
+            fr = {
+              ...fr,
+              ...iu,
+            };
+          }
+
+          return fr;
+        });
+      }
+
+      if (resultsByTypes.get(5)) {
+        // has capdev
+        capdev =
+          await this._resultsCapacityDevelopmentsRepository.getSectionSevenDataForReport(
+            resultsByTypes.get(5).map((r) => r.resultCode),
+          );
+
+        fullReport = fullReport.map((fr) => {
+          const cd = capdev.find(
+            (cd) => cd['Result Code'] == fr['Result Code'],
+          );
+          if (cd) {
+            delete cd['Result Code'];
+            delete cd['Result ID'];
+            fr = {
+              ...fr,
+              ...cd,
+            };
+          }
+
+          return fr;
+        });
+      }
+
+      if (resultsByTypes.get(6)) {
+        // has kps
+        const kpsResponse =
+          await this._resultsKnowledgeProductsService.getSectionSevenDataForReport(
+            resultsByTypes.get(6).map((r) => r.resultCode),
+          );
+
+        if (kpsResponse.status < 300) {
+          kps = kpsResponse.response;
+
+          fullReport = fullReport.map((fr) => {
+            const kp = kps.find((kp) => kp['Result Code'] == fr['Result Code']);
+            if (kp) {
+              delete kp['Result Code'];
+              delete kp['Result ID'];
+              fr = {
+                ...fr,
+                ...kp,
+              };
+            }
+
+            return fr;
+          });
+        }
+      }
+
+      if (resultsByTypes.get(7)) {
+        // has innovation developments
+        innovationDevelopments =
+          await this._resultsInnovationsDevRepository.getSectionSevenDataForReport(
+            resultsByTypes.get(7).map((r) => r.resultCode),
+          );
+
+        fullReport = fullReport.map((fr) => {
+          const id = innovationDevelopments.find(
+            (id) => id['Result Code'] == fr['Result Code'],
+          );
+          if (id) {
+            delete id['Result Code'];
+            delete id['Result ID'];
+            fr = {
+              ...fr,
+              ...id,
+            };
+          }
+
+          return fr;
+        });
+      }
 
       return {
-        response: results,
+        response: fullReport,
         message: 'Successful response',
         status: HttpStatus.OK,
       };

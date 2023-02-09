@@ -409,7 +409,7 @@ export class ResultsApiService {
         // console.log(resp.responee);
         resp?.response.map(result => {
           result.full_name = `${result.result_title} ${result.result_code} ${result.official_code} ${result.result_type_name}`;
-          result.full_name_html = `${result.result_title} <strong>Result code: (${result.result_code})</strong> - <strong>Official code: (${result.official_code})</strong> - <strong>Result Type: (${result.result_type_name})</strong>`;
+          result.full_name_html = `<div class="completeness-${result.is_submitted == 1 ? 'submitted' : 'editing'} completeness-state">${result.is_submitted == 1 ? 'Submitted' : 'Editing'}</div> <strong>Result code: (${result.result_code})</strong> - ${result.result_title}  - <strong>Official code: (${result.official_code})</strong> - <strong>Result Type: (${result.result_type_name})</strong>`;
           result.result_code = Number(result.result_code);
           result.completeness = Number(result.completeness);
           result.general_information_value = Number(result?.general_information?.value);

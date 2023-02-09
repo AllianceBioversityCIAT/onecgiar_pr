@@ -848,7 +848,7 @@ export class ResultsKnowledgeProductsService {
         await this._resultsKnowledgeProductRepository.findOne({
           where: {
             results_id: result.id,
-            ...this._resultsKnowledgeProductWhere,
+            //...this._resultsKnowledgeProductWhere,
           },
           relations: this._resultsKnowledgeProductRelations,
         });
@@ -861,6 +861,51 @@ export class ResultsKnowledgeProductsService {
         };
       }
 
+      knowledgeProduct.result_knowledge_product_author_array =
+        await this._resultsKnowledgeProductAuthorRepository.find({
+          where: {
+            result_knowledge_product_id:
+              knowledgeProduct.result_knowledge_product_id,
+            is_active: true,
+          },
+        });
+
+      knowledgeProduct.result_knowledge_product_altmetric_array =
+        await this._resultsKnowledgeProductAltmetricRepository.find({
+          where: {
+            result_knowledge_product_id:
+              knowledgeProduct.result_knowledge_product_id,
+            is_active: true,
+          },
+        });
+
+      knowledgeProduct.result_knowledge_product_institution_array =
+        await this._resultsKnowledgeProductInstitutionRepository.find({
+          where: {
+            result_knowledge_product_id:
+              knowledgeProduct.result_knowledge_product_id,
+            is_active: true,
+          },
+        });
+
+      knowledgeProduct.result_knowledge_product_keyword_array =
+        await this._resultsKnowledgeProductKeywordRepository.find({
+          where: {
+            result_knowledge_product_id:
+              knowledgeProduct.result_knowledge_product_id,
+            is_active: true,
+          },
+        });
+
+      knowledgeProduct.result_knowledge_product_metadata_array =
+        await this._resultsKnowledgeProductMetadataRepository.find({
+          where: {
+            result_knowledge_product_id:
+              knowledgeProduct.result_knowledge_product_id,
+            is_active: true,
+          },
+        });
+
       const response =
         this._resultsKnowledgeProductMapper.entityToDto(knowledgeProduct);
 
@@ -869,7 +914,7 @@ export class ResultsKnowledgeProductsService {
 
       return {
         response,
-        message: 'The Result Knowledge Product has already been created.',
+        message: 'The Result Knowledge Product has been found.',
         status: HttpStatus.OK,
       };
     } catch (error) {
@@ -1024,6 +1069,24 @@ export class ResultsKnowledgeProductsService {
         response: kps,
         message:
           'The active knowledge products have been retrieved successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async getSectionSevenDataForReport(resultCodesArray: number[]) {
+    try {
+      const data =
+        await this._resultsKnowledgeProductRepository.getSectionSevenDataForReport(
+          resultCodesArray,
+        );
+
+      return {
+        response: data,
+        message:
+          'The data for the knowledge products have been retrieved successfully',
         status: HttpStatus.OK,
       };
     } catch (error) {
