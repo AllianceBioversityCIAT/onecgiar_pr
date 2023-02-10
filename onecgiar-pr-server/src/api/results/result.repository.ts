@@ -807,7 +807,11 @@ GROUP by rbi.result_id) as "Partners (with delivery type)",
     GROUP_CONCAT(DISTINCT CONCAT('(',res2.result_code,': ',res2.result_type,' - ', res2.title,')')) as "Linked Results",
     GROUP_CONCAT(DISTINCT lr2.legacy_link separator ', ') as "Results from previous portfolio",
     -- section 6
-    GROUP_CONCAT(DISTINCT CONCAT('• Link: ', e.link, '; Gender related? ', IF(COALESCE(e.gender_related, 0) = 1, 'Yes', 'No'), '; Youth related? ', IF(COALESCE(e.youth_related, 0) = 1, 'Yes', 'No'), '; Details: ', COALESCE(e.description, 'Not Provided')) SEPARATOR '\n') as "Evidences" 
+   /* GROUP_CONCAT(DISTINCT CONCAT('• Link: ', e.link, '; Gender related? ', IF(COALESCE(e.gender_related, 0) = 1, 'Yes', 'No'), '; Youth related? ', IF(COALESCE(e.youth_related, 0) = 1, 'Yes', 'No'), '; Details: ', COALESCE(e.description, 'Not Provided')) SEPARATOR '\n') as "Evidences" */
+    (SELECT GROUP_CONCAT(DISTINCT CONCAT('• Link: ', e.link, '; Gender related? ', IF(COALESCE(e.gender_related, 0) = 1, 'Yes', 'No'), '; Youth related? ', IF(COALESCE(e.youth_related, 0) = 1, 'Yes', 'No'), '; Details: ', COALESCE(e.description, 'Not Provided')) SEPARATOR '\n') 
+  FROM evidence e
+ WHERE e.result_id = r.id
+   AND e.is_active > 0) as "Evidences"
     FROM 
     \`result\` r
     left join gender_tag_level gtl on gtl.id = r.gender_tag_level_id 
@@ -871,7 +875,7 @@ GROUP by rbi.result_id) as "Partners (with delivery type)",
     and lr2.is_active > 0
     and lr2.legacy_link is not NULL
     left join results_knowledge_product rkp on rkp.results_id = r.id and rkp.is_active > 0
-    left join evidence e on e.result_id = r.id and e.is_active > 0
+  /*  left join evidence e on e.result_id = r.id and e.is_active > 0 */
     WHERE r.result_code ${resultCodes.length ? `in (${resultCodes})` : '= 0'}
     GROUP by 
     r.result_code,
