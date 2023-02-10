@@ -66,9 +66,9 @@ export class ResultsPolicyChangesRepository extends Repository<ResultsPolicyChan
             else '???'
           end
         )
-      ) as 'Status',
-      concat(cps.name, ' - ', cps.definition) 'Stage',
-      group_concat(distinct concat(if(coalesce(ci.acronym, '') = '', '', concat(ci.acronym, ' - ')), ci.name) separator '; ') as 'Implementing organizations'
+      ) as 'Status (Policy change)',
+      concat(cps.name, ' - ', cps.definition) 'Stage (Policy change)',
+      group_concat(distinct concat(if(coalesce(ci.acronym, '') = '', '', concat(ci.acronym, ' - ')), ci.name) separator '; ') as 'Implementing organizations (Policy change)'
     from results_policy_changes rpc
     right join result r on rpc.result_id = r.id and r.is_active = 1
     left join clarisa_policy_type cpt on rpc.policy_type_id = cpt.id
