@@ -17,7 +17,15 @@ export class InitGeneralResultsReportComponent {
   valueToFilter = null;
   yearToFilter = null;
   requestCounter = 0;
+  allInitiatives = [];
+
   constructor(public api: ApiService, private exportTablesSE: ExportTablesService, private customAlertService: CustomizedAlertsFeService) {}
+
+  ngOnInit(): void {
+    //Called after the constructor, initializing input properties, and the first call to ngOnChanges.
+    //Add 'implements OnInit' to the class.
+    this.getAll();
+  }
 
   onSelectInit() {
     let inits = [];
@@ -27,6 +35,20 @@ export class InitGeneralResultsReportComponent {
     });
     console.log(inits);
     this.POST_reportSesultsCompleteness(inits);
+  }
+
+  async getAll() {
+    await this.api.rolesSE.validateReadOnly();
+    this.GET_AllInitiatives();
+  }
+
+  GET_AllInitiatives() {
+    // console.log(this.api.rolesSE.isAdmin);
+    if (!this.api.rolesSE.isAdmin) return;
+    this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
+      // console.log(response);
+      this.allInitiatives = response;
+    });
   }
 
   POST_reportSesultsCompleteness(inits: any[]) {
