@@ -785,7 +785,20 @@ WHERE
     GROUP_CONCAT(distinct CONCAT('(',ci6.official_code,' - ',ci6.short_name,'): ', 'Toc Level: ' ,IFNULL(tl2.name , 'Not provider'), ', ToC result title:' ,IFNULL(tr2.title, 'Not provider')) SEPARATOR ', ') as "ToC Mapping (Contributting initiatives)",
     -- section 3
     if(r.no_applicable_partner=1, "Yes", "No") as "Are partners applicable?",
-    GROUP_CONCAT(DISTINCT concat('(',prt.name, ', Delivery type(s): ', prt.deliveries_type,')') SEPARATOR ', ') as "Partners (with delivery type)",
+    /* GROUP_CONCAT(DISTINCT concat('(',prt.name, ', Delivery type(s): ', prt.deliveries_type,')') SEPARATOR ', ') as "Partners (with delivery type)",*/
+    (SELECT GROUP_CONCAT(DISTINCT concat('(',ci7.name, ', Delivery type(s): ', pdt.name,')') SEPARATOR ', ') as "Partners (with delivery type)"
+    FROM results_by_institution rbi
+left join result_by_institutions_by_deliveries_type rbibdt 
+      on rbibdt.result_by_institution_id = rbi.id 
+     and rbibdt.is_active > 0
+left join clarisa_institutions ci7 
+      on ci7.id = rbi.institutions_id
+left JOIN partner_delivery_type pdt 
+      on pdt.id = rbibdt.partner_delivery_type_id
+   WHERE rbi.result_id = r.id
+     and rbi.institution_roles_id = 2
+     and rbi.is_active > 0
+GROUP by rbi.result_id) as "Partners (with delivery type)",
     -- section 4
     if(cgs.name is null, 'Not Provided', (if(cgs.id = 3, 'National', cgs.name))) as "Geographic Focus",
     GROUP_CONCAT(DISTINCT cr.name separator ', ') as "Regions",
@@ -829,7 +842,7 @@ WHERE
     left join clarisa_initiatives ci6 on ci6.id = rtr2.initiative_id 
     left join toc_result tr2 on tr2.toc_result_id = rtr2.toc_result_id
     left join toc_level tl2 on tl2.toc_level_id = tr2.toc_level_id
-    left join (select rbi3.result_id, ci7.name, GROUP_CONCAT(pdt.name separator ', ') as deliveries_type  
+/*  left join (select rbi3.result_id, ci7.name, GROUP_CONCAT(pdt.name separator ', ') as deliveries_type  
     from results_by_institution rbi3 
     left join result_by_institutions_by_deliveries_type rbibdt on rbibdt.result_by_institution_id = rbi3.id 
     and rbibdt.is_active > 0
@@ -837,7 +850,7 @@ WHERE
     left JOIN partner_delivery_type pdt on pdt.id = rbibdt.partner_delivery_type_id
     WHERE rbi3.institution_roles_id = 2
     and rbi3.is_active > 0
-    GROUP by rbi3.result_id, ci7.name) prt on prt.result_id = r.id
+    GROUP by rbi3.result_id, ci7.name) prt on prt.result_id = r.id */
     left join result_region rr ON rr.result_id = r.id 
     and rr.is_active > 0
     left join clarisa_regions cr on cr.um49Code = rr.region_id 
