@@ -89,6 +89,7 @@ export class InitGeneralResultsReportComponent {
         },
         err => {
           this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: 'There was an error in the system while generating the report. If the issue persists, please contact the technical team.', status: 'error' });
+          resolve(null);
         }
       );
     });
