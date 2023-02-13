@@ -19,6 +19,7 @@ import { LegacyResult } from '../legacy-result/entities/legacy-result.entity';
 import { ClarisaGeographicScope } from '../../../clarisa/clarisa-geographic-scopes/entities/clarisa-geographic-scope.entity';
 import { ResultsKnowledgeProduct } from '../results-knowledge-products/entities/results-knowledge-product.entity';
 import { ResultRegion } from '../result-regions/entities/result-region.entity';
+import { ResultCountry } from '../result-countries/entities/result-country.entity';
 
 @Entity()
 @Index(['result_code', 'version_id'], { unique: true })
@@ -190,4 +191,7 @@ export class Result {
 
   @OneToMany(() => ResultRegion, (rr) => rr.result_object)
   result_region_array: ResultRegion[];
+
+  @OneToMany(() => ResultCountry, (rc) => rc.result_object)
+  result_country_array: ResultCountry[];
 }

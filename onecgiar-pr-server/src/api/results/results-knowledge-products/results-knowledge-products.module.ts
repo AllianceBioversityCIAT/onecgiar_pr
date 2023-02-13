@@ -27,6 +27,8 @@ import { UserRepository } from '../../../auth/modules/user/repositories/user.rep
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { ResultRegionRepository } from '../result-regions/result-regions.repository';
 import { ClarisaRegionsRepository } from '../../../clarisa/clarisa-regions/ClariasaRegions.repository';
+import { CGSpaceCountryMappingsRepository } from './repositories/cgspace-country-mappings.repository';
+import { ResultCountryRepository } from '../result-countries/result-countries.repository';
 
 @Module({
   imports: [HttpModule],
@@ -55,6 +57,8 @@ import { ClarisaRegionsRepository } from '../../../clarisa/clarisa-regions/Clari
     RoleByUserRepository,
     ResultRegionRepository,
     ClarisaRegionsRepository,
+    CGSpaceCountryMappingsRepository,
+    ResultCountryRepository,
   ],
   exports: [
     ResultsKnowledgeProductsRepository,
@@ -78,6 +82,8 @@ import { ClarisaRegionsRepository } from '../../../clarisa/clarisa-regions/Clari
     RoleByUserRepository,
     ResultRegionRepository,
     ClarisaRegionsRepository,
+    CGSpaceCountryMappingsRepository,
+    ResultCountryRepository,
   ],
 })
 export class ResultsKnowledgeProductsModule {}

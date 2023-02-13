@@ -35,7 +35,6 @@
             [readOnly]="this.api.dataControlSE.isKnowledgeProduct"
             [hideOptions]="this.geographicLocationBody.scope_id != 1 && this.geographicLocationBody.scope_id != 2">
         </app-pr-yes-or-not>
-        <div *ngIf="(!this.api.dataControlSE.isKnowledgeProduct); else kpBlock">
             <app-pr-multi-select
                 *ngIf="this.geographicLocationBody.has_countries !== false && !!this.geographicLocationBody.has_countries  || this.geographicLocationBody.scope_id == 3"
                 [options]="this.regionsCountriesSE.countriesList" selectedLabel="Countries selected"
@@ -43,20 +42,6 @@
                 optionLabel="full_name" optionValue="id" placeholder="Select countries"
                 [(ngModel)]="this.geographicLocationBody.countries">
             </app-pr-multi-select>
-        </div>
-        <ng-template #kpBlock>
-            <div *ngIf="this.geographicLocationBody.has_countries !== false && !!this.geographicLocationBody.has_countries  || this.geographicLocationBody.scope_id == 3">
-                <app-pr-field-header label="Countries" [required]="false"></app-pr-field-header>
-                <div *ngIf="geographicLocationBody.countries?.length;else notProvided" class="custom_chips">
-                    <div class="geoscope" *ngFor="let item of geographicLocationBody.countries">
-                        {{item}}
-                    </div>
-                </div>
-                <ng-template #notProvided>
-                    <div class="read-only">Not Provided</div>
-                </ng-template>
-            </div>
-        </ng-template>
         <!-- flagsCode="iso_alpha_2" -->
     </div>
 </div>

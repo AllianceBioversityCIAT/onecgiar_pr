@@ -45,14 +45,9 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProductDto.type = mqapResponseDto?.Type;
 
     //TODO remove when this mapping is done
-    if (typeof mqapResponseDto?.Countries === 'string') {
-      knowledgeProductDto.cgspace_countries = mqapResponseDto?.Countries;
-    } else {
-      knowledgeProductDto.cgspace_countries = (
-        mqapResponseDto?.Countries ?? []
-      ).join('; ');
-    }
-
+    knowledgeProductDto.cgspace_countries = this.getAsArray(
+      mqapResponseDto?.Countries,
+    );
     /*if (typeof mqapResponseDto?.['Region of the research'] === 'string') {
       knowledgeProductDto.cgspace_regions =
         mqapResponseDto?.['Region of the research'];
@@ -62,9 +57,9 @@ export class ResultsKnowledgeProductMapper {
       ).join('; ');
     }*/
 
-    if ((knowledgeProductDto.cgspace_countries ?? '').length < 1) {
+    /*if ((knowledgeProductDto.cgspace_countries ?? '').length < 1) {
       knowledgeProductDto.cgspace_countries = null;
-    }
+    }*/
 
     /*if ((knowledgeProductDto.cgspace_regions ?? '').length < 1) {
       knowledgeProductDto.cgspace_regions = null;
@@ -169,6 +164,7 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProductDto.clarisa_regions = regions
       .filter((r) => r)
       .map((r) => r.clarisa_id);
+    //knowledgeProductDto.cgspace_countries = this.getAsArray(dto?.Countries);
 
     const geoLocation = this.getAsArray(dto?.['Geographic location']);
     const isGlobal = geoLocation.find((r) => r.clarisa_id === 1);
@@ -300,7 +296,7 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProductDto.melia_type_id = entity.melia_type_id;
     knowledgeProductDto.ost_melia_study_id = entity.ost_melia_study_id;
     //TODO remove when this mapping is done
-    knowledgeProductDto.cgspace_countries = entity.cgspace_countries;
+    //knowledgeProductDto.cgspace_countries = entity.cgspace_countries;
     //knowledgeProductDto.cgspace_regions = entity.cgspace_regions;
 
     const authors = entity.result_knowledge_product_author_array;
@@ -367,7 +363,7 @@ export class ResultsKnowledgeProductMapper {
       return institutionDto;
     });
 
-    knowledgeProductDto.cgspace_countries = null; //TODO TBD
+    //knowledgeProductDto.cgspace_countries = null; //TODO TBD
 
     const regions = entity.result_object.result_region_array;
     knowledgeProductDto.clarisa_regions = (regions ?? []).map(
@@ -413,7 +409,7 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProduct.version_id = versionId;
 
     //TODO remove when mapping of countries is done
-    knowledgeProduct.cgspace_countries = dto.cgspace_countries;
+    //knowledgeProduct.cgspace_countries = dto.cgspace_countries;
     //knowledgeProduct.cgspace_regions = dto.cgspace_regions;
 
     return knowledgeProduct;
