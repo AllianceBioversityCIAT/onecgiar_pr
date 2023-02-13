@@ -25,4 +25,8 @@ export class TocApiService {
   GET_fullInitiativeToc(resultId) {
     return this.http.get<any>(`${this.apiBaseUrl}result/get/full-initiative-toc/result/${resultId}`);
   }
+
+  GET_fullInitiativeTocByinitId(initiativeId) {
+    return this.http.get<any>(`${this.apiBaseUrl}result/get/full-initiative-toc/initiative/${initiativeId}`);
+  }
 }
