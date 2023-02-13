@@ -40,12 +40,17 @@ export class ResultDetailComponent {
   GET_resultIdToCode() {
     this.currentResultSE.resultIdIsconverted = false;
     return new Promise((resolve, reject) => {
-      this.api.resultsSE.GET_resultIdToCode(this.api.resultsSE.currentResultId).subscribe(({ response }) => {
-        this.api.resultsSE.currentResultId = response;
-        // console.log('GET_resultIdToCode');
-        this.currentResultSE.resultIdIsconverted = true;
-        resolve(null);
-      });
+      this.api.resultsSE.GET_resultIdToCode(this.api.resultsSE.currentResultId).subscribe(
+        ({ response }) => {
+          this.api.resultsSE.currentResultId = response;
+          // console.log('GET_resultIdToCode');
+          this.currentResultSE.resultIdIsconverted = true;
+          resolve(null);
+        },
+        err => {
+          resolve(null);
+        }
+      );
     });
   }
 
