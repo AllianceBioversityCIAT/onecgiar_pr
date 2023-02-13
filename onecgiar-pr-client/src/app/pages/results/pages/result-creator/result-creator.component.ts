@@ -85,7 +85,8 @@ export class ResultCreatorComponent implements OnInit {
       // console.log(this.resultLevelSE.resultBody);
       this.api.resultsSE.POST_resultCreateHeader(this.resultLevelSE.resultBody).subscribe(
         (resp: any) => {
-          this.router.navigate([`/result/result-detail/${resp?.response?.id}/general-information`]);
+          this.router.navigate([`/result/result-detail/${resp?.response?.result_code}/general-information`]);
+          console.log(resp);
           this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
         },
         err => {
@@ -96,8 +97,8 @@ export class ResultCreatorComponent implements OnInit {
       // console.log({ ...this.mqapJson, result_data: this.resultLevelSE.resultBody });
       this.api.resultsSE.POST_createWithHandle({ ...this.mqapJson, result_data: this.resultLevelSE.resultBody }).subscribe(
         (resp: any) => {
-          // console.log(resp);
-          this.router.navigate([`/result/result-detail/${resp?.response?.id}/general-information`]);
+          console.log(resp);
+          this.router.navigate([`/result/result-detail/${resp?.response?.result_code}/general-information`]);
           this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
         },
         err => {
