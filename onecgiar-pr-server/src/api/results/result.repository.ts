@@ -785,18 +785,54 @@ WHERE
     GROUP_CONCAT(distinct CONCAT('(',ci6.official_code,' - ',ci6.short_name,'): ', 'Toc Level: ' ,IFNULL(tl2.name , 'Not provider'), ', ToC result title:' ,IFNULL(tr2.title, 'Not provider')) SEPARATOR ', ') as "ToC Mapping (Contributting initiatives)",
     -- section 3
     if(r.no_applicable_partner=1, "Yes", "No") as "Are partners applicable?",
-    GROUP_CONCAT(DISTINCT concat('(',prt.name, ', Delivery type(s): ', prt.deliveries_type,')') SEPARATOR ', ') as "Partners (with delivery type)",
+    /* GROUP_CONCAT(DISTINCT concat('(',prt.name, ', Delivery type(s): ', prt.deliveries_type,')') SEPARATOR ', ') as "Partners (with delivery type)",*/
+    (SELECT GROUP_CONCAT(DISTINCT concat('(',ci7.name, ', Delivery type(s): ', pdt.name,')') SEPARATOR ', ') as "Partners (with delivery type)"
+    FROM results_by_institution rbi
+left join result_by_institutions_by_deliveries_type rbibdt 
+      on rbibdt.result_by_institution_id = rbi.id 
+     and rbibdt.is_active > 0
+left join clarisa_institutions ci7 
+      on ci7.id = rbi.institutions_id
+left JOIN partner_delivery_type pdt 
+      on pdt.id = rbibdt.partner_delivery_type_id
+   WHERE rbi.result_id = r.id
+     and rbi.institution_roles_id = 2
+     and rbi.is_active > 0
+GROUP by rbi.result_id) as "Partners (with delivery type)",
     -- section 4
-    if(cgs.name is null, 'Not Provided', (if(cgs.id = 3, 'National', cgs.name))) as "Geographic Focus",
-    GROUP_CONCAT(DISTINCT cr.name separator ', ') as "Regions",
-    if(rt.id<>6, GROUP_CONCAT(DISTINCT cc3.name separator ', '), rkp.cgspace_countries) as "Countries",
+    (SELECT if(cgs.name is null, 'Not Provided', (if(cgs.id = 3, 'National', cgs.name))) 
+  FROM clarisa_geographic_scope cgs
+ WHERE cgs.id = r.geographic_scope_id
+ GROUP BY cgs.id,cgs.name) as "Geographic Focus",
+    ( SELECT GROUP_CONCAT(DISTINCT cr.name separator ', ')
+     FROM result_region rr
+left join clarisa_regions cr 
+       on cr.um49Code = rr.region_id 
+    WHERE rr.result_id  =  r.id
+      and rr.is_active = 1) as "Regions",
+     (SELECT if(rt.id<>6, GROUP_CONCAT(DISTINCT cc3.name separator ', '), rkp.cgspace_countries) 
+     FROM result_country rc2
+left join clarisa_countries cc3 
+       on cc3.id = rc2.country_id 
+    WHERE rc2.result_id  = r.id
+      and rc2.is_active = 1) as "Countries",
     -- section 5
     GROUP_CONCAT(DISTINCT CONCAT('(',res2.result_code,': ',res2.result_type,' - ', res2.title,')')) as "Linked Results",
-    GROUP_CONCAT(DISTINCT lr2.legacy_link separator ', ') as "Results from previous portfolio",
+ /* GROUP_CONCAT(DISTINCT lr2.legacy_link separator ', ') as "Results from previous portfolio", */
+ (SELECT GROUP_CONCAT(DISTINCT lr2.legacy_link separator ', ')
+  FROM linked_result lr2
+ WHERE lr2.origin_result_id = 28
+    and lr2.linked_results_id is NULL 
+    and lr2.is_active > 0
+    and lr2.legacy_link is not NULL) as "Results from previous portfolio",
     -- section 6
-    GROUP_CONCAT(DISTINCT CONCAT('• Link: ', e.link, '; Gender related? ', IF(COALESCE(e.gender_related, 0) = 1, 'Yes', 'No'), '; Youth related? ', IF(COALESCE(e.youth_related, 0) = 1, 'Yes', 'No'), '; Details: ', COALESCE(e.description, 'Not Provided')) SEPARATOR '\n') as "Evidences" 
+   /* GROUP_CONCAT(DISTINCT CONCAT('• Link: ', e.link, '; Gender related? ', IF(COALESCE(e.gender_related, 0) = 1, 'Yes', 'No'), '; Youth related? ', IF(COALESCE(e.youth_related, 0) = 1, 'Yes', 'No'), '; Details: ', COALESCE(e.description, 'Not Provided')) SEPARATOR '\n') as "Evidences" */
+    (SELECT GROUP_CONCAT(DISTINCT CONCAT('• Link: ', e.link, '; Gender related? ', IF(COALESCE(e.gender_related, 0) = 1, 'Yes', 'No'), '; Youth related? ', IF(COALESCE(e.youth_related, 0) = 1, 'Yes', 'No'), '; Details: ', COALESCE(e.description, 'Not Provided')) SEPARATOR '\n') 
+  FROM evidence e
+ WHERE e.result_id = r.id
+   AND e.is_active > 0) as "Evidences"
     FROM 
-    \`result\` r
+    result r
     left join gender_tag_level gtl on gtl.id = r.gender_tag_level_id 
     left join gender_tag_level gtl2 on gtl2.id = r.climate_change_tag_level_id 
     left join results_by_inititiative rbi on rbi.result_id = r.id 
@@ -829,7 +865,7 @@ WHERE
     left join clarisa_initiatives ci6 on ci6.id = rtr2.initiative_id 
     left join toc_result tr2 on tr2.toc_result_id = rtr2.toc_result_id
     left join toc_level tl2 on tl2.toc_level_id = tr2.toc_level_id
-    left join (select rbi3.result_id, ci7.name, GROUP_CONCAT(pdt.name separator ', ') as deliveries_type  
+/*  left join (select rbi3.result_id, ci7.name, GROUP_CONCAT(pdt.name separator ', ') as deliveries_type  
     from results_by_institution rbi3 
     left join result_by_institutions_by_deliveries_type rbibdt on rbibdt.result_by_institution_id = rbi3.id 
     and rbibdt.is_active > 0
@@ -837,28 +873,28 @@ WHERE
     left JOIN partner_delivery_type pdt on pdt.id = rbibdt.partner_delivery_type_id
     WHERE rbi3.institution_roles_id = 2
     and rbi3.is_active > 0
-    GROUP by rbi3.result_id, ci7.name) prt on prt.result_id = r.id
-    left join result_region rr ON rr.result_id = r.id 
+    GROUP by rbi3.result_id, ci7.name) prt on prt.result_id = r.id */
+  /*  left join result_region rr ON rr.result_id = r.id 
     and rr.is_active > 0
     left join clarisa_regions cr on cr.um49Code = rr.region_id 
     left join result_country rc2 on rc2.result_id = r.id 
     and rc2.is_active > 0
     left join clarisa_countries cc3 on cc3.id = rc2.country_id 
-    left join clarisa_geographic_scope cgs ON cgs.id = r.geographic_scope_id 
+    left join clarisa_geographic_scope cgs ON cgs.id = r.geographic_scope_id */
     left join linked_result lr on lr.origin_result_id = r.id
     and lr.linked_results_id is not NULL 
     and lr.is_active > 0
     and lr.legacy_link is NULL 
     left join (select r2.id, r2.result_code, r2.title, rt2.name as result_type 
-    from \`result\` r2 
+    from result r2 
     left join result_type rt2 on rt2.id = r2.result_type_id
     where r2.is_active > 0) res2 on res2.id = lr.linked_results_id
-    left join linked_result lr2 on lr2.origin_result_id = r.id
+   /* left join linked_result lr2 on lr2.origin_result_id = r.id
     and lr2.linked_results_id is NULL 
     and lr2.is_active > 0
-    and lr2.legacy_link is not NULL
+    and lr2.legacy_link is not NULL */
     left join results_knowledge_product rkp on rkp.results_id = r.id and rkp.is_active > 0
-    left join evidence e on e.result_id = r.id and e.is_active > 0
+  /*  left join evidence e on e.result_id = r.id and e.is_active > 0 */
     WHERE r.result_code ${resultCodes.length ? `in (${resultCodes})` : '= 0'}
     GROUP by 
     r.result_code,
@@ -877,8 +913,6 @@ WHERE
     ci.short_name,
     r.no_applicable_partner,
     rkp.cgspace_countries,
-    cgs.id,
-    cgs.name,
     rt.id
     `;
 

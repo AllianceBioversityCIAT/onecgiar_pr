@@ -246,6 +246,26 @@ export class TocResultsRepository extends Repository<TocResult> {
     }
   }
 
+  async getFullInitiativeTocByInitiative(initiativeId: number) {
+    const queryData = `
+    SELECT i.toc_id
+    FROM clarisa_initiatives i
+   WHERE i.id = ?
+     AND active = 1;
+    `;
+    try {
+      const tocid = await this.query(queryData, [initiativeId]);
+      return tocid;
+    } catch (error) {
+      throw {
+        message: `[${TocResultsRepository.name}] => getTocIdFromOst by initiative error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
+
   async isTocResoultByInitiative(resultId: number, tResult: number) {
     const queryData = `
     select 

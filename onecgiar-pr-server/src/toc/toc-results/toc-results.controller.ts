@@ -36,6 +36,17 @@ export class TocResultsController {
     throw new HttpException({ message, response }, status);
   }
 
+  @Get('get/full-initiative-toc/initiative/:initiativeId')
+  async getFullInitiativeTocByInitiative(
+    @Param('initiativeId') initiativeId: number,
+  ) {
+    const { message, response, status } =
+      await this.tocResultsService.findFullInitiativeTocByInitiative(
+        initiativeId,
+      );
+    throw new HttpException({ message, response }, status);
+  }
+
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateTocResultDto: UpdateTocResultDto) {
     return this.tocResultsService.update(+id, updateTocResultDto);

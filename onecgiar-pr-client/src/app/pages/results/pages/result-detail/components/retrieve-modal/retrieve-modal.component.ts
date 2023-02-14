@@ -48,7 +48,8 @@ export class RetrieveModalComponent implements OnInit {
         this.api.alertsFe.show({ id: 'partners', title: `The Legacy Result was retrieved successfully!`, description: `The selected result is already list in the reported results.`, status: 'success' });
         this.requesting = false;
         this.api.dataControlSE.showRetrieveRequest = false;
-        this.router.navigate([`/result/result-detail/${resp?.response?.newResultHeader?.id}/general-information`]);
+        console.log(resp);
+        this.router.navigate([`/result/result-detail/${resp?.response?.newResultHeader?.result_code}/general-information`]);
       },
       err => {
         console.log(err);

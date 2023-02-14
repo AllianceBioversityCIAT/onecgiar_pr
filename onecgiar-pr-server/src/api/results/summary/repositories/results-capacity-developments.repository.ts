@@ -60,11 +60,11 @@ export class ResultsCapacityDevelopmentsRepository extends Repository<ResultsCap
       r.id 'Result ID', 
       r.result_code 'Result Code',
       -- Initiative Output - Capacity sharing for development specific fields
-      rcd.female_using 'Number of females',
-      rcd.male_using 'Number of males',
+      rcd.female_using 'Number of females (CapDev)',
+      rcd.male_using 'Number of males (CapDev)',
       if(ct.capdev_term_id in (3,4), ct.name, concat(ct.term, ' - ', ct.name)) as 'Lenght of training',
       cdm.name 'Delivery method',
-      group_concat(distinct concat(if(coalesce(ci.acronym, '') = '', '', concat(ci.acronym, ' - ')), ci.name) separator '; ') as 'Implementing organizations'
+      group_concat(distinct concat(if(coalesce(ci.acronym, '') = '', '', concat(ci.acronym, ' - ')), ci.name) separator '; ') as 'Implementing organizations (CapDev)'
     from results_capacity_developments rcd 
     left join result r on rcd.result_id = r.id and r.is_active = 1
     left join capdevs_term ct on rcd.capdev_term_id = ct.capdev_term_id

@@ -66,6 +66,31 @@ export class TocResultsService {
     }
   }
 
+  async findFullInitiativeTocByInitiative(initiativeId: number) {
+    try {
+      const tocResults =
+        await this._tocResultsRepository.getFullInitiativeTocByInitiative(
+          initiativeId,
+        );
+      if (!tocResults.length) {
+        throw {
+          response: {},
+          message: 'ToC by Initiative Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      return {
+        response: tocResults,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+
   update(id: number, updateTocResultDto: UpdateTocResultDto) {
     return `This action updates a #${id} tocResult`;
   }
