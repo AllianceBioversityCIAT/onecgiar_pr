@@ -19,7 +19,6 @@ export class TypeOneReportService {
   async getFactSheetByInit(initId: number){
     try {
       const results = await this._typeOneReportRepository.getFactSheetByInit(initId);
-      results['results'] = JSON.parse(results['results']);
       return {
         response: results,
         message: 'Successful response',
