@@ -220,7 +220,7 @@ export class TypeOneReportRepository {
           return rr.inititiative_id === gi.initiative_id;
         });
         gi['eoiOutcome'] = eoiOutcome.filter((eoi) => {
-          return eoi.initvStgId === gi.initiative_id;
+          return eoi.initvStgId === gi.initiative_stage_id;
         });
         gi['budget'] = budget.filter((b) => {
           return b.initvStgId === gi.initiative_stage_id;
