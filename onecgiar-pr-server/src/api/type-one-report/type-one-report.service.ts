@@ -19,7 +19,6 @@ export class TypeOneReportService {
   async getFactSheetByInit(initId: number){
     try {
       const results = await this._typeOneReportRepository.getFactSheetByInit(initId);
-      console.log("🚀 ~ file: type-one-report.service.ts:22 ~ TypeOneReportService ~ getFactSheetByInit ~ results", results[0])
       return {
         response: results[0],
         message: 'Successful response',
