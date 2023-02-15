@@ -30,6 +30,7 @@ import { MQAPModule } from './api/m-qap/m-qap.module';
 import { ElasticModule } from './elastic/elastic.module';
 
 import { ResultDashboardBIdModule } from './result-dashboard-bi/result-dashboard.module';
+import { PlanningModuleModule } from './planning-module/planning-module.module';
 
 
 @Module({
@@ -55,7 +56,8 @@ import { ResultDashboardBIdModule } from './result-dashboard-bi/result-dashboard
     TocResultsModule,
     RouterModule.register(MainRoutes),
     ElasticModule,
-    ResultDashboardBIdModule
+    ResultDashboardBIdModule,
+    PlanningModuleModule
   ],
   controllers: [AppController],
   providers: [
