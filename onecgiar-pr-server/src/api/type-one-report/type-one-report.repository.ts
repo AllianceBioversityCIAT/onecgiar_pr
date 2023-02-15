@@ -158,6 +158,7 @@ export class TypeOneReportRepository {
       rt.name as type_name,
       re.result_type_id as result_type,
       re.result_title,
+      re.result_description,
       re.is_global,
       re.active
     FROM
