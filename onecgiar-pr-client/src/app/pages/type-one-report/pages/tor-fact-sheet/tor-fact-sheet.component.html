@@ -1,4 +1,18 @@
 <div class="local_container">
+
+    <div class="tor_sub_title">
+        1. Fact sheet
+    </div>
+
     <app-simple-table-with-clipboard distribution="left" [data]="data" [header]="header"
         title="Fact sheet"></app-simple-table-with-clipboard>
+
+    <br>
+    <div class="tor_sub_title">
+        Budget
+    </div>
+
+    <app-simple-table-with-clipboard [data]="budget.data" [header]="budget.header"
+        title="Fact sheet"></app-simple-table-with-clipboard>
+
 </div>

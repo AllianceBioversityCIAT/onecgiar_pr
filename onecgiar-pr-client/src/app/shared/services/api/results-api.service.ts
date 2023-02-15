@@ -450,4 +450,8 @@ export class ResultsApiService {
   POST_excelFullReport(resultCodes: any[]) {
     return this.http.post<any>(`${this.apiBaseUrl}admin-panel/report/results/excel-full-report`, { resultCodes });
   }
+
+  GET_factSheetByInitiativeId(initiativeId) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/type-one-report/fact-sheet/initiative/1`);
+  }
 }
