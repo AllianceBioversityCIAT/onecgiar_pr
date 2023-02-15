@@ -271,8 +271,12 @@ export class AdminPanelService implements OnModuleInit {
         `Bulk sync process started at ${initDate}. Sync for ${kps.length} kp(s).`,
       );
 
-      let responses: { response: any; message: string; status: HttpStatus }[] =
-        [];
+      let responses: {
+        response: any;
+        message: string;
+        status: HttpStatus;
+        handle: string;
+      }[] = [];
 
       for (const kp of kps) {
         this._logger.debug(
@@ -284,7 +288,7 @@ export class AdminPanelService implements OnModuleInit {
           user,
         );
 
-        responses.push(response);
+        responses.push({ ...response, handle: kp.handle });
       }
 
       const endDate: Date = new Date();
@@ -303,7 +307,9 @@ export class AdminPanelService implements OnModuleInit {
         `KPs successfully updated: ${successful.length}; KPs re-sync failed: ${failed.length}`,
       );
 
-      failed.forEach((f) => this._logger.error(f.message));
+      failed.forEach((f) =>
+        this._logger.error(`"${f.message}" for handle "${f.handle}"`),
+      );
 
       return {
         response: '1',
