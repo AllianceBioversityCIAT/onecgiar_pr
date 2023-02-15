@@ -1,6 +1,34 @@
 <div class="local_container">
-    <app-dynamic-panel-menu [options]="this.sections" panelName="Type 1 Report"></app-dynamic-panel-menu>
+    <app-dynamic-panel-menu [options]="this.sections" panelName="Type 1 Report">
+        <!-- <div util>
+            <div class="initiatives_selector">
+                <app-pr-select class="segment_title_margin" [options]="this.api.dataControlSE.myInitiativesList"
+                    *ngIf="!this.api.rolesSE.isAdmin" label="Initiative" [isStatic]="true" optionLabel="full_name"
+                    optionValue="initiative_id" placeholder="Select initiative">
+                </app-pr-select>
+
+                <app-pr-select class="segment_title_margin" [options]="this.allInitiatives" label="Initiative"
+                    [isStatic]="true" *ngIf="this.api.rolesSE.isAdmin" optionLabel="full_name"
+                    optionValue="initiative_id" placeholder="Select initiative">
+                </app-pr-select>
+            </div>
+        </div> -->
+    </app-dynamic-panel-menu>
     <div class="router">
-        <router-outlet></router-outlet>
+        <div class="tor_section_container">
+            <div class="initiative">
+                <app-pr-select [options]="this.api.dataControlSE.myInitiativesList" *ngIf="!this.api.rolesSE.isAdmin"
+                    [isStatic]="true" optionLabel="full_name" optionValue="initiative_id"
+                    placeholder="Select initiative">
+                </app-pr-select>
+                <app-pr-select [options]="this.allInitiatives" [isStatic]="true" *ngIf="this.api.rolesSE.isAdmin"
+                    optionLabel="full_name" optionValue="initiative_id" placeholder="Select initiative">
+                </app-pr-select>
+                <div class="title">Sustainable Animal Productivity - Type 1 report</div>
+            </div>
+            <div class="router_outlet_container">
+                <router-outlet></router-outlet>
+            </div>
+        </div>
     </div>
 </div>

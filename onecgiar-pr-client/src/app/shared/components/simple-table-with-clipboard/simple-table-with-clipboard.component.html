@@ -7,13 +7,17 @@
     </div>
     <table #tableOne class="distribution-{{this.distribution}}">
         <tr class="table_title">
-            <th colspan="2">{{title || 'Untitled'}}</th>
+            <th [attr.colspan]="header?.length">{{title || 'Untitled'}}</th>
         </tr>
         <tr *ngIf="distribution == 'normal'">
-            <th *ngFor="let headerItem of header">{{headerItem?.name}}</th>
+            <th *ngFor="let headerItem of header">
+                <div [innerHTML]="headerItem?.name"></div>
+            </th>
         </tr>
         <tr *ngFor="let dataItem of data">
-            <td *ngFor="let headerItem of header">{{dataItem[headerItem.attr]}}</td>
+            <td *ngFor="let headerItem of header">
+                <div [innerHTML]="dataItem[headerItem.attr]"></div>
+            </td>
         </tr>
     </table>
 </div>

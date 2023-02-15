@@ -4,9 +4,10 @@ import { CommonModule } from '@angular/common';
 import { TypeOneReportRoutingModule } from './type-one-report-routing.module';
 import { TypeOneReportComponent } from './type-one-report.component';
 import { DynamicPanelMenuModule } from '../../shared/components/dynamic-panel-menu/dynamic-panel-menu.module';
+import { CustomFieldsModule } from '../../custom-fields/custom-fields.module';
 
 @NgModule({
   declarations: [TypeOneReportComponent],
-  imports: [CommonModule, TypeOneReportRoutingModule, DynamicPanelMenuModule]
+  imports: [CommonModule, TypeOneReportRoutingModule, DynamicPanelMenuModule, CustomFieldsModule]
 })
 export class TypeOneReportModule {}
