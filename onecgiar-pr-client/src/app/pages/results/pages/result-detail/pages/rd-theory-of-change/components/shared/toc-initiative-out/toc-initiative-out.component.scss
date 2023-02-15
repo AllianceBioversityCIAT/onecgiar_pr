@@ -2,25 +2,5 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-
-    .toc_button {
-        background-color: var(--pr-color-primary);
-        color: white;
-        display: flex;
-        gap: 10px;
-        padding: 3px 3px 3px 15px;
-        align-items: center;
-        font-size: 12px;
-        border-radius: 100px;
-        cursor: pointer;
-        text-decoration: none;
-
-        img {
-            width: 20px;
-            height: 20px;
-            background-color: white;
-            border-radius: 10px;
-            padding: 2px;
-        }
-    }
+    gap: 20px;
 }

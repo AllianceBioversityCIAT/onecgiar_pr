@@ -37,7 +37,8 @@
                     </div>
                 </td>
                 <td class="actions">
-                    <div class="link_button view" (click)="openInNewPage('/result/result-detail/' + result?.id)">View
+                    <div class="link_button view"
+                        (click)="openInNewPage('/result/result-detail/' + result?.result_code)">View
                     </div>
                     <div class="link_button"
                         *ngIf="!this.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"
