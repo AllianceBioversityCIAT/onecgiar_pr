@@ -151,6 +151,26 @@ export class TypeOneReportRepository {
       AND rr.is_active = 1;
     `;
 
+    const eoiOutcomeQuery = `
+    SELECT
+      re.initvStgId,
+      re.id,
+      rt.name as type_name,
+      re.result_type_id as result_type,
+      re.result_title,
+      re.is_global,
+      re.active
+    FROM
+      ${env.DB_OST}.results re
+      left join ${env.DB_OST}.results_types rt on rt.id = re.result_type_id
+    WHERE
+      re.initvStgId = ?
+      AND re.active = 1
+      AND re.result_type_id = 3
+    order by
+      re.result_type_id;
+    `;
+
     const budgetQuery = `
     SELECT
       ibs.id AS initvStgId,
@@ -182,6 +202,7 @@ export class TypeOneReportRepository {
       const regionsProposal: any[] = await this.dataSource.query(regionsProposalQuery, [initiative_stage_id])
       const countrieReported: any[] = await this.dataSource.query(countrieReportedQuery, [initId]);
       const regionsReported: any[] = await this.dataSource.query(regionsReportedQuery, [initId]);
+      const eoiOutcome: any[] = await this.dataSource.query(eoiOutcomeQuery, [initiative_stage_id]);
       const budget: any[] = await this.dataSource.query(budgetQuery, [initiative_stage_id]);
       const genderScore: any[] = await this.dataSource.query(genderScoreQuery, [initId]);
 
@@ -197,6 +218,9 @@ export class TypeOneReportRepository {
         });
         gi['regionsReported'] = regionsReported.filter((rr) => {
           return rr.inititiative_id === gi.initiative_id;
+        });
+        gi['eoiOutcome'] = eoiOutcome.filter((eoi) => {
+          return eoi.initvStgId === gi.initiative_stage_id;
         });
         gi['budget'] = budget.filter((b) => {
           return b.initvStgId === gi.initiative_stage_id;

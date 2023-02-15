@@ -20,7 +20,7 @@ export class TypeOneReportService {
     try {
       const results = await this._typeOneReportRepository.getFactSheetByInit(initId);
       return {
-        response: results,
+        response: results[0],
         message: 'Successful response',
         status: HttpStatus.OK,
       };
