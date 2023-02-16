@@ -202,7 +202,6 @@ export class ResultsTocResultsService {
           newRtR.last_updated_by = user.id;
           newRtR.results_id = result.id;
           newRtR.planned_result = result_toc_result.planned_result;
-          newRtR.is_active = true;
           if (result.result_level_id == 2) {
             newRtR.action_area_outcome_id = result_toc_result?.action_area_outcome_id ?? null;
           } else {
@@ -235,7 +234,6 @@ export class ResultsTocResultsService {
               newRtR.last_updated_by = user.id;
               newRtR.planned_result = contributors_result_toc_result[index]?.planned_result;
               newRtR.results_id = result.id;
-              newRtR.is_active = true;
               newRtR.initiative_id = contributors_result_toc_result[index]?.initiative_id || null;
               if (result.result_level_id == 2) {
                 newRtR.action_area_outcome_id = contributors_result_toc_result[index]?.action_area_outcome_id || null;

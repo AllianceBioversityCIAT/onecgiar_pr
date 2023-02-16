@@ -495,19 +495,20 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
     `;
 
     try {
-      if(initiative?.length){
+      if (initiative?.length) {
+
         const upDateInactiveResult = await this.query(upDateInactive, [
-          userId, resultId
+          userId,
+          resultId,
         ]);
   
-        return await this.query(upDateActive, [
-          userId, resultId
-        ]);
-      }else{
+        return await this.query(upDateActive, [userId, resultId]);
+      }
+      /*else{
         return await this.query(upDateAllInactive, [
           userId, resultId
         ]);
-      }
+      }*/
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
