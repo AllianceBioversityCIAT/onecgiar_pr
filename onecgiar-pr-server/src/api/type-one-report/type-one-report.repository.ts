@@ -234,7 +234,7 @@ export class TypeOneReportRepository {
               WHEN (a.Mitigation_Score = 1) THEN 'The activity contributes in a significant way to any of the three CGIAR climate-related strategy objectives – namely, climate mitigation, climate adaptation and climate policy, even though it is not the principal focus of the activity.'
               ELSE 'The activity is principally about meeting any of the three CGIAR climate-related strategy objectives – namely, climate mitigation, climate adaptation and climate policy, and would not have been undertaken without this objective.'
           END
-      ) as migration_desc,
+      ) as mitigation_desc,
       a.Gender_Score AS gender_score
   FROM
     ${env.DB_OST}.aecd a
