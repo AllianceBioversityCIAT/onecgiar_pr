@@ -168,23 +168,45 @@ export class TypeOneReportRepository {
       re.initvStgId = ?
       AND re.active = 1
       AND re.result_type_id = 3
-    order by
+    ORDER BY
       re.result_type_id;
     `;
 
-    const budgetQuery = `
+    const budgetProposalQuery = `
     SELECT
-      ibs.id AS initvStgId,
-      fry.year,
-      SUM(fry.value) AS total
-    FROM ${env.DB_OST}.financial_resources_years fry
-      LEFT JOIN ${env.DB_OST}.financial_resources fr ON fr.id = fry.financialResourcesId
-      LEFT JOIN ${env.DB_OST}.initiatives_by_stages ibs ON ibs.id = fr.initvStgId
+        fry.year,
+        SUM(fry.value) AS total,
+        i.id AS initiative_id
+    FROM
+        ${env.DB_OST}.financial_resources_years fry
+        LEFT JOIN  ${env.DB_OST}.financial_resources fr ON fr.id = fry.financialResourcesId
+        LEFT JOIN  ${env.DB_OST}.initiatives_by_stages ibs ON ibs.id = fr.initvStgId
+        LEFT JOIN  ${env.DB_OST}.initiatives i ON i.id = ibs.initiativeId 
     WHERE
-      ibs.id = ?
-      AND fry.active = 1
-      AND fr.financial_type = 'activity_breakdown'
-    GROUP BY fry.year;
+        i.id = ?
+        AND fry.active = 1
+        AND fr.financial_type = 'activity_breakdown'
+        AND ibs.stageId = 3
+    GROUP BY
+        fry.year;
+    `;
+
+    const budgetAnaPlanQuery = `
+    SELECT
+        fry.year,
+        SUM(fry.value) AS total
+    FROM
+        ${env.DB_OST}.financial_resources_years fry
+        LEFT JOIN ${env.DB_OST}.financial_resources fr ON fr.id = fry.financialResourcesId
+        LEFT JOIN ${env.DB_OST}.initiatives_by_stages ibs ON ibs.id = fr.initvStgId
+        LEFT JOIN ${env.DB_OST}.initiatives i ON i.id = ibs.initiativeId 
+    WHERE
+        i.id = ?
+        AND fry.active = 1
+        AND fr.financial_type = 'activity_breakdown'
+        AND ibs.stageId = 4
+    GROUP BY
+        fry.year;
     `;
 
     const genderScoreQuery = `
@@ -204,7 +226,8 @@ export class TypeOneReportRepository {
       const countrieReported: any[] = await this.dataSource.query(countrieReportedQuery, [initId]);
       const regionsReported: any[] = await this.dataSource.query(regionsReportedQuery, [initId]);
       const eoiOutcome: any[] = await this.dataSource.query(eoiOutcomeQuery, [initiative_stage_id]);
-      const budget: any[] = await this.dataSource.query(budgetQuery, [initiative_stage_id]);
+      const budgetProposal: any[] = await this.dataSource.query(budgetProposalQuery, [initId]);
+      const budgetAnaPlan: any[] = await this.dataSource.query(budgetAnaPlanQuery, [initId]);
       const genderScore: any[] = await this.dataSource.query(genderScoreQuery, [initId]);
 
       generalInformation.map((gi) => {
@@ -223,8 +246,11 @@ export class TypeOneReportRepository {
         gi['eoiOutcome'] = eoiOutcome.filter((eoi) => {
           return eoi.initvStgId === gi.initiative_stage_id;
         });
-        gi['budget'] = budget.filter((b) => {
-          return b.initvStgId === gi.initiative_stage_id;
+        gi['budgetProposal'] = budgetProposal.filter((b) => {
+          return b.inititiative_id === gi.inititiative_id;
+        });
+        gi['budgetAnaPlan'] = budgetAnaPlan.filter((b) => {
+          return b.inititiative_id === gi.inititiative_id;
         });
         gi['genderScore'] = genderScore.filter((gs) => {
           return gs.initiative_id === gi.initiative_id;
