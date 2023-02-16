@@ -200,33 +200,47 @@ export class TypeOneReportRepository {
     `;
     const genderScoreQuery = `
     SELECT
-        i.id AS initiative_id,
-        CONCAT(
-            'Score ',
-            a.Adaptation_Score,
-            ' - ',
-            CASE
-                WHEN (a.Adaptation_Score = 0) THEN 'Not targeted'
-                WHEN (a.Adaptation_Score = 1) THEN 'Significant'
-                ELSE 'Principal'
-            END
-        ) as adaptation,
-        CONCAT(
-            'Score ',
-            a.Adaptation_Score,
-            ' - ',
-            CASE
-                WHEN (a.Mitigation_Score  = 0) THEN 'Not targeted'
-                WHEN (a.Mitigation_Score  = 1) THEN 'Significant'
-                ELSE 'Principal'
-            END
-        ) as mitigation,
-        a.Gender_Score AS gender_score
-    FROM
-      ${env.DB_OST}.aecd a
-        LEFT JOIN ${env.DB_OST}.initiatives i ON i.official_code = a.ID
-    WHERE
-        i.id = ?;
+      i.id AS initiative_id,
+      CONCAT(
+          'Score ',
+          a.Adaptation_Score,
+          ' - ',
+          CASE
+              WHEN (a.Adaptation_Score = 0) THEN 'Not targeted'
+              WHEN (a.Adaptation_Score = 1) THEN 'Significant'
+              ELSE 'Principal'
+          END
+      ) as adaptation,
+      CONCAT(
+          CASE
+              WHEN (a.Adaptation_Score = 0) THEN 'The activity does not target the climate mitigation, adaptation and climate policy objectives of CGIAR as put forward in its strategy.'
+              WHEN (a.Adaptation_Score = 1) THEN 'The activity contributes in a significant way to any of the three CGIAR climate-related strategy objectives – namely, climate mitigation, climate adaptation and climate policy, even though it is not the principal focus of the activity.'
+              ELSE 'The activity is principally about meeting any of the three CGIAR climate-related strategy objectives – namely, climate mitigation, climate adaptation and climate policy, and would not have been undertaken without this objective.'
+          END
+      ) as adaptation_desc,
+      CONCAT(
+          'Score ',
+          a.Adaptation_Score,
+          ' - ',
+          CASE
+              WHEN (a.Mitigation_Score  = 0) THEN 'Not targeted'
+              WHEN (a.Mitigation_Score  = 1) THEN 'Significant'
+              ELSE 'Principal'
+          END
+      ) as mitigation,
+      CONCAT(
+          CASE
+              WHEN (a.Mitigation_Score = 0) THEN 'The activity does not target the climate mitigation, adaptation and climate policy objectives of CGIAR as put forward in its strategy.'
+              WHEN (a.Mitigation_Score = 1) THEN 'The activity contributes in a significant way to any of the three CGIAR climate-related strategy objectives – namely, climate mitigation, climate adaptation and climate policy, even though it is not the principal focus of the activity.'
+              ELSE 'The activity is principally about meeting any of the three CGIAR climate-related strategy objectives – namely, climate mitigation, climate adaptation and climate policy, and would not have been undertaken without this objective.'
+          END
+      ) as migration_desc,
+      a.Gender_Score AS gender_score
+  FROM
+    ${env.DB_OST}.aecd a
+      LEFT JOIN ${env.DB_OST}.initiatives i ON i.official_code = a.ID
+  WHERE
+      i.id = ?;
     `;
     try {
       const generalInformation: any[] = await this.dataSource.query(initiativeGeneralInformationQuery, [initId]);
