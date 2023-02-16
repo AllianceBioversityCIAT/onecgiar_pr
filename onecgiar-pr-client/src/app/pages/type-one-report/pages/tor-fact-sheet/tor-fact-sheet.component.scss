@@ -26,3 +26,8 @@
 .local_container {
     padding: 20px;
 }
+
+.half_size {
+    display: grid;
+    grid-template-columns: minmax(500px, .5fr);
+}

@@ -24,7 +24,12 @@ export class TorFactSheetComponent {
     { category: 'Links to webpage', value: '' }
   ];
 
-  budget = {
+  budgetProposal = {
+    header: [],
+    data: []
+  };
+
+  budgetAnaPlan = {
     header: [],
     data: []
   };
@@ -52,16 +57,20 @@ export class TorFactSheetComponent {
   }
 
   convertBudgetData(data) {
+    //* budgetProposal
     let dataItem = {};
-
-    data.budget.forEach(element => {
-      console.log(element);
-      this.budget.header.push({ attr: element.year, name: element.year });
+    data.budgetProposal?.forEach(element => {
+      this.budgetProposal.header.push({ attr: element.year, name: element.year });
       dataItem[element.year] = element.total;
     });
-    this.budget.data.push(dataItem);
-    console.log(data);
-    console.log(this.budget);
+    this.budgetProposal.data.push(dataItem);
+    //* budgetAnaPlan
+    dataItem = {};
+    data.budgetAnaPlan?.forEach(element => {
+      this.budgetAnaPlan.header.push({ attr: element.year, name: element.year });
+      dataItem[element.year] = element.total;
+    });
+    this.budgetAnaPlan.data.push(dataItem);
   }
 
   concatGeo(data) {

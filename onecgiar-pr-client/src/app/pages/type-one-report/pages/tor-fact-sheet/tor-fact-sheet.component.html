@@ -11,8 +11,16 @@
     <div class="tor_sub_title">
         Budget
     </div>
+    <div class="half_size">
+        <app-simple-table-with-clipboard [data]="budgetProposal.data" [header]="budgetProposal.header"
+            title="Proposal Budget from initial submission"></app-simple-table-with-clipboard>
+    </div>
+    <br><br>
+    <div class="half_size">
+        <app-simple-table-with-clipboard [data]="budgetAnaPlan.data" [header]="budgetAnaPlan.header"
+            title="Approved 2022 budget"></app-simple-table-with-clipboard>
+    </div>
 
-    <app-simple-table-with-clipboard [data]="budget.data" [header]="budget.header"
-        title="Fact sheet"></app-simple-table-with-clipboard>
+    <br><br><br><br><br>
 
 </div>
