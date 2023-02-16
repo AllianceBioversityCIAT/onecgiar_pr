@@ -39,7 +39,7 @@ export class TorFactSheetComponent {
   ngOnInit(): void {
     //Called after the constructor, initializing input properties, and the first call to ngOnChanges.
     //Add 'implements OnInit' to the class.
-    this.api.resultsSE.GET_factSheetByInitiativeId(this.getInitiativeID(this.typeOneReportSE.initiativeSelected)?.id).subscribe(({ response }) => {
+    this.api.resultsSE.GET_factSheetByInitiativeId(this.typeOneReportSE.getInitiativeID(this.typeOneReportSE.initiativeSelected)?.id).subscribe(({ response }) => {
       let data = response;
       this.convertBudgetData(data);
       this.data[0].value = data.initiative_name;
@@ -56,12 +56,6 @@ export class TorFactSheetComponent {
       this.data[11].value = data.genderScore[0]?.gender_score;
       this.data[12].value = '';
     });
-  }
-
-  getInitiativeID(official_code) {
-    console.log(official_code);
-    if (!this.api.rolesSE.isAdmin) return this.api.dataControlSE.myInitiativesList.find(init => init.official_code == official_code);
-    return this.typeOneReportSE.allInitiatives.find(init => init.official_code == official_code);
   }
 
   convertBudgetData(data) {

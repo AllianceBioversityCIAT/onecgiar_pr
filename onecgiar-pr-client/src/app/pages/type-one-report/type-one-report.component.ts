@@ -12,10 +12,10 @@ import { Router } from '@angular/router';
 export class TypeOneReportComponent {
   sections = [
     { path: 'fact-sheet', icon: '', name: 'Fact sheet' },
-    { path: 'initiative-progress-and-key-results', icon: '', name: 'Initiative progress & Key results' }
+    { path: 'initiative-progress-and-key-results', icon: '', name: 'Initiative progress & Key results' },
     // { path: 'ipi-external-partners', icon: '', name: 'Impact pathway integration - External partners' },
     // { path: 'ipi-cgiar-portfolio-linkages', icon: '', name: 'Impact pathway integration - CGIAR portfolio linkages' },
-    // { path: 'key-result-story', icon: '', name: 'Key result story' }
+    { path: 'key-result-story', icon: '', name: 'Key result story' }
   ];
   constructor(private titleService: Title, public api: ApiService, public typeOneReportSE: TypeOneReportService, private router: Router) {}
   ngOnInit(): void {

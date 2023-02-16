@@ -1,5 +1,6 @@
 <div class="local_container">
-
+    <app-alert-status [description]="openFolderText()">
+    </app-alert-status>
     <div class="alert_status_container">
         <div [ngClass]="{'animate__pulse_infinite': this.requesting}">
             <app-alert-status
@@ -8,6 +9,7 @@
         </div>
 
     </div>
+
 
     <app-pr-multi-select *ngIf="!this.api.rolesSE.isAdmin" label="Initiatives" selectedLabel="Initiatives selected"
         [options]="this.api.dataControlSE.myInitiativesList | filterInitWithRoleCoordAndLead" optionLabel="full_name"

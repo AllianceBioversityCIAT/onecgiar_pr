@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { TypeOneReportService } from '../../type-one-report.service';
+import { ApiService } from '../../../../shared/services/api/api.service';
 
 @Component({
   selector: 'app-tor-init-progress-and-key-results',

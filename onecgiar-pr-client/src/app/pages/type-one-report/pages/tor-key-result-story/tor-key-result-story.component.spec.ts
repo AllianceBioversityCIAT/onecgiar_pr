@@ -8,9 +8,8 @@ describe('TorKeyResultStoryComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ TorKeyResultStoryComponent ]
-    })
-    .compileComponents();
+      declarations: [TorKeyResultStoryComponent]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(TorKeyResultStoryComponent);
     component = fixture.componentInstance;
