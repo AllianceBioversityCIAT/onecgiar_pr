@@ -7,5 +7,6 @@ import { TypeOneReportService } from '../../type-one-report.service';
   styleUrls: ['./tor-init-progress-and-key-results.component.scss']
 })
 export class TorInitProgressAndKeyResultsComponent {
+  full_screen = false;
   constructor(public typeOneReportSE: TypeOneReportService) {}
 }
