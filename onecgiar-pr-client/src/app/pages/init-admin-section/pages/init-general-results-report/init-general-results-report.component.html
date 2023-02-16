@@ -3,7 +3,7 @@
     </app-alert-status>
     <div class="alert_status_container">
         <div [ngClass]="{'animate__pulse_infinite': this.requesting}">
-            <app-alert-status
+            <app-alert-status status="warning"
                 [description]="this.requesting ?'The report may take some time to be generated, please do not close the window.':'This report consumes a considerable amount of system resources, therefore, we appreciate it if you do not generate reports too often.'">
             </app-alert-status>
         </div>
