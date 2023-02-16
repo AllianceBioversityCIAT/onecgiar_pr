@@ -12,7 +12,7 @@ export class TypeOneReportService {
   allInitiatives = [];
   constructor(public sanitizer: DomSanitizer, private api: ApiService) {}
   sanitizeUrl() {
-    this.sanitizedUrl = this.sanitizer.bypassSecurityTrustResourceUrl(`http://prmsbitest.s3-website-us-east-1.amazonaws.com/bi/4/${this.initiativeSelected}`);
+    this.sanitizedUrl = this.sanitizer.bypassSecurityTrustResourceUrl(`https://d1ovl329vs2rtq.cloudfront.net/bi/4/${this.initiativeSelected}`);
   }
 
   getInitiativeID(official_code) {

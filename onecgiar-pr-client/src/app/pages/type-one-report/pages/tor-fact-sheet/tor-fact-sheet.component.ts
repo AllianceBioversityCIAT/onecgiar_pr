@@ -68,6 +68,8 @@ export class TorFactSheetComponent {
     this.budgetProposal.data.push(dataItem);
     //* budgetAnaPlan
     dataItem = {};
+    data.budgetAnaPlan.splice(2, 1);
+    data.budgetAnaPlan.splice(1, 1);
     data.budgetAnaPlan?.forEach(element => {
       this.budgetAnaPlan.header.push({ attr: element.year, name: element.year });
       dataItem[element.year] = element.total;
