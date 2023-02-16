@@ -22,6 +22,7 @@ export class ResultsApiService {
   constructor(public http: HttpClient, private saveButtonSE: SaveButtonService) {}
   apiBaseUrl = environment.apiBaseUrl + 'api/results/';
   currentResultId: number | string = null;
+  currentResultCode: number | string = null;
   private readonly elasicCredentials = `Basic ${btoa(`${environment.elastic.username}:${environment.elastic.password}`)}`;
   GET_AllResultLevel() {
     return this.http.get<any>(`${this.apiBaseUrl}levels/all`);

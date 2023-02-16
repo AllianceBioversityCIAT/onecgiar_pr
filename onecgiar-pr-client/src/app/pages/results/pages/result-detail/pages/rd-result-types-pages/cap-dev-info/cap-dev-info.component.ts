@@ -90,7 +90,7 @@ export class CapDevInfoComponent implements OnInit {
   }
 
   deliveryMethodDescription() {
-    return `Please go to <a href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultId}/geographic-location" class="open_route" target="_blank">section 4. Geographic Location</a> and specify the location information of where the training took place if you selected 'In person' or 'Blended'.`;
+    return `Please go to <a href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultCode}/geographic-location" class="open_route" target="_blank">section 4. Geographic Location</a> and specify the location information of where the training took place if you selected 'In person' or 'Blended'.`;
   }
 
   requestEvent() {

@@ -54,8 +54,8 @@ export class ResultsInnovationsUseRepository extends Repository<ResultsInnovatio
       r.id 'Result ID', 
       r.result_code 'Result Code',
       -- Action Area Outcome - Innovation use specific fields
-      riu.female_using 'Number of females',
-      riu.male_using 'Number of males',
+      riu.female_using 'Number of females (Innovation use)',
+      riu.male_using 'Number of males (Innovation use)',
       group_concat(distinct concat('Unit of measure: ', rium.unit_of_measure, '; Quantity: ', rium.quantity) separator '\n') as 'Other quantitative measures'
     from results_innovations_use riu 
     left join result r on riu.results_id = r.id and r.is_active = 1

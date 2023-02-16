@@ -25,7 +25,7 @@ export class TocInitiativeOutcomeSectionComponent {
   ngOnInit(): void {
     this.GET_outcomeList();
     this.GET_outputList();
-    this.GET_fullInitiativeToc();
+    this.GET_fullInitiativeTocByinitId();
     this.GET_eoi();
   }
 
@@ -57,8 +57,8 @@ export class TocInitiativeOutcomeSectionComponent {
     );
   }
 
-  GET_fullInitiativeToc() {
-    this.api.tocApiSE.GET_fullInitiativeToc(this.result_toc_result.initiative_id).subscribe(
+  GET_fullInitiativeTocByinitId() {
+    this.api.tocApiSE.GET_fullInitiativeTocByinitId(this.result_toc_result.initiative_id).subscribe(
       ({ response }) => {
         this.fullInitiativeToc = response[0]?.toc_id;
       },

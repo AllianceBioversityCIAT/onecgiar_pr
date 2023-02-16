@@ -1077,7 +1077,7 @@ export class ResultsService {
         });
 
       if (knowledgeProduct) {
-        contries = knowledgeProduct.cgspace_countries?.split('; ') ?? [];
+        //contries = knowledgeProduct.cgspace_countries?.split('; ') ?? [];
         //regions = knowledgeProduct.cgspace_regions?.split('; ') ?? [];
       }
 
@@ -1127,9 +1127,11 @@ export class ResultsService {
     }
   }
 
-  async transformResultCode(resultCode: number){
+  async transformResultCode(resultCode: number) {
     try {
-      const result = await this._resultRepository.transformResultCode(resultCode);
+      const result = await this._resultRepository.transformResultCode(
+        resultCode,
+      );
 
       if (!result) {
         throw {

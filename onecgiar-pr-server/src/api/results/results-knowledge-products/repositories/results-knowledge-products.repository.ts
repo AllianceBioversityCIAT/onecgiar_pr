@@ -20,7 +20,7 @@ export class ResultsKnowledgeProductsRepository extends Repository<ResultsKnowle
       r.id 'Result ID', 
       r.result_code 'Result Code',
       -- kp specific data
-      rkp.handle 'Handle ID',
+      concat('hdl.handle.net/',rkp.handle) 'Handle',
       rkp.knowledge_product_type 'Knowledge product type',
       group_concat(distinct rka.author_name separator '; ') 'Authors (semicolon separated)',
       rkp.licence 'License',
@@ -32,7 +32,7 @@ export class ResultsKnowledgeProductsRepository extends Repository<ResultsKnowle
       group_concat(distinct concat('Is Core Collection? ', if(coalesce(cgspace.is_isi ,0) = 0, 'No', 'Yes'), '; Accessibility: ', cgspace.accesibility,'; Year: ', cgspace.\`year\`, '; DOI: ', cgspace.doi, '; Is Peer Reviewed? ', if(coalesce(cgspace.is_peer_reviewed ,0) = 0, 'No', 'Yes')) separator '; ') "CGSpace Metadata",
       group_concat(distinct concat('Is Core Collection? ', if(coalesce(wos.is_isi ,0) = 0, 'No', 'Yes'), '; Accessibility: ', wos.accesibility,'; Year: ', wos.\`year\`, '; DOI: ', wos.doi, '; Is Peer Reviewed? ', if(coalesce(wos.is_peer_reviewed ,0) = 0, 'No', 'Yes'))separator '; ') "WoS Metadata",
       -- altmetrics data
-      altmetrics.altmetric_id 'Altmetrics ID',
+      concat('altmetric.com/details/',altmetrics.altmetric_id) 'Altmetric Details URL',
       altmetrics.score 'Altmetrics score',
       -- fair (most recent)
       format(rkp.findable, 2) 'Findable',

@@ -81,7 +81,7 @@ export class InitGeneralResultsReportComponent {
     return new Promise((resolve, reject) => {
       this.api.resultsSE.POST_excelFullReport([result]).subscribe(
         ({ response }) => {
-          console.log(response);
+          // console.log(response);
           // console.log(response);
           this.requestCounter++;
           this.dataToExport.push(...response);
@@ -89,6 +89,7 @@ export class InitGeneralResultsReportComponent {
         },
         err => {
           this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: 'There was an error in the system while generating the report. If the issue persists, please contact the technical team.', status: 'error' });
+          resolve(null);
         }
       );
     });

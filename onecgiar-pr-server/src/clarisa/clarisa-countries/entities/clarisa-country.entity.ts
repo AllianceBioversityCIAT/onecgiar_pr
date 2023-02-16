@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { CGSpaceCountryMappings } from '../../../api/results/results-knowledge-products/entities/cgspace-country-mappings.entity';
 import { Auditable } from '../../../shared/entities/auditableEntity';
 
 @Entity('clarisa_countries')
@@ -16,7 +17,7 @@ export class ClarisaCountry {
     name: 'iso_alpha_2',
     type: 'varchar',
     length: 5,
-    unique: true
+    unique: true,
   })
   iso_alpha_2: string;
 
@@ -25,4 +26,8 @@ export class ClarisaCountry {
     type: 'text',
   })
   iso_alpha_3: string;
+
+  //object relations
+  @OneToMany(() => CGSpaceCountryMappings, (ccm) => ccm.clarisa_country_object)
+  cgspace_country_mapping_array: CGSpaceCountryMappings[];
 }

@@ -39,7 +39,7 @@ export class InnovationUseInfoComponent implements OnInit {
   }
   alertInfoText() {
     return `Please fill in the following fields that are required based on the result type. <br>
-    Please provide evidence of use claims in the <a href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultId}/general-information" class="open_route" target="_blank">General information</a> section. `;
+    Please provide evidence of use claims in the <a href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultCode}/general-information" class="open_route" target="_blank">General information</a> section. `;
   }
   onAddMore() {
     // console.log('onAddMore');

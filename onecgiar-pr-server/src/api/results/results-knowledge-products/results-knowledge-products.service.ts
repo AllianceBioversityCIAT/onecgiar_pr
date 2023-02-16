@@ -47,6 +47,9 @@ import { ResultRegionRepository } from '../result-regions/result-regions.reposit
 import { ClarisaRegionsRepository } from '../../../clarisa/clarisa-regions/ClariasaRegions.repository';
 import { ClarisaRegion } from '../../../clarisa/clarisa-regions/entities/clarisa-region.entity';
 import { ResultRegion } from '../result-regions/entities/result-region.entity';
+import { CGSpaceCountryMappingsRepository } from './repositories/cgspace-country-mappings.repository';
+import { ResultCountry } from '../result-countries/entities/result-country.entity';
+import { ResultCountryRepository } from '../result-countries/result-countries.repository';
 
 @Injectable()
 export class ResultsKnowledgeProductsService {
@@ -63,31 +66,10 @@ export class ResultsKnowledgeProductsService {
         result_region_array: {
           region_object: true,
         },
-      },
-    };
-
-  private readonly _resultsKnowledgeProductWhere: FindOptionsWhere<ResultsKnowledgeProduct> =
-    {
-      is_active: true,
-      result_knowledge_product_altmetric_array: {
-        is_active: true,
-      },
-      result_knowledge_product_institution_array: {
-        is_active: true,
-      },
-      result_knowledge_product_metadata_array: {
-        is_active: true,
-      },
-      result_knowledge_product_keyword_array: {
-        is_active: true,
-      },
-      result_knowledge_product_author_array: {
-        is_active: true,
-      },
-      result_object: {
-        is_active: true,
-        result_region_array: {
-          is_active: true,
+        result_country_array: {
+          country_object: {
+            cgspace_country_mapping_array: true,
+          },
         },
       },
     };
@@ -115,6 +97,8 @@ export class ResultsKnowledgeProductsService {
     private readonly _resultRegionRepository: ResultRegionRepository,
     private readonly _knowledgeProductFairBaselineRepository: KnowledgeProductFairBaselineRepository,
     private readonly _clarisaRegionsRepository: ClarisaRegionsRepository,
+    private readonly _cgSpaceCountryMappingsRepository: CGSpaceCountryMappingsRepository,
+    private readonly _resultCountryRepository: ResultCountryRepository,
   ) {}
 
   private async createOwnerResult(
@@ -348,6 +332,11 @@ export class ResultsKnowledgeProductsService {
       );
 
       //geolocation
+      await this.updateCountries(updatedKnowledgeProduct, newMetadata, true);
+      await this._resultCountryRepository.save(
+        updatedKnowledgeProduct.result_object.result_country_array ?? [],
+      );
+
       await this.updateGeoLocation(
         updatedKnowledgeProduct.result_object,
         updatedKnowledgeProduct,
@@ -366,6 +355,67 @@ export class ResultsKnowledgeProductsService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
+  }
+
+  async updateCountries(
+    newKnowledgeProduct: ResultsKnowledgeProduct,
+    resultsKnowledgeProductDto: ResultsKnowledgeProductDto,
+    upsert: boolean = false,
+  ) {
+    const allCountryMappings =
+      await this._cgSpaceCountryMappingsRepository.find({
+        where: { is_active: true },
+      });
+
+    const countries = (resultsKnowledgeProductDto.cgspace_countries ?? []).map(
+      (c) => {
+        let country: ResultCountry;
+        if (upsert) {
+          country = (
+            newKnowledgeProduct.result_object.result_country_array ?? []
+          ).find((orc) =>
+            (orc.country_object?.cgspace_country_mapping_array ?? []).find(
+              (ccm) => ccm.cgspace_country_name == c,
+            ),
+          );
+          if (country) {
+            country['matched'] = true;
+          }
+        }
+
+        country ??= new ResultCountry();
+
+        let clarisaCountry = allCountryMappings.find(
+          (ccm) => ccm.cgspace_country_name == c,
+        )?.clarisa_country_code;
+        country.country_id = clarisaCountry;
+        if (!clarisaCountry) {
+          console.warn(
+            `country with name "${c}" does not have a mapping in CLARISA for handle "${resultsKnowledgeProductDto.handle}"`,
+          );
+        }
+
+        country.result_id = newKnowledgeProduct.results_id;
+
+        return country;
+      },
+    );
+
+    (newKnowledgeProduct.result_object.result_country_array ?? []).forEach(
+      (oc) => {
+        if (!oc['matched']) {
+          if (oc.result_country_id) {
+            oc.is_active = false;
+          }
+
+          countries.push(oc);
+        } else {
+          delete oc['matched'];
+        }
+      },
+    );
+
+    newKnowledgeProduct.result_object.result_country_array = countries;
   }
 
   async findOnCGSpace(handle: string, validateExisting: boolean = true) {
@@ -547,6 +597,16 @@ export class ResultsKnowledgeProductsService {
       );
 
       //geolocation
+      await this.updateCountries(
+        newKnowledgeProduct,
+        resultsKnowledgeProductDto,
+        false,
+      );
+
+      await this._resultCountryRepository.save(
+        newKnowledgeProduct.result_object.result_country_array ?? [],
+      );
+
       await this.updateGeoLocation(
         newResult,
         newKnowledgeProduct,
@@ -713,11 +773,9 @@ export class ResultsKnowledgeProductsService {
 
     newResult.result_region_array = cleanedResultRegions;
     newResult.has_regions = (newResult.result_region_array ?? []).length != 0;
-    const country_array = (newKnowledgeProduct.cgspace_countries ?? '').split(
-      '; ',
-    );
+
     newResult.has_countries =
-      (newKnowledgeProduct.cgspace_countries ?? '').length != 0;
+      (newResult.result_country_array ?? []).length != 0;
     //newResult.has_regions = (newKnowledgeProduct.cgspace_regions??'').length != 0;
 
     if (resultsKnowledgeProductDto.is_global_geoscope) {
@@ -733,7 +791,8 @@ export class ResultsKnowledgeProductsService {
       if (newResult.has_regions) {
         newResult.geographic_scope_id = 2;
       } else {
-        newResult.geographic_scope_id = country_array.length > 1 ? 3 : 4;
+        newResult.geographic_scope_id =
+          (newResult.result_country_array ?? []).length > 1 ? 3 : 4;
       }
     }
 
