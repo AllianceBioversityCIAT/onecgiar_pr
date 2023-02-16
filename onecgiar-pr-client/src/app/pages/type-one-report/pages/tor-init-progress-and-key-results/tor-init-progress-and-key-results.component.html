@@ -7,5 +7,6 @@
     <app-alert-status
         description="All this information can be extracted in excel format through the download button on the dashboard.">
     </app-alert-status>
-    <iframe src="http://prmsbitest.s3-website-us-east-1.amazonaws.com/bi/4" frameborder="0"></iframe>
+    <iframe [src]="this.typeOneReportSE.sanitizedUrl" frameborder="0"
+        *ngIf="typeOneReportSE.initiativeSelected && typeOneReportSE.showTorIframe"></iframe>
 </div>

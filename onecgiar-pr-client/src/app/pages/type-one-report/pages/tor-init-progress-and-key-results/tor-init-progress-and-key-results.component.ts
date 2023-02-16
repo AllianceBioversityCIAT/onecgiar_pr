@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { TypeOneReportService } from '../../type-one-report.service';
 
 @Component({
   selector: 'app-tor-init-progress-and-key-results',
@@ -6,5 +7,5 @@ import { Component, OnInit } from '@angular/core';
   styleUrls: ['./tor-init-progress-and-key-results.component.scss']
 })
 export class TorInitProgressAndKeyResultsComponent {
-  constructor() {}
+  constructor(public typeOneReportSE: TypeOneReportService) {}
 }
