@@ -1,0 +1,33 @@
+#tablee {
+    // opacity: 0;
+    top: 0;
+    left: 0;
+    position: absolute;
+    border: 1px solid rgb(17, 0, 255);
+
+    th {
+        border: 1px solid rgb(4, 0, 255);
+    }
+
+    td {
+        border: 1px solid black;
+    }
+}
+
+.box {
+    position: relative;
+    width: 0px;
+    height: 0px;
+    // border: 1px solid red;
+    overflow: hidden;
+
+}
+
+.local_container {
+    padding: 20px;
+}
+
+.half_size {
+    display: grid;
+    grid-template-columns: minmax(500px, .5fr);
+}

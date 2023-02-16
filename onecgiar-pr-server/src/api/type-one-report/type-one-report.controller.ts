@@ -23,6 +23,13 @@ export class TypeOneReportController {
     throw new HttpException({ message, response }, status);
   }
 
+  @Get('key-result-story/initiative/:initId')
+  async getKeyResultStoryByInt(@Param('initId') initId: number){
+    const { message, response, status } =
+      await this.typeOneReportService.getKeyResultStory(initId);
+    throw new HttpException({ message, response }, status);
+  }
+
   @Post()
   create(@Body() createTypeOneReportDto: CreateTypeOneReportDto) {
     return this.typeOneReportService.create(createTypeOneReportDto);

@@ -3,15 +3,12 @@ import { DataSource, Repository } from 'typeorm';
 import { env } from 'process';
 import { TypeOneReport } from './entities/type-one-report.entity';
 import { HandlersError } from 'src/shared/handlers/error.utils';
-
 @Injectable()
 export class TypeOneReportRepository {
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
-
   ) { }
-
   async getFactSheetByInit(
     initId: number
   ) {
@@ -76,7 +73,6 @@ export class TypeOneReportRepository {
     ORDER BY
       i.official_code ASC;
     `;
-
     const countriesProposalQuery = `
     SELECT
       DISTINCT(co.country_id),
@@ -99,7 +95,6 @@ export class TypeOneReportRepository {
       co.id,
       co.country_id;
     `;
-
     const regionsProposalQuery = `
     SELECT
       DISTINCT (r.region_id),
@@ -121,11 +116,10 @@ export class TypeOneReportRepository {
     GROUP BY
       r.region_id
     `;
-
     const countrieReportedQuery = `
     SELECT
       DISTINCT cc3.name,
-      rbi.inititiative_id 
+      rbi.inititiative_id
     FROM
       prdb.result_country rc2
       LEFT JOIN prdb.clarisa_countries cc3 ON cc3.id = rc2.country_id
@@ -136,11 +130,10 @@ export class TypeOneReportRepository {
       AND rc2.is_active = 1
       AND r.is_active = 1;
     `;
-
     const regionsReportedQuery = `
     SELECT
       DISTINCT cr.name,
-      rbi.inititiative_id 
+      rbi.inititiative_id
     FROM
       prdb.result_region rr
       LEFT JOIN prdb.clarisa_regions cr ON cr.um49Code = rr.region_id
@@ -150,7 +143,6 @@ export class TypeOneReportRepository {
       rbi.inititiative_id = ?
       AND rr.is_active = 1;
     `;
-
     const eoiOutcomeQuery = `
     SELECT
       re.initvStgId,
@@ -171,7 +163,6 @@ export class TypeOneReportRepository {
     ORDER BY
       re.result_type_id;
     `;
-
     const budgetProposalQuery = `
     SELECT
         fry.year,
@@ -181,7 +172,7 @@ export class TypeOneReportRepository {
         ${env.DB_OST}.financial_resources_years fry
         LEFT JOIN  ${env.DB_OST}.financial_resources fr ON fr.id = fry.financialResourcesId
         LEFT JOIN  ${env.DB_OST}.initiatives_by_stages ibs ON ibs.id = fr.initvStgId
-        LEFT JOIN  ${env.DB_OST}.initiatives i ON i.id = ibs.initiativeId 
+        LEFT JOIN  ${env.DB_OST}.initiatives i ON i.id = ibs.initiativeId
     WHERE
         i.id = ?
         AND fry.active = 1
@@ -190,7 +181,6 @@ export class TypeOneReportRepository {
     GROUP BY
         fry.year;
     `;
-
     const budgetAnaPlanQuery = `
     SELECT
         fry.year,
@@ -199,7 +189,7 @@ export class TypeOneReportRepository {
         ${env.DB_OST}.financial_resources_years fry
         LEFT JOIN ${env.DB_OST}.financial_resources fr ON fr.id = fry.financialResourcesId
         LEFT JOIN ${env.DB_OST}.initiatives_by_stages ibs ON ibs.id = fr.initvStgId
-        LEFT JOIN ${env.DB_OST}.initiatives i ON i.id = ibs.initiativeId 
+        LEFT JOIN ${env.DB_OST}.initiatives i ON i.id = ibs.initiativeId
     WHERE
         i.id = ?
         AND fry.active = 1
@@ -208,16 +198,50 @@ export class TypeOneReportRepository {
     GROUP BY
         fry.year;
     `;
-
     const genderScoreQuery = `
-    SELECT 
+    SELECT
       i.id AS initiative_id,
+      CONCAT(
+          'Score ',
+          a.Adaptation_Score,
+          ' - ',
+          CASE
+              WHEN (a.Adaptation_Score = 0) THEN 'Not targeted'
+              WHEN (a.Adaptation_Score = 1) THEN 'Significant'
+              ELSE 'Principal'
+          END
+      ) as adaptation,
+      CONCAT(
+          CASE
+              WHEN (a.Adaptation_Score = 0) THEN 'The activity does not target the climate mitigation, adaptation and climate policy objectives of CGIAR as put forward in its strategy.'
+              WHEN (a.Adaptation_Score = 1) THEN 'The activity contributes in a significant way to any of the three CGIAR climate-related strategy objectives – namely, climate mitigation, climate adaptation and climate policy, even though it is not the principal focus of the activity.'
+              ELSE 'The activity is principally about meeting any of the three CGIAR climate-related strategy objectives – namely, climate mitigation, climate adaptation and climate policy, and would not have been undertaken without this objective.'
+          END
+      ) as adaptation_desc,
+      CONCAT(
+          'Score ',
+          a.Adaptation_Score,
+          ' - ',
+          CASE
+              WHEN (a.Mitigation_Score  = 0) THEN 'Not targeted'
+              WHEN (a.Mitigation_Score  = 1) THEN 'Significant'
+              ELSE 'Principal'
+          END
+      ) as mitigation,
+      CONCAT(
+          CASE
+              WHEN (a.Mitigation_Score = 0) THEN 'The activity does not target the climate mitigation, adaptation and climate policy objectives of CGIAR as put forward in its strategy.'
+              WHEN (a.Mitigation_Score = 1) THEN 'The activity contributes in a significant way to any of the three CGIAR climate-related strategy objectives – namely, climate mitigation, climate adaptation and climate policy, even though it is not the principal focus of the activity.'
+              ELSE 'The activity is principally about meeting any of the three CGIAR climate-related strategy objectives – namely, climate mitigation, climate adaptation and climate policy, and would not have been undertaken without this objective.'
+          END
+      ) as mitigation_desc,
       a.Gender_Score AS gender_score
-    FROM ${env.DB_OST}.aecd a
+  FROM
+    ${env.DB_OST}.aecd a
       LEFT JOIN ${env.DB_OST}.initiatives i ON i.official_code = a.ID
-    WHERE i.id = ?;
+  WHERE
+      i.id = ?;
     `;
-
     try {
       const generalInformation: any[] = await this.dataSource.query(initiativeGeneralInformationQuery, [initId]);
       const initiative_stage_id = generalInformation[0].initiative_stage_id;
@@ -229,7 +253,6 @@ export class TypeOneReportRepository {
       const budgetProposal: any[] = await this.dataSource.query(budgetProposalQuery, [initId]);
       const budgetAnaPlan: any[] = await this.dataSource.query(budgetAnaPlanQuery, [initId]);
       const genderScore: any[] = await this.dataSource.query(genderScoreQuery, [initId]);
-
       generalInformation.map((gi) => {
         gi['countriesProposal'] = countriesProposal.filter((cp) => {
           return cp.initvStgId === gi.initiative_stage_id;
@@ -256,7 +279,6 @@ export class TypeOneReportRepository {
           return gs.initiative_id === gi.initiative_id;
         });
       });
-
       return [generalInformation[0]];
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -266,5 +288,100 @@ export class TypeOneReportRepository {
       });
     }
   }
-
+  async getKeyResultStory(initId:number){
+    const queryKeyResultStory = `SELECT r.result_code ,
+    r.title as 'result_title',
+    IF((r.result_type_id = 9), 1, 0) AS is_impact,
+    CONCAT(ci.official_code,' ', ci.name) as  'primary_submitter',
+    (SELECT GROUP_CONCAT(DISTINCT concat(ci2.official_code, ' ', ci2.short_name) separator ', ')
+      FROM result r2
+      left join results_by_inititiative rbi2
+      on rbi2.result_id = r2.id
+      and rbi2.initiative_role_id = 2
+      and rbi2.is_active > 0
+      left join clarisa_initiatives ci2 on ci2.id = rbi2.inititiative_id
+      WHERE r2.id = r.id
+    ) as "contributing_initiative",
+    (SELECT GROUP_CONCAT(DISTINCT ci4.acronym separator ', ')
+      FROM result r3
+      left join non_pooled_project npp on npp.results_id = r3.id
+      and npp.is_active > 0
+      left join clarisa_institutions ci4 on ci4.id = npp.funder_institution_id
+      left join results_center rc on rc.result_id = r.id
+      and rc.is_active > 0
+      WHERE r3.id = r.id
+    ) as "contributing_center",
+    (SELECT GROUP_CONCAT(DISTINCT ci7.name SEPARATOR ', ')
+      FROM results_by_institution rbi
+      left join result_by_institutions_by_deliveries_type rbibdt
+      on rbibdt.result_by_institution_id = rbi.id
+      and rbibdt.is_active > 0
+      left join clarisa_institutions ci7
+      on ci7.id = rbi.institutions_id
+      left JOIN partner_delivery_type pdt
+      on pdt.id = rbibdt.partner_delivery_type_id
+      WHERE rbi.result_id = r.id
+      and rbi.institution_roles_id = 2
+      and rbi.is_active > 0
+      GROUP by rbi.result_id) as "contribution_external_partner",
+    ( SELECT GROUP_CONCAT(DISTINCT cr.name separator ', ')
+         FROM result_region rr
+    left join clarisa_regions cr
+           on cr.um49Code = rr.region_id
+        WHERE rr.result_id = r.id
+          and rr.is_active = 1) as "regions",
+    (SELECT GROUP_CONCAT(DISTINCT cc3.name separator ', ')
+         FROM result_country rc2
+    left join clarisa_countries cc3
+           on cc3.id = rc2.country_id
+        WHERE rc2.result_id = r.id
+          and rc2.is_active = 1) as "countries",
+    (SELECT GROUP_CONCAT(DISTINCT concat (cgt.target, ciai.name)  separator ', ')
+    FROM result r5
+    left join results_impact_area_indicators riai 
+      on r5.id = riai.result_id
+    left join results_impact_area_target riat 
+      ON r5.id = riat.result_id 
+    left join clarisa_impact_area_indicator ciai 
+      on ciai.id = riai.impact_area_indicator_id 
+    left join clarisa_global_targets cgt 
+      on cgt.targetId = riat.result_impact_area_target_id 
+    WHERE r5.id = r.id
+    ) as "other_relevant_impact_area",
+    (SELECT GROUP_CONCAT(DISTINCT cgt.target  separator ', ')
+    FROM result r6
+    left join results_impact_area_target riat 
+      ON r6.id = riat.result_id 
+    left join clarisa_global_targets cgt 
+      on cgt.targetId = riat.result_impact_area_target_id 
+    WHERE r6.id = r.id
+    ) as "global_target",
+    (SELECT GROUP_CONCAT(DISTINCT lr.detail_link  separator ', ')
+    FROM result r7
+    left join legacy_result lr
+      ON lr.legacy_id  = r7.legacy_id  
+    WHERE r7.id = r.id and r7.legacy_id is not null
+    ) as "web_legacy"
+  from result r
+  join results_by_inititiative rbi
+    on rbi.result_id = r.id
+    and rbi.initiative_role_id = 1
+    and rbi.is_active > 0
+  join clarisa_initiatives ci
+    on rbi.inititiative_id = ci.id
+  left join result_type rt on rt.id = r.result_type_id
+    WHERE r.is_krs = 1
+    and r.is_active = 1
+    and ci.id = ?`;
+    try {
+      const generalInformation: any[] = await this.dataSource.query(queryKeyResultStory, [initId]);
+      return generalInformation;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: TypeOneReportRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
 }

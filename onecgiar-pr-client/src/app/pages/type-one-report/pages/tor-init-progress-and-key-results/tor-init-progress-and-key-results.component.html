@@ -1,0 +1,34 @@
+<div class="local_container">
+
+    <div class="box_container">
+        <div class="tor_sub_title">
+            2. Initiative progress on science and towards EOI-O
+        </div>
+        Sustainable Animal Productivity - ToC image
+        <div class="tor_sub_title">
+            3. WP-specific progress
+        </div>
+        Work Package images
+    </div>
+
+    <div class="tor_sub_title" style="padding-left: 20px;">
+        4. Key results
+    </div>
+    <div style="padding-left: 20px;">Dashboard</div>
+
+    <app-alert-status
+        description="All this information can be extracted in excel format through the download button on the dashboard.">
+    </app-alert-status>
+    <div [ngClass]="{'expand': full_screen}" class="iframe_container"
+        *ngIf="typeOneReportSE.initiativeSelected && typeOneReportSE.showTorIframe">
+        <div class="expand_icon" (click)="full_screen = !full_screen">
+            <i class="material-icons-round">
+                {{full_screen?'close_fullscreen':'open_in_full'}}
+            </i>
+            {{full_screen?'Minimize ':'Open in full screen'}}
+        </div>
+
+        <iframe [src]="this.typeOneReportSE.sanitizedUrl" frameborder="0"></iframe>
+    </div>
+
+</div>
