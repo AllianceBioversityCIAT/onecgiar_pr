@@ -210,12 +210,34 @@ export class TypeOneReportRepository {
     `;
 
     const genderScoreQuery = `
-    SELECT 
-      i.id AS initiative_id,
-      a.Gender_Score AS gender_score
-    FROM ${env.DB_OST}.aecd a
-      LEFT JOIN ${env.DB_OST}.initiatives i ON i.official_code = a.ID
-    WHERE i.id = ?;
+    SELECT
+        i.id AS initiative_id,
+        CONCAT(
+            'Score ',
+            a.Adaptation_Score,
+            ' - ',
+            CASE
+                WHEN (a.Adaptation_Score = 0) THEN 'Not targeted'
+                WHEN (a.Adaptation_Score = 1) THEN 'Significant'
+                ELSE 'Principal'
+            END
+        ) as adaptation,
+        CONCAT(
+            'Score ',
+            a.Adaptation_Score,
+            ' - ',
+            CASE
+                WHEN (a.Mitigation_Score  = 0) THEN 'Not targeted'
+                WHEN (a.Mitigation_Score  = 1) THEN 'Significant'
+                ELSE 'Principal'
+            END
+        ) as mitigation,
+        a.Gender_Score AS gender_score
+    FROM
+      ${env.DB_OST}.aecd a
+        LEFT JOIN ${env.DB_OST}.initiatives i ON i.official_code = a.ID
+    WHERE
+        i.id = ?;
     `;
 
     try {
