@@ -30,6 +30,21 @@ export class TypeOneReportService {
     }
   }
 
+  async getKeyResultStory(initId:number){
+    try {
+      const results = await this._typeOneReportRepository.getKeyResultStory(initId);
+      results['results'] = JSON.parse(results['results']);
+      return {
+        response: results,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+    
+  }
+
   findAll() {
     return `This action returns all typeOneReport`;
   }
