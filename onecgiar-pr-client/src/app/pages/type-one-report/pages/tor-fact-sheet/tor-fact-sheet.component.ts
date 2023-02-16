@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../shared/services/api/api.service';
+import { TypeOneReportService } from '../../type-one-report.service';
 
 @Component({
   selector: 'app-tor-fact-sheet',
@@ -34,11 +35,11 @@ export class TorFactSheetComponent {
     data: []
   };
 
-  constructor(private api: ApiService) {}
+  constructor(private api: ApiService, private typeOneReportSE: TypeOneReportService) {}
   ngOnInit(): void {
     //Called after the constructor, initializing input properties, and the first call to ngOnChanges.
     //Add 'implements OnInit' to the class.
-    this.api.resultsSE.GET_factSheetByInitiativeId(1).subscribe(({ response }) => {
+    this.api.resultsSE.GET_factSheetByInitiativeId(this.getInitiativeID(this.typeOneReportSE.initiativeSelected)?.id).subscribe(({ response }) => {
       let data = response;
       this.convertBudgetData(data);
       this.data[0].value = data.initiative_name;
@@ -49,11 +50,18 @@ export class TorFactSheetComponent {
       //* Geographic location
       this.concatGeo(data);
       this.concatEoiOutcome(data);
-      this.data[9].value = '';
-      this.data[10].value = '';
-      this.data[11].value = '';
+      console.log(data);
+      this.data[9].value = `<strong>${data.genderScore[0]?.adaptation}</strong><br>${data.genderScore[0]?.adaptation_desc}`;
+      this.data[10].value = `<strong>${data.genderScore[0]?.mitigation}</strong><br>${data.genderScore[0]?.mitigation_desc}`;
+      this.data[11].value = data.genderScore[0]?.gender_score;
       this.data[12].value = '';
     });
+  }
+
+  getInitiativeID(official_code) {
+    console.log(official_code);
+    if (!this.api.rolesSE.isAdmin) return this.api.dataControlSE.myInitiativesList.find(init => init.official_code == official_code);
+    return this.typeOneReportSE.allInitiatives.find(init => init.official_code == official_code);
   }
 
   convertBudgetData(data) {

@@ -22,11 +22,12 @@
                     (selectOptionEvent)="selectInitiativeEvent()" placeholder="Select initiative"
                     [(ngModel)]="typeOneReportSE.initiativeSelected">
                 </app-pr-select>
-                <app-pr-select [options]="this.allInitiatives" [isStatic]="true" *ngIf="this.api.rolesSE.isAdmin"
-                    optionLabel="full_name" optionValue="official_code" placeholder="Select initiative"
-                    (selectOptionEvent)="selectInitiativeEvent()" [(ngModel)]="typeOneReportSE.initiativeSelected">
+                <app-pr-select [options]="this.typeOneReportSE.allInitiatives" [isStatic]="true"
+                    *ngIf="this.api.rolesSE.isAdmin" optionLabel="full_name" optionValue="official_code"
+                    placeholder="Select initiative" (selectOptionEvent)="selectInitiativeEvent()"
+                    [(ngModel)]="typeOneReportSE.initiativeSelected">
                 </app-pr-select>
-                <div class="title">Sustainable Animal Productivity - Type 1 report</div>
+                <div class="title"></div>
             </div>
             <div class="router_outlet_container">
                 <router-outlet></router-outlet>
