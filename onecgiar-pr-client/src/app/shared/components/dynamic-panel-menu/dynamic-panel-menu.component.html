@@ -2,12 +2,16 @@
     <div class="section_title">
         {{this.panelName}}
     </div>
+    <div class="util_container">
+        <ng-content select="[util]"></ng-content>
+    </div>
     <div class="options">
         <div class="option" *ngFor="let option of options" [routerLink]="option.path" routerLinkActive="active">
             <i class="material-icons-round">
                 {{option?.icon}}
             </i>
             {{option?.name}}
+            <img *ngIf="option?.underConstruction" src="assets/work-in-progress.png" alt="" srcset="">
         </div>
     </div>
 </div>

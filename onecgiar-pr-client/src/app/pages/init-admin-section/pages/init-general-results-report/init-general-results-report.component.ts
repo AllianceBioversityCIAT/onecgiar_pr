@@ -51,6 +51,10 @@ export class InitGeneralResultsReportComponent {
     });
   }
 
+  openFolderText() {
+    return `In this <a href="https://cgiar.sharepoint.com/:f:/s/PRMSProject/Ev8QdqJv6vtPmcRvE4QLnDUB17Hke9nHOUneI1AZCI5KHg?e=5He46N"  class="open_route" target="_blank">folder</a>, you will find the latest reports that contains all the results reported in the tool. Please make sure to check the date of each report to ensure that you are always downloading the most recent version.`;
+  }
+
   POST_reportSesultsCompleteness(inits: any[]) {
     this.resultsList = [];
     this.api.resultsSE.POST_reportSesultsCompleteness(inits, 2).subscribe(({ response }) => {
