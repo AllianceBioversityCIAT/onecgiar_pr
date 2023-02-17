@@ -478,7 +478,7 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       update results_toc_result  
       set is_active = 1,
         last_updated_date = NOW(),
-        planned_result = NULL,
+       /* planned_result = NULL, */
         last_updated_by = ?
       where results_id = ?
         and initiative_id in (${initiative.toString()});
@@ -495,18 +495,16 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
     `;
 
     try {
-      if(initiative?.length){
+      if (initiative?.length) {
+
         const upDateInactiveResult = await this.query(upDateInactive, [
-          userId, resultId
+          userId,
+          resultId,
         ]);
   
-        return await this.query(upDateActive, [
-          userId, resultId
-        ]);
-      }else{
-        return await this.query(upDateAllInactive, [
-          userId, resultId
-        ]);
+        return await this.query(upDateActive, [userId, resultId]);
+      } else {
+        return await this.query(upDateAllInactive, [userId, resultId]);
       }
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

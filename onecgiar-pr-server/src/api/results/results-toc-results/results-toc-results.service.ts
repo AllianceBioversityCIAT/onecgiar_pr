@@ -47,10 +47,21 @@ export class ResultsTocResultsService {
 
   async create(createResultsTocResultDto: CreateResultsTocResultDto, user: TokenDto) {
     try {
-      let { contributing_np_projects, result_id, contributing_center, contributing_initiatives, result_toc_result, contributors_result_toc_result, impacts, pending_contributing_initiatives } = createResultsTocResultDto;
+      let {
+        contributing_np_projects,
+        result_id,
+        contributing_center,
+        contributing_initiatives,
+        result_toc_result,
+        contributors_result_toc_result,
+        impacts,
+        pending_contributing_initiatives,
+      } = createResultsTocResultDto;
       const version = await this._versionsService.findBaseVersion();
       const result = await this._resultRepository.getResultById(result_id);
       let initiativeArray: number[] = [];
+      let initiativeArrayRtr: number[] = [];
+      let initiativeArrayPnd: number[] = [];
       if (version.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: version });
       }
@@ -60,9 +71,21 @@ export class ResultsTocResultsService {
         contributing_center.map(el => { el.primary = false; });
       }
 
-      if (contributing_initiatives?.length) {
-        initiativeArray = contributing_initiatives.map(el => el.id);
-        await this._resultByInitiativesRepository.updateResultByInitiative(result_id, [...initiativeArray, result_toc_result.initiative_id], user.id, false);
+      if (
+        contributing_initiatives?.length ||
+        pending_contributing_initiatives?.length
+      ) {
+        initiativeArray = contributing_initiatives.map((el) => el.id);
+        initiativeArrayPnd = pending_contributing_initiatives.map(
+          (pend) => pend.id,
+        );
+        await this._resultByInitiativesRepository.updateResultByInitiative(
+          result_id,
+          [...initiativeArray, result_toc_result.initiative_id],
+          user.id,
+          false,
+          initiativeArrayPnd
+        );
         const dataRequst: CreateTocShareResult = {
           isToc: true,
           initiativeShareId: initiativeArray,
@@ -72,7 +95,13 @@ export class ResultsTocResultsService {
         }
         await this._shareResultRequestService.resultRequest(dataRequst, result_id, user);
       } else {
-        await this._resultByInitiativesRepository.updateResultByInitiative(result_id, [], user.id, false);
+        await this._resultByInitiativesRepository.updateResultByInitiative(
+          result_id,
+          [],
+          user.id,
+          false,
+          [],
+        );
       }
       const cancelRequest = pending_contributing_initiatives?.filter(e => e.is_active == false);
       if(cancelRequest?.length){
@@ -182,7 +211,13 @@ export class ResultsTocResultsService {
           }
         });
       } else {
-        await this._resultsTocResultRepository.updateResultByInitiative(result_id, [...initiativeArray, result_toc_result.initiative_id], user.id);
+        initiativeArrayRtr = contributing_initiatives.map(
+          (initiative) => initiative.id,
+        );
+        initiativeArrayRtr = initiativeArrayRtr.concat(
+          pending_contributing_initiatives.map((pending) => pending.id),
+        );
+        await this._resultsTocResultRepository.updateResultByInitiative(result_id, [...initiativeArrayRtr, result_toc_result.initiative_id], user.id);
         let RtR = await this._resultsTocResultRepository.getRTRById(result_toc_result?.result_toc_result_id, result_id, result_toc_result?.initiative_id);
         if (RtR) {
           if (result.result_level_id == 2) {

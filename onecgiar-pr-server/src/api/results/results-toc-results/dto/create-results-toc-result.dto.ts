@@ -57,6 +57,7 @@ interface resultToResultInterfaceToc{
 }
 
 interface shareResultRequestInterface{
+    id:number;
     share_result_request_id: number;
     is_active: boolean;
 }

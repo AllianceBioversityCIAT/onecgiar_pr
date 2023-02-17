@@ -310,8 +310,16 @@ export class ResultByInitiativesRepository extends Repository<ResultsByInititiat
     }
   }
 
-  async updateResultByInitiative(resultId: number, initiativeArray: number[], userId: number, isOwner: boolean) {
-    const initiative = initiativeArray??[];
+  async updateResultByInitiative(
+    resultId: number,
+    initiativeArray: number[],
+    userId: number,
+    isOwner: boolean,
+    initiativeArrayPnd: number[],
+  ) {
+    const initiative = initiativeArray ?? [];
+    const initiativepnd = initiativeArrayPnd ?? [];
+    const initiativeparameter = initiative.concat(initiativepnd);
     const upDateInactive = `
         update results_by_inititiative  
         set is_active  = 0,
@@ -320,7 +328,8 @@ export class ResultByInitiativesRepository extends Repository<ResultsByInititiat
         where is_active > 0 
           and result_id = ?
           and initiative_role_id = ?
-          and inititiative_id not in (${initiative.toString()});
+          and inititiative_id not in (${initiativeparameter.toString()})
+      
     `;
 
     const upDateActive = `
@@ -334,8 +343,6 @@ export class ResultByInitiativesRepository extends Repository<ResultsByInititiat
     `;
 
     const upDateAllInactive = `
-
-
     update results_by_inititiative  
       set is_active  = 0,
         last_updated_date = NOW(),
