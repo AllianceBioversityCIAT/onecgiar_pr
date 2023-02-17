@@ -42,6 +42,17 @@ export class AdminPanelController {
     throw new HttpException({ message, response }, status);
   }
 
+  @Get('report/results/excel-full-report/:initiativeId')
+  async excelFullReportByResultByInitiative(
+    @Param('initiativeId') initiativeId: number,
+  ) {
+    const { message, response, status } =
+      await this.adminPanelService.excelFullReportByResultByInitiative(
+        initiativeId,
+      );
+    throw new HttpException({ message, response }, status);
+  }
+
   @Get('report/results/:resultId/submissions')
   async submissionsByResults(@Param('resultId') resultId: number) {
     const { message, response, status } =
