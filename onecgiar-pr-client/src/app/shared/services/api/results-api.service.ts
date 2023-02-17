@@ -458,4 +458,8 @@ export class ResultsApiService {
   GET_keyResultStoryInitiativeId(initiativeId) {
     return this.http.get<any>(`${environment.apiBaseUrl}api/type-one-report/key-result-story/initiative/${initiativeId}`);
   }
+
+  GET_excelFullReportByInitiativeId(initiativeId) {
+    return this.http.get<any>(`${this.apiBaseUrl}admin-panel/report/results/excel-full-report/${initiativeId}`);
+  }
 }

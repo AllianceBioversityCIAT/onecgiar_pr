@@ -32,7 +32,7 @@ export class TorKeyResultStoryComponent {
     this.api.resultsSE.GET_keyResultStoryInitiativeId(this.typeOneReportSE.getInitiativeID(this.typeOneReportSE.initiativeSelected)?.id).subscribe(({ response }) => {
       let data = response[0];
       console.log(data);
-      if (!data) return;
+      if (!data) return (this.data = null);
 
       const is_impact = Boolean(Number(data.is_impact));
 

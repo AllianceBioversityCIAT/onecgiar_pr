@@ -27,6 +27,19 @@ table {
     width: 100%;
 }
 
+.flatFormat {
+    table {
+        width: auto !important;
+        font-family: Calibri, 'Trebuchet MS', sans-serif;
+        font-size: 13px;
+
+        .table_title {
+            color: black;
+            background-color: white !important;
+        }
+    }
+}
+
 .copy_to_clipboard_button {
     background-color: rgb(255, 255, 255);
     color: rgb(80, 80, 80);

@@ -1,24 +1,36 @@
 <div class="local_container">
 
     <div class="box_container">
+        <div class="desc">
+            Please access the SharePoint folder link to find the Theory of Change (ToC) images that need to be included
+            in the official report. Within the folder, you will find an image for the overall ToC diagram to be inserted
+            under the section #2, as well as individual images for each work package within your initiative to be
+            inserted in the section #3.
+            <app-pr-button text="Go to folder" icon="folder"></app-pr-button>
+        </div>
+
         <div class="tor_sub_title">
             2. Initiative progress on science and towards EOI-O
         </div>
-        Sustainable Animal Productivity - ToC image
+        File name: INIT-XX_tocdiagram.png
+        <br><br>
         <div class="tor_sub_title">
             3. WP-specific progress
         </div>
-        Work Package images
+        File names: INIT-XX_wptoc0X.png
     </div>
-
+    <br><br>
     <div class="tor_sub_title" style="padding-left: 20px;">
         4. Key results
     </div>
-    <div style="padding-left: 20px;">Dashboard</div>
 
     <app-alert-status
-        description="All this information can be extracted in excel format through the download button on the dashboard.">
+        description="All this information can be extracted in excel format by clicking in the download button below:">
     </app-alert-status>
+
+    <app-pr-button text="Download .xlsx" icon="file_download"
+        (click)="exportExcel(typeOneReportSE.initiativeSelected)"></app-pr-button>
+
     <div [ngClass]="{'expand': full_screen}" class="iframe_container"
         *ngIf="typeOneReportSE.initiativeSelected && typeOneReportSE.showTorIframe">
         <div class="expand_icon" (click)="full_screen = !full_screen">

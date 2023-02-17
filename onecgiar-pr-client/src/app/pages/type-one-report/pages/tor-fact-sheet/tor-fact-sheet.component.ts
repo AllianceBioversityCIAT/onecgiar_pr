@@ -62,7 +62,7 @@ export class TorFactSheetComponent {
     //* budgetProposal
     let dataItem = {};
     data.budgetProposal?.forEach(element => {
-      this.budgetProposal.header.push({ attr: element.year, name: element.year });
+      this.budgetProposal.header.push({ attr: element.year, name: element.year, type: 'currency' });
       dataItem[element.year] = element.total;
     });
     this.budgetProposal.data.push(dataItem);
@@ -71,7 +71,7 @@ export class TorFactSheetComponent {
     data.budgetAnaPlan.splice(2, 1);
     data.budgetAnaPlan.splice(1, 1);
     data.budgetAnaPlan?.forEach(element => {
-      this.budgetAnaPlan.header.push({ attr: element.year, name: element.year });
+      this.budgetAnaPlan.header.push({ attr: element.year, name: element.year, type: 'currency' });
       dataItem[element.year] = element.total;
     });
     this.budgetAnaPlan.data.push(dataItem);
@@ -81,7 +81,7 @@ export class TorFactSheetComponent {
     //* Regions targeted in the proposal:
     this.data[7].value += '<strong>Regions targeted in the proposal:</strong><br>';
     data.regionsProposal?.forEach(element => {
-      this.data[7].value += `${element.name}${', '}`;
+      this.data[7].value += `${element.name}${'; '}`;
     });
     this.data[7].value = this.data[7].value.substring(0, this.data[7].value.length - 2);
     this.data[7].value += '.<br>';
@@ -89,7 +89,7 @@ export class TorFactSheetComponent {
     //* Countries targeted in the proposal:
     this.data[7].value += '<br><strong>Countries targeted in the proposal:</strong><br>';
     data.countriesProposal?.forEach(element => {
-      this.data[7].value += `${element.name}${', '}`;
+      this.data[7].value += `${element.name}${'; '}`;
     });
     this.data[7].value = this.data[7].value.substring(0, this.data[7].value.length - 2);
     this.data[7].value += '.<br>';
@@ -97,7 +97,7 @@ export class TorFactSheetComponent {
     //* Regions with results reported in 2022:
     this.data[7].value += '<br><strong>Regions with results reported in 2022:</strong><br>';
     data.regionsReported?.forEach(element => {
-      this.data[7].value += `${element.name}${', '}`;
+      this.data[7].value += `${element.name}${'; '}`;
     });
     this.data[7].value = this.data[7].value.substring(0, this.data[7].value.length - 2);
     this.data[7].value += '.<br>';
@@ -105,7 +105,7 @@ export class TorFactSheetComponent {
     //* Countries with results reported in 2022:
     this.data[7].value += '<br><strong>Countries with results reported in 2022:</strong><br>';
     data.countrieReported?.forEach(element => {
-      this.data[7].value += `${element.name}${', '}`;
+      this.data[7].value += `${element.name}${'; '}`;
     });
 
     this.data[7].value = this.data[7].value.substring(0, this.data[7].value.length - 2);
