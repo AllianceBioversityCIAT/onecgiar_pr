@@ -56,7 +56,7 @@ export class TorFactSheetComponent {
       this.data[9].value = `<strong>${data.genderScore[0]?.adaptation}</strong><br>${data.genderScore[0]?.adaptation_desc}`;
       this.data[10].value = `<strong>${data.genderScore[0]?.mitigation}</strong><br>${data.genderScore[0]?.mitigation_desc}`;
       this.data[11].value = `<strong>${data.genderScore[0]?.gender_score}</strong><br>${''}`;
-      this.data[12].value = `<a href="data?.web_page" target="_blank">${data?.web_page}</a>`;
+      this.data[12].value = `<a href="${data?.web_page}" target="_blank">${data?.web_page}</a>`;
     });
   }
 
