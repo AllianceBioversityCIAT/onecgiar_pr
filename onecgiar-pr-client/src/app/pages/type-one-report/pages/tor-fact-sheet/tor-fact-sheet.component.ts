@@ -62,7 +62,7 @@ export class TorFactSheetComponent {
     //* budgetProposal
     let dataItem = {};
     data.budgetProposal?.forEach(element => {
-      this.budgetProposal.header.push({ attr: element.year, name: element.year });
+      this.budgetProposal.header.push({ attr: element.year, name: element.year, type: 'currency' });
       dataItem[element.year] = element.total;
     });
     this.budgetProposal.data.push(dataItem);
@@ -71,7 +71,7 @@ export class TorFactSheetComponent {
     data.budgetAnaPlan.splice(2, 1);
     data.budgetAnaPlan.splice(1, 1);
     data.budgetAnaPlan?.forEach(element => {
-      this.budgetAnaPlan.header.push({ attr: element.year, name: element.year });
+      this.budgetAnaPlan.header.push({ attr: element.year, name: element.year, type: 'currency' });
       dataItem[element.year] = element.total;
     });
     this.budgetAnaPlan.data.push(dataItem);

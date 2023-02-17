@@ -16,7 +16,9 @@
         </tr>
         <tr *ngFor="let dataItem of data">
             <td *ngFor="let headerItem of header">
-                <div [innerHTML]="dataItem[headerItem.attr]"></div>
+                <div
+                    [innerHTML]="headerItem.type == 'currency' ? (dataItem[headerItem.attr] | currency : 'USD' : 'symbol' : '1.0-0' ) : dataItem[headerItem.attr]">
+                </div>
             </td>
         </tr>
     </table>
