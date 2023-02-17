@@ -1,4 +1,4 @@
-<div class="box">
+<div class="box" [ngClass]="{'flatFormat': flatFormat}">
     <div class="copy_to_clipboard_button" (click)="copyTable(tableOne)" pTooltip="Copy to clipboard"
         tooltipPosition="left">
         Copy <i class="material-icons-round">
