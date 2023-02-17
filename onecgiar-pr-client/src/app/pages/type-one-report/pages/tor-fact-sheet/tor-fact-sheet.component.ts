@@ -47,14 +47,16 @@ export class TorFactSheetComponent {
       this.data[2].value = data.iniative_lead;
       this.data[3].value = data.initiative_deputy;
       this.data[4].value = data.action_area;
+      this.data[5].value = new Date(data.start_date).toLocaleDateString('en-us', { day: 'numeric', month: 'short', year: 'numeric' });
+      this.data[6].value = new Date(data.end_date).toLocaleDateString('en-us', { day: 'numeric', month: 'short', year: 'numeric' });
       //* Geographic location
       this.concatGeo(data);
       this.concatEoiOutcome(data);
       console.log(data);
       this.data[9].value = `<strong>${data.genderScore[0]?.adaptation}</strong><br>${data.genderScore[0]?.adaptation_desc}`;
       this.data[10].value = `<strong>${data.genderScore[0]?.mitigation}</strong><br>${data.genderScore[0]?.mitigation_desc}`;
-      this.data[11].value = data.genderScore[0]?.gender_score;
-      this.data[12].value = '';
+      this.data[11].value = `<strong>${data.genderScore[0]?.gender_score}</strong><br>${''}`;
+      this.data[12].value = `<a href="data?.web_page" target="_blank">${data?.web_page}</a>`;
     });
   }
 

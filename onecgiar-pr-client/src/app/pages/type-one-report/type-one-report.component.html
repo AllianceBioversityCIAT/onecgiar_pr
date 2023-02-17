@@ -5,16 +5,21 @@
     <div class="router">
         <div class="tor_section_container shadow-1">
             <div class="initiative">
-                <app-pr-select [options]="this.api.dataControlSE.myInitiativesList" *ngIf="!this.api.rolesSE.isAdmin"
-                    [isStatic]="true" optionLabel="full_name" optionValue="official_code"
-                    (selectOptionEvent)="selectInitiativeEvent()" placeholder="Select initiative"
-                    [(ngModel)]="typeOneReportSE.initiativeSelected">
-                </app-pr-select>
-                <app-pr-select [options]="this.typeOneReportSE.allInitiatives" [isStatic]="true"
-                    *ngIf="this.api.rolesSE.isAdmin" optionLabel="full_name" optionValue="official_code"
-                    placeholder="Select initiative" (selectOptionEvent)="selectInitiativeEvent()"
-                    [(ngModel)]="typeOneReportSE.initiativeSelected">
-                </app-pr-select>
+                <div class="dropdown">
+                    <div class="label">Select Initiative:</div>
+                    <div class="select">
+                        <app-pr-select [options]="this.api.dataControlSE.myInitiativesList"
+                            *ngIf="!this.api.rolesSE.isAdmin" [isStatic]="true" optionLabel="full_name"
+                            optionValue="official_code" (selectOptionEvent)="selectInitiativeEvent()"
+                            placeholder="Select initiative" [(ngModel)]="typeOneReportSE.initiativeSelected">
+                        </app-pr-select>
+                        <app-pr-select [options]="this.typeOneReportSE.allInitiatives" [isStatic]="true"
+                            *ngIf="this.api.rolesSE.isAdmin" optionLabel="full_name" optionValue="official_code"
+                            placeholder="Select initiative" (selectOptionEvent)="selectInitiativeEvent()"
+                            [(ngModel)]="typeOneReportSE.initiativeSelected">
+                        </app-pr-select>
+                    </div>
+                </div>
                 <!-- <div class="title"></div> -->
             </div>
             <div class="router_outlet_container">

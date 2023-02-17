@@ -18,6 +18,25 @@
                 grid-template-columns: 1fr;
                 border-bottom: 5px solid var(--pr-color-primary);
 
+                .dropdown {
+                    display: flex;
+                    align-items: center;
+                    width: 100%;
+
+                    .select {
+                        width: 50%;
+                    }
+
+                    .label {
+                        width: max-content;
+                        white-space: nowrap;
+                        font-weight: 500;
+                        color: var(--pr-color-primary);
+                        padding: 0px 10px;
+                        font-size: 1.1em;
+                    }
+                }
+
                 .title {
                     background-color: var(--pr-color-primary);
                     color: white;

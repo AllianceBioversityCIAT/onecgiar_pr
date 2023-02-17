@@ -16,7 +16,7 @@ export class TorInitProgressAndKeyResultsComponent {
     this.api.resultsSE.GET_excelFullReportByInitiativeId(this.typeOneReportSE.getInitiativeID(initiativeSelected)?.id).subscribe(
       ({ response }) => {
         console.log(response);
-        this.exportTablesSE.exportExcel(response, 'initiative-progress-and-key-results');
+        this.exportTablesSE.exportExcel(response, 'Initiative-progress-and-key-results');
         // console.log(response);
       },
       err => {
