@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { TypeOneReportService } from '../../type-one-report.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
+import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 
 @Component({
   selector: 'app-tor-init-progress-and-key-results',
@@ -9,18 +10,18 @@ import { ApiService } from '../../../../shared/services/api/api.service';
 })
 export class TorInitProgressAndKeyResultsComponent {
   full_screen = false;
-  constructor(public typeOneReportSE: TypeOneReportService, private api: ApiService) {}
+  constructor(public typeOneReportSE: TypeOneReportService, private api: ApiService, private exportTablesSE: ExportTablesService) {}
 
   exportExcel(initiativeSelected) {
-    console.log(initiativeSelected);
-    // this.api.resultsSE.POST_excelFullReport([result]).subscribe(
-    //   ({ response }) => {
-    //     // console.log(response);
-    //     // console.log(response);
-    //   },
-    //   err => {
-    //     this.api.alertsFe.show({ id: 'loginAlert', title: 'Oops!', description: 'There was an error in the system while generating the report. If the issue persists, please contact the technical team.', status: 'error' });
-    //   }
-    // );
+    this.api.resultsSE.GET_excelFullReportByInitiativeId(this.typeOneReportSE.getInitiativeID(initiativeSelected)?.id).subscribe(
+      ({ response }) => {
+        console.log(response);
+        this.exportTablesSE.exportExcel(response, 'initiative-progress-and-key-results');
+        // console.log(response);
+      },
+      err => {
+        this.api.alertsFe.show({ id: 'loginAlert', title: 'Oops!', description: 'There was an error in the system while generating the report. If the issue persists, please contact the technical team.', status: 'error' });
+      }
+    );
   }
 }
