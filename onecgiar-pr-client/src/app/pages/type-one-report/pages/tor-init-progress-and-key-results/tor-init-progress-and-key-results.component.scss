@@ -15,6 +15,15 @@
     border: 1px solid rgb(189, 189, 189);
     background-color: #f8f8f8;
     padding: 20px;
+
+    .desc {
+        padding: 20px 100px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 10px;
+    }
 }
 
 .expand_icon {
