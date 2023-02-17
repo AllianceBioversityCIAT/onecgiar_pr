@@ -295,7 +295,7 @@ export class TypeOneReportRepository {
   }
   async getKeyResultStory(initId:number){
     const queryKeyResultStory = `SELECT r.result_code ,
-    r.title as 'result_title',
+    concat(r.result_code,'-',r.title) as 'result_title',
     IF((r.result_type_id = 9), 1, 0) AS is_impact,
     CONCAT(ci.official_code,' ', ci.name) as  'primary_submitter',
     (SELECT GROUP_CONCAT(DISTINCT concat(ci2.official_code, ' ', ci2.short_name) separator ', ')
