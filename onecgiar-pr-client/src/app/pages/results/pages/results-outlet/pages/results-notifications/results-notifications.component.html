@@ -1,17 +1,18 @@
 <div class="all_notifications">
-    <div *ngFor="let notification of interactiveNotisList">
+    <div *ngFor="let notification of this.resultsNotificationsSE.interactiveNotisList">
         <app-notification-item [comes]="true" [readOnly]="notification.readOnly"
-            (requestEvent)="get_section_information()" [notification]="notification">
+            (requestEvent)="this.resultsNotificationsSE.get_section_information()" [notification]="notification">
         </app-notification-item>
     </div>
 </div>
 <br>
 <div class="all_notifications">
-    <div *ngFor="let notification of staticNotisList">
+    <div *ngFor="let notification of this.resultsNotificationsSE.staticNotisList">
         <app-notification-item [comes]="false" [notification]="notification">
         </app-notification-item>
     </div>
 </div>
 
-<app-no-data-text title="No notifications" *ngIf="!interactiveNotisList?.length && !staticNotisList?.length">
+<app-no-data-text title="No notifications"
+    *ngIf="!this.resultsNotificationsSE.interactiveNotisList?.length && !this.resultsNotificationsSE.staticNotisList?.length">
 </app-no-data-text>

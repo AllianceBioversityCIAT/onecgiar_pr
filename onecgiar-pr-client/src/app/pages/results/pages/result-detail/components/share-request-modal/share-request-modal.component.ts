@@ -6,6 +6,7 @@ import { ShareRequestModalService } from './share-request-modal.service';
 import { Router } from '@angular/router';
 import { RetrieveModalService } from '../retrieve-modal/retrieve-modal.service';
 import { environment } from 'src/environments/environment';
+import { ResultsNotificationsService } from '../../../results-outlet/pages/results-notifications/results-notifications.service';
 
 @Component({
   selector: 'app-share-request-modal',
@@ -23,7 +24,7 @@ export class ShareRequestModalComponent {
       initiative_id: 10
     }
   ];
-  constructor(public retrieveModalSE: RetrieveModalService, public api: ApiService, public rolesSE: RolesService, public shareRequestModalSE: ShareRequestModalService, private router: Router) {}
+  constructor(public retrieveModalSE: RetrieveModalService, public api: ApiService, public rolesSE: RolesService, public shareRequestModalSE: ShareRequestModalService, private router: Router, public resultsNotificationsSE: ResultsNotificationsService) {}
   ngOnInit(): void {
     this.shareRequestModalSE.shareRequestBody = new ShareRequestBody();
     //Called after the constructor, initializing input properties, and the first call to ngOnChanges.
@@ -83,6 +84,7 @@ export class ShareRequestModalComponent {
         this.api.dataControlSE.showShareRequest = false;
         this.api.alertsFe.show({ id: 'noti', title: `Request sent`, description: `Once your request is accepted, the result can be mapped to your Initiative's ToC.`, status: 'success' });
         this.requesting = false;
+        this.resultsNotificationsSE.get_section_information();
       },
       err => {
         this.api.dataControlSE.showShareRequest = false;
