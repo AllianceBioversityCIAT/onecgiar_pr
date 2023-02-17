@@ -131,7 +131,8 @@ export class TypeOneReportRepository {
     WHERE
       rbi.inititiative_id = ?
       AND rc2.is_active = 1
-      AND r.is_active = 1;
+      AND r.is_active = 1
+      AND r.status = 1;
     `;
     const regionsReportedQuery = `
     SELECT
@@ -144,7 +145,8 @@ export class TypeOneReportRepository {
       LEFT JOIN prdb.results_by_inititiative rbi ON rbi.result_id = r.id
     WHERE
       rbi.inititiative_id = ?
-      AND rr.is_active = 1;
+      AND rr.is_active = 1
+      AND r.status = 1;
     `;
     const eoiOutcomeQuery = `
     SELECT
@@ -375,6 +377,7 @@ export class TypeOneReportRepository {
   left join result_type rt on rt.id = r.result_type_id
     WHERE r.is_krs = 1
     and r.is_active = 1
+    and r.status = 1
     and ci.id = ?`;
     try {
       const generalInformation: any[] = await this.dataSource.query(queryKeyResultStory, [initId]);
