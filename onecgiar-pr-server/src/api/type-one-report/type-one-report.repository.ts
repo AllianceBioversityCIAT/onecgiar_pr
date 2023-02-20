@@ -135,18 +135,19 @@ export class TypeOneReportRepository {
       AND r.status = 1;
     `;
     const regionsReportedQuery = `
-    SELECT
-      DISTINCT cr.name,
-      rbi.inititiative_id
-    FROM
-      prdb.result_region rr
-      LEFT JOIN prdb.clarisa_regions cr ON cr.um49Code = rr.region_id
-      LEFT JOIN prdb.result r ON r.id = rr.result_id
-      LEFT JOIN prdb.results_by_inititiative rbi ON rbi.result_id = r.id
+    SELECT 
+        IFNULL(GROUP_CONCAT(DISTINCT crc.cgiar_name SEPARATOR '; '), '') AS regions,
+        rbi.inititiative_id
+    FROM result_region rr
+      LEFT JOIN clarisa_regions cr ON cr.um49Code = rr.region_id
+      LEFT JOIN clarisa_regions_cgiar crc ON crc.un_code = cr.um49Code
+      LEFT JOIN result r ON r.id = rr.result_id
+      LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
     WHERE
-      rbi.inititiative_id = ?
-      AND rr.is_active = 1
-      AND r.status = 1;
+        rbi.inititiative_id = 22
+        AND rr.is_active = 1
+        AND r.status = 1
+        AND cr.parent_regions_code IS NOT NULL;
     `;
     const eoiOutcomeQuery = `
     SELECT
@@ -203,50 +204,40 @@ export class TypeOneReportRepository {
     GROUP BY
         fry.year;
     `;
-    const genderScoreQuery = `
+    const climateGenderScoreQuery = `
     SELECT
-        i.id AS initiative_id,
-        CONCAT(
-            'Score ',
-            a.Adaptation_Score,
-            ' - ',
-            CASE
-                WHEN (a.Adaptation_Score = 0) THEN 'Not targeted'
-                WHEN (a.Adaptation_Score = 1) THEN 'Significant'
-                ELSE 'Principal'
-            END
-        ) as adaptation,
-        CONCAT(
-            CASE
-                WHEN (a.Adaptation_Score = 0) THEN 'The activity does not target the climate mitigation, adaptation and climate policy objectives of CGIAR as put forward in its strategy.'
-                WHEN (a.Adaptation_Score = 1) THEN 'The activity contributes in a significant way to any of the three CGIAR climate-related strategy objectives – namely, climate mitigation, climate adaptation and climate policy, even though it is not the principal focus of the activity.'
-                ELSE 'The activity is principally about meeting any of the three CGIAR climate-related strategy objectives – namely, climate mitigation, climate adaptation and climate policy, and would not have been undertaken without this objective.'
-            END
-        ) as adaptation_desc,
-        CONCAT(
-            'Score ',
-            a.Adaptation_Score,
-            ' - ',
-            CASE
-                WHEN (a.Mitigation_Score  = 0) THEN 'Not targeted'
-                WHEN (a.Mitigation_Score  = 1) THEN 'Significant'
-                ELSE 'Principal'
-            END
-        ) as mitigation,
-        CONCAT(
-            CASE
-                WHEN (a.Mitigation_Score = 0) THEN 'The activity does not target the climate mitigation, adaptation and climate policy objectives of CGIAR as put forward in its strategy.'
-                WHEN (a.Mitigation_Score = 1) THEN 'The activity contributes in a significant way to any of the three CGIAR climate-related strategy objectives – namely, climate mitigation, climate adaptation and climate policy, even though it is not the principal focus of the activity.'
-                ELSE 'The activity is principally about meeting any of the three CGIAR climate-related strategy objectives – namely, climate mitigation, climate adaptation and climate policy, and would not have been undertaken without this objective.'
-            END
-        ) as mitigation_desc,
-        a.Gender_Score AS gender_score
+      DISTINCT a.ID,
+      i.id AS initiative_id,
+      CONCAT(
+        'Score ',
+        a.Adaptation_Score
+      ) as adaptation_score,
+      (
+        SELECT
+          climate_score_def
+        FROM
+          ${env.DB_OST}.climate_score_cl csc
+        WHERE
+          csc.id_climate_score_cl = a.Adaptation_Score
+      ) AS adaptation_desc,
+      (
+        SELECT
+          csc.climate_score_def
+        FROM
+          ${env.DB_OST}.climate_score_cl csc
+        WHERE
+          csc.id_climate_score_cl = a.Mitigation_Score
+      ) AS mitigationon_desc,
+      a.Gender_Score AS gender_score,
+      gsc.gender_score_def AS gender_desc
     FROM
       ${env.DB_OST}.aecd a
-        LEFT JOIN ${env.DB_OST}.initiatives i ON i.official_code = a.ID
+      LEFT JOIN ${env.DB_OST}.initiatives i ON i.official_code = a.ID
+      LEFT JOIN ${env.DB_OST}.gender_score_cl gsc ON gsc.id_gender_score_cl = a.Gender_Score
     WHERE
-        i.id = ?;
+      i.id = ?;
     `;
+
     try {
       const generalInformation: any[] = await this.dataSource.query(initiativeGeneralInformationQuery, [initId]);
       const initiative_stage_id = generalInformation[0].initiative_stage_id;
@@ -257,7 +248,8 @@ export class TypeOneReportRepository {
       const eoiOutcome: any[] = await this.dataSource.query(eoiOutcomeQuery, [initiative_stage_id]);
       const budgetProposal: any[] = await this.dataSource.query(budgetProposalQuery, [initId]);
       const budgetAnaPlan: any[] = await this.dataSource.query(budgetAnaPlanQuery, [initId]);
-      const genderScore: any[] = await this.dataSource.query(genderScoreQuery, [initId]);
+      const climateGenderScore: any[] = await this.dataSource.query(climateGenderScoreQuery, [initId]);
+      console.log("🚀 ~ file: type-one-report.repository.ts:248 ~ TypeOneReportRepository ~ climateGenderScore", climateGenderScore)
       generalInformation.map((gi) => {
         gi['countriesProposal'] = countriesProposal.filter((cp) => {
           return cp.initvStgId === gi.initiative_stage_id;
@@ -280,8 +272,8 @@ export class TypeOneReportRepository {
         gi['budgetAnaPlan'] = budgetAnaPlan.filter((b) => {
           return b.inititiative_id === gi.inititiative_id;
         });
-        gi['genderScore'] = genderScore.filter((gs) => {
-          return gs.initiative_id === gi.initiative_id;
+        gi['climateGenderScore'] = climateGenderScore.filter((cgs) => {
+          return cgs.initiative_id === gi.initiative_id;
         });
       });
       return [generalInformation[0]];
@@ -293,7 +285,7 @@ export class TypeOneReportRepository {
       });
     }
   }
-  async getKeyResultStory(initId:number){
+  async getKeyResultStory(initId: number) {
     const queryKeyResultStory = `SELECT r.result_code ,
     concat('Result Code: ',r.result_code,'-',r.title) as 'result_title',
     IF((r.result_type_id = 9), 1, 0) AS is_impact,
