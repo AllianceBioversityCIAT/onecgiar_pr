@@ -206,36 +206,40 @@ export class TypeOneReportRepository {
     `;
     const climateGenderScoreQuery = `
     SELECT
-      DISTINCT a.ID,
-      i.id AS initiative_id,
-      CONCAT(
-        'Score ',
-        a.Adaptation_Score
-      ) as adaptation_score,
-      (
-        SELECT
-          climate_score_def
-        FROM
-          ${env.DB_OST}.climate_score_cl csc
-        WHERE
-          csc.id_climate_score_cl = a.Adaptation_Score
-      ) AS adaptation_desc,
-      (
-        SELECT
-          csc.climate_score_def
-        FROM
-          ${env.DB_OST}.climate_score_cl csc
-        WHERE
-          csc.id_climate_score_cl = a.Mitigation_Score
-      ) AS mitigationon_desc,
-      a.Gender_Score AS gender_score,
-      gsc.gender_score_def AS gender_desc
+        DISTINCT a.ID,
+        i.id AS initiative_id,
+        CONCAT(
+            'Score ',
+            a.Adaptation_Score
+        ) as adaptation_score,
+        (
+            SELECT
+                climate_score_def
+            FROM
+              ${env.DB_OST}.climate_score_cl csc
+            WHERE
+                csc.id_climate_score_cl = a.Adaptation_Score
+        ) AS adaptation_desc,
+        CONCAT(
+            'Score ',
+            a.Mitigation_Score
+        ) as mitigation_score,
+        (
+            SELECT
+                csc.climate_score_def
+            FROM
+              ${env.DB_OST}.climate_score_cl csc
+            WHERE
+                csc.id_climate_score_cl = a.Mitigation_Score
+        ) AS mitigation_desc,
+        a.Gender_Score AS gender_score,
+        gsc.gender_score_def AS gender_desc
     FROM
-      ${env.DB_OST}.aecd a
-      LEFT JOIN ${env.DB_OST}.initiatives i ON i.official_code = a.ID
-      LEFT JOIN ${env.DB_OST}.gender_score_cl gsc ON gsc.id_gender_score_cl = a.Gender_Score
+        ${env.DB_OST}.aecd a
+        LEFT JOIN ${env.DB_OST}.initiatives i ON i.official_code = a.ID
+        LEFT JOIN ${env.DB_OST}.gender_score_cl gsc ON gsc.id_gender_score_cl = a.Gender_Score
     WHERE
-      i.id = ?;
+        i.id = ?;
     `;
 
     try {
