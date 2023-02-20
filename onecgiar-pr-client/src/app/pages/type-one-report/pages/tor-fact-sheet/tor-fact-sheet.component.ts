@@ -47,17 +47,26 @@ export class TorFactSheetComponent {
       this.data[2].value = data.iniative_lead;
       this.data[3].value = data.initiative_deputy;
       this.data[4].value = data.action_area;
-      this.data[5].value = new Date(data.start_date).toLocaleDateString('en-us', { day: 'numeric', month: 'short', year: 'numeric' });
-      this.data[6].value = new Date(data.end_date).toLocaleDateString('en-us', { day: 'numeric', month: 'short', year: 'numeric' });
+      this.data[5].value = this.getDateWithFormat(data.start_date);
+      this.data[6].value = this.getDateWithFormat(data.end_date);
       //* Geographic location
       this.concatGeo(data);
       this.concatEoiOutcome(data);
       console.log(data);
-      this.data[9].value = `<strong>${data.genderScore[0]?.adaptation}</strong><br>${data.genderScore[0]?.adaptation_desc}`;
-      this.data[10].value = `<strong>${data.genderScore[0]?.mitigation}</strong><br>${data.genderScore[0]?.mitigation_desc}`;
-      this.data[11].value = `<strong>${data.genderScore[0]?.gender_score}</strong><br>${''}`;
+      this.data[9].value = `<strong>${data?.climateGenderScore[0]?.adaptation_score}</strong><br>${data?.climateGenderScore[0]?.adaptation_desc}`;
+      this.data[10].value = `<strong>${data.climateGenderScore[0]?.mitigation_score}</strong><br>${data.climateGenderScore[0]?.mitigation_desc}`;
+      this.data[11].value = `<strong>${data.climateGenderScore[0]?.gender_score}</strong><br>${''}`;
       this.data[12].value = `<a href="${data?.web_page}" target="_blank">${data?.web_page}</a>`;
     });
+  }
+
+  getDateWithFormat(dateString: string) {
+    console.log(dateString);
+    const date = new Date(dateString);
+    const month = date.toLocaleString('default', { month: 'long' });
+    const day = date.getDay();
+    const year = date.getFullYear();
+    return `${day} ${month} ${year}`;
   }
 
   convertBudgetData(data) {
@@ -82,35 +91,22 @@ export class TorFactSheetComponent {
   concatGeo(data) {
     //* Regions targeted in the proposal:
     this.data[7].value += '<strong>Regions targeted in the proposal:</strong><br>';
-    data.regionsProposal?.forEach(element => {
-      this.data[7].value += `${element.name}${'; '}`;
-    });
-    this.data[7].value = this.data[7].value.substring(0, this.data[7].value.length - 2);
+    this.data[7].value += data?.regionsProposal[0]?.name;
     this.data[7].value += '.<br>';
 
     //* Countries targeted in the proposal:
     this.data[7].value += '<br><strong>Countries targeted in the proposal:</strong><br>';
-    data.countriesProposal?.forEach(element => {
-      this.data[7].value += `${element.name}${'; '}`;
-    });
-    this.data[7].value = this.data[7].value.substring(0, this.data[7].value.length - 2);
+    this.data[7].value += data?.countriesProposal[0]?.name;
     this.data[7].value += '.<br>';
 
     //* Regions with results reported in 2022:
     this.data[7].value += '<br><strong>Regions with results reported in 2022:</strong><br>';
-    data.regionsReported?.forEach(element => {
-      this.data[7].value += `${element.name}${'; '}`;
-    });
-    this.data[7].value = this.data[7].value.substring(0, this.data[7].value.length - 2);
+    this.data[7].value += data?.regionsReported[0]?.regions;
     this.data[7].value += '.<br>';
 
     //* Countries with results reported in 2022:
     this.data[7].value += '<br><strong>Countries with results reported in 2022:</strong><br>';
-    data.countrieReported?.forEach(element => {
-      this.data[7].value += `${element.name}${'; '}`;
-    });
-
-    this.data[7].value = this.data[7].value.substring(0, this.data[7].value.length - 2);
+    this.data[7].value += data?.countrieReported[0]?.regions;
     this.data[7].value += '.<br>';
   }
   concatEoiOutcome(data) {
