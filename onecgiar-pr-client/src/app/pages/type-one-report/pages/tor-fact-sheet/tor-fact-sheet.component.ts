@@ -113,5 +113,6 @@ export class TorFactSheetComponent {
     data.eoiOutcome?.forEach(element => {
       this.data[8].value += `<strong>${element?.type_name} - ${element?.result_title}</strong><br>${element?.result_description}<br><br>`;
     });
+    if (!data.eoiOutcome?.length) this.data[8].value += `<div class="no-data-text-format">This initiative does not have a Measurable three-year outcome</div>`;
   }
 }
