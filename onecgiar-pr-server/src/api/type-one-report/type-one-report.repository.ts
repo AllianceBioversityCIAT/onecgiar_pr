@@ -78,76 +78,63 @@ export class TypeOneReportRepository {
     `;
     const countriesProposalQuery = `
     SELECT
-      DISTINCT(co.country_id),
-      (
-        SELECT
-          cc.name
-        FROM
-          ${env.DB_OST}.clarisa_countries cc
-        WHERE
-          cc.code = co.country_id
-      ) as name,
-      co.initvStgId
+        IFNULL(GROUP_CONCAT(DISTINCT cc.name SEPARATOR '; '), 'There are not Countries data') AS name,
+        co.initvStgId
     FROM
-      ${env.DB_OST}.countries_by_initiative_by_stage co
+        ${env.DB_OST}.countries_by_initiative_by_stage co
+        LEFT JOIN ${env.DB_OST}.clarisa_countries cc ON cc.code = co.country_id
     WHERE
-      co.initvStgId = ?
-      AND co.active = 1
-      AND co.wrkPkgId IS NOT NULL
-    GROUP BY
-      co.id,
-      co.country_id;
+        co.initvStgId = ?
+        AND co.active = 1
+        AND co.wrkPkgId IS NOT NULL
+    ORDER BY
+      cc.name ASC;
     `;
     const regionsProposalQuery = `
     SELECT
-      DISTINCT (r.region_id),
-      (
-        SELECT
-          cr.name
-        FROM
-        ${env.DB_OST}.clarisa_regions_cgiar cr
-        WHERE
-          cr.id = r.region_id
-      ) as name,
-      r.initvStgId
+        IFNULL(GROUP_CONCAT(DISTINCT crc.name SEPARATOR '; '), 'There are not Regions data') AS name,
+        r.initvStgId
     FROM
       ${env.DB_OST}.regions_by_initiative_by_stage r
+        LEFT JOIN ${env.DB_OST}.clarisa_regions_cgiar crc ON crc.id = r.region_id
     WHERE
-      r.initvStgId = ?
-      AND r.active = 1
-      AND r.wrkPkgId IS NOT NULL
-    GROUP BY
-      r.region_id
+        r.initvStgId = ?
+        AND r.active = 1
+        AND r.wrkPkgId IS NOT NULL
+    ORDER BY
+      crc.name ASC;
     `;
     const countrieReportedQuery = `
     SELECT
-      DISTINCT cc3.name,
-      rbi.inititiative_id
+      IFNULL(GROUP_CONCAT(DISTINCT cc3.name SEPARATOR '; '), 'There are not Countries data') AS countries,
+        rbi.inititiative_id AS initiative_id
     FROM
-      prdb.result_country rc2
-      LEFT JOIN prdb.clarisa_countries cc3 ON cc3.id = rc2.country_id
-      LEFT JOIN prdb.result r ON r.id = rc2.result_id
-      LEFT JOIN prdb.results_by_inititiative rbi ON rbi.result_id = r.id
+        result_country rc2
+        LEFT JOIN clarisa_countries cc3 ON cc3.id = rc2.country_id
+        LEFT JOIN result r ON r.id = rc2.result_id
+        LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
     WHERE
-      rbi.inititiative_id = ?
-      AND rc2.is_active = 1
-      AND r.is_active = 1
-      AND r.status = 1;
+        rbi.inititiative_id = ?
+        AND rc2.is_active = 1
+        AND r.is_active = 1
+        AND r.status = 1
+    ORDER BY
+        cc3.name ASC;
     `;
     const regionsReportedQuery = `
-    SELECT 
-        IFNULL(GROUP_CONCAT(DISTINCT crc.cgiar_name SEPARATOR '; '), '') AS regions,
-        rbi.inititiative_id
-    FROM result_region rr
-      LEFT JOIN clarisa_regions cr ON cr.um49Code = rr.region_id
-      LEFT JOIN clarisa_regions_cgiar crc ON crc.un_code = cr.um49Code
-      LEFT JOIN result r ON r.id = rr.result_id
-      LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
+    SELECT
+        IFNULL(GROUP_CONCAT(DISTINCT cr.name SEPARATOR '; '), 'There are not Regions data') AS regions,
+        rbi.inititiative_id AS initiative_id
+    FROM
+        result_region rr
+        LEFT JOIN clarisa_regions cr ON cr.um49Code = rr.region_id
+        LEFT JOIN result r ON r.id = rr.result_id
+        LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
     WHERE
-        rbi.inititiative_id = 22
+        rbi.inititiative_id = ?
         AND rr.is_active = 1
-        AND r.status = 1
-        AND cr.parent_regions_code IS NOT NULL;
+    ORDER BY
+      cr.name ASC;
     `;
     const eoiOutcomeQuery = `
     SELECT
@@ -253,7 +240,6 @@ export class TypeOneReportRepository {
       const budgetProposal: any[] = await this.dataSource.query(budgetProposalQuery, [initId]);
       const budgetAnaPlan: any[] = await this.dataSource.query(budgetAnaPlanQuery, [initId]);
       const climateGenderScore: any[] = await this.dataSource.query(climateGenderScoreQuery, [initId]);
-      console.log("🚀 ~ file: type-one-report.repository.ts:248 ~ TypeOneReportRepository ~ climateGenderScore", climateGenderScore)
       generalInformation.map((gi) => {
         gi['countriesProposal'] = countriesProposal.filter((cp) => {
           return cp.initvStgId === gi.initiative_stage_id;
