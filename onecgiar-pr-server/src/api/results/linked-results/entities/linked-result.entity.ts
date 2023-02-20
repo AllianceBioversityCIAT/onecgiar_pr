@@ -1,6 +1,7 @@
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { Result } from '../../entities/result.entity';
 import { User } from '../../../../auth/modules/user/entities/user.entity';
+import { Version } from '../../versions/entities/version.entity';
 
 @Entity('linked_result')
 export class LinkedResult {
@@ -36,6 +37,12 @@ export class LinkedResult {
         default: true
     })
     is_active: boolean;
+
+    @ManyToOne(() => Version, (v) => v.id, {nullable: true})
+    @JoinColumn({
+      name: 'version_id',
+    })
+    version_id: number;
 
     @ManyToOne(() => User, (u) => u.id, { nullable: false })
     @JoinColumn({

@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { Result } from '../../entities/result.entity';
 import { ClarisaCountry } from '../../../../clarisa/clarisa-countries/entities/clarisa-country.entity';
+import { Version } from '../../versions/entities/version.entity';
 
 @Entity('result_country')
 export class ResultCountry {
@@ -17,10 +18,10 @@ export class ResultCountry {
   })
   result_country_id: number;
 
-  @Column()
+  @Column({type: 'bigint', nullable: true})
   result_id: number;
 
-  @Column()
+  @Column({type: 'int', nullable: true})
   country_id: number;
 
   @Column({
@@ -29,6 +30,12 @@ export class ResultCountry {
     default: true,
   })
   is_active: boolean;
+
+  @ManyToOne(() => Version, (v) => v.id, { nullable: true })
+  @JoinColumn({
+    name: 'version_id',
+  })
+  version_id: number;
 
   @CreateDateColumn({
     name: 'created_date',

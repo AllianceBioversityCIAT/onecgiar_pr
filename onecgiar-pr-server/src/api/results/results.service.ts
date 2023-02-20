@@ -1158,4 +1158,10 @@ export class ResultsService {
   remove(id: number) {
     return `This action removes a #${id} result`;
   }
+
+
+  versioningResults(resultId: number){
+    
+  }
+
 }
