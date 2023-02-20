@@ -55,7 +55,7 @@ export class TorFactSheetComponent {
       console.log(data);
       this.data[9].value = `<strong>${data?.climateGenderScore[0]?.adaptation_score}</strong><br>${data?.climateGenderScore[0]?.adaptation_desc}`;
       this.data[10].value = `<strong>${data.climateGenderScore[0]?.mitigation_score}</strong><br>${data.climateGenderScore[0]?.mitigation_desc}`;
-      this.data[11].value = `<strong>${data.climateGenderScore[0]?.gender_score}</strong><br>${''}`;
+      this.data[11].value = `<strong>${data.climateGenderScore[0]?.gender_score}</strong><br>${data.climateGenderScore[0]?.gender_desc}`;
       this.data[12].value = `<a href="${data?.web_page}" target="_blank">${data?.web_page}</a>`;
     });
   }
