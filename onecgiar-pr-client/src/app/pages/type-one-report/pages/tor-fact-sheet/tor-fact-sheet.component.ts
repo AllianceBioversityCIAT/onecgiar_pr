@@ -91,23 +91,23 @@ export class TorFactSheetComponent {
   concatGeo(data) {
     //* Regions targeted in the proposal:
     this.data[7].value += '<strong>Regions targeted in the proposal:</strong><br>';
-    this.data[7].value += data?.regionsProposal[0]?.name;
-    this.data[7].value += '.<br>';
+    this.data[7].value += data?.regionsProposal[0]?.name ? data?.regionsProposal[0]?.name : '<div class="no-data-text-format">There are not Regions data</div>';
+    this.data[7].value += '<br>';
 
     //* Countries targeted in the proposal:
     this.data[7].value += '<br><strong>Countries targeted in the proposal:</strong><br>';
-    this.data[7].value += data?.countriesProposal[0]?.name;
-    this.data[7].value += '.<br>';
+    this.data[7].value += data?.countriesProposal[0]?.name ? data?.countriesProposal[0]?.name : '<div class="no-data-text-format">There are not Countries data</div>';
+    this.data[7].value += '<br>';
 
     //* Regions with results reported in 2022:
     this.data[7].value += '<br><strong>Regions with results reported in 2022:</strong><br>';
-    this.data[7].value += data?.regionsReported[0]?.regions;
-    this.data[7].value += '.<br>';
+    this.data[7].value += data?.regionsReported[0]?.regions ? data?.regionsReported[0]?.regions : '<div class="no-data-text-format">There are not Regions data</div>';
+    this.data[7].value += '<br>';
 
     //* Countries with results reported in 2022:
     this.data[7].value += '<br><strong>Countries with results reported in 2022:</strong><br>';
-    this.data[7].value += data?.countrieReported[0]?.regions;
-    this.data[7].value += '.<br>';
+    this.data[7].value += data?.countrieReported[0]?.regions ? data?.countrieReported[0]?.regions : '<div class="no-data-text-format">There are not Countries data</div>';
+    this.data[7].value += '<br>';
   }
   concatEoiOutcome(data) {
     data.eoiOutcome?.forEach(element => {
