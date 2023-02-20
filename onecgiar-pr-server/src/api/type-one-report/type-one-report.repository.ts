@@ -106,7 +106,7 @@ export class TypeOneReportRepository {
     `;
     const countrieReportedQuery = `
     SELECT
-      IFNULL(GROUP_CONCAT(DISTINCT cc3.name SEPARATOR '; '), 'There are not Countries data') AS countries,
+        IFNULL(GROUP_CONCAT(DISTINCT cc3.name SEPARATOR '; '), 'There are not Countries data') AS countries,
         rbi.inititiative_id AS initiative_id
     FROM
         result_country rc2
@@ -248,10 +248,10 @@ export class TypeOneReportRepository {
           return rp.initvStgId === gi.initiative_stage_id;
         });
         gi['countrieReported'] = countrieReported.filter((cr) => {
-          return cr.inititiative_id === gi.initiative_id;
+          return cr.initiative_id === gi.initiative_id;
         });
         gi['regionsReported'] = regionsReported.filter((rr) => {
-          return rr.inititiative_id === gi.initiative_id;
+          return rr.initiative_id === gi.initiative_id;
         });
         gi['eoiOutcome'] = eoiOutcome.filter((eoi) => {
           return eoi.initvStgId === gi.initiative_stage_id;
