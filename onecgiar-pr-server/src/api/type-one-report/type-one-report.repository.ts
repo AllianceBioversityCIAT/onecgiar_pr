@@ -94,7 +94,7 @@ export class TypeOneReportRepository {
     `;
     const regionsProposalQuery = `
     SELECT
-        IFNULL(GROUP_CONCAT(DISTINCT crc.name SEPARATOR '; '), 'There are not Regions data') AS name,
+        DISTINCT crc.name,
         r.initvStgId
     FROM
       ${env.DB_OST}.regions_by_initiative_by_stage r
