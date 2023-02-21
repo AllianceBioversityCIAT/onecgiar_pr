@@ -367,8 +367,8 @@ export class ResultsKnowledgeProductsService {
         where: { is_active: true },
       });
 
-    const countries = (resultsKnowledgeProductDto.cgspace_countries ?? []).map(
-      (c) => {
+    const countries = (resultsKnowledgeProductDto.cgspace_countries ?? [])
+      .map((c) => {
         let country: ResultCountry;
         if (upsert) {
           country = (
@@ -909,7 +909,6 @@ export class ResultsKnowledgeProductsService {
             results_id: result.id,
             //...this._resultsKnowledgeProductWhere,
           },
-          relations: this._resultsKnowledgeProductRelations,
         });
 
       if (!knowledgeProduct) {
