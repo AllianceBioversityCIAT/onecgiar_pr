@@ -12,6 +12,8 @@ export class TypeOneReportRepository {
   async getFactSheetByInit(
     initId: number
   ) {
+    const date = new Date();
+
     const initiativeGeneralInformationQuery = `
     SELECT
       i.id AS initiative_id,
@@ -232,13 +234,43 @@ export class TypeOneReportRepository {
     `;
 
     try {
-      const generalInformation: any[] = await this.dataSource.query(initiativeGeneralInformationQuery, [initId]);
-      const initiative_stage_id = generalInformation[0].initiative_stage_id;
-      const countriesProposal: any[] = await this.dataSource.query(countriesProposalQuery, [initiative_stage_id])
-      const regionsProposal: any[] = await this.dataSource.query(regionsProposalQuery, [initiative_stage_id])
+      const ginfo: any[] = await this.dataSource.query(initiativeGeneralInformationQuery, [initId]);
+      const istage = ginfo[0].initiative_stage_id;
+
+
+      const generalInformation = [];
+
+      const initiative_id = ginfo[0].initiative_id;
+      const initiative_stage_id = ginfo[0].initiative_stage_id;
+      const official_code = ginfo[0].official_code;
+      const initiative_name = ginfo[0].initiative_name;
+      const short_name = ginfo[0].short_name;
+      const action_area = ginfo[0].action_area;
+      const start_date = new Date(ginfo[0].start_date).toLocaleDateString('en-GB');
+      const end_date = new Date(ginfo[0].end_date).toLocaleDateString('en-GB');
+      const web_page = ginfo[0].web_page;
+      const iniative_lead = ginfo[0].iniative_lead;
+      const initiative_deputy = ginfo[0].initiative_deputy;
+
+      generalInformation.push({
+        initiative_id,
+        initiative_stage_id,
+        official_code,
+        initiative_name,
+        short_name,
+        action_area,
+        start_date,
+        end_date,
+        web_page,
+        iniative_lead,
+        initiative_deputy,
+      })
+
+      const countriesProposal: any[] = await this.dataSource.query(countriesProposalQuery, [istage])
+      const regionsProposal: any[] = await this.dataSource.query(regionsProposalQuery, [istage])
       const countrieReported: any[] = await this.dataSource.query(countrieReportedQuery, [initId]);
       const regionsReported: any[] = await this.dataSource.query(regionsReportedQuery, [initId]);
-      const eoiOutcome: any[] = await this.dataSource.query(eoiOutcomeQuery, [initiative_stage_id]);
+      const eoiOutcome: any[] = await this.dataSource.query(eoiOutcomeQuery, [istage]);
       const budgetProposal: any[] = await this.dataSource.query(budgetProposalQuery, [initId]);
       const budgetAnaPlan: any[] = await this.dataSource.query(budgetAnaPlanQuery, [initId]);
       const climateGenderScore: any[] = await this.dataSource.query(climateGenderScoreQuery, [initId]);
