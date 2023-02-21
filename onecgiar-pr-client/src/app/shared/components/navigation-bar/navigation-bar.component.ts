@@ -30,6 +30,7 @@ export class NavigationBarComponent implements OnInit {
     if (this.rolesSE.isAdmin) return false;
     if (option?.path == 'init-admin-module') return this.validateCoordAndLead();
     // if (option?.path == 'quality-assurance' && !this.rolesSE.isAdmin) return true;
+    if (option?.path == 'type-one-report' && !this.rolesSE.isAdmin) return true;
     return false;
   }
 

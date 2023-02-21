@@ -30,8 +30,9 @@ table {
 .flatFormat {
     table {
         width: auto !important;
-        font-family: Calibri, 'Trebuchet MS', sans-serif;
-        font-size: 13px;
+        font-family: Arial, Calibri, 'Trebuchet MS', sans-serif;
+        font-size: 14.5px !important;
+        text-align: justify !important;
 
         .table_title {
             color: black;

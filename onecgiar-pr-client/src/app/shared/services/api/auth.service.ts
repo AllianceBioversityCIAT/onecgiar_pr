@@ -38,7 +38,7 @@ export class AuthService {
     // console.log(window.hasOwnProperty('Tawk_API'))
     if (window.hasOwnProperty('Tawk_API')) {
       try {
-        window['Tawk_API'].endChat();
+        window['Tawk_API']?.endChat();
         window['Tawk_API'].visitor = {
           name: null,
           email: null

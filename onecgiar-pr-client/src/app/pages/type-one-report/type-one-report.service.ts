@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { ApiService } from '../../shared/services/api/api.service';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -10,9 +11,10 @@ export class TypeOneReportService {
   initiativeSelected = null;
   sanitizedUrl: any = null;
   allInitiatives = [];
+  t1rBiUrl = environment.t1rBiUrl;
   constructor(public sanitizer: DomSanitizer, private api: ApiService) {}
   sanitizeUrl() {
-    this.sanitizedUrl = this.sanitizer.bypassSecurityTrustResourceUrl(`https://d1ovl329vs2rtq.cloudfront.net/bi/4/${this.initiativeSelected}`);
+    this.sanitizedUrl = this.sanitizer.bypassSecurityTrustResourceUrl(`${this.t1rBiUrl}/bi/4/${this.initiativeSelected}`);
   }
 
   getInitiativeID(official_code) {

@@ -1,10 +1,11 @@
 import { Route } from '@angular/router';
 import { CheckLoginGuard } from '../guards/check-login.guard';
+import { CheckAdminGuard } from '../guards/check-admin.guard';
 
 export const routingApp: PrRoute[] = [
   // { prName: 'Home', canActivate: [CheckLoginGuard], path: 'home', loadChildren: () => import('../../pages/home/home.module').then(m => m.HomeModule) },
   { prName: 'Results', underConstruction: false, canActivate: [CheckLoginGuard], path: 'result', loadChildren: () => import('../../pages/results/results.module').then(m => m.ResultsModule) },
-  { prName: 'Type 1 report elements', underConstruction: true, onlytest: true, canActivate: [CheckLoginGuard], path: 'type-one-report', loadChildren: () => import('../../pages/type-one-report/type-one-report.module').then(m => m.TypeOneReportModule) },
+  { prName: 'Type 1 report elements', underConstruction: false, onlytest: true, canActivate: [CheckLoginGuard], path: 'type-one-report', loadChildren: () => import('../../pages/type-one-report/type-one-report.module').then(m => m.TypeOneReportModule) },
   { prName: 'login', prHide: true, path: 'login', loadChildren: () => import('../../pages/login/login.module').then(m => m.LoginModule) },
   { prName: 'Quality Assurance', onlytest: false, underConstruction: false, canActivate: [CheckLoginGuard], path: 'quality-assurance', loadChildren: () => import('../../pages/quality-assurance/quality-assurance.module').then(m => m.QualityAssuranceModule) },
   { prName: 'INIT Admin Module', onlytest: false, prHide: false, path: 'init-admin-module', loadChildren: () => import('../../pages/init-admin-section/init-admin-section.module').then(m => m.InitAdminSectionModule) },
@@ -60,7 +61,7 @@ export const TypePneReportRouting: PrRoute[] = [
   { prName: 'Fact sheet', path: 'fact-sheet', loadChildren: () => import('../../pages/type-one-report/pages/tor-fact-sheet/tor-fact-sheet.module').then(m => m.TorFactSheetModule) },
   { prName: 'Initiative progress & Key results', path: 'initiative-progress-and-key-results', loadChildren: () => import('../../pages/type-one-report/pages/tor-init-progress-and-key-results/tor-init-progress-and-key-results.module').then(m => m.TorInitProgressAndKeyResultsModule) },
   // { prName: 'Impact pathway integration - External partners', path: 'ipi-external-partners', loadChildren: () => import('../../pages/type-one-report/pages/tor-ipi-cgiar-portfolio-linkages/tor-ipi-cgiar-portfolio-linkages.module').then(m => m.TorIpiCgiarPortfolioLinkagesModule) },
-  // { prName: 'Impact pathway integration - CGIAR portfolio linkages', path: 'ipi-cgiar-portfolio-linkages', loadChildren: () => import('../../pages/type-one-report/pages/tor-ipi-cgiar-portfolio-linkages/tor-ipi-cgiar-portfolio-linkages.module').then(m => m.TorIpiCgiarPortfolioLinkagesModule) },
+  { prName: 'Impact pathway integration - CGIAR portfolio linkages', path: 'ipi-cgiar-portfolio-linkages', loadChildren: () => import('../../pages/type-one-report/pages/tor-ipi-cgiar-portfolio-linkages/tor-ipi-cgiar-portfolio-linkages.module').then(m => m.TorIpiCgiarPortfolioLinkagesModule) },
   { prName: 'Impact pathway integration', path: 'impact-pathway-integration', loadChildren: () => import('../../pages/type-one-report/pages/tor-impact-pathway-integration/tor-impact-pathway-integration.module').then(m => m.TorImpactPathwayIntegrationModule) },
   { prName: 'Key result story', path: 'key-result-story', loadChildren: () => import('../../pages/type-one-report/pages/tor-key-result-story/tor-key-result-story.module').then(m => m.TorKeyResultStoryModule) },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'fact-sheet' }

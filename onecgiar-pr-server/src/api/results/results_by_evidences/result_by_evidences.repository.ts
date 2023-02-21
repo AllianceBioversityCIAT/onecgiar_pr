@@ -45,9 +45,9 @@ export class ResultByEvidencesRepository extends Repository<ResultsByEvidence> {
 
   async logicalElimination(resultId: number) {
     const queryData = `
-    update results_by_evidence
+    update evidence
     set is_active = false
-    where results_id = ?;
+    where result_id = ?;
     `;
     try {
       const completeUser: any[] = await this.query(queryData, [resultId]);

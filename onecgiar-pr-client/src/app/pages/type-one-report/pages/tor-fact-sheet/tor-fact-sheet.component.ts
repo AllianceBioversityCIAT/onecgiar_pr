@@ -47,15 +47,26 @@ export class TorFactSheetComponent {
       this.data[2].value = data.iniative_lead;
       this.data[3].value = data.initiative_deputy;
       this.data[4].value = data.action_area;
+      this.data[5].value = this.getDateWithFormat(data.start_date);
+      this.data[6].value = this.getDateWithFormat(data.end_date);
       //* Geographic location
       this.concatGeo(data);
       this.concatEoiOutcome(data);
       console.log(data);
-      this.data[9].value = `<strong>${data.genderScore[0]?.adaptation}</strong><br>${data.genderScore[0]?.adaptation_desc}`;
-      this.data[10].value = `<strong>${data.genderScore[0]?.mitigation}</strong><br>${data.genderScore[0]?.mitigation_desc}`;
-      this.data[11].value = data.genderScore[0]?.gender_score;
-      this.data[12].value = '';
+      this.data[9].value = `<strong>${data?.climateGenderScore[0]?.adaptation_score}</strong><br>${data?.climateGenderScore[0]?.adaptation_desc}`;
+      this.data[10].value = `<strong>${data.climateGenderScore[0]?.mitigation_score}</strong><br>${data.climateGenderScore[0]?.mitigation_desc}`;
+      this.data[11].value = `<strong>${data.climateGenderScore[0]?.gender_score}</strong><br>${data.climateGenderScore[0]?.gender_desc}`;
+      this.data[12].value = `<a href="${data?.web_page}" target="_blank">${data?.web_page}</a>`;
     });
+  }
+
+  getDateWithFormat(dateString: string) {
+    console.log(dateString);
+    const date = new Date(dateString);
+    const month = date.toLocaleString('default', { month: 'long' });
+    const day = date.getDay();
+    const year = date.getFullYear();
+    return `${day} ${month} ${year}`;
   }
 
   convertBudgetData(data) {
@@ -80,40 +91,36 @@ export class TorFactSheetComponent {
   concatGeo(data) {
     //* Regions targeted in the proposal:
     this.data[7].value += '<strong>Regions targeted in the proposal:</strong><br>';
+    // this.data[7].value += data?.regionsProposal[0]?.name ? data?.regionsProposal[0]?.name : '<div class="no-data-text-format">There are not Regions data</div>';
     data.regionsProposal?.forEach(element => {
       this.data[7].value += `${element.name}${'; '}`;
     });
     this.data[7].value = this.data[7].value.substring(0, this.data[7].value.length - 2);
-    this.data[7].value += '.<br>';
+    this.data[7].value += '<br>';
 
     //* Countries targeted in the proposal:
     this.data[7].value += '<br><strong>Countries targeted in the proposal:</strong><br>';
+    // this.data[7].value += data?.countriesProposal[0]?.name ? data?.countriesProposal[0]?.name : '<div class="no-data-text-format">There are not Countries data</div>';
     data.countriesProposal?.forEach(element => {
       this.data[7].value += `${element.name}${'; '}`;
     });
     this.data[7].value = this.data[7].value.substring(0, this.data[7].value.length - 2);
-    this.data[7].value += '.<br>';
+    this.data[7].value += '<br>';
 
     //* Regions with results reported in 2022:
     this.data[7].value += '<br><strong>Regions with results reported in 2022:</strong><br>';
-    data.regionsReported?.forEach(element => {
-      this.data[7].value += `${element.name}${'; '}`;
-    });
-    this.data[7].value = this.data[7].value.substring(0, this.data[7].value.length - 2);
-    this.data[7].value += '.<br>';
+    this.data[7].value += data?.regionsReported[0]?.regions ? data?.regionsReported[0]?.regions : '<div class="no-data-text-format">There are not Regions data</div>';
+    this.data[7].value += '<br>';
 
     //* Countries with results reported in 2022:
     this.data[7].value += '<br><strong>Countries with results reported in 2022:</strong><br>';
-    data.countrieReported?.forEach(element => {
-      this.data[7].value += `${element.name}${'; '}`;
-    });
-
-    this.data[7].value = this.data[7].value.substring(0, this.data[7].value.length - 2);
-    this.data[7].value += '.<br>';
+    this.data[7].value += data?.countrieReported[0]?.countries ? data?.countrieReported[0]?.countries : '<div class="no-data-text-format">There are not Countries data</div>';
+    this.data[7].value += '<br>';
   }
   concatEoiOutcome(data) {
     data.eoiOutcome?.forEach(element => {
       this.data[8].value += `<strong>${element?.type_name} - ${element?.result_title}</strong><br>${element?.result_description}<br><br>`;
     });
+    if (!data.eoiOutcome?.length) this.data[8].value += `<div class="no-data-text-format">This initiative does not have a Measurable three-year outcome</div>`;
   }
 }
