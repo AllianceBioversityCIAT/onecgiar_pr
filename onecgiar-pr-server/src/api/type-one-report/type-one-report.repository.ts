@@ -78,7 +78,7 @@ export class TypeOneReportRepository {
     `;
     const countriesProposalQuery = `
     SELECT
-        IFNULL(GROUP_CONCAT(DISTINCT cc.name SEPARATOR '; '), 'There are not Countries data') AS name,
+        DISTINCT cc.name,
         co.initvStgId
     FROM
         ${env.DB_OST}.countries_by_initiative_by_stage co
@@ -88,11 +88,13 @@ export class TypeOneReportRepository {
         AND co.active = 1
         AND co.wrkPkgId IS NOT NULL
     ORDER BY
-      cc.name ASC;
+      cc.name ASC
+    LIMIT 
+      15000;
     `;
     const regionsProposalQuery = `
     SELECT
-        IFNULL(GROUP_CONCAT(DISTINCT crc.name SEPARATOR '; '), 'There are not Regions data') AS name,
+        DISTINCT crc.name,
         r.initvStgId
     FROM
       ${env.DB_OST}.regions_by_initiative_by_stage r

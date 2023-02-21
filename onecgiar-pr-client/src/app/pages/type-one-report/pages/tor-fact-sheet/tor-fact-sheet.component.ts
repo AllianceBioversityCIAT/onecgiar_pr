@@ -91,12 +91,20 @@ export class TorFactSheetComponent {
   concatGeo(data) {
     //* Regions targeted in the proposal:
     this.data[7].value += '<strong>Regions targeted in the proposal:</strong><br>';
-    this.data[7].value += data?.regionsProposal[0]?.name ? data?.regionsProposal[0]?.name : '<div class="no-data-text-format">There are not Regions data</div>';
+    // this.data[7].value += data?.regionsProposal[0]?.name ? data?.regionsProposal[0]?.name : '<div class="no-data-text-format">There are not Regions data</div>';
+    data.regionsProposal?.forEach(element => {
+      this.data[7].value += `${element.name}${'; '}`;
+    });
+    this.data[7].value = this.data[7].value.substring(0, this.data[7].value.length - 2);
     this.data[7].value += '<br>';
 
     //* Countries targeted in the proposal:
     this.data[7].value += '<br><strong>Countries targeted in the proposal:</strong><br>';
-    this.data[7].value += data?.countriesProposal[0]?.name ? data?.countriesProposal[0]?.name : '<div class="no-data-text-format">There are not Countries data</div>';
+    // this.data[7].value += data?.countriesProposal[0]?.name ? data?.countriesProposal[0]?.name : '<div class="no-data-text-format">There are not Countries data</div>';
+    data.countriesProposal?.forEach(element => {
+      this.data[7].value += `${element.name}${'; '}`;
+    });
+    this.data[7].value = this.data[7].value.substring(0, this.data[7].value.length - 2);
     this.data[7].value += '<br>';
 
     //* Regions with results reported in 2022:
@@ -106,7 +114,7 @@ export class TorFactSheetComponent {
 
     //* Countries with results reported in 2022:
     this.data[7].value += '<br><strong>Countries with results reported in 2022:</strong><br>';
-    this.data[7].value += data?.countrieReported[0]?.regions ? data?.countrieReported[0]?.regions : '<div class="no-data-text-format">There are not Countries data</div>';
+    this.data[7].value += data?.countrieReported[0]?.countries ? data?.countrieReported[0]?.countries : '<div class="no-data-text-format">There are not Countries data</div>';
     this.data[7].value += '<br>';
   }
   concatEoiOutcome(data) {

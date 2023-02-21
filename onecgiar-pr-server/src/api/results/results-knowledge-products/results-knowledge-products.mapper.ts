@@ -365,12 +365,12 @@ export class ResultsKnowledgeProductMapper {
 
     //knowledgeProductDto.cgspace_countries = null; //TODO TBD
 
-    const regions = entity.result_object.result_region_array;
+    const regions = entity.result_object?.result_region_array;
     knowledgeProductDto.clarisa_regions = (regions ?? []).map(
       (r) => r.region_id,
     );
     knowledgeProductDto.is_global_geoscope =
-      entity.result_object.geographic_scope_id === 1;
+      entity.result_object?.geographic_scope_id === 1;
 
     return knowledgeProductDto;
   }
