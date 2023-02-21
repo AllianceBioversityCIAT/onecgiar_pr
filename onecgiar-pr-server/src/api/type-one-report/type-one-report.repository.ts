@@ -127,18 +127,19 @@ export class TypeOneReportRepository {
     `;
     const regionsReportedQuery = `
     SELECT
-        IFNULL(GROUP_CONCAT(DISTINCT cr.name SEPARATOR '; '), 'There are not Regions data') AS regions,
-        rbi.inititiative_id AS initiative_id
-    FROM
-        result_region rr
-        LEFT JOIN clarisa_regions cr ON cr.um49Code = rr.region_id
-        LEFT JOIN result r ON r.id = rr.result_id
-        LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
-    WHERE
-        rbi.inititiative_id = ?
-        AND rr.is_active = 1
-    ORDER BY
-      cr.name ASC;
+      GROUP_CONCAT(DISTINCT crc.cgiar_name  SEPARATOR '; ') AS regions,
+      rbi.inititiative_id AS initiative_id
+    FROM 
+      result_region rr 
+      LEFT JOIN clarisa_regions cr ON cr.um49Code = rr.result_region_id
+      LEFT JOIN clarisa_regions_cgiar crc ON crc.un_code = cr.um49Code
+      LEFT JOIN result r ON r.id = rr.result_id 
+      LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id 
+    WHERE rbi.inititiative_id = ?
+      AND rr.is_active = 1
+      AND r.is_active = 1 
+      AND cr.parent_regions_code IS NOT NULL
+    ORDER BY crc.cgiar_name ASC;
     `;
     const eoiOutcomeQuery = `
     SELECT
