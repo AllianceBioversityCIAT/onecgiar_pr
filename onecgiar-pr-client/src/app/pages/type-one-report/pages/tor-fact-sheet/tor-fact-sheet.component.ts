@@ -63,12 +63,16 @@ export class TorFactSheetComponent {
   getDateWithFormat(dateString: string) {
     console.log(dateString);
     const date = new Date(dateString);
+    console.log(date);
+    
    /* const month = date.toLocaleString('default', { month: 'long' });
     const day = date.getDay();
     const year = date.getFullYear(); */
     const yyyy = date.getFullYear();
     let mm:any = date.getMonth() + 1; // Months start at 0!
     let dd:any = date.getDate();
+    console.log(dd+' '+mm+' '+yyyy);
+    
     if (dd < 10) dd = '0' + dd; 
     if (mm < 10) mm = '0' + mm;
     return `${dd}/${mm}/${yyyy}`;
