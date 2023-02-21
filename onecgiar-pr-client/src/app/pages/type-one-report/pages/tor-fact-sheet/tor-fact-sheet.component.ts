@@ -47,8 +47,8 @@ export class TorFactSheetComponent {
       this.data[2].value = data.iniative_lead;
       this.data[3].value = data.initiative_deputy;
       this.data[4].value = data.action_area;
-      this.data[5].value = this.getDateWithFormat(data.start_date);
-      this.data[6].value = this.getDateWithFormat(data.end_date);
+      this.data[5].value = data.start_date;
+      this.data[6].value = data.end_date;
       //* Geographic location
       this.concatGeo(data);
       this.concatEoiOutcome(data);
