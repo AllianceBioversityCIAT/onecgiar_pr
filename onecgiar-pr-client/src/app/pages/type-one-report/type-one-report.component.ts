@@ -24,7 +24,7 @@ export class TypeOneReportComponent {
     this.api.rolesSE.validateReadOnly();
     this.titleService.setTitle('Type one report');
     this.GET_AllInitiatives();
-    if (!this.rolesSE.isAdmin) this.router.navigate(['/result/results-outlet/results-list']);
+    // if (!this.rolesSE.isAdmin) this.router.navigate(['/result/results-outlet/results-list']);
   }
   onRemoveinit(option) {}
 

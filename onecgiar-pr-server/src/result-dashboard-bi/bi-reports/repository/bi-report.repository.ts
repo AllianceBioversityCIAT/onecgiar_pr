@@ -160,10 +160,48 @@ export class BiReportRepository extends Repository<BiReport> {
     }
   }
 
+  async getTokenAndReportByName(report_name: string){
+    this.credentialsBi = await this._servicesClarisaCredentials.getCredentialsBi();
+    const tokensReports: TokenBiReport[] = await this.tokenBireports.query(`select * from token_report_bi trb order by id desc limit 1;`)
+    const today = new Date();
+    let reportsExist = await this.getReportByName(report_name);
+    
+    if(reportsExist != null){
+      if(tokensReports.length <= 0 || Date.parse(tokensReports[0].expiration_toke_id.toString()) < Date.parse(today.toString())){
+        
+        const registerInToken = await this.getTokenPowerBi();
+        const responseToken = await registerInToken['reportsInformation'].filter(report => report.name == report_name);
+        return {
+          token:registerInToken['embed_token'],
+          report: responseToken[0]
+        };
+      }else{
+        let reportsInfo: ReportInformation = new ReportInformation;
+        reportsInfo.id = reportsExist[0].id;
+        reportsInfo.resport_id = reportsExist[0].report_id;
+        reportsInfo.name = reportsExist[0].report_name;
+        reportsInfo.description = reportsExist[0].report_description;
+        reportsInfo.embed_url = this.credentialsBi.embed_url_base+reportsExist[0].report_id+'&groupId='+reportsExist[0].group_id+'&config='+this.credentialsBi.config_id;
+
+        return {
+          token: tokensReports[0].token_bi,
+          report:reportsInfo
+        }
+      }
+    }else{
+      return {
+        error:'This Report not exists'
+      }
+    }
+  }
+
   async createNewRegisterBi(createBiReport: CreateBiReportDto){
     let returnReportBi = this.save(createBiReport);
     return returnReportBi;
   }
 
+  async getReportByName(report_name: string){
+    return await this.query(`select * from bi_reports br WHERE br.report_name = ? and is_active = 1`, [report_name])
+  }
 }
 
