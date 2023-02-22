@@ -400,9 +400,10 @@ export class TypeOneReportRepository {
                 r7.id = r.id
                 and r7.legacy_id is not null
         ) as "web_legacy",
+        concat('[',
         (
-            SELECT
-                GROUP_CONCAT(DISTINCT cia.name separator '\n')
+        	SELECT 
+        		GROUP_CONCAT(DISTINCT concat('{"id_impactArea:"', cia.id, ',\n"nameImpact:"', cia.name,'}') separator ',\n')
             from
                 ${env.DB_OST}.toc_results_impact_area_results triar
                 join ${env.DB_OST}.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
@@ -418,7 +419,7 @@ export class TypeOneReportRepository {
                     WHERE
                         r8.id = r.id
                 )
-        ) as 'impact_areas',
+        ),']') as 'impact_areas',
         (
             SELECT
                 GROUP_CONCAT(DISTINCT cgt.target separator '\n')
