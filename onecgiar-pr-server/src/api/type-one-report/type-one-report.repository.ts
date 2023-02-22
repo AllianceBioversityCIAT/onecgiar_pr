@@ -325,14 +325,15 @@ export class TypeOneReportRepository {
       left join clarisa_initiatives ci2 on ci2.id = rbi2.inititiative_id
       WHERE r2.id = r.id
 ) as "contributing_initiative",
-(SELECT GROUP_CONCAT(DISTINCT ci4.acronym separator ', ')
-      FROM result r3
-      left join non_pooled_project npp on npp.results_id = r3.id
-      and npp.is_active > 0
-      left join clarisa_institutions ci4 on ci4.id = npp.funder_institution_id
-      left join results_center rc on rc.result_id = r.id
-      and rc.is_active > 0
-      WHERE r3.id = r.id
+(   SELECT 
+  GROUP_CONCAT(distinct CONCAT(if(rc.is_primary,'(Primary: ','('),ci5.acronym,' - ',ci5.name,')') SEPARATOR ', ')
+   FROM result r2
+left join results_center rc on rc.result_id = r2.id 
+    and rc.is_active > 0
+left join clarisa_center cc2 on cc2.code = rc.center_id 
+left join clarisa_institutions ci5 on ci5.id = cc2.institutionId 
+  WHERE r2.id = r.id
+    AND r2.status = 1
 ) as "contributing_center",
 (SELECT GROUP_CONCAT(DISTINCT ci7.name SEPARATOR ', ')
       FROM results_by_institution rbi
