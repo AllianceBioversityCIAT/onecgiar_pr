@@ -78,7 +78,10 @@ export class ResultsInnovationsUseMeasuresRepository extends Repository<ResultsI
     }
   }
 
-  async updateInnovatonUseMeasures(innovationUseId: number, unitOfMeasure: number[], userId: number) {
+  async updateInnovatonUseMeasures(
+    innovationUseId: number, 
+    unitOfMeasure: number[], 
+    userId: number) {
     const initiative = unitOfMeasure??[];
     const upDateInactive = `
     update results_innovations_use_measures  
