@@ -22,7 +22,7 @@
         [isStatic]="true" [options]="this.allInitiatives" optionLabel="full_name" optionValue="id"
         [showSelectAll]="true" (selectOptionEvent)="onSelectInit()" [required]="false"
         (removeOptionEvent)="onRemoveinit($event)" selectedOptionLabel="full_name"
-        [(ngModel)]="this.initiativesSelected" [confirmDeletion]="true" placeholder="Select initiative(s)">
+        [(ngModel)]="this.initiativesSelected" placeholder="Select initiative(s)">
     </app-pr-multi-select>
 
     <br>
