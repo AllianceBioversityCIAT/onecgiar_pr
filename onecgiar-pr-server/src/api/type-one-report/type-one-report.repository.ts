@@ -403,7 +403,7 @@ export class TypeOneReportRepository {
         concat('[',
         (
         	SELECT 
-        		GROUP_CONCAT(DISTINCT concat('{"id_impactArea":', cia.id, ',\n"nameImpact":', cia.name,'}') separator ',\n')
+        		GROUP_CONCAT(DISTINCT concat('{"id_impactArea":"', cia.id, '",\n"nameImpact":"', cia.name,'"}') separator ',\n')
             from
                 ${env.DB_OST}.toc_results_impact_area_results triar
                 join ${env.DB_OST}.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
