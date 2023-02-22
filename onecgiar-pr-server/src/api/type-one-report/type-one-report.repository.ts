@@ -158,6 +158,7 @@ export class TypeOneReportRepository {
       re.initvStgId = ?
       AND re.active = 1
       AND re.result_type_id = 3
+      AND re.result_description IS NOT NULL
     ORDER BY
       re.result_type_id;
     `;
@@ -354,7 +355,7 @@ export class TypeOneReportRepository {
         ) as "contributing_center",
         (
             SELECT
-                GROUP_CONCAT(DISTINCT ci7.acronym, IF((ci7.acronym IS NULL), NULL, ' - '), ci7.name SEPARATOR '<br>')
+                GROUP_CONCAT(DISTINCT '<strong>', ci7.acronym, '</strong>', IF((ci7.acronym IS NULL), NULL, ' - '), ci7.name SEPARATOR '<br>')
             FROM
                 results_by_institution rbi
                 left join result_by_institutions_by_deliveries_type rbibdt on rbibdt.result_by_institution_id = rbi.id
