@@ -312,101 +312,145 @@ export class TypeOneReportRepository {
   }
   async getKeyResultStory(initId: number) {
     const queryKeyResultStory = `
-    SELECT r.result_code ,
-    concat('Result Code: ',r.result_code,'-',r.title) as 'result_title',
-    IF((r.result_type_id = 9), 1, 0) AS is_impact,
-    CONCAT(ci.official_code,' ', ci.name) as 'primary_submitter',
-(SELECT GROUP_CONCAT(DISTINCT concat(ci2.official_code, ' ', ci2.short_name) separator ', ')
-      FROM result r2
-      left join results_by_inititiative rbi2
-      on rbi2.result_id = r2.id
-      and rbi2.initiative_role_id = 2
-      and rbi2.is_active > 0
-      left join clarisa_initiatives ci2 on ci2.id = rbi2.inititiative_id
-      WHERE r2.id = r.id
-) as "contributing_initiative",
-(   SELECT 
-  GROUP_CONCAT(distinct CONCAT(if(rc.is_primary,'(Primary: ','('),ci5.acronym,' - ',ci5.name,')') SEPARATOR ', ')
-   FROM result r2
-left join results_center rc on rc.result_id = r2.id 
-    and rc.is_active > 0
-left join clarisa_center cc2 on cc2.code = rc.center_id 
-left join clarisa_institutions ci5 on ci5.id = cc2.institutionId 
-  WHERE r2.id = r.id
-    AND r2.status = 1
-) as "contributing_center",
-(SELECT GROUP_CONCAT(DISTINCT ci7.name SEPARATOR ', ')
-      FROM results_by_institution rbi
-      left join result_by_institutions_by_deliveries_type rbibdt
-      on rbibdt.result_by_institution_id = rbi.id
-      and rbibdt.is_active > 0
-      left join clarisa_institutions ci7
-      on ci7.id = rbi.institutions_id
-      left JOIN partner_delivery_type pdt
-      on pdt.id = rbibdt.partner_delivery_type_id
-      WHERE rbi.result_id = r.id
-      and rbi.institution_roles_id = 2
-      and rbi.is_active > 0
-      GROUP by rbi.result_id) as "contribution_external_partner",
-( SELECT GROUP_CONCAT(DISTINCT crc.cgiar_name separator ', ')
-FROM result_region rr
-left join clarisa_regions cr
-  on cr.um49Code = rr.region_id
-LEFT JOIN clarisa_regions_cgiar crc 
-ON crc.un_code = cr.um49Code 
-WHERE rr.result_id = r.id
- and rr.is_active = 1) as "regions",
-(SELECT GROUP_CONCAT(DISTINCT cc3.name separator ', ')
-         FROM result_country rc2
-    left join clarisa_countries cc3
-           on cc3.id = rc2.country_id
-        WHERE rc2.result_id = r.id
-          and rc2.is_active = 1) as "countries",
-(SELECT GROUP_CONCAT(DISTINCT lr.detail_link separator ', ')
-    FROM result r7
-    left join legacy_result lr
-      ON lr.legacy_id = r7.legacy_id
-    WHERE r7.id = r.id and r7.legacy_id is not null
-) as "web_legacy",
-(SELECT GROUP_CONCAT(DISTINCT cia.name separator '\n')
-from ${env.DB_OST}.toc_results_impact_area_results triar
-join ${env.DB_OST}.toc_impact_area_results tiar
-on tiar.toc_result_id = triar.impact_area_toc_result_id
-join ${env.DB_OST}.clarisa_impact_areas cia
-on cia.id = tiar.impact_area_id
-WHERE triar.toc_result_id in (SELECT tr.toc_internal_id
-	from result r8
-	join results_toc_result rtr on rtr.results_id = r8.id
-	join toc_result tr
-	on tr.toc_result_id = rtr.toc_result_id
-	WHERE r8.id = r.id)
-) as 'impact_areas',
-(SELECT GROUP_CONCAT(DISTINCT cgt.target  separator '\n')
-	from ${env.DB_OST}.toc_results_impact_area_results triar
-join ${env.DB_OST}.toc_impact_area_results tiar
- on tiar.toc_result_id = triar.impact_area_toc_result_id
-join ${env.DB_OST}.toc_impact_area_results_global_targets tiargt 
-	on tiargt.impact_area_toc_result_id = tiar.toc_result_id
-join ${env.DB_OST}.clarisa_global_targets cgt 
-	on cgt.id = tiargt.global_target_id 
-WHERE triar.toc_result_id in (SELECT tr.toc_internal_id
-	from result r8
-	join results_toc_result rtr on rtr.results_id = r8.id
-	join toc_result tr
-	on tr.toc_result_id = rtr.toc_result_id
-	WHERE r8.id = r.id)) as 'global_targets'
-  from result r
-  join results_by_inititiative rbi
-    on rbi.result_id = r.id
-    and rbi.initiative_role_id = 1
-    and rbi.is_active > 0
-  join clarisa_initiatives ci
-    on rbi.inititiative_id = ci.id
-  left join result_type rt on rt.id = r.result_type_id
-    WHERE r.is_krs = 1
-    and r.is_active = 1
-    and r.status = 1
-    and ci.id = ?;`;
+    SELECT
+        r.result_code,
+        concat('Result Code: ', r.result_code, '-', r.title) as 'result_title',
+        IF((r.result_type_id = 9), 1, 0) AS is_impact,
+        CONCAT(ci.official_code, ' ', ci.name) as 'primary_submitter',
+        (
+            SELECT
+                GROUP_CONCAT(
+                    DISTINCT concat(ci2.official_code, ' ', ci2.short_name) separator '; '
+                )
+            FROM
+                result r2
+                left join results_by_inititiative rbi2 on rbi2.result_id = r2.id
+                and rbi2.initiative_role_id = 2
+                and rbi2.is_active > 0
+                left join clarisa_initiatives ci2 on ci2.id = rbi2.inititiative_id
+            WHERE
+                r2.id = r.id
+        ) as "contributing_initiative",
+        (
+            SELECT
+                GROUP_CONCAT(
+                    distinct CONCAT(
+                        if(rc.is_primary, '(Primary: ', '('),
+                        ci5.acronym,
+                        ' - ',
+                        ci5.name,
+                        ')'
+                    ) SEPARATOR ', '
+                )
+            FROM
+                result r2
+                left join results_center rc on rc.result_id = r2.id
+                and rc.is_active > 0
+                left join clarisa_center cc2 on cc2.code = rc.center_id
+                left join clarisa_institutions ci5 on ci5.id = cc2.institutionId
+            WHERE
+                r2.id = r.id
+                AND r2.status = 1
+        ) as "contributing_center",
+        (
+            SELECT
+                GROUP_CONCAT(DISTINCT ci7.name SEPARATOR '; ')
+            FROM
+                results_by_institution rbi
+                left join result_by_institutions_by_deliveries_type rbibdt on rbibdt.result_by_institution_id = rbi.id
+                and rbibdt.is_active > 0
+                left join clarisa_institutions ci7 on ci7.id = rbi.institutions_id
+                left JOIN partner_delivery_type pdt on pdt.id = rbibdt.partner_delivery_type_id
+            WHERE
+                rbi.result_id = r.id
+                and rbi.institution_roles_id = 2
+                and rbi.is_active > 0
+            GROUP by
+                rbi.result_id
+        ) as "contribution_external_partner",
+        (
+            SELECT
+                GROUP_CONCAT(DISTINCT crc.cgiar_name separator '; ')
+            FROM
+                result_region rr
+                left join clarisa_regions cr on cr.um49Code = rr.region_id
+                LEFT JOIN clarisa_regions_cgiar crc ON crc.un_code = cr.um49Code
+            WHERE
+                rr.result_id = r.id
+                and rr.is_active = 1
+        ) as "regions",
+        (
+            SELECT
+                GROUP_CONCAT(DISTINCT cc3.name separator '; ')
+            FROM
+                result_country rc2
+                left join clarisa_countries cc3 on cc3.id = rc2.country_id
+            WHERE
+                rc2.result_id = r.id
+                and rc2.is_active = 1
+        ) as "countries",
+        (
+            SELECT
+                GROUP_CONCAT(DISTINCT lr.detail_link separator '; ')
+            FROM
+                result r7
+                left join legacy_result lr ON lr.legacy_id = r7.legacy_id
+            WHERE
+                r7.id = r.id
+                and r7.legacy_id is not null
+        ) as "web_legacy",
+        (
+            SELECT
+                GROUP_CONCAT(DISTINCT cia.name separator '\n')
+            from
+                ${env.DB_OST}.toc_results_impact_area_results triar
+                join ${env.DB_OST}.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
+                join ${env.DB_OST}.clarisa_impact_areas cia on cia.id = tiar.impact_area_id
+            WHERE
+                triar.toc_result_id in (
+                    SELECT
+                        tr.toc_internal_id
+                    from
+                        result r8
+                        join results_toc_result rtr on rtr.results_id = r8.id
+                        join toc_result tr on tr.toc_result_id = rtr.toc_result_id
+                    WHERE
+                        r8.id = r.id
+                )
+        ) as 'impact_areas',
+        (
+            SELECT
+                GROUP_CONCAT(DISTINCT cgt.target separator '\n')
+            from
+                ${env.DB_OST}.toc_results_impact_area_results triar
+                join ${env.DB_OST}.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
+                join ${env.DB_OST}.toc_impact_area_results_global_targets tiargt on tiargt.impact_area_toc_result_id = tiar.toc_result_id
+                join ${env.DB_OST}.clarisa_global_targets cgt on cgt.id = tiargt.global_target_id
+            WHERE
+                triar.toc_result_id in (
+                    SELECT
+                        tr.toc_internal_id
+                    from
+                        result r8
+                        join results_toc_result rtr on rtr.results_id = r8.id
+                        join toc_result tr on tr.toc_result_id = rtr.toc_result_id
+                    WHERE
+                        r8.id = r.id
+                )
+        ) as 'global_targets'
+    from
+        result r
+        join results_by_inititiative rbi on rbi.result_id = r.id
+        and rbi.initiative_role_id = 1
+        and rbi.is_active > 0
+        join clarisa_initiatives ci on rbi.inititiative_id = ci.id
+        left join result_type rt on rt.id = r.result_type_id
+    WHERE
+        r.is_krs = 1
+        and r.is_active = 1
+        and r.status = 1
+        and ci.id = ?;
+    `;
     try {
       const generalInformation: any[] = await this.dataSource.query(queryKeyResultStory, [initId]);
       return generalInformation;
