@@ -47,23 +47,25 @@ export class TorKeyResultStoryComponent {
 
     const is_impact = Boolean(Number(table.is_impact));
 
-    data[0].value = table.result_title;
-    data[1].value = table.primary_submitter;
-    data[2].value = table.contributing_initiative;
-    data[3].value = table.contributing_center;
-    data[4].value = table.contribution_external_partner;
-    const countriesText = `<strong>Countries</strong><br> ${table.countries} <br> `;
-    const regionsText = `<strong>Regions</strong>${table.regions}<br> `;
-    data[5].value = (table.countries ? countriesText : '') + (table.regions ? regionsText : '');
-    data[6].value = table.xxx;
-    data[7].value = table.other_relevant_impact_area;
-    data[8].value = table.global_target;
-    data[9].value = table.web_legacy;
+    const noDataText = '<div class="no-data-text-format">This result is not a impact reported in the PRMS Reporting tool</div>';
+
+    data[0].value = table.result_title || '<div class="no-data-text-format">There are not result title data</div>';
+    data[1].value = table.primary_submitter || '<div class="no-data-text-format">There are not primary submitter data</div>';
+    data[2].value = table.contributing_initiative || '<div class="no-data-text-format">There are not contributing initiatives data</div>';
+    data[3].value = table.contributing_center || '<div class="no-data-text-format">There are not contributing centers data</div>';
+    data[4].value = table.contribution_external_partner || '<div class="no-data-text-format">There are not contributing external partner(s) data</div>';
+    const countriesText = `<strong>Countries:</strong><br> ${table.countries} <br>`;
+    const regionsText = `<br><strong>Regions:</strong><br>${table.regions}<br> `;
+    data[5].value = (table.countries ? countriesText : '') + (table.regions ? regionsText : '') || '<div class="no-data-text-format">There are not Geographic location data</div>';
+    data[6].value = (table.impact_areas || noDataText) + '<div class="under-construction-t1r">Under construction<img src="assets/work-in-progress.png" alt="" srcset=""></div>';
+    data[7].value = (table.other_relevant_impact_area || noDataText) + '<div class="under-construction-t1r">Under construction<img src="assets/work-in-progress.png" alt="" srcset=""></div>';
+    data[8].value = table.global_target || noDataText;
+    data[9].value = table.web_legacy || '<div class="no-data-text-format">There are not web legacy data</div>';
 
     if (!is_impact) {
-      data.splice(8, 1);
-      data.splice(7, 1);
-      data.splice(6, 1);
+      // data.splice(8, 1);
+      // data.splice(7, 1);
+      // data.splice(6, 1);
     }
 
     this.tablesList.push({ data, header });

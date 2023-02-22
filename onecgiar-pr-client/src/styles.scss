@@ -169,10 +169,33 @@ a {
     }
 
     img {
-        width: 20px;
-        height: 20px;
+        width: 15px;
+        height: 15px;
         background-color: white;
         border-radius: 10px;
         padding: 2px;
+    }
+}
+
+.under-construction-t1r {
+    margin-top: 5px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-style: italic;
+    color: rgb(255, 255, 255);
+    font-weight: 700;
+    background-color: #7486ee;
+    border-radius: 5px 100px 100px 5px;
+    width: max-content;
+    padding: 2px 5px;
+    cursor: default;
+    font-size: .8em;
+
+    img {
+        width: 17px;
+        background-color: white;
+        border-radius: 100px;
+        padding: 1px;
     }
 }

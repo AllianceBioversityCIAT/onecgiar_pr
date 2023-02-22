@@ -71,7 +71,7 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     }
   }
 
-  async getRequestByUser(userId: number) {
+  async getRequestByUser(userId: number, version: number = 1) {
     const queryData = `
     SELECT
     	srr.share_result_request_id,
@@ -108,6 +108,7 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     	share_result_request srr
     	inner join \`result\` r on r.id = srr.result_id 
     						and r.is_active > 0
+							and r.version_id = ?
     	inner join result_level rl on rl.id = r.result_level_id 
     	inner join result_type rt on rt.id = r.result_type_id 
 		left join users u on u.id = srr.requested_by 
@@ -129,7 +130,7 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
 	order by srr.request_status_id ASC;
     `;
     try {
-      const shareResultRequest: ShareResultRequest[] = await this.query(queryData, [userId]);
+      const shareResultRequest: ShareResultRequest[] = await this.query(queryData, [userId, version]);
       return shareResultRequest;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -140,7 +141,7 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     }
   }
 
-  async getPendingByUser(userId: number) {
+  async getPendingByUser(userId: number, version: number = 1) {
     const queryData = `
     SELECT
     	srr.share_result_request_id,
@@ -176,6 +177,7 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     	share_result_request srr
     	inner join \`result\` r on r.id = srr.result_id 
     						and r.is_active > 0
+							and r.version_id = ?
     	inner join result_level rl on rl.id = r.result_level_id 
     	inner join result_type rt on rt.id = r.result_type_id 
 		left join users u on u.id = srr.requested_by 
@@ -196,7 +198,7 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
 		and srr.is_active > 0;
     `;
     try {
-      const shareResultRequest: ShareResultRequest[] = await this.query(queryData, [userId]);
+      const shareResultRequest: ShareResultRequest[] = await this.query(queryData, [userId, version]);
       return shareResultRequest;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -207,7 +209,7 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     }
   }
 
-  async getInitiativeOnlyPendingByResult(userId: number) {
+  async getInitiativeOnlyPendingByResult(userId: number, version: number = 1) {
     const queryData = `
     SELECT
     	srr.share_result_request_id,
@@ -231,6 +233,7 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     	share_result_request srr
     	inner join \`result\` r on r.id = srr.result_id 
     						and r.is_active > 0
+							and r.version_id = ?
     	inner join result_level rl on rl.id = r.result_level_id 
     	inner join result_type rt on rt.id = r.result_type_id 
     WHERE 
@@ -247,7 +250,7 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
 		and srr.is_active > 0;
     `;
     try {
-      const shareResultRequest: ShareResultRequest[] = await this.query(queryData, [userId]);
+      const shareResultRequest: ShareResultRequest[] = await this.query(queryData, [userId, version]);
       return shareResultRequest;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

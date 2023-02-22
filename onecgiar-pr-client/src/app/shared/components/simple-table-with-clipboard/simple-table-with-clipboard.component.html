@@ -7,7 +7,7 @@
     </div>
     <table #tableOne class="distribution-{{this.distribution}}">
         <tr class="table_title">
-            <th [attr.colspan]="header?.length">{{title || 'Untitled'}}</th>
+            <th [attr.colspan]="header?.length">{{tableTitle || 'Untitled'}}</th>
         </tr>
         <tr *ngIf="distribution == 'normal'">
             <th *ngFor="let headerItem of header">

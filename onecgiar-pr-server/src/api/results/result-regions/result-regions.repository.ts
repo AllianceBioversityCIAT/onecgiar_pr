@@ -12,7 +12,7 @@ export class ResultRegionRepository extends Repository<ResultRegion> {
     super(ResultRegion, dataSource.createEntityManager());
   }
 
-  async getAllResultRegion(){
+  async getAllResultRegion(version: number = 1){
     const query = `
     select 
     rr.result_region_id,
@@ -22,11 +22,12 @@ export class ResultRegionRepository extends Repository<ResultRegion> {
     rr.created_date,
     rr.last_updated_date 
     from result_region rr 
-    where rr.is_active > 0;
+    where rr.is_active > 0
+      and rr.version_id = ?;
     `;
 
     try {
-      const result: ResultRegion[] = await this.query(query);
+      const result: ResultRegion[] = await this.query(query, [version]);
       return result;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

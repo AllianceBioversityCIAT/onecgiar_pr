@@ -535,6 +535,12 @@ export class ResultsService {
     }
   }
 
+  /**
+   * !dIMPORTANTE REVISAR
+   * @param resultId 
+   * @returns 
+   */
+
   async deleteResult(resultId: number) {
     try {
       const result: Result = await this._resultRepository.findOne({
@@ -980,7 +986,6 @@ export class ResultsService {
         await this._resultByIntitutionsTypeRepository.getResultByInstitutionTypeActorFull(
           result.id,
         );
-      console.log(result);
       return {
         response: {
           result_id: result.id,
@@ -1052,7 +1057,7 @@ export class ResultsService {
     }
   }
 
-  async getGeoScope(resultId: number) {
+  async getGeoScope(resultId: number, version: number = 1) {
     try {
       const result = await this._resultRepository.getResultById(resultId);
 
@@ -1161,7 +1166,7 @@ export class ResultsService {
 
 
   versioningResults(resultId: number){
-    
+
   }
 
 }
