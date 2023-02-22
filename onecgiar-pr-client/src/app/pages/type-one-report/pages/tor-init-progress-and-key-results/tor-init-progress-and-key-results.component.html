@@ -32,8 +32,8 @@
         description="All this information can be extracted in excel format by clicking in the download button below:">
     </app-alert-status>
 
-    <app-pr-button text="Download .xlsx" icon="file_download"
-        (click)="exportExcel(typeOneReportSE.initiativeSelected)"></app-pr-button>
+    <app-pr-button [text]="this.requesting?'Downloading .xlsx':'Download .xlsx'" [icon]="this.requesting?'loop':'send'"
+        [rotating]="this.requesting" (click)="exportExcel(typeOneReportSE.initiativeSelected)"></app-pr-button>
 
     <div [ngClass]="{'expand': full_screen}" class="iframe_container"
         *ngIf="typeOneReportSE.initiativeSelected && typeOneReportSE.showTorIframe">
