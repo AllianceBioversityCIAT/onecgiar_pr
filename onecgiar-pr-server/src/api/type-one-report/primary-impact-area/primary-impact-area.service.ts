@@ -11,13 +11,11 @@ export class PrimaryImpactAreaService {
     private readonly _handlersError: HandlersError,
     private readonly _primaryImpactAreaRepository: PrimaryImpactAreaRepository
   ){}
-  async create(createPrimaryImpactAreaDto: CreatePrimaryImpactAreaDto[], user: TokenDto) {
+  async create(createPrimaryImpactAreaDto: any[], user: TokenDto) {
     try {
       let listImpactAreaPrimary = []
       createPrimaryImpactAreaDto.forEach((resp)=>{
-        if(resp.impact_area_id == null && resp.result_code == null){
-          throw this._handlersError.returnErrorRes({ error:resp, debug: true });
-        }else{
+        if(resp.impact_area_id != null && resp.result_code != null){
           listImpactAreaPrimary.push({
             result_code:resp.result_code,
             impact_area_id: resp.impact_area_id,
@@ -26,9 +24,6 @@ export class PrimaryImpactAreaService {
           })
         }
       })
-
-      console.log(listImpactAreaPrimary);
-      
 
       const saveImpactAre = await this._primaryImpactAreaRepository.save(listImpactAreaPrimary);
 

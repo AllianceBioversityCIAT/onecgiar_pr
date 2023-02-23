@@ -12,7 +12,7 @@ export class PrimaryImpactAreaController {
 
   @Patch('create')
   async mapResultLegacy(
-    @Body() primaryImpactArea: CreatePrimaryImpactAreaDto[],
+    @Body() primaryImpactArea: any[],
     @Headers() auth: HeadersDto,
   ) {
     const token: TokenDto = <TokenDto>(
