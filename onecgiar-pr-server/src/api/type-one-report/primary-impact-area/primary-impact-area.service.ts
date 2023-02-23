@@ -17,19 +17,22 @@ export class PrimaryImpactAreaService {
       createPrimaryImpactAreaDto.forEach((resp)=>{
         if(resp.impact_area_id != null && resp.result_code != null){
           listImpactAreaPrimary.push({
-            result_code:resp.result_code,
+            result_code: resp.result_code,
             impact_area_id: resp.impact_area_id,
             created_by: user.id,
-            updated_by:user.id
+            updated_by: user.id
           })
         }
       })
+
+      console.log(listImpactAreaPrimary);
+      
 
       const saveImpactAre = await this._primaryImpactAreaRepository.save(listImpactAreaPrimary);
 
       return {
         response: saveImpactAre,
-        message:'Successful Response',
+        message: 'Successful Response',
         status: HttpStatus.OK
       }
     } catch (error) {
@@ -37,5 +40,5 @@ export class PrimaryImpactAreaService {
     }
   }
 
-  
+
 }
