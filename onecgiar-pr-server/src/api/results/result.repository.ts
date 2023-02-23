@@ -799,6 +799,11 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     r.result_code as "Result Code",
     rl.name as "Result Level",
     rt.name as "Result Type",
+    (case 
+      when r.status = 0 then "Editing"
+      when r.status = 1 then "Submitted"
+      else "Not defined"
+    end) as "Status",
     r.title as "Result Title",
     r.description as "Result Description",
     r.lead_contact_person as "Lead Contact Person",
@@ -975,6 +980,11 @@ left join clarisa_countries cc3
     r.result_code as "Result Code",
     rl.name as "Result Level",
     rt.name as "Result Type",
+    (case 
+      when r.status = 0 then "Editing"
+      when r.status = 1 then "Submitted"
+      else "Not defined"
+    end) as "Status",
     r.title as "Result Title",
     r.description as "Result Description",
     r.lead_contact_person as "Lead Contact Person",
@@ -1136,6 +1146,22 @@ left join clarisa_countries cc3
     try {
       const results = await this.query(query);
       return results;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async getActiveResultCodes() {
+    try {
+      const resultCodes = await this.find({
+        where: { is_active: true },
+        select: { id: true, result_code: true },
+      });
+      return resultCodes;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultRepository.name,

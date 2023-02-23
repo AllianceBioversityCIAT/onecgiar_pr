@@ -66,7 +66,15 @@ export class AdminPanelService implements OnModuleInit {
   }
 
   async excelFullReportByResultCodes(filterResults: FilterResultsDto) {
-    const resultCodes = filterResults?.resultCodes ?? [];
+    let resultCodes = [];
+    if (filterResults?.fullReport) {
+      resultCodes = (await this._resultRepository.getActiveResultCodes()).map(
+        (r) => r.result_code,
+      );
+    } else {
+      resultCodes = filterResults?.resultCodes ?? [];
+    }
+
     try {
       let fullReport: any[];
 
@@ -227,7 +235,6 @@ export class AdminPanelService implements OnModuleInit {
   }
 
   async excelFullReportByResultByInitiative(initiativeId: number) {
-  
     try {
       let fullReport: any[];
 
