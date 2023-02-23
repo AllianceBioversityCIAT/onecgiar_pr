@@ -1,0 +1,8 @@
+<div class="field_container">
+    <app-pr-select class="segment_title_margin" [options]="[]" label="Impact areas" [isStatic]="true"
+        description="Select a primary impact area" optionLabel="full_name" optionValue="initiative_id"
+        placeholder="Select initiative">
+    </app-pr-select>
+    <app-pr-button padding="medium" [text]="isSaving?'Saving':'Save'" [rotating]="isSaving" (click)="onSave()"
+        [icon]="isSaving?'loop':'save'" [ngClass]="{'globalDisabled': isSaving}"></app-pr-button>
+</div>
