@@ -66,6 +66,7 @@ export class InitGeneralResultsReportComponent {
   dataToExport = [];
 
   async exportExcel(resultsRelected) {
+    this.dataToExport = [];
     this.requesting = true;
     this.requestCounter = 0;
 

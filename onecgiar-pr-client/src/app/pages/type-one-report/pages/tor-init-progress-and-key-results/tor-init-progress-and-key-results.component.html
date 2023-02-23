@@ -2,10 +2,11 @@
 
     <div class="box_container">
         <div class="desc">
-            Please access the SharePoint folder link to find the Theory of Change (ToC) images that need to be included
-            in the official report. Within the folder, you will find an image for the overall ToC diagram to be inserted
-            under the section #2, as well as individual images for each work package within your initiative to be
-            inserted in the section #3.
+            You may access this SharePoint link to find the draft Theory of Change (ToC) images for inclusion in the
+            official report. Please note that these images are raw exports and represent ToC data from 25 January, and
+            are being visually improved by a graphic designer. Within the folder, you will find an image for the overall
+            ToC diagram to be inserted under the section #2, as well as individual images for each work package within
+            your initiative to be inserted in the section #3.
             <a href="https://cgiar.sharepoint.com/:f:/s/PRMSProject/EuPp7t1onn1JtAAT2q_xjJEB0N5JmBOkIZsWArFxvxQnJw?e=T8M1YW"
                 target="_blank">
                 <app-pr-button text="Go to folder" icon="folder"></app-pr-button>
@@ -31,8 +32,9 @@
         description="All this information can be extracted in excel format by clicking in the download button below:">
     </app-alert-status>
 
-    <app-pr-button text="Download .xlsx" icon="file_download"
-        (click)="exportExcel(typeOneReportSE.initiativeSelected)"></app-pr-button>
+    <app-pr-button [text]="this.requesting?'Downloading .xlsx':'Download .xlsx'"
+        [ngClass]="{'globalDisabled': this.requesting}" [icon]="this.requesting?'loop':'send'"
+        [rotating]="this.requesting" (click)="exportExcel(typeOneReportSE.initiativeSelected)"></app-pr-button>
 
     <div [ngClass]="{'expand': full_screen}" class="iframe_container"
         *ngIf="typeOneReportSE.initiativeSelected && typeOneReportSE.showTorIframe">

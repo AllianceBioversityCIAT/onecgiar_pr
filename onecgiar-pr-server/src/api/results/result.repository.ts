@@ -63,6 +63,13 @@ export class ResultRepository extends Repository<Result> {
     }
   }
 
+  /**
+   * !Revisar asignacion de de parametros sql
+   * @param id 
+   * @param allowDeleted 
+   * @param version 
+   * @returns 
+   */
   async resultsForElasticSearch(
     id?: string,
     allowDeleted: boolean = false,
@@ -207,7 +214,7 @@ export class ResultRepository extends Repository<Result> {
    * !reported_year revisar
    * @returns
    */
-  async AllResults() {
+  async AllResults(version: number = 1) {
     const queryData = `
     SELECT
     r.id,
@@ -246,11 +253,11 @@ FROM
     inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
 WHERE
     r.is_active > 0
-    and r.version_id = 1;
+    and r.version_id = ?;
     `;
 
     try {
-      const results: any[] = await this.query(queryData);
+      const results: any[] = await this.query(queryData, [version]);
       return results;
     } catch (error) {
       throw {
@@ -298,7 +305,7 @@ WHERE
     }
   }*/
 
-  async AllResultsByRoleUsers(userid: number) {
+  async AllResultsByRoleUsers(userid: number, version: number = 1) {
     const queryData = `
     SELECT
     r.id,
@@ -339,11 +346,11 @@ WHERE
     AND rbi.is_active > 0
     AND rbi.initiative_role_id = 1
     AND ci.active > 0
-    AND r.version_id = 1;
+    AND r.version_id = ?;
     `;
 
     try {
-      const results = await this.query(queryData, [userid]);
+      const results = await this.query(queryData, [userid, version]);
       return results;
     } catch (error) {
       throw {
@@ -446,7 +453,7 @@ WHERE
     }
   }
 
-  async AllResultsLegacyNewByTitle(title: string) {
+  async AllResultsLegacyNewByTitle(title: string, version: number = 1) {
     const queryData = `
     (select 
       lr.legacy_id as id,
@@ -481,13 +488,14 @@ WHERE
       inner join result_type rt on rt.id = r.result_type_id 
     where r.is_active > 0
       and r.title like ?
-      and r.version_id = 1)
+      and r.version_id = ?)
     `;
 
     try {
       const results: DepthSearch[] = await this.query(queryData, [
         `%${title}%`,
         `%${title}%`,
+        version
       ]);
       return results;
     } catch (error) {
@@ -530,8 +538,7 @@ WHERE
       inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id
                           and ci.active > 0
     where r.is_active > 0
-    and r.id = ?
-    and r.version_id = 1)
+    and r.id = ?)
     `;
 
     try {
@@ -608,7 +615,6 @@ FROM
 WHERE
     r.is_active > 0
     and r.id = ?
-    and r.version_id = 1;
     `;
 
     try {
@@ -659,8 +665,7 @@ FROM
     inner join result_type rt on rt.id = r.result_type_id 
 WHERE
     r.is_active > 0
-    and r.id = ?
-    and r.version_id = 1;
+    and r.id = ?;
     `;
 
     try {
@@ -675,13 +680,13 @@ WHERE
     }
   }
 
-  async getLastResultCode(): Promise<number> {
+  async getLastResultCode(version: number = 1): Promise<number> {
     const queryData = `
-    SELECT max(r.result_code) as last_code from \`result\` r WHERE version_id = 1;
+    SELECT max(r.result_code) as last_code from \`result\` r WHERE version_id = ?;
     `;
 
     try {
-      const results: Array<{ last_code }> = await this.query(queryData);
+      const results: Array<{ last_code }> = await this.query(queryData, [version]);
       return results.length ? parseInt(results[0].last_code) : null;
     } catch (error) {
       throw {
@@ -713,18 +718,18 @@ WHERE
     }
   }
 
-  async transformResultCode(resultCode: number): Promise<number> {
+  async transformResultCode(resultCode: number, version: number = 1): Promise<number> {
     const queryData = `
     SELECT 
     r.id
     FROM 
     \`result\` r 
     WHERE r.is_active > 0
-      and r.version_id = 1
+      and r.version_id = ?
       and r.result_code = ?;
     `;
     try {
-      const results: Array<{ id }> = await this.query(queryData, [resultCode]);
+      const results: Array<{ id }> = await this.query(queryData, [version, resultCode]);
       return results?.length ? results[0].id : null;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -737,6 +742,7 @@ WHERE
 
   async getTypesOfResultByCodes(
     resultCodes: number[],
+    version: number = 1
   ): Promise<ResultTypeDto[]> {
     const queryData = `
     select
@@ -748,11 +754,12 @@ WHERE
     join result_type rt on r.result_type_id = rt.id
     where
       r.is_active = 1
+      and r.version_id = ?
       and r.result_code ${resultCodes.length ? `in (${resultCodes})` : '= 0'}
     ;
     `;
     try {
-      const results = await this.query(queryData);
+      const results = await this.query(queryData, [version]);
       return results;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -765,6 +772,7 @@ WHERE
 
   async getTypesOfResultByInitiative(
     initiativeId: number,
+    version: number = 1
   ): Promise<ResultTypeDto[]> {
     const queryData = `
     select
@@ -778,10 +786,11 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     where rbi3.inititiative_id = ?
       and r.status = 1
       and r.is_active = 1
+      and r.version_id = ?
     ;
     `;
     try {
-      const results = await this.query(queryData, [initiativeId]);
+      const results = await this.query(queryData, [initiativeId, version]);
       return results;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

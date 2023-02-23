@@ -5,10 +5,11 @@ import { RouterModule } from '@nestjs/core';
 import { typeOneReportRoutes } from './type-one-report.routes';
 import { HandlersError } from 'src/shared/handlers/error.utils';
 import { TypeOneReportRepository } from './type-one-report.repository';
+import { PrimaryImpactAreaModule } from './primary-impact-area/primary-impact-area.module';
 
 @Module({
   controllers: [TypeOneReportController],
-  imports: [RouterModule.register(typeOneReportRoutes)],
+  imports: [RouterModule.register(typeOneReportRoutes), PrimaryImpactAreaModule],
   providers: [TypeOneReportService,HandlersError, TypeOneReportRepository],
 })
 export class TypeOneReportModule {}

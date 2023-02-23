@@ -68,4 +68,21 @@ export class ResultsKnowledgeProductsRepository extends Repository<ResultsKnowle
       });
     }
   }
+
+  async statusElement(kpId: number, status: boolean){
+    const query = `
+    UPDATE results_knowledge_product 
+    SET is_active = ?
+    WHERE result_knowledge_product_id = ?;
+    `;
+    try{
+      return await this.query(query, [status?1:0, kpId]);
+    }catch(error){
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsKnowledgeProductsRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
 }

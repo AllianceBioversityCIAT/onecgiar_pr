@@ -12,9 +12,9 @@ export class BiReportsController {
     return this.biReportsService.create(createBiReportDto);
   }
 
-  @Get()
-  findAll() {
-    return this.biReportsService.findAll();
+  @Get(':report_name')
+  findAll(@Param('report_name') report_name:string) {
+    return this.biReportsService.findAll(report_name);
   }
 
   @Get('/reports')
@@ -26,7 +26,11 @@ export class BiReportsController {
   findOne(@Param('id') id: string) {
     return this.biReportsService.findOne(+id);
   }
-
+  
+  @Get('/reportName/:report_name')
+  findOnefindOneReportName(@Param('report_name') report_name: string) {
+    return this.biReportsService.findOneReportName(report_name);
+  }
   
 
   

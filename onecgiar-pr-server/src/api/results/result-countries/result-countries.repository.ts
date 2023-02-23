@@ -12,7 +12,7 @@ export class ResultCountryRepository extends Repository<ResultCountry> {
     super(ResultCountry, dataSource.createEntityManager());
   }
 
-  async getAllResultCountries(){
+  async getAllResultCountries(version: number = 1){
     const query = `
     select 
     rc.result_country_id,
@@ -22,11 +22,12 @@ export class ResultCountryRepository extends Repository<ResultCountry> {
     rc.created_date,
     rc.last_updated_date 
     from result_country rc 
-    where rc.is_active > 0;
+    where rc.is_active > 0
+      and rc.version_id = ?;
     `;
 
     try {
-      const result: ResultCountry[] = await this.query(query);
+      const result: ResultCountry[] = await this.query(query, [version]);
       return result;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

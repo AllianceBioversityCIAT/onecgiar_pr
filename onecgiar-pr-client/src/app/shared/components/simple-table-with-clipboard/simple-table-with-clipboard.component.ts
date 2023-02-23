@@ -15,7 +15,7 @@ interface Header {
 })
 export class SimpleTableWithClipboardComponent {
   @Input() distribution: 'left' | 'normal' = 'normal';
-  @Input() title: string;
+  @Input() tableTitle: string;
   @Input() header = [];
   @Input() data = [];
   flatFormat = false;
