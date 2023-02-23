@@ -13,9 +13,9 @@ export class PrimaryImpactArea {
 
     @OneToOne(() => Result, r => r.id, { nullable: false })
     @JoinColumn({
-        name: 'result_id'
+        name: 'result_code'
     })
-    result_id: number;
+    result_code: number;
 
     @ManyToOne(() => ClarisaImpactArea, c => c.id, { nullable: false })
     @JoinColumn({

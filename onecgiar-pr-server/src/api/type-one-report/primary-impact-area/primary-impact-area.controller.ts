@@ -10,9 +10,9 @@ export class PrimaryImpactAreaController {
   
   constructor(private readonly primaryImpactArea: PrimaryImpactAreaService) {}
 
-  @Post('create')
+  @Patch('create')
   async mapResultLegacy(
-    @Body() primaryImpactArea: CreatePrimaryImpactAreaDto,
+    @Body() primaryImpactArea: CreatePrimaryImpactAreaDto[],
     @Headers() auth: HeadersDto,
   ) {
     const token: TokenDto = <TokenDto>(
