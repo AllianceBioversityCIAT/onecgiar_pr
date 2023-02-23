@@ -19,7 +19,7 @@
                 <div
                     [innerHTML]="headerItem.type == 'currency' ? (dataItem[headerItem.attr] | currency : 'USD' : 'symbol' : '1.0-0' ) : dataItem[headerItem.attr]">
                 </div>
-                <app-tor-krs-primary-impact-area-selector
+                <app-tor-krs-primary-impact-area-selector [flatFormat]="flatFormat"
                     *ngIf="headerItem.attr=='value' && i == 2"></app-tor-krs-primary-impact-area-selector>
             </td>
         </tr>

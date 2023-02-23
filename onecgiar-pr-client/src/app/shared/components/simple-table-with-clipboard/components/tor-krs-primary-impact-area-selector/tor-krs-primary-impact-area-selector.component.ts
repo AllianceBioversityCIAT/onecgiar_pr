@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, Input } from '@angular/core';
 
 @Component({
   selector: 'app-tor-krs-primary-impact-area-selector',
@@ -7,6 +7,7 @@ import { Component, OnInit } from '@angular/core';
 })
 export class TorKrsPrimaryImpactAreaSelectorComponent implements OnInit {
   isSaving = false;
+  @Input() flatFormat: boolean;
   constructor() {}
 
   ngOnInit(): void {}

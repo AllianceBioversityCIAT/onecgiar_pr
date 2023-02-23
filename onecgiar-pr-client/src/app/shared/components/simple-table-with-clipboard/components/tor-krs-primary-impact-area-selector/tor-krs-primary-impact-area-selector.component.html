@@ -1,4 +1,7 @@
-<div class="field_container">
+<div *ngIf="flatFormat">
+    Example text
+</div>
+<div class="field_container" *ngIf="!flatFormat">
     <app-pr-select class="segment_title_margin" [options]="[]" label="Impact areas" [isStatic]="true"
         description="Select a primary impact area" optionLabel="full_name" optionValue="initiative_id"
         placeholder="Select initiative">
