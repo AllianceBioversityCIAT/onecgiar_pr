@@ -24,7 +24,7 @@
         </tr>
         <tr *ngFor="let dataItem of data; let i=index">
             <td *ngFor="let headerItem of header; let j=index">
-                <div *ngIf="!(headerItem.attr=='value' && i == 6)"
+                <div *ngIf="!(headerItem.attr=='value' && i == 6 && validateObj(dataItem[headerItem.attr]))"
                     [innerHTML]="headerItem.type == 'currency' ? (dataItem[headerItem.attr] | currency : 'USD' : 'symbol' : '1.0-0' ) : dataItem[headerItem.attr]">
                 </div>
                 <div *ngIf="headerItem.attr=='value' && loadingData && !dataItem[headerItem.attr]">
@@ -36,7 +36,7 @@
 
                 <app-tor-krs-primary-impact-area-selector [selectOptions]="dataItem[headerItem.attr]"
                     [result_code]="data[0].id" [flatFormat]="flatFormat"
-                    *ngIf="headerItem.attr=='value' && i == 6 && data[0].id"></app-tor-krs-primary-impact-area-selector>
+                    *ngIf="headerItem.attr=='value' && i == 6 && data[0].id && validateObj(dataItem[headerItem.attr])"></app-tor-krs-primary-impact-area-selector>
                 <!-- 
                 <app-tor-krs-others-primary-impact-area [result_code]="data[0].id"
                     *ngIf="headerItem.attr=='value' && i == 7 && data[0].id"></app-tor-krs-others-primary-impact-area> -->

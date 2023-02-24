@@ -17,4 +17,13 @@ export class TorKrsPrimaryImpactAreaSelectorComponent {
   get resultIndex() {
     return this.typeOneReportSE.keyResultStoryData.findIndex(item => item.result_code == this.result_code);
   }
+
+  impactAreaName(index) {
+    console.log(index);
+    console.log(this.selectOptions);
+    console.log(this.typeOneReportSE.keyResultStoryData[index]?.impact_area_id);
+    console.log(this.selectOptions?.find(item => item.id_impactArea == this.typeOneReportSE.keyResultStoryData[index]?.impact_area_id));
+    const impactReaObject = this.selectOptions?.find(item => item.id_impactArea == this.typeOneReportSE.keyResultStoryData[index]?.impact_area_id);
+    return impactReaObject?.nameImpact;
+  }
 }

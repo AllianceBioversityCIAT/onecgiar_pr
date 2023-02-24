@@ -1,5 +1,5 @@
 <div *ngIf="flatFormat">
-    Example text
+    {{impactAreaName(resultIndex)}}
 </div>
 <div class="field_container" *ngIf="!flatFormat && this.selectOptions?.length">
     <app-pr-select class="segment_title_margin" [options]="this.selectOptions" label="Impact areas" [isStatic]="true"

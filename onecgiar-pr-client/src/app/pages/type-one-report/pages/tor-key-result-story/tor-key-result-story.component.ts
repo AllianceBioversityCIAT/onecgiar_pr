@@ -83,9 +83,9 @@ export class TorKeyResultStoryComponent {
     const countriesText = `<strong>Countries:</strong><br> ${table.countries} <br>`;
     const regionsText = `<br><strong>Regions:</strong><br>${table.regions}<br> `;
     data[5].value = (table.countries ? countriesText : '') + (table.regions ? regionsText : '') || '<div class="no-data-text-format">There are not Geographic location data</div>';
-    data[6].value = JSON.parse(table.impact_areas);
-    data[7].value = table.other_relevant_impact_area || noDataText;
-    data[8].value = table.global_target || noDataText;
+    data[6].value = JSON.parse(table?.impact_areas) || noDataText;
+    data[7].value = table.other_impact_areas || noDataText;
+    data[8].value = table.global_targets || noDataText;
     data[9].value = table.web_legacy || '<div class="no-data-text-format">There are not web legacy data</div>';
 
     if (!is_impact) {

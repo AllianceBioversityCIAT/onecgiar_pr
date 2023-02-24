@@ -48,6 +48,10 @@ export class SimpleTableWithClipboardComponent {
     }, 200);
   }
 
+  validateObj(value) {
+    return typeof value == 'object';
+  }
+
   getIndexColumnClass() {
     return 'custom-class-1';
   }
