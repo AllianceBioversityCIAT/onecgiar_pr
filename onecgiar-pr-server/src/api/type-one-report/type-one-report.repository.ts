@@ -423,12 +423,12 @@ export class TypeOneReportRepository {
                  from
                     primary_impact_area pia 
                     join clarisa_impact_areas cia ON cia.id = pia.impact_area_id 
-                    WHERE pia.result_id = r.result_code) is null, 0, (SELECT 
+                    WHERE pia.result_code = r.result_code) is null, 0, (SELECT 
                   pia.impact_area_id
                  from
                     primary_impact_area pia 
                     join clarisa_impact_areas cia ON cia.id = pia.impact_area_id 
-                    WHERE pia.result_id = r.result_code))
+                    WHERE pia.result_code = r.result_code))
         ),']') as 'impact_areas',
         (
             SELECT
@@ -457,7 +457,7 @@ export class TypeOneReportRepository {
             from
                primary_impact_area pia 
                join clarisa_impact_areas cia ON cia.id = pia.impact_area_id 
-               WHERE pia.result_id = r.result_code 
+               WHERE pia.result_code = r.result_code 
                 
         ),']') as 'primary_impact'
     from
