@@ -418,7 +418,17 @@ export class TypeOneReportRepository {
                         join toc_result tr on tr.toc_result_id = rtr.toc_result_id
                     WHERE
                         r8.id = r.id
-                )
+                )and cia.id <> if((SELECT 
+                  pia.impact_area_id
+                 from
+                    primary_impact_area pia 
+                    join clarisa_impact_areas cia ON cia.id = pia.impact_area_id 
+                    WHERE pia.result_id = r.result_code) is null, 0, (SELECT 
+                  pia.impact_area_id
+                 from
+                    primary_impact_area pia 
+                    join clarisa_impact_areas cia ON cia.id = pia.impact_area_id 
+                    WHERE pia.result_id = r.result_code))
         ),']') as 'impact_areas',
         (
             SELECT
@@ -439,7 +449,17 @@ export class TypeOneReportRepository {
                     WHERE
                         r8.id = r.id
                 )
-        ) as 'global_targets'
+        ) as 'global_targets',
+        concat('[',
+        (
+        	SELECT 
+        		GROUP_CONCAT(DISTINCT concat('{"id_impactArea":', pia.impact_area_id , ',\n"nameImpact":"', cia.name,'"}') separator ',\n')
+            from
+               primary_impact_area pia 
+               join clarisa_impact_areas cia ON cia.id = pia.impact_area_id 
+               WHERE pia.result_id = r.result_code 
+                
+        ),']') as 'primary_impact'
     from
         result r
         join results_by_inititiative rbi on rbi.result_id = r.id
