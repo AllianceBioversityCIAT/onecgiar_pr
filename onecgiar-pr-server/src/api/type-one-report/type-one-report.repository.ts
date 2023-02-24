@@ -422,7 +422,7 @@ export class TypeOneReportRepository {
         ),']') as 'impact_areas',
         (
             SELECT
-                GROUP_CONCAT(DISTINCT cgt.target separator '\n')
+                GROUP_CONCAT(DISTINCT cgt.target separator '<br>')
             from
                 ${env.DB_OST}.toc_results_impact_area_results triar
                 join ${env.DB_OST}.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
@@ -452,7 +452,7 @@ export class TypeOneReportRepository {
         
         (
         	SELECT 
-        		GROUP_CONCAT(DISTINCT cia.name separator '\n')
+        		GROUP_CONCAT(DISTINCT cia.name separator '<br>')
             from
                 ${env.DB_OST}.toc_results_impact_area_results triar
                 join ${env.DB_OST}.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
