@@ -8,6 +8,7 @@ import { TypeOneReportService } from '../../type-one-report.service';
   styleUrls: ['./tor-fact-sheet.component.scss']
 })
 export class TorFactSheetComponent {
+  loadingData = false;
   header = [{ attr: 'category' }, { attr: 'value' }];
   data = [
     { category: 'Initiative name', value: '' },
@@ -15,8 +16,8 @@ export class TorFactSheetComponent {
     { category: 'Initiative lead', value: '' },
     { category: 'Initiative deputy', value: '' },
     { category: 'Action Area', value: '' },
-    { category: 'Start date', value: 'Day/Month/Year (to be filled)' },
-    { category: 'End date', value: 'Day/Month/Year (to be filled)' },
+    { category: 'Start date', value: '' },
+    { category: 'End date', value: '' },
     { category: 'Geographic location', value: '' },
     { category: 'Measurable three-year (End of Initiative) outcomes', value: '' },
     { category: 'OECD DAC Climate marker Adaptation score', value: '' },
@@ -39,6 +40,7 @@ export class TorFactSheetComponent {
   ngOnInit(): void {
     //Called after the constructor, initializing input properties, and the first call to ngOnChanges.
     //Add 'implements OnInit' to the class.
+    this.loadingData = true;
     this.api.resultsSE.GET_factSheetByInitiativeId(this.typeOneReportSE.getInitiativeID(this.typeOneReportSE.initiativeSelected)?.id).subscribe(({ response }) => {
       let data = response;
       this.convertBudgetData(data);
@@ -57,6 +59,7 @@ export class TorFactSheetComponent {
       this.data[10].value = `<strong>${data.climateGenderScore[0]?.mitigation_score}</strong><br>${data.climateGenderScore[0]?.mitigation_desc}`;
       this.data[11].value = `<strong>${data.climateGenderScore[0]?.gender_score}</strong><br>${data.climateGenderScore[0]?.gender_desc}`;
       this.data[12].value = `<a href="${data?.web_page}" target="_blank">${data?.web_page}</a>`;
+      this.loadingData = false;
     });
   }
 

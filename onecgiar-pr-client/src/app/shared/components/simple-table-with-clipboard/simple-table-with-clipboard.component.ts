@@ -17,6 +17,7 @@ export class SimpleTableWithClipboardComponent {
   @Input() distribution: 'left' | 'normal' = 'normal';
   @Input() tableTitle: string;
   @Input() header = [];
+  @Input() loadingData = false;
   @Input() data = [];
   flatFormat = false;
 
@@ -45,5 +46,13 @@ export class SimpleTableWithClipboardComponent {
         this.flatFormat = false;
       }, 200);
     }, 200);
+  }
+
+  validateObj(value) {
+    return typeof value == 'object';
+  }
+
+  getIndexColumnClass() {
+    return 'custom-class-1';
   }
 }

@@ -50,6 +50,11 @@ import { ElasticService } from '../../elastic/elastic.service';
 import { ElasticOperationDto } from '../../elastic/dto/elastic-operation.dto';
 import process from 'process';
 import { resultValidationRepository } from './results-validation-module/results-validation-module.repository';
+import { ResultsKnowledgeProductAuthorRepository } from './results-knowledge-products/repositories/results-knowledge-product-authors.repository';
+import { ResultsKnowledgeProductInstitutionRepository } from './results-knowledge-products/repositories/results-knowledge-product-institution.repository';
+import { ResultsKnowledgeProductMetadataRepository } from './results-knowledge-products/repositories/results-knowledge-product-metadata.repository';
+import { ResultsKnowledgeProductKeywordRepository } from './results-knowledge-products/repositories/results-knowledge-product-keywords.repository';
+import { ResultsKnowledgeProductAltmetricRepository } from './results-knowledge-products/repositories/results-knowledge-product-altmetrics.repository';
 
 @Injectable()
 export class ResultsService {
@@ -80,6 +85,11 @@ export class ResultsService {
     private readonly _resultKnowledgeProductRepository: ResultsKnowledgeProductsRepository,
     private readonly _elasticService: ElasticService,
     private readonly _resultValidationRepository: resultValidationRepository,
+    private readonly _resultsKnowledgeProductAltmetricRepository: ResultsKnowledgeProductAltmetricRepository,
+    private readonly _resultsKnowledgeProductAuthorRepository: ResultsKnowledgeProductAuthorRepository,
+    private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
+    private readonly _resultsKnowledgeProductKeywordRepository: ResultsKnowledgeProductKeywordRepository,
+    private readonly _resultsKnowledgeProductMetadataRepository: ResultsKnowledgeProductMetadataRepository,
   ) {}
 
   /**
@@ -545,7 +555,7 @@ export class ResultsService {
     try {
       const result: Result = await this._resultRepository.findOne({
         where: { id: resultId },
-        relations: { legacy_id: true },
+        relations: { legacy_id: true, result_type_id: true },
       });
       if (!result) {
         throw {
@@ -576,6 +586,16 @@ export class ResultsService {
         result.id.toString(),
         true,
       );
+
+      if(result.result_type_id['id'] == 6){
+        const {result_knowledge_product_id: kpId} = await this._resultKnowledgeProductRepository.findOne({where: { results_id: result.id }});
+        await this._resultsKnowledgeProductAltmetricRepository.statusElement(kpId, false);
+        await this._resultsKnowledgeProductAuthorRepository.statusElement(kpId, false);
+        await this._resultsKnowledgeProductInstitutionRepository.statusElement(kpId, false);
+        await this._resultsKnowledgeProductKeywordRepository.statusElement(kpId, false);
+        await this._resultsKnowledgeProductMetadataRepository.statusElement(kpId, false);
+        await this._resultKnowledgeProductRepository.statusElement(kpId, false);
+      }
 
       if (toUpdateFromElastic.status !== HttpStatus.OK) {
         this._logger.warn(

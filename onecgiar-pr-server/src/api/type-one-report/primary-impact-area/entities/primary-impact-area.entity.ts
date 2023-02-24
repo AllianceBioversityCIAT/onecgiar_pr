@@ -5,17 +5,17 @@ import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToOne, Prim
 
 @Entity('primary_impact_area')
 export class PrimaryImpactArea {
-    @PrimaryGeneratedColumn({
-        name: 'id',
-        type: 'bigint'
+    @Column({
+        name: 'result_code',
+        primary: true
     })
-    id: number;
+    result_code: number;
 
-    @OneToOne(() => Result, r => r.id, { nullable: false })
+    @OneToOne(() => Result, r => r.result_code, { nullable: false })
     @JoinColumn({
-        name: 'result_id'
+        name: 'result_code'
     })
-    result_id: number;
+    result_c: number;
 
     @ManyToOne(() => ClarisaImpactArea, c => c.id, { nullable: false })
     @JoinColumn({

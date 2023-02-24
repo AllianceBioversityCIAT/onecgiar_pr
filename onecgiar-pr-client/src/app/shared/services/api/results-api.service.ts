@@ -462,4 +462,8 @@ export class ResultsApiService {
   GET_excelFullReportByInitiativeId(initiativeId) {
     return this.http.get<any>(`${this.apiBaseUrl}admin-panel/report/results/excel-full-report/${initiativeId}`);
   }
+
+  PATCH_primaryImpactAreaKrs(body) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/type-one-report/primary/primary-impact-area/create`, body);
+  }
 }

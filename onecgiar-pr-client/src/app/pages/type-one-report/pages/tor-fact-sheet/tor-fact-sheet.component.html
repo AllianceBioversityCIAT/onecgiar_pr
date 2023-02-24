@@ -5,7 +5,7 @@
     </div>
 
     This information is sourced from the PRMS
-    <app-simple-table-with-clipboard distribution="left" [data]="data" [header]="header"
+    <app-simple-table-with-clipboard [loadingData]="loadingData" distribution="left" [data]="data" [header]="header"
         tableTitle="Fact sheet"></app-simple-table-with-clipboard>
 
     <br>
@@ -13,13 +13,14 @@
         Budget
     </div>
     <div class="half_size">
-        <app-simple-table-with-clipboard [data]="budgetProposal.data" [header]="budgetProposal.header"
+        <app-simple-table-with-clipboard [loadingData]="loadingData" [data]="budgetProposal.data"
+            [header]="budgetProposal.header"
             tableTitle="Proposal Budget from initial submission (USD)"></app-simple-table-with-clipboard>
     </div>
     <br><br>
     <div class="half_size">
-        <app-simple-table-with-clipboard [data]="budgetAnaPlan.data" [header]="budgetAnaPlan.header"
-            tableTitle="Approved 2022 budget (USD)"></app-simple-table-with-clipboard>
+        <app-simple-table-with-clipboard [loadingData]="loadingData" [data]="budgetAnaPlan.data"
+            [header]="budgetAnaPlan.header" tableTitle="Approved 2022 budget (USD)"></app-simple-table-with-clipboard>
     </div>
 
     <br><br><br><br><br>

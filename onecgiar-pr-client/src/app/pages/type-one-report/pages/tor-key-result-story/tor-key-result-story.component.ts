@@ -19,17 +19,42 @@ export class TorKeyResultStoryComponent {
 
   GET_keyResultStoryInitiativeId() {
     this.api.resultsSE.GET_keyResultStoryInitiativeId(this.typeOneReportSE.getInitiativeID(this.typeOneReportSE.initiativeSelected)?.id).subscribe(({ response }) => {
+      this.typeOneReportSE.keyResultStoryData = response;
       console.log(response);
+      this.tablesList = [];
       response.forEach(table => {
         this.formatTable(table);
       });
     });
   }
 
+  onSaveSection() {
+    console.log(this.typeOneReportSE.keyResultStoryData);
+    this.api.resultsSE.PATCH_primaryImpactAreaKrs(this.typeOneReportSE.keyResultStoryData).subscribe(
+      resp => {
+        console.log(resp);
+        this.GET_keyResultStoryInitiativeId();
+        this.api.alertsFe.show({ id: 'save-button', title: 'Key result story informaion saved correctly', description: '', status: 'success', closeIn: 500 });
+      },
+      err => {
+        console.log(err);
+      }
+    );
+  }
+
+  // onSave() {
+  //   console.log(this.typeOneReportSE.keyResultStoryData);
+
+  //   this.isSaving = true;
+  //   setTimeout(() => {
+  //     this.isSaving = false;
+  //   }, 3000);
+  // }
+
   formatTable(tableData) {
     let header = [{ attr: 'category' }, { attr: 'value' }];
     let data = [
-      { category: 'Result title', value: '' },
+      { category: 'Result title', value: '', id: null },
       { category: 'Primary submitter', value: '' },
       { category: 'Contributing initiatives', value: '' },
       { category: 'Contributing centers', value: '' },
@@ -42,7 +67,7 @@ export class TorKeyResultStoryComponent {
     ];
 
     let table = tableData;
-    console.log(table);
+    // console.log(table);
     if (!table) return (data = null);
 
     const is_impact = Boolean(Number(table.is_impact));
@@ -50,6 +75,7 @@ export class TorKeyResultStoryComponent {
     const noDataText = '<div class="no-data-text-format">This result is not a impact reported in the PRMS Reporting tool</div>';
 
     data[0].value = table.result_title || '<div class="no-data-text-format">There are not result title data</div>';
+    data[0].id = table.result_code;
     data[1].value = table.primary_submitter || '<div class="no-data-text-format">There are not primary submitter data</div>';
     data[2].value = table.contributing_initiative || '<div class="no-data-text-format">There are not contributing initiatives data</div>';
     data[3].value = table.contributing_center || '<div class="no-data-text-format">There are not contributing centers data</div>';
@@ -57,12 +83,11 @@ export class TorKeyResultStoryComponent {
     const countriesText = `<strong>Countries:</strong><br> ${table.countries} <br>`;
     const regionsText = `<br><strong>Regions:</strong><br>${table.regions}<br> `;
     data[5].value = (table.countries ? countriesText : '') + (table.regions ? regionsText : '') || '<div class="no-data-text-format">There are not Geographic location data</div>';
-    data[6].value = noDataText + '<div class="under-construction-t1r">Under construction<img src="assets/work-in-progress.png" alt="" srcset=""></div>';
-    data[7].value = noDataText + '<div class="under-construction-t1r">Under construction<img src="assets/work-in-progress.png" alt="" srcset=""></div>';
-    data[8].value = table.global_target || noDataText;
+    data[6].value = JSON.parse(table?.impact_areas) || noDataText;
+    data[7].value = table.other_impact_areas || noDataText;
+    data[8].value = table.global_targets || noDataText;
     data[9].value = table.web_legacy || '<div class="no-data-text-format">There are not web legacy data</div>';
-    // table.impact_areas ||
-    // table.other_relevant_impact_area ||
+
     if (!is_impact) {
       // data.splice(8, 1);
       // data.splice(7, 1);

@@ -403,7 +403,7 @@ export class TypeOneReportRepository {
         concat('[',
         (
         	SELECT 
-        		GROUP_CONCAT(DISTINCT concat('{"id_impactArea":"', cia.id, '",\n"nameImpact":"', cia.name,'"}') separator ',\n')
+        		GROUP_CONCAT(DISTINCT concat('{"id_impactArea":', cia.id, ',\n"nameImpact":"', cia.name,'"}') separator ',\n')
             from
                 ${env.DB_OST}.toc_results_impact_area_results triar
                 join ${env.DB_OST}.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
@@ -422,7 +422,7 @@ export class TypeOneReportRepository {
         ),']') as 'impact_areas',
         (
             SELECT
-                GROUP_CONCAT(DISTINCT cgt.target separator '\n')
+                GROUP_CONCAT(DISTINCT cgt.target separator '<br>')
             from
                 ${env.DB_OST}.toc_results_impact_area_results triar
                 join ${env.DB_OST}.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
@@ -439,7 +439,48 @@ export class TypeOneReportRepository {
                     WHERE
                         r8.id = r.id
                 )
-        ) as 'global_targets'
+        ) as 'global_targets',
+        (
+        	SELECT 
+        		 pia.impact_area_id 
+            from
+               primary_impact_area pia 
+               join clarisa_impact_areas cia ON cia.id = pia.impact_area_id 
+               WHERE pia.result_code = r.result_code 
+                
+        )as 'impact_area_id',
+        
+        (
+        	SELECT 
+        		GROUP_CONCAT(DISTINCT cia.name separator '<br>')
+            from
+                ${env.DB_OST}.toc_results_impact_area_results triar
+                join ${env.DB_OST}.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
+                join ${env.DB_OST}.clarisa_impact_areas cia on cia.id = tiar.impact_area_id
+            WHERE
+                triar.toc_result_id in (
+                    SELECT
+                        tr.toc_internal_id
+                    from
+                        result r8
+                        join results_toc_result rtr on rtr.results_id = r8.id
+                        join toc_result tr on tr.toc_result_id = rtr.toc_result_id
+                    WHERE
+                        r8.id = r.id
+                )
+               and cia.id <> if((SELECT 
+        		 pia.impact_area_id
+            from
+               primary_impact_area pia 
+               join clarisa_impact_areas cia ON cia.id = pia.impact_area_id 
+               WHERE pia.result_code = r.result_code) is null, 0, (SELECT 
+        		 pia.impact_area_id
+            from
+               primary_impact_area pia 
+               join clarisa_impact_areas cia ON cia.id = pia.impact_area_id 
+               WHERE pia.result_code = r.result_code))
+        ) as 'other_impact_areas'
+        
     from
         result r
         join results_by_inititiative rbi on rbi.result_id = r.id

@@ -12,9 +12,9 @@ export class BiReportsController {
     return this.biReportsService.create(createBiReportDto);
   }
 
-  @Get(':report_name')
-  findAll(@Param('report_name') report_name:string) {
-    return this.biReportsService.findAll(report_name);
+  @Get()
+  findAll() {
+    return this.biReportsService.findAll();
   }
 
   @Get('/reports')
