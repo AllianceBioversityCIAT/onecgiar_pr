@@ -23,8 +23,10 @@
     </div>
 
     <div class="second_options">
-        <app-pr-button text="Download .xlsx" icon="file_download"
-            (click)="exportExcel(this.resultsList)"></app-pr-button>
+
+        <app-pr-button [text]="this.requesting?'Downloading .xlsx':'Download .xlsx'"
+            [ngClass]="{'globalDisabled': this.requesting}" [icon]="this.requesting?'loop':'file_download'"
+            [rotating]="this.requesting" (click)="exportExcel(resultsList)"></app-pr-button>
         <app-pr-button [text]="show_full_screen?'Minimize':'Open in full screen'"
             (click)="show_full_screen = !show_full_screen"
             [icon]="show_full_screen?'close_fullscreen':'open_in_full'"></app-pr-button>

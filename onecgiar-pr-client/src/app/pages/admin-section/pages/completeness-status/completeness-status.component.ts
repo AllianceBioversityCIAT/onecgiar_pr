@@ -14,6 +14,7 @@ export class CompletenessStatusComponent {
   initiativesSelected = [];
   show_full_screen = false;
   allInitiatives = [];
+  requesting = false;
 
   constructor(public api: ApiService, public resultHistoryOfChangesModalSE: ResultHistoryOfChangesModalService, public exportTablesSE: ExportTablesService) {}
   ngOnInit(): void {
@@ -31,6 +32,7 @@ export class CompletenessStatusComponent {
   onRemoveinit(option) {}
 
   exportExcel(resultsList) {
+    this.requesting = true;
     console.table(resultsList);
     let resultsListMapped = [];
     //header
@@ -72,6 +74,7 @@ export class CompletenessStatusComponent {
     // console.table(resultsListMapped);
     const wscols = [{ wpx: 70 }, { wpx: 800 }, { wpx: 100 }, { wpx: 130 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }];
     this.exportTablesSE.exportExcel(resultsListMapped, 'completeness_status', wscols);
+    this.requesting = false;
   }
 
   GET_AllInitiatives() {

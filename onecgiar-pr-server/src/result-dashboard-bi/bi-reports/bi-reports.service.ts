@@ -13,8 +13,8 @@ export class BiReportsService {
     return this.biReportRepository.createNewRegisterBi(createBiReportDto);
   }
 
-  findAll(report_name:string) {
-    return this.biReportRepository.getReportByName(report_name);
+  findAll() {
+    return this.biReportRepository.getTokenPowerBi();
   }
 
   findOne(id: number) {

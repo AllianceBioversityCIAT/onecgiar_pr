@@ -1,0 +1,12 @@
+<div *ngIf="flatFormat">
+    {{impactAreaName(resultIndex)}}
+</div>
+<div class="field_container" *ngIf="!flatFormat && this.selectOptions?.length">
+    <app-pr-select class="segment_title_margin" [options]="this.selectOptions" label="Impact areas" [isStatic]="true"
+        description="Select a primary impact area" optionLabel="nameImpact" optionValue="id_impactArea"
+        placeholder="Select initiative"
+        [(ngModel)]="this.typeOneReportSE.keyResultStoryData[this.resultIndex].impact_area_id">
+    </app-pr-select>
+    <!-- <app-pr-button padding="medium" [text]="isSaving?'Saving':'Save'" [rotating]="isSaving" (click)="onSave()"
+        [icon]="isSaving?'loop':'save'" [ngClass]="{'globalDisabled': isSaving}"></app-pr-button> -->
+</div>
