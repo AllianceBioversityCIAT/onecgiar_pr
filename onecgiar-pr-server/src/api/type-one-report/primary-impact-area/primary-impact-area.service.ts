@@ -10,12 +10,25 @@ export class PrimaryImpactAreaService {
   constructor(
     private readonly _handlersError: HandlersError,
     private readonly _primaryImpactAreaRepository: PrimaryImpactAreaRepository
-  ){}
+  ) { }
   async create(createPrimaryImpactAreaDto: any[], user: TokenDto) {
     try {
       let listImpactAreaPrimary = []
-      createPrimaryImpactAreaDto.forEach((resp)=>{
-        if(resp.impact_area_id != null && resp.result_code != null){
+      createPrimaryImpactAreaDto.forEach(async (resp) => {
+        if (resp.impact_area_id != null && resp.result_code != null) {
+          const primaryExists = resp.result_code;
+          const impactArea = resp.impact_area_id;
+
+          if (primaryExists) {
+            const updatedImpact = await this._primaryImpactAreaRepository.update(primaryExists, { impact_area_id: impactArea });
+
+            return {
+              response: updatedImpact,
+              message: 'Successful Update',
+              status: HttpStatus.OK
+            }
+          }
+
           listImpactAreaPrimary.push({
             result_code: resp.result_code,
             impact_area_id: resp.impact_area_id,
@@ -24,9 +37,6 @@ export class PrimaryImpactAreaService {
           })
         }
       })
-
-      console.log(listImpactAreaPrimary);
-      
 
       const saveImpactAre = await this._primaryImpactAreaRepository.save(listImpactAreaPrimary);
 
