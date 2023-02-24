@@ -419,17 +419,6 @@ export class TypeOneReportRepository {
                     WHERE
                         r8.id = r.id
                 )
-               and cia.id <> if((SELECT 
-        		 pia.impact_area_id
-            from
-               primary_impact_area pia 
-               join clarisa_impact_areas cia ON cia.id = pia.impact_area_id 
-               WHERE pia.result_id = r.result_code) is null, 0, (SELECT 
-        		 pia.impact_area_id
-            from
-               primary_impact_area pia 
-               join clarisa_impact_areas cia ON cia.id = pia.impact_area_id 
-               WHERE pia.result_id = r.result_code))
         ),']') as 'impact_areas',
         (
             SELECT
