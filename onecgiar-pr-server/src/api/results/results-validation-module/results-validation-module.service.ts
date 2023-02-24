@@ -183,13 +183,6 @@ export class ResultsValidationModuleService {
       await this._resultValidationRepository.inactiveOldInserts(result.id);
       let newValidation = new Validation();
 
-      if(validation){
-        newValidation.id = validation.id;
-        newValidation.results_id =  validation.results_id;
-      }else{
-        newValidation.results_id = result.id;
-      }
-
       newValidation.is_active =  true;
       const vGeneral = await this._resultValidationRepository.generalInformationValidation(result.id, result.result_level_id, result.result_type_id);
       newValidation.general_information = vGeneral.validation;
@@ -255,8 +248,14 @@ export class ResultsValidationModuleService {
           response.push(vSection77);
           break;
       }
+      if(validation){
+        delete validation.results_id;
+        await this._resultValidationRepository.update(validation.id, newValidation);
+      }else{
+        newValidation.results_id = result.id;
+        await this._resultValidationRepository.save(newValidation);
+      }
 
-      await this._resultValidationRepository.save(newValidation);
 
       const submit = response.reduce((previousValue, currentValue:any) => (previousValue * parseInt(currentValue.validation)), 1 );
 
