@@ -161,7 +161,7 @@ export class TypeOneReportRepository {
       AND re.result_type_id = 3
       AND re.result_description IS NOT NULL
     ORDER BY
-      re.result_type_id;
+      re.result_title ASC;
     `;
     const budgetProposalQuery = `
     SELECT
