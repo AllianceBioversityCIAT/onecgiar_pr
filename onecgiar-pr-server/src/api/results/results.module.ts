@@ -59,6 +59,7 @@ import { OstMeliaStudiesModule } from './ost-melia-studies/ost-melia-studies.mod
 import { ResultsValidationModuleModule } from './results-validation-module/results-validation-module.module';
 import { SubmissionsModule } from './submissions/submissions.module';
 import { AdminPanelModule } from './admin-panel/admin-panel.module';
+import { LogRepository } from '../../connection/dynamodb-logs/dynamodb-logs.repository';
 
 @Module({
   controllers: [ResultsController],
@@ -116,6 +117,7 @@ import { AdminPanelModule } from './admin-panel/admin-panel.module';
     ClarisaInstitutionsTypeRepository,
     ResultLegacyRepository,
     ElasticService,
+    LogRepository
   ],
   exports: [ResultRepository, JwtMiddleware],
 })
@@ -128,6 +130,10 @@ export class ResultsModule implements NestModule {
       },
       {
         path: '/api/clarisa/*',
+        method: RequestMethod.ALL,
+      },
+      {
+        path: '/logs/*',
         method: RequestMethod.ALL,
       },
     );

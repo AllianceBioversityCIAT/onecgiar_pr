@@ -33,5 +33,8 @@ export class BiReportsController {
   }
   
 
-  
+  @Get('/azure')
+  findAzure() {
+    return this.biReportsService.azureToken();
+  }
 }

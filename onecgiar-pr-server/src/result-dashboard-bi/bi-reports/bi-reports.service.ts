@@ -28,4 +28,8 @@ export class BiReportsService {
   findOneReportName(report_name: string) {
     return this.biReportRepository.getTokenAndReportByName(report_name);
   }
+
+  azureToken(){
+    return this.biReportRepository.getBarerTokenAzure();
+  }
 }

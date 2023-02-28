@@ -96,4 +96,8 @@ export class TorKeyResultStoryComponent {
 
     this.tablesList.push({ data, header });
   }
+
+  validateOneDropDown() {
+    return this.typeOneReportSE.keyResultStoryData.some(item => JSON.parse(item?.impact_areas)?.length);
+  }
 }

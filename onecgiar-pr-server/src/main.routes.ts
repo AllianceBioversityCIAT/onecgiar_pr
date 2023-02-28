@@ -9,6 +9,7 @@ import { ModulesRoutes } from './api/modules.routes';
 import { TocRoutes } from './toc/toc.routes';
 import { TocModule } from './toc/toc.module';
 import { ResultDashboardBIRoutes } from './result-dashboard-bi/result-dashboard-bi.routes';
+import { dynamoRoutes } from './connection/dynamoRoutes.routes';
 
 export const MainRoutes: Routes = [
   {
@@ -31,5 +32,9 @@ export const MainRoutes: Routes = [
   {
     path:'result-dashboard-bi',
     children:ResultDashboardBIRoutes
+  },
+  {
+    path: 'logs',
+    children: dynamoRoutes
   }
 ];

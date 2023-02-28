@@ -16,6 +16,7 @@ import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { MapLegacy } from './dto/map-legacy.dto';
 import { CreateGeneralInformationResultDto } from './dto/create-general-information-result.dto';
 import { CreateResultGeoDto } from './dto/create-result-geo-scope.dto';
+import { UserToken } from 'src/shared/decorators/user-token.decorator';
 
 @Controller()
 export class ResultsController {
@@ -116,13 +117,10 @@ export class ResultsController {
   @Post('map/legacy')
   async mapResultLegacy(
     @Body() MapLegacy: MapLegacy,
-    @Headers() auth: HeadersDto,
+    @UserToken() user: TokenDto,
   ) {
-    const token: TokenDto = <TokenDto>(
-      JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
-    );
     const { message, response, status } =
-      await this.resultsService.mapResultLegacy(MapLegacy, token);
+      await this.resultsService.mapResultLegacy(MapLegacy, user);
     throw new HttpException({ message, response }, status);
   }
 
@@ -130,15 +128,12 @@ export class ResultsController {
   async createGeneralInformation(
     @Body()
     CreateGeneralInformationResultDto: CreateGeneralInformationResultDto,
-    @Headers() auth: HeadersDto,
+    @UserToken() user: TokenDto
   ) {
-    const token: TokenDto = <TokenDto>(
-      JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
-    );
     const { message, response, status } =
       await this.resultsService.createResultGeneralInformation(
         CreateGeneralInformationResultDto,
-        token,
+        user,
       );
     throw new HttpException({ message, response }, status);
   }
@@ -151,9 +146,12 @@ export class ResultsController {
   }
 
   @Patch('delete/:id')
-  async update(@Param('id') id: number) {
+  async update(
+    @Param('id') id: number,
+    @UserToken() user: TokenDto
+    ) {
     const { message, response, status } =
-      await this.resultsService.deleteResult(id);
+      await this.resultsService.deleteResult(id, user);
     throw new HttpException({ message, response }, status);
   }
 
@@ -193,5 +191,14 @@ export class ResultsController {
       initDate, lastDate
     );
     throw new HttpException({ message, response }, status);
+  }
+
+  @Post('create/version/:resultId')
+  async createVersion(
+    @Param('resultId') resultId: number,
+    @UserToken() user: TokenDto
+  ){
+    await this.resultsService.versioningResultsById(resultId, user);
+    return 'ok';
   }
 }

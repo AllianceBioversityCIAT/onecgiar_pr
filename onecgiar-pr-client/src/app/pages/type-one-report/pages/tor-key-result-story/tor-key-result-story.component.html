@@ -14,6 +14,8 @@
             *ngIf="!this.table.data"></app-no-data-text>
         <br><br><br>
     </div>
-    <app-save-button class="position_sticky" (clickSave)="onSaveSection()" [editable]="true"></app-save-button>
+
+    <app-save-button class="position_sticky" (clickSave)="onSaveSection()" [editable]="true"
+        *ngIf="validateOneDropDown()"></app-save-button>
 
 </div>
