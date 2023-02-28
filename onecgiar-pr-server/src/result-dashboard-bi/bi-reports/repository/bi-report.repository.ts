@@ -106,6 +106,7 @@ export class BiReportRepository extends Repository<BiReport> {
         reportsInfo.resport_id = resp.report_id;
         reportsInfo.name = resp.report_name;
         reportsInfo.description = resp.report_description;
+        reportsInfo.title = resp.report_title;
         reportsInfo.embed_url = this.credentialsBi.embed_url_base+resp.report_id+'&groupId='+resp.group_id+'&config='+this.credentialsBi.config_id;
         auxReportsInfo.push(reportsInfo)
       })
