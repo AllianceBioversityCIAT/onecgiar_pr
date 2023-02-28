@@ -11,7 +11,7 @@ export class PrimaryImpactArea {
     })
     result_code: number;
 
-    @OneToOne(() => Result, r => r.id, { nullable: false })
+    @OneToOne(() => Result, r => r.result_code, { nullable: false })
     @JoinColumn({
         name: 'result_code'
     })
