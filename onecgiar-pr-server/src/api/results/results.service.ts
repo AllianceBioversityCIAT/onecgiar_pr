@@ -55,6 +55,10 @@ import { ResultsKnowledgeProductInstitutionRepository } from './results-knowledg
 import { ResultsKnowledgeProductMetadataRepository } from './results-knowledge-products/repositories/results-knowledge-product-metadata.repository';
 import { ResultsKnowledgeProductKeywordRepository } from './results-knowledge-products/repositories/results-knowledge-product-keywords.repository';
 import { ResultsKnowledgeProductAltmetricRepository } from './results-knowledge-products/repositories/results-knowledge-product-altmetrics.repository';
+import { ResultsImpactAreaIndicatorRepository } from './results-impact-area-indicators/results-impact-area-indicators.repository';
+import { ResultsImpactAreaTargetRepository } from './results-impact-area-target/results-impact-area-target.repository';
+import { LogRepository } from '../../connection/dynamodb-logs/dynamodb-logs.repository';
+import { Actions } from 'src/connection/dynamodb-logs/dto/enumAction.const';
 
 @Injectable()
 export class ResultsService {
@@ -90,6 +94,9 @@ export class ResultsService {
     private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
     private readonly _resultsKnowledgeProductKeywordRepository: ResultsKnowledgeProductKeywordRepository,
     private readonly _resultsKnowledgeProductMetadataRepository: ResultsKnowledgeProductMetadataRepository,
+    //private readonly _resultsImpactAreaIndicatorRepository: ResultsImpactAreaIndicatorRepository,
+    //private readonly _resultsImpactAreaTargetRepository: ResultsImpactAreaTargetRepository,
+    private readonly _logRepository: LogRepository
   ) {}
 
   /**
@@ -551,7 +558,7 @@ export class ResultsService {
    * @returns 
    */
 
-  async deleteResult(resultId: number) {
+  async deleteResult(resultId: number, user: TokenDto) {
     try {
       const result: Result = await this._resultRepository.findOne({
         where: { id: resultId },
@@ -616,6 +623,7 @@ export class ResultsService {
           const bulk = await this._elasticService.sendBulkOperationToElastic(
             elasticJson,
           );
+          await this._logRepository.createLog(result.result_code, user, Actions.DELETE, {class: ResultsService.name, method: `deleteResult`});
         } catch (error) {
           this._logger.warn(
             `the elastic removal failed for the result #${result.id}`,
@@ -1185,7 +1193,14 @@ export class ResultsService {
   }
 
 
-  versioningResults(resultId: number){
+  async versioningResultsById(resultId: number, user: TokenDto){
+    const {id: result_id, result_code} = await this._resultRepository.findOne({where: {id: resultId}});
+    this._logger.verbose(`The versioning process of the result with id ${result_id} and code ${result_code} was started by ${user.id}: ${user.first_name} ${user.last_name}.`);
+
+
+  }
+
+  bulkVersinoningResult(){
 
   }
 

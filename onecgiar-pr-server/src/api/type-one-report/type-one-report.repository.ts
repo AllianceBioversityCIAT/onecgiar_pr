@@ -122,6 +122,7 @@ export class TypeOneReportRepository {
         AND rc2.is_active = 1
         AND r.is_active = 1
         AND r.status = 1
+        AND rbi.initiative_role_id = 1
     ORDER BY
         cc3.name ASC;
     `;
@@ -160,7 +161,7 @@ export class TypeOneReportRepository {
       AND re.result_type_id = 3
       AND re.result_description IS NOT NULL
     ORDER BY
-      re.result_type_id;
+      re.result_title ASC;
     `;
     const budgetProposalQuery = `
     SELECT
@@ -449,7 +450,6 @@ export class TypeOneReportRepository {
                WHERE pia.result_code = r.result_code 
                 
         )as 'impact_area_id',
-        
         (
         	SELECT 
         		GROUP_CONCAT(DISTINCT cia.name separator '<br>')
@@ -480,7 +480,6 @@ export class TypeOneReportRepository {
                join clarisa_impact_areas cia ON cia.id = pia.impact_area_id 
                WHERE pia.result_code = r.result_code))
         ) as 'other_impact_areas'
-        
     from
         result r
         join results_by_inititiative rbi on rbi.result_id = r.id
@@ -492,6 +491,7 @@ export class TypeOneReportRepository {
         r.is_krs = 1
         and r.is_active = 1
         and r.status = 1
+        and rbi.initiative_role_id = 1 
         and ci.id = ?;
     `;
     try {
