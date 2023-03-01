@@ -1,0 +1,37 @@
+#tablee {
+  top: 0;
+  left: 0;
+  position: absolute;
+  border: 1px solid #1100ff;
+}
+#tablee th {
+  border: 1px solid #0400ff;
+}
+#tablee td {
+  border: 1px solid black;
+}
+
+.box {
+  position: relative;
+  width: 0px;
+  height: 0px;
+  overflow: hidden;
+}
+
+.local_container {
+  padding: 20px;
+}
+
+.half_size {
+  display: grid;
+  grid-template-columns: minmax(500px, 0.5fr);
+}
+
+.footnote {
+  margin-top: 10px;
+  text-align: center;
+  font-style: italic;
+  color: #4e4e4e;
+  font-size: 1em;
+  font-weight: 400;
+}
