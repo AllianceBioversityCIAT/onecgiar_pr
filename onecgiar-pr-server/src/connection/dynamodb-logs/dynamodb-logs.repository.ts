@@ -1,14 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import * as dynamoose from 'dynamoose';
 import { Model } from 'dynamoose/dist/Model';
 import { LogsSchemaDto } from './dto/logsSchema.dto';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { ddbClient } from 'src/config/dynamo.config';
-import { ListTablesCommand } from "@aws-sdk/client-dynamodb";
-import { DescribeTableCommand, PutItemCommand, GetItemCommand, ScanCommand } from "@aws-sdk/client-dynamodb";
+import { PutItemCommand, ScanCommand } from "@aws-sdk/client-dynamodb";
 import { LogsModel } from './entities/dynamodb-log.schema';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
-import { CreateDynamodbLogDto } from './dto/create-dynamodb-log.dto';
 import { Actions } from './dto/enumAction.const';
 import { Number } from 'aws-sdk/clients/iot';
 

@@ -31,3 +31,12 @@
     display: grid;
     grid-template-columns: minmax(500px, .5fr);
 }
+
+.footnote {
+    margin-top: 10px;
+    text-align: center;
+    font-style: italic;
+    color: rgb(78, 78, 78);
+    font-size: 1em;
+    font-weight: 400;
+}

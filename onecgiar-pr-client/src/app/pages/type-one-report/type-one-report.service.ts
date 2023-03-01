@@ -15,7 +15,7 @@ export class TypeOneReportService {
   t1rBiUrl = environment.t1rBiUrl;
   constructor(public sanitizer: DomSanitizer, private api: ApiService) {}
   sanitizeUrl() {
-    this.sanitizedUrl = this.sanitizer.bypassSecurityTrustResourceUrl(`${this.t1rBiUrl}/bi/type-1-report-dashboard?official_code=${this.initiativeSelected}`);
+    this.sanitizedUrl = this.sanitizer.bypassSecurityTrustResourceUrl(`${this.t1rBiUrl}?official_code=${this.initiativeSelected}`);
   }
 
   getInitiativeID(official_code) {
