@@ -1172,6 +1172,201 @@ left join clarisa_countries cc3
     }
   }
 
+  async getTocDataForReport(resultCodesArray: number[]) {
+    const resultCodes = (resultCodesArray ?? []).join(',');
+    const query = `
+    select
+      r.id as "Result ID",
+      r.result_code as "Result Code",
+      (
+          SELECT GROUP_CONCAT(DISTINCT concat('• ', cia.name) separator '\n')
+          from ${env.DB_OST}.toc_results_impact_area_results triar
+            join ${
+              env.DB_OST
+            }.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
+            join ${
+              env.DB_OST
+            }.clarisa_impact_areas cia on cia.id = tiar.impact_area_id
+            WHERE triar.toc_result_id in (
+              SELECT tr.toc_internal_id
+                from result r8
+                join results_toc_result rtr on rtr.results_id = r8.id
+                join toc_result tr on tr.toc_result_id = rtr.toc_result_id
+                WHERE r8.id = r.id
+            )
+        ) as "Impact Area(s)",
+        (
+          SELECT GROUP_CONCAT(DISTINCT concat('• ', cgt.target) separator '\n')
+            from ${env.DB_OST}.toc_results_impact_area_results triar
+            join ${
+              env.DB_OST
+            }.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
+            join ${
+              env.DB_OST
+            }.toc_impact_area_results_global_targets tiargt on tiargt.impact_area_toc_result_id = tiar.toc_result_id
+            join ${
+              env.DB_OST
+            }.clarisa_global_targets cgt on cgt.id = tiargt.global_target_id
+            WHERE triar.toc_result_id in (
+              SELECT tr.toc_internal_id
+                from result r8
+                join results_toc_result rtr on rtr.results_id = r8.id
+                join toc_result tr on tr.toc_result_id = rtr.toc_result_id
+                WHERE r8.id = r.id
+            )
+      ) as "Impact Area Target(s)",
+      (
+        SELECT GROUP_CONCAT(DISTINCT concat('• ', cst.sdg_target_code, ' - ', cst.sdg_target) separator '\n')
+            from ${env.DB_OST}.toc_results_impact_area_results triar
+            join ${
+              env.DB_OST
+            }.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
+            join ${
+              env.DB_OST
+            }.toc_impact_area_results_sdg_results tiarsr on tiarsr.impact_area_toc_result_id = tiar.toc_result_id
+            join ${
+              env.DB_OST
+            }.toc_sdg_results tsr on tsr.toc_result_id = tiarsr.sdg_toc_result_id
+            join ${
+              env.DB_OST
+            }.toc_sdg_results_sdg_targets tsrst on tsrst.sdg_toc_result_id = tsr.toc_result_id
+            join ${
+              env.DB_OST
+            }.clarisa_sdg_targets cst on cst.id = tsrst.sdg_target_id
+            WHERE triar.toc_result_id in (
+              SELECT tr.toc_internal_id
+                from result r8
+                join results_toc_result rtr on rtr.results_id = r8.id
+                join toc_result tr on tr.toc_result_id = rtr.toc_result_id
+                WHERE r8.id = r.id
+        )
+      ) as "SDG Target(s)",
+      (
+        SELECT GROUP_CONCAT(DISTINCT concat('• ', replace(cst.sdg -> "$.shortName", '"', "")) separator '\n')
+            from ${env.DB_OST}.toc_results_impact_area_results triar
+            join ${
+              env.DB_OST
+            }.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
+            join ${
+              env.DB_OST
+            }.toc_impact_area_results_sdg_results tiarsr on tiarsr.impact_area_toc_result_id = tiar.toc_result_id
+            join ${
+              env.DB_OST
+            }.toc_sdg_results tsr on tsr.toc_result_id = tiarsr.sdg_toc_result_id
+            join ${
+              env.DB_OST
+            }.toc_sdg_results_sdg_targets tsrst on tsrst.sdg_toc_result_id = tsr.toc_result_id
+            join ${
+              env.DB_OST
+            }.clarisa_sdg_targets cst on cst.id = tsrst.sdg_target_id
+            WHERE triar.toc_result_id in (
+              SELECT tr.toc_internal_id
+                from result r8
+                join results_toc_result rtr on rtr.results_id = r8.id
+                join toc_result tr on tr.toc_result_id = rtr.toc_result_id
+                WHERE r8.id = r.id
+        )
+      ) as "SDG(s)"
+    from result r
+    WHERE r.result_code ${resultCodes.length ? `in (${resultCodes})` : '= 0'}
+    ;
+    `;
+
+    try {
+      const results = await this.query(query);
+      return results;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async getTocDataForReportByInitiative(initiativeId: number) {
+    const inititiative_id = initiativeId;
+    const query = `
+    select
+      r.id as "Result ID",
+      r.result_code as "Result Code",
+      (
+          SELECT GROUP_CONCAT(DISTINCT concat('• ', cia.name) separator '\n')
+          from ${env.DB_OST}.toc_results_impact_area_results triar
+            join ${env.DB_OST}.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
+            join ${env.DB_OST}.clarisa_impact_areas cia on cia.id = tiar.impact_area_id
+            WHERE triar.toc_result_id in (
+              SELECT tr.toc_internal_id
+                from result r8
+                join results_toc_result rtr on rtr.results_id = r8.id
+                join toc_result tr on tr.toc_result_id = rtr.toc_result_id
+                WHERE r8.id = r.id
+            )
+        ) as "Impact Area(s)",
+        (
+          SELECT GROUP_CONCAT(DISTINCT concat('• ', cgt.target) separator '\n')
+            from ${env.DB_OST}.toc_results_impact_area_results triar
+            join ${env.DB_OST}.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
+            join ${env.DB_OST}.toc_impact_area_results_global_targets tiargt on tiargt.impact_area_toc_result_id = tiar.toc_result_id
+            join ${env.DB_OST}.clarisa_global_targets cgt on cgt.id = tiargt.global_target_id
+            WHERE triar.toc_result_id in (
+              SELECT tr.toc_internal_id
+                from result r8
+                join results_toc_result rtr on rtr.results_id = r8.id
+                join toc_result tr on tr.toc_result_id = rtr.toc_result_id
+                WHERE r8.id = r.id
+            )
+      ) as "Impact Area Target(s)",
+      (
+        SELECT GROUP_CONCAT(DISTINCT concat('• ', cst.sdg_target_code, ' - ', cst.sdg_target) separator '\n')
+            from ${env.DB_OST}.toc_results_impact_area_results triar
+            join ${env.DB_OST}.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
+            join ${env.DB_OST}.toc_impact_area_results_sdg_results tiarsr on tiarsr.impact_area_toc_result_id = tiar.toc_result_id
+            join ${env.DB_OST}.toc_sdg_results tsr on tsr.toc_result_id = tiarsr.sdg_toc_result_id
+            join ${env.DB_OST}.toc_sdg_results_sdg_targets tsrst on tsrst.sdg_toc_result_id = tsr.toc_result_id
+            join ${env.DB_OST}.clarisa_sdg_targets cst on cst.id = tsrst.sdg_target_id
+            WHERE triar.toc_result_id in (
+              SELECT tr.toc_internal_id
+                from result r8
+                join results_toc_result rtr on rtr.results_id = r8.id
+                join toc_result tr on tr.toc_result_id = rtr.toc_result_id
+                WHERE r8.id = r.id
+        )
+      ) as "SDG Target(s)",
+      (
+        SELECT GROUP_CONCAT(DISTINCT concat('• ',replace(cst.sdg -> "$.shortName", '"', "")) separator '\n')
+            from ${env.DB_OST}.toc_results_impact_area_results triar
+            join ${env.DB_OST}.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
+            join ${env.DB_OST}.toc_impact_area_results_sdg_results tiarsr on tiarsr.impact_area_toc_result_id = tiar.toc_result_id
+            join ${env.DB_OST}.toc_sdg_results tsr on tsr.toc_result_id = tiarsr.sdg_toc_result_id
+            join ${env.DB_OST}.toc_sdg_results_sdg_targets tsrst on tsrst.sdg_toc_result_id = tsr.toc_result_id
+            join ${env.DB_OST}.clarisa_sdg_targets cst on cst.id = tsrst.sdg_target_id
+            WHERE triar.toc_result_id in (
+              SELECT tr.toc_internal_id
+                from result r8
+                join results_toc_result rtr on rtr.results_id = r8.id
+                join toc_result tr on tr.toc_result_id = rtr.toc_result_id
+                WHERE r8.id = r.id
+        )
+      ) as "SDG(s)"
+    from result r
+    left join results_by_inititiative rbi on rbi.result_id = r.id
+    WHERE rbi.inititiative_id = ${inititiative_id} AND r.status = 1
+    ;
+    `;
+
+    try {
+      const results = await this.query(query);
+      return results;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async getActiveResultCodes() {
     try {
       const resultCodes = await this.find({

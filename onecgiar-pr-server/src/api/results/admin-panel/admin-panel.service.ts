@@ -224,6 +224,25 @@ export class AdminPanelService implements OnModuleInit {
         });
       }
 
+      //adding TOC related data (SDG and targets, Impact Area and targets)
+      const tocData = await this._resultRepository.getTocDataForReport(
+        resultCodes,
+      );
+
+      fullReport = fullReport.map((fr) => {
+        const td = tocData.find((td) => td['Result Code'] == fr['Result Code']);
+        if (td) {
+          delete td['Result Code'];
+          delete td['Result ID'];
+          fr = {
+            ...fr,
+            ...td,
+          };
+        }
+
+        return fr;
+      });
+
       return {
         response: fullReport,
         message: 'Successful response',
@@ -385,6 +404,26 @@ export class AdminPanelService implements OnModuleInit {
           return fr;
         });
       }
+
+      //adding TOC related data (SDG and targets, Impact Area and targets)
+      const tocData =
+        await this._resultRepository.getTocDataForReportByInitiative(
+          initiativeId,
+        );
+
+      fullReport = fullReport.map((fr) => {
+        const td = tocData.find((td) => td['Result Code'] == fr['Result Code']);
+        if (td) {
+          delete td['Result Code'];
+          delete td['Result ID'];
+          fr = {
+            ...fr,
+            ...td,
+          };
+        }
+
+        return fr;
+      });
 
       return {
         response: fullReport,
