@@ -65,10 +65,10 @@ export class ResultRepository extends Repository<Result> {
 
   /**
    * !Revisar asignacion de de parametros sql
-   * @param id 
-   * @param allowDeleted 
-   * @param version 
-   * @returns 
+   * @param id
+   * @param allowDeleted
+   * @param version
+   * @returns
    */
   async resultsForElasticSearch(
     id?: string,
@@ -495,7 +495,7 @@ WHERE
       const results: DepthSearch[] = await this.query(queryData, [
         `%${title}%`,
         `%${title}%`,
-        version
+        version,
       ]);
       return results;
     } catch (error) {
@@ -686,7 +686,9 @@ WHERE
     `;
 
     try {
-      const results: Array<{ last_code }> = await this.query(queryData, [version]);
+      const results: Array<{ last_code }> = await this.query(queryData, [
+        version,
+      ]);
       return results.length ? parseInt(results[0].last_code) : null;
     } catch (error) {
       throw {
@@ -718,7 +720,10 @@ WHERE
     }
   }
 
-  async transformResultCode(resultCode: number, version: number = 1): Promise<number> {
+  async transformResultCode(
+    resultCode: number,
+    version: number = 1,
+  ): Promise<number> {
     const queryData = `
     SELECT 
     r.id
@@ -729,7 +734,10 @@ WHERE
       and r.result_code = ?;
     `;
     try {
-      const results: Array<{ id }> = await this.query(queryData, [version, resultCode]);
+      const results: Array<{ id }> = await this.query(queryData, [
+        version,
+        resultCode,
+      ]);
       return results?.length ? results[0].id : null;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -742,7 +750,7 @@ WHERE
 
   async getTypesOfResultByCodes(
     resultCodes: number[],
-    version: number = 1
+    version: number = 1,
   ): Promise<ResultTypeDto[]> {
     const queryData = `
     select
@@ -772,7 +780,7 @@ WHERE
 
   async getTypesOfResultByInitiative(
     initiativeId: number,
-    version: number = 1
+    version: number = 1,
   ): Promise<ResultTypeDto[]> {
     const queryData = `
     select
@@ -828,7 +836,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     CONCAT('(',ci.official_code,' - ',ci.short_name,'): ', 'Toc Level: ' ,IFNULL(tl.name , 'Not provider'), ', ToC result title:' ,IFNULL(tr.title, 'Not provider')) as "ToC Mapping (Primary submitter)",
     GROUP_CONCAT(distinct CONCAT('(',ci6.official_code,' - ',ci6.short_name,'): ', 'Toc Level: ' ,IFNULL(tl2.name , 'Not provider'), ', ToC result title:' ,IFNULL(tr2.title, 'Not provider')) SEPARATOR ', ') as "ToC Mapping (Contributting initiatives)",
     -- section 3
-    if(r.no_applicable_partner=1, "Yes", "No") as "Are partners applicable?",
+    if(r.no_applicable_partner=1, "No", "Yes") as "Are partners applicable?",
     /* GROUP_CONCAT(DISTINCT concat('(',prt.name, ', Delivery type(s): ', prt.deliveries_type,')') SEPARATOR ', ') as "Partners (with delivery type)",*/
     if(rt.id <> 6,(select GROUP_CONCAT(DISTINCT concat('• ',concat(if(coalesce(ci7.acronym, '') = '', '', concat(ci7.acronym, ' - ')), ci7.name), '; Delivery type(s): ', pdt.name) SEPARATOR '\n')
     FROM results_by_institution rbi
@@ -1009,7 +1017,7 @@ left join clarisa_countries cc3
     CONCAT('(',ci.official_code,' - ',ci.short_name,'): ', 'Toc Level: ' ,IFNULL(tl.name , 'Not provider'), ', ToC result title:' ,IFNULL(tr.title, 'Not provider')) as "ToC Mapping (Primary submitter)",
     GROUP_CONCAT(distinct CONCAT('(',ci6.official_code,' - ',ci6.short_name,'): ', 'Toc Level: ' ,IFNULL(tl2.name , 'Not provider'), ', ToC result title:' ,IFNULL(tr2.title, 'Not provider')) SEPARATOR ', ') as "ToC Mapping (Contributting initiatives)",
     -- section 3
-    if(r.no_applicable_partner=1, "Yes", "No") as "Are partners applicable?",
+    if(r.no_applicable_partner=1, "No", "Yes") as "Are partners applicable?",
     /* GROUP_CONCAT(DISTINCT concat('(',prt.name, ', Delivery type(s): ', prt.deliveries_type,')') SEPARATOR ', ') as "Partners (with delivery type)",*/
     if(rt.id <> 6,(select GROUP_CONCAT(DISTINCT concat('• ',concat(if(coalesce(ci7.acronym, '') = '', '', concat(ci7.acronym, ' - ')), ci7.name), '; Delivery type(s): ', pdt.name) SEPARATOR '\n')
     FROM results_by_institution rbi
