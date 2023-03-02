@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Result } from '../../entities/result.entity';
 
 @Entity('validation')
@@ -69,5 +69,19 @@ export class Validation{
         default: true
     })
     is_active!: boolean;
+
+    @CreateDateColumn({
+        name: 'created_date',
+        nullable: true,
+        type: 'timestamp',
+      })
+      created_date: Date;
+    
+      @UpdateDateColumn({
+        name: 'last_updated_date',
+        type: 'timestamp',
+        nullable: true,
+      })
+      last_updated_date!: Date;
 
 }
