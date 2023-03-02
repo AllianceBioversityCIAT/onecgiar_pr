@@ -1179,7 +1179,24 @@ left join clarisa_countries cc3
       r.id as "Result ID",
       r.result_code as "Result Code",
       (
-          SELECT GROUP_CONCAT(DISTINCT concat('• ', cia.name) separator '\n')
+        SELECT GROUP_CONCAT(DISTINCT concat('• ', caa.name) separator '\n')
+          from ${env.DB_OST}.toc_results_action_area_results traar
+          join ${
+            env.DB_OST
+          }.toc_action_area_results taar on traar.action_area_toc_result_id = taar.toc_result_id
+          join ${
+            env.DB_OST
+          }.clarisa_action_areas caa on caa.id = taar.action_areas_id
+          WHERE traar.toc_result_id in (
+            SELECT tr.toc_internal_id
+            from result r8
+            join results_toc_result rtr on rtr.results_id = r8.id
+            join toc_result tr on tr.toc_result_id = rtr.toc_result_id
+            WHERE r8.id = r.id
+          )
+      ) as "Action Area(s)",
+      (
+        SELECT GROUP_CONCAT(DISTINCT concat('• ', cia.name) separator '\n')
           from ${env.DB_OST}.toc_results_impact_area_results triar
             join ${
               env.DB_OST
@@ -1290,6 +1307,19 @@ left join clarisa_countries cc3
     select
       r.id as "Result ID",
       r.result_code as "Result Code",
+      (
+        SELECT GROUP_CONCAT(DISTINCT concat('• ', caa.name) separator '\n')
+          from ${env.DB_OST}.toc_results_action_area_results traar
+          join ${env.DB_OST}.toc_action_area_results taar on traar.action_area_toc_result_id = taar.toc_result_id
+          join ${env.DB_OST}.clarisa_action_areas caa on caa.id = taar.action_areas_id
+          WHERE traar.toc_result_id in (
+            SELECT tr.toc_internal_id
+            from result r8
+            join results_toc_result rtr on rtr.results_id = r8.id
+            join toc_result tr on tr.toc_result_id = rtr.toc_result_id
+            WHERE r8.id = r.id
+          )
+      ) as "Action Area(s)",
       (
           SELECT GROUP_CONCAT(DISTINCT concat('• ', cia.name) separator '\n')
           from ${env.DB_OST}.toc_results_impact_area_results triar
