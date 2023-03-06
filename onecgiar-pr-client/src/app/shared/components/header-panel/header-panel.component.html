@@ -38,6 +38,6 @@
   </div>
 </div>
 
-<app-tawk *ngIf="this.api.authSE.localStorageUser?.user_name &&  this.api.authSE.localStorageUser?.email"
+<app-tawk *ngIf="this.api.authSE.localStorageUser?.user_name &&  this.api.authSE.localStorageUser?.email && !inLocal"
   [user]="{username: this.api.authSE.localStorageUser.user_name, email:this.api.authSE.localStorageUser.email}">
 </app-tawk>

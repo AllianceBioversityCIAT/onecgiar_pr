@@ -38,7 +38,6 @@ export class InitGeneralResultsReportComponent {
   }
 
   async getAll() {
-    await this.api.rolesSE.validateReadOnly();
     this.GET_AllInitiatives();
   }
 
