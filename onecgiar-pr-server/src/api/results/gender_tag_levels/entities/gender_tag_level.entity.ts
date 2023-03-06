@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { ResultInnovationPackage } from '../../../../api/ipsr/result-innovation-package/entities/result-innovation-package.entity';
 
 @Entity()
 export class GenderTagLevel {
@@ -21,4 +22,7 @@ export class GenderTagLevel {
     nullable: true,
   })
   description!: string;
+
+  @OneToMany(() => ResultInnovationPackage, rip => rip.obj_gender_tag_level)
+  result_innovation_package_array: ResultInnovationPackage[];
 }

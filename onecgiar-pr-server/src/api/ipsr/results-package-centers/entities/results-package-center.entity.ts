@@ -4,7 +4,7 @@ import { ResultInnovationPackage } from '../../result-innovation-package/entitie
 import { Version } from '../../../results/versions/entities/version.entity';
 import { BaseEntity } from '../../../../shared/entities/base-entity';
 
-@Entity('results_package_center')
+@Entity('results_innovation_package_center')
 export class ResultsPackageCenter extends BaseEntity{
     @PrimaryGeneratedColumn({
         name: 'results_package_center_id',
@@ -21,9 +21,10 @@ export class ResultsPackageCenter extends BaseEntity{
 
     @Column({
         name: 'center_id',
-        type: 'bigint'
+        type: 'varchar',
+        length: 15
     })
-    center_id: number;
+    center_id: string;
 
     @Column({
         name: 'result_package_id',

@@ -4,7 +4,7 @@ import { ResultInnovationPackage } from '../../result-innovation-package/entitie
 import { Version } from '../../../results/versions/entities/version.entity';
 import { BaseEntity } from '../../../../shared/entities/base-entity';
 
-@Entity('results_package_toc_result')
+@Entity('results_innovation_package_toc_result')
 export class ResultsPackageTocResult extends BaseEntity{
     @PrimaryGeneratedColumn({
         name: 'results_package_toc_result_id',

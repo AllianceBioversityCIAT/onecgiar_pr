@@ -6,6 +6,7 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { ResultInnovationPackageRegion } from '../../../api/ipsr/result-innovation-package-regions/entities/result-innovation-package-region.entity';
 
 @Entity('clarisa_regions')
 export class ClarisaRegion {
@@ -33,4 +34,7 @@ export class ClarisaRegion {
 
   @OneToMany(() => ClarisaRegion, (cr) => cr.parent_region_object)
   children_array: ClarisaRegion[];
+
+  @OneToMany(() => ResultInnovationPackageRegion, ripr => ripr.obj_region)
+  result_innovation_package_region_array: ResultInnovationPackageRegion[];
 }

@@ -5,7 +5,7 @@ import { BaseEntity } from '../../../../shared/entities/base-entity';
 import { Version } from '../../../results/versions/entities/version.entity';
 import { ResultInnovationPackage } from '../../result-innovation-package/entities/result-innovation-package.entity';
 
-@Entity('results_package_by_initiative')
+@Entity('results_innovation_package_by_initiative')
 export class ResultsPackageByInitiative extends BaseEntity {
 
     @PrimaryGeneratedColumn({

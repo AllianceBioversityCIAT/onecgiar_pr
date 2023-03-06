@@ -5,7 +5,7 @@ import { ClarisaInstitution } from '../../../../clarisa/clarisa-institutions/ent
 import { Version } from '../../../results/versions/entities/version.entity';
 import { BaseEntity } from '../../../../shared/entities/base-entity';
 
-@Entity('non_pooled_package_project')
+@Entity('non_pooled_innovation_package_project')
 export class NonPooledPackageProject extends BaseEntity{
     @PrimaryGeneratedColumn({
         name: 'non_pooled_package_project_id',
@@ -32,10 +32,9 @@ export class NonPooledPackageProject extends BaseEntity{
     results_package_id: number;
 
     @Column({
-        name: 'lead_center_id',
-        type: 'bigint'
+        name: 'lead_center_id'
     })
-    lead_center_id: number;
+    lead_center_id: string;
 
     @Column({
         name: 'funder_institution_id',

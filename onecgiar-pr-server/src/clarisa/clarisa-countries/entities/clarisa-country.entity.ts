@@ -1,5 +1,6 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { CGSpaceCountryMappings } from '../../../api/results/results-knowledge-products/entities/cgspace-country-mappings.entity';
+import { ResultInnovationPackageCountry } from '../../../api/ipsr/result-innovation-package-countries/entities/result-innovation-package-country.entity';
 import { Auditable } from '../../../shared/entities/auditableEntity';
 
 @Entity('clarisa_countries')
@@ -30,4 +31,7 @@ export class ClarisaCountry {
   //object relations
   @OneToMany(() => CGSpaceCountryMappings, (ccm) => ccm.clarisa_country_object)
   cgspace_country_mapping_array: CGSpaceCountryMappings[];
+
+  @OneToMany(() => ResultInnovationPackageCountry, (ripc) => ripc.obj_country)
+  result_innovation_package_country_array: ResultInnovationPackageCountry[];
 }

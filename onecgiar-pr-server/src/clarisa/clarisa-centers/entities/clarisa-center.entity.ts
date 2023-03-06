@@ -12,7 +12,7 @@ export class ClarisaCenter {
         name: 'code',
         primary: true,
     })
-    code: number;
+    code: string;
 
     @ManyToOne(() => ClarisaInstitution, ci => ci.id)
     @JoinColumn({
