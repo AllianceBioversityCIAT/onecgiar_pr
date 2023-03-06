@@ -11,6 +11,7 @@ import { ClarisaInstitutionsType } from '../../clarisa-institutions-type/entitie
 import { ClarisaRegion } from '../../clarisa-regions/entities/clarisa-region.entity';
 import { ClarisaCountry } from '../../clarisa-countries/entities/clarisa-country.entity';
 import { ResultsKnowledgeProductInstitution } from '../../../api/results/results-knowledge-products/entities/results-knowledge-product-institution.entity';
+import { NonPooledPackageProject } from '../../../api/ipsr/non-pooled-package-projects/entities/non-pooled-package-project.entity';
 
 @Entity('clarisa_institutions')
 export class ClarisaInstitution {
@@ -71,4 +72,9 @@ export class ClarisaInstitution {
     nullable: true,
   })
   last_updated_date: Date;
+
+  //-------------
+
+  @OneToMany(() => NonPooledPackageProject, nppp => nppp.obj_funder_institution)
+  non_pooled_package_project: NonPooledPackageProject[];
 }

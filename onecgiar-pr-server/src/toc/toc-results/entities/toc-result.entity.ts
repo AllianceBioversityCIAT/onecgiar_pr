@@ -1,6 +1,7 @@
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { TocLevel } from '../../toc-level/entities/toc-level.entity';
 import { ClarisaInitiative } from '../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
+import { ResultsPackageTocResult } from '../../../api/ipsr/results-package-toc-result/entities/results-package-toc-result.entity';
 
 @Entity('toc_result')
 export class TocResult {
@@ -64,5 +65,8 @@ export class TocResult {
         default: true
     })
     is_active: boolean;
+
+    @OneToMany(() => ResultsPackageTocResult, rptr => rptr.obj_toc_result)
+    results_package_toc_result: ResultsPackageTocResult[];
 
 }

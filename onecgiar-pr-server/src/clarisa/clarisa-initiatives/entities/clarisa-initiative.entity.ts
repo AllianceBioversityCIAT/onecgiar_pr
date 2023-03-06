@@ -6,6 +6,9 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { ClarisaActionArea } from '../../clarisa-action-areas/entities/clarisa-action-area.entity';
+import { ResultsPackageTocResult } from '../../../api/ipsr/results-package-toc-result/entities/results-package-toc-result.entity';
+import { OneToMany } from 'typeorm';
+import { ResultsPackageByInitiative } from '../../../api/ipsr/results-package-by-initiatives/entities/results-package-by-initiative.entity';
 
 @Entity('clarisa_initiatives')
 export class ClarisaInitiative {
@@ -48,4 +51,7 @@ export class ClarisaInitiative {
     nullable: true
   })
   toc_id!: string;
+
+  @OneToMany(() => ResultsPackageByInitiative, rptr => rptr.obj_initiative)
+  results_package_by_initiative: ResultsPackageByInitiative[];
 }
