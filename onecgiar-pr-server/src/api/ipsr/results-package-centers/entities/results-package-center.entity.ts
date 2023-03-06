@@ -22,7 +22,10 @@ export class ResultsPackageCenter extends BaseEntity{
     @Column({
         name: 'center_id',
         type: 'varchar',
-        length: 15
+        length: 15,
+        nullable: true,
+        charset: 'utf8',
+        collation: 'utf8_unicode_ci'
     })
     center_id: string;
 

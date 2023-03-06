@@ -32,7 +32,12 @@ export class NonPooledPackageProject extends BaseEntity{
     results_package_id: number;
 
     @Column({
-        name: 'lead_center_id'
+        name: 'lead_center_id',
+        type: 'varchar',
+        length: 15,
+        nullable: true,
+        charset: 'utf8',
+        collation: 'utf8_unicode_ci'
     })
     lead_center_id: string;
 
