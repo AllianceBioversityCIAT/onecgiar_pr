@@ -5,11 +5,6 @@ import { Component, OnInit } from '@angular/core';
   templateUrl: './innovation-package-detail.component.html',
   styleUrls: ['./innovation-package-detail.component.scss']
 })
-export class InnovationPackageDetailComponent implements OnInit {
-
-  constructor() { }
-
-  ngOnInit(): void {
-  }
-
+export class InnovationPackageDetailComponent {
+  constructor() {}
 }
