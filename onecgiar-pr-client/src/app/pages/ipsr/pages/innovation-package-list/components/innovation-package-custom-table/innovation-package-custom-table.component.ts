@@ -1,4 +1,4 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 
 @Component({
@@ -9,11 +9,11 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 export class InnovationPackageCustomTableComponent {
   @Input() tableData: any;
   columnOrder = [
-    { title: 'ID', attr: 'ID' },
+    { title: 'ID', attr: 'id' },
     { title: 'Title', attr: 'title', class: 'notCenter' },
     { title: 'Submitter', attr: 'submitter' },
     { title: 'Status', attr: 'status_name' },
-    { title: 'Year', attr: 'Year' }
+    { title: 'Year', attr: 'year' }
   ];
   constructor(public api: ApiService) {}
 }
