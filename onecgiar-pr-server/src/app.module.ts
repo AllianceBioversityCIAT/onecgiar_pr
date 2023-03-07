@@ -31,6 +31,7 @@ import { ElasticModule } from './elastic/elastic.module';
 
 import { ResultDashboardBIdModule } from './result-dashboard-bi/result-dashboard.module';
 import { DynamodbLogsModule } from './connection/dynamodb-logs/dynamodb-logs.module';
+import { IpsrModule } from './api/ipsr/ipsr.module';
 
 
 @Module({
@@ -40,6 +41,7 @@ import { DynamodbLogsModule } from './connection/dynamodb-logs/dynamodb-logs.mod
     AuthModule,
     HomeModule,
     ResultsModule,
+    IpsrModule,
     TypeOneReportModule,
     TypeOrmModule.forRoot({
       ...dataSource.options,
