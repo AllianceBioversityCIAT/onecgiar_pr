@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Ipsr } from '../../../ipsr/entities/ipsr.entity';
 
 @Entity('version')
 export class Version {
@@ -28,4 +29,7 @@ export class Version {
     nullable: true,
   })
   end_date!: string;
+
+  @OneToMany(() => Ipsr, i => i.obj_version)
+  innovation_by_result: Ipsr[];
 }
