@@ -6,6 +6,7 @@ export class addedVersionNonPool1678311174621 implements MigrationInterface {
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`ALTER TABLE \`non_pooled_project\` ADD \`version_id\` bigint NULL`);
         await queryRunner.query(`ALTER TABLE \`non_pooled_project\` ADD CONSTRAINT \`FK_2c75f37a5180edcc80c3da36df2\` FOREIGN KEY (\`version_id\`) REFERENCES \`version\`(\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`UPDATE non_pooled_project SET version_id = true;`);
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
