@@ -19,5 +19,5 @@ export const IPSRDetailRouting: PrRoute[] = [
   { prName: 'Contributors', path: 'contributors', loadChildren: () => import('../innovation-package-detail/pages/ipsr-contributors/ipsr-contributors.module').then(m => m.IpsrContributorsModule) },
   { prName: 'IPSR Innovation use pathway', path: 'ipsr-innovation-use-pathway', loadChildren: () => import('../innovation-package-detail/pages/ipsr-innovation-use-pathway/ipsr-innovation-use-pathway.module').then(m => m.IpsrInnovationUsePathwayModule) },
   { prName: 'Link to results', path: 'link-to-results', loadChildren: () => import('../innovation-package-detail/pages/ipsr-link-to-results/ipsr-link-to-results.module').then(m => m.IpsrLinkToResultsModule) },
-  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'list' }
+  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'general-information' }
 ];

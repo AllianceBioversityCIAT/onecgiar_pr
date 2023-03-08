@@ -5,9 +5,11 @@ import { InnovationPackageCreatorRoutingModule } from './innovation-package-crea
 import { InnovationPackageCreatorComponent } from './innovation-package-creator.component';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { SectionHeaderModule } from '../../components/section-header/section-header.module';
+import { ResultsInnovationOutputListModule } from './components/results-innovation-output-list/results-innovation-output-list.module';
+import { IpsrGeoscopeCreatorModule } from './components/ipsr-geoscope-creator/ipsr-geoscope-creator.module';
 
 @NgModule({
   declarations: [InnovationPackageCreatorComponent],
-  imports: [CommonModule, InnovationPackageCreatorRoutingModule, CustomFieldsModule, SectionHeaderModule]
+  imports: [CommonModule, InnovationPackageCreatorRoutingModule, CustomFieldsModule, SectionHeaderModule, ResultsInnovationOutputListModule, IpsrGeoscopeCreatorModule]
 })
 export class InnovationPackageCreatorModule {}
