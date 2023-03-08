@@ -1,1 +1,5 @@
-export class Ipsr {}
+import { Entity } from 'typeorm';
+
+export class Ipsr {
+    
+}

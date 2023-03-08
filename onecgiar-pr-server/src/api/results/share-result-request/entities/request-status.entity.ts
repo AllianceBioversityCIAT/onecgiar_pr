@@ -1,5 +1,4 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
-import { ShareResultInnovationPackageRequest } from '../../../ipsr/share-result-innovation-package-request/entities/share-result-innovation-package-request.entity';
 
 @Entity('request_status')
 export class RequestStatus{
@@ -22,8 +21,5 @@ export class RequestStatus{
         nullable: true
     })
     description!: string;
-
-    @OneToMany(() => ShareResultInnovationPackageRequest, srip => srip.obj_request_status)
-    share_result_innovation_package_request: ShareResultInnovationPackageRequest[];
 
 }

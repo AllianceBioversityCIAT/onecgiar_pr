@@ -1,8 +1,6 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { TocLevel } from '../../toc-level/entities/toc-level.entity';
 import { ClarisaInitiative } from '../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
-import { ResultsPackageTocResult } from '../../../api/ipsr/results-package-toc-result/entities/results-package-toc-result.entity';
-import { ShareResultInnovationPackageRequest } from '../../../api/ipsr/share-result-innovation-package-request/entities/share-result-innovation-package-request.entity';
 
 @Entity('toc_result')
 export class TocResult {
@@ -66,11 +64,5 @@ export class TocResult {
         default: true
     })
     is_active: boolean;
-
-    @OneToMany(() => ResultsPackageTocResult, rptr => rptr.obj_toc_result)
-    results_package_toc_result: ResultsPackageTocResult[];
-
-    @OneToMany(() => ShareResultInnovationPackageRequest, rptr => rptr.obj_toc_result)
-    share_result_innovation_package_request: ShareResultInnovationPackageRequest[];
 
 }

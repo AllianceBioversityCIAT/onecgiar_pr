@@ -14,7 +14,7 @@ export class ResultsPackageTocResultController {
     @Body() createResultsPackageTocResultDto: CreateResultsPackageTocResultDto,
     @UserToken() user: TokenDto
     ) {
-    return this.resultsPackageTocResultService.create(createResultsPackageTocResultDto, user);
+    //return this.resultsPackageTocResultService.create(createResultsPackageTocResultDto, user);
   }
 
   @Get()

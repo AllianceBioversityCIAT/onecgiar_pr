@@ -1,4 +1,3 @@
-import { ShareResultInnovationPackageRequest } from '../../../../api/ipsr/share-result-innovation-package-request/entities/share-result-innovation-package-request.entity';
 import {
   Column,
   CreateDateColumn,
@@ -71,10 +70,4 @@ export class User {
     nullable: true,
   })
   last_updated_date!: Date;
-
-  @OneToMany(() => ShareResultInnovationPackageRequest, srip => srip.obj_requested_by)
-  obj_requested_by: ShareResultInnovationPackageRequest[];
-
-  @OneToMany(() => ShareResultInnovationPackageRequest, srip => srip.obj_approved_by)
-  obj_approved_by: ShareResultInnovationPackageRequest[];
 }
