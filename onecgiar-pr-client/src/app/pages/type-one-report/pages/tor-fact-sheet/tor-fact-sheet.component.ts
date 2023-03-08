@@ -55,10 +55,10 @@ export class TorFactSheetComponent {
       this.concatGeo(data);
       this.concatEoiOutcome(data);
       console.log(data);
-      this.data[9].value = `<strong>${data?.climateGenderScore[0]?.adaptation_score}</strong><br>${data?.climateGenderScore[0]?.adaptation_desc}`;
-      this.data[10].value = `<strong>${data.climateGenderScore[0]?.mitigation_score}</strong><br>${data.climateGenderScore[0]?.mitigation_desc}`;
-      this.data[11].value = `<strong>${data.climateGenderScore[0]?.gender_score}</strong><br>${data.climateGenderScore[0]?.gender_desc}`;
-      this.data[12].value = `<a href="${data?.web_page}" target="_blank">${data?.web_page}</a>`;
+      this.data[9].value = data?.climateGenderScore[0]?.adaptation_score ? `<strong>${data?.climateGenderScore[0]?.adaptation_score}</strong><br>${data?.climateGenderScore[0]?.adaptation_desc}` : '<div class="no-data-text-format">This initiative does not have OECD DAC Climate marker Adaptation score</strong>';
+      this.data[10].value = data.climateGenderScore[0]?.mitigation_score ? `<strong>${data.climateGenderScore[0]?.mitigation_score}</strong><br>${data.climateGenderScore[0]?.mitigation_desc}` : '<div class="no-data-text-format">This initiative does not have OECD DAC Climate marker Mitigation score</strong>';
+      this.data[11].value = data.climateGenderScore[0]?.gender_score ? `<strong>${data.climateGenderScore[0]?.gender_score}</strong><br>${data.climateGenderScore[0]?.gender_desc}` : '<div class="no-data-text-format">This initiative does not have OECD DAC Gender equity marker score</strong>';
+      this.data[12].value = data?.web_page ? `<a href="${data?.web_page}" target="_blank">${data?.web_page}</a>` : '<div class="no-data-text-format">This initiative does not have Links to webpage</strong>';
       this.loadingData = false;
     });
   }
@@ -104,30 +104,38 @@ export class TorFactSheetComponent {
     //* Regions targeted in the proposal:
     this.data[7].value += '<strong>Regions targeted in the proposal:</strong><br>';
     // this.data[7].value += data?.regionsProposal[0]?.name ? data?.regionsProposal[0]?.name : '<div class="no-data-text-format">There are not Regions data</div>';
-    data.regionsProposal?.forEach(element => {
-      this.data[7].value += `${element.name}${'; '}`;
-    });
-    this.data[7].value = this.data[7].value.substring(0, this.data[7].value.length - 2);
-    this.data[7].value += '<br>';
+    if (data.regionsProposal?.length) {
+      data.regionsProposal?.forEach(element => {
+        this.data[7].value += `${element.name}${'; '}`;
+      });
+      this.data[7].value = this.data[7].value.substring(0, this.data[7].value.length - 2);
+      this.data[7].value += '<br>';
+    } else {
+      this.data[7].value += '<div class="no-data-text-format">This initiative does not have regions targeted in the proposal</div>';
+    }
 
     //* Countries targeted in the proposal:
     this.data[7].value += '<br><strong>Countries targeted in the proposal:</strong><br>';
     // this.data[7].value += data?.countriesProposal[0]?.name ? data?.countriesProposal[0]?.name : '<div class="no-data-text-format">There are not Countries data</div>';
-    data.countriesProposal?.forEach(element => {
-      this.data[7].value += `${element.name}${'; '}`;
-    });
-    this.data[7].value = this.data[7].value.substring(0, this.data[7].value.length - 2);
-    this.data[7].value += '<br>';
+    if (data.regionsProposal?.length) {
+      data.regionsProposal?.forEach(element => {
+        this.data[7].value += `${element.name}${'; '}`;
+      });
+      this.data[7].value = this.data[7].value.substring(0, this.data[7].value.length - 2);
+      this.data[7].value += '<br>';
+    } else {
+      this.data[7].value += '<div class="no-data-text-format">This initiative does not have regions targeted in the proposal</div>';
+    }
 
-    //* Regions with results reported in 2022:
-    this.data[7].value += '<br><strong>Regions with results reported in 2022:</strong><br>';
-    this.data[7].value += data?.regionsReported[0]?.regions ? data?.regionsReported[0]?.regions : '<div class="no-data-text-format">There are not Regions data</div>';
-    this.data[7].value += '<br>';
+    // //* Regions with results reported in 2022:
+    // this.data[7].value += '<br><strong>Regions with results reported in 2022:</strong><br>';
+    // this.data[7].value += data?.regionsReported[0]?.regions ? data?.regionsReported[0]?.regions : '<div class="no-data-text-format">There are not Regions data</div>';
+    // this.data[7].value += '<br>';
 
-    //* Countries with results reported in 2022:
-    this.data[7].value += '<br><strong>Countries with results reported in 2022:</strong><br>';
-    this.data[7].value += data?.countrieReported[0]?.countries ? data?.countrieReported[0]?.countries : '<div class="no-data-text-format">There are not Countries data</div>';
-    this.data[7].value += '<br>';
+    // //* Countries with results reported in 2022:
+    // this.data[7].value += '<br><strong>Countries with results reported in 2022:</strong><br>';
+    // this.data[7].value += data?.countrieReported[0]?.countries ? data?.countrieReported[0]?.countries : '<div class="no-data-text-format">There are not Countries data</div>';
+    // this.data[7].value += '<br>';
   }
   concatEoiOutcome(data) {
     data.eoiOutcome?.forEach(element => {

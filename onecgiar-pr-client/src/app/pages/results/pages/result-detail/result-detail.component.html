@@ -19,8 +19,10 @@
           Result code: <strong>{{this.api.resultsSE.currentResultCode}}</strong>
         </div>
         <div class="item">
-          {{this.dataControlSE.currentResult?.initiative_official_code}}
+          {{this.dataControlSE.currentResult?.initiative_official_code}} -
+          {{this.dataControlSE.currentResult?.initiative_name}}
         </div>
+
       </div>
       <router-outlet *ngIf="this.currentResultSE.resultIdIsconverted"></router-outlet>
       <div class="spinner" *ngIf="this.saveButtonSE.isSavingSection">
