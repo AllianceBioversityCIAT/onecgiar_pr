@@ -2,6 +2,7 @@ import { Column, Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from 't
 import { BaseEntity } from '../../../shared/entities/base-entity';
 import { Version } from '../../results/versions/entities/version.entity';
 import { Result } from '../../results/entities/result.entity';
+import { IpsrRole } from './ipsr-role.entity';
 
 @Entity('innovation_by_result')
 export class Ipsr extends BaseEntity{
@@ -22,6 +23,18 @@ export class Ipsr extends BaseEntity{
         type: 'bigint'
     })
     result_id: number;
+
+    @Column({
+        name: 'ipsr_role_id',
+        type: 'bigint'
+    })
+    ipsr_role_id: number;
+
+    @ManyToOne(() => IpsrRole, ir => ir.obj_ipsr_role)
+    @JoinColumn({
+        name: 'ipsr_role_id'
+    })
+    obj_ipsr_role: IpsrRole;
 
     @ManyToOne(() => Version, v => v.innovation_by_result)
     @JoinColumn({
