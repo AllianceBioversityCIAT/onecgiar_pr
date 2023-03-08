@@ -1,6 +1,7 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { Ipsr } from '../../../ipsr/entities/ipsr.entity';
 import { NonPooledProject } from '../../non-pooled-projects/entities/non-pooled-project.entity';
+import { ResultsCenter } from '../../results-centers/entities/results-center.entity';
 
 @Entity('version')
 export class Version {
@@ -36,4 +37,7 @@ export class Version {
 
   @OneToMany(() => NonPooledProject, i => i.obj_version)
   non_pooled_project: NonPooledProject[];
+
+  @OneToMany(() => ResultsCenter, rc => rc.obj_version)
+  results_center: ResultsCenter[];
 }

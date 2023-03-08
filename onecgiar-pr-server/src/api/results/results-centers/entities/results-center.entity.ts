@@ -3,6 +3,7 @@ import { ClarisaCenter } from '../../../../clarisa/clarisa-centers/entities/clar
 import { Result } from '../../entities/result.entity';
 import { User } from '../../../../auth/modules/user/entities/user.entity';
 import { ClarisaInitiative } from '../../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
+import { Version } from '../../versions/entities/version.entity';
 
 @Entity('results_center')
 export class ResultsCenter {
@@ -61,4 +62,17 @@ export class ResultsCenter {
     nullable: true,
   })
   last_updated_date!: Date;
+
+  @Column({
+    name: 'version_id',
+    type: 'bigint',
+    nullable: true
+  })
+  version_id: number;
+
+  @ManyToOne(() => Version, v => v.results_center)
+  @JoinColumn({
+    name: 'version_id'
+  })
+  obj_version: Version;
 }
