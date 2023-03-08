@@ -32,14 +32,6 @@
     </div>
 </div>
 
-
-
-
-<app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
-    label="Climate change tag">
-</app-pr-radio-button>
-
-
 <app-pr-yes-or-not label="Is this result featured in a Key Result Story for the Reporting year?"
     (ngModelChange)="onChangeKrs()" [(ngModel)]="isKrs"></app-pr-yes-or-not>
 <app-pr-input *ngIf="this.isKrs" placeholder="e.g. https://www.cgiar.org/example"
