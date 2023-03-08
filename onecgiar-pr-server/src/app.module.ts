@@ -60,6 +60,7 @@ import { IpsrModule } from './api/ipsr/ipsr.module';
     ElasticModule,
     ResultDashboardBIdModule,
     DynamodbLogsModule,
+    IpsrModule
   ],
   controllers: [AppController],
   providers: [

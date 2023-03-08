@@ -3,13 +3,16 @@ import { HandlersError } from 'src/shared/handlers/error.utils';
 import { CreateIpsrDto } from './dto/create-ipsr.dto';
 import { UpdateIpsrDto } from './dto/update-ipsr.dto';
 import { IpsrRepository } from './ipsr.repository';
+import { ResultsPackageByInitiativeRepository } from './results-package-by-initiatives/results-package-by-initiatives.repository';
 
 @Injectable()
 export class IpsrService {
+
   constructor(
-    private readonly _handlersError: HandlersError,
-    private readonly _ipsrRespository: IpsrRepository
-  ) { }
+    protected readonly _handlersError: HandlersError,
+    protected readonly _ipsrRespository: IpsrRepository,
+    protected readonly _resultsPackageByInitiativeRepository: ResultsPackageByInitiativeRepository
+  ){}
 
   create(createIpsrDto: CreateIpsrDto) {
     return 'This action adds a new ipsr';

@@ -1,0 +1,124 @@
+import { MigrationInterface, QueryRunner } from "typeorm";
+
+export class changeName1678216045939 implements MigrationInterface {
+    name = 'changeName1678216045939'
+
+    public async up(queryRunner: QueryRunner): Promise<void> {
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_countries\` DROP COLUMN \`create_by\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_countries\` DROP COLUMN \`create_date\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_countries\` DROP COLUMN \`last_update_by\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_countries\` DROP COLUMN \`last_update_date\``);
+        await queryRunner.query(`ALTER TABLE \`non_pooled_innovation_package_project\` DROP COLUMN \`create_by\``);
+        await queryRunner.query(`ALTER TABLE \`non_pooled_innovation_package_project\` DROP COLUMN \`create_date\``);
+        await queryRunner.query(`ALTER TABLE \`non_pooled_innovation_package_project\` DROP COLUMN \`last_update_by\``);
+        await queryRunner.query(`ALTER TABLE \`non_pooled_innovation_package_project\` DROP COLUMN \`last_update_date\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_center\` DROP COLUMN \`create_by\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_center\` DROP COLUMN \`create_date\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_center\` DROP COLUMN \`last_update_by\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_center\` DROP COLUMN \`last_update_date\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_region\` DROP COLUMN \`create_by\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_region\` DROP COLUMN \`create_date\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_region\` DROP COLUMN \`last_update_by\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_region\` DROP COLUMN \`last_update_date\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_by_initiative\` DROP COLUMN \`create_by\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_by_initiative\` DROP COLUMN \`create_date\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_by_initiative\` DROP COLUMN \`last_update_by\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_by_initiative\` DROP COLUMN \`last_update_date\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_toc_result\` DROP COLUMN \`create_by\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_toc_result\` DROP COLUMN \`create_date\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_toc_result\` DROP COLUMN \`last_update_by\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_toc_result\` DROP COLUMN \`last_update_date\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package\` DROP COLUMN \`create_by\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package\` DROP COLUMN \`create_date\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package\` DROP COLUMN \`last_update_by\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package\` DROP COLUMN \`last_update_date\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_countries\` ADD \`created_date\` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_countries\` ADD \`last_updated_date\` timestamp(6) NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_countries\` ADD \`created_by\` bigint NULL`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_countries\` ADD \`last_updated_by\` bigint NULL`);
+        await queryRunner.query(`ALTER TABLE \`non_pooled_innovation_package_project\` ADD \`created_date\` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)`);
+        await queryRunner.query(`ALTER TABLE \`non_pooled_innovation_package_project\` ADD \`last_updated_date\` timestamp(6) NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)`);
+        await queryRunner.query(`ALTER TABLE \`non_pooled_innovation_package_project\` ADD \`created_by\` bigint NULL`);
+        await queryRunner.query(`ALTER TABLE \`non_pooled_innovation_package_project\` ADD \`last_updated_by\` bigint NULL`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_center\` ADD \`created_date\` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_center\` ADD \`last_updated_date\` timestamp(6) NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_center\` ADD \`created_by\` bigint NULL`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_center\` ADD \`last_updated_by\` bigint NULL`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_region\` ADD \`created_date\` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_region\` ADD \`last_updated_date\` timestamp(6) NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_region\` ADD \`created_by\` bigint NULL`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_region\` ADD \`last_updated_by\` bigint NULL`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_by_initiative\` ADD \`created_date\` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_by_initiative\` ADD \`last_updated_date\` timestamp(6) NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_by_initiative\` ADD \`created_by\` bigint NULL`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_by_initiative\` ADD \`last_updated_by\` bigint NULL`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_toc_result\` ADD \`created_date\` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_toc_result\` ADD \`last_updated_date\` timestamp(6) NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_toc_result\` ADD \`created_by\` bigint NULL`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_toc_result\` ADD \`last_updated_by\` bigint NULL`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package\` ADD \`created_date\` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package\` ADD \`last_updated_date\` timestamp(6) NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package\` ADD \`created_by\` bigint NULL`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package\` ADD \`last_updated_by\` bigint NULL`);
+    }
+
+    public async down(queryRunner: QueryRunner): Promise<void> {
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package\` DROP COLUMN \`last_updated_by\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package\` DROP COLUMN \`created_by\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package\` DROP COLUMN \`last_updated_date\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package\` DROP COLUMN \`created_date\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_toc_result\` DROP COLUMN \`last_updated_by\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_toc_result\` DROP COLUMN \`created_by\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_toc_result\` DROP COLUMN \`last_updated_date\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_toc_result\` DROP COLUMN \`created_date\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_by_initiative\` DROP COLUMN \`last_updated_by\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_by_initiative\` DROP COLUMN \`created_by\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_by_initiative\` DROP COLUMN \`last_updated_date\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_by_initiative\` DROP COLUMN \`created_date\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_region\` DROP COLUMN \`last_updated_by\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_region\` DROP COLUMN \`created_by\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_region\` DROP COLUMN \`last_updated_date\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_region\` DROP COLUMN \`created_date\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_center\` DROP COLUMN \`last_updated_by\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_center\` DROP COLUMN \`created_by\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_center\` DROP COLUMN \`last_updated_date\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_center\` DROP COLUMN \`created_date\``);
+        await queryRunner.query(`ALTER TABLE \`non_pooled_innovation_package_project\` DROP COLUMN \`last_updated_by\``);
+        await queryRunner.query(`ALTER TABLE \`non_pooled_innovation_package_project\` DROP COLUMN \`created_by\``);
+        await queryRunner.query(`ALTER TABLE \`non_pooled_innovation_package_project\` DROP COLUMN \`last_updated_date\``);
+        await queryRunner.query(`ALTER TABLE \`non_pooled_innovation_package_project\` DROP COLUMN \`created_date\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_countries\` DROP COLUMN \`last_updated_by\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_countries\` DROP COLUMN \`created_by\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_countries\` DROP COLUMN \`last_updated_date\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_countries\` DROP COLUMN \`created_date\``);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package\` ADD \`last_update_date\` timestamp(6) NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package\` ADD \`last_update_by\` bigint NULL`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package\` ADD \`create_date\` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package\` ADD \`create_by\` bigint NULL`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_toc_result\` ADD \`last_update_date\` timestamp(6) NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_toc_result\` ADD \`last_update_by\` bigint NULL`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_toc_result\` ADD \`create_date\` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_toc_result\` ADD \`create_by\` bigint NULL`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_by_initiative\` ADD \`last_update_date\` timestamp(6) NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_by_initiative\` ADD \`last_update_by\` bigint NULL`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_by_initiative\` ADD \`create_date\` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_by_initiative\` ADD \`create_by\` bigint NULL`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_region\` ADD \`last_update_date\` timestamp(6) NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_region\` ADD \`last_update_by\` bigint NULL`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_region\` ADD \`create_date\` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_region\` ADD \`create_by\` bigint NULL`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_center\` ADD \`last_update_date\` timestamp(6) NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_center\` ADD \`last_update_by\` bigint NULL`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_center\` ADD \`create_date\` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_center\` ADD \`create_by\` bigint NULL`);
+        await queryRunner.query(`ALTER TABLE \`non_pooled_innovation_package_project\` ADD \`last_update_date\` timestamp(6) NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)`);
+        await queryRunner.query(`ALTER TABLE \`non_pooled_innovation_package_project\` ADD \`last_update_by\` bigint NULL`);
+        await queryRunner.query(`ALTER TABLE \`non_pooled_innovation_package_project\` ADD \`create_date\` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)`);
+        await queryRunner.query(`ALTER TABLE \`non_pooled_innovation_package_project\` ADD \`create_by\` bigint NULL`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_countries\` ADD \`last_update_date\` timestamp(6) NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_countries\` ADD \`last_update_by\` bigint NULL`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_countries\` ADD \`create_date\` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)`);
+        await queryRunner.query(`ALTER TABLE \`results_innovation_package_countries\` ADD \`create_by\` bigint NULL`);
+    }
+
+}

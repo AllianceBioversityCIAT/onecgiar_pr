@@ -12,10 +12,11 @@ import { RouterModule } from '@nestjs/core';
 import { IpsrRoutes } from './ipsr.routes';
 import { IpsrRepository } from './ipsr.repository';
 import { HandlersError } from 'src/shared/handlers/error.utils';
+import { ShareResultInnovationPackageRequestModule } from './share-result-innovation-package-request/share-result-innovation-package-request.module';
 
 @Module({
   controllers: [IpsrController],
   providers: [IpsrService, IpsrRepository, HandlersError],
-  imports: [RouterModule.register(IpsrRoutes), ResultInnovationPackageModule, ResultsPackageByInitiativesModule, ResultsPackageTocResultModule, ResultsPackageCentersModule, NonPooledPackageProjectsModule],
+  imports: [RouterModule.register(IpsrRoutes), ResultInnovationPackageModule, ResultsPackageByInitiativesModule, ResultsPackageTocResultModule, ResultsPackageCentersModule, NonPooledPackageProjectsModule, ShareResultInnovationPackageRequestModule],
 })
 export class IpsrModule {}

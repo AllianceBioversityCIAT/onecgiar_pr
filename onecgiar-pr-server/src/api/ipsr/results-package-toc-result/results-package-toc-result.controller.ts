@@ -2,14 +2,19 @@ import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/commo
 import { ResultsPackageTocResultService } from './results-package-toc-result.service';
 import { CreateResultsPackageTocResultDto } from './dto/create-results-package-toc-result.dto';
 import { UpdateResultsPackageTocResultDto } from './dto/update-results-package-toc-result.dto';
+import { UserToken } from '../../../shared/decorators/user-token.decorator';
+import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 
-@Controller('results-package-toc-result')
+@Controller()
 export class ResultsPackageTocResultController {
   constructor(private readonly resultsPackageTocResultService: ResultsPackageTocResultService) {}
 
-  @Post()
-  create(@Body() createResultsPackageTocResultDto: CreateResultsPackageTocResultDto) {
-    return this.resultsPackageTocResultService.create(createResultsPackageTocResultDto);
+  @Post('create/:innoPackageId')
+  create(
+    @Body() createResultsPackageTocResultDto: CreateResultsPackageTocResultDto,
+    @UserToken() user: TokenDto
+    ) {
+    return this.resultsPackageTocResultService.create(createResultsPackageTocResultDto, user);
   }
 
   @Get()
@@ -17,7 +22,7 @@ export class ResultsPackageTocResultController {
     return this.resultsPackageTocResultService.findAll();
   }
 
-  @Get(':id')
+  @Get('get/:innoPackageId')
   findOne(@Param('id') id: string) {
     return this.resultsPackageTocResultService.findOne(+id);
   }

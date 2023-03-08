@@ -3,6 +3,7 @@ import { TocResult } from '../../../../toc/toc-results/entities/toc-result.entit
 import { ResultInnovationPackage } from '../../result-innovation-package/entities/result-innovation-package.entity';
 import { Version } from '../../../results/versions/entities/version.entity';
 import { BaseEntity } from '../../../../shared/entities/base-entity';
+import { ClarisaInitiative } from '../../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 
 @Entity('results_innovation_package_toc_result')
 export class ResultsPackageTocResult extends BaseEntity{
@@ -14,7 +15,8 @@ export class ResultsPackageTocResult extends BaseEntity{
 
     @Column({
         name: 'toc_result_id',
-        type: 'bigint'
+        type: 'bigint',
+        nullable: true
     })
     toc_result_id: number;
 
@@ -26,9 +28,23 @@ export class ResultsPackageTocResult extends BaseEntity{
 
     @Column({
         name: 'planned_result_packages',
-        type: 'boolean'
+        type: 'boolean',
+        nullable: true
     })
     planned_result_packages: boolean;
+
+    @Column({
+        name: 'initiative_id',
+        type: 'bigint',
+        nullable: true
+    })
+    initiative_id: number;
+
+    @ManyToOne(() => ClarisaInitiative, ci => ci.results_package_toc_result)
+    @JoinColumn({
+        name: 'initiative_id'
+    })
+    obj_initiative: ClarisaInitiative;
 
     @ManyToOne(() => Version, v => v.results_package_toc_result)
     @JoinColumn({

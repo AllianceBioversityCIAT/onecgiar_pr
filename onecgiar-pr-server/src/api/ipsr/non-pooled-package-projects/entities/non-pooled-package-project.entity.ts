@@ -45,7 +45,7 @@ export class NonPooledPackageProject extends BaseEntity{
         name: 'funder_institution_id',
         type: 'bigint'
     })
-    funder_institution_id: boolean;
+    funder_institution_id: number;
 
     //-------------------------
 

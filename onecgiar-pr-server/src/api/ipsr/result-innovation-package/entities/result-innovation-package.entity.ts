@@ -11,6 +11,7 @@ import { Version } from "../../../../api/results/versions/entities/version.entit
 import { BaseEntity } from "../../../../shared/entities/base-entity";
 import { ResultInnovationPackageCountry } from "../../result-innovation-package-countries/entities/result-innovation-package-country.entity";
 import { ResultInnovationPackageRegion } from "../../result-innovation-package-regions/entities/result-innovation-package-region.entity";
+import { ShareResultInnovationPackageRequest } from '../../share-result-innovation-package-request/entities/share-result-innovation-package-request.entity';
 
 @Entity('results_innovation_package')
 export class ResultInnovationPackage extends BaseEntity {
@@ -124,4 +125,7 @@ export class ResultInnovationPackage extends BaseEntity {
 
     @OneToMany(() => ResultInnovationPackageRegion, ripr => ripr.obj_result_innovation_package)
     result_innovation_package_region_array: ResultInnovationPackageRegion[];
+    
+    @OneToMany(() => ShareResultInnovationPackageRequest, ripr => ripr.obj_result_package)
+    share_result_innovation_package_request: ShareResultInnovationPackageRequest[];
 }

@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
+import { ShareResultInnovationPackageRequest } from '../../../api/ipsr/share-result-innovation-package-request/entities/share-result-innovation-package-request.entity';
 
 @Entity('clarisa_action_area_outcome')
 export class ClarisaActionAreaOutcome {
@@ -19,5 +20,8 @@ export class ClarisaActionAreaOutcome {
         nullable: true
     })
     outcomeStatement: string;
+
+    @OneToMany(() => ShareResultInnovationPackageRequest, srip => srip.obj_action_area_outcome)
+    share_result_innovation_package_request: ShareResultInnovationPackageRequest[];
 
 }

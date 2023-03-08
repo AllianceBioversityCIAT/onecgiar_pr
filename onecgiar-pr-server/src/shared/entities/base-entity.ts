@@ -22,31 +22,31 @@ import {
     version_id: number;
   
     @CreateDateColumn({
-      name: 'create_date',
+      name: 'created_date',
       type: 'timestamp',
       nullable: false,
     })
-    create_date: Date;
+    created_date: Date;
   
     @UpdateDateColumn({
-      name: 'last_update_date',
+      name: 'last_updated_date',
       type: 'timestamp',
       nullable: true,
     })
-    last_update_date!: Date;
+    last_updated_date!: Date;
   
     @Column({
-      name: 'create_by',
+      name: 'created_by',
       type: 'bigint',
       nullable: true,
     })
-    create_by!: number;
+    created_by!: number;
   
     @Column({
-      name: 'last_update_by',
+      name: 'last_updated_by',
       type: 'bigint',
       nullable: true,
     })
-    last_update_by!: number;
+    last_updated_by!: number;
   }
   
