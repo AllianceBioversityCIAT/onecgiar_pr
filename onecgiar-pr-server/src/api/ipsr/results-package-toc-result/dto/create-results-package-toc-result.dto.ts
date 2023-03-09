@@ -1,5 +1,6 @@
+import { ResultsByInstitution } from '../../../results/results_by_institutions/entities/results_by_institution.entity';
 export class CreateResultsPackageTocResultDto {
-    result_innovation_package_id: number;
+    result_id: number;
     contributing_initiatives: initiativeInterfaces[];
     contributing_np_projects: donorInterfaceToc[];
     contributing_center: centerInterfacesToc[];
@@ -7,8 +8,14 @@ export class CreateResultsPackageTocResultDto {
     contributors_result_toc_result: resultToResultInterfaceToc[];
     impacts: ResultTocImpactsInterface[];
     pending_contributing_initiatives: shareResultRequestInterface[];
+    institutions: institutionsInterface[]
 
 }
+
+interface institutionsInterface {
+    institutions_id: number;
+    deliveries?: number[];
+  }
 
 interface ResultTocImpactsInterface{
     id: number;
@@ -30,6 +37,7 @@ interface indicatorsTocInterface{
 
 interface initiativeInterfaces{
     id: number;
+    is_active: boolean;
 }
 
 interface institutionsInterfaceToc{
@@ -37,10 +45,10 @@ interface institutionsInterfaceToc{
 }
 
 interface donorInterfaceToc{
-    funder_institution_id: number;
+    funder: number;
     grant_title: string;
     center_grant_id: string;
-    lead_center_id: string;
+    lead_center: string;
 }
 interface centerInterfacesToc{
     code: string;
@@ -48,11 +56,11 @@ interface centerInterfacesToc{
 }
 
 interface resultToResultInterfaceToc{
-    result_package_toc_result_id?: number;
+    result_toc_result_id?: number;
     toc_result_id?: number;
     action_area_outcome_id?: number;
-    result_innovation_package_id: number;
-    planned_result_packages: boolean;
+    results_id: number;
+    planned_result: boolean;
     initiative_id: number;
 }
 

@@ -8,21 +8,39 @@ import { Version } from '../../results/versions/entities/version.entity';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { Result } from '../../results/entities/result.entity';
 import { CreateResultsTocResultDto } from '../../results/results-toc-results/dto/create-results-toc-result.dto';
+import { IpsrRepository } from '../repository/ipsr.repository';
+import { NonPooledProjectRepository } from '../../results/non-pooled-projects/non-pooled-projects.repository';
+import { ResultsCenterRepository } from '../../results/results-centers/results-centers.repository';
+import { ResultByInitiativesRepository } from '../../results/results_by_inititiatives/resultByInitiatives.repository';
+import { ResultsTocResultRepository } from '../../results/results-toc-results/results-toc-results.repository';
+import { resultPackageTocResultDTO } from './dto/result-package-toc-result.dto';
+import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
+import { ResultByInstitutionsByDeliveriesTypeRepository } from '../../results/result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';
+import { ResultsByInstitution } from '../../results/results_by_institutions/entities/results_by_institution.entity';
+import { CreateTocShareResult } from '../../results/share-result-request/dto/create-toc-share-result.dto';
+import { ShareResultRequestService } from '../../results/share-result-request/share-result-request.service';
+import { ShareResultRequestRepository } from '../../results/share-result-request/share-result-request.repository';
 
 @Injectable()
 export class ResultsPackageTocResultService {
 
   constructor(
+    protected readonly _nonPooledProjectRepository: NonPooledProjectRepository,
+    protected readonly _resultsCenterRepository: ResultsCenterRepository,
+    protected readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
+    protected readonly _resultsTocResultRepository: ResultsTocResultRepository,
+    protected readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
+    protected readonly _resultByInstitutionsByDeliveriesTypeRepository: ResultByInstitutionsByDeliveriesTypeRepository,
+    protected readonly _shareResultRequestService: ShareResultRequestService,
+    protected readonly _shareResultRequestRepository: ShareResultRequestRepository,
     protected readonly _resultRepository: ResultRepository,
     protected readonly _versionsService: VersionsService,
+    protected readonly _ipsrRepository: IpsrRepository,
     protected readonly _handlersError: HandlersError,
   ) { }
 
-  async create(crtr: CreateResultsTocResultDto, user: TokenDto) {
+  async create(crtr: CreateResultsPackageTocResultDto, user: TokenDto) {
     //create Contributing initiative
-
-    //more data
-    /*
     try {
       const rip = await this._resultRepository.getResultById(crtr.result_id);
       if (!rip) {
@@ -34,7 +52,8 @@ export class ResultsPackageTocResultService {
           status: HttpStatus.BAD_REQUEST,
         }
       }
-      const result = await this._resultRepository.getResultById(rip.id);
+      const iprsCore = await this._ipsrRepository.findOne({ where: { ipsr_result_id: rip.id, is_active: true, ipsr_role_id: 1 } });
+      const result = await this._resultRepository.getResultById(iprsCore.result_id);
       if (!result) {
         throw {
           response: {
@@ -51,60 +70,84 @@ export class ResultsPackageTocResultService {
       }
       const version: Version = <Version>vTemp.response;
 
-      
-        //!contributing_np_projects
-       
-      if (cptr?.contributing_np_projects?.length) {
-        const cnpp = cptr.contributing_np_projects;
+      if (crtr?.contributing_initiatives.length) {
+        const { contributing_initiatives: cinit } = crtr;
+        for (const init of cinit) {
+          if (!init.is_active == false) {
+            await this._resultByInitiativesRepository.update({ result_id: rip.id, initiative_id: init.id }, { is_active: false });
+          }
+        }
+
+        const dataRequst: CreateTocShareResult = {
+          isToc: true,
+          initiativeShareId: cinit.map(el => el.id),
+          action_area_outcome_id: null,
+          planned_result: null,
+          toc_result_id: null
+        }
+        await this._shareResultRequestService.resultRequest(dataRequst, rip.id, user);
+      }
+
+      if (crtr?.pending_contributing_initiatives.length) {
+        const {pending_contributing_initiatives:pint} = crtr;
+        const cancelRequest = pint?.filter(e => e.is_active == false);
+        if (cancelRequest?.length) {
+          await this._shareResultRequestRepository.cancelRequest(cancelRequest.map(e => e.share_result_request_id));
+        }
+      }
+
+      //!contributing_np_projects
+
+      if (crtr?.contributing_np_projects?.length) {
+        const { contributing_np_projects: cnpp } = crtr;
         const titles = cnpp.map(el => el.grant_title);
 
-        await this._nonPooledPackageProjectRepository.updateNPPackageProjectById(rip.result_innovation_package_id, titles, user.id)
+        await this._nonPooledProjectRepository.updateNPProjectById(rip.id, titles, user.id)
         for (const cpnp of cnpp) {
           if (cpnp?.grant_title?.length) {
-            const nonPP = await this._nonPooledPackageProjectRepository.findOne({ where: { results_package_id: rip.result_innovation_package_id, grant_title: cpnp.grant_title } });
+            const nonPP = await this._nonPooledProjectRepository.getAllNPProjectById(rip.id, cpnp.grant_title);
             if (nonPP) {
-              this._nonPooledPackageProjectRepository.update(
-                nonPP.non_pooled_package_project_id,
+              this._nonPooledProjectRepository.update(
+                nonPP.id,
                 {
                   is_active: true,
                   center_grant_id: cpnp.center_grant_id,
-                  funder_institution_id: cpnp.funder_institution_id,
-                  lead_center_id: cpnp.lead_center_id,
+                  funder_institution_id: cpnp.funder,
+                  lead_center_id: cpnp.lead_center,
                   last_updated_by: user.id
                 }
               );
             } else {
-              this._nonPooledPackageProjectRepository.save({
-                results_package_id: rip.result_innovation_package_id,
+              this._nonPooledProjectRepository.save({
+                results_id: rip.id,
                 center_grant_id: cpnp.center_grant_id,
-                funder_institution_id: cpnp.funder_institution_id,
-                lead_center_id: cpnp.lead_center_id,
-                grant_title: cpnp.grant_title,
-                last_updated_by: user.id,
+                funder_institution_id: cpnp.funder,
+                lead_center_id: cpnp.lead_center,
+                version_id: version.id,
                 created_by: user.id,
-                version_id: version.id
+                last_updated_by: user.id
               })
             }
           }
         }
       } else {
-        await this._nonPooledPackageProjectRepository.updateNPPackageProjectById(rip.result_innovation_package_id, [], user.id)
+        await this._nonPooledProjectRepository.updateNPProjectById(rip.id, [], user.id);
       }
 
 
-       //!contributing_center
+      //!contributing_center
 
-      if (cptr?.contributing_center?.length) {
-        const { contributing_center: cc } = cptr;
+      if (crtr?.contributing_center?.length) {
+        const { contributing_center: cc } = crtr;
         const code = cc.map(el => el.code);
-        await this._resultsPackageCenterRepository.updateCenter(rip.result_innovation_package_id, code, user.id);
+        await this._resultsCenterRepository.updateCenter(rip.id, code, user.id);
 
         for (const cenCC of cc) {
           cenCC.primary = cenCC.primary || false;
-          const rpC = await this._resultsPackageCenterRepository.findOne({ where: { result_package_id: rip.result_innovation_package_id, center_id: cenCC.code } });
+          const rpC = await this._resultsCenterRepository.getAllResultsCenterByResultIdAndCenterId(rip.id, cenCC.code);
           if (rpC) {
-            this._resultsPackageCenterRepository.update(
-              rpC.results_package_center_id,
+            this._resultsCenterRepository.update(
+              rpC.id,
               {
                 is_active: true,
                 is_primary: cenCC.primary,
@@ -112,82 +155,105 @@ export class ResultsPackageTocResultService {
               }
             );
           } else {
-            this._resultsPackageCenterRepository.save({
+            this._resultsCenterRepository.save({
               center_id: cenCC.code,
-              result_package_id: rip.result_innovation_package_id,
-              is_primary: cenCC.primary,
-              last_updated_by: user.id,
+              result_id: rip.id,
               created_by: user.id,
+              last_updated_by: user.id,
+              is_primary: cenCC.primary,
               version_id: version.id
             })
           }
         }
       } else {
-        await this._resultsPackageCenterRepository.updateCenter(rip.result_innovation_package_id, [], user.id);
+        await this._resultsCenterRepository.updateCenter(rip.id, [], user.id);
       }
 
-      const initRtr = cptr.contributing_initiatives.map(
-        (init) => init.id
-      );
-      await this._resultsPackageByInitiativeRepository.updateResultByInitiative(rip.result_innovation_package_id, [...initRtr, cptr.result_toc_result.initiative_id], user.id);
-      const {result_toc_result, contributors_result_toc_result} = cptr;
-      
+      const { result_toc_result, contributors_result_toc_result } = crtr;
 
-       // !result_toc_result
 
-      await this.saveResultPackageTocResult(rip, result, user, version, true, result_toc_result);
-      const crpi = await this._resultsPackageByInitiativeRepository.find({where: {results_package_id: rip.result_innovation_package_id, initiative_role_id: 2, is_active: true}});
-      const iniId = crpi.map((el) => el.initiative_id);
+      // !result_toc_result
+
+      await this.saveResultPackageTocResult(rip, user, version, true, result_toc_result);
+      // !agregar la logica de cancelacion iniciativa
+      // !con_result_toc_result
+
+      const crpi = await this._resultByInitiativesRepository.getContributorInitiativeByResult(rip.id);
+      const iniId = crpi.map((el) => el.id);
       const saveConInit = contributors_result_toc_result.filter((el) => iniId.includes(el.initiative_id));
-
-
-       // !con_result_toc_result
-
       for (const crtr of saveConInit) {
-        await this.saveResultPackageTocResult(rip, result, user, version, false, crtr);
+        await this.saveResultPackageTocResult(rip, user, version, false, crtr);
       }
 
+      if (crtr?.institutions.length) {
+        const { institutions: inst } = crtr;
+        await this._resultByIntitutionsRepository.updateIstitutions(rip.id, inst, false, user.id);
+        for (const ins of inst) {
+          const instExist = await this._resultByIntitutionsRepository.getGenericResultByInstitutionExists(rip.id, ins.institutions_id, 2);
+          let rbi: ResultsByInstitution = null;
+          if (!instExist) {
+            rbi = await this._resultByIntitutionsRepository.save({
+              institution_roles_id: 2,
+              institutions_id: ins.institutions_id,
+              result_id: rip.id,
+              version_id: version.id,
+              created_by: user.id,
+              last_updated_by: user.id
+            })
+          }
 
-       // !agregar la logica de cancelacion iniciativa
-
-
-
-
-
+          if (ins?.deliveries.length) {
+            const { deliveries } = ins;
+            await this.saveDeliveries(instExist ? instExist : rbi, deliveries, user.id, version);
+          }
+        }
+      } else {
+        await this._resultByIntitutionsRepository.updateIstitutions(rip.id, [], false, user.id);
+      }
     } catch (error) {
 
-    }*/
+    }
   }
 
-  protected async saveResultPackageTocResult(rip: any, result: Result, user: TokenDto, version: Version, owner: boolean, rtr: any){
-    /*const {planned_result_packages, initiative_id, result_package_toc_result_id, toc_result_id} = rtr;
-    const rptr = await this._resultsPackageTocResultRepository.findOne({
-      where: {
-        results_package_toc_result_id: result_package_toc_result_id, 
-        results_package_id: rip.result_innovation_package_id, 
-        initiative_id: result.initiative_id
+  protected async saveDeliveries(inst: ResultsByInstitution, deliveries: number[], userId: number, v: Version) {
+    await this._resultByInstitutionsByDeliveriesTypeRepository.inactiveResultDeLivery(inst.id, deliveries, userId);
+    for (const deli of deliveries) {
+      const deliExist = await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByTypeAndResultByInstitution(inst.id, deli);
+      if (!deliExist) {
+        await this._resultByInstitutionsByDeliveriesTypeRepository.save({
+          partner_delivery_type_id: deli,
+          result_by_institution_id: inst.id,
+          last_updated_by: userId,
+          created_by: userId,
+          versions_id: v.id
+        });
       }
-    });
-    if(rptr){
-      await this._resultsPackageTocResultRepository.update(
-        rptr.results_package_toc_result_id,
+    }
+  }
+
+  protected async saveResultPackageTocResult(rip: Result, user: TokenDto, version: Version, owner: boolean, rtr: resultToResultInterfaceToc) {
+    const { planned_result, initiative_id, toc_result_id, result_toc_result_id } = rtr;
+    const rptr = await this._resultsTocResultRepository.getRTRById(result_toc_result_id, rip.id, rip.initiative_id);
+    if (rptr) {
+      await this._resultsTocResultRepository.update(
+        rptr.result_toc_result_id,
         {
           toc_result_id: toc_result_id,
           is_active: true,
           last_updated_by: user.id,
-          planned_result_packages: planned_result_packages
+          planned_result: planned_result
         }
       )
-    }else{
-      this._resultsPackageTocResultRepository.save({
+    } else {
+      this._resultsTocResultRepository.save({
         version_id: version.id,
-        initiative_id: owner?result.initiative_id: initiative_id,
+        initiative_id: owner ? rip.initiative_id : initiative_id,
         toc_result_id: toc_result_id,
-        planned_result_packages: planned_result_packages,
+        planned_result: planned_result,
         last_updated_by: user.id,
         created_by: user.id
       });
-    }*/
+    }
   }
 
   findAll() {
@@ -205,4 +271,13 @@ export class ResultsPackageTocResultService {
   remove(id: number) {
     return `This action removes a #${id} resultsPackageTocResult`;
   }
+}
+
+interface resultToResultInterfaceToc {
+  result_toc_result_id?: number;
+  toc_result_id?: number;
+  action_area_outcome_id?: number;
+  results_id: number;
+  planned_result: boolean;
+  initiative_id: number;
 }
