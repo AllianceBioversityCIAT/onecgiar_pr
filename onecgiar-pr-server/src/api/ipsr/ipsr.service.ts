@@ -32,8 +32,16 @@ export class IpsrService {
   async findOneInnovation(resultId: number) {
     try {
       const result = await this._ipsrRespository.getResultInnovationById(resultId);
+      if (!result[0]) {
+        throw {
+          response: result,
+          message: 'The result was not found.',
+          status: HttpStatus.NOT_FOUND
+        }
+      }
+
       return {
-        response: result,
+        response: result[0],
         message: 'Successful response',
         status: HttpStatus.OK
       }

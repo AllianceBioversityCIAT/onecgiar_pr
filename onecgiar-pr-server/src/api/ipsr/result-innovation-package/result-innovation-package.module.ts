@@ -22,7 +22,7 @@ import { IpsrRepository } from '../ipsr.repository';
     ResultRegionRepository,
     ResultCountryRepository,
     ResultByInitiativesRepository,
-    IpsrRepository
+    IpsrRepository,
   ],
   imports: [VersionsModule]
 })

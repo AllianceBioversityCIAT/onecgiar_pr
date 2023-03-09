@@ -11,6 +11,7 @@ import { ResultByInitiativesRepository } from '../../../api/results/results_by_i
 import { ResultCountry } from '../../../api/results/result-countries/entities/result-country.entity';
 import { ResultCountryRepository } from '../../../api/results/result-countries/result-countries.repository';
 import { IpsrRepository } from '../ipsr.repository';
+import { ResultTypeRepository } from 'src/api/results/result_types/resultType.repository';
 
 @Injectable()
 export class ResultInnovationPackageService {
@@ -32,9 +33,9 @@ export class ResultInnovationPackageService {
           CreateResultInnovationPackageDto.result_id
         );
       if (!resultExist) {
-        return {
-          response: {},
-          message: '',
+        throw {
+          response: resultExist,
+          message: 'The result was not found',
           status: HttpStatus.NOT_FOUND,
         };
       }
@@ -50,6 +51,13 @@ export class ResultInnovationPackageService {
 
       // * Extract the result and version
       const result = resultExist;
+      if(result.result_type_id != 2) {
+        throw {
+          response: result.result_type_id,
+          message: 'This is not a valid result type. Only Innovation Use can be used to create a new Innovation Package.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
       const vrs: Version = <Version>version.response;
 
       // * Obtain last result code in the list
@@ -65,7 +73,7 @@ export class ResultInnovationPackageService {
         description: result.description,
         reported_year_id: result.reported_year_id,
         result_level_id: result.result_level_id,
-        result_type_id: result.result_type_id,
+        result_type_id: 10,
         has_regions: regions
           ? true
           : false,
@@ -166,7 +174,7 @@ export class ResultInnovationPackageService {
 
       return {
         response: updateResult,
-        message: 'Successfully created',
+        message: 'Successfully updated',
         status: HttpStatus.OK
       }
     } catch (error) {
