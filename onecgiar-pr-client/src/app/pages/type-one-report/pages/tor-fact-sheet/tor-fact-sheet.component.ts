@@ -55,9 +55,10 @@ export class TorFactSheetComponent {
       this.concatGeo(data);
       this.concatEoiOutcome(data);
       console.log(data);
+      const genderDescription = 'This score is derived from assessing the Initiative Proposal against adapted OECD gender equity scoring criteria.';
       this.data[9].value = data?.climateGenderScore[0]?.adaptation_score ? `<strong>${data?.climateGenderScore[0]?.adaptation_score}</strong><br>${data?.climateGenderScore[0]?.adaptation_desc}` : '<div class="no-data-text-format">This initiative does not have OECD DAC Climate marker Adaptation score</strong>';
       this.data[10].value = data.climateGenderScore[0]?.mitigation_score ? `<strong>${data.climateGenderScore[0]?.mitigation_score}</strong><br>${data.climateGenderScore[0]?.mitigation_desc}` : '<div class="no-data-text-format">This initiative does not have OECD DAC Climate marker Mitigation score</strong>';
-      this.data[11].value = data.climateGenderScore[0]?.gender_score ? `<strong>${data.climateGenderScore[0]?.gender_score}</strong><br>${data.climateGenderScore[0]?.gender_desc}` : '<div class="no-data-text-format">This initiative does not have OECD DAC Gender equity marker score</strong>';
+      this.data[11].value = data.climateGenderScore[0]?.gender_score ? `<strong class="tor-fact-desc">${genderDescription}</strong><br><strong>Score ${data.climateGenderScore[0]?.gender_score}</strong><br>${data.climateGenderScore[0]?.gender_desc}` : '<div class="no-data-text-format">This initiative does not have OECD DAC Gender equity marker score</strong>';
       this.data[12].value = data?.web_page ? `<a href="${data?.web_page}" target="_blank">${data?.web_page}</a>` : '<div class="no-data-text-format">This initiative does not have Links to webpage</strong>';
       this.loadingData = false;
     });
