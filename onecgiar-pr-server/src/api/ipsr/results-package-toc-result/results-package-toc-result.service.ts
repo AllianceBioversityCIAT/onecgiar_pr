@@ -89,7 +89,7 @@ export class ResultsPackageTocResultService {
       }
 
       if (crtr?.pending_contributing_initiatives.length) {
-        const {pending_contributing_initiatives:pint} = crtr;
+        const { pending_contributing_initiatives: pint } = crtr;
         const cancelRequest = pint?.filter(e => e.is_active == false);
         if (cancelRequest?.length) {
           await this._shareResultRequestRepository.cancelRequest(cancelRequest.map(e => e.share_result_request_id));
@@ -216,7 +216,7 @@ export class ResultsPackageTocResultService {
         message: 'The toc data is successfully created',
         status: HttpStatus.CREATED,
       };
-      
+
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
@@ -263,21 +263,58 @@ export class ResultsPackageTocResultService {
     }
   }
 
-  findAll() {
-    return `This action returns all resultsPackageTocResult`;
+  async findOne(resultId: number) {
+    try {
+      const resultInit = await this._resultByInitiativesRepository.getOwnerInitiativeByResult(resultId);
+    const conInit = await this._resultByInitiativesRepository.getContributorInitiativeByResult(resultId);
+    const conPending = await this._resultByInitiativesRepository.getPendingInit(resultId);
+    const npProject = await this._nonPooledProjectRepository.getAllNPProjectByResultId(resultId);
+    const resCenters = await this._resultsCenterRepository.getAllResultsCenterByResultId(resultId);
+    const institutions = await this._resultByIntitutionsRepository.getGenericAllResultByInstitutionByRole(resultId, 2);
+    const deliveries = await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByResultByInstitution(institutions?.map(el => el.id));
+    institutions.map(int => {
+      int['deliveries'] = deliveries.filter(del => del.result_by_institution_id == int.id).map(del => del.partner_delivery_type_id);
+    });
+    let resTocRes: any[] = [];
+    let conResTocRes: any[] = [];
+    resTocRes = await this._resultsTocResultRepository.getRTRPrimary(resultId, [resultInit.id], true);
+    if (!resTocRes?.length) {
+      resTocRes = [{
+        action_area_outcome_id: null,
+        toc_result_id: null,
+        planned_result: null,
+        results_id: resultId,
+        initiative_id: resultInit.id,
+        short_name: resultInit.short_name,
+        official_code: resultInit.official_code
+      }]
+    }
+    resTocRes[0]['toc_level_id'] = resTocRes[0]['planned_result'] != null && resTocRes[0]['planned_result'] == 0 ? 3 : resTocRes[0]['toc_level_id'];
+    conResTocRes = await this._resultsTocResultRepository.getRTRPrimary(resultId, [resultInit.id], false, conInit.map(el => el.id));
+    conResTocRes.map(el => {
+      el['toc_level_id'] = el['planned_result'] == 0 && el['planned_result'] != null ? 3 : el['toc_level_id'];
+    })
+
+    return {
+      response: {
+        contributing_initiatives: conInit,
+        pending_contributing_initiatives: conPending,
+        contributing_np_projects: npProject,
+        contributing_center: resCenters,
+        result_toc_result: resTocRes[0],
+        contributors_result_toc_result: conResTocRes,
+        institutions: institutions
+      },
+      message: 'The toc data is successfully created',
+      status: HttpStatus.OK,
+    };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} resultsPackageTocResult`;
-  }
+  
 
-  update(id: number, updateResultsPackageTocResultDto: UpdateResultsPackageTocResultDto) {
-    return `This action updates a #${id} resultsPackageTocResult`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} resultsPackageTocResult`;
-  }
 }
 
 interface resultToResultInterfaceToc {

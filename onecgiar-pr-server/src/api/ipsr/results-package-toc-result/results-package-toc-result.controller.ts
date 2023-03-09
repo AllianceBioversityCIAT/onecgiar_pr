@@ -22,23 +22,9 @@ export class ResultsPackageTocResultController {
       throw new HttpException({ message, response }, status);
   }
 
-  @Get()
-  findAll() {
-    return this.resultsPackageTocResultService.findAll();
-  }
-
   @Get('get/:resultId')
   findOne(@Param('resultId') resultId: string) {
     return this.resultsPackageTocResultService.findOne(+resultId);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateResultsPackageTocResultDto: UpdateResultsPackageTocResultDto) {
-    return this.resultsPackageTocResultService.update(+id, updateResultsPackageTocResultDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.resultsPackageTocResultService.remove(+id);
-  }
 }
