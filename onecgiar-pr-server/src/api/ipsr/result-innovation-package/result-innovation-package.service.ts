@@ -108,7 +108,9 @@ export class ResultInnovationPackageService {
         ipsr_result_id: newResult,
         result_id: result.id,
         ipsr_role_id: 1,
-        version_id: vrs.id
+        version_id: vrs.id,
+        created_by: user.id,
+        last_updated_by: user.id
       });
 
       let resultRegions: ResultRegion[] = [];
@@ -117,7 +119,7 @@ export class ResultInnovationPackageService {
         for (let i = 0; i < regions.length; i++) {
           const newRegions = new ResultRegion();
           newRegions.result_id = newResult;
-          newRegions.region_id = regions[i].id;
+          newRegions.region_id = regions[i].region_id;
           newRegions.is_active = true;
           resultRegions.push(newRegions);
         }
@@ -131,7 +133,7 @@ export class ResultInnovationPackageService {
         for (let i = 0; i < countries.length; i++) {
           const newCountries = new ResultCountry();
           newCountries.result_id = newResult;
-          newCountries.country_id = countries[i].id;
+          newCountries.country_id = countries[i].country_id;
           newCountries.is_active = true;
           resultCountries.push(newCountries);
         }

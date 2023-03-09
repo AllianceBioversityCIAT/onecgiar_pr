@@ -6,8 +6,8 @@ export class CreateResultInnovationPackageDto {
     public countries: countriesInterface[];
 }
 export interface regionsInterface{
-    id: number;
+    region_id: number;
 }
 export interface countriesInterface{
-    id: number;
+    country_id: number;
 }
