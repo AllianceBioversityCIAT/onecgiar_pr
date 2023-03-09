@@ -9,6 +9,7 @@ import { VersionsModule } from '../../../api/results/versions/versions.module';
 import { ResultRegionRepository } from '../../../api/results/result-regions/result-regions.repository';
 import { ResultByInitiativesRepository } from '../../../api/results/results_by_inititiatives/resultByInitiatives.repository';
 import { ResultCountryRepository } from '../../../api/results/result-countries/result-countries.repository';
+import { IpsrRepository } from '../ipsr.repository';
 
 @Module({
   controllers: [ResultInnovationPackageController],
@@ -20,7 +21,8 @@ import { ResultCountryRepository } from '../../../api/results/result-countries/r
     ResultInnovationPackageByInitiativeRepository,
     ResultRegionRepository,
     ResultCountryRepository,
-    ResultByInitiativesRepository
+    ResultByInitiativesRepository,
+    IpsrRepository
   ],
   imports: [VersionsModule]
 })

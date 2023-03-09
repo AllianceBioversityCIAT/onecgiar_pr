@@ -10,6 +10,7 @@ import { ResultRegionRepository } from '../../../api/results/result-regions/resu
 import { ResultByInitiativesRepository } from '../../../api/results/results_by_inititiatives/resultByInitiatives.repository';
 import { ResultCountry } from '../../../api/results/result-countries/entities/result-country.entity';
 import { ResultCountryRepository } from '../../../api/results/result-countries/result-countries.repository';
+import { IpsrRepository } from '../ipsr.repository';
 
 @Injectable()
 export class ResultInnovationPackageService {
@@ -19,25 +20,26 @@ export class ResultInnovationPackageService {
     private readonly _versionsService: VersionsService,
     private readonly _resultByInitiativeRepository: ResultByInitiativesRepository,
     private readonly _resultRegionRepository: ResultRegionRepository,
-    private readonly _resultCountryRepository: ResultCountryRepository
+    private readonly _resultCountryRepository: ResultCountryRepository,
+    private readonly _innovationByResultRepository: IpsrRepository
   ) { }
 
   async createHeader(CreateResultInnovationPackageDto: CreateResultInnovationPackageDto, user: TokenDto) {
     try {
-      // Check if result already exists
+      // * Check if result already exists
       const resultExist =
-        await this._resultRepository.getResultsByInitiativeId(
+        await this._resultRepository.getResultById(
           CreateResultInnovationPackageDto.result_id
         );
       if (!resultExist) {
         return {
           response: {},
-          message: 'This result is already part of the PRMS reporting',
+          message: '',
           status: HttpStatus.NOT_FOUND,
         };
       }
 
-      // Check for the active version
+      // * Check for the active version
       const version = await this._versionsService.findBaseVersion();
       if (version.status >= 300) {
         throw this._handlersError.returnErrorRes({
@@ -46,27 +48,34 @@ export class ResultInnovationPackageService {
         });
       }
 
-      // Extract the result and version
-      const result = resultExist[0];
+      // * Extract the result and version
+      const result = resultExist;
       const vrs: Version = <Version>version.response;
 
-      // Obtain last result code in the list
+      // * Obtain last result code in the list
       const last_code = await this._resultRepository.getLastResultCode();
-      // Create new result 
+      // * Obtain the regions in the body
+      const regions = CreateResultInnovationPackageDto.regions;
+      // * Obtain the countries in the body
+      const countries = CreateResultInnovationPackageDto.countries;
+      // * Create new result 
       const newInnovationHeader = await this._resultRepository.save({
-        result_id: result.result_id,
         result_code: last_code + 1,
         title: result.title,
         description: result.description,
         reported_year_id: result.reported_year_id,
-        // TODO: Queda como?
         result_level_id: result.result_level_id,
-        // TODO: Queda como?
         result_type_id: result.result_type_id,
+        has_regions: regions
+          ? true
+          : false,
+        has_countries: countries
+          ? true
+          : false,
         geo_scope_id: CreateResultInnovationPackageDto.geo_scope_id,
         initiative_id: CreateResultInnovationPackageDto.initiative_id,
         gender_tag_level_id: result.gender_tag_level_id,
-        climate_tag_level_id: result.climate_change_tag_level_id,
+        climate_change_tag_level_id: result.climate_change_tag_level_id,
         is_krs: result.is_krs,
         krs_url: result.krs_url,
         version_id: vrs.id,
@@ -74,9 +83,9 @@ export class ResultInnovationPackageService {
         last_updated_by: user.id,
       });
 
-      // Extract the result id from the new result response
-      const newResult = newInnovationHeader.result_id;
-      // Save the result by initiative record
+      // * Extract the result id from the new result response
+      const newResult = newInnovationHeader.id;
+      // * Save the result by initiative record
       const newInnovationByInitiative = await this._resultByInitiativeRepository.save({
         result_id: newResult,
         initiative_id: CreateResultInnovationPackageDto.initiative_id,
@@ -86,11 +95,17 @@ export class ResultInnovationPackageService {
         last_updated_by: user.id,
       });
 
-      // Obtain the regions in the body
-      const regions = CreateResultInnovationPackageDto.regions;
+      // * Save new result into innovation by result
+      const newInnovationByResult = await this._innovationByResultRepository.save({
+        ipsr_result_id: newResult,
+        result_id: result.id,
+        ipsr_role_id: 1,
+        version_id: vrs.id
+      });
+
       let resultRegions: ResultRegion[] = [];
       if (regions) {
-        // Iterate into the regions to save them
+        // * Iterate into the regions to save them
         for (let i = 0; i < regions.length; i++) {
           const newRegions = new ResultRegion();
           newRegions.result_id = newResult;
@@ -99,14 +114,12 @@ export class ResultInnovationPackageService {
           resultRegions.push(newRegions);
         }
       }
-      // Save the regions
+      // * Save the regions
       const newInnovationRegions = await this._resultRegionRepository.save(resultRegions);
 
-      // Obtain the countries in the body
-      const countries = CreateResultInnovationPackageDto.countries;
       let resultCountries: ResultCountry[] = [];
       if (countries) {
-        // Iterate into the countries to save them
+        // * Iterate into the countries to save them
         for (let i = 0; i < countries.length; i++) {
           const newCountries = new ResultCountry();
           newCountries.result_id = newResult;
@@ -115,13 +128,14 @@ export class ResultInnovationPackageService {
           resultCountries.push(newCountries);
         }
       }
-      // Save the countries
+      // * Save the countries
       const newInnovationCountries = await this._resultCountryRepository.save(resultCountries);
 
       return {
         response: {
           newInnovationHeader,
           newInnovationByInitiative,
+          newInnovationByResult,
           newInnovationRegions,
           newInnovationCountries
         },
