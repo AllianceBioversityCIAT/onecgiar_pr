@@ -1,14 +1,17 @@
 import { Injectable } from "@nestjs/common";
 import { HandlersError } from "src/shared/handlers/error.utils";
-import { DataSource } from "typeorm";
+import { DataSource, Repository } from "typeorm";
+import { Ipsr } from "./entities/ipsr.entity";
 
 
 @Injectable()
-export class IpsrRepository {
+export class IpsrRepository extends Repository<Ipsr>{
     constructor(
         private dataSource: DataSource,
         private readonly _handlersError: HandlersError,
-    ) { }
+    ) {
+        super(Ipsr, dataSource.createEntityManager())
+     }
 
     async getResultsInnovation() {
         const resultInnovationQuery = `
@@ -42,10 +45,7 @@ export class IpsrRepository {
             r.status = 1
             AND r.is_active = 1
             AND rbi.initiative_role_id = 1
-            AND (
-                r.result_type_id = 2
-                OR r.result_type_id = 7
-            );
+            AND r.result_type_id = 2;
         `;
 
         try {
