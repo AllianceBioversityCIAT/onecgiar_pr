@@ -122,7 +122,7 @@ export class IpsrRepository extends Repository<Ipsr>{
 
         const countryQuery = `
         SELECT
-            rc.country_id,
+            rc.country_id AS id,
             cc.name,
             rc.result_id
         FROM result_country rc
@@ -133,7 +133,7 @@ export class IpsrRepository extends Repository<Ipsr>{
 
         const regionsQuery = `
         SELECT
-            rr.region_id,
+            rr.region_id AS id,
             cr.name,
             rr.result_id
         FROM result_region rr

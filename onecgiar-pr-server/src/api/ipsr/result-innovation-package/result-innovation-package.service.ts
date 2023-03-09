@@ -119,7 +119,7 @@ export class ResultInnovationPackageService {
         for (let i = 0; i < regions.length; i++) {
           const newRegions = new ResultRegion();
           newRegions.result_id = newResult;
-          newRegions.region_id = regions[i].region_id;
+          newRegions.region_id = regions[i].id;
           newRegions.is_active = true;
           resultRegions.push(newRegions);
         }
@@ -133,7 +133,7 @@ export class ResultInnovationPackageService {
         for (let i = 0; i < countries.length; i++) {
           const newCountries = new ResultCountry();
           newCountries.result_id = newResult;
-          newCountries.country_id = countries[i].country_id;
+          newCountries.country_id = countries[i].id;
           newCountries.is_active = true;
           resultCountries.push(newCountries);
         }
