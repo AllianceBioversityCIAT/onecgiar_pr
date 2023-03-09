@@ -1,34 +1,34 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException } from '@nestjs/common';
 import { ResultInnovationPackageService } from './result-innovation-package.service';
 import { CreateResultInnovationPackageDto } from './dto/create-result-innovation-package.dto';
 import { UpdateResultInnovationPackageDto } from './dto/update-result-innovation-package.dto';
+import { UserToken } from '../../../shared/decorators/user-token.decorator';
+import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 
-@Controller('result-innovation-package')
+@Controller()
 export class ResultInnovationPackageController {
-  constructor(private readonly resultInnovationPackageService: ResultInnovationPackageService) {}
+  constructor(private readonly resultInnovationPackageService: ResultInnovationPackageService) { }
 
-  @Post()
-  create(@Body() createResultInnovationPackageDto: CreateResultInnovationPackageDto) {
-    return this.resultInnovationPackageService.create(createResultInnovationPackageDto);
+  @Post('create-header')
+  async createHeader(
+    @Body() CreateResultInnovationPackageDto: CreateResultInnovationPackageDto,
+    @UserToken() user: TokenDto
+  ) {
+    const { message, response, status } =
+      await this.resultInnovationPackageService.createHeader(CreateResultInnovationPackageDto, user);
+
+    throw new HttpException({ message, response }, status);
   }
 
-  @Get()
-  findAll() {
-    return this.resultInnovationPackageService.findAll();
-  }
+  @Patch('general-information/:resultId')
+  async generalInformation(
+    @Param('resultId') resultId: number,
+    @Body() updateResultInnovationPackageDto: any,
+    @UserToken() user: TokenDto
+  ) {
+    const { message, response, status } =
+      await this.resultInnovationPackageService.generalInformation(resultId, updateResultInnovationPackageDto, user);
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.resultInnovationPackageService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateResultInnovationPackageDto: UpdateResultInnovationPackageDto) {
-    return this.resultInnovationPackageService.update(+id, updateResultInnovationPackageDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.resultInnovationPackageService.remove(+id);
+    throw new HttpException({ message, response }, status);
   }
 }
