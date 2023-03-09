@@ -210,8 +210,15 @@ export class ResultsPackageTocResultService {
       } else {
         await this._resultByIntitutionsRepository.updateIstitutions(rip.id, [], false, user.id);
       }
-    } catch (error) {
 
+      return {
+        response: {},
+        message: 'The toc data is successfully created',
+        status: HttpStatus.CREATED,
+      };
+      
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
     }
   }
 

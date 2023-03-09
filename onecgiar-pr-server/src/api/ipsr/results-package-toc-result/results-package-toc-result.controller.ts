@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException } from '@nestjs/common';
 import { ResultsPackageTocResultService } from './results-package-toc-result.service';
 import { CreateResultsPackageTocResultDto } from './dto/create-results-package-toc-result.dto';
 import { UpdateResultsPackageTocResultDto } from './dto/update-results-package-toc-result.dto';
@@ -9,12 +9,17 @@ import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 export class ResultsPackageTocResultController {
   constructor(private readonly resultsPackageTocResultService: ResultsPackageTocResultService) {}
 
-  @Post('create/:innoPackageId')
-  create(
+  @Post('create/:resultId')
+  async create(
     @Body() createResultsPackageTocResultDto: CreateResultsPackageTocResultDto,
+    @Param('resultId') resultId: number,
     @UserToken() user: TokenDto
     ) {
-    //return this.resultsPackageTocResultService.create(createResultsPackageTocResultDto, user);
+      createResultsPackageTocResultDto.result_id = resultId;
+      const { message, response, status } =
+      await this.resultsPackageTocResultService.create(createResultsPackageTocResultDto, user);
+
+      throw new HttpException({ message, response }, status);
   }
 
   @Get()
@@ -22,9 +27,9 @@ export class ResultsPackageTocResultController {
     return this.resultsPackageTocResultService.findAll();
   }
 
-  @Get('get/:innoPackageId')
-  findOne(@Param('id') id: string) {
-    return this.resultsPackageTocResultService.findOne(+id);
+  @Get('get/:resultId')
+  findOne(@Param('resultId') resultId: string) {
+    return this.resultsPackageTocResultService.findOne(+resultId);
   }
 
   @Patch(':id')
