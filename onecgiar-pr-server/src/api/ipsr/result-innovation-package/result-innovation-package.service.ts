@@ -165,7 +165,7 @@ export class ResultInnovationPackageService {
       const updateResult = await this._resultRepository.update(resultId, {
         title: req.title || resultExist.title,
         description: req.description || resultExist.description,
-        lead_contact_person: req.lead_contact_person || resultExist.lead_contact_person,
+        lead_contact_person: req.lead_contact_person,
         gender_tag_level_id: req.gender_tag_level_id || resultExist.gender_tag_level_id,
         climate_change_tag_level_id: req.climate_change_tag_level_id || resultExist.climate_change_tag_level_id,
         is_krs: req.is_krs || resultExist.is_krs,

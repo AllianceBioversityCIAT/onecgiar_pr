@@ -106,7 +106,8 @@ export class IpsrRepository extends Repository<Ipsr>{
                     gtl2.id = r.climate_change_tag_level_id
             ) AS climate_tag_level,
             r.is_krs,
-            r.krs_url
+            r.krs_url,
+            r.lead_contact_person
         FROM
             result r
             LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
