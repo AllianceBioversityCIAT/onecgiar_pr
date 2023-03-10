@@ -466,4 +466,24 @@ export class ResultsApiService {
   PATCH_primaryImpactAreaKrs(body) {
     return this.http.patch<any>(`${environment.apiBaseUrl}api/type-one-report/primary/primary-impact-area/create`, body);
   }
+
+  GETallInnovations() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/all-innovations`);
+  }
+
+  GETInnovationByResultId(resultId) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation/${resultId}`);
+  }
+
+  POSTResultInnovationPackage(body) {
+    return this.http.post<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-package/create-header`, body);
+  }
+
+  GETAllInnovationPackages() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/all-innovation-packages`);
+  }
+
+  PATCHIpsrGeneralInfo(body, resulId) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-package/general-information/${resulId}`, body);
+  }
 }

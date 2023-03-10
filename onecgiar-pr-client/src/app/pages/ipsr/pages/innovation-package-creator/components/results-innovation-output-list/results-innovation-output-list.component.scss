@@ -124,7 +124,7 @@ tr {
 
 .table {
     position: relative;
-    margin-bottom: 120px;
+    margin-bottom: 40px;
 
     .total {
         position: absolute;
@@ -139,4 +139,26 @@ tr {
     display: flex;
     justify-content: flex-end;
     margin-right: 50px;
+}
+
+
+
+.actions {
+    gap: 10px;
+    display: flex;
+
+    .view {
+        background-color: var(--pr-color-secondary) !important;
+        width: min-content !important;
+    }
+
+    .link_button {
+        color: white;
+        background-color: var(--pr-color-primary);
+        padding: 3px 10px;
+        width: 100px;
+        border-radius: 3px;
+        cursor: pointer;
+        text-align: center;
+    }
 }

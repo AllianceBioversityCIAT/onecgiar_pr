@@ -1,7 +1,8 @@
 <div class="table">
-    <p-table sortField="result_code" [sortOrder]="-1" [value]="(this.tableData)" responsiveLayout="scroll"
-        [paginator]="(this.tableData)?.length" [rows]="10" styleClass="p-datatable-gridlines p-datatable-sm"
-        selectionMode="single" [rowsPerPageOptions]="[10,50,100]">
+    <p-table sortField="result_code" [sortOrder]="-1" [value]="(this.manageInnovationsListSE.allInnovationsList)"
+        responsiveLayout="scroll" [paginator]="!!((this.manageInnovationsListSE.allInnovationsList)?.length) "
+        [rows]="10" styleClass="p-datatable-gridlines p-datatable-sm" selectionMode="single"
+        [rowsPerPageOptions]="[10,50,100]">
         <ng-template pTemplate="header">
             <tr>
                 <th pSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder">
@@ -13,7 +14,7 @@
         <ng-template pTemplate="body" let-result>
             <tr>
                 <td *ngFor="let column of columnOrder; let i=index" class="{{column.attr}}">
-                    <a class="{{column.class}}" [routerLink]="'/ipsr/detail/5'">
+                    <a class="{{column.class}}">
                         <div class="point"
                             [style.background]="'var(--pr-color-result-level-'+result?.result_level_id+')'"
                             *ngIf="column.attr === 'result_type'"></div>
@@ -27,9 +28,15 @@
                         {{ result[column.attr] }}
                     </div>
                 </td>
-                <td *ngIf="!this.api.dataControlSE.platformIsClosed">
-                    <div class="icon_container"><i class="pi pi-ellipsis-v"></i></div>
-                    <!-- (click)="menu.toggle($event);onPressAction(result)" -->
+                <td class="actions" *ngIf="!this.api.dataControlSE.platformIsClosed">
+                    <div class="link_button view"
+                        (click)="openInNewPage('/result/result-detail/' + result?.result_code)">View
+                    </div>
+                    <div class="link_button"
+                        *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"
+                        [ngClass]="{'globalDisabled': result.selected}"
+                        (click)="!result.selected ? selectInnovation(result) : null">{{result.selected ? 'Selected' :
+                        'Select'}}</div>
                 </td>
             </tr>
         </ng-template>
@@ -39,7 +46,7 @@
         {{(this.api.dataControlSE.resultsList |
         resultsListFilter:this.resultsListService.text_to_search:this.api.resultsListFilterSE.filterJoin)?.length}} /
         {{this.api.dataControlSE.resultsList?.length}}</div> -->
-    <div class="noDataText" *ngIf="!(this.tableData)?.length">
+    <div class="noDataText" *ngIf="!(this.manageInnovationsListSE.allInnovationsList)?.length">
         There are no results for the selected filters.
     </div>
 </div>

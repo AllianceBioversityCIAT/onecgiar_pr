@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, Input } from '@angular/core';
 import { RegionsCountriesService } from '../../../../../../shared/services/global/regions-countries.service';
 
 @Component({
@@ -7,6 +7,7 @@ import { RegionsCountriesService } from '../../../../../../shared/services/globa
   styleUrls: ['./ipsr-geoscope-creator.component.scss']
 })
 export class IpsrGeoscopeCreatorComponent {
+  @Input() body: any;
   geoscopeExample = [
     { full_name: 'Global', id: 1 },
     { full_name: 'Regional', id: 2 },

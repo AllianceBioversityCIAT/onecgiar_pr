@@ -9,11 +9,11 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 export class InnovationPackageCustomTableComponent {
   @Input() tableData: any;
   columnOrder = [
-    { title: 'ID', attr: 'id' },
+    { title: 'Result code', attr: 'result_code' },
     { title: 'Title', attr: 'title', class: 'notCenter' },
-    { title: 'Submitter', attr: 'submitter' },
-    { title: 'Status', attr: 'status_name' },
-    { title: 'Year', attr: 'year' }
+    { title: 'Submitter', attr: 'official_code' },
+    { title: 'Status', attr: 'status' },
+    { title: 'Year', attr: 'reported_year_id' }
   ];
   constructor(public api: ApiService) {}
 }
