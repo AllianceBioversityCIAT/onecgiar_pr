@@ -6,4 +6,5 @@ export class IpsrGeneralInformationBody {
   climate_change_tag_level_id = null;
   is_krs: boolean = null;
   krs_url = null;
+  reported_year_id = null;
 }

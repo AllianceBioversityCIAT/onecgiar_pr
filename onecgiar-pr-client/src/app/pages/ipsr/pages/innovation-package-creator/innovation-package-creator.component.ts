@@ -10,6 +10,7 @@ import { Router } from '@angular/router';
 })
 export class InnovationPackageCreatorComponent {
   innovationPackageCreatorBody = new InnovationPackageCreatorBody();
+  searchText = '';
   constructor(public api: ApiService, private router: Router) {}
   selectInnovationEvent(e) {
     this.innovationPackageCreatorBody.result_id = e.result_id;
@@ -28,8 +29,7 @@ export class InnovationPackageCreatorComponent {
   onSaveSection() {
     console.log(this.innovationPackageCreatorBody);
     this.api.resultsSE.POSTResultInnovationPackage(this.innovationPackageCreatorBody).subscribe(({ response }) => {
-      console.log(response.newInnovationHeader.id);
-      this.router.navigateByUrl(`/ipsr/detail/${response.newInnovationHeader.id}`);
+      this.router.navigateByUrl(`/ipsr/detail/${response.newInnovationHeader.result_code}`);
       this.api.alertsFe.show({ id: 'ipsr-creator', title: 'Innovation package created', status: 'success', closeIn: 500 });
     });
   }

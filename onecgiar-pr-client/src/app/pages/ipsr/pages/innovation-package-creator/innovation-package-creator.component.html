@@ -17,10 +17,10 @@
     <app-pr-field-header label="Select Core Innovation for innovation packaging and scaling readiness assessment"
         [required]="false"
         description="Only one can be selected. Only QAed innovations will be listed."></app-pr-field-header>
-    <div class="search_input">
+    <!-- <div class="search_input">
         <i class="material-icons-round">search</i>
-        <input type="text" placeholder="Find result...">
-    </div>
+        <input type="text" placeholder="Find result..." [(ngModel)]="searchText">
+    </div> -->
     <app-results-innovation-output-list
         (selectInnovationEvent)="selectInnovationEvent($event)"></app-results-innovation-output-list>
 
