@@ -161,15 +161,16 @@ export class ResultInnovationPackageService {
     try {
       const resultExist = await this._resultRepository.findOneBy({ id: resultId });
       const req = updateResultInnovationPackageDto;
+      console.log("🚀 ~ file: result-innovation-package.service.ts:164 ~ ResultInnovationPackageService ~ generalInformation ~ req:", req.is_krs)
 
       const updateResult = await this._resultRepository.update(resultId, {
         title: req.title || resultExist.title,
         description: req.description || resultExist.description,
         lead_contact_person: req.lead_contact_person,
-        gender_tag_level_id: req.gender_tag_level_id || resultExist.gender_tag_level_id,
-        climate_change_tag_level_id: req.climate_change_tag_level_id || resultExist.climate_change_tag_level_id,
-        is_krs: req.is_krs || resultExist.is_krs,
-        krs_url: req.krs_url || resultExist.is_krs,
+        gender_tag_level_id: req.gender_tag_level_id,
+        climate_change_tag_level_id: req.climate_change_tag_level_id,
+        is_krs: req.is_krs,
+        krs_url: req.krs_url,
         geographic_scope_id: resultExist.geographic_scope_id,
         last_updated_by: user.id
       });

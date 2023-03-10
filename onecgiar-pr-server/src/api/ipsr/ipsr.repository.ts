@@ -105,7 +105,7 @@ export class IpsrRepository extends Repository<Ipsr>{
                 WHERE
                     gtl2.id = r.climate_change_tag_level_id
             ) AS climate_tag_level,
-            r.is_krs,
+            IF((r.is_krs = 1), true, false ) AS is_krs,
             r.krs_url,
             r.lead_contact_person
         FROM
