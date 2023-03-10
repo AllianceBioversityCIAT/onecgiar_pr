@@ -172,7 +172,7 @@ export class ResultInnovationPackageService {
         krs_url: req.krs_url || resultExist.is_krs,
         geographic_scope_id: resultExist.geographic_scope_id,
         last_updated_by: user.id
-      })
+      });
 
       return {
         response: updateResult,
