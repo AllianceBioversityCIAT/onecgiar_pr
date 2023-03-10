@@ -40,6 +40,14 @@ export class ResultInnovationPackageService {
         };
       }
 
+      if (!CreateResultInnovationPackageDto.initiative_id) {
+        throw {
+          response: `Initiative id: ${CreateResultInnovationPackageDto.initiative_id}`,
+          message: 'Please enter a Initiative Official Code to create a new Innovation Package',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
       // * Check for the active version
       const version = await this._versionsService.findBaseVersion();
       if (version.status >= 300) {
@@ -51,7 +59,7 @@ export class ResultInnovationPackageService {
 
       // * Extract the result and version
       const result = resultExist;
-      if(result.result_type_id != 2) {
+      if (result.result_type_id != 2) {
         throw {
           response: result.result_type_id,
           message: 'This is not a valid result type. Only Innovation Use can be used to create a new Innovation Package.',
