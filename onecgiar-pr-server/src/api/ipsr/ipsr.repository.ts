@@ -109,14 +109,7 @@ export class IpsrRepository extends Repository<Ipsr>{
             result r
             LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
             LEFT JOIN clarisa_geographic_scope cgs ON cgs.id = r.geographic_scope_id
-        WHERE
-            r.status = 1
-            AND r.is_active = 1
-            AND rbi.initiative_role_id = 1
-            AND (
-                r.result_type_id = 2
-                OR r.result_type_id = 7
-            )
+        WHERE r.is_active = 1
             AND r.id = ?;
         `;
 
