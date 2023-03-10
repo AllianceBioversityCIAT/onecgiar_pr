@@ -1,0 +1,29 @@
+.top_menu {
+    background-color: #F3F3F3;
+    display: flex;
+    justify-content: space-between;
+
+    .option {
+        // color: #ffffff;
+        padding: 10px 20px;
+        width: 100%;
+        text-align: center;
+        color: var(--pr-color-primary);
+        font-weight: 500;
+        cursor: pointer;
+        transition: all ease .3s;
+
+        &:hover {
+            background-color: #556add23;
+        }
+    }
+
+    .option_active {
+        color: white;
+        background-color: var(--pr-color-primary);
+
+        &:hover {
+            background-color: #3b4db3;
+        }
+    }
+}

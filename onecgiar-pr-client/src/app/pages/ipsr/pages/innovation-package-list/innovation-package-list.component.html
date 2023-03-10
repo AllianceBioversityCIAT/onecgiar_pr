@@ -1,0 +1,8 @@
+<div class="section_container">
+    <app-section-header titleText="Innovation Packages"
+        description="Here you will see a listing of all the Innovation Packages so that you can access them."></app-section-header>
+    <a routerLink="/ipsr/creator"><app-pr-button text="Create a new Innovation Package" icon="add_box"
+            [reverse]="true"></app-pr-button></a>
+    <app-innovation-package-custom-table
+        [tableData]="this.innovationPackagesList"></app-innovation-package-custom-table>
+</div>

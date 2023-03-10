@@ -71,4 +71,6 @@ export class ClarisaInstitution {
     nullable: true,
   })
   last_updated_date: Date;
+
+  //-------------
 }

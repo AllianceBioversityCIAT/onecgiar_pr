@@ -3,6 +3,7 @@ import { Result } from '../../entities/result.entity';
 import { User } from '../../../../auth/modules/user/entities/user.entity';
 import { ClarisaInstitution } from '../../../../clarisa/clarisa-institutions/entities/clarisa-institution.entity';
 import { ClarisaCenter } from '../../../../clarisa/clarisa-centers/entities/clarisa-center.entity';
+import { Version } from '../../versions/entities/version.entity';
 
 @Entity('non_pooled_project')
 export class NonPooledProject {
@@ -77,5 +78,17 @@ export class NonPooledProject {
   })
   last_updated_date!: Date;
 
+  @Column({
+    name: 'version_id',
+    type: 'bigint',
+    nullable: true
+  })
+  version_id: number;
+
+  @ManyToOne(() => Version, v => v.non_pooled_project)
+  @JoinColumn({
+    name: 'version_id'
+  })
+  obj_version: Version;
     
 }

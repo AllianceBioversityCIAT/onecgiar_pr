@@ -199,7 +199,7 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
 
   async getGenericAllResultByInstitutionByRole(
     resultId: number,
-    institutionRolesId: 1 | 2 | 3| 4,
+    institutionRolesId: 1 | 2 | 3| 4| 5,
   ): Promise<ResultsByInstitution[]> {
     const queryData = `
     select 

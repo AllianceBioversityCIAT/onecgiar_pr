@@ -133,6 +133,10 @@ export class ResultsModule implements NestModule {
         method: RequestMethod.ALL,
       },
       {
+        path: '/api/ipsr/*',
+        method: RequestMethod.ALL,
+      },
+      {
         path: '/logs/*',
         method: RequestMethod.ALL,
       },

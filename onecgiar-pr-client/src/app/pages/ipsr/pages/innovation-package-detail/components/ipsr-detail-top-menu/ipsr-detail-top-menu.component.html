@@ -1,0 +1,5 @@
+<div class="top_menu">
+    <div class="option" *ngFor="let option of this.menuOptions" [routerLink]="this.option.path"
+        routerLinkActive="option_active" [hidden]="!this.option?.prName">{{this.option?.prName}}
+    </div>
+</div>

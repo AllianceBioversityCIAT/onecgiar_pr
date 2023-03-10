@@ -4,6 +4,7 @@ import { NavigationBarService } from '../../services/navigation-bar.service';
 import { RolesService } from '../../services/global/roles.service';
 import { environment } from 'src/environments/environment';
 import { DataControlService } from '../../services/data-control.service';
+import { AuthService } from '../../services/api/auth.service';
 
 @Component({
   selector: 'app-navigation-bar',
@@ -12,11 +13,12 @@ import { DataControlService } from '../../services/data-control.service';
 })
 export class NavigationBarComponent implements OnInit {
   navigationOptions: PrRoute[] = routingApp;
-  constructor(public _navigationBarService: NavigationBarService, private rolesSE: RolesService, private dataControlSE: DataControlService) {}
+  emailAccess = ['admin@prms.pr', 'j.cadavid@cgiar.org', 'j.delgado@cgiar.org', 'd.casanas@cgiar.org', 'S.Galvez@cgiar.org', 'y.zuniga@cgiar.org'];
+  constructor(public _navigationBarService: NavigationBarService, private rolesSE: RolesService, private dataControlSE: DataControlService, private authSE: AuthService) {}
 
   ngOnInit(): void {
     window.addEventListener('scroll', e => {
-      let scrollTopValue: any = window.pageYOffset || ((document.documentElement || document.body.parentNode || document.body) as any).scrollTop;
+      const scrollTopValue: any = window.pageYOffset || ((document.documentElement || document.body.parentNode || document.body) as any).scrollTop;
       if (scrollTopValue > 70) {
         this._navigationBarService.navbar_fixed = true;
       } else {
@@ -25,12 +27,18 @@ export class NavigationBarComponent implements OnInit {
     });
   }
 
+  hasAccess() {
+    return !!this.emailAccess.find(email => email.toUpperCase() == this.authSE?.localStorageUser?.email.toUpperCase());
+  }
+
   validateAdminModuleAndRole(option) {
     if (option.onlytest && environment.production) return true;
+    if (option?.path == 'ipsr' && !this.hasAccess()) return true;
     if (this.rolesSE.isAdmin) return false;
     if (option?.path == 'init-admin-module') return this.validateCoordAndLead();
     // if (option?.path == 'quality-assurance' && !this.rolesSE.isAdmin) return true;
     // if (option?.path == 'type-one-report' && !this.rolesSE.isAdmin) return true;
+
     return false;
   }
 
