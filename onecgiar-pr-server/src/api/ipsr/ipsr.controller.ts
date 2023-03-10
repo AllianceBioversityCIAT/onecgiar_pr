@@ -9,11 +9,6 @@ import { Result } from '../results/entities/result.entity';
 export class IpsrController {
   constructor(private readonly ipsrService: IpsrService) { }
 
-  @Post()
-  create(@Body() createIpsrDto: CreateIpsrDto) {
-    return this.ipsrService.create(createIpsrDto);
-  }
-
   @Get('all-innovations')
   async findAll() {
     const { message, response, status } =
@@ -30,9 +25,12 @@ export class IpsrController {
     throw new HttpException({ message, response }, status);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateIpsrDto: UpdateIpsrDto) {
-    return this.ipsrService.update(+id, updateIpsrDto);
+  @Get('all-innovation-packages')
+  async allInnovationPackages() {
+    const { message, response, status }
+      = await this.ipsrService.allInnovationPackages();
+
+    throw new HttpException({ message, response }, status);
   }
 
   @Delete(':id')

@@ -10,7 +10,7 @@ export class IpsrService {
   constructor(
     protected readonly _handlersError: HandlersError,
     protected readonly _ipsrRespository: IpsrRepository
-  ){}
+  ) { }
 
   create(createIpsrDto: CreateIpsrDto) {
     return 'This action adds a new ipsr';
@@ -46,12 +46,30 @@ export class IpsrService {
         status: HttpStatus.OK
       }
     } catch (error) {
-      return this._handlersError.returnErrorRes({ error, debug: true })
+      return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 
-  update(id: number, updateIpsrDto: UpdateIpsrDto) {
-    return `This action updates a #${id} ipsr`;
+  async allInnovationPackages() {
+    try {
+      const allResults = await this._ipsrRespository.getAllInnovationPackages();
+
+      if (!allResults[0]) {
+        throw {
+          response: allResults,
+          message: 'At the moment we don\'t have any Innovation Packages results.',
+          status: HttpStatus.NOT_FOUND
+        }
+      }
+
+      return {
+        response: allResults,
+        message: 'Successful response',
+        status: HttpStatus.OK
+      }
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true })
+    }
   }
 
   remove(id: number) {

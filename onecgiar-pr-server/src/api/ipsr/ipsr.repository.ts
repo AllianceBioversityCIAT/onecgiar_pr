@@ -166,4 +166,33 @@ export class IpsrRepository extends Repository<Ipsr>{
             });
         }
     }
+
+    async getAllInnovationPackages() {
+        const innovationPackagesQuery = `
+        SELECT
+            DISTINCT r.id,
+            r.result_code,
+            r.title,
+            r.status,
+            r.reported_year_id
+        FROM result r
+            LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
+            LEFT JOIN innovation_by_result ibr ON ibr.ipsr_result_id = r.id
+        WHERE r.is_active = 1
+            AND r.id = ibr.ipsr_result_id
+            AND rbi.is_active = 1
+            AND rbi.initiative_role_id = 1;
+        `;
+
+        try {
+            const getAllInnovationPackages: any[] = await this.dataSource.query(innovationPackagesQuery);
+            return getAllInnovationPackages;
+        } catch (error) {
+            throw this._handlersError.returnErrorRepository({
+                className: IpsrRepository.name,
+                error: error,
+                debug: true,
+            });
+        }
+    }
 }
