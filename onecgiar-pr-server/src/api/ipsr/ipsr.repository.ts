@@ -107,7 +107,8 @@ export class IpsrRepository extends Repository<Ipsr>{
             ) AS climate_tag_level,
             IF((r.is_krs = 1), true, false ) AS is_krs,
             r.krs_url,
-            r.lead_contact_person
+            r.lead_contact_person,
+            r.reported_year_id
         FROM
             result r
             LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
