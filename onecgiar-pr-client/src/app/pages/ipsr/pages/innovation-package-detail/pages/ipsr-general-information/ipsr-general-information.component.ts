@@ -22,6 +22,9 @@ export class IpsrGeneralInformationComponent {
     this.api.resultsSE.GETInnovationByResultId(this.ipsrDataControlSE.resultInnovationId).subscribe(({ response }) => {
       console.log(response);
       this.ipsrGeneralInformationBody = response;
+      console.log(this.ipsrGeneralInformationBody.is_krs);
+      this.ipsrGeneralInformationBody.is_krs = Boolean(Number(this.ipsrGeneralInformationBody.is_krs));
+      console.log(this.ipsrGeneralInformationBody);
     });
   }
 

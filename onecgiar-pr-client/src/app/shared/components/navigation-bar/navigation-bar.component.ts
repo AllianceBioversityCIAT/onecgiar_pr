@@ -13,7 +13,7 @@ import { AuthService } from '../../services/api/auth.service';
 })
 export class NavigationBarComponent implements OnInit {
   navigationOptions: PrRoute[] = routingApp;
-  emailAccess = ['admin@prms.pr', 'j.cadavid@cgiar.org', 'j.delgado@cgiar.org', 'd.casanas@cgiar.org'];
+  emailAccess = ['admin@prms.pr', 'j.cadavid@cgiar.org', 'j.delgado@cgiar.org', 'd.casanas@cgiar.org', 'S.Galvez@cgiar.org', 'y.zuniga@cgiar.org'];
   constructor(public _navigationBarService: NavigationBarService, private rolesSE: RolesService, private dataControlSE: DataControlService, private authSE: AuthService) {}
 
   ngOnInit(): void {
@@ -28,7 +28,7 @@ export class NavigationBarComponent implements OnInit {
   }
 
   hasAccess() {
-    return !!this.emailAccess.find(email => email == this.authSE?.localStorageUser?.email);
+    return !!this.emailAccess.find(email => email.toUpperCase() == this.authSE?.localStorageUser?.email.toUpperCase());
   }
 
   validateAdminModuleAndRole(option) {
