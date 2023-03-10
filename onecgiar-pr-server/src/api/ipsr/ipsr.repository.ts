@@ -192,7 +192,8 @@ export class IpsrRepository extends Repository<Ipsr>{
         `;
 
         try {
-            const getAllInnovationPackages: any[] = await this.dataSource.query(innovationPackagesQuery);
+            const getAllInnovationPackages: any[] = 
+                await this.dataSource.query(innovationPackagesQuery);
             return getAllInnovationPackages;
         } catch (error) {
             throw this._handlersError.returnErrorRepository({
