@@ -48,6 +48,14 @@ export class ResultInnovationPackageService {
         };
       }
 
+      if (!CreateResultInnovationPackageDto.geo_scope_id) {
+        throw {
+          response: `Initiative id: ${CreateResultInnovationPackageDto.initiative_id}`,
+          message: 'Please enter a Geo Scope to create a new Innovation Package',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
       // * Check for the active version
       const version = await this._versionsService.findBaseVersion();
       if (version.status >= 300) {
