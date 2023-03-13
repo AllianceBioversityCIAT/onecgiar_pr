@@ -304,7 +304,7 @@ WHERE
     }
   }*/
 
-  async AllResultsByRoleUsers(userid: number, version: number = 1) {
+  async AllResultsByRoleUsers(userid: number, version: number = 1, excludeType = [10]) {
     const queryData = `
     SELECT
     r.id,
@@ -345,7 +345,8 @@ WHERE
     AND rbi.is_active > 0
     AND rbi.initiative_role_id = 1
     AND ci.active > 0
-    AND r.version_id = ?;
+    AND r.version_id = ?
+    AND rt.id not in (${excludeType.toString()});
     `;
 
     try {
