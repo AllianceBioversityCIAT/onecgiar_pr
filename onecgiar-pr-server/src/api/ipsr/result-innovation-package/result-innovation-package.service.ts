@@ -130,30 +130,37 @@ export class ResultInnovationPackageService {
       });
 
       let resultRegions: ResultRegion[] = [];
-      if (regions) {
-        // * Iterate into the regions to save them
-        for (let i = 0; i < regions.length; i++) {
-          const newRegions = new ResultRegion();
-          newRegions.result_id = newResult;
-          newRegions.region_id = regions[i].id;
-          newRegions.is_active = true;
-          resultRegions.push(newRegions);
+      let resultCountries: ResultCountry[] = [];
+
+      //  TODO: PENDING VALIDATION FOR MULTI-NATIONAL !!!!!!!!!!!!!!!!!!!
+
+      // * Validate if geo scope  is regional
+      if (CreateResultInnovationPackageDto.geo_scope_id === 2) {
+        if (regions) {
+          // * Iterate into the regions to save them
+          for (let i = 0; i < regions.length; i++) {
+            const newRegions = new ResultRegion();
+            newRegions.result_id = newResult;
+            newRegions.region_id = regions[i].id;
+            newRegions.is_active = true;
+            resultRegions.push(newRegions);
+          }
+        }
+        // * Validate if geo scope  is national or  multination
+      } else if (CreateResultInnovationPackageDto.geo_scope_id === 3) {
+        if (countries) {
+          // * Iterate into the countries to save them
+          for (let i = 0; i < countries.length; i++) {
+            const newCountries = new ResultCountry();
+            newCountries.result_id = newResult;
+            newCountries.country_id = countries[i].id;
+            newCountries.is_active = true;
+            resultCountries.push(newCountries);
+          }
         }
       }
       // * Save the regions
       const newInnovationRegions = await this._resultRegionRepository.save(resultRegions);
-
-      let resultCountries: ResultCountry[] = [];
-      if (countries) {
-        // * Iterate into the countries to save them
-        for (let i = 0; i < countries.length; i++) {
-          const newCountries = new ResultCountry();
-          newCountries.result_id = newResult;
-          newCountries.country_id = countries[i].id;
-          newCountries.is_active = true;
-          resultCountries.push(newCountries);
-        }
-      }
       // * Save the countries
       const newInnovationCountries = await this._resultCountryRepository.save(resultCountries);
 
