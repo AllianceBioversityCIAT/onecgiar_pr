@@ -160,9 +160,11 @@ export class ResultInnovationPackageService {
         }
       }
       // * Save the regions
-      const newInnovationRegions = await this._resultRegionRepository.save(resultRegions);
+      const newInnovationRegions = 
+        await this._resultRegionRepository.save(resultRegions);
       // * Save the countries
-      const newInnovationCountries = await this._resultCountryRepository.save(resultCountries);
+      const newInnovationCountries = 
+        await this._resultCountryRepository.save(resultCountries);
 
       return {
         response: {
