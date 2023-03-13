@@ -118,8 +118,8 @@ export class TorFactSheetComponent {
     //* Countries targeted in the proposal:
     this.data[7].value += '<br><strong>Countries targeted in the proposal:</strong><br>';
     // this.data[7].value += data?.countriesProposal[0]?.name ? data?.countriesProposal[0]?.name : '<div class="no-data-text-format">There are not Countries data</div>';
-    if (data.regionsProposal?.length) {
-      data.regionsProposal?.forEach(element => {
+    if (data.countriesProposal?.length) {
+      data.countriesProposal?.forEach(element => {
         this.data[7].value += `${element.name}${'; '}`;
       });
       this.data[7].value = this.data[7].value.substring(0, this.data[7].value.length - 2);
