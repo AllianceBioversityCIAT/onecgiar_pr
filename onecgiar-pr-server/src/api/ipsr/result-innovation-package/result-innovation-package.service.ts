@@ -27,6 +27,8 @@ export class ResultInnovationPackageService {
 
   async createHeader(CreateResultInnovationPackageDto: CreateResultInnovationPackageDto, user: TokenDto) {
     try {
+      let innovationTitle: string;
+
       // * Check if result already exists
       const resultExist =
         await this._resultRepository.getResultById(
@@ -40,6 +42,7 @@ export class ResultInnovationPackageService {
         };
       }
 
+      // * Validate that initiative id is coming.
       if (!CreateResultInnovationPackageDto.initiative_id) {
         throw {
           response: `Initiative id: ${CreateResultInnovationPackageDto.initiative_id}`,
@@ -48,9 +51,10 @@ export class ResultInnovationPackageService {
         };
       }
 
+      // * Validate that geo scope id is coming
       if (!CreateResultInnovationPackageDto.geo_scope_id) {
         throw {
-          response: `Initiative id: ${CreateResultInnovationPackageDto.initiative_id}`,
+          response: `Geo Scope id: ${CreateResultInnovationPackageDto.geo_scope_id}`,
           message: 'Please enter a Geo Scope to create a new Innovation Package',
           status: HttpStatus.BAD_REQUEST,
         };
@@ -82,10 +86,36 @@ export class ResultInnovationPackageService {
       const regions = CreateResultInnovationPackageDto.regions;
       // * Obtain the countries in the body
       const countries = CreateResultInnovationPackageDto.countries;
+
+      // TODO: ADD THE NAME REPLACE THE ID
+      // * Validate the Geo Scope to concat the regions or countries in the title.
+      if (CreateResultInnovationPackageDto.geo_scope_id === 2) {
+        innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${result.title} in ${regions.map(r => r.id).join(', ')}`;
+      } else if (CreateResultInnovationPackageDto.geo_scope_id === 3) {
+        innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${result.title} in ${countries.map(c => c.id).join(', ')}`;
+      } else {
+        innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${result.title}`;
+      }
+
+      // * Find a title like it´s incoming from the request.
+      const titleValidate = await this._resultRepository
+        .createQueryBuilder('result')
+        .where('result.title like :title', { title: `${innovationTitle}` })
+        .getMany();
+
+      // * Validate if the title is duplicate
+      if (titleValidate.length) {
+        throw {
+          response: titleValidate.map(tv => tv.id),
+          message: `The title already exists, in the following result: ${titleValidate.map(tv => tv.result_code)}`,
+          status: HttpStatus.BAD_REQUEST,
+        }
+      }
+
       // * Create new result 
       const newInnovationHeader = await this._resultRepository.save({
         result_code: last_code + 1,
-        title: result.title,
+        title: innovationTitle,
         description: result.description,
         reported_year_id: result.reported_year_id,
         result_level_id: result.result_level_id,
@@ -184,10 +214,24 @@ export class ResultInnovationPackageService {
     try {
       const resultExist = await this._resultRepository.findOneBy({ id: resultId });
       const req = updateResultInnovationPackageDto;
-      console.log("🚀 ~ file: result-innovation-package.service.ts:164 ~ ResultInnovationPackageService ~ generalInformation ~ req:", req.is_krs)
+
+      // * Find a title like it´s incoming from the request.
+      const titleValidate = await this._resultRepository
+        .createQueryBuilder('result')
+        .where('result.title like :title', { title: `${req.title}` })
+        .getMany();
+
+      // * Validate if the title is duplicate
+      if (!titleValidate.find(tv => tv.id === resultId)) {
+        throw {
+          response: titleValidate.map(tv => tv.id),
+          message: `The title already exists, in the following results: ${titleValidate.map(tv => tv.result_code)}`,
+          status: HttpStatus.BAD_REQUEST,
+        }
+      }
 
       const updateResult = await this._resultRepository.update(resultId, {
-        title: req.title || resultExist.title,
+        title: req.title,
         description: req.description || resultExist.description,
         lead_contact_person: req.lead_contact_person,
         gender_tag_level_id: req.gender_tag_level_id,
