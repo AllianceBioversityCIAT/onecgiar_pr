@@ -13,10 +13,11 @@ import { IpsrRoutes } from './ipsr.routes';
 import { IpsrRepository } from './ipsr.repository';
 import { HandlersError } from 'src/shared/handlers/error.utils';
 import { ShareResultInnovationPackageRequestModule } from './share-result-innovation-package-request/share-result-innovation-package-request.module';
+import { InnovationPathwayModule } from './innovation-pathway/innovation-pathway.module';
 
 @Module({
   controllers: [IpsrController],
   providers: [IpsrService, IpsrRepository, HandlersError],
-  imports: [RouterModule.register(IpsrRoutes), ResultInnovationPackageModule, ResultsPackageByInitiativesModule, ResultsPackageTocResultModule, ResultsPackageCentersModule, NonPooledPackageProjectsModule, ShareResultInnovationPackageRequestModule],
+  imports: [RouterModule.register(IpsrRoutes), ResultInnovationPackageModule, ResultsPackageByInitiativesModule, ResultsPackageTocResultModule, ResultsPackageCentersModule, NonPooledPackageProjectsModule, ShareResultInnovationPackageRequestModule, InnovationPathwayModule],
 })
 export class IpsrModule {}
