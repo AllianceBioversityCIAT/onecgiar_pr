@@ -1,4 +1,12 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { CreateInnovationPathwayDto } from './create-innovation-pathway.dto';
-
-export class UpdateInnovationPathwayDto extends PartialType(CreateInnovationPathwayDto) {}
+export class UpdateInnovationPathwayDto {
+    public result_id: number;
+    public geo_scope_id: number;
+    public regions: regionsInterface[];
+    public countries: countriesInterface[];
+}
+export interface regionsInterface {
+    id: number;
+}
+export interface countriesInterface {
+    id: number;
+}

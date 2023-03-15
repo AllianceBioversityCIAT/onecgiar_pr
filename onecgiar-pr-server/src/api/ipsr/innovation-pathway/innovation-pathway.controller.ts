@@ -2,33 +2,35 @@ import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/commo
 import { InnovationPathwayService } from './innovation-pathway.service';
 import { CreateInnovationPathwayDto } from './dto/create-innovation-pathway.dto';
 import { UpdateInnovationPathwayDto } from './dto/update-innovation-pathway.dto';
+import { UserToken } from '../../../shared/decorators/user-token.decorator';
+import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 
-@Controller('innovation-pathway')
+@Controller()
 export class InnovationPathwayController {
-  constructor(private readonly innovationPathwayService: InnovationPathwayService) {}
+  constructor(private readonly innovationPathwayService: InnovationPathwayService) { }
 
-  @Post()
-  create(@Body() createInnovationPathwayDto: CreateInnovationPathwayDto) {
-    return this.innovationPathwayService.create(createInnovationPathwayDto);
+  @Patch('step1/:resultId')
+  update(
+    @Param('resultId') resultId: string,
+    @Body() updateInnovationPathwayDto: UpdateInnovationPathwayDto,
+    @UserToken() user: TokenDto
+  ) {
+    return this.innovationPathwayService.updateMain(+resultId, updateInnovationPathwayDto, user);
   }
 
-  @Get()
-  findAll() {
-    return this.innovationPathwayService.findAll();
-  }
+  // @Get()
+  // findAll() {
+  //   return this.innovationPathwayService.findAll();
+  // }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.innovationPathwayService.findOne(+id);
-  }
+  // @Get(':id')
+  // findOne(@Param('id') id: string) {
+  //   return this.innovationPathwayService.findOne(+id);
+  // }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateInnovationPathwayDto: UpdateInnovationPathwayDto) {
-    return this.innovationPathwayService.update(+id, updateInnovationPathwayDto);
-  }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.innovationPathwayService.remove(+id);
-  }
+  // @Delete(':id')
+  // remove(@Param('id') id: string) {
+  //   return this.innovationPathwayService.remove(+id);
+  // }
 }
