@@ -8,11 +8,13 @@ import { ApiService } from '../../../../shared/services/api/api.service';
 })
 export class InnovationPackageListComponent {
   innovationPackagesList = [];
+  searchText = '';
   constructor(private api: ApiService) {}
   ngOnInit(): void {
     this.api.resultsSE.GETAllInnovationPackages().subscribe(({ response }) => {
-      console.log(response);
+      console.log(this.innovationPackagesList);
       this.innovationPackagesList = response;
+      this.innovationPackagesList.map((inno: any) => (inno.full_name = inno.title));
     });
   }
 }
