@@ -8,6 +8,7 @@ import { ResultRegion } from '../../../api/results/result-regions/entities/resul
 import { ResultCountry } from '../../../api/results/result-countries/entities/result-country.entity';
 import { ResultRegionRepository } from '../../../api/results/result-regions/result-regions.repository';
 import { ResultCountryRepository } from '../../../api/results/result-countries/result-countries.repository';
+import { VersionsService } from '../../results/versions/versions.service';
 
 @Injectable()
 export class InnovationPathwayService {
@@ -16,40 +17,45 @@ export class InnovationPathwayService {
     private readonly _resultRepository: ResultRepository,
     private readonly _resultRegionRepository: ResultRegionRepository,
     private readonly _resultCountryRepository: ResultCountryRepository,
+    protected readonly _versionsService: VersionsService,
   ) { }
 
   async updateMain(resultId: number, UpdateInnovationPathwayDto: UpdateInnovationPathwayDto, user: TokenDto) {
-    let id: number;
     try {
       // * Check if result already exists
-      const resultExist =
+      const result =
         await this._resultRepository.findOneBy(
           { id: resultId }
         );
       // * Validate if the query incoming empty
-      if (!resultExist) {
+      if (!result) {
         throw {
-          response: resultExist,
+          response: result,
           message: 'The result was not found',
           status: HttpStatus.NOT_FOUND,
         };
       }
 
+      const vTemp = await this._versionsService.findBaseVersion();
+      if (vTemp.status >= 300) {
+        throw this._handlersError.returnErrorRes({ error: vTemp });
+      }
+      const version: Version = <Version>vTemp.response;
+
       // * Assign the result id of the query
-      id = resultExist.id;
+      return {
+        response: [
+          await this.geoScope(result.id, version, UpdateInnovationPathwayDto, user),
+          await this.specifyAspiredOutcomesAndImpact(result.id, UpdateInnovationPathwayDto)
+        ]
+      }
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
 
-    return {
-      response: [
-        await this.geoScope(id, UpdateInnovationPathwayDto, user),
-        await this.specifyAspiredOutcomesAndImpact(resultId, UpdateInnovationPathwayDto)
-      ]
-    }
   }
 
-  async geoScope(id: number, UpdateInnovationPathwayDto: UpdateInnovationPathwayDto, user: TokenDto) {
+  async geoScope(id: number, version: Version, UpdateInnovationPathwayDto: UpdateInnovationPathwayDto, user: TokenDto) {
     try {
       const req = UpdateInnovationPathwayDto;
       // * Obtain the regions in the body
@@ -113,6 +119,7 @@ export class InnovationPathwayService {
                 const newRegions = new ResultRegion();
                 newRegions.region_id = regions[i].id;
                 newRegions.result_id = id;
+                newRegions.version_id = version.id;
                 resultRegions.push(newRegions);
               }
 
@@ -135,6 +142,7 @@ export class InnovationPathwayService {
               const newCountries = new ResultCountry();
               newCountries.country_id = countries[i].id;
               newCountries.result_id = id;
+              newCountries.version_id = version.id
               resultCountries.push(newCountries);
             }
 
