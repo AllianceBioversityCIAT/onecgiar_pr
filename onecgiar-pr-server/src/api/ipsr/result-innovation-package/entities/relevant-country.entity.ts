@@ -5,7 +5,7 @@ import { BaseEntity } from '../../../../shared/entities/base-entity';
 export class RelevantCountry{
     @PrimaryGeneratedColumn({
         name: 'relevant_country_id',
-        type: 'int'
+        type: 'bigint'
     })
     relevant_country_id: number;
 

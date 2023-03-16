@@ -5,7 +5,7 @@ import { BaseEntity } from '../../../../shared/entities/base-entity';
 export class consensusInitiativeWorkPackage{
     @PrimaryGeneratedColumn({
         name: 'consensus_initiative_work_package_id',
-        type: 'int'
+        type: 'bigint'
     })
     consensus_initiative_work_package_id: number;
 
