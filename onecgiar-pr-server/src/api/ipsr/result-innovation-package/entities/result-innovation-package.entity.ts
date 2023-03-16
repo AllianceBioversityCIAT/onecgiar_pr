@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryGeneratedColumn, JoinColumn, ManyToOne } from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { BaseEntity } from '../../../../shared/entities/base-entity';
 import { consensusInitiativeWorkPackage } from './consensus-initiative-work-package.entity';
 import { RelevantCountry } from './relevant-country.entity';
@@ -6,12 +6,14 @@ import { RegionalLeadership } from './regional-leadership.entity';
 import { RegionalIntegrated } from './regional-integrated.entity';
 import { ActiveBackstopping } from './active-backstopping.entity';
 import { Version } from '../../../results/versions/entities/version.entity';
+import { Result } from '../../../results/entities/result.entity';
 
 @Entity('result_innovation_package')
 export class ResultInnovationPackage extends BaseEntity{
-    @PrimaryGeneratedColumn({
+    @Column({
         name: 'result_innovation_package_id',
-        type: 'bigint'
+        type: 'bigint',
+        primary: true
     })
     result_innovation_package_id: number;
 
@@ -99,4 +101,10 @@ export class ResultInnovationPackage extends BaseEntity{
         name: 'version_id'
     })
     obj_version: Version;
+    
+    @OneToOne(() => Result, r => r.id)
+    @JoinColumn({
+        name: 'result_innovation_package_id'
+    })
+    obj_result_innovation_package: Result;
 }
