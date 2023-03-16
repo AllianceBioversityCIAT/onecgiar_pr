@@ -10,6 +10,7 @@ import { ResultRegionRepository } from '../../../api/results/result-regions/resu
 import { ResultByInitiativesRepository } from '../../../api/results/results_by_inititiatives/resultByInitiatives.repository';
 import { ResultCountryRepository } from '../../../api/results/result-countries/result-countries.repository';
 import { IpsrRepository } from '../ipsr.repository';
+import { ResultInnovationPackageRepository } from './repositories/result-innovation-package.repository';
 
 @Module({
   controllers: [ResultInnovationPackageController],
@@ -23,7 +24,11 @@ import { IpsrRepository } from '../ipsr.repository';
     ResultCountryRepository,
     ResultByInitiativesRepository,
     IpsrRepository,
+    ResultInnovationPackageRepository
   ],
-  imports: [VersionsModule]
+  imports: [VersionsModule],
+  exports: [
+    ResultInnovationPackageRepository
+  ]
 })
 export class ResultInnovationPackageModule { }
