@@ -15,6 +15,7 @@ import { CustomFieldsModule } from './custom-fields/custom-fields.module';
 import { TawkComponent } from './shared/components/tawk/tawk.component';
 import { GoogleAnalyticsComponent } from './shared/components/external-tools/components/google-analytics/google-analytics.component';
 import { ShareRequestModalModule } from './pages/results/pages/result-detail/components/share-request-modal/share-request-modal.module';
+import { FeedbackValidationDirective } from './shared/directives/feedback-validation.directive';
 
 @NgModule({
   declarations: [AppComponent, NavigationBarComponent, FooterComponent, HeaderPanelComponent, ExternalToolsComponent, TestEnvironmentLabelComponent, TawkComponent, GoogleAnalyticsComponent],

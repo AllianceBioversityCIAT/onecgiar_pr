@@ -21,16 +21,18 @@ export class InnovationPackageCreatorComponent {
       this.innovationPackageCreatorBody.result_code = response.result_code;
       this.innovationPackageCreatorBody.official_code = response.official_code;
       this.innovationPackageCreatorBody.title = response.title;
-      console.log(response);
       window.scrollTo(0, document.body.scrollHeight);
     });
   }
 
   onSaveSection() {
-    console.log(this.innovationPackageCreatorBody);
     this.api.resultsSE.POSTResultInnovationPackage(this.innovationPackageCreatorBody).subscribe(({ response }) => {
       this.router.navigateByUrl(`/ipsr/detail/${response.newInnovationHeader.result_code}`);
       this.api.alertsFe.show({ id: 'ipsr-creator', title: 'Innovation package created', status: 'success', closeIn: 500 });
     });
+  }
+
+  ngDoCheck(): void {
+    this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.section_container');
   }
 }
