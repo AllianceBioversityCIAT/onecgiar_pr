@@ -11,6 +11,7 @@ import { ApiService } from '../../../../shared/services/api/api.service';
 export class InnovationPackageDetailComponent {
   constructor(private activatedRoute: ActivatedRoute, public ipsrDataControlSE: IpsrDataControlService, private api: ApiService) {}
   ngOnInit(): void {
+    this.ipsrDataControlSE.resultInnovationId = null;
     this.ipsrDataControlSE.resultInnovationCode = this.activatedRoute.snapshot.paramMap.get('id');
     this.GET_resultIdToCode();
   }
