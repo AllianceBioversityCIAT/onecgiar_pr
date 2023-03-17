@@ -28,6 +28,7 @@ export class ResultInnovationPackageService {
   async createHeader(CreateResultInnovationPackageDto: CreateResultInnovationPackageDto, user: TokenDto) {
     try {
       let innovationTitle: string;
+      let innovationGeoScope: number;
 
       // * Check if result already exists
       const resultExist =
@@ -88,7 +89,17 @@ export class ResultInnovationPackageService {
       // * Obtain the countries in the body
       const countries = CreateResultInnovationPackageDto.countries;
 
-      // TODO: ADD THE NAME REPLACE THE ID
+      // * Check Geo Scope
+      if (CreateResultInnovationPackageDto.geo_scope_id === 1) {
+        innovationGeoScope = 1;
+      } else if (CreateResultInnovationPackageDto.geo_scope_id === 2) {
+        innovationGeoScope = 2;
+      } else if (countries?.length > 1) {
+        innovationGeoScope = 3
+      } else {
+        innovationGeoScope = 4
+      }
+
       // * Validate the Geo Scope to concat the regions or countries in the title.
       if (CreateResultInnovationPackageDto.geo_scope_id === 2) {
         innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${result.title} in ${regions.map(r => r.name).join(', ')}`;
@@ -127,7 +138,7 @@ export class ResultInnovationPackageService {
         has_countries: countries
           ? true
           : false,
-        geo_scope_id: CreateResultInnovationPackageDto.geo_scope_id,
+        geographic_scope_id: innovationGeoScope,
         initiative_id: CreateResultInnovationPackageDto.initiative_id,
         gender_tag_level_id: result.gender_tag_level_id,
         climate_change_tag_level_id: result.climate_change_tag_level_id,
@@ -163,8 +174,6 @@ export class ResultInnovationPackageService {
       let resultRegions: ResultRegion[] = [];
       let resultCountries: ResultCountry[] = [];
 
-      //  TODO: PENDING VALIDATION FOR MULTI-NATIONAL !!!!!!!!!!!!!!!!!!!
-
       // * Validate if geo scope  is regional
       if (CreateResultInnovationPackageDto.geo_scope_id === 2) {
         if (regions) {
@@ -178,7 +187,7 @@ export class ResultInnovationPackageService {
           }
         }
         // * Validate if geo scope  is national or  multination
-      } else if (CreateResultInnovationPackageDto.geo_scope_id === 3) {
+      } else if (CreateResultInnovationPackageDto.geo_scope_id === 3 || CreateResultInnovationPackageDto.geo_scope_id === 4) {
         if (countries) {
           // * Iterate into the countries to save them
           for (let i = 0; i < countries.length; i++) {
