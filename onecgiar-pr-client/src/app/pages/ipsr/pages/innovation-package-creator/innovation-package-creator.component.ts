@@ -26,10 +26,15 @@ export class InnovationPackageCreatorComponent {
   }
 
   onSaveSection() {
-    this.api.resultsSE.POSTResultInnovationPackage(this.innovationPackageCreatorBody).subscribe(({ response }) => {
-      this.router.navigateByUrl(`/ipsr/detail/${response.newInnovationHeader.result_code}`);
-      this.api.alertsFe.show({ id: 'ipsr-creator', title: 'Innovation package created', status: 'success', closeIn: 500 });
-    });
+    this.api.resultsSE.POSTResultInnovationPackage(this.innovationPackageCreatorBody).subscribe(
+      ({ response }) => {
+        this.router.navigateByUrl(`/ipsr/detail/${response.newInnovationHeader.result_code}`);
+        this.api.alertsFe.show({ id: 'ipsr-creator', title: 'Innovation package created', status: 'success', closeIn: 500 });
+      },
+      err => {
+        this.api.alertsFe.show({ id: 'ipsr-creator-error', title: 'Error!', description: err?.error?.message, status: 'error' });
+      }
+    );
   }
 
   ngDoCheck(): void {
