@@ -265,7 +265,7 @@ export class ResultsPackageTocResultService {
 
   async findOne(resultId: number) {
     try {
-      const resultInit = await this._resultByInitiativesRepository.getOwnerInitiativeByResult(resultId);
+    const resultInit = await this._resultByInitiativesRepository.getOwnerInitiativeByResult(resultId);
     const conInit = await this._resultByInitiativesRepository.getContributorInitiativeByResult(resultId);
     const conPending = await this._resultByInitiativesRepository.getPendingInit(resultId);
     const npProject = await this._nonPooledProjectRepository.getAllNPProjectByResultId(resultId);
@@ -305,7 +305,7 @@ export class ResultsPackageTocResultService {
         contributors_result_toc_result: conResTocRes,
         institutions: institutions
       },
-      message: 'The toc data is successfully created',
+      message: 'The toc data is successfully',
       status: HttpStatus.OK,
     };
     } catch (error) {
