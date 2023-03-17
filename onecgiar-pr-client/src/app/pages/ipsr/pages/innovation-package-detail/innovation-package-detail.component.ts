@@ -24,4 +24,7 @@ export class InnovationPackageDetailComponent {
       err => {}
     );
   }
+  ngDoCheck(): void {
+    this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.section_container');
+  }
 }

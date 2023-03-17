@@ -19,6 +19,7 @@ interface CoreInnovationSelected {
 })
 export class ResultsInnovationOutputListComponent {
   coreInnovationSelected: CoreInnovationSelected;
+  searchText = '';
   @Output() selectInnovationEvent = new EventEmitter<CoreInnovationSelected>();
   constructor(public api: ApiService, public manageInnovationsListSE: ManageInnovationsListService) {}
 

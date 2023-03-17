@@ -23,6 +23,7 @@ export class ManageInnovationsListService {
   GETallInnovations() {
     this.api.resultsSE.GETallInnovations().subscribe(({ response }) => {
       this.allInnovationsList = response;
+      this.allInnovationsList.map((inno: any) => (inno.full_name = inno.title));
     });
   }
 }

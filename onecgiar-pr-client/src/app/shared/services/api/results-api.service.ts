@@ -99,7 +99,7 @@ export class ResultsApiService {
   }
 
   GET_generalInformationByResultId() {
-    return this.http.get<any>(`${this.apiBaseUrl}get/general-information/result/${this.currentResultId}`).pipe(this.saveButtonSE.isSavingSectionPipe());
+    return this.http.get<any>(`${this.apiBaseUrl}get/general-information/result/${this.currentResultId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   PATCH_generalInformation(body: GeneralInfoBody) {
@@ -138,7 +138,7 @@ export class ResultsApiService {
         }
         return resp;
       }),
-      this.saveButtonSE.isSavingSectionPipe()
+      this.saveButtonSE.isGettingSectionPipe()
     );
   }
 
@@ -223,11 +223,11 @@ export class ResultsApiService {
   }
 
   GET_resultknowledgeProducts() {
-    return this.http.get<any>(`${this.apiBaseUrl}results-knowledge-products/get/result/${this.currentResultId}`).pipe(this.saveButtonSE.isSavingSectionPipe());
+    return this.http.get<any>(`${this.apiBaseUrl}results-knowledge-products/get/result/${this.currentResultId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   PATCH_resyncKnowledgeProducts() {
-    return this.http.patch<any>(`${this.apiBaseUrl}results-knowledge-products/resync/${this.currentResultId}`, null).pipe(this.saveButtonSE.isSavingSectionPipe());
+    return this.http.patch<any>(`${this.apiBaseUrl}results-knowledge-products/resync/${this.currentResultId}`, null).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   POST_createWithHandle(body) {
@@ -241,7 +241,7 @@ export class ResultsApiService {
         resp?.response?.contributing_initiatives.map(initiative => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name || ''}</strong> - ${initiative?.initiative_name}`));
         return resp;
       }),
-      this.saveButtonSE.isSavingSectionPipe()
+      this.saveButtonSE.isGettingSectionPipe()
     );
   }
 
@@ -250,7 +250,7 @@ export class ResultsApiService {
   }
 
   GET_innovationUse() {
-    return this.http.get<any>(`${this.apiBaseUrl}summary/innovation-use/get/result/${this.currentResultId}`).pipe(this.saveButtonSE.isSavingSectionPipe());
+    return this.http.get<any>(`${this.apiBaseUrl}summary/innovation-use/get/result/${this.currentResultId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   PATCH_capacityDevelopent(body) {
@@ -259,7 +259,7 @@ export class ResultsApiService {
 
   GET_capacityDevelopent() {
     return this.http.get<any>(`${this.apiBaseUrl}summary/capacity-developent/get/result/${this.currentResultId}`).pipe(
-      this.saveButtonSE.isSavingSectionPipe(),
+      this.saveButtonSE.isGettingSectionPipe(),
       map((resp: any) => {
         resp?.response?.institutions?.map(institution => (institution.full_name = `(Id:${institution?.institutions_id}) <strong>${institution?.institutions_acronym || ''}</strong> ${institution?.institutions_acronym ? ' - ' : ''} ${institution?.institutions_name}`));
         return resp;
@@ -315,7 +315,7 @@ export class ResultsApiService {
   }
 
   GET_innovationDev() {
-    return this.http.get<any>(`${this.apiBaseUrl}summary/innovation-dev/get/result/${this.currentResultId}`).pipe(this.saveButtonSE.isSavingSectionPipe());
+    return this.http.get<any>(`${this.apiBaseUrl}summary/innovation-dev/get/result/${this.currentResultId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   PATCH_policyChanges(body) {
@@ -324,7 +324,7 @@ export class ResultsApiService {
 
   GET_policyChanges() {
     return this.http.get<any>(`${this.apiBaseUrl}summary/policy-changes/get/result/${this.currentResultId}`).pipe(
-      this.saveButtonSE.isSavingSectionPipe(),
+      this.saveButtonSE.isGettingSectionPipe(),
       map((resp: any) => {
         resp?.response?.institutions?.map(institution => (institution.full_name = `(Id:${institution?.institutions_id}) <strong>${institution?.institutions_acronym || ''}</strong> ${institution?.institutions_acronym ? ' - ' : ''} ${institution?.institutions_name}`));
         return resp;
@@ -476,7 +476,7 @@ export class ResultsApiService {
   }
 
   POSTResultInnovationPackage(body) {
-    return this.http.post<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-package/create-header`, body);
+    return this.http.post<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-package/create-header`, body).pipe(this.saveButtonSE.isCreatingPipe());
   }
 
   GETAllInnovationPackages() {
