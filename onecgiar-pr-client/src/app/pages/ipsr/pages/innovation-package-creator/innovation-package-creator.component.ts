@@ -15,7 +15,7 @@ export class InnovationPackageCreatorComponent {
   selectInnovationEvent(e) {
     this.innovationPackageCreatorBody.result_id = e.result_id;
     this.api.resultsSE.GETInnovationByResultId(e.result_id).subscribe(({ response }) => {
-      this.innovationPackageCreatorBody.geo_scope_id = response.geographic_scope_id;
+      this.innovationPackageCreatorBody.geo_scope_id = response.geographic_scope_id == 3 ? 4 : response.geographic_scope_id;
       this.innovationPackageCreatorBody.regions = response.hasRegions;
       this.innovationPackageCreatorBody.countries = response.hasCountries;
       this.innovationPackageCreatorBody.result_code = response.result_code;
