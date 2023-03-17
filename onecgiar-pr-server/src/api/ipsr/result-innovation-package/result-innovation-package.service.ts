@@ -71,6 +71,7 @@ export class ResultInnovationPackageService {
 
       // * Extract the result and version
       const result = resultExist;
+      console.log("🚀 ~ file: result-innovation-package.service.ts:74 ~ ResultInnovationPackageService ~ createHeader ~ result:", result)
       if (result.result_type_id != 2) {
         throw {
           response: result.result_type_id,
@@ -90,11 +91,11 @@ export class ResultInnovationPackageService {
       // TODO: ADD THE NAME REPLACE THE ID
       // * Validate the Geo Scope to concat the regions or countries in the title.
       if (CreateResultInnovationPackageDto.geo_scope_id === 2) {
-        innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${result.title} in ${regions.map(r => r.id).join(', ')}`;
+        innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${result.title} in ${regions.map(r => r.name).join(', ')}`;
       } else if (CreateResultInnovationPackageDto.geo_scope_id === 3) {
-        innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${result.title} in ${countries.map(c => c.id).join(', ')}`;
+        innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${result.title} in ${countries.map(c => c.name).join(', ')}`;
       } else {
-        innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${result.title}`;
+        innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${result.title}.`;
       }
 
       // * Find a title like it´s incoming from the request.
@@ -107,7 +108,7 @@ export class ResultInnovationPackageService {
       if (titleValidate.length) {
         throw {
           response: titleValidate.map(tv => tv.id),
-          message: `The title already exists, in the following result: ${titleValidate.map(tv => tv.result_code)}`,
+          message: `The title already exists, in the following result: ${titleValidate.map(tv => tv.result_code)}. Please change the Regions or Countries.`,
           status: HttpStatus.BAD_REQUEST,
         }
       }

@@ -7,7 +7,9 @@ export class CreateResultInnovationPackageDto {
 }
 export interface regionsInterface{
     id: number;
+    name: string;
 }
 export interface countriesInterface{
     id: number;
+    name: string;
 }
