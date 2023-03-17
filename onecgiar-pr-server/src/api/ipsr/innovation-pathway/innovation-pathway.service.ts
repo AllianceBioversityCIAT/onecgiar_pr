@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Type } from '@nestjs/common';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResultRepository } from '../../../api/results/result.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
@@ -17,6 +17,7 @@ import { CreateInnovationPackagingExpertDto } from '../innovation-packaging-expe
 import { ResultInnovationPackageRepository } from '../result-innovation-package/repositories/result-innovation-package.repository';
 import { CreateResultInnovationPackageDto } from '../result-innovation-package/dto/create-result-innovation-package.dto';
 import { VersionsService } from '../../results/versions/versions.service';
+import { ResultInnovationPackage } from '../result-innovation-package/entities/result-innovation-package.entity';
 
 @Injectable()
 export class InnovationPathwayService {
@@ -251,6 +252,48 @@ export class InnovationPathwayService {
           )
         }
       }
+    }
+  }
+
+  private async saveConsensus(result: Result, user: TokenDto, version: Version, {result_innocation_package: rip}: CreateResultInnovationPackageDto){
+    try {
+      const ripExists = await this._resultInnovationPackageRepository.findOne({where:{
+          result_innovation_package_id: result.id
+      }});
+      if(ripExists){
+         await this._resultInnovationPackageRepository.update(
+          result.id,
+          {
+            active_backstopping: rip.active_backstopping,
+            consensus_initiative_work_package: rip.consensus_initiative_work_package,
+            regional_integrated: rip.regional_integrated,
+            relevant_country: rip.relevant_country,
+            regional_leadership: rip.regional_leadership,
+            is_active: true,
+            last_updated_by:user.id
+          }
+        );
+      }else{
+        await this._resultInnovationPackageRepository.save(
+          {
+            result_innovation_package_id: result.id,
+            active_backstopping: rip.active_backstopping,
+            consensus_initiative_work_package: rip.consensus_initiative_work_package,
+            regional_integrated: rip.regional_integrated,
+            relevant_country: rip.relevant_country,
+            regional_leadership: rip.regional_leadership,
+            version_id: version.id,
+            created_by: user.id,
+            last_updated_by:user.id
+          }
+        );
+      }
+      const res = await this._resultInnovationPackageRepository.findOne({where:{
+        result_innovation_package_id: result.id
+      }});
+      return res;
+    } catch (error) {
+      return null
     }
   }
 }
