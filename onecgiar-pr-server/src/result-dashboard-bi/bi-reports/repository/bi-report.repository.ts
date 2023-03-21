@@ -191,7 +191,7 @@ export class BiReportRepository extends Repository<BiReport> {
         }
       }
     }else{
-      throw new NotFoundException('This report no exist');
+      throw new NotFoundException({message:'This report no exist'});
     }
   }
 
