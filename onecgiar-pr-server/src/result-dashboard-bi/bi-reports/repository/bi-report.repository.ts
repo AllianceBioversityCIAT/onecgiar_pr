@@ -11,6 +11,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { TokenBiReport } from '../entities/token-bi-reports.entity';
 import { log } from 'console';
 import { TokenReportBiDto } from '../dto/create-token-bi-report.dto';
+import { NotFoundException } from '@nestjs/common';
 
 @Injectable()
 export class BiReportRepository extends Repository<BiReport> {
@@ -190,10 +191,7 @@ export class BiReportRepository extends Repository<BiReport> {
         }
       }
     }else{
-      return {
-        status: 404,
-        error:'This Report not exists'
-      }
+      throw new NotFoundException('This report no exist');
     }
   }
 
