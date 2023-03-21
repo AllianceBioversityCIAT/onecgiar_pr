@@ -39,7 +39,8 @@
               "src/styles/containers.scss",
               "src/styles/table-custom-styles.scss",
               "src/app/custom-fields/custom-fields.scss",
-              "src/styles/custom-alert.scss"
+              "src/styles/custom-alert.scss",
+              "src/styles/filters-list.scss"
             ],
             "scripts": ["node_modules/pusher-js/dist/web/pusher.min.js"]
           },
