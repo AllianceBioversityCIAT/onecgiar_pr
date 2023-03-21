@@ -2,6 +2,12 @@
     <app-ipsr-detail-top-menu></app-ipsr-detail-top-menu>
     <div class="content">
         <router-outlet *ngIf="this.ipsrDataControlSE.resultInnovationId"></router-outlet>
+        <div class="spinner" *ngIf="this.saveButtonSE.isGettingSection">
+            <div class="info">
+                <i class="material-icons-round icon rotating">sync</i>
+                <div class="text">Loading section...</div>
+            </div>
+        </div>
         <div class="section_final_space"></div>
     </div>
 </div>

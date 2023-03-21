@@ -14,12 +14,13 @@ import { SaveButtonService } from '../../../custom-fields/save-button/save-butto
 import { ElasticResult, Source } from '../../interfaces/elastic.interface';
 import { KnowledgeProductBodyMapped } from '../../../pages/results/pages/result-detail/pages/rd-result-types-pages/knowledge-product-info/model/KnowledgeProductBodyMapped';
 import { KnowledgeProductSaveDto } from '../../../pages/results/pages/result-detail/pages/rd-result-types-pages/knowledge-product-info/model/knowledge-product-save.dto';
+import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-control.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ResultsApiService {
-  constructor(public http: HttpClient, private saveButtonSE: SaveButtonService) {}
+  constructor(public http: HttpClient, private saveButtonSE: SaveButtonService, private ipsrDataControlSE: IpsrDataControlService) {}
   apiBaseUrl = environment.apiBaseUrl + 'api/results/';
   currentResultId: number | string = null;
   currentResultCode: number | string = null;
@@ -472,7 +473,7 @@ export class ResultsApiService {
   }
 
   GETInnovationByResultId(resultId) {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation/${resultId}`);
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation/${resultId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   POSTResultInnovationPackage(body) {
@@ -484,6 +485,10 @@ export class ResultsApiService {
   }
 
   PATCHIpsrGeneralInfo(body, resulId) {
-    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-package/general-information/${resulId}`, body);
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-package/general-information/${resulId}`, body).pipe(this.saveButtonSE.isCreatingPipe());
+  }
+
+  GETContributorsByResulId() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/contributors/get/${this.ipsrDataControlSE.resultInnovationId}`);
   }
 }
