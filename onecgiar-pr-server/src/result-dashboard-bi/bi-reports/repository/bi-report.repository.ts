@@ -167,10 +167,10 @@ export class BiReportRepository extends Repository<BiReport> {
     const today = new Date();
     let reportsExist = await this.getReportByName(report_name);
     
-    if(reportsExist != null){
+    if(reportsExist != null && reportsExist.length != 0){
       if(tokensReports.length <= 0 || Date.parse(tokensReports[0].expiration_toke_id.toString()) < Date.parse(today.toString())){
         
-        const registerInToken = await this.getTokenPowerBi();
+        const registerInToken= await this.getTokenPowerBi();
         const responseToken = await registerInToken['reportsInformation'].filter(report => report.name == report_name);
         return {
           token:registerInToken['embed_token'],
@@ -191,6 +191,7 @@ export class BiReportRepository extends Repository<BiReport> {
       }
     }else{
       return {
+        status: 404,
         error:'This Report not exists'
       }
     }
