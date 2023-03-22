@@ -60,6 +60,7 @@ import { ResultsValidationModuleModule } from './results-validation-module/resul
 import { SubmissionsModule } from './submissions/submissions.module';
 import { AdminPanelModule } from './admin-panel/admin-panel.module';
 import { LogRepository } from '../../connection/dynamodb-logs/dynamodb-logs.repository';
+import { ResultActorsModule } from './result-actors/result-actors.module';
 
 @Module({
   controllers: [ResultsController],
@@ -105,6 +106,7 @@ import { LogRepository } from '../../connection/dynamodb-logs/dynamodb-logs.repo
     ResultsValidationModuleModule,
     SubmissionsModule,
     AdminPanelModule,
+    ResultActorsModule,
   ],
   providers: [
     ResultsService,
