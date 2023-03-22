@@ -15,5 +15,10 @@ export class IpsrGeoscopeCreatorComponent {
     { full_name: 'Sub-national', id: 5 }
   ];
   constructor(public regionsCountriesSE: RegionsCountriesService) {}
+
+  get selectRegionsDescription() {
+    return `The list of regions below follows the UN <a class="open_route" href="https://unstats.un.org/unsd/methodology/m49/" target='_blank'>(M.49)</a> standard`;
+  }
+
   onSaveSection() {}
 }
