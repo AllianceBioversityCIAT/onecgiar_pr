@@ -52,7 +52,7 @@ export class ResultsPackageTocResultService {
           status: HttpStatus.BAD_REQUEST,
         }
       }
-      const iprsCore = await this._ipsrRepository.findOne({ where: { ipsr_result_id: rip.id, is_active: true, ipsr_role_id: 1 } });
+      const iprsCore = await this._ipsrRepository.findOne({ where: { result_innovation_package_id: rip.id, is_active: true, ipsr_role_id: 1 } });
       const result = await this._resultRepository.getResultById(iprsCore.result_id);
       if (!result) {
         throw {

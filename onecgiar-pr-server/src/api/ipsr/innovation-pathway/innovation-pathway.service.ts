@@ -169,7 +169,7 @@ export class InnovationPathwayService {
 
       // * Search the IPSR result to retrieve the Core Innovation
       const ipsrResult =
-        await this._innovationByResultRepository.findOneBy({ ipsr_result_id: id });
+        await this._innovationByResultRepository.findOneBy({ result_innovation_package_id: id });
 
       // * Find the Result Core Innovation.
       const coreResult =

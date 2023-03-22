@@ -12,6 +12,7 @@ import { ResultCountry } from '../../../api/results/result-countries/entities/re
 import { ResultCountryRepository } from '../../../api/results/result-countries/result-countries.repository';
 import { IpsrRepository } from '../ipsr.repository';
 import { ResultTypeRepository } from 'src/api/results/result_types/resultType.repository';
+import { ResultInnovationPackageRepository } from './repositories/result-innovation-package.repository';
 
 @Injectable()
 export class ResultInnovationPackageService {
@@ -22,11 +23,15 @@ export class ResultInnovationPackageService {
     private readonly _resultByInitiativeRepository: ResultByInitiativesRepository,
     private readonly _resultRegionRepository: ResultRegionRepository,
     private readonly _resultCountryRepository: ResultCountryRepository,
-    private readonly _innovationByResultRepository: IpsrRepository
+    private readonly _innovationByResultRepository: IpsrRepository,
+    private readonly _resultInnovationPackageRepository: ResultInnovationPackageRepository,
   ) { }
 
   async createHeader(CreateResultInnovationPackageDto: CreateResultInnovationPackageDto, user: TokenDto) {
     try {
+      let innovationTitle: string;
+      let innovationGeoScope: number;
+
       // * Check if result already exists
       const resultExist =
         await this._resultRepository.getResultById(
@@ -40,6 +45,7 @@ export class ResultInnovationPackageService {
         };
       }
 
+      // * Validate that initiative id is coming.
       if (!CreateResultInnovationPackageDto.initiative_id) {
         throw {
           response: `Initiative id: ${CreateResultInnovationPackageDto.initiative_id}`,
@@ -48,9 +54,10 @@ export class ResultInnovationPackageService {
         };
       }
 
+      // * Validate that geo scope id is coming
       if (!CreateResultInnovationPackageDto.geo_scope_id) {
         throw {
-          response: `Initiative id: ${CreateResultInnovationPackageDto.initiative_id}`,
+          response: `Geo Scope id: ${CreateResultInnovationPackageDto.geo_scope_id}`,
           message: 'Please enter a Geo Scope to create a new Innovation Package',
           status: HttpStatus.BAD_REQUEST,
         };
@@ -67,7 +74,8 @@ export class ResultInnovationPackageService {
 
       // * Extract the result and version
       const result = resultExist;
-      if (result.result_type_id != 2) {
+      console.log("🚀 ~ file: result-innovation-package.service.ts:74 ~ ResultInnovationPackageService ~ createHeader ~ result:", result)
+      if (result.result_type_id != 7) {
         throw {
           response: result.result_type_id,
           message: 'This is not a valid result type. Only Innovation Use can be used to create a new Innovation Package.',
@@ -82,10 +90,46 @@ export class ResultInnovationPackageService {
       const regions = CreateResultInnovationPackageDto.regions;
       // * Obtain the countries in the body
       const countries = CreateResultInnovationPackageDto.countries;
+
+      // * Check Geo Scope
+      if (CreateResultInnovationPackageDto.geo_scope_id === 1) {
+        innovationGeoScope = 1;
+      } else if (CreateResultInnovationPackageDto.geo_scope_id === 2) {
+        innovationGeoScope = 2;
+      } else if (countries?.length > 1) {
+        innovationGeoScope = 3
+      } else {
+        innovationGeoScope = 4
+      }
+
+      // * Validate the Geo Scope to concat the regions or countries in the title.
+      if (CreateResultInnovationPackageDto.geo_scope_id === 2) {
+        innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${result.title} in ${regions.map(r => r.name).join(', ')}`;
+      } else if (CreateResultInnovationPackageDto.geo_scope_id === 3) {
+        innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${result.title} in ${countries.map(c => c.name).join(', ')}`;
+      } else {
+        innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${result.title}.`;
+      }
+
+      // * Find a title like it´s incoming from the request.
+      const titleValidate = await this._resultRepository
+        .createQueryBuilder('result')
+        .where('result.title like :title', { title: `${innovationTitle}` })
+        .getMany();
+
+      // * Validate if the title is duplicate
+      if (titleValidate.length) {
+        throw {
+          response: titleValidate.map(tv => tv.id),
+          message: `The title already exists, in the following result: ${titleValidate.map(tv => tv.result_code)}. Please change the Regions or Countries.`,
+          status: HttpStatus.BAD_REQUEST,
+        }
+      }
+
       // * Create new result 
       const newInnovationHeader = await this._resultRepository.save({
         result_code: last_code + 1,
-        title: result.title,
+        title: innovationTitle,
         description: result.description,
         reported_year_id: result.reported_year_id,
         result_level_id: result.result_level_id,
@@ -96,7 +140,7 @@ export class ResultInnovationPackageService {
         has_countries: countries
           ? true
           : false,
-        geo_scope_id: CreateResultInnovationPackageDto.geo_scope_id,
+        geographic_scope_id: innovationGeoScope,
         initiative_id: CreateResultInnovationPackageDto.initiative_id,
         gender_tag_level_id: result.gender_tag_level_id,
         climate_change_tag_level_id: result.climate_change_tag_level_id,
@@ -119,9 +163,15 @@ export class ResultInnovationPackageService {
         last_updated_by: user.id,
       });
 
-      // * Save new result into innovation by result
+      // * Save the result in the result innovation package
+      const newResultInnovationPackage = await this._resultInnovationPackageRepository.save({
+        result_innovation_package_id: newResult,
+        version_id: vrs.id,
+      });
+
+      // * Save new result into result BY innovation package
       const newInnovationByResult = await this._innovationByResultRepository.save({
-        ipsr_result_id: newResult,
+        result_innovation_package_id: newResult,
         result_id: result.id,
         ipsr_role_id: 1,
         version_id: vrs.id,
@@ -131,8 +181,6 @@ export class ResultInnovationPackageService {
 
       let resultRegions: ResultRegion[] = [];
       let resultCountries: ResultCountry[] = [];
-
-      //  TODO: PENDING VALIDATION FOR MULTI-NATIONAL !!!!!!!!!!!!!!!!!!!
 
       // * Validate if geo scope  is regional
       if (CreateResultInnovationPackageDto.geo_scope_id === 2) {
@@ -147,7 +195,7 @@ export class ResultInnovationPackageService {
           }
         }
         // * Validate if geo scope  is national or  multination
-      } else if (CreateResultInnovationPackageDto.geo_scope_id === 3) {
+      } else if (CreateResultInnovationPackageDto.geo_scope_id === 3 || CreateResultInnovationPackageDto.geo_scope_id === 4) {
         if (countries) {
           // * Iterate into the countries to save them
           for (let i = 0; i < countries.length; i++) {
@@ -160,16 +208,15 @@ export class ResultInnovationPackageService {
         }
       }
       // * Save the regions
-      const newInnovationRegions = 
-        await this._resultRegionRepository.save(resultRegions);
+      const newInnovationRegions = await this._resultRegionRepository.save(resultRegions);
       // * Save the countries
-      const newInnovationCountries = 
-        await this._resultCountryRepository.save(resultCountries);
+      const newInnovationCountries = await this._resultCountryRepository.save(resultCountries);
 
       return {
         response: {
           newInnovationHeader,
           newInnovationByInitiative,
+          newResultInnovationPackage,
           newInnovationByResult,
           newInnovationRegions,
           newInnovationCountries
@@ -186,10 +233,24 @@ export class ResultInnovationPackageService {
     try {
       const resultExist = await this._resultRepository.findOneBy({ id: resultId });
       const req = updateResultInnovationPackageDto;
-      console.log("🚀 ~ file: result-innovation-package.service.ts:164 ~ ResultInnovationPackageService ~ generalInformation ~ req:", req.is_krs)
+
+      // * Find a title like it´s incoming from the request.
+      const titleValidate = await this._resultRepository
+        .createQueryBuilder('result')
+        .where('result.title like :title', { title: `${req.title}` })
+        .getMany();
+
+      // * Validate if the title is duplicate
+      if (!titleValidate.find(tv => tv.id === resultId)) {
+        throw {
+          response: titleValidate.map(tv => tv.id),
+          message: `The title already exists, in the following results: ${titleValidate.map(tv => tv.result_code)}`,
+          status: HttpStatus.BAD_REQUEST,
+        }
+      }
 
       const updateResult = await this._resultRepository.update(resultId, {
-        title: req.title || resultExist.title,
+        title: req.title,
         description: req.description || resultExist.description,
         lead_contact_person: req.lead_contact_person,
         gender_tag_level_id: req.gender_tag_level_id,

@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryGeneratedColumn, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn, JoinColumn, ManyToOne, OneToOne, OneToMany } from 'typeorm';
 import { BaseEntity } from '../../../../shared/entities/base-entity';
 import { consensusInitiativeWorkPackage } from './consensus-initiative-work-package.entity';
 import { RelevantCountry } from './relevant-country.entity';
@@ -7,6 +7,7 @@ import { RegionalIntegrated } from './regional-integrated.entity';
 import { ActiveBackstopping } from './active-backstopping.entity';
 import { Version } from '../../../results/versions/entities/version.entity';
 import { Result } from '../../../results/entities/result.entity';
+import { Ipsr } from '../../entities/ipsr.entity';
 
 @Entity('result_innovation_package')
 export class ResultInnovationPackage extends BaseEntity{
@@ -107,4 +108,7 @@ export class ResultInnovationPackage extends BaseEntity{
         name: 'result_innovation_package_id'
     })
     obj_result_innovation_package: Result;
+
+    @OneToMany(() => Ipsr, (i) => i.obj_result_by_innovation_package)
+    obj_result: Ipsr[];
 }

@@ -9,9 +9,11 @@ export class CreateResultInnovationPackageDto {
     public regions: regionsInterface[];
     public countries: countriesInterface[];
 }
-export interface regionsInterface{
+export interface regionsInterface {
     id: number;
+    name: string;
 }
-export interface countriesInterface{
+export interface countriesInterface {
     id: number;
+    name: string;
 }
