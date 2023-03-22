@@ -1,5 +1,5 @@
 export class CreateInnovationPackagingExpertDto {
-    public innovation_packaging_expert_id: number;
+    public result_ip_expert_id: number;
     public first_name: string;
     public last_name: string;
     public email: string;

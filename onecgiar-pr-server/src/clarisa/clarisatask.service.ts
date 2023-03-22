@@ -470,7 +470,7 @@ export class ClarisaTaskService {
         });
         const dataNew = await lastValueFrom(
           await this._httpService
-            .get(`${this.clarisaHost}institution-types?type=one-cgiar`, {
+            .get(`${this.clarisaHost}institution-types/simple`, {
               auth: { username: env.L_CLA_USER, password: env.L_CLA_PASSWORD },
             })
             .pipe(map((resp) => resp.data)),
