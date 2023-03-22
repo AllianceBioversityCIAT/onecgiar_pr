@@ -11,6 +11,8 @@ import { ResultInnovationPackageRepository } from '../result-innovation-package/
 import { VersionsService } from '../../results/versions/versions.service';
 import { VersionRepository } from 'src/api/results/versions/version.repository';
 import { IpsrRepository } from '../ipsr.repository';
+import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
+import { ResultByInstitutionsByDeliveriesTypeRepository } from '../../results/result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';
 
 @Module({
   controllers: [InnovationPathwayController],
@@ -26,6 +28,8 @@ import { IpsrRepository } from '../ipsr.repository';
     VersionsService,
     VersionRepository,
     IpsrRepository,
+    ResultByIntitutionsRepository,
+    ResultByInstitutionsByDeliveriesTypeRepository
   ]
 })
 export class InnovationPathwayModule { }

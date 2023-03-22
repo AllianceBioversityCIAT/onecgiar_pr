@@ -5,7 +5,6 @@ export class CreateResultInnovationPackageDto {
     public initiative_id: number;
     public geo_scope_id: number;
     public result_innocation_package: ResultInnovationPackage;
-    public experts: CreateInnovationPackagingExpertDto[];
     public regions: regionsInterface[];
     public countries: countriesInterface[];
 }

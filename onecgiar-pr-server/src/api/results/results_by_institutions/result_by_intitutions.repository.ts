@@ -162,7 +162,7 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
   async getGenericResultByInstitutionExists(
     resultId: number,
     institutionsId: number,
-    institutionRolesId: 1 | 2 | 3| 4,
+    institutionRolesId: 1 | 2 | 3| 4| 5,
   ): Promise<ResultsByInstitution> {
     const queryData = `
     select 

@@ -19,6 +19,10 @@ import { CreateResultInnovationPackageDto } from '../result-innovation-package/d
 import { VersionsService } from '../../results/versions/versions.service';
 import { ResultInnovationPackage } from '../result-innovation-package/entities/result-innovation-package.entity';
 import { IpsrRepository } from '../ipsr.repository';
+import { CreateResultIPDto } from '../result-innovation-package/dto/create-result-ip.dto';
+import { ResultsByInstitution } from '../../results/results_by_institutions/entities/results_by_institution.entity';
+import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
+import { ResultByInstitutionsByDeliveriesTypeRepository } from '../../results/result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';
 
 @Injectable()
 export class InnovationPathwayService {
@@ -32,6 +36,8 @@ export class InnovationPathwayService {
     protected readonly _versionsService: VersionsService,
     protected readonly _resultInnovationPackageRepository: ResultInnovationPackageRepository,
     protected readonly _innovationByResultRepository: IpsrRepository,
+    protected readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
+    protected readonly _resultByInstitutionsByDeliveriesTypeRepository: ResultByInstitutionsByDeliveriesTypeRepository
   ) { }
 
   async updateMain(resultId: number, UpdateInnovationPathwayDto: UpdateInnovationPathwayDto, user: TokenDto) {
@@ -69,7 +75,7 @@ export class InnovationPathwayService {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
 
-  } 
+  }
 
   async geoScope(result: any, version: Version, UpdateInnovationPathwayDto: UpdateInnovationPathwayDto, user: TokenDto) {
     const id = result.id;
@@ -221,7 +227,7 @@ export class InnovationPathwayService {
     return `This action removes a #${result} specifyAspiredOutcomesAndImpact`;
   }
 
-  private async saveInnovationPackagingExperts(result: Result, v: Version, user: TokenDto, { result_innocation_package: rpData, experts }: CreateResultInnovationPackageDto) {
+  private async saveInnovationPackagingExperts(result: Result, v: Version, user: TokenDto, { result_ip: rpData, experts  }: UpdateInnovationPathwayDto) {
     const rip = await this._resultInnovationPackageRepository.findOne({
       where: {
         result_innovation_package_id: result.id
@@ -269,7 +275,7 @@ export class InnovationPathwayService {
         if (innExp) {
           await this._innovationPackagingExpertRepository.update(
             innExp.result_ip_expert_id,
-            ex.is_active?{
+            ex.is_active ? {
               first_name: ex.first_name,
               last_name: ex.last_name,
               version_id: v.id,
@@ -300,13 +306,15 @@ export class InnovationPathwayService {
     }
   }
 
-  private async saveConsensus(result: Result, user: TokenDto, version: Version, {result_innocation_package: rip}: CreateResultInnovationPackageDto){
+  private async saveConsensus(result: Result, user: TokenDto, version: Version, rip: CreateResultIPDto) {
     try {
-      const ripExists = await this._resultInnovationPackageRepository.findOne({where:{
+      const ripExists = await this._resultInnovationPackageRepository.findOne({
+        where: {
           result_innovation_package_id: result.id
-      }});
-      if(ripExists){
-         await this._resultInnovationPackageRepository.update(
+        }
+      });
+      if (ripExists) {
+        await this._resultInnovationPackageRepository.update(
           result.id,
           {
             active_backstopping: rip.active_backstopping,
@@ -315,10 +323,10 @@ export class InnovationPathwayService {
             relevant_country: rip.relevant_country,
             regional_leadership: rip.regional_leadership,
             is_active: true,
-            last_updated_by:user.id
+            last_updated_by: user.id
           }
         );
-      }else{
+      } else {
         await this._resultInnovationPackageRepository.save(
           {
             result_innovation_package_id: result.id,
@@ -329,16 +337,62 @@ export class InnovationPathwayService {
             regional_leadership: rip.regional_leadership,
             version_id: version.id,
             created_by: user.id,
-            last_updated_by:user.id
+            last_updated_by: user.id
           }
         );
       }
-      const res = await this._resultInnovationPackageRepository.findOne({where:{
-        result_innovation_package_id: result.id
-      }});
+      const res = await this._resultInnovationPackageRepository.findOne({
+        where: {
+          result_innovation_package_id: result.id
+        }
+      });
       return res;
     } catch (error) {
       return null
+    }
+  }
+
+  private async savePartners(result: Result, user: TokenDto, version:Version, crtr:UpdateInnovationPathwayDto) {
+    if (crtr?.institutions.length) {
+      const { institutions: inst } = crtr;
+      await this._resultByIntitutionsRepository.updateIstitutions(result.id, inst, false, user.id);
+      for (const ins of inst) {
+        const instExist = await this._resultByIntitutionsRepository.getGenericResultByInstitutionExists(result.id, ins.institutions_id, 5);
+        let rbi: ResultsByInstitution = null;
+        if (!instExist) {
+          rbi = await this._resultByIntitutionsRepository.save({
+            institution_roles_id: 2,
+            institutions_id: ins.institutions_id,
+            result_id: result.id,
+            version_id: version.id,
+            created_by: user.id,
+            last_updated_by: user.id
+          })
+        }
+
+        if (ins?.deliveries.length) {
+          const { deliveries } = ins;
+          await this.saveDeliveries(instExist ? instExist : rbi, deliveries, user.id, version);
+        }
+      }
+    } else {
+      await this._resultByIntitutionsRepository.updateIstitutions(result.id, [], false, user.id);
+    }
+  }
+
+  protected async saveDeliveries(inst: ResultsByInstitution, deliveries: number[], userId: number, v: Version) {
+    await this._resultByInstitutionsByDeliveriesTypeRepository.inactiveResultDeLivery(inst.id, deliveries, userId);
+    for (const deli of deliveries) {
+      const deliExist = await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByTypeAndResultByInstitution(inst.id, deli);
+      if (!deliExist) {
+        await this._resultByInstitutionsByDeliveriesTypeRepository.save({
+          partner_delivery_type_id: deli,
+          result_by_institution_id: inst.id,
+          last_updated_by: userId,
+          created_by: userId,
+          versions_id: v.id
+        });
+      }
     }
   }
 }
