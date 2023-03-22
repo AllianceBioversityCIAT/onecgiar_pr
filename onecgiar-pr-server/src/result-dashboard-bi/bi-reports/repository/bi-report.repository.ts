@@ -108,6 +108,7 @@ export class BiReportRepository extends Repository<BiReport> {
         reportsInfo.name = resp.report_name;
         reportsInfo.description = resp.report_description;
         reportsInfo.title = resp.report_title;
+        reportsInfo.order = resp.report_order;
         reportsInfo.embed_url = this.credentialsBi.embed_url_base+resp.report_id+'&groupId='+resp.group_id+'&config='+this.credentialsBi.config_id;
         auxReportsInfo.push(reportsInfo)
       })
@@ -148,6 +149,7 @@ export class BiReportRepository extends Repository<BiReport> {
         reportsInfo.resport_id = reportsExist.report_id;
         reportsInfo.name = reportsExist.report_name;
         reportsInfo.description = reportsExist.report_description;
+        reportsInfo.order = reportsExist.report_order;
         reportsInfo.embed_url = this.credentialsBi.embed_url_base+reportsExist.report_id+'&groupId='+reportsExist.group_id+'&config='+this.credentialsBi.config_id;
 
         return {
@@ -183,6 +185,7 @@ export class BiReportRepository extends Repository<BiReport> {
         reportsInfo.resport_id = reportsExist[0].report_id;
         reportsInfo.name = reportsExist[0].report_name;
         reportsInfo.description = reportsExist[0].report_description;
+        reportsInfo.order = reportsExist[0].report_order;
         reportsInfo.embed_url = this.credentialsBi.embed_url_base+reportsExist[0].report_id+'&groupId='+reportsExist[0].group_id+'&config='+this.credentialsBi.config_id;
 
         return {
@@ -191,7 +194,7 @@ export class BiReportRepository extends Repository<BiReport> {
         }
       }
     }else{
-      throw new NotFoundException({message:'This report no exist'});
+      throw new NotFoundException({message:'This report does not exist'});
     }
   }
 
