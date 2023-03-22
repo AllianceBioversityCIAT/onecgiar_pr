@@ -196,9 +196,6 @@ export class Result {
   @OneToMany(() => ResultCountry, (rc) => rc.result_object)
   result_country_array: ResultCountry[];
 
-  @OneToMany(() => Ipsr, (rc) => rc.obj_ipsr_result)
-  obj_ipsr_result: Ipsr[];
-
   @OneToMany(() => Ipsr, (rc) => rc.obj_result)
   obj_result: Ipsr[];
 }

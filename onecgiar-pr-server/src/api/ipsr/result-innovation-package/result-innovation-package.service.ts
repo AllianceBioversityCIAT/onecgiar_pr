@@ -12,6 +12,7 @@ import { ResultCountry } from '../../../api/results/result-countries/entities/re
 import { ResultCountryRepository } from '../../../api/results/result-countries/result-countries.repository';
 import { IpsrRepository } from '../ipsr.repository';
 import { ResultTypeRepository } from 'src/api/results/result_types/resultType.repository';
+import { ResultInnovationPackageRepository } from './repositories/result-innovation-package.repository';
 
 @Injectable()
 export class ResultInnovationPackageService {
@@ -22,7 +23,8 @@ export class ResultInnovationPackageService {
     private readonly _resultByInitiativeRepository: ResultByInitiativesRepository,
     private readonly _resultRegionRepository: ResultRegionRepository,
     private readonly _resultCountryRepository: ResultCountryRepository,
-    private readonly _innovationByResultRepository: IpsrRepository
+    private readonly _innovationByResultRepository: IpsrRepository,
+    private readonly _resultInnovationPackageRepository: ResultInnovationPackageRepository,
   ) { }
 
   async createHeader(CreateResultInnovationPackageDto: CreateResultInnovationPackageDto, user: TokenDto) {
@@ -73,8 +75,7 @@ export class ResultInnovationPackageService {
       // * Extract the result and version
       const result = resultExist;
       console.log("🚀 ~ file: result-innovation-package.service.ts:74 ~ ResultInnovationPackageService ~ createHeader ~ result:", result)
-      if (result.result_type_id != 2) {
-        throw {
+      if (result.result_type_id != 7) {
           response: result.result_type_id,
           message: 'This is not a valid result type. Only Innovation Use can be used to create a new Innovation Package.',
           status: HttpStatus.BAD_REQUEST,
@@ -161,9 +162,15 @@ export class ResultInnovationPackageService {
         last_updated_by: user.id,
       });
 
-      // * Save new result into innovation by result
+      // * Save the result in the result innovation package
+      const newResultInnovationPackage = await this._resultInnovationPackageRepository.save({
+        result_innovation_package_id: newResult,
+        version_id: vrs.id,
+      });
+
+      // * Save new result into result BY innovation package
       const newInnovationByResult = await this._innovationByResultRepository.save({
-        ipsr_result_id: newResult,
+        result_innovation_package_id: newResult,
         result_id: result.id,
         ipsr_role_id: 1,
         version_id: vrs.id,
@@ -208,6 +215,7 @@ export class ResultInnovationPackageService {
         response: {
           newInnovationHeader,
           newInnovationByInitiative,
+          newResultInnovationPackage,
           newInnovationByResult,
           newInnovationRegions,
           newInnovationCountries

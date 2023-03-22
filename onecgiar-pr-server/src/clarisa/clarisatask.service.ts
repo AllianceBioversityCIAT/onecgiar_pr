@@ -31,6 +31,10 @@ import { ClarisaActionAreaOutcomeRepository } from './clarisa-action-area-outcom
 import { TocResultsRepository } from '../toc/toc-results/toc-results.repository';
 import { ClarisaCentersRepository } from './clarisa-centers/clarisa-centers.repository';
 import { ClarisaPolicyTypeRepository } from './clarisa-policy-types/clarisa-policy-types.repository';
+import { ClarisaSdgsRepository } from './clarisa-sdgs/clarisa-sdgs.repository';
+import { ClarisaSdg } from './clarisa-sdgs/entities/clarisa-sdg.entity';
+import { ClarisaSdgsTargetsRepository } from './clarisa-sdgs-targets/clarisa-sdgs-targets.repository';
+import { ClarisaSdgsTarget } from './clarisa-sdgs-targets/entities/clarisa-sdgs-target.entity';
 
 @Injectable()
 export class ClarisaTaskService {
@@ -64,8 +68,10 @@ export class ClarisaTaskService {
     private readonly _tocResultsRepository: TocResultsRepository,
     private readonly _clarisaPolicyTypeRepository: ClarisaPolicyTypeRepository,
     private readonly _clarisaCentersRepository: ClarisaCentersRepository,
+    private readonly _clarisaSdgsRepository: ClarisaSdgsRepository,
+    private readonly _clarisaSdgsTargetsRepository: ClarisaSdgsTargetsRepository,
     private readonly _httpService: HttpService,
-  ) {}
+  ) { }
 
   public async clarisaBootstrap() {
     this._logger.debug(`Cloning of CLARISA control lists`);
@@ -100,9 +106,11 @@ export class ClarisaTaskService {
     count = await this.cloneResultTocRepository(count);
     count = await this.cloneClarisaCenterRepository(count);
     count = await this.cloneClarisaPolicyTypeRepository(count);
+    // count = await this.cloneClarisaSdgs(count);
+    // count = await this.cloneClarisaSdgsTargets(count);
   }
 
-  public async clarisaBootstrapImportantData(){
+  public async clarisaBootstrapImportantData() {
     this._logger.debug(`Cloning of CLARISA important control lists`);
     let count = 1;
     count = await this.cloneClarisaInstitutions(count);
@@ -462,7 +470,7 @@ export class ClarisaTaskService {
         });
         const dataNew = await lastValueFrom(
           await this._httpService
-            .get(`${this.clarisaHost}institution-types?type=one-cgiar`, {
+            .get(`${this.clarisaHost}institution-types/simple`, {
               auth: { username: env.L_CLA_USER, password: env.L_CLA_PASSWORD },
             })
             .pipe(map((resp) => resp.data)),
@@ -505,8 +513,7 @@ export class ClarisaTaskService {
         const data = await lastValueFrom(
           this._httpService
             .get(
-              `${this.clarisaHost}institutions?show=all${
-                lastUpdated ? `&from=${lastUpdated}` : ''
+              `${this.clarisaHost}institutions?show=all${lastUpdated ? `&from=${lastUpdated}` : ''
               }`,
               {
                 auth: {
@@ -531,8 +538,7 @@ export class ClarisaTaskService {
 
         await this._clarisaInstitutionsRepository.save(data);
         this._logger.verbose(
-          `[${position}]: All CLARISA Institutions control list data has been created. Updated/created ${
-            data.length ?? 0
+          `[${position}]: All CLARISA Institutions control list data has been created. Updated/created ${data.length ?? 0
           } institutions`,
         );
       }
@@ -841,6 +847,85 @@ export class ClarisaTaskService {
     } catch (error) {
       this._logger.error(
         `[${position}]: Error in manipulating the data of CLARISA Centers`,
+      );
+      this._logger.error(error);
+      return ++position;
+    }
+  }
+
+
+  private async cloneClarisaSdgs(position: number, deleteItem = false) {
+    try {
+      if (deleteItem) {
+        const deleteData =
+          await this._clarisaSdgsRepository.deleteAllData();
+        this._logger.warn(
+          `[${position}]: All CLARISA SDGs control list data has been deleted`,
+        );
+      } else {
+        const { data } = await axios.get(
+          `${this.clarisaHost}allSDG`,
+          this.configAuth,
+        );
+        const sdgs: ClarisaSdg[] = data.map(cs => {
+          return {
+            usnd_code: cs.usndCode,
+            financial_code: cs.financialCode,
+            full_name: cs.fullName,
+            short_name: cs.shortName
+          };
+        });
+
+        await this._clarisaSdgsRepository.save(
+          sdgs,
+        );
+        this._logger.verbose(
+          `[${position}]: All CLARISA SDGs control list data has been created`,
+        );
+      }
+      return ++position;
+    } catch (error) {
+      this._logger.error(
+        `[${position}]: Error in manipulating the data of CLARISA SDGs`,
+      );
+      this._logger.error(error);
+      return ++position;
+    }
+  }
+
+  private async cloneClarisaSdgsTargets(position: number, deleteItem = false) {
+    try {
+      if (deleteItem) {
+        const deleteData =
+          await this._clarisaSdgsTargetsRepository.deleteAllData();
+        this._logger.warn(
+          `[${position}]: All CLARISA SDGs Targets control list data has been deleted`,
+        );
+      } else {
+        const { data } = await axios.get(
+          `${this.clarisaHost}sdg-targets/sdg-ipsr`,
+          this.configAuth,
+        );
+        const sdgsTargets: ClarisaSdgsTarget[] = data.map(cst => {
+          return {
+            id: cst.id,
+            sdg_target_code: cst.sdgTargetCode,
+            sdg_target: cst.sdgTarget,
+            usnd_code: cst.usndCode
+          };
+        });
+
+        await this._clarisaSdgsTargetsRepository.save(
+          sdgsTargets,
+        );
+        this._logger.verbose(
+          `[${position}]: All CLARISA SDGs Targets control list data has been created`,
+        );
+      }
+      return ++position;
+    } catch (error) {
+      this._logger.error(
+        `[${position}]: Error in manipulating the data of CLARISA SDGs Targets`,
       );
       this._logger.error(error);
       return ++position;

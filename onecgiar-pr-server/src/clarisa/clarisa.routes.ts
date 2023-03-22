@@ -17,6 +17,8 @@ import { ClarisaInnovationReadinessLevelsModule } from './clarisa-innovation-rea
 import { ClarisaInnovationCharacteristicsModule } from './clarisa-innovation-characteristics/clarisa-innovation-characteristics.module';
 import { ClarisaPolicyStagesModule } from './clarisa-policy-stages/clarisa-policy-stages.module';
 import { ClarisaPolicyTypesModule } from './clarisa-policy-types/clarisa-policy-types.module';
+import { ClarisaSdgsModule } from './clarisa-sdgs/clarisa-sdgs.module';
+import { ClarisaSdgsTargetsModule } from './clarisa-sdgs-targets/clarisa-sdgs-targets.module';
 
 export const ClarisaRoutes: Routes = [
   {
@@ -90,5 +92,13 @@ export const ClarisaRoutes: Routes = [
   {
     path: 'policy-types',
     module: ClarisaPolicyTypesModule
-  }
+  },
+  {
+    path: 'sdgs',
+    module: ClarisaSdgsModule,
+  },
+  {
+    path: 'sdgs-targets',
+    module: ClarisaSdgsTargetsModule,
+  },
 ];

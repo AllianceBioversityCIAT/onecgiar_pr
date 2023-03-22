@@ -7,12 +7,15 @@ import { ResultRepository } from '../result.repository';
 import { Result } from '../entities/result.entity';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { LinkedResult } from './entities/linked-result.entity';
+import { VersionsService } from '../versions/versions.service';
+import { Version } from '../versions/entities/version.entity';
 
 @Injectable()
 export class LinkedResultsService {
   constructor(
     private readonly _linkedResultRepository: LinkedResultRepository,
     private readonly _handlersError: HandlersError,
+    private readonly _versionsService: VersionsService,
     private readonly _resultRepository: ResultRepository
   ){}
   async create(createLinkedResultDto: CreateLinkedResultDto, user: TokenDto) {
@@ -33,6 +36,12 @@ export class LinkedResultsService {
           status: HttpStatus.NOT_FOUND,
         };
       }
+
+      const vTemp = await this._versionsService.findBaseVersion();
+      if (vTemp.status >= 300) {
+        throw this._handlersError.returnErrorRes({ error: vTemp });
+      }
+      const version: Version = <Version>vTemp.response;
       
       let isExistsNew:number[] =[];
       let isExistsNewLegacy:string[] =[];
@@ -51,6 +60,7 @@ export class LinkedResultsService {
             newLink.last_updated_by = user.id;
             newLink.origin_result_id = result.id;
             newLink.linked_results_id = links[index].id;
+            newLink.version_id = version.id;
             isExistsNew.push(links[index].id);
             newLinks.push(newLink);
           }
@@ -71,6 +81,7 @@ export class LinkedResultsService {
             newLink.created_by = user.id;
             newLink.last_updated_by = user.id;
             newLink.origin_result_id = result.id;
+            newLink.version_id = version.id;
             newLink.legacy_link = legacyLinks[index].legacy_link;
             isExistsNewLegacy.push(legacyLinks[index].legacy_link);
             newLinks.push(newLink);

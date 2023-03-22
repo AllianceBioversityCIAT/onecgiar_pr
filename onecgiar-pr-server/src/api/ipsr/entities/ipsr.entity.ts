@@ -3,20 +3,21 @@ import { BaseEntity } from '../../../shared/entities/base-entity';
 import { Version } from '../../results/versions/entities/version.entity';
 import { Result } from '../../results/entities/result.entity';
 import { IpsrRole } from './ipsr-role.entity';
+import { ResultInnovationPackage } from '../result-innovation-package/entities/result-innovation-package.entity';
 
-@Entity('innovation_by_result')
+@Entity('result_by_innovation_package')
 export class Ipsr extends BaseEntity{
     @PrimaryGeneratedColumn({
-        name: 'innovation_by_result_id',
+        name: 'result_by_innovation_package_id',
         type: 'bigint'
     })
-    innovation_by_result_id: number;
+    result_by_innovation_package_id: number;
 
     @Column({
-        name: 'ipsr_result_id',
+        name: 'result_innovation_package_id',
         type: 'bigint'
     }) 
-    ipsr_result_id: number;
+    result_innovation_package_id: number;
 
     @Column({
         name: 'result_id',
@@ -42,11 +43,11 @@ export class Ipsr extends BaseEntity{
     })
     obj_version: Version;
 
-    @ManyToOne(() => Result, r => r.obj_ipsr_result)
+    @ManyToOne(() => ResultInnovationPackage, r => r.result_innovation_package_id)
     @JoinColumn({
-        name: 'ipsr_result_id'
+        name: 'result_innovation_package_id'
     })
-    obj_ipsr_result: Result;
+    obj_result_by_innovation_package: ResultInnovationPackage;
 
     @ManyToOne(() => Result, r => r.obj_result)
     @JoinColumn({

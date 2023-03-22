@@ -32,6 +32,8 @@ import { ClarisaCentersModule } from './clarisa-centers/clarisa-centers.module';
 import { TocResultsRepository } from '../toc/toc-results/toc-results.repository';
 import { ClarisaPolicyTypesModule } from './clarisa-policy-types/clarisa-policy-types.module';
 import { ClarisaRegionsCgiarModule } from './clarisa-regions-cgiar/clarisa-regions-cgiar.module';
+import { ClarisaSdgsModule } from './clarisa-sdgs/clarisa-sdgs.module';
+import { ClarisaSdgsTargetsModule } from './clarisa-sdgs-targets/clarisa-sdgs-targets.module';
 
 @Module({
   imports: [
@@ -61,6 +63,8 @@ import { ClarisaRegionsCgiarModule } from './clarisa-regions-cgiar/clarisa-regio
     ClarisaCentersModule,
     ClarisaPolicyTypesModule,
     ClarisaRegionsCgiarModule,
+    ClarisaSdgsModule,
+    ClarisaSdgsTargetsModule
     
   ],
   controllers: [],
@@ -87,6 +91,8 @@ import { ClarisaRegionsCgiarModule } from './clarisa-regions-cgiar/clarisa-regio
     ClarisaPolicyStagesModule,
     ClarisaCronsService,
     ClarisaTaskService,
+    ClarisaSdgsModule,
+    ClarisaSdgsTargetsModule
   ],
 })
 export class ClarisaModule {}

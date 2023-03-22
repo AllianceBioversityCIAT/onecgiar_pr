@@ -16,6 +16,21 @@ export class HandlersError {
     };
   }
 
+  public returnData(config: configReturnError): returnDataDto {
+    const { error, debug } = config;
+    if (debug) {
+      this._logger.error(error);
+    }
+    return {
+      data: error.response,
+      logs: {
+        response: error?.response ? error.response : { error: true },
+        message: error?.message ? error.message : 'INTERNAL_SERVER_ERROR',
+        status: error?.status ? error.status : HttpStatus.INTERNAL_SERVER_ERROR,
+      }
+    };
+  }
+
   public returnErrorRepository(
     config: configReturnRepositoryError,
   ): returnErrorDto {
@@ -46,4 +61,9 @@ export class returnErrorDto {
   public response: Type;
   public message: string;
   public status: HttpStatus;
+}
+
+export class returnDataDto {
+  public data: Type;
+  public logs: returnErrorDto;
 }

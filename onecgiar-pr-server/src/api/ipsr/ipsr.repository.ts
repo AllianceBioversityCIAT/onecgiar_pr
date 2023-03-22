@@ -45,7 +45,7 @@ export class IpsrRepository extends Repository<Ipsr>{
             r.status = 1
             AND r.is_active = 1
             AND rbi.initiative_role_id = 1
-            AND r.result_type_id = 2;
+            AND r.result_type_id = 7;
         `;
 
         try {
@@ -183,10 +183,10 @@ export class IpsrRepository extends Repository<Ipsr>{
         FROM
             result r
             LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
-            LEFT JOIN innovation_by_result ibr ON ibr.ipsr_result_id = r.id
+            LEFT JOIN result_by_innovation_package ibr ON ibr.result_innovation_package_id = r.id
         WHERE
             r.is_active = 1
-            AND r.id = ibr.ipsr_result_id
+            AND r.id = ibr.result_innovation_package_id
             AND rbi.is_active = 1
             AND rbi.initiative_role_id = 1
         ORDER BY
