@@ -10,6 +10,7 @@ import { InnovationPackagingExpertRepository } from '../innovation-packaging-exp
 import { ResultInnovationPackageRepository } from '../result-innovation-package/repositories/result-innovation-package.repository';
 import { VersionsService } from '../../results/versions/versions.service';
 import { VersionRepository } from 'src/api/results/versions/version.repository';
+import { IpsrRepository } from '../ipsr.repository';
 
 @Module({
   controllers: [InnovationPathwayController],
@@ -23,7 +24,8 @@ import { VersionRepository } from 'src/api/results/versions/version.repository';
     InnovationPackagingExpertRepository,
     ResultInnovationPackageRepository,
     VersionsService,
-    VersionRepository
+    VersionRepository,
+    IpsrRepository,
   ]
 })
 export class InnovationPathwayModule { }
