@@ -25,6 +25,6 @@
         <i class="material-icons-round">search</i>
         <input type="text" placeholder="Find result..." [(ngModel)]="searchText">
     </div>
-    <app-innovation-package-custom-table
+    <app-innovation-package-custom-table [total]="this.innovationPackagesList?.length"
         [tableData]="this.innovationPackagesList | innovationPackageListFilter:searchText:this.api.dataControlSE?.myInitiativesList:initsSelectedJoinText"></app-innovation-package-custom-table>
 </div>

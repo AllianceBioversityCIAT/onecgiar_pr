@@ -8,6 +8,7 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 })
 export class InnovationPackageCustomTableComponent {
   @Input() tableData: any;
+  @Input() total: number = 0;
   columnOrder = [
     { title: 'Result code', attr: 'result_code' },
     { title: 'Title', attr: 'title', class: 'notCenter' },
