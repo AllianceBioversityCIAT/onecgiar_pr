@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { ClarisaActionArea } from '../../../clarisa/clarisa-action-areas/entities/clarisa-action-area.entity';
 
 @Entity('clarisa_action_area_outcome')
 export class ClarisaActionAreaOutcome {
@@ -13,11 +14,14 @@ export class ClarisaActionAreaOutcome {
     })
     outcomeSMOcode: string;
 
+    @ManyToOne(() => ClarisaActionArea, caa => caa.id)
+    @JoinColumn({ name: 'actionAreaId' })
+    actionAreaId: number;
+
     @Column({
         name: 'outcomeStatement',
         type: 'text',
         nullable: true
     })
     outcomeStatement: string;
-
 }
