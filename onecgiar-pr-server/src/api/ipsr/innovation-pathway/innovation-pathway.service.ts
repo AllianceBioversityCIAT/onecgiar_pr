@@ -205,10 +205,10 @@ export class InnovationPathwayService {
     if (experts?.length) {
       for (const ex of experts) {
         let innExp: InnovationPackagingExpert = null;
-        if (ex?.innovation_packaging_expert_id) {
+        if (ex?.result_ip_expert_id) {
           innExp = await this._innovationPackagingExpertRepository.findOne({
             where: {
-              innovation_packaging_expert_id: ex.innovation_packaging_expert_id,
+              result_ip_expert_id: ex.result_ip_expert_id,
               result_id: result.id
             }
           });
@@ -223,7 +223,7 @@ export class InnovationPathwayService {
 
         if (innExp) {
           await this._innovationPackagingExpertRepository.update(
-            innExp.innovation_packaging_expert_id,
+            innExp.result_ip_expert_id,
             ex.is_active?{
               first_name: ex.first_name,
               last_name: ex.last_name,

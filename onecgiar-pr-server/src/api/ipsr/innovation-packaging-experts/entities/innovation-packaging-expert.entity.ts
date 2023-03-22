@@ -5,13 +5,13 @@ import { Version } from '../../../results/versions/entities/version.entity';
 import { ClarisaInstitution } from '../../../../clarisa/clarisa-institutions/entities/clarisa-institution.entity';
 import { Result } from '../../../results/entities/result.entity';
 
-@Entity('innovation_packaging_expert')
+@Entity('result_ip_expert')
 export class InnovationPackagingExpert extends BaseEntity{
     @PrimaryGeneratedColumn({
-        name: 'innovation_packaging_expert_id',
+        name: 'result_ip_expert_id',
         type: 'bigint'
     })
-    innovation_packaging_expert_id: number;
+    result_ip_expert_id: number;
 
     @Column({
         name: 'first_name',
