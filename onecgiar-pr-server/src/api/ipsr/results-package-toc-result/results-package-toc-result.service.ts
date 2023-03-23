@@ -214,7 +214,7 @@ export class ResultsPackageTocResultService {
             const { deliveries } = ins;
             await this.saveDeliveries(instExist ? instExist : rbi, deliveries, user.id, version);
           }else{
-            await this._resultByInstitutionsByDeliveriesTypeRepository.inactiveResultDeLivery(rbi.id, [], user.id);
+            await this._resultByInstitutionsByDeliveriesTypeRepository.inactiveResultDeLivery((instExist ? instExist : rbi).id, [], user.id);
           }
         }
       } else {
