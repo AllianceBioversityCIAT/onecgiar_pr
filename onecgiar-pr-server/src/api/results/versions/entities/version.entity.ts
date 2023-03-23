@@ -3,7 +3,7 @@ import { Ipsr } from '../../../ipsr/entities/ipsr.entity';
 import { NonPooledProject } from '../../non-pooled-projects/entities/non-pooled-project.entity';
 import { ResultsCenter } from '../../results-centers/entities/results-center.entity';
 import { ResultActor } from '../../result-actors/entities/result-actor.entity';
-import { ResultIpEoiOutcome } from '../../../../api/ipsr/result-ip-eoi-outcomes/entities/result-ip-eoi-outcome.entity';
+import { ResultIpEoiOutcome } from '../../../ipsr/innovation-pathway/entities/result-ip-eoi-outcome.entity';
 
 @Entity('version')
 export class Version {

@@ -4,7 +4,8 @@ import { Version } from '../../results/versions/entities/version.entity';
 import { Result } from '../../results/entities/result.entity';
 import { IpsrRole } from './ipsr-role.entity';
 import { ResultInnovationPackage } from '../result-innovation-package/entities/result-innovation-package.entity';
-import { ResultIpEoiOutcome } from '../result-ip-eoi-outcomes/entities/result-ip-eoi-outcome.entity';
+import { ResultIpEoiOutcome } from '../innovation-pathway/entities/result-ip-eoi-outcome.entity';
+import { ResultIpSdgTargets } from '../innovation-pathway/entities/result-ip-sdg-targets.entity';
 
 @Entity('result_by_innovation_package')
 export class Ipsr extends BaseEntity{
@@ -58,4 +59,7 @@ export class Ipsr extends BaseEntity{
 
     @OneToMany(() => ResultIpEoiOutcome, rio => rio.obj_result_by_innovation_package)
     obj_result_by_innovation_package_eoi_outcome: ResultIpEoiOutcome[];
+
+    @OneToMany(() => ResultIpSdgTargets, ris => ris.obj_result_by_innovation_package_sdg_targets)
+    obj_result_by_innovation_package_sdg_targets: ResultIpSdgTargets[];
 }
