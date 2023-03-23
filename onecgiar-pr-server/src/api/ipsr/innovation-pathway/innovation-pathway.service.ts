@@ -224,11 +224,10 @@ export class InnovationPathwayService {
 
       await this._resultIpSdgsTargetsRepository.updateSdg(resultByInnovationPackageId.result_by_innovation_package_id, sdgs.map(c => c.clarisa_sdg_target_id), user.id);
       if (sdgs?.length) {
-        // * Iterate into the countries to save them
         for (let i = 0; i < sdgs.length; i++) {
           const sdgExist = await this._resultIpSdgsTargetsRepository.getSdgsByIpAndSdgId(resultByInnovationPackageId.result_by_innovation_package_id, sdgs[i].clarisa_sdg_target_id);
 
-          if (!sdgExist[0]?.length) {
+          if (!sdgExist) {
             const newSdgs = new ResultIpSdgTargets();
             newSdgs.clarisa_sdg_target_id = sdgs[i].clarisa_sdg_target_id;
             newSdgs.clarisa_sdg_usnd_code = sdgs[i].clarisa_sdg_usnd_code;
@@ -246,8 +245,8 @@ export class InnovationPathwayService {
       }
 
       return {
-        response: saveSdgs,
-        message: 'Si',
+        response: { status: 'Success' },
+        message: 'The SDGs have been saved successfully',
         status: HttpStatus.OK
       }
     } catch (error) {

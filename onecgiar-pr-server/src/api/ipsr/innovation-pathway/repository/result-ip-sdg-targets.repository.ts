@@ -26,7 +26,7 @@ export class ResultIpSdgTargetRepository extends Repository<ResultIpSdgTargets>{
 
         try {
             const sdgsTarget: ResultIpSdgTargets[] = await this.query(query, [resultByInnovationPackageId, sdgId]);
-            return sdgsTarget?.length ? sdgsTarget[0] : [];
+            return sdgsTarget?.length ? sdgsTarget[0] : undefined;
         } catch (error) {
             throw this._handlersError.returnErrorRepository({
                 className: ResultIpSdgTargetRepository.name,
@@ -37,7 +37,9 @@ export class ResultIpSdgTargetRepository extends Repository<ResultIpSdgTargets>{
     }
 
     async updateSdg(resultByInnovationPackageId: number, sdgsArray: number[], user: number) {
+        console.log("🚀 ~ file: result-ip-sdg-targets.repository.ts:40 ~ ResultIpSdgTargetRepository ~ updateSdg ~ resultByInnovationPackageId:", resultByInnovationPackageId)
         const sdgs = sdgsArray ?? [];
+        console.log("🚀 ~ file: result-ip-sdg-targets.repository.ts:42 ~ ResultIpSdgTargetRepository ~ updateSdg ~ sdgs:", sdgs)
 
         const updateInactive = `
         UPDATE
@@ -48,7 +50,7 @@ export class ResultIpSdgTargetRepository extends Repository<ResultIpSdgTargets>{
             last_updated_by = ${user}
         WHERE is_active > 0
             AND result_by_innovation_package_id = ?
-            AND clarisa_sdg_target_id NOT IN (${sdgs.toString()});
+            AND clarisa_sdg_target_id NOT IN (${sdgs});
         `;
 
         const updateActive = `
@@ -59,7 +61,7 @@ export class ResultIpSdgTargetRepository extends Repository<ResultIpSdgTargets>{
             last_updated_date = NOW(),
             last_updated_by = ${user}
         WHERE result_by_innovation_package_id = ?
-            AND clarisa_sdg_target_id IN (${sdgs.toString()});
+            AND clarisa_sdg_target_id IN (${sdgs});
         `;
 
         const updateAllInactive = `
