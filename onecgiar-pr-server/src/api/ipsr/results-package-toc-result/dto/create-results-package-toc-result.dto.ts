@@ -45,6 +45,7 @@ interface institutionsInterfaceToc{
 }
 
 interface donorInterfaceToc{
+    id: number;
     funder: number;
     grant_title: string;
     center_grant_id: string;

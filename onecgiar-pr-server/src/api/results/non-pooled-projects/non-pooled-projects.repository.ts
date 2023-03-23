@@ -56,10 +56,41 @@ export class NonPooledProjectRepository extends Repository<NonPooledProject> {
       npp.last_updated_by
       from non_pooled_project npp
       WHERE npp.results_id = ?
-      	and npp.grant_title = ?;
+      	and npp.grant_title ${!grantTitle?`is null`: `= ${grantTitle}`}
+      ${`group by npp.id desc`};
     `;
     try {
-      const npProject: NonPooledProject[] = await this.query(queryData, [resultId, grantTitle || null]);
+      const npProject: NonPooledProject[] = await this.query(queryData, [resultId]);
+      return npProject?.length? npProject[0]: undefined;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: NonPooledProjectRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async getAllNPProjectByNPId(resultId: number, nppId: number) {
+    const queryData = `
+    select 
+      npp.id,
+      npp.grant_title,
+      npp.center_grant_id,
+      npp.is_active,
+      npp.created_date,
+      npp.last_updated_date,
+      npp.results_id,
+      npp.lead_center_id,
+      npp.funder_institution_id,
+      npp.created_by,
+      npp.last_updated_by
+      from non_pooled_project npp
+      WHERE npp.results_id = ?
+      	and npp.ip = ?;
+    `;
+    try {
+      const npProject: NonPooledProject[] = await this.query(queryData, [resultId, nppId || null]);
       return npProject?.length? npProject[0]: undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

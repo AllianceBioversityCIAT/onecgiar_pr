@@ -20,6 +20,7 @@ import { ResultsByInstitution } from '../../results/results_by_institutions/enti
 import { CreateTocShareResult } from '../../results/share-result-request/dto/create-toc-share-result.dto';
 import { ShareResultRequestService } from '../../results/share-result-request/share-result-request.service';
 import { ShareResultRequestRepository } from '../../results/share-result-request/share-result-request.repository';
+import { NonPooledProject } from '../../results/non-pooled-projects/entities/non-pooled-project.entity';
 
 @Injectable()
 export class ResultsPackageTocResultService {
@@ -104,8 +105,13 @@ export class ResultsPackageTocResultService {
 
         await this._nonPooledProjectRepository.updateNPProjectById(rip.id, titles, user.id)
         for (const cpnp of cnpp) {
+          let nonPP: NonPooledProject = null;
           if (cpnp?.grant_title?.length) {
-            const nonPP = await this._nonPooledProjectRepository.getAllNPProjectById(rip.id, cpnp.grant_title);
+            if(cpnp?.id){
+              nonPP = await this._nonPooledProjectRepository.getAllNPProjectByNPId(rip.id, cpnp.id);
+            }else{
+              nonPP = await this._nonPooledProjectRepository.getAllNPProjectById(rip.id, cpnp.grant_title);
+            }
             if (nonPP) {
               this._nonPooledProjectRepository.update(
                 nonPP.id,
@@ -114,13 +120,15 @@ export class ResultsPackageTocResultService {
                   center_grant_id: cpnp.center_grant_id,
                   funder_institution_id: cpnp.funder,
                   lead_center_id: cpnp.lead_center,
-                  last_updated_by: user.id
+                  last_updated_by: user.id,
+                  grant_title: cpnp.grant_title
                 }
               );
             } else {
               this._nonPooledProjectRepository.save({
                 results_id: rip.id,
                 center_grant_id: cpnp.center_grant_id,
+                grant_title: cpnp.grant_title,
                 funder_institution_id: cpnp.funder,
                 lead_center_id: cpnp.lead_center,
                 version_id: version.id,
