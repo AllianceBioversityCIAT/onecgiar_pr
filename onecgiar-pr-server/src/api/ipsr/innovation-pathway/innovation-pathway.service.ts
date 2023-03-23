@@ -25,6 +25,9 @@ import { ResultByIntitutionsRepository } from '../../results/results_by_institut
 import { ResultByInstitutionsByDeliveriesTypeRepository } from '../../results/result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';
 import { ResultIpSdgTargetRepository } from './repository/result-ip-sdg-targets.repository';
 import { ResultIpSdgTargets } from './entities/result-ip-sdg-targets.entity';
+import { ResultIpEoiOutcomeRepository } from './repository/result-ip-eoi-outcomes.repository';
+import { ResultIpEoiOutcome } from './entities/result-ip-eoi-outcome.entity';
+import { In } from 'typeorm';
 
 @Injectable()
 export class InnovationPathwayService {
@@ -40,6 +43,7 @@ export class InnovationPathwayService {
     protected readonly _innovationByResultRepository: IpsrRepository,
     protected readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
     protected readonly _resultByInstitutionsByDeliveriesTypeRepository: ResultByInstitutionsByDeliveriesTypeRepository,
+    protected readonly _resultIpEoiOutcomes: ResultIpEoiOutcomeRepository,
     protected readonly _resultIpSdgsTargetsRepository: ResultIpSdgTargetRepository
   ) { }
 
@@ -66,8 +70,8 @@ export class InnovationPathwayService {
       const version: Version = <Version>vTemp.response;
 
       const geoScope = await this.geoScope(result, version, UpdateInnovationPathwayDto, user);
-      const specifyAspiredOutcomesAndImpact = await this.saveSpecifyAspiredOutcomesAndImpact(result.id, version, UpdateInnovationPathwayDto, user);
-      const sdgTargets = await this.saveSdgTargets(result.id, version, UpdateInnovationPathwayDto, user);
+      const specifyAspiredOutcomesAndImpact = await this.saveSpecifyAspiredOutcomesAndImpact(result, version, UpdateInnovationPathwayDto, user);
+      const sdgTargets = await this.saveSdgTargets(result, version, UpdateInnovationPathwayDto, user);
 
       return {
         response: [
@@ -210,8 +214,71 @@ export class InnovationPathwayService {
     }
   }
 
-  async saveSpecifyAspiredOutcomesAndImpact(result: number, version: Version, UpdateInnovationPathwayDto: UpdateInnovationPathwayDto, user: TokenDto) {
-    return `This action removes a #${result} specifyAspiredOutcomesAndImpact`;
+  async saveSpecifyAspiredOutcomesAndImpact(result: any, version: Version, UpdateInnovationPathwayDto: UpdateInnovationPathwayDto, user: TokenDto) {
+    const id = result.id;
+    try {
+      // * Recupero la data de reult BY innovation
+      const resultByInnovationPackageId = await this._innovationByResultRepository.findOneBy({ result_innovation_package_id: id })
+      // * Obtengo el id de result_by_innovation_packager
+      const result_by_innovation_package_id = resultByInnovationPackageId.result_by_innovation_package_id;
+      // * Obtengo los toc_results
+      const eoiOutcomes = UpdateInnovationPathwayDto.eoiOutcomes;
+
+      // * Mapeos los toc_results_id
+      const tocIds = UpdateInnovationPathwayDto.eoiOutcomes.map(e => e.toc_result_id);
+      console.log("🚀 ~ file: innovation-pathway.service.ts:229 ~ InnovationPathwayService ~ saveSpecifyAspiredOutcomesAndImpact ~ tocIds:", tocIds)
+      // * Busco si ya hay algun dato insertado con los toc_rersult
+      const existingToc = await this._resultIpEoiOutcomes.find({
+        where: { toc_result_id: In(tocIds), result_by_innovation_package_id: result_by_innovation_package_id },
+      });
+
+      // * Mapeo los toc que ya estan registrados
+      const existingIds = existingToc.map(et => et.toc_result_id);
+
+      // * Extraigo los datos que no estan creados
+      const entitiesToSave = eoiOutcomes.filter(
+        eoi => !existingIds.includes(eoi.toc_result_id),
+      );
+
+      // * Extraigo los datos que ya estan creados
+      const entitiesToUpdate = existingToc.filter(
+        eoi =>
+        eoiOutcomes.find(e => e.toc_result_id === eoi.toc_result_id) &&
+          eoi.is_active !== false,
+      );
+
+      const saveToc = [];
+
+      if (entitiesToSave.length > 0) {
+        for (const entity of entitiesToSave) {
+          const newEoi = new ResultIpEoiOutcome();
+          newEoi.toc_result_id = entity.toc_result_id;
+          newEoi.result_by_innovation_package_id = result_by_innovation_package_id;
+          newEoi.version_id = version.id;
+          newEoi.created_by = user.id;
+          newEoi.last_updated_by = user.id;
+          newEoi.created_date = new Date();
+          newEoi.last_updated_date = new Date();
+          saveToc.push(this._resultIpEoiOutcomes.save(newEoi));
+        }
+      }
+
+      if (entitiesToUpdate.length > 0) {
+        for (const entity of entitiesToUpdate) {
+          entity.is_active = false;
+          saveToc.push(this._resultIpEoiOutcomes.save(entity));
+        }
+      }
+
+      return {
+        response: { status: 'Success' },
+        message: 'The EOI Outcomes have been saved successfully',
+        status: HttpStatus.OK
+      }
+
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
   }
 
   async saveSdgTargets(result: any, version: Version, UpdateInnovationPathwayDto: UpdateInnovationPathwayDto, user: TokenDto) {

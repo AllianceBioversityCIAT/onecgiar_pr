@@ -14,6 +14,7 @@ import { IpsrRepository } from '../ipsr.repository';
 import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
 import { ResultByInstitutionsByDeliveriesTypeRepository } from '../../results/result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';
 import { ResultIpSdgTargetRepository } from './repository/result-ip-sdg-targets.repository';
+import { ResultIpEoiOutcomeRepository } from './repository/result-ip-eoi-outcomes.repository';
 
 @Module({
   controllers: [InnovationPathwayController],
@@ -31,7 +32,8 @@ import { ResultIpSdgTargetRepository } from './repository/result-ip-sdg-targets.
     IpsrRepository,
     ResultByIntitutionsRepository,
     ResultByInstitutionsByDeliveriesTypeRepository,
-    ResultIpSdgTargetRepository
+    ResultIpSdgTargetRepository,
+    ResultIpEoiOutcomeRepository
   ]
 })
 export class InnovationPathwayModule { }
