@@ -23,6 +23,8 @@ import { CreateResultIPDto } from '../result-innovation-package/dto/create-resul
 import { ResultsByInstitution } from '../../results/results_by_institutions/entities/results_by_institution.entity';
 import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
 import { ResultByInstitutionsByDeliveriesTypeRepository } from '../../results/result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';
+import { ResultIpSdgTargetRepository } from './repository/result-ip-sdg-targets.repository';
+import { ResultIpSdgTargets } from './entities/result-ip-sdg-targets.entity';
 
 @Injectable()
 export class InnovationPathwayService {
@@ -37,7 +39,8 @@ export class InnovationPathwayService {
     protected readonly _resultInnovationPackageRepository: ResultInnovationPackageRepository,
     protected readonly _innovationByResultRepository: IpsrRepository,
     protected readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
-    protected readonly _resultByInstitutionsByDeliveriesTypeRepository: ResultByInstitutionsByDeliveriesTypeRepository
+    protected readonly _resultByInstitutionsByDeliveriesTypeRepository: ResultByInstitutionsByDeliveriesTypeRepository,
+    protected readonly _resultIpSdgsTargetsRepository: ResultIpSdgTargetRepository
   ) { }
 
   async updateMain(resultId: number, UpdateInnovationPathwayDto: UpdateInnovationPathwayDto, user: TokenDto) {
@@ -63,12 +66,14 @@ export class InnovationPathwayService {
       const version: Version = <Version>vTemp.response;
 
       const geoScope = await this.geoScope(result, version, UpdateInnovationPathwayDto, user);
-      const specifyAspiredOutcomesAndImpact = await this.specifyAspiredOutcomesAndImpact(result.id, UpdateInnovationPathwayDto);
+      const specifyAspiredOutcomesAndImpact = await this.saveSpecifyAspiredOutcomesAndImpact(result.id, version, UpdateInnovationPathwayDto, user);
+      const sdgTargets = await this.saveSdgTargets(result.id, version, UpdateInnovationPathwayDto, user);
 
       return {
         response: [
           geoScope,
-          specifyAspiredOutcomesAndImpact
+          specifyAspiredOutcomesAndImpact,
+          sdgTargets
         ]
       }
     } catch (error) {
@@ -98,34 +103,14 @@ export class InnovationPathwayService {
       // * Update geo scope in the result
       const updateGeoScope = await this._resultRepository.update(id, {
         geographic_scope_id: req.geo_scope_id,
-        last_updated_by: user.id
+        last_updated_by: user.id,
+        last_updated_date: new Date()
       });
 
       let resultRegions: ResultRegion[] = [];
       let resultCountries: ResultCountry[] = [];
       let updateRegions: any;
       let updateCountries: any;
-
-      // * Validate consistency
-      if (UpdateInnovationPathwayDto.geo_scope_id === 1 && (regions?.length || countries?.length)) {
-        throw {
-          response: UpdateInnovationPathwayDto.geo_scope_id,
-          message: 'Mark as Global but incoming regions or countrie data',
-          status: HttpStatus.BAD_REQUEST,
-        }
-      } else if (UpdateInnovationPathwayDto.geo_scope_id === 2 && countries?.length) {
-        throw {
-          response: UpdateInnovationPathwayDto.geo_scope_id,
-          message: 'Mark as Regional but incoming countrie data',
-          status: HttpStatus.BAD_REQUEST,
-        }
-      } else if ((UpdateInnovationPathwayDto.geo_scope_id === 3 || UpdateInnovationPathwayDto.geo_scope_id === 4) && regions?.length) {
-        throw {
-          response: UpdateInnovationPathwayDto.geo_scope_id,
-          message: 'Mark as National or Multi-National but incoming countrie data',
-          status: HttpStatus.BAD_REQUEST,
-        }
-      }
 
       // * Validate if geo scope  is regional
       if (UpdateInnovationPathwayDto.geo_scope_id !== 2) {
@@ -211,6 +196,8 @@ export class InnovationPathwayService {
       // * Update the title
       const updateTitle = await this._resultRepository.update(id, {
         title: innovationTitle || result.title,
+        last_updated_by: user.id,
+        last_updated_date: new Date(),
       });
 
       return {
@@ -223,11 +210,52 @@ export class InnovationPathwayService {
     }
   }
 
-  async specifyAspiredOutcomesAndImpact(result: number, UpdateInnovationPathwayDto: UpdateInnovationPathwayDto) {
+  async saveSpecifyAspiredOutcomesAndImpact(result: number, version: Version, UpdateInnovationPathwayDto: UpdateInnovationPathwayDto, user: TokenDto) {
     return `This action removes a #${result} specifyAspiredOutcomesAndImpact`;
   }
 
-  private async saveInnovationPackagingExperts(result: Result, v: Version, user: TokenDto, { result_ip: rpData, experts  }: UpdateInnovationPathwayDto) {
+  async saveSdgTargets(result: any, version: Version, UpdateInnovationPathwayDto: UpdateInnovationPathwayDto, user: TokenDto) {
+    const id = result.id;
+    try {
+      let saveSdgs: any;
+      let sdgsTargets: ResultIpSdgTargets[] = [];
+      const resultByInnovationPackageId = await this._innovationByResultRepository.findOneBy({ result_innovation_package_id: id })
+      const sdgs = UpdateInnovationPathwayDto.sdgTargets;
+
+      await this._resultIpSdgsTargetsRepository.updateSdg(resultByInnovationPackageId.result_by_innovation_package_id, sdgs.map(c => c.clarisa_sdg_target_id), user.id);
+      if (sdgs?.length) {
+        // * Iterate into the countries to save them
+        for (let i = 0; i < sdgs.length; i++) {
+          const sdgExist = await this._resultIpSdgsTargetsRepository.getSdgsByIpAndSdgId(resultByInnovationPackageId.result_by_innovation_package_id, sdgs[i].clarisa_sdg_target_id);
+
+          if (!sdgExist[0]?.length) {
+            const newSdgs = new ResultIpSdgTargets();
+            newSdgs.clarisa_sdg_target_id = sdgs[i].clarisa_sdg_target_id;
+            newSdgs.clarisa_sdg_usnd_code = sdgs[i].clarisa_sdg_usnd_code;
+            newSdgs.result_by_innovation_package_id = resultByInnovationPackageId.result_by_innovation_package_id;
+            newSdgs.created_by = user.id;
+            newSdgs.version_id = version.id;
+            newSdgs.last_updated_by = user.id;
+            newSdgs.created_date = new Date();
+            newSdgs.last_updated_date = new Date();
+            sdgsTargets.push(newSdgs);
+          }
+
+          saveSdgs = await this._resultIpSdgsTargetsRepository.save(sdgsTargets);
+        }
+      }
+
+      return {
+        response: saveSdgs,
+        message: 'Si',
+        status: HttpStatus.OK
+      }
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  private async saveInnovationPackagingExperts(result: Result, v: Version, user: TokenDto, { result_ip: rpData, experts }: UpdateInnovationPathwayDto) {
     const rip = await this._resultInnovationPackageRepository.findOne({
       where: {
         result_innovation_package_id: result.id
@@ -352,7 +380,7 @@ export class InnovationPathwayService {
     }
   }
 
-  private async savePartners(result: Result, user: TokenDto, version:Version, crtr:UpdateInnovationPathwayDto) {
+  private async savePartners(result: Result, user: TokenDto, version: Version, crtr: UpdateInnovationPathwayDto) {
     if (crtr?.institutions.length) {
       const { institutions: inst } = crtr;
       await this._resultByIntitutionsRepository.updateIstitutions(result.id, inst, false, user.id);

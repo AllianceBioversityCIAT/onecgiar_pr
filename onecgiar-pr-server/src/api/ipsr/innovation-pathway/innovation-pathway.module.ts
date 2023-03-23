@@ -13,6 +13,7 @@ import { VersionRepository } from 'src/api/results/versions/version.repository';
 import { IpsrRepository } from '../ipsr.repository';
 import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
 import { ResultByInstitutionsByDeliveriesTypeRepository } from '../../results/result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';
+import { ResultIpSdgTargetRepository } from './repository/result-ip-sdg-targets.repository';
 
 @Module({
   controllers: [InnovationPathwayController],
@@ -29,7 +30,8 @@ import { ResultByInstitutionsByDeliveriesTypeRepository } from '../../results/re
     VersionRepository,
     IpsrRepository,
     ResultByIntitutionsRepository,
-    ResultByInstitutionsByDeliveriesTypeRepository
+    ResultByInstitutionsByDeliveriesTypeRepository,
+    ResultIpSdgTargetRepository
   ]
 })
 export class InnovationPathwayModule { }
