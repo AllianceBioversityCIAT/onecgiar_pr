@@ -1,0 +1,45 @@
+<app-alert-status *ngIf="!this.rolesSE.readOnly"
+    description="If you don't find the partner you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list">
+</app-alert-status>
+
+<div class="auto_fit_container fadeIn">
+    <div>
+        <app-pr-multi-select [options]="this.institutionsSE.institutionsList" [required]="false" label="Partners"
+            selectedOptionLabel="institutions_name" optionLabel="full_name" optionValue="institutions_id"
+            [(ngModel)]="contributorsBody.institutions" placeholder="Select Partners"
+            (selectOptionEvent)="toggle = toggle+1">
+        </app-pr-multi-select>
+        <div class="partners_selected_header" [style]="this.rolesSE.readOnly?'margin-top: -15px':''">
+            <app-pr-field-header [description]="'Partner(s) selected ('+contributorsBody.institutions?.length+'):'">
+            </app-pr-field-header>
+        </div>
+
+        <div class="chips_container  custom_scroll partners_selected">
+            <div class="pr_chip_selected" *ngFor="let option of contributorsBody.institutions; let i=index">
+                <div class="name">{{option?.institutions_name}}</div>
+                <div class="type"> <strong>Institution type:</strong> {{option?.institutions_type_name}}</div>
+                <div class="deliveries" [ngClass]="{'readOnly_deliveries': this.rolesSE.readOnly}">
+                    <div class="delivery"
+                        *ngIf="this.rolesSE.readOnly ? validateDeliverySelection(option?.deliveries,1) : true"
+                        [ngClass]="{'active': validateDeliverySelection(option?.deliveries,1)}"
+                        (click)="onSelectDelivery(option,1)">Scaling</div>
+                    <div class="delivery"
+                        *ngIf="this.rolesSE.readOnly ? validateDeliverySelection(option?.deliveries,2) : true"
+                        [ngClass]="{'active': validateDeliverySelection(option?.deliveries,2)}"
+                        (click)="onSelectDelivery(option,2)">Demand</div>
+                    <div class="delivery"
+                        *ngIf="this.rolesSE.readOnly ? validateDeliverySelection(option?.deliveries,3) : true"
+                        [ngClass]="{'active': validateDeliverySelection(option?.deliveries,3)}"
+                        (click)="onSelectDelivery(option,3)">Innovation</div>
+                    <div class="delivery"
+                        *ngIf="this.rolesSE.readOnly ? validateDeliverySelection(option?.deliveries,4) : true"
+                        [ngClass]="{'active': validateDeliverySelection(option?.deliveries,4)}"
+                        (click)="onSelectDelivery(option,4)">Other</div>
+                </div>
+                <i class="material-icons-round" *ngIf="!this.rolesSE.readOnly" (click)="removePartner(i)">remove_circle
+                </i>
+            </div>
+        </div>
+    </div>
+
+</div>
