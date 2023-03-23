@@ -25,5 +25,11 @@ export class IpsrContributorsComponent {
     });
   }
 
-  onSaveSection() {}
+  onSaveSection() {
+    console.log(this.contributorsBody);
+    this.api.resultsSE.PATCHContributorsByIpsrResultId(this.contributorsBody).subscribe(({ response }) => {
+      console.log(response);
+      this.getSectionInformation();
+    });
+  }
 }

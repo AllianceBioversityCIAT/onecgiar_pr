@@ -22,7 +22,7 @@ export class IpsrContributorsTocComponent {
   GET_AllWithoutResults() {
     this.api.resultsSE.GET_AllWithoutResults().subscribe(({ response }) => {
       this.contributingInitiativesList = response;
-      console.log(response);
+      // console.log(response);
     });
   }
 
@@ -49,5 +49,8 @@ export class IpsrContributorsTocComponent {
     const contributorFinded = this.contributorsBody.contributors_result_toc_result?.findIndex((result: any) => result?.initiative_id == e.remove.id);
     this.contributorsBody.contributors_result_toc_result.splice(contributorFinded, 1);
     // console.log(contributorFinded);
+  }
+  toggleActiveContributor(item) {
+    item.is_active = !item.is_active;
   }
 }

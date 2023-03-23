@@ -20,7 +20,7 @@ export class InnovationPackageDetailComponent {
   GET_resultIdToCode() {
     this.api.resultsSE.GET_resultIdToCode(this.ipsrDataControlSE.resultInnovationCode).subscribe(
       ({ response }) => {
-        console.log(response);
+        // console.log(response);
         this.ipsrDataControlSE.resultInnovationId = response;
       },
       err => {}

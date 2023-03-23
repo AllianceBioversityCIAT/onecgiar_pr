@@ -27,3 +27,18 @@
         [resultLevelId]="2">
     </app-toc-initiative-out>
 </div>
+
+<div class="selected_container custom_scroll">
+    <app-pr-field-header
+        [description]="'Initiatives to be added as contributor('+this.contributorsBody?.pending_contributing_initiatives?.length+')'">
+    </app-pr-field-header>
+    <div class="chips_container">
+        <div class="pr_chip_selected pending" *ngFor="let item of this.contributorsBody?.pending_contributing_initiatives
+         let i=index">
+            <div class="name" [ngClass]="{'text_inactive': !item.is_active}" [innerHtml]="item.initiative_name">
+            </div>
+            <i class="material-icons-round" [style.color]="item.is_active?'#fd6d6d':'#5569dd'"
+                (click)="toggleActiveContributor(item)">{{item.is_active?'backspace':'undo'}}</i>
+        </div>
+    </div>
+</div>

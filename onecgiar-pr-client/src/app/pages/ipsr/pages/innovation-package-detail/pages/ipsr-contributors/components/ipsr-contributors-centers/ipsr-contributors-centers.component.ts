@@ -16,7 +16,7 @@ export class IpsrContributorsCentersComponent {
     if (this.contributorsBody.contributing_center.length === 1) this.contributorsBody.contributing_center[0].primary = true;
   }
   addPrimary(center) {
-    this.contributorsBody.contributing_center.map(center => (center.primary = false));
+    this.contributorsBody.contributing_center.map((center: any) => (center.primary = false));
     center.primary = true;
   }
   deletContributingCenter(index) {
