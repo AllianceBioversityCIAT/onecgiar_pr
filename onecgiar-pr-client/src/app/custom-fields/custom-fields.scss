@@ -74,6 +74,8 @@ input::placeholder,
 }
 
 .custom_select {
+    z-index: 0;
+
     .field {
         display: flex;
         justify-content: space-between;
@@ -88,6 +90,7 @@ input::placeholder,
         font-family: 'Poppins' !important;
         width: 100%;
         cursor: pointer;
+        z-index: 0;
 
         .text {
             padding-right: 15px;
