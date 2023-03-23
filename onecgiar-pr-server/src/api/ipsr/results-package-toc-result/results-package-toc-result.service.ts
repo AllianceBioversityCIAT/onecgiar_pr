@@ -264,6 +264,7 @@ export class ResultsPackageTocResultService {
     } else {
       this._resultsTocResultRepository.save({
         version_id: version.id,
+        results_id: rip.id,
         initiative_id: owner ? rip.initiative_id : initiative_id,
         toc_result_id: toc_result_id,
         planned_result: planned_result,
