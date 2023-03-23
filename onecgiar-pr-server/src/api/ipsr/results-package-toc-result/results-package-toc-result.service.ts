@@ -210,7 +210,7 @@ export class ResultsPackageTocResultService {
             })
           }
 
-          if (ins?.deliveries.length) {
+          if (ins?.deliveries?.length) {
             const { deliveries } = ins;
             await this.saveDeliveries(instExist ? instExist : rbi, deliveries, user.id, version);
           }
