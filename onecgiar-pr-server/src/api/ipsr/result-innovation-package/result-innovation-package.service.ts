@@ -160,13 +160,15 @@ export class ResultInnovationPackageService {
         initiative_role_id: 1,
         version_id: vrs.id,
         created_by: user.id,
-        last_updated_by: user.id,
+        last_updated_by: user.id
       });
 
       // * Save the result in the result innovation package
       const newResultInnovationPackage = await this._resultInnovationPackageRepository.save({
         result_innovation_package_id: newResult,
         version_id: vrs.id,
+        created_by: user.id,
+        last_updated_by: user.id,
       });
 
       // * Save new result into result BY innovation package
@@ -238,6 +240,7 @@ export class ResultInnovationPackageService {
       const titleValidate = await this._resultRepository
         .createQueryBuilder('result')
         .where('result.title like :title', { title: `${req.title}` })
+        .andWhere('result.is_active = 1')
         .getMany();
 
       // * Validate if the title is duplicate
