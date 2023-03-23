@@ -87,7 +87,7 @@ export class NonPooledProjectRepository extends Repository<NonPooledProject> {
       npp.last_updated_by
       from non_pooled_project npp
       WHERE npp.results_id = ?
-      	and npp.ip = ?;
+      	and npp.id = ?;
     `;
     try {
       const npProject: NonPooledProject[] = await this.query(queryData, [resultId, nppId || null]);
