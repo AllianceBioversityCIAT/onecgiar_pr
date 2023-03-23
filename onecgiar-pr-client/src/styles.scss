@@ -243,3 +243,16 @@ a {
         }
     }
 }
+
+.donors {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+
+    .donor {
+        background-color: #e8ebff;
+        padding: 10px 50px 40px 50px;
+        position: relative;
+        border-radius: 10px;
+    }
+}

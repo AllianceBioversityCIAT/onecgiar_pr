@@ -6,9 +6,10 @@ import { CustomFieldsModule } from '../../../../../../custom-fields/custom-field
 import { IpsrContributorsComponent } from './ipsr-contributors.component';
 import { TocInitiativeOutModule } from '../../../../../results/pages/result-detail/pages/rd-theory-of-change/components/shared/toc-initiative-out/toc-initiative-out.module';
 import { IpsrContributorsTocComponent } from './components/ipsr-contributors-toc/ipsr-contributors-toc.component';
+import { IpsrNonPooledProjectsComponent } from './components/ipsr-non-pooled-projects/ipsr-non-pooled-projects.component';
 
 @NgModule({
-  declarations: [IpsrContributorsComponent, IpsrContributorsTocComponent],
+  declarations: [IpsrContributorsComponent, IpsrContributorsTocComponent, IpsrNonPooledProjectsComponent],
   imports: [CommonModule, IpsrContributorsRoutingModule, CustomFieldsModule, TocInitiativeOutModule]
 })
 export class IpsrContributorsModule {}
