@@ -74,7 +74,7 @@ export class ResultsPackageTocResultService {
       if (crtr?.contributing_initiatives.length) {
         const { contributing_initiatives: cinit } = crtr;
         for (const init of cinit) {
-          if (!init.is_active == false) {
+          if (init?.is_active == false) {
             await this._resultByInitiativesRepository.update({ result_id: rip.id, initiative_id: init.id }, { is_active: false });
           }
         }
