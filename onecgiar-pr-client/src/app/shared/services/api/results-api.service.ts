@@ -488,15 +488,18 @@ export class ResultsApiService {
     return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-package/general-information/${resulId}`, body).pipe(this.saveButtonSE.isCreatingPipe());
   }
 
-  GETContributorsByResulId() {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/contributors/get/${this.ipsrDataControlSE.resultInnovationId}`);
-  }
-
   GETContributorsByIpsrResultId() {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/contributors/get/${this.ipsrDataControlSE.resultInnovationId}`);
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/contributors/get/${this.ipsrDataControlSE.resultInnovationId}`).pipe(
+      map(resp => {
+        // console.log(resp.response);
+        resp?.response?.contributing_initiatives.map(initiative => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name || ''}</strong> - ${initiative?.initiative_name}`));
+        return resp;
+      }),
+      this.saveButtonSE.isGettingSectionPipe()
+    );
   }
 
-  PATCHContributorsByIpsrResultId() {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/contributors/save/${this.ipsrDataControlSE.resultInnovationId}`);
+  PATCHContributorsByIpsrResultId(body) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/contributors/save/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 }

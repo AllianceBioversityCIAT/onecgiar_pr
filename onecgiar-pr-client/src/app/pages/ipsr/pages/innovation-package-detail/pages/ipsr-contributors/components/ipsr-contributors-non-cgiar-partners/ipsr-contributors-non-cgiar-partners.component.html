@@ -35,11 +35,43 @@
                         *ngIf="this.rolesSE.readOnly ? validateDeliverySelection(option?.deliveries,4) : true"
                         [ngClass]="{'active': validateDeliverySelection(option?.deliveries,4)}"
                         (click)="onSelectDelivery(option,4)">Other</div>
+
+                    <div class="info_button" (click)="showInfo = true">
+
+                        <i class="material-icons-round">help_outline
+                        </i>
+                    </div>
                 </div>
-                <i class="material-icons-round" *ngIf="!this.rolesSE.readOnly" (click)="removePartner(i)">remove_circle
+                <i class="material-icons-round remove_button" *ngIf="!this.rolesSE.readOnly"
+                    (click)="removePartner(i)">remove_circle
                 </i>
+            </div>
+            <div class="content" *ngIf="showInfo">
+                <div class="texts">
+                    <i class="material-icons-round close_content" (click)="showInfo = false">
+                        cancel
+                    </i>
+                    <div><strong>Scaling Partner:</strong> Organizations or entities that CGIAR collaborates
+                        with
+                        to
+                        advance the uptake and use of innovations at scale.</div>
+                    <div><strong>Demand Partner:</strong> Organizations or
+                        entities that have
+                        (expressed) an explicit or implicit demand for an innovation, change or who aspire
+                        to a
+                        specific goal or impact to which CGIAR can contribute. </div>
+                    <div><strong>Innovation partner:</strong> Organizations or entities that CGIAR
+                        collaborates
+                        and co-invests with to improve the readiness of innovations
+                        to contribute to impact at scale.</div>
+
+                    <div><strong>Other:</strong> Any partner role that does not fit the other categories.
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
 </div>
+
+<hr class="divider-20">
