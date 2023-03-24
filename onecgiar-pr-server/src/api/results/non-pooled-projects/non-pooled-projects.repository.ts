@@ -56,7 +56,7 @@ export class NonPooledProjectRepository extends Repository<NonPooledProject> {
       npp.last_updated_by
       from non_pooled_project npp
       WHERE npp.results_id = ?
-      	and npp.grant_title ${!grantTitle?`is null`: `= ${grantTitle}`}
+      	and npp.grant_title ${!grantTitle?`is null`: `= '${grantTitle}'`}
       order by npp.id desc;
     `;
     try {

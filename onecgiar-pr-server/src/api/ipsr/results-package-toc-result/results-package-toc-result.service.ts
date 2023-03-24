@@ -250,7 +250,7 @@ export class ResultsPackageTocResultService {
 
   protected async saveResultPackageTocResult(rip: Result, user: TokenDto, version: Version, owner: boolean, rtr: resultToResultInterfaceToc) {
     const { planned_result, initiative_id, toc_result_id, result_toc_result_id } = rtr;
-    const rptr = await this._resultsTocResultRepository.getRTRById(result_toc_result_id, rip.id, rip.initiative_id);
+    const rptr = await this._resultsTocResultRepository.getNewRTRById(result_toc_result_id, rip.id, rip.initiative_id);
     if (rptr) {
       await this._resultsTocResultRepository.update(
         rptr.result_toc_result_id,
@@ -262,7 +262,7 @@ export class ResultsPackageTocResultService {
         }
       )
     } else {
-      this._resultsTocResultRepository.save({
+      await this._resultsTocResultRepository.save({
         version_id: version.id,
         results_id: rip.id,
         initiative_id: owner ? rip.initiative_id : initiative_id,
