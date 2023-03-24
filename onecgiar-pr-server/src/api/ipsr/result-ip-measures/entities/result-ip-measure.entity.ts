@@ -30,7 +30,7 @@ export class ResultIpMeasure extends BaseEntity{
         name: 'result_ip_id',
         type: 'bigint'
     })
-    result_id: number;
+    result_ip_id: number;
 
     @ManyToOne(() => ResultInnovationPackage, r => r.result_innovation_package_id)
     @JoinColumn({

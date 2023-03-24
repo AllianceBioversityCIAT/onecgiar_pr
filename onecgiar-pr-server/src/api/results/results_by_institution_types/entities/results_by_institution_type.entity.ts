@@ -46,6 +46,13 @@ export class ResultsByInstitutionType {
   })
   is_active: boolean;
 
+  @Column({
+    name: 'how_many',
+    type: 'bigint',
+    nullable: true
+  })
+  how_many!: number;
+
   @ManyToOne(() => Version, (v) => v.id, { nullable: false })
   @JoinColumn({
     name: 'version_id',

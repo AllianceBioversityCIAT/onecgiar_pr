@@ -15,6 +15,9 @@ import { ResultByIntitutionsRepository } from '../../results/results_by_institut
 import { ResultByInstitutionsByDeliveriesTypeRepository } from '../../results/result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';
 import { ResultIpSdgTargetRepository } from './repository/result-ip-sdg-targets.repository';
 import { ResultIpEoiOutcomeRepository } from './repository/result-ip-eoi-outcomes.repository';
+import { ResultActorRepository } from '../../results/result-actors/repositories/result-actors.repository';
+import { ResultByIntitutionsTypeRepository } from '../../results/results_by_institution_types/result_by_intitutions_type.repository';
+import { ResultIpMeasureRepository } from '../result-ip-measures/result-ip-measures.repository';
 
 @Module({
   controllers: [InnovationPathwayController],
@@ -33,7 +36,10 @@ import { ResultIpEoiOutcomeRepository } from './repository/result-ip-eoi-outcome
     ResultByIntitutionsRepository,
     ResultByInstitutionsByDeliveriesTypeRepository,
     ResultIpSdgTargetRepository,
-    ResultIpEoiOutcomeRepository
+    ResultIpEoiOutcomeRepository,
+    ResultActorRepository,
+    ResultByIntitutionsTypeRepository,
+    ResultIpMeasureRepository
   ]
 })
 export class InnovationPathwayModule { }

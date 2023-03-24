@@ -6,7 +6,6 @@ export class CreateResultsPackageTocResultDto {
     contributing_center: centerInterfacesToc[];
     result_toc_result: resultToResultInterfaceToc;
     contributors_result_toc_result: resultToResultInterfaceToc[];
-    impacts: ResultTocImpactsInterface[];
     pending_contributing_initiatives: shareResultRequestInterface[];
     institutions: institutionsInterface[]
 
@@ -16,14 +15,6 @@ interface institutionsInterface {
     institutions_id: number;
     deliveries?: number[];
   }
-
-interface ResultTocImpactsInterface{
-    id: number;
-    name: string;
-    description: string;
-    target: targetTocInterface[];
-    indicators: indicatorsTocInterface[];
-}
 
 interface targetTocInterface{
     targetId: number;
