@@ -57,7 +57,7 @@ export class NonPooledProjectRepository extends Repository<NonPooledProject> {
       from non_pooled_project npp
       WHERE npp.results_id = ?
       	and npp.grant_title ${!grantTitle?`is null`: `= ${grantTitle}`}
-      ${`group by npp.id desc`};
+      order by npp.id desc;
     `;
     try {
       const npProject: NonPooledProject[] = await this.query(queryData, [resultId]);
