@@ -3,6 +3,11 @@
     padding-bottom: 2px;
 }
 
+.date {
+    display: flex;
+    justify-content: flex-end;
+}
+
 .readOnly_deliveries {
     .delivery {
         padding: 4px 8px !important;

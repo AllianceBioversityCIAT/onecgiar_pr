@@ -500,6 +500,6 @@ export class ResultsApiService {
   }
 
   PATCHContributorsByIpsrResultId(body) {
-    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/contributors/save/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isCreatingPipe());
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/contributors/save/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 }

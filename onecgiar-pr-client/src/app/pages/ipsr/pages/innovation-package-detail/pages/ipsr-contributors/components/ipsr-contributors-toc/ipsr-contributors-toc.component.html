@@ -11,12 +11,12 @@
 </div>
 <app-pr-multi-select [options]="this.contributingInitiativesList" label="Contributing CGIAR Initiatives"
     [logicalDeletion]="true" [disableOptions]="this.contributorsBody?.pending_contributing_initiatives"
-    selectedLabel="Contributing CGIAR Initiatives" optionLabel="full_name" optionValue="id"
-    (selectOptionEvent)="onSelectContributingInitiative()" [required]="false" selectedOptionLabel="full_name"
-    [(ngModel)]="this.contributorsBody.contributing_initiatives" [confirmDeletion]="true"
-    placeholder="Select initiative(s)">
+    selectedLabel="Contributing CGIAR Initiatives" optionLabel="full_name" optionValue="id" [required]="false"
+    selectedOptionLabel="full_name" [(ngModel)]="this.contributorsBody.contributing_initiatives"
+    [confirmDeletion]="true" placeholder="Select initiative(s)">
 </app-pr-multi-select>
-<hr>
+<br>
+<hr class="divider-20">
 <app-pr-field-header label="Theory of Change" [required]="false" [simpleStyle]="true"
     *ngIf="this.contributorsBody.contributors_result_toc_result?.length">
 </app-pr-field-header>
@@ -42,3 +42,4 @@
         </div>
     </div>
 </div>
+<hr class="divider-20">
