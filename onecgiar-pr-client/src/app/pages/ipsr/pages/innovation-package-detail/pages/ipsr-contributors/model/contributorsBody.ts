@@ -63,4 +63,5 @@ interface shareResultRequestInterface {
   share_result_request_id: number;
   is_active: boolean;
   initiative_name: string;
+  official_code: string;
 }

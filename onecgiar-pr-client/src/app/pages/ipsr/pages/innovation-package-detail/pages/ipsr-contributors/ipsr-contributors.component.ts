@@ -22,6 +22,7 @@ export class IpsrContributorsComponent {
     this.api.resultsSE.GETContributorsByIpsrResultId().subscribe(({ response }) => {
       console.log(response);
       this.contributorsBody = response;
+      this.contributorsBody.contributors_result_toc_result.map(item => (item.planned_result = Boolean(item.planned_result)));
     });
   }
 

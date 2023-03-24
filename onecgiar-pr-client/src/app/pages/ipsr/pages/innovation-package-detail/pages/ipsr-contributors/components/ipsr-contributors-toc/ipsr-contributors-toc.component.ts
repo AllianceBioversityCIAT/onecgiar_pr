@@ -43,13 +43,13 @@ export class IpsrContributorsTocComponent {
     });
   }
 
-  onRemoveContributingInitiative(e) {
-    // console.clear();
-    // console.log(e);
-    const contributorFinded = this.contributorsBody.contributors_result_toc_result?.findIndex((result: any) => result?.initiative_id == e.remove.id);
-    this.contributorsBody.contributors_result_toc_result.splice(contributorFinded, 1);
-    // console.log(contributorFinded);
-  }
+  // onRemoveContributingInitiative(e) {
+  //   // console.clear();
+  //   // console.log(e);
+  //   const contributorFinded = this.contributorsBody.contributors_result_toc_result?.findIndex((result: any) => result?.initiative_id == e.remove.id);
+  //   this.contributorsBody.contributors_result_toc_result.splice(contributorFinded, 1);
+  //   // console.log(contributorFinded);
+  // }
   toggleActiveContributor(item) {
     item.is_active = !item.is_active;
   }
