@@ -12,6 +12,8 @@ export class IpsrContributorsNonCgiarPartnersComponent {
   @Input() contributorsBody = new ContributorsBody();
   toggle = 0;
 
+  showInfo = false;
+
   constructor(public rolesSE: RolesService, public institutionsSE: InstitutionsService) {}
 
   validateDeliverySelection(deliveries, deliveryId) {
