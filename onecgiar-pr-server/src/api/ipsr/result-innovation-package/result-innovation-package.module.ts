@@ -13,6 +13,8 @@ import { IpsrRepository } from '../ipsr.repository';
 import { ResultInnovationPackageRepository } from './repositories/result-innovation-package.repository';
 import { ResultIpAAOutcomeRepository } from '../innovation-pathway/repository/result-ip-action-area-outcome.repository';
 import { ClarisaActionAreaOutcomeRepository } from '../../../clarisa/clarisa-action-area-outcome/clarisa-action-area-outcome.repository';
+import { ResultsImpactAreaIndicatorRepository } from 'src/api/results/results-impact-area-indicators/results-impact-area-indicators.repository';
+import { ResultIpImpactAreaRepository } from '../innovation-pathway/repository/result-ip-sdg-targets.repository copy';
 
 @Module({
   controllers: [ResultInnovationPackageController],
@@ -28,7 +30,9 @@ import { ClarisaActionAreaOutcomeRepository } from '../../../clarisa/clarisa-act
     IpsrRepository,
     ResultInnovationPackageRepository,
     ResultIpAAOutcomeRepository,
-    ClarisaActionAreaOutcomeRepository
+    ClarisaActionAreaOutcomeRepository,
+    ResultsImpactAreaIndicatorRepository,
+    ResultIpImpactAreaRepository
   ],
   imports: [VersionsModule],
   exports: [

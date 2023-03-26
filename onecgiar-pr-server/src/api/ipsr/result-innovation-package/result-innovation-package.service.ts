@@ -17,6 +17,9 @@ import { ResultIpAAOutcomeRepository } from '../innovation-pathway/repository/re
 import { ClarisaActionAreaOutcomeRepository } from '../../../clarisa/clarisa-action-area-outcome/clarisa-action-area-outcome.repository';
 import { In } from 'typeorm';
 import { ResultIpAAOutcome } from '../innovation-pathway/entities/result-ip-action-area-outcome.entity';
+import { ResultsImpactAreaIndicatorRepository } from 'src/api/results/results-impact-area-indicators/results-impact-area-indicators.repository';
+import { ResultIpImpactArea } from '../innovation-pathway/entities/result-ip-impact-area.entity';
+import { ResultIpImpactAreaRepository } from '../innovation-pathway/repository/result-ip-sdg-targets.repository copy';
 
 @Injectable()
 export class ResultInnovationPackageService {
@@ -31,6 +34,8 @@ export class ResultInnovationPackageService {
     private readonly _resultInnovationPackageRepository: ResultInnovationPackageRepository,
     private readonly _resultIpAAOutcomeRepository: ResultIpAAOutcomeRepository,
     private readonly _clarisaAAOutcome: ClarisaActionAreaOutcomeRepository,
+    private readonly _resultImpactAreaIndicatorsRespository: ResultsImpactAreaIndicatorRepository,
+    private readonly _resultIpImpactAreaRespository: ResultIpImpactAreaRepository,
   ) { }
 
   async createHeader(CreateResultInnovationPackageDto: CreateResultInnovationPackageDto, user: TokenDto) {
@@ -223,6 +228,8 @@ export class ResultInnovationPackageService {
       // * Map the AAOutcomes
       const retriveAAOutcome = await this.retrievedAAOutcome(CreateResultInnovationPackageDto.initiative_id, user.id, resultByInnivationPackage, vrs.id);
 
+      const retrievedImpactArea = await this.retrievedImpactArea(result.id, user.id, resultByInnivationPackage, vrs.id);
+
       return {
         response: {
           newInnovationHeader,
@@ -264,6 +271,36 @@ export class ResultInnovationPackageService {
       return {
         response: {
           saveAAOutcome
+        },
+        message: 'Successfully created',
+        status: HttpStatus.OK
+      }
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async retrievedImpactArea(resultId: number, user: number, resultByIpId: number, version: number) {
+    const id = resultId;
+    try {
+      let savImpactArea: any;
+      const searchImpactDataInResult = await this._resultImpactAreaIndicatorsRespository.findBy({ result_id: id });
+      const mapImpactsIds = searchImpactDataInResult.map(sid => sid.impact_area_indicator_id);
+
+      for (const data of mapImpactsIds) {
+        const newImpactArea = new ResultIpImpactArea();
+        newImpactArea.impact_area_indicator_id = data;
+        newImpactArea.result_by_innovation_package_id = resultByIpId;
+        newImpactArea.created_by = user;
+        newImpactArea.last_updated_by = user;
+        newImpactArea.version_id = version;
+        newImpactArea.created_date = new Date();
+        newImpactArea.last_updated_date = new Date();
+        savImpactArea = await this._resultIpImpactAreaRespository.save(newImpactArea);
+      }
+      return {
+        response: {
+          savImpactArea
         },
         message: 'Successfully created',
         status: HttpStatus.OK
