@@ -30,6 +30,11 @@ import { ResultIpEoiOutcome } from './entities/result-ip-eoi-outcome.entity';
 import { In } from 'typeorm';
 import { ResultIpAAOutcomeRepository } from './repository/result-ip-action-area-outcome.repository';
 import { ResultIpAAOutcome } from './entities/result-ip-action-area-outcome.entity';
+import { ResultActorRepository } from '../../results/result-actors/repositories/result-actors.repository';
+import { ResultActor } from '../../results/result-actors/entities/result-actor.entity';
+import { ResultByIntitutionsTypeRepository } from '../../results/results_by_institution_types/result_by_intitutions_type.repository';
+import { ResultIpMeasureRepository } from '../result-ip-measures/result-ip-measures.repository';
+import { ResultIpMeasure } from '../result-ip-measures/entities/result-ip-measure.entity';
 
 @Injectable()
 export class InnovationPathwayService {
@@ -47,7 +52,10 @@ export class InnovationPathwayService {
     protected readonly _resultByInstitutionsByDeliveriesTypeRepository: ResultByInstitutionsByDeliveriesTypeRepository,
     protected readonly _resultIpEoiOutcomes: ResultIpEoiOutcomeRepository,
     protected readonly _resultIpAAOutcomes: ResultIpAAOutcomeRepository,
-    protected readonly _resultIpSdgsTargetsRepository: ResultIpSdgTargetRepository
+    protected readonly _resultIpSdgsTargetsRepository: ResultIpSdgTargetRepository,
+    protected readonly _resultActorRepository: ResultActorRepository,
+    protected readonly _resultByIntitutionsTypeRepository: ResultByIntitutionsTypeRepository,
+    protected readonly _resultIpMeasureRepository: ResultIpMeasureRepository
   ) { }
 
   async updateMain(resultId: number, UpdateInnovationPathwayDto: UpdateInnovationPathwayDto, user: TokenDto) {
@@ -551,6 +559,111 @@ export class InnovationPathwayService {
           versions_id: v.id
         });
       }
+    }
+  }
+
+  private async saveInnovationUse(result: Result, user: TokenDto, version:Version, {innovatonUse: crtr}: UpdateInnovationPathwayDto){
+    if(crtr?.actors?.length){
+      const { actors } = crtr;
+      actors.map(async (el: ResultActor) => {
+        const actorExists = await this._resultActorRepository.findOne({where:{actor_type_id: el.actor_type_id, result_id: result.id}});
+        if(actorExists){
+          await this._resultActorRepository.update(
+            actorExists.result_actors_id,
+            {
+              actor_type_id: el.actor_type_id,
+              is_active: el.is_active,
+              men: el.men,
+              men_youth: el.men_youth,
+              women: el.women,
+              women_youth: el.women_youth,
+              last_updated_by: user.id
+            }
+          )
+        }else{
+          await this._resultActorRepository.save({
+              actor_type_id: el.actor_type_id,
+              is_active: el.is_active,
+              men: el.men,
+              men_youth: el.men_youth,
+              women: el.women,
+              women_youth: el.women_youth,
+              last_updated_by: user.id,
+              created_by: user.id,
+              result_id: result.id,
+              version_id: version.id
+          })
+        }
+      })
+    }
+
+    if(crtr?.organization.length){
+      const { organization } = crtr;
+      organization.map(async (el) => {
+        const ite = await this._resultByIntitutionsTypeRepository.getNewResultByInstitutionTypeExists(result.id, el.institution_types_id, 5);
+        if(ite){
+          await this._resultByIntitutionsTypeRepository.update(
+            ite.id,
+            {
+              last_updated_by: user.id,
+              how_many: el.how_many,
+              is_active: el.is_active
+            }
+          );
+        }else{
+          await this._resultByIntitutionsTypeRepository.save({
+            results_id: result.id,
+            created_by: user.id,
+            last_updated_by: user.id,
+            institution_types_id: el.institution_types_id,
+            institution_roles_id: 5,
+            how_many: el.how_many,
+            version_id: version.id
+          })
+        }
+      })
+    }
+
+    if(crtr?.measures.length){
+      const { measures } = crtr;
+      measures.map(async (el) => {
+        let ripm: ResultIpMeasure = null;
+        if(el?.result_ip_measure_id){
+          ripm = await this._resultIpMeasureRepository.findOne({
+            where: {
+              result_ip_measure_id: el.result_ip_measure_id
+            }
+          });
+        }else{
+          ripm = await this._resultIpMeasureRepository.findOne({
+            where: {
+              unit_of_measure: el.unit_of_measure,
+              result_ip_id: el.result_ip_id
+            }
+          });
+        }
+
+        if(ripm){
+          await this._resultIpMeasureRepository.update(
+            ripm.result_ip_measure_id,
+            {
+              unit_of_measure: el.unit_of_measure,
+              quantity: el.quantity,
+              last_updated_by: user.id,
+              is_active: el.is_active
+            }
+          )
+        }else{
+          await this._resultIpMeasureRepository.save({
+            result_ip_id: result.id,
+            unit_of_measure: el.unit_of_measure,
+            quantity: el.quantity,
+            created_by: user.id,
+            last_updated_by: user.id,
+            version_id: version.id
+          })
+        }
+      });
     }
   }
 }
