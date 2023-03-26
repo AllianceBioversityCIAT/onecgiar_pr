@@ -16,6 +16,7 @@ export class UpdateInnovationPathwayDto {
     public institutions: institutionsInterface[]
     public sdgTargets: sdgTargetsInterface[]
     public eoiOutcomes: eoiOutcomesInterface[]
+    public actionAreaOutcomes: actionAreaOutcomesInterface[]
 }
 export interface regionsInterface {
     id: number;
@@ -27,6 +28,9 @@ export interface countriesInterface {
 }
 export interface eoiOutcomesInterface {
     toc_result_id: number;
+}
+export interface actionAreaOutcomesInterface {
+    action_area_outcome_id: number;
 }
 export interface sdgTargetsInterface {
     clarisa_sdg_usnd_code: number;

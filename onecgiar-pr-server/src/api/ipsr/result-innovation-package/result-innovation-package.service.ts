@@ -13,6 +13,10 @@ import { ResultCountryRepository } from '../../../api/results/result-countries/r
 import { IpsrRepository } from '../ipsr.repository';
 import { ResultTypeRepository } from 'src/api/results/result_types/resultType.repository';
 import { ResultInnovationPackageRepository } from './repositories/result-innovation-package.repository';
+import { ResultIpAAOutcomeRepository } from '../innovation-pathway/repository/result-ip-action-area-outcome.repository';
+import { ClarisaActionAreaOutcomeRepository } from '../../../clarisa/clarisa-action-area-outcome/clarisa-action-area-outcome.repository';
+import { In } from 'typeorm';
+import { ResultIpAAOutcome } from '../innovation-pathway/entities/result-ip-action-area-outcome.entity';
 
 @Injectable()
 export class ResultInnovationPackageService {
@@ -25,6 +29,8 @@ export class ResultInnovationPackageService {
     private readonly _resultCountryRepository: ResultCountryRepository,
     private readonly _innovationByResultRepository: IpsrRepository,
     private readonly _resultInnovationPackageRepository: ResultInnovationPackageRepository,
+    private readonly _resultIpAAOutcomeRepository: ResultIpAAOutcomeRepository,
+    private readonly _clarisaAAOutcome: ClarisaActionAreaOutcomeRepository,
   ) { }
 
   async createHeader(CreateResultInnovationPackageDto: CreateResultInnovationPackageDto, user: TokenDto) {
@@ -74,11 +80,10 @@ export class ResultInnovationPackageService {
 
       // * Extract the result and version
       const result = resultExist;
-      console.log("🚀 ~ file: result-innovation-package.service.ts:74 ~ ResultInnovationPackageService ~ createHeader ~ result:", result)
       if (result.result_type_id != 7) {
         throw {
           response: result.result_type_id,
-          message: 'This is not a valid result type. Only Innovation Use can be used to create a new Innovation Package.',
+          message: 'This is not a valid result type. Only Innovation Develpments can be used to create a new Innovation Package.',
           status: HttpStatus.BAD_REQUEST,
         };
       }
@@ -180,6 +185,7 @@ export class ResultInnovationPackageService {
         created_by: user.id,
         last_updated_by: user.id
       });
+      const resultByInnivationPackage = newInnovationByResult.result_by_innovation_package_id;
 
       let resultRegions: ResultRegion[] = [];
       let resultCountries: ResultCountry[] = [];
@@ -214,14 +220,50 @@ export class ResultInnovationPackageService {
       // * Save the countries
       const newInnovationCountries = await this._resultCountryRepository.save(resultCountries);
 
+      // * Map the AAOutcomes
+      const retriveAAOutcome = await this.retrievedAAOutcome(CreateResultInnovationPackageDto.initiative_id, user.id, resultByInnivationPackage, vrs.id);
+
       return {
         response: {
           newInnovationHeader,
+          retriveAAOutcome,
           newInnovationByInitiative,
           newResultInnovationPackage,
           newInnovationByResult,
           newInnovationRegions,
           newInnovationCountries
+        },
+        message: 'Successfully created',
+        status: HttpStatus.OK
+      }
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async retrievedAAOutcome(initId: number, user: number, resultByIpId: number, version: number) {
+    try {
+      let saveAAOutcome: any;
+      const searchTocData = await this._resultIpAAOutcomeRepository.mapActionAreaOutcome(initId);
+      const smoAAOutcomeToc = searchTocData.map(stc => stc.outcome_smo_code);
+      const mapAAOutcome = await this._clarisaAAOutcome.find({
+        where: { outcomeSMOcode: In(smoAAOutcomeToc) }
+      });
+
+      for (const data of mapAAOutcome) {
+        const newAAOutcome = new ResultIpAAOutcome();
+        newAAOutcome.action_area_outcome_id = data.id;
+        newAAOutcome.result_by_innovation_package_id = resultByIpId;
+        newAAOutcome.created_by = user;
+        newAAOutcome.last_updated_by = user;
+        newAAOutcome.version_id = version;
+        newAAOutcome.created_date = new Date();
+        newAAOutcome.last_updated_date = new Date();
+        saveAAOutcome = await this._resultIpAAOutcomeRepository.save(newAAOutcome);
+      }
+      return {
+        response: {
+          saveAAOutcome
         },
         message: 'Successfully created',
         status: HttpStatus.OK

@@ -28,6 +28,8 @@ import { ResultIpSdgTargets } from './entities/result-ip-sdg-targets.entity';
 import { ResultIpEoiOutcomeRepository } from './repository/result-ip-eoi-outcomes.repository';
 import { ResultIpEoiOutcome } from './entities/result-ip-eoi-outcome.entity';
 import { In } from 'typeorm';
+import { ResultIpAAOutcomeRepository } from './repository/result-ip-action-area-outcome.repository';
+import { ResultIpAAOutcome } from './entities/result-ip-action-area-outcome.entity';
 
 @Injectable()
 export class InnovationPathwayService {
@@ -44,6 +46,7 @@ export class InnovationPathwayService {
     protected readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
     protected readonly _resultByInstitutionsByDeliveriesTypeRepository: ResultByInstitutionsByDeliveriesTypeRepository,
     protected readonly _resultIpEoiOutcomes: ResultIpEoiOutcomeRepository,
+    protected readonly _resultIpAAOutcomes: ResultIpAAOutcomeRepository,
     protected readonly _resultIpSdgsTargetsRepository: ResultIpSdgTargetRepository
   ) { }
 
@@ -71,12 +74,14 @@ export class InnovationPathwayService {
 
       const geoScope = await this.geoScope(result, version, UpdateInnovationPathwayDto, user);
       const specifyAspiredOutcomesAndImpact = await this.saveSpecifyAspiredOutcomesAndImpact(result, version, UpdateInnovationPathwayDto, user);
+      const saveActionAreaOutcomes = await this.saveActionAreaOutcomes(result, version, UpdateInnovationPathwayDto, user);
       const sdgTargets = await this.saveSdgTargets(result, version, UpdateInnovationPathwayDto, user);
 
       return {
         response: [
           geoScope,
           specifyAspiredOutcomesAndImpact,
+          saveActionAreaOutcomes,
           sdgTargets
         ]
       }
@@ -90,12 +95,9 @@ export class InnovationPathwayService {
     const id = result.id;
     try {
       const req = UpdateInnovationPathwayDto;
-      // * Obtain the regions in the body
       const regions = UpdateInnovationPathwayDto.regions;
-      // * Obtain the countries in the body
       const countries = UpdateInnovationPathwayDto.countries;
 
-      // * Validate if geo scope is empty
       if (!UpdateInnovationPathwayDto.geo_scope_id) {
         throw {
           response: UpdateInnovationPathwayDto.geo_scope_id,
@@ -104,7 +106,6 @@ export class InnovationPathwayService {
         };
       }
 
-      // * Update geo scope in the result
       const updateGeoScope = await this._resultRepository.update(id, {
         geographic_scope_id: req.geo_scope_id,
         last_updated_by: user.id,
@@ -116,14 +117,12 @@ export class InnovationPathwayService {
       let updateRegions: any;
       let updateCountries: any;
 
-      // * Validate if geo scope  is regional
       if (UpdateInnovationPathwayDto.geo_scope_id !== 2) {
         await this._resultRegionRepository.updateRegions(id, [])
       } else if (UpdateInnovationPathwayDto.geo_scope_id === 2) {
         if (regions) {
           await this._resultRegionRepository.updateRegions(id, UpdateInnovationPathwayDto.regions.map(r => r.id));
           if (regions?.length) {
-            // * Iterate into the regions to save them
             for (let i = 0; i < regions.length; i++) {
               const regionsExist = await this._resultRegionRepository.getResultRegionByResultIdAndRegionId(id, regions[i].id);
               if (!regionsExist) {
@@ -140,13 +139,11 @@ export class InnovationPathwayService {
         }
       }
 
-      // * Validate if geo scope  is national or  multination
       if (UpdateInnovationPathwayDto.geo_scope_id !== 3) {
         await this._resultCountryRepository.updateCountries(id, []);
       } else if (UpdateInnovationPathwayDto.geo_scope_id === 3) {
         await this._resultCountryRepository.updateCountries(id, UpdateInnovationPathwayDto.countries.map(c => c.id));
         if (countries?.length) {
-          // * Iterate into the countries to save them
           for (let i = 0; i < countries.length; i++) {
             const countriExist = await this._resultCountryRepository.getResultCountrieByIdResultAndCountryId(id, countries[i].id);
             if (!countriExist) {
@@ -162,17 +159,14 @@ export class InnovationPathwayService {
         }
       }
 
-      // * Search the IPSR result to retrieve the Core Innovation
       const ipsrResult =
         await this._innovationByResultRepository.findOneBy({ result_innovation_package_id: id });
 
-      // * Find the Result Core Innovation.
       const coreResult =
         await this._resultRepository.findOneBy({ id: ipsrResult.result_id });
 
       let innovationTitle: string;
 
-      // * Validate the Geo Scope to concat the regions or countries in the title.
       if (UpdateInnovationPathwayDto.geo_scope_id === 2) {
         innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${coreResult.title} in ${regions.map(r => r.name).join(', ')}`;
       } else if (UpdateInnovationPathwayDto.geo_scope_id === 3) {
@@ -181,14 +175,12 @@ export class InnovationPathwayService {
         innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${coreResult.title}`;
       }
 
-      // * Seacrh a title for validation
       const titleValidate = await this._resultRepository
         .createQueryBuilder('result')
         .where('result.title like :title', { title: `${innovationTitle}` })
         .andWhere('result.is_active = 1')
         .getMany();
 
-      // * Validate if the title is duplicate
       if (!titleValidate.find(tv => tv.id === id)) {
         throw {
           response: titleValidate.map(tv => tv.id),
@@ -197,7 +189,6 @@ export class InnovationPathwayService {
         }
       }
 
-      // * Update the title
       const updateTitle = await this._resultRepository.update(id, {
         title: innovationTitle || result.title,
         last_updated_by: user.id,
@@ -217,40 +208,36 @@ export class InnovationPathwayService {
   async saveSpecifyAspiredOutcomesAndImpact(result: any, version: Version, UpdateInnovationPathwayDto: UpdateInnovationPathwayDto, user: TokenDto) {
     const id = result.id;
     try {
-      // * Recupero la data de reult BY innovation
       const resultByInnovationPackageId = await this._innovationByResultRepository.findOneBy({ result_innovation_package_id: id })
-      // * Obtengo el id de result_by_innovation_packager
       const result_by_innovation_package_id = resultByInnovationPackageId.result_by_innovation_package_id;
-      // * Obtengo los toc_results
       const eoiOutcomes = UpdateInnovationPathwayDto.eoiOutcomes;
 
-      // * Mapeos los toc_results_id
-      const tocIds = UpdateInnovationPathwayDto.eoiOutcomes.map(e => e.toc_result_id);
-      console.log("🚀 ~ file: innovation-pathway.service.ts:229 ~ InnovationPathwayService ~ saveSpecifyAspiredOutcomesAndImpact ~ tocIds:", tocIds)
-      // * Busco si ya hay algun dato insertado con los toc_rersult
-      const existingToc = await this._resultIpEoiOutcomes.find({
-        where: { toc_result_id: In(tocIds), result_by_innovation_package_id: result_by_innovation_package_id },
+      const allTocByResult = await this._resultIpEoiOutcomes.find({
+        where: { result_by_innovation_package_id: result_by_innovation_package_id },
       });
 
-      // * Mapeo los toc que ya estan registrados
-      const existingIds = existingToc.map(et => et.toc_result_id);
+      const existingIds = allTocByResult.map(et => et.toc_result_id);
 
-      // * Extraigo los datos que no estan creados
-      const entitiesToSave = eoiOutcomes.filter(
-        eoi => !existingIds.includes(eoi.toc_result_id),
+      const tocsToActive = allTocByResult.filter(
+        eoi =>
+          eoiOutcomes.find(e => e.toc_result_id === eoi.toc_result_id) &&
+          eoi.is_active === false,
       );
 
-      // * Extraigo los datos que ya estan creados
-      const entitiesToUpdate = existingToc.filter(
+      const tocsToInactive = allTocByResult.filter(
         eoi =>
-        eoiOutcomes.find(e => e.toc_result_id === eoi.toc_result_id) &&
-          eoi.is_active !== false,
+          !eoiOutcomes.find(e => e.toc_result_id === eoi.toc_result_id) &&
+          eoi.is_active === true,
+      );
+
+      const tocsToSave = eoiOutcomes.filter(
+        eoi => !existingIds.includes(eoi.toc_result_id),
       );
 
       const saveToc = [];
 
-      if (entitiesToSave.length > 0) {
-        for (const entity of entitiesToSave) {
+      if (tocsToSave.length > 0) {
+        for (const entity of tocsToSave) {
           const newEoi = new ResultIpEoiOutcome();
           newEoi.toc_result_id = entity.toc_result_id;
           newEoi.result_by_innovation_package_id = result_by_innovation_package_id;
@@ -263,8 +250,15 @@ export class InnovationPathwayService {
         }
       }
 
-      if (entitiesToUpdate.length > 0) {
-        for (const entity of entitiesToUpdate) {
+      if (tocsToActive.length > 0) {
+        for (const entity of tocsToActive) {
+          entity.is_active = true;
+          saveToc.push(this._resultIpEoiOutcomes.save(entity));
+        }
+      }
+
+      if (tocsToInactive.length > 0) {
+        for (const entity of tocsToInactive) {
           entity.is_active = false;
           saveToc.push(this._resultIpEoiOutcomes.save(entity));
         }
@@ -273,6 +267,76 @@ export class InnovationPathwayService {
       return {
         response: { status: 'Success' },
         message: 'The EOI Outcomes have been saved successfully',
+        status: HttpStatus.OK
+      }
+
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async saveActionAreaOutcomes(result: any, version: Version, UpdateInnovationPathwayDto: UpdateInnovationPathwayDto, user: TokenDto) {
+    const id = result.id;
+    try {
+      const resultByInnovationPackageId = await this._innovationByResultRepository.findOneBy({ result_innovation_package_id: id })
+      const result_by_innovation_package_id = resultByInnovationPackageId.result_by_innovation_package_id;
+      const aaOutcomes = UpdateInnovationPathwayDto.actionAreaOutcomes;
+
+      const allAAOutcome = await this._resultIpAAOutcomes.find({
+        where: { result_by_innovation_package_id: result_by_innovation_package_id },
+      });
+
+      const existingIds = allAAOutcome.map(et => et.action_area_outcome_id);
+
+      const aaToActive = allAAOutcome.filter(
+        eoi =>
+          aaOutcomes.find(e => e.action_area_outcome_id === eoi.action_area_outcome_id) &&
+          eoi.is_active === false,
+      );
+
+      const aaToInactive = allAAOutcome.filter(
+        eoi =>
+          !aaOutcomes.find(e => e.action_area_outcome_id === eoi.action_area_outcome_id) &&
+          eoi.is_active === true,
+      );
+
+      const aaToSave = aaOutcomes.filter(
+        eoi => !existingIds.includes(eoi.action_area_outcome_id),
+      );
+
+      const saveToc = [];
+
+      if (aaToSave.length > 0) {
+        for (const entity of aaToSave) {
+          const newEoi = new ResultIpAAOutcome();
+          newEoi.action_area_outcome_id = entity.action_area_outcome_id;
+          newEoi.result_by_innovation_package_id = result_by_innovation_package_id;
+          newEoi.version_id = version.id;
+          newEoi.created_by = user.id;
+          newEoi.last_updated_by = user.id;
+          newEoi.created_date = new Date();
+          newEoi.last_updated_date = new Date();
+          saveToc.push(this._resultIpAAOutcomes.save(newEoi));
+        }
+      }
+
+      if (aaToActive.length > 0) {
+        for (const entity of aaToActive) {
+          entity.is_active = true;
+          saveToc.push(this._resultIpAAOutcomes.save(entity));
+        }
+      }
+
+      if (aaToInactive.length > 0) {
+        for (const entity of aaToInactive) {
+          entity.is_active = false;
+          saveToc.push(this._resultIpAAOutcomes.save(entity));
+        }
+      }
+
+      return {
+        response: { status: 'Success' },
+        message: 'The Action Area Outcomes have been saved successfully',
         status: HttpStatus.OK
       }
 
