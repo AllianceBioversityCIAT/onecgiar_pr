@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { InnovationPathwayService } from './innovation-pathway.service';
+import { InnovationPathwayStepOneService } from './innovation-pathway-step-one.service';
 import { InnovationPathwayController } from './innovation-pathway.controller';
 import { ResultRepository } from '../../../api/results/result.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
@@ -24,7 +24,7 @@ import { ResultIpImpactAreaRepository } from './repository/result-ip-sdg-targets
 @Module({
   controllers: [InnovationPathwayController],
   providers: [
-    InnovationPathwayService,
+    InnovationPathwayStepOneService,
     HandlersError,
     ResultRepository,
     ResultRegionRepository,

@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { InnovationPathwayService } from './innovation-pathway.service';
+import { InnovationPathwayService } from './innovation-pathway-step-one.service';
 
 describe('InnovationPathwayService', () => {
   let service: InnovationPathwayService;

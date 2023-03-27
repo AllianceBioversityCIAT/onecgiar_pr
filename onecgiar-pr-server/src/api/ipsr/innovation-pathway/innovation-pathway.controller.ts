@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { InnovationPathwayService } from './innovation-pathway.service';
+import { InnovationPathwayStepOneService } from './innovation-pathway-step-one.service';
 import { CreateInnovationPathwayDto } from './dto/create-innovation-pathway.dto';
 import { UpdateInnovationPathwayDto } from './dto/update-innovation-pathway.dto';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
@@ -7,7 +7,7 @@ import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 
 @Controller()
 export class InnovationPathwayController {
-  constructor(private readonly innovationPathwayService: InnovationPathwayService) { }
+  constructor(private readonly _innovationPathwayStepOneServiceService: InnovationPathwayStepOneService) { }
 
   @Patch('step1/:resultId')
   update(
@@ -15,7 +15,7 @@ export class InnovationPathwayController {
     @Body() updateInnovationPathwayDto: UpdateInnovationPathwayDto,
     @UserToken() user: TokenDto
   ) {
-    return this.innovationPathwayService.updateMain(+resultId, updateInnovationPathwayDto, user);
+    return this._innovationPathwayStepOneServiceService.updateMain(+resultId, updateInnovationPathwayDto, user);
   }
 
   // @Get()
