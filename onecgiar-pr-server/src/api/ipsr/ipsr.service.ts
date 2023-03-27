@@ -29,6 +29,27 @@ export class IpsrService {
     }
   }
 
+  async findInnovationDetail(resultId: number) {
+    try {
+      const result = await this._ipsrRespository.getResultInnovationDetail(resultId);
+      if (!result) {
+        throw {
+          response: result,
+          message: 'The result was not found.',
+          status: HttpStatus.NOT_FOUND
+        }
+      }
+
+      return {
+        response: result,
+        message: 'Successful response',
+        status: HttpStatus.OK
+      }
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
   async findOneInnovation(resultId: number) {
     try {
       const result = await this._ipsrRespository.getResultInnovationById(resultId);
