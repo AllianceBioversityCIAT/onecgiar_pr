@@ -11,7 +11,7 @@ export class IpsrRepository extends Repository<Ipsr>{
         private readonly _handlersError: HandlersError,
     ) {
         super(Ipsr, dataSource.createEntityManager())
-     }
+    }
 
     async getResultsInnovation() {
         const resultInnovationQuery = `
@@ -51,6 +51,58 @@ export class IpsrRepository extends Repository<Ipsr>{
         try {
             const resultInnovation: any[] = await this.dataSource.query(resultInnovationQuery);
             return resultInnovation;
+        } catch (error) {
+            throw this._handlersError.returnErrorRepository({
+                className: IpsrRepository.name,
+                error: error,
+                debug: true,
+            });
+        }
+    }
+
+    async getResultInnovationDetail(resultId: number) {
+        const resultInnovationByIdQuery = `
+        SELECT
+            r.id AS result_id,
+            r.result_code,
+            r.title,
+            (
+                SELECT
+                    CONCAT(ci.official_code, ' - ', ci.short_name)
+                FROM
+                    clarisa_initiatives ci
+                WHERE
+                    ci.id = rbi.inititiative_id
+            ) AS official_code,
+            (
+                SELECT
+                    rl.name
+                FROM
+                    result_level rl
+                WHERE
+                    rl.id = r.result_level_id
+            ) AS result_level,
+            (
+                SELECT
+                    rt.name
+                FROM
+                    result_type rt
+                WHERE
+                    rt.id = r.result_type_id
+            ) AS result_type
+        FROM
+            result r
+            LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
+            LEFT JOIN clarisa_geographic_scope cgs ON cgs.id = r.geographic_scope_id
+        WHERE
+            r.is_active = 1
+            AND r.id = ?;
+        `;
+
+        try {
+            const resultInnovation: any[] = await this.dataSource.query(resultInnovationByIdQuery, [resultId]);
+
+            return resultInnovation[0];
         } catch (error) {
             throw this._handlersError.returnErrorRepository({
                 className: IpsrRepository.name,
@@ -137,7 +189,7 @@ export class IpsrRepository extends Repository<Ipsr>{
             LEFT JOIN clarisa_regions cr ON cr.um49Code = rr.region_id
         WHERE rr.result_id = ?
             AND rr.is_active = 1;
-        `;  
+        `;
 
         try {
             const resultInnovation: any[] = await this.dataSource.query(resultInnovationByIdQuery, [resultId]);
