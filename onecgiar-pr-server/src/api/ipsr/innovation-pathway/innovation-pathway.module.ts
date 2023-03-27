@@ -19,6 +19,7 @@ import { ResultIpAAOutcomeRepository } from './repository/result-ip-action-area-
 import { ResultActorRepository } from '../../results/result-actors/repositories/result-actors.repository';
 import { ResultByIntitutionsTypeRepository } from '../../results/results_by_institution_types/result_by_intitutions_type.repository';
 import { ResultIpMeasureRepository } from '../result-ip-measures/result-ip-measures.repository';
+import { ResultIpImpactAreaRepository } from './repository/result-ip-sdg-targets.repository copy';
 
 @Module({
   controllers: [InnovationPathwayController],
@@ -41,7 +42,8 @@ import { ResultIpMeasureRepository } from '../result-ip-measures/result-ip-measu
     ResultIpAAOutcomeRepository,
     ResultActorRepository,
     ResultByIntitutionsTypeRepository,
-    ResultIpMeasureRepository
+    ResultIpMeasureRepository,
+    ResultIpImpactAreaRepository
   ]
 })
 export class InnovationPathwayModule { }

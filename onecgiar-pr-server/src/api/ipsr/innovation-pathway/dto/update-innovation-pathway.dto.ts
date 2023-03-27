@@ -18,6 +18,7 @@ export class UpdateInnovationPathwayDto {
     public sdgTargets: sdgTargetsInterface[]
     public eoiOutcomes: eoiOutcomesInterface[]
     public actionAreaOutcomes: actionAreaOutcomesInterface[]
+    public impactAreas: impactAreasInterface[]
 }
 export interface regionsInterface {
     id: number;
@@ -32,6 +33,9 @@ export interface eoiOutcomesInterface {
 }
 export interface actionAreaOutcomesInterface {
     action_area_outcome_id: number;
+}
+export interface impactAreasInterface {
+    impact_area_indicator_id: number;
 }
 export interface sdgTargetsInterface {
     clarisa_sdg_usnd_code: number;

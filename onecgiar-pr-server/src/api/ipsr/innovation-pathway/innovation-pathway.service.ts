@@ -35,6 +35,8 @@ import { ResultActor } from '../../results/result-actors/entities/result-actor.e
 import { ResultByIntitutionsTypeRepository } from '../../results/results_by_institution_types/result_by_intitutions_type.repository';
 import { ResultIpMeasureRepository } from '../result-ip-measures/result-ip-measures.repository';
 import { ResultIpMeasure } from '../result-ip-measures/entities/result-ip-measure.entity';
+import { ResultIpImpactAreaRepository } from './repository/result-ip-sdg-targets.repository copy';
+import { ResultIpImpactArea } from './entities/result-ip-impact-area.entity';
 
 @Injectable()
 export class InnovationPathwayService {
@@ -55,7 +57,8 @@ export class InnovationPathwayService {
     protected readonly _resultIpSdgsTargetsRepository: ResultIpSdgTargetRepository,
     protected readonly _resultActorRepository: ResultActorRepository,
     protected readonly _resultByIntitutionsTypeRepository: ResultByIntitutionsTypeRepository,
-    protected readonly _resultIpMeasureRepository: ResultIpMeasureRepository
+    protected readonly _resultIpMeasureRepository: ResultIpMeasureRepository,
+    protected readonly _resultIpImpactAreas: ResultIpImpactAreaRepository
   ) { }
 
   async updateMain(resultId: number, UpdateInnovationPathwayDto: UpdateInnovationPathwayDto, user: TokenDto) {
@@ -82,14 +85,16 @@ export class InnovationPathwayService {
 
       const geoScope = await this.geoScope(result, version, UpdateInnovationPathwayDto, user);
       const specifyAspiredOutcomesAndImpact = await this.saveSpecifyAspiredOutcomesAndImpact(result, version, UpdateInnovationPathwayDto, user);
-      const saveActionAreaOutcomes = await this.saveActionAreaOutcomes(result, version, UpdateInnovationPathwayDto, user);
+      const actionAreaOutcomes = await this.saveActionAreaOutcomes(result, version, UpdateInnovationPathwayDto, user);
+      const impactAreas = await this.saveImpactAreas(result, version, UpdateInnovationPathwayDto, user);
       const sdgTargets = await this.saveSdgTargets(result, version, UpdateInnovationPathwayDto, user);
 
       return {
         response: [
           geoScope,
           specifyAspiredOutcomesAndImpact,
-          saveActionAreaOutcomes,
+          actionAreaOutcomes,
+          impactAreas,
           sdgTargets
         ]
       }
@@ -312,7 +317,7 @@ export class InnovationPathwayService {
         eoi => !existingIds.includes(eoi.action_area_outcome_id),
       );
 
-      const saveToc = [];
+      const saveActionAreas = [];
 
       if (aaToSave.length > 0) {
         for (const entity of aaToSave) {
@@ -324,27 +329,97 @@ export class InnovationPathwayService {
           newEoi.last_updated_by = user.id;
           newEoi.created_date = new Date();
           newEoi.last_updated_date = new Date();
-          saveToc.push(this._resultIpAAOutcomes.save(newEoi));
+          saveActionAreas.push(this._resultIpAAOutcomes.save(newEoi));
         }
       }
 
       if (aaToActive.length > 0) {
         for (const entity of aaToActive) {
           entity.is_active = true;
-          saveToc.push(this._resultIpAAOutcomes.save(entity));
+          saveActionAreas.push(this._resultIpAAOutcomes.save(entity));
         }
       }
 
       if (aaToInactive.length > 0) {
         for (const entity of aaToInactive) {
           entity.is_active = false;
-          saveToc.push(this._resultIpAAOutcomes.save(entity));
+          saveActionAreas.push(this._resultIpAAOutcomes.save(entity));
         }
       }
 
       return {
         response: { status: 'Success' },
         message: 'The Action Area Outcomes have been saved successfully',
+        status: HttpStatus.OK
+      }
+
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async saveImpactAreas(result: any, version: Version, UpdateInnovationPathwayDto: UpdateInnovationPathwayDto, user: TokenDto) {
+    const id = result.id;
+    try {
+      const resultByInnovationPackageId = await this._innovationByResultRepository.findOneBy({ result_innovation_package_id: id })
+      const result_by_innovation_package_id = resultByInnovationPackageId.result_by_innovation_package_id;
+      const impactAreas = UpdateInnovationPathwayDto.impactAreas;
+
+      const allImpactAreas = await this._resultIpImpactAreas.find({
+        where: { result_by_innovation_package_id: result_by_innovation_package_id },
+      });
+
+      const existingIds = allImpactAreas.map(et => et.impact_area_indicator_id);
+
+      const impactAreasToActive = allImpactAreas.filter(
+        ia =>
+          impactAreas.find(e => e.impact_area_indicator_id === ia.impact_area_indicator_id) &&
+          ia.is_active === false,
+      );
+
+      const impactAreasToInactive = allImpactAreas.filter(
+        ia =>
+          !impactAreas.find(e => e.impact_area_indicator_id === ia.impact_area_indicator_id) &&
+          ia.is_active === true,
+      );
+
+      const impactAreasToSave = impactAreas.filter(
+        ia => !existingIds.includes(ia.impact_area_indicator_id),
+      );
+
+      const saveImpactAreas = [];
+
+      if (impactAreasToSave.length > 0) {
+        for (const entity of impactAreasToSave) {
+          const newEoi = new ResultIpImpactArea();
+          newEoi.impact_area_indicator_id = entity.impact_area_indicator_id;
+          newEoi.result_by_innovation_package_id = result_by_innovation_package_id;
+          newEoi.version_id = version.id;
+          newEoi.created_by = user.id;
+          newEoi.last_updated_by = user.id;
+          newEoi.created_date = new Date();
+          newEoi.last_updated_date = new Date();
+          saveImpactAreas.push(this._resultIpImpactAreas.save(newEoi));
+        }
+      }
+
+      if (impactAreasToActive.length > 0) {
+        for (const entity of impactAreasToActive) {
+          entity.is_active = true;
+          saveImpactAreas.push(this._resultIpImpactAreas.save(entity));
+        }
+      }
+
+      if (impactAreasToInactive.length > 0) {
+        for (const entity of impactAreasToInactive) {
+          entity.is_active = false;
+          saveImpactAreas.push(this._resultIpImpactAreas.save(entity));
+        }
+      }
+
+      return {
+        response: { status: 'Success' },
+        message: 'The Impact Areas have been saved successfully',
         status: HttpStatus.OK
       }
 
