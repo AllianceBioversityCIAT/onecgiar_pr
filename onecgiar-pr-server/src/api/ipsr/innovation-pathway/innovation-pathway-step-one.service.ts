@@ -1,23 +1,19 @@
 import { HttpStatus, Injectable, Type } from '@nestjs/common';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
-import { ResultRepository } from '../../../api/results/result.repository';
+import { ResultRepository } from '../../results/result.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
-import { CreateInnovationPathwayDto } from './dto/create-innovation-pathway.dto';
 import { UpdateInnovationPathwayDto } from './dto/update-innovation-pathway.dto';
-import { ResultRegion } from '../../../api/results/result-regions/entities/result-region.entity';
-import { ResultCountry } from '../../../api/results/result-countries/entities/result-country.entity';
-import { ResultRegionRepository } from '../../../api/results/result-regions/result-regions.repository';
-import { ResultCountryRepository } from '../../../api/results/result-countries/result-countries.repository';
+import { ResultRegion } from '../../results/result-regions/entities/result-region.entity';
+import { ResultCountry } from '../../results/result-countries/entities/result-country.entity';
+import { ResultRegionRepository } from '../../results/result-regions/result-regions.repository';
+import { ResultCountryRepository } from '../../results/result-countries/result-countries.repository';
 import { ExpertisesRepository } from '../innovation-packaging-experts/repositories/expertises.repository';
 import { InnovationPackagingExpertRepository } from '../innovation-packaging-experts/repositories/innovation-packaging-expert.repository';
 import { InnovationPackagingExpert } from '../innovation-packaging-experts/entities/innovation-packaging-expert.entity';
 import { Result } from '../../results/entities/result.entity';
 import { Version } from '../../results/versions/entities/version.entity';
-import { CreateInnovationPackagingExpertDto } from '../innovation-packaging-experts/dto/create-innovation-packaging-expert.dto';
 import { ResultInnovationPackageRepository } from '../result-innovation-package/repositories/result-innovation-package.repository';
-import { CreateResultInnovationPackageDto } from '../result-innovation-package/dto/create-result-innovation-package.dto';
 import { VersionsService } from '../../results/versions/versions.service';
-import { ResultInnovationPackage } from '../result-innovation-package/entities/result-innovation-package.entity';
 import { IpsrRepository } from '../ipsr.repository';
 import { CreateResultIPDto } from '../result-innovation-package/dto/create-result-ip.dto';
 import { ResultsByInstitution } from '../../results/results_by_institutions/entities/results_by_institution.entity';
@@ -27,7 +23,6 @@ import { ResultIpSdgTargetRepository } from './repository/result-ip-sdg-targets.
 import { ResultIpSdgTargets } from './entities/result-ip-sdg-targets.entity';
 import { ResultIpEoiOutcomeRepository } from './repository/result-ip-eoi-outcomes.repository';
 import { ResultIpEoiOutcome } from './entities/result-ip-eoi-outcome.entity';
-import { In } from 'typeorm';
 import { ResultIpAAOutcomeRepository } from './repository/result-ip-action-area-outcome.repository';
 import { ResultIpAAOutcome } from './entities/result-ip-action-area-outcome.entity';
 import { ResultActorRepository } from '../../results/result-actors/repositories/result-actors.repository';
@@ -39,7 +34,7 @@ import { ResultIpImpactAreaRepository } from './repository/result-ip-sdg-targets
 import { ResultIpImpactArea } from './entities/result-ip-impact-area.entity';
 
 @Injectable()
-export class InnovationPathwayService {
+export class InnovationPathwayStepOneService {
   constructor(
     private readonly _handlersError: HandlersError,
     private readonly _resultRepository: ResultRepository,

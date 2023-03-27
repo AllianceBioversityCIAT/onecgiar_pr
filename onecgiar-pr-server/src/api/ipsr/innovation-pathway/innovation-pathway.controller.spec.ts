@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { InnovationPathwayController } from './innovation-pathway.controller';
-import { InnovationPathwayService } from './innovation-pathway.service';
+import { InnovationPathwayService } from './innovation-pathway-step-one.service';
 
 describe('InnovationPathwayController', () => {
   let controller: InnovationPathwayController;
