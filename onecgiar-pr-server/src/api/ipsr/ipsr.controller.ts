@@ -33,8 +33,11 @@ export class IpsrController {
     throw new HttpException({ message, response }, status);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.ipsrService.remove(+id);
+  @Get('innovation-package-detail/:resultId')
+  async findInnovationDetail(@Param('resultId') resultId: number) {
+    const { message, response, status }
+      = await this.ipsrService.findInnovationDetail(resultId);
+
+    throw new HttpException({ message, response }, status);
   }
 }
