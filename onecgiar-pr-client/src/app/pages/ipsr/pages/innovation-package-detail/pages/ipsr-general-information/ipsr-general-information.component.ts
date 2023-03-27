@@ -20,11 +20,8 @@ export class IpsrGeneralInformationComponent {
   getSectionInformation() {
     this.ipsrDataControlSE.resultInnovationId;
     this.api.resultsSE.GETInnovationByResultId(this.ipsrDataControlSE.resultInnovationId).subscribe(({ response }) => {
-      console.log(response);
       this.ipsrGeneralInformationBody = response;
-      console.log(this.ipsrGeneralInformationBody.is_krs);
       this.ipsrGeneralInformationBody.is_krs = Boolean(Number(this.ipsrGeneralInformationBody.is_krs));
-      console.log(this.ipsrGeneralInformationBody);
     });
   }
 
@@ -32,9 +29,6 @@ export class IpsrGeneralInformationComponent {
     if (this.ipsrGeneralInformationBody.is_krs === false) this.ipsrGeneralInformationBody.is_krs = null;
   }
   onSaveSection() {
-    console.log('onSaveSection');
-    console.log(this.ipsrGeneralInformationBody);
-    console.log(this.ipsrDataControlSE.resultInnovationId);
     this.api.resultsSE.PATCHIpsrGeneralInfo(this.ipsrGeneralInformationBody, this.ipsrDataControlSE.resultInnovationId).subscribe(
       resp => {
         console.log(resp);

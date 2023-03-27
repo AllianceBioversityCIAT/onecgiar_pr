@@ -8,11 +8,31 @@ import { ApiService } from '../../../../shared/services/api/api.service';
 })
 export class InnovationPackageListComponent {
   innovationPackagesList = [];
-  constructor(private api: ApiService) {}
+  searchText = '';
+  constructor(public api: ApiService) {}
   ngOnInit(): void {
     this.api.resultsSE.GETAllInnovationPackages().subscribe(({ response }) => {
-      console.log(response);
       this.innovationPackagesList = response;
+      this.innovationPackagesList.map((inno: any) => (inno.full_name = inno.title));
     });
+  }
+
+  onSelectChip(option) {
+    option.selected = !option.selected;
+  }
+
+  get initsSelectedJoinText() {
+    return JSON.stringify(this.api.dataControlSE?.myInitiativesList);
+  }
+  get everyDeselected() {
+    return this.api.dataControlSE.myInitiativesList.every(item => item.selected != true);
+  }
+
+  deselectInits() {
+    this.api.dataControlSE.myInitiativesList.map(item => (item.selected = false));
+  }
+
+  ngOnDestroy(): void {
+    this.api.dataControlSE?.myInitiativesList.map(item => (item.selected = true));
   }
 }

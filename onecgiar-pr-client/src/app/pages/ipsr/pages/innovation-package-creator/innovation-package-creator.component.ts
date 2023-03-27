@@ -15,22 +15,29 @@ export class InnovationPackageCreatorComponent {
   selectInnovationEvent(e) {
     this.innovationPackageCreatorBody.result_id = e.result_id;
     this.api.resultsSE.GETInnovationByResultId(e.result_id).subscribe(({ response }) => {
-      this.innovationPackageCreatorBody.geo_scope_id = response.geographic_scope_id;
+      this.innovationPackageCreatorBody.geo_scope_id = response.geographic_scope_id == 3 ? 4 : response.geographic_scope_id;
       this.innovationPackageCreatorBody.regions = response.hasRegions;
       this.innovationPackageCreatorBody.countries = response.hasCountries;
       this.innovationPackageCreatorBody.result_code = response.result_code;
       this.innovationPackageCreatorBody.official_code = response.official_code;
       this.innovationPackageCreatorBody.title = response.title;
-      console.log(response);
       window.scrollTo(0, document.body.scrollHeight);
     });
   }
 
   onSaveSection() {
-    console.log(this.innovationPackageCreatorBody);
-    this.api.resultsSE.POSTResultInnovationPackage(this.innovationPackageCreatorBody).subscribe(({ response }) => {
-      this.router.navigateByUrl(`/ipsr/detail/${response.newInnovationHeader.result_code}`);
-      this.api.alertsFe.show({ id: 'ipsr-creator', title: 'Innovation package created', status: 'success', closeIn: 500 });
-    });
+    this.api.resultsSE.POSTResultInnovationPackage(this.innovationPackageCreatorBody).subscribe(
+      ({ response }) => {
+        this.router.navigateByUrl(`/ipsr/detail/${response.newInnovationHeader.result_code}`);
+        this.api.alertsFe.show({ id: 'ipsr-creator', title: 'Innovation package created', status: 'success', closeIn: 500 });
+      },
+      err => {
+        this.api.alertsFe.show({ id: 'ipsr-creator-error', title: 'Error!', description: err?.error?.message, status: 'error' });
+      }
+    );
+  }
+
+  ngDoCheck(): void {
+    this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.section_container');
   }
 }

@@ -9,7 +9,7 @@ import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 export class ResultsPackageTocResultController {
   constructor(private readonly resultsPackageTocResultService: ResultsPackageTocResultService) {}
 
-  @Post('create/:resultId')
+  @Patch('save/:resultId')
   async create(
     @Body() createResultsPackageTocResultDto: CreateResultsPackageTocResultDto,
     @Param('resultId') resultId: number,

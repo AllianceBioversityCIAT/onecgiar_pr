@@ -17,12 +17,13 @@
     <app-pr-field-header label="Select Core Innovation for innovation packaging and scaling readiness assessment"
         [required]="false"
         description="Only one can be selected. Only QAed innovations will be listed."></app-pr-field-header>
-    <!-- <div class="search_input">
-        <i class="material-icons-round">search</i>
-        <input type="text" placeholder="Find result..." [(ngModel)]="searchText">
-    </div> -->
+
     <app-results-innovation-output-list
         (selectInnovationEvent)="selectInnovationEvent($event)"></app-results-innovation-output-list>
+
+    <div appFeedbackValidation labelText="Innovation package"
+        [isComplete]="!!this.innovationPackageCreatorBody.result_id">
+    </div>
 
     <div *ngIf="this.innovationPackageCreatorBody.result_id">
         <app-pr-field-header label="Core innovation selected and CGIAR Initiative leading the development"
@@ -35,7 +36,7 @@
                 -
                 <strong>{{this.innovationPackageCreatorBody.official_code}}</strong>
             </div>
-            <i class="material-icons-round">
+            <i class="material-icons-round" (click)="this.innovationPackageCreatorBody.result_id = null">
                 cancel
             </i>
 
@@ -45,7 +46,8 @@
     <app-ipsr-geoscope-creator *ngIf="this.innovationPackageCreatorBody.result_id"
         [body]="this.innovationPackageCreatorBody"></app-ipsr-geoscope-creator>
 
-    <app-save-button class="position_sticky" (clickSave)="onSaveSection()" text="Save and continue">
+    <app-save-button class="position_sticky" (clickSave)="onSaveSection()" text="Save and continue"
+        [disabled]="!this.innovationPackageCreatorBody.result_id  || !this.innovationPackageCreatorBody.initiative_id">
     </app-save-button>
 
 </div>

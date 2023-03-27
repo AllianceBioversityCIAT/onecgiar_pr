@@ -1,7 +1,6 @@
 <div>
     <div class="editable_field" [ngClass]="{'global-editable': this.editable}">
-        <app-pr-yes-or-not
-            label="<strong>{{initiative?.official_code}} {{initiative?.short_name}}</strong> - Are you able to match your reported result to a planned result in this Initiative's Theory of Change?"
+        <app-pr-yes-or-not [label]="getDescription(initiative?.official_code,initiative?.short_name)"
             (selectOptionEvent)="valdiateEOI(initiative);initiative.toc_result_id = null"
             [(ngModel)]="initiative.planned_result"
             [description]=" initiative.planned_result == false? 'Please select the End of Initiative (EOI)-Outcome that most closely matches this result. You will have time during the reflect moment to update your ToC':''"

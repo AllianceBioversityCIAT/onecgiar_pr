@@ -22,7 +22,8 @@
         <div class="chips_container">
             <div class="pr_chip_selected pending" *ngFor="let item of this.theoryOfChangeBody?.pending_contributing_initiatives
              let i=index">
-                <div class="name" [ngClass]="{'text_inactive': !item.is_active}" [innerHtml]="item.initiative_name">
+                <div class="name" [ngClass]="{'text_inactive': !item.is_active}"
+                    [innerHtml]="'<strong>'+item.official_code+'</strong> '+item.initiative_name">
                 </div>
                 <i class="material-icons-round" [style.color]="item.is_active?'#fd6d6d':'#5569dd'"
                     (click)="toggleActiveContributor(item)">{{item.is_active?'backspace':'undo'}}</i>

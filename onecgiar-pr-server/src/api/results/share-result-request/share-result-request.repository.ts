@@ -130,7 +130,7 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
 	order by srr.request_status_id ASC;
     `;
     try {
-      const shareResultRequest: ShareResultRequest[] = await this.query(queryData, [userId, version]);
+      const shareResultRequest: ShareResultRequest[] = await this.query(queryData, [version, userId]);
       return shareResultRequest;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -198,7 +198,7 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
 		and srr.is_active > 0;
     `;
     try {
-      const shareResultRequest: ShareResultRequest[] = await this.query(queryData, [userId, version]);
+      const shareResultRequest: ShareResultRequest[] = await this.query(queryData, [version, userId]);
       return shareResultRequest;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
