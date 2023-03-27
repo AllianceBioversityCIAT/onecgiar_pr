@@ -6,6 +6,9 @@
         </div>
     </div>
     <div class="option" *ngFor="let option of this.menuOptions" [routerLink]="this.option.path"
-        routerLinkActive="option_active" [hidden]="!this.option?.prName">{{this.option?.prName}}
+        [ngClass]="{'option_hidden': !this.option?.prName}" routerLinkActive="option_active"
+        [hidden]="!this.option?.prName">{{this.option?.prName}}
+        <img *ngIf="option.underConstruction" class="under_construction" src="assets/work-in-progress.png" alt=""
+            srcset="">
     </div>
 </div>
