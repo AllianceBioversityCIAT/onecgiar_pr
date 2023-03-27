@@ -60,8 +60,13 @@ export class InnovationPathwayStepOneService {
     try {
       // * Check if result already exists
       const result =
-        await this._resultRepository.findOneBy(
-          { id: resultId }
+        await this._resultRepository.findOne(
+          {
+            where:{ 
+              id: resultId ,
+              is_active: true
+            }
+          }
         );
       // * Validate if the query incoming empty
       if (!result) {
@@ -83,6 +88,10 @@ export class InnovationPathwayStepOneService {
       const actionAreaOutcomes = await this.saveActionAreaOutcomes(result, version, UpdateInnovationPathwayDto, user);
       const impactAreas = await this.saveImpactAreas(result, version, UpdateInnovationPathwayDto, user);
       const sdgTargets = await this.saveSdgTargets(result, version, UpdateInnovationPathwayDto, user);
+      const experts = await  this.saveInnovationPackagingExperts(result, version, user, UpdateInnovationPathwayDto);
+      const consensus = await this.saveConsensus(result,user,version, UpdateInnovationPathwayDto.result_ip);
+      const partners = await this.savePartners(result, user, version, UpdateInnovationPathwayDto);
+      const innovationUse = await this.saveInnovationUse(result, user, version, UpdateInnovationPathwayDto);
 
       return {
         response: [
@@ -91,7 +100,9 @@ export class InnovationPathwayStepOneService {
           actionAreaOutcomes,
           impactAreas,
           sdgTargets
-        ]
+        ],
+        message: 'The data was updated correctly',
+        status: HttpStatus.OK,
       }
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
