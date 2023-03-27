@@ -2,7 +2,7 @@ import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "t
 import { Ipsr } from "../../entities/ipsr.entity";
 import { BaseEntity } from "../../../../shared/entities/base-entity";
 import { Version } from "../../../results/versions/entities/version.entity";
-import { ClarisaImpactArea } from "../../../../clarisa/clarisa-impact-area/entities/clarisa-impact-area.entity";
+import { ClarisaImpactAreaIndicator } from "../../../../clarisa/clarisa-impact-area-indicators/entities/clarisa-impact-area-indicator.entity";
 
 @Entity('result_ip_impact_area_target')
 export class ResultIpImpactArea extends BaseEntity{
@@ -27,11 +27,11 @@ export class ResultIpImpactArea extends BaseEntity{
     })
     obj_result_by_innovation_package: Ipsr;
 
-    @ManyToOne(() => ClarisaImpactArea, cia => cia.id)
+    @ManyToOne(() => ClarisaImpactAreaIndicator, cia => cia.id)
     @JoinColumn({
         name: 'impact_area_indicator_id'
     })
-    obj_impact_area_indicator: ClarisaImpactArea;
+    obj_impact_area_indicator: ClarisaImpactAreaIndicator;
 
     @ManyToOne(() => Version, v => v.id)
     @JoinColumn({
