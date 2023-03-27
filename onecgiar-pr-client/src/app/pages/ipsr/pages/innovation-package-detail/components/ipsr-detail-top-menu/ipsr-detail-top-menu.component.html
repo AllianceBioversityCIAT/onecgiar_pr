@@ -1,4 +1,10 @@
 <div class="top_menu">
+    <div class="option back_buttton" routerLink="/ipsr/list">
+        <div class="content">
+            <i class="material-icons-round">arrow_back</i>
+            <!-- <div>Back to innovation packages</div> -->
+        </div>
+    </div>
     <div class="option" *ngFor="let option of this.menuOptions" [routerLink]="this.option.path"
         routerLinkActive="option_active" [hidden]="!this.option?.prName">{{this.option?.prName}}
     </div>

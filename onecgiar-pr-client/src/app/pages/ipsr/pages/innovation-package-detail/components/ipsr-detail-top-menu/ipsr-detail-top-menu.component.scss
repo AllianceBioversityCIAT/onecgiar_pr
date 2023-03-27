@@ -26,4 +26,27 @@
             background-color: #3b4db3;
         }
     }
+
+    .back_buttton {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 15px !important;
+        width: max-content;
+        // white-space: nowrap;
+        // font-size: .8em;
+        background-color: var(--pr-color-secondary);
+        color: white;
+        transition: all ease .3s;
+
+        &:hover {
+            background-color: var(--pr-color-tertiary);
+        }
+
+        .content {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+    }
 }
