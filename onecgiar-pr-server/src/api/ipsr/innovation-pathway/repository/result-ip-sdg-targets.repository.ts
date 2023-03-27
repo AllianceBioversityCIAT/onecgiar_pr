@@ -37,9 +37,7 @@ export class ResultIpSdgTargetRepository extends Repository<ResultIpSdgTargets>{
     }
 
     async updateSdg(resultByInnovationPackageId: number, sdgsArray: number[], user: number) {
-        console.log("🚀 ~ file: result-ip-sdg-targets.repository.ts:40 ~ ResultIpSdgTargetRepository ~ updateSdg ~ resultByInnovationPackageId:", resultByInnovationPackageId)
         const sdgs = sdgsArray ?? [];
-        console.log("🚀 ~ file: result-ip-sdg-targets.repository.ts:42 ~ ResultIpSdgTargetRepository ~ updateSdg ~ sdgs:", sdgs)
 
         const updateInactive = `
         UPDATE
