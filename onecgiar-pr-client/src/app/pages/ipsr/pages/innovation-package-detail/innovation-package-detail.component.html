@@ -1,5 +1,35 @@
+<div class="innovation_packages_title">
+    <div class="title">
+        <div>
+            {{this.ipsrDataControlSE.detailData?.title}}
+        </div>
+        <div class="submit_button">
+            <app-pr-button text="Submit" [verticalMargin]="0"></app-pr-button>
+        </div>
+    </div>
+
+</div>
 <div class="section_container">
     <app-ipsr-detail-top-menu></app-ipsr-detail-top-menu>
+    <div class="ipsr-detail-line"></div>
+    <div class="section_container_chips">
+        <div class="metadata">
+            <div class="item">
+                Result level: <strong>{{this.ipsrDataControlSE.detailData?.result_level}}</strong>
+            </div>
+            <div class="item">
+                Result type: <strong>{{this.ipsrDataControlSE.detailData?.result_type}}</strong>
+            </div>
+            <div class="item">
+                Result code: <strong>{{this.ipsrDataControlSE.detailData?.result_code}}</strong>
+            </div>
+            <div class="item">
+                {{this.ipsrDataControlSE.detailData?.official_code}}
+            </div>
+
+        </div>
+    </div>
+
     <div class="content">
         <router-outlet *ngIf="this.ipsrDataControlSE.resultInnovationId"></router-outlet>
         <div class="spinner" *ngIf="this.saveButtonSE.isGettingSection">

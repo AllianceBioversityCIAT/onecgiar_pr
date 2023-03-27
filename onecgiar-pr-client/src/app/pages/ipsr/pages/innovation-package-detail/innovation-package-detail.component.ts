@@ -14,14 +14,22 @@ export class InnovationPackageDetailComponent {
   ngOnInit(): void {
     this.ipsrDataControlSE.resultInnovationId = null;
     this.ipsrDataControlSE.resultInnovationCode = this.activatedRoute.snapshot.paramMap.get('id');
-    this.GET_resultIdToCode();
+    this.GET_resultIdToCode(() => this.GETInnovationPackageDetail());
   }
 
-  GET_resultIdToCode() {
+  GETInnovationPackageDetail() {
+    this.api.resultsSE.GETInnovationPackageDetail().subscribe(({ response }) => {
+      // console.log(response);
+      this.ipsrDataControlSE.detailData = response;
+    });
+  }
+
+  GET_resultIdToCode(callback) {
     this.api.resultsSE.GET_resultIdToCode(this.ipsrDataControlSE.resultInnovationCode).subscribe(
       ({ response }) => {
         // console.log(response);
         this.ipsrDataControlSE.resultInnovationId = response;
+        callback();
       },
       err => {}
     );

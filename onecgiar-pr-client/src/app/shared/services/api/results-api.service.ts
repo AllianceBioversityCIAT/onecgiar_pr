@@ -502,4 +502,8 @@ export class ResultsApiService {
   PATCHContributorsByIpsrResultId(body) {
     return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/contributors/save/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
+
+  GETInnovationPackageDetail() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-package-detail/${this.ipsrDataControlSE.resultInnovationId}`);
+  }
 }
