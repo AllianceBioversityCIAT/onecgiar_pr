@@ -19,7 +19,7 @@ import { In } from 'typeorm';
 import { ResultIpAAOutcome } from '../innovation-pathway/entities/result-ip-action-area-outcome.entity';
 import { ResultsImpactAreaIndicatorRepository } from 'src/api/results/results-impact-area-indicators/results-impact-area-indicators.repository';
 import { ResultIpImpactArea } from '../innovation-pathway/entities/result-ip-impact-area.entity';
-import { ResultIpImpactAreaRepository } from '../innovation-pathway/repository/result-ip-sdg-targets.repository copy';
+import { ResultIpImpactAreaRepository } from '../innovation-pathway/repository/result-ip-impact-area-targets.repository';
 
 @Injectable()
 export class ResultInnovationPackageService {

@@ -30,7 +30,7 @@ import { ResultActor } from '../../results/result-actors/entities/result-actor.e
 import { ResultByIntitutionsTypeRepository } from '../../results/results_by_institution_types/result_by_intitutions_type.repository';
 import { ResultIpMeasureRepository } from '../result-ip-measures/result-ip-measures.repository';
 import { ResultIpMeasure } from '../result-ip-measures/entities/result-ip-measure.entity';
-import { ResultIpImpactAreaRepository } from './repository/result-ip-sdg-targets.repository copy';
+import { ResultIpImpactAreaRepository } from './repository/result-ip-impact-area-targets.repository';
 import { ResultIpImpactArea } from './entities/result-ip-impact-area.entity';
 
 @Injectable()
@@ -56,14 +56,41 @@ export class InnovationPathwayStepOneService {
     protected readonly _resultIpImpactAreas: ResultIpImpactAreaRepository
   ) { }
 
+  async getMain(resultId: number) {
+    try {
+      // * Check if result already exists
+      const result =
+        await this._resultRepository.findOne(
+          {
+            where: {
+              id: resultId,
+              is_active: true
+            }
+          }
+        );
+      // * Validate if the query incoming empty
+      if (!result) {
+        throw {
+          response: result,
+          message: 'The result was not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
   async updateMain(resultId: number, UpdateInnovationPathwayDto: UpdateInnovationPathwayDto, user: TokenDto) {
     try {
       // * Check if result already exists
       const result =
         await this._resultRepository.findOne(
           {
-            where:{ 
-              id: resultId ,
+            where: {
+              id: resultId,
               is_active: true
             }
           }
@@ -88,10 +115,10 @@ export class InnovationPathwayStepOneService {
       const actionAreaOutcomes = await this.saveActionAreaOutcomes(result, version, UpdateInnovationPathwayDto, user);
       const impactAreas = await this.saveImpactAreas(result, version, UpdateInnovationPathwayDto, user);
       const sdgTargets = await this.saveSdgTargets(result, version, UpdateInnovationPathwayDto, user);
-      const experts = await  this.saveInnovationPackagingExperts(result, version, user, UpdateInnovationPathwayDto);
-      const consensus = await this.saveConsensus(result,user,version, UpdateInnovationPathwayDto.result_ip);
-      const partners = await this.savePartners(result, user, version, UpdateInnovationPathwayDto);
-      const innovationUse = await this.saveInnovationUse(result, user, version, UpdateInnovationPathwayDto);
+      // const experts = await this.saveInnovationPackagingExperts(result, version, user, UpdateInnovationPathwayDto);
+      // const consensus = await this.saveConsensus(result, user, version, UpdateInnovationPathwayDto.result_ip);
+      // const partners = await this.savePartners(result, user, version, UpdateInnovationPathwayDto);
+      // const innovationUse = await this.saveInnovationUse(result, user, version, UpdateInnovationPathwayDto);
 
       return {
         response: [
@@ -99,7 +126,11 @@ export class InnovationPathwayStepOneService {
           specifyAspiredOutcomesAndImpact,
           actionAreaOutcomes,
           impactAreas,
-          sdgTargets
+          sdgTargets,
+          // experts,
+          // consensus,
+          // partners,
+          // innovationUse
         ],
         message: 'The data was updated correctly',
         status: HttpStatus.OK,
@@ -178,6 +209,19 @@ export class InnovationPathwayStepOneService {
         }
       }
 
+      let innovationGeoScope: number;
+
+      // * Check Geo Scope
+      if (UpdateInnovationPathwayDto.geo_scope_id === 1) {
+        innovationGeoScope = 1;
+      } else if (UpdateInnovationPathwayDto.geo_scope_id === 2) {
+        innovationGeoScope = 2;
+      } else if (countries?.length > 1) {
+        innovationGeoScope = 3
+      } else {
+        innovationGeoScope = 4
+      }
+
       const ipsrResult =
         await this._innovationByResultRepository.findOneBy({ result_innovation_package_id: id });
 
@@ -194,28 +238,39 @@ export class InnovationPathwayStepOneService {
         innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${coreResult.title}`;
       }
 
-      const titleValidate = await this._resultRepository
-        .createQueryBuilder('result')
-        .where('result.title like :title', { title: `${innovationTitle}` })
-        .andWhere('result.is_active = 1')
-        .getMany();
 
-      if (!titleValidate.find(tv => tv.id === id)) {
+      if (result.title === innovationTitle) {
         throw {
-          response: titleValidate.map(tv => tv.id),
-          message: `The title already exists, in the following results: ${titleValidate.map(tv => tv.result_code)}`,
-          status: HttpStatus.BAD_REQUEST,
+          response: { valid: true },
+          message: `The title no needs to be upgraded`,
+          status: HttpStatus.NOT_MODIFIED,
+        }
+      } else {
+        const titleValidate = await this._resultRepository
+          .createQueryBuilder('result')
+          .where('result.title = :title', { title: `${innovationTitle}` })
+          .andWhere('result.is_active = 1')
+          .getMany();
+
+        if (titleValidate.find(tv => tv.id === id)) {
+          throw {
+            response: titleValidate.map(tv => tv.id),
+            message: `The title already exists, in the following results: ${titleValidate.map(tv => tv.result_code)}`,
+            status: HttpStatus.BAD_REQUEST,
+          }
+        } else {
+          await this._resultRepository.update(id, {
+            title: innovationTitle || result.title,
+            last_updated_by: user.id,
+            geographic_scope_id: innovationGeoScope,
+            last_updated_date: new Date(),
+          });
         }
       }
 
-      const updateTitle = await this._resultRepository.update(id, {
-        title: innovationTitle || result.title,
-        last_updated_by: user.id,
-        last_updated_date: new Date(),
-      });
 
       return {
-        response: updateTitle,
+        response: { valid: true },
         message: 'The Geographic Scope and Title was updated correctly',
         status: HttpStatus.OK
       }
@@ -643,12 +698,12 @@ export class InnovationPathwayStepOneService {
     }
   }
 
-  private async saveInnovationUse(result: Result, user: TokenDto, version:Version, {innovatonUse: crtr}: UpdateInnovationPathwayDto){
-    if(crtr?.actors?.length){
+  private async saveInnovationUse(result: Result, user: TokenDto, version: Version, { innovatonUse: crtr }: UpdateInnovationPathwayDto) {
+    if (crtr?.actors?.length) {
       const { actors } = crtr;
       actors.map(async (el: ResultActor) => {
-        const actorExists = await this._resultActorRepository.findOne({where:{actor_type_id: el.actor_type_id, result_id: result.id}});
-        if(actorExists){
+        const actorExists = await this._resultActorRepository.findOne({ where: { actor_type_id: el.actor_type_id, result_id: result.id } });
+        if (actorExists) {
           await this._resultActorRepository.update(
             actorExists.result_actors_id,
             {
@@ -661,28 +716,28 @@ export class InnovationPathwayStepOneService {
               last_updated_by: user.id
             }
           )
-        }else{
+        } else {
           await this._resultActorRepository.save({
-              actor_type_id: el.actor_type_id,
-              is_active: el.is_active,
-              men: el.men,
-              men_youth: el.men_youth,
-              women: el.women,
-              women_youth: el.women_youth,
-              last_updated_by: user.id,
-              created_by: user.id,
-              result_id: result.id,
-              version_id: version.id
+            actor_type_id: el.actor_type_id,
+            is_active: el.is_active,
+            men: el.men,
+            men_youth: el.men_youth,
+            women: el.women,
+            women_youth: el.women_youth,
+            last_updated_by: user.id,
+            created_by: user.id,
+            result_id: result.id,
+            version_id: version.id
           })
         }
       })
     }
 
-    if(crtr?.organization.length){
+    if (crtr?.organization.length) {
       const { organization } = crtr;
       organization.map(async (el) => {
         const ite = await this._resultByIntitutionsTypeRepository.getNewResultByInstitutionTypeExists(result.id, el.institution_types_id, 5);
-        if(ite){
+        if (ite) {
           await this._resultByIntitutionsTypeRepository.update(
             ite.id,
             {
@@ -691,7 +746,7 @@ export class InnovationPathwayStepOneService {
               is_active: el.is_active
             }
           );
-        }else{
+        } else {
           await this._resultByIntitutionsTypeRepository.save({
             results_id: result.id,
             created_by: user.id,
@@ -705,17 +760,17 @@ export class InnovationPathwayStepOneService {
       })
     }
 
-    if(crtr?.measures.length){
+    if (crtr?.measures.length) {
       const { measures } = crtr;
       measures.map(async (el) => {
         let ripm: ResultIpMeasure = null;
-        if(el?.result_ip_measure_id){
+        if (el?.result_ip_measure_id) {
           ripm = await this._resultIpMeasureRepository.findOne({
             where: {
               result_ip_measure_id: el.result_ip_measure_id
             }
           });
-        }else{
+        } else {
           ripm = await this._resultIpMeasureRepository.findOne({
             where: {
               unit_of_measure: el.unit_of_measure,
@@ -724,7 +779,7 @@ export class InnovationPathwayStepOneService {
           });
         }
 
-        if(ripm){
+        if (ripm) {
           await this._resultIpMeasureRepository.update(
             ripm.result_ip_measure_id,
             {
@@ -734,7 +789,7 @@ export class InnovationPathwayStepOneService {
               is_active: el.is_active
             }
           )
-        }else{
+        } else {
           await this._resultIpMeasureRepository.save({
             result_ip_id: result.id,
             unit_of_measure: el.unit_of_measure,
