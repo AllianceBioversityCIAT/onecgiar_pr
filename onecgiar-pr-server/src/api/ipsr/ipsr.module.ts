@@ -17,6 +17,9 @@ import { InnovationPathwayModule } from './innovation-pathway/innovation-pathway
 import { InnovationPackagingExpertsModule } from './innovation-packaging-experts/innovation-packaging-experts.module';
 import { ResultIpMeasuresModule } from './result-ip-measures/result-ip-measures.module';
 import { ResultIpAAOutcomeRepository } from './innovation-pathway/repository/result-ip-action-area-outcome.repository';
+import { ResultsComplementaryInnovationsModule } from './results-complementary-innovations/results-complementary-innovations.module';
+import { ResultsComplementaryInnovationsFunctionsModule } from './results-complementary-innovations-functions/results-complementary-innovations-functions.module';
+import { ResultsInnovationPackagesEnablerTypeModule } from './results-innovation-packages-enabler-type/results-innovation-packages-enabler-type.module';
 
 @Module({
   controllers: [IpsrController],
@@ -31,7 +34,7 @@ import { ResultIpAAOutcomeRepository } from './innovation-pathway/repository/res
     ShareResultInnovationPackageRequestModule, 
     InnovationPathwayModule, 
     InnovationPackagingExpertsModule, 
-    ResultIpMeasuresModule,
+    ResultIpMeasuresModule, ResultsComplementaryInnovationsModule, ResultsComplementaryInnovationsFunctionsModule, ResultsInnovationPackagesEnablerTypeModule,
   ],
 })
 export class IpsrModule {}
