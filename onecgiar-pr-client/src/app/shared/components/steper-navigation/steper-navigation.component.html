@@ -1,0 +1,7 @@
+<div class="local_container">
+    <div class="line">
+        <div class="circle" [ngClass]="{'active': (options ? item[optionValue] : item) == this.value}" #circle
+            *ngFor="let item of (options ? options :sizeArray); let i=index"
+            (click)="onSelectLevel(options ? item[optionValue] : item,circle)">{{options ? i : item}}</div>
+    </div>
+</div>
