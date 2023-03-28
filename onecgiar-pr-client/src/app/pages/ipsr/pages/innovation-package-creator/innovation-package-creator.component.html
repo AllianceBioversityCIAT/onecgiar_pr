@@ -7,12 +7,13 @@
     <app-section-header titleText="Creation of innovation package"
         description="Here you can create an innovation package by filling out a variety of fields."></app-section-header>
 
-
-    <app-pr-select class="segment_title_margin" [options]="this.api.dataControlSE.myInitiativesList"
-        label="Primary submitter of the innovation package" [isStatic]="true" optionLabel="full_name"
-        optionValue="initiative_id" placeholder="Select initiative" description="Select an initiative"
-        [(ngModel)]="this.innovationPackageCreatorBody.initiative_id">
-    </app-pr-select>
+    <div class="dropdown-50p">
+        <app-pr-select class="segment_title_margin" [options]="this.api.dataControlSE.myInitiativesList"
+            label="Primary submitter of the innovation package" [isStatic]="true" optionLabel="full_name"
+            optionValue="initiative_id" placeholder="Select initiative" description="Select an initiative"
+            [(ngModel)]="this.innovationPackageCreatorBody.initiative_id">
+        </app-pr-select>
+    </div>
 
     <app-pr-field-header label="Select Core Innovation for innovation packaging and scaling readiness assessment"
         [required]="false"
