@@ -304,7 +304,7 @@ WHERE
     }
   }*/
 
-  async AllResultsByRoleUsers(userid: number, version: number = 1, excludeType = [10]) {
+  async AllResultsByRoleUsers(userid: number, version: number = 1, excludeType = [10,11]) {
     const queryData = `
     SELECT
     r.id,
