@@ -256,4 +256,51 @@ export class IpsrRepository extends Repository<Ipsr>{
             });
         }
     }
+
+    async getStepTwoOne(resultId: number) {
+        const query = `
+        SELECT
+        	rbip.result_id,
+        	r.result_code,
+        	r.title,
+        	r.description,
+        	rbi.inititiative_id,
+        	ci.official_code
+        FROM
+        	result_by_innovation_package rbip
+        inner join \`result\` r on
+        	r.id = rbip.result_id
+        	and r.is_active = true
+        left join results_by_inititiative rbi on
+        	rbi.result_id = r.id
+        	and rbi.initiative_role_id = 1
+        	and rbi.is_active = true
+        left join clarisa_initiatives ci on
+        	ci.id = rbi.inititiative_id
+        where
+        	rbip.result_innovation_package_id = ?
+        	and rbip.is_active = true;
+        `;
+
+        try {
+            const results: getInnovationComInterface[] = await this.query(query, [resultId]);
+            return results;
+        } catch (error) {
+            throw this._handlersError.returnErrorRepository({
+                className: IpsrRepository.name,
+                error: error,
+                debug: true,
+            });
+        }
+    }
+
+}
+
+export interface getInnovationComInterface{
+    result_id: number;
+    result_code: number;
+    title: string;
+    description: string;
+    inititiative_id: number;
+    official_code:string;
 }

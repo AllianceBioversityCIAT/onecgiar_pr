@@ -36,5 +36,8 @@ import { ResultsInnovationPackagesEnablerTypeModule } from './results-innovation
     InnovationPackagingExpertsModule, 
     ResultIpMeasuresModule, ResultsComplementaryInnovationsModule, ResultsComplementaryInnovationsFunctionsModule, ResultsInnovationPackagesEnablerTypeModule,
   ],
+  exports: [
+    IpsrRepository
+  ]
 })
 export class IpsrModule {}

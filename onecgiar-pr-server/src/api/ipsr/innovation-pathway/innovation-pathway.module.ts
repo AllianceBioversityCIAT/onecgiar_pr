@@ -20,11 +20,13 @@ import { ResultActorRepository } from '../../results/result-actors/repositories/
 import { ResultByIntitutionsTypeRepository } from '../../results/results_by_institution_types/result_by_intitutions_type.repository';
 import { ResultIpMeasureRepository } from '../result-ip-measures/result-ip-measures.repository';
 import { ResultIpImpactAreaRepository } from './repository/result-ip-impact-area-targets.repository';
+import { InnovationPathwayStepTwoService } from './innovation-pathway-step-two.service';
 
 @Module({
   controllers: [InnovationPathwayController],
   providers: [
     InnovationPathwayStepOneService,
+    InnovationPathwayStepTwoService,
     HandlersError,
     ResultRepository,
     ResultRegionRepository,
@@ -43,7 +45,7 @@ import { ResultIpImpactAreaRepository } from './repository/result-ip-impact-area
     ResultActorRepository,
     ResultByIntitutionsTypeRepository,
     ResultIpMeasureRepository,
-    ResultIpImpactAreaRepository
+    ResultIpImpactAreaRepository,
   ]
 })
 export class InnovationPathwayModule { }
