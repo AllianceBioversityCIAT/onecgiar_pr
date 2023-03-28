@@ -22,6 +22,7 @@ import { ResultRegion } from '../result-regions/entities/result-region.entity';
 import { ResultCountry } from '../result-countries/entities/result-country.entity';
 import { Ipsr } from '../../ipsr/entities/ipsr.entity';
 import { ResultActor } from '../result-actors/entities/result-actor.entity';
+import { ResultsByInititiative } from '../results_by_inititiatives/entities/results_by_inititiative.entity';
 
 @Entity()
 @Index(['result_code', 'version_id'], { unique: true })
@@ -273,4 +274,7 @@ export class Result {
 
   @OneToMany(() => ResultActor, (rc) => rc.obj_result)
   obj_result_actor: ResultActor[];
+
+  @OneToMany(() => ResultsByInititiative, rbi => rbi.obj_result)
+  obj_result_by_initiatives: ResultsByInititiative[];
 }

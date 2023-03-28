@@ -670,6 +670,7 @@ FROM
     inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
 WHERE
     r.is_active > 0
+    and r.status = if(r.result_type_id = 7, 1, (0 or 1))
     ${typesId?.length?`and result_type_id in (${typesId.toString()})`:``}
     `;
 
