@@ -45,7 +45,18 @@ tr {
         position: relative;
 
         .transparent_text {
-            color: transparent;
+            color: rgba(255, 255, 255, 0);
+            display: flex;
+
+            .point {
+                color: transparent;
+                opacity: 0;
+            }
+
+            .new_tag {
+                color: transparent;
+                opacity: 0;
+            }
         }
 
 

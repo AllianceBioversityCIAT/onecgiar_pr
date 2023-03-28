@@ -32,19 +32,26 @@
                         <div class="new_tag" *ngIf="i==1 && result.is_new">New</div> {{column.attr !== 'created_date' ?
                         result[column.attr] : (result[column.attr] | date: 'YYYY-MM-dd')}}
                     </a>
-                    <div class="transparent_text">
-                        {{ result[column.attr] }}
+                    <div class="transparent_text {{column.class}}">
+                        <div class="point"
+                            [style.background]="'var(--pr-color-result-level-'+result?.result_level_id+')'"
+                            *ngIf="column.attr === 'result_type'"></div>
+
+                        <div class="new_tag" *ngIf="i==1 && result.is_new">New</div> {{column.attr !== 'created_date' ?
+                        result[column.attr] : (result[column.attr] | date: 'YYYY-MM-dd')}}
                     </div>
                 </td>
-                <td class="actions">
-                    <div class="link_button view"
-                        (click)="openInNewPage('/result/result-detail/' + result?.result_code)">View
+                <td>
+                    <div class="actions">
+                        <div class="link_button view"
+                            (click)="openInNewPage('/result/result-detail/' + result?.result_code)">View
+                        </div>
+                        <div class="link_button"
+                            *ngIf="!this.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"
+                            [ngClass]="{'globalDisabled': result.selected}"
+                            (click)="!result.selected ? onLinkResult(result) : null">{{result.selected ? 'Selected' :
+                            'Link'}}</div>
                     </div>
-                    <div class="link_button"
-                        *ngIf="!this.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"
-                        [ngClass]="{'globalDisabled': result.selected}"
-                        (click)="!result.selected ? onLinkResult(result) : null">{{result.selected ? 'Selected' :
-                        'Link'}}</div>
                 </td>
             </tr>
         </ng-template>
