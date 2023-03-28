@@ -260,12 +260,14 @@ export class IpsrRepository extends Repository<Ipsr>{
     async getStepTwoOne(resultId: number) {
         const query = `
         SELECT
+            rbip.result_by_innovation_package_id,
         	rbip.result_id,
         	r.result_code,
         	r.title,
         	r.description,
-        	rbi.inititiative_id,
-        	ci.official_code
+        	rbi.inititiative_id as initiative_id,
+        	ci.official_code as initiative_official_code,
+            rbi.is_active
         FROM
         	result_by_innovation_package rbip
         inner join \`result\` r on
@@ -279,6 +281,7 @@ export class IpsrRepository extends Repository<Ipsr>{
         	ci.id = rbi.inititiative_id
         where
         	rbip.result_innovation_package_id = ?
+            and rvip.ipsr_role_id = 2
         	and rbip.is_active = true;
         `;
 
@@ -297,10 +300,12 @@ export class IpsrRepository extends Repository<Ipsr>{
 }
 
 export interface getInnovationComInterface{
+    result_by_innovation_package_id: number;
     result_id: number;
     result_code: number;
     title: string;
     description: string;
-    inititiative_id: number;
-    official_code:string;
+    initiative_id: number;
+    initiative_official_code:string;
+    is_active: boolean;
 }
