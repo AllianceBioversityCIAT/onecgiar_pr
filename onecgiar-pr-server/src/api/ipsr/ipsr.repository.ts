@@ -299,13 +299,13 @@ export class IpsrRepository extends Repository<Ipsr>{
 
 }
 
-export interface getInnovationComInterface{
-    result_by_innovation_package_id: number;
-    result_id: number;
-    result_code: number;
-    title: string;
-    description: string;
-    initiative_id: number;
-    initiative_official_code:string;
-    is_active: boolean;
+export class getInnovationComInterface{
+    public result_by_innovation_package_id: number;
+    public result_id: number;
+    public result_code: number;
+    public title: string;
+    public description: string;
+    public initiative_id: number;
+    public initiative_official_code:string;
+    public is_active: boolean;
 }

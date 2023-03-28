@@ -149,8 +149,13 @@ export class InnovationPathwayStepTwoService {
           }
         }
       }
+      return {
+        response: saveData,
+        message: 'Data was saved correctly',
+        status: HttpStatus.OK,
+      }
     } catch (error) {
-
+      return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 }
