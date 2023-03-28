@@ -5,10 +5,12 @@
 <div class="donors">
     <div class="donor" *ngFor="let donor of this.contributorsBody.contributing_np_projects; let i=index">
         <app-pr-field-header [label]="'Non-pooled project No. ' + (i+1)" [required]="false"></app-pr-field-header>
-        <app-pr-select class="segment_title_margin" [options]="this.institutionsSE?.institutionsList"
-            label="Funder name" optionLabel="full_name" optionValue="institutions_id" placeholder="Select funder"
-            [(ngModel)]="donor.funder">
-        </app-pr-select>
+        <div class="dropdown-50p">
+            <app-pr-select class="segment_title_margin" [options]="this.institutionsSE?.institutionsList"
+                label="Funder name" optionLabel="full_name" optionValue="institutions_id" placeholder="Select funder"
+                [(ngModel)]="donor.funder">
+            </app-pr-select>
+        </div>
         <div class="auto_fit_container">
             <app-pr-input label="Grant title" [required]="true" [(ngModel)]="donor.grant_title"
                 placeholder="Grant title goes here...">

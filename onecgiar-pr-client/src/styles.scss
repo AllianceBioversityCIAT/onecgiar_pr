@@ -258,3 +258,33 @@ a {
         border-radius: 10px;
     }
 }
+
+
+
+
+@media only screen and (max-width: 600px) {}
+
+
+@media only screen and (min-width: 600px) {}
+
+
+@media only screen and (min-width: 768px) {
+    .dropdown-50p {
+        max-width: 100%;
+    }
+}
+
+
+@media only screen and (min-width: 992px) {
+    .dropdown-50p {
+        max-width: 60%;
+    }
+
+}
+
+
+@media only screen and (min-width: 1200px) {
+    .dropdown-50p {
+        max-width: 50%;
+    }
+}
