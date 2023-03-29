@@ -9,13 +9,22 @@ import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 export class InnovationPathwayController {
   constructor(private readonly _innovationPathwayStepOneServiceService: InnovationPathwayStepOneService) { }
 
+  @Get('get-step-one/:resultId')
+  async getStepOne(
+    @Param('resultId') resultId: string,
+  ) {
+    const {message, response, status} = await this._innovationPathwayStepOneServiceService.getStepOne(+resultId);
+
+    throw new HttpException({ message, response }, status);
+  }
+
   @Patch('step-one/:resultId')
   async updateStepOne(
     @Param('resultId') resultId: string,
     @Body() updateInnovationPathwayDto: UpdateInnovationPathwayDto,
     @UserToken() user: TokenDto
   ) {
-    const {message, response, status} = await this._innovationPathwayStepOneServiceService.updateMain(+resultId, updateInnovationPathwayDto, user);
+    const { message, response, status } = await this._innovationPathwayStepOneServiceService.updateMain(+resultId, updateInnovationPathwayDto, user);
     throw new HttpException({ message, response }, status);
   }
 
