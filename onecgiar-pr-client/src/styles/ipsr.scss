@@ -1,0 +1,22 @@
+.step_title {
+    display: flex;
+    gap: 5px;
+    color: var(--pr-color-primary);
+    font-size: 1.1em;
+}
+
+.ipsr_chip_container {
+    background-color: var(--pr-color-primary-2);
+    width: max-content;
+    padding: 4px 20px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+
+    i {
+        color: var(--pr-color-primary);
+        font-size: 1.2em;
+        cursor: pointer;
+    }
+}
