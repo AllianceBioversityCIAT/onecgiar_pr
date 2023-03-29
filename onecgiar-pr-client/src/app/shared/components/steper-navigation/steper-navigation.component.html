@@ -1,7 +1,8 @@
 <div class="local_container">
     <div class="line">
-        <div class="circle" [ngClass]="{'active': (options ? item[optionValue] : item) == this.value}" #circle
-            *ngFor="let item of (options ? options :sizeArray); let i=index"
-            (click)="onSelectLevel(options ? item[optionValue] : item,circle)">{{options ? i : item}}</div>
+        <!-- <div class="line_value"></div> -->
+        <div class="circle" [routerLink]="option?.path" routerLinkActive="active"
+            *ngFor="let option of options ; let i=index">{{i+1}} <div class="name">{{option?.routeName}}</div>
+        </div>
     </div>
 </div>
