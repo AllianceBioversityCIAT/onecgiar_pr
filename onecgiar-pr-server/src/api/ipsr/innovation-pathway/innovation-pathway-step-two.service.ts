@@ -21,6 +21,11 @@ import { In } from 'typeorm';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { Ipsr } from '../entities/ipsr.entity';
 import { Version } from '../../results/versions/entities/version.entity';
+import { ResultsComplementaryInnovationRepository } from '../results-complementary-innovations/repositories/results-complementary-innovation.repository';
+import { ResultsComplementaryInnovationsFunctionRepository } from '../results-complementary-innovations-functions/repositories/results-complementary-innovations-function.repository';
+import { ResultsComplementaryInnovationsFunction } from '../results-complementary-innovations-functions/entities/results-complementary-innovations-function.entity';
+import { Evidence } from '../../../api/results/evidences/entities/evidence.entity';
+import { EvidencesRepository } from '../../../api/results/evidences/evidences.repository';
 
 @Injectable()
 export class InnovationPathwayStepTwoService {
@@ -43,6 +48,9 @@ export class InnovationPathwayStepTwoService {
     protected readonly _resultByIntitutionsTypeRepository: ResultByIntitutionsTypeRepository,
     protected readonly _resultIpMeasureRepository: ResultIpMeasureRepository,
     protected readonly _resultIpImpactAreas: ResultIpImpactAreaRepository,
+    protected readonly _resultComplementaryInnovation: ResultsComplementaryInnovationRepository,
+    protected readonly _resultComplementaryInnovationFunctions: ResultsComplementaryInnovationsFunctionRepository,
+    protected readonly _evidence: EvidencesRepository,
   ) { }
 
   async findInnovationsAndComplementary() {
@@ -157,5 +165,115 @@ export class InnovationPathwayStepTwoService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  async saveComplementaryinnovation(resultId: number, User: TokenDto, saveData: getInnovationComInterface[]) {
+    console.log("🚀 ~ file: innovation-pathway-step-two.service.ts:163 ~ InnovationPathwayStepTwoService ~ saveComplementaryinnovation ~ saveData:", saveData);
+    try {
+      const result = await this._resultRepository.findOne({
+        where: {
+          id: resultId,
+          is_active: true
+        }
+      });
+
+      if (!result) {
+        throw {
+          response: result,
+          message: 'The result was not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      if (!saveData.length) {
+        throw {
+          response: result,
+          message: 'Missing fields',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const vTemp = await this._versionsService.findBaseVersion();
+      if (vTemp.status >= 300) {
+        throw this._handlersError.returnErrorRes({ error: vTemp });
+      }
+      const version: Version = <Version>vTemp.response;
+
+      const updateResult = await this._resultRepository.update(resultId, {
+        title: saveData[0].title,
+        description: saveData[0].description,
+        last_updated_by: User.id,
+        last_updated_date: new Date()
+      });
+
+      const newResultComplemetaryInnovation = await this._resultComplementaryInnovation.save({
+        result_id: resultId,
+        short_title: saveData[0].short_title,
+        other_funcions: saveData[0].other_funcions,
+        created_by: User.id,
+        last_updated_by: User.id,
+        created_date: new Date(),
+        last_updated_date: new Date(),
+        version_id: version.id
+      });
+
+      const resultComplementaryInnovationId = newResultComplemetaryInnovation[0].result_complementary_innovation_id;
+      const complementaryFunctions = saveData[0].complementaryFunctions;
+
+      const saveCF = [];
+      if (complementaryFunctions.length > 0) {
+        for (const entity of complementaryFunctions) {
+          const newCF = new ResultsComplementaryInnovationsFunction();
+          newCF.result_complementary_innovation_id = resultComplementaryInnovationId;
+          newCF.complementary_innovation_function_id = entity.complementary_innovation_functions_id;
+          newCF.created_by = User.id;
+          newCF.last_updated_by = User.id;
+          newCF.created_date = new Date();
+          newCF.last_updated_date = new Date();
+          newCF.version_id = version.id;
+          saveCF.push(this._resultComplementaryInnovationFunctions.save(newCF));
+        }
+      }
+
+      const referenceMaterials = saveData[0].referenceMaterials;
+      if (referenceMaterials.length > 3) {
+        return {
+          response: {
+            valid: false
+          },
+          message: 'The Reference Materials must be three',
+          status: HttpStatus.BAD_REQUEST
+        }
+      }
+
+      const saveEvidence = [];
+      if (referenceMaterials.length > 0) {
+        for (const entity of referenceMaterials) {
+          const newMaterial = new Evidence();
+          newMaterial.link = entity.link;
+          newMaterial.created_by = User.id;
+          newMaterial.last_updated_by = User.id;
+          newMaterial.creation_date = new Date();
+          newMaterial.last_updated_date = new Date();
+          newMaterial.version_id = version.id;
+          saveEvidence.push(this._evidence.save(newMaterial));
+        }
+      }
+
+      return {
+        response: {
+          updateResult,
+          newResultComplemetaryInnovation,
+          saveCF,
+          saveEvidence
+        },
+        message: 'The Result Complementary Innovation have been saved successfully',
+        status: HttpStatus.OK
+      }
+
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+
   }
 }

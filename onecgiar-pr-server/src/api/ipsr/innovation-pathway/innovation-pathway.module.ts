@@ -21,6 +21,9 @@ import { ResultByIntitutionsTypeRepository } from '../../results/results_by_inst
 import { ResultIpMeasureRepository } from '../result-ip-measures/result-ip-measures.repository';
 import { ResultIpImpactAreaRepository } from './repository/result-ip-impact-area-targets.repository';
 import { InnovationPathwayStepTwoService } from './innovation-pathway-step-two.service';
+import { ResultsComplementaryInnovationRepository } from '../results-complementary-innovations/repositories/results-complementary-innovation.repository';
+import { ResultsComplementaryInnovationsFunctionRepository } from '../results-complementary-innovations-functions/repositories/results-complementary-innovations-function.repository';
+import { EvidencesRepository } from '../../../api/results/evidences/evidences.repository';
 
 @Module({
   controllers: [InnovationPathwayController],
@@ -31,7 +34,7 @@ import { InnovationPathwayStepTwoService } from './innovation-pathway-step-two.s
     ResultRepository,
     ResultRegionRepository,
     ResultCountryRepository,
-    ExpertisesRepository, 
+    ExpertisesRepository,
     InnovationPackagingExpertRepository,
     ResultInnovationPackageRepository,
     VersionsService,
@@ -46,6 +49,10 @@ import { InnovationPathwayStepTwoService } from './innovation-pathway-step-two.s
     ResultByIntitutionsTypeRepository,
     ResultIpMeasureRepository,
     ResultIpImpactAreaRepository,
+    ResultsComplementaryInnovationRepository,
+    ResultsComplementaryInnovationsFunctionRepository,
+    EvidencesRepository
+
   ]
 })
 export class InnovationPathwayModule { }
