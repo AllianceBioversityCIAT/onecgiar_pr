@@ -81,6 +81,7 @@ export class InnovationPathwayStepOneService {
         };
       }
 
+      const coreResult = await this._innovationByResultRepository.getInnovationCoreStepOne(resultId);
       const regions: ResultRegion[] = await this._resultRegionRepository.findBy({ result_id: resultId, is_active: true });
       const countries: ResultCountry[] = await this._resultCountryRepository.findBy({ result_id: resultId, is_active: true });
       const specifyAspiredOutcomesAndImpact: ResultIpEoiOutcome[] = await this._resultIpEoiOutcomes.findBy({ result_by_innovation_package_id: resultByInnovationPackageId.result_by_innovation_package_id, is_active: true });
@@ -94,15 +95,15 @@ export class InnovationPathwayStepOneService {
         int['deliveries'] = deliveries.filter(del => del.result_by_institution_id == int.id).map(del => del.partner_delivery_type_id);
       });
       const experts = await this._innovationPackagingExpertRepository.find({
-        where:{
+        where: {
           result_id: result.id,
           is_active: true
         }
       });
       const innovatonUse: innovatonUseInterface = {
-        actors: await (await this._resultActorRepository.find({where: {result_id: result.id, is_active: true}})).map(el => ({...el, men_non_youth: el.men - el.men_youth, women_non_youth: el.women - el.women_youth})), 
-        measures: await this._resultIpMeasureRepository.find({where: {result_ip_id: result.id, is_active: true}}),
-        organization: await this._resultByIntitutionsTypeRepository.find({where: {results_id: result.id, institution_roles_id: 5, is_active: true}, relations: {obj_institution_types: {children:true}}})
+        actors: await (await this._resultActorRepository.find({ where: { result_id: result.id, is_active: true } })).map(el => ({ ...el, men_non_youth: el.men - el.men_youth, women_non_youth: el.women - el.women_youth })),
+        measures: await this._resultIpMeasureRepository.find({ where: { result_ip_id: result.id, is_active: true } }),
+        organization: await this._resultByIntitutionsTypeRepository.find({ where: { results_id: result.id, institution_roles_id: 5, is_active: true }, relations: { obj_institution_types: { children: true } } })
       }
       const result_ip = this._resultInnovationPackageRepository.findOne({
         where: {
@@ -114,6 +115,7 @@ export class InnovationPathwayStepOneService {
       return {
         response: {
           result_id: result.id,
+          coreResult,
           result_ip,
           institutions,
           experts,
