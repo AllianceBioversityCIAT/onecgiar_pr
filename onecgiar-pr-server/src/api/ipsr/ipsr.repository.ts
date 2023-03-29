@@ -66,6 +66,7 @@ export class IpsrRepository extends Repository<Ipsr>{
             r.id AS result_id,
             r.result_code,
             r.title,
+            rbi.inititiative_id,
             (
                 SELECT
                     CONCAT(ci.official_code, ' - ', ci.short_name)
