@@ -2,7 +2,7 @@ import { HttpStatus, Injectable, Type } from '@nestjs/common';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResultRepository } from '../../results/result.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
-import { UpdateInnovationPathwayDto } from './dto/update-innovation-pathway.dto';
+import { innovatonUseInterface, UpdateInnovationPathwayDto } from './dto/update-innovation-pathway.dto';
 import { ResultRegion } from '../../results/result-regions/entities/result-region.entity';
 import { ResultCountry } from '../../results/result-countries/entities/result-country.entity';
 import { ResultRegionRepository } from '../../results/result-regions/result-regions.repository';
@@ -88,12 +88,36 @@ export class InnovationPathwayStepOneService {
       const impactAreas: ResultIpImpactArea[] = await this._resultIpImpactAreasRepository.findBy({ result_by_innovation_package_id: resultByInnovationPackageId.result_by_innovation_package_id, is_active: true });
       const sdgTargets: ResultIpSdgTargets[] = await this._resultIpSdgsTargetsRepository.findBy({ result_by_innovation_package_id: resultByInnovationPackageId.result_by_innovation_package_id, is_active: true });
       const resultInnovationPackage: ResultInnovationPackage[] = await this._resultInnovationPackageRepository.findBy({ result_innovation_package_id: resultId, is_active: true });
-      const partners: ResultsByInstitution[] = await this._resultByIntitutionsRepository.getResultByInstitutionFull(resultId);
-      // const partnerIds = partners.map(p => p.id);
-      // const deliveries: ResultByInstitutionsByDeliveriesType[] = await this._resultByInstitutionsByDeliveriesTypeRepository.find({ where: { result_by_institution_id: In(partnerIds), is_active: true } });
+      const institutions: ResultsByInstitution[] = await this._resultByIntitutionsRepository.getGenericAllResultByInstitutionByRole(resultId, 5);
+      const deliveries: ResultByInstitutionsByDeliveriesType[] = await await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByResultByInstitution(institutions?.map(el => el.id));
+      institutions.map(int => {
+        int['deliveries'] = deliveries.filter(del => del.result_by_institution_id == int.id).map(del => del.partner_delivery_type_id);
+      });
+      const experts = await this._innovationPackagingExpertRepository.find({
+        where:{
+          result_id: result.id,
+          is_active: true
+        }
+      });
+      const innovatonUse: innovatonUseInterface = {
+        actors: await (await this._resultActorRepository.find({where: {result_id: result.id, is_active: true}})).map(el => ({...el, men_non_youth: el.men - el.men_youth, women_non_youth: el.women - el.women_youth})), 
+        measures: await this._resultIpMeasureRepository.find({where: {result_ip_id: result.id, is_active: true}}),
+        organization: await this._resultByIntitutionsTypeRepository.find({where: {results_id: result.id, institution_roles_id: 5, is_active: true}, relations: {obj_institution_types: {children:true}}})
+      }
+      const result_ip = this._resultInnovationPackageRepository.findOne({
+        where: {
+          result_innovation_package_id: result.id,
+          is_active: true
+        }
+      })
 
       return {
         response: {
+          result_id: result.id,
+          result_ip,
+          institutions,
+          experts,
+          innovatonUse,
           result,
           regions,
           countries,
@@ -102,7 +126,6 @@ export class InnovationPathwayStepOneService {
           impactAreas,
           sdgTargets,
           resultInnovationPackage,
-          partners,
         }
         ,
         message: 'Result data',
@@ -694,7 +717,7 @@ export class InnovationPathwayStepOneService {
         let rbi: ResultsByInstitution = null;
         if (!instExist) {
           rbi = await this._resultByIntitutionsRepository.save({
-            institution_roles_id: 2,
+            institution_roles_id: 5,
             institutions_id: ins.institutions_id,
             result_id: result.id,
             version_id: version.id,

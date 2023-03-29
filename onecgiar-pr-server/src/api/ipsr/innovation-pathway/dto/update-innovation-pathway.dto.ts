@@ -42,7 +42,7 @@ export interface sdgTargetsInterface {
     clarisa_sdg_target_id: number;
 }
 
-interface innovatonUseInterface {
+export interface innovatonUseInterface {
     actors: ResultActor[],
     organization: ResultsByInstitutionType[],
     measures: ResultIpMeasure[];
