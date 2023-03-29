@@ -506,4 +506,12 @@ export class ResultsApiService {
   GETInnovationPackageDetail() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-package-detail/${this.ipsrDataControlSE.resultInnovationId}`);
   }
+
+  GETInnovationPathwayByStepOneResultId() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/step-one/${this.ipsrDataControlSE.resultInnovationId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+  }
+
+  PATCHInnovationPathwayByStepOneResultId(body) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/step-one/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+  }
 }
