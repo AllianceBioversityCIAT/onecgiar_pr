@@ -553,15 +553,15 @@ export class InnovationPathwayStepOneService {
       const resultByInnovationPackageId = await this._innovationByResultRepository.findOneBy({ result_innovation_package_id: id })
       const sdgs = UpdateInnovationPathwayDto.sdgTargets;
 
-      await this._resultIpSdgsTargetsRepository.updateSdg(resultByInnovationPackageId.result_by_innovation_package_id, sdgs.map(c => c.clarisa_sdg_target_id), user.id);
+      await this._resultIpSdgsTargetsRepository.updateSdg(resultByInnovationPackageId.result_by_innovation_package_id, sdgs.map(c => c.id), user.id);
       if (sdgs?.length) {
         for (let i = 0; i < sdgs.length; i++) {
-          const sdgExist = await this._resultIpSdgsTargetsRepository.getSdgsByIpAndSdgId(resultByInnovationPackageId.result_by_innovation_package_id, sdgs[i].clarisa_sdg_target_id);
+          const sdgExist = await this._resultIpSdgsTargetsRepository.getSdgsByIpAndSdgId(resultByInnovationPackageId.result_by_innovation_package_id, sdgs[i].id);
 
           if (!sdgExist) {
             const newSdgs = new ResultIpSdgTargets();
-            newSdgs.clarisa_sdg_target_id = sdgs[i].clarisa_sdg_target_id;
-            newSdgs.clarisa_sdg_usnd_code = sdgs[i].clarisa_sdg_usnd_code;
+            newSdgs.clarisa_sdg_target_id = sdgs[i].id;
+            newSdgs.clarisa_sdg_usnd_code = sdgs[i].usnd_code;
             newSdgs.result_by_innovation_package_id = resultByInnovationPackageId.result_by_innovation_package_id;
             newSdgs.created_by = user.id;
             newSdgs.version_id = version.id;

@@ -1,20 +1,22 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException } from '@nestjs/common';
 import { ClarisaSdgsTargetsService } from './clarisa-sdgs-targets.service';
 import { CreateClarisaSdgsTargetDto } from './dto/create-clarisa-sdgs-target.dto';
 import { UpdateClarisaSdgsTargetDto } from './dto/update-clarisa-sdgs-target.dto';
 
-@Controller('clarisa-sdgs-targets')
+@Controller()
 export class ClarisaSdgsTargetsController {
-  constructor(private readonly clarisaSdgsTargetsService: ClarisaSdgsTargetsService) {}
+  constructor(private readonly clarisaSdgsTargetsService: ClarisaSdgsTargetsService) { }
 
   @Post()
   create(@Body() createClarisaSdgsTargetDto: CreateClarisaSdgsTargetDto) {
     return this.clarisaSdgsTargetsService.create(createClarisaSdgsTargetDto);
   }
 
-  @Get()
-  findAll() {
-    return this.clarisaSdgsTargetsService.findAll();
+  @Get('sdgs-targets')
+  async findAll() {
+    const { message, response, status } =
+      await this.clarisaSdgsTargetsService.findAll();
+    throw new HttpException({ message, response }, status);
   }
 
   @Get(':id')
