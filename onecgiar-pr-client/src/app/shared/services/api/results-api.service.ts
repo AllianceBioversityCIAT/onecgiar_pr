@@ -508,7 +508,7 @@ export class ResultsApiService {
   }
 
   GETInnovationPathwayByStepOneResultId() {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/step-one/${this.ipsrDataControlSE.resultInnovationId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get-step-one/${this.ipsrDataControlSE.resultInnovationId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   PATCHInnovationPathwayByStepOneResultId(body) {
