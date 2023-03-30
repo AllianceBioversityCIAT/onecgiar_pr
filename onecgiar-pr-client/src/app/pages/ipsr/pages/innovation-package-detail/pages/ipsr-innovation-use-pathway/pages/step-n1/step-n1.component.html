@@ -3,9 +3,13 @@
 <app-pr-field-header [required]="false"
     label="Core innovation selected and CGIAR Initiative leading the development:"></app-pr-field-header>
 
-<div class="ipsr_chip_container">Result code - Climate Security Investment Planning methodology - INIT-23
-    <i class="material-icons-round">open_in_new</i>
+<div class="ipsr_chip_container">
+    <div class="text">{{this.coreResult.result_code}} - <strong>{{this.coreResult.title}}</strong> -
+        {{this.coreResult.official_code}}</div>
+    <a class="material-icons-round" [routerLink]="'/result/result-detail/'+this.coreResult.result_code"
+        target="_blank">open_in_new</a>
 </div>
 
 <app-step-n1-geoscope [body]="this.ipsrStep1Body"></app-step-n1-geoscope>
-<app-step-n1-eoi-outcomes></app-step-n1-eoi-outcomes>
+<app-step-n1-eoi-outcomes [body]="this.ipsrStep1Body"
+    *ngIf="this.ipsrDataControlSE?.detailData?.inititiative_id"></app-step-n1-eoi-outcomes>
