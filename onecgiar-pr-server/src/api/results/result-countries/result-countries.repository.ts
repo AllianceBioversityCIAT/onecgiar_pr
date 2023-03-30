@@ -47,7 +47,8 @@ export class ResultCountryRepository extends Repository<ResultCountry> {
     rc.country_id as id,
     rc.created_date,
     rc.last_updated_date,
-    cc.name 
+    cc.name,
+    cc.iso_alpha_2
     from result_country rc 
     inner join clarisa_countries cc on cc.id = rc.country_id 
     where rc.is_active > 0
