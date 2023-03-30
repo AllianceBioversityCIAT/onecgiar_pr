@@ -174,7 +174,8 @@ export class IpsrRepository extends Repository<Ipsr>{
         SELECT
             rc.country_id AS id,
             cc.name,
-            rc.result_id
+            rc.result_id,
+            cc.iso_alpha_2
         FROM result_country rc
             LEFT JOIN clarisa_countries cc ON cc.id = rc.country_id	
         WHERE rc.result_id = ?
