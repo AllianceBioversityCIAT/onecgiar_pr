@@ -5,6 +5,7 @@ import { ResultsCenter } from '../../results-centers/entities/results-center.ent
 import { ResultActor } from '../../result-actors/entities/result-actor.entity';
 import { ResultIpEoiOutcome } from '../../../ipsr/innovation-pathway/entities/result-ip-eoi-outcome.entity';
 import { ResultIpAAOutcome } from '../../../../api/ipsr/innovation-pathway/entities/result-ip-action-area-outcome.entity';
+import { ResultsIpActor } from '../../../ipsr/results-ip-actors/entities/results-ip-actor.entity';
 
 @Entity('version')
 export class Version {
@@ -46,6 +47,9 @@ export class Version {
 
   @OneToMany(() => ResultActor, rc => rc.obj_version)
   result_actor: ResultActor[];
+
+  @OneToMany(() => ResultsIpActor, rc => rc.obj_version)
+  result_ip_actor: ResultActor[];
 
   @OneToMany(() => ResultIpEoiOutcome, rio => rio.obj_version_result_ip_eoi_outcome)
   obj_version_result_ip_eoi_outcome: ResultIpEoiOutcome[];
