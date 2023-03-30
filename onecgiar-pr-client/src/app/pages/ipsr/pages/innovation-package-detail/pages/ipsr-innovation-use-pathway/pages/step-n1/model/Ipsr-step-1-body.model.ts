@@ -2,6 +2,8 @@ export class IpsrStep1Body {
   initiative_id: number = null;
   geo_scope_id: number = null;
   countries: Country[] = [];
+  regions: any[] = [];
+  coreResult: any = null;
   eoiOutcomes: EoiOutcome[] = [];
   actionAreaOutcomes: ActionAreaOutcome[] = [];
   impactAreas: ImpactArea[] = [];
@@ -80,4 +82,10 @@ interface EoiOutcome {
 interface Country {
   id: number;
   name: string;
+}
+
+export class CoreResult {
+  result_code: string = null;
+  title: string = null;
+  official_code: string = null;
 }
