@@ -12,7 +12,7 @@ export class ClarisaSdgsTargetsController {
     return this.clarisaSdgsTargetsService.create(createClarisaSdgsTargetDto);
   }
 
-  @Get('sdgs-targets')
+  @Get('all')
   async findAll() {
     const { message, response, status } =
       await this.clarisaSdgsTargetsService.findAll();

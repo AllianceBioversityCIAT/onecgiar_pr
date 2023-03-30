@@ -8,6 +8,51 @@ export class ClarisaActionAreaOutcomeRepository extends Repository<ClarisaAction
     super(ClarisaActionAreaOutcome, dataSource.createEntityManager());
   }
 
+  async aaOutcomes() {
+    const systemTrasnformationQuery = `
+      SELECT
+        *
+      FROM
+        clarisa_action_area_outcome
+      WHERE actionAreaId = 1
+      ORDER BY id ASC;
+    `;
+    const resilientAgrifoodSystemsQuery = `
+      SELECT
+        *
+      FROM
+        clarisa_action_area_outcome
+      WHERE actionAreaId = 2
+      ORDER BY id ASC;
+    `;
+    const geneticInnovationQuery = `
+      SELECT
+        *
+      FROM
+        clarisa_action_area_outcome
+      WHERE actionAreaId = 3
+      ORDER BY id ASC;
+    `;
+
+    try {
+      const systemTrasnformation = await this.query(systemTrasnformationQuery);
+      const resilientAgrifoodSystems = await this.query(resilientAgrifoodSystemsQuery);
+      const geneticInnovation = await this.query(geneticInnovationQuery);
+
+      return {
+        systemTrasnformation,
+        resilientAgrifoodSystems,
+        geneticInnovation
+      }
+    } catch (error) {
+      throw {
+        message: `[${ClarisaActionAreaOutcomeRepository.name}] => deleteAllData error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
   async deleteAllData() {
     const queryData = `
     DELETE FROM clarisa_action_area_outcome;
