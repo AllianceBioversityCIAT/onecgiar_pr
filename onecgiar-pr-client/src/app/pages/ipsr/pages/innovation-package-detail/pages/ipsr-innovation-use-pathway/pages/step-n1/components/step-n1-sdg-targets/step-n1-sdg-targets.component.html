@@ -1,1 +1,13 @@
-<p>step-n1-sdg-targets works!</p>
+<app-pr-field-header
+    label="Specify to which CGIAR Impact Area Target(s) the scaling of the core innovation is expected to contribute to by 2030 in the specific country/ subnational context"></app-pr-field-header>
+
+<div>Select an Impact Area to filter the list of targets:</div>
+<h1>ID: {{this.currentImpactAreaID}}</h1>
+<div class="impact_areas_circles">
+    <div class="impact_area_circle_item" [style.background]="impactAreaItem?.color"
+        [ngClass]="{'no_selected': !impactAreaItem?.selected}" (click)="selectImpactArea(impactAreaItem)"
+        *ngFor="let impactAreaItem of this.impactAreasData">
+        <img class="impact_area_image" [src]="'assets/impact_areas/png/'+impactAreaItem?.imageRoute+'.png'" alt=""
+            srcset="">
+    </div>
+</div>
