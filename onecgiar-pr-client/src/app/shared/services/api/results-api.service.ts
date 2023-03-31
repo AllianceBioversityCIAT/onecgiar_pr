@@ -514,4 +514,12 @@ export class ResultsApiService {
   PATCHInnovationPathwayByStepOneResultId(body) {
     return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/step-one/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
+
+  GETAllClarisaActionAreasOutcomes() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/action-areas-outcomes/all`).pipe(this.saveButtonSE.isGettingSectionPipe());
+  }
+
+  GETAllClarisaSdgsTargets() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/sdgs-targets/all`).pipe(this.saveButtonSE.isGettingSectionPipe());
+  }
 }
