@@ -1,1 +1,47 @@
-<p>step-n1-action-area-outcomes works!</p>
+<app-pr-field-header
+    label="Specify to which CGIAR AA outcomes the scaling of the core innovation is expected to contribute to by 2024 in the specific country/ subnational context"></app-pr-field-header>
+<br>
+<div class="aao-list">
+    <div class="aao-item">
+        <div class="title">
+            <img class="aao_image" src="assets/action_areas/1.png" alt="" srcset="">
+            <div class="segment_title">Systems Transformation outcomes</div>
+        </div>
+        <div class="dropdown-50p">
+            <app-pr-multi-select [options]="[]" [required]="false" optionLabel="Systems Transformation outcomes"
+                optionValue="toc_result_id" selectedOptionLabel="title"
+                placeholder="Select Systems Transformation outcomes "
+                selectedLabel="Systems Transformation Outcome(s) selected">
+            </app-pr-multi-select>
+        </div>
+        <div class="fragment_section_divider"></div>
+    </div>
+    <div class="aao-item">
+        <div class="title">
+            <img class="aao_image" src="assets/action_areas/2.png" alt="" srcset="">
+            <div class="segment_title">Resilient Agrifood Systems outcomes</div>
+        </div>
+        <div class="dropdown-50p">
+            <app-pr-multi-select [options]="[]" [required]="false" optionLabel="Systems Transformation outcomes"
+                optionValue="toc_result_id" selectedOptionLabel="title"
+                placeholder="Select Resilient Agrifood Systems outcomes"
+                selectedLabel="Resilient Agrifood Systems Outcome(s) selected">
+            </app-pr-multi-select>
+        </div>
+        <div class="fragment_section_divider"></div>
+    </div>
+    <div class="aao-item">
+        <div class="title">
+            <img class="aao_image" src="assets/action_areas/3.png" alt="" srcset="">
+            <div class="segment_title">Genetic Innovation outcomes</div>
+        </div>
+        <div class="dropdown-50p">
+            <app-pr-multi-select [options]="[]" [required]="false" optionLabel="Systems Transformation outcomes"
+                optionValue="toc_result_id" selectedOptionLabel="title" placeholder="Select Genetic Innovation outcomes"
+                selectedLabel="Genetic Innovation Outcome(s) selected">
+            </app-pr-multi-select>
+        </div>
+        <div class="fragment_section_divider"></div>
+        <div class="step_divider"></div>
+    </div>
+</div>
