@@ -28,5 +28,5 @@ export const ipsrInnovationUsePathwayRouting: PrRoute[] = [
   { prName: '', underConstruction: true, path: 'step-2', loadChildren: () => import('../innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n2/step-n2.module').then(m => m.StepN2Module) },
   { prName: '', underConstruction: true, path: 'step-3', loadChildren: () => import('../innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n3/step-n3.module').then(m => m.StepN3Module) },
   { prName: '', underConstruction: true, path: 'step-4', loadChildren: () => import('../innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n4/step-n4.module').then(m => m.StepN4Module) },
-  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'general-information' }
+  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'step-1' }
 ];
