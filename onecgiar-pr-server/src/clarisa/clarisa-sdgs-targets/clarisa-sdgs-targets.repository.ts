@@ -164,25 +164,76 @@ export class ClarisaSdgsTargetsRepository extends Repository<ClarisaSdgsTarget> 
             const sdgSixteen = await this.query(sdgSixteenQuery);
             const sdgSeventeen = await this.query(sdgSeventeenQuery);
 
-            return {
-                sdgOne,
-                sdgTwo,
-                sdgThree,
-                sdgFour,
-                sdgFive,
-                sdgSix,
-                sdgSeven,
-                sdgEight,
-                sdgNine,
-                sdgTen,
-                sdgEleven,
-                sdgTwelve,
-                sdgThirteen,
-                sdgFourteen,
-                sdgFifteen,
-                sdgSixteen,
-                sdgSeventeen,
-            };
+            return [
+                {
+                    sdgId: 1,
+                    sdgList: sdgOne
+                },
+                {
+                    sdgId: 2,
+                    sdgList: sdgTwo
+                },
+                {
+                    sdgId: 3,
+                    sdgList: sdgThree
+                },
+                {
+                    sdgId: 4,
+                    sdgList: sdgFour
+                },
+                {
+                    sdgId: 5,
+                    sdgList: sdgFive
+                },
+                {
+                    sdgId: 6,
+                    sdgList: sdgSix
+                },
+                {
+                    sdgId: 7,
+                    sdgList: sdgSeven
+                },
+                {
+                    sdgId: 8,
+                    sdgList: sdgEight
+                },
+                {
+                    sdgId: 9,
+                    sdgList: sdgNine
+                },
+                {
+                    sdgId: 10,
+                    sdgList: sdgTen
+                },
+                {
+                    sdgId: 11,
+                    sdgList: sdgEleven
+                },
+                {
+                    sdgId: 12,
+                    sdgList: sdgTwelve
+                },
+                {
+                    sdgId: 13,
+                    sdgList: sdgThirteen
+                },
+                {
+                    sdgId: 14,
+                    sdgList: sdgFourteen
+                },
+                {
+                    sdgId: 15,
+                    sdgList: sdgFifteen
+                },
+                {
+                    sdgId: 16,
+                    sdgList: sdgSixteen
+                },
+                {
+                    sdgId: 17,
+                    sdgList: sdgSeventeen
+                }
+            ];
         } catch (error) {
             throw {
                 message: `[${ClarisaSdgsTarget.name}] => deleteAllData error: ${error}`,
