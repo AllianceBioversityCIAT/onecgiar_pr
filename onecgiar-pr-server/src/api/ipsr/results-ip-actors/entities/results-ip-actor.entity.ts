@@ -54,6 +54,12 @@ export class ResultsIpActor extends BaseEntity{
     })
     actor_type_id!: number;
 
+    @Column({
+        name:'evidence_link',
+        type: 'text',
+        nullable: true
+    })
+    evidence_link!: string;
 
     @ManyToOne(() => Ipsr, ir => ir.obj_result_ip_actors)
     @JoinColumn({

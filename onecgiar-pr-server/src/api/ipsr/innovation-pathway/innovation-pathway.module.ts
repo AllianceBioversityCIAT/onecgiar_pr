@@ -24,6 +24,10 @@ import { InnovationPathwayStepTwoService } from './innovation-pathway-step-two.s
 import { ResultsComplementaryInnovationRepository } from '../results-complementary-innovations/repositories/results-complementary-innovation.repository';
 import { ResultsComplementaryInnovationsFunctionRepository } from '../results-complementary-innovations-functions/repositories/results-complementary-innovations-function.repository';
 import { EvidencesRepository } from '../../../api/results/evidences/evidences.repository';
+import { InnovationPathwayStepThreeService } from './innovation-pathway-step-three.service';
+import { ResultsByIpInnovationUseMeasureRepository } from '../results-by-ip-innovation-use-measures/results-by-ip-innovation-use-measure.repository';
+import { ResultsIpActorRepository } from '../results-ip-actors/results-ip-actor.repository';
+import { ResultsIpInstitutionTypeRepository } from '../results-ip-institution-type/results-ip-institution-type.repository';
 
 @Module({
   controllers: [InnovationPathwayController],
@@ -51,8 +55,11 @@ import { EvidencesRepository } from '../../../api/results/evidences/evidences.re
     ResultIpImpactAreaRepository,
     ResultsComplementaryInnovationRepository,
     ResultsComplementaryInnovationsFunctionRepository,
-    EvidencesRepository
-
+    EvidencesRepository,
+    InnovationPathwayStepThreeService,
+    ResultsByIpInnovationUseMeasureRepository,
+    ResultsIpActorRepository,
+    ResultsIpInstitutionTypeRepository
   ]
 })
 export class InnovationPathwayModule { }

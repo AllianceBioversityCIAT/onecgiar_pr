@@ -25,6 +25,13 @@ export class ResultsByIpInnovationUseMeasure extends BaseEntity {
         nullable: true
     })
     quantity!: number;
+    
+    @Column({
+        name:'evidence_link',
+        type: 'text',
+        nullable: true
+    })
+    evidence_link!: string;
 
     @Column({
         name: 'result_ip_result_id',
