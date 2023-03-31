@@ -17,7 +17,7 @@ export class ClarisaSdgsTargetsService {
 
   async findAll() {
     try {
-      const sdgsTargets = await this._sdgsTargets.find();
+      const sdgsTargets = await this._sdgsTargets.Sdgs();
 
       return {
         response: sdgsTargets,
