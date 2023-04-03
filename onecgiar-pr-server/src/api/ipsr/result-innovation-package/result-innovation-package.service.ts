@@ -104,12 +104,15 @@ export class ResultInnovationPackageService {
       }
 
       if (CreateResultInnovationPackageDto.geo_scope_id === 2) {
-        innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${result.title} in ${regions.map(r => r.name).join(', ')}`;
+        const regionsList = regions.map(r => r.name);
+        innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${result.title} in ${regionsList.slice(0, -1).join(', ')}${regionsList.length > 1 ? ' and ' : ''}${regionsList[regionsList.length - 1]}`;
       } else if (CreateResultInnovationPackageDto.geo_scope_id === 3 || CreateResultInnovationPackageDto.geo_scope_id === 4) {
-        innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${result.title} in ${countries.map(c => c.name).join(', ')}`;
+        const countriesList = countries.map(c => c.name);
+        innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${result.title} in ${countriesList.slice(0, -1).join(', ')}${countriesList.length > 1 ? ' and ' : ''}${countriesList[countriesList.length - 1]}`;
       } else {
         innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${result.title}.`;
       }
+
 
       const titleValidate = await this._resultRepository
         .createQueryBuilder('result')
@@ -294,22 +297,22 @@ export class ResultInnovationPackageService {
       });
       const req = updateResultInnovationPackageDto;
 
-      // * Find a title like it´s incoming from the request.
       const titleValidate = await this._resultRepository
         .createQueryBuilder('result')
         .where('result.title like :title', { title: `${req.title}` })
         .andWhere('result.is_active = 1')
         .getMany();
 
-      // * Validate if the title is duplicate
-      if (!titleValidate.find((tv) => tv.id === resultId)) {
-        throw {
-          response: titleValidate.map((tv) => tv.id),
-          message: `The title already exists, in the following results: ${titleValidate.map(
-            (tv) => tv.result_code,
-          )}`,
-          status: HttpStatus.BAD_REQUEST,
-        };
+      if (titleValidate.length > 1) {
+        if (!titleValidate.find((tv) => tv.id === resultId)) {
+          throw {
+            response: titleValidate.map((tv) => tv.id),
+            message: `The title already exists, in the following results: ${titleValidate.map(
+              (tv) => tv.result_code,
+            )}`,
+            status: HttpStatus.BAD_REQUEST,
+          };
+        }
       }
 
       const updateResult = await this._resultRepository.update(resultId, {
