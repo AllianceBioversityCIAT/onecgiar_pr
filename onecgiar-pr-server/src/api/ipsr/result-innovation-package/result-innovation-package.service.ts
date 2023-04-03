@@ -47,11 +47,23 @@ export class ResultInnovationPackageService {
         await this._resultRepository.getResultById(
           CreateResultInnovationPackageDto.result_id
         );
+
       if (!resultExist) {
         throw {
           response: resultExist,
           message: 'The result was not found',
           status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const initiativeRole = await this._resultByInitiativeRepository.InitiativeByResult(+resultExist.id);
+      const mapInits = initiativeRole.find(i => i.inititiative_id === CreateResultInnovationPackageDto.initiative_id);
+
+      if (!mapInits) {
+        return {
+          response: mapInits,
+          message: 'If your initiative is not primary or does not contribute to the Core Innovation, you cannot create an Innovatio Package with the result.',
+          status: HttpStatus.BAD_REQUEST,
         };
       }
 
@@ -313,6 +325,14 @@ export class ResultInnovationPackageService {
             status: HttpStatus.BAD_REQUEST,
           };
         }
+      }
+
+      if (req.lead_contact_person === '' || req.lead_contact_person === null) {
+        return {
+          response: { valid: false },
+          message: 'Please add a lead contact person',
+          status: HttpStatus.BAD_REQUEST,
+        };
       }
 
       const updateResult = await this._resultRepository.update(resultId, {

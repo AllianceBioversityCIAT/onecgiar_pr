@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException, Req } from '@nestjs/common';
 import { IpsrService } from './ipsr.service';
 import { CreateIpsrDto } from './dto/create-ipsr.dto';
 import { UpdateIpsrDto } from './dto/update-ipsr.dto';
@@ -9,10 +9,12 @@ import { Result } from '../results/entities/result.entity';
 export class IpsrController {
   constructor(private readonly ipsrService: IpsrService) { }
 
-  @Get('all-innovations')
-  async findAll() {
+  @Post('all-innovations')
+  async findAll(
+    @Body('initiativeId') initiativeId: number
+  ) {
     const { message, response, status } =
-      await this.ipsrService.findAllInnovations();
+      await this.ipsrService.findAllInnovations(initiativeId);
 
     throw new HttpException({ message, response }, status);
   }

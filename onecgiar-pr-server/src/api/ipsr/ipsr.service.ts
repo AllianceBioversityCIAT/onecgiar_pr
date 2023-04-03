@@ -16,9 +16,9 @@ export class IpsrService {
     return 'This action adds a new ipsr';
   }
 
-  async findAllInnovations() {
+  async findAllInnovations(initiativeId: number) {
     try {
-      const innovation = await this._ipsrRespository.getResultsInnovation();
+      const innovation = await this._ipsrRespository.getResultsInnovation(initiativeId);
       return {
         response: innovation,
         message: 'Successful response',
