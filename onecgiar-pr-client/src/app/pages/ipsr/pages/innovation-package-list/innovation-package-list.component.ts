@@ -11,6 +11,7 @@ export class InnovationPackageListComponent {
   searchText = '';
   constructor(public api: ApiService) {}
   ngOnInit(): void {
+    this.api.rolesSE.isAdmin ? this.deselectInits() : null;
     this.api.resultsSE.GETAllInnovationPackages().subscribe(({ response }) => {
       // console.log(response);
       this.innovationPackagesList = response;
