@@ -12,8 +12,9 @@ export class InnovationPackageListComponent {
   constructor(public api: ApiService) {}
   ngOnInit(): void {
     this.api.resultsSE.GETAllInnovationPackages().subscribe(({ response }) => {
+      // console.log(response);
       this.innovationPackagesList = response;
-      this.innovationPackagesList.map((inno: any) => (inno.full_name = inno.title));
+      this.innovationPackagesList.map((inno: any) => (inno.full_name = `${inno?.result_code} ${inno?.title} ${inno?.official_code}`));
     });
   }
 
