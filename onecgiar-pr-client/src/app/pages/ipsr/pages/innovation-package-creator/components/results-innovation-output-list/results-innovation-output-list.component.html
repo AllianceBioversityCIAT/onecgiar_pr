@@ -26,7 +26,7 @@
 
                         <div class="new_tag" *ngIf="i==1 && result.is_new && !result.legacy_id">New</div>
                         <div class="new_tag pre" *ngIf="i==1 && result.legacy_id">Pre 2022</div> {{column.attr !==
-                        'created_date' ?
+                        'creation_date' ?
                         result[column.attr] : (result[column.attr] | date: 'YYYY-MM-dd')}}
                     </a>
                     <div class="transparent_text">
