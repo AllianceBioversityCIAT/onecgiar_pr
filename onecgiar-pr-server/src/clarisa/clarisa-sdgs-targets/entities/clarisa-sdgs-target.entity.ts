@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { ResultIpSdgTargets } from "../../../api/ipsr/innovation-pathway/entities/result-ip-sdg-targets.entity";
 
 @Entity('clarisa_sdgs_targets')
 export class ClarisaSdgsTarget {
@@ -26,4 +27,7 @@ export class ClarisaSdgsTarget {
         name: 'usnd_code'
     })
     usnd_code: number;
+
+    @OneToMany(() => ResultIpSdgTargets, ris => ris.obj_clarisa_sdg_target)
+    obj_clarisa_sdg_target: ResultIpSdgTargets[];
 }

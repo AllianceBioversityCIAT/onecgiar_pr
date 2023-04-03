@@ -22,3 +22,11 @@ export const IPSRDetailRouting: PrRoute[] = [
   { prName: 'Link to results', underConstruction: true, path: 'link-to-results', loadChildren: () => import('../innovation-package-detail/pages/ipsr-link-to-results/ipsr-link-to-results.module').then(m => m.IpsrLinkToResultsModule) },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'general-information' }
 ];
+
+export const ipsrInnovationUsePathwayRouting: PrRoute[] = [
+  { prName: '', underConstruction: true, path: 'step-1', loadChildren: () => import('../innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n1/step-n1.module').then(m => m.StepN1Module) },
+  { prName: '', underConstruction: true, path: 'step-2', loadChildren: () => import('../innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n2/step-n2.module').then(m => m.StepN2Module) },
+  { prName: '', underConstruction: true, path: 'step-3', loadChildren: () => import('../innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n3/step-n3.module').then(m => m.StepN3Module) },
+  { prName: '', underConstruction: true, path: 'step-4', loadChildren: () => import('../innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n4/step-n4.module').then(m => m.StepN4Module) },
+  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'step-1' }
+];

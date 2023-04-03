@@ -1,0 +1,28 @@
+    .impact_areas_circles {
+        display: flex;
+        gap: 2vw;
+        justify-content: center;
+
+        .no_selected {
+            opacity: .5;
+        }
+
+        .impact_area_circle_item {
+            border-radius: 300px;
+            max-width: 80px !important;
+            max-height: 80px !important;
+            min-width: 80px !important;
+            min-height: 80px !important;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all ease-in-out .3s;
+
+            .impact_area_image {
+                max-width: 50px;
+                max-height: 50px;
+                object-fit: fill;
+            }
+        }
+    }

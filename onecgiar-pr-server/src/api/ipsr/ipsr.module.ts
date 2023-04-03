@@ -15,11 +15,23 @@ import { HandlersError } from 'src/shared/handlers/error.utils';
 import { ShareResultInnovationPackageRequestModule } from './share-result-innovation-package-request/share-result-innovation-package-request.module';
 import { InnovationPathwayModule } from './innovation-pathway/innovation-pathway.module';
 import { InnovationPackagingExpertsModule } from './innovation-packaging-experts/innovation-packaging-experts.module';
-import { ResultIpEoiOutcomesModule } from './result-ip-eoi-outcomes/result-ip-eoi-outcomes.module';
+import { ResultIpMeasuresModule } from './result-ip-measures/result-ip-measures.module';
+import { ResultIpAAOutcomeRepository } from './innovation-pathway/repository/result-ip-action-area-outcome.repository';
 
 @Module({
   controllers: [IpsrController],
   providers: [IpsrService, IpsrRepository, HandlersError],
-  imports: [RouterModule.register(IpsrRoutes), ResultInnovationPackageModule, ResultsPackageByInitiativesModule, ResultsPackageTocResultModule, ResultsPackageCentersModule, NonPooledPackageProjectsModule, ShareResultInnovationPackageRequestModule, InnovationPathwayModule, InnovationPackagingExpertsModule, ResultIpEoiOutcomesModule],
+  imports: [
+    RouterModule.register(IpsrRoutes), 
+    ResultInnovationPackageModule, 
+    ResultsPackageByInitiativesModule, 
+    ResultsPackageTocResultModule, 
+    ResultsPackageCentersModule, 
+    NonPooledPackageProjectsModule, 
+    ShareResultInnovationPackageRequestModule, 
+    InnovationPathwayModule, 
+    InnovationPackagingExpertsModule, 
+    ResultIpMeasuresModule,
+  ],
 })
 export class IpsrModule {}

@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { InnovationPathwayService } from './innovation-pathway.service';
+import { InnovationPathwayStepOneService } from './innovation-pathway-step-one.service';
 import { InnovationPathwayController } from './innovation-pathway.controller';
 import { ResultRepository } from '../../../api/results/result.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
@@ -11,11 +11,20 @@ import { ResultInnovationPackageRepository } from '../result-innovation-package/
 import { VersionsService } from '../../results/versions/versions.service';
 import { VersionRepository } from 'src/api/results/versions/version.repository';
 import { IpsrRepository } from '../ipsr.repository';
+import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
+import { ResultByInstitutionsByDeliveriesTypeRepository } from '../../results/result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';
+import { ResultIpSdgTargetRepository } from './repository/result-ip-sdg-targets.repository';
+import { ResultIpEoiOutcomeRepository } from './repository/result-ip-eoi-outcomes.repository';
+import { ResultIpAAOutcomeRepository } from './repository/result-ip-action-area-outcome.repository';
+import { ResultActorRepository } from '../../results/result-actors/repositories/result-actors.repository';
+import { ResultByIntitutionsTypeRepository } from '../../results/results_by_institution_types/result_by_intitutions_type.repository';
+import { ResultIpMeasureRepository } from '../result-ip-measures/result-ip-measures.repository';
+import { ResultIpImpactAreaRepository } from './repository/result-ip-impact-area-targets.repository';
 
 @Module({
   controllers: [InnovationPathwayController],
   providers: [
-    InnovationPathwayService,
+    InnovationPathwayStepOneService,
     HandlersError,
     ResultRepository,
     ResultRegionRepository,
@@ -26,6 +35,15 @@ import { IpsrRepository } from '../ipsr.repository';
     VersionsService,
     VersionRepository,
     IpsrRepository,
+    ResultByIntitutionsRepository,
+    ResultByInstitutionsByDeliveriesTypeRepository,
+    ResultIpSdgTargetRepository,
+    ResultIpEoiOutcomeRepository,
+    ResultIpAAOutcomeRepository,
+    ResultActorRepository,
+    ResultByIntitutionsTypeRepository,
+    ResultIpMeasureRepository,
+    ResultIpImpactAreaRepository
   ]
 })
 export class InnovationPathwayModule { }

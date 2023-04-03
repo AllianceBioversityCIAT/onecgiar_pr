@@ -16,4 +16,5 @@ interface DetailData {
   official_code: string;
   result_level: string;
   result_type: string;
+  inititiative_id: string;
 }

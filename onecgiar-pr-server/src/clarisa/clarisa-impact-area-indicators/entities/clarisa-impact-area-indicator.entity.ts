@@ -1,8 +1,10 @@
+import { ResultIpImpactArea } from '../../../api/ipsr/innovation-pathway/entities/result-ip-impact-area.entity';
 import {
   Column,
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { ClarisaImpactArea } from '../../clarisa-impact-area/entities/clarisa-impact-area.entity';
@@ -51,4 +53,8 @@ export class ClarisaImpactAreaIndicator {
     type: 'text',
   })
   name: string;
+
+
+  @OneToMany(() => ResultIpImpactArea, ria => ria.obj_impact_area_indicator)
+  obj_impact_area_indicator_result_impact_area: ResultIpImpactArea[];
 }

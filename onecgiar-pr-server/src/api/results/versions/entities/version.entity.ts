@@ -2,6 +2,9 @@ import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { Ipsr } from '../../../ipsr/entities/ipsr.entity';
 import { NonPooledProject } from '../../non-pooled-projects/entities/non-pooled-project.entity';
 import { ResultsCenter } from '../../results-centers/entities/results-center.entity';
+import { ResultActor } from '../../result-actors/entities/result-actor.entity';
+import { ResultIpEoiOutcome } from '../../../ipsr/innovation-pathway/entities/result-ip-eoi-outcome.entity';
+import { ResultIpAAOutcome } from '../../../../api/ipsr/innovation-pathway/entities/result-ip-action-area-outcome.entity';
 
 @Entity('version')
 export class Version {
@@ -40,4 +43,13 @@ export class Version {
 
   @OneToMany(() => ResultsCenter, rc => rc.obj_version)
   results_center: ResultsCenter[];
+
+  @OneToMany(() => ResultActor, rc => rc.obj_version)
+  result_actor: ResultActor[];
+
+  @OneToMany(() => ResultIpEoiOutcome, rio => rio.obj_version_result_ip_eoi_outcome)
+  obj_version_result_ip_eoi_outcome: ResultIpEoiOutcome[];
+
+  @OneToMany(() => ResultIpAAOutcome, ria => ria.obj_version_result_ip_aa_outcome)
+  obj_version_result_ip_aa_outcome: ResultIpAAOutcome[];
 }

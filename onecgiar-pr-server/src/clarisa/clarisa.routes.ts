@@ -19,11 +19,16 @@ import { ClarisaPolicyStagesModule } from './clarisa-policy-stages/clarisa-polic
 import { ClarisaPolicyTypesModule } from './clarisa-policy-types/clarisa-policy-types.module';
 import { ClarisaSdgsModule } from './clarisa-sdgs/clarisa-sdgs.module';
 import { ClarisaSdgsTargetsModule } from './clarisa-sdgs-targets/clarisa-sdgs-targets.module';
+import { ClarisaActionAreaOutcomeModule } from './clarisa-action-area-outcome/clarisa-action-area-outcome.module';
 
 export const ClarisaRoutes: Routes = [
   {
     path: 'action-areas',
     module: ClarisaActionAreasModule,
+  },
+  {
+    path: 'action-areas-outcomes',
+    module: ClarisaActionAreaOutcomeModule
   },
   {
     path: 'action-areas-outcomes-indicators',

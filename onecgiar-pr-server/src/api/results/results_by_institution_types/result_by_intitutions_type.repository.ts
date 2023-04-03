@@ -109,7 +109,8 @@ export class ResultByIntitutionsTypeRepository extends Repository<ResultsByInsti
     	rbit.institution_roles_id,
     	rbit.version_id,
     	rbit.created_by,
-    	rbit.last_updated_by 
+    	rbit.last_updated_by,
+      rbit.how_many 
     from results_by_institution_type rbit
     where rbit.results_id  = ?
       and institution_roles_id = ?
@@ -121,6 +122,43 @@ export class ResultByIntitutionsTypeRepository extends Repository<ResultsByInsti
         [resultId, isActor?1:2, institutionsTypeId],
       );
       return completeUser?.length?completeUser[0]:undefined;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultByIntitutionsTypeRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async getNewResultByInstitutionTypeExists(
+    resultId: number, 
+    institutionsTypeId: number, 
+    type: number) {
+    const queryData = `
+    select 
+    	rbit.id,
+    	rbit .institution_types_id,
+    	rbit.is_active,
+    	rbit.creation_date,
+    	rbit.last_updated_date,
+    	rbit.results_id,
+    	rbit.institution_roles_id,
+    	rbit.version_id,
+    	rbit.created_by,
+    	rbit.last_updated_by,
+      rbit.how_many 
+    from results_by_institution_type rbit
+    where rbit.results_id  = ?
+      and institution_roles_id = ?
+      and rbit.institution_types_id = ?;
+    `;
+    try {
+      const completeUser: ResultsByInstitutionType[] = await this.query(
+        queryData,
+        [resultId, type, institutionsTypeId],
+      );
+      return completeUser?.length?completeUser[0]:null;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByIntitutionsTypeRepository.name,

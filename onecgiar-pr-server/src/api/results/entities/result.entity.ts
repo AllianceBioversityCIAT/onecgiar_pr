@@ -21,6 +21,7 @@ import { ResultsKnowledgeProduct } from '../results-knowledge-products/entities/
 import { ResultRegion } from '../result-regions/entities/result-region.entity';
 import { ResultCountry } from '../result-countries/entities/result-country.entity';
 import { Ipsr } from '../../ipsr/entities/ipsr.entity';
+import { ResultActor } from '../result-actors/entities/result-actor.entity';
 
 @Entity()
 @Index(['result_code', 'version_id'], { unique: true })
@@ -198,4 +199,7 @@ export class Result {
 
   @OneToMany(() => Ipsr, (rc) => rc.obj_result)
   obj_result: Ipsr[];
+
+  @OneToMany(() => ResultActor, (rc) => rc.obj_result)
+  obj_result_actor: ResultActor[];
 }

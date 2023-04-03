@@ -13,6 +13,13 @@ import { ResultCountryRepository } from '../../../api/results/result-countries/r
 import { IpsrRepository } from '../ipsr.repository';
 import { ResultTypeRepository } from 'src/api/results/result_types/resultType.repository';
 import { ResultInnovationPackageRepository } from './repositories/result-innovation-package.repository';
+import { ResultIpAAOutcomeRepository } from '../innovation-pathway/repository/result-ip-action-area-outcome.repository';
+import { ClarisaActionAreaOutcomeRepository } from '../../../clarisa/clarisa-action-area-outcome/clarisa-action-area-outcome.repository';
+import { In } from 'typeorm';
+import { ResultIpAAOutcome } from '../innovation-pathway/entities/result-ip-action-area-outcome.entity';
+import { ResultsImpactAreaIndicatorRepository } from 'src/api/results/results-impact-area-indicators/results-impact-area-indicators.repository';
+import { ResultIpImpactArea } from '../innovation-pathway/entities/result-ip-impact-area.entity';
+import { ResultIpImpactAreaRepository } from '../innovation-pathway/repository/result-ip-impact-area-targets.repository';
 
 @Injectable()
 export class ResultInnovationPackageService {
@@ -25,7 +32,11 @@ export class ResultInnovationPackageService {
     private readonly _resultCountryRepository: ResultCountryRepository,
     private readonly _innovationByResultRepository: IpsrRepository,
     private readonly _resultInnovationPackageRepository: ResultInnovationPackageRepository,
-  ) {}
+    private readonly _resultIpAAOutcomeRepository: ResultIpAAOutcomeRepository,
+    private readonly _clarisaAAOutcome: ClarisaActionAreaOutcomeRepository,
+    private readonly _resultImpactAreaIndicatorsRespository: ResultsImpactAreaIndicatorRepository,
+    private readonly _resultIpImpactAreaRespository: ResultIpImpactAreaRepository,
+  ) { }
 
   async createHeader(
     CreateResultInnovationPackageDto: CreateResultInnovationPackageDto,
@@ -78,15 +89,10 @@ export class ResultInnovationPackageService {
 
       // * Extract the result and version
       const result = resultExist;
-      console.log(
-        '🚀 ~ file: result-innovation-package.service.ts:74 ~ ResultInnovationPackageService ~ createHeader ~ result:',
-        result,
-      );
       if (result.result_type_id != 7) {
         throw {
           response: result.result_type_id,
-          message:
-            'This is not a valid result type. Only Innovation Use can be used to create a new Innovation Package.',
+          message: 'This is not a valid result type. Only Innovation Developments can be used to create a new Innovation Package.',
           status: HttpStatus.BAD_REQUEST,
         };
       }
@@ -164,33 +170,33 @@ export class ResultInnovationPackageService {
       // * Extract the result id from the new result response
       const newResult = newInnovationHeader.id;
       // * Save the result by initiative record
-      const newInnovationByInitiative =
-        await this._resultByInitiativeRepository.save({
-          result_id: newResult,
-          initiative_id: CreateResultInnovationPackageDto.initiative_id,
-          initiative_role_id: 1,
-          version_id: vrs.id,
-          created_by: user.id,
-          last_updated_by: user.id,
-        });
+      const newInnovationByInitiative = await this._resultByInitiativeRepository.save({
+        result_id: newResult,
+        initiative_id: CreateResultInnovationPackageDto.initiative_id,
+        initiative_role_id: 1,
+        version_id: vrs.id,
+        created_by: user.id,
+        last_updated_by: user.id
+      });
 
       // * Save the result in the result innovation package
-      const newResultInnovationPackage =
-        await this._resultInnovationPackageRepository.save({
-          result_innovation_package_id: newResult,
-          version_id: vrs.id,
-        });
+      const newResultInnovationPackage = await this._resultInnovationPackageRepository.save({
+        result_innovation_package_id: newResult,
+        version_id: vrs.id,
+        created_by: user.id,
+        last_updated_by: user.id,
+      });
 
       // * Save new result into result BY innovation package
-      const newInnovationByResult =
-        await this._innovationByResultRepository.save({
-          result_innovation_package_id: newResult,
-          result_id: result.id,
-          ipsr_role_id: 1,
-          version_id: vrs.id,
-          created_by: user.id,
-          last_updated_by: user.id,
-        });
+      const newInnovationByResult = await this._innovationByResultRepository.save({
+        result_innovation_package_id: newResult,
+        result_id: result.id,
+        ipsr_role_id: 1,
+        version_id: vrs.id,
+        created_by: user.id,
+        last_updated_by: user.id
+      });
+      const resultByInnivationPackage = newInnovationByResult.result_by_innovation_package_id;
 
       const resultRegions: ResultRegion[] = [];
       const resultCountries: ResultCountry[] = [];
@@ -232,9 +238,15 @@ export class ResultInnovationPackageService {
         resultCountries,
       );
 
+      // * Map the AAOutcomes
+      const retriveAAOutcome = await this.retrievedAAOutcome(CreateResultInnovationPackageDto.initiative_id, user.id, resultByInnivationPackage, vrs.id);
+
+      const retrievedImpactArea = await this.retrievedImpactArea(result.id, user.id, resultByInnivationPackage, vrs.id);
+
       return {
         response: {
           newInnovationHeader,
+          retriveAAOutcome,
           newInnovationByInitiative,
           newResultInnovationPackage,
           newInnovationByResult,
@@ -249,11 +261,69 @@ export class ResultInnovationPackageService {
     }
   }
 
-  async generalInformation(
-    resultId: number,
-    updateResultInnovationPackageDto: any,
-    user: TokenDto,
-  ) {
+  async retrievedAAOutcome(initId: number, user: number, resultByIpId: number, version: number) {
+    try {
+      let saveAAOutcome: any;
+      const searchTocData = await this._resultIpAAOutcomeRepository.mapActionAreaOutcome(initId);
+      const smoAAOutcomeToc = searchTocData.map(stc => stc.outcome_smo_code);
+      const mapAAOutcome = await this._clarisaAAOutcome.find({
+        where: { outcomeSMOcode: In(smoAAOutcomeToc) }
+      });
+
+      for (const data of mapAAOutcome) {
+        const newAAOutcome = new ResultIpAAOutcome();
+        newAAOutcome.action_area_outcome_id = data.id;
+        newAAOutcome.result_by_innovation_package_id = resultByIpId;
+        newAAOutcome.created_by = user;
+        newAAOutcome.last_updated_by = user;
+        newAAOutcome.version_id = version;
+        newAAOutcome.created_date = new Date();
+        newAAOutcome.last_updated_date = new Date();
+        saveAAOutcome = await this._resultIpAAOutcomeRepository.save(newAAOutcome);
+      }
+      return {
+        response: {
+          saveAAOutcome
+        },
+        message: 'Successfully created',
+        status: HttpStatus.OK
+      }
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async retrievedImpactArea(resultId: number, user: number, resultByIpId: number, version: number) {
+    const id = resultId;
+    try {
+      let savImpactArea: any;
+      const searchImpactDataInResult = await this._resultImpactAreaIndicatorsRespository.findBy({ result_id: id });
+      const mapImpactsIds = searchImpactDataInResult.map(sid => sid.impact_area_indicator_id);
+
+      for (const data of mapImpactsIds) {
+        const newImpactArea = new ResultIpImpactArea();
+        newImpactArea.impact_area_indicator_id = data;
+        newImpactArea.result_by_innovation_package_id = resultByIpId;
+        newImpactArea.created_by = user;
+        newImpactArea.last_updated_by = user;
+        newImpactArea.version_id = version;
+        newImpactArea.created_date = new Date();
+        newImpactArea.last_updated_date = new Date();
+        savImpactArea = await this._resultIpImpactAreaRespository.save(newImpactArea);
+      }
+      return {
+        response: {
+          savImpactArea
+        },
+        message: 'Successfully created',
+        status: HttpStatus.OK
+      }
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async generalInformation(resultId: number, updateResultInnovationPackageDto: any, user: TokenDto) {
     try {
       const resultExist = await this._resultRepository.findOneBy({
         id: resultId,
@@ -264,6 +334,7 @@ export class ResultInnovationPackageService {
       const titleValidate = await this._resultRepository
         .createQueryBuilder('result')
         .where('result.title like :title', { title: `${req.title}` })
+        .andWhere('result.is_active = 1')
         .getMany();
 
       // * Validate if the title is duplicate
