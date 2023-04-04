@@ -12,7 +12,8 @@
     <div class="dropdown-50p" *ngFor="let item of sdgTargetLis">
         <app-pr-multi-select [options]="item?.sdgList" optionLabel="sdg_target" optionValue="id"
             *ngIf="this.currentsdgID ==item?.sdgId" selectedOptionLabel="indicator_statement"
-            placeholder="Select Poverty Reduction, Livelihoods and Jobs targets(s)" [(ngModel)]="sdgTargetLisSelected">
+            placeholder="Select Poverty Reduction, Livelihoods and Jobs targets(s)"
+            [(ngModel)]="this.sdgTargetLisSelected">
         </app-pr-multi-select>
     </div>
 </div>
