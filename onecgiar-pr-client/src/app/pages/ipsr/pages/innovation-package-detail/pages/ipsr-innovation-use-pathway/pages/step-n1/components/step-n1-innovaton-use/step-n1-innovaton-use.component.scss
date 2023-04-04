@@ -1,0 +1,17 @@
+.fields_list {
+    .fields {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+
+        .right_content {
+            display: flex;
+            gap: 10px;
+
+            app-pr-input,
+            app-pr-select {
+                width: 100%;
+            }
+        }
+    }
+}

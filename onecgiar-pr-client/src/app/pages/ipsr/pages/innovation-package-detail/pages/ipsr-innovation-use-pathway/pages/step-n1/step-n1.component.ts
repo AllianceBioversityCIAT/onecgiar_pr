@@ -19,10 +19,10 @@ export class StepN1Component implements OnInit {
 
   getSectionInformation() {
     this.api.resultsSE.GETInnovationPathwayByStepOneResultId().subscribe(({ response }) => {
-      console.log(response);
+      // console.log(response);
       this.ipsrStep1Body = response;
       this.coreResult = response?.coreResult;
-      console.log(this.coreResult);
+      // console.log(this.coreResult);
     });
   }
   onSaveSection() {
