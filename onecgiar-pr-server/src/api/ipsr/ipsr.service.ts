@@ -92,8 +92,4 @@ export class IpsrService {
       return this._handlersError.returnErrorRes({ error, debug: true })
     }
   }
-
-  remove(id: number) {
-    return `This action removes a #${id} ipsr`;
-  }
 }
