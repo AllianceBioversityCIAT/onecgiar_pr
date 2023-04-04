@@ -8,6 +8,7 @@ import { InnovationPackageCustomTableModule } from './components/innovation-pack
 import { SectionHeaderModule } from '../../components/section-header/section-header.module';
 import { FilterByTextModule } from '../../../../shared/pipes/filter-by-text.module';
 import { InnovationPackageListFilterPipe } from './components/innovation-package-custom-table/pipes/innovation-package-list-filter.pipe';
+import { MenuModule } from 'primeng/menu';
 
 @NgModule({
   declarations: [InnovationPackageListComponent, InnovationPackageListFilterPipe],

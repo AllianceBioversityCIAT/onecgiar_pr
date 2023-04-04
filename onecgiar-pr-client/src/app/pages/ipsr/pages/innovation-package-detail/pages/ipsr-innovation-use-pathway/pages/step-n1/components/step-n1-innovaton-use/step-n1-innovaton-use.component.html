@@ -1,1 +1,56 @@
-<p>step-n1-innovaton-use works!</p>
+<div class="ipsr-sub-title">Targeted innovation use</div>
+
+<app-pr-field-header
+    label="Specify targeted innovation use/ beneficiary group(s)/ end-user and also specify how many of the innovation users/ beneficiaries does the Initiative aim to reach by end of 2024?"></app-pr-field-header>
+
+
+<div class="fields_list" *ngIf="this.body.innovatonUse.actors?.length">
+    <div class="fields" *ngFor="let actorItem of this.body.innovatonUse.actors">
+        <app-pr-select [options]="this.actorsTypeList" label="Actor type" optionLabel="name" optionValue="actor_type_id"
+            [(ngModel)]="actorItem.actor_type_id" placeholder="Select actor type">
+        </app-pr-select>
+        <div class="right_content">
+            <app-pr-input placeholder="Write some..." label="Women" type="text" [required]="false"
+                [(ngModel)]="this.actorItem.women">
+            </app-pr-input>
+            <app-pr-input placeholder="Write some..." label="Youth" type="text" [required]="false"
+                [(ngModel)]="this.actorItem.women_youth">
+            </app-pr-input>
+            <app-pr-input placeholder="Write some..." label="Non-youth" type="text" [required]="false"
+                [readOnly]="true">
+            </app-pr-input>
+        </div>
+    </div>
+</div>
+
+<app-add-button name="Add actor" (clickEvent)="addActor()"></app-add-button>
+<div class="fragment_section_divider"></div>
+
+<div class="fields_list" *ngIf="this.body.innovatonUse.organization?.length">
+    <div class="fields" *ngFor="let organizationItem of this.body.innovatonUse.organization">
+        <app-pr-select [options]="this.institutionsTypeTreeList" label="Organization" optionLabel="name"
+            optionValue="code" [(ngModel)]="organizationItem.institution_types_id" placeholder="Select organization"
+            (selectOptionEvent)="reloadSelect(organizationItem)">
+        </app-pr-select>
+        <div class="right_content">
+            <app-pr-select *ngIf="organizationItem.institution_types_id && !organizationItem.hide"
+                [options]="getInstitutionsTypeTreeChildrens(organizationItem.institution_types_id)" label="Organization"
+                optionLabel="name" optionValue="code" [(ngModel)]="organizationItem.institution_types_id"
+                placeholder="Select organization">
+            </app-pr-select>
+            <app-pr-input placeholder="Write some..." label="How many" type="text" [required]="false"
+                [(ngModel)]="this.organizationItem.how_many">
+            </app-pr-input>
+        </div>
+    </div>
+</div>
+
+<app-add-button name="Add organization" (clickEvent)="addOrganization()"></app-add-button>
+<div class="fragment_section_divider"></div>
+
+<div class="fields_list" *ngIf="this.body.innovatonUse.measures?.length">
+    <div class="fields" *ngFor="let measuresItem of this.body.innovatonUse.measures">
+        field
+    </div>
+</div>
+<app-add-button name="Add other" (clickEvent)="addOther()"></app-add-button>

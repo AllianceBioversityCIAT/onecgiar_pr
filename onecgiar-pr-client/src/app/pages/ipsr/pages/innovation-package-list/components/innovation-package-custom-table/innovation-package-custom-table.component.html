@@ -28,7 +28,8 @@
                     </div>
                 </td>
                 <td *ngIf="!this.api.dataControlSE.platformIsClosed">
-                    <div class="icon_container"><i class="pi pi-ellipsis-v"></i></div>
+                    <div class="icon_container"><i class="pi pi-ellipsis-v"
+                            (click)="menu.toggle($event);onPressAction(result)"></i></div>
                     <!-- (click)="menu.toggle($event);onPressAction(result)" -->
                 </td>
             </tr>
@@ -41,3 +42,9 @@
         There are no results for the selected filters.
     </div>
 </div>
+
+
+
+<p-menu #menu [popup]="true"
+    [model]="this.api.dataControlSE?.currentResult?.role_id || this.api.rolesSE.isAdmin?  itemsWithDelete:items">
+</p-menu>
