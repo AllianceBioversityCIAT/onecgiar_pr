@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { InnovationPackageCreatorBody } from './model/innovation-package-creator.model';
 import { Router } from '@angular/router';
+import { ManageInnovationsListService } from '../../services/manage-innovations-list.service';
 
 @Component({
   selector: 'app-innovation-package-creator',
@@ -11,7 +12,10 @@ import { Router } from '@angular/router';
 export class InnovationPackageCreatorComponent {
   innovationPackageCreatorBody = new InnovationPackageCreatorBody();
   searchText = '';
-  constructor(public api: ApiService, private router: Router) {}
+  allInitiatives = [];
+  constructor(public api: ApiService, private router: Router, public manageInnovationsListSE: ManageInnovationsListService) {
+    this.GET_AllInitiatives();
+  }
   selectInnovationEvent(e) {
     this.innovationPackageCreatorBody.result_id = e.result_id;
     this.api.resultsSE.GETInnovationByResultId(e.result_id).subscribe(({ response }) => {
@@ -22,6 +26,15 @@ export class InnovationPackageCreatorComponent {
       this.innovationPackageCreatorBody.official_code = response.official_code;
       this.innovationPackageCreatorBody.title = response.title;
       window.scrollTo(0, document.body.scrollHeight);
+    });
+  }
+
+  GET_AllInitiatives() {
+    console.log(this.api.rolesSE.isAdmin);
+    if (!this.api.rolesSE.isAdmin) return;
+    this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
+      console.log(response);
+      this.allInitiatives = response;
     });
   }
 
