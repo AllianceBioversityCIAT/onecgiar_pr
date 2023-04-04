@@ -13,10 +13,10 @@ export class IpsrRepository extends Repository<Ipsr>{
         super(Ipsr, dataSource.createEntityManager())
     }
 
-    async getResultsInnovation() {
+    async getResultsInnovation(initiativeId: number) {
         const resultInnovationQuery = `
         SELECT
-            r.id AS result_id,
+            DISTINCT r.id AS result_id,
             r.result_code,
             r.title,
             r.description,
@@ -37,19 +37,25 @@ export class IpsrRepository extends Repository<Ipsr>{
                     result_type rt
                 WHERE
                     rt.id = r.result_type_id
-            ) AS innovation_type
+            ) AS innovation_type,
+            rbi.initiative_role_id
         FROM
             result r
             LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
         WHERE
             r.status = 1
             AND r.is_active = 1
-            AND rbi.initiative_role_id = 1
-            AND r.result_type_id = 7;
+            AND rbi.inititiative_id IN (?)
+            AND (
+                rbi.initiative_role_id = 1 
+                OR rbi.initiative_role_id = 2
+            )
+            AND r.result_type_id = 7
+        ORDER BY r.created_date ASC;
         `;
 
         try {
-            const resultInnovation: any[] = await this.dataSource.query(resultInnovationQuery);
+            const resultInnovation: any[] = await this.dataSource.query(resultInnovationQuery, [initiativeId]);
             return resultInnovation;
         } catch (error) {
             throw this._handlersError.returnErrorRepository({

@@ -20,6 +20,11 @@ import { ResultIpAAOutcome } from '../innovation-pathway/entities/result-ip-acti
 import { ResultsImpactAreaIndicatorRepository } from 'src/api/results/results-impact-area-indicators/results-impact-area-indicators.repository';
 import { ResultIpImpactArea } from '../innovation-pathway/entities/result-ip-impact-area.entity';
 import { ResultIpImpactAreaRepository } from '../innovation-pathway/repository/result-ip-impact-area-targets.repository';
+import { ResultByEvidencesRepository } from '../../../api/results/results_by_evidences/result_by_evidences.repository';
+import { ResultByIntitutionsRepository } from '../../../api/results/results_by_institutions/result_by_intitutions.repository';
+import { ResultByIntitutionsTypeRepository } from '../../../api/results/results_by_institution_types/result_by_intitutions_type.repository';
+import { resultValidationRepository } from '../../../api/results/results-validation-module/results-validation-module.repository';
+import { ResultIpSdgTargetRepository } from '../innovation-pathway/repository/result-ip-sdg-targets.repository';
 
 @Injectable()
 export class ResultInnovationPackageService {
@@ -32,10 +37,15 @@ export class ResultInnovationPackageService {
     private readonly _resultCountryRepository: ResultCountryRepository,
     private readonly _innovationByResultRepository: IpsrRepository,
     private readonly _resultInnovationPackageRepository: ResultInnovationPackageRepository,
-    private readonly _resultIpAAOutcomeRepository: ResultIpAAOutcomeRepository,
     private readonly _clarisaAAOutcome: ClarisaActionAreaOutcomeRepository,
-    private readonly _resultImpactAreaIndicatorsRespository: ResultsImpactAreaIndicatorRepository,
+    private readonly _resultIpAAOutcomeRepository: ResultIpAAOutcomeRepository,
+    private readonly _resultIpImpactAreaIndicatorsRespository: ResultsImpactAreaIndicatorRepository,
     private readonly _resultIpImpactAreaRespository: ResultIpImpactAreaRepository,
+    private readonly _resultIpSdgRespository: ResultIpSdgTargetRepository,
+    private readonly _resultByEvidencesRepository: ResultByEvidencesRepository,
+    private readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
+    private readonly _resultByIntitutionsTypeRepository: ResultByIntitutionsTypeRepository,
+    private readonly _resultValidationRepository: resultValidationRepository,
   ) { }
 
   async createHeader(CreateResultInnovationPackageDto: CreateResultInnovationPackageDto, user: TokenDto) {
@@ -47,11 +57,23 @@ export class ResultInnovationPackageService {
         await this._resultRepository.getResultById(
           CreateResultInnovationPackageDto.result_id
         );
+
       if (!resultExist) {
         throw {
           response: resultExist,
           message: 'The result was not found',
           status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const initiativeRole = await this._resultByInitiativeRepository.InitiativeByResult(+resultExist.id);
+      const mapInits = initiativeRole.find(i => i.inititiative_id === CreateResultInnovationPackageDto.initiative_id);
+
+      if (!mapInits) {
+        return {
+          response: mapInits,
+          message: 'If your initiative is not primary or does not contribute to the Core Innovation, you cannot create an Innovatio Package with the result.',
+          status: HttpStatus.BAD_REQUEST,
         };
       }
 
@@ -104,12 +126,15 @@ export class ResultInnovationPackageService {
       }
 
       if (CreateResultInnovationPackageDto.geo_scope_id === 2) {
-        innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${result.title} in ${regions.map(r => r.name).join(', ')}`;
+        const regionsList = regions.map(r => r.name);
+        innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${result.title} in ${regionsList.slice(0, -1).join(', ')}${regionsList.length > 1 ? ' and ' : ''}${regionsList[regionsList.length - 1]}`;
       } else if (CreateResultInnovationPackageDto.geo_scope_id === 3 || CreateResultInnovationPackageDto.geo_scope_id === 4) {
-        innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${result.title} in ${countries.map(c => c.name).join(', ')}`;
+        const countriesList = countries.map(c => c.name);
+        innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${result.title} in ${countriesList.slice(0, -1).join(', ')}${countriesList.length > 1 ? ' and ' : ''}${countriesList[countriesList.length - 1]}`;
       } else {
         innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${result.title}.`;
       }
+
 
       const titleValidate = await this._resultRepository
         .createQueryBuilder('result')
@@ -261,7 +286,7 @@ export class ResultInnovationPackageService {
     const id = resultId;
     try {
       let savImpactArea: any;
-      const searchImpactDataInResult = await this._resultImpactAreaIndicatorsRespository.findBy({ result_id: id });
+      const searchImpactDataInResult = await this._resultIpImpactAreaIndicatorsRespository.findBy({ result_id: id });
       const mapImpactsIds = searchImpactDataInResult.map(sid => sid.impact_area_indicator_id);
 
       for (const data of mapImpactsIds) {
@@ -294,20 +319,28 @@ export class ResultInnovationPackageService {
       });
       const req = updateResultInnovationPackageDto;
 
-      // * Find a title like it´s incoming from the request.
       const titleValidate = await this._resultRepository
         .createQueryBuilder('result')
         .where('result.title like :title', { title: `${req.title}` })
         .andWhere('result.is_active = 1')
         .getMany();
 
-      // * Validate if the title is duplicate
-      if (!titleValidate.find((tv) => tv.id === resultId)) {
-        throw {
-          response: titleValidate.map((tv) => tv.id),
-          message: `The title already exists, in the following results: ${titleValidate.map(
-            (tv) => tv.result_code,
-          )}`,
+      if (titleValidate.length > 1) {
+        if (!titleValidate.find((tv) => tv.id === resultId)) {
+          throw {
+            response: titleValidate.map((tv) => tv.id),
+            message: `The title already exists, in the following results: ${titleValidate.map(
+              (tv) => tv.result_code,
+            )}`,
+            status: HttpStatus.BAD_REQUEST,
+          };
+        }
+      }
+
+      if (req.lead_contact_person === '' || req.lead_contact_person === null) {
+        return {
+          response: { valid: false },
+          message: 'Please add a lead contact person',
           status: HttpStatus.BAD_REQUEST,
         };
       }
@@ -331,6 +364,55 @@ export class ResultInnovationPackageService {
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async delete(resultId: number, user: TokenDto) {
+    const resultToUpdate = await this._resultRepository.find({
+      where: { id: resultId, is_active: true }
+    });
+
+    const resultByInnovationPackageToUpdate = await this._resultByInitiativeRepository.find({
+      where: { id: resultId, is_active: true }
+    });
+
+    const id = resultToUpdate[0].id;
+    const result_by_innovation_package_id = resultByInnovationPackageToUpdate[0].id;
+
+    const result = await this._resultRepository.update(id, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
+    const regions = await this._resultRegionRepository.update({ result_id: id }, { is_active: false, last_updated_date: new Date() });
+    const countries = await this._resultCountryRepository.update({ result_id: id }, { is_active: false, last_updated_date: new Date() });
+    const resultByInit = await this._resultByInitiativeRepository.update({ result_id: id }, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
+    const resultByInnoPackage = await this._resultByInitiativeRepository.update({ result_id: id }, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
+    const resultInnoPackage = await this._resultInnovationPackageRepository.update({ result_innovation_package_id: id }, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
+    const resultByInstitutionsType = await this._resultByIntitutionsTypeRepository.update({ results_id: id }, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
+    const resultBInstitutions = await this._resultByIntitutionsRepository.update({ result_id: id }, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
+    const resultByevidencce = await this._resultByEvidencesRepository.update({ results_id: id }, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
+    const resultValidattion = await this._resultValidationRepository.update({ results_id: id }, { is_active: false, last_updated_date: new Date() });
+    const resultIpAAOutcome = await this._resultIpAAOutcomeRepository.update({ result_by_innovation_package_id }, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
+    const resultIpImpactAreaIndicators = await this._resultIpImpactAreaRespository.update({ result_by_innovation_package_id }, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
+    const resultIpImpactArea = await this._resultIpImpactAreaRespository.update({ result_by_innovation_package_id }, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
+    const resultIpSdg = await this._resultIpSdgRespository.update({ result_by_innovation_package_id }, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
+
+    return {
+      response: {
+        result,
+        regions,
+        countries,
+        resultByInit,
+        resultByInnoPackage,
+        resultInnoPackage,
+        resultByInstitutionsType,
+        resultBInstitutions,
+        resultByevidencce,
+        resultValidattion,
+        resultIpAAOutcome,
+        resultIpImpactAreaIndicators,
+        resultIpImpactArea,
+        resultIpSdg,
+      },
+      message: 'The result was deleted successfully',
+      status: HttpStatus.ACCEPTED
     }
   }
 }
