@@ -19,7 +19,7 @@ export class InnovationPackageDetailComponent {
 
   GETInnovationPackageDetail() {
     this.api.resultsSE.GETInnovationPackageDetail().subscribe(({ response }) => {
-      console.log(response);
+      // console.log(response);
       this.ipsrDataControlSE.detailData = response;
     });
   }
