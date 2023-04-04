@@ -2,16 +2,33 @@
     label="Specify to which SDG Target(s) the scaling of the core innovation is expected to contribute to by 2030 in the specific country/ subnational context"></app-pr-field-header>
 
 <div class="sdg_targets">
-    <div class="sdg_item" *ngFor="let sdgItem of this.sdgTargetListSelector" (click)="onSelectSDG(sdgItem)">
-        <img [src]="'assets/sdg/'+sdgItem?.id+'.png'" alt="" srcset="" [ngClass]="{'sdg_selected': sdgItem?.selected}">
+    <div class="sdg_item" *ngFor="let sdgItem of this.sdgTargetLis" (click)="onSelectSDG(sdgItem)">
+        <img [src]="'assets/sdg/'+sdgItem?.sdgId+'.png'" alt="" srcset=""
+            [ngClass]="{'sdg_selected': sdgItem?.selected}">
     </div>
 </div>
 
 <div class="sdg_targets_dropdowns">
-    <!-- <div class="dropdown-50p" *ngFor="let item of sdgTargetListDropdowns">
-        <app-pr-multi-select [options]="" optionLabel="target" optionValue="targetId"
-            selectedOptionLabel="indicator_statement"
-            placeholder="Select Poverty Reduction, Livelihoods and Jobs targets(s)">
+    <div class="dropdown-50p" *ngFor="let item of sdgTargetLis">
+        <app-pr-multi-select [options]="item?.sdgList" optionLabel="sdg_target" optionValue="id"
+            *ngIf="this.currentsdgID ==item?.sdgId" selectedOptionLabel="indicator_statement"
+            placeholder="Select Poverty Reduction, Livelihoods and Jobs targets(s)" [(ngModel)]="sdgTargetLisSelected">
         </app-pr-multi-select>
-    </div> -->
+    </div>
 </div>
+
+<div class="selected_container custom_scroll dropdown-50p" *ngIf="this.currentsdgID">
+    <br>
+    <app-pr-field-header description=" All Impact Area target(s) selected:">
+    </app-pr-field-header>
+    <div class="chips_container">
+        <div class="pr_chip_selected" *ngFor="let option of this.sdgTargetLisSelected; let i=index"
+            [ngClass]="{'is_active_false': false}">
+            <div class="name" [innerHtml]="option?.sdg_target"></div><i class="material-icons-round"
+                (click)="removeOption(option)">remove_circle
+            </i>
+        </div>
+    </div>
+</div>
+
+<div class="step_divider"></div>

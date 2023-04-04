@@ -26,7 +26,7 @@ export class StepN1ImpactAreasComponent {
 
   GET_AllClarisaImpactAreaIndicators() {
     this.api.resultsSE.GET_AllglobalTarget().subscribe(({ response }) => {
-      console.log(response);
+      // console.log(response);
       this.allImpactAreaIndicators = response;
     });
   }
