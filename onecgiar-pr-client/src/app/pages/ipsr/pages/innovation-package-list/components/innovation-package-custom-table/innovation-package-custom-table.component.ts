@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { MenuItem } from 'primeng/api';
 
@@ -10,6 +10,8 @@ import { MenuItem } from 'primeng/api';
 export class InnovationPackageCustomTableComponent {
   @Input() tableData: any;
   @Input() total: number = 0;
+  @Output() deleteEvent = new EventEmitter();
+  currentInnovationPackageToAction = { id: '', title: '' };
   columnOrder = [
     { title: 'Result code', attr: 'result_code' },
     { title: 'Title', attr: 'title', class: 'notCenter' },
@@ -56,23 +58,25 @@ export class InnovationPackageCustomTableComponent {
   ];
   onDelete() {
     // console.log(this.api.dataControlSE.currentResult);
-    this.api.alertsFe.show({ id: 'confirm-delete-result', title: `Are you sure you want to delete the result "${this.api.dataControlSE?.currentResult?.title}"?`, description: `If you delete this result it will no longer be displayed in the list of results.`, status: 'success', confirmText: 'Yes, delete' }, () => {
+    this.api.alertsFe.show({ id: 'confirm-delete-result', title: `Are you sure you want to delete the Innovation Package "${this.currentInnovationPackageToAction.title}"?`, description: `If you delete this Innovation Package it will no longer be displayed in the list of Innovation Packages.`, status: 'success', confirmText: 'Yes, delete' }, () => {
       // console.log('delete');
-      this.api.resultsSE.PATCH_DeleteResult(this.api.dataControlSE.currentResult.id).subscribe(
+      this.api.resultsSE.DELETEInnovationPackage(this.currentInnovationPackageToAction.id).subscribe(
         resp => {
-          // console.log(resp);
-          this.api.alertsFe.show({ id: 'confirm-delete-result-su', title: `The result "${this.api.dataControlSE?.currentResult?.title}" was deleted`, description: ``, status: 'success' });
-          this.api.updateResultsList();
+          console.log(resp);
+          this.api.alertsFe.show({ id: 'confirm-delete-result-su', title: `The Innovation Package "${this.currentInnovationPackageToAction.title}" was deleted`, description: ``, status: 'success' });
+          this.deleteEvent.emit();
         },
         err => {
           console.log(err);
-          this.api.alertsFe.show({ id: 'delete-error', title: 'Error when delete result', description: '', status: 'error' });
+          this.api.alertsFe.show({ id: 'delete-error', title: 'Error when delete Innovation Package', description: '', status: 'error' });
         }
       );
     });
   }
   onPressAction(result) {
     // console.log(result);
+    this.currentInnovationPackageToAction.id = result?.id;
+    this.currentInnovationPackageToAction.title = result.title;
     // this.retrieveModalSE.title = result?.title;
     // this.api.resultsSE.currentResultId = result?.id;
     // this.api.dataControlSE.currentResult = result;
