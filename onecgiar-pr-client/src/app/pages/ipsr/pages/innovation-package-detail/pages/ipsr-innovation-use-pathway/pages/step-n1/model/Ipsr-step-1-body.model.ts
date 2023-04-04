@@ -44,17 +44,19 @@ class InnovatonUse {
   measures: Measure[] = [];
 }
 
-interface Measure {
+export class Measure {
   unit_of_measure: string;
   quantity: number;
 }
 
-interface Organization {
+export class Organization {
   institution_types_id: number;
   how_many: number;
+  // Aux
+  hide: boolean;
 }
 
-interface Actor {
+export class Actor {
   actor_type_id: number;
   women: number;
   women_youth: number;

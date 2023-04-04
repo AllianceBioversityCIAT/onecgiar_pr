@@ -522,4 +522,12 @@ export class ResultsApiService {
   GETAllClarisaSdgsTargets() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/sdgs-targets/all`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
+
+  GETAllActorsTypes() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/actors/type/all`);
+  }
+
+  GETInstitutionsTypeTree() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/institutions-type/tree`);
+  }
 }

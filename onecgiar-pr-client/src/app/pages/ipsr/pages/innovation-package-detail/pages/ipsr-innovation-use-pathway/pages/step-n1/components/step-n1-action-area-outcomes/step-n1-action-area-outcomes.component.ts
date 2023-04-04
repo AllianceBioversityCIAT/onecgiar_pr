@@ -20,17 +20,7 @@ export class StepN1ActionAreaOutcomesComponent {
     this.api.resultsSE.GETAllClarisaActionAreasOutcomes().subscribe(
       ({ response }) => {
         this.actionAreasOutcomesList = response;
-        console.log(response);
-      },
-      err => {
-        console.log(err);
-      }
-    );
-
-    this.api.resultsSE.GETAllClarisaSdgsTargets().subscribe(
-      ({ response }) => {
-        this.actionAreasOutcomesList = response;
-        console.log(response);
+        // console.log(response);
       },
       err => {
         console.log(err);
@@ -41,7 +31,7 @@ export class StepN1ActionAreaOutcomesComponent {
     this.api.tocApiSE.GET_tocLevelsByresultId(this.ipsrDataControlSE?.detailData?.inititiative_id, 4).subscribe(
       ({ response }) => {
         this.actionAreasOutcomesList = response;
-        console.log(response);
+        // console.log(response);
       },
       err => {
         console.log(err);
