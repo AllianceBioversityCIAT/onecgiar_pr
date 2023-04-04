@@ -31,4 +31,39 @@ export class ResultInnovationPackageController {
 
     throw new HttpException({ message, response }, status);
   }
+
+  @Get('active-backstopping')
+  async findActiveBackstopping() {
+    const { message, response, status } =
+      await this.resultInnovationPackageService.findActiveBackstopping();
+    throw new HttpException({ message, response }, status);
+  }
+
+  @Get('consensus-initiative-work-package')
+  async findConsensusInitiativeWorkPackage() {
+    const { message, response, status } =
+      await this.resultInnovationPackageService.findConsensusInitiativeWorkPackage();
+    throw new HttpException({ message, response }, status);
+  }
+
+  @Get('regional-integrated')
+  async findRegionalIntegrated() {
+    const { message, response, status } =
+      await this.resultInnovationPackageService.findRegionalIntegrated();
+    throw new HttpException({ message, response }, status);
+  }
+
+  @Get('regional-leadership')
+  async findRegionalLeadership() {
+    const { message, response, status } =
+      await this.resultInnovationPackageService.findRegionalLeadership();
+    throw new HttpException({ message, response }, status);
+  }
+
+  @Get('relevant-country')
+  async findRelevantCountry() {
+    const { message, response, status } =
+      await this.resultInnovationPackageService.findRelevantCountry();
+    throw new HttpException({ message, response }, status);
+  }
 }

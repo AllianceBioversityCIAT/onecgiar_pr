@@ -15,6 +15,11 @@ import { ResultIpAAOutcomeRepository } from '../innovation-pathway/repository/re
 import { ClarisaActionAreaOutcomeRepository } from '../../../clarisa/clarisa-action-area-outcome/clarisa-action-area-outcome.repository';
 import { ResultsImpactAreaIndicatorRepository } from 'src/api/results/results-impact-area-indicators/results-impact-area-indicators.repository';
 import { ResultIpImpactAreaRepository } from '../innovation-pathway/repository/result-ip-impact-area-targets.repository';
+import { ActiveBackstoppingRepository } from './repositories/active-backstopping.repository';
+import { consensusInitiativeWorkPackageRepository } from './repositories/consensus-initiative-work-package.repository';
+import { RegionalIntegratedRepository } from './repositories/regional-integrated.repository';
+import { RegionalLeadershipRepository } from './repositories/regional-leadership.repository';
+import { RelevantCountryRepository } from './repositories/relevant-country.repository';
 
 @Module({
   controllers: [ResultInnovationPackageController],
@@ -32,7 +37,12 @@ import { ResultIpImpactAreaRepository } from '../innovation-pathway/repository/r
     ResultIpAAOutcomeRepository,
     ClarisaActionAreaOutcomeRepository,
     ResultsImpactAreaIndicatorRepository,
-    ResultIpImpactAreaRepository
+    ResultIpImpactAreaRepository,
+    ActiveBackstoppingRepository,
+    consensusInitiativeWorkPackageRepository,
+    RegionalIntegratedRepository,
+    RegionalLeadershipRepository,
+    RelevantCountryRepository
   ],
   imports: [VersionsModule],
   exports: [
