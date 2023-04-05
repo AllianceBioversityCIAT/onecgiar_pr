@@ -8,27 +8,39 @@
     description="To design a realistic innovation package, the engagement of a diverse group of experts is recommended. Please consider the following scaling expertises when developing the invitee list for the innovation packaging and scaling readiness assessment workshop"></app-pr-field-header>
 <div class="step_divider"></div>
 
-<div class="component_fields two_elements_grid">
-    <div>
-        <div class="two_elements_grid">
-            <app-pr-input placeholder="Write some..." label="First name" type="text">
-            </app-pr-input>
-            <app-pr-input placeholder="Write some..." label="Last name" type="text">
-            </app-pr-input>
+<div class="experts">
+
+    <div *ngFor="let expert of expertExampleList">
+        <div class="component_fields two_elements_grid">
+            <div>
+                <div class="two_elements_grid">
+                    <app-pr-input placeholder="Write some..." label="First name" type="text">
+                    </app-pr-input>
+                    <app-pr-input placeholder="Write some..." label="Last name" type="text">
+                    </app-pr-input>
+                </div>
+                <app-pr-select [options]="this.institutionsSE.institutionsList" label="Organization"
+                    optionLabel="full_name" optionValue="institutions_id" placeholder="Select organization">
+                </app-pr-select>
+            </div>
+            <div>
+                <app-pr-input placeholder="Write some..." label="Email" type="text">
+                </app-pr-input>
+                <app-pr-select
+                    description="What expertises will this expert contribute?* - To design a realistic innovation package, the engagement of a diverse group of experts is recommended. Please consider the following scaling expertises when developing the invitee list for the innovation packaging and scaling readiness assessment workshop"
+                    [options]="this.expertisesList" optionLabel="name" optionValue="expertises_id"
+                    placeholder="Select expertises">
+                </app-pr-select>
+            </div>
         </div>
-        <app-pr-select [options]="this.institutionsSE.institutionsList" label="Organization" optionLabel="full_name"
-            optionValue="institutions_id" placeholder="Select organization">
-        </app-pr-select>
-    </div>
-    <div>
-        <app-pr-input placeholder="Write some..." label="Email" type="text">
-        </app-pr-input>
-        <app-pr-select
-            description="What expertises will this expert contribute?* - To design a realistic innovation package, the engagement of a diverse group of experts is recommended. Please consider the following scaling expertises when developing the invitee list for the innovation packaging and scaling readiness assessment workshop"
-            [options]="this.expertisesList" optionLabel="name" optionValue="expertises_id"
-            placeholder="Select expertises">
-        </app-pr-select>
+        <div class="fragment_section_divider"></div>
+
     </div>
 </div>
 
+
+<app-add-button name="Add expert" (clickEvent)="addExpert()"></app-add-button>
+
+<app-pr-field-header
+    label="Engaging a diverse group of experts leads to better and more realistic innovation package design and assessment. Please confirm that the above list of experts is diverse in gender, age, disciplinary and cultural background, organizational affiliation and typology, etc."></app-pr-field-header>
 <div class="step_divider"></div>

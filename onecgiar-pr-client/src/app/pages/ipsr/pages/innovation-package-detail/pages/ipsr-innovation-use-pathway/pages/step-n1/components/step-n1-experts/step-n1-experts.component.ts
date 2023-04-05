@@ -11,6 +11,7 @@ import { ApiService } from 'src/app/shared/services/api/api.service';
 })
 export class StepN1ExpertsComponent {
   @Input() body = new IpsrStep1Body();
+  expertExampleList = [];
   expertisesList = [];
   constructor(public rolesSE: RolesService, public institutionsSE: InstitutionsService, private api: ApiService) {
     this.GETAllInnovationPackagingExpertsExpertises();
@@ -20,5 +21,8 @@ export class StepN1ExpertsComponent {
       console.log(response);
       this.expertisesList = response;
     });
+  }
+  addExpert() {
+    this.expertExampleList.push({});
   }
 }
