@@ -534,4 +534,20 @@ export class ResultsApiService {
   GETAllInnovationPackagingExpertsExpertises() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-packaging-experts/expertises`);
   }
+
+  getAllInnoPaActiveBackstopping() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-package/active-backstopping`);
+  }
+  getAllInnoPaConsensusInitiativeWorkPackage() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-package/consensus-initiative-work-package`);
+  }
+  getAllInnoPaRegionalIntegrated() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-package/regional-integrated`);
+  }
+  getAllInnoPaRegionalLeadership() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-package/regional-leadership`);
+  }
+  getAllInnoPaRelevantCountry() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-package/relevant-country`);
+  }
 }
