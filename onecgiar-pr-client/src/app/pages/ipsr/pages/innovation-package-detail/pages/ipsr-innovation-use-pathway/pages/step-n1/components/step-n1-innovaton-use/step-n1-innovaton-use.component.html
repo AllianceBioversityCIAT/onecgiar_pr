@@ -49,8 +49,18 @@
 <div class="fragment_section_divider"></div>
 
 <div class="fields_list" *ngIf="this.body.innovatonUse.measures?.length">
+    <app-pr-field-header label="Other quantitative measures of innovation use (e.g. # of hectares)"
+        [required]="false"></app-pr-field-header>
     <div class="fields" *ngFor="let measuresItem of this.body.innovatonUse.measures">
-        field
+        <div class="right_content">
+            <app-pr-input placeholder="Write some..." label="Unit of measure" type="text" [required]="false"
+                [(ngModel)]="this.measuresItem.unit_of_measure">
+            </app-pr-input>
+            <app-pr-input placeholder="Write some..." label="Quantity" type="text" [required]="false"
+                [(ngModel)]="this.measuresItem.quantity">
+            </app-pr-input>
+        </div>
+
     </div>
 </div>
 <app-add-button name="Add other" (clickEvent)="addOther()"></app-add-button>
