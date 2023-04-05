@@ -41,6 +41,12 @@
 
 <app-add-button name="Add expert" (clickEvent)="addExpert()"></app-add-button>
 
-<app-pr-field-header
-    label="Engaging a diverse group of experts leads to better and more realistic innovation package design and assessment. Please confirm that the above list of experts is diverse in gender, age, disciplinary and cultural background, organizational affiliation and typology, etc."></app-pr-field-header>
+
+<app-pr-radio-button
+    label="Engaging a diverse group of experts leads to better and more realistic innovation package design and assessment. Please confirm that the above list of experts is diverse in gender, age, disciplinary and cultural background, organizational affiliation and typology, etc."
+    [options]="this.engagingOptions" optionLabel="name" optionValue="id">
+</app-pr-radio-button>
+<br>
+<app-pr-textarea *ngIf="true" placeholder="Write some..." type="text"></app-pr-textarea>
+
 <div class="step_divider"></div>
