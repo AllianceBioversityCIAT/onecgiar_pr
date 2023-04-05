@@ -1,5 +1,8 @@
 import { Component, OnInit, Input } from '@angular/core';
 import { IpsrStep1Body } from '../../model/Ipsr-step-1-body.model';
+import { RolesService } from 'src/app/shared/services/global/roles.service';
+import { InstitutionsService } from 'src/app/shared/services/global/institutions.service';
+import { ApiService } from 'src/app/shared/services/api/api.service';
 
 @Component({
   selector: 'app-step-n1-experts',
@@ -8,5 +11,14 @@ import { IpsrStep1Body } from '../../model/Ipsr-step-1-body.model';
 })
 export class StepN1ExpertsComponent {
   @Input() body = new IpsrStep1Body();
-  constructor() {}
+  expertisesList = [];
+  constructor(public rolesSE: RolesService, public institutionsSE: InstitutionsService, private api: ApiService) {
+    this.GETAllInnovationPackagingExpertsExpertises();
+  }
+  GETAllInnovationPackagingExpertsExpertises() {
+    this.api.resultsSE.GETAllInnovationPackagingExpertsExpertises().subscribe(({ response }) => {
+      console.log(response);
+      this.expertisesList = response;
+    });
+  }
 }

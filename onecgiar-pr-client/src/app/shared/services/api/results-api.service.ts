@@ -530,4 +530,8 @@ export class ResultsApiService {
   GETInstitutionsTypeTree() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/institutions-type/tree`);
   }
+
+  GETAllInnovationPackagingExpertsExpertises() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-packaging-experts/expertises`);
+  }
 }

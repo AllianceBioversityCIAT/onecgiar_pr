@@ -1,2 +1,34 @@
-<p>step-n1-experts works!</p>
+<div class="ipsr-sub-title">Innovation Packaging Experts</div>
+<app-pr-field-header
+    label="Identify a diverse group of public/ private experts that need to be engaged in Innovation Package design and Scaling Readiness assessment"></app-pr-field-header>
+<app-alert-status *ngIf="!this.rolesSE.readOnly"
+    description="If you don't find the partner you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list">
+</app-alert-status>
+<app-pr-field-header
+    description="To design a realistic innovation package, the engagement of a diverse group of experts is recommended. Please consider the following scaling expertises when developing the invitee list for the innovation packaging and scaling readiness assessment workshop"></app-pr-field-header>
+<div class="step_divider"></div>
+
+<div class="component_fields two_elements_grid">
+    <div>
+        <div class="two_elements_grid">
+            <app-pr-input placeholder="Write some..." label="First name" type="text">
+            </app-pr-input>
+            <app-pr-input placeholder="Write some..." label="Last name" type="text">
+            </app-pr-input>
+        </div>
+        <app-pr-select [options]="this.institutionsSE.institutionsList" label="Organization" optionLabel="full_name"
+            optionValue="institutions_id" placeholder="Select organization">
+        </app-pr-select>
+    </div>
+    <div>
+        <app-pr-input placeholder="Write some..." label="Email" type="text">
+        </app-pr-input>
+        <app-pr-select
+            description="What expertises will this expert contribute?* - To design a realistic innovation package, the engagement of a diverse group of experts is recommended. Please consider the following scaling expertises when developing the invitee list for the innovation packaging and scaling readiness assessment workshop"
+            [options]="this.expertisesList" optionLabel="name" optionValue="expertises_id"
+            placeholder="Select expertises">
+        </app-pr-select>
+    </div>
+</div>
+
 <div class="step_divider"></div>
