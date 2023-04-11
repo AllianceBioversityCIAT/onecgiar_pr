@@ -45,7 +45,7 @@ export class InnovationPathwayController {
     throw new HttpException({ message, response }, status);
   }
 
-  @Patch('save/complementary-innovation/:resultId')
+  @Post('save/complementary-innovation/:resultId')
   async saveComplementaryInnovation(
     @Param('resultId') resultId: string,
     @Body() CreateComplementaryInnovationDto: CreateComplementaryInnovationDto,
