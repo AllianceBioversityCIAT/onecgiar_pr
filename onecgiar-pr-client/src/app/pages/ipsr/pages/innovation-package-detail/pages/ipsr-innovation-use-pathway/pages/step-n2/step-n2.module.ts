@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 
 import { StepN2RoutingModule } from './step-n2-routing.module';
 import { StepN2Component } from './step-n2.component';
-
+import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
+import { ButtonModule } from 'primeng/button';
 
 @NgModule({
   declarations: [
@@ -11,7 +12,9 @@ import { StepN2Component } from './step-n2.component';
   ],
   imports: [
     CommonModule,
-    StepN2RoutingModule
+    StepN2RoutingModule,
+    CustomFieldsModule,
+    ButtonModule
   ]
 })
 export class StepN2Module { }
