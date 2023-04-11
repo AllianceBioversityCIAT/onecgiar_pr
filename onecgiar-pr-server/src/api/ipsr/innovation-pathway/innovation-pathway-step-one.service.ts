@@ -753,9 +753,12 @@ export class InnovationPathwayStepOneService {
         let actorExists: ResultActor = null;
         if(el?.actor_type_id){
           actorExists = await this._resultActorRepository.findOne({ where: { actor_type_id: el.actor_type_id, result_id: result.id } });
-        }else {
+        }
+
+        if(!actorExists && el?.result_actors_id){
           actorExists = await this._resultActorRepository.findOne({ where: { result_actors_id: el.result_actors_id, result_id: result.id } });
         }
+
         if (actorExists) {
           await this._resultActorRepository.update(
             actorExists.result_actors_id,
