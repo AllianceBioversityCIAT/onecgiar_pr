@@ -723,10 +723,8 @@ export class InnovationPathwayStepOneService {
           })
         }
 
-        if (ins?.deliveries?.length) {
-          const { deliveries } = ins;
-          await this.saveDeliveries(instExist ? instExist : rbi, deliveries, user.id, version);
-        }
+        const delData = ins?.deliveries?.length? ins?.deliveries : [];
+        await this.saveDeliveries(instExist ? instExist : rbi, delData, user.id, version);
       }
     } else {
       await this._resultByIntitutionsRepository.updateGenericIstitutions(result.id, [], 5, user.id);
