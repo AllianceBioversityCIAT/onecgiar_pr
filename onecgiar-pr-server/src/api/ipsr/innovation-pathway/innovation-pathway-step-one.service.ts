@@ -106,7 +106,7 @@ export class InnovationPathwayStepOneService {
       const innovatonUse = {
         actors: await (await this._resultActorRepository.find({ where: { result_id: result.id, is_active: true } })).map(el => ({ ...el, men_non_youth: el.men - el.men_youth, women_non_youth: el.women - el.women_youth })),
         measures: await this._resultIpMeasureRepository.find({ where: { result_ip_id: result.id, is_active: true } }),
-        organization: (await this._resultByIntitutionsTypeRepository.find({ where: { results_id: result.id, institution_roles_id: 5, is_active: true }, relations: { obj_institution_types: { children: true } } })).map(async el => ({...el, parent_institution_type_id:  await (await this._clarisaInstitutionsTypeRepository.findOne({where: {id_parent: el.id}})).code}))
+        organization: await (await this._resultByIntitutionsTypeRepository.find({ where: { results_id: result.id, institution_roles_id: 5, is_active: true }, relations: { obj_institution_types: { children: true} } })).map(el => ({...el, parent_institution_type_id: el.obj_institution_types.id_parent}))
       }
       const result_ip = this._resultInnovationPackageRepository.findOne({
         where: {
