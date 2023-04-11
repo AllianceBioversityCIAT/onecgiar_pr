@@ -289,7 +289,7 @@ export class IpsrRepository extends Repository<Ipsr>{
         	ci.id = rbi.inititiative_id
         where
         	rbip.result_innovation_package_id = ?
-            and rvip.ipsr_role_id = 2
+            and rbip.ipsr_role_id = 2
         	and rbip.is_active = true;
         `;
 
