@@ -34,7 +34,7 @@ import { ResultIpImpactAreaRepository } from './repository/result-ip-impact-area
 import { ResultIpImpactArea } from './entities/result-ip-impact-area.entity';
 import { ResultInnovationPackage } from '../result-innovation-package/entities/result-innovation-package.entity';
 import { ResultByInstitutionsByDeliveriesType } from 'src/api/results/result-by-institutions-by-deliveries-type/entities/result-by-institutions-by-deliveries-type.entity';
-import { In } from 'typeorm';
+import { In, IsNull } from 'typeorm';
 
 @Injectable()
 export class InnovationPathwayStepOneService {
@@ -750,7 +750,12 @@ export class InnovationPathwayStepOneService {
     if (crtr?.actors?.length) {
       const { actors } = crtr;
       actors.map(async (el: ResultActor) => {
-        const actorExists = await this._resultActorRepository.findOne({ where: { actor_type_id: el.actor_type_id, result_id: result.id } });
+        let actorExists: ResultActor = null;
+        if(el?.actor_type_id){
+          actorExists = await this._resultActorRepository.findOne({ where: { actor_type_id: el.actor_type_id, result_id: result.id } });
+        }else {
+          actorExists = await this._resultActorRepository.findOne({ where: { actor_type_id: IsNull(), result_id: result.id } });
+        }
         if (actorExists) {
           await this._resultActorRepository.update(
             actorExists.result_actors_id,
