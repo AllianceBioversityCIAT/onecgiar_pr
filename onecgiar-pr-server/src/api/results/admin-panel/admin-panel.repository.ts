@@ -80,7 +80,8 @@ export class AdminPanelRepository {
     v.partners +
     v.geographic_location +
     v.links_to_results +
-    v.evidence)* 100) / if(v.section_seven is null, 6, 7)) as completeness
+    v.evidence)* 100) / if(v.section_seven is null, 6, 7)) as completeness,
+    if((SELECT if(s.id is null, 0, 1)  from submission s WHERE s.results_id = r.id and is_active > 0 LIMIT 1) > 0, 1, 0) as have_a_history
   FROM
   result r
   left join validation v on

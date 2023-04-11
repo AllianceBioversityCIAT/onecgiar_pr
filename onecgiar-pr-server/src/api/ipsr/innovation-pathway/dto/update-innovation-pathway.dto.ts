@@ -14,11 +14,13 @@ export class UpdateInnovationPathwayDto {
     public innovatonUse: innovatonUseInterface;
     public regions: regionsInterface[];
     public countries: countriesInterface[];
-    public institutions: institutionsInterface[]
-    public sdgTargets: sdgTargetsInterface[]
-    public eoiOutcomes: eoiOutcomesInterface[]
-    public actionAreaOutcomes: actionAreaOutcomesInterface[]
-    public impactAreas: impactAreasInterface[]
+    public institutions: institutionsInterface[];
+    public sdgTargets: sdgTargetsInterface[];
+    public eoiOutcomes: eoiOutcomesInterface[];
+    public actionAreaOutcomes: actionAreaOutcomesInterface[];
+    public impactAreas: impactAreasInterface[];
+    public experts_is_diverse!: boolean;
+    public is_not_diverse_justification!: string; 
 }
 export interface regionsInterface {
     id: number;
@@ -38,11 +40,11 @@ export interface impactAreasInterface {
     impact_area_indicator_id: number;
 }
 export interface sdgTargetsInterface {
-    clarisa_sdg_usnd_code: number;
-    clarisa_sdg_target_id: number;
+    usnd_code: number;
+    id: number;
 }
 
-interface innovatonUseInterface {
+export interface innovatonUseInterface {
     actors: ResultActor[],
     organization: ResultsByInstitutionType[],
     measures: ResultIpMeasure[];

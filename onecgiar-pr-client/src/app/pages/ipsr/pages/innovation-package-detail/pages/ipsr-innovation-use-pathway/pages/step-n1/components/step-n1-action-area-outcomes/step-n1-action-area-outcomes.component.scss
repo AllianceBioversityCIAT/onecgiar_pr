@@ -1,0 +1,17 @@
+.aao-list {
+    .aao-item {
+        .title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+
+
+            .aao_image {
+                width: 30px;
+                height: 30px;
+            }
+        }
+
+    }
+}

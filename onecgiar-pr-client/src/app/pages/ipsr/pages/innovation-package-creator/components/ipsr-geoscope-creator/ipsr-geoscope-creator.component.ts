@@ -8,12 +8,17 @@ import { RegionsCountriesService } from '../../../../../../shared/services/globa
 })
 export class IpsrGeoscopeCreatorComponent {
   @Input() body: any;
-  geoscopeExample = [
+  geoscopeOptions = [
     { full_name: 'Global', id: 1 },
     { full_name: 'Regional', id: 2 },
-    { full_name: 'Country', id: 3 },
-    { full_name: 'Sub-national', id: 4 }
+    { full_name: 'Country', id: 4 },
+    { full_name: 'Sub-national', id: 5 }
   ];
   constructor(public regionsCountriesSE: RegionsCountriesService) {}
+
+  get selectRegionsDescription() {
+    return `The list of regions below follows the UN <a class="open_route" href="https://unstats.un.org/unsd/methodology/m49/" target='_blank'>(M.49)</a> standard`;
+  }
+
   onSaveSection() {}
 }

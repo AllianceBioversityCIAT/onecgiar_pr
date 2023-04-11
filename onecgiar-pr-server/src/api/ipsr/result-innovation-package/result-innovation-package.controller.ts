@@ -31,4 +31,15 @@ export class ResultInnovationPackageController {
 
     throw new HttpException({ message, response }, status);
   }
+
+  @Delete(':resultId')
+  async delete(
+    @Param('resultId') resultId: number,
+    @UserToken() user: TokenDto
+  ) {
+    const { message, response, status } =
+      await this.resultInnovationPackageService.delete(resultId, user);
+
+    throw new HttpException({ message, response }, status);
+  }
 }

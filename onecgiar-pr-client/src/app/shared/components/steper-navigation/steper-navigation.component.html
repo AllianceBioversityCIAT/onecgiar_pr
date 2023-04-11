@@ -1,0 +1,8 @@
+<div class="local_container">
+    <div class="line">
+        <!-- <div class="line_value"></div> -->
+        <div class="circle" [routerLink]="option?.path" routerLinkActive="active"
+            *ngFor="let option of options ; let i=index">{{i+1}} <div class="name">{{option?.routeName}}</div>
+        </div>
+    </div>
+</div>

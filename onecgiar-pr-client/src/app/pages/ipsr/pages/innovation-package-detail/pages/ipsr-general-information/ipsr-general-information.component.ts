@@ -20,11 +20,8 @@ export class IpsrGeneralInformationComponent {
   getSectionInformation() {
     this.ipsrDataControlSE.resultInnovationId;
     this.api.resultsSE.GETInnovationByResultId(this.ipsrDataControlSE.resultInnovationId).subscribe(({ response }) => {
-      console.log(response);
       this.ipsrGeneralInformationBody = response;
-      console.log(this.ipsrGeneralInformationBody.is_krs);
       this.ipsrGeneralInformationBody.is_krs = Boolean(Number(this.ipsrGeneralInformationBody.is_krs));
-      console.log(this.ipsrGeneralInformationBody);
     });
   }
 
@@ -32,9 +29,6 @@ export class IpsrGeneralInformationComponent {
     if (this.ipsrGeneralInformationBody.is_krs === false) this.ipsrGeneralInformationBody.is_krs = null;
   }
   onSaveSection() {
-    console.log('onSaveSection');
-    console.log(this.ipsrGeneralInformationBody);
-    console.log(this.ipsrDataControlSE.resultInnovationId);
     this.api.resultsSE.PATCHIpsrGeneralInfo(this.ipsrGeneralInformationBody, this.ipsrDataControlSE.resultInnovationId).subscribe(
       resp => {
         console.log(resp);
@@ -45,5 +39,27 @@ export class IpsrGeneralInformationComponent {
         this.api.alertsFe.show({ id: 'save-button', title: 'There was an error saving the section', description: '', status: 'error', closeIn: 500 });
       }
     );
+  }
+  climateInformation() {
+    return `<strong>Climate change tag guidance</strong>
+    <br>There are three main climate indicators at systems level: 
+    <br>- Turn agriculture and forest systems into a net sink for carbon by 2050 (climate mitigation target)
+    <br>- Equip 500 million small-scale producers to be more resilient by 2030 (climate adaptation target)
+    <br>- Support countries in implementing NAPs and NDCs, and increased ambition in climate actions by 2030 (climate policy target)
+    <br>Climate scores should be determined based on the following:
+    <ul>
+    <strong>Climate scores should be determined based on the following:</strong>
+    <li><strong>0 : Not targeted</strong> The activity does not target the climate mitigation, adaptation and climate policy objectives of CGIAR as put forward in its strategy.</li>
+    <li><strong>1 : Significant</strong> The activity contributes in a significant way to any of the three CGIAR climate-related strategy objectives – namely, climate mitigation, climate adaptation and climate policy, even though it is not the principal focus of the activity.</li>
+    <li><strong>2 : Principal</strong> The activity is principally about meeting any of the three CGIAR climate-related strategy objectives – namely, climate mitigation, climate adaptation and climate policy, and would not have been undertaken without this objective.</li>
+    </ul>`;
+  }
+
+  genderInformation() {
+    return `<strong>Gender tag guidance</strong> <ul>
+    <li><strong>0 : Not targeted</strong> The activity has been screened against the marker but has not been found to target gender equality.</li>
+    <li><strong>1 : Significant</strong> Significant Gender equality is an important and deliberate objective, but not the principal reason for undertaking the activity.</li>
+    <li><strong>2 : Principal</strong> Gender equality is the main objective of the activity and is fundamental in its design and expected results. The activity would not have been undertaken without this gender equality objective.</li>
+    </ul>`;
   }
 }

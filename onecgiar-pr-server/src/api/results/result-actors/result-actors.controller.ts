@@ -1,9 +1,9 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException } from '@nestjs/common';
 import { ResultActorsService } from './result-actors.service';
 import { CreateResultActorDto } from './dto/create-result-actor.dto';
 import { UpdateResultActorDto } from './dto/update-result-actor.dto';
 
-@Controller('result-actors')
+@Controller()
 export class ResultActorsController {
   constructor(private readonly resultActorsService: ResultActorsService) {}
 
@@ -12,9 +12,11 @@ export class ResultActorsController {
     return this.resultActorsService.create(createResultActorDto);
   }
 
-  @Get()
-  findAll() {
-    return this.resultActorsService.findAll();
+  @Get('type/all')
+  async findAll() {
+    const { message, response, status } =
+      await this.resultActorsService.findAll();
+    throw new HttpException({ message, response }, status);
   }
 
   @Get(':id')

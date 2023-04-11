@@ -16,6 +16,15 @@ export class InnovationPathwayController {
     private readonly _innovationPathwayStepTwoService: InnovationPathwayStepTwoService,
   ) { }
 
+  @Get('get-step-one/:resultId')
+  async getStepOne(
+    @Param('resultId') resultId: string,
+  ) {
+    const {message, response, status} = await this._innovationPathwayStepOneServiceService.getStepOne(+resultId);
+
+    throw new HttpException({ message, response }, status);
+  }
+
   @Patch('save/step-one/:resultId')
   async updateStepOne(
     @Param('resultId') resultId: string,
