@@ -708,7 +708,7 @@ export class InnovationPathwayStepOneService {
   private async savePartners(result: Result, user: TokenDto, version: Version, crtr: UpdateInnovationPathwayDto) {
     if (crtr?.institutions?.length) {
       const { institutions: inst } = crtr;
-      await this._resultByIntitutionsRepository.updateIstitutions(result.id, inst, false, user.id);
+      await this._resultByIntitutionsRepository.updateGenericIstitutions(result.id, inst, 5, user.id);
       for (const ins of inst) {
         const instExist = await this._resultByIntitutionsRepository.getGenericResultByInstitutionExists(result.id, ins.institutions_id, 5);
         let rbi: ResultsByInstitution = null;
@@ -729,7 +729,7 @@ export class InnovationPathwayStepOneService {
         }
       }
     } else {
-      await this._resultByIntitutionsRepository.updateIstitutions(result.id, [], false, user.id);
+      await this._resultByIntitutionsRepository.updateGenericIstitutions(result.id, [], 5, user.id);
     }
   }
 
@@ -803,9 +803,7 @@ export class InnovationPathwayStepOneService {
         if(!ite && el?.id){
           ite = await this._resultByIntitutionsTypeRepository.getNewResultByIdExists(result.id, el.id, 5);
         }
-        console.log(el)
         if (ite) {
-          console.log(ite)
           await this._resultByIntitutionsTypeRepository.update(
             ite.id,
             {
