@@ -69,6 +69,12 @@ export class InnovationPathwayController {
     throw new HttpException({ message, response }, status);
   }
 
+  @Get('get/complementary-innovations-functions')
+  async getComplementaryInnovationFunctions() {
+    const { message, response, status } = await this._innovationPathwayStepTwoService.findComplementaryInnovationFuctions();
+    throw new HttpException({ message, response }, status);
+  }
+
   // @Get()
   // findAll() {
   //   return this.innovationPathwayService.findAll();

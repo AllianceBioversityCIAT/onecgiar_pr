@@ -26,6 +26,7 @@ import { ResultsComplementaryInnovationsFunctionRepository } from '../results-co
 import { EvidencesRepository } from '../../../api/results/evidences/evidences.repository';
 import { YearRepository } from '../../../api/results/years/year.repository';
 import { ResultByInitiativesRepository } from '../../../api/results/results_by_inititiatives/resultByInitiatives.repository';
+import { ComplementaryInnovationFunctionsRepository } from '../results-complementary-innovations-functions/repositories/complementary-innovation-functions.repository';
 
 @Module({
   controllers: [InnovationPathwayController],
@@ -56,6 +57,7 @@ import { ResultByInitiativesRepository } from '../../../api/results/results_by_i
     EvidencesRepository,
     YearRepository,
     ResultByInitiativesRepository,
+    ComplementaryInnovationFunctionsRepository
   ]
 })
 export class InnovationPathwayModule { }

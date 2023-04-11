@@ -34,6 +34,7 @@ import { ResultByInitiativesRepository } from 'src/api/results/results_by_initit
 import { ResultInnovationPackage } from '../result-innovation-package/entities/result-innovation-package.entity';
 import { ResultsByInititiative } from 'src/api/results/results_by_inititiatives/entities/results_by_inititiative.entity';
 import { ResultsComplementaryInnovation } from '../results-complementary-innovations/entities/results-complementary-innovation.entity';
+import { ComplementaryInnovationFunctionsRepository } from '../results-complementary-innovations-functions/repositories/complementary-innovation-functions.repository';
 
 @Injectable()
 export class InnovationPathwayStepTwoService {
@@ -61,6 +62,7 @@ export class InnovationPathwayStepTwoService {
     protected readonly _evidence: EvidencesRepository,
     protected readonly _yearRepository: YearRepository,
     protected readonly _resultByInitiativeRepository: ResultByInitiativesRepository,
+    protected readonly _complementarynnovationFucntions: ComplementaryInnovationFunctionsRepository
   ) { }
 
   async findInnovationsAndComplementary() {
@@ -170,6 +172,20 @@ export class InnovationPathwayStepTwoService {
       return {
         response: saveData,
         message: 'Data was saved correctly',
+        status: HttpStatus.OK,
+      }
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async findComplementaryInnovationFuctions() {
+    try {
+      const complementaryFunctions = await this._complementarynnovationFucntions.find();
+
+      return {
+        response: complementaryFunctions,
+        message: 'Successful response',
         status: HttpStatus.OK,
       }
     } catch (error) {
