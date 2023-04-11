@@ -20,6 +20,7 @@ import { ResultActorRepository } from '../../results/result-actors/repositories/
 import { ResultByIntitutionsTypeRepository } from '../../results/results_by_institution_types/result_by_intitutions_type.repository';
 import { ResultIpMeasureRepository } from '../result-ip-measures/result-ip-measures.repository';
 import { ResultIpImpactAreaRepository } from './repository/result-ip-impact-area-targets.repository';
+import { ClarisaInstitutionsTypeRepository } from '../../../clarisa/clarisa-institutions-type/ClariasaInstitutionsType.repository';
 
 @Module({
   controllers: [InnovationPathwayController],
@@ -43,7 +44,8 @@ import { ResultIpImpactAreaRepository } from './repository/result-ip-impact-area
     ResultActorRepository,
     ResultByIntitutionsTypeRepository,
     ResultIpMeasureRepository,
-    ResultIpImpactAreaRepository
+    ResultIpImpactAreaRepository,
+    ClarisaInstitutionsTypeRepository
   ]
 })
 export class InnovationPathwayModule { }

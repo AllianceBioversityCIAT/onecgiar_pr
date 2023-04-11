@@ -35,6 +35,8 @@ import { ResultIpImpactArea } from './entities/result-ip-impact-area.entity';
 import { ResultInnovationPackage } from '../result-innovation-package/entities/result-innovation-package.entity';
 import { ResultByInstitutionsByDeliveriesType } from 'src/api/results/result-by-institutions-by-deliveries-type/entities/result-by-institutions-by-deliveries-type.entity';
 import { In, IsNull } from 'typeorm';
+import { ResultsByInstitutionType } from '../../results/results_by_institution_types/entities/results_by_institution_type.entity';
+import { ClarisaInstitutionsTypeRepository } from '../../../clarisa/clarisa-institutions-type/ClariasaInstitutionsType.repository';
 
 @Injectable()
 export class InnovationPathwayStepOneService {
@@ -56,7 +58,8 @@ export class InnovationPathwayStepOneService {
     protected readonly _resultActorRepository: ResultActorRepository,
     protected readonly _resultByIntitutionsTypeRepository: ResultByIntitutionsTypeRepository,
     protected readonly _resultIpMeasureRepository: ResultIpMeasureRepository,
-    protected readonly _resultIpImpactAreasRepository: ResultIpImpactAreaRepository
+    protected readonly _resultIpImpactAreasRepository: ResultIpImpactAreaRepository,
+    protected readonly _clarisaInstitutionsTypeRepository: ClarisaInstitutionsTypeRepository
   ) { }
 
   async getStepOne(resultId: number) {
@@ -100,10 +103,10 @@ export class InnovationPathwayStepOneService {
           is_active: true
         }
       });
-      const innovatonUse: innovatonUseInterface = {
+      const innovatonUse = {
         actors: await (await this._resultActorRepository.find({ where: { result_id: result.id, is_active: true } })).map(el => ({ ...el, men_non_youth: el.men - el.men_youth, women_non_youth: el.women - el.women_youth })),
         measures: await this._resultIpMeasureRepository.find({ where: { result_ip_id: result.id, is_active: true } }),
-        organization: await this._resultByIntitutionsTypeRepository.find({ where: { results_id: result.id, institution_roles_id: 5, is_active: true }, relations: { obj_institution_types: { children: true } } })
+        organization: (await this._resultByIntitutionsTypeRepository.find({ where: { results_id: result.id, institution_roles_id: 5, is_active: true }, relations: { obj_institution_types: { children: true } } })).map(async el => ({...el, parent_institution_type_id:  await (await this._clarisaInstitutionsTypeRepository.findOne({where: {id_parent: el.id}})).code}))
       }
       const result_ip = this._resultInnovationPackageRepository.findOne({
         where: {
@@ -792,7 +795,15 @@ export class InnovationPathwayStepOneService {
     if (crtr?.organization?.length) {
       const { organization } = crtr;
       organization.map(async (el) => {
-        const ite = await this._resultByIntitutionsTypeRepository.getNewResultByInstitutionTypeExists(result.id, el.institution_types_id, 5);
+        let ite:ResultsByInstitutionType = null;
+        if(el?.institution_types_id){
+          ite = await this._resultByIntitutionsTypeRepository.getNewResultByInstitutionTypeExists(result.id, el.institution_types_id, 5);
+        }
+
+        if(!ite && el?.id){
+          ite = await this._resultByIntitutionsTypeRepository.getNewResultByIdExists(result.id, el.id, 5);
+        }
+
         if (ite) {
           await this._resultByIntitutionsTypeRepository.update(
             ite.id,
