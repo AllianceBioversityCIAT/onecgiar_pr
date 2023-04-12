@@ -88,7 +88,7 @@ export class InnovationPathwayStepOneService {
       const coreResult = await this._innovationByResultRepository.getInnovationCoreStepOne(resultId);
       const regions: ResultRegion[] = await this._resultRegionRepository.getResultRegionByResultId(resultId);
       const countries: ResultCountry[] = await this._resultCountryRepository.getResultCountriesByResultId(resultId);
-      const specifyAspiredOutcomesAndImpact: ResultIpEoiOutcome[] = await this._resultIpEoiOutcomes.findBy({ result_by_innovation_package_id: resultByInnovationPackageId.result_by_innovation_package_id, is_active: true });
+      const eoiOutcomes: ResultIpEoiOutcome[] = await this._resultIpEoiOutcomes.findBy({ result_by_innovation_package_id: resultByInnovationPackageId.result_by_innovation_package_id, is_active: true });
       const actionAreaOutcomes: ResultIpAAOutcome[] = await this._resultIpAAOutcomes.findBy({ result_by_innovation_package_id: resultByInnovationPackageId.result_by_innovation_package_id, is_active: true });
       const impactAreas: ResultIpImpactArea[] = await this._resultIpImpactAreasRepository.findBy({ result_by_innovation_package_id: resultByInnovationPackageId.result_by_innovation_package_id, is_active: true });
       const sdgTargets: ResultIpSdgTargets[] = await this._resultIpSdgsTargetsRepository.findBy({ result_by_innovation_package_id: resultByInnovationPackageId.result_by_innovation_package_id, is_active: true });
@@ -128,7 +128,7 @@ export class InnovationPathwayStepOneService {
           result,
           regions,
           countries,
-          specifyAspiredOutcomesAndImpact,
+          eoiOutcomes,
           actionAreaOutcomes,
           impactAreas,
           sdgTargets,
