@@ -11,12 +11,7 @@ export class IpsrStep1Body {
   innovatonUse: InnovatonUse = new InnovatonUse();
   institutions: Institutions[] = [];
   experts: Expert[] = [];
-  consensus_initiative_work_package: number = null;
   result_ip = new Result_ip();
-  relevant_country: number = null;
-  regional_leadership: number = null;
-  regional_integrated: number = null;
-  active_backstopping: number = null;
 }
 
 export class Expert {
@@ -29,8 +24,15 @@ export class Expert {
 }
 
 class Result_ip {
+  //experts
   is_not_diverse_justification: string = null;
   experts_is_diverse: boolean = null;
+  // Consensus and Consultation
+  consensus_initiative_work_package_id: number = null;
+  relevant_country_id: number = null;
+  regional_leadership_id: number = null;
+  regional_integrated_id: number = null;
+  active_backstopping_id: number = null;
 }
 
 interface Institutions {
@@ -81,11 +83,13 @@ interface SdgTarget {
 
 interface ImpactArea {
   impact_area_indicator_id: number;
+  target: string;
 }
 
 interface ActionAreaOutcome {
   action_area_outcome_id: number;
   outcomeStatement: string;
+  is_active: boolean;
 }
 
 interface EoiOutcome {

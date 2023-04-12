@@ -38,5 +38,8 @@ export class StepN1ActionAreaOutcomesComponent {
       }
     );
   }
-  removeOption(option) {}
+  removeOption(option) {
+    const index = this.body.actionAreaOutcomes.findIndex(valueItem => valueItem.action_area_outcome_id == option.action_area_outcome_id);
+    this.body.actionAreaOutcomes.splice(index, 1);
+  }
 }

@@ -18,7 +18,6 @@ export class StepN1ImpactAreasComponent {
     { id: 4, imageRoute: '4', selected: false, color: '#377431' },
     { id: 5, imageRoute: '5', selected: false, color: '#8ebf3e' }
   ];
-  impactAreasSelected = [];
   constructor(private api: ApiService) {}
   ngOnInit(): void {
     this.GET_AllClarisaImpactAreaIndicators();
@@ -36,16 +35,8 @@ export class StepN1ImpactAreasComponent {
   }
 
   removeOption(option) {
-    // if (this.logicalDeletion && option.new) {
-    //   const optionFinded = this.value.findIndex(valueItem => valueItem[this.optionValue] == option[this.optionValue]);
-    //   this.value.splice(optionFinded, 1);
-    // } else {
-    //   option.is_active = false;
-    // }
-    // console.log(option);
-    // // let itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == option[this.optionValue]);
-    // // if (itemFinded) itemFinded.selected = false;
-    // this.removeOptionEvent.emit({ remove: option });
+    const index = this.body.impactAreas.findIndex((valueItem: any) => valueItem.targetId == option.targetId);
+    this.body.impactAreas.splice(index, 1);
   }
 
   selectImpactArea(impactAreaItem) {

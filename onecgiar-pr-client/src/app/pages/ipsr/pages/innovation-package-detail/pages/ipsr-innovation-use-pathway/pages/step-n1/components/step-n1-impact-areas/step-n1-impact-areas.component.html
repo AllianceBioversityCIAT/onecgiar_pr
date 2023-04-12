@@ -16,43 +16,42 @@
 <div *ngIf="this.allImpactAreaIndicators?.length">
     <div class="dropdown-50p" *ngIf="this.currentImpactAreaID == 1">
         <app-pr-multi-select [options]="this.filterImpactAreaIndicatorsByImpactAreaID(1)" optionLabel="target"
-            optionValue="targetId" selectedOptionLabel="indicator_statement"
-            placeholder="Select Nutrition, Health and Food Security targets(s)" [(ngModel)]="impactAreasSelected">
+            optionValue="targetId" selectedOptionLabel="indicator_statement" placeholder="Select Impact Area target(s)"
+            [(ngModel)]="this.body.impactAreas">
         </app-pr-multi-select>
     </div>
     <div class="dropdown-50p" *ngIf="this.currentImpactAreaID == 2">
         <app-pr-multi-select [options]="this.filterImpactAreaIndicatorsByImpactAreaID(2)" optionLabel="target"
-            optionValue="targetId" selectedOptionLabel="indicator_statement"
-            placeholder="Select Poverty Reduction, Livelihoods and Jobs targets(s)" [(ngModel)]="impactAreasSelected">
+            optionValue="targetId" selectedOptionLabel="indicator_statement" placeholder="Select Impact Area target(s)"
+            [(ngModel)]="this.body.impactAreas">
         </app-pr-multi-select>
     </div>
     <div class="dropdown-50p" *ngIf="this.currentImpactAreaID == 3">
         <app-pr-multi-select [options]="this.filterImpactAreaIndicatorsByImpactAreaID(3)" optionLabel="target"
-            optionValue="targetId" selectedOptionLabel="indicator_statement"
-            placeholder="Select Gender Equality, Youth and Social Inclusion targets(s)"
-            [(ngModel)]="impactAreasSelected">
+            optionValue="targetId" selectedOptionLabel="indicator_statement" placeholder="Select Impact Area target(s)"
+            [(ngModel)]="this.body.impactAreas">
         </app-pr-multi-select>
     </div>
     <div class="dropdown-50p" *ngIf="this.currentImpactAreaID == 4">
         <app-pr-multi-select [options]="this.filterImpactAreaIndicatorsByImpactAreaID(4)" optionLabel="target"
-            optionValue="targetId" selectedOptionLabel="indicator_statement"
-            placeholder="Select Climate Adaptation and Mitigation targets(s)" [(ngModel)]="impactAreasSelected">
+            optionValue="targetId" selectedOptionLabel="indicator_statement" placeholder="Select Impact Area target(s)"
+            [(ngModel)]="this.body.impactAreas">
         </app-pr-multi-select>
     </div>
     <div class="dropdown-50p" *ngIf="this.currentImpactAreaID == 5">
         <app-pr-multi-select [options]="this.filterImpactAreaIndicatorsByImpactAreaID(5)" optionLabel="target"
-            optionValue="targetId" selectedOptionLabel="indicator_statement"
-            placeholder="Select Environmental Health and Biodiversity targets(s)" [(ngModel)]="impactAreasSelected">
+            optionValue="targetId" selectedOptionLabel="indicator_statement" placeholder="Select Impact Area target(s)"
+            [(ngModel)]="this.body.impactAreas">
         </app-pr-multi-select>
     </div>
 </div>
 
-<div class="selected_container custom_scroll dropdown-50p" *ngIf="this.currentImpactAreaID">
+<div class="selected_container custom_scroll dropdown-50p">
     <br>
     <app-pr-field-header description=" All Impact Area target(s) selected:">
     </app-pr-field-header>
     <div class="chips_container">
-        <div class="pr_chip_selected" *ngFor="let option of this.impactAreasSelected; let i=index"
+        <div class="pr_chip_selected" *ngFor="let option of this.body.impactAreas; let i=index"
             [ngClass]="{'is_active_false': false}">
             <div class="name" [innerHtml]="option.target"></div><i class="material-icons-round"
                 (click)="removeOption(option)">remove_circle
