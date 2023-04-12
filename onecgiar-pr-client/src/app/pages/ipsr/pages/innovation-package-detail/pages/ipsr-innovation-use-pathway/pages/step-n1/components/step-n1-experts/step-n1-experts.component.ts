@@ -1,5 +1,5 @@
 import { Component, OnInit, Input } from '@angular/core';
-import { IpsrStep1Body } from '../../model/Ipsr-step-1-body.model';
+import { Expert, IpsrStep1Body } from '../../model/Ipsr-step-1-body.model';
 import { RolesService } from 'src/app/shared/services/global/roles.service';
 import { InstitutionsService } from 'src/app/shared/services/global/institutions.service';
 import { ApiService } from 'src/app/shared/services/api/api.service';
@@ -11,7 +11,6 @@ import { ApiService } from 'src/app/shared/services/api/api.service';
 })
 export class StepN1ExpertsComponent {
   @Input() body = new IpsrStep1Body();
-  expertExampleList = [];
   expertisesList = [];
   engagingOptions = [
     { id: 1, name: 'Yes, the group of experts is diverse' },
@@ -27,6 +26,6 @@ export class StepN1ExpertsComponent {
     });
   }
   addExpert() {
-    this.expertExampleList.push({});
+    this.body.experts.push(new Expert());
   }
 }

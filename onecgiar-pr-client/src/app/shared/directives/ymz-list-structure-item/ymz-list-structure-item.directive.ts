@@ -25,6 +25,7 @@ export class YmzListStructureItemDirective {
     div.appendChild(icon);
     const line = document.createElement('div');
     line.classList.add('line');
-    this.el.nativeElement.appendChild(line, div);
+    this.el.nativeElement.appendChild(line);
+    this.el.nativeElement.appendChild(div);
   }
 }

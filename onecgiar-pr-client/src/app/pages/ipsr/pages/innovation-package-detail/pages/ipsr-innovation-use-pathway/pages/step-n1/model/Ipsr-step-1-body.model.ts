@@ -20,7 +20,7 @@ export class IpsrStep1Body {
   active_backstopping: number = null;
 }
 
-interface Expert {
+export class Expert {
   first_name: string;
   last_name: string;
   email: string;
@@ -81,6 +81,7 @@ interface ImpactArea {
 
 interface ActionAreaOutcome {
   action_area_outcome_id: number;
+  outcomeStatement: string;
 }
 
 interface EoiOutcome {

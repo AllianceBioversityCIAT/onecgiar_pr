@@ -10,7 +10,7 @@ import { ApiService } from '../../../../../../../../../../shared/services/api/ap
 })
 export class StepN1ActionAreaOutcomesComponent {
   @Input() body = new IpsrStep1Body();
-  actionAreasOutcomesList = [];
+  actionAreasOutcomesList: any = null;
   constructor(private ipsrDataControlSE: IpsrDataControlService, private api: ApiService) {}
   ngOnInit(): void {
     //Called after the constructor, initializing input properties, and the first call to ngOnChanges.
@@ -20,7 +20,7 @@ export class StepN1ActionAreaOutcomesComponent {
     this.api.resultsSE.GETAllClarisaActionAreasOutcomes().subscribe(
       ({ response }) => {
         this.actionAreasOutcomesList = response;
-        // console.log(response);
+        console.log(response);
       },
       err => {
         console.log(err);
@@ -38,4 +38,5 @@ export class StepN1ActionAreaOutcomesComponent {
       }
     );
   }
+  removeOption(option) {}
 }

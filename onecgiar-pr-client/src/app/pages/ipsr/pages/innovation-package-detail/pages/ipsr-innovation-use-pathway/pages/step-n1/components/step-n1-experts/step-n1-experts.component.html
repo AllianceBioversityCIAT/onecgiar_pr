@@ -10,26 +10,30 @@
 
 <div class="experts">
 
-    <div *ngFor="let expert of expertExampleList">
+    <div *ngFor="let expert of this.body.experts" appYmzListStructureItem (deleteEvent)="expert.is_active = false"
+        [ngClass]="{'hideElement': expert.is_active == false}">
         <div class="component_fields two_elements_grid">
             <div>
                 <div class="two_elements_grid">
-                    <app-pr-input placeholder="Write some..." label="First name" type="text">
+                    <app-pr-input placeholder="Write some..." label="First name" type="text"
+                        [(ngModel)]="this.expert.first_name">
                     </app-pr-input>
-                    <app-pr-input placeholder="Write some..." label="Last name" type="text">
+                    <app-pr-input placeholder="Write some..." label="Last name" type="text"
+                        [(ngModel)]="this.expert.last_name">
                     </app-pr-input>
                 </div>
                 <app-pr-select [options]="this.institutionsSE.institutionsList" label="Organization"
-                    optionLabel="full_name" optionValue="institutions_id" placeholder="Select organization">
+                    optionLabel="full_name" optionValue="institutions_id" placeholder="Select organization"
+                    [(ngModel)]="this.expert.organization_id">
                 </app-pr-select>
             </div>
             <div>
-                <app-pr-input placeholder="Write some..." label="Email" type="text">
+                <app-pr-input placeholder="Write some..." label="Email" type="text" [(ngModel)]="this.expert.email">
                 </app-pr-input>
                 <app-pr-select
                     description="What expertises will this expert contribute?* - To design a realistic innovation package, the engagement of a diverse group of experts is recommended. Please consider the following scaling expertises when developing the invitee list for the innovation packaging and scaling readiness assessment workshop"
                     [options]="this.expertisesList" optionLabel="name" optionValue="expertises_id"
-                    placeholder="Select expertises">
+                    placeholder="Select expertises" [(ngModel)]="this.expert.expertises_id">
                 </app-pr-select>
             </div>
         </div>
