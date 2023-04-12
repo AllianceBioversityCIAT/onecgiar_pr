@@ -11,9 +11,8 @@ export class IpsrStep1Body {
   innovatonUse: InnovatonUse = new InnovatonUse();
   institutions: Institutions[] = [];
   experts: Expert[] = [];
-  experts_is_diverse: number = null;
-  is_not_diverse_justification: string = null;
   consensus_initiative_work_package: number = null;
+  result_ip = new Result_ip();
   relevant_country: number = null;
   regional_leadership: number = null;
   regional_integrated: number = null;
@@ -27,6 +26,11 @@ export class Expert {
   organization_id: number;
   expertises_id: number;
   is_active: boolean;
+}
+
+class Result_ip {
+  is_not_diverse_justification: string = null;
+  experts_is_diverse: boolean = null;
 }
 
 interface Institutions {
