@@ -79,6 +79,7 @@ export class Actor {
 interface SdgTarget {
   clarisa_sdg_usnd_code: number;
   clarisa_sdg_target_id: number;
+  sdg_target: string;
 }
 
 interface ImpactArea {
