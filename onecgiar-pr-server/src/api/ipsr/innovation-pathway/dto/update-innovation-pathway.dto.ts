@@ -4,13 +4,14 @@ import { ResultByInstitutionsByDeliveriesType } from '../../../results/result-by
 import { ResultsByInstitutionType } from '../../../results/results_by_institution_types/entities/results_by_institution_type.entity';
 import { ResultActor } from '../../../results/result-actors/entities/result-actor.entity';
 import { ResultIpMeasure } from '../../result-ip-measures/entities/result-ip-measure.entity';
+import { CreateResultIPDto } from '../../result-innovation-package/dto/create-result-ip.dto';
 export class UpdateInnovationPathwayDto {
     public result_id: number;
     public geo_scope_id: number;
     public result_by_innovation_package_id: number;
     public title: string;
     public experts: CreateInnovationPackagingExpertDto[];
-    public result_ip: ResultInnovationPackage;
+    public result_ip: ResultInnovationPackage & CreateResultIPDto;
     public innovatonUse: innovatonUseInterface;
     public regions: regionsInterface[];
     public countries: countriesInterface[];

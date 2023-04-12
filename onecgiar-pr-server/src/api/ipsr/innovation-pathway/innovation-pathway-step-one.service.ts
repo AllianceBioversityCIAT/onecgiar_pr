@@ -677,11 +677,11 @@ export class InnovationPathwayStepOneService {
         await this._resultInnovationPackageRepository.update(
           result.id,
           {
-            active_backstopping: rip.active_backstopping,
-            consensus_initiative_work_package: rip.consensus_initiative_work_package,
-            regional_integrated: rip.regional_integrated,
-            relevant_country: rip.relevant_country,
-            regional_leadership: rip.regional_leadership,
+            active_backstopping: rip.active_backstopping_id,
+            consensus_initiative_work_package: rip.consensus_initiative_work_package_id,
+            regional_integrated: rip.regional_integrated_id,
+            relevant_country: rip.relevant_country_id,
+            regional_leadership: rip.regional_leadership_id,
             is_active: true,
             last_updated_by: user.id
           }
@@ -690,11 +690,11 @@ export class InnovationPathwayStepOneService {
         await this._resultInnovationPackageRepository.save(
           {
             result_innovation_package_id: result.id,
-            active_backstopping: rip.active_backstopping,
-            consensus_initiative_work_package: rip.consensus_initiative_work_package,
-            regional_integrated: rip.regional_integrated,
-            relevant_country: rip.relevant_country,
-            regional_leadership: rip.regional_leadership,
+            active_backstopping: rip.active_backstopping_id,
+            consensus_initiative_work_package: rip.consensus_initiative_work_package_id,
+            regional_integrated: rip.regional_integrated_id,
+            relevant_country: rip.relevant_country_id,
+            regional_leadership: rip.regional_leadership_id,
             version_id: version.id,
             created_by: user.id,
             last_updated_by: user.id
