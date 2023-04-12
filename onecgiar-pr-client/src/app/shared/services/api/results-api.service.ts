@@ -533,10 +533,10 @@ export class ResultsApiService {
   }
 
   GETinnovationpathwayStepTwo(){
-    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/complementary-innovations`);
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/complementary-innovations`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
-  GETInnovationPathwayStepTwoInnovationSelect(result_id:number){
+  GETInnovationPathwayStepTwoInnovationSelect(){
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/step-two/${this.ipsrDataControlSE.resultInnovationId}`);
   }
 
@@ -558,5 +558,19 @@ export class ResultsApiService {
   }
   getAllInnoPaRelevantCountry() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-package/relevant-country`);
+  }
+
+  PATCHComplementaryInnovation(body){
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-two/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+  }
+
+
+  GETComplementataryInnovationFunctions(){
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/complementary-innovations-functions`)
+  }
+
+
+  POSTNewCompletaryInnovation(body){
+    return this.http.post<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/complementary-innovation/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 }

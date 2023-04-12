@@ -1,5 +1,6 @@
 import { Component, EventEmitter, OnInit, Output } from '@angular/core';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
+import { IpsrDataControlService } from '../../../../../../../../services/ipsr-data-control.service';
 
 
 export class ComplementaryInnovation {
@@ -29,13 +30,21 @@ export class ComplementaryInnovation {
 export class ComplementaryInnovationComponent implements OnInit {
 
   innovationPackageCreatorBody:ComplementaryInnovation[] = [];
-  constructor(public api: ApiService,) {}
+  complemntaryFunction:any;
+  status:boolean = false;
+  constructor(public api: ApiService, private ipsrDataControlSE: IpsrDataControlService) {}
 
   ngOnInit(): void {
-    this.api.resultsSE.GETInnovationPathwayStepTwoInnovationSelect(4569).subscribe((resp) => {
+    this.api.resultsSE.GETInnovationPathwayStepTwoInnovationSelect().subscribe((resp) => {
+      this.innovationPackageCreatorBody = resp['response']
       console.log(resp);
       
-    })
+    });
+
+    this.api.resultsSE.GETComplementataryInnovationFunctions().subscribe((resp) => {
+      console.log(resp);
+      this.complemntaryFunction = resp['response']
+    });
   }
 
   selectInnovationEvent(e) {
@@ -49,4 +58,24 @@ export class ComplementaryInnovationComponent implements OnInit {
     this.innovationPackageCreatorBody.splice(index,1)
   }
 
+  regiterInnovationComplementary(complementaryInnovcation){
+    let seletedInnovation = []
+    complementaryInnovcation.forEach(element => {
+      seletedInnovation.push({
+        result_id:element['result_id'],
+      })
+    });
+
+    return seletedInnovation;
+  }
+
+  async onSaveSection(){
+    let body = await this.regiterInnovationComplementary(this.innovationPackageCreatorBody);
+    
+    this.api.resultsSE.PATCHComplementaryInnovation({ complementaryInovatins:body}).subscribe((resp) =>{
+      console.log(resp);
+      
+    })
+    console.log(this.regiterInnovationComplementary(this.innovationPackageCreatorBody));
+  }
 }

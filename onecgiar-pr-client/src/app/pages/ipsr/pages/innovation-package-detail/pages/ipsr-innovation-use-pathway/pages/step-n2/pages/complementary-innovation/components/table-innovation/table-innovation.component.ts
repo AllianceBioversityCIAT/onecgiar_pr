@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnInit, Output, SimpleChanges } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnInit, Output, SimpleChanges, ViewChild } from '@angular/core';
 import { ApiService } from '../../../../../../../../../../../../shared/services/api/api.service';
 import { ManageInnovationsListService } from '../../../../../../../../../../services/manage-innovations-list.service';
 import { Observable } from 'rxjs';
@@ -36,18 +36,16 @@ export class TableInnovationComponent implements OnInit {
   informationComplementaryInnovation:ComplementaryInnovation[] = [];
   loading:boolean = true;
   @Output() selectInnovationEvent = new EventEmitter<ComplementaryInnovation>();
+  @Input() selectionsInnovation :any [];
   constructor(public api: ApiService, public manageInnovationsListSE: ManageInnovationsListService) {}
 
   ngOnInit(): void {
     this.cleanSelected();
   }
+  
   ngOnChanges(changes: SimpleChanges) {
-    this.InnovationSelect= changes['selectInnovations'].currentValue;
-    this.InnovationSelect.forEach(element => {
-      this.findResultSelected(element.result_id)
-    });
-    
-    
+    // changes.prop contains the old and the new value...
+    this.selectionsInnovation= changes['selectionsInnovation'].currentValue;
   }
 
   ngOnDestroy(): void {
@@ -71,11 +69,14 @@ export class TableInnovationComponent implements OnInit {
   cleanSelected() {
     this.api.resultsSE.GETinnovationpathwayStepTwo().subscribe((resp) =>{
       console.log(resp);
-      this.informationComplementaryInnovation = resp.response;
+      this.informationComplementaryInnovation = resp['response'];
       this.loading = false;
     })
   }
-  findResultSelected(id_result){
-    this.informationComplementaryInnovation.find((resp)=> resp.result_id == id_result? resp.selected = true:  resp.selected = false)
+
+  findResultSelected(result: ComplementaryInnovation){
+    this.selectionsInnovation.find((resp)=> resp.result_id == result.result_id? result.selected = true:  result.selected = false);
   }
+
+
 }
