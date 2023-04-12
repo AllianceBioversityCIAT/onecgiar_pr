@@ -64,6 +64,8 @@ export class ResultInnovationPackageController {
   async findRelevantCountry() {
     const { message, response, status } =
       await this.resultInnovationPackageService.findRelevantCountry();
+
+    throw new HttpException({ message, response }, status);
   }
 
   @Delete(':resultId')
