@@ -88,7 +88,8 @@ export class InnovationPathwayStepOneService {
       const coreResult = await this._innovationByResultRepository.getInnovationCoreStepOne(resultId);
       const regions: ResultRegion[] = await this._resultRegionRepository.getResultRegionByResultId(resultId);
       const countries: ResultCountry[] = await this._resultCountryRepository.getResultCountriesByResultId(resultId);
-      const eoiOutcomes: ResultIpEoiOutcome[] = await this._resultIpEoiOutcomes.findBy({ result_by_innovation_package_id: resultByInnovationPackageId.result_by_innovation_package_id, is_active: true });
+      const eoiOutcomes: ResultIpEoiOutcome[] = await this._resultIpEoiOutcomes.getEoiOutcomes(resultByInnovationPackageId.result_by_innovation_package_id);
+      console.log("🚀 ~ file: innovation-pathway-step-one.service.ts:92 ~ InnovationPathwayStepOneService ~ getStepOne ~ eoiOutcomes:", eoiOutcomes)
       const actionAreaOutcomes: ResultIpAAOutcome[] = await this._resultIpAAOutcomes.findBy({ result_by_innovation_package_id: resultByInnovationPackageId.result_by_innovation_package_id, is_active: true });
       const impactAreas: ResultIpImpactArea[] = await this._resultIpImpactAreasRepository.findBy({ result_by_innovation_package_id: resultByInnovationPackageId.result_by_innovation_package_id, is_active: true });
       const sdgTargets: ResultIpSdgTargets[] = await this._resultIpSdgsTargetsRepository.findBy({ result_by_innovation_package_id: resultByInnovationPackageId.result_by_innovation_package_id, is_active: true });
@@ -282,7 +283,7 @@ export class InnovationPathwayStepOneService {
         await this._resultRepository.findOneBy({ id: ipsrResult.result_id });
 
       let innovationTitle: string;
- 
+
       if (UpdateInnovationPathwayDto.geo_scope_id === 2) {
         const regionsList = regions.map(r => r.name);
         innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${coreResult.title} in ${regionsList.slice(0, -1).join(', ')}${regionsList.length > 1 ? ' and ' : ''}${regionsList[regionsList.length - 1]}`;
