@@ -17,13 +17,18 @@ export class ResultIpImpactAreaRepository extends Repository<ResultIpImpactArea>
         const query = `
         SELECT 
             riia.impact_area_indicator_id AS targetId,
-            cia.description  AS target
+            (
+                SELECT
+                    cgt.target 
+                FROM clarisa_global_targets cgt 
+                WHERE cgt.targetId = riia.impact_area_indicator_id
+            )AS target
         FROM
             result_ip_impact_area_target riia
             LEFT JOIN clarisa_impact_area_indicator ciai ON ciai.id = riia.impact_area_indicator_id
             LEFT JOIN clarisa_impact_areas cia ON cia.id = ciai.impact_area_id
-        WHERE riia.is_active > 0
-            AND riia.result_by_innovation_package_id = ?
+        WHERE riia.is_active  > 0
+            AND riia.result_by_innovation_package_id = ?;
         `;
     
         try {
