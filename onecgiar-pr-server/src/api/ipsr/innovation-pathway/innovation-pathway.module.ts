@@ -20,6 +20,7 @@ import { ResultActorRepository } from '../../results/result-actors/repositories/
 import { ResultByIntitutionsTypeRepository } from '../../results/results_by_institution_types/result_by_intitutions_type.repository';
 import { ResultIpMeasureRepository } from '../result-ip-measures/result-ip-measures.repository';
 import { ResultIpImpactAreaRepository } from './repository/result-ip-impact-area-targets.repository';
+import { ClarisaInstitutionsTypeRepository } from '../../../clarisa/clarisa-institutions-type/ClariasaInstitutionsType.repository';
 import { InnovationPathwayStepTwoService } from './innovation-pathway-step-two.service';
 import { ResultsComplementaryInnovationRepository } from '../results-complementary-innovations/repositories/results-complementary-innovation.repository';
 import { ResultsComplementaryInnovationsFunctionRepository } from '../results-complementary-innovations-functions/repositories/results-complementary-innovations-function.repository';
@@ -52,6 +53,7 @@ import { ComplementaryInnovationFunctionsRepository } from '../results-complemen
     ResultByIntitutionsTypeRepository,
     ResultIpMeasureRepository,
     ResultIpImpactAreaRepository,
+    ClarisaInstitutionsTypeRepository,
     ResultsComplementaryInnovationRepository,
     ResultsComplementaryInnovationsFunctionRepository,
     EvidencesRepository,

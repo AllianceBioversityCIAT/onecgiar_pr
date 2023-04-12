@@ -19,7 +19,7 @@ export class StepN1SdgTargetsComponent {
   GETAllClarisaSdgsTargets() {
     this.api.resultsSE.GETAllClarisaSdgsTargets().subscribe(
       ({ response }) => {
-        console.log(response);
+        // console.log(response);
         this.sdgTargetLis = response;
         // this.mapSdgTargetListDropdowns(response);
       },

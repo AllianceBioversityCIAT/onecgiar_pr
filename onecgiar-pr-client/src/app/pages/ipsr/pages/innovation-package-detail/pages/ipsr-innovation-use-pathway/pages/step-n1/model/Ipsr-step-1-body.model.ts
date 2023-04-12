@@ -9,7 +9,7 @@ export class IpsrStep1Body {
   impactAreas: ImpactArea[] = [];
   sdgTargets: SdgTarget[] = [];
   innovatonUse: InnovatonUse = new InnovatonUse();
-  institutions: Institutions = new Institutions();
+  institutions: Institutions[] = [];
   experts: Expert[] = [];
   experts_is_diverse: number = null;
   is_not_diverse_justification: string = null;
@@ -29,9 +29,11 @@ interface Expert {
   is_active: boolean;
 }
 
-class Institutions {
-  institutions_id: number = null;
-  deliveries: Delivery[] = [];
+interface Institutions {
+  institutions_id: number;
+  institutions_name: string;
+  institutions_type_name: string;
+  deliveries: Delivery[];
 }
 
 interface Delivery {
@@ -47,13 +49,16 @@ class InnovatonUse {
 export class Measure {
   unit_of_measure: string;
   quantity: number;
+  is_active: boolean;
 }
 
 export class Organization {
   institution_types_id: number;
+  institution_sub_type_id: number;
   how_many: number;
   // Aux
   hide: boolean;
+  is_active: boolean;
 }
 
 export class Actor {
@@ -62,6 +67,7 @@ export class Actor {
   women_youth: number;
   men: number;
   men_youth: number;
+  is_active: boolean;
 }
 
 interface SdgTarget {

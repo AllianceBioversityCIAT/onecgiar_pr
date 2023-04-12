@@ -10,10 +10,12 @@ import { StepN1InstitutionsComponent } from './step-n1-institutions/step-n1-inst
 import { StepN1ExpertsComponent } from './step-n1-experts/step-n1-experts.component';
 import { StepN1ConsensusAndConsultationComponent } from './step-n1-consensus-and-consultation/step-n1-consensus-and-consultation.component';
 import { StepN1ActionAreaOutcomesComponent } from './step-n1-action-area-outcomes/step-n1-action-area-outcomes.component';
-const components = [StepN1ActionAreaOutcomesComponent, StepN1GeoscopeComponent, StepN1EoiOutcomesComponent, StepN1ImpactAreasComponent, StepN1SdgTargetsComponent, StepN1InnovatonUseComponent, StepN1InstitutionsComponent, StepN1ExpertsComponent, StepN1ConsensusAndConsultationComponent];
+import { StepN1ScalingAmbitionBlurbComponent } from './step-n1-scaling-ambition-blurb/step-n1-scaling-ambition-blurb.component';
+import { YmzListStructureItemModule } from 'src/app/shared/directives/ymz-list-structure-item/ymz-list-structure-item.module';
+const components = [StepN1ScalingAmbitionBlurbComponent, StepN1ActionAreaOutcomesComponent, StepN1GeoscopeComponent, StepN1EoiOutcomesComponent, StepN1ImpactAreasComponent, StepN1SdgTargetsComponent, StepN1InnovatonUseComponent, StepN1InstitutionsComponent, StepN1ExpertsComponent, StepN1ConsensusAndConsultationComponent];
 @NgModule({
   declarations: [...components],
   exports: [...components],
-  imports: [CommonModule, CustomFieldsModule]
+  imports: [CommonModule, CustomFieldsModule, YmzListStructureItemModule]
 })
 export class StepN1ComponentsModule {}
