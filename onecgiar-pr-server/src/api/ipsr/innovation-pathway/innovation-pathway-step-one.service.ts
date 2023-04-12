@@ -639,7 +639,8 @@ export class InnovationPathwayStepOneService {
               is_active: ex.is_active,
               email: ex.email,
               last_updated_by: user.id,
-              expertises_id: ex.expertises_id
+              expertises_id: ex.expertises_id,
+              organization_id: ex.organization_id
             } :
               {
                 is_active: ex.is_active
@@ -655,7 +656,9 @@ export class InnovationPathwayStepOneService {
               email: ex.email,
               last_updated_by: user.id,
               created_by: user.id,
-              expertises_id: ex.expertises_id
+              expertises_id: ex.expertises_id,
+              organization_id: ex.organization_id,
+              result_id: result.id
             }
           )
         }
