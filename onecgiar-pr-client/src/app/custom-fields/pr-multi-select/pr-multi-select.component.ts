@@ -152,11 +152,12 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   }
 
   removeOption(option) {
-    if (this.logicalDeletion && option.new) {
+    console.log('removeOption');
+    if (this.logicalDeletion && !option.new) {
+      option.is_active = false;
+    } else {
       const optionFinded = this.value.findIndex(valueItem => valueItem[this.optionValue] == option[this.optionValue]);
       this.value.splice(optionFinded, 1);
-    } else {
-      option.is_active = false;
     }
     console.log(option);
 

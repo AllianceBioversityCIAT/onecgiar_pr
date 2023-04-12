@@ -21,16 +21,24 @@ import { ResultByIntitutionsTypeRepository } from '../../results/results_by_inst
 import { ResultIpMeasureRepository } from '../result-ip-measures/result-ip-measures.repository';
 import { ResultIpImpactAreaRepository } from './repository/result-ip-impact-area-targets.repository';
 import { ClarisaInstitutionsTypeRepository } from '../../../clarisa/clarisa-institutions-type/ClariasaInstitutionsType.repository';
+import { InnovationPathwayStepTwoService } from './innovation-pathway-step-two.service';
+import { ResultsComplementaryInnovationRepository } from '../results-complementary-innovations/repositories/results-complementary-innovation.repository';
+import { ResultsComplementaryInnovationsFunctionRepository } from '../results-complementary-innovations-functions/repositories/results-complementary-innovations-function.repository';
+import { EvidencesRepository } from '../../../api/results/evidences/evidences.repository';
+import { YearRepository } from '../../../api/results/years/year.repository';
+import { ResultByInitiativesRepository } from '../../../api/results/results_by_inititiatives/resultByInitiatives.repository';
+import { ComplementaryInnovationFunctionsRepository } from '../results-complementary-innovations-functions/repositories/complementary-innovation-functions.repository';
 
 @Module({
   controllers: [InnovationPathwayController],
   providers: [
     InnovationPathwayStepOneService,
+    InnovationPathwayStepTwoService,
     HandlersError,
     ResultRepository,
     ResultRegionRepository,
     ResultCountryRepository,
-    ExpertisesRepository, 
+    ExpertisesRepository,
     InnovationPackagingExpertRepository,
     ResultInnovationPackageRepository,
     VersionsService,
@@ -45,7 +53,13 @@ import { ClarisaInstitutionsTypeRepository } from '../../../clarisa/clarisa-inst
     ResultByIntitutionsTypeRepository,
     ResultIpMeasureRepository,
     ResultIpImpactAreaRepository,
-    ClarisaInstitutionsTypeRepository
+    ClarisaInstitutionsTypeRepository,
+    ResultsComplementaryInnovationRepository,
+    ResultsComplementaryInnovationsFunctionRepository,
+    EvidencesRepository,
+    YearRepository,
+    ResultByInitiativesRepository,
+    ComplementaryInnovationFunctionsRepository
   ]
 })
 export class InnovationPathwayModule { }

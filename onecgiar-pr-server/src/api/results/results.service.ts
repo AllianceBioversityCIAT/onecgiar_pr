@@ -561,8 +561,7 @@ export class ResultsService {
   async deleteResult(resultId: number, user: TokenDto) {
     try {
       const result: Result = await this._resultRepository.findOne({
-        where: { id: resultId },
-        relations: { legacy_id: true, result_type_id: true },
+        where: { id: resultId }
       });
       if (!result) {
         throw {
@@ -577,7 +576,7 @@ export class ResultsService {
 
       if (result?.legacy_id) {
         await this._resultLegacyRepository.update(
-          result.legacy_id['legacy_id'],
+          result.legacy_id,
           { is_migrated: false },
         );
       }
@@ -594,7 +593,7 @@ export class ResultsService {
         true,
       );
 
-      if(result.result_type_id['id'] == 6){
+      if(result.result_type_id == 6){
         const {result_knowledge_product_id: kpId} = await this._resultKnowledgeProductRepository.findOne({where: { results_id: result.id }});
         await this._resultsKnowledgeProductAltmetricRepository.statusElement(kpId, false);
         await this._resultsKnowledgeProductAuthorRepository.statusElement(kpId, false);

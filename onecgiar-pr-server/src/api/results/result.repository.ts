@@ -305,11 +305,7 @@ WHERE
     }
   }*/
 
-  async AllResultsByRoleUsers(
-    userid: number,
-    version: number = 1,
-    excludeType = [10],
-  ) {
+  async AllResultsByRoleUsers(userid: number, version: number = 1, excludeType = [10,11]) {
     const queryData = `
     SELECT
     r.id,
@@ -628,6 +624,63 @@ WHERE
     } catch (error) {
       throw {
         message: `[${ResultRepository.name}] => completeAllData error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
+  async getResultByTypes(typesId: number[]): Promise<Result[]> {
+    const queryData = `
+    SELECT
+    r.id as result_id,
+    r.result_code,
+    r.description,
+    r.is_active,
+    r.last_updated_date,
+    r.gender_tag_level_id,
+    r.climate_change_tag_level_id,
+    r.version_id,
+    r.result_type_id,
+    r.status,
+    r.created_by,
+    r.last_updated_by,
+    r.reported_year_id,
+    r.created_date,
+    r.result_level_id,
+    r.title,
+    r.legacy_id,
+    r.no_applicable_partner,
+    r.geographic_scope_id,
+    rbi.inititiative_id as initiative_id,
+    rl.name as result_level_name,
+    rt.name as result_type_name,
+    r.has_regions,
+    r.has_countries,
+    ci.name as initiative_name,
+    ci.short_name as initiative_short_name,
+    ci.official_code as initiative_official_code,
+    r.lead_contact_person
+FROM
+    result r
+    inner join results_by_inititiative rbi ON rbi.result_id = r.id 
+    									and rbi.is_active > 0
+                      and rbi.initiative_role_id = 1
+    inner join result_level rl on rl.id = r.result_level_id 
+    inner join result_type rt on rt.id = r.result_type_id 
+    inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
+WHERE
+    r.is_active > 0
+    and r.status = if(r.result_type_id = 7, 1, (0 or 1))
+    ${typesId?.length?`and result_type_id in (${typesId.toString()})`:``}
+    `;
+
+    try {
+      const results: Result[] = await this.query(queryData);
+      return results;
+    } catch (error) {
+      throw {
+        message: `[${ResultRepository.name}] => getResultByTypes error: ${error}`,
         response: {},
         status: HttpStatus.INTERNAL_SERVER_ERROR,
       };
