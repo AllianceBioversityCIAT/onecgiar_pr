@@ -296,7 +296,7 @@ export class InnovationPathwayStepOneService {
 
       if (result.title === innovationTitle) {
         throw {
-          response: { valid: true },
+          response: innovationTitle,
           message: `The title no needs to be upgraded`,
           status: HttpStatus.NOT_MODIFIED,
         }
