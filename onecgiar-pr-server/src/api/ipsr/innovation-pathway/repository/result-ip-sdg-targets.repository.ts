@@ -13,6 +13,35 @@ export class ResultIpSdgTargetRepository extends Repository<ResultIpSdgTargets>{
         super(ResultIpSdgTargets, dataSource.createEntityManager())
     }
 
+    async getSdgs(resultByInnovationPackageId: number) {
+        const query = `
+        SELECT 
+            ris.clarisa_sdg_target_id AS id,
+            (
+                SELECT
+                    cst.sdg_target
+                FROM
+                    clarisa_sdgs_targets cst
+                WHERE cst.id = ris.clarisa_sdg_target_id
+            ) AS sdg_target
+        FROM
+            result_ip_sdg_targets ris
+        WHERE ris.is_active > 0
+            AND result_by_innovation_package_id = ?
+        `;
+
+        try {
+            const sdgsTarget: ResultIpSdgTargets[] = await this.query(query, [resultByInnovationPackageId]);
+            return sdgsTarget;
+        } catch (error) {
+            throw this._handlersError.returnErrorRepository({
+                className: ResultIpSdgTargetRepository.name,
+                error: error,
+                debug: true,
+            });
+        }
+    }
+
     async getSdgsByIpAndSdgId(resultByInnovationPackageId: number, sdgId: number) {
         const query = `
         SELECT 

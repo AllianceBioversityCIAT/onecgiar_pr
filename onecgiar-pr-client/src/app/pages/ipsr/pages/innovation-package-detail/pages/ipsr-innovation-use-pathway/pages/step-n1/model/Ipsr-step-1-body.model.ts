@@ -11,22 +11,28 @@ export class IpsrStep1Body {
   innovatonUse: InnovatonUse = new InnovatonUse();
   institutions: Institutions[] = [];
   experts: Expert[] = [];
-  experts_is_diverse: number = null;
-  is_not_diverse_justification: string = null;
-  consensus_initiative_work_package: number = null;
-  relevant_country: number = null;
-  regional_leadership: number = null;
-  regional_integrated: number = null;
-  active_backstopping: number = null;
+  result_ip = new Result_ip();
 }
 
-interface Expert {
+export class Expert {
   first_name: string;
   last_name: string;
   email: string;
   organization_id: number;
   expertises_id: number;
   is_active: boolean;
+}
+
+class Result_ip {
+  //experts
+  is_not_diverse_justification: string = null;
+  experts_is_diverse: boolean = null;
+  // Consensus and Consultation
+  consensus_initiative_work_package_id: number = null;
+  relevant_country_id: number = null;
+  regional_leadership_id: number = null;
+  regional_integrated_id: number = null;
+  active_backstopping_id: number = null;
 }
 
 interface Institutions {
@@ -73,14 +79,18 @@ export class Actor {
 interface SdgTarget {
   clarisa_sdg_usnd_code: number;
   clarisa_sdg_target_id: number;
+  sdg_target: string;
 }
 
 interface ImpactArea {
   impact_area_indicator_id: number;
+  target: string;
 }
 
 interface ActionAreaOutcome {
   action_area_outcome_id: number;
+  outcomeStatement: string;
+  is_active: boolean;
 }
 
 interface EoiOutcome {

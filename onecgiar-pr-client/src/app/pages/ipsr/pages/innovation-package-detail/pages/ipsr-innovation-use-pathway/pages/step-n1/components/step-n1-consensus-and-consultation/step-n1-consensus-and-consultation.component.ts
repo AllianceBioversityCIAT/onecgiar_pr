@@ -10,33 +10,33 @@ import { ApiService } from 'src/app/shared/services/api/api.service';
 export class StepN1ConsensusAndConsultationComponent {
   @Input() body = new IpsrStep1Body();
   fields = [
-    { label: 'Can you confirm that there is consensus/commitment among the Initiative and Work Package leadership and partners on the proposed Innovation, country and targets', radioOptions: [] },
-    { label: 'Can you confirm that the relevant CGIAR country convener is aware of the proposed innovation package and scaling readiness exercise', radioOptions: [] },
-    { label: 'Can you confirm that the CGIAR Regional Leadership is aware of the proposed innovation package and scaling readiness exercise', radioOptions: [] },
-    { label: 'Can you confirm that the CGIAR Regional Integrated Initiative leadership is aware of the proposed innovation package and scaling readiness exercise', radioOptions: [] },
-    { label: 'Would you like to receive active backstopping to ensure (gender-) responsible scaling?', radioOptions: [] }
+    { idAttr: 'consensus_initiative_work_package_id', label: 'Can you confirm that there is consensus/commitment among the Initiative and Work Package leadership and partners on the proposed Innovation, country and targets', radioOptions: [] },
+    { idAttr: 'relevant_country_id', label: 'Can you confirm that the relevant CGIAR country convener is aware of the proposed innovation package and scaling readiness exercise', radioOptions: [] },
+    { idAttr: 'regional_leadership_id', label: 'Can you confirm that the CGIAR Regional Leadership is aware of the proposed innovation package and scaling readiness exercise', radioOptions: [] },
+    { idAttr: 'regional_integrated_id', label: 'Can you confirm that the CGIAR Regional Integrated Initiative leadership is aware of the proposed innovation package and scaling readiness exercise', radioOptions: [] },
+    { idAttr: 'active_backstopping_id', label: 'Would you like to receive active backstopping to ensure (gender-) responsible scaling?', radioOptions: [] }
   ];
   constructor(private api: ApiService) {
     this.getInformation();
   }
   getInformation() {
-    this.api.resultsSE.getAllInnoPaActiveBackstopping().subscribe(({ response }) => {
+    this.api.resultsSE.getAllInnoPaConsensusInitiativeWorkPackage().subscribe(({ response }) => {
       // console.log(response);
       this.fields[0].radioOptions = response;
     });
-    this.api.resultsSE.getAllInnoPaConsensusInitiativeWorkPackage().subscribe(({ response }) => {
+    this.api.resultsSE.getAllInnoPaRelevantCountry().subscribe(({ response }) => {
       // console.log(response);
       this.fields[1].radioOptions = response;
     });
-    this.api.resultsSE.getAllInnoPaRegionalIntegrated().subscribe(({ response }) => {
+    this.api.resultsSE.getAllInnoPaRegionalLeadership().subscribe(({ response }) => {
       // console.log(response);
       this.fields[2].radioOptions = response;
     });
-    this.api.resultsSE.getAllInnoPaRegionalLeadership().subscribe(({ response }) => {
+    this.api.resultsSE.getAllInnoPaRegionalIntegrated().subscribe(({ response }) => {
       // console.log(response);
       this.fields[3].radioOptions = response;
     });
-    this.api.resultsSE.getAllInnoPaRelevantCountry().subscribe(({ response }) => {
+    this.api.resultsSE.getAllInnoPaActiveBackstopping().subscribe(({ response }) => {
       // console.log(response);
       this.fields[4].radioOptions = response;
     });

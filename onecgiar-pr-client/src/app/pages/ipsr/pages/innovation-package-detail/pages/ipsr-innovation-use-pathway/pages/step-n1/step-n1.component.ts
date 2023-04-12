@@ -22,39 +22,34 @@ export class StepN1Component implements OnInit {
       console.log(response);
       this.convertOrganizations(response?.innovatonUse?.organization);
       this.ipsrStep1Body = response;
+      this.ipsrStep1Body.geo_scope_id = response.geo_scope_id == 3 ? 4 : response.geo_scope_id;
       this.coreResult = response?.coreResult;
-      // console.log(this.coreResult);
     });
   }
   onSaveSection() {
     console.log(this.ipsrStep1Body);
     this.convertOrganizationsTosave();
-    this.api.resultsSE.PATCHInnovationPathwayByStepOneResultId(this.ipsrStep1Body).subscribe(resp => {
-      // console.log(resp);
+    this.api.resultsSE.PATCHInnovationPathwayByStepOneResultId(this.ipsrStep1Body).subscribe((resp: any) => {
+      // console.log(resp?.response[0].response);
+      this.ipsrDataControlSE.detailData.title = resp?.response[0].response;
       this.getSectionInformation();
     });
   }
 
   convertOrganizations(organizations) {
-    console.log(organizations);
     organizations.map((item: any) => {
-      console.log(item);
       if (item.parent_institution_type_id) {
         item.institution_sub_type_id = item?.institution_types_id;
         item.institution_types_id = item?.parent_institution_type_id;
       }
     });
-    console.log(organizations);
   }
 
   convertOrganizationsTosave() {
     this.ipsrStep1Body.innovatonUse.organization.map((item: any) => {
-      console.log(item);
       if (item.institution_sub_type_id) {
-        // item.institution_sub_type_id = item?.institution_types_id;
         item.institution_types_id = item.institution_sub_type_id;
       }
     });
-    console.log(this.ipsrStep1Body.innovatonUse.organization);
   }
 }
