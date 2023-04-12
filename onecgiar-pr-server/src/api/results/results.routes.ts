@@ -26,6 +26,7 @@ import { ResultsValidationModuleModule } from './results-validation-module/resul
 import { ShareResultRequestModule } from './share-result-request/share-result-request.module';
 import { SubmissionsModule } from './submissions/submissions.module';
 import { AdminPanelModule } from './admin-panel/admin-panel.module';
+import { ResultActorsModule } from './result-actors/result-actors.module';
 
 export const ResultsRoutes: Routes = [
   {
@@ -135,5 +136,9 @@ export const ResultsRoutes: Routes = [
   {
     path: 'admin-panel',
     module: AdminPanelModule
+  },
+  {
+    path: 'actors',
+    module: ResultActorsModule
   }
 ];

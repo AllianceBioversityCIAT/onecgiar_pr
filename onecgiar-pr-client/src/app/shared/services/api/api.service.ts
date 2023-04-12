@@ -26,7 +26,6 @@ export class ApiService {
         // this.rolesSE.roles = GET_allRolesByUser.response;
         //?
         this.dataControlSE.myInitiativesList = GET_initiativesByUser?.response;
-        console.log(this.dataControlSE.myInitiativesList);
         this.qaSE.$qaFirstInitObserver?.next();
         this.dataControlSE.myInitiativesList.map(myInit => {
           myInit.role = GET_allRolesByUser?.response?.initiative?.find(initRole => initRole?.initiative_id == myInit?.initiative_id)?.description;

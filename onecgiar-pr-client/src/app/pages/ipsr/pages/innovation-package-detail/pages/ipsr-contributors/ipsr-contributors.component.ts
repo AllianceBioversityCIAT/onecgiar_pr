@@ -1,4 +1,8 @@
 import { Component, OnInit } from '@angular/core';
+import { environment } from 'src/environments/environment';
+import { RolesService } from '../../../../../../shared/services/global/roles.service';
+import { ApiService } from '../../../../../../shared/services/api/api.service';
+import { ContributorsBody, resultToResultInterfaceToc } from './model/contributorsBody';
 
 @Component({
   selector: 'app-ipsr-contributors',
@@ -6,7 +10,27 @@ import { Component, OnInit } from '@angular/core';
   styleUrls: ['./ipsr-contributors.component.scss']
 })
 export class IpsrContributorsComponent {
-  constructor() {}
+  contributorsBody = new ContributorsBody();
 
-  onSaveSection() {}
+  constructor(public api: ApiService, public rolesSE: RolesService) {}
+
+  ngOnInit(): void {
+    this.getSectionInformation();
+  }
+
+  getSectionInformation() {
+    this.api.resultsSE.GETContributorsByIpsrResultId().subscribe(({ response }) => {
+      console.log(response);
+      this.contributorsBody = response;
+      this.contributorsBody.contributors_result_toc_result.map(item => (item.planned_result = Boolean(item.planned_result)));
+    });
+  }
+
+  onSaveSection() {
+    console.log(this.contributorsBody);
+    this.api.resultsSE.PATCHContributorsByIpsrResultId(this.contributorsBody).subscribe(({ response }) => {
+      console.log(response);
+      this.getSectionInformation();
+    });
+  }
 }

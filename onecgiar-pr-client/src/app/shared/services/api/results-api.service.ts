@@ -14,12 +14,13 @@ import { SaveButtonService } from '../../../custom-fields/save-button/save-butto
 import { ElasticResult, Source } from '../../interfaces/elastic.interface';
 import { KnowledgeProductBodyMapped } from '../../../pages/results/pages/result-detail/pages/rd-result-types-pages/knowledge-product-info/model/KnowledgeProductBodyMapped';
 import { KnowledgeProductSaveDto } from '../../../pages/results/pages/result-detail/pages/rd-result-types-pages/knowledge-product-info/model/knowledge-product-save.dto';
+import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-control.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ResultsApiService {
-  constructor(public http: HttpClient, private saveButtonSE: SaveButtonService) {}
+  constructor(public http: HttpClient, private saveButtonSE: SaveButtonService, private ipsrDataControlSE: IpsrDataControlService) {}
   apiBaseUrl = environment.apiBaseUrl + 'api/results/';
   currentResultId: number | string = null;
   currentResultCode: number | string = null;
@@ -35,8 +36,8 @@ export class ResultsApiService {
   }
   GET_AllResultsWithUseRole(userId) {
     return this.http.get<any>(`${this.apiBaseUrl}get/all/roles/${userId}`).pipe(
-      map(resp => {
-        resp.response.map(result => {
+      map((resp) => {
+        resp.response.map((result) => {
           result.id = Number(result.id);
           result.result_code = Number(result.result_code);
           result.full_name = `${result.create_last_name} ${result.create_first_name}`;
@@ -51,13 +52,13 @@ export class ResultsApiService {
   GET_FindResultsElastic(search?: string) {
     const elasticSearchString = (search ?? '')
       .split(' ')
-      .map(s => `${s}*`)
+      .map((s) => `${s}*`)
       .join(' ');
     const searchQuery = `?q=${elasticSearchString?.length > 0 ? elasticSearchString : '*'}`;
     const options = { headers: new HttpHeaders({ Authorization: this.elasicCredentials }) };
     return this.http.get<ElasticResult>(`${environment.elastic.baseUrl}${searchQuery}`, options).pipe(
-      map(resp =>
-        (resp?.hits?.hits ?? []).map(h => {
+      map((resp) =>
+        (resp?.hits?.hits ?? []).map((h) => {
           return { probability: h._score, ...h._source } as Source & { probability: number };
         })
       )
@@ -70,8 +71,8 @@ export class ResultsApiService {
 
   GET_allGenderTag() {
     return this.http.get<any>(`${this.apiBaseUrl}gender-tag-levels/all`).pipe(
-      map(resp => {
-        resp.response.map(institution => (institution.full_name = `(${institution?.id - 1}) ${institution?.title}`));
+      map((resp) => {
+        resp.response.map((institution) => (institution.full_name = `(${institution?.id - 1}) ${institution?.title}`));
         return resp;
       })
     );
@@ -91,15 +92,15 @@ export class ResultsApiService {
 
   GET_allInstitutions() {
     return this.http.get<any>(`${this.apiBaseUrl}get/institutions/all`).pipe(
-      map(resp => {
-        resp.response.map(institution => (institution.full_name = `(Id:${institution?.institutions_id}) <strong>${institution?.institutions_acronym || ''}</strong> ${institution?.institutions_acronym ? ' - ' : ''} ${institution?.institutions_name} - ${institution?.headquarter_name}`));
+      map((resp) => {
+        resp.response.map((institution) => (institution.full_name = `(Id:${institution?.institutions_id}) <strong>${institution?.institutions_acronym || ''}</strong> ${institution?.institutions_acronym ? ' - ' : ''} ${institution?.institutions_name} - ${institution?.headquarter_name}`));
         return resp;
       })
     );
   }
 
   GET_generalInformationByResultId() {
-    return this.http.get<any>(`${this.apiBaseUrl}get/general-information/result/${this.currentResultId}`).pipe(this.saveButtonSE.isSavingSectionPipe());
+    return this.http.get<any>(`${this.apiBaseUrl}get/general-information/result/${this.currentResultId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   PATCH_generalInformation(body: GeneralInfoBody) {
@@ -129,16 +130,16 @@ export class ResultsApiService {
 
   GET_partnersSection() {
     return this.http.get<any>(`${this.apiBaseUrl}results-by-institutions/partners/result/${this.currentResultId}`).pipe(
-      map(resp => {
+      map((resp) => {
         if (resp?.response?.mqap_institutions) {
-          resp?.response?.mqap_institutions.map(resp => {
+          resp?.response?.mqap_institutions.map((resp) => {
             // console.log(resp?.user_matched_institution?.deliveries);
             if (!resp?.user_matched_institution?.deliveries?.length) resp.user_matched_institution.deliveries = [3];
           });
         }
         return resp;
       }),
-      this.saveButtonSE.isSavingSectionPipe()
+      this.saveButtonSE.isGettingSectionPipe()
     );
   }
 
@@ -160,8 +161,8 @@ export class ResultsApiService {
 
   GET_AllCLARISACountries() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/countries/get/all`).pipe(
-      map(resp => {
-        resp.response.map(institution => (institution.full_name = `${institution?.iso_alpha_2} - ${institution?.name}`));
+      map((resp) => {
+        resp.response.map((institution) => (institution.full_name = `${institution?.iso_alpha_2} - ${institution?.name}`));
         return resp;
       })
     );
@@ -169,9 +170,9 @@ export class ResultsApiService {
 
   GET_AllCLARISACenters() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/centers/get/all`).pipe(
-      map(resp => {
+      map((resp) => {
         // console.log(resp);
-        resp.response.map(center => {
+        resp.response.map((center) => {
           center.lead_center = center.code;
           center.full_name = `<strong>${center.acronym} - </strong> ${center.name}`;
         });
@@ -182,9 +183,9 @@ export class ResultsApiService {
 
   GET_AllWithoutResults() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/initiatives/get/all/without/result/${this.currentResultId}`).pipe(
-      map(resp => {
+      map((resp) => {
         // console.log(resp.response);
-        resp.response.map(initiative => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name}</strong> - ${initiative?.name}`));
+        resp.response.map((initiative) => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name}</strong> - ${initiative?.name}`));
         return resp;
       })
     );
@@ -198,12 +199,12 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}get/geographic/${this.currentResultId}`);
   }
 
-  GET_resultsLinked() {
-    return this.http.get<any>(`${this.apiBaseUrl}linked/get/${this.currentResultId}`);
+  GET_resultsLinked(isIpsr: boolean) {
+    return this.http.get<any>(`${this.apiBaseUrl}linked/get/${isIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId}`);
   }
 
-  POST_resultsLinked(body: LinksToResultsBody) {
-    return this.http.post<any>(`${this.apiBaseUrl}linked/create/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+  POST_resultsLinked(body: LinksToResultsBody, isIpsr: boolean) {
+    return this.http.post<any>(`${this.apiBaseUrl}linked/create/${isIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
   GET_evidences() {
@@ -223,11 +224,11 @@ export class ResultsApiService {
   }
 
   GET_resultknowledgeProducts() {
-    return this.http.get<any>(`${this.apiBaseUrl}results-knowledge-products/get/result/${this.currentResultId}`).pipe(this.saveButtonSE.isSavingSectionPipe());
+    return this.http.get<any>(`${this.apiBaseUrl}results-knowledge-products/get/result/${this.currentResultId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   PATCH_resyncKnowledgeProducts() {
-    return this.http.patch<any>(`${this.apiBaseUrl}results-knowledge-products/resync/${this.currentResultId}`, null).pipe(this.saveButtonSE.isSavingSectionPipe());
+    return this.http.patch<any>(`${this.apiBaseUrl}results-knowledge-products/resync/${this.currentResultId}`, null).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   POST_createWithHandle(body) {
@@ -236,12 +237,12 @@ export class ResultsApiService {
 
   GET_toc() {
     return this.http.get<any>(`${this.apiBaseUrl}toc/get/result/${this.currentResultId}`).pipe(
-      map(resp => {
+      map((resp) => {
         // console.log(resp.response);
-        resp?.response?.contributing_initiatives.map(initiative => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name || ''}</strong> - ${initiative?.initiative_name}`));
+        resp?.response?.contributing_initiatives.map((initiative) => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name || ''}</strong> - ${initiative?.initiative_name}`));
         return resp;
       }),
-      this.saveButtonSE.isSavingSectionPipe()
+      this.saveButtonSE.isGettingSectionPipe()
     );
   }
 
@@ -250,7 +251,7 @@ export class ResultsApiService {
   }
 
   GET_innovationUse() {
-    return this.http.get<any>(`${this.apiBaseUrl}summary/innovation-use/get/result/${this.currentResultId}`).pipe(this.saveButtonSE.isSavingSectionPipe());
+    return this.http.get<any>(`${this.apiBaseUrl}summary/innovation-use/get/result/${this.currentResultId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   PATCH_capacityDevelopent(body) {
@@ -259,9 +260,9 @@ export class ResultsApiService {
 
   GET_capacityDevelopent() {
     return this.http.get<any>(`${this.apiBaseUrl}summary/capacity-developent/get/result/${this.currentResultId}`).pipe(
-      this.saveButtonSE.isSavingSectionPipe(),
+      this.saveButtonSE.isGettingSectionPipe(),
       map((resp: any) => {
-        resp?.response?.institutions?.map(institution => (institution.full_name = `(Id:${institution?.institutions_id}) <strong>${institution?.institutions_acronym || ''}</strong> ${institution?.institutions_acronym ? ' - ' : ''} ${institution?.institutions_name}`));
+        resp?.response?.institutions?.map((institution) => (institution.full_name = `(Id:${institution?.institutions_id}) <strong>${institution?.institutions_acronym || ''}</strong> ${institution?.institutions_acronym ? ' - ' : ''} ${institution?.institutions_name}`));
         return resp;
       })
     );
@@ -277,10 +278,10 @@ export class ResultsApiService {
 
   GET_AllInitiatives() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/initiatives`).pipe(
-      map(resp => {
+      map((resp) => {
         // console.log(resp);
-        resp?.response.map(initiative => (initiative.initiative_id = initiative?.id));
-        resp?.response.map(initiative => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name}</strong> - ${initiative?.name}`));
+        resp?.response.map((initiative) => (initiative.initiative_id = initiative?.id));
+        resp?.response.map((initiative) => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name}</strong> - ${initiative?.name}`));
         return resp;
       })
     );
@@ -288,8 +289,8 @@ export class ResultsApiService {
 
   GET_clarisaInnovationType() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/innovation-type/get/all`).pipe(
-      map(resp => {
-        resp?.response.map(innovation => (innovation.extraInformation = `<strong>${innovation.name}</strong> <br> <div class="select_item_description">${innovation.definition}</div>`));
+      map((resp) => {
+        resp?.response.map((innovation) => (innovation.extraInformation = `<strong>${innovation.name}</strong> <br> <div class="select_item_description">${innovation.definition}</div>`));
         // console.log(resp.response);
         return resp;
       })
@@ -298,8 +299,8 @@ export class ResultsApiService {
 
   GET_clarisaInnovationCharacteristics() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/innovation-characteristics/get/all`).pipe(
-      map(resp => {
-        resp?.response.map(innovation => (innovation.extraInformation = `<strong>${innovation.name}</strong> <br> <div class="select_item_description">${innovation.definition}</div>`));
+      map((resp) => {
+        resp?.response.map((innovation) => (innovation.extraInformation = `<strong>${innovation.name}</strong> <br> <div class="select_item_description">${innovation.definition}</div>`));
         // console.log(resp.response);
         return resp;
       })
@@ -315,7 +316,7 @@ export class ResultsApiService {
   }
 
   GET_innovationDev() {
-    return this.http.get<any>(`${this.apiBaseUrl}summary/innovation-dev/get/result/${this.currentResultId}`).pipe(this.saveButtonSE.isSavingSectionPipe());
+    return this.http.get<any>(`${this.apiBaseUrl}summary/innovation-dev/get/result/${this.currentResultId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   PATCH_policyChanges(body) {
@@ -324,9 +325,9 @@ export class ResultsApiService {
 
   GET_policyChanges() {
     return this.http.get<any>(`${this.apiBaseUrl}summary/policy-changes/get/result/${this.currentResultId}`).pipe(
-      this.saveButtonSE.isSavingSectionPipe(),
+      this.saveButtonSE.isGettingSectionPipe(),
       map((resp: any) => {
-        resp?.response?.institutions?.map(institution => (institution.full_name = `(Id:${institution?.institutions_id}) <strong>${institution?.institutions_acronym || ''}</strong> ${institution?.institutions_acronym ? ' - ' : ''} ${institution?.institutions_name}`));
+        resp?.response?.institutions?.map((institution) => (institution.full_name = `(Id:${institution?.institutions_id}) <strong>${institution?.institutions_acronym || ''}</strong> ${institution?.institutions_acronym ? ' - ' : ''} ${institution?.institutions_name}`));
         return resp;
       })
     );
@@ -338,9 +339,9 @@ export class ResultsApiService {
 
   GET_clarisaPolicyStages() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/policy-stages/get/all`).pipe(
-      map(resp => {
+      map((resp) => {
         // console.log(resp.response);
-        resp?.response.map(stage => (stage.full_name = `<strong>${stage.name}</strong> - ${stage.definition}`));
+        resp?.response.map((stage) => (stage.full_name = `<strong>${stage.name}</strong> - ${stage.definition}`));
         return resp;
       })
     );
@@ -406,9 +407,9 @@ export class ResultsApiService {
 
   POST_reportSesultsCompleteness(initiatives: any[], rol_user?) {
     return this.http.post<any>(`${this.apiBaseUrl}admin-panel/report/results/completeness`, { rol_user, initiatives }).pipe(
-      map(resp => {
+      map((resp) => {
         // console.log(resp.responee);
-        resp?.response.map(result => {
+        resp?.response.map((result) => {
           result.full_name = `${result.result_title} ${result.result_code} ${result.official_code} ${result.result_type_name}`;
           result.full_name_html = `<div class="completeness-${result.is_submitted == 1 ? 'submitted' : 'editing'} completeness-state">${result.is_submitted == 1 ? 'Submitted' : 'Editing'}</div> <strong>Result code: (${result.result_code})</strong> - ${result.result_title}  - <strong>Official code: (${result.official_code})</strong> - <strong>Result Type: (${result.result_type_name})</strong>`;
           result.result_code = Number(result.result_code);
@@ -432,9 +433,9 @@ export class ResultsApiService {
 
   GET_reportUsers() {
     return this.http.get<any>(`${this.apiBaseUrl}admin-panel/report/users`).pipe(
-      map(resp => {
+      map((resp) => {
         // console.log(resp.response);
-        resp?.response.map(user => {
+        resp?.response.map((user) => {
           user.full_name = `${user.user_id} ${user.user_first_name} ${user.user_last_name} ${user.user_email} ${user.initiative_name} ${user.official_code} ${user.initiative_role_name}`;
           user.init_name_official_code = `${user?.official_code ? '(' + user?.official_code + ') ' : ''}${user?.initiative_name}`;
         });
@@ -467,16 +468,16 @@ export class ResultsApiService {
     return this.http.patch<any>(`${environment.apiBaseUrl}api/type-one-report/primary/primary-impact-area/create`, body);
   }
 
-  GETallInnovations() {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/all-innovations`);
+  GETallInnovations(initiativesList) {
+    return this.http.post<any>(`${environment.apiBaseUrl}api/ipsr/all-innovations`, initiativesList);
   }
 
   GETInnovationByResultId(resultId) {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation/${resultId}`);
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation/${resultId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   POSTResultInnovationPackage(body) {
-    return this.http.post<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-package/create-header`, body);
+    return this.http.post<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-package/create-header`, body).pipe(this.saveButtonSE.isCreatingPipe());
   }
 
   GETAllInnovationPackages() {
@@ -484,6 +485,69 @@ export class ResultsApiService {
   }
 
   PATCHIpsrGeneralInfo(body, resulId) {
-    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-package/general-information/${resulId}`, body);
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-package/general-information/${resulId}`, body).pipe(this.saveButtonSE.isCreatingPipe());
+  }
+
+  GETContributorsByIpsrResultId() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/contributors/get/${this.ipsrDataControlSE.resultInnovationId}`).pipe(
+      map((resp) => {
+        // console.log(resp.response);
+        resp?.response?.contributing_initiatives.map((initiative) => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name || ''}</strong> - ${initiative?.initiative_name}`));
+        return resp;
+      }),
+      this.saveButtonSE.isGettingSectionPipe()
+    );
+  }
+
+  PATCHContributorsByIpsrResultId(body) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/contributors/save/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+  }
+
+  GETInnovationPackageDetail() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-package-detail/${this.ipsrDataControlSE.resultInnovationId}`);
+  }
+
+  GETInnovationPathwayByStepOneResultId() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get-step-one/${this.ipsrDataControlSE.resultInnovationId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+  }
+
+  PATCHInnovationPathwayByStepOneResultId(body) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/step-one/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+  }
+
+  GETAllClarisaActionAreasOutcomes() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/action-areas-outcomes/all`);
+  }
+
+  GETAllClarisaSdgsTargets() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/sdgs-targets/all`);
+  }
+
+  GETAllActorsTypes() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/actors/type/all`);
+  }
+
+  GETInstitutionsTypeTree() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/institutions-type/tree`);
+  }
+
+  GETAllInnovationPackagingExpertsExpertises() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-packaging-experts/expertises`);
+  }
+
+  getAllInnoPaActiveBackstopping() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-package/active-backstopping`);
+  }
+  getAllInnoPaConsensusInitiativeWorkPackage() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-package/consensus-initiative-work-package`);
+  }
+  getAllInnoPaRegionalIntegrated() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-package/regional-integrated`);
+  }
+  getAllInnoPaRegionalLeadership() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-package/regional-leadership`);
+  }
+  getAllInnoPaRelevantCountry() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-package/relevant-country`);
   }
 }

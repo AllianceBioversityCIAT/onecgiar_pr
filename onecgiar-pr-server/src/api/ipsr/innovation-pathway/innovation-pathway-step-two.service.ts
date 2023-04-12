@@ -26,6 +26,15 @@ import { ResultsComplementaryInnovationsFunctionRepository } from '../results-co
 import { ResultsComplementaryInnovationsFunction } from '../results-complementary-innovations-functions/entities/results-complementary-innovations-function.entity';
 import { Evidence } from '../../../api/results/evidences/entities/evidence.entity';
 import { EvidencesRepository } from '../../../api/results/evidences/evidences.repository';
+import { CreateComplementaryInnovationDto } from './dto/create-complementary-innovation.dto'
+import { Result } from '../../../api/results/entities/result.entity';
+import { Year } from '../../../api/results/years/entities/year.entity';
+import { YearRepository } from '../../../api/results/years/year.repository';
+import { ResultByInitiativesRepository } from 'src/api/results/results_by_inititiatives/resultByInitiatives.repository';
+import { ResultInnovationPackage } from '../result-innovation-package/entities/result-innovation-package.entity';
+import { ResultsByInititiative } from 'src/api/results/results_by_inititiatives/entities/results_by_inititiative.entity';
+import { ResultsComplementaryInnovation } from '../results-complementary-innovations/entities/results-complementary-innovation.entity';
+import { ComplementaryInnovationFunctionsRepository } from '../results-complementary-innovations-functions/repositories/complementary-innovation-functions.repository';
 
 @Injectable()
 export class InnovationPathwayStepTwoService {
@@ -51,6 +60,9 @@ export class InnovationPathwayStepTwoService {
     protected readonly _resultComplementaryInnovation: ResultsComplementaryInnovationRepository,
     protected readonly _resultComplementaryInnovationFunctions: ResultsComplementaryInnovationsFunctionRepository,
     protected readonly _evidence: EvidencesRepository,
+    protected readonly _yearRepository: YearRepository,
+    protected readonly _resultByInitiativeRepository: ResultByInitiativesRepository,
+    protected readonly _complementarynnovationFucntions: ComplementaryInnovationFunctionsRepository
   ) { }
 
   async findInnovationsAndComplementary() {
@@ -167,27 +179,37 @@ export class InnovationPathwayStepTwoService {
     }
   }
 
-  async saveComplementaryinnovation(resultId: number, User: TokenDto, saveData: getInnovationComInterface[]) {
-    console.log("🚀 ~ file: innovation-pathway-step-two.service.ts:163 ~ InnovationPathwayStepTwoService ~ saveComplementaryinnovation ~ saveData:", saveData);
+  async findComplementaryInnovationFuctions() {
     try {
-      const result = await this._resultRepository.findOne({
-        where: {
-          id: resultId,
-          is_active: true
-        }
-      });
+      const complementaryFunctions = await this._complementarynnovationFucntions.find();
 
-      if (!result) {
+      return {
+        response: complementaryFunctions,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      }
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async saveComplementaryInnovation(resultId: number, User: TokenDto, CreateComplementaryInnovationDto: CreateComplementaryInnovationDto) {
+    try {
+
+      const resultIpResults: Result[] = await this._resultRepository.findBy({ id: resultId });
+      const year: Year[] = await this._yearRepository.findBy({ active: true });
+
+      if (!resultIpResults) {
         throw {
-          response: result,
+          response: { valid: false },
           message: 'The result was not found',
           status: HttpStatus.NOT_FOUND,
         };
       }
 
-      if (!saveData.length) {
+      if (!CreateComplementaryInnovationDto) {
         throw {
-          response: result,
+          response: { valid: false },
           message: 'Missing fields',
           status: HttpStatus.NOT_FOUND,
         };
@@ -199,17 +221,38 @@ export class InnovationPathwayStepTwoService {
       }
       const version: Version = <Version>vTemp.response;
 
-      const updateResult = await this._resultRepository.update(resultId, {
-        title: saveData[0].title,
-        description: saveData[0].description,
+      const last_code = await this._resultRepository.getLastResultCode();
+
+      const createResult: Result = await this._resultRepository.save({
+        title: CreateComplementaryInnovationDto.title,
+        description: CreateComplementaryInnovationDto.description,
+        initiative_id: CreateComplementaryInnovationDto.initiative_id,
+        result_code: last_code + 1,
+        result_level_id: 4,
+        result_type_id: 11,
+        year: year[0].year,
+        version_id: version.id,
+        created_by: User.id,
         last_updated_by: User.id,
-        last_updated_date: new Date()
+        created_date: new Date(),
+        last_updated_date: new Date(),
       });
 
-      const newResultComplemetaryInnovation = await this._resultComplementaryInnovation.save({
-        result_id: resultId,
-        short_title: saveData[0].short_title,
-        other_funcions: saveData[0].other_funcions,
+      const newResult = createResult.id;
+
+      const newInnovationByInitiative: ResultsByInititiative = await this._resultByInitiativeRepository.save({
+        result_id: newResult,
+        initiative_id: CreateComplementaryInnovationDto.initiative_id,
+        initiative_role_id: 1,
+        version_id: version.id,
+        created_by: User.id,
+        last_updated_by: User.id
+      });
+
+      const newResultIpResults: Ipsr = await this._innovationByResultRepository.save({
+        result_innovation_package_id: resultIpResults[0].id,
+        result_id: newResult,
+        ipsr_role_id: 2,
         created_by: User.id,
         last_updated_by: User.id,
         created_date: new Date(),
@@ -217,15 +260,26 @@ export class InnovationPathwayStepTwoService {
         version_id: version.id
       });
 
-      const resultComplementaryInnovationId = newResultComplemetaryInnovation[0].result_complementary_innovation_id;
-      const complementaryFunctions = saveData[0].complementaryFunctions;
+      const newResultComplemetaryInnovation: ResultsComplementaryInnovation = await this._resultComplementaryInnovation.save({
+        result_id: newResult,
+        short_title: CreateComplementaryInnovationDto.short_title,
+        other_funcions: CreateComplementaryInnovationDto.other_funcions,
+        created_by: User.id,
+        last_updated_by: User.id,
+        created_date: new Date(),
+        last_updated_date: new Date(),
+        version_id: version.id
+      });
+
+      const resultComplementaryInnovationId = newResultComplemetaryInnovation.result_complementary_innovation_id;
+      const complementaryFunctions = CreateComplementaryInnovationDto.complementaryFunctions.map(cf => cf.complementary_innovation_functions_id);
 
       const saveCF = [];
       if (complementaryFunctions.length > 0) {
         for (const entity of complementaryFunctions) {
           const newCF = new ResultsComplementaryInnovationsFunction();
-          newCF.result_complementary_innovation_id = resultComplementaryInnovationId;
-          newCF.complementary_innovation_function_id = entity.complementary_innovation_functions_id;
+          newCF.result_complementary_innovation_id = +resultComplementaryInnovationId;
+          newCF.complementary_innovation_function_id = entity;
           newCF.created_by = User.id;
           newCF.last_updated_by = User.id;
           newCF.created_date = new Date();
@@ -235,7 +289,7 @@ export class InnovationPathwayStepTwoService {
         }
       }
 
-      const referenceMaterials = saveData[0].referenceMaterials;
+      const referenceMaterials = CreateComplementaryInnovationDto.referenceMaterials.map(rm => rm.link);
       if (referenceMaterials.length > 3) {
         return {
           response: {
@@ -250,7 +304,8 @@ export class InnovationPathwayStepTwoService {
       if (referenceMaterials.length > 0) {
         for (const entity of referenceMaterials) {
           const newMaterial = new Evidence();
-          newMaterial.link = entity.link;
+          newMaterial.result_id = newResult;
+          newMaterial.link = entity;
           newMaterial.created_by = User.id;
           newMaterial.last_updated_by = User.id;
           newMaterial.creation_date = new Date();
@@ -260,12 +315,16 @@ export class InnovationPathwayStepTwoService {
         }
       }
 
+      const resultCF = await Promise.all(saveCF);
+      const resultEvidence = await Promise.all(saveEvidence);
+
       return {
         response: {
-          updateResult,
+          createResult,
+          newResultIpResults,
           newResultComplemetaryInnovation,
-          saveCF,
-          saveEvidence
+          resultCF,
+          resultEvidence
         },
         message: 'The Result Complementary Innovation have been saved successfully',
         status: HttpStatus.OK

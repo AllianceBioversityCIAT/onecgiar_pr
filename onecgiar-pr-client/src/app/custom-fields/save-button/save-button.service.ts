@@ -8,7 +8,7 @@ import { CustomizedAlertsFeService } from '../../shared/services/customized-aler
 })
 export class SaveButtonService {
   isSaving = false;
-  isSavingSection = false;
+  isGettingSection = false;
   constructor(private customizedAlertsFeSE: CustomizedAlertsFeService) {}
   showSaveSpinner() {
     this.isSaving = true;
@@ -17,20 +17,20 @@ export class SaveButtonService {
     this.isSaving = false;
   }
 
-  isSavingSectionPipe(): any {
+  isGettingSectionPipe(): any {
     Promise.resolve().then(() => {
-      this.isSavingSection = true;
+      this.isGettingSection = true;
     });
     // this.cd.detectChanges();
     return pipe(
       tap(resp => {
         Promise.resolve().then(() => {
-          this.isSavingSection = false;
+          this.isGettingSection = false;
         });
       }),
       catchError(err => {
         Promise.resolve().then(() => {
-          this.isSavingSection = false;
+          this.isGettingSection = false;
         });
         return throwError(err);
       })
