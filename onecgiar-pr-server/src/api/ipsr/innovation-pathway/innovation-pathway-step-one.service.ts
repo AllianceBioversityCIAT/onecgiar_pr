@@ -282,7 +282,7 @@ export class InnovationPathwayStepOneService {
         await this._resultRepository.findOneBy({ id: ipsrResult.result_id });
 
       let innovationTitle: string;
-
+ 
       if (UpdateInnovationPathwayDto.geo_scope_id === 2) {
         const regionsList = regions.map(r => r.name);
         innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${coreResult.title} in ${regionsList.slice(0, -1).join(', ')}${regionsList.length > 1 ? ' and ' : ''}${regionsList[regionsList.length - 1]}`;
@@ -325,7 +325,7 @@ export class InnovationPathwayStepOneService {
 
 
       return {
-        response: { valid: true },
+        response: innovationTitle,
         message: 'The Geographic Scope and Title was updated correctly',
         status: HttpStatus.OK
       }
