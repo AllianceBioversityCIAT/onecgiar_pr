@@ -30,3 +30,10 @@ export const ipsrInnovationUsePathwayRouting: PrRoute[] = [
   { prName: '', underConstruction: true, path: 'step-4', loadChildren: () => import('../innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n4/step-n4.module').then(m => m.StepN4Module) },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'step-1' }
 ];
+
+
+export const ipsrInnovationUsePathwayStep2Routing:PrRoute[] = [
+  { prName: '', underConstruction: true, path: 'complementary-innovation', loadChildren: () => import('../innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n2/pages/complementary-innovation/complementary-innovation.module').then(m => m.ComplementaryInnovationModule) },
+  { prName: 'Basic Info', underConstruction: true, path: 'basic-info', loadChildren: () => import('../innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n2/pages/basic-info/basic-info-routing.module').then(m => m.BasicInfoRoutingModule) },
+  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'complementary-innovation' }
+]

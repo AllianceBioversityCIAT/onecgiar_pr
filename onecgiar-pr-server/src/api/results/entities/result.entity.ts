@@ -22,6 +22,7 @@ import { ResultRegion } from '../result-regions/entities/result-region.entity';
 import { ResultCountry } from '../result-countries/entities/result-country.entity';
 import { Ipsr } from '../../ipsr/entities/ipsr.entity';
 import { ResultActor } from '../result-actors/entities/result-actor.entity';
+import { ResultsByInititiative } from '../results_by_inititiatives/entities/results_by_inititiative.entity';
 
 @Entity()
 @Index(['result_code', 'version_id'], { unique: true })
@@ -52,29 +53,57 @@ export class Result {
   })
   description!: string;
 
+  @Column({
+    name: 'result_type_id',
+    type: 'int',
+    nullable: true
+  })
+  result_type_id: number;
+
   @ManyToOne(() => ResultType, (rt) => rt.id)
   @JoinColumn({
     name: 'result_type_id',
   })
-  result_type_id: number;
+  obj_result_type: ResultType;
+
+  @Column({
+    name: 'result_level_id',
+    type: 'int',
+    nullable: true
+  })
+  result_level_id: number;
 
   @ManyToOne(() => ResultLevel, (rl) => rl.id)
   @JoinColumn({
     name: 'result_level_id',
   })
-  result_level_id: number;
+  obj_result_level: ResultLevel;
 
-  @ManyToOne(() => GenderTagLevel, (gtl) => gtl.id, { nullable: true })
-  @JoinColumn({
+  @Column({
     name: 'gender_tag_level_id',
+    type: 'bigint',
+    nullable: true
   })
   gender_tag_level_id!: number;
 
   @ManyToOne(() => GenderTagLevel, (gtl) => gtl.id, { nullable: true })
   @JoinColumn({
+    name: 'gender_tag_level_id',
+  })
+  obj_gender_tag_level!: GenderTagLevel;
+
+  @Column({
     name: 'climate_change_tag_level_id',
+    type: 'bigint',
+    nullable: true
   })
   climate_change_tag_level_id!: number;
+
+  @ManyToOne(() => GenderTagLevel, (gtl) => gtl.id, { nullable: true })
+  @JoinColumn({
+    name: 'climate_change_tag_level_id',
+  })
+  obj_climate_change_tag_level!: GenderTagLevel;
 
   @Column({
     name: 'is_active',
@@ -84,17 +113,31 @@ export class Result {
   })
   is_active: boolean;
 
+  @Column({
+    name: 'version_id',
+    type: 'bigint',
+    nullable: false,
+  })
+  version_id: number;
+
   @ManyToOne(() => Version, (v) => v.id, { nullable: false })
   @JoinColumn({
     name: 'version_id',
   })
-  version_id: number;
+  obj_version: Version;
+
+  @Column({
+    name: 'created_by',
+    type: 'int',
+    nullable: false,
+  })
+  created_by: number;
 
   @ManyToOne(() => User, (u) => u.id, { nullable: false })
   @JoinColumn({
     name: 'created_by',
   })
-  created_by: number;
+  obj_created: User;
 
   @CreateDateColumn({
     name: 'created_date',
@@ -103,11 +146,18 @@ export class Result {
   })
   created_date: Date;
 
+  @Column({
+    name: 'last_updated_by',
+    type: 'int',
+    nullable: true,
+  })
+  last_updated_by: number;
+
   @ManyToOne(() => User, (u) => u.id, { nullable: true })
   @JoinColumn({
     name: 'last_updated_by',
   })
-  last_updated_by!: number;
+  obj_last_updated!: User;
 
   @UpdateDateColumn({
     name: 'last_updated_date',
@@ -124,17 +174,32 @@ export class Result {
   })
   status!: number;
 
+  @Column({
+    name: 'reported_year_id',
+    type: 'year',
+    nullable: true,
+  })
+  reported_year_id: number;
+
   @ManyToOne(() => Year, (y) => y.year, { nullable: true })
   @JoinColumn({
     name: 'reported_year_id',
   })
-  reported_year_id: number;
+  obj_reported_year: Year;
+
+  @Column({
+    name: 'legacy_id',
+    type: 'varchar',
+    length: 45,
+    nullable: true,
+  })
+  legacy_id: string;
 
   @ManyToOne(() => LegacyResult, (lr) => lr.legacy_id, { nullable: true })
   @JoinColumn({
     name: 'legacy_id',
   })
-  legacy_id!: string;
+  obj_legacy!: LegacyResult;
 
   @Column({
     name: 'krs_url',
@@ -158,11 +223,18 @@ export class Result {
   })
   no_applicable_partner: boolean;
 
+  @Column({
+    name: 'geographic_scope_id',
+    type: 'int',
+    nullable: true
+  })
+  geographic_scope_id: number;
+
   @ManyToOne(() => ClarisaGeographicScope, (cgo) => cgo.id, { nullable: true })
   @JoinColumn({
     name: 'geographic_scope_id',
   })
-  geographic_scope_id!: number;
+  obj_geographic_scope!: ClarisaGeographicScope;
 
   @Column({
     name: 'has_regions',
@@ -202,4 +274,7 @@ export class Result {
 
   @OneToMany(() => ResultActor, (rc) => rc.obj_result)
   obj_result_actor: ResultActor[];
+
+  @OneToMany(() => ResultsByInititiative, rbi => rbi.obj_result)
+  obj_result_by_initiatives: ResultsByInititiative[];
 }

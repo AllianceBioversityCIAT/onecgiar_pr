@@ -20,6 +20,11 @@ import { consensusInitiativeWorkPackageRepository } from './repositories/consens
 import { RegionalIntegratedRepository } from './repositories/regional-integrated.repository';
 import { RegionalLeadershipRepository } from './repositories/regional-leadership.repository';
 import { RelevantCountryRepository } from './repositories/relevant-country.repository';
+import { resultValidationRepository } from '../../../api/results/results-validation-module/results-validation-module.repository';
+import { ResultByEvidencesRepository } from '../../../api/results/results_by_evidences/result_by_evidences.repository';
+import { ResultByIntitutionsTypeRepository } from '../../../api/results/results_by_institution_types/result_by_intitutions_type.repository';
+import { ResultByIntitutionsRepository } from '../../../api/results/results_by_institutions/result_by_intitutions.repository';
+import { ResultIpSdgTargetRepository } from '../innovation-pathway/repository/result-ip-sdg-targets.repository';
 
 @Module({
   controllers: [ResultInnovationPackageController],
@@ -42,7 +47,12 @@ import { RelevantCountryRepository } from './repositories/relevant-country.repos
     consensusInitiativeWorkPackageRepository,
     RegionalIntegratedRepository,
     RegionalLeadershipRepository,
-    RelevantCountryRepository
+    RelevantCountryRepository,
+    ResultByEvidencesRepository,
+    ResultByIntitutionsRepository,
+    ResultByIntitutionsTypeRepository,
+    resultValidationRepository,
+    ResultIpSdgTargetRepository
   ],
   imports: [VersionsModule],
   exports: [

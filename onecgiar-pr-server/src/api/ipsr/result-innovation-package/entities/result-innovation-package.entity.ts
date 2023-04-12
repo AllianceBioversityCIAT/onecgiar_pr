@@ -8,6 +8,7 @@ import { ActiveBackstopping } from './active-backstopping.entity';
 import { Version } from '../../../results/versions/entities/version.entity';
 import { Result } from '../../../results/entities/result.entity';
 import { Ipsr } from '../../entities/ipsr.entity';
+import { ResultsInnovationPackagesEnablerType } from '../../results-innovation-packages-enabler-type/entities/results-innovation-packages-enabler-type.entity';
 
 @Entity('result_innovation_package')
 export class ResultInnovationPackage extends BaseEntity{
@@ -111,4 +112,7 @@ export class ResultInnovationPackage extends BaseEntity{
 
     @OneToMany(() => Ipsr, (i) => i.obj_result_by_innovation_package)
     obj_result: Ipsr[];
+
+    @OneToMany(() => ResultsInnovationPackagesEnablerType, ripet => ripet.obj_result_by_innovation_package)
+    children_innovation_packages_enabler_type: ResultsInnovationPackagesEnablerType[];
 }
