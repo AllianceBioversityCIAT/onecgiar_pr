@@ -489,18 +489,18 @@ export class InnovationPathwayStepOneService {
 
       const impactAreasToActive = allImpactAreas.filter(
         ia =>
-          impactAreas.find(e => e.impact_area_indicator_id === ia.impact_area_indicator_id) &&
+          impactAreas.find(e => e.targetId === ia.impact_area_indicator_id) &&
           ia.is_active === false,
       );
 
       const impactAreasToInactive = allImpactAreas.filter(
         ia =>
-          !impactAreas.find(e => e.impact_area_indicator_id === ia.impact_area_indicator_id) &&
+          !impactAreas.find(e => e.targetId === ia.impact_area_indicator_id) &&
           ia.is_active === true,
       );
 
       const impactAreasToSave = impactAreas.filter(
-        ia => !existingIds.includes(ia.impact_area_indicator_id),
+        ia => !existingIds.includes(ia.targetId),
       );
 
       const saveImpactAreas = [];
@@ -508,7 +508,7 @@ export class InnovationPathwayStepOneService {
       if (impactAreasToSave?.length > 0) {
         for (const entity of impactAreasToSave) {
           const newEoi = new ResultIpImpactArea();
-          newEoi.impact_area_indicator_id = entity.impact_area_indicator_id;
+          newEoi.impact_area_indicator_id = entity.targetId;
           newEoi.result_by_innovation_package_id = result_by_innovation_package_id;
           newEoi.version_id = version.id;
           newEoi.created_by = user.id;

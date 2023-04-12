@@ -38,7 +38,7 @@ export interface actionAreaOutcomesInterface {
     action_area_outcome_id: number;
 }
 export interface impactAreasInterface {
-    impact_area_indicator_id: number;
+    targetId: number;
 }
 export interface sdgTargetsInterface {
     usnd_code: number;
