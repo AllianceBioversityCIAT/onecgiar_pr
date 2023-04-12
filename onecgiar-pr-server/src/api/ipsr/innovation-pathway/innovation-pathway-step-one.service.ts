@@ -84,6 +84,7 @@ export class InnovationPathwayStepOneService {
         };
       }
 
+      const geo_scope_id = result.geographic_scope_id;
       const coreResult = await this._innovationByResultRepository.getInnovationCoreStepOne(resultId);
       const regions: ResultRegion[] = await this._resultRegionRepository.getResultRegionByResultId(resultId);
       const countries: ResultCountry[] = await this._resultCountryRepository.getResultCountriesByResultId(resultId);
@@ -106,7 +107,7 @@ export class InnovationPathwayStepOneService {
       const innovatonUse = {
         actors: (await this._resultActorRepository.find({ where: { result_id: result.id, is_active: true } })).map(el => ({ ...el, men_non_youth: el.men - el.men_youth, women_non_youth: el.women - el.women_youth })),
         measures: await this._resultIpMeasureRepository.find({ where: { result_ip_id: result.id, is_active: true } }),
-        organization: (await this._resultByIntitutionsTypeRepository.find({ where: { results_id: result.id, institution_roles_id: 5, is_active: true }, relations: { obj_institution_types: { obj_parent: {obj_parent:true}} } })).map(el => ({...el, parent_institution_type_id: el.obj_institution_types?.obj_parent?.obj_parent?.code || null}))
+        organization: (await this._resultByIntitutionsTypeRepository.find({ where: { results_id: result.id, institution_roles_id: 5, is_active: true }, relations: { obj_institution_types: { obj_parent: { obj_parent: true } } } })).map(el => ({ ...el, parent_institution_type_id: el.obj_institution_types?.obj_parent?.obj_parent?.code || null }))
       }
       const result_ip = this._resultInnovationPackageRepository.findOne({
         where: {
@@ -118,6 +119,7 @@ export class InnovationPathwayStepOneService {
       return {
         response: {
           result_id: result.id,
+          geo_scope_id,
           coreResult,
           result_ip,
           institutions,
@@ -354,7 +356,7 @@ export class InnovationPathwayStepOneService {
           !eoiOutcomes.find(e => e.toc_result_id === eoi.toc_result_id) &&
           eoi.is_active === true,
       );
-        
+
       const tocsToSave = eoiOutcomes?.filter(
         eoi => !existingIds.includes(eoi.toc_result_id),
       );
@@ -723,7 +725,7 @@ export class InnovationPathwayStepOneService {
           })
         }
 
-        const delData = ins?.deliveries?.length? ins?.deliveries : [];
+        const delData = ins?.deliveries?.length ? ins?.deliveries : [];
         await this.saveDeliveries(instExist ? instExist : rbi, delData, user.id, version);
       }
     } else {
@@ -752,11 +754,11 @@ export class InnovationPathwayStepOneService {
       const { actors } = crtr;
       actors.map(async (el: ResultActor) => {
         let actorExists: ResultActor = null;
-        if(el?.actor_type_id){
+        if (el?.actor_type_id) {
           actorExists = await this._resultActorRepository.findOne({ where: { actor_type_id: el.actor_type_id, result_id: result.id } });
         }
 
-        if(!actorExists && el?.result_actors_id){
+        if (!actorExists && el?.result_actors_id) {
           actorExists = await this._resultActorRepository.findOne({ where: { result_actors_id: el.result_actors_id, result_id: result.id } });
         }
 
@@ -793,12 +795,12 @@ export class InnovationPathwayStepOneService {
     if (crtr?.organization?.length) {
       const { organization } = crtr;
       organization.map(async (el) => {
-        let ite:ResultsByInstitutionType = null;
-        if(el?.institution_types_id){
+        let ite: ResultsByInstitutionType = null;
+        if (el?.institution_types_id) {
           ite = await this._resultByIntitutionsTypeRepository.getNewResultByInstitutionTypeExists(result.id, el.institution_types_id, 5);
         }
 
-        if(!ite && el?.id){
+        if (!ite && el?.id) {
           ite = await this._resultByIntitutionsTypeRepository.getNewResultByIdExists(result.id, el.id, 5);
         }
         if (ite) {
