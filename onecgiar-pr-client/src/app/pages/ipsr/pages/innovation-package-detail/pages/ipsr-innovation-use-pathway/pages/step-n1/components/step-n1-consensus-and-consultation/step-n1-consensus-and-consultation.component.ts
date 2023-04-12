@@ -21,23 +21,23 @@ export class StepN1ConsensusAndConsultationComponent {
   }
   getInformation() {
     this.api.resultsSE.getAllInnoPaActiveBackstopping().subscribe(({ response }) => {
-      console.log(response);
+      // console.log(response);
       this.fields[0].radioOptions = response;
     });
     this.api.resultsSE.getAllInnoPaConsensusInitiativeWorkPackage().subscribe(({ response }) => {
-      console.log(response);
+      // console.log(response);
       this.fields[1].radioOptions = response;
     });
     this.api.resultsSE.getAllInnoPaRegionalIntegrated().subscribe(({ response }) => {
-      console.log(response);
+      // console.log(response);
       this.fields[2].radioOptions = response;
     });
     this.api.resultsSE.getAllInnoPaRegionalLeadership().subscribe(({ response }) => {
-      console.log(response);
+      // console.log(response);
       this.fields[3].radioOptions = response;
     });
     this.api.resultsSE.getAllInnoPaRelevantCountry().subscribe(({ response }) => {
-      console.log(response);
+      // console.log(response);
       this.fields[4].radioOptions = response;
     });
   }

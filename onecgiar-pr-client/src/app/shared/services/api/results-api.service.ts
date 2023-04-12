@@ -516,11 +516,11 @@ export class ResultsApiService {
   }
 
   GETAllClarisaActionAreasOutcomes() {
-    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/action-areas-outcomes/all`).pipe(this.saveButtonSE.isGettingSectionPipe());
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/action-areas-outcomes/all`);
   }
 
   GETAllClarisaSdgsTargets() {
-    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/sdgs-targets/all`).pipe(this.saveButtonSE.isGettingSectionPipe());
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/sdgs-targets/all`);
   }
 
   GETAllActorsTypes() {

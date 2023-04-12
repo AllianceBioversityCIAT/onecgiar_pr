@@ -22,7 +22,7 @@ export class StepN1ExpertsComponent {
   }
   GETAllInnovationPackagingExpertsExpertises() {
     this.api.resultsSE.GETAllInnovationPackagingExpertsExpertises().subscribe(({ response }) => {
-      console.log(response);
+      // console.log(response);
       this.expertisesList = response;
     });
   }
