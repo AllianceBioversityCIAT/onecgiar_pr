@@ -28,6 +28,7 @@ import { EvidencesRepository } from '../../../api/results/evidences/evidences.re
 import { YearRepository } from '../../../api/results/years/year.repository';
 import { ResultByInitiativesRepository } from '../../../api/results/results_by_inititiatives/resultByInitiatives.repository';
 import { ComplementaryInnovationFunctionsRepository } from '../results-complementary-innovations-functions/repositories/complementary-innovation-functions.repository';
+import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
 
 @Module({
   controllers: [InnovationPathwayController],
@@ -59,7 +60,8 @@ import { ComplementaryInnovationFunctionsRepository } from '../results-complemen
     EvidencesRepository,
     YearRepository,
     ResultByInitiativesRepository,
-    ComplementaryInnovationFunctionsRepository
+    ComplementaryInnovationFunctionsRepository,
+    ClarisaInstitutionsRepository
   ]
 })
 export class InnovationPathwayModule { }
