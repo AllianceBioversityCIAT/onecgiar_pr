@@ -109,19 +109,19 @@ export class InnovationPathwayStepOneService {
         measures: await this._resultIpMeasureRepository.find({ where: { result_ip_id: result.id, is_active: true } }),
         organization: (await this._resultByIntitutionsTypeRepository.find({ where: { results_id: result.id, institution_roles_id: 5, is_active: true }, relations: { obj_institution_types: { obj_parent: { obj_parent: true } } } })).map(el => ({ ...el, parent_institution_type_id: el.obj_institution_types?.obj_parent?.obj_parent?.code || null }))
       }
-      const result_ip = this._resultInnovationPackageRepository.findOne({
+      const result_ip = await this._resultInnovationPackageRepository.findOne({
         where: {
           result_innovation_package_id: result.id,
           is_active: true
         }
-      })
+      });
 
       return {
         response: {
           result_id: result.id,
           geo_scope_id,
           coreResult,
-          result_ip,
+          result_ip ,
           institutions,
           experts,
           innovatonUse,
