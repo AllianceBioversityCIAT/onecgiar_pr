@@ -30,7 +30,6 @@ export class ResultIpEoiOutcomeRepository extends Repository<ResultIpEoiOutcome>
 
     try {
       const eoiOutcome: any[] = await this.query(query, [resultByInnovationPackageId]);
-      console.log("🚀 ~ file: result-ip-eoi-outcomes.repository.ts:33 ~ ResultIpEoiOutcomeRepository ~ getEoiOutcomes ~ eoiOutcome:", eoiOutcome)
       return eoiOutcome;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
