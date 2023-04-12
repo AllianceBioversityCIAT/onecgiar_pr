@@ -6,22 +6,22 @@
 <app-pr-button text="Add new complementary innovation/ enabler/ solution" icon="add_box"
             [reverse]="true" [verticalMargin]="20"></app-pr-button>
 
-<div *ngIf="this.innovationPackageCreatorBody.result_id">
+<div *ngIf="this.innovationPackageCreatorBody.length > 0">
     <app-pr-field-header 
         [required]="false" description="Complementary innovation(s)/ enabler(s)/ solution(s) selected:"></app-pr-field-header>
 
-    <div class="core_innovation_selected ">
+    <div class="core_innovation_selected " *ngFor="let result of this.innovationPackageCreatorBody" style="margin-top: 10px;">
         <div>
-            <strong>{{this.innovationPackageCreatorBody.result_code}}</strong> -
-            {{this.innovationPackageCreatorBody.title}}
+            <span style="text-overflow: ellipsis;">{{ result.title.length > 120? result.title.substr(0,120)+"..." : result.title }}</span>
             -
-            <strong>{{this.innovationPackageCreatorBody.official_code}}</strong>
+            <strong>{{result.initiative_official_code}}</strong>
         </div>
-        <i class="material-icons-round" (click)="this.innovationPackageCreatorBody.result_id = null">
+        <i class="material-icons-round" (click)="cancelInnovation(result.result_id)">
             cancel
         </i>
 
     </div>
 </div>
+
 
 

@@ -15,6 +15,7 @@ import { ElasticResult, Source } from '../../interfaces/elastic.interface';
 import { KnowledgeProductBodyMapped } from '../../../pages/results/pages/result-detail/pages/rd-result-types-pages/knowledge-product-info/model/KnowledgeProductBodyMapped';
 import { KnowledgeProductSaveDto } from '../../../pages/results/pages/result-detail/pages/rd-result-types-pages/knowledge-product-info/model/knowledge-product-save.dto';
 import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-control.service';
+import { getInnovationComInterface } from '../../../../../../onecgiar-pr-server/src/api/ipsr/ipsr.repository';
 
 @Injectable({
   providedIn: 'root'
@@ -529,5 +530,13 @@ export class ResultsApiService {
 
   GETInstitutionsTypeTree() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/institutions-type/tree`);
+  }
+
+  GETinnovationpathwayStepTwo(){
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/complementary-innovations`);
+  }
+
+  GETInnovationPathwayStepTwoInnovationSelect(result_id:number){
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/step-two/${this.ipsrDataControlSE.resultInnovationId}`);
   }
 }
