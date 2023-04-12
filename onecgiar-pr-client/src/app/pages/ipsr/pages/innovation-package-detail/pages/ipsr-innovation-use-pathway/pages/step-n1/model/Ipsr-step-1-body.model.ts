@@ -49,13 +49,16 @@ class InnovatonUse {
 export class Measure {
   unit_of_measure: string;
   quantity: number;
+  is_active: boolean;
 }
 
 export class Organization {
   institution_types_id: number;
+  institution_sub_type_id: number;
   how_many: number;
   // Aux
   hide: boolean;
+  is_active: boolean;
 }
 
 export class Actor {
@@ -64,6 +67,7 @@ export class Actor {
   women_youth: number;
   men: number;
   men_youth: number;
+  is_active: boolean;
 }
 
 interface SdgTarget {
