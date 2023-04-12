@@ -1,15 +1,32 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
 import { CreateResultActorDto } from './dto/create-result-actor.dto';
 import { UpdateResultActorDto } from './dto/update-result-actor.dto';
+import { HandlersError } from '../../../shared/handlers/error.utils';
+import { ActorTypeRepository } from './repositories/actors-type.repository';
 
 @Injectable()
 export class ResultActorsService {
+
+  constructor(
+    protected readonly _handlersError: HandlersError,
+    protected readonly _actorTypeRepository: ActorTypeRepository
+  ){}
+
   create(createResultActorDto: CreateResultActorDto) {
     return 'This action adds a new resultActor';
   }
 
-  findAll() {
-    return `This action returns all resultActors`;
+  async findAll() {
+    try {
+      const data = await this._actorTypeRepository.find();
+      return {
+        response: data,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
   }
 
   findOne(id: number) {

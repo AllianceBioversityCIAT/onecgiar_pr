@@ -20,6 +20,7 @@ import { ResultsByInstitution } from '../../results/results_by_institutions/enti
 import { CreateTocShareResult } from '../../results/share-result-request/dto/create-toc-share-result.dto';
 import { ShareResultRequestService } from '../../results/share-result-request/share-result-request.service';
 import { ShareResultRequestRepository } from '../../results/share-result-request/share-result-request.repository';
+import { NonPooledProject } from '../../results/non-pooled-projects/entities/non-pooled-project.entity';
 
 @Injectable()
 export class ResultsPackageTocResultService {
@@ -73,7 +74,7 @@ export class ResultsPackageTocResultService {
       if (crtr?.contributing_initiatives.length) {
         const { contributing_initiatives: cinit } = crtr;
         for (const init of cinit) {
-          if (!init.is_active == false) {
+          if (init?.is_active == false) {
             await this._resultByInitiativesRepository.update({ result_id: rip.id, initiative_id: init.id }, { is_active: false });
           }
         }
@@ -104,8 +105,13 @@ export class ResultsPackageTocResultService {
 
         await this._nonPooledProjectRepository.updateNPProjectById(rip.id, titles, user.id)
         for (const cpnp of cnpp) {
+          let nonPP: NonPooledProject = null;
           if (cpnp?.grant_title?.length) {
-            const nonPP = await this._nonPooledProjectRepository.getAllNPProjectById(rip.id, cpnp.grant_title);
+            if(cpnp?.id){
+              nonPP = await this._nonPooledProjectRepository.getAllNPProjectByNPId(rip.id, cpnp.id);
+            }else{
+              nonPP = await this._nonPooledProjectRepository.getAllNPProjectById(rip.id, cpnp.grant_title);
+            }
             if (nonPP) {
               this._nonPooledProjectRepository.update(
                 nonPP.id,
@@ -114,13 +120,15 @@ export class ResultsPackageTocResultService {
                   center_grant_id: cpnp.center_grant_id,
                   funder_institution_id: cpnp.funder,
                   lead_center_id: cpnp.lead_center,
-                  last_updated_by: user.id
+                  last_updated_by: user.id,
+                  grant_title: cpnp.grant_title
                 }
               );
             } else {
               this._nonPooledProjectRepository.save({
                 results_id: rip.id,
                 center_grant_id: cpnp.center_grant_id,
+                grant_title: cpnp.grant_title,
                 funder_institution_id: cpnp.funder,
                 lead_center_id: cpnp.lead_center,
                 version_id: version.id,
@@ -202,9 +210,11 @@ export class ResultsPackageTocResultService {
             })
           }
 
-          if (ins?.deliveries.length) {
+          if (ins?.deliveries?.length) {
             const { deliveries } = ins;
             await this.saveDeliveries(instExist ? instExist : rbi, deliveries, user.id, version);
+          }else{
+            await this._resultByInstitutionsByDeliveriesTypeRepository.inactiveResultDeLivery((instExist ? instExist : rbi).id, [], user.id);
           }
         }
       } else {
@@ -240,7 +250,7 @@ export class ResultsPackageTocResultService {
 
   protected async saveResultPackageTocResult(rip: Result, user: TokenDto, version: Version, owner: boolean, rtr: resultToResultInterfaceToc) {
     const { planned_result, initiative_id, toc_result_id, result_toc_result_id } = rtr;
-    const rptr = await this._resultsTocResultRepository.getRTRById(result_toc_result_id, rip.id, rip.initiative_id);
+    const rptr = await this._resultsTocResultRepository.getNewRTRById(result_toc_result_id, rip.id, rip.initiative_id);
     if (rptr) {
       await this._resultsTocResultRepository.update(
         rptr.result_toc_result_id,
@@ -252,8 +262,9 @@ export class ResultsPackageTocResultService {
         }
       )
     } else {
-      this._resultsTocResultRepository.save({
+      await this._resultsTocResultRepository.save({
         version_id: version.id,
+        results_id: rip.id,
         initiative_id: owner ? rip.initiative_id : initiative_id,
         toc_result_id: toc_result_id,
         planned_result: planned_result,
@@ -265,7 +276,7 @@ export class ResultsPackageTocResultService {
 
   async findOne(resultId: number) {
     try {
-      const resultInit = await this._resultByInitiativesRepository.getOwnerInitiativeByResult(resultId);
+    const resultInit = await this._resultByInitiativesRepository.getOwnerInitiativeByResult(resultId);
     const conInit = await this._resultByInitiativesRepository.getContributorInitiativeByResult(resultId);
     const conPending = await this._resultByInitiativesRepository.getPendingInit(resultId);
     const npProject = await this._nonPooledProjectRepository.getAllNPProjectByResultId(resultId);
@@ -305,7 +316,7 @@ export class ResultsPackageTocResultService {
         contributors_result_toc_result: conResTocRes,
         institutions: institutions
       },
-      message: 'The toc data is successfully created',
+      message: 'The toc data is successfully',
       status: HttpStatus.OK,
     };
     } catch (error) {

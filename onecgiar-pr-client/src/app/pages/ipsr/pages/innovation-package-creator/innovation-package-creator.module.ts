@@ -7,9 +7,10 @@ import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.modu
 import { SectionHeaderModule } from '../../components/section-header/section-header.module';
 import { ResultsInnovationOutputListModule } from './components/results-innovation-output-list/results-innovation-output-list.module';
 import { IpsrGeoscopeCreatorModule } from './components/ipsr-geoscope-creator/ipsr-geoscope-creator.module';
+import { FeedbackValidationDirectiveModule } from '../../../../shared/directives/feedback-validation-directive.module';
 
 @NgModule({
   declarations: [InnovationPackageCreatorComponent],
-  imports: [CommonModule, InnovationPackageCreatorRoutingModule, CustomFieldsModule, SectionHeaderModule, ResultsInnovationOutputListModule, IpsrGeoscopeCreatorModule]
+  imports: [CommonModule, InnovationPackageCreatorRoutingModule, CustomFieldsModule, SectionHeaderModule, ResultsInnovationOutputListModule, IpsrGeoscopeCreatorModule, FeedbackValidationDirectiveModule]
 })
 export class InnovationPackageCreatorModule {}

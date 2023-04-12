@@ -13,7 +13,7 @@ import { AuthService } from '../../services/api/auth.service';
 })
 export class NavigationBarComponent implements OnInit {
   navigationOptions: PrRoute[] = routingApp;
-  emailAccess = ['admin@prms.pr', 'j.cadavid@cgiar.org', 'j.delgado@cgiar.org', 'd.casanas@cgiar.org', 'S.Galvez@cgiar.org', 'y.zuniga@cgiar.org'];
+  emailAccess = ['h.f.tobon@cgiar.org', 'admin@prms.pr', 'j.cadavid@cgiar.org', 'j.delgado@cgiar.org', 'd.casanas@cgiar.org', 'S.Galvez@cgiar.org', 'y.zuniga@cgiar.org', 'yecksin@gmail.com'];
   constructor(public _navigationBarService: NavigationBarService, private rolesSE: RolesService, private dataControlSE: DataControlService, private authSE: AuthService) {}
 
   ngOnInit(): void {
@@ -33,7 +33,7 @@ export class NavigationBarComponent implements OnInit {
 
   validateAdminModuleAndRole(option) {
     if (option.onlytest && environment.production) return true;
-    if (option?.path == 'ipsr' && !this.hasAccess()) return true;
+    // if (option?.path == 'ipsr' && !this.hasAccess()) return true;
     if (this.rolesSE.isAdmin) return false;
     if (option?.path == 'init-admin-module') return this.validateCoordAndLead();
     // if (option?.path == 'quality-assurance' && !this.rolesSE.isAdmin) return true;

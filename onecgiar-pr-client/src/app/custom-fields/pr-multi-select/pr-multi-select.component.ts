@@ -33,6 +33,7 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   @Input() required: boolean = true;
   @Input() flagsCode: string;
   @Input() confirmDeletion: boolean = false;
+  @Input() logicalDeletion: boolean = false;
   @Output() selectOptionEvent = new EventEmitter<any>();
   @Output() removeOptionEvent = new EventEmitter<any>();
   selectAll = null;
@@ -50,12 +51,12 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
       resp.selected = false;
     });
     this.disableOptions?.map(disableOption => {
-      let itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == disableOption[this.optionValue]);
+      const itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == disableOption[this.optionValue]);
       if (itemFinded) itemFinded.disabled = true;
     });
 
     this.value?.map(savedListItem => {
-      let itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == savedListItem[this.optionValue]);
+      const itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == savedListItem[this.optionValue]);
       if (itemFinded) itemFinded.selected = true;
     });
 
@@ -140,7 +141,7 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
     // console.log('onSelectOption');
     const optionFinded = this.value.findIndex(valueItem => valueItem[this.optionValue] == option[this.optionValue]);
     if (optionFinded < 0) {
-      this.value.push(option);
+      this.value.push({ ...option, new: true });
     } else {
       // console.log('lo enceutra');
       this.value.splice(optionFinded, 1);
@@ -151,8 +152,15 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   }
 
   removeOption(option) {
-    const optionFinded = this.value.findIndex(valueItem => valueItem[this.optionValue] == option[this.optionValue]);
-    this.value.splice(optionFinded, 1);
+    console.log('removeOption');
+    if (this.logicalDeletion && !option.new) {
+      option.is_active = false;
+    } else {
+      const optionFinded = this.value.findIndex(valueItem => valueItem[this.optionValue] == option[this.optionValue]);
+      this.value.splice(optionFinded, 1);
+    }
+    console.log(option);
+
     // let itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == option[this.optionValue]);
     // if (itemFinded) itemFinded.selected = false;
     this.removeOptionEvent.emit({ remove: option });

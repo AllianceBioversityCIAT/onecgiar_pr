@@ -44,11 +44,13 @@
         <app-pr-field-header [description]="this.selectedLabel+'('+value?.length+')'">
         </app-pr-field-header>
         <div class="chips_container" *ngIf="this.selectedOptionLabel">
-            <div class="pr_chip_selected" *ngFor="let option of value; let i=index">
+            <div class="pr_chip_selected" *ngFor="let option of value; let i=index"
+                [ngClass]="{'is_active_false': logicalDeletion && option.is_active == false}">
                 <div class="name" [innerHtml]="option[this.selectedOptionLabel]"></div><i
                     *ngIf="!(readOnly || this.rolesSE.readOnly || !!this.dataControlSE?.currentResult?.status) || (isStatic)"
                     class="material-icons-round"
-                    (click)="confirmDeletion?confirmDeletionEvent(option):removeOption(option)">remove_circle </i>
+                    (click)="confirmDeletion && option.new?confirmDeletionEvent(option):removeOption(option)">remove_circle
+                </i>
             </div>
         </div>
     </div>

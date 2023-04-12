@@ -58,7 +58,7 @@ export class ResultByInstitutionsByDeliveriesTypeRepository extends Repository<R
     rbibdt.last_updated_by
     from result_by_institutions_by_deliveries_type rbibdt 
     where rbibdt.is_active > 0
-    	and rbibdt.result_by_institution_id in (${resultByInstitutionsId.toString()});
+    	and rbibdt.result_by_institution_id in (${resultByInstitutionsId?.toString() || null});
     `;
 
     try {

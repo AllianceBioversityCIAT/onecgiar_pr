@@ -11,6 +11,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { TokenBiReport } from '../entities/token-bi-reports.entity';
 import { log } from 'console';
 import { TokenReportBiDto } from '../dto/create-token-bi-report.dto';
+import { NotFoundException } from '@nestjs/common';
 
 @Injectable()
 export class BiReportRepository extends Repository<BiReport> {
@@ -107,6 +108,7 @@ export class BiReportRepository extends Repository<BiReport> {
         reportsInfo.name = resp.report_name;
         reportsInfo.description = resp.report_description;
         reportsInfo.title = resp.report_title;
+        reportsInfo.order = resp.report_order;
         reportsInfo.embed_url = this.credentialsBi.embed_url_base+resp.report_id+'&groupId='+resp.group_id+'&config='+this.credentialsBi.config_id;
         auxReportsInfo.push(reportsInfo)
       })
@@ -147,6 +149,7 @@ export class BiReportRepository extends Repository<BiReport> {
         reportsInfo.resport_id = reportsExist.report_id;
         reportsInfo.name = reportsExist.report_name;
         reportsInfo.description = reportsExist.report_description;
+        reportsInfo.order = reportsExist.report_order;
         reportsInfo.embed_url = this.credentialsBi.embed_url_base+reportsExist.report_id+'&groupId='+reportsExist.group_id+'&config='+this.credentialsBi.config_id;
 
         return {
@@ -167,10 +170,10 @@ export class BiReportRepository extends Repository<BiReport> {
     const today = new Date();
     let reportsExist = await this.getReportByName(report_name);
     
-    if(reportsExist != null){
+    if(reportsExist != null && reportsExist.length != 0){
       if(tokensReports.length <= 0 || Date.parse(tokensReports[0].expiration_toke_id.toString()) < Date.parse(today.toString())){
         
-        const registerInToken = await this.getTokenPowerBi();
+        const registerInToken= await this.getTokenPowerBi();
         const responseToken = await registerInToken['reportsInformation'].filter(report => report.name == report_name);
         return {
           token:registerInToken['embed_token'],
@@ -182,6 +185,7 @@ export class BiReportRepository extends Repository<BiReport> {
         reportsInfo.resport_id = reportsExist[0].report_id;
         reportsInfo.name = reportsExist[0].report_name;
         reportsInfo.description = reportsExist[0].report_description;
+        reportsInfo.order = reportsExist[0].report_order;
         reportsInfo.embed_url = this.credentialsBi.embed_url_base+reportsExist[0].report_id+'&groupId='+reportsExist[0].group_id+'&config='+this.credentialsBi.config_id;
 
         return {
@@ -190,9 +194,7 @@ export class BiReportRepository extends Repository<BiReport> {
         }
       }
     }else{
-      return {
-        error:'This Report not exists'
-      }
+      throw new NotFoundException({message:'This report does not exist'});
     }
   }
 

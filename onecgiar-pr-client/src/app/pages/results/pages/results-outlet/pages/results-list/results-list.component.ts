@@ -118,4 +118,7 @@ export class ResultsListComponent implements OnInit {
       );
     });
   }
+  ngOnDestroy(): void {
+    this.api.dataControlSE?.myInitiativesList.map(item => (item.selected = true));
+  }
 }

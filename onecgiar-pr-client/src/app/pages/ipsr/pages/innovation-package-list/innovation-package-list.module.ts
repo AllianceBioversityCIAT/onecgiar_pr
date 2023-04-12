@@ -6,9 +6,12 @@ import { InnovationPackageListComponent } from './innovation-package-list.compon
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { InnovationPackageCustomTableModule } from './components/innovation-package-custom-table/innovation-package-custom-table.module';
 import { SectionHeaderModule } from '../../components/section-header/section-header.module';
+import { FilterByTextModule } from '../../../../shared/pipes/filter-by-text.module';
+import { InnovationPackageListFilterPipe } from './components/innovation-package-custom-table/pipes/innovation-package-list-filter.pipe';
+import { MenuModule } from 'primeng/menu';
 
 @NgModule({
-  declarations: [InnovationPackageListComponent],
-  imports: [CommonModule, InnovationPackageListRoutingModule, CustomFieldsModule, InnovationPackageCustomTableModule, SectionHeaderModule]
+  declarations: [InnovationPackageListComponent, InnovationPackageListFilterPipe],
+  imports: [CommonModule, InnovationPackageListRoutingModule, CustomFieldsModule, InnovationPackageCustomTableModule, SectionHeaderModule, FilterByTextModule]
 })
 export class InnovationPackageListModule {}
