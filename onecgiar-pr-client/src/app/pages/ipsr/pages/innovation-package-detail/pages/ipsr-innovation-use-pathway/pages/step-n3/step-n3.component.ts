@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { IpsrStep3Body } from './model/Ipsr-step-3-body.model';
+import { IpsrDataControlService } from 'src/app/pages/ipsr/services/ipsr-data-control.service';
 
 @Component({
   selector: 'app-step-n3',
@@ -12,7 +13,7 @@ export class StepN3Component implements OnInit {
     { id: 1, name: 'Yes, an expert workshop was organized' },
     { id: 2, name: 'No expert workshop was organized' }
   ];
-  constructor() {}
+  constructor(public ipsrDataControlSE: IpsrDataControlService) {}
 
   ngOnInit(): void {
     this.getSectionInformation();
