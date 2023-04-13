@@ -14,6 +14,7 @@ import { Result } from '../../entities/result.entity';
 import { InstitutionRole } from '../../institution_roles/entities/institution_role.entity';
 import { ClarisaInstitution } from '../../../../clarisa/clarisa-institutions/entities/clarisa-institution.entity';
 import { ResultsKnowledgeProductInstitution } from '../../results-knowledge-products/entities/results-knowledge-product-institution.entity';
+import { ResultInstitutionsBudget } from '../../result_budget/entities/result_institutions_budget.entity';
 
 @Entity()
 export class ResultsByInstitution {
@@ -84,4 +85,7 @@ export class ResultsByInstitution {
     (rkpi) => rkpi.results_by_institutions_object,
   )
   result_knowledge_product_institution_array: ResultsKnowledgeProductInstitution[];
+
+  @OneToMany(() => ResultInstitutionsBudget, rib => rib.obj_result_institution)
+  obj_result_institution_array: ResultInstitutionsBudget[];
 }

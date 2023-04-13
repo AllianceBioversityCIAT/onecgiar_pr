@@ -50,6 +50,4 @@ export class NonPooledProjectBudget extends BaseEntity{
         name: 'version_id'
     })
     obj_version: Version;
-
-
 }
