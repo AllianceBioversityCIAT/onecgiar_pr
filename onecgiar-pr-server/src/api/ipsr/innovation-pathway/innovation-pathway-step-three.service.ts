@@ -80,6 +80,8 @@ export class InnovationPathwayStepThreeService {
           readinees_evidence_link: result_ip_core.readinees_evidence_link,
           use_level_evidence_based: result_ip_core.use_level_evidence_based,
           use_evidence_link: result_ip_core.use_evidence_link,
+          use_details_of_evidence: result_ip_core.use_details_of_evidence,
+          readiness_details_of_evidence: result_ip_core.readiness_details_of_evidence,
           last_updated_by: user.id
         }
       )
@@ -95,6 +97,8 @@ export class InnovationPathwayStepThreeService {
               readinees_evidence_link: ripc.readinees_evidence_link,
               use_level_evidence_based: ripc.use_level_evidence_based,
               use_evidence_link: ripc.use_evidence_link,
+              use_details_of_evidence: ripc.use_details_of_evidence,
+              readiness_details_of_evidence: ripc.readiness_details_of_evidence,
               last_updated_by: user.id
             }
           )
