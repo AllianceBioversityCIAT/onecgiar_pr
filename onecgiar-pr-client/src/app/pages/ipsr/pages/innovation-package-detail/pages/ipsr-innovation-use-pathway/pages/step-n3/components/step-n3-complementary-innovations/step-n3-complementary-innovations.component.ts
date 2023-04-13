@@ -7,11 +7,12 @@ import { IpsrStep3Body } from '../../model/Ipsr-step-3-body.model';
   styleUrls: ['./step-n3-complementary-innovations.component.scss']
 })
 export class StepN3ComplementaryInnovationsComponent implements OnInit {
+  @Input() rangesOptions: any[] = [];
   @Input() body = new IpsrStep3Body();
   ci = {
     index: 0,
     previous: () => !(this.ci.index > 0) || this.ci.index--,
-    next: () => !(this.ci.index < 7) || this.ci.index++
+    next: () => !(this.ci.index < this.body.result_ip_result_complementary?.length - 1) || this.ci.index++
   };
   constructor() {}
 

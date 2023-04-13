@@ -1,7 +1,7 @@
 export class IpsrStep3Body {
   innovatonUse = new InnovatonUse();
   result_innovation_package = new Resultinnovationpackage();
-  // result_ip_result_complementary: Resultipresultcomplementary[];
+  result_ip_result_complementary: Resultipresultcomplementary[] = [];
   result_ip_result_core = new Resultipresultcomplementary();
 }
 
@@ -10,7 +10,7 @@ class Resultipresultcomplementary {
   // version_id: string;
   // created_date: string;
   // last_updated_date: string;
-  // created_by: string;
+  created_by: string;
   // last_updated_by: string;
   // result_by_innovation_package_id: string;
   // result_innovation_package_id: string;
@@ -20,6 +20,7 @@ class Resultipresultcomplementary {
   use_evidence_link?: any;
   readiness_level_evidence_based?: any;
   use_level_evidence_based?: any;
+  obj_result: any;
 }
 
 class Resultinnovationpackage {
