@@ -1,6 +1,45 @@
 export class IpsrStep3Body {
-  example: any = null;
-  innovatonUse: InnovatonUse = new InnovatonUse();
+  innovatonUse = new InnovatonUse();
+  result_innovation_package = new Resultinnovationpackage();
+  // result_ip_result_complementary: Resultipresultcomplementary[];
+  result_ip_result_core = new Resultipresultcomplementary();
+}
+
+class Resultipresultcomplementary {
+  // is_active: boolean;
+  // version_id: string;
+  // created_date: string;
+  // last_updated_date: string;
+  // created_by: string;
+  // last_updated_by: string;
+  // result_by_innovation_package_id: string;
+  // result_innovation_package_id: string;
+  // result_id: string;
+  // ipsr_role_id: string;
+  readinees_evidence_link?: any;
+  use_evidence_link?: any;
+  readiness_level_evidence_based?: any;
+  use_level_evidence_based?: any;
+}
+
+class Resultinnovationpackage {
+  // is_active: boolean;
+  // version_id: string;
+  // created_date: string;
+  // last_updated_date: string;
+  // created_by: string;
+  // last_updated_by: string;
+  // result_innovation_package_id: string;
+  // experts_is_diverse: boolean;
+  // is_not_diverse_justification?: any;
+  // consensus_initiative_work_package_id: string;
+  // relevant_country_id: string;
+  // regional_leadership_id: string;
+  // regional_integrated_id: string;
+  // active_backstopping_id: string;
+  use_level_evidence_based = null;
+  readiness_level_evidence_based = null;
+  is_expert_workshop_organized = null;
 }
 
 class InnovatonUse {
@@ -13,6 +52,7 @@ export class MeasureN3 {
   unit_of_measure: string;
   quantity: number;
   is_active: boolean;
+  evidence_link: string;
 }
 
 export class OrganizationN3 {
@@ -22,6 +62,7 @@ export class OrganizationN3 {
   // Aux
   hide: boolean;
   is_active: boolean;
+  evidence_link: string;
 }
 
 export class ActorN3 {
@@ -31,4 +72,5 @@ export class ActorN3 {
   men: number;
   men_youth: number;
   is_active: boolean;
+  evidence_link: string;
 }

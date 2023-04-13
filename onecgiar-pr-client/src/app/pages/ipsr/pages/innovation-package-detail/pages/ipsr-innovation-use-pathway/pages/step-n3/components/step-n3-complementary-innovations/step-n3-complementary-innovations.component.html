@@ -1,8 +1,9 @@
 <app-pr-field-header label="Complementary innovations/ enablers/ solutions" [required]="false"></app-pr-field-header>
+<h1>{{this.ci.index}}</h1>
 <div class="toggle_change_buttons">
-    <app-pr-button padding="medium" [text]="'Previous ('+ 1+'/'+10+')'" icon="arrow_circle_left"
-        [reverse]="true"></app-pr-button>
-    <app-pr-button padding="medium" text="Next" icon="arrow_circle_right"></app-pr-button>
+    <app-pr-button (click)="this.ci.previous()" padding="medium" [text]="'Previous ('+ 1+'/'+10+')'"
+        icon="arrow_circle_left" [reverse]="true"></app-pr-button>
+    <app-pr-button (click)="this.ci.next()" padding="medium" text="Next" icon="arrow_circle_right"></app-pr-button>
 </div>
 <app-pr-field-header label="Complementary innovation/ enabler/ solution #2: << TITLE >>"
     [required]="false"></app-pr-field-header>

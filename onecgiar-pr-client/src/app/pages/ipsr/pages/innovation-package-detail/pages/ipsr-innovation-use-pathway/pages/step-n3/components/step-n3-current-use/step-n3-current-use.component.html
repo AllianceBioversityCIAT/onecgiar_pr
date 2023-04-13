@@ -41,7 +41,8 @@
                 </app-pr-input>
             </div>
             <div class="right_content">
-                <app-pr-input placeholder="Write some..." label="Evidence link" type="number">
+                <app-pr-input placeholder="Write some..." label="Evidence link" type="text"
+                    [(ngModel)]="this.actorItem.evidence_link">
                 </app-pr-input>
             </div>
         </div>
@@ -72,7 +73,8 @@
                 </app-pr-input>
             </div>
             <div class="right_content">
-                <app-pr-input placeholder="Write some..." label="Evidence link" type="number">
+                <app-pr-input placeholder="Write some..." label="Evidence link" type="text"
+                    [(ngModel)]="this.organizationItem.evidence_link">
                 </app-pr-input>
             </div>
         </div>
@@ -97,7 +99,8 @@
             </app-pr-input>
         </div>
         <div class="right_content">
-            <app-pr-input placeholder="Write some..." label="Evidence link" type="number">
+            <app-pr-input placeholder="Write some..." label="Evidence link" type="text"
+                [(ngModel)]="this.measuresItem.evidence_link">
             </app-pr-input>
         </div>
 

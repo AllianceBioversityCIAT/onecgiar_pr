@@ -8,6 +8,11 @@ import { IpsrStep3Body } from '../../model/Ipsr-step-3-body.model';
 })
 export class StepN3ComplementaryInnovationsComponent implements OnInit {
   @Input() body = new IpsrStep3Body();
+  ci = {
+    index: 0,
+    previous: () => !(this.ci.index > 0) || this.ci.index--,
+    next: () => !(this.ci.index < 7) || this.ci.index++
+  };
   constructor() {}
 
   ngOnInit(): void {}

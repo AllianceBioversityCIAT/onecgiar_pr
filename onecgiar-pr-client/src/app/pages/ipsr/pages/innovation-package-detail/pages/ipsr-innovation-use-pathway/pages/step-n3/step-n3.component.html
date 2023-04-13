@@ -2,18 +2,20 @@
 
 <app-pr-radio-button
     label="Was an Innovation Packaging and Scaling Readiness online or in-person expert workshop organized?"
-    [options]="this.radioOptions" optionLabel="name" optionValue="id">
+    optionLabel="name" optionValue="id" [options]="this.radioOptions"
+    [(ngModel)]="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized">
 </app-pr-radio-button>
 
 <app-pr-field-header label="Innovation Readiness level self-assessment" [required]="false"
     [description]="this.readinessLevelSelfAssessmentText()"></app-pr-field-header>
+<app-pr-range-level optionLabel="name" optionValue="id" [options]="this.rangesOptions"
+    [(ngModel)]="this.ipsrStep3Body.result_innovation_package.readiness_level_evidence_based"></app-pr-range-level>
 
-<app-pr-range-level optionLabel="name" optionValue="id"></app-pr-range-level>
-
-<app-pr-field-header label="Innovation Readiness level self-assessment" [required]="false"
+<app-pr-field-header label="Innovation use level self-assessment" [required]="false"
     [description]="this.useLevelDelfAssessment()"></app-pr-field-header>
 
-<app-pr-range-level optionLabel="name" optionValue="id"></app-pr-range-level>
+<app-pr-range-level optionLabel="name" optionValue="id" [options]="this.rangesOptions"
+    [(ngModel)]="this.ipsrStep3Body.result_innovation_package.use_level_evidence_based"></app-pr-range-level>
 
 <div class="step_divider"></div>
 
@@ -27,9 +29,11 @@
 <app-pr-field-header label="Innovation Readiness level evidence-based" [required]="false"
     [description]="this.useLevelDelfAssessment()"></app-pr-field-header>
 
-<app-pr-range-level optionLabel="name" optionValue="id"></app-pr-range-level>
+<app-pr-range-level optionLabel="name" optionValue="id" [options]="this.rangesOptions"
+    [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.readiness_level_evidence_based"></app-pr-range-level>
 
-<app-pr-input label="Evidence link" placeholder="Grant title goes here...">
+<app-pr-input label="Evidence link" placeholder="Grant title goes here..."
+    [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.readinees_evidence_link">
 </app-pr-input>
 
 <app-pr-textarea placeholder="Write some..."
@@ -41,9 +45,11 @@
 <app-pr-field-header label="Innovation use level evidence-based" [required]="false"
     [description]="this.useLevelDelfAssessment()"></app-pr-field-header>
 
-<app-pr-range-level optionLabel="name" optionValue="id"></app-pr-range-level>
+<app-pr-range-level optionLabel="name" optionValue="id" [options]="this.rangesOptions"
+    [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.use_level_evidence_based"></app-pr-range-level>
 
-<app-pr-input label="Evidence link" placeholder="Grant title goes here...">
+<app-pr-input label="Evidence link" placeholder="Grant title goes here..."
+    [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.use_evidence_link">
 </app-pr-input>
 
 <app-pr-textarea placeholder="Write some..."
