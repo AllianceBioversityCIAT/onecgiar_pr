@@ -22,12 +22,4 @@ export class ComplementaryInnovationEnablerTypes extends BaseEntity {
         nullable: true
     })
     type!: string;
-
-    @Column({
-        name: 'is_active',
-        type: 'boolean',
-        nullable: false,
-        default: true
-    })
-    is_active!: boolean
 }

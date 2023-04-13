@@ -130,47 +130,183 @@ export class InnovationPathwayStepTwoService {
       }
       const version: Version = <Version>vTemp.response;
 
-      if (saveData?.length) {
-        for (const rbip of saveData) {
-          let exists: Ipsr = null;
-          if (rbip?.result_by_innovation_package_id) {
-            exists = await this._innovationByResultRepository.findOne({
-              where: {
-                result_by_innovation_package_id: rbip.result_by_innovation_package_id,
-                ipsr_role_id: 2
-              }
-            });
-          } else {
-            exists = await this._innovationByResultRepository.findOne({
-              where: {
-                result_id: rbip.result_id,
-                ipsr_role_id: 2
-              }
-            });
-          }
+      const complementaryInnovation = saveData;
 
-          if (exists) {
-            await this._innovationByResultRepository.update(
-              exists.result_by_innovation_package_id,
-              {
-                is_active: rbip.is_active,
-                last_updated_by: user.id
-              }
-            );
-          } else {
-            await this._innovationByResultRepository.save({
-              version_id: version.id,
-              last_updated_by: user.id,
-              created_by: user.id,
-              result_id: rbip.result_id,
-              result_innovation_package_id: result.id,
-              ipsr_role_id: 2
-            });
-          }
+      const allComplementary = await this._innovationByResultRepository.find({
+        where: {
+          result_innovation_package_id: resultId,
+          ipsr_role_id: 2
         }
-      }
+      });
+
+      const existingIds = allComplementary.map(ci => ci.result_id);
+
+      const complementaryInnovationsToSave = complementaryInnovation
+        .filter(ci => !existingIds.includes(ci.result_id))
+        .map(ci => {
+          const newCi = new Ipsr();
+          newCi.version_id = version.id;
+          newCi.last_updated_by = user.id;
+          newCi.created_by = user.id;
+          newCi.result_id = ci.result_id;
+          newCi.result_innovation_package_id = result.id;
+          newCi.ipsr_role_id = 2;
+          newCi.created_by = user.id;
+          newCi.last_updated_by = user.id;
+          newCi.created_date = new Date();
+          newCi.last_updated_date = new Date();
+          return newCi;
+        });
+
+      const complementaryInnovationsToActivate = allComplementary
+        .filter(ci => complementaryInnovation.some(e => e.result_id === ci.result_id) && !ci.is_active)
+        .map(ci => {
+          ci.is_active = true;
+          return ci;
+        });
+
+      const complementaryInnovationsToInactivate = allComplementary
+        .filter(ci => !complementaryInnovation.some(e => e.result_id === ci.result_id) && ci.is_active)
+        .map(ci => {
+          ci.is_active = false;
+          return ci;
+        });
+
+      const savePromises = [
+        ...complementaryInnovationsToSave.map(ci => this._innovationByResultRepository.save(ci)),
+        ...complementaryInnovationsToActivate.map(ci => this._innovationByResultRepository.save(ci)),
+        ...complementaryInnovationsToInactivate.map(ci => this._innovationByResultRepository.save(ci)),
+      ];
+
+      await Promise.all(savePromises);
+
+      // const result = await this._resultRepository.findOne({
+      //   where: {
+      //     id: resultId,
+      //     is_active: true
+      //   }
+      // });
+
+      // if (!result) {
+      //   throw {
+      //     response: result,
+      //     message: 'The result was not found',
+      //     status: HttpStatus.NOT_FOUND,
+      //   };
+      // }
+
+      // const vTemp = await this._versionsService.findBaseVersion();
+      // if (vTemp.status >= 300) {
+      //   throw this._handlersError.returnErrorRes({ error: vTemp });
+      // }
+      // const version: Version = <Version>vTemp.response;
+
+      // const complementaryInnovation = saveData;
+
+      // const allComplementary = await this._innovationByResultRepository.find({
+      //   where: {
+      //     result_innovation_package_id: resultId,
+      //     ipsr_role_id: 2
+      //   }
+      // });
+
+      // const existingIds: number[] = allComplementary.map(ac => ac.result_id);
+
+      // const ciToActive = allComplementary.filter(
+      //   ac =>
+      //     complementaryInnovation.find(ci => ci.result_id == ac.result_id) &&
+      //     ac.is_active === false
+      // );
+
+      // const ciToInactive = allComplementary.filter(
+      //   ac =>
+      //     !complementaryInnovation.find(e => e.result_id == ac.result_id) &&
+      //     ac.is_active === false
+      // );
+
+      // const ciToSave = complementaryInnovation.filter(
+      //   ci => !existingIds.includes(ci.result_id)
+      // );
+
+      // const saveComplementaryInnovation = [];
+
+      // if (ciToSave?.length > 0) {
+      //   for (const entity of ciToSave) {
+      //     const newCi = new Ipsr();
+      //     newCi.version_id = version.id;
+      //     newCi.last_updated_by = user.id;
+      //     newCi.created_by = user.id;
+      //     newCi.result_id = entity.result_id;
+      //     newCi.result_innovation_package_id = result.id;
+      //     newCi.ipsr_role_id = 1;
+      //     newCi.created_by = user.id;
+      //     newCi.last_updated_by = user.id;
+      //     newCi.created_date = new Date();
+      //     newCi.last_updated_date = new Date();
+      //     saveComplementaryInnovation.push(this._innovationByResultRepository.save(entity));
+      //   }
+      // }
+
+      // if (ciToActive?.length > 0) {
+      //   for (const entity of ciToActive) {
+      //     entity.is_active = true;
+      //     saveComplementaryInnovation.push(this._innovationByResultRepository.save(entity));
+      //   }
+      // }
+
+      // if (ciToInactive?.length > 0) {
+      //   for (const entity of ciToInactive) {
+      //     entity.is_active = false;
+      //     saveComplementaryInnovation.push(this._innovationByResultRepository.save(entity));
+      //   }
+      // }
+
+      // if (saveData?.length) {
+      //   for (const rbip of saveData) {
+      //     let exists: Ipsr = null;
+      //     if (rbip?.result_by_innovation_package_id) {
+      //       exists = await this._innovationByResultRepository.findOne({
+      //         where: {
+      //           result_by_innovation_package_id: resultId,
+      //           ipsr_role_id: 2
+      //         }
+      //       });
+      //     } else {
+      //       exists = await this._innovationByResultRepository.findOne({
+      //         where: {
+      //           result_id: rbip.result_id,
+      //           ipsr_role_id: 2
+      //         }
+      //       });
+      //     }
+
+      //     if (exists) {
+      //       await this._innovationByResultRepository.update(
+      //         exists.result_by_innovation_package_id,
+      //         {
+      //           is_active: rbip.is_active,
+      //           last_updated_by: user.id
+      //         }
+      //       );
+      //     } else {
+      //       await this._innovationByResultRepository.save({
+      //         version_id: version.id,
+      //         last_updated_by: user.id,
+      //         created_by: user.id,
+      //         result_id: rbip.result_id,
+      //         result_innovation_package_id: result.id,
+      //         ipsr_role_id: 2
+      //       });
+      //     }
+      //   }
+      // }
       return {
-        response: saveData,
+        response: {
+          // saveComplementaryInnovation
+          complementaryInnovationsToSave,
+          complementaryInnovationsToActivate,
+          complementaryInnovationsToInactivate
+        },
         message: 'Data was saved correctly',
         status: HttpStatus.OK,
       }
