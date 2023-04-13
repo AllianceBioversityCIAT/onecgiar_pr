@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException } from
 import { InnovationPathwayStepOneService } from './innovation-pathway-step-one.service';
 import { CreateInnovationPathwayDto } from './dto/create-innovation-pathway.dto';
 import { UpdateInnovationPathwayDto } from './dto/update-innovation-pathway.dto';
+import { CreateComplementaryInnovationDto } from './dto/create-complementary-innovation.dto'
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { getInnovationComInterface } from '../ipsr.repository';
@@ -16,15 +17,24 @@ export class InnovationPathwayController {
     private readonly _innovationPathwayStepThreeService: InnovationPathwayStepThreeService,
     private readonly _innovationPathwayStepOneServiceService: InnovationPathwayStepOneService,
     private readonly _innovationPathwayStepTwoService: InnovationPathwayStepTwoService,
-    ) { }
+  ) { }
 
-  @Patch('step-one/:resultId')
+  @Get('get-step-one/:resultId')
+  async getStepOne(
+    @Param('resultId') resultId: string,
+  ) {
+    const {message, response, status} = await this._innovationPathwayStepOneServiceService.getStepOne(+resultId);
+
+    throw new HttpException({ message, response }, status);
+  }
+
+  @Patch('save/step-one/:resultId')
   async updateStepOne(
     @Param('resultId') resultId: string,
     @Body() updateInnovationPathwayDto: UpdateInnovationPathwayDto,
     @UserToken() user: TokenDto
   ) {
-    const {message, response, status} = await this._innovationPathwayStepOneServiceService.updateMain(+resultId, updateInnovationPathwayDto, user);
+    const { message, response, status } = await this._innovationPathwayStepOneServiceService.updateMain(+resultId, updateInnovationPathwayDto, user);
     throw new HttpException({ message, response }, status);
   }
 
@@ -34,7 +44,17 @@ export class InnovationPathwayController {
     @Body() saveData: SaveStepTwoOne,
     @UserToken() user: TokenDto
   ) {
-    const {message, response, status} = await this._innovationPathwayStepTwoService.saveSetepTowOne(+resultId, user, saveData.complementaryInovatins);
+    const { message, response, status } = await this._innovationPathwayStepTwoService.saveSetepTowOne(+resultId, user, saveData.complementaryInovatins);
+    throw new HttpException({ message, response }, status);
+  }
+
+  @Post('save/complementary-innovation/:resultId')
+  async saveComplementaryInnovation(
+    @Param('resultId') resultId: string,
+    @Body() CreateComplementaryInnovationDto: CreateComplementaryInnovationDto,
+    @UserToken() User: TokenDto
+  ) {
+    const { message, response, status } = await this._innovationPathwayStepTwoService.saveComplementaryInnovation(+resultId, User, CreateComplementaryInnovationDto);
     throw new HttpException({ message, response }, status);
   }
 
@@ -42,13 +62,19 @@ export class InnovationPathwayController {
   async getSteptwo(
     @Param('resultId') resultId: string
   ) {
-    const {message, response, status} = await this._innovationPathwayStepTwoService.getStepTwoOne(+resultId);
+    const { message, response, status } = await this._innovationPathwayStepTwoService.getStepTwoOne(+resultId);
     throw new HttpException({ message, response }, status);
   }
 
   @Get('get/complementary-innovations')
   async getComplementaryInnovation() {
-    const {message, response, status} = await this._innovationPathwayStepTwoService.findInnovationsAndComplementary();
+    const { message, response, status } = await this._innovationPathwayStepTwoService.findInnovationsAndComplementary();
+    throw new HttpException({ message, response }, status);
+  }
+
+  @Get('get/complementary-innovations-functions')
+  async getComplementaryInnovationFunctions() {
+    const { message, response, status } = await this._innovationPathwayStepTwoService.findComplementaryInnovationFuctions();
     throw new HttpException({ message, response }, status);
   }
 

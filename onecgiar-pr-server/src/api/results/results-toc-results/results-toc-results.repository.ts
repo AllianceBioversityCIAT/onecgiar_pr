@@ -111,6 +111,45 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
     }
   }
 
+  async getNewRTRById(RtRId: number, resultId: number, initiativeId: number) {
+
+    const queryData = `
+    SELECT
+      rtr.result_toc_result_id,
+      rtr.planned_result ,
+      rtr.is_active ,
+      rtr.created_date ,
+      rtr.last_updated_date ,
+      rtr.toc_result_id ,
+      rtr.results_id ,
+      rtr.action_area_outcome_id ,
+      rtr.version_id ,
+      rtr.created_by ,
+      rtr.last_updated_by,
+      ci.id as inititiative_id,
+      ci.official_code,
+      ci.name,
+      ci.short_name,
+      tr.toc_level_id
+    FROM
+      results_toc_result rtr
+      left join clarisa_initiatives ci on ci.id = rtr.initiative_id 
+      left JOIN toc_result tr on tr.toc_result_id = rtr.toc_result_id
+    where ${RtRId?`rtr.result_toc_result_id = ${RtRId}`:
+          `rtr.initiative_id = ${initiativeId} and rtr.results_id = ${resultId}`};
+    `;
+    try {
+      const resultTocResult: ResultsTocResult[] = await this.query(queryData);
+      return resultTocResult?.length?resultTocResult[0]:undefined;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsTocResultRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async getRTRPrimary(resultId: number, initiativeId: number[], isPrimary: boolean, initiativeArray?: number[]) {
 
     const queryData = `

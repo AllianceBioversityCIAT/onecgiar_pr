@@ -1,0 +1,23 @@
+.fields_list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+
+    .fields {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 30px;
+
+        .right_content {
+            display: flex;
+            gap: 10px;
+
+
+
+            app-pr-input,
+            app-pr-select {
+                width: 100%;
+            }
+        }
+    }
+}

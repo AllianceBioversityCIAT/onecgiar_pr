@@ -156,11 +156,12 @@ export class ResultRepository extends Repository<Result> {
         lr.indicator_type,
         is_legacy
         ) as q1
-    ${id
+    ${
+      id
         ? `where
       q1.id = ?`
         : ''
-      }
+    }
     ;
     `;
 
@@ -885,8 +886,8 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     gtl2.title as "Climate Tag Level",
     if(r.is_krs is null,'Not provided',if(r.is_krs,'Yes','No')) as "Is Key Result Story?",
     -- section 2
-    ci.official_code as "Primary Submitter",
-    GROUP_CONCAT(distinct ci2.official_code SEPARATOR ', ') as "Contributing Initiative(s)",
+    concat(ci.official_code, ' - ', ci.name) as "Primary Submitter",
+    GROUP_CONCAT(distinct concat(ci2.official_code, ' - ', ci2.name) SEPARATOR '; ') as "Contributing Initiative(s)",
     GROUP_CONCAT(CONCAT('(Funder name: ',ci4.acronym,' - ',ci4.name ,', Grant title: ',npp.grant_title,', Center Grant ID: ',IFNULL(npp.center_grant_id, 'Not applicable'),', Lead/Contract Center: ',ci3.name,')') SEPARATOR ', ') as "Non-pooled Project(s)",
    /* GROUP_CONCAT(CONCAT(if(rc.is_primary,'(Primary: ','('),ci4.acronym,' - ',ci4.name,')') SEPARATOR ', ') as "Contributing Center(s)", */
     GROUP_CONCAT(distinct CONCAT(if(rc.is_primary,'(Primary: ','('),ci5.acronym,' - ',ci5.name,')') SEPARATOR ', ') as "Contributing Center(s)",
@@ -1238,10 +1239,12 @@ left join clarisa_countries cc3
       (
         SELECT GROUP_CONCAT(DISTINCT concat('• ', caa.name) separator '\n')
           from ${env.DB_OST}.toc_results_action_area_results traar
-          join ${env.DB_OST
-      }.toc_action_area_results taar on traar.action_area_toc_result_id = taar.toc_result_id
-          join ${env.DB_OST
-      }.clarisa_action_areas caa on caa.id = taar.action_areas_id
+          join ${
+            env.DB_OST
+          }.toc_action_area_results taar on traar.action_area_toc_result_id = taar.toc_result_id
+          join ${
+            env.DB_OST
+          }.clarisa_action_areas caa on caa.id = taar.action_areas_id
           WHERE traar.toc_result_id in (
             SELECT tr.toc_internal_id
             from result r8
@@ -1253,10 +1256,12 @@ left join clarisa_countries cc3
       (
         SELECT GROUP_CONCAT(DISTINCT concat('• ', cia.name) separator '\n')
           from ${env.DB_OST}.toc_results_impact_area_results triar
-            join ${env.DB_OST
-      }.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
-            join ${env.DB_OST
-      }.clarisa_impact_areas cia on cia.id = tiar.impact_area_id
+            join ${
+              env.DB_OST
+            }.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
+            join ${
+              env.DB_OST
+            }.clarisa_impact_areas cia on cia.id = tiar.impact_area_id
             WHERE triar.toc_result_id in (
               SELECT tr.toc_internal_id
                 from result r8
@@ -1268,12 +1273,15 @@ left join clarisa_countries cc3
         (
           SELECT GROUP_CONCAT(DISTINCT concat('• ', cgt.target) separator '\n')
             from ${env.DB_OST}.toc_results_impact_area_results triar
-            join ${env.DB_OST
-      }.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
-            join ${env.DB_OST
-      }.toc_impact_area_results_global_targets tiargt on tiargt.impact_area_toc_result_id = tiar.toc_result_id
-            join ${env.DB_OST
-      }.clarisa_global_targets cgt on cgt.id = tiargt.global_target_id
+            join ${
+              env.DB_OST
+            }.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
+            join ${
+              env.DB_OST
+            }.toc_impact_area_results_global_targets tiargt on tiargt.impact_area_toc_result_id = tiar.toc_result_id
+            join ${
+              env.DB_OST
+            }.clarisa_global_targets cgt on cgt.id = tiargt.global_target_id
             WHERE triar.toc_result_id in (
               SELECT tr.toc_internal_id
                 from result r8
@@ -1285,16 +1293,21 @@ left join clarisa_countries cc3
       (
         SELECT GROUP_CONCAT(DISTINCT concat('• ', cst.sdg_target_code, ' - ', cst.sdg_target) separator '\n')
             from ${env.DB_OST}.toc_results_impact_area_results triar
-            join ${env.DB_OST
-      }.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
-            join ${env.DB_OST
-      }.toc_impact_area_results_sdg_results tiarsr on tiarsr.impact_area_toc_result_id = tiar.toc_result_id
-            join ${env.DB_OST
-      }.toc_sdg_results tsr on tsr.toc_result_id = tiarsr.sdg_toc_result_id
-            join ${env.DB_OST
-      }.toc_sdg_results_sdg_targets tsrst on tsrst.sdg_toc_result_id = tsr.toc_result_id
-            join ${env.DB_OST
-      }.clarisa_sdg_targets cst on cst.id = tsrst.sdg_target_id
+            join ${
+              env.DB_OST
+            }.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
+            join ${
+              env.DB_OST
+            }.toc_impact_area_results_sdg_results tiarsr on tiarsr.impact_area_toc_result_id = tiar.toc_result_id
+            join ${
+              env.DB_OST
+            }.toc_sdg_results tsr on tsr.toc_result_id = tiarsr.sdg_toc_result_id
+            join ${
+              env.DB_OST
+            }.toc_sdg_results_sdg_targets tsrst on tsrst.sdg_toc_result_id = tsr.toc_result_id
+            join ${
+              env.DB_OST
+            }.clarisa_sdg_targets cst on cst.id = tsrst.sdg_target_id
             WHERE triar.toc_result_id in (
               SELECT tr.toc_internal_id
                 from result r8
@@ -1306,16 +1319,21 @@ left join clarisa_countries cc3
       (
         SELECT GROUP_CONCAT(DISTINCT concat('• ', replace(cst.sdg -> "$.shortName", '"', "")) separator '\n')
             from ${env.DB_OST}.toc_results_impact_area_results triar
-            join ${env.DB_OST
-      }.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
-            join ${env.DB_OST
-      }.toc_impact_area_results_sdg_results tiarsr on tiarsr.impact_area_toc_result_id = tiar.toc_result_id
-            join ${env.DB_OST
-      }.toc_sdg_results tsr on tsr.toc_result_id = tiarsr.sdg_toc_result_id
-            join ${env.DB_OST
-      }.toc_sdg_results_sdg_targets tsrst on tsrst.sdg_toc_result_id = tsr.toc_result_id
-            join ${env.DB_OST
-      }.clarisa_sdg_targets cst on cst.id = tsrst.sdg_target_id
+            join ${
+              env.DB_OST
+            }.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
+            join ${
+              env.DB_OST
+            }.toc_impact_area_results_sdg_results tiarsr on tiarsr.impact_area_toc_result_id = tiar.toc_result_id
+            join ${
+              env.DB_OST
+            }.toc_sdg_results tsr on tsr.toc_result_id = tiarsr.sdg_toc_result_id
+            join ${
+              env.DB_OST
+            }.toc_sdg_results_sdg_targets tsrst on tsrst.sdg_toc_result_id = tsr.toc_result_id
+            join ${
+              env.DB_OST
+            }.clarisa_sdg_targets cst on cst.id = tsrst.sdg_target_id
             WHERE triar.toc_result_id in (
               SELECT tr.toc_internal_id
                 from result r8

@@ -43,7 +43,7 @@ export class RolesService {
   }
 
   async validateReadOnly(result?) {
-    console.log('%cvalidateReadOnly', 'background: #222; color: #52cd47');
+    // console.log('%cvalidateReadOnly', 'background: #222; color: #52cd47');
     if (environment?.platformIsClosed) {
       this.readOnly = true;
       this.updateRolesListFromLocalStorage();
@@ -103,8 +103,8 @@ export class RolesService {
 
   //TODO App roles
   /*
-  Admin  
-  Guest 
+  Admin
+  Guest
   */
 
   //TODO Roles by initiative

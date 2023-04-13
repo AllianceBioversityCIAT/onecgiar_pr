@@ -1,16 +1,15 @@
-<app-pr-radio-button [options]="this.geoscopeExample" optionLabel="full_name" optionValue="id"
+<app-pr-radio-button [options]="this.geoscopeOptions" optionLabel="full_name" optionValue="id"
     label="Select country/ geoscope for which packaging and scaling readiness assessment will be conducted"
     [(ngModel)]="body.geo_scope_id">
 </app-pr-radio-button>
 
-<br>
-
 <app-pr-multi-select *ngIf="body.geo_scope_id == 2" [options]="this.regionsCountriesSE.regionsList"
-    selectedLabel="Regions(s) selected" selectedOptionLabel="name" optionLabel="name" optionValue="id"
-    placeholder="Select regions" [(ngModel)]="body.regions">
+    [description]="selectRegionsDescription" label="Select regions" selectedLabel="Regions(s) selected"
+    selectedOptionLabel="name" optionLabel="name" optionValue="id" placeholder="Select regions"
+    [(ngModel)]="body.regions">
 </app-pr-multi-select>
 
-<app-pr-multi-select *ngIf="body.geo_scope_id == 3" [options]="this.regionsCountriesSE.countriesList"
-    selectedLabel="Countries selected" selectedOptionLabel="name" optionLabel="full_name" optionValue="id"
-    placeholder="Select countries" [(ngModel)]="body.countries">
+<app-pr-multi-select *ngIf="body.geo_scope_id == 4" [options]="this.regionsCountriesSE.countriesList"
+    label="Select countries" selectedLabel="Countries selected" selectedOptionLabel="name" optionLabel="full_name"
+    optionValue="id" placeholder="Select countries" [(ngModel)]="body.countries">
 </app-pr-multi-select>

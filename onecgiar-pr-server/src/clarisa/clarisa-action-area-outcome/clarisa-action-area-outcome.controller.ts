@@ -1,20 +1,22 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException } from '@nestjs/common';
 import { ClarisaActionAreaOutcomeService } from './clarisa-action-area-outcome.service';
 import { CreateClarisaActionAreaOutcomeDto } from './dto/create-clarisa-action-area-outcome.dto';
 import { UpdateClarisaActionAreaOutcomeDto } from './dto/update-clarisa-action-area-outcome.dto';
 
-@Controller('clarisa-action-area-outcome')
+@Controller()
 export class ClarisaActionAreaOutcomeController {
-  constructor(private readonly clarisaActionAreaOutcomeService: ClarisaActionAreaOutcomeService) {}
+  constructor(private readonly clarisaActionAreaOutcomeService: ClarisaActionAreaOutcomeService) { }
 
   @Post()
   create(@Body() createClarisaActionAreaOutcomeDto: CreateClarisaActionAreaOutcomeDto) {
     return this.clarisaActionAreaOutcomeService.create(createClarisaActionAreaOutcomeDto);
   }
 
-  @Get()
-  findAll() {
-    return this.clarisaActionAreaOutcomeService.findAll();
+  @Get('all')
+  async findAll() {
+    const { response, message, status } = await this.clarisaActionAreaOutcomeService.findAll();
+
+    throw new HttpException({ message, response }, status);
   }
 
   @Get(':id')

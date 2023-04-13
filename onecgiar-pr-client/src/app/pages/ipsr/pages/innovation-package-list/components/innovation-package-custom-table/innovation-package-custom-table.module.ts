@@ -4,10 +4,11 @@ import { InnovationPackageCustomTableComponent } from './innovation-package-cust
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { TableModule } from 'primeng/table';
 import { RouterModule } from '@angular/router';
+import { MenuModule } from 'primeng/menu';
 
 @NgModule({
   declarations: [InnovationPackageCustomTableComponent],
   exports: [InnovationPackageCustomTableComponent],
-  imports: [CommonModule, CustomFieldsModule, TableModule, RouterModule]
+  imports: [CommonModule, CustomFieldsModule, TableModule, RouterModule, MenuModule]
 })
 export class InnovationPackageCustomTableModule {}

@@ -19,6 +19,7 @@ interface CoreInnovationSelected {
 })
 export class ResultsInnovationOutputListComponent {
   coreInnovationSelected: CoreInnovationSelected;
+  searchText = '';
   @Output() selectInnovationEvent = new EventEmitter<CoreInnovationSelected>();
   constructor(public api: ApiService, public manageInnovationsListSE: ManageInnovationsListService) {}
 
@@ -31,6 +32,7 @@ export class ResultsInnovationOutputListComponent {
   }
 
   columnOrder = [
+    { title: 'Result code', attr: 'result_code' },
     { title: 'Title', attr: 'title', class: 'notCenter' },
     { title: 'Lead', attr: 'official_code' },
     { title: 'Creation date', attr: 'creation_date' }

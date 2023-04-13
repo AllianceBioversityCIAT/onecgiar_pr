@@ -14,4 +14,5 @@ export class ReportInformation{
 	title:string;
 	description:string;
 	embed_url:string;
+	order:number;
 }

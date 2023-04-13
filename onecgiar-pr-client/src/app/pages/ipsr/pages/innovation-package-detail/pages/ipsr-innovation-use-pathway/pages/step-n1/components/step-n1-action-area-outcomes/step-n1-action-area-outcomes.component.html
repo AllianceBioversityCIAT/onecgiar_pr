@@ -1,0 +1,69 @@
+<app-pr-field-header
+    label="Specify to which CGIAR AA outcomes the scaling of the core innovation is expected to contribute to by 2024 in the specific country/ subnational context"></app-pr-field-header>
+<br>
+<div class="aao-list">
+    <div class="aao-item">
+        <div class="title">
+            <img class="aao_image" src="assets/action_areas/1.png" alt="" srcset="">
+            <div class="segment_title">Systems Transformation outcomes</div>
+        </div>
+        <div class="dropdown-50p">
+            <app-pr-multi-select *ngIf="this.actionAreasOutcomesList?.systemTrasnformation?.length"
+                [options]="this.actionAreasOutcomesList?.systemTrasnformation" [required]="false"
+                optionLabel="outcomeStatement" optionValue="action_area_outcome_id"
+                selectedOptionLabel="outcomeStatement" placeholder="Select Systems Transformation outcomes "
+                [(ngModel)]="this.body.actionAreaOutcomes">
+            </app-pr-multi-select>
+        </div>
+        <div class="fragment_section_divider"></div>
+    </div>
+    <div class="aao-item">
+        <div class="title">
+            <img class="aao_image" src="assets/action_areas/2.png" alt="" srcset="">
+            <div class="segment_title">Resilient Agrifood Systems outcomes</div>
+        </div>
+        <div class="dropdown-50p">
+            <app-pr-multi-select *ngIf="this.actionAreasOutcomesList?.resilientAgrifoodSystems?.length"
+                [options]="this.actionAreasOutcomesList?.resilientAgrifoodSystems" [required]="false"
+                optionLabel="outcomeStatement" optionValue="action_area_outcome_id"
+                selectedOptionLabel="outcomeStatement" placeholder="Select Resilient Agrifood Systems outcomes"
+                [(ngModel)]="this.body.actionAreaOutcomes">
+            </app-pr-multi-select>
+        </div>
+        <div class="fragment_section_divider"></div>
+    </div>
+    <div class="aao-item">
+        <div class="title">
+            <img class="aao_image" src="assets/action_areas/3.png" alt="" srcset="">
+            <div class="segment_title">Genetic Innovation outcomes</div>
+        </div>
+        <div class="dropdown-50p">
+            <app-pr-multi-select *ngIf="this.actionAreasOutcomesList?.geneticInnovation?.length"
+                [options]="this.actionAreasOutcomesList?.geneticInnovation" [required]="false"
+                optionLabel="outcomeStatement" optionValue="action_area_outcome_id"
+                selectedOptionLabel="outcomeStatement" placeholder="Select Genetic Innovation outcomes"
+                [(ngModel)]="this.body.actionAreaOutcomes">
+            </app-pr-multi-select>
+        </div>
+        <div class="fragment_section_divider"></div>
+
+    </div>
+
+
+</div>
+
+<div class="selected_container custom_scroll dropdown-50p">
+    <br>
+    <app-pr-field-header description=" All Action Area Outcome(s) selected:">
+    </app-pr-field-header>
+    <div class="chips_container">
+        <div class="pr_chip_selected" *ngFor="let option of this.body.actionAreaOutcomes; let i=index"
+            [ngClass]="{'is_active_false': false}">
+            <div class="name" [innerHtml]="option.outcomeStatement"></div><i class="material-icons-round"
+                (click)="removeOption(option)">remove_circle
+            </i>
+        </div>
+    </div>
+</div>
+
+<div class="step_divider"></div>

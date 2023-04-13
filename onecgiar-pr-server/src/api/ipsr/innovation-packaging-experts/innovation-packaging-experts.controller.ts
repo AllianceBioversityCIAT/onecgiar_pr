@@ -1,9 +1,9 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException } from '@nestjs/common';
 import { InnovationPackagingExpertsService } from './innovation-packaging-experts.service';
 import { CreateInnovationPackagingExpertDto } from './dto/create-innovation-packaging-expert.dto';
 import { UpdateInnovationPackagingExpertDto } from './dto/update-innovation-packaging-expert.dto';
 
-@Controller('innovation-packaging-experts')
+@Controller()
 export class InnovationPackagingExpertsController {
   constructor(private readonly innovationPackagingExpertsService: InnovationPackagingExpertsService) {}
 
@@ -15,6 +15,13 @@ export class InnovationPackagingExpertsController {
   @Get()
   findAll() {
     return this.innovationPackagingExpertsService.findAll();
+  }
+
+  @Get('expertises')
+  async findAllExpertises() {
+    const { message, response, status } =
+      await  this.innovationPackagingExpertsService.findAllExpertises();
+    throw new HttpException({ message, response }, status);
   }
 
   @Get(':id')

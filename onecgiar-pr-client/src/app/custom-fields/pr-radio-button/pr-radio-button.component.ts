@@ -60,13 +60,15 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
 
   currentVal = null;
   onSelect() {
-    this.selectOptionEvent.emit();
-    if (this.currentVal == this.value) this.value = null;
-    this.currentVal = this.value;
+    setTimeout(() => {
+      this.selectOptionEvent.emit();
+      if (this.currentVal == this.value) this.value = null;
+      this.currentVal = this.value;
+    }, 5);
   }
 
   get valueName() {
-    const optionFinded = this.options.find(option => option[this.optionValue] == this.value);
+    const optionFinded = this.options.find((option: any) => option[this.optionValue] == this.value);
     if (optionFinded) return optionFinded[this.optionLabel];
     return "<div class='not_provided_color'>Not provided</div>";
   }

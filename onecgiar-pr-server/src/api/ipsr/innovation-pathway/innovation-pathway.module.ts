@@ -20,6 +20,7 @@ import { ResultActorRepository } from '../../results/result-actors/repositories/
 import { ResultByIntitutionsTypeRepository } from '../../results/results_by_institution_types/result_by_intitutions_type.repository';
 import { ResultIpMeasureRepository } from '../result-ip-measures/result-ip-measures.repository';
 import { ResultIpImpactAreaRepository } from './repository/result-ip-impact-area-targets.repository';
+import { ClarisaInstitutionsTypeRepository } from '../../../clarisa/clarisa-institutions-type/ClariasaInstitutionsType.repository';
 import { InnovationPathwayStepTwoService } from './innovation-pathway-step-two.service';
 import { ResultsComplementaryInnovationRepository } from '../results-complementary-innovations/repositories/results-complementary-innovation.repository';
 import { ResultsComplementaryInnovationsFunctionRepository } from '../results-complementary-innovations-functions/repositories/results-complementary-innovations-function.repository';
@@ -28,6 +29,10 @@ import { InnovationPathwayStepThreeService } from './innovation-pathway-step-thr
 import { ResultsByIpInnovationUseMeasureRepository } from '../results-by-ip-innovation-use-measures/results-by-ip-innovation-use-measure.repository';
 import { ResultsIpActorRepository } from '../results-ip-actors/results-ip-actor.repository';
 import { ResultsIpInstitutionTypeRepository } from '../results-ip-institution-type/results-ip-institution-type.repository';
+import { YearRepository } from '../../../api/results/years/year.repository';
+import { ResultByInitiativesRepository } from '../../../api/results/results_by_inititiatives/resultByInitiatives.repository';
+import { ComplementaryInnovationFunctionsRepository } from '../results-complementary-innovations-functions/repositories/complementary-innovation-functions.repository';
+import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
 
 @Module({
   controllers: [InnovationPathwayController],
@@ -53,13 +58,18 @@ import { ResultsIpInstitutionTypeRepository } from '../results-ip-institution-ty
     ResultByIntitutionsTypeRepository,
     ResultIpMeasureRepository,
     ResultIpImpactAreaRepository,
+    ClarisaInstitutionsTypeRepository,
     ResultsComplementaryInnovationRepository,
     ResultsComplementaryInnovationsFunctionRepository,
     EvidencesRepository,
     InnovationPathwayStepThreeService,
     ResultsByIpInnovationUseMeasureRepository,
     ResultsIpActorRepository,
-    ResultsIpInstitutionTypeRepository
+    ResultsIpInstitutionTypeRepository,
+    YearRepository,
+    ResultByInitiativesRepository,
+    ComplementaryInnovationFunctionsRepository,
+    ClarisaInstitutionsRepository
   ]
 })
 export class InnovationPathwayModule { }
