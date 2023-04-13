@@ -1,6 +1,8 @@
-import { PrimaryGeneratedColumn, Column, Entity, ManyToOne } from 'typeorm';
+import { PrimaryGeneratedColumn, Column, Entity, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from '../../../../shared/entities/base-entity';
 import { BaseBudget } from './base-budget';
+import { ResultsByInititiative } from '../../results_by_inititiatives/entities/results_by_inititiative.entity';
+import { Version } from '../../versions/entities/version.entity';
 
 @Entity('result_initiative_budget')
 export class ResultInitiativeBudget extends BaseEntity{
@@ -37,4 +39,16 @@ export class ResultInitiativeBudget extends BaseEntity{
         nullable: true
     })
     is_determined!: boolean;
+
+    @ManyToOne(() => ResultsByInititiative, rbi => rbi.obj_result_initiative_array)
+    @JoinColumn({
+        name: 'result_initiative_id'
+    })
+    obj_result_initiative: ResultsByInititiative;
+
+    @ManyToOne(() => Version, v => v.id)
+    @JoinColumn({
+        name: 'version_id'
+    })
+    obj_version: Version;
 }
