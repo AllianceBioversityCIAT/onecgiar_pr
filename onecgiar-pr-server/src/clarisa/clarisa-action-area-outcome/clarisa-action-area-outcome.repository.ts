@@ -11,7 +11,10 @@ export class ClarisaActionAreaOutcomeRepository extends Repository<ClarisaAction
   async aaOutcomes() {
     const systemTrasnformationQuery = `
       SELECT
-        *
+        id AS action_area_outcome_id,
+        outcomeSMOcode,
+        outcomeStatement,
+        actionAreaId
       FROM
         clarisa_action_area_outcome
       WHERE actionAreaId = 1
@@ -19,7 +22,10 @@ export class ClarisaActionAreaOutcomeRepository extends Repository<ClarisaAction
     `;
     const resilientAgrifoodSystemsQuery = `
       SELECT
-        *
+        id AS action_area_outcome_id,
+        outcomeSMOcode,
+        outcomeStatement,
+        actionAreaId
       FROM
         clarisa_action_area_outcome
       WHERE actionAreaId = 2
@@ -27,7 +33,10 @@ export class ClarisaActionAreaOutcomeRepository extends Repository<ClarisaAction
     `;
     const geneticInnovationQuery = `
       SELECT
-        *
+        id AS action_area_outcome_id,
+        outcomeSMOcode,
+        outcomeStatement,
+        actionAreaId
       FROM
         clarisa_action_area_outcome
       WHERE actionAreaId = 3

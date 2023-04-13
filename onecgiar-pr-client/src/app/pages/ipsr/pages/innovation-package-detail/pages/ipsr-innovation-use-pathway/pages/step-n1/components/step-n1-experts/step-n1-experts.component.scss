@@ -5,3 +5,9 @@
     grid-template-columns: 1fr 1fr;
     gap: 20px;
 }
+
+.experts {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}

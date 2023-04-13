@@ -84,13 +84,14 @@ export class InnovationPathwayStepOneService {
         };
       }
 
+      const geo_scope_id = result.geographic_scope_id;
       const coreResult = await this._innovationByResultRepository.getInnovationCoreStepOne(resultId);
       const regions: ResultRegion[] = await this._resultRegionRepository.getResultRegionByResultId(resultId);
       const countries: ResultCountry[] = await this._resultCountryRepository.getResultCountriesByResultId(resultId);
-      const specifyAspiredOutcomesAndImpact: ResultIpEoiOutcome[] = await this._resultIpEoiOutcomes.findBy({ result_by_innovation_package_id: resultByInnovationPackageId.result_by_innovation_package_id, is_active: true });
-      const actionAreaOutcomes: ResultIpAAOutcome[] = await this._resultIpAAOutcomes.findBy({ result_by_innovation_package_id: resultByInnovationPackageId.result_by_innovation_package_id, is_active: true });
-      const impactAreas: ResultIpImpactArea[] = await this._resultIpImpactAreasRepository.findBy({ result_by_innovation_package_id: resultByInnovationPackageId.result_by_innovation_package_id, is_active: true });
-      const sdgTargets: ResultIpSdgTargets[] = await this._resultIpSdgsTargetsRepository.findBy({ result_by_innovation_package_id: resultByInnovationPackageId.result_by_innovation_package_id, is_active: true });
+      const eoiOutcomes: ResultIpEoiOutcome[] = await this._resultIpEoiOutcomes.getEoiOutcomes(resultByInnovationPackageId.result_by_innovation_package_id);
+      const actionAreaOutcomes: ResultIpAAOutcome[] = await this._resultIpAAOutcomes.getAAOutcomes(resultByInnovationPackageId.result_by_innovation_package_id);
+      const impactAreas: ResultIpImpactArea[] = await this._resultIpImpactAreasRepository.getImpactAreas(resultByInnovationPackageId.result_by_innovation_package_id);
+      const sdgTargets: ResultIpSdgTargets[] = await this._resultIpSdgsTargetsRepository.getSdgs(resultByInnovationPackageId.result_by_innovation_package_id);
       const resultInnovationPackage: ResultInnovationPackage[] = await this._resultInnovationPackageRepository.findBy({ result_innovation_package_id: resultId, is_active: true });
       const institutions: ResultsByInstitution[] = await this._resultByIntitutionsRepository.getGenericAllResultByInstitutionByRole(resultId, 5);
       const deliveries: ResultByInstitutionsByDeliveriesType[] = await await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByResultByInstitution(institutions?.map(el => el.id));
@@ -106,18 +107,19 @@ export class InnovationPathwayStepOneService {
       const innovatonUse = {
         actors: (await this._resultActorRepository.find({ where: { result_id: result.id, is_active: true } })).map(el => ({ ...el, men_non_youth: el.men - el.men_youth, women_non_youth: el.women - el.women_youth })),
         measures: await this._resultIpMeasureRepository.find({ where: { result_ip_id: result.id, is_active: true } }),
-        organization: (await this._resultByIntitutionsTypeRepository.find({ where: { results_id: result.id, institution_roles_id: 5, is_active: true }, relations: { obj_institution_types: { obj_parent: {obj_parent:true}} } })).map(el => ({...el, parent_institution_type_id: el.obj_institution_types?.obj_parent?.obj_parent?.code || null}))
+        organization: (await this._resultByIntitutionsTypeRepository.find({ where: { results_id: result.id, institution_roles_id: 5, is_active: true }, relations: { obj_institution_types: { obj_parent: { obj_parent: true } } } })).map(el => ({ ...el, parent_institution_type_id: el.obj_institution_types?.obj_parent?.obj_parent?.code || null }))
       }
-      const result_ip = this._resultInnovationPackageRepository.findOne({
+      const result_ip = await this._resultInnovationPackageRepository.findOne({
         where: {
           result_innovation_package_id: result.id,
           is_active: true
         }
-      })
+      });
 
       return {
         response: {
           result_id: result.id,
+          geo_scope_id,
           coreResult,
           result_ip,
           institutions,
@@ -126,7 +128,7 @@ export class InnovationPathwayStepOneService {
           result,
           regions,
           countries,
-          specifyAspiredOutcomesAndImpact,
+          eoiOutcomes,
           actionAreaOutcomes,
           impactAreas,
           sdgTargets,
@@ -282,17 +284,19 @@ export class InnovationPathwayStepOneService {
       let innovationTitle: string;
 
       if (UpdateInnovationPathwayDto.geo_scope_id === 2) {
-        innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${coreResult.title} in ${regions.map(r => r.name).join(', ')}`;
-      } else if (UpdateInnovationPathwayDto.geo_scope_id === 3) {
-        innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${coreResult.title} in ${countries.map(c => c.name).join(', ')}`;
+        const regionsList = regions.map(r => r.name);
+        innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${coreResult.title} in ${regionsList.slice(0, -1).join(', ')}${regionsList.length > 1 ? ' and ' : ''}${regionsList[regionsList.length - 1]}`;
+      } else if (UpdateInnovationPathwayDto.geo_scope_id === 3 || UpdateInnovationPathwayDto.geo_scope_id === 4) {
+        const countriesList = countries.map(c => c.name);
+        innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${coreResult.title} in ${countriesList.slice(0, -1).join(', ')}${countriesList.length > 1 ? ' and ' : ''}${countriesList[countriesList.length - 1]}`;
       } else {
-        innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${coreResult.title}`;
+        innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${coreResult.title}.`;
       }
 
 
       if (result.title === innovationTitle) {
         throw {
-          response: { valid: true },
+          response: innovationTitle,
           message: `The title no needs to be upgraded`,
           status: HttpStatus.NOT_MODIFIED,
         }
@@ -321,7 +325,7 @@ export class InnovationPathwayStepOneService {
 
 
       return {
-        response: { valid: true },
+        response: innovationTitle,
         message: 'The Geographic Scope and Title was updated correctly',
         status: HttpStatus.OK
       }
@@ -354,7 +358,7 @@ export class InnovationPathwayStepOneService {
           !eoiOutcomes.find(e => e.toc_result_id === eoi.toc_result_id) &&
           eoi.is_active === true,
       );
-        
+
       const tocsToSave = eoiOutcomes?.filter(
         eoi => !existingIds.includes(eoi.toc_result_id),
       );
@@ -485,18 +489,18 @@ export class InnovationPathwayStepOneService {
 
       const impactAreasToActive = allImpactAreas.filter(
         ia =>
-          impactAreas.find(e => e.impact_area_indicator_id === ia.impact_area_indicator_id) &&
+          impactAreas.find(e => e.targetId === ia.impact_area_indicator_id) &&
           ia.is_active === false,
       );
 
       const impactAreasToInactive = allImpactAreas.filter(
         ia =>
-          !impactAreas.find(e => e.impact_area_indicator_id === ia.impact_area_indicator_id) &&
+          !impactAreas.find(e => e.targetId === ia.impact_area_indicator_id) &&
           ia.is_active === true,
       );
 
       const impactAreasToSave = impactAreas.filter(
-        ia => !existingIds.includes(ia.impact_area_indicator_id),
+        ia => !existingIds.includes(ia.targetId),
       );
 
       const saveImpactAreas = [];
@@ -504,7 +508,7 @@ export class InnovationPathwayStepOneService {
       if (impactAreasToSave?.length > 0) {
         for (const entity of impactAreasToSave) {
           const newEoi = new ResultIpImpactArea();
-          newEoi.impact_area_indicator_id = entity.impact_area_indicator_id;
+          newEoi.impact_area_indicator_id = entity.targetId;
           newEoi.result_by_innovation_package_id = result_by_innovation_package_id;
           newEoi.version_id = version.id;
           newEoi.created_by = user.id;
@@ -635,7 +639,8 @@ export class InnovationPathwayStepOneService {
               is_active: ex.is_active,
               email: ex.email,
               last_updated_by: user.id,
-              expertises_id: ex.expertises_id
+              expertises_id: ex.expertises_id,
+              organization_id: ex.organization_id
             } :
               {
                 is_active: ex.is_active
@@ -651,7 +656,9 @@ export class InnovationPathwayStepOneService {
               email: ex.email,
               last_updated_by: user.id,
               created_by: user.id,
-              expertises_id: ex.expertises_id
+              expertises_id: ex.expertises_id,
+              organization_id: ex.organization_id,
+              result_id: result.id
             }
           )
         }
@@ -668,13 +675,13 @@ export class InnovationPathwayStepOneService {
       });
       if (ripExists) {
         await this._resultInnovationPackageRepository.update(
-          result.id,
+          ripExists.result_innovation_package_id,
           {
-            active_backstopping: rip.active_backstopping,
-            consensus_initiative_work_package: rip.consensus_initiative_work_package,
-            regional_integrated: rip.regional_integrated,
-            relevant_country: rip.relevant_country,
-            regional_leadership: rip.regional_leadership,
+            active_backstopping_id: rip.active_backstopping_id,
+            consensus_initiative_work_package_id: rip.consensus_initiative_work_package_id,
+            regional_integrated_id: rip.regional_integrated_id,
+            relevant_country_id: rip.relevant_country_id,
+            regional_leadership_id: rip.regional_leadership_id,
             is_active: true,
             last_updated_by: user.id
           }
@@ -683,11 +690,11 @@ export class InnovationPathwayStepOneService {
         await this._resultInnovationPackageRepository.save(
           {
             result_innovation_package_id: result.id,
-            active_backstopping: rip.active_backstopping,
-            consensus_initiative_work_package: rip.consensus_initiative_work_package,
-            regional_integrated: rip.regional_integrated,
-            relevant_country: rip.relevant_country,
-            regional_leadership: rip.regional_leadership,
+            active_backstopping_id: rip.active_backstopping_id,
+            consensus_initiative_work_package_id: rip.consensus_initiative_work_package_id,
+            regional_integrated_id: rip.regional_integrated_id,
+            relevant_country_id: rip.relevant_country_id,
+            regional_leadership_id: rip.regional_leadership_id,
             version_id: version.id,
             created_by: user.id,
             last_updated_by: user.id
@@ -723,7 +730,7 @@ export class InnovationPathwayStepOneService {
           })
         }
 
-        const delData = ins?.deliveries?.length? ins?.deliveries : [];
+        const delData = ins?.deliveries?.length ? ins?.deliveries : [];
         await this.saveDeliveries(instExist ? instExist : rbi, delData, user.id, version);
       }
     } else {
@@ -752,11 +759,11 @@ export class InnovationPathwayStepOneService {
       const { actors } = crtr;
       actors.map(async (el: ResultActor) => {
         let actorExists: ResultActor = null;
-        if(el?.actor_type_id){
+        if (el?.actor_type_id) {
           actorExists = await this._resultActorRepository.findOne({ where: { actor_type_id: el.actor_type_id, result_id: result.id } });
         }
 
-        if(!actorExists && el?.result_actors_id){
+        if (!actorExists && el?.result_actors_id) {
           actorExists = await this._resultActorRepository.findOne({ where: { result_actors_id: el.result_actors_id, result_id: result.id } });
         }
 
@@ -793,12 +800,12 @@ export class InnovationPathwayStepOneService {
     if (crtr?.organization?.length) {
       const { organization } = crtr;
       organization.map(async (el) => {
-        let ite:ResultsByInstitutionType = null;
-        if(el?.institution_types_id){
+        let ite: ResultsByInstitutionType = null;
+        if (el?.institution_types_id) {
           ite = await this._resultByIntitutionsTypeRepository.getNewResultByInstitutionTypeExists(result.id, el.institution_types_id, 5);
         }
 
-        if(!ite && el?.id){
+        if (!ite && el?.id) {
           ite = await this._resultByIntitutionsTypeRepository.getNewResultByIdExists(result.id, el.id, 5);
         }
         if (ite) {
