@@ -159,7 +159,7 @@ export class InnovationPathwayStepThreeService {
 
         if (actorExists) {
           await this._resultsIpActorRepository.update(
-            actorExists.result_ip_result_id,
+            actorExists.result_ip_actors_id,
             {
               actor_type_id: el.actor_type_id,
               is_active: el.is_active,
