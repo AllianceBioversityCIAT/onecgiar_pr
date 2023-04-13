@@ -115,6 +115,13 @@ export class InnovationPathwayStepThreeService {
   async getStepThree(resultId: number){
     try {
       const result_ip = await this._resultInnovationPackageRepository.findOne({where:{result_innovation_package_id: resultId, is_active: true}});
+      if (!result_ip) {
+        throw {
+          response: resultId,
+          message: 'The result was not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
       const result_core = await this._innovationByResultRepository.findOne({where: {ipsr_role_id: 1, result_innovation_package_id: result_ip.result_innovation_package_id, is_active: true}});
       const result_complementary = await this._innovationByResultRepository.find({where: {ipsr_role_id: 2, result_innovation_package_id: result_ip.result_innovation_package_id, is_active: true}});
       const returdata: SaveStepTwoThree = {
@@ -141,7 +148,15 @@ export class InnovationPathwayStepThreeService {
     if (crtr?.actors?.length) {
       const { actors } = crtr;
       actors.map(async (el: ResultsIpActor) => {
-        const actorExists = await this._resultsIpActorRepository.findOne({ where: { actor_type_id: el.actor_type_id, result_ip_result_id: riprc.result_by_innovation_package_id } });
+        let actorExists: ResultsIpActor = null;
+        if (el?.actor_type_id) {
+          actorExists = await this._resultsIpActorRepository.findOne({ where: { actor_type_id: el.actor_type_id, result_ip_result_id: riprc.result_by_innovation_package_id } });
+        }
+
+        if (!actorExists && el?.result_ip_actors_id) {
+          actorExists = await this._resultsIpActorRepository.findOne({ where: { result_ip_actors_id: el.result_ip_actors_id, result_ip_result_id: riprc.result_by_innovation_package_id } });
+        }
+
         if (actorExists) {
           await this._resultsIpActorRepository.update(
             actorExists.result_ip_result_id,
