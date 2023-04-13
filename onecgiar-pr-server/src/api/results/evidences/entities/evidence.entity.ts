@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { Version } from '../../versions/entities/version.entity';
 import { Result } from '../../entities/result.entity';
+import { EvidenceType } from '../../evidence_types/entities/evidence_type.entity';
 
 @Entity('evidence')
 export class Evidence {
@@ -106,4 +107,17 @@ export class Evidence {
     nullable: true,
   })
   last_updated_date!: Date;
+
+  @Column({
+    name: 'evidence_type_id',
+    type: 'bigint',
+    nullable: true
+  })
+  evidence_type_id: number;
+
+  @ManyToOne(() => EvidenceType, et => et.id)
+  @JoinColumn({
+    name: 'evidence_type_id'
+  })
+  evidence_type: EvidenceType;
 }
