@@ -33,6 +33,7 @@ import { YearRepository } from '../../../api/results/years/year.repository';
 import { ResultByInitiativesRepository } from '../../../api/results/results_by_inititiatives/resultByInitiatives.repository';
 import { ComplementaryInnovationFunctionsRepository } from '../results-complementary-innovations-functions/repositories/complementary-innovation-functions.repository';
 import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
+import { InnovationPathwayStepFourService } from './innovation-pathway-step-four.service';
 
 @Module({
   controllers: [InnovationPathwayController],
@@ -69,7 +70,8 @@ import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institut
     YearRepository,
     ResultByInitiativesRepository,
     ComplementaryInnovationFunctionsRepository,
-    ClarisaInstitutionsRepository
+    ClarisaInstitutionsRepository,
+    InnovationPathwayStepFourService
   ]
 })
 export class InnovationPathwayModule { }

@@ -28,19 +28,25 @@ import { ResultsByIpInnovationUseMeasuresModule } from './results-by-ip-innovati
   controllers: [IpsrController],
   providers: [IpsrService, IpsrRepository, HandlersError],
   imports: [
-    RouterModule.register(IpsrRoutes), 
-    ResultInnovationPackageModule, 
-    ResultsPackageByInitiativesModule, 
-    ResultsPackageTocResultModule, 
-    ResultsPackageCentersModule, 
-    NonPooledPackageProjectsModule, 
-    ShareResultInnovationPackageRequestModule, 
-    InnovationPathwayModule, 
-    InnovationPackagingExpertsModule, 
-    ResultIpMeasuresModule, ResultsComplementaryInnovationsModule, ResultsComplementaryInnovationsFunctionsModule, ResultsInnovationPackagesEnablerTypeModule, ResultsIpInstitutionTypeModule, ResultsIpActorsModule, ResultsByIpInnovationUseMeasuresModule,
+    RouterModule.register(IpsrRoutes),
+    ResultInnovationPackageModule,
+    ResultsPackageByInitiativesModule,
+    ResultsPackageTocResultModule,
+    ResultsPackageCentersModule,
+    NonPooledPackageProjectsModule,
+    ShareResultInnovationPackageRequestModule,
+    InnovationPathwayModule,
+    InnovationPackagingExpertsModule,
+    ResultIpMeasuresModule,
+    ResultsComplementaryInnovationsModule,
+    ResultsComplementaryInnovationsFunctionsModule,
+    ResultsInnovationPackagesEnablerTypeModule,
+    ResultsIpInstitutionTypeModule,
+    ResultsIpActorsModule,
+    ResultsByIpInnovationUseMeasuresModule,
   ],
   exports: [
     IpsrRepository
   ]
 })
-export class IpsrModule {}
+export class IpsrModule { }

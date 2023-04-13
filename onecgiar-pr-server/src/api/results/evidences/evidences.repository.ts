@@ -12,6 +12,28 @@ export class EvidencesRepository extends Repository<Evidence> {
     super(Evidence, dataSource.createEntityManager());
   }
 
+  async getEvidence(resultId: number) {
+    const queryData = `
+    SELECT 
+      e.id,
+      e.link,
+      e.evidence_type_id,
+      e.result_id
+    FROM evidence e 
+    WHERE e.result_id = ?;
+    `;
+    try {
+      const evidence: Evidence[] = await this.query(queryData, [resultId]);
+      return evidence;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: EvidencesRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async getEvidenceFull(evidenceId: number) {
     const queryData = `
     select 
