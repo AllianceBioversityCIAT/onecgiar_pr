@@ -1,1 +1,53 @@
-<p>step-n3 works!</p>
+<div class="step_title"> <strong>Step 3:</strong>Scaling readiness assessment</div>
+
+<app-pr-radio-button
+    label="Was an Innovation Packaging and Scaling Readiness online or in-person expert workshop organized?"
+    [options]="this.radioOptions" optionLabel="name" optionValue="id">
+</app-pr-radio-button>
+
+<app-pr-field-header label="Innovation Readiness level self-assessment" [required]="false"
+    [description]="this.readinessLevelSelfAssessmentText()"></app-pr-field-header>
+
+<app-pr-range-level optionLabel="name" optionValue="id"></app-pr-range-level>
+
+<app-pr-field-header label="Innovation Readiness level self-assessment" [required]="false"
+    [description]="this.useLevelDelfAssessment()"></app-pr-field-header>
+
+<app-pr-range-level optionLabel="name" optionValue="id"></app-pr-range-level>
+
+<div class="step_divider"></div>
+
+<app-pr-field-header
+    label="Fill the Scaling Readiness evidence-based assessment (post workshop and supported by available evidence)"
+    [required]="false"></app-pr-field-header>
+
+
+<app-pr-field-header label="Core innovation" [required]="false"></app-pr-field-header>
+
+<app-pr-field-header label="Innovation Readiness level evidence-based" [required]="false"
+    [description]="this.useLevelDelfAssessment()"></app-pr-field-header>
+
+<app-pr-range-level optionLabel="name" optionValue="id"></app-pr-range-level>
+
+<app-pr-input label="Evidence link" placeholder="Grant title goes here...">
+</app-pr-input>
+
+<app-pr-textarea placeholder="Write some..."
+    label="Please provide details of where evidence can be found within the source link (e.g. page number, slide number, table number)"
+    type="text" [required]="true"></app-pr-textarea>
+
+<div class="fragment_section_divider"></div>
+
+<app-pr-field-header label="Innovation use level evidence-based" [required]="false"
+    [description]="this.useLevelDelfAssessment()"></app-pr-field-header>
+
+<app-pr-range-level optionLabel="name" optionValue="id"></app-pr-range-level>
+
+<app-pr-input label="Evidence link" placeholder="Grant title goes here...">
+</app-pr-input>
+
+<app-pr-textarea placeholder="Write some..."
+    label="Please provide details of where evidence can be found within the source link (e.g. page number, slide number, table number)"
+    type="text" [required]="true"></app-pr-textarea>
+
+<div class="fragment_section_divider"></div>
