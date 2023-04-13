@@ -21,6 +21,8 @@ class Resultipresultcomplementary {
   readiness_level_evidence_based?: any;
   use_level_evidence_based?: any;
   obj_result: any;
+  readiness_details_of_evidence: string;
+  use_details_of_evidence: string;
 }
 
 class Resultinnovationpackage {
@@ -74,4 +76,6 @@ export class ActorN3 {
   men_youth: number;
   is_active: boolean;
   evidence_link: string;
+  women_non_youth: string;
+  men_non_youth: string;
 }

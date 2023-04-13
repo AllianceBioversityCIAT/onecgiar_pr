@@ -17,25 +17,30 @@
     <app-pr-range-level [options]="this.rangesOptions" optionLabel="name" optionValue="id"
         [(ngModel)]="this.body.result_ip_result_complementary[this.ci.index].readiness_level_evidence_based"></app-pr-range-level>
 
-    <app-pr-input label="Evidence link" placeholder="Grant title goes here...">
+    <app-pr-input label="Evidence link" placeholder="Grant title goes here..."
+        [(ngModel)]="this.body.result_ip_result_complementary[this.ci.index].readinees_evidence_link">
     </app-pr-input>
 
     <app-pr-textarea placeholder="Write some..."
         label="Please provide details of where evidence can be found within the source link (e.g. page number, slide number, table number)"
-        type="text" [required]="true"></app-pr-textarea>
+        type="text" [required]="true"
+        [(ngModel)]="this.body.result_ip_result_complementary[this.ci.index].readiness_details_of_evidence"></app-pr-textarea>
 
     <div class="fragment_section_divider"></div>
 
     <app-pr-field-header label="Innovation use level evidence-based" [required]="false"
         [description]="this.readinessLevelSelfAssessmentText()"></app-pr-field-header>
 
-    <!-- <app-pr-range-level [options]="this.rangesOptions" *ngIf="this.rangesOptions?.length" optionLabel="name"
-        optionValue="id"></app-pr-range-level> -->
+    <app-pr-range-level [options]="this.rangesOptions" *ngIf="this.rangesOptions?.length" optionLabel="name"
+        optionValue="id"
+        [(ngModel)]="this.body.result_ip_result_complementary[this.ci.index].use_level_evidence_based"></app-pr-range-level>
 
-    <app-pr-input label="Evidence link" placeholder="Grant title goes here...">
+    <app-pr-input label="Evidence link" placeholder="Grant title goes here..."
+        [(ngModel)]="this.body.result_ip_result_complementary[this.ci.index].use_evidence_link">
     </app-pr-input>
 
     <app-pr-textarea placeholder="Write some..."
         label="Please provide details of where evidence can be found within the source link (e.g. page number, slide number, table number)"
-        type="text" [required]="true"></app-pr-textarea>
+        type="text" [required]="true"
+        [(ngModel)]="this.body.result_ip_result_complementary[this.ci.index].use_details_of_evidence"></app-pr-textarea>
 </div>

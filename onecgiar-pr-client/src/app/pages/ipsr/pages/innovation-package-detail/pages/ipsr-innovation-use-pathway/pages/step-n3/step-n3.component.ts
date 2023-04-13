@@ -38,7 +38,9 @@ export class StepN3Component implements OnInit {
     this.convertOrganizationsTosave();
     this.api.resultsSE.PATCHInnovationPathwayByRiId(this.ipsrStep3Body).subscribe(({ response }) => {
       console.log(response);
+      // setTimeout(() => {
       this.getSectionInformation();
+      // }, 3000);
     });
   }
 
