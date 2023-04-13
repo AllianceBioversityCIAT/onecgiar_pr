@@ -103,14 +103,14 @@ export class ResultsPackageTocResultService {
         const { contributing_np_projects: cnpp } = crtr;
         const titles = cnpp.map(el => el.grant_title);
 
-        await this._nonPooledProjectRepository.updateNPProjectById(rip.id, titles, user.id)
+        await this._nonPooledProjectRepository.updateNPProjectById(rip.id, titles, user.id, 1)
         for (const cpnp of cnpp) {
           let nonPP: NonPooledProject = null;
           if (cpnp?.grant_title?.length) {
             if(cpnp?.id){
-              nonPP = await this._nonPooledProjectRepository.getAllNPProjectByNPId(rip.id, cpnp.id);
+              nonPP = await this._nonPooledProjectRepository.getAllNPProjectByNPId(rip.id, cpnp.id, 1);
             }else{
-              nonPP = await this._nonPooledProjectRepository.getAllNPProjectById(rip.id, cpnp.grant_title);
+              nonPP = await this._nonPooledProjectRepository.getAllNPProjectById(rip.id, cpnp.grant_title, 1);
             }
             if (nonPP) {
               this._nonPooledProjectRepository.update(
@@ -133,13 +133,14 @@ export class ResultsPackageTocResultService {
                 lead_center_id: cpnp.lead_center,
                 version_id: version.id,
                 created_by: user.id,
-                last_updated_by: user.id
+                last_updated_by: user.id,
+                non_pooled_project_type_id: 1
               })
             }
           }
         }
       } else {
-        await this._nonPooledProjectRepository.updateNPProjectById(rip.id, [], user.id);
+        await this._nonPooledProjectRepository.updateNPProjectById(rip.id, [], user.id, 1);
       }
 
 
@@ -279,7 +280,7 @@ export class ResultsPackageTocResultService {
     const resultInit = await this._resultByInitiativesRepository.getOwnerInitiativeByResult(resultId);
     const conInit = await this._resultByInitiativesRepository.getContributorInitiativeByResult(resultId);
     const conPending = await this._resultByInitiativesRepository.getPendingInit(resultId);
-    const npProject = await this._nonPooledProjectRepository.getAllNPProjectByResultId(resultId);
+    const npProject = await this._nonPooledProjectRepository.getAllNPProjectByResultId(resultId, 1);
     const resCenters = await this._resultsCenterRepository.getAllResultsCenterByResultId(resultId);
     const institutions = await this._resultByIntitutionsRepository.getGenericAllResultByInstitutionByRole(resultId, 2);
     const deliveries = await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByResultByInstitution(institutions?.map(el => el.id));
