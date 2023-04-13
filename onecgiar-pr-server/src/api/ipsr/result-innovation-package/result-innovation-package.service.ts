@@ -20,6 +20,11 @@ import { ResultIpAAOutcome } from '../innovation-pathway/entities/result-ip-acti
 import { ResultsImpactAreaIndicatorRepository } from 'src/api/results/results-impact-area-indicators/results-impact-area-indicators.repository';
 import { ResultIpImpactArea } from '../innovation-pathway/entities/result-ip-impact-area.entity';
 import { ResultIpImpactAreaRepository } from '../innovation-pathway/repository/result-ip-impact-area-targets.repository';
+import { ActiveBackstoppingRepository } from './repositories/active-backstopping.repository';
+import { consensusInitiativeWorkPackageRepository } from './repositories/consensus-initiative-work-package.repository';
+import { RegionalIntegratedRepository } from './repositories/regional-integrated.repository';
+import { RegionalLeadershipRepository } from './repositories/regional-leadership.repository';
+import { RelevantCountryRepository } from './repositories/relevant-country.repository';
 import { ResultByEvidencesRepository } from '../../../api/results/results_by_evidences/result_by_evidences.repository';
 import { ResultByIntitutionsRepository } from '../../../api/results/results_by_institutions/result_by_intitutions.repository';
 import { ResultByIntitutionsTypeRepository } from '../../../api/results/results_by_institution_types/result_by_intitutions_type.repository';
@@ -41,12 +46,82 @@ export class ResultInnovationPackageService {
     private readonly _resultIpAAOutcomeRepository: ResultIpAAOutcomeRepository,
     private readonly _resultIpImpactAreaIndicatorsRespository: ResultsImpactAreaIndicatorRepository,
     private readonly _resultIpImpactAreaRespository: ResultIpImpactAreaRepository,
+    private readonly _activeBackstoppingRepository: ActiveBackstoppingRepository,
+    private readonly _consensusInitiativeWorkPackageRepository: consensusInitiativeWorkPackageRepository,
+    private readonly _regionalIntegratedRepository: RegionalIntegratedRepository,
+    private readonly _regionalLeadershipRepository: RegionalLeadershipRepository,
+    private readonly _relevantCountryRepositor: RelevantCountryRepository,
     private readonly _resultIpSdgRespository: ResultIpSdgTargetRepository,
     private readonly _resultByEvidencesRepository: ResultByEvidencesRepository,
     private readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
     private readonly _resultByIntitutionsTypeRepository: ResultByIntitutionsTypeRepository,
     private readonly _resultValidationRepository: resultValidationRepository,
   ) { }
+
+  async findRelevantCountry() {
+    try {
+      const request = await this._relevantCountryRepositor.find();
+      return {
+        response: request,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async findRegionalLeadership() {
+    try {
+      const request = await this._regionalLeadershipRepository.find();
+      return {
+        response: request,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async findRegionalIntegrated() {
+    try {
+      const request = await this._regionalIntegratedRepository.find();
+      return {
+        response: request,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async findConsensusInitiativeWorkPackage() {
+    try {
+      const request = await this._consensusInitiativeWorkPackageRepository.find();
+      return {
+        response: request,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async findActiveBackstopping() {
+    try {
+      const request = await this._activeBackstoppingRepository.find();
+      return {
+        response: request,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
 
   async createHeader(CreateResultInnovationPackageDto: CreateResultInnovationPackageDto, user: TokenDto) {
     try {

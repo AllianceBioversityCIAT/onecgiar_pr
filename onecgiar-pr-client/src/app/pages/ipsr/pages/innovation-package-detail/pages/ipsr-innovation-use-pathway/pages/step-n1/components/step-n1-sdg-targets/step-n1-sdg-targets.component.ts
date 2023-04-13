@@ -9,7 +9,6 @@ import { ApiService } from 'src/app/shared/services/api/api.service';
 })
 export class StepN1SdgTargetsComponent {
   currentsdgID = null;
-  sdgTargetLisSelected = [];
   @Input() body = new IpsrStep1Body();
   sdgTargetLis = [];
   constructor(private api: ApiService) {}
@@ -19,7 +18,7 @@ export class StepN1SdgTargetsComponent {
   GETAllClarisaSdgsTargets() {
     this.api.resultsSE.GETAllClarisaSdgsTargets().subscribe(
       ({ response }) => {
-        console.log(response);
+        // console.log(response);
         this.sdgTargetLis = response;
         // this.mapSdgTargetListDropdowns(response);
       },
@@ -28,7 +27,10 @@ export class StepN1SdgTargetsComponent {
       }
     );
   }
-  removeOption(option) {}
+  removeOption(option) {
+    const index = this.body.sdgTargets.findIndex((valueItem: any) => valueItem.id == option.id);
+    this.body.sdgTargets.splice(index, 1);
+  }
   // mapSdgTargetListDropdowns(objectList) {
   //   console.log(objectList);
   //   console.log(Object.keys(objectList));

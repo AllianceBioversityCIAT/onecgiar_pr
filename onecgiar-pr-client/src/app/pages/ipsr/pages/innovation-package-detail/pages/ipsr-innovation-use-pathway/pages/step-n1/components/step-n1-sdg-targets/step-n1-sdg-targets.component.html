@@ -12,18 +12,17 @@
     <div class="dropdown-50p" *ngFor="let item of sdgTargetLis">
         <app-pr-multi-select [options]="item?.sdgList" optionLabel="sdg_target" optionValue="id"
             *ngIf="this.currentsdgID ==item?.sdgId" selectedOptionLabel="indicator_statement"
-            placeholder="Select Poverty Reduction, Livelihoods and Jobs targets(s)"
-            [(ngModel)]="this.sdgTargetLisSelected">
+            placeholder="Select SDG Target(s)" [(ngModel)]="this.body.sdgTargets">
         </app-pr-multi-select>
     </div>
 </div>
 
-<div class="selected_container custom_scroll dropdown-50p" *ngIf="this.currentsdgID">
+<div class="selected_container custom_scroll dropdown-50p">
     <br>
     <app-pr-field-header description=" All Impact Area target(s) selected:">
     </app-pr-field-header>
     <div class="chips_container">
-        <div class="pr_chip_selected" *ngFor="let option of this.sdgTargetLisSelected; let i=index"
+        <div class="pr_chip_selected" *ngFor="let option of this.body.sdgTargets; let i=index"
             [ngClass]="{'is_active_false': false}">
             <div class="name" [innerHtml]="option?.sdg_target"></div><i class="material-icons-round"
                 (click)="removeOption(option)">remove_circle

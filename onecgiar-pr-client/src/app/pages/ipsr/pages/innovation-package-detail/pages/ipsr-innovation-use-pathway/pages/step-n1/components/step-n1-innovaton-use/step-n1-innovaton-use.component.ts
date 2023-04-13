@@ -17,13 +17,13 @@ export class StepN1InnovatonUseComponent {
   }
   GETAllActorsTypes() {
     this.api.resultsSE.GETAllActorsTypes().subscribe(({ response }) => {
-      console.log(response);
+      // console.log(response);
       this.actorsTypeList = response;
     });
   }
   GETInstitutionsTypeTree() {
     this.api.resultsSE.GETInstitutionsTypeTree().subscribe(({ response }) => {
-      console.log(response);
+      // console.log(response);
       // this.actorsTypeList = response;
       this.institutionsTypeTreeList = response;
     });

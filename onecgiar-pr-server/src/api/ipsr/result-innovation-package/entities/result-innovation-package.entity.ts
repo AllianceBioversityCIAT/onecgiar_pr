@@ -8,6 +8,7 @@ import { ActiveBackstopping } from './active-backstopping.entity';
 import { Version } from '../../../results/versions/entities/version.entity';
 import { Result } from '../../../results/entities/result.entity';
 import { Ipsr } from '../../entities/ipsr.entity';
+import { ResultsInnovationPackagesEnablerType } from '../../results-innovation-packages-enabler-type/entities/results-innovation-packages-enabler-type.entity';
 
 @Entity('result_innovation_package')
 export class ResultInnovationPackage extends BaseEntity{
@@ -33,67 +34,67 @@ export class ResultInnovationPackage extends BaseEntity{
     is_not_diverse_justification!: string;    
 
     @Column({
-        name: 'consensus_initiative_work_package',
+        name: 'consensus_initiative_work_package_id',
         type: 'int',
         nullable: true
     })
-    consensus_initiative_work_package!: number;
+    consensus_initiative_work_package_id!: number;
     
     @Column({
-        name: 'relevant_country',
+        name: 'relevant_country_id',
         type: 'int',
         nullable: true
     })
-    relevant_country!: number;
+    relevant_country_id!: number;
 
     @Column({
-        name: 'regional_leadership',
+        name: 'regional_leadership_id',
         type: 'int',
         nullable: true
     })
-    regional_leadership!: number;
+    regional_leadership_id!: number;
 
     @Column({
-        name: 'regional_integrated',
+        name: 'regional_integrated_id',
         type: 'int',
         nullable: true
     })
-    regional_integrated!: number;
+    regional_integrated_id!: number;
 
     @Column({
-        name: 'active_backstopping',
+        name: 'active_backstopping_id',
         type: 'int',
         nullable: true
     })
-    active_backstopping!: number;
+    active_backstopping_id!: number;
 
     @ManyToOne(() => consensusInitiativeWorkPackage , ciwp => ciwp.consensus_initiative_work_package_id, {nullable: true})
     @JoinColumn({
-        name: 'consensus_initiative_work_package'
+        name: 'consensus_initiative_work_package_id'
     })
     obj_consensus_initiative_work_package!: consensusInitiativeWorkPackage;
     
     @ManyToOne(() => RelevantCountry, rc => rc.relevant_country_id, {nullable: true})
     @JoinColumn({
-        name: 'relevant_country'
+        name: 'relevant_country_id'
     })
     obj_relevant_country!: RelevantCountry;
 
     @ManyToOne(() => RegionalLeadership, rl => rl.regional_leadership_id, {nullable: true})
     @JoinColumn({
-        name: 'regional_leadership'
+        name: 'regional_leadership_id'
     })
     obj_regional_leadership!: RegionalLeadership;
 
     @ManyToOne(() => RegionalIntegrated, ri => ri.regional_integrated_id, {nullable: true})
     @JoinColumn({
-        name: 'regional_integrated'
+        name: 'regional_integrated_id'
     })
     obj_regional_integrated!: RegionalIntegrated;
 
     @ManyToOne(() => ActiveBackstopping, ab => ab.active_backstopping_id, {nullable: true})
     @JoinColumn({
-        name: 'active_backstopping'
+        name: 'active_backstopping_id'
     })
     obj_active_backstopping!: ActiveBackstopping;
 
@@ -111,4 +112,7 @@ export class ResultInnovationPackage extends BaseEntity{
 
     @OneToMany(() => Ipsr, (i) => i.obj_result_by_innovation_package)
     obj_result: Ipsr[];
+
+    @OneToMany(() => ResultsInnovationPackagesEnablerType, ripet => ripet.obj_result_by_innovation_package)
+    children_innovation_packages_enabler_type: ResultsInnovationPackagesEnablerType[];
 }

@@ -26,4 +26,6 @@ export class ManageInnovationsListService {
       this.allInnovationsList.map((inno: any) => (inno.full_name = `${inno?.result_code} ${inno?.title} ${inno?.official_code}`));
     });
   }
+
+
 }

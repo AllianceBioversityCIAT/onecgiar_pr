@@ -48,4 +48,32 @@ export class ResultIpAAOutcomeRepository extends Repository<ResultIpAAOutcome> {
       });
     }
   }
+
+  async getAAOutcomes(resultByInnovationPackageId: number) {
+    const query = `
+    SELECT 
+      riaa.action_area_outcome_id,
+      (
+        SELECT 
+          caao.outcomeStatement
+        FROM clarisa_action_area_outcome caao
+        WHERE id = action_area_outcome_id
+      ) AS outcomeStatement
+    FROM
+      result_ip_action_area_outcome riaa
+    WHERE riaa.is_active > 0
+        AND riaa.result_by_innovation_package_id = ?
+    `;
+
+    try {
+      const aaOutcome: any[] = await this.query(query, [resultByInnovationPackageId]);
+      return aaOutcome;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultIpAAOutcomeRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
 }

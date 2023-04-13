@@ -1,7 +1,8 @@
 import { Injectable } from "@nestjs/common";
-import { HandlersError } from "src/shared/handlers/error.utils";
+
 import { DataSource, Repository } from "typeorm";
 import { Ipsr } from "./entities/ipsr.entity";
+import { HandlersError } from '../../shared/handlers/error.utils';
 
 
 @Injectable()
@@ -265,6 +266,46 @@ export class IpsrRepository extends Repository<Ipsr>{
         }
     }
 
+    async getStepTwoOne(resultId: number) {
+        const query = `
+        SELECT
+            rbip.result_by_innovation_package_id,
+        	rbip.result_id,
+        	r.result_code,
+        	r.title,
+        	r.description,
+        	rbi.inititiative_id as initiative_id,
+        	ci.official_code as initiative_official_code,
+            rbi.is_active
+        FROM
+        	result_by_innovation_package rbip
+        inner join \`result\` r on
+        	r.id = rbip.result_id
+        	and r.is_active = true
+        left join results_by_inititiative rbi on
+        	rbi.result_id = r.id
+        	and rbi.initiative_role_id = 1
+        	and rbi.is_active = true
+        left join clarisa_initiatives ci on
+        	ci.id = rbi.inititiative_id
+        where
+        	rbip.result_innovation_package_id = ?
+            and rbip.ipsr_role_id = 2
+        	and rbip.is_active = true;
+        `;
+
+        try {
+            const results: getInnovationComInterface[] = await this.query(query, [resultId]);
+            return results;
+        } catch (error) {
+            throw this._handlersError.returnErrorRepository({
+                className: IpsrRepository.name,
+                error: error,
+                debug: true,
+            });
+        }
+    }
+    
     async getInnovationCoreStepOne(resultId: number) {
         const innovationByIdQuery = `
         SELECT
@@ -306,4 +347,27 @@ export class IpsrRepository extends Repository<Ipsr>{
             });
         }
     }
+
+}
+
+export class getInnovationComInterface {
+    public result_by_innovation_package_id: number;
+    public result_id: number;
+    public result_code: number;
+    public title: string;
+    public short_title: string;
+    public description: string;
+    public other_funcions: string;
+    public initiative_id: number;
+    public initiative_official_code: string;
+    public is_active: boolean;
+    public complementaryFunctions: ComplementaryFunctionsInterface[];
+    public referenceMaterials: ReferenceMaterialsInterface[];
+}
+
+export interface ComplementaryFunctionsInterface {
+    complementary_innovation_functions_id: number;
+}
+export interface ReferenceMaterialsInterface {
+    link: string;
 }

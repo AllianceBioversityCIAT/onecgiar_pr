@@ -15,6 +15,11 @@ import { ResultIpAAOutcomeRepository } from '../innovation-pathway/repository/re
 import { ClarisaActionAreaOutcomeRepository } from '../../../clarisa/clarisa-action-area-outcome/clarisa-action-area-outcome.repository';
 import { ResultsImpactAreaIndicatorRepository } from 'src/api/results/results-impact-area-indicators/results-impact-area-indicators.repository';
 import { ResultIpImpactAreaRepository } from '../innovation-pathway/repository/result-ip-impact-area-targets.repository';
+import { ActiveBackstoppingRepository } from './repositories/active-backstopping.repository';
+import { consensusInitiativeWorkPackageRepository } from './repositories/consensus-initiative-work-package.repository';
+import { RegionalIntegratedRepository } from './repositories/regional-integrated.repository';
+import { RegionalLeadershipRepository } from './repositories/regional-leadership.repository';
+import { RelevantCountryRepository } from './repositories/relevant-country.repository';
 import { resultValidationRepository } from '../../../api/results/results-validation-module/results-validation-module.repository';
 import { ResultByEvidencesRepository } from '../../../api/results/results_by_evidences/result_by_evidences.repository';
 import { ResultByIntitutionsTypeRepository } from '../../../api/results/results_by_institution_types/result_by_intitutions_type.repository';
@@ -38,6 +43,11 @@ import { ResultIpSdgTargetRepository } from '../innovation-pathway/repository/re
     ClarisaActionAreaOutcomeRepository,
     ResultsImpactAreaIndicatorRepository,
     ResultIpImpactAreaRepository,
+    ActiveBackstoppingRepository,
+    consensusInitiativeWorkPackageRepository,
+    RegionalIntegratedRepository,
+    RegionalLeadershipRepository,
+    RelevantCountryRepository,
     ResultByEvidencesRepository,
     ResultByIntitutionsRepository,
     ResultByIntitutionsTypeRepository,

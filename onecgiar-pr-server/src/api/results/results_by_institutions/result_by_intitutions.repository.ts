@@ -333,7 +333,7 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
   async updateGenericIstitutions(
     resultId: number,
     institutionsArray: institutionsInterface[],
-    institutionRole: 1|2|3|4,
+    institutionRole: 1|2|3|4 |5,
     userId: number,
     applicablePartner: boolean = false,
   ) {

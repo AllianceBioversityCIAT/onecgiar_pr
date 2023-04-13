@@ -9,18 +9,12 @@ export class IpsrStep1Body {
   impactAreas: ImpactArea[] = [];
   sdgTargets: SdgTarget[] = [];
   innovatonUse: InnovatonUse = new InnovatonUse();
-  institutions: Institutions = new Institutions();
+  institutions: Institutions[] = [];
   experts: Expert[] = [];
-  experts_is_diverse: number = null;
-  is_not_diverse_justification: string = null;
-  consensus_initiative_work_package: number = null;
-  relevant_country: number = null;
-  regional_leadership: number = null;
-  regional_integrated: number = null;
-  active_backstopping: number = null;
+  result_ip = new Result_ip();
 }
 
-interface Expert {
+export class Expert {
   first_name: string;
   last_name: string;
   email: string;
@@ -29,9 +23,23 @@ interface Expert {
   is_active: boolean;
 }
 
-class Institutions {
-  institutions_id: number = null;
-  deliveries: Delivery[] = [];
+class Result_ip {
+  //experts
+  is_not_diverse_justification: string = null;
+  experts_is_diverse: boolean = null;
+  // Consensus and Consultation
+  consensus_initiative_work_package_id: number = null;
+  relevant_country_id: number = null;
+  regional_leadership_id: number = null;
+  regional_integrated_id: number = null;
+  active_backstopping_id: number = null;
+}
+
+interface Institutions {
+  institutions_id: number;
+  institutions_name: string;
+  institutions_type_name: string;
+  deliveries: Delivery[];
 }
 
 interface Delivery {
@@ -47,13 +55,16 @@ class InnovatonUse {
 export class Measure {
   unit_of_measure: string;
   quantity: number;
+  is_active: boolean;
 }
 
 export class Organization {
   institution_types_id: number;
+  institution_sub_type_id: number;
   how_many: number;
   // Aux
   hide: boolean;
+  is_active: boolean;
 }
 
 export class Actor {
@@ -62,19 +73,24 @@ export class Actor {
   women_youth: number;
   men: number;
   men_youth: number;
+  is_active: boolean;
 }
 
 interface SdgTarget {
   clarisa_sdg_usnd_code: number;
   clarisa_sdg_target_id: number;
+  sdg_target: string;
 }
 
 interface ImpactArea {
   impact_area_indicator_id: number;
+  target: string;
 }
 
 interface ActionAreaOutcome {
   action_area_outcome_id: number;
+  outcomeStatement: string;
+  is_active: boolean;
 }
 
 interface EoiOutcome {
