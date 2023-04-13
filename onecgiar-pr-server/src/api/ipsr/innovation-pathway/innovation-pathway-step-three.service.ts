@@ -162,7 +162,7 @@ export class InnovationPathwayStepThreeService {
             actorExists.result_ip_actors_id,
             {
               actor_type_id: el.actor_type_id,
-              is_active: el.is_active,
+              is_active: el.is_active == undefined?true:el.is_active,
               men: el.men,
               men_youth: el.men_youth,
               women: el.women,
@@ -205,7 +205,7 @@ export class InnovationPathwayStepThreeService {
             {
               last_updated_by: user.id,
               how_many: el.how_many,
-              is_active: el.is_active,
+              is_active: el.is_active == undefined?true:el.is_active,
               evidence_link: el.evidence_link
             }
           );
@@ -254,7 +254,7 @@ export class InnovationPathwayStepThreeService {
               quantity: el.quantity,
               last_updated_by: user.id,
               evidence_link: el.evidence_link,
-              is_active: el.is_active
+              is_active: el.is_active == undefined?true:el.is_active
             }
           )
         } else {
