@@ -161,16 +161,17 @@ export class InnovationPathwayStepThreeService {
         }
 
         if (actorExists) {
+
           await this._resultsIpActorRepository.update(
             actorExists.result_ip_actors_id,
             {
-              actor_type_id: el.actor_type_id,
+              actor_type_id: this.isNullData(el?.actor_type_id),
               is_active: el.is_active == undefined?true:el.is_active,
-              men: el.men,
-              men_youth: el.men_youth,
-              women: el.women,
-              women_youth: el.women_youth,
-              evidence_link: el.evidence_link,
+              men: this.isNullData(el?.men),
+              men_youth: this.isNullData(el?.men_youth),
+              women: this.isNullData(el?.women),
+              women_youth: this.isNullData(el?.women_youth),
+              evidence_link: this.isNullData(el?.evidence_link),
               last_updated_by: user.id
             }
           );
@@ -207,9 +208,9 @@ export class InnovationPathwayStepThreeService {
             ite.id,
             {
               last_updated_by: user.id,
-              how_many: el.how_many,
+              how_many: this.isNullData(el.how_many),
               is_active: el.is_active == undefined?true:el.is_active,
-              evidence_link: el.evidence_link
+              evidence_link: this.isNullData(el.evidence_link)
             }
           );
         } else {
@@ -236,6 +237,13 @@ export class InnovationPathwayStepThreeService {
           ripm = await this._resultsByIpInnovationUseMeasureRepository.findOne({
             where: {
               unit_of_measure: el.unit_of_measure,
+              result_ip_result_id: riprc.result_by_innovation_package_id
+            }
+          });
+        }else{
+          ripm = await this._resultsByIpInnovationUseMeasureRepository.findOne({
+            where: {
+              unit_of_measure: IsNull(),
               result_ip_result_id: riprc.result_by_innovation_package_id
             }
           });
@@ -273,6 +281,11 @@ export class InnovationPathwayStepThreeService {
         }
       });
     }
+  }
+
+
+  isNullData(data: any){
+    return data == undefined? null: data;
   }
 
 }
