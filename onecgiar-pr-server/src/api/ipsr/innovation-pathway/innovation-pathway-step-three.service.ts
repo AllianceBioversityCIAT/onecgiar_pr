@@ -101,8 +101,10 @@ export class InnovationPathwayStepThreeService {
         }
       }
 
+      const {response} = await this.getStepThree(resultId);
+
       return {
-        response: {},
+        response: response,
         message: 'The Result Complementary Innovation have been saved successfully',
         status: HttpStatus.OK
       }
@@ -150,14 +152,15 @@ export class InnovationPathwayStepThreeService {
       const { actors } = crtr;
       actors.map(async (el: ResultsIpActor) => {
         let actorExists: ResultsIpActor = null;
-        if (el?.actor_type_id) {
+        
+        if (el?.result_ip_actors_id) {
+          actorExists = await this._resultsIpActorRepository.findOne({ where: { result_ip_actors_id: el.result_ip_actors_id, result_ip_result_id: riprc.result_by_innovation_package_id } });
+        }
+        
+        if (!actorExists && el?.actor_type_id) {
           actorExists = await this._resultsIpActorRepository.findOne({ where: { actor_type_id: el.actor_type_id, result_ip_result_id: riprc.result_by_innovation_package_id } });
         }else{
           actorExists = await this._resultsIpActorRepository.findOne({ where: { actor_type_id: IsNull(), result_ip_result_id: riprc.result_by_innovation_package_id } });
-        }
-
-        if (!actorExists && el?.result_ip_actors_id) {
-          actorExists = await this._resultsIpActorRepository.findOne({ where: { result_ip_actors_id: el.result_ip_actors_id, result_ip_result_id: riprc.result_by_innovation_package_id } });
         }
 
         if (actorExists) {
