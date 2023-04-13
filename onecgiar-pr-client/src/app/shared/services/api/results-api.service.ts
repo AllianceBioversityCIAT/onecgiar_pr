@@ -15,6 +15,7 @@ import { ElasticResult, Source } from '../../interfaces/elastic.interface';
 import { KnowledgeProductBodyMapped } from '../../../pages/results/pages/result-detail/pages/rd-result-types-pages/knowledge-product-info/model/KnowledgeProductBodyMapped';
 import { KnowledgeProductSaveDto } from '../../../pages/results/pages/result-detail/pages/rd-result-types-pages/knowledge-product-info/model/knowledge-product-save.dto';
 import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-control.service';
+import { getInnovationComInterface } from '../../../../../../onecgiar-pr-server/src/api/ipsr/ipsr.repository';
 
 @Injectable({
   providedIn: 'root'
@@ -531,6 +532,14 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/institutions-type/tree`);
   }
 
+  GETinnovationpathwayStepTwo(){
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/complementary-innovations`).pipe(this.saveButtonSE.isGettingSectionPipe());
+  }
+
+  GETInnovationPathwayStepTwoInnovationSelect(){
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/step-two/${this.ipsrDataControlSE.resultInnovationId}`);
+  }
+
   GETAllInnovationPackagingExpertsExpertises() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-packaging-experts/expertises`);
   }
@@ -549,5 +558,19 @@ export class ResultsApiService {
   }
   getAllInnoPaRelevantCountry() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-package/relevant-country`);
+  }
+
+  PATCHComplementaryInnovation(body){
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-two/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+  }
+
+
+  GETComplementataryInnovationFunctions(){
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/complementary-innovations-functions`)
+  }
+
+
+  POSTNewCompletaryInnovation(body){
+    return this.http.post<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/complementary-innovation/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 }

@@ -9,12 +9,15 @@ import { FilterByTextModule } from '../../../../../../../../../../shared/pipes/f
 import { FormsModule } from '@angular/forms';
 import { TableInnovationComponent } from './components/table-innovation/table-innovation.component';
 import { CustomFieldsModule } from '../../../../../../../../../../custom-fields/custom-fields.module';
+import { NewComplementaryInnovationComponent } from './components/new-complementary-innovation/new-complementary-innovation.component';
+import { DialogModule } from 'primeng/dialog';
 
 
 @NgModule({
   declarations: [
     ComplementaryInnovationComponent,
-    TableInnovationComponent
+    TableInnovationComponent,
+    NewComplementaryInnovationComponent
   ],
   imports: [
     CommonModule,
@@ -23,7 +26,8 @@ import { CustomFieldsModule } from '../../../../../../../../../../custom-fields/
     RouterModule, 
     FilterByTextModule,
     FormsModule,
-    CustomFieldsModule
+    CustomFieldsModule,
+    DialogModule
   ],
   exports:[
     ComplementaryInnovationComponent
