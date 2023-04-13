@@ -3,7 +3,13 @@
 }
 
 .pr_button.medium {
-    padding: 10px 40px;
+    padding: 10px 15px;
+    gap: 20px;
+    font-size: 1.2em;
+
+    i {
+        font-size: 1.8em;
+    }
 }
 
 .pr_button.big {
