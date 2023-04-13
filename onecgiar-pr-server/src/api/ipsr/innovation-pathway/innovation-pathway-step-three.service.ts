@@ -16,6 +16,7 @@ import { ResultsIpInstitutionTypeRepository } from '../results-ip-institution-ty
 import { ResultsIpActor } from '../results-ip-actors/entities/results-ip-actor.entity';
 import { ResultsByIpInnovationUseMeasure } from '../results-by-ip-innovation-use-measures/entities/results-by-ip-innovation-use-measure.entity';
 import { IpsrRepository } from '../ipsr.repository';
+import { IsNull } from 'typeorm';
 
 @Injectable()
 export class InnovationPathwayStepThreeService {
@@ -123,7 +124,7 @@ export class InnovationPathwayStepThreeService {
         };
       }
       const result_core = await this._innovationByResultRepository.findOne({where: {ipsr_role_id: 1, result_innovation_package_id: result_ip.result_innovation_package_id, is_active: true}});
-      const result_complementary = await this._innovationByResultRepository.find({where: {ipsr_role_id: 2, result_innovation_package_id: result_ip.result_innovation_package_id, is_active: true}});
+      const result_complementary = await this._innovationByResultRepository.find({where: {ipsr_role_id: 2, result_innovation_package_id: result_ip.result_innovation_package_id, is_active: true}, relations:{obj_result: true}});
       const returdata: SaveStepTwoThree = {
         innovatonUse: {
           actors: (await this._resultsIpActorRepository.find({where:{is_active: true, result_ip_result_id: result_core.result_by_innovation_package_id}})).map(el => ({ ...el, men_non_youth: el.men - el.men_youth, women_non_youth: el.women - el.women_youth })),
@@ -151,6 +152,8 @@ export class InnovationPathwayStepThreeService {
         let actorExists: ResultsIpActor = null;
         if (el?.actor_type_id) {
           actorExists = await this._resultsIpActorRepository.findOne({ where: { actor_type_id: el.actor_type_id, result_ip_result_id: riprc.result_by_innovation_package_id } });
+        }else{
+          actorExists = await this._resultsIpActorRepository.findOne({ where: { actor_type_id: IsNull(), result_ip_result_id: riprc.result_by_innovation_package_id } });
         }
 
         if (!actorExists && el?.result_ip_actors_id) {
