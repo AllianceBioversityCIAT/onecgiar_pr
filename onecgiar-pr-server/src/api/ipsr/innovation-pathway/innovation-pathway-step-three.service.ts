@@ -155,11 +155,9 @@ export class InnovationPathwayStepThreeService {
         
         if (el?.result_ip_actors_id) {
           actorExists = await this._resultsIpActorRepository.findOne({ where: { result_ip_actors_id: el.result_ip_actors_id, result_ip_result_id: riprc.result_by_innovation_package_id } });
-        }
-        
-        if (!actorExists && el?.actor_type_id) {
+        }else if (!actorExists && el?.actor_type_id) {
           actorExists = await this._resultsIpActorRepository.findOne({ where: { actor_type_id: el.actor_type_id, result_ip_result_id: riprc.result_by_innovation_package_id } });
-        }else{
+        }else if(!actorExists){
           actorExists = await this._resultsIpActorRepository.findOne({ where: { actor_type_id: IsNull(), result_ip_result_id: riprc.result_by_innovation_package_id } });
         }
 
