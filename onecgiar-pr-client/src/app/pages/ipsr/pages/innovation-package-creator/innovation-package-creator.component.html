@@ -8,18 +8,31 @@
         description="Here you can create an innovation package by filling out a variety of fields."></app-section-header>
 
     <div class="dropdown-50p">
-        <app-pr-select class="segment_title_margin" [options]="this.api.dataControlSE.myInitiativesList"
+        <app-pr-select *ngIf="!this.api.rolesSE.isAdmin" class="segment_title_margin"
+            [options]="this.api.dataControlSE.myInitiativesList" label="Primary submitter of the innovation package"
+            [isStatic]="true" optionLabel="full_name" optionValue="initiative_id" placeholder="Select initiative"
+            description="Select an initiative"
+            (selectOptionEvent)="this.manageInnovationsListSE.GETallInnovations(this.innovationPackageCreatorBody.initiative_id);"
+            [(ngModel)]="this.innovationPackageCreatorBody.initiative_id">
+        </app-pr-select>
+
+        <app-pr-select *ngIf="this.api.rolesSE.isAdmin" class="segment_title_margin" [options]="this.allInitiatives"
             label="Primary submitter of the innovation package" [isStatic]="true" optionLabel="full_name"
             optionValue="initiative_id" placeholder="Select initiative" description="Select an initiative"
+            (selectOptionEvent)="this.manageInnovationsListSE.GETallInnovations(this.innovationPackageCreatorBody.initiative_id);"
             [(ngModel)]="this.innovationPackageCreatorBody.initiative_id">
         </app-pr-select>
     </div>
+
+
+
 
     <app-pr-field-header label="Select Core Innovation for innovation packaging and scaling readiness assessment"
         [required]="false"
         description="Only one can be selected. Only QAed innovations will be listed."></app-pr-field-header>
 
-    <app-results-innovation-output-list
+    <app-results-innovation-output-list *ngIf="this.innovationPackageCreatorBody.initiative_id"
+        [body]="this.innovationPackageCreatorBody"
         (selectInnovationEvent)="selectInnovationEvent($event)"></app-results-innovation-output-list>
 
     <div appFeedbackValidation labelText="Innovation package"

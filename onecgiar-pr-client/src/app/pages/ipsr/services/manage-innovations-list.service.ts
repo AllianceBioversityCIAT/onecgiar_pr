@@ -17,12 +17,9 @@ interface Innovation {
 })
 export class ManageInnovationsListService {
   allInnovationsList: Innovation[] = [];
-  constructor(private api: ApiService) {
-    this.GETallInnovations();
-  }
-  GETallInnovations() {
-    const body = { initiativeId: [] };
-    this.api.dataControlSE.myInitiativesList.forEach((initItem: any) => body.initiativeId.push(initItem.initiative_id));
+  constructor(private api: ApiService) {}
+  GETallInnovations(initiativesList) {
+    const body = { initiativeId: [initiativesList] };
     this.api.resultsSE.GETallInnovations(body).subscribe(({ response }) => {
       console.log(response);
       this.allInnovationsList = response;

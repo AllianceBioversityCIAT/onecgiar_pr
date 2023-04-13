@@ -532,6 +532,9 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/institutions-type/tree`);
   }
 
+  DELETEInnovationPackage(resultId) {
+    return this.http.delete<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-package/${resultId}`);
+  }
   GETinnovationpathwayStepTwo() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/complementary-innovations`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
