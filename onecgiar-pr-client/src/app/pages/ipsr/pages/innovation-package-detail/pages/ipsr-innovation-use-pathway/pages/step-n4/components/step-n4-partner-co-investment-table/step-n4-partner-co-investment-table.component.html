@@ -1,0 +1,67 @@
+<table>
+    <tr>
+        <th>Partner</th>
+        <th>In-kind investment (staff time, etc.) USD</th>
+        <th>In-cash USD investment</th>
+        <th></th>
+    </tr>
+    <tr *ngFor="let option of list; let i=index">
+        <td>
+            Partner {{i+1}}
+            <app-pr-field-header label="Delivery type"></app-pr-field-header>
+
+
+
+
+
+
+            <div class="deliveries" [ngClass]="{'readOnly_deliveries': this.rolesSE.readOnly}">
+                <div class="delivery"
+                    *ngIf="this.rolesSE.readOnly ? validateDeliverySelection(option?.deliveries,1) : true"
+                    [ngClass]="{'active': validateDeliverySelection(option?.deliveries,1)}"
+                    (click)="onSelectDelivery(option,1)">Scaling</div>
+                <div class="delivery"
+                    *ngIf="this.rolesSE.readOnly ? validateDeliverySelection(option?.deliveries,2) : true"
+                    [ngClass]="{'active': validateDeliverySelection(option?.deliveries,2)}"
+                    (click)="onSelectDelivery(option,2)">Demand</div>
+                <div class="delivery"
+                    *ngIf="this.rolesSE.readOnly ? validateDeliverySelection(option?.deliveries,3) : true"
+                    [ngClass]="{'active': validateDeliverySelection(option?.deliveries,3)}"
+                    (click)="onSelectDelivery(option,3)">Innovation</div>
+                <div class="delivery"
+                    *ngIf="this.rolesSE.readOnly ? validateDeliverySelection(option?.deliveries,4) : true"
+                    [ngClass]="{'active': validateDeliverySelection(option?.deliveries,4)}"
+                    (click)="onSelectDelivery(option,4)">Other</div>
+
+                <!-- <div class="info_button" (click)="showInfo = true">
+
+                    <i class="material-icons-round">help_outline
+                    </i>
+                </div> -->
+            </div>
+
+
+
+
+
+
+
+
+        </td>
+        <td>
+            <app-pr-input placeholder="Write some..." type="number" [required]="false">
+            </app-pr-input>
+        </td>
+        <td>
+            <app-pr-input placeholder="Write some..." type="number" [required]="false">
+            </app-pr-input>
+        </td>
+        <td>
+            <app-pr-radio-button optionLabel="name" optionValue="id"
+                [options]="[{name:'This is yet to be determined',id:true}]">
+            </app-pr-radio-button>
+        </td>
+    </tr>
+</table>
+
+<app-pr-button (click)="addItem()" padding="small" text="Add partner" icon="add_box"></app-pr-button>

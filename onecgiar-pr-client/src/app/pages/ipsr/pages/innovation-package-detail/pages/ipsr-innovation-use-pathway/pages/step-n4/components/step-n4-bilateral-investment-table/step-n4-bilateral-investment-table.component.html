@@ -1,0 +1,26 @@
+<table>
+    <tr>
+        <th>Bilateral</th>
+        <th>In-kind investment (staff time, etc.) USD</th>
+        <th>In-cash USD investment</th>
+        <th></th>
+    </tr>
+    <tr *ngFor="let item of list; let i=index">
+        <td>Biltateral {{i+1}}</td>
+        <td>
+            <app-pr-input placeholder="Write some..." type="number" [required]="false">
+            </app-pr-input>
+        </td>
+        <td>
+            <app-pr-input placeholder="Write some..." type="number" [required]="false">
+            </app-pr-input>
+        </td>
+        <td>
+            <app-pr-radio-button optionLabel="name" optionValue="id"
+                [options]="[{name:'This is yet to be determined',id:true}]">
+            </app-pr-radio-button>
+        </td>
+    </tr>
+</table>
+
+<app-pr-button (click)="addItem()" padding="small" text="Add bilateral" icon="add_box"></app-pr-button>

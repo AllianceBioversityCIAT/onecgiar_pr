@@ -1,0 +1,24 @@
+<table>
+    <tr>
+        <th>Initiative</th>
+        <th>Current year</th>
+        <th>Next year</th>
+        <th></th>
+    </tr>
+    <tr *ngFor="let item of [1,1,1,1]">
+        <td>INIT-18 - Asian Mega-Deltas (Lead)</td>
+        <td>
+            <app-pr-input placeholder="Write some..." type="number" [required]="false">
+            </app-pr-input>
+        </td>
+        <td>
+            <app-pr-input placeholder="Write some..." type="number" [required]="false">
+            </app-pr-input>
+        </td>
+        <td>
+            <app-pr-radio-button optionLabel="name" optionValue="id"
+                [options]="[{name:'This is yet to be determined',id:true}]">
+            </app-pr-radio-button>
+        </td>
+    </tr>
+</table>

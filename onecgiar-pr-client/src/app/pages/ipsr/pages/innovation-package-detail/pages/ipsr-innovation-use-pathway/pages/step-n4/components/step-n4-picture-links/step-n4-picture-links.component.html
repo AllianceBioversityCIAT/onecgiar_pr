@@ -1,0 +1,11 @@
+<app-pr-field-header label="Provide pictures that show the Innovation in action/use (if available)"
+    [required]="false"></app-pr-field-header>
+
+<div class="fields">
+    <div class="field" *ngFor="let item of this.body.list1; let i=index">
+        <div class="number">{{i+1}}.</div>
+        <app-pr-input [required]="true" placeholder="Link">
+        </app-pr-input>
+    </div>
+</div>
+<app-pr-button (click)="addItem()" padding="small" text="Add another link to picture" icon="add_box"></app-pr-button>
