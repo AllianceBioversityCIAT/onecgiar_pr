@@ -299,6 +299,7 @@ export class InnovationPathwayStepFourService {
         for (const e of existingIds) {
           await this._evidenceRepository.update(e, {
             link: ipsrWorkshop,
+            is_active: 1,
             last_updated_by: user.id,
             last_updated_date: new Date(),
           })
