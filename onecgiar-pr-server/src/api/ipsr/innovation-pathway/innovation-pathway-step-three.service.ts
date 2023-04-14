@@ -16,6 +16,7 @@ import { ResultsIpInstitutionTypeRepository } from '../results-ip-institution-ty
 import { ResultsIpActor } from '../results-ip-actors/entities/results-ip-actor.entity';
 import { ResultsByIpInnovationUseMeasure } from '../results-by-ip-innovation-use-measures/entities/results-by-ip-innovation-use-measure.entity';
 import { IpsrRepository } from '../ipsr.repository';
+import { IsNull } from 'typeorm';
 
 @Injectable()
 export class InnovationPathwayStepThreeService {
@@ -79,6 +80,8 @@ export class InnovationPathwayStepThreeService {
           readinees_evidence_link: result_ip_core.readinees_evidence_link,
           use_level_evidence_based: result_ip_core.use_level_evidence_based,
           use_evidence_link: result_ip_core.use_evidence_link,
+          use_details_of_evidence: result_ip_core.use_details_of_evidence,
+          readiness_details_of_evidence: result_ip_core.readiness_details_of_evidence,
           last_updated_by: user.id
         }
       )
@@ -94,14 +97,18 @@ export class InnovationPathwayStepThreeService {
               readinees_evidence_link: ripc.readinees_evidence_link,
               use_level_evidence_based: ripc.use_level_evidence_based,
               use_evidence_link: ripc.use_evidence_link,
+              use_details_of_evidence: ripc.use_details_of_evidence,
+              readiness_details_of_evidence: ripc.readiness_details_of_evidence,
               last_updated_by: user.id
             }
           )
         }
       }
 
+      const {response} = await this.getStepThree(resultId);
+
       return {
-        response: {},
+        response: response,
         message: 'The Result Complementary Innovation have been saved successfully',
         status: HttpStatus.OK
       }
@@ -115,13 +122,20 @@ export class InnovationPathwayStepThreeService {
   async getStepThree(resultId: number){
     try {
       const result_ip = await this._resultInnovationPackageRepository.findOne({where:{result_innovation_package_id: resultId, is_active: true}});
+      if (!result_ip) {
+        throw {
+          response: resultId,
+          message: 'The result was not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
       const result_core = await this._innovationByResultRepository.findOne({where: {ipsr_role_id: 1, result_innovation_package_id: result_ip.result_innovation_package_id, is_active: true}});
-      const result_complementary = await this._innovationByResultRepository.find({where: {ipsr_role_id: 2, result_innovation_package_id: result_ip.result_innovation_package_id, is_active: true}});
+      const result_complementary = await this._innovationByResultRepository.find({where: {ipsr_role_id: 2, result_innovation_package_id: result_ip.result_innovation_package_id, is_active: true}, relations:{obj_result: true}});
       const returdata: SaveStepTwoThree = {
         innovatonUse: {
-          actors: await this._resultsIpActorRepository.find({where:{is_active: true, result_ip_result_id: result_core.result_by_innovation_package_id}}),
+          actors: (await this._resultsIpActorRepository.find({where:{is_active: true, result_ip_result_id: result_core.result_by_innovation_package_id}})).map(el => ({ ...el, men_non_youth: el.men - el.men_youth, women_non_youth: el.women - el.women_youth })),
           measures: await this._resultsByIpInnovationUseMeasureRepository.find({where:{is_active: true, result_ip_result_id: result_core.result_by_innovation_package_id}}),
-          organization: await this._resultsIpInstitutionTypeRepository.find({where: {is_active: true, result_ip_results_id: result_core.result_by_innovation_package_id}})
+          organization: (await this._resultsIpInstitutionTypeRepository.find({ where: { result_ip_results_id: result_core.result_by_innovation_package_id, institution_roles_id: 6, is_active: true }, relations: { obj_institution_types: { obj_parent: { obj_parent: true } } } })).map(el => ({ ...el, parent_institution_type_id: el.obj_institution_types?.obj_parent?.obj_parent?.code || null }))
         },
         result_innovation_package: result_ip,
         result_ip_result_complementary: result_complementary,
@@ -136,23 +150,33 @@ export class InnovationPathwayStepThreeService {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
-
+  
   private async saveInnovationUse(user: TokenDto, version: Version, { innovatonUse: crtr, result_ip_result_core: riprc }: SaveStepTwoThree) {
     if (crtr?.actors?.length) {
       const { actors } = crtr;
       actors.map(async (el: ResultsIpActor) => {
-        const actorExists = await this._resultsIpActorRepository.findOne({ where: { actor_type_id: el.actor_type_id, result_ip_result_id: riprc.result_by_innovation_package_id } });
+        let actorExists: ResultsIpActor = null;
+        
+        if (el?.result_ip_actors_id) {
+          actorExists = await this._resultsIpActorRepository.findOne({ where: { result_ip_actors_id: el.result_ip_actors_id, result_ip_result_id: riprc.result_by_innovation_package_id } });
+        }else if (!actorExists && el?.actor_type_id) {
+          actorExists = await this._resultsIpActorRepository.findOne({ where: { actor_type_id: el.actor_type_id, result_ip_result_id: riprc.result_by_innovation_package_id } });
+        }else if(!actorExists){
+          actorExists = await this._resultsIpActorRepository.findOne({ where: { actor_type_id: IsNull(), result_ip_result_id: riprc.result_by_innovation_package_id } });
+        }
+
         if (actorExists) {
+
           await this._resultsIpActorRepository.update(
-            actorExists.result_ip_result_id,
+            actorExists.result_ip_actors_id,
             {
-              actor_type_id: el.actor_type_id,
-              is_active: el.is_active,
-              men: el.men,
-              men_youth: el.men_youth,
-              women: el.women,
-              women_youth: el.women_youth,
-              evidence_link: el.evidence_link,
+              actor_type_id: this.isNullData(el?.actor_type_id),
+              is_active: el.is_active == undefined?true:el.is_active,
+              men: this.isNullData(el?.men),
+              men_youth: this.isNullData(el?.men_youth),
+              women: this.isNullData(el?.women),
+              women_youth: this.isNullData(el?.women_youth),
+              evidence_link: this.isNullData(el?.evidence_link),
               last_updated_by: user.id
             }
           );
@@ -189,9 +213,9 @@ export class InnovationPathwayStepThreeService {
             ite.id,
             {
               last_updated_by: user.id,
-              how_many: el.how_many,
-              is_active: el.is_active,
-              evidence_link: el.evidence_link
+              how_many: this.isNullData(el.how_many),
+              is_active: el.is_active == undefined?true:el.is_active,
+              evidence_link: this.isNullData(el.evidence_link)
             }
           );
         } else {
@@ -213,21 +237,31 @@ export class InnovationPathwayStepThreeService {
       const { measures } = crtr;
       measures.map(async (el) => {
         let ripm: ResultsByIpInnovationUseMeasure = null;
-        if (el?.result_ip_result_measures_id) {
-          ripm = await this._resultsByIpInnovationUseMeasureRepository.findOne({
-            where: {
-              result_ip_result_measures_id: el.result_ip_result_measures_id
-            }
-          });
-        } else {
+        
+        if(el?.unit_of_measure) {
           ripm = await this._resultsByIpInnovationUseMeasureRepository.findOne({
             where: {
               unit_of_measure: el.unit_of_measure,
               result_ip_result_id: riprc.result_by_innovation_package_id
             }
           });
+        }else{
+          ripm = await this._resultsByIpInnovationUseMeasureRepository.findOne({
+            where: {
+              unit_of_measure: IsNull(),
+              result_ip_result_id: riprc.result_by_innovation_package_id
+            }
+          });
         }
-
+        
+        if (!ripm && el?.result_ip_result_measures_id) {
+          ripm = await this._resultsByIpInnovationUseMeasureRepository.findOne({
+            where: {
+              result_ip_result_measures_id: el.result_ip_result_measures_id
+            }
+          });
+        } 
+        
         if (ripm) {
           await this._resultsByIpInnovationUseMeasureRepository.update(
             ripm.result_ip_result_measures_id,
@@ -236,7 +270,7 @@ export class InnovationPathwayStepThreeService {
               quantity: el.quantity,
               last_updated_by: user.id,
               evidence_link: el.evidence_link,
-              is_active: el.is_active
+              is_active: el.is_active == undefined?true:el.is_active
             }
           )
         } else {
@@ -252,6 +286,11 @@ export class InnovationPathwayStepThreeService {
         }
       });
     }
+  }
+
+
+  isNullData(data: any){
+    return data == undefined? null: data;
   }
 
 }

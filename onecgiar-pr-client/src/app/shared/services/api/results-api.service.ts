@@ -532,11 +532,14 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/institutions-type/tree`);
   }
 
-  GETinnovationpathwayStepTwo(){
+  DELETEInnovationPackage(resultId) {
+    return this.http.delete<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-package/${resultId}`);
+  }
+  GETinnovationpathwayStepTwo() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/complementary-innovations`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
-  GETInnovationPathwayStepTwoInnovationSelect(){
+  GETInnovationPathwayStepTwoInnovationSelect() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/step-two/${this.ipsrDataControlSE.resultInnovationId}`);
   }
 
@@ -560,17 +563,27 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-package/relevant-country`);
   }
 
-  PATCHComplementaryInnovation(body){
+  PATCHComplementaryInnovation(body) {
     return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-two/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
-
-  GETComplementataryInnovationFunctions(){
-    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/complementary-innovations-functions`)
+  GETComplementataryInnovationFunctions() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/complementary-innovations-functions`);
   }
 
-
-  POSTNewCompletaryInnovation(body){
+  POSTNewCompletaryInnovation(body) {
     return this.http.post<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/complementary-innovation/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+  }
+
+  GETInnovationPathwayByRiId() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/step-three/${this.ipsrDataControlSE.resultInnovationId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+  }
+
+  PATCHInnovationPathwayByRiId(body) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-three/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+  }
+
+  GETAllClarisaInnovationReadinessLevels() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/innovation-readiness-levels/get/all`);
   }
 }

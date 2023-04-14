@@ -1,6 +1,7 @@
-import { Component, OnInit, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, Output, EventEmitter, Input } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ManageInnovationsListService } from '../../../../services/manage-innovations-list.service';
+import { InnovationPackageCreatorBody } from '../../model/innovation-package-creator.model';
 interface CoreInnovationSelected {
   result_id: string;
   result_code: string;
@@ -20,11 +21,13 @@ interface CoreInnovationSelected {
 export class ResultsInnovationOutputListComponent {
   coreInnovationSelected: CoreInnovationSelected;
   searchText = '';
+  @Input() body = new InnovationPackageCreatorBody();
   @Output() selectInnovationEvent = new EventEmitter<CoreInnovationSelected>();
   constructor(public api: ApiService, public manageInnovationsListSE: ManageInnovationsListService) {}
 
   ngOnInit(): void {
     this.cleanSelected();
+    this.manageInnovationsListSE.GETallInnovations(this.body.initiative_id);
   }
 
   ngOnDestroy(): void {

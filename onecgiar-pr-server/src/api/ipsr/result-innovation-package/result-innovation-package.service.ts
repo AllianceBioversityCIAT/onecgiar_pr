@@ -444,28 +444,35 @@ export class ResultInnovationPackageService {
 
   async delete(resultId: number, user: TokenDto) {
     const resultToUpdate = await this._resultRepository.find({
-      where: { id: resultId, is_active: true }
+      where: { id: resultId }
     });
 
-    const resultByInnovationPackageToUpdate = await this._resultByInitiativeRepository.find({
-      where: { id: resultId, is_active: true }
+    if (!resultToUpdate) {
+      return {
+        response: { valid: false },
+        message: 'The result was not found',
+        status: HttpStatus.NOT_FOUND,
+      };
+    }
+
+    const resultByInnovationPackageToUpdate = await this._innovationByResultRepository.find({
+      where: { result_innovation_package_id: resultId, is_active: true }
     });
 
     const id = resultToUpdate[0].id;
-    const result_by_innovation_package_id = resultByInnovationPackageToUpdate[0].id;
+    const result_by_innovation_package_id = resultByInnovationPackageToUpdate[0].result_by_innovation_package_id;
 
-    const result = await this._resultRepository.update(id, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
+    const result = await this._resultRepository.update({ id }, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
     const regions = await this._resultRegionRepository.update({ result_id: id }, { is_active: false, last_updated_date: new Date() });
     const countries = await this._resultCountryRepository.update({ result_id: id }, { is_active: false, last_updated_date: new Date() });
     const resultByInit = await this._resultByInitiativeRepository.update({ result_id: id }, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
-    const resultByInnoPackage = await this._resultByInitiativeRepository.update({ result_id: id }, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
+    const resultByInnoPackage = await this._innovationByResultRepository.update({ result_id: id }, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
     const resultInnoPackage = await this._resultInnovationPackageRepository.update({ result_innovation_package_id: id }, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
     const resultByInstitutionsType = await this._resultByIntitutionsTypeRepository.update({ results_id: id }, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
     const resultBInstitutions = await this._resultByIntitutionsRepository.update({ result_id: id }, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
     const resultByevidencce = await this._resultByEvidencesRepository.update({ results_id: id }, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
     const resultValidattion = await this._resultValidationRepository.update({ results_id: id }, { is_active: false, last_updated_date: new Date() });
     const resultIpAAOutcome = await this._resultIpAAOutcomeRepository.update({ result_by_innovation_package_id }, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
-    const resultIpImpactAreaIndicators = await this._resultIpImpactAreaRespository.update({ result_by_innovation_package_id }, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
     const resultIpImpactArea = await this._resultIpImpactAreaRespository.update({ result_by_innovation_package_id }, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
     const resultIpSdg = await this._resultIpSdgRespository.update({ result_by_innovation_package_id }, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
 
@@ -482,7 +489,6 @@ export class ResultInnovationPackageService {
         resultByevidencce,
         resultValidattion,
         resultIpAAOutcome,
-        resultIpImpactAreaIndicators,
         resultIpImpactArea,
         resultIpSdg,
       },

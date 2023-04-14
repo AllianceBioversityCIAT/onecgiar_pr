@@ -65,6 +65,20 @@ export class Ipsr extends BaseEntity{
     })
     use_level_evidence_based: number;
 
+    @Column({
+        name: 'use_details_of_evidence',
+        type: 'text',
+        nullable: true
+    })
+    use_details_of_evidence!: string;
+
+    @Column({
+        name: 'readiness_details_of_evidence',
+        type: 'text',
+        nullable: true
+    })
+    readiness_details_of_evidence!: string;
+
     @ManyToOne(() => IpsrRole, ir => ir.obj_ipsr_role)
     @JoinColumn({
         name: 'ipsr_role_id'

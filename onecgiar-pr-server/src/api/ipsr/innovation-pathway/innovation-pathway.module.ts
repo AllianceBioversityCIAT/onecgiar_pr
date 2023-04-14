@@ -71,7 +71,7 @@ import { InnovationPathwayStepFourService } from './innovation-pathway-step-four
     ResultByInitiativesRepository,
     ComplementaryInnovationFunctionsRepository,
     ClarisaInstitutionsRepository,
-    InnovationPathwayStepFourService
-  ]
+    InnovationPathwayStepFourService,
+  ],
 })
-export class InnovationPathwayModule { }
+export class InnovationPathwayModule {}

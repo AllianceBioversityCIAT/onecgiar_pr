@@ -12,10 +12,16 @@ export class InnovationPackageListComponent {
   constructor(public api: ApiService) {}
   ngOnInit(): void {
     this.api.rolesSE.isAdmin ? this.deselectInits() : null;
+    this.GETAllInnovationPackages();
+  }
+
+  GETAllInnovationPackages() {
     this.api.resultsSE.GETAllInnovationPackages().subscribe(({ response }) => {
-      // console.log(response);
       this.innovationPackagesList = response;
-      this.innovationPackagesList.map((inno: any) => (inno.full_name = `${inno?.result_code} ${inno?.title} ${inno?.official_code}`));
+      this.innovationPackagesList.map((inno: any) => {
+        inno.full_name = `${inno?.result_code} ${inno?.title} ${inno?.official_code}`;
+        inno.result_code = Number(inno.result_code);
+      });
     });
   }
 

@@ -62,3 +62,11 @@
         background-color: var(--pr-color-primary);
     }
 }
+
+.toggle_change_step {
+    display: flex;
+    gap: 10px;
+    // position: fixed;
+    // bottom: 10px;
+    // left: 100px;
+}
