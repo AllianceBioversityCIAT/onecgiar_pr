@@ -77,6 +77,15 @@ export class InnovationPathwayStepFourService {
       const billateralInvestment = await this.saveBillateralInvestment(result.id, user, saveStepFourDto, version);
       const partnertInvestment = await this.savePartnertInvestment(result.id, user, saveStepFourDto, version);
 
+      const investment = await this._resultInnovationPackageRepository.update(resultId, {
+        initiative_unit_time_id: saveStepFourDto.initiative_unit_time_id,
+        initiative_expected_time: saveStepFourDto.initiative_expected_time,
+        bilateral_unit_time_id: saveStepFourDto.bilateral_unit_time_id,
+        bilateral_expected_time: saveStepFourDto.bilateral_expected_time,
+        partner_unit_time_id: saveStepFourDto.partner_unit_time_id,
+        partner_expected_time: saveStepFourDto.partner_expected_time,
+      });
+
 
 
       return {
@@ -86,7 +95,8 @@ export class InnovationPathwayStepFourService {
           workshop,
           initiativeInvestment,
           billateralInvestment,
-          partnertInvestment
+          partnertInvestment,
+          investment,
         },
         message: 'Successful response',
         status: HttpStatus.OK,
@@ -285,7 +295,7 @@ export class InnovationPathwayStepFourService {
         }
       }
 
-      if (existingWorkshop) {
+      if (existingWorkshop?.length) {
         for (const e of existingIds) {
           await this._evidenceRepository.update(e, {
             link: ipsrWorkshop,
