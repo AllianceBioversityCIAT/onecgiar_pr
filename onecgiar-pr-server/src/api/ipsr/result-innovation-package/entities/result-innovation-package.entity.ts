@@ -136,6 +136,13 @@ export class ResultInnovationPackage extends BaseEntity{
     })
     partner_unit_time_id!: number;
 
+    @Column({
+        name: 'is_result_ip_published',
+        type: 'boolean',
+        nullable: true
+    })
+    is_result_ip_published!: boolean;
+
     @ManyToOne(() => consensusInitiativeWorkPackage , ciwp => ciwp.consensus_initiative_work_package_id, {nullable: true})
     @JoinColumn({
         name: 'consensus_initiative_work_package_id'
