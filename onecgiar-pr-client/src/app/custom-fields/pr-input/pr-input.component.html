@@ -6,7 +6,7 @@
     <div [ngSwitch]="(readOnly || this.rolesSE.readOnly || !!this.dataControlSE?.currentResult?.status) && (!isStatic)"
         [ngClass]="{'mandatory': this.required,'readOnly':(readOnly || this.rolesSE.readOnly || !!this.dataControlSE?.currentResult?.status) && (!isStatic)}"
         class="pr-input position-relative">
-        <div class="read-only" *ngSwitchCase="true">{{this.noDataText ||(value|yesOrNotByBoolean) || (this.required ?
+        <div class="read-only" *ngSwitchCase="true">{{(value|yesOrNotByBoolean) ||this.noDataText || (this.required ?
             'Not provided' :
             'Not applicable')}}</div>
         <div class="p-fluid input_container" *ngSwitchCase="false">

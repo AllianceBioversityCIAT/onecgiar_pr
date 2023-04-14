@@ -20,6 +20,9 @@ import { ResultIpAAOutcomeRepository } from './innovation-pathway/repository/res
 import { ResultsComplementaryInnovationsModule } from './results-complementary-innovations/results-complementary-innovations.module';
 import { ResultsComplementaryInnovationsFunctionsModule } from './results-complementary-innovations-functions/results-complementary-innovations-functions.module';
 import { ResultsInnovationPackagesEnablerTypeModule } from './results-innovation-packages-enabler-type/results-innovation-packages-enabler-type.module';
+import { ResultsIpInstitutionTypeModule } from './results-ip-institution-type/results-ip-institution-type.module';
+import { ResultsIpActorsModule } from './results-ip-actors/results-ip-actors.module';
+import { ResultsByIpInnovationUseMeasuresModule } from './results-by-ip-innovation-use-measures/results-by-ip-innovation-use-measures.module';
 
 @Module({
   controllers: [IpsrController],
@@ -34,7 +37,7 @@ import { ResultsInnovationPackagesEnablerTypeModule } from './results-innovation
     ShareResultInnovationPackageRequestModule, 
     InnovationPathwayModule, 
     InnovationPackagingExpertsModule, 
-    ResultIpMeasuresModule, ResultsComplementaryInnovationsModule, ResultsComplementaryInnovationsFunctionsModule, ResultsInnovationPackagesEnablerTypeModule,
+    ResultIpMeasuresModule, ResultsComplementaryInnovationsModule, ResultsComplementaryInnovationsFunctionsModule, ResultsInnovationPackagesEnablerTypeModule, ResultsIpInstitutionTypeModule, ResultsIpActorsModule, ResultsByIpInnovationUseMeasuresModule,
   ],
   exports: [
     IpsrRepository

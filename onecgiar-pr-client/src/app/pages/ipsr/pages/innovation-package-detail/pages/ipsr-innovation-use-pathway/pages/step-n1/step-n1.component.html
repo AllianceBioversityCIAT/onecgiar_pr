@@ -24,3 +24,8 @@
 <app-step-n1-consensus-and-consultation [body]="this.ipsrStep1Body"></app-step-n1-consensus-and-consultation>
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()">
 </app-save-button>
+<div class="toggle_change_step">
+    <app-pr-button
+        [routerLink]="'/ipsr/detail/'+this.ipsrDataControlSE.resultInnovationCode+'/ipsr-innovation-use-pathway/step-2'"
+        padding="big" text="Go to next step" icon="arrow_circle_right"></app-pr-button>
+</div>

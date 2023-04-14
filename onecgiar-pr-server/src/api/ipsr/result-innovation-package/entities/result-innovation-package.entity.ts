@@ -9,6 +9,7 @@ import { Version } from '../../../results/versions/entities/version.entity';
 import { Result } from '../../../results/entities/result.entity';
 import { Ipsr } from '../../entities/ipsr.entity';
 import { ResultsInnovationPackagesEnablerType } from '../../results-innovation-packages-enabler-type/entities/results-innovation-packages-enabler-type.entity';
+import { ClarisaInnovationReadinessLevel } from '../../../../clarisa/clarisa-innovation-readiness-levels/entities/clarisa-innovation-readiness-level.entity';
 
 @Entity('result_innovation_package')
 export class ResultInnovationPackage extends BaseEntity{
@@ -68,6 +69,27 @@ export class ResultInnovationPackage extends BaseEntity{
     })
     active_backstopping_id!: number;
 
+    @Column({
+        name: 'use_level_evidence_based',
+        type: 'bigint',
+        nullable: true
+    })
+    use_level_evidence_based!: number;
+
+    @Column({
+        name: 'readiness_level_evidence_based',
+        type: 'bigint',
+        nullable: true
+    })
+    readiness_level_evidence_based!: number;
+
+    @Column({
+        name: 'is_expert_workshop_organized',
+        type: 'boolean',
+        nullable: true
+    })
+    is_expert_workshop_organized!: boolean;
+
     @ManyToOne(() => consensusInitiativeWorkPackage , ciwp => ciwp.consensus_initiative_work_package_id, {nullable: true})
     @JoinColumn({
         name: 'consensus_initiative_work_package_id'
@@ -115,4 +137,16 @@ export class ResultInnovationPackage extends BaseEntity{
 
     @OneToMany(() => ResultsInnovationPackagesEnablerType, ripet => ripet.obj_result_by_innovation_package)
     children_innovation_packages_enabler_type: ResultsInnovationPackagesEnablerType[];
+
+    @ManyToOne(() => ClarisaInnovationReadinessLevel, cirl => cirl.id)
+    @JoinColumn({
+        name: 'use_level_evidence_based'
+    })
+    obj_use_level_evidence_based: ClarisaInnovationReadinessLevel;
+
+    @ManyToOne(() => ClarisaInnovationReadinessLevel, cirl => cirl.id)
+    @JoinColumn({
+        name: 'readiness_level_evidence_based'
+    })
+    obj_readiness_level_evidence_based: ClarisaInnovationReadinessLevel;
 }

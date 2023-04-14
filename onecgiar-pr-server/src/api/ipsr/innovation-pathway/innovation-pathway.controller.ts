@@ -8,10 +8,13 @@ import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { getInnovationComInterface } from '../ipsr.repository';
 import { InnovationPathwayStepTwoService } from './innovation-pathway-step-two.service';
 import { SaveStepTwoOne } from './dto/save-step-two-one.dto';
+import { InnovationPathwayStepThreeService } from './innovation-pathway-step-three.service';
+import { SaveStepTwoThree } from './dto/save-step-three.dto';
 
 @Controller()
 export class InnovationPathwayController {
   constructor(
+    private readonly _innovationPathwayStepThreeService: InnovationPathwayStepThreeService,
     private readonly _innovationPathwayStepOneServiceService: InnovationPathwayStepOneService,
     private readonly _innovationPathwayStepTwoService: InnovationPathwayStepTwoService,
   ) { }
@@ -75,19 +78,21 @@ export class InnovationPathwayController {
     throw new HttpException({ message, response }, status);
   }
 
-  // @Get()
-  // findAll() {
-  //   return this.innovationPathwayService.findAll();
-  // }
+  @Patch('save/step-three/:resultId')
+  async updateStepthree(
+    @Param('resultId') resultId: string,
+    @Body() saveData: SaveStepTwoThree,
+    @UserToken() user: TokenDto
+  ) {
+    const {message, response, status} = await this._innovationPathwayStepThreeService.saveComplementaryinnovation(+resultId, user, saveData);
+    throw new HttpException({ message, response }, status);
+  }
 
-  // @Get(':id')
-  // findOne(@Param('id') id: string) {
-  //   return this.innovationPathwayService.findOne(+id);
-  // }
-
-
-  // @Delete(':id')
-  // remove(@Param('id') id: string) {
-  //   return this.innovationPathwayService.remove(+id);
-  // }
+  @Get('get/step-three/:resultId')
+  async getStepthree(
+    @Param('resultId') resultId: string
+  ) {
+    const {message, response, status} = await this._innovationPathwayStepThreeService.getStepThree(+resultId);
+    throw new HttpException({ message, response }, status);
+  }
 }
