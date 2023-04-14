@@ -32,7 +32,7 @@ import { ElasticModule } from './elastic/elastic.module';
 import { ResultDashboardBIdModule } from './result-dashboard-bi/result-dashboard.module';
 import { DynamodbLogsModule } from './connection/dynamodb-logs/dynamodb-logs.module';
 import { IpsrModule } from './api/ipsr/ipsr.module';
-
+import { PublicReportModule } from './api/public-report/public-report.module';
 
 @Module({
   imports: [
@@ -60,7 +60,8 @@ import { IpsrModule } from './api/ipsr/ipsr.module';
     ElasticModule,
     ResultDashboardBIdModule,
     DynamodbLogsModule,
-    IpsrModule
+    IpsrModule,
+    PublicReportModule,
   ],
   controllers: [AppController],
   providers: [
