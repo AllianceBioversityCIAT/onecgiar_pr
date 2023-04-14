@@ -19,11 +19,12 @@
         <app-pr-select *ngIf="this.api.rolesSE.isAdmin" class="segment_title_margin" [options]="this.allInitiatives"
             label="Primary submitter of the innovation package" [isStatic]="true" optionLabel="full_name"
             optionValue="initiative_id" placeholder="Select initiative" description="Select an initiative"
-            (selectOptionEvent)="this.manageInnovationsListSE.GETallInnovations(this.innovationPackageCreatorBody.initiative_id);"
+            (selectOptionEvent)="this.manageInnovationsListSE.GETallInnovations(this.innovationPackageCreatorBody.initiative_id); status= false;"
             [(ngModel)]="this.innovationPackageCreatorBody.initiative_id">
         </app-pr-select>
     </div>
 
+    
 
 
 
@@ -31,9 +32,8 @@
         [required]="false"
         description="Only one can be selected. Only QAed innovations will be listed."></app-pr-field-header>
 
-    <app-results-innovation-output-list *ngIf="this.innovationPackageCreatorBody.initiative_id"
-        [body]="this.innovationPackageCreatorBody"
-        (selectInnovationEvent)="selectInnovationEvent($event)"></app-results-innovation-output-list>
+        <app-pr-button text="Select Core Innovation." [ngClass]="{'globalDisabled' : status }" (click)="statusPdialog = true"></app-pr-button>
+
 
     <div appFeedbackValidation labelText="Innovation package"
         [isComplete]="!!this.innovationPackageCreatorBody.result_id">
@@ -65,3 +65,20 @@
     </app-save-button>
 
 </div>
+
+
+
+
+<p-dialog class="support_information" header="Select core Innovation" [(visible)]="statusPdialog"
+[draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="true" 
+[dismissableMask]="true" [style]="{padding: '0px', margin:'0px', width:'70vw'}" [blockScroll]="true" appendTo="body">
+
+<div style="display: flex; justify-content: center; flex-direction: column;">
+   <div class="modal_title">New complementary innovation/ enabler/ solution</div>
+   <div class="modal_container">
+    <app-results-innovation-output-list *ngIf="this.innovationPackageCreatorBody.initiative_id"
+    [body]="this.innovationPackageCreatorBody"
+    (selectInnovationEvent)="selectInnovationEvent($event)"></app-results-innovation-output-list>
+   </div>
+</div>
+</p-dialog>

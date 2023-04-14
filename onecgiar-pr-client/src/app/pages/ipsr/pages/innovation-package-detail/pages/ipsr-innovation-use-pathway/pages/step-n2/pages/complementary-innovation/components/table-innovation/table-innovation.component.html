@@ -50,7 +50,7 @@
             Total:
             {{(informationComplementaryInnovation | filterByText:searchText)?.length}} /
             {{informationComplementaryInnovation?.length}}</div>
-        <div class="noDataText" *ngIf="!(this.manageInnovationsListSE.allInnovationsList| filterByText:searchText)?.length">
+        <div class="noDataText" *ngIf="!(informationComplementaryInnovation| filterByText:searchText)?.length">
             There are no results for the selected filters.
         </div>
     </div>
