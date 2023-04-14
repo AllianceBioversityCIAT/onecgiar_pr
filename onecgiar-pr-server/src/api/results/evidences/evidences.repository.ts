@@ -12,15 +12,65 @@ export class EvidencesRepository extends Repository<Evidence> {
     super(Evidence, dataSource.createEntityManager());
   }
 
-  async getEvidence(resultId: number) {
+  async getPictures(resultId: number) {
     const queryData = `
     SELECT 
       e.id,
       e.link,
       e.evidence_type_id,
-      e.result_id
+      e.result_id,
+      e.is_active
     FROM evidence e 
-    WHERE e.result_id = ?;
+    WHERE e.result_id = ?
+      AND e.evidence_type_id = 3;
+    `;
+    try {
+      const evidence: Evidence[] = await this.query(queryData, [resultId]);
+      return evidence;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: EvidencesRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async getMaterials(resultId: number) {
+    const queryData = `
+    SELECT 
+      e.id,
+      e.link,
+      e.evidence_type_id,
+      e.result_id,
+      e.is_active
+    FROM evidence e 
+    WHERE e.result_id = ?
+      AND e.evidence_type_id = 4;
+    `;
+    try {
+      const evidence: Evidence[] = await this.query(queryData, [resultId]);
+      return evidence;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: EvidencesRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async getWokrshop(resultId: number) {
+    const queryData = `
+    SELECT 
+      e.id,
+      e.link,
+      e.evidence_type_id,
+      e.result_id,
+      e.is_active
+    FROM evidence e 
+    WHERE e.result_id = ?
+      AND e.evidence_type_id = 5;
     `;
     try {
       const evidence: Evidence[] = await this.query(queryData, [resultId]);
