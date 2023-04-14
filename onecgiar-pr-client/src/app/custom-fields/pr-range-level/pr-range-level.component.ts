@@ -18,6 +18,8 @@ export class PrRangeLevelComponent {
   @Input() optionLabel: string;
   @Input() optionValue: string;
   @Input() options: any;
+  @Input() itemTitle: string = '0- test';
+  @Input() itemDescription: string = 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Exercitationem, perspiciatis.';
   public list = [];
   constructor() {}
 
@@ -52,6 +54,10 @@ export class PrRangeLevelComponent {
   get sizeArray() {
     if (!this.list?.length) Array.from({ length: this.size + 1 }).map((_, i) => this.list.push(i));
     return this.list;
+  }
+
+  getRangeIndexByValue(value) {
+    return this.options.findIndex(item => item[this.optionValue] == value);
   }
 
   onSelectLevel(option, circle: HTMLElement) {

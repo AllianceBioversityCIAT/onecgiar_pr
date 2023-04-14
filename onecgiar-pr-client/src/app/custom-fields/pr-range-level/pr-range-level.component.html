@@ -5,3 +5,9 @@
             (click)="onSelectLevel(options ? item[optionValue] : item,circle)">{{options ? i : item}}</div>
     </div>
 </div>
+
+<div *ngIf="this.getRangeIndexByValue(this.value)>=0 && (itemTitle || itemDescription)" class="gray_card">
+    <div class="title">{{this.getRangeIndexByValue(this.value)}} -
+        {{this.options[this.getRangeIndexByValue(this.value)][itemTitle]}}</div>
+    <div class="description">{{this.options[this.getRangeIndexByValue(this.value)][itemDescription]}}</div>
+</div>
