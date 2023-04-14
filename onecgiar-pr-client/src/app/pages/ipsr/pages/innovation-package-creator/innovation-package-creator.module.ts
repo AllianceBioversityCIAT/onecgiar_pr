@@ -8,9 +8,10 @@ import { SectionHeaderModule } from '../../components/section-header/section-hea
 import { ResultsInnovationOutputListModule } from './components/results-innovation-output-list/results-innovation-output-list.module';
 import { IpsrGeoscopeCreatorModule } from './components/ipsr-geoscope-creator/ipsr-geoscope-creator.module';
 import { FeedbackValidationDirectiveModule } from '../../../../shared/directives/feedback-validation-directive.module';
-
+import { DialogModule } from 'primeng/dialog';
 @NgModule({
   declarations: [InnovationPackageCreatorComponent],
-  imports: [CommonModule, InnovationPackageCreatorRoutingModule, CustomFieldsModule, SectionHeaderModule, ResultsInnovationOutputListModule, IpsrGeoscopeCreatorModule, FeedbackValidationDirectiveModule]
+  imports: [CommonModule, InnovationPackageCreatorRoutingModule, CustomFieldsModule, SectionHeaderModule, ResultsInnovationOutputListModule, IpsrGeoscopeCreatorModule, FeedbackValidationDirectiveModule,
+    DialogModule ]
 })
 export class InnovationPackageCreatorModule {}

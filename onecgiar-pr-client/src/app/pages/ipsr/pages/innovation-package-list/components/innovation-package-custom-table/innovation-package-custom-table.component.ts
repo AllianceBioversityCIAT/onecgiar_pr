@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { MenuItem } from 'primeng/api';
+import { RetrieveModalService } from '../../../../../results/pages/result-detail/components/retrieve-modal/retrieve-modal.service';
 
 @Component({
   selector: 'app-innovation-package-custom-table',
@@ -19,7 +20,7 @@ export class InnovationPackageCustomTableComponent {
     { title: 'Status', attr: 'status' },
     { title: 'Year', attr: 'reported_year_id' }
   ];
-  constructor(public api: ApiService) {}
+  constructor(public api: ApiService, private retrieveModalSE: RetrieveModalService) {}
   items: MenuItem[] = [
     {
       label: 'Map to TOC',
@@ -74,11 +75,11 @@ export class InnovationPackageCustomTableComponent {
     });
   }
   onPressAction(result) {
-    // console.log(result);
+    console.log(result);
     this.currentInnovationPackageToAction.id = result?.id;
     this.currentInnovationPackageToAction.title = result.title;
-    // this.retrieveModalSE.title = result?.title;
-    // this.api.resultsSE.currentResultId = result?.id;
-    // this.api.dataControlSE.currentResult = result;
+    this.retrieveModalSE.title = result?.title;
+     this.api.resultsSE.currentResultId = result?.id;
+    this.api.dataControlSE.currentResult = result;
   }
 }

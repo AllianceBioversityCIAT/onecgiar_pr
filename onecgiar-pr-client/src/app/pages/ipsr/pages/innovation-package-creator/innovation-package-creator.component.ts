@@ -13,6 +13,8 @@ export class InnovationPackageCreatorComponent {
   innovationPackageCreatorBody = new InnovationPackageCreatorBody();
   searchText = '';
   allInitiatives = [];
+  status:boolean = true;
+  statusPdialog:boolean = false;
   constructor(public api: ApiService, private router: Router, public manageInnovationsListSE: ManageInnovationsListService) {
     this.GET_AllInitiatives();
   }

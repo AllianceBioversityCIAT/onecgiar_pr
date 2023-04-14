@@ -70,7 +70,10 @@ export class TableInnovationComponent implements OnInit {
     this.api.resultsSE.GETinnovationpathwayStepTwo().subscribe((resp) =>{
       console.log(resp);
       this.informationComplementaryInnovation = resp['response'];
-      this.loading = false;
+      this.informationComplementaryInnovation.map((inno: any) => {
+        inno.full_name = `${inno?.result_code} ${inno?.title} ${inno?.initiative_official_code} ${inno?.initiative_official_code} ${inno?.lead_contact_person} yes no `;
+        inno.result_code = Number(inno.result_code);
+      });
     })
   }
 

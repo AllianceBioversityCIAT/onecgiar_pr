@@ -7,7 +7,7 @@
         [value]="(this.manageInnovationsListSE.allInnovationsList | filterByText:searchText)" responsiveLayout="scroll"
         [paginator]="!!((this.manageInnovationsListSE.allInnovationsList| filterByText:searchText)?.length) "
         [rows]="10" styleClass="p-datatable-gridlines p-datatable-sm" selectionMode="single"
-        [rowsPerPageOptions]="[10,50,100]">
+        [rowsPerPageOptions]="[10,50,100]"  paginatorDropdownAppendTo="body">
         <ng-template pTemplate="header">
             <tr>
                 <th pSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder">
