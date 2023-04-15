@@ -1,3 +1,6 @@
+import { ResultsByInstitution } from '../../../results/results_by_institutions/entities/results_by_institution.entity';
+import { PartialType } from '@nestjs/mapped-types';
+import { ResultInstitutionsBudget } from '../../../results/result_budget/entities/result_institutions_budget.entity';
 export class SaveStepFour {
     ipsr_pictures:  IpsrPictures[];
     ipsr_materials:  IpsrMaterials[];
@@ -8,9 +11,18 @@ export class SaveStepFour {
     bilateral_expected_investment: BilateralExpectedInvestment[];
     bilateral_unit_time_id: number;
     bilateral_expected_time: string;
-    institutions_expected_investment: InstitutionsExpectedInvestment[];
+    institutions_expected_investment: institutionsFour[];
     partner_unit_time_id: number;
     partner_expected_time: string;
+}
+
+export interface institutionsFour{
+    institution: institutionsInterface;
+    budget: ResultInstitutionsBudget;
+}
+
+export class institutionsInterface extends PartialType(ResultsByInstitution){
+    deliveries?: number[];
 }
 
 export interface IpsrPictures {
@@ -36,4 +48,12 @@ export interface InstitutionsExpectedInvestment {
     current_year: number;
     next_year: number;
     is_determined: boolean;
+}
+
+export interface donorInterfaceToc{
+    id: number;
+    funder: number;
+    grant_title: string;
+    center_grant_id: string;
+    lead_center: string;
 }

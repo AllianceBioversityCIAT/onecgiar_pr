@@ -19,18 +19,18 @@ export class NonPooledProjectBudget extends BaseEntity{
     non_pooled_projetct_id: number;
 
     @Column({
-        name: 'current_year',
+        name: 'in_kind',
         type: 'bigint',
         nullable: true
     })
-    current_year!: number;
+    in_kind!: number;
 
     @Column({
-        name: 'next_year',
+        name: 'in_cash',
         type: 'bigint',
         nullable: true
     })
-    next_year!: number;
+    in_cash!: number;
 
     @Column({
         name: 'is_determined',

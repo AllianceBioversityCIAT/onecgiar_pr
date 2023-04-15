@@ -11,7 +11,7 @@ import { SaveStepTwoOne } from './dto/save-step-two-one.dto';
 import { InnovationPathwayStepThreeService } from './innovation-pathway-step-three.service';
 import { SaveStepTwoThree } from './dto/save-step-three.dto';
 import { InnovationPathwayStepFourService } from './innovation-pathway-step-four.service';
-import { SaveStepFour } from './dto/save-step-four.dto';
+import { donorInterfaceToc, institutionsInterface, SaveStepFour } from './dto/save-step-four.dto';
 
 @Controller()
 export class InnovationPathwayController {
@@ -119,4 +119,27 @@ export class InnovationPathwayController {
       await this._innovationPathwayStepFourService.saveMain(+resultId, user, saveStepFourDto);
     throw new HttpException({ message, response }, status);
   }
+
+  @Patch('save/step-four/partners/:resultId')
+  async saveFourPartners(
+    @Param('resultId') resultId: string,
+    @Body() partners: institutionsInterface,
+    @UserToken() user: TokenDto
+  ) {
+    const { message, response, status } = 
+      await this._innovationPathwayStepFourService.savePartners(+resultId, user, partners);
+    throw new HttpException({ message, response }, status);
+  }
+
+  @Patch('save/step-four/bilaterals/:resultId')
+  async saveFourBilaterals(
+    @Param('resultId') resultId: string,
+    @Body() bilaterals: donorInterfaceToc,
+    @UserToken() user: TokenDto
+  ) {
+    const { message, response, status } = 
+      await this._innovationPathwayStepFourService.saveBilaterals(+resultId, user, bilaterals);
+    throw new HttpException({ message, response }, status);
+  }
+
 }

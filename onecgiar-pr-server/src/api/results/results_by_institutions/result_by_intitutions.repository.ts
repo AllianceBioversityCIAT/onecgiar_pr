@@ -226,7 +226,7 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
 
   async getGenericAllResultByInstitutionByRole(
     resultId: number,
-    institutionRolesId: 1 | 2 | 3| 4| 5,
+    institutionRolesId: 1 | 2 | 3| 4| 5| 6| 7,
   ): Promise<ResultsByInstitution[]> {
     const queryData = `
     select 
