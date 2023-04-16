@@ -31,6 +31,7 @@ import { ResultByIntitutionsTypeRepository } from '../../../api/results/results_
 import { resultValidationRepository } from '../../../api/results/results-validation-module/results-validation-module.repository';
 import { ResultIpSdgTargetRepository } from '../innovation-pathway/repository/result-ip-sdg-targets.repository';
 import { ResultInitiativeBudgetRepository } from '../../../api/results/result_budget/repositories/result_initiative_budget.repository';
+import { UnitTimeRepository } from './repositories/unit_time.repository';
 
 @Injectable()
 export class ResultInnovationPackageService {
@@ -58,7 +59,21 @@ export class ResultInnovationPackageService {
     private readonly _resultByIntitutionsTypeRepository: ResultByIntitutionsTypeRepository,
     private readonly _resultValidationRepository: resultValidationRepository,
     protected readonly _resultInitiativesBudgetRepository: ResultInitiativeBudgetRepository,
+    protected readonly _unitTimeRepository: UnitTimeRepository,
   ) { }
+
+  async findUnitTime() {
+    try {
+      const unit_time = await this._unitTimeRepository.find();
+      return {
+        response: unit_time,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
 
   async findRelevantCountry() {
     try {

@@ -26,6 +26,7 @@ import { ResultByIntitutionsTypeRepository } from '../../../api/results/results_
 import { ResultByIntitutionsRepository } from '../../../api/results/results_by_institutions/result_by_intitutions.repository';
 import { ResultIpSdgTargetRepository } from '../innovation-pathway/repository/result-ip-sdg-targets.repository';
 import { ResultInitiativeBudgetRepository } from '../../../api/results/result_budget/repositories/result_initiative_budget.repository';
+import { UnitTimeRepository } from './repositories/unit_time.repository';
 
 
 @Module({
@@ -55,7 +56,8 @@ import { ResultInitiativeBudgetRepository } from '../../../api/results/result_bu
     ResultByIntitutionsTypeRepository,
     resultValidationRepository,
     ResultIpSdgTargetRepository,
-    ResultInitiativeBudgetRepository
+    ResultInitiativeBudgetRepository,
+    UnitTimeRepository
   ],
   imports: [VersionsModule],
   exports: [
