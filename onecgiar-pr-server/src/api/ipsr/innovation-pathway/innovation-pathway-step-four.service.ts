@@ -134,7 +134,7 @@ export class InnovationPathwayStepFourService {
         response: {
           ipsr_pictures,
           ipsr_materials,
-          link_workshop_list,
+          link_workshop_list: link_workshop_list.link,
           initiative_expected_investment,
           initiative_unit_time_id: result_ip.initiative_unit_time_id,
           initiative_expected_time: result_ip.initiative_expected_time,
@@ -217,7 +217,7 @@ export class InnovationPathwayStepFourService {
       const allEvidence = await this._evidenceRepository.getPictures(id);
       const existingPictures = allEvidence.map(e => e.link);
       const existingIds = allEvidence.map(e => e.id);
-      const ipsrPictures = saveStepFourDto.ipsr_pictures || [];
+      const ipsrPictures = saveStepFourDto.ipsr_pictures;
       if (!ipsrPictures.length) {
         for (const e of existingIds) {
           await this._evidenceRepository.update(e, {
@@ -249,19 +249,20 @@ export class InnovationPathwayStepFourService {
       }
 
       for (const entity of ipsrPictures) {
-        if (!existingPictures.includes(entity.link)) {
-          const newMaterials = new Evidence();
-          newMaterials.result_id = resultId;
-          newMaterials.link = entity.link;
-          newMaterials.evidence_type_id = 3;
-          newMaterials.version_id = version.id;
-          newMaterials.created_by = user.id;
-          newMaterials.creation_date = new Date();
-          newMaterials.last_updated_by = user.id;
-          newMaterials.last_updated_date = new Date();
-          savePictures.push(await this._evidenceRepository.save(newMaterials));
+          // const link = ipsrPictures.map(i => i.link)
+          if (!existingPictures.includes(entity.link)) {
+            const newMaterials = new Evidence();
+            newMaterials.result_id = resultId;
+            newMaterials.link = entity.link;
+            newMaterials.evidence_type_id = 3;
+            newMaterials.version_id = version.id;
+            newMaterials.created_by = user.id;
+            newMaterials.creation_date = new Date();
+            newMaterials.last_updated_by = user.id;
+            newMaterials.last_updated_date = new Date();
+            savePictures.push(await this._evidenceRepository.save(newMaterials));
+          }
         }
-      }
 
       return { savePictures };
 
