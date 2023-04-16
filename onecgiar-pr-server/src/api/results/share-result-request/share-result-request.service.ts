@@ -16,6 +16,7 @@ import { ResultsTocResult } from '../results-toc-results/entities/results-toc-re
 import { ResultsTocResultRepository } from '../results-toc-results/results-toc-results.repository';
 import { Result } from '../entities/result.entity';
 import { getRepository } from 'typeorm';
+import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/result_initiative_budget.repository';
 
 @Injectable()
 export class ShareResultRequestService {
@@ -27,6 +28,7 @@ export class ShareResultRequestService {
     private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
     private readonly _versionsService: VersionsService,
     private readonly _resultsTocResultRepository: ResultsTocResultRepository,
+    private readonly _resultInitiativesBudgetRepository: ResultInitiativeBudgetRepository,
   ) { }
 
   create(createShareResultRequestDto: CreateShareResultRequestDto) {
@@ -151,6 +153,12 @@ export class ShareResultRequestService {
             newRtR.toc_result_id = toc_result_id || null;
           }
 
+          await this._resultInitiativesBudgetRepository.save({
+            result_initiative_id: newResultByInitiative.id,
+            version_id: vrs.id,
+            created_by: user.id,
+            last_updated_by: user.id,
+          });
           await this._resultByInitiativesRepository.save(newResultByInitiative);
           const resultTocResult = await this._resultsTocResultRepository.existsResultTocResult(result.id, shared_inititiative_id);
           if(!resultTocResult){

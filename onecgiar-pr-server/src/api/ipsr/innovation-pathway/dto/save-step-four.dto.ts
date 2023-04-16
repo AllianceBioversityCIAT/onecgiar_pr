@@ -32,15 +32,15 @@ export interface IpsrMaterials {
     link: string;
 }
 export interface InitiativeExpectedInvestment {
-    initiative_id: number;
+    result_initiative_budget_id: number;
     current_year: number;
     next_year: number;
     is_determined: boolean;
 }
 export interface BilateralExpectedInvestment {
-    npp_id: number;
-    current_year: number;
-    next_year: number;
+    non_pooled_projetct_budget_id: number;
+    in_cash: number;
+    in_kind: number;
     is_determined: boolean;
 }
 export interface InstitutionsExpectedInvestment {

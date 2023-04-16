@@ -8,6 +8,7 @@ import { ResultByInitiativesRepository } from '../results_by_inititiatives/resul
 import { VersionsService } from '../versions/versions.service';
 import { VersionRepository } from '../versions/version.repository';
 import { ResultsTocResultRepository } from '../results-toc-results/results-toc-results.repository';
+import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/result_initiative_budget.repository';
 
 @Module({
   controllers: [ShareResultRequestController],
@@ -19,7 +20,8 @@ import { ResultsTocResultRepository } from '../results-toc-results/results-toc-r
     ResultByInitiativesRepository,
     VersionsService,
     VersionRepository,
-    ResultsTocResultRepository
+    ResultsTocResultRepository,
+    ResultInitiativeBudgetRepository
   ],
   exports: [
     ShareResultRequestRepository

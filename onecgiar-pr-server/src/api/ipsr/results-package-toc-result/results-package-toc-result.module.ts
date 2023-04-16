@@ -14,6 +14,9 @@ import { ShareResultRequestRepository } from '../../results/share-result-request
 import { NonPooledProjectRepository } from '../../results/non-pooled-projects/non-pooled-projects.repository';
 import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
 import { ResultByInstitutionsByDeliveriesTypeRepository } from '../../results/result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';
+import { NonPooledProjectBudgetRepository } from '../../results/result_budget/repositories/non_pooled_proyect_budget.repository';
+import { ResultInstitutionsBudgetRepository } from '../../results/result_budget/repositories/result_institutions_budget.repository';
+import { ResultInitiativeBudgetRepository } from '../../results/result_budget/repositories/result_initiative_budget.repository';
 
 @Module({
   controllers: [ResultsPackageTocResultController],
@@ -31,7 +34,11 @@ import { ResultByInstitutionsByDeliveriesTypeRepository } from '../../results/re
     NonPooledProjectRepository,
     ResultByIntitutionsRepository,
     ResultByInstitutionsByDeliveriesTypeRepository,
-    HandlersError],
+    HandlersError,
+    NonPooledProjectBudgetRepository,
+    ResultInstitutionsBudgetRepository,
+    ResultInitiativeBudgetRepository
+  ],
   exports: []
 })
 export class ResultsPackageTocResultModule {}

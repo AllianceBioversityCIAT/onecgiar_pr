@@ -12,17 +12,45 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     super(ResultsByInstitution, dataSource.createEntityManager());
   }
 
+  async getResultByInstitution(resultId: number) {
+    const queryData = `
+    SELECT 
+    	rbi.id,
+    	rbi.institutions_id,
+    	rbi.institution_roles_id,
+    	rbi.version_id,
+      ci.name as institutions_name,
+		  ci.acronym as institutions_acronym
+    FROM results_by_institution rbi 
+      LEFT JOIN clarisa_institutions ci on ci.id = rbi.institutions_id 
+    WHERE rbi.result_id = ?
+    	AND rbi.is_active > 0;
+    `;
+    try {
+      const completeIntitutions: ResultsByInstitution[] = await this.query(queryData, [
+        resultId,
+      ]);
+      return completeIntitutions;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultByIntitutionsRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async getResultByInstitutionById(resultId: number, rbiId: number) {
     const queryData = `
-    select 
+    SELECT 
     	rbi.id,
     	rbi.institutions_id,
     	rbi.institution_roles_id,
     	rbi.version_id
-    from results_by_institution rbi 
-    where rbi.result_id = ?
-      and rbi.id = ?
-    	and rbi.is_active > 0;
+    FROM results_by_institution rbi 
+    WHERE rbi.result_id = ?
+      AND rbi.id = ?
+    	AND rbi.is_active > 0;
     `;
     try {
       const completeIntitutions: ResultsByInstitution[] = await this.query(queryData, [

@@ -16,6 +16,7 @@ import { ResultsImpactAreaIndicatorRepository } from '../results-impact-area-ind
 import { ClarisaImpactAreaRepository } from '../../../clarisa/clarisa-impact-area/ClarisaImpactArea.repository';
 import { ShareResultRequestService } from '../share-result-request/share-result-request.service';
 import { ShareResultRequestRepository } from '../share-result-request/share-result-request.repository';
+import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/result_initiative_budget.repository';
 
 @Module({
   controllers: [ResultsTocResultsController],
@@ -34,7 +35,8 @@ import { ShareResultRequestRepository } from '../share-result-request/share-resu
     ResultsImpactAreaIndicatorRepository,
     ClarisaImpactAreaRepository,
     ShareResultRequestService,
-    ShareResultRequestRepository
+    ShareResultRequestRepository,
+    ResultInitiativeBudgetRepository
   ],
   exports: [
     ResultsTocResultRepository
