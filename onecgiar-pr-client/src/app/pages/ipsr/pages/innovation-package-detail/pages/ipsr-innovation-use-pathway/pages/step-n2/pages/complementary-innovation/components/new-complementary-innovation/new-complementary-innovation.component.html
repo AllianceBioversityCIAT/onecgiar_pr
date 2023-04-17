@@ -73,7 +73,7 @@
             <div style="display: flex; flex-direction: row;" *ngFor="let i of inputs">
                 <div style="background-color:aliceblue ; width: 5%; display: flex; align-items: center; justify-content: center; color: black;">{{i}}</div><div style="width: 95%;"><app-pr-input placeholder="Link" [(ngModel)]="linksComplemntaryInnovation[i-1]['link']"> </app-pr-input></div>
             </div>
-            <app-pr-button text="Add reference material" padding="medium" (click) = "addNewInput()" ></app-pr-button>
+            <app-pr-button text="Add reference material" padding="medium" (click) = "addNewInput()" [ngClass]="{'globalDisabled': statusAdd}"></app-pr-button>
             <!-- flagsCode="iso_alpha_2" -->
         </div>
     </div>

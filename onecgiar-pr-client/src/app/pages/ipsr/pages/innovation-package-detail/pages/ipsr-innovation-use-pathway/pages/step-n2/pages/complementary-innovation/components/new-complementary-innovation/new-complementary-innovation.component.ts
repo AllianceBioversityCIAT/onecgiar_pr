@@ -26,6 +26,7 @@ export class NewComplementaryInnovationComponent implements OnInit {
   linksRegister:number = 1;
   inputs:any = [1];
   disabled:boolean = true;
+  statusAdd:boolean = false;
   @Input() complementaryInnovationFunction:any;
   linksComplemntary:any;
   linksComplemntaryInnovation:any =[];
@@ -47,6 +48,9 @@ export class NewComplementaryInnovationComponent implements OnInit {
         this.inputs.push(this.linksRegister);
       }
       
+    }
+    if (this.linksRegister == 3) {
+      this.statusAdd = true;
     }
   }
 
