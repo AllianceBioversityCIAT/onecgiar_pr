@@ -41,12 +41,12 @@ export class StepN4AddPartnerComponent implements OnInit {
   }
 
   cleanObject() {
-    // console.log('cleanForm');
-    // this.showForm = false;
-    // // this.partnersRequestBody = new PartnersRequestBody();
-    // setTimeout(() => {
-    //   this.showForm = true;
-    // }, 0);
+    console.log('cleanForm');
+    this.showForm = false;
+    this.partnerBody = new AddPartnerBody();
+    setTimeout(() => {
+      this.showForm = true;
+    }, 0);
   }
 }
 
