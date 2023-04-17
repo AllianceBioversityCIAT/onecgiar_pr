@@ -8,7 +8,7 @@
         <th></th>
     </tr>
     <tr *ngFor="let item of this.body.bilateral_expected_investment; let i=index">
-        <td>Biltateral {{i+1}}</td>
+        <td>{{item?.obj_non_pooled_projetct?.grant_title}}</td>
         <td>
             <app-pr-input placeholder="Write some..." type="number" [required]="false" [(ngModel)]="this.item.in_kind">
             </app-pr-input>
@@ -25,4 +25,5 @@
     </tr>
 </table>
 
-<app-pr-button (click)="addItem()" padding="small" text="Add bilateral" icon="add_box"></app-pr-button>
+
+<app-step-n4-add-bilateral [body]="this.body"></app-step-n4-add-bilateral>

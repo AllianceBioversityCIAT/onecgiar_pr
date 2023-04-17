@@ -11,6 +11,7 @@ export class IpsrStep4Body {
   institutions_expected_investment: InstitutionsexpectedinvestmentStep4[] = [];
   partner_unit_time_id: number = null;
   partner_expected_time: string = null;
+  is_result_ip_published: boolean = null;
 }
 
 export class InstitutionsexpectedinvestmentStep4 {
@@ -36,6 +37,7 @@ export class BilateralexpectedinvestmentStep4 {
   in_cash: string;
   in_kind: string;
   is_determined: number;
+  obj_non_pooled_projetct: any;
 }
 
 interface Initiativeexpectedinvestment {

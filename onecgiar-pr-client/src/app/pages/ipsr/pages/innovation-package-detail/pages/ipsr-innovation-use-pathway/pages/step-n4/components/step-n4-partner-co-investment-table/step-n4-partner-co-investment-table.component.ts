@@ -28,7 +28,4 @@ export class StepN4PartnerCoInvestmentTableComponent implements OnInit {
     if (!(typeof option?.deliveries == 'object')) option.deliveries = [];
     index < 0 ? option?.deliveries.push(deliveryId) : option?.deliveries.splice(index, 1);
   }
-  addItem() {
-    this.body.institutions_expected_investment.push(new InstitutionsexpectedinvestmentStep4());
-  }
 }

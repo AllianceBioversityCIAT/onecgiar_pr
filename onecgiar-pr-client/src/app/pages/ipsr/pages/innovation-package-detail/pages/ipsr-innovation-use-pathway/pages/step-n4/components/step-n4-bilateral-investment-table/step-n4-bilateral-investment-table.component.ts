@@ -8,12 +8,9 @@ import { BilateralexpectedinvestmentStep4, IpsrStep4Body } from '../../model/Ips
 })
 export class StepN4BilateralInvestmentTableComponent implements OnInit {
   @Input() body = new IpsrStep4Body();
+  showModal = false;
 
   constructor() {}
 
   ngOnInit(): void {}
-
-  addItem() {
-    this.body.bilateral_expected_investment.push(new BilateralexpectedinvestmentStep4());
-  }
 }
