@@ -55,6 +55,9 @@
         //     transform: translateX(-50%);
         //     z-index: 0;
         // }
+        .name {
+            color: var(--pr-color-primary) !important;
+        }
     }
 
 }
