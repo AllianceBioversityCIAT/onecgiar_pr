@@ -46,6 +46,8 @@ export class TableInnovationComponent implements OnInit {
   ngOnChanges(changes: SimpleChanges) {
     // changes.prop contains the old and the new value...
     this.selectionsInnovation= changes['selectionsInnovation'].currentValue;
+    console.log('lol');
+    
   }
 
   ngOnDestroy(): void {
@@ -79,7 +81,12 @@ export class TableInnovationComponent implements OnInit {
   }
 
   findResultSelected(result: ComplementaryInnovation){
-    this.selectionsInnovation.find((resp)=> resp.result_id == result.result_id? result.selected = true:  result.selected = false);
+   let index =  this.selectionsInnovation.findIndex((resp)=> resp.result_id == result.result_id? result.selected = true:  result.selected = false);
+    if (index == -1) {
+        return false;
+    }else{
+      return true;
+    }
   }
 
 

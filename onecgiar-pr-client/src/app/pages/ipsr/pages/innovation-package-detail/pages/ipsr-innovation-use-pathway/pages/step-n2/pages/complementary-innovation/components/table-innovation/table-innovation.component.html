@@ -39,8 +39,8 @@
                         
                         <div class="link_button"
                             
-                            [ngClass]="{'globalDisabled': result.selected}"
-                            (click)="!result.selected ? selectInnovation(result) : null">{{result.selected || findResultSelected(result)? 'Selected' :
+                            [ngClass]="{'globalDisabled': findResultSelected(result)}"
+                            (click)="!result.selected ? selectInnovation(result) : null">{{findResultSelected(result)? 'Selected' :
                             'Select'}}</div>
                     </td>
                 </tr>
