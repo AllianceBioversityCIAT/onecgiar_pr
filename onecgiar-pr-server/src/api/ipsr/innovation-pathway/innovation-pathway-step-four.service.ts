@@ -191,8 +191,8 @@ export class InnovationPathwayStepFourService {
         bilateral_expected_time: saveStepFourDto.bilateral_expected_time,
         partner_unit_time_id: saveStepFourDto.partner_unit_time_id,
         partner_expected_time: saveStepFourDto.partner_expected_time,
+        is_result_ip_published: saveStepFourDto.is_result_ip_published
       });
-
 
 
       return {
@@ -354,7 +354,6 @@ export class InnovationPathwayStepFourService {
     try {
       const allEvidence: Evidence[] = await this._evidenceRepository.getWokrshop(+id);
       const existingWorkshop = allEvidence.map(e => e.link);
-      console.log("🚀 ~ file: innovation-pathway-step-four.service.ts:356 ~ InnovationPathwayStepFourService ~ saveWorkshop ~ existingWorkshop:", existingWorkshop)
       const existingIds = allEvidence.map(e => e.id);
 
       const ipsrWorkshop: string = saveStepFourDto.link_workshop_list;
@@ -516,42 +515,45 @@ export class InnovationPathwayStepFourService {
     try {
       if (saveStepFourDto?.institutions_expected_investment?.length) {
         const { institutions_expected_investment: iei } = saveStepFourDto;
-        iei.forEach(async (el) => {
-          if (!el?.institution?.is_active) {
-            await this._resultByInstitutionsRepository.update(el.institution.id, { is_active: false });
-            await this._resultInstitutionsBudgetRepository.update(el.budget.result_institutions_budget_id, { is_active: false });
-          } else {
-            await this.saveDeliveries(el.institution, el.institution.deliveries, user.id, version);
-            let existBud: ResultInstitutionsBudget = null;
-            if(el?.budget?.result_institutions_budget_id){
-              existBud = await this._resultInstitutionsBudgetRepository.findOne({where: {result_institutions_budget_id: el?.budget?.result_institutions_budget_id}});
-            }else{
-              existBud = await this._resultInstitutionsBudgetRepository.findOne({where: {result_institution_id: el.institution.id}});
-            }
 
-            if(existBud){
-              await this._resultInstitutionsBudgetRepository.update(
-                el?.budget?.result_institutions_budget_id,
-                {
+        iei.forEach(async (el) => {
+          const { budget } = el;
+          budget.map(async i => {
+            if (!el?.institution?.is_active) {
+              await this._resultByInstitutionsRepository.update(el.institution.id, { is_active: false });
+              await this._resultInstitutionsBudgetRepository.update(i?.result_institutions_budget_id, { is_active: false });
+            } else {
+              await this.saveDeliveries(el.institution, el.institution.deliveries, user.id, version);
+              let existBud: ResultInstitutionsBudget = null;
+              if (i?.result_institutions_budget_id) {
+                existBud = await this._resultInstitutionsBudgetRepository.findOne({ where: { result_institutions_budget_id: i?.result_institutions_budget_id } });
+              } else if (!existBud) {
+                existBud = await this._resultInstitutionsBudgetRepository.findOne({ where: { result_institution_id: el.institution.id } });
+              }
+
+              if (existBud) {
+                await this._resultInstitutionsBudgetRepository.update(
+                  i?.result_institutions_budget_id,
+                  {
+                    last_updated_by: user?.id,
+                    is_determined: i?.is_determined,
+                    in_kind: i?.in_kind,
+                    in_cash: i?.in_cash
+                  }
+                )
+              } else {
+                await this._resultInstitutionsBudgetRepository.save({
+                  result_institution_id: el.institution.id,
                   last_updated_by: user?.id,
-                  is_determined: el?.budget?.is_determined,
-                  in_kind: el?.budget?.in_kind,
-                  in_cash: el?.budget?.in_cash
-                }
-              )
-            }else{
-              await this._resultInstitutionsBudgetRepository.save({
-                result_institution_id: el.institution.id,
-                last_updated_by: user?.id,
-                is_determined: el?.budget?.is_determined,
-                in_kind: el?.budget?.in_kind,
-                in_cash: el?.budget?.in_cash,
-                version_id: version.id,
-                created_by: user.id,
-                
-              })
+                  is_determined: i?.is_determined,
+                  in_kind: i?.in_kind,
+                  in_cash: i?.in_cash,
+                  version_id: version.id,
+                  created_by: user.id,
+                })
+              }
             }
-          }
+          })
         });
       }
     } catch (error) {
