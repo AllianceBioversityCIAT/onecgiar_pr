@@ -230,7 +230,7 @@ export class ResultInnovationPackageService {
 
       const titleValidate = await this._resultRepository
         .createQueryBuilder('result')
-        .where('result.title like :title', { title: `${innovationTitle}` })
+        .where('result.title like :title AND is_active = true', { title: `${innovationTitle}` })
         .getMany();
 
       if (titleValidate.length) {
