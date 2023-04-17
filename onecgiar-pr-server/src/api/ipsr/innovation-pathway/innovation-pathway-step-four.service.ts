@@ -581,6 +581,9 @@ export class InnovationPathwayStepFourService {
 
   async saveBilaterals(resultId: number, user: TokenDto, bltl: donorInterfaceToc) {
     try {
+      let bilateral_expected_investment: any;
+      let newBie: any;
+      let newNpp: any;
       const vTemp = await this._versionsService.findBaseVersion();
       if (vTemp.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: vTemp });
@@ -608,7 +611,7 @@ export class InnovationPathwayStepFourService {
             }
           );
         } else {
-          await this._nonPooledProjectRepository.save({
+          newNpp = await this._nonPooledProjectRepository.save({
             results_id: resultId,
             center_grant_id: bltl.center_grant_id,
             grant_title: bltl.grant_title,
@@ -619,10 +622,27 @@ export class InnovationPathwayStepFourService {
             last_updated_by: user.id,
             non_pooled_project_type_id: 2
           })
+
+          const newBie = await this._resultBilateralBudgetRepository.save({
+            non_pooled_projetct_id: newNpp?.id,
+            version_id: version.id,
+            created_by: user.id,
+            last_updated_by: user.id,
+          })
+
+          bilateral_expected_investment = await this._resultBilateralBudgetRepository.find({
+            where: {
+              non_pooled_projetct_id: newNpp?.id,
+              is_active: true
+            },
+            relations: {
+              obj_non_pooled_projetct: true
+            }
+          });
         }
       }
       return {
-        response: {},
+        response: bilateral_expected_investment[0],
         message: 'Successful response',
         status: HttpStatus.OK,
       }
