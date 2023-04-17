@@ -22,6 +22,7 @@ import { ResultByInstitutionsByDeliveriesTypeRepository } from '../../results/re
 import { ResultsByInstitution } from '../../results/results_by_institutions/entities/results_by_institution.entity';
 import { NonPooledProject } from '../../results/non-pooled-projects/entities/non-pooled-project.entity';
 import { ResultByInstitutionsByDeliveriesType } from '../../results/result-by-institutions-by-deliveries-type/entities/result-by-institutions-by-deliveries-type.entity';
+import { ResultInstitutionsBudget } from '../../results/result_budget/entities/result_institutions_budget.entity';
 
 @Injectable()
 export class InnovationPathwayStepFourService {
@@ -521,15 +522,35 @@ export class InnovationPathwayStepFourService {
             await this._resultInstitutionsBudgetRepository.update(el.budget.result_institutions_budget_id, { is_active: false });
           } else {
             await this.saveDeliveries(el.institution, el.institution.deliveries, user.id, version);
-            await this._resultInstitutionsBudgetRepository.update(
-              el?.budget?.result_institutions_budget_id,
-              {
+            let existBud: ResultInstitutionsBudget = null;
+            if(el?.budget?.result_institutions_budget_id){
+              existBud = await this._resultInstitutionsBudgetRepository.findOne({where: {result_institutions_budget_id: el?.budget?.result_institutions_budget_id}});
+            }else{
+              existBud = await this._resultInstitutionsBudgetRepository.findOne({where: {result_institution_id: el.institution.id}});
+            }
+
+            if(existBud){
+              await this._resultInstitutionsBudgetRepository.update(
+                el?.budget?.result_institutions_budget_id,
+                {
+                  last_updated_by: user?.id,
+                  is_determined: el?.budget?.is_determined,
+                  in_kind: el?.budget?.in_kind,
+                  in_cash: el?.budget?.in_cash
+                }
+              )
+            }else{
+              await this._resultInstitutionsBudgetRepository.save({
+                result_institution_id: el.institution.id,
                 last_updated_by: user?.id,
                 is_determined: el?.budget?.is_determined,
                 in_kind: el?.budget?.in_kind,
-                in_cash: el?.budget?.in_cash
-              }
-            )
+                in_cash: el?.budget?.in_cash,
+                version_id: version.id,
+                created_by: user.id,
+                
+              })
+            }
           }
         });
       }
