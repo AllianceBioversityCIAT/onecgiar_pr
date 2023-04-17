@@ -2,7 +2,8 @@
 <div class="local_container section_container">
     <div class="tabs">
         <a class="tab" routerLinkActive="active" routerLink="complementary-innovation">2.1 Complementary innovations/enavlers/solutions</a>
-        <a class="tab" routerLinkActive="active" routerLink="basic-info">2.2 Basic info</a>
+        <a class="tab" routerLinkActive="active" routerLink="basic-info" [ngClass]="{'globalDisabled': true}">2.2 Basic info <img  class="under_construction" src="assets/work-in-progress.png" alt=""
+            srcset="" style="width: 20px;"></a>
     </div>
     <div class="outlet">
         <router-outlet></router-outlet>
