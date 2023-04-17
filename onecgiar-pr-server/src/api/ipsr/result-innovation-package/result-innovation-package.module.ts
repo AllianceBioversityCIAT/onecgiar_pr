@@ -27,6 +27,8 @@ import { ResultByIntitutionsRepository } from '../../../api/results/results_by_i
 import { ResultIpSdgTargetRepository } from '../innovation-pathway/repository/result-ip-sdg-targets.repository';
 import { ResultInitiativeBudgetRepository } from '../../../api/results/result_budget/repositories/result_initiative_budget.repository';
 import { UnitTimeRepository } from './repositories/unit_time.repository';
+import { TocResultsRepository } from '../../../toc/toc-results/toc-results.repository';
+import { ResultIpEoiOutcomeRepository } from '../innovation-pathway/repository/result-ip-eoi-outcomes.repository';
 
 
 @Module({
@@ -57,7 +59,9 @@ import { UnitTimeRepository } from './repositories/unit_time.repository';
     resultValidationRepository,
     ResultIpSdgTargetRepository,
     ResultInitiativeBudgetRepository,
-    UnitTimeRepository
+    UnitTimeRepository,
+    TocResultsRepository,
+    ResultIpEoiOutcomeRepository
   ],
   imports: [VersionsModule],
   exports: [
