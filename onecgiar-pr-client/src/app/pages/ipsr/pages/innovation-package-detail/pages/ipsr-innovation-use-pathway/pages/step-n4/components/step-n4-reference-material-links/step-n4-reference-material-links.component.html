@@ -2,9 +2,9 @@
     [required]="false"></app-pr-field-header>
 
 <div class="fields">
-    <div class="field" *ngFor="let item of this.body.list2; let i=index">
+    <div class="field" *ngFor="let item of this.body.ipsr_materials; let i=index">
         <div class="number">{{i+1}}.</div>
-        <app-pr-input [required]="true" placeholder="Link">
+        <app-pr-input [required]="true" placeholder="Link" [(ngModel)]="item.link">
         </app-pr-input>
     </div>
 </div>

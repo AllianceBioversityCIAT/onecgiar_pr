@@ -1,5 +1,5 @@
 import { Component, OnInit, Input } from '@angular/core';
-import { IpsrStep4Body } from '../../model/Ipsr-step-4-body.model';
+import { IpsrStep4Body, IpsrpictureStep4 } from '../../model/Ipsr-step-4-body.model';
 
 @Component({
   selector: 'app-step-n4-picture-links',
@@ -12,6 +12,6 @@ export class StepN4PictureLinksComponent implements OnInit {
 
   ngOnInit(): void {}
   addItem() {
-    this.body.list1.push({});
+    this.body.ipsr_pictures.push(new IpsrpictureStep4());
   }
 }

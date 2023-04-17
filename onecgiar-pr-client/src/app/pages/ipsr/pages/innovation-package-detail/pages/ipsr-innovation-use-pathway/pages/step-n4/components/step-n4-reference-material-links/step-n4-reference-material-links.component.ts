@@ -1,5 +1,5 @@
 import { Component, OnInit, Input } from '@angular/core';
-import { IpsrStep4Body } from '../../model/Ipsr-step-4-body.model';
+import { IpsrStep4Body, IpsrpictureStep4 } from '../../model/Ipsr-step-4-body.model';
 
 @Component({
   selector: 'app-step-n4-reference-material-links',
@@ -12,6 +12,6 @@ export class StepN4ReferenceMaterialLinksComponent implements OnInit {
 
   ngOnInit(): void {}
   addItem() {
-    this.body.list2.push({});
+    this.body.ipsr_materials.push(new IpsrpictureStep4());
   }
 }
