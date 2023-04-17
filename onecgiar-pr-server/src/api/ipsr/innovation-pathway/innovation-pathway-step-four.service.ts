@@ -540,6 +540,7 @@ export class InnovationPathwayStepFourService {
 
   async savePartners(resultId: number, user: TokenDto, crtr: institutionsInterface) {
     try {
+      let institutions_expected_investment: any;
       const vTemp = await this._versionsService.findBaseVersion();
       if (vTemp.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: vTemp });
@@ -563,6 +564,36 @@ export class InnovationPathwayStepFourService {
             version_id: version.id,
             created_by: user.id,
             last_updated_by: user.id
+          });
+
+          const newIbe = await this._resultInstitutionsBudgetRepository.save(
+            {
+              result_institution_id: rbi.id,
+              version_id: version.id,
+              created_by: user.id,
+              last_updated_by: user.id
+            }
+          )
+
+          const institutions = await this._resultByInstitutionsRepository.find({ where: { id: rbi.id, institution_roles_id: 7 } });
+          const deliveries = await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByResultByInstitution(institutions?.map(el => el.id));
+          institutions?.map(int => {
+            int['deliveries'] = deliveries?.filter(del => del.result_by_institution_id == int.id).map(del => del.partner_delivery_type_id);
+          });
+
+
+          const intitutins_budget = await this._resultInstitutionsBudgetRepository.find({
+            where: {
+              result_institution_id: In(institutions.map(el => el.id)),
+              is_active: true
+            }
+          });
+
+          institutions_expected_investment = institutions.map(el => {
+            return {
+              institution: el,
+              budget: intitutins_budget.filter(b => b.result_institution_id == el.id)
+            }
           })
         }
         const delData = crtr?.deliveries?.length ? crtr?.deliveries : [];
@@ -570,7 +601,7 @@ export class InnovationPathwayStepFourService {
 
       }
       return {
-        response: {},
+        response: institutions_expected_investment,
         message: 'Successful response',
         status: HttpStatus.OK,
       }
