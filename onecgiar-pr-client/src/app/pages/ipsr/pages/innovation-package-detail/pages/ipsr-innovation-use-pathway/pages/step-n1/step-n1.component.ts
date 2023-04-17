@@ -15,6 +15,7 @@ export class StepN1Component implements OnInit {
 
   ngOnInit(): void {
     this.getSectionInformation();
+    this.requestEvent();
   }
 
   getSectionInformation() {
@@ -50,6 +51,22 @@ export class StepN1Component implements OnInit {
       if (item.institution_sub_type_id) {
         item.institution_types_id = item.institution_sub_type_id;
       }
+    });
+  }
+  requestEvent() {
+    this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
+      try {
+        document.querySelector('.alert-event').addEventListener('click', e => {
+          this.api.dataControlSE.showPartnersRequest = true;
+        });
+      } catch (error) {}
+    });
+    this.api.dataControlSE.findClassTenSeconds('alert-event-2').then(resp => {
+      try {
+        document.querySelector('.alert-event-2').addEventListener('click', e => {
+          this.api.dataControlSE.showPartnersRequest = true;
+        });
+      } catch (error) {}
     });
   }
 }
