@@ -586,4 +586,24 @@ export class ResultsApiService {
   GETAllClarisaInnovationReadinessLevels() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/innovation-readiness-levels/get/all`);
   }
+
+  GETInnovationPathwayStepFourByRiId() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/step-four/${this.ipsrDataControlSE.resultInnovationId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+  }
+
+  PATCHInnovationPathwayStepFourByRiId(body) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-four/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+  }
+
+  GETAllResultsInnovationPackageUnitTime() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-package/unit-time`);
+  }
+
+  PATCHInnovationPathwayStep4Partners(body) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-four/partners/${this.ipsrDataControlSE.resultInnovationId}`, body);
+  }
+
+  PATCHInnovationPathwayStep4Bilaterals(body) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-four/bilaterals/${this.ipsrDataControlSE.resultInnovationId}`, body);
+  }
 }

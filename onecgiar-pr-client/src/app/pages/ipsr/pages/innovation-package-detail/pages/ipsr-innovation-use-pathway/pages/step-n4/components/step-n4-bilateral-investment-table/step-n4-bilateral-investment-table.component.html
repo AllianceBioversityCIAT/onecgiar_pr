@@ -1,0 +1,44 @@
+<div class="unit_of_time_container">
+    <div>
+        <app-pr-field-header label="Expected CGIAR Bilateral investments in Innovation Package in next"
+            [required]="false"></app-pr-field-header>
+    </div>
+    <div>
+        <app-pr-input placeholder="Number" type="number" [required]="false"
+            [(ngModel)]="this.body.bilateral_expected_time">
+        </app-pr-input>
+    </div>
+    <div>
+        <app-pr-select [options]="this.manageRipUnitTimeSE.unitTimeList" optionLabel="name" optionValue="unit_time_id"
+            [(ngModel)]="this.body.bilateral_unit_time_id" placeholder="Select">
+        </app-pr-select>
+    </div>
+</div>
+
+<table>
+    <tr>
+        <th>Bilateral</th>
+        <th>In-kind investment (staff time, etc.) USD</th>
+        <th>In-cash USD investment</th>
+        <th></th>
+    </tr>
+    <tr *ngFor="let item of this.body.bilateral_expected_investment; let i=index">
+        <td>{{item?.obj_non_pooled_projetct?.grant_title}}</td>
+        <td>
+            <app-pr-input placeholder="Write some..." type="number" [required]="false" [(ngModel)]="this.item.in_kind">
+            </app-pr-input>
+        </td>
+        <td>
+            <app-pr-input placeholder="Write some..." type="number" [required]="false" [(ngModel)]="this.item.in_cash">
+            </app-pr-input>
+        </td>
+        <td>
+            <app-pr-radio-button optionLabel="name" optionValue="id"
+                [options]="[{name:'This is yet to be determined',id:true}]" [(ngModel)]="item.is_determined">
+            </app-pr-radio-button>
+        </td>
+    </tr>
+</table>
+
+
+<app-step-n4-add-bilateral [body]="this.body"></app-step-n4-add-bilateral>

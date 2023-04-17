@@ -25,6 +25,9 @@ import { ResultByEvidencesRepository } from '../../../api/results/results_by_evi
 import { ResultByIntitutionsTypeRepository } from '../../../api/results/results_by_institution_types/result_by_intitutions_type.repository';
 import { ResultByIntitutionsRepository } from '../../../api/results/results_by_institutions/result_by_intitutions.repository';
 import { ResultIpSdgTargetRepository } from '../innovation-pathway/repository/result-ip-sdg-targets.repository';
+import { ResultInitiativeBudgetRepository } from '../../../api/results/result_budget/repositories/result_initiative_budget.repository';
+import { UnitTimeRepository } from './repositories/unit_time.repository';
+
 
 @Module({
   controllers: [ResultInnovationPackageController],
@@ -52,7 +55,9 @@ import { ResultIpSdgTargetRepository } from '../innovation-pathway/repository/re
     ResultByIntitutionsRepository,
     ResultByIntitutionsTypeRepository,
     resultValidationRepository,
-    ResultIpSdgTargetRepository
+    ResultIpSdgTargetRepository,
+    ResultInitiativeBudgetRepository,
+    UnitTimeRepository
   ],
   imports: [VersionsModule],
   exports: [
