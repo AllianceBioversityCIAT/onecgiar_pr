@@ -438,18 +438,10 @@ export class ResultInnovationPackageService {
         }
       }
 
-      if (req.lead_contact_person === '' || req.lead_contact_person === null) {
-        return {
-          response: { valid: false },
-          message: 'Please add a lead contact person',
-          status: HttpStatus.BAD_REQUEST,
-        };
-      }
-
       const updateResult = await this._resultRepository.update(resultId, {
         title: req.title,
         description: req.description || resultExist.description,
-        lead_contact_person: req.lead_contact_person,
+        lead_contact_person: req?.lead_contact_person,
         gender_tag_level_id: req.gender_tag_level_id,
         climate_change_tag_level_id: req.climate_change_tag_level_id,
         is_krs: req.is_krs,
