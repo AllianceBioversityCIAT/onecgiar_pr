@@ -601,7 +601,7 @@ export class InnovationPathwayStepFourService {
 
       }
       return {
-        response: institutions_expected_investment,
+        response: institutions_expected_investment[0],
         message: 'Successful response',
         status: HttpStatus.OK,
       }
