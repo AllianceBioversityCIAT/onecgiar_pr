@@ -41,30 +41,38 @@ export class InnovationPathwayStepFourService {
     protected readonly _resultByInstitutionsByDeliveriesTypeRepository: ResultByInstitutionsByDeliveriesTypeRepository
   ) { }
 
-  async getStepFour(resultId: number){
+  async getStepFour(resultId: number) {
     try {
-      const ipsr_pictures = await this._evidenceRepository.find({where:{
-        result_id: resultId,
-        is_active: 1,
-        evidence_type_id: 3
-      }});
+      const ipsr_pictures = await this._evidenceRepository.find({
+        where: {
+          result_id: resultId,
+          is_active: 1,
+          evidence_type_id: 3
+        }
+      });
 
-      const ipsr_materials = await this._evidenceRepository.find({where:{
-        result_id: resultId,
-        is_active: 1,
-        evidence_type_id: 4
-      }});
+      const ipsr_materials = await this._evidenceRepository.find({
+        where: {
+          result_id: resultId,
+          is_active: 1,
+          evidence_type_id: 4
+        }
+      });
 
-      const link_workshop_list = await this._evidenceRepository.findOne({where:{
-        result_id: resultId,
-        is_active: 1,
-        evidence_type_id: 4
-      }});
+      const link_workshop_list = await this._evidenceRepository.findOne({
+        where: {
+          result_id: resultId,
+          is_active: 1,
+          evidence_type_id: 5
+        }
+      });
 
-      const initiatives = await this._resultByInitiativeRepository.find({where:{
-        result_id: resultId,
-        is_active: true
-      }});
+      const initiatives = await this._resultByInitiativeRepository.find({
+        where: {
+          result_id: resultId,
+          is_active: true
+        }
+      });
 
       const initiative_expected_investment = await this._resultInitiativesBudgetRepository.find({
         where: {
@@ -79,7 +87,7 @@ export class InnovationPathwayStepFourService {
       });
 
       const result_ip = await this._resultInnovationPackageRepository.findOne({
-        where:{
+        where: {
           result_innovation_package_id: resultId,
           is_active: true
         }
@@ -137,7 +145,7 @@ export class InnovationPathwayStepFourService {
           partner_expected_time: result_ip.partner_expected_time,
           bilateral_expected_investment,
           institutions_expected_investment
-         },
+        },
         message: 'Successful response',
         status: HttpStatus.OK,
       }
@@ -205,15 +213,13 @@ export class InnovationPathwayStepFourService {
   }
 
   async savePictures(resultId: number, user: TokenDto, saveStepFourDto: SaveStepFour, version: Version) {
-    const id: number = +resultId;
+    const id = +resultId;
     try {
-      const allEvidence: Evidence[] = await this._evidenceRepository.getPictures(+id);
+      const allEvidence = await this._evidenceRepository.getPictures(id);
       const existingPictures = allEvidence.map(e => e.link);
       const existingIds = allEvidence.map(e => e.id);
-
-      const ipsrPictures: any[] = saveStepFourDto.ipsr_pictures;
-
-      if (!ipsrPictures?.length) {
+      const ipsrPictures = saveStepFourDto.ipsr_pictures;
+      if (!ipsrPictures.length) {
         for (const e of existingIds) {
           await this._evidenceRepository.update(e, {
             is_active: 0,
@@ -221,66 +227,53 @@ export class InnovationPathwayStepFourService {
             last_updated_date: new Date(),
           })
         }
-        throw {
-          message: 'Picture was not found',
-          status: HttpStatus.NOT_FOUND,
+      }
+
+      const savePictures = [];
+
+      for (const entity of allEvidence) {
+        if (ipsrPictures.find(ip => ip.link === entity.link)) {
+          if (entity.is_active === 0) {
+            entity.is_active = 1;
+            entity.last_updated_by = user.id;
+            entity.last_updated_date = new Date();
+            savePictures.push(await this._evidenceRepository.save(entity));
+          }
+        } else {
+          if (entity.is_active === 1) {
+            entity.is_active = 0;
+            entity.last_updated_by = user.id;
+            entity.last_updated_date = new Date();
+            savePictures.push(await this._evidenceRepository.save(entity));
+          }
         }
       }
 
-      const picturesToActive = allEvidence.filter(
-        ae =>
-          ipsrPictures.find(e => e.link === ae.link) &&
-          ae.is_active === 0
-      );
-
-      const picturesToInactive = allEvidence.filter(
-        ae =>
-          !ipsrPictures.find(e => e.link === ae.link) &&
-          ae.is_active === 1
-      );
-
-      const picturesToSave = ipsrPictures?.filter(
-        ip => !existingPictures.includes(ip.link)
-      );
-
-      let savePictures: Evidence[] = [];
-
-      if (picturesToSave?.length > 0) {
-        for (const entity of picturesToSave) {
-          const newMaterials = new Evidence();
-          newMaterials.result_id = resultId;
-          newMaterials.link = entity.link;
-          newMaterials.evidence_type_id = 3;
-          newMaterials.version_id = version.id;
-          newMaterials.created_by = user.id;
-          newMaterials.creation_date = new Date();
-          newMaterials.last_updated_by = user.id;
-          newMaterials.last_updated_date = new Date();
-          savePictures.push(await this._evidenceRepository.save(newMaterials));
+      for (const entity of ipsrPictures) {
+        const link = entity.link;
+        if (!link) {
+          return {
+            response: { valid: false },
+            message: 'Please provide a link',
+            status: HttpStatus.NOT_ACCEPTABLE,
+          }
         }
-      };
 
-      if (picturesToActive?.length > 0) {
-        for (const entity of picturesToActive) {
-          entity.is_active = 1;
-          entity.last_updated_by = user.id;
-          entity.last_updated_date = new Date();
-          savePictures.push(await this._evidenceRepository.save(entity));
+        if (!existingPictures.includes(entity.link)) {
+          const newPictures = new Evidence();
+          newPictures.result_id = resultId;
+          newPictures.link = entity.link;
+          newPictures.evidence_type_id = 3;
+          newPictures.version_id = version.id;
+          newPictures.created_by = user.id;
+          newPictures.creation_date = new Date();
+          newPictures.last_updated_by = user.id;
+          newPictures.last_updated_date = new Date();
+          savePictures.push(await this._evidenceRepository.save(newPictures));
         }
-      };
+      }
 
-      if (picturesToInactive?.length > 0) {
-        for (const entity of picturesToInactive) {
-          entity.is_active = 0;
-          entity.last_updated_by = user.id;
-          entity.last_updated_date = new Date();
-          savePictures.push(await this._evidenceRepository.save(entity));
-        }
-      };
-
-      return {
-        savePictures
-      };
+      return { savePictures };
 
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
@@ -288,15 +281,13 @@ export class InnovationPathwayStepFourService {
   }
 
   async saveMaterials(resultId: number, user: TokenDto, saveStepFourDto: SaveStepFour, version: Version) {
-    const id: number = +resultId;
+    const id = +resultId;
     try {
-      const allEvidence: Evidence[] = await this._evidenceRepository.getMaterials(+id);
+      const allEvidence = await this._evidenceRepository.getMaterials(id);
       const existingMaterials = allEvidence.map(e => e.link);
       const existingIds = allEvidence.map(e => e.id);
-
-      const ipsrMaterials: any[] = saveStepFourDto.ipsr_materials;
-
-      if (!ipsrMaterials?.length) {
+      const ipsrMaterials = saveStepFourDto.ipsr_materials;
+      if (!ipsrMaterials.length) {
         for (const e of existingIds) {
           await this._evidenceRepository.update(e, {
             is_active: 0,
@@ -304,32 +295,39 @@ export class InnovationPathwayStepFourService {
             last_updated_date: new Date(),
           })
         }
-        throw {
-          message: 'Materials was not found',
-          status: HttpStatus.NOT_FOUND,
+      }
+
+      const saveMaterial = [];
+
+      for (const entity of allEvidence) {
+        if (ipsrMaterials.find(ip => ip.link === entity.link)) {
+          if (entity.is_active === 0) {
+            entity.is_active = 1;
+            entity.last_updated_by = user.id;
+            entity.last_updated_date = new Date();
+            saveMaterial.push(await this._evidenceRepository.save(entity));
+          }
+        } else {
+          if (entity.is_active === 1) {
+            entity.is_active = 0;
+            entity.last_updated_by = user.id;
+            entity.last_updated_date = new Date();
+            saveMaterial.push(await this._evidenceRepository.save(entity));
+          }
         }
       }
 
-      const materialsToActive = allEvidence.filter(
-        ae =>
-          ipsrMaterials.find(e => e.link === ae.link) &&
-          ae.is_active === 0
-      );
+      for (const entity of ipsrMaterials) {
+        const link = entity.link;
+        if (!link) {
+          return {
+            response: { valid: false },
+            message: 'Please provide a link',
+            status: HttpStatus.NOT_ACCEPTABLE,
+          }
+        }
 
-      const materialsToInactive = allEvidence.filter(
-        ae =>
-          !ipsrMaterials.find(e => e.link === ae.link) &&
-          ae.is_active === 1
-      );
-
-      const materialsToSave = ipsrMaterials?.filter(
-        ip => !existingMaterials.includes(ip.link)
-      );
-
-      let saveMaterials: Evidence[] = [];
-
-      if (materialsToSave?.length > 0) {
-        for (const entity of materialsToSave) {
+        if (!existingMaterials.includes(entity.link)) {
           const newMaterials = new Evidence();
           newMaterials.result_id = resultId;
           newMaterials.link = entity.link;
@@ -339,31 +337,11 @@ export class InnovationPathwayStepFourService {
           newMaterials.creation_date = new Date();
           newMaterials.last_updated_by = user.id;
           newMaterials.last_updated_date = new Date();
-          saveMaterials.push(await this._evidenceRepository.save(newMaterials));
+          saveMaterial.push(await this._evidenceRepository.save(newMaterials));
         }
-      };
+      }
 
-      if (materialsToActive?.length > 0) {
-        for (const entity of materialsToActive) {
-          entity.is_active = 1;
-          entity.last_updated_by = user.id;
-          entity.last_updated_date = new Date();
-          saveMaterials.push(await this._evidenceRepository.save(entity));
-        }
-      };
-
-      if (materialsToInactive?.length > 0) {
-        for (const entity of materialsToInactive) {
-          entity.is_active = 0;
-          entity.last_updated_by = user.id;
-          entity.last_updated_date = new Date();
-          saveMaterials.push(await this._evidenceRepository.save(entity));
-        }
-      };
-
-      return {
-        saveMaterials
-      };
+      return { saveMaterial };
 
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
@@ -375,6 +353,7 @@ export class InnovationPathwayStepFourService {
     try {
       const allEvidence: Evidence[] = await this._evidenceRepository.getWokrshop(+id);
       const existingWorkshop = allEvidence.map(e => e.link);
+      console.log("🚀 ~ file: innovation-pathway-step-four.service.ts:356 ~ InnovationPathwayStepFourService ~ saveWorkshop ~ existingWorkshop:", existingWorkshop)
       const existingIds = allEvidence.map(e => e.id);
 
       const ipsrWorkshop: string = saveStepFourDto.link_workshop_list;
@@ -388,7 +367,7 @@ export class InnovationPathwayStepFourService {
           })
         }
         throw {
-          message: 'Materials was not found',
+          message: 'Workshop was not found',
           status: HttpStatus.NOT_FOUND,
         }
       }
@@ -422,6 +401,7 @@ export class InnovationPathwayStepFourService {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
+
 
   async saveInitiativeInvestment(resultId: number, user: TokenDto, saveStepFourDto: SaveStepFour, version: Version) {
     try {
@@ -599,7 +579,7 @@ export class InnovationPathwayStepFourService {
     }
   }
 
-  async saveBilaterals(resultId: number,user: TokenDto, bltl: donorInterfaceToc) {
+  async saveBilaterals(resultId: number, user: TokenDto, bltl: donorInterfaceToc) {
     try {
       const vTemp = await this._versionsService.findBaseVersion();
       if (vTemp.status >= 300) {
