@@ -22,7 +22,6 @@ export class StepN1InstitutionsComponent {
     return index < 0 ? false : true;
   }
   onSelectDelivery(option, deliveryId) {
-    // console.log('onSelectDelivery');
     if (option?.deliveries?.find((deliveryId: any) => deliveryId == 4) && deliveryId != 4) {
       return;
     }

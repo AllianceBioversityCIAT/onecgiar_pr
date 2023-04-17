@@ -22,7 +22,8 @@ export class StepN4PartnerCoInvestmentTableComponent implements OnInit {
   onSelectDelivery(option, deliveryId) {
     // console.log('onSelectDelivery');
     if (option?.deliveries?.find((deliveryId: any) => deliveryId == 4) && deliveryId != 4) {
-      return;
+      const index = option?.deliveries?.indexOf(4) == undefined ? -1 : option?.deliveries?.indexOf(4);
+      option?.deliveries.splice(index, 1);
     }
     const index = option?.deliveries?.indexOf(deliveryId) == undefined ? -1 : option?.deliveries?.indexOf(deliveryId);
     if (deliveryId == 4 && index < 0) option.deliveries = [];
