@@ -329,6 +329,14 @@ export class ResultInnovationPackageService {
       const retriveAAOutcome = await this.retrievedAAOutcome(CreateResultInnovationPackageDto.initiative_id, user.id, resultByInnivationPackage, vrs.id);
       const retrievedImpactArea = await this.retrievedImpactArea(result.id, user.id, resultByInnivationPackage, vrs.id);
 
+      await this._resultInnovationPackageRepository.update(
+        newResultInnovationPackage.result_innovation_package_id,
+        {
+          relevant_country_id: await this.defaultRelevantCountry(result.geographic_scope_id, result.id),
+          regional_leadership_id: result.geographic_scope_id == 1?3:null,
+          regional_integrated_id: result.geographic_scope_id == 1?3:null
+        }
+      )
 
 
       return {
@@ -349,6 +357,19 @@ export class ResultInnovationPackageService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  async defaultRelevantCountry(geoscope: number, resultId: number) {
+    if ([1, 2, 3, 4].includes(geoscope)) {
+      if ([1, 2].includes(geoscope)) {
+        return 3;
+      }
+      if ([3, 4].includes(geoscope)) {
+        const rc = await this._resultCountryRepository.findOne({ where: { result_id: resultId, is_active: true } });
+        return rc ? 3 : null;
+      }
+    }
+    return null;
   }
 
   async retrievedAAOutcome(initId: number, user: number, resultByIpId: number, version: number) {
