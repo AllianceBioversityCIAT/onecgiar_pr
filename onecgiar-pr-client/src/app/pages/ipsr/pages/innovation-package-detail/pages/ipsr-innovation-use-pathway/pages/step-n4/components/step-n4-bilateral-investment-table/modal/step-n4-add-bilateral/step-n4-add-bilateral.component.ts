@@ -46,12 +46,12 @@ export class StepN4AddBilateralComponent implements OnInit {
   }
 
   cleanObject() {
-    // console.log('cleanForm');
-    // this.showForm = false;
-    // // this.partnersRequestBody = new PartnersRequestBody();
-    // setTimeout(() => {
-    //   this.showForm = true;
-    // }, 0);
+    console.log('cleanForm');
+    this.showForm = false;
+    this.biltarealBody = new AddBilateralBody();
+    setTimeout(() => {
+      this.showForm = true;
+    }, 0);
   }
   ngDoCheck(): void {
     this.formIsInvalid = this.api.dataControlSE.someMandatoryFieldIncomplete('.partners-request-container');
