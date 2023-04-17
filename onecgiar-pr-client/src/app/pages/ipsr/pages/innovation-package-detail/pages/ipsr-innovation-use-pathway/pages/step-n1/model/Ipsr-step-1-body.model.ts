@@ -19,7 +19,8 @@ export class Expert {
   last_name: string;
   email: string;
   organization_id: number;
-  expertises_id: number;
+  // expertises_id: number;
+  expertises = [];
   is_active: boolean;
 }
 

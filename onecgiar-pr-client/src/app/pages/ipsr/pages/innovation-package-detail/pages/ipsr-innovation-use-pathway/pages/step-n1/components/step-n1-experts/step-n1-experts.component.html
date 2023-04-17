@@ -30,11 +30,22 @@
             <div>
                 <app-pr-input placeholder="Write some..." label="Email" type="text" [(ngModel)]="this.expert.email">
                 </app-pr-input>
-                <app-pr-select
+
+                <app-pr-multi-select
                     description="What expertises will this expert contribute?* - To design a realistic innovation package, the engagement of a diverse group of experts is recommended. Please consider the following scaling expertises when developing the invitee list for the innovation packaging and scaling readiness assessment workshop"
                     [options]="this.expertisesList" optionLabel="name" optionValue="expertises_id"
-                    placeholder="Select expertises" [(ngModel)]="this.expert.expertises_id">
-                </app-pr-select>
+                    selectedLabel="Expertises(s) selected" placeholder="Select expertises" selectedOptionLabel="name"
+                    [(ngModel)]="this.expert.expertises">
+                </app-pr-multi-select>
+
+                <!-- <app-pr-multi-select *ngIf="body.geo_scope_id == 2" [options]="this.regionsCountriesSE.regionsList"
+                [description]="selectRegionsDescription" label="Select regions" selectedLabel="Regions(s) selected"
+                selectedOptionLabel="name" optionLabel="name" optionValue="id" placeholder="Select regions"
+                [(ngModel)]="body.regions">
+            </app-pr-multi-select> -->
+
+
+
             </div>
         </div>
         <div class="fragment_section_divider"></div>
