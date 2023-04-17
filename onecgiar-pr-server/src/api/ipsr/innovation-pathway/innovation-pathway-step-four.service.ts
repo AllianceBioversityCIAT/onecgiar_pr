@@ -127,7 +127,7 @@ export class InnovationPathwayStepFourService {
         response: {
           ipsr_pictures,
           ipsr_materials,
-          link_workshop_list,
+          link_workshop_list: link_workshop_list.link,
           initiative_expected_investment,
           initiative_unit_time_id: result_ip.initiative_unit_time_id,
           initiative_expected_time: result_ip.initiative_expected_time,
