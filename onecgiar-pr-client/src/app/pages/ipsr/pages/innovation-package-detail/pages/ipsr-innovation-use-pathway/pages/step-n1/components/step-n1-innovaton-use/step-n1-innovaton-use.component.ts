@@ -49,4 +49,14 @@ export class StepN1InnovatonUseComponent {
   addOther() {
     this.body.innovatonUse.measures.push(new Measure());
   }
+  get getAllSubTypes() {
+    const list = [];
+    // console.log(this.body.innovatonUse.organization);
+    this.body.innovatonUse.organization.forEach(resp => {
+      // console.log(resp.institution_sub_type_id);
+      list.push({ code: resp.institution_sub_type_id });
+    });
+    // console.log(list);
+    return list;
+  }
 }

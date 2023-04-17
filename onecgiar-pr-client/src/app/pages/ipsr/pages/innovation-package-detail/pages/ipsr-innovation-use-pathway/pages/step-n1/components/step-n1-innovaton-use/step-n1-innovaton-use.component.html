@@ -61,7 +61,7 @@
                 *ngIf="organizationItem.institution_types_id && !organizationItem.hide && getInstitutionsTypeTreeChildrens(organizationItem.institution_types_id)?.length"
                 [options]="getInstitutionsTypeTreeChildrens(organizationItem.institution_types_id)" label="Sub-type"
                 optionLabel="name" optionValue="code" [(ngModel)]="organizationItem.institution_sub_type_id"
-                placeholder="Select Sub-type">
+                [disableOptions]="getAllSubTypes" placeholder="Select Sub-type">
             </app-pr-select>
             <app-pr-input placeholder="Write some..." label="How many" type="text" [required]="false"
                 [(ngModel)]="this.organizationItem.how_many">
