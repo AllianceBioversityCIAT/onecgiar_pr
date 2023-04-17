@@ -1,3 +1,5 @@
+<app-pr-field-header label="Expected partner co-investment (from own resources) in Innovation Package in next"
+    [required]="false"></app-pr-field-header>
 <table>
     <tr>
         <th>Partner</th>
@@ -5,7 +7,7 @@
         <th>In-cash USD investment</th>
         <th></th>
     </tr>
-    <tr *ngFor="let option of list; let i=index">
+    <tr *ngFor="let option of this.body.institutions_expected_investment; let i=index">
         <td>
             Partner {{i+1}}
             <app-pr-field-header label="Delivery type"></app-pr-field-header>
@@ -17,21 +19,21 @@
 
             <div class="deliveries" [ngClass]="{'readOnly_deliveries': this.rolesSE.readOnly}">
                 <div class="delivery"
-                    *ngIf="this.rolesSE.readOnly ? validateDeliverySelection(option?.deliveries,1) : true"
-                    [ngClass]="{'active': validateDeliverySelection(option?.deliveries,1)}"
-                    (click)="onSelectDelivery(option,1)">Scaling</div>
+                    *ngIf="this.rolesSE.readOnly ? validateDeliverySelection(option?.institution.deliveries,1) : true"
+                    [ngClass]="{'active': validateDeliverySelection(option?.institution?.deliveries,1)}"
+                    (click)="onSelectDelivery(option?.institution,1)">Scaling</div>
                 <div class="delivery"
-                    *ngIf="this.rolesSE.readOnly ? validateDeliverySelection(option?.deliveries,2) : true"
-                    [ngClass]="{'active': validateDeliverySelection(option?.deliveries,2)}"
-                    (click)="onSelectDelivery(option,2)">Demand</div>
+                    *ngIf="this.rolesSE.readOnly ? validateDeliverySelection(option?.institution?.deliveries,2) : true"
+                    [ngClass]="{'active': validateDeliverySelection(option?.institution?.deliveries,2)}"
+                    (click)="onSelectDelivery(option?.institution,2)">Demand</div>
                 <div class="delivery"
-                    *ngIf="this.rolesSE.readOnly ? validateDeliverySelection(option?.deliveries,3) : true"
-                    [ngClass]="{'active': validateDeliverySelection(option?.deliveries,3)}"
-                    (click)="onSelectDelivery(option,3)">Innovation</div>
+                    *ngIf="this.rolesSE.readOnly ? validateDeliverySelection(option?.institution?.deliveries,3) : true"
+                    [ngClass]="{'active': validateDeliverySelection(option?.institution?.deliveries,3)}"
+                    (click)="onSelectDelivery(option?.institution,3)">Innovation</div>
                 <div class="delivery"
-                    *ngIf="this.rolesSE.readOnly ? validateDeliverySelection(option?.deliveries,4) : true"
-                    [ngClass]="{'active': validateDeliverySelection(option?.deliveries,4)}"
-                    (click)="onSelectDelivery(option,4)">Other</div>
+                    *ngIf="this.rolesSE.readOnly ? validateDeliverySelection(option?.institution?.deliveries,4) : true"
+                    [ngClass]="{'active': validateDeliverySelection(option?.institution?.deliveries,4)}"
+                    (click)="onSelectDelivery(option?.institution,4)">Other</div>
 
                 <!-- <div class="info_button" (click)="showInfo = true">
 
@@ -49,16 +51,18 @@
 
         </td>
         <td>
-            <app-pr-input placeholder="Write some..." type="number" [required]="false">
+            <app-pr-input placeholder="Write some..." type="number" [required]="false"
+                [(ngModel)]="option.budget.in_kind">
             </app-pr-input>
         </td>
         <td>
-            <app-pr-input placeholder="Write some..." type="number" [required]="false">
+            <app-pr-input placeholder="Write some..." type="number" [required]="false"
+                [(ngModel)]="option.budget.in_cash">
             </app-pr-input>
         </td>
         <td>
             <app-pr-radio-button optionLabel="name" optionValue="id"
-                [options]="[{name:'This is yet to be determined',id:true}]">
+                [options]="[{name:'This is yet to be determined',id:true}]" [(ngModel)]="option.budget.is_determined">
             </app-pr-radio-button>
         </td>
     </tr>

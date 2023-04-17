@@ -1,5 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { RolesService } from 'src/app/shared/services/global/roles.service';
+import { InstitutionsexpectedinvestmentStep4, IpsrStep4Body } from '../../model/Ipsr-step-4-body.model';
 
 @Component({
   selector: 'app-step-n4-partner-co-investment-table',
@@ -7,7 +8,8 @@ import { RolesService } from 'src/app/shared/services/global/roles.service';
   styleUrls: ['./step-n4-partner-co-investment-table.component.scss']
 })
 export class StepN4PartnerCoInvestmentTableComponent implements OnInit {
-  list: any[] = [{}];
+  @Input() body = new IpsrStep4Body();
+
   constructor(public rolesSE: RolesService) {}
 
   ngOnInit(): void {}
@@ -27,6 +29,6 @@ export class StepN4PartnerCoInvestmentTableComponent implements OnInit {
     index < 0 ? option?.deliveries.push(deliveryId) : option?.deliveries.splice(index, 1);
   }
   addItem() {
-    this.list.push({});
+    this.body.institutions_expected_investment.push(new InstitutionsexpectedinvestmentStep4());
   }
 }
