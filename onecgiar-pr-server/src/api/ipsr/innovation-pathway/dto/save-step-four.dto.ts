@@ -39,9 +39,9 @@ export interface InitiativeExpectedInvestment {
     is_determined: boolean;
 }
 export interface BilateralExpectedInvestment {
-    npp_id: number;
-    current_year: number;
-    next_year: number;
+    non_pooled_projetct_id: number;
+    in_kind: number;
+    in_cash: number;
     is_determined: boolean;
 }
 export interface InstitutionsExpectedInvestment {

@@ -23,6 +23,7 @@ import { ResultsByInstitution } from '../../results/results_by_institutions/enti
 import { NonPooledProject } from '../../results/non-pooled-projects/entities/non-pooled-project.entity';
 import { ResultByInstitutionsByDeliveriesType } from '../../results/result-by-institutions-by-deliveries-type/entities/result-by-institutions-by-deliveries-type.entity';
 import { ResultInstitutionsBudget } from '../../results/result_budget/entities/result_institutions_budget.entity';
+import { log } from 'console';
 
 @Injectable()
 export class InnovationPathwayStepFourService {
@@ -140,7 +141,7 @@ export class InnovationPathwayStepFourService {
           initiative_expected_investment,
           initiative_unit_time_id: result_ip.initiative_unit_time_id,
           initiative_expected_time: result_ip.initiative_expected_time,
-          bilateral_unit_time_id: result_ip.obj_bilateral_unit_time_id,
+          bilateral_unit_time_id: result_ip.bilateral_unit_time_id,
           bilateral_expected_time: result_ip.bilateral_expected_time,
           partner_unit_time_id: result_ip.partner_unit_time_id,
           partner_expected_time: result_ip.partner_expected_time,
@@ -465,11 +466,12 @@ export class InnovationPathwayStepFourService {
         } = saveStepFourDto;
 
         bei.forEach(async i => {
+          
           const npp = await this._nonPooledProjectRepository.findOne({
             where: {
               results_id: resultId,
               is_active: true,
-              id: i.npp_id
+              id: i.non_pooled_projetct_id
             }
           });
 
@@ -483,16 +485,16 @@ export class InnovationPathwayStepFourService {
 
             if (rbb) {
               await this._resultBilateralBudgetRepository.update(rbb.non_pooled_projetct_budget_id, {
-                in_kind: i.current_year,
-                in_cash: i.next_year,
+                in_kind: i.in_kind,
+                in_cash: i.in_cash,
                 is_determined: i.is_determined,
                 last_updated_by: user.id,
               });
             } else {
               await this._resultBilateralBudgetRepository.save({
                 non_pooled_projetct_id: npp.id,
-                in_kind: i.current_year,
-                in_cash: i.next_year,
+                in_kind: i.in_kind,
+                in_cash: i.in_cash,
                 is_determined: i.is_determined,
                 version_id: version.id,
                 created_by: user.id,
