@@ -49,4 +49,15 @@ export class StepN3CurrentUseComponent {
   addOther() {
     this.body.innovatonUse.measures.push(new MeasureN3());
   }
+
+  get getAllSubTypes() {
+    const list = [];
+    // console.log(this.body.innovatonUse.organization);
+    this.body.innovatonUse.organization.forEach(resp => {
+      // console.log(resp.institution_sub_type_id);
+      list.push({ code: resp.institution_sub_type_id });
+    });
+    // console.log(list);
+    return list;
+  }
 }
