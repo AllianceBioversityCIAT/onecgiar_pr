@@ -1,3 +1,22 @@
+<div class="ipsr-sub-title">Anticipated investment in improving the scaling readiness of the innovation package</div>
+
+<div class="unit_of_time_container">
+    <div>
+        <app-pr-field-header
+            label="Expected CGIAR Initiative investment in improving the scaling readiness of the Innovation Package in next "
+            [required]="false"></app-pr-field-header>
+    </div>
+    <div>
+        <app-pr-input placeholder="Number" type="number" [required]="false">
+        </app-pr-input>
+    </div>
+    <div>
+        <app-pr-select [options]="[]" optionLabel="id" optionValue="value" placeholder="Select">
+        </app-pr-select>
+    </div>
+</div>
+
+
 <table>
     <tr>
         <th>Initiative</th>
@@ -5,18 +24,19 @@
         <th>Next year</th>
         <th></th>
     </tr>
-    <tr *ngFor="let item of [1,1,1,1]">
-        <td>INIT-18 - Asian Mega-Deltas (Lead)</td>
+    <tr *ngFor="let item of this.body.initiative_expected_investment">
+        <td>{{item.obj_result_initiative.obj_initiative.official_code}} -
+            {{item.obj_result_initiative.obj_initiative.name}}</td>
         <td>
-            <app-pr-input placeholder="Write some..." type="number" [required]="false">
+            <app-pr-input [(ngModel)]="item.current_year" placeholder="Write some..." type="number" [required]="false">
             </app-pr-input>
         </td>
         <td>
-            <app-pr-input placeholder="Write some..." type="number" [required]="false">
+            <app-pr-input [(ngModel)]="item.next_year" placeholder="Write some..." type="number" [required]="false">
             </app-pr-input>
         </td>
         <td>
-            <app-pr-radio-button optionLabel="name" optionValue="id"
+            <app-pr-radio-button [(ngModel)]="item.is_determined" optionLabel="name" optionValue="id"
                 [options]="[{name:'This is yet to be determined',id:true}]">
             </app-pr-radio-button>
         </td>
