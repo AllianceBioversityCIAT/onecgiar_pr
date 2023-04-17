@@ -517,12 +517,12 @@ export class InnovationPathwayStepFourService {
         const { institutions_expected_investment: iei } = saveStepFourDto;
 
         iei.forEach(async (el) => {
-          const { budget } = el;
-          budget.map(async i => {
-            if (!el?.institution?.is_active) {
-              await this._resultByInstitutionsRepository.update(el.institution.id, { is_active: false });
-              await this._resultInstitutionsBudgetRepository.update(i?.result_institutions_budget_id, { is_active: false });
-            } else {
+          if (!el?.institution?.is_active) {
+            await this._resultByInstitutionsRepository.update(el.institution.id, { is_active: false });
+            await this._resultInstitutionsBudgetRepository.update({ result_institution_id: el?.institution?.id }, { is_active: false });
+          } else {
+            const { budget } = el;
+            budget.map(async i => {
               await this.saveDeliveries(el.institution, el.institution.deliveries, user.id, version);
               let existBud: ResultInstitutionsBudget = null;
               if (i?.result_institutions_budget_id) {
@@ -551,9 +551,10 @@ export class InnovationPathwayStepFourService {
                   version_id: version.id,
                   created_by: user.id,
                 })
+
               }
-            }
-          })
+            })
+          }
         });
       }
     } catch (error) {
