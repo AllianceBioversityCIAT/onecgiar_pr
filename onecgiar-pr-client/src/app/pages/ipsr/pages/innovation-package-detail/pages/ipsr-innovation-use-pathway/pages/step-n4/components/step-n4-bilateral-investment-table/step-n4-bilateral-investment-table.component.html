@@ -1,3 +1,5 @@
+<app-pr-field-header label="Expected CGIAR Bilateral investments in Innovation Package in next"
+    [required]="false"></app-pr-field-header>
 <table>
     <tr>
         <th>Bilateral</th>
@@ -5,19 +7,19 @@
         <th>In-cash USD investment</th>
         <th></th>
     </tr>
-    <tr *ngFor="let item of list; let i=index">
+    <tr *ngFor="let item of this.body.bilateral_expected_investment; let i=index">
         <td>Biltateral {{i+1}}</td>
         <td>
-            <app-pr-input placeholder="Write some..." type="number" [required]="false">
+            <app-pr-input placeholder="Write some..." type="number" [required]="false" [(ngModel)]="this.item.in_kind">
             </app-pr-input>
         </td>
         <td>
-            <app-pr-input placeholder="Write some..." type="number" [required]="false">
+            <app-pr-input placeholder="Write some..." type="number" [required]="false" [(ngModel)]="this.item.in_cash">
             </app-pr-input>
         </td>
         <td>
             <app-pr-radio-button optionLabel="name" optionValue="id"
-                [options]="[{name:'This is yet to be determined',id:true}]">
+                [options]="[{name:'This is yet to be determined',id:true}]" [(ngModel)]="item.is_determined">
             </app-pr-radio-button>
         </td>
     </tr>

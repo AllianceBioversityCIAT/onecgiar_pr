@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
+import { BilateralexpectedinvestmentStep4, IpsrStep4Body } from '../../model/Ipsr-step-4-body.model';
 
 @Component({
   selector: 'app-step-n4-bilateral-investment-table',
@@ -6,13 +7,13 @@ import { Component, OnInit } from '@angular/core';
   styleUrls: ['./step-n4-bilateral-investment-table.component.scss']
 })
 export class StepN4BilateralInvestmentTableComponent implements OnInit {
-  list: any[] = [{}];
+  @Input() body = new IpsrStep4Body();
 
   constructor() {}
 
   ngOnInit(): void {}
 
   addItem() {
-    this.list.push({});
+    this.body.bilateral_expected_investment.push(new BilateralexpectedinvestmentStep4());
   }
 }
