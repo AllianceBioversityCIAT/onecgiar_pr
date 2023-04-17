@@ -146,7 +146,8 @@ export class InnovationPathwayStepFourService {
           partner_unit_time_id: result_ip.partner_unit_time_id,
           partner_expected_time: result_ip.partner_expected_time,
           bilateral_expected_investment,
-          institutions_expected_investment
+          institutions_expected_investment,
+          is_result_ip_published: result_ip.is_result_ip_published,
         },
         message: 'Successful response',
         status: HttpStatus.OK,
@@ -466,7 +467,7 @@ export class InnovationPathwayStepFourService {
         } = saveStepFourDto;
 
         bei.forEach(async i => {
-          
+
           const npp = await this._nonPooledProjectRepository.findOne({
             where: {
               results_id: resultId,
