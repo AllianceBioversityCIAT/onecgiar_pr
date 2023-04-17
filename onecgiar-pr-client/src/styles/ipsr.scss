@@ -70,3 +70,29 @@
     // bottom: 10px;
     // left: 100px;
 }
+
+.unit_of_time_container {
+    display: flex;
+    // border: 1px solid red;
+    align-items: center;
+    gap: 10px;
+
+    &>div:first-child {
+        width: max-content;
+        // border: 1px solid red;
+        margin-top: -20px;
+        margin-bottom: -7px;
+    }
+
+    &>div:nth-child(2) {
+        width: 100px;
+        // border: 1px solid blue;
+        margin-top: 5px;
+    }
+
+    &>div:nth-child(3) {
+        width: 300px;
+        // border: 1px solid green;
+    }
+
+}

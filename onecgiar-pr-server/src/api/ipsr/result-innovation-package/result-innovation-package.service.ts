@@ -30,6 +30,8 @@ import { ResultByIntitutionsRepository } from '../../../api/results/results_by_i
 import { ResultByIntitutionsTypeRepository } from '../../../api/results/results_by_institution_types/result_by_intitutions_type.repository';
 import { resultValidationRepository } from '../../../api/results/results-validation-module/results-validation-module.repository';
 import { ResultIpSdgTargetRepository } from '../innovation-pathway/repository/result-ip-sdg-targets.repository';
+import { ResultInitiativeBudgetRepository } from '../../../api/results/result_budget/repositories/result_initiative_budget.repository';
+import { UnitTimeRepository } from './repositories/unit_time.repository';
 
 @Injectable()
 export class ResultInnovationPackageService {
@@ -56,7 +58,22 @@ export class ResultInnovationPackageService {
     private readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
     private readonly _resultByIntitutionsTypeRepository: ResultByIntitutionsTypeRepository,
     private readonly _resultValidationRepository: resultValidationRepository,
+    protected readonly _resultInitiativesBudgetRepository: ResultInitiativeBudgetRepository,
+    protected readonly _unitTimeRepository: UnitTimeRepository,
   ) { }
+
+  async findUnitTime() {
+    try {
+      const unit_time = await this._unitTimeRepository.find();
+      return {
+        response: unit_time,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
 
   async findRelevantCountry() {
     try {
@@ -258,6 +275,14 @@ export class ResultInnovationPackageService {
         last_updated_by: user.id
       });
 
+      const resultByInitiativesId = newInnovationByInitiative.id;
+      const newresultInitiativeBudget = await this._resultInitiativesBudgetRepository.save({
+        result_initiative_id: resultByInitiativesId,
+        version_id: vrs.id,
+        created_by: user.id,
+        last_updated_by: user.id,
+      });
+
       const newResultInnovationPackage = await this._resultInnovationPackageRepository.save({
         result_innovation_package_id: newResult,
         version_id: vrs.id,
@@ -312,6 +337,7 @@ export class ResultInnovationPackageService {
           retriveAAOutcome,
           retrievedImpactArea,
           newInnovationByInitiative,
+          newresultInitiativeBudget,
           newResultInnovationPackage,
           newInnovationByResult,
           newInnovationRegions,
@@ -412,18 +438,10 @@ export class ResultInnovationPackageService {
         }
       }
 
-      if (req.lead_contact_person === '' || req.lead_contact_person === null) {
-        return {
-          response: { valid: false },
-          message: 'Please add a lead contact person',
-          status: HttpStatus.BAD_REQUEST,
-        };
-      }
-
       const updateResult = await this._resultRepository.update(resultId, {
         title: req.title,
-        description: req.description || resultExist.description,
-        lead_contact_person: req.lead_contact_person,
+        description: req?.description,
+        lead_contact_person: req?.lead_contact_person,
         gender_tag_level_id: req.gender_tag_level_id,
         climate_change_tag_level_id: req.climate_change_tag_level_id,
         is_krs: req.is_krs,

@@ -78,4 +78,12 @@ export class ResultInnovationPackageController {
 
     throw new HttpException({ message, response }, status);
   }
+
+  @Get('unit-time')
+  async findUnitTime() {
+    const { message, response, status } =
+      await this.resultInnovationPackageService.findUnitTime();
+
+    throw new HttpException({ message, response }, status);
+  }
 }

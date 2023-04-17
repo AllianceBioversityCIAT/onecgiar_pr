@@ -5,6 +5,7 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -12,6 +13,7 @@ import { Result } from '../../entities/result.entity';
 import { InitiativeRole } from '../../initiative_roles/entities/initiative_role.entity';
 import { Version } from '../../versions/entities/version.entity';
 import { ClarisaInitiative } from '../../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
+import { ResultInitiativeBudget } from '../../result_budget/entities/result_initiative_budget.entity';
 
 @Entity()
 export class ResultsByInititiative {
@@ -110,11 +112,14 @@ export class ResultsByInititiative {
     name: 'last_updated_by',
   })
   obj_last_updated!: User;
-
+  
   @UpdateDateColumn({
     name: 'last_updated_date',
     type: 'timestamp',
     nullable: true,
   })
   last_updated_date!: Date;
+  
+  @OneToMany(() => ResultInitiativeBudget, rib => rib.obj_result_initiative)
+  obj_result_initiative_array: ResultInitiativeBudget[];
 }
