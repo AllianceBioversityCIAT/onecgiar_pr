@@ -74,6 +74,8 @@ export class Actor {
   men: number;
   men_youth: number;
   is_active: boolean;
+  women_non_youth: any;
+  men_non_youth: any;
 }
 
 interface SdgTarget {

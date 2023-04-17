@@ -27,7 +27,7 @@
                     [(ngModel)]="this.actorItem.women_youth">
                 </app-pr-input>
                 <app-pr-input noDataText="Save to calculate" placeholder="Write some..." label="Non-youth" type="number"
-                    [required]="false" [readOnly]="true">
+                    [required]="false" [readOnly]="true" [(ngModel)]="this.actorItem.women_non_youth">
                 </app-pr-input>
             </div>
             <div class="right_content">
@@ -38,7 +38,7 @@
                     [(ngModel)]="this.actorItem.men_youth">
                 </app-pr-input>
                 <app-pr-input noDataText="Save to calculate" placeholder="Write some..." label="Non-youth" type="number"
-                    [required]="false" [readOnly]="true">
+                    [required]="false" [readOnly]="true" [(ngModel)]="this.actorItem.men_non_youth">
                 </app-pr-input>
             </div>
         </div>
