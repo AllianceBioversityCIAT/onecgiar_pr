@@ -1,5 +1,20 @@
-<app-pr-field-header label="Expected CGIAR Bilateral investments in Innovation Package in next"
-    [required]="false"></app-pr-field-header>
+<div class="unit_of_time_container">
+    <div>
+        <app-pr-field-header label="Expected CGIAR Bilateral investments in Innovation Package in next"
+            [required]="false"></app-pr-field-header>
+    </div>
+    <div>
+        <app-pr-input placeholder="Number" type="number" [required]="false"
+            [(ngModel)]="this.body.bilateral_expected_time">
+        </app-pr-input>
+    </div>
+    <div>
+        <app-pr-select [options]="this.manageRipUnitTimeSE.unitTimeList" optionLabel="name" optionValue="unit_time_id"
+            [(ngModel)]="this.body.bilateral_unit_time_id" placeholder="Select">
+        </app-pr-select>
+    </div>
+</div>
+
 <table>
     <tr>
         <th>Bilateral</th>

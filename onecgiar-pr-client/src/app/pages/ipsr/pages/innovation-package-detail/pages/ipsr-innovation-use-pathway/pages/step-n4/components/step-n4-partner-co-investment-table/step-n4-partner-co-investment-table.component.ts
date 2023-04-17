@@ -1,6 +1,7 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { RolesService } from 'src/app/shared/services/global/roles.service';
 import { InstitutionsexpectedinvestmentStep4, IpsrStep4Body } from '../../model/Ipsr-step-4-body.model';
+import { ManageRipUnitTimeService } from '../../services/manage-rip-unit-time.service';
 
 @Component({
   selector: 'app-step-n4-partner-co-investment-table',
@@ -10,7 +11,7 @@ import { InstitutionsexpectedinvestmentStep4, IpsrStep4Body } from '../../model/
 export class StepN4PartnerCoInvestmentTableComponent implements OnInit {
   @Input() body = new IpsrStep4Body();
 
-  constructor(public rolesSE: RolesService) {}
+  constructor(public rolesSE: RolesService, public manageRipUnitTimeSE: ManageRipUnitTimeService) {}
 
   ngOnInit(): void {}
   validateDeliverySelection(deliveries, deliveryId) {

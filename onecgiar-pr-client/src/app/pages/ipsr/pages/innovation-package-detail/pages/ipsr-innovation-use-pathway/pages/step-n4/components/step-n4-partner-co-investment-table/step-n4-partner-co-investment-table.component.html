@@ -1,5 +1,20 @@
-<app-pr-field-header label="Expected partner co-investment (from own resources) in Innovation Package in next"
-    [required]="false"></app-pr-field-header>
+<div class="unit_of_time_container">
+    <div>
+        <app-pr-field-header label="Expected partner co-investment (from own resources) in Innovation Package in next"
+            [required]="false"></app-pr-field-header>
+    </div>
+    <div>
+        <app-pr-input placeholder="Number" type="number" [required]="false"
+            [(ngModel)]="this.body.partner_expected_time">
+        </app-pr-input>
+    </div>
+    <div>
+        <app-pr-select [options]="this.manageRipUnitTimeSE.unitTimeList" optionLabel="name" optionValue="unit_time_id"
+            [(ngModel)]="this.body.partner_unit_time_id" placeholder="Select">
+        </app-pr-select>
+    </div>
+</div>
+
 <table>
     <tr>
         <th>Partner</th>
@@ -52,17 +67,18 @@
         </td>
         <td>
             <app-pr-input placeholder="Write some..." type="number" [required]="false"
-                [(ngModel)]="option.budget.in_kind">
+                [(ngModel)]="option.budget[0].in_kind">
             </app-pr-input>
         </td>
         <td>
             <app-pr-input placeholder="Write some..." type="number" [required]="false"
-                [(ngModel)]="option.budget.in_cash">
+                [(ngModel)]="option.budget[0].in_cash">
             </app-pr-input>
         </td>
         <td>
             <app-pr-radio-button optionLabel="name" optionValue="id"
-                [options]="[{name:'This is yet to be determined',id:true}]" [(ngModel)]="option.budget.is_determined">
+                [options]="[{name:'This is yet to be determined',id:true}]"
+                [(ngModel)]="option.budget[0].is_determined">
             </app-pr-radio-button>
         </td>
     </tr>

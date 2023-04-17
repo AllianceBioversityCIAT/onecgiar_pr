@@ -1,5 +1,6 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { BilateralexpectedinvestmentStep4, IpsrStep4Body } from '../../model/Ipsr-step-4-body.model';
+import { ManageRipUnitTimeService } from '../../services/manage-rip-unit-time.service';
 
 @Component({
   selector: 'app-step-n4-bilateral-investment-table',
@@ -10,7 +11,7 @@ export class StepN4BilateralInvestmentTableComponent implements OnInit {
   @Input() body = new IpsrStep4Body();
   showModal = false;
 
-  constructor() {}
+  constructor(public manageRipUnitTimeSE: ManageRipUnitTimeService) {}
 
   ngOnInit(): void {}
 }

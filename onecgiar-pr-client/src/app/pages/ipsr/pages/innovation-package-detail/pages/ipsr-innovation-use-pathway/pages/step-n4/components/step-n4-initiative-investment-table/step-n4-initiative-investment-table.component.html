@@ -7,11 +7,13 @@
             [required]="false"></app-pr-field-header>
     </div>
     <div>
-        <app-pr-input placeholder="Number" type="number" [required]="false">
+        <app-pr-input placeholder="Number" type="number" [required]="false"
+            [(ngModel)]="this.body.initiative_expected_time">
         </app-pr-input>
     </div>
     <div>
-        <app-pr-select [options]="[]" optionLabel="id" optionValue="value" placeholder="Select">
+        <app-pr-select [options]="this.manageRipUnitTimeSE.unitTimeList" optionLabel="name" optionValue="unit_time_id"
+            [(ngModel)]="this.body.initiative_unit_time_id" placeholder="Select">
         </app-pr-select>
     </div>
 </div>
