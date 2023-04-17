@@ -249,7 +249,6 @@ export class ResultInnovationPackageService {
       const newInnovationHeader = await this._resultRepository.save({
         result_code: last_code + 1,
         title: innovationTitle,
-        description: result.description,
         reported_year_id: result.reported_year_id,
         result_level_id: result.result_level_id,
         result_type_id: 10,
@@ -505,7 +504,6 @@ export class ResultInnovationPackageService {
 
       const updateResult = await this._resultRepository.update(resultId, {
         title: req.title,
-        description: req?.description,
         lead_contact_person: req?.lead_contact_person,
         gender_tag_level_id: req.gender_tag_level_id,
         climate_change_tag_level_id: req.climate_change_tag_level_id,
