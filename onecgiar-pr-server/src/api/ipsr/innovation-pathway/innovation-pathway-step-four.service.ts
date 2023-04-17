@@ -556,6 +556,10 @@ export class InnovationPathwayStepFourService {
               is_active: true
             }
           );
+          return {
+            message: 'The institution already exists',
+            status: HttpStatus.NOT_ACCEPTABLE
+          }
         } else {
           rbi = await this._resultByInstitutionsRepository.save({
             institution_roles_id: 7,
