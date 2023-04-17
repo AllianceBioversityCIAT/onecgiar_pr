@@ -109,7 +109,7 @@ export class InnovationPathwayStepOneService {
         }
       });
       const innovatonUse = {
-        actors: (await this._resultActorRepository.find({ where: { result_id: result.id, is_active: true }, relations: {obj_actor_type: true} })).map(el => ({ ...el, men_non_youth: el.men - el.men_youth, women_non_youth: el.women - el.women_youth })),
+        actors: (await this._resultActorRepository.find({ where: { result_id: result.id, is_active: true }, relations: { obj_actor_type: true } })).map(el => ({ ...el, men_non_youth: el.men - el.men_youth, women_non_youth: el.women - el.women_youth })),
         measures: await this._resultIpMeasureRepository.find({ where: { result_ip_id: result.id, is_active: true } }),
         organization: (await this._resultByIntitutionsTypeRepository.find({ where: { results_id: result.id, institution_roles_id: 5, is_active: true }, relations: { obj_institution_types: { obj_parent: { obj_parent: true } } } })).map(el => ({ ...el, parent_institution_type_id: el.obj_institution_types?.obj_parent?.obj_parent?.code || null }))
       }
@@ -119,22 +119,22 @@ export class InnovationPathwayStepOneService {
           is_active: true
         }
       });
-      
+
       const resInitLead = await this._resultByInitiativesRepository.findOne({
         where: {
           result_id: result.id,
           is_active: true,
           initiative_role_id: 1
         },
-        relations:{
+        relations: {
           obj_initiative: true
         }
       })
 
-      const coreData = await this._innovationByResultRepository.findOne({where: {result_innovation_package_id: result.id, is_active: true, ipsr_role_id: 1}, relations: {obj_result: true}});
+      const coreData = await this._innovationByResultRepository.findOne({ where: { result_innovation_package_id: result.id, is_active: true, ipsr_role_id: 1 }, relations: { obj_result: true } });
       const scalig_ambition = {
         title: `2024 Scaling Ambition blurb`,
-        body: `By 2024, the ${resInitLead?.obj_initiative?.short_name} and partners will work together with${this.arrayToStringAnd(institutions?.map(el => el['institutions_name']))} to accomplish the use of ${coreData?.obj_result?.title} by ${this.arrayToStringActorsAnd(innovatonUse.actors)} ${geo_scope_id == 1?'':`in ${this.arrayToStringGeoScopeAnd(geo_scope_id, regions, countries)}`} to contribute achieving ${this.arrayToStringAnd(eoiOutcomes?.map(el => el['title']))}.`
+        body: `By 2024, the ${resInitLead?.obj_initiative?.short_name} and partners will work together with${this.arrayToStringAnd(institutions?.map(el => el['institutions_name']))} to accomplish the use of ${coreData?.obj_result?.title} by ${this.arrayToStringActorsAnd(innovatonUse.actors)} ${geo_scope_id == 1 ? '' : `in ${this.arrayToStringGeoScopeAnd(geo_scope_id, regions, countries)}`} to contribute achieving ${this.arrayToStringAnd(eoiOutcomes?.map(el => el['title']))}.`
       };
 
       return {
@@ -166,30 +166,30 @@ export class InnovationPathwayStepOneService {
     }
   }
 
-  arrayToStringAnd(arrayData: any[]){
+  arrayToStringAnd(arrayData: any[]) {
     const count = arrayData?.length;
     const lastElement = arrayData.pop();
-    return count?`${arrayData.toString().replace(/,/g,', ')}${count > 1?' and':''} ${lastElement}`: '<Data not provided>';
+    return count ? `${arrayData.toString().replace(/,/g, ', ')}${count > 1 ? ' and' : ''} ${lastElement}` : '<Data not provided>';
   }
 
-  arrayToStringGeoScopeAnd(geoId: number, r: ResultRegion[], c:ResultCountry[]){
+  arrayToStringGeoScopeAnd(geoId: number, r: ResultRegion[], c: ResultCountry[]) {
     let returnData: string = '';
-    if(geoId == 1){
+    if (geoId == 1) {
       return
-    }else if(geoId == 2){
+    } else if (geoId == 2) {
       returnData = this.arrayToStringAnd(r.map(el => el['name']));
-    }else if(geoId == 3 || geoId == 4){
+    } else if (geoId == 3 || geoId == 4) {
       returnData = this.arrayToStringAnd(c.map(el => el['name']));
-    }else if(geoId == 5){
+    } else if (geoId == 5) {
       returnData = '<Data not provided>';
     }
 
     return returnData;
   }
 
-  arrayToStringActorsAnd(arrayData: ResultActor[]){
+  arrayToStringActorsAnd(arrayData: ResultActor[]) {
     const count = arrayData?.length;
-    if(!count){
+    if (!count) {
       return '<Data not provided>';
     }
     const lastElement = arrayData.pop();
@@ -197,7 +197,7 @@ export class InnovationPathwayStepOneService {
     for (const i of arrayData) {
       actors += `${i.men + i.women} ${i?.obj_actor_type?.name}`
     }
-    return `${actors} ${count > 1?'and ':''}${lastElement.men + lastElement.women} ${lastElement?.obj_actor_type?.name}`;
+    return `${actors} ${count > 1 ? 'and ' : ''}${lastElement.men + lastElement.women} ${lastElement?.obj_actor_type?.name}`;
   }
 
   async updateMain(resultId: number, UpdateInnovationPathwayDto: UpdateInnovationPathwayDto, user: TokenDto) {
@@ -817,25 +817,25 @@ export class InnovationPathwayStepOneService {
         let actorExists: ResultActor = null;
         if (el?.actor_type_id) {
           actorExists = await this._resultActorRepository.findOne({ where: { actor_type_id: el.actor_type_id, result_id: result.id } });
-        }
-
-        if (!actorExists && el?.result_actors_id) {
+        } else if (!actorExists && el?.result_actors_id) {
           actorExists = await this._resultActorRepository.findOne({ where: { result_actors_id: el.result_actors_id, result_id: result.id } });
+        } else if (!actorExists) {
+          actorExists = await this._resultActorRepository.findOne({ where: { actor_type_id: IsNull(), result_id: result.id } });
         }
 
         if (actorExists) {
           await this._resultActorRepository.update(
             actorExists.result_actors_id,
             {
-              actor_type_id: el.actor_type_id,
-              is_active: el.is_active,
-              men: el.men,
-              men_youth: el.men_youth,
-              women: el.women,
-              women_youth: el.women_youth,
+              actor_type_id: this.isNullData(el?.actor_type_id),
+              is_active: el.is_active == undefined ? true : el.is_active,
+              men: this.isNullData(el?.men),
+              men_youth: this.isNullData(el?.men_youth),
+              women: this.isNullData(el?.women),
+              women_youth: this.isNullData(el?.women_youth),
               last_updated_by: user.id
             }
-          )
+          );
         } else {
           await this._resultActorRepository.save({
             actor_type_id: el.actor_type_id,
@@ -848,7 +848,7 @@ export class InnovationPathwayStepOneService {
             created_by: user.id,
             result_id: result.id,
             version_id: version.id
-          })
+          });
         }
       })
     }
@@ -929,5 +929,9 @@ export class InnovationPathwayStepOneService {
         }
       });
     }
+  }
+
+  isNullData(data: any) {
+    return data == undefined ? null : data;
   }
 }
