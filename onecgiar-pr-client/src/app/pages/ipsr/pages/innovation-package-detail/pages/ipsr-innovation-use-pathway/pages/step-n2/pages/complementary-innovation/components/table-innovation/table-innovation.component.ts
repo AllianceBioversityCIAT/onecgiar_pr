@@ -53,6 +53,7 @@ export class TableInnovationComponent implements OnInit {
   }
 
   columnOrder = [
+    { title: 'Result code', attr: 'result_code'},
     { title: 'Title', attr: 'title' , class: 'notCenter' },
     { title: 'Lead', attr: 'initiative_official_code'},
     { title: 'is QAed', attr: 'status' },

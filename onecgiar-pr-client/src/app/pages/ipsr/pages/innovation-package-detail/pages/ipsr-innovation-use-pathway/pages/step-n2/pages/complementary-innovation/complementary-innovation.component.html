@@ -11,7 +11,9 @@
         [required]="false" description="Complementary innovation(s)/ enabler(s)/ solution(s) selected:"></app-pr-field-header>
 
     <div class="core_innovation_selected " *ngFor="let result of this.innovationPackageCreatorBody" style="margin-top: 10px;">
+        
         <div>
+            <strong>{{result.result_code}}</strong> -
             <span style="text-overflow: ellipsis;">{{ result.title.length > 120? result.title.substr(0,120)+"..." : result.title }}</span>
             -
             <strong>{{result.initiative_official_code}}</strong>
