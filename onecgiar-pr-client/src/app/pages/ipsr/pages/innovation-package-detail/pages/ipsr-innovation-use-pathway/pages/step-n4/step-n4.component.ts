@@ -17,6 +17,13 @@ export class StepN4Component implements OnInit {
   ];
   ngOnInit(): void {
     this.getSectionInformation();
+    this.api.dataControlSE.findClassTenSeconds('alert-event-3').then(resp => {
+      try {
+        document.querySelector('.alert-event-3').addEventListener('click', e => {
+          this.api.dataControlSE.showPartnersRequest = true;
+        });
+      } catch (error) {}
+    });
   }
 
   getSectionInformation() {
