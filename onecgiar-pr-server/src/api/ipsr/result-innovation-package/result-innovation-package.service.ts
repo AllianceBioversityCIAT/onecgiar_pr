@@ -32,6 +32,9 @@ import { resultValidationRepository } from '../../../api/results/results-validat
 import { ResultIpSdgTargetRepository } from '../innovation-pathway/repository/result-ip-sdg-targets.repository';
 import { ResultInitiativeBudgetRepository } from '../../../api/results/result_budget/repositories/result_initiative_budget.repository';
 import { UnitTimeRepository } from './repositories/unit_time.repository';
+import { TocResultsRepository } from '../../../toc/toc-results/toc-results.repository';
+import { ResultIpEoiOutcomeRepository } from '../innovation-pathway/repository/result-ip-eoi-outcomes.repository';
+import { ResultIpEoiOutcome } from '../innovation-pathway/entities/result-ip-eoi-outcome.entity';
 
 @Injectable()
 export class ResultInnovationPackageService {
@@ -60,6 +63,8 @@ export class ResultInnovationPackageService {
     private readonly _resultValidationRepository: resultValidationRepository,
     protected readonly _resultInitiativesBudgetRepository: ResultInitiativeBudgetRepository,
     protected readonly _unitTimeRepository: UnitTimeRepository,
+    protected readonly _tocResult: TocResultsRepository,
+    protected readonly _resultIpEoiOutcomesRepository: ResultIpEoiOutcomeRepository,
   ) { }
 
   async findUnitTime() {
@@ -326,6 +331,7 @@ export class ResultInnovationPackageService {
       }
       const newInnovationRegions = await this._resultRegionRepository.save(resultRegions);
       const newInnovationCountries = await this._resultCountryRepository.save(resultCountries);
+      const retrievedEoi = await this.retrievedEoi(CreateResultInnovationPackageDto.initiative_id, user.id, resultByInnivationPackage, vrs.id);
       const retriveAAOutcome = await this.retrievedAAOutcome(CreateResultInnovationPackageDto.initiative_id, user.id, resultByInnivationPackage, vrs.id);
       const retrievedImpactArea = await this.retrievedImpactArea(result.id, user.id, resultByInnivationPackage, vrs.id);
 
@@ -333,8 +339,8 @@ export class ResultInnovationPackageService {
         newResultInnovationPackage.result_innovation_package_id,
         {
           relevant_country_id: await this.defaultRelevantCountry(result.geographic_scope_id, result.id),
-          regional_leadership_id: result.geographic_scope_id == 1?3:null,
-          regional_integrated_id: result.geographic_scope_id == 1?3:null
+          regional_leadership_id: result.geographic_scope_id == 1 ? 3 : null,
+          regional_integrated_id: result.geographic_scope_id == 1 ? 3 : null
         }
       )
 
@@ -370,6 +376,44 @@ export class ResultInnovationPackageService {
       }
     }
     return null;
+  }
+
+  async retrievedEoi(initId: number, user: number, resultByIpId: number, version: number) {
+    try {
+      let saveEoiOutcome: any;
+      const searchEoi = await this._tocResult.find({ where: { inititiative_id: initId, is_active: true, toc_level_id: '3' } });
+
+      if (!searchEoi.length) {
+        return {
+          response: { valid: true },
+          message: 'No End of Initiative Outcomes were found'
+        }
+      }
+
+
+      for (const eoi of searchEoi) {
+        const newEoi = new ResultIpEoiOutcome();
+        newEoi.toc_result_id = eoi.toc_result_id;
+        newEoi.result_by_innovation_package_id = resultByIpId;
+        newEoi.created_by = user;
+        newEoi.last_updated_by = user;
+        newEoi.version_id = version;
+        newEoi.created_date = new Date();
+        newEoi.last_updated_date = new Date();
+        saveEoiOutcome = await this._resultIpEoiOutcomesRepository.save(newEoi);
+      }
+
+      return {
+        response: {
+          saveEoiOutcome
+        },
+        message: 'Successfully created',
+        status: HttpStatus.OK
+      }
+
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
   }
 
   async retrievedAAOutcome(initId: number, user: number, resultByIpId: number, version: number) {
