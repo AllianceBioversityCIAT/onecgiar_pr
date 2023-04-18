@@ -11,7 +11,6 @@ import { Ipsr } from '../../entities/ipsr.entity';
 import { ResultsInnovationPackagesEnablerType } from '../../results-innovation-packages-enabler-type/entities/results-innovation-packages-enabler-type.entity';
 import { ClarisaInnovationReadinessLevel } from '../../../../clarisa/clarisa-innovation-readiness-levels/entities/clarisa-innovation-readiness-level.entity';
 import { UnitTime } from './unit-time.entity';
-
 @Entity('result_innovation_package')
 export class ResultInnovationPackage extends BaseEntity{
     @Column({

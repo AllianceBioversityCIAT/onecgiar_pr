@@ -39,6 +39,9 @@ import { ResultsByInstitutionType } from '../../results/results_by_institution_t
 import { ClarisaInstitutionsTypeRepository } from '../../../clarisa/clarisa-institutions-type/ClariasaInstitutionsType.repository';
 import { ResultByInitiativesRepository } from '../../results/results_by_inititiatives/resultByInitiatives.repository';
 import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
+import { ResultIpExpertisesRepository } from '../innovation-packaging-experts/repositories/result-ip-expertises.repository';
+import { ResultIpExpertises } from '../innovation-packaging-experts/entities/result_ip_expertises.entity';
+import e from 'express';
 
 @Injectable()
 export class InnovationPathwayStepOneService {
@@ -64,6 +67,7 @@ export class InnovationPathwayStepOneService {
     protected readonly _clarisaInstitutionsTypeRepository: ClarisaInstitutionsTypeRepository,
     protected readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
     protected readonly _clarisaInstitutionsRepository: ClarisaInstitutionsRepository,
+    protected readonly _resultIpExpertisesRepository: ResultIpExpertisesRepository
   ) { }
 
   async getStepOne(resultId: number) {
@@ -108,6 +112,19 @@ export class InnovationPathwayStepOneService {
           is_active: true
         }
       });
+
+      await experts.map(async el => {
+        el.expertises = await this._resultIpExpertisesRepository.find({
+          where: {
+            result_ip_expert_id: el.result_ip_expert_id,
+            is_active: true
+          },
+          relations: {
+            obj_expertises: true
+          }
+        })
+      })
+
       const innovatonUse = {
         actors: (await this._resultActorRepository.find({ where: { result_id: result.id, is_active: true }, relations: { obj_actor_type: true } })).map(el => ({ ...el, men_non_youth: el.men - el.men_youth, women_non_youth: el.women - el.women_youth })),
         measures: await this._resultIpMeasureRepository.find({ where: { result_ip_id: result.id, is_active: true } }),
@@ -703,7 +720,7 @@ export class InnovationPathwayStepOneService {
               }
           )
         } else {
-          await this._innovationPackagingExpertRepository.save(
+          innExp = await this._innovationPackagingExpertRepository.save(
             {
               first_name: ex.first_name,
               last_name: ex.last_name,
@@ -718,8 +735,50 @@ export class InnovationPathwayStepOneService {
             }
           )
         }
+
+        await this.saveExpertises(ex.expertises, innExp.result_ip_expert_id, user, v);
       }
     }
+  }
+
+  private async saveExpertises(exps: ResultIpExpertises[], result_ip_expert_id: number, user: TokenDto, v: Version) {
+    await exps.map(async (el) => {
+      let riesEx: ResultIpExpertises = null;
+      if (el?.result_ip_expertises_id) {
+        riesEx = await this._resultIpExpertisesRepository.findOne({
+          where: {
+            result_ip_expertises_id: el?.result_ip_expertises_id
+          }
+        });
+      } else if (el?.expertises_id) {
+        riesEx = await this._resultIpExpertisesRepository.findOne({
+          where: {
+            expertises_id: el.expertises_id,
+            result_ip_expert_id: result_ip_expert_id
+          }
+        });
+      }
+
+      if (riesEx) {
+        await this._resultIpExpertisesRepository.update(
+          riesEx.result_ip_expertises_id,
+          {
+            is_active: el.is_active == undefined?true:el.is_active,
+            expertises_id: el.expertises_id,
+            last_updated_by: user.id
+          }
+        );
+      } else {
+        await this._resultIpExpertisesRepository.save({
+          created_by: user.id,
+          last_updated_by: user.id,
+          expertises_id: el.expertises_id,
+          result_ip_expert_id: result_ip_expert_id,
+          version_id: v.id,
+        });
+      }
+
+    });
   }
 
   private async saveConsensus(result: Result, user: TokenDto, version: Version, rip: CreateResultIPDto) {
