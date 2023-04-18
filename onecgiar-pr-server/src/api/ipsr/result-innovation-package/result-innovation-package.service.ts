@@ -347,6 +347,7 @@ export class ResultInnovationPackageService {
       return {
         response: {
           newInnovationHeader,
+          retrievedEoi,
           retriveAAOutcome,
           retrievedImpactArea,
           newInnovationByInitiative,
