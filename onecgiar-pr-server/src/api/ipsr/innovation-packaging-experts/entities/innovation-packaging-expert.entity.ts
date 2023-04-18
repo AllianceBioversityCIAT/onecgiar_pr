@@ -1,9 +1,10 @@
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
 import { BaseEntity } from '../../../../shared/entities/base-entity';
 import { Expertises } from './expertises.entity';
 import { Version } from '../../../results/versions/entities/version.entity';
 import { ClarisaInstitution } from '../../../../clarisa/clarisa-institutions/entities/clarisa-institution.entity';
 import { Result } from '../../../results/entities/result.entity';
+import { ResultIpExpertises } from './result_ip_expertises.entity';
 
 @Entity('result_ip_expert')
 export class InnovationPackagingExpert extends BaseEntity{
@@ -39,7 +40,8 @@ export class InnovationPackagingExpert extends BaseEntity{
 
     @Column({
         name: 'expertises_id',
-        type: 'bigint'
+        type: 'bigint',
+        nullable: true
     })
     expertises_id: number;
 
@@ -49,7 +51,7 @@ export class InnovationPackagingExpert extends BaseEntity{
     })
     result_id: number;
 
-    @ManyToOne(() => Expertises, e => e.expertises_id)
+    @ManyToOne(() => Expertises, e => e.expertises_id, {nullable: true})
     @JoinColumn({
         name: 'expertises_id'
     })
@@ -72,4 +74,7 @@ export class InnovationPackagingExpert extends BaseEntity{
         name: 'result_id'
     })
     obj_result: Result;
+
+    @OneToMany(() => ResultIpExpertises, ripe => ripe.obj_result_ip_expert)
+    expertises: ResultIpExpertises[];
 }
