@@ -25,6 +25,8 @@ export class StepN1Component implements OnInit {
       this.ipsrStep1Body = response;
       this.ipsrStep1Body.geo_scope_id = response.geo_scope_id == 3 ? 4 : response.geo_scope_id;
       this.coreResult = response?.coreResult;
+
+      this.ipsrStep1Body.actionAreaOutcomes.map(item => (item.full_name = `<strong>${item.outcomeSMOcode}</strong> - ${item.outcomeStatement}`));
     });
   }
   onSaveSection() {

@@ -94,6 +94,8 @@ interface ActionAreaOutcome {
   action_area_outcome_id: number;
   outcomeStatement: string;
   is_active: boolean;
+  full_name: string;
+  outcomeSMOcode: string;
 }
 
 interface EoiOutcome {

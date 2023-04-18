@@ -12,6 +12,7 @@ export class RolesService {
   currentInitiativeRole = null;
   roles: any;
   isAdmin = false;
+  firstValidationOfReadOnly = false;
   restrictions = [
     {
       id: 1,
@@ -75,6 +76,7 @@ export class RolesService {
   async updateRolesListFromLocalStorage() {
     this.roles = JSON.parse(localStorage.getItem('roles'));
     this.getIsAdminValue();
+    this.firstValidationOfReadOnly = true;
   }
 
   async updateRolesList() {
@@ -87,6 +89,7 @@ export class RolesService {
           this.getIsAdminValue();
 
           //?
+          this.firstValidationOfReadOnly = true;
           resolve(response);
         },
         err => {
