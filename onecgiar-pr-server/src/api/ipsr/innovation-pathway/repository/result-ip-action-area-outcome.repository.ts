@@ -55,6 +55,12 @@ export class ResultIpAAOutcomeRepository extends Repository<ResultIpAAOutcome> {
       riaa.action_area_outcome_id,
       (
         SELECT 
+          caao.outcomeSMOcode
+        FROM clarisa_action_area_outcome caao
+        WHERE id = action_area_outcome_id
+      ) AS outcomeSMOcode,
+      (
+        SELECT 
           caao.outcomeStatement
         FROM clarisa_action_area_outcome caao
         WHERE id = action_area_outcome_id
