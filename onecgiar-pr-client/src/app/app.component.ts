@@ -13,7 +13,9 @@ export class AppComponent implements OnInit {
   isProduction = environment.production;
   constructor(public AuthService: AuthService, private rolesSE: RolesService) {}
   ngOnInit(): void {
-    this.AuthService.inLogin = false;
-    this.rolesSE.validateReadOnly();
+    // this.AuthService.inLogin = false;
+    setTimeout(() => {
+      if (!this.AuthService.inLogin) this.rolesSE.validateReadOnly();
+    }, 500);
   }
 }
