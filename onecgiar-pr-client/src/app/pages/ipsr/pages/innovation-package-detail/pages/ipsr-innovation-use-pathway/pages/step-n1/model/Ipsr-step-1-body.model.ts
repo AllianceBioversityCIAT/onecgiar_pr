@@ -54,9 +54,9 @@ class InnovatonUse {
 }
 
 export class Measure {
-  unit_of_measure: string;
-  quantity: number;
-  is_active: boolean;
+  unit_of_measure: string = null;
+  quantity: number = null;
+  is_active: boolean = null;
 }
 
 export class Organization {
