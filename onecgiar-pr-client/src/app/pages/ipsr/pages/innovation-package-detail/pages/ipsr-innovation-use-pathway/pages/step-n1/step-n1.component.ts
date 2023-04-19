@@ -27,6 +27,7 @@ export class StepN1Component implements OnInit {
       this.coreResult = response?.coreResult;
 
       this.ipsrStep1Body.actionAreaOutcomes.map(item => (item.full_name = `<strong>${item.outcomeSMOcode}</strong> - ${item.outcomeStatement}`));
+      this.ipsrStep1Body.sdgTargets.map(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
     });
   }
   onSaveSection() {

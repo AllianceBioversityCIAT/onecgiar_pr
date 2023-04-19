@@ -10,7 +10,7 @@
 
 <div class="sdg_targets_dropdowns">
     <div class="dropdown-50p" *ngFor="let item of sdgTargetLis">
-        <app-pr-multi-select [options]="item?.sdgList" optionLabel="sdg_target" optionValue="id"
+        <app-pr-multi-select [options]="item?.sdgList" optionLabel="full_name" optionValue="id"
             *ngIf="this.currentsdgID ==item?.sdgId" selectedOptionLabel="indicator_statement"
             placeholder="Select SDG Target(s)" [(ngModel)]="this.body.sdgTargets">
         </app-pr-multi-select>
@@ -24,7 +24,7 @@
     <div class="chips_container">
         <div class="pr_chip_selected" *ngFor="let option of this.body.sdgTargets; let i=index"
             [ngClass]="{'is_active_false': false}">
-            <div class="name" [innerHtml]="option?.sdg_target"></div><i class="material-icons-round"
+            <div class="name" [innerHtml]="option?.full_name"></div><i class="material-icons-round"
                 (click)="removeOption(option)">remove_circle
             </i>
         </div>
