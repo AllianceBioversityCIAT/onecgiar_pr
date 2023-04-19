@@ -83,11 +83,15 @@ interface SdgTarget {
   clarisa_sdg_usnd_code: number;
   clarisa_sdg_target_id: number;
   sdg_target: string;
+  full_name: string;
+  sdg_target_code: string;
 }
 
 interface ImpactArea {
   impact_area_indicator_id: number;
   target: string;
+  full_name: string;
+  name: string;
 }
 
 interface ActionAreaOutcome {

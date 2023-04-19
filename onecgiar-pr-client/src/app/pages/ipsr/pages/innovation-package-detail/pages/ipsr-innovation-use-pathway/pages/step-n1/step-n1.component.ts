@@ -20,10 +20,10 @@ export class StepN1Component implements OnInit {
 
   getSectionInformation() {
     this.api.resultsSE.GETInnovationPathwayByStepOneResultId().subscribe(({ response }) => {
-      //console.log(response);
+      
       this.convertOrganizations(response?.innovatonUse?.organization);
       this.ipsrStep1Body = response;
-     //console.log(response);
+     
      
       this.ipsrStep1Body.geo_scope_id = response.geo_scope_id == 3 ? 4 : response.geo_scope_id;
       this.coreResult = response?.coreResult;
@@ -34,10 +34,13 @@ export class StepN1Component implements OnInit {
         this.ipsrStep1Body.innovatonUse.measures.push(oneMessure)
       }
       this.ipsrStep1Body.actionAreaOutcomes.map(item => (item.full_name = `<strong>${item.outcomeSMOcode}</strong> - ${item.outcomeStatement}`));
+      this.ipsrStep1Body.sdgTargets.map(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
+      this.ipsrStep1Body.impactAreas.map(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
+      console.log(this.ipsrStep1Body);
     });
   }
   onSaveSection() {
-    console.log(this.ipsrStep1Body);
+    // console.log(this.ipsrStep1Body);
     this.convertOrganizationsTosave();
     this.api.resultsSE.PATCHInnovationPathwayByStepOneResultId(this.ipsrStep1Body).subscribe((resp: any) => {
       // console.log(resp?.response[0].response);
