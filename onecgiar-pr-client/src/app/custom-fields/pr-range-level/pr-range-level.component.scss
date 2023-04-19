@@ -32,3 +32,16 @@
     }
 
 }
+
+.gray_card {
+    padding: 10px 20px;
+    border-radius: 5px !important;
+
+    .title {
+        font-weight: 700;
+        margin-bottom: 10px;
+        font-size: 1.1em;
+    }
+
+    .description {}
+}

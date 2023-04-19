@@ -8,13 +8,15 @@
 
 <app-pr-field-header label="Innovation Readiness level self-assessment" [required]="false"
     [description]="this.readinessLevelSelfAssessmentText()"></app-pr-field-header>
-<app-pr-range-level optionLabel="name" optionValue="id" [options]="this.rangesOptions"
+<app-pr-range-level optionLabel="name" optionValue="id" [options]="this.rangesOptions" itemTitle="name"
+    itemDescription="definition"
     [(ngModel)]="this.ipsrStep3Body.result_innovation_package.readiness_level_evidence_based"></app-pr-range-level>
 
 <app-pr-field-header label="Innovation use level self-assessment" [required]="false"
     [description]="this.useLevelDelfAssessment()"></app-pr-field-header>
 
-<app-pr-range-level optionLabel="name" optionValue="id" [options]="this.rangesOptions"
+<app-pr-range-level itemTitle="name" itemDescription="definition" optionLabel="name" optionValue="id"
+    [options]="this.rangesOptions"
     [(ngModel)]="this.ipsrStep3Body.result_innovation_package.use_level_evidence_based"></app-pr-range-level>
 
 <div class="step_divider"></div>
@@ -29,7 +31,8 @@
 <app-pr-field-header label="Innovation Readiness level evidence-based" [required]="false"
     [description]="this.useLevelDelfAssessment()"></app-pr-field-header>
 
-<app-pr-range-level optionLabel="name" optionValue="id" [options]="this.rangesOptions"
+<app-pr-range-level itemTitle="name" itemDescription="definition" optionLabel="name" optionValue="id"
+    [options]="this.rangesOptions"
     [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.readiness_level_evidence_based"></app-pr-range-level>
 
 <app-pr-input label="Evidence link" placeholder="Link goes here"
@@ -46,7 +49,8 @@
 <app-pr-field-header label="Innovation use level evidence-based" [required]="false"
     [description]="this.useLevelDelfAssessment()"></app-pr-field-header>
 
-<app-pr-range-level optionLabel="name" optionValue="id" [options]="this.rangesOptions"
+<app-pr-range-level itemTitle="name" itemDescription="definition" optionLabel="name" optionValue="id"
+    [options]="this.rangesOptions"
     [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.use_level_evidence_based"></app-pr-range-level>
 
 <app-pr-input label="Evidence link" placeholder="Link goes here"
