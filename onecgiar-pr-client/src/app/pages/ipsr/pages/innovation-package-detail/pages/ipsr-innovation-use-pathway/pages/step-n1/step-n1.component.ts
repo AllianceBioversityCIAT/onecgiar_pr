@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
-import { IpsrStep1Body, CoreResult } from './model/Ipsr-step-1-body.model';
+import { IpsrStep1Body, CoreResult, Measure } from './model/Ipsr-step-1-body.model';
 import { IpsrDataControlService } from '../../../../../../services/ipsr-data-control.service';
 
 @Component({
@@ -20,12 +20,19 @@ export class StepN1Component implements OnInit {
 
   getSectionInformation() {
     this.api.resultsSE.GETInnovationPathwayByStepOneResultId().subscribe(({ response }) => {
-      // console.log(response);
+      
       this.convertOrganizations(response?.innovatonUse?.organization);
       this.ipsrStep1Body = response;
+     
+     
       this.ipsrStep1Body.geo_scope_id = response.geo_scope_id == 3 ? 4 : response.geo_scope_id;
       this.coreResult = response?.coreResult;
-
+      
+      if (this.ipsrStep1Body.innovatonUse.measures.length == 0) {
+        let oneMessure =  new Measure();
+        oneMessure.unit_of_measure = '# of hectares';
+        this.ipsrStep1Body.innovatonUse.measures.push(oneMessure)
+      }
       this.ipsrStep1Body.actionAreaOutcomes.map(item => (item.full_name = `<strong>${item.outcomeSMOcode}</strong> - ${item.outcomeStatement}`));
       this.ipsrStep1Body.sdgTargets.map(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
       this.ipsrStep1Body.impactAreas.map(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
