@@ -9,6 +9,7 @@ export class DataControlService {
   showPartnersRequest: boolean = false;
   showRetrieveRequest: boolean = false;
   myInitiativesList = [];
+  myInitiativesLoaded = false;
   resultsList: ResultItem[];
   currentResult: any;
   showSectionSpinner = false;

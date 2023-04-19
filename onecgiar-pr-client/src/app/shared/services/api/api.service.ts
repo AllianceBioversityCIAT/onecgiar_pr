@@ -26,6 +26,7 @@ export class ApiService {
         // this.rolesSE.roles = GET_allRolesByUser.response;
         //?
         this.dataControlSE.myInitiativesList = GET_initiativesByUser?.response;
+        this.dataControlSE.myInitiativesLoaded = true;
         this.qaSE.$qaFirstInitObserver?.next();
         this.dataControlSE.myInitiativesList.map(myInit => {
           myInit.role = GET_allRolesByUser?.response?.initiative?.find(initRole => initRole?.initiative_id == myInit?.initiative_id)?.description;
@@ -37,6 +38,7 @@ export class ApiService {
       },
       err => {
         this.resultsListFilterSE.updateMyInitiatives(this.dataControlSE.myInitiativesList);
+        this.dataControlSE.myInitiativesLoaded = true;
       }
     );
   }

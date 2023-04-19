@@ -10,7 +10,7 @@
     </app-toc-initiative-out>
 </div>
 <div class="dropdown-50p">
-    <app-pr-multi-select [options]="this.contributingInitiativesList" label="Contributing CGIAR Initiatives"
+    <app-pr-multi-select [options]="this.getcontributingInitiativesList" label="Contributing CGIAR Initiatives"
         [logicalDeletion]="true" [disableOptions]="this.contributorsBody?.pending_contributing_initiatives"
         selectedLabel="Contributing CGIAR Initiatives" optionLabel="full_name" optionValue="id" [required]="false"
         selectedOptionLabel="full_name" [(ngModel)]="this.contributorsBody.contributing_initiatives"

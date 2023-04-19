@@ -11,9 +11,11 @@ import { RolesService } from './shared/services/global/roles.service';
 export class AppComponent implements OnInit {
   title = 'onecgiar-pr-client';
   isProduction = environment.production;
-  constructor(public AuthService: AuthService, private rolesSE: RolesService) {}
+  constructor(public AuthService: AuthService, public rolesSE: RolesService) {}
   ngOnInit(): void {
-    this.AuthService.inLogin = false;
-    this.rolesSE.validateReadOnly();
+    // this.AuthService.inLogin = false;
+    setTimeout(() => {
+      if (!this.AuthService.inLogin) this.rolesSE.validateReadOnly();
+    }, 500);
   }
 }

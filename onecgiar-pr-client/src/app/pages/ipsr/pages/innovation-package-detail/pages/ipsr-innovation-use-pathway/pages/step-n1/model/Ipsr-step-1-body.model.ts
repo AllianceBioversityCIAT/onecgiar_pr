@@ -83,6 +83,8 @@ interface SdgTarget {
   clarisa_sdg_usnd_code: number;
   clarisa_sdg_target_id: number;
   sdg_target: string;
+  full_name: string;
+  sdg_target_code: string;
 }
 
 interface ImpactArea {
@@ -94,6 +96,8 @@ interface ActionAreaOutcome {
   action_area_outcome_id: number;
   outcomeStatement: string;
   is_active: boolean;
+  full_name: string;
+  outcomeSMOcode: string;
 }
 
 interface EoiOutcome {

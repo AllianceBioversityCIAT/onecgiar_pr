@@ -18,8 +18,10 @@ export class StepN1SdgTargetsComponent {
   GETAllClarisaSdgsTargets() {
     this.api.resultsSE.GETAllClarisaSdgsTargets().subscribe(
       ({ response }) => {
-        // console.log(response);
         this.sdgTargetLis = response;
+        this.sdgTargetLis.forEach(sdg => sdg.sdgList.map(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`)));
+        console.log(this.sdgTargetLis);
+
         // this.mapSdgTargetListDropdowns(response);
       },
       err => {
