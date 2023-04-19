@@ -1,5 +1,5 @@
 <div class="complementary_innovation">
-    <app-pr-field-header label="Complementary innovations/ enablers/ solutions"
+    <app-pr-field-header label="<strong>Complementary innovations/ enablers/ solutions</strong>"
         [required]="false"></app-pr-field-header>
     <div class="toggle_change_buttons">
         <app-pr-button (click)="this.ci.previous()" padding="medium"
@@ -8,7 +8,7 @@
         <app-pr-button (click)="this.ci.next()" padding="medium" text="Next" icon="arrow_circle_right"></app-pr-button>
     </div>
     <app-pr-field-header
-        [label]="'Complementary innovation/ enabler/ solution #'+(this.ci.index+1)+': '+this.body?.result_ip_result_complementary[this.ci?.index]?.obj_result?.title"
+        [label]="'<strong>Complementary innovations/ enablers/ solutions #'+(this.ci.index+1)+':</strong> '+this.body?.result_ip_result_complementary[this.ci?.index]?.obj_result?.title"
         [required]="false"></app-pr-field-header>
 
     <app-pr-field-header label="Innovation Readiness level evidence-based" [required]="false"
