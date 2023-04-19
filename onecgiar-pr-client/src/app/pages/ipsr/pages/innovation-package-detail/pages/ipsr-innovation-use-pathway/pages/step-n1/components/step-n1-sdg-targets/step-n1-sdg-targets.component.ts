@@ -19,8 +19,13 @@ export class StepN1SdgTargetsComponent {
     this.api.resultsSE.GETAllClarisaSdgsTargets().subscribe(
       ({ response }) => {
         this.sdgTargetLis = response;
-        this.sdgTargetLis.forEach(sdg => sdg.sdgList.map(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`)));
-        console.log(this.sdgTargetLis);
+        this.sdgTargetLis.forEach(sdg => {
+          // console.log(sdg);
+          sdg.sdgId = sdg.sdg.usnd_code;
+          sdg.short_name = sdg.sdg.short_name;
+          sdg.sdgList.map(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
+        });
+        // console.log(this.sdgTargetLis);
 
         // this.mapSdgTargetListDropdowns(response);
       },

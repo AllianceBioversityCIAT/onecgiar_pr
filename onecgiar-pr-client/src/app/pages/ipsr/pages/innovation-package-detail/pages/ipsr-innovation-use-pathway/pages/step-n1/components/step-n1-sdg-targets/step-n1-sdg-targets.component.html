@@ -12,7 +12,7 @@
     <div class="dropdown-50p" *ngFor="let item of sdgTargetLis">
         <app-pr-multi-select [options]="item?.sdgList" optionLabel="full_name" optionValue="id"
             *ngIf="this.currentsdgID ==item?.sdgId" selectedOptionLabel="indicator_statement"
-            placeholder="Select SDG Target(s)" [(ngModel)]="this.body.sdgTargets">
+            [placeholder]="'Select ' +item?.short_name+ ' target(s)'" [(ngModel)]="this.body.sdgTargets">
         </app-pr-multi-select>
     </div>
 </div>
