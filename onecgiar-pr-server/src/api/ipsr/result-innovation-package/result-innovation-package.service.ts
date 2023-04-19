@@ -35,6 +35,7 @@ import { UnitTimeRepository } from './repositories/unit_time.repository';
 import { TocResultsRepository } from '../../../toc/toc-results/toc-results.repository';
 import { ResultIpEoiOutcomeRepository } from '../innovation-pathway/repository/result-ip-eoi-outcomes.repository';
 import { ResultIpEoiOutcome } from '../innovation-pathway/entities/result-ip-eoi-outcome.entity';
+import { TocResult } from '../../../toc/toc-results/entities/toc-result.entity';
 
 @Injectable()
 export class ResultInnovationPackageService {
@@ -381,7 +382,7 @@ export class ResultInnovationPackageService {
   async retrievedEoi(initId: number, user: number, resultByIpId: number, version: number) {
     try {
       let saveEoiOutcome: any;
-      const searchEoi = await this._tocResult.find({ where: { inititiative_id: initId, is_active: true, toc_level_id: '3' } });
+      const searchEoi: TocResult[] = await this._tocResult.getEoiIp(initId);
 
       if (!searchEoi.length) {
         return {

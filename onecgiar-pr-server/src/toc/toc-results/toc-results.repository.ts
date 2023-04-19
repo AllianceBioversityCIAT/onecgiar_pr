@@ -294,5 +294,28 @@ export class TocResultsRepository extends Repository<TocResult> {
       };
     }
   }
+
+
+  async getEoiIp(initId: number) {
+    const query = `
+    SELECT
+      *
+    FROM toc_result
+    WHERE inititiative_id = ?
+      AND is_active > 0
+      AND toc_level_id = 3
+    `;
+
+    try {
+      const eoiOutcome: any[] = await this.query(query, [initId]);
+      return eoiOutcome;
+    } catch (error) {
+      throw {
+        message: `[${TocResultsRepository.name}] => getAllTocResults error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
 }
 
