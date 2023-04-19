@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from 'src/app/shared/services/api/api.service';
+import { IpsrDataControlService } from './services/ipsr-data-control.service';
 
 @Component({
   selector: 'app-ipsr',
@@ -7,5 +8,7 @@ import { ApiService } from 'src/app/shared/services/api/api.service';
   styleUrls: ['./ipsr.component.scss']
 })
 export class IpsrComponent {
-  constructor(public api: ApiService) {}
+  constructor(public api: ApiService, private ipsrDataControlSE: IpsrDataControlService) {
+    this.ipsrDataControlSE.inIpsr = true;
+  }
 }
