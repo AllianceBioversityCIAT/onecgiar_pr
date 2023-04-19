@@ -149,6 +149,19 @@ export class AdminPanelRepository {
     left join \`role\` r3 on r3.id = rbu2.\`role\` 
     WHERE
       r.id = ?
+    GROUP  by 
+      s.id,
+      s.status,
+      s.comment,
+      s.created_date,
+      r.id,
+      r.result_code,
+      r.title,
+      u.id,
+      u.first_name,
+      u.last_name,
+      u.email
+    HAVING min(r3.id)
     ORDER BY
     	s.created_date DESC;
     `;
