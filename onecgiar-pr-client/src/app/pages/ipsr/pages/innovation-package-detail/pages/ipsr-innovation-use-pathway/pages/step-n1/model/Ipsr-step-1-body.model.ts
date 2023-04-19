@@ -90,6 +90,8 @@ interface SdgTarget {
 interface ImpactArea {
   impact_area_indicator_id: number;
   target: string;
+  full_name: string;
+  name: string;
 }
 
 interface ActionAreaOutcome {
