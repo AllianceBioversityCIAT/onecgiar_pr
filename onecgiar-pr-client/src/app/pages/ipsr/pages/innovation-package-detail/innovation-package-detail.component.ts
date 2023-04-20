@@ -20,6 +20,9 @@ export class InnovationPackageDetailComponent {
   GETInnovationPackageDetail() {
     this.api.resultsSE.GETInnovationPackageDetail().subscribe(({ response }) => {
       // console.log(response);
+      response.initiative_id = response.inititiative_id;
+      this.api.rolesSE.validateReadOnly(response);
+
       this.ipsrDataControlSE.detailData = response;
     });
   }
