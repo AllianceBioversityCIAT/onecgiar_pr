@@ -10,7 +10,7 @@ export interface PrRoute extends Route {
 
 export const IPSRRouting: PrRoute[] = [
   { prName: '', path: 'creator', loadChildren: () => import('../innovation-package-creator/innovation-package-creator.module').then(m => m.InnovationPackageCreatorModule) },
-  { prName: '', path: 'list', loadChildren: () => import('../innovation-package-list/innovation-package-list.module').then(m => m.InnovationPackageListModule) },
+  { prName: '', path: 'list', loadChildren: () => import('../innovation-package-list-content/innovation-package-list-content.module').then(m => m.InnovationPackageListContentModule) },
   { prName: '', path: 'detail/:id', loadChildren: () => import('../innovation-package-detail/innovation-package-detail.module').then(m => m.InnovationPackageDetailModule) },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'list' }
 ];
@@ -36,3 +36,9 @@ export const ipsrInnovationUsePathwayStep2Routing: PrRoute[] = [
   { prName: 'Basic Info', underConstruction: true, path: 'basic-info', loadChildren: () => import('../innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n2/pages/basic-info/basic-info-routing.module').then(m => m.BasicInfoRoutingModule) },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'complementary-innovation' }
 ];
+
+export const ipsrInnovationPackageListContent: PrRoute[] = [
+  { prName: '', underConstruction: true, path: 'innovation-list', loadChildren: () => import('../innovation-package-list-content/pages/innovation-package-list/innovation-package-list.module').then(m => m.InnovationPackageListModule) },
+  { prName: 'Notifications', path: 'notifications', loadChildren: () => import('../../../results/pages/results-outlet/pages/results-notifications/results-notifications.module').then(m => m.ResultsNotificationsModule) },
+  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'innovation-list' }
+]
