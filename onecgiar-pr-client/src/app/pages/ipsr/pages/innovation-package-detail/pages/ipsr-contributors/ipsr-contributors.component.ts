@@ -17,6 +17,7 @@ export class IpsrContributorsComponent {
   ngOnInit(): void {
     this.getSectionInformation();
     this.requestEvent();
+    this.api.setTitle('Contributors');
   }
 
   getSectionInformation() {

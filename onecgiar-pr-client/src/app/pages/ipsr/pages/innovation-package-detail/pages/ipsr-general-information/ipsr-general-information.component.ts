@@ -16,6 +16,7 @@ export class IpsrGeneralInformationComponent {
     //Called after the constructor, initializing input properties, and the first call to ngOnChanges.
     //Add 'implements OnInit' to the class.
     this.getSectionInformation();
+    this.api.setTitle('General information');
   }
   getSectionInformation() {
     this.ipsrDataControlSE.resultInnovationId;

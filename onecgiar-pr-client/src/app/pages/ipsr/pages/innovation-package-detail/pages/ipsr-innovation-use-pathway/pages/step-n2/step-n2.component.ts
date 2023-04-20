@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { ApiService } from 'src/app/shared/services/api/api.service';
 
 @Component({
   selector: 'app-step-n2',
@@ -6,10 +7,9 @@ import { Component, OnInit } from '@angular/core';
   styleUrls: ['./step-n2.component.scss']
 })
 export class StepN2Component implements OnInit {
-
-  constructor() { }
+  constructor(private api: ApiService) {}
 
   ngOnInit(): void {
+    this.api.setTitle('Step 2');
   }
-  
 }

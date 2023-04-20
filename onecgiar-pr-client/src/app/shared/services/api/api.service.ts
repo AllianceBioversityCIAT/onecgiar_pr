@@ -10,12 +10,13 @@ import { WordCounterService } from '../word-counter.service';
 import { RolesService } from '../global/roles.service';
 import { TocApiService } from './toc-api.service';
 import { QualityAssuranceService } from '../../../pages/quality-assurance/quality-assurance.service';
+import { Title } from '@angular/platform-browser';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ApiService {
-  constructor(public resultsSE: ResultsApiService, public alertsFs: CustomizedAlertsFsService, private qaSE: QualityAssuranceService, public authSE: AuthService, public alertsFe: CustomizedAlertsFeService, public dataControlSE: DataControlService, public resultsListFilterSE: ResultsListFilterService, public wordCounterSE: WordCounterService, public rolesSE: RolesService, public tocApiSE: TocApiService) {}
+  constructor(private titleService: Title, public resultsSE: ResultsApiService, public alertsFs: CustomizedAlertsFsService, private qaSE: QualityAssuranceService, public authSE: AuthService, public alertsFe: CustomizedAlertsFeService, public dataControlSE: DataControlService, public resultsListFilterSE: ResultsListFilterService, public wordCounterSE: WordCounterService, public rolesSE: RolesService, public tocApiSE: TocApiService) {}
 
   updateUserData(callback) {
     if (!this.authSE?.localStorageUser?.id) return;
@@ -78,5 +79,8 @@ export class ApiService {
     } catch (error) {
       console.log(error);
     }
+  }
+  setTitle(title) {
+    this.titleService.setTitle(title);
   }
 }

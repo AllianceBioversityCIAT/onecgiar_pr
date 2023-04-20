@@ -20,6 +20,7 @@ export class StepN3Component implements OnInit {
   ngOnInit(): void {
     this.GETAllClarisaInnovationReadinessLevels();
     this.getSectionInformation();
+    this.api.setTitle('Step 3');
   }
 
   getSectionInformation() {
