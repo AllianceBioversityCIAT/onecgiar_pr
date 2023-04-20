@@ -54,7 +54,7 @@
 </div>
 
 
-<app-add-button name="Add expert" (clickEvent)="addExpert()"></app-add-button>
+<app-add-button name="Add expert" *ngIf="!this.rolesSE.readOnly" (clickEvent)="addExpert()"></app-add-button>
 
 
 <app-pr-radio-button

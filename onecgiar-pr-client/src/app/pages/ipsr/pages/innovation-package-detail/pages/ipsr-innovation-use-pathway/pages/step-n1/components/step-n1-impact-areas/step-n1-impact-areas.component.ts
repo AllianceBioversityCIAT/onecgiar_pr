@@ -18,7 +18,7 @@ export class StepN1ImpactAreasComponent {
     { id: 4, imageRoute: '4', selected: false, color: '#377431' },
     { id: 5, imageRoute: '5', selected: false, color: '#8ebf3e' }
   ];
-  constructor(private api: ApiService) {}
+  constructor(public api: ApiService) {}
   ngOnInit(): void {
     this.GET_AllClarisaImpactAreaIndicators();
   }

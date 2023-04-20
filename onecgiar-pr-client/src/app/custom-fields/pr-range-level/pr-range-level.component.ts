@@ -1,5 +1,6 @@
 import { Component, Input, OnInit, forwardRef } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { RolesService } from 'src/app/shared/services/global/roles.service';
 
 @Component({
   selector: 'app-pr-range-level',
@@ -21,7 +22,7 @@ export class PrRangeLevelComponent {
   @Input() itemTitle: string = '0- test';
   @Input() itemDescription: string = 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Exercitationem, perspiciatis.';
   public list = [];
-  constructor() {}
+  constructor(private rolesSE: RolesService) {}
 
   private _value: string;
 
@@ -61,6 +62,7 @@ export class PrRangeLevelComponent {
   }
 
   onSelectLevel(option, circle: HTMLElement) {
+    if (this.rolesSE.readOnly) return;
     const htmlElement: HTMLElement = circle;
     htmlElement.parentElement.querySelectorAll('.circle').forEach(circle => {
       circle.classList.remove('active');

@@ -11,7 +11,7 @@ export class StepN3CurrentUseComponent {
   actorsTypeList = [];
   institutionsTypeTreeList = [];
   @Input() body = new IpsrStep3Body();
-  constructor(private api: ApiService) {
+  constructor(public api: ApiService) {
     this.GETAllActorsTypes();
     this.GETInstitutionsTypeTree();
   }

@@ -50,7 +50,7 @@
     </div>
 </div>
 <br>
-<app-add-button name="Add actor" (clickEvent)="addActor()"></app-add-button>
+<app-add-button name="Add actor" *ngIf="!this.api.rolesSE.readOnly" (clickEvent)="addActor()"></app-add-button>
 <div class="fragment_section_divider"></div>
 
 <div class="fields_list" *ngIf="this.body.innovatonUse.organization?.length">
@@ -82,7 +82,8 @@
     </div>
 </div>
 
-<app-add-button name="Add organization" (clickEvent)="addOrganization()"></app-add-button>
+<app-add-button name="Add organization" *ngIf="!this.api.rolesSE.readOnly"
+    (clickEvent)="addOrganization()"></app-add-button>
 <div class="fragment_section_divider"></div>
 
 <div class="fields_list" *ngIf="this.body.innovatonUse.measures?.length">
@@ -107,4 +108,4 @@
 
     </div>
 </div>
-<app-add-button name="Add other" (clickEvent)="addOther()"></app-add-button>
+<app-add-button name="Add other" *ngIf="!this.api.rolesSE.readOnly" (clickEvent)="addOther()"></app-add-button>

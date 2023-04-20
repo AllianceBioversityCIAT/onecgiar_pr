@@ -1,24 +1,27 @@
-<app-pr-field-header label="Select or specify complementary innovations/ enablers/ solutions"
-        [required]="false"
-        description="Please first consider the inclusion of other innovations/ enablers/ solutions that CGIAR and partners are already working on. Additional complementary innovations/ enablers/ solutions can be added below."></app-pr-field-header>
-<app-table-innovation (selectInnovationEvent)="selectInnovationEvent($event)" [selectionsInnovation] = "innovationPackageCreatorBody"></app-table-innovation>
+<app-pr-field-header label="Select or specify complementary innovations/ enablers/ solutions" [required]="false"
+    description="Please first consider the inclusion of other innovations/ enablers/ solutions that CGIAR and partners are already working on. Additional complementary innovations/ enablers/ solutions can be added below."></app-pr-field-header>
+<app-table-innovation (selectInnovationEvent)="selectInnovationEvent($event)"
+    [selectionsInnovation]="innovationPackageCreatorBody"></app-table-innovation>
 
 
-<app-new-complementary-innovation [complementaryInnovationFunction]="complemntaryFunction" ></app-new-complementary-innovation>
+<app-new-complementary-innovation
+    [complementaryInnovationFunction]="complemntaryFunction"></app-new-complementary-innovation>
 
 <div *ngIf="this.innovationPackageCreatorBody.length > 0">
-    <app-pr-field-header 
-        [required]="false" description="Complementary innovation(s)/ enabler(s)/ solution(s) selected:"></app-pr-field-header>
+    <app-pr-field-header [required]="false"
+        description="Complementary innovation(s)/ enabler(s)/ solution(s) selected:"></app-pr-field-header>
 
-    <div class="core_innovation_selected " *ngFor="let result of this.innovationPackageCreatorBody" style="margin-top: 10px;">
-        
+    <div class="core_innovation_selected " *ngFor="let result of this.innovationPackageCreatorBody"
+        style="margin-top: 10px;">
+
         <div>
             <strong>{{result.result_code}}</strong> -
-            <span style="text-overflow: ellipsis;">{{ result.title.length > 120? result.title.substr(0,120)+"..." : result.title }}</span>
+            <span style="text-overflow: ellipsis;">{{ result.title.length > 120? result.title.substr(0,120)+"..." :
+                result.title }}</span>
             -
             <strong>{{result.initiative_official_code}}</strong>
         </div>
-        <i class="material-icons-round" (click)="cancelInnovation(result.result_id)">
+        <i class="material-icons-round" (click)="cancelInnovation(result.result_id)" *ngIf="!this.api.rolesSE.readOnly">
             cancel
         </i>
 

@@ -58,8 +58,8 @@
     <div class="chips_container">
         <div class="pr_chip_selected" *ngFor="let option of this.body.impactAreas; let i=index"
             [ngClass]="{'is_active_false': false}">
-            <div class="name" [innerHtml]="option.full_name"></div><i class="material-icons-round"
-                (click)="removeOption(option)">remove_circle
+            <div class="name" [innerHtml]="option.full_name"></div><i *ngIf="!this.api.rolesSE.readOnly"
+                class="material-icons-round" (click)="removeOption(option)">remove_circle
             </i>
         </div>
     </div>

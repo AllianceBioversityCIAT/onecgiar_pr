@@ -7,16 +7,14 @@ import { ApiService } from 'src/app/shared/services/api/api.service';
   templateUrl: './step-n1-innovaton-use.component.html',
   styleUrls: ['./step-n1-innovaton-use.component.scss']
 })
-export class StepN1InnovatonUseComponent{
+export class StepN1InnovatonUseComponent {
   actorsTypeList = [];
   institutionsTypeTreeList = [];
   @Input() body = new IpsrStep1Body();
-  constructor(private api: ApiService) {
+  constructor(public api: ApiService) {
     this.GETAllActorsTypes();
     this.GETInstitutionsTypeTree();
   }
-
-
 
   GETAllActorsTypes() {
     this.api.resultsSE.GETAllActorsTypes().subscribe(({ response }) => {
@@ -52,7 +50,6 @@ export class StepN1InnovatonUseComponent{
   addOther() {
     this.body.innovatonUse.measures.push(new Measure());
     //console.log(this.body.innovatonUse.measures);
-    
   }
   get getAllSubTypes() {
     const list = [];
@@ -64,6 +61,4 @@ export class StepN1InnovatonUseComponent{
     // console.log(list);
     return list;
   }
-
-
 }

@@ -26,4 +26,5 @@
     </div>
 
 </p-dialog>
-<app-pr-button (click)="visible= true;" padding="small" text="Add partner" icon="add_box"></app-pr-button>
+<app-pr-button (click)="visible= true;" padding="small" text="Add partner" icon="add_box"
+    *ngIf="!this.rolesSE.readOnly"></app-pr-button>

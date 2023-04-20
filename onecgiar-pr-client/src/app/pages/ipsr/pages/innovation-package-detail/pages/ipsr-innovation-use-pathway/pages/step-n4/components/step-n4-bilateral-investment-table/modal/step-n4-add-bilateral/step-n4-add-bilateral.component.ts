@@ -16,7 +16,7 @@ export class StepN4AddBilateralComponent implements OnInit {
   showForm = true;
   requesting = false;
   formIsInvalid = false;
-  constructor(public institutionsSE: InstitutionsService, public centersSE: CentersService, private api: ApiService) {}
+  constructor(public institutionsSE: InstitutionsService, public centersSE: CentersService, public api: ApiService) {}
 
   ngOnInit(): void {}
 
