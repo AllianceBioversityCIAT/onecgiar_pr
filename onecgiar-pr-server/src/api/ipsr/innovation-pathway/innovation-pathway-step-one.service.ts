@@ -957,10 +957,17 @@ export class InnovationPathwayStepOneService {
               result_ip_measure_id: el.result_ip_measure_id
             }
           });
-        } else {
+        } else if(!ripm && el?.unit_of_measure) {
           ripm = await this._resultIpMeasureRepository.findOne({
             where: {
               unit_of_measure: el.unit_of_measure,
+              result_ip_id: el.result_ip_id
+            }
+          });
+        } else if (!ripm){
+          ripm = await this._resultIpMeasureRepository.findOne({
+            where: {
+              unit_of_measure: IsNull(),
               result_ip_id: el.result_ip_id
             }
           });
@@ -970,10 +977,10 @@ export class InnovationPathwayStepOneService {
           await this._resultIpMeasureRepository.update(
             ripm.result_ip_measure_id,
             {
-              unit_of_measure: el.unit_of_measure,
-              quantity: el.quantity,
+              unit_of_measure: this.isNullData(el.unit_of_measure),
+              quantity: this.isNullData(el.quantity),
               last_updated_by: user.id,
-              is_active: el.is_active
+              is_active: el.is_active == undefined?true:el.is_active
             }
           )
         } else {
