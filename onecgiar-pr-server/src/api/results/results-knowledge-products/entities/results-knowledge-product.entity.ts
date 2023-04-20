@@ -120,7 +120,7 @@ export class ResultsKnowledgeProduct {
   @Column({
     name: 'is_melia',
     type: 'boolean',
-    nullable: true,
+    default: false
   })
   is_melia: boolean;
 
