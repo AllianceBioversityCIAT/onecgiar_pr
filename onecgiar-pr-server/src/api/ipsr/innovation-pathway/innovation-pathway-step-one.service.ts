@@ -693,48 +693,55 @@ export class InnovationPathwayStepOneService {
               result_id: result.id
             }
           });
-        } else {
+        } else if (!innExp && ex?.email) {
           innExp = await this._innovationPackagingExpertRepository.findOne({
             where: {
               email: ex.email,
               result_id: result.id
             }
           });
+        } else if (!innExp) {
+          innExp = await this._innovationPackagingExpertRepository.findOne({
+            where: {
+              email: IsNull(),
+              result_id: result.id
+            }
+          });
         }
 
+        console.log(innExp)
+        console.log(ex)
         if (innExp) {
           await this._innovationPackagingExpertRepository.update(
             innExp.result_ip_expert_id,
-            ex.is_active ? {
-              first_name: ex.first_name,
-              last_name: ex.last_name,
+            {
+              first_name: ex?.first_name,
+              last_name: ex?.last_name,
               version_id: v.id,
-              is_active: ex.is_active,
-              email: ex.email,
+              is_active: ex.is_active == undefined ? true : ex.is_active,
+              email: ex?.email,
               last_updated_by: user.id,
-              expertises_id: ex.expertises_id,
-              organization_id: ex.organization_id
-            } :
-              {
-                is_active: ex.is_active
-              }
+              expertises_id: ex?.expertises_id,
+              organization_id: ex?.organization_id
+            }
           )
         } else {
           innExp = await this._innovationPackagingExpertRepository.save(
             {
-              first_name: ex.first_name,
-              last_name: ex.last_name,
+              first_name: ex?.first_name,
+              last_name: ex?.last_name,
               version_id: v.id,
-              is_active: ex.is_active,
-              email: ex.email,
+              is_active: ex?.is_active,
+              email: ex?.email,
               last_updated_by: user.id,
               created_by: user.id,
-              expertises_id: ex.expertises_id,
-              organization_id: ex.organization_id,
+              expertises_id: ex?.expertises_id,
+              organization_id: ex?.organization_id,
               result_id: result.id
             }
           )
         }
+
 
         await this.saveExpertises(ex.expertises, innExp.result_ip_expert_id, user, v);
       }
@@ -763,7 +770,7 @@ export class InnovationPathwayStepOneService {
         await this._resultIpExpertisesRepository.update(
           riesEx.result_ip_expertises_id,
           {
-            is_active: el.is_active == undefined?true:el.is_active,
+            is_active: el.is_active == undefined ? true : el.is_active,
             expertises_id: el.expertises_id,
             last_updated_by: user.id
           }
@@ -957,10 +964,17 @@ export class InnovationPathwayStepOneService {
               result_ip_measure_id: el.result_ip_measure_id
             }
           });
-        } else {
+        } else if (!ripm && el?.unit_of_measure) {
           ripm = await this._resultIpMeasureRepository.findOne({
             where: {
               unit_of_measure: el.unit_of_measure,
+              result_ip_id: el.result_ip_id
+            }
+          });
+        } else if (!ripm) {
+          ripm = await this._resultIpMeasureRepository.findOne({
+            where: {
+              unit_of_measure: IsNull(),
               result_ip_id: el.result_ip_id
             }
           });
@@ -970,10 +984,10 @@ export class InnovationPathwayStepOneService {
           await this._resultIpMeasureRepository.update(
             ripm.result_ip_measure_id,
             {
-              unit_of_measure: el.unit_of_measure,
-              quantity: el.quantity,
+              unit_of_measure: this.isNullData(el.unit_of_measure),
+              quantity: this.isNullData(el.quantity),
               last_updated_by: user.id,
-              is_active: el.is_active
+              is_active: el.is_active == undefined ? true : el.is_active
             }
           )
         } else {
