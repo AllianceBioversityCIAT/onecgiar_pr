@@ -7,7 +7,7 @@ import { Result } from '../../../results/entities/result.entity';
 import { ResultIpExpertises } from './result_ip_expertises.entity';
 
 @Entity('result_ip_expert')
-export class InnovationPackagingExpert extends BaseEntity{
+export class InnovationPackagingExpert extends BaseEntity {
     @PrimaryGeneratedColumn({
         name: 'result_ip_expert_id',
         type: 'bigint'
@@ -16,25 +16,29 @@ export class InnovationPackagingExpert extends BaseEntity{
 
     @Column({
         name: 'first_name',
-        type: 'text'
+        type: 'text',
+        nullable: true
     })
     first_name: string;
 
     @Column({
         name: 'last_name',
-        type: 'text'
+        type: 'text',
+        nullable: true
     })
     last_name: string;
 
     @Column({
         name: 'email',
-        type: 'text'
+        type: 'text',
+        nullable: true
     })
     email: string;
 
     @Column({
         name: 'organization_id',
-        type: 'bigint'
+        type: 'bigint',
+        nullable: true
     })
     organization_id: number;
 
@@ -51,7 +55,7 @@ export class InnovationPackagingExpert extends BaseEntity{
     })
     result_id: number;
 
-    @ManyToOne(() => Expertises, e => e.expertises_id, {nullable: true})
+    @ManyToOne(() => Expertises, e => e.expertises_id, { nullable: true })
     @JoinColumn({
         name: 'expertises_id'
     })
