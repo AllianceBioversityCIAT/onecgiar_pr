@@ -467,40 +467,60 @@ export class InnovationPathwayStepFourService {
         } = saveStepFourDto;
 
         bei.forEach(async i => {
-
-          const npp = await this._nonPooledProjectRepository.findOne({
-            where: {
-              results_id: resultId,
-              is_active: true,
-              id: i.non_pooled_projetct_id
-            }
-          });
-
-          if (npp) {
+          if (i?.is_active != undefined && i?.is_active == false) {
+            await this._nonPooledProjectRepository.update(
+              i.non_pooled_projetct_id,
+              {
+                is_active: false
+              }
+            );
             const rbb = await this._resultBilateralBudgetRepository.findOne({
               where: {
-                non_pooled_projetct_id: npp.id,
+                non_pooled_projetct_id: i.non_pooled_projetct_id,
                 is_active: true
               }
             });
+            await this._resultBilateralBudgetRepository.update(
+              rbb.non_pooled_projetct_budget_id,
+              {
+                is_active: false
+              }
+            )
+          } else {
+            const npp = await this._nonPooledProjectRepository.findOne({
+              where: {
+                results_id: resultId,
+                is_active: true,
+                id: i.non_pooled_projetct_id
+              }
+            });
 
-            if (rbb) {
-              await this._resultBilateralBudgetRepository.update(rbb.non_pooled_projetct_budget_id, {
-                in_kind: i.in_kind,
-                in_cash: i.in_cash,
-                is_determined: i.is_determined,
-                last_updated_by: user.id,
+            if (npp) {
+              const rbb = await this._resultBilateralBudgetRepository.findOne({
+                where: {
+                  non_pooled_projetct_id: npp.id,
+                  is_active: true
+                }
               });
-            } else {
-              await this._resultBilateralBudgetRepository.save({
-                non_pooled_projetct_id: npp.id,
-                in_kind: i.in_kind,
-                in_cash: i.in_cash,
-                is_determined: i.is_determined,
-                version_id: version.id,
-                created_by: user.id,
-                last_updated_by: user.id,
-              })
+
+              if (rbb) {
+                await this._resultBilateralBudgetRepository.update(rbb.non_pooled_projetct_budget_id, {
+                  in_kind: i.in_kind,
+                  in_cash: i.in_cash,
+                  is_determined: i.is_determined,
+                  last_updated_by: user.id,
+                });
+              } else {
+                await this._resultBilateralBudgetRepository.save({
+                  non_pooled_projetct_id: npp.id,
+                  in_kind: i.in_kind,
+                  in_cash: i.in_cash,
+                  is_determined: i.is_determined,
+                  version_id: version.id,
+                  created_by: user.id,
+                  last_updated_by: user.id,
+                })
+              }
             }
           }
         })

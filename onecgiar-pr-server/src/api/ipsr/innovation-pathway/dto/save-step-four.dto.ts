@@ -2,8 +2,8 @@ import { ResultsByInstitution } from '../../../results/results_by_institutions/e
 import { PartialType } from '@nestjs/mapped-types';
 import { ResultInstitutionsBudget } from '../../../results/result_budget/entities/result_institutions_budget.entity';
 export class SaveStepFour {
-    ipsr_pictures:  IpsrPictures[];
-    ipsr_materials:  IpsrMaterials[];
+    ipsr_pictures: IpsrPictures[];
+    ipsr_materials: IpsrMaterials[];
     link_workshop_list: string;
     initiative_expected_investment: InitiativeExpectedInvestment[];
     initiative_unit_time_id: number;
@@ -17,12 +17,12 @@ export class SaveStepFour {
     is_result_ip_published: boolean;
 }
 
-export interface institutionsFour{
+export interface institutionsFour {
     institution: institutionsInterface;
     budget: ResultInstitutionsBudget[];
 }
 
-export class institutionsInterface extends PartialType(ResultsByInstitution){
+export class institutionsInterface extends PartialType(ResultsByInstitution) {
     deliveries?: number[];
 }
 
@@ -40,6 +40,7 @@ export interface InitiativeExpectedInvestment {
 }
 export interface BilateralExpectedInvestment {
     non_pooled_projetct_id: number;
+    is_active: boolean;
     in_kind: number;
     in_cash: number;
     is_determined: boolean;
@@ -51,7 +52,7 @@ export interface InstitutionsExpectedInvestment {
     is_determined: boolean;
 }
 
-export interface donorInterfaceToc{
+export interface donorInterfaceToc {
     id: number;
     funder: number;
     grant_title: string;
