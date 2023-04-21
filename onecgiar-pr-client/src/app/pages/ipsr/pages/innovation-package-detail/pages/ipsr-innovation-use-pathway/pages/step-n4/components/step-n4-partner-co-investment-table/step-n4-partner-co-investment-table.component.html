@@ -21,10 +21,12 @@
         <th>In-kind investment (staff time, etc.) USD</th>
         <th>In-cash USD investment</th>
         <th></th>
+        <th *ngIf="!this.rolesSE.readOnly"></th>
     </tr>
-    <tr *ngFor="let option of this.body.institutions_expected_investment; let i=index">
+    <tr *ngFor="let option of this.body.institutions_expected_investment; let i=index"
+        [hidden]="option.is_active == false">
         <td>
-            Partner {{i+1}}
+            {{option.institution.institutions_name}}
             <app-pr-field-header label="Delivery type"></app-pr-field-header>
 
 
@@ -80,6 +82,15 @@
                 [options]="[{name:'This is yet to be determined',id:true}]"
                 [(ngModel)]="option.budget[0].is_determined">
             </app-pr-radio-button>
+        </td>
+        <td *ngIf="!this.rolesSE.readOnly">
+            <div class="center_flex_100">
+                <div class="step-4-delete-button" (click)="deletePartner(option)">
+                    <i class="material-icons-round">
+                        delete
+                    </i>
+                </div>
+            </div>
         </td>
     </tr>
 </table>
