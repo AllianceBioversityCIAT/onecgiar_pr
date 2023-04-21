@@ -103,7 +103,7 @@ export class InnovationPathwayController {
   async getStepFour(
     @Param('resultId') resultId: string
   ) {
-    const { message, response, status } = 
+    const { message, response, status } =
       await this._innovationPathwayStepFourService.getStepFour(+resultId);
     throw new HttpException({ message, response }, status);
   }
@@ -115,7 +115,7 @@ export class InnovationPathwayController {
     @Body() saveStepFourDto: SaveStepFour,
     @UserToken() user: TokenDto
   ) {
-    const { message, response, status } = 
+    const { message, response, status } =
       await this._innovationPathwayStepFourService.saveMain(+resultId, user, saveStepFourDto);
     throw new HttpException({ message, response }, status);
   }
@@ -126,7 +126,7 @@ export class InnovationPathwayController {
     @Body() partners: institutionsInterface,
     @UserToken() user: TokenDto
   ) {
-    const { message, response, status } = 
+    const { message, response, status } =
       await this._innovationPathwayStepFourService.savePartners(+resultId, user, partners);
     throw new HttpException({ message, response }, status);
   }
@@ -137,7 +137,7 @@ export class InnovationPathwayController {
     @Body() bilaterals: donorInterfaceToc,
     @UserToken() user: TokenDto
   ) {
-    const { message, response, status } = 
+    const { message, response, status } =
       await this._innovationPathwayStepFourService.saveBilaterals(+resultId, user, bilaterals);
     throw new HttpException({ message, response }, status);
   }

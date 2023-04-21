@@ -124,9 +124,13 @@ export class InnovationPathwayStepOneService {
           }
         })
       })
-
+      let actorsData = await this._resultActorRepository.find({ where: { result_id: result.id, is_active: true }, relations: { obj_actor_type: true } });
+      actorsData.map(el => {
+        el['men_non_youth'] = el.men - el.men_youth;
+        el['women_non_youth'] = el.women - el.women_youth;
+      });
       const innovatonUse = {
-        actors: (await this._resultActorRepository.find({ where: { result_id: result.id, is_active: true }, relations: { obj_actor_type: true } })).map(el => ({ ...el, men_non_youth: el.men - el.men_youth, women_non_youth: el.women - el.women_youth })),
+        actors: actorsData,
         measures: await this._resultIpMeasureRepository.find({ where: { result_ip_id: result.id, is_active: true } }),
         organization: (await this._resultByIntitutionsTypeRepository.find({ where: { results_id: result.id, institution_roles_id: 5, is_active: true }, relations: { obj_institution_types: { obj_parent: { obj_parent: true } } } })).map(el => ({ ...el, parent_institution_type_id: el.obj_institution_types?.obj_parent?.obj_parent?.code || null }))
       }
@@ -149,13 +153,13 @@ export class InnovationPathwayStepOneService {
       })
 
       const coreData = await this._innovationByResultRepository.findOne({ where: { result_innovation_package_id: result.id, is_active: true, ipsr_role_id: 1 }, relations: { obj_result: true } });
+
       const scalig_ambition = {
         title: `2024 Scaling Ambition blurb`,
-        body: `By 2024, the ${resInitLead?.obj_initiative?.short_name} and partners will work together with${this.arrayToStringAnd(institutions?.map(el => el['institutions_name']))} to accomplish the use of ${coreData?.obj_result?.title} by ${this.arrayToStringActorsAnd(innovatonUse.actors)} ${geo_scope_id == 1 ? '' : `in ${this.arrayToStringGeoScopeAnd(geo_scope_id, regions, countries)}`} to contribute achieving ${this.arrayToStringAnd(eoiOutcomes?.map(el => el['title']))}.`
+        body: `By 2024, the ${resInitLead?.obj_initiative?.short_name} and partners will work together with${this.arrayToStringAnd(institutions?.map(el => el['institutions_name']))} to accomplish the use of ${coreData?.obj_result?.title} by ${this.arrayToStringActorsAnd(innovatonUse.actors.map(el => el))} ${geo_scope_id == 1 ? '' : `in ${this.arrayToStringGeoScopeAnd(geo_scope_id, regions.map(el => el), countries.map(el => el))}`} to contribute achieving ${this.arrayToStringAnd(eoiOutcomes?.map(el => el['title']))}.`
       };
-
       return {
-        response: {
+        response: await {
           result_id: result.id,
           scalig_ambition,
           geo_scope_id,
@@ -709,8 +713,6 @@ export class InnovationPathwayStepOneService {
           });
         }
 
-        console.log(innExp)
-        console.log(ex)
         if (innExp) {
           await this._innovationPackagingExpertRepository.update(
             innExp.result_ip_expert_id,
@@ -880,6 +882,7 @@ export class InnovationPathwayStepOneService {
     if (crtr?.actors?.length) {
       const { actors } = crtr;
       actors.map(async (el: ResultActor) => {
+        console.log(el)
         let actorExists: ResultActor = null;
         if (el?.actor_type_id) {
           actorExists = await this._resultActorRepository.findOne({ where: { actor_type_id: el.actor_type_id, result_id: result.id } });
@@ -888,8 +891,9 @@ export class InnovationPathwayStepOneService {
         } else if (!actorExists) {
           actorExists = await this._resultActorRepository.findOne({ where: { actor_type_id: IsNull(), result_id: result.id } });
         }
-
+        console.log(actorExists)
         if (actorExists) {
+          console.log('si', el.is_active == undefined ? true : el.is_active)
           await this._resultActorRepository.update(
             actorExists.result_actors_id,
             {
@@ -903,6 +907,7 @@ export class InnovationPathwayStepOneService {
             }
           );
         } else {
+          console.log('no')
           await this._resultActorRepository.save({
             actor_type_id: el.actor_type_id,
             is_active: el.is_active,
@@ -918,6 +923,8 @@ export class InnovationPathwayStepOneService {
         }
       })
     }
+
+    console.log(await this._resultActorRepository.find({ where: { result_id: result.id } }))
 
     if (crtr?.organization?.length) {
       const { organization } = crtr;
