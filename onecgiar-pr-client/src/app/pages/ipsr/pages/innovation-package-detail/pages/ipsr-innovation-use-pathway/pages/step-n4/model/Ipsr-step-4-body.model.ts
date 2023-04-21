@@ -17,6 +17,7 @@ export class IpsrStep4Body {
 export class InstitutionsexpectedinvestmentStep4 {
   institution: Institution = new Institution();
   budget: Budget = new Budget();
+  is_active: boolean;
 }
 
 class Budget {
@@ -30,6 +31,7 @@ class Institution {
   id: number;
   is_active: boolean;
   deliveries: number[];
+  institutions_name: string;
 }
 
 export class BilateralexpectedinvestmentStep4 {
@@ -38,6 +40,7 @@ export class BilateralexpectedinvestmentStep4 {
   in_kind: string;
   is_determined: number;
   obj_non_pooled_projetct: any;
+  is_active: boolean;
 }
 
 interface Initiativeexpectedinvestment {

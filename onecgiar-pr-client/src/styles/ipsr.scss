@@ -101,3 +101,20 @@
     border-radius: 10px;
     box-shadow: 0px 7px 7px 3px rgb(0 0 0 / 16%);
 }
+
+.step-4-delete-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50px;
+    background-color: var(--pr-color-danger);
+    color: white;
+    width: 35px;
+    height: 35px;
+    cursor: pointer;
+
+    i {
+        font-size: 1.3em;
+
+    }
+}
