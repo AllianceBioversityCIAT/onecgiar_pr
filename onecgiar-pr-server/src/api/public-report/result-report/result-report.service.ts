@@ -6,7 +6,7 @@ import { join } from 'path';
 @Injectable()
 export class ResultReportService {
   async findOne(id: number) {
-    const templateRead = await readFileSync(
+    const templateRead = readFileSync(
       join(__dirname, '../templates/test-template.html'),
       'utf-8',
     );
