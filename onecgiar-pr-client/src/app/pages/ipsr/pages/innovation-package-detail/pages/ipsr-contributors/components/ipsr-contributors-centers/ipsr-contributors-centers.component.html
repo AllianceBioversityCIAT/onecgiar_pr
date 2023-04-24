@@ -1,10 +1,9 @@
-<div class="dropdown-50p">
+<div class="dropdown-50p partnersindex">
     <app-pr-multi-select [options]="this.centersSE.centersList" label="Contributing Centers"
         (selectOptionEvent)="validatePrimarySelection()" selectedLabel="Center(s) selected" optionLabel="full_name"
         optionValue="code" [(ngModel)]="this.contributorsBody.contributing_center" placeholder="Select center(s)
 ">
     </app-pr-multi-select>
-    <br><br><br><br><br>
 </div>
 
 <div class="medal_info">
@@ -23,3 +22,5 @@
         </div>
     </div>
 </div>
+
+<br><br><br><br><br><br><br>
