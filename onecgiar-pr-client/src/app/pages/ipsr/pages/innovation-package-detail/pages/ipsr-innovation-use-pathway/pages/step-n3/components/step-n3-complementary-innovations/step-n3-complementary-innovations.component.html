@@ -14,7 +14,8 @@
     <app-pr-field-header label="Innovation Readiness level evidence-based" [required]="false"
         [description]="this.readinessLevelSelfAssessmentText()"></app-pr-field-header>
 
-    <app-pr-range-level [options]="this.rangesOptions" optionLabel="name" optionValue="id"
+    <app-pr-range-level itemTitle="name" itemDescription="definition" [options]="this.rangesOptions" optionLabel="name"
+        optionValue="id"
         [(ngModel)]="this.body.result_ip_result_complementary[this.ci.index].readiness_level_evidence_based"></app-pr-range-level>
 
     <app-pr-input label="Evidence link" placeholder="Grant title goes here..."
@@ -31,8 +32,8 @@
     <app-pr-field-header label="Innovation use level evidence-based" [required]="false"
         [description]="this.readinessLevelSelfAssessmentText()"></app-pr-field-header>
 
-    <app-pr-range-level [options]="this.rangesOptions" *ngIf="this.rangesOptions?.length" optionLabel="name"
-        optionValue="id"
+    <app-pr-range-level itemTitle="name" itemDescription="definition" [options]="this.rangesOptions"
+        *ngIf="this.rangesOptions?.length" optionLabel="name" optionValue="id"
         [(ngModel)]="this.body.result_ip_result_complementary[this.ci.index].use_level_evidence_based"></app-pr-range-level>
 
     <app-pr-input label="Evidence link" placeholder="Grant title goes here..."
