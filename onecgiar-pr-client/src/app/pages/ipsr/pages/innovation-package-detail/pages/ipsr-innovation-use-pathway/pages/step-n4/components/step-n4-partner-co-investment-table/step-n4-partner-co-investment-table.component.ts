@@ -31,6 +31,6 @@ export class StepN4PartnerCoInvestmentTableComponent implements OnInit {
     index < 0 ? option?.deliveries.push(deliveryId) : option?.deliveries.splice(index, 1);
   }
   deletePartner(partner) {
-    partner.is_active = false;
+    partner.institution.is_active = false;
   }
 }

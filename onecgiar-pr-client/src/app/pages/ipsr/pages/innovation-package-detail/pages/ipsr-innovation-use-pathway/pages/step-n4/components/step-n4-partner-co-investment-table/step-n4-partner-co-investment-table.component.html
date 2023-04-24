@@ -24,7 +24,7 @@
         <th *ngIf="!this.rolesSE.readOnly"></th>
     </tr>
     <tr *ngFor="let option of this.body.institutions_expected_investment; let i=index"
-        [hidden]="option.is_active == false">
+        [hidden]="option.institution.is_active == false">
         <td>
             {{option.institution.institutions_name}}
             <app-pr-field-header label="Delivery type"></app-pr-field-header>
