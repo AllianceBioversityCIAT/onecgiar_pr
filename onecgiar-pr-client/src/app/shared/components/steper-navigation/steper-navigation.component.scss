@@ -33,6 +33,12 @@
             position: relative;
             z-index: 1;
 
+            .green_check_absolute {
+                position: absolute;
+                top: -17px;
+                right: -17px;
+            }
+
             .name {
                 position: absolute;
                 top: 45px;

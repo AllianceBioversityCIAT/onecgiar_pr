@@ -2,7 +2,11 @@
     <div class="line">
         <!-- <div class="line_value"></div> -->
         <div class="circle" [routerLink]="option?.path" routerLinkActive="active"
-            *ngFor="let option of options ; let i=index">{{i+1}} <div class="name">{{option?.routeName}}</div>
+            *ngFor="let option of options ; let i=index">
+            <div class="green_check_absolute">
+                <app-ipsr-green-check [objectReference]="'stepSections.'+i"></app-ipsr-green-check>
+            </div>
+            {{i+1}} <div class="name">{{option?.routeName}}</div>
         </div>
     </div>
 </div>
