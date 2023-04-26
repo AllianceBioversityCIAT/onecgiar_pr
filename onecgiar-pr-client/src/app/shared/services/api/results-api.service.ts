@@ -16,6 +16,8 @@ import { KnowledgeProductBodyMapped } from '../../../pages/results/pages/result-
 import { KnowledgeProductSaveDto } from '../../../pages/results/pages/result-detail/pages/rd-result-types-pages/knowledge-product-info/model/knowledge-product-save.dto';
 import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-control.service';
 import { getInnovationComInterface } from '../../../../../../onecgiar-pr-server/src/api/ipsr/ipsr.repository';
+import { Observable } from 'rxjs';
+import { IpsrCompletenessStatusService } from '../../../pages/ipsr/services/ipsr-completeness-status.service';
 
 @Injectable({
   providedIn: 'root'
@@ -157,6 +159,7 @@ export class ResultsApiService {
   }
 
   POST_partnerRequest(body: PartnersRequestBody) {
+    console.log(`${environment.apiBaseUrl}api/clarisa/partner-request/${this.currentResultId}`);
     return this.http.post<any>(`${environment.apiBaseUrl}api/clarisa/partner-request/${this.currentResultId}`, body);
   }
 
@@ -605,5 +608,20 @@ export class ResultsApiService {
 
   PATCHInnovationPathwayStep4Bilaterals(body) {
     return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-four/bilaterals/${this.ipsrDataControlSE.resultInnovationId}`, body);
+  }
+
+  getCompletenessStatus(): Observable<any> {
+    // aquí se puede crear un observable con la respuesta deseada
+    console.log('getCompletenessStatus');
+    return new Observable(observer => {
+      const respuesta = {
+        datos: [1, 2, 3],
+        mensaje: 'Datos obtenidos exitosamente'
+      };
+
+      // se emite la respuesta al observer
+      observer.next(respuesta);
+      observer.complete();
+    });
   }
 }
