@@ -1,26 +1,59 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { CreateResultsInnovationPackagesValidationModuleDto } from './dto/create-results-innovation-packages-validation-module.dto';
 import { UpdateResultsInnovationPackagesValidationModuleDto } from './dto/update-results-innovation-packages-validation-module.dto';
+import { GetValidationSectionInnoPckgDto } from './dto/get-validation-section-inno-pckg.dto';
+import { IpsrRepository } from '../ipsr.repository';
+import { HandlersError } from '../../../shared/handlers/error.utils';
+import { ResultRepository } from '../../results/result.repository';
+import { ResultsInnovationPackagesValidationModuleRepository } from './results-innovation-packages-validation-module.repository';
 
 @Injectable()
 export class ResultsInnovationPackagesValidationModuleService {
-  create(createResultsInnovationPackagesValidationModuleDto: CreateResultsInnovationPackagesValidationModuleDto) {
-    return 'This action adds a new resultsInnovationPackagesValidationModule';
-  }
 
-  findAll() {
-    return `This action returns all resultsInnovationPackagesValidationModule`;
-  }
+  constructor(
+    private readonly _handlersError: HandlersError,
+    private readonly _resultRepository: ResultRepository,
+    private readonly _ipsrReposotory: IpsrRepository,
+    private readonly _resultInnovationPackageValidationModuleRepository: ResultsInnovationPackagesValidationModuleRepository,
+  ) { }
 
-  findOne(id: number) {
-    return `This action returns a #${id} resultsInnovationPackagesValidationModule`;
-  }
+  async getGreenchecksByinnovationPackage(resultId: number) {
+    try {
+      const resultExist = await this._resultRepository.findOneBy({ id: resultId, is_active: true });
+      const ipExist = await this._ipsrReposotory.findOneBy({ result_innovation_package_id: resultId, ipsr_role_id: 1, is_active: true });
+      if (!resultExist) {
+        throw {
+          response: {},
+          message: 'Results Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+      if (!ipExist) {
+        throw {
+          response: {},
+          message: 'Results Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
 
-  update(id: number, updateResultsInnovationPackagesValidationModuleDto: UpdateResultsInnovationPackagesValidationModuleDto) {
-    return `This action updates a #${id} resultsInnovationPackagesValidationModule`;
-  }
+      let response: GetValidationSectionInnoPckgDto[] = [];
 
-  remove(id: number) {
-    return `This action removes a #${id} resultsInnovationPackagesValidationModule`;
+      const gi = await this._resultInnovationPackageValidationModuleRepository.generalInformation(resultId);
+      const contributors = await this._resultInnovationPackageValidationModuleRepository.contributors(resultId);
+
+
+      return {
+        response: {
+          mainSection: [
+            gi,
+            contributors
+          ],
+        },
+        message: 'Sections have been successfully validated',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
   }
 }
