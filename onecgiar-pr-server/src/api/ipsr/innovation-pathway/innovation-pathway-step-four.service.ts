@@ -626,7 +626,7 @@ export class InnovationPathwayStepFourService {
             }
           )
 
-          const institutions = await this._resultByInstitutionsRepository.find({ where: { id: rbi.id, institution_roles_id: 7 } });
+          const institutions = await this._resultByInstitutionsRepository.find({ where: { id: rbi.id, institution_roles_id: 7 }, relations: { obj_institutions: true } });
           const deliveries = await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByResultByInstitution(institutions?.map(el => el.id));
           institutions?.map(int => {
             int['deliveries'] = deliveries?.filter(del => del.result_by_institution_id == int.id).map(del => del.partner_delivery_type_id);

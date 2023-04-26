@@ -14,7 +14,7 @@
             </app-pr-field-header>
         </div>
 
-        <div class="chips_container  custom_scroll partners_selected">
+        <div class="chips_container  custom_scroll partners_selected" [ngClass]="{'chips_container_expand': showInfo}">
             <div class="pr_chip_selected" *ngFor="let option of contributorsBody.institutions; let i=index">
                 <div class="name">{{option?.institutions_name}}</div>
                 <div class="type"> <strong>Institution type:</strong> {{option?.institutions_type_name}}</div>

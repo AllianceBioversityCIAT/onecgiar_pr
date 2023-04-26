@@ -4,7 +4,6 @@
     gap: 10px;
     overflow-y: auto;
     max-height: 70vh !important;
-    min-height: 200px;
     position: relative;
 
     .pr_chip_selected {
@@ -47,6 +46,10 @@
             }
         }
     }
+}
+
+.chips_container_expand {
+    min-height: 200px !important;
 }
 
 .partners_selected_header {
