@@ -5,10 +5,11 @@
             <!-- <div>Back to innovation packages</div> -->
         </div>
     </div>
-    <div class="option" *ngFor="let option of this.menuOptions" [routerLink]="this.option.path"
+    <div class="option" *ngFor="let option of this.menuOptions; let i=index" [routerLink]="this.option.path"
         [ngClass]="{'option_hidden': !this.option?.prName}" routerLinkActive="option_active"
         [hidden]="!this.option?.prName">{{this.option?.prName}}
         <img *ngIf="option.underConstruction" class="under_construction" src="assets/work-in-progress.png" alt=""
             srcset="">
+        <app-ipsr-green-check [objectReference]="'mainSections.'+i"></app-ipsr-green-check>
     </div>
 </div>
