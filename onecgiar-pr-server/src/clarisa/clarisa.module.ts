@@ -34,6 +34,8 @@ import { ClarisaPolicyTypesModule } from './clarisa-policy-types/clarisa-policy-
 import { ClarisaRegionsCgiarModule } from './clarisa-regions-cgiar/clarisa-regions-cgiar.module';
 import { ClarisaSdgsModule } from './clarisa-sdgs/clarisa-sdgs.module';
 import { ClarisaSdgsTargetsModule } from './clarisa-sdgs-targets/clarisa-sdgs-targets.module';
+import { ClarisaSecondOrderAdministrativeDivisionModule } from './clarisa-second-order-administrative-division/clarisa-second-order-administrative-division.module';
+import { ClarisaFirstOrderAdministrativeDivisionModule } from './clarisa-first-order-administrative-division/clarisa-first-order-administrative-division.module';
 import { ClarisaInnovationUseLevelsModule } from './clarisa-innovation-use-levels/clarisa-innovation-use-levels.module';
 
 @Module({
@@ -66,6 +68,8 @@ import { ClarisaInnovationUseLevelsModule } from './clarisa-innovation-use-level
     ClarisaRegionsCgiarModule,
     ClarisaSdgsModule,
     ClarisaSdgsTargetsModule,
+    ClarisaSecondOrderAdministrativeDivisionModule,
+    ClarisaFirstOrderAdministrativeDivisionModule,
     ClarisaInnovationUseLevelsModule
     
   ],
