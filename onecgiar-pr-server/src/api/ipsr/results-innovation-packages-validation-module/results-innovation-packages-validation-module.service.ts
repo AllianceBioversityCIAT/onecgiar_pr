@@ -40,6 +40,7 @@ export class ResultsInnovationPackagesValidationModuleService {
 
       const gi = await this._resultInnovationPackageValidationModuleRepository.generalInformation(resultId);
       const contributors = await this._resultInnovationPackageValidationModuleRepository.contributors(resultId);
+      const stepOne = await this._resultInnovationPackageValidationModuleRepository.stepOne(resultId);
 
 
       return {
@@ -48,6 +49,9 @@ export class ResultsInnovationPackagesValidationModuleService {
             gi,
             contributors
           ],
+          stepSections: [
+            stepOne
+          ]
         },
         message: 'Sections have been successfully validated',
         status: HttpStatus.OK,

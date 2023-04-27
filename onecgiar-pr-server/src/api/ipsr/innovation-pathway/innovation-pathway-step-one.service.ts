@@ -297,6 +297,21 @@ export class InnovationPathwayStepOneService {
       let updateRegions: any;
       let updateCountries: any;
 
+
+      let innovationGeoScope: number;
+
+      // * Check Geo Scope
+      if (UpdateInnovationPathwayDto.geo_scope_id === 1) {
+        innovationGeoScope = 1;
+      } else if (UpdateInnovationPathwayDto.geo_scope_id === 2) {
+        innovationGeoScope = 2;
+      } else if (countries?.length > 1) {
+        innovationGeoScope = 3
+      } else {
+        innovationGeoScope = 4
+      }
+
+
       if (UpdateInnovationPathwayDto.geo_scope_id !== 2) {
         await this._resultRegionRepository.updateRegions(id, [])
       } else if (UpdateInnovationPathwayDto.geo_scope_id === 2) {
@@ -319,9 +334,9 @@ export class InnovationPathwayStepOneService {
         }
       }
 
-      if (UpdateInnovationPathwayDto.geo_scope_id !== 3) {
+      if (UpdateInnovationPathwayDto.geo_scope_id === 1 || UpdateInnovationPathwayDto.geo_scope_id === 2) {
         await this._resultCountryRepository.updateCountries(id, []);
-      } else if (UpdateInnovationPathwayDto.geo_scope_id === 3) {
+      } else if (UpdateInnovationPathwayDto.geo_scope_id === 3 || UpdateInnovationPathwayDto.geo_scope_id === 4) {
         await this._resultCountryRepository.updateCountries(id, UpdateInnovationPathwayDto.countries.map(c => c.id));
         if (countries?.length) {
           for (let i = 0; i < countries.length; i++) {
@@ -337,19 +352,6 @@ export class InnovationPathwayStepOneService {
             updateCountries = await this._resultCountryRepository.save(resultCountries);
           }
         }
-      }
-
-      let innovationGeoScope: number;
-
-      // * Check Geo Scope
-      if (UpdateInnovationPathwayDto.geo_scope_id === 1) {
-        innovationGeoScope = 1;
-      } else if (UpdateInnovationPathwayDto.geo_scope_id === 2) {
-        innovationGeoScope = 2;
-      } else if (countries?.length > 1) {
-        innovationGeoScope = 3
-      } else {
-        innovationGeoScope = 4
       }
 
       const ipsrResult =
