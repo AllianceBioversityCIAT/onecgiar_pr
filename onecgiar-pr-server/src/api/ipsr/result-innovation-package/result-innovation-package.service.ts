@@ -2,7 +2,7 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { HandlersError } from 'src/shared/handlers/error.utils';
 import { ResultRepository } from '../../../api/results/result.repository';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
-import { CreateResultInnovationPackageDto } from './dto/create-result-innovation-package.dto';
+import { countriesInterface, CreateResultInnovationPackageDto } from './dto/create-result-innovation-package.dto';
 import { Version } from '../../results/versions/entities/version.entity';
 import { VersionsService } from '../../../api/results/versions/versions.service';
 import { ResultRegion } from '../../../api/results/result-regions/entities/result-region.entity';
@@ -15,7 +15,7 @@ import { ResultTypeRepository } from 'src/api/results/result_types/resultType.re
 import { ResultInnovationPackageRepository } from './repositories/result-innovation-package.repository';
 import { ResultIpAAOutcomeRepository } from '../innovation-pathway/repository/result-ip-action-area-outcome.repository';
 import { ClarisaActionAreaOutcomeRepository } from '../../../clarisa/clarisa-action-area-outcome/clarisa-action-area-outcome.repository';
-import { In } from 'typeorm';
+import { In, IsNull } from 'typeorm';
 import { ResultIpAAOutcome } from '../innovation-pathway/entities/result-ip-action-area-outcome.entity';
 import { ResultsImpactAreaIndicatorRepository } from 'src/api/results/results-impact-area-indicators/results-impact-area-indicators.repository';
 import { ResultIpImpactArea } from '../innovation-pathway/entities/result-ip-impact-area.entity';
@@ -36,6 +36,8 @@ import { TocResultsRepository } from '../../../toc/toc-results/toc-results.repos
 import { ResultIpEoiOutcomeRepository } from '../innovation-pathway/repository/result-ip-eoi-outcomes.repository';
 import { ResultIpEoiOutcome } from '../innovation-pathway/entities/result-ip-eoi-outcome.entity';
 import { TocResult } from '../../../toc/toc-results/entities/toc-result.entity';
+import { ResultCountriesSubNationalRepository } from '../../results/result-countries-sub-national/result-countries-sub-national.repository';
+import { ResultCountriesSubNational } from '../../results/result-countries-sub-national/entities/result-countries-sub-national.entity';
 
 @Injectable()
 export class ResultInnovationPackageService {
@@ -62,10 +64,11 @@ export class ResultInnovationPackageService {
     private readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
     private readonly _resultByIntitutionsTypeRepository: ResultByIntitutionsTypeRepository,
     private readonly _resultValidationRepository: resultValidationRepository,
-    protected readonly _resultInitiativesBudgetRepository: ResultInitiativeBudgetRepository,
-    protected readonly _unitTimeRepository: UnitTimeRepository,
-    protected readonly _tocResult: TocResultsRepository,
-    protected readonly _resultIpEoiOutcomesRepository: ResultIpEoiOutcomeRepository,
+    private readonly _resultInitiativesBudgetRepository: ResultInitiativeBudgetRepository,
+    private readonly _unitTimeRepository: UnitTimeRepository,
+    private readonly _tocResult: TocResultsRepository,
+    private readonly _resultIpEoiOutcomesRepository: ResultIpEoiOutcomeRepository,
+    private readonly _resultCountriesSubNationalRepository: ResultCountriesSubNationalRepository
   ) { }
 
   async findUnitTime() {
@@ -306,7 +309,7 @@ export class ResultInnovationPackageService {
       const resultByInnivationPackage = newInnovationByResult.result_by_innovation_package_id;
 
       let resultRegions: ResultRegion[] = [];
-      let resultCountries: ResultCountry[] = [];
+      let newInnovationCountries: ResultCountry[] = [];
 
       if (CreateResultInnovationPackageDto.geo_scope_id === 2) {
         if (regions) {
@@ -318,19 +321,22 @@ export class ResultInnovationPackageService {
             resultRegions.push(newRegions);
           }
         }
-      } else if (CreateResultInnovationPackageDto.geo_scope_id === 3 || CreateResultInnovationPackageDto.geo_scope_id === 4) {
+      } else if (CreateResultInnovationPackageDto.geo_scope_id === 3 || CreateResultInnovationPackageDto.geo_scope_id === 4 || CreateResultInnovationPackageDto.geo_scope_id === 5) {
         if (countries) {
-          for (let i = 0; i < countries.length; i++) {
-            const newCountries = new ResultCountry();
-            newCountries.result_id = newResult;
-            newCountries.country_id = countries[i].id;
-            newCountries.is_active = true;
-            resultCountries.push(newCountries);
+          for (const ct of countries) {
+            const newRc = await this._resultCountryRepository.save({
+              result_id: newResult,
+              country_id: ct.id,
+
+            });
+            newInnovationCountries.push(newRc);
+            if (CreateResultInnovationPackageDto.geo_scope_id === 5 && ct?.result_countries_sub_national?.length) {
+              await this.saveSubNational(newRc.result_country_id, ct.result_countries_sub_national, user);
+            }
           }
         }
       }
       const newInnovationRegions = await this._resultRegionRepository.save(resultRegions);
-      const newInnovationCountries = await this._resultCountryRepository.save(resultCountries);
       const retrievedEoi = await this.retrievedEoi(CreateResultInnovationPackageDto.initiative_id, user.id, resultByInnivationPackage, vrs.id);
       const retriveAAOutcome = await this.retrievedAAOutcome(CreateResultInnovationPackageDto.initiative_id, user.id, resultByInnivationPackage, vrs.id);
       const retrievedImpactArea = await this.retrievedImpactArea(result.id, user.id, resultByInnivationPackage, vrs.id);
@@ -363,6 +369,53 @@ export class ResultInnovationPackageService {
       }
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async saveSubNational(reCoId: number, subNationals: ResultCountriesSubNational[], user: TokenDto) {
+    if (subNationals?.length) {
+      subNationals.forEach(async el => {
+        let reCoSub: ResultCountriesSubNational = null;
+        const whereConditions = el?.result_countries_sub_national_id
+          ? { result_countries_sub_national_id: el.result_countries_sub_national_id }
+          : el?.sub_level_one_id && el?.sub_level_two_id
+            ? { sub_level_one_id: el.sub_level_one_id, sub_level_two_id: el.sub_level_two_id, result_countries_id: reCoId }
+            : !reCoId && el?.sub_level_one_id && !el?.sub_level_two_id
+              ? { sub_level_one_id: el.sub_level_one_id, sub_level_two_id: IsNull(), result_countries_id: reCoId }
+              : !reCoId && !el?.sub_level_one_id && !el?.sub_level_two_id
+                ? { sub_level_one_id: IsNull(), sub_level_two_id: IsNull(), result_countries_id: reCoId }
+                : null;
+
+        if (whereConditions) {
+          reCoSub = await this._resultCountriesSubNationalRepository.findOne({
+            where: whereConditions
+          });
+        }
+
+        if (reCoSub) {
+          await this._resultCountriesSubNationalRepository.update(
+            reCoSub.result_countries_sub_national_id,
+            {
+              is_active: el?.is_active == undefined ? true : el.is_active,
+              sub_level_one_id: el?.sub_level_one_id,
+              sub_level_one_name: el?.sub_level_one_name,
+              sub_level_two_id: el?.sub_level_two_id,
+              sub_level_two_name: el?.sub_level_two_name,
+              last_updated_by: user.id
+            }
+          );
+        } else {
+          await this._resultCountriesSubNationalRepository.save({
+            created_by: user.id,
+            last_updated_by: user.id,
+            sub_level_one_id: el?.sub_level_one_id,
+            sub_level_two_id: el?.sub_level_two_id,
+            sub_level_one_name: el?.sub_level_one_name,
+            sub_level_two_name: el?.sub_level_two_name,
+            result_countries_id: reCoId,
+          });
+        }
+      })
     }
   }
 

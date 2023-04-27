@@ -3,6 +3,7 @@ import { Injectable } from "@nestjs/common";
 import { DataSource, Repository } from "typeorm";
 import { Ipsr } from "./entities/ipsr.entity";
 import { HandlersError } from '../../shared/handlers/error.utils';
+import { ResultCountriesSubNational } from '../results/result-countries-sub-national/entities/result-countries-sub-national.entity';
 
 
 @Injectable()
@@ -174,6 +175,7 @@ export class IpsrRepository extends Repository<Ipsr>{
 
         const countryQuery = `
         SELECT
+            rc.result_country_id,
             rc.country_id AS id,
             cc.name,
             rc.result_id,
@@ -184,8 +186,26 @@ export class IpsrRepository extends Repository<Ipsr>{
             AND rc.is_active = 1;
         `;
 
+        const subNationalQuery = `
+        SELECT
+        	*
+        from
+        	result_countries_sub_national rcsn
+        WHERE
+        	rcsn.result_countries_id in (
+        	SELECT
+        		rc.result_country_id
+        	FROM
+        		result_country rc
+        	WHERE
+        		rc.result_id = ?
+        		AND rc.is_active = 1)
+        and rcsn.is_active = true;
+        `
+
         const regionsQuery = `
         SELECT
+            rr.result_region_id,
             rr.region_id AS id,
             cr.name,
             rr.result_id
@@ -199,6 +219,7 @@ export class IpsrRepository extends Repository<Ipsr>{
             const resultInnovation: any[] = await this.dataSource.query(resultInnovationByIdQuery, [resultId]);
             const regions: any[] = await this.dataSource.query(regionsQuery, [resultId]);
             const countries: any[] = await this.dataSource.query(countryQuery, [resultId]);
+            const sub_national: ResultCountriesSubNational[] = await this.dataSource.query(subNationalQuery, [resultId]);
 
             resultInnovation.map(ri => {
                 ri['hasRegions'] = regions.filter(r => {
@@ -207,6 +228,9 @@ export class IpsrRepository extends Repository<Ipsr>{
 
                 ri['hasCountries'] = countries.filter(c => {
                     return c.result_id === ri.result_id;
+                }).map(cid => {
+                    cid['result_countries_sub_national'] = sub_national.filter(el => el.result_countries_id == cid['result_country_id']);
+                    return cid;
                 });
             });
 
@@ -300,7 +324,7 @@ export class IpsrRepository extends Repository<Ipsr>{
             });
         }
     }
-    
+
     async getInnovationCoreStepOne(resultId: number) {
         const innovationByIdQuery = `
         SELECT
