@@ -21,6 +21,8 @@ export class IpsrRepository extends Repository<Ipsr>{
             r.result_code,
             r.title,
             r.description,
+            r.result_type_id,
+            r.result_level_id,
             rbi.inititiative_id AS initiative_id,
             (
                 SELECT
