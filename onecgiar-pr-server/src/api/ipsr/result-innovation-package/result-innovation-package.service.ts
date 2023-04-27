@@ -506,12 +506,13 @@ export class ResultInnovationPackageService {
       }
 
       const updateResult = await this._resultRepository.update(resultId, {
-        title: req.title,
+        title: req?.title,
+        description: req?.description,
         lead_contact_person: req?.lead_contact_person,
-        gender_tag_level_id: req.gender_tag_level_id,
-        climate_change_tag_level_id: req.climate_change_tag_level_id,
-        is_krs: req.is_krs,
-        krs_url: req.krs_url,
+        gender_tag_level_id: req?.gender_tag_level_id,
+        climate_change_tag_level_id: req?.climate_change_tag_level_id,
+        is_krs: req?.is_krs,
+        krs_url: req?.krs_url,
         geographic_scope_id: resultExist.geographic_scope_id,
         last_updated_by: user.id,
       });
