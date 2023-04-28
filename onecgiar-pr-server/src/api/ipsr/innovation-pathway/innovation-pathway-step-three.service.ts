@@ -213,6 +213,7 @@ export class InnovationPathwayStepThreeService {
             ite.id,
             {
               last_updated_by: user.id,
+              institution_types_id: el.institution_types_id,
               how_many: this.isNullData(el.how_many),
               is_active: el.is_active == undefined?true:el.is_active,
               evidence_link: this.isNullData(el.evidence_link)
