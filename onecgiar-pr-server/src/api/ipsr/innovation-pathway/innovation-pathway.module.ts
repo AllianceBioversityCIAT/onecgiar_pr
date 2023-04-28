@@ -39,7 +39,6 @@ import { NonPooledProjectRepository } from '../../../api/results/non-pooled-proj
 import { NonPooledProjectBudgetRepository } from '../../results/result_budget/repositories/non_pooled_proyect_budget.repository';
 import { ResultInstitutionsBudgetRepository } from '../../results/result_budget/repositories/result_institutions_budget.repository';
 import { ResultIpExpertisesRepository } from '../innovation-packaging-experts/repositories/result-ip-expertises.repository';
-import { ResultCountriesSubNationalRepository } from '../../results/result-countries-sub-national/result-countries-sub-national.repository';
 
 @Module({
   controllers: [InnovationPathwayController],
@@ -82,8 +81,7 @@ import { ResultCountriesSubNationalRepository } from '../../results/result-count
     NonPooledProjectRepository,
     NonPooledProjectBudgetRepository,
     ResultInstitutionsBudgetRepository,
-    ResultIpExpertisesRepository,
-    ResultCountriesSubNationalRepository
+    ResultIpExpertisesRepository
   ]
 })
-export class InnovationPathwayModule { }
+export class InnovationPathwayModule {}

@@ -20,8 +20,6 @@ import { ClarisaPolicyTypesModule } from './clarisa-policy-types/clarisa-policy-
 import { ClarisaSdgsModule } from './clarisa-sdgs/clarisa-sdgs.module';
 import { ClarisaSdgsTargetsModule } from './clarisa-sdgs-targets/clarisa-sdgs-targets.module';
 import { ClarisaActionAreaOutcomeModule } from './clarisa-action-area-outcome/clarisa-action-area-outcome.module';
-import { ClarisaSecondOrderAdministrativeDivisionModule } from './clarisa-second-order-administrative-division/clarisa-second-order-administrative-division.module';
-import { ClarisaFirstOrderAdministrativeDivisionModule } from './clarisa-first-order-administrative-division/clarisa-first-order-administrative-division.module';
 
 export const ClarisaRoutes: Routes = [
   {
@@ -81,15 +79,15 @@ export const ClarisaRoutes: Routes = [
     module: ClarisaInitiativesModule
   },
   {
-    path: 'innovation-type',
+    path:'innovation-type',
     module: ClarisaInnovationTypeModule
   },
   {
-    path: 'innovation-readiness-levels',
+    path:'innovation-readiness-levels',
     module: ClarisaInnovationReadinessLevelsModule
   },
   {
-    path: 'innovation-characteristics',
+    path:'innovation-characteristics',
     module: ClarisaInnovationCharacteristicsModule
   },
   {
@@ -108,12 +106,4 @@ export const ClarisaRoutes: Routes = [
     path: 'sdgs-targets',
     module: ClarisaSdgsTargetsModule,
   },
-  {
-    path: 'second-order-administrative-division',
-    module: ClarisaSecondOrderAdministrativeDivisionModule
-  },
-  {
-    path: 'first-order-administrative-division',
-    module: ClarisaFirstOrderAdministrativeDivisionModule
-  }
 ];

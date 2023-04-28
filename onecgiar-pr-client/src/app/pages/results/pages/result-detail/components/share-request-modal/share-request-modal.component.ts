@@ -26,6 +26,8 @@ export class ShareRequestModalComponent {
   ];
   constructor(public retrieveModalSE: RetrieveModalService, public api: ApiService, public rolesSE: RolesService, public shareRequestModalSE: ShareRequestModalService, private router: Router, public resultsNotificationsSE: ResultsNotificationsService) {}
   ngOnInit(): void {
+    
+    
     this.shareRequestModalSE.shareRequestBody = new ShareRequestBody();
     //Called after the constructor, initializing input properties, and the first call to ngOnChanges.
     //Add 'implements OnInit' to the class.
@@ -95,6 +97,7 @@ export class ShareRequestModalComponent {
   }
 
   GET_AllInitiatives() {
+    console.log(this.retrieveModalSE.requester_initiative_id);
     this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
       this.allInitiatives = response;
     });

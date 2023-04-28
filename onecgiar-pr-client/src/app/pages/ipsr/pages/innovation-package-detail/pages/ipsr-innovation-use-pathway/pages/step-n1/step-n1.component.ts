@@ -43,7 +43,7 @@ export class StepN1Component implements OnInit {
     // console.log(this.ipsrStep1Body);
     this.convertOrganizationsTosave();
     this.api.resultsSE.PATCHInnovationPathwayByStepOneResultId(this.ipsrStep1Body).subscribe((resp: any) => {
-      // console.log(resp?.response[0].response);
+      console.log(resp?.response[0].response);
       this.ipsrDataControlSE.detailData.title = resp?.response[0].response;
       this.getSectionInformation();
     });

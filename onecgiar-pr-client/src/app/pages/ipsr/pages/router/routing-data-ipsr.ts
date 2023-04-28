@@ -39,6 +39,6 @@ export const ipsrInnovationUsePathwayStep2Routing: PrRoute[] = [
 
 export const ipsrInnovationPackageListContent: PrRoute[] = [
   { prName: '', underConstruction: true, path: 'innovation-list', loadChildren: () => import('../innovation-package-list-content/pages/innovation-package-list/innovation-package-list.module').then(m => m.InnovationPackageListModule) },
-  { prName: 'Notifications', path: 'notifications', loadChildren: () => import('../../../results/pages/results-outlet/pages/results-notifications/results-notifications.module').then(m => m.ResultsNotificationsModule) },
+  { prName: 'Notifications', path: 'notifications', loadChildren: () => import('../innovation-package-list-content/pages/innovation-packages-notification/innovation-packages-notification.module').then(m => m.InnovationPackagesNotificationModule) },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'innovation-list' }
 ]
