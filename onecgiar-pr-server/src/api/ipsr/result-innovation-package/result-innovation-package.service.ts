@@ -337,7 +337,8 @@ export class ResultInnovationPackageService {
         }
       }
       const newInnovationRegions = await this._resultRegionRepository.save(resultRegions);
-      const retrievedEoi = await this.retrievedEoi(CreateResultInnovationPackageDto.initiative_id, user.id, resultByInnivationPackage, vrs.id);
+      // ! This method it's no necesary
+      // const retrievedEoi = await this.retrievedEoi(CreateResultInnovationPackageDto.initiative_id, user.id, resultByInnivationPackage, vrs.id);
       const retriveAAOutcome = await this.retrievedAAOutcome(CreateResultInnovationPackageDto.initiative_id, user.id, resultByInnivationPackage, vrs.id);
       const retrievedImpactArea = await this.retrievedImpactArea(result.id, user.id, resultByInnivationPackage, vrs.id);
 
@@ -354,7 +355,7 @@ export class ResultInnovationPackageService {
       return {
         response: {
           newInnovationHeader,
-          retrievedEoi,
+          // retrievedEoi,
           retriveAAOutcome,
           retrievedImpactArea,
           newInnovationByInitiative,
@@ -431,45 +432,45 @@ export class ResultInnovationPackageService {
     }
     return null;
   }
-
-  async retrievedEoi(initId: number, user: number, resultByIpId: number, version: number) {
-    try {
-      let saveEoiOutcome: any;
-      const searchEoi: TocResult[] = await this._tocResult.getEoiIp(initId);
-
-      if (!searchEoi.length) {
-        return {
-          response: { valid: true },
-          message: 'No End of Initiative Outcomes were found'
+  /*
+    async retrievedEoi(initId: number, user: number, resultByIpId: number, version: number) {
+      try {
+        let saveEoiOutcome: any;
+        const searchEoi: TocResult[] = await this._tocResult.getEoiIp(initId);
+  
+        if (!searchEoi.length) {
+          return {
+            response: { valid: true },
+            message: 'No End of Initiative Outcomes were found'
+          }
         }
+  
+  
+        for (const eoi of searchEoi) {
+          const newEoi = new ResultIpEoiOutcome();
+          newEoi.toc_result_id = eoi.toc_result_id;
+          newEoi.result_by_innovation_package_id = resultByIpId;
+          newEoi.created_by = user;
+          newEoi.last_updated_by = user;
+          newEoi.version_id = version;
+          newEoi.created_date = new Date();
+          newEoi.last_updated_date = new Date();
+          saveEoiOutcome = await this._resultIpEoiOutcomesRepository.save(newEoi);
+        }
+  
+        return {
+          response: {
+            saveEoiOutcome
+          },
+          message: 'Successfully created',
+          status: HttpStatus.OK
+        }
+  
+      } catch (error) {
+        return this._handlersError.returnErrorRes({ error, debug: true });
       }
-
-
-      for (const eoi of searchEoi) {
-        const newEoi = new ResultIpEoiOutcome();
-        newEoi.toc_result_id = eoi.toc_result_id;
-        newEoi.result_by_innovation_package_id = resultByIpId;
-        newEoi.created_by = user;
-        newEoi.last_updated_by = user;
-        newEoi.version_id = version;
-        newEoi.created_date = new Date();
-        newEoi.last_updated_date = new Date();
-        saveEoiOutcome = await this._resultIpEoiOutcomesRepository.save(newEoi);
-      }
-
-      return {
-        response: {
-          saveEoiOutcome
-        },
-        message: 'Successfully created',
-        status: HttpStatus.OK
-      }
-
-    } catch (error) {
-      return this._handlersError.returnErrorRes({ error, debug: true });
     }
-  }
-
+  */
   async retrievedAAOutcome(initId: number, user: number, resultByIpId: number, version: number) {
     try {
       let saveAAOutcome: any;
