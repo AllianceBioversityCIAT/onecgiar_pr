@@ -16,8 +16,6 @@ export class ResultsNotificationsComponent {
     this.api.updateUserData(() => {
       this.resultsNotificationsSE.get_section_information();
     });
-    //console.log(this.resultsNotificationsSE);
-    
     this.shareRequestModalSE.inNotifications = true;
   }
 }
