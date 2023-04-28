@@ -35,10 +35,8 @@ export class StepN1InnovatonUseComponent {
     // console.log(fundedList?.childrens);
     return fundedList?.childrens ?? [];
   }
-
   reloadSelect(organizationItem) {
     organizationItem.hide = true;
-    organizationItem.institution_sub_type_id = null;
     setTimeout(() => {
       organizationItem.hide = false;
     }, 300);
@@ -55,26 +53,12 @@ export class StepN1InnovatonUseComponent {
   }
   get getAllSubTypes() {
     const list = [];
+    // console.log(this.body.innovatonUse.organization);
     this.body.innovatonUse.organization.forEach(resp => {
+      // console.log(resp.institution_sub_type_id);
       list.push({ code: resp.institution_sub_type_id });
     });
+    // console.log(list);
     return list;
-  }
-
-  get disableOrganizations() {
-    // console.log(this.institutionsTypeTreeList);
-    const list = [];
-    this.body.innovatonUse.organization.forEach(resp => {
-      // console.log(resp);
-      if (!resp.institution_sub_type_id) list.push({ code: resp.institution_types_id });
-    });
-    return list;
-  }
-
-  removeOrganization(organizationItem) {
-    console.log(organizationItem);
-    organizationItem.institution_sub_type_id = null;
-    organizationItem.institution_types_id = null;
-    organizationItem.is_active = false;
   }
 }

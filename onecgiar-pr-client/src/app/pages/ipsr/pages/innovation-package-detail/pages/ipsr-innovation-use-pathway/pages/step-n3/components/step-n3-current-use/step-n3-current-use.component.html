@@ -54,12 +54,12 @@
 <div class="fragment_section_divider"></div>
 
 <div class="fields_list" *ngIf="this.body.innovatonUse.organization?.length">
-    <div class="fields" appYmzListStructureItem (deleteEvent)="removeOrganization(organizationItem)"
+    <div class="fields" appYmzListStructureItem (deleteEvent)="organizationItem.is_active = false"
         [ngClass]="{'hideElement': organizationItem.is_active == false}"
         *ngFor="let organizationItem of this.body.innovatonUse.organization">
         <app-pr-select [options]="this.institutionsTypeTreeList" label="Organization" optionLabel="name"
             optionValue="code" [(ngModel)]="organizationItem.institution_types_id" placeholder="Select organization"
-            (selectOptionEvent)="reloadSelect(organizationItem)" [disableOptions]="disableOrganizations">
+            (selectOptionEvent)="reloadSelect(organizationItem)">
         </app-pr-select>
         <div>
             <div class="right_content">
@@ -69,7 +69,7 @@
                     optionLabel="name" optionValue="code" [(ngModel)]="organizationItem.institution_sub_type_id"
                     placeholder="Select Sub-type" [disableOptions]="getAllSubTypes">
                 </app-pr-select>
-                <app-pr-input placeholder="Write some..." label="How many" type="number" [required]="false"
+                <app-pr-input placeholder="Write some..." label="How many" type="text" [required]="false"
                     [(ngModel)]="this.organizationItem.how_many">
                 </app-pr-input>
             </div>
