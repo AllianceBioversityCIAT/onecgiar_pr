@@ -36,6 +36,7 @@ export class StepN3CurrentUseComponent {
   }
   reloadSelect(organizationItem) {
     organizationItem.hide = true;
+    organizationItem.institution_sub_type_id = null;
     setTimeout(() => {
       organizationItem.hide = false;
     }, 300);
