@@ -49,7 +49,7 @@ export class StepN1InnovatonUseComponent {
   }
   addOther() {
     this.body.innovatonUse.measures.push(new Measure());
-    //console.log(this.body.innovatonUse.measures);
+    console.log(this.body.innovatonUse.measures);
   }
   get getAllSubTypes() {
     const list = [];
