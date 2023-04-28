@@ -237,11 +237,13 @@ export class IpsrRepository extends Repository<Ipsr>{
                     clarisa_initiatives ci
                 WHERE
                     ci.id = rbi.inititiative_id
-            ) AS official_code
+            ) AS official_code,
+            rt.name AS result_type , r.result_level_id 
         FROM
             result r
             LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
             LEFT JOIN result_by_innovation_package ibr ON ibr.result_innovation_package_id = r.id
+            LEFT JOIN result_type rt ON rt.id = r.result_type_id 
         WHERE
             r.is_active = 1
             AND r.id = ibr.result_innovation_package_id
