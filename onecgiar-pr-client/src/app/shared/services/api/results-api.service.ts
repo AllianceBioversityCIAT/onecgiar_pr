@@ -611,17 +611,6 @@ export class ResultsApiService {
   }
 
   getCompletenessStatus(): Observable<any> {
-    // aquí se puede crear un observable con la respuesta deseada
-    console.log('getCompletenessStatus');
-    return new Observable(observer => {
-      const respuesta = {
-        datos: [1, 2, 3],
-        mensaje: 'Datos obtenidos exitosamente'
-      };
-
-      // se emite la respuesta al observer
-      observer.next(respuesta);
-      observer.complete();
-    });
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-packages-validation-module/get/green-checks/${this.ipsrDataControlSE.resultInnovationId}`);
   }
 }
