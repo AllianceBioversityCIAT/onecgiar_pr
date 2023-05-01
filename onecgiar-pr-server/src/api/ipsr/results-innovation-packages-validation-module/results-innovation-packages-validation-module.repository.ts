@@ -3,6 +3,7 @@ import { DataSource, Repository } from "typeorm";
 import { HandlersError } from "../../../shared/handlers/error.utils";
 import { ResultsInnovationPackagesValidationModule } from "./entities/results-innovation-packages-validation-module.entity";
 import { GetValidationSectionInnoPckgDto } from "./dto/get-validation-section-inno-pckg.dto";
+import { BooleanModel } from "aws-sdk/clients/gamelift";
 
 
 @Injectable()
@@ -80,8 +81,8 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                                 AND rbi2.initiative_role_id = 2
                                 AND rbi2.is_active = true
                         )
-                ) != 0
-                OR (
+                ) != 0 THEN FALSE
+                WHEN (
                     SELECT
                         COUNT(*)
                     FROM
@@ -89,9 +90,10 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                     WHERE
                         rbi3.result_id = r.id
                         AND rbi3.institution_roles_id = 2
+                        AND rbi3.is_active = TRUE
                 ) != (
                     SELECT
-                        DISTINCT COUNT(*)
+                        COUNT(DISTINCT rbibdt.result_by_institution_id)
                     FROM
                         result_by_institutions_by_deliveries_type rbibdt
                     WHERE
@@ -104,17 +106,18 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                             WHERE
                                 rbi4.result_id = r.id
                                 AND rbi4.institution_roles_id = 2
+                                AND rbi4.is_active = true
                         )
-                        OR (
-                            SELECT
-                                COUNT(*)
-                            FROM
-                                results_center rc
-                            WHERE
-                                rc.result_id = r.id
-                                AND rc.is_active = true
-                        ) < 1
                 ) THEN FALSE
+                WHEN (
+                    SELECT
+                        COUNT(*)
+                    FROM
+                        results_center rc
+                    WHERE
+                        rc.result_id = r.id
+                        AND rc.is_active = true
+                ) < 1 THEN FALSE
                 ELSE TRUE
             END AS validation
         FROM
@@ -123,7 +126,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
             AND rbi.is_active = 1
         WHERE
             r.is_active = 1
-            AND r.id = ?;    
+            AND r.id = ?;
         `;
 
         try {
@@ -136,7 +139,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                 debug: true,
             });
         }
-    
+
     }
 
     async stepOne(resultId: number) {
@@ -356,5 +359,80 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                 debug: true,
             });
         }
+    }
+
+
+    async stepTwo(resultId: number) {
+        const stepTwoOneQuery = `
+        SELECT
+            2.1 AS subSection,
+            'Step 2.1' AS sectionName,
+            CASE 
+                WHEN (
+                    SELECT
+                        COUNT(*)
+                    FROM result_by_innovation_package rbip 
+                    WHERE rbip.is_active = TRUE 
+                        AND rbip.ipsr_role_id = 2
+                        AND rbip.result_innovation_package_id = r.id
+                ) = 0 THEN FALSE
+                ELSE TRUE
+            END AS validation
+        FROM
+            result r
+            LEFT JOIN result_by_innovation_package rbip ON rbip.result_innovation_package_id = 4594
+            AND rbip.ipsr_role_id = 1
+        WHERE
+            r.is_active = 1
+            AND r.id = ?;
+        `;
+
+        const stepTwoTwoQuery = `
+        SELECT
+            2.2 AS subSection,
+            'Step 2.2' AS sectionName,
+            CASE 
+                WHEN (
+                    SELECT
+                        COUNT(*)
+                    FROM result_by_innovation_package rbip 
+                    WHERE rbip.is_active = TRUE 
+                        AND rbip.ipsr_role_id = 2
+                        AND rbip.result_innovation_package_id = r.id
+                ) = 0 THEN FALSE
+                ELSE TRUE
+            END AS validation
+        FROM
+            result r
+            LEFT JOIN result_by_innovation_package rbip ON rbip.result_innovation_package_id = 4594
+            AND rbip.ipsr_role_id = 1
+        WHERE
+            r.is_active = 1
+            AND r.id = ?;
+        `;
+
+        try {
+            const [stepTwoOne, stepTwoTwo]: GetValidationSectionInnoPckgDto[][] = await Promise.all(
+                [
+                    this.query(stepTwoOneQuery, [resultId]),
+                    this.query(stepTwoTwoQuery, [resultId]),
+                ]
+            );
+
+            const stepTwoValidation = stepTwoOne[0].validation && stepTwoTwo[0].validation;
+
+            return {
+                step: '2',
+                sectionName: 'Step 2',
+                validation: stepTwoValidation,
+                stepSubSections: [stepTwoOne[0], stepTwoTwo[0]]
+            };
+        } catch (error) {
+            throw this._handlersError.returnErrorRepository({
+                className: ResultsInnovationPackagesValidationModuleRepository.name,
+                error: error, debug: true,
+            });
+        }
+
     }
 } 

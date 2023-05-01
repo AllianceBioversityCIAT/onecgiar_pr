@@ -41,7 +41,7 @@ export class ResultsInnovationPackagesValidationModuleService {
       const gi = await this._resultInnovationPackageValidationModuleRepository.generalInformation(resultId);
       const contributors = await this._resultInnovationPackageValidationModuleRepository.contributors(resultId);
       const stepOne = await this._resultInnovationPackageValidationModuleRepository.stepOne(resultId);
-
+      const stepTwo = await this._resultInnovationPackageValidationModuleRepository.stepTwo(resultId);
 
       return {
         response: {
@@ -50,7 +50,8 @@ export class ResultsInnovationPackagesValidationModuleService {
             contributors
           ],
           stepSections: [
-            stepOne
+            stepOne,
+            stepTwo
           ]
         },
         message: 'Sections have been successfully validated',
