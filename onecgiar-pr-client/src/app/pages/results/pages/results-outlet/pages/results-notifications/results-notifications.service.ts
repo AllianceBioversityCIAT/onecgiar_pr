@@ -38,7 +38,7 @@ export class ResultsNotificationsService {
   }
 
   get_section_innovation_packages(){
-    console.log('get_section_information');
+    console.log('get_section_innovation_packages');
     this.api.resultsSE.GET_allRequest().subscribe(({ response }) => {
        console.log(response);
       this.interactiveNotisList = null;

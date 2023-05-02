@@ -225,12 +225,12 @@ export class ResultInnovationPackageService {
 
       if (CreateResultInnovationPackageDto.geo_scope_id === 2) {
         const regionsList = regions.map(r => r.name);
-        innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${result.title} in ${regionsList.slice(0, -1).join(', ')}${regionsList.length > 1 ? ' and ' : ''}${regionsList[regionsList.length - 1]}`;
+        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${result.title} in ${regionsList.slice(0, -1).join(', ')}${regionsList.length > 1 ? ' and ' : ''}${regionsList[regionsList.length - 1]}`;
       } else if (CreateResultInnovationPackageDto.geo_scope_id === 3 || CreateResultInnovationPackageDto.geo_scope_id === 4) {
         const countriesList = countries.map(c => c.name);
-        innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${result.title} in ${countriesList.slice(0, -1).join(', ')}${countriesList.length > 1 ? ' and ' : ''}${countriesList[countriesList.length - 1]}`;
+        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${result.title} in ${countriesList.slice(0, -1).join(', ')}${countriesList.length > 1 ? ' and ' : ''}${countriesList[countriesList.length - 1]}`;
       } else {
-        innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${result.title}.`;
+        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${result.title}.`;
       }
 
 
@@ -261,10 +261,6 @@ export class ResultInnovationPackageService {
           : false,
         geographic_scope_id: innovationGeoScope,
         initiative_id: CreateResultInnovationPackageDto.initiative_id,
-        gender_tag_level_id: result.gender_tag_level_id,
-        climate_change_tag_level_id: result.climate_change_tag_level_id,
-        is_krs: result.is_krs,
-        krs_url: result.krs_url,
         version_id: vrs.id,
         created_by: user.id,
         last_updated_by: user.id,

@@ -20,7 +20,7 @@ export class NotificationItemInnovationComponent {
 
   mapAndAccept(notification) {
     if (this.api.dataControlSE.platformIsClosed) return;
-    // console.log(notification);
+    console.log(notification);
     this.retrieveModalSE.title = notification?.title;
     this.retrieveModalSE.requester_initiative_id = notification?.requester_initiative_id;
     this.api.resultsSE.currentResultId = notification?.result_id;
@@ -47,7 +47,7 @@ export class NotificationItemInnovationComponent {
   }
 
   resultUrl(resultCode) {
-    return `/result/result-detail/${resultCode}`;
+    return `/ipsr/detail/${resultCode}/general-information`;
   }
 
   acceptOrReject(response) {
@@ -59,7 +59,7 @@ export class NotificationItemInnovationComponent {
     this.api.resultsSE.PATCH_updateRequest(body).subscribe(
       resp => {
         this.requesting = false;
-        // console.log(resp);
+       console.log(resp);
         this.api.alertsFe.show({ id: 'noti', title: response ? 'Request accepted' : 'Request rejected', status: 'success' });
         this.requestEvent.emit();
       },
