@@ -2,7 +2,7 @@
     <div *ngFor="let notification of this.resultsNotificationsSE.interactiveNotisList">
         
         <app-notification-item-innovation [comes]="true" [readOnly]="notification.readOnly"
-            (requestEvent)="this.resultsNotificationsSE.get_section_information()" [notification]="notification">
+            (requestEvent)="this.resultsNotificationsSE.get_section_innovation_packages()" [notification]="notification">
         </app-notification-item-innovation>
     </div>
 </div>

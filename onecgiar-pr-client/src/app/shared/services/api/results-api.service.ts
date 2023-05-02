@@ -23,7 +23,7 @@ import { IpsrCompletenessStatusService } from '../../../pages/ipsr/services/ipsr
   providedIn: 'root'
 })
 export class ResultsApiService {
-  constructor(public http: HttpClient, private saveButtonSE: SaveButtonService, private ipsrDataControlSE: IpsrDataControlService) {}
+  constructor(public http: HttpClient, private saveButtonSE: SaveButtonService, public ipsrDataControlSE: IpsrDataControlService) {}
   apiBaseUrl = environment.apiBaseUrl + 'api/results/';
   currentResultId: number | string = null;
   currentResultCode: number | string = null;
