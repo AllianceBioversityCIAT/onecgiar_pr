@@ -18,7 +18,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
     async generalInformation(resultId: number) {
         const giQuery = `
         SELECT
-            'General Information' as sectionName,
+            'General information' as sectionName,
             CASE 
                 WHEN 
                     r.title IS NULL OR r.title = '' OR
@@ -435,4 +435,12 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
         }
 
     }
+
+    links = () => {
+        return {
+            sectionName: 'Link to results',
+            validation: '1'
+        }
+    }
+
 } 

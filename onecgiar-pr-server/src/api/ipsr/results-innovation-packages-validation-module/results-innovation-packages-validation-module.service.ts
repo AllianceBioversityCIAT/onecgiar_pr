@@ -42,12 +42,19 @@ export class ResultsInnovationPackagesValidationModuleService {
       const contributors = await this._resultInnovationPackageValidationModuleRepository.contributors(resultId);
       const stepOne = await this._resultInnovationPackageValidationModuleRepository.stepOne(resultId);
       const stepTwo = await this._resultInnovationPackageValidationModuleRepository.stepTwo(resultId);
+      const pathway = {
+        sectionName: 'IPSR Innovation use pathway',
+        validation: stepOne.validation && stepTwo.validation
+      }
+      const links = this._resultInnovationPackageValidationModuleRepository.links();
 
       return {
         response: {
           mainSection: [
             gi,
-            contributors
+            contributors,
+            pathway,
+            links
           ],
           stepSections: [
             stepOne,
