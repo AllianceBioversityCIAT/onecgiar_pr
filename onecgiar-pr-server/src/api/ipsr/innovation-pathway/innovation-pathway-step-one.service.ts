@@ -893,9 +893,7 @@ export class InnovationPathwayStepOneService {
         } else if (!actorExists) {
           actorExists = await this._resultActorRepository.findOne({ where: { actor_type_id: IsNull(), result_id: result.id } });
         }
-        console.log(actorExists)
         if (actorExists) {
-          console.log('si', el.is_active == undefined ? true : el.is_active)
           await this._resultActorRepository.update(
             actorExists.result_actors_id,
             {
@@ -909,7 +907,6 @@ export class InnovationPathwayStepOneService {
             }
           );
         } else {
-          console.log('no')
           await this._resultActorRepository.save({
             actor_type_id: el.actor_type_id,
             is_active: el.is_active,
@@ -925,8 +922,6 @@ export class InnovationPathwayStepOneService {
         }
       })
     }
-
-    console.log(await this._resultActorRepository.find({ where: { result_id: result.id } }))
 
     if (crtr?.organization?.length) {
       const { organization } = crtr;
@@ -977,14 +972,14 @@ export class InnovationPathwayStepOneService {
           ripm = await this._resultIpMeasureRepository.findOne({
             where: {
               unit_of_measure: el.unit_of_measure,
-              result_ip_id: el.result_ip_id
+              result_ip_id: result.id
             }
           });
         } else if (!ripm) {
           ripm = await this._resultIpMeasureRepository.findOne({
             where: {
               unit_of_measure: IsNull(),
-              result_ip_id: el.result_ip_id
+              result_ip_id: result.id
             }
           });
         }
