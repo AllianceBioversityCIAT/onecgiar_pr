@@ -159,8 +159,8 @@ export class ResultsApiService {
   }
 
   POST_partnerRequest(body: PartnersRequestBody) {
-    console.log(`${environment.apiBaseUrl}api/clarisa/partner-request/${this.currentResultId}`);
-    return this.http.post<any>(`${environment.apiBaseUrl}api/clarisa/partner-request/${this.currentResultId}`, body);
+    console.log(`${environment.apiBaseUrl}api/clarisa/partner-request/${this.ipsrDataControlSE.inIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId}`);
+    return this.http.post<any>(`${environment.apiBaseUrl}api/clarisa/partner-request/${this.ipsrDataControlSE.inIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId}`, body);
   }
 
   GET_AllCLARISACountries() {
