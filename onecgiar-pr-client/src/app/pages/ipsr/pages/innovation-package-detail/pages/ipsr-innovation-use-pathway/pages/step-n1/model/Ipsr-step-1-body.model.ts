@@ -12,6 +12,12 @@ export class IpsrStep1Body {
   institutions: Institutions[] = [];
   experts: Expert[] = [];
   result_ip = new Result_ip();
+  scalig_ambition: Scalig_ambition = new Scalig_ambition();
+}
+
+class Scalig_ambition {
+  body: string = null;
+  title: string = null;
 }
 
 export class Expert {
