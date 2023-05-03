@@ -436,6 +436,191 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
 
     }
 
+    async stepThree(resultId: number) {
+        const stepThreeQuery = `
+        SELECT
+            3 AS step,
+            'Step 3' AS sectionName,
+            CASE
+                WHEN rip.is_expert_workshop_organized IS NULL
+                OR '' THEN FALSE
+                WHEN rip.is_expert_workshop_organized = 1
+                AND rip.use_level_evidence_based IS NULL
+                OR '' THEN FALSE
+                WHEN rip.is_expert_workshop_organized = 1
+                AND rip.readiness_level_evidence_based IS NULL
+                OR '' THEN FALSE
+                WHEN (
+                    rbip.readiness_level_evidence_based IS NULL
+                    OR ''
+                )
+                OR (
+                    rbip.use_level_evidence_based IS NULL
+                    OR ''
+                )
+                OR (
+                    rbip.readinees_evidence_link IS NULL
+                    OR ''
+                )
+                OR (
+                    rbip.use_evidence_link IS NULL
+                    OR ''
+                ) THEN FALSE
+                WHEN (
+                    SELECT
+                        COUNT(*)
+                    FROM
+                        result_ip_result_actors rira
+                    WHERE
+                        rira.result_ip_result_id = rbip.result_by_innovation_package_id
+                        AND rira.is_active = TRUE
+                        AND (
+                            rira.women IS NOT NULL
+                            AND rira.women_youth IS NOT NULL
+                            AND rira.men IS NOT NULL
+                            AND rira.men_youth IS NOT NULL
+                            AND rira.evidence_link IS NOT NULL
+                        )
+                ) = 0 THEN FALSE
+                WHEN (
+                    SELECT
+                        COUNT(*)
+                    FROM
+                        result_ip_result_actors rira
+                    WHERE
+                        rira.result_ip_result_id = rbip.result_by_innovation_package_id
+                        AND rira.is_active = TRUE
+                        AND (
+                            rira.women IS NULL
+                            OR rira.women_youth IS NULL
+                            OR rira.men IS NULL
+                            OR rira.men_youth IS NULL
+                            OR rira.evidence_link IS NULL
+                        )
+                ) > 0 THEN FALSE
+                WHEN (
+                    SELECT
+                        COUNT(*)
+                    FROM
+                        result_ip_result_institution_types ririt 
+                    WHERE
+                        ririt.result_ip_results_id = rbip.result_by_innovation_package_id 
+                        AND ririt.is_active = TRUE
+                        AND (
+                            ririt.how_many IS NOT NULL
+                            AND ririt.evidence_link IS NOT NULL
+                            AND ririt.institution_types_id IS NOT NULL
+                            AND ririt.institution_types_id IS NOT NULL 
+                        )
+                ) = 0 THEN FALSE
+                WHEN (
+                    SELECT
+                        COUNT(*)
+                    FROM
+                        result_ip_result_institution_types ririt 
+                    WHERE
+                        ririt.result_ip_results_id = rbip.result_by_innovation_package_id 
+                        AND ririt.is_active = TRUE
+                        AND (
+                            ririt.how_many IS NULL
+                            OR ririt.evidence_link IS NULL
+                            OR ririt.institution_types_id IS NULL
+                            OR ririt.institution_types_id IS NULL 
+                        )
+                ) > 0 THEN FALSE
+                WHEN (
+                    SELECT 
+                        COUNT(*)
+                    FROM result_by_innovation_package rbip2
+                    WHERE rbip2.is_active = TRUE 
+                        AND rbip2.ipsr_role_id = 2
+                        AND rbip2.result_innovation_package_id = r.id
+                        AND (
+                            rbip2.readiness_level_evidence_based IS NULL OR ''
+                            OR rbip2.use_level_evidence_based IS NULL OR ''
+                            OR rbip2.readinees_evidence_link IS NULL OR ''
+                            OR rbip2.use_evidence_link IS NULL OR ''
+                        )
+                ) > 0 THEN FALSE
+                ELSE TRUE
+            END AS validation
+        FROM
+            result r
+            LEFT JOIN result_innovation_package rip ON rip.result_innovation_package_id = r.id
+            LEFT JOIN result_by_innovation_package rbip ON rbip.result_innovation_package_id = rip.result_innovation_package_id
+            AND rbip.ipsr_role_id = 1
+        WHERE
+            r.is_active = 1
+            AND r.id = ?;
+        `;
+
+        try {
+            const stepThree: GetValidationSectionInnoPckgDto[] = await this.query(stepThreeQuery, [resultId]);
+            return stepThree[0];
+        } catch (error) {
+            throw this._handlersError.returnErrorRepository({
+                className: ResultsInnovationPackagesValidationModuleRepository.name,
+                error: error,
+                debug: true,
+            });
+        }
+    }
+
+    async stepFour(resultId: number) {
+        const stepFourQuery = `
+        SELECT
+            4 AS step,
+            'Step 4' AS sectionName,
+            CASE
+                WHEN (
+                    rip.initiative_expected_time IS NULL
+                    AND rip.initiative_unit_time_id IS NULL
+                ) THEN FALSE
+                WHEN (
+                    ripb.is_determined IS NULL
+                    OR ripb.is_determined != 1
+                )
+                AND (
+                    ripb.current_year IS NULL
+                    OR ripb.current_year = 0
+                    OR ripb.next_year IS NULL
+                    OR ripb.next_year = 0
+                ) THEN FALSE
+                WHEN (
+                    ripb.is_determined = 1
+                )
+                AND (
+                    ripb.current_year IS NULL
+                    OR ''
+                    OR ripb.next_year IS NULL
+                    OR ''
+                ) THEN TRUE
+                ELSE TRUE
+            END AS validation
+        FROM
+            result r
+            LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
+            AND rbi.initiative_role_id = 1
+            LEFT JOIN result_innovation_package rip ON rip.result_innovation_package_id = r.id
+            LEFT JOIN result_initiative_budget ripb ON ripb.result_initiative_id = rbi.id
+            AND ripb.is_active = TRUE
+        WHERE
+            r.is_active = 1
+            AND r.id = ?;
+        `;
+
+        try {
+            const stepFour: GetValidationSectionInnoPckgDto[] = await this.query(stepFourQuery, [resultId]);
+            return stepFour[0];
+        } catch (error) {
+            throw this._handlersError.returnErrorRepository({
+                className: ResultsInnovationPackagesValidationModuleRepository.name,
+                error: error,
+                debug: true,
+            });
+        }
+    }
+
     links = () => {
         return {
             sectionName: 'Link to results',
