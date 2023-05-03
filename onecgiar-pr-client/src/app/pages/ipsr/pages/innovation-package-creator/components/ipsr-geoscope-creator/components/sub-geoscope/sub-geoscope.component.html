@@ -5,11 +5,13 @@
     <app-pr-select [options]="this.body" [isStatic]="true" optionValue="id" label="Country" 
         optionLabel="name" placeholder="Select Country" [(ngModel)]="countrySelected" 
         (selectOptionEvent)="getSubNationalLevelOne()"></app-pr-select>
-    <app-pr-select [options]="this.body" label="Country" optionLabel="name"></app-pr-select>
-    <app-pr-select [options]="this.body" label="Country" optionLabel="name"></app-pr-select>
+    <app-pr-select [options]="this.body" label="Sub-national level 1" placeholder="Select Sub-national level 1" optionLabel="name" 
+    [isStatic]="true" optionValue="id"></app-pr-select>
+    <app-pr-select [options]="this.body" label="Sub-national level 2" placeholder="Select Sub-national level 2" optionLabel="name" 
+    [isStatic]="true" optionValue="id"></app-pr-select>
     
     <div>
-        <div class="delete">
+        <div class="delete" (click)="delete(index)">
             <i class="clickEvent material-icons-round ymz-lsi-delete-icon" style="color: red; cursor: pointer;">delete</i>
         </div>
     </div>
