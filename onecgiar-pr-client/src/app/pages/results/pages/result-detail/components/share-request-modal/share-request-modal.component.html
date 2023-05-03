@@ -33,7 +33,7 @@
             *ngIf="shareRequestModalSE.shareRequestBody?.initiative_id && this.showTocOut && (this.api.dataControlSE?.currentResult?.result_level_id==4 || this.api.dataControlSE?.currentResult?.result_level_id==3)"
             [initiative]="shareRequestModalSE.shareRequestBody"
             [editable]="!platformIsClosed && (this.rolesSE.validateInitiative(shareRequestModalSE.shareRequestBody?.initiative_id) || this.rolesSE.isAdmin || this.api.dataControlSE.inNotifications)"
-            [resultLevelId]="this.api.dataControlSE?.currentResult?.result_level_id==4?1:2">
+            [resultLevelId]="this.api.dataControlSE?.currentResult?.result_level_id==4 && !this.api.resultsSE.ipsrDataControlSE.inIpsr ?1:2">
         </app-toc-initiative-out>
 
         <!-- flagsCode="iso_alpha_2" -->

@@ -31,6 +31,8 @@ export class ShareRequestModalComponent {
     this.shareRequestModalSE.shareRequestBody = new ShareRequestBody();
     //Called after the constructor, initializing input properties, and the first call to ngOnChanges.
     //Add 'implements OnInit' to the class.
+    console.log(this.api.resultsSE.ipsrDataControlSE.inIpsr);
+    
     this.GET_AllInitiatives();
     
   }
