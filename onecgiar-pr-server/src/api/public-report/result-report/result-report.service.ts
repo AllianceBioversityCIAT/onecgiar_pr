@@ -2,14 +2,20 @@ import { Injectable } from '@nestjs/common';
 import { create as createPDF } from 'pdf-creator-node';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { DataSource } from 'typeorm';
 
 @Injectable()
 export class ResultReportService {
+  constructor(private _dataSource: DataSource) {}
+
   async findOne(id: number) {
-    const templateRead = readFileSync(
-      join(__dirname, '../templates/test-template.html'),
-      'utf-8',
-    );
+    const templateRead =
+      (
+        await this._dataSource.query(
+          'select fullHtmlReportTemplateByResultCode(?)',
+          [id],
+        )
+      )?.[0]?.[`fullHtmlReportTemplateByResultCode(${id})`] ?? '';
 
     const options = {
       format: 'A3',
@@ -31,42 +37,20 @@ export class ResultReportService {
       },
     };
 
-    var users = [
-      {
-        id,
-        name: 'Shyam',
-        age: '26',
-      },
-      {
-        id,
-        name: 'Navjot',
-        age: '26',
-      },
-      {
-        id,
-        name: 'Vitthal',
-        age: '26',
-      },
-    ];
-
     var document = {
       html: templateRead,
-      data: {
-        users: users,
-      },
+      data: {},
       type: 'buffer',
     };
 
     const pdf: Buffer = await createPDF(document, options)
       .then((res: Buffer) => {
-        console.log(res);
+        //console.log(res);
         return res;
       })
       .catch((error) => {
         console.error(error);
         return null;
       });
-
-    return pdf;
   }
 }
