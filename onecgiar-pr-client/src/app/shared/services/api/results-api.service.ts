@@ -613,4 +613,9 @@ export class ResultsApiService {
   getCompletenessStatus(): Observable<any> {
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-packages-validation-module/get/green-checks/${this.ipsrDataControlSE.resultInnovationId}`);
   }
+
+
+  getSubNationalLevelOne(isoAlpha){
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/first-order-administrative-division/iso-alpha-2/${isoAlpha}`);
+  }
 }

@@ -8,6 +8,7 @@ import { RegionsCountriesService } from '../../../../../../shared/services/globa
 })
 export class IpsrGeoscopeCreatorComponent {
   @Input() body: any;
+  sub_scope:any = [];
   geoscopeOptions = [
     { full_name: 'Global', id: 1 },
     { full_name: 'Regional', id: 2 },
@@ -21,4 +22,8 @@ export class IpsrGeoscopeCreatorComponent {
   }
 
   onSaveSection() {}
+
+  onClicked(){
+    this.sub_scope.push(this.sub_scope.length);
+  }
 }

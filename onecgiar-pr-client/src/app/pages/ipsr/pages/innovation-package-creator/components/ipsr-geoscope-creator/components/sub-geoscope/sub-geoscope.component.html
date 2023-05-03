@@ -1,0 +1,17 @@
+<div class="geo-scope">
+    <div style="display: flex; justify-content: center; align-items: center;">
+        <h4>{{index+1}}.</h4>
+    </div>
+    <app-pr-select [options]="this.body" [isStatic]="true" optionValue="id" label="Country" 
+        optionLabel="name" placeholder="Select Country" [(ngModel)]="countrySelected" 
+        (selectOptionEvent)="getSubNationalLevelOne()"></app-pr-select>
+    <app-pr-select [options]="this.body" label="Country" optionLabel="name"></app-pr-select>
+    <app-pr-select [options]="this.body" label="Country" optionLabel="name"></app-pr-select>
+    
+    <div>
+        <div class="delete">
+            <i class="clickEvent material-icons-round ymz-lsi-delete-icon" style="color: red; cursor: pointer;">delete</i>
+        </div>
+    </div>
+</div>
+{{countrySelected}}
