@@ -36,13 +36,13 @@ export class StepN1Component implements OnInit {
       this.ipsrStep1Body.sdgTargets.map(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
       this.ipsrStep1Body.impactAreas.map(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
       this.ipsrStep1Body.experts.forEach(expert => expert.expertises.map(expertItem => (expertItem.name = expertItem.obj_expertises.name)));
-      console.log(this.ipsrStep1Body);
+      //? console.log(this.ipsrStep1Body);
     });
   }
   onSaveSection() {
-    console.log("body");
-    
-    console.log(this.ipsrStep1Body);
+    // console.log("body");
+
+    //? console.log(this.ipsrStep1Body);
     this.convertOrganizationsTosave();
     this.api.resultsSE.PATCHInnovationPathwayByStepOneResultId(this.ipsrStep1Body).subscribe((resp: any) => {
       console.log(resp?.response[0].response);

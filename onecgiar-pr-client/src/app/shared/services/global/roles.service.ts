@@ -60,8 +60,8 @@ export class RolesService {
       if (isAdmin) return null;
       if (!result) return null;
       const { initiative_id } = result;
-      console.log(initiative_id);
-      console.log(initiative);
+      // console.log(initiative_id);
+      // console.log(initiative);
 
       const initiativeFinded = initiative.find(init => init.initiative_id == initiative_id);
       this.readOnly = Boolean(!initiativeFinded);
