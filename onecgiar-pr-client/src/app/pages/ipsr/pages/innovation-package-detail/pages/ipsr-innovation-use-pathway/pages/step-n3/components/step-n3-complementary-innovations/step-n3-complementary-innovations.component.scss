@@ -23,3 +23,8 @@
         border-radius: 5px 5px 0px 0px;
     }
 }
+
+.hideButton {
+    opacity: 0;
+    pointer-events: none;
+}
