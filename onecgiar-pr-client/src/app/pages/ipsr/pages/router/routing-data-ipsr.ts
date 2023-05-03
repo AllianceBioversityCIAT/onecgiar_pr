@@ -1,4 +1,5 @@
 import { Route } from '@angular/router';
+import { StepTwoBasicInfoModule } from '../innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n2/pages/step-two-basic-info/step-two-basic-info.module';
 
 export interface PrRoute extends Route {
   prName?: string;
@@ -33,7 +34,7 @@ export const ipsrInnovationUsePathwayRouting: PrRoute[] = [
 
 export const ipsrInnovationUsePathwayStep2Routing: PrRoute[] = [
   { prName: '', underConstruction: true, path: 'complementary-innovation', loadChildren: () => import('../innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n2/pages/complementary-innovation/complementary-innovation.module').then(m => m.ComplementaryInnovationModule) },
-  { prName: 'Basic Info', underConstruction: true, path: 'basic-info', loadChildren: () => import('../innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n2/pages/basic-info/basic-info-routing.module').then(m => m.BasicInfoRoutingModule) },
+  { prName: 'Basic Info', underConstruction: true, path: 'basic-info', loadChildren: () => import('../innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n2/pages/step-two-basic-info/step-two-basic-info-routing.module').then(m => m.StepTwoBasicInfoRoutingModule) },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'complementary-innovation' }
 ];
 
