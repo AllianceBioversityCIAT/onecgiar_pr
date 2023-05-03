@@ -40,11 +40,13 @@ export class ResultsInnovationPackagesValidationModuleService {
 
       const gi = await this._resultInnovationPackageValidationModuleRepository.generalInformation(resultId);
       const contributors = await this._resultInnovationPackageValidationModuleRepository.contributors(resultId);
-      const stepOne = await this._resultInnovationPackageValidationModuleRepository.stepOne(resultId);
-      const stepTwo = await this._resultInnovationPackageValidationModuleRepository.stepTwo(resultId);
+      const stepOne: GetValidationSectionInnoPckgDto = await this._resultInnovationPackageValidationModuleRepository.stepOne(resultId);
+      const stepTwo: GetValidationSectionInnoPckgDto = await this._resultInnovationPackageValidationModuleRepository.stepTwo(resultId);
+      const stepThree: GetValidationSectionInnoPckgDto = await this._resultInnovationPackageValidationModuleRepository.stepThree(resultId);
+      const stepFour: GetValidationSectionInnoPckgDto = await this._resultInnovationPackageValidationModuleRepository.stepFour(resultId);
       const pathway = {
         sectionName: 'IPSR Innovation use pathway',
-        validation: stepOne.validation && stepTwo.validation
+        validation: stepOne?.validation && stepTwo?.validation && stepThree?.validation && stepFour?.validation
       }
       const links = this._resultInnovationPackageValidationModuleRepository.links();
 
@@ -58,7 +60,9 @@ export class ResultsInnovationPackagesValidationModuleService {
           ],
           stepSections: [
             stepOne,
-            stepTwo
+            stepTwo,
+            stepThree,
+            stepFour
           ]
         },
         message: 'Sections have been successfully validated',
