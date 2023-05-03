@@ -56,7 +56,9 @@
                 <span style="display: flex;flex-direction: column; width: 50%; margin-left: '10px';">
                     <div *ngFor="let innovation of complementaryInnovationFunction; let i = index">
                         <div *ngIf="i >= 5" style="margin-top: 10px;">
-                            <app-pr-checkbox label="{{innovation.name}}"></app-pr-checkbox>
+                            <app-pr-checkbox label="{{innovation.name}}"
+                            (click)="change(innovation.complementary_innovation_functions_id)"
+                            [optionLabel]="innovation.name" [optionValue]="innovation.name"></app-pr-checkbox>
                         </div>
 
                     </div>
