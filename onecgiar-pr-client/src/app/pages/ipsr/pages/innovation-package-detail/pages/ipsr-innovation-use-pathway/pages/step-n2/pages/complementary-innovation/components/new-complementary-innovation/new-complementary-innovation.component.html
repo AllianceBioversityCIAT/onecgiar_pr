@@ -1,7 +1,7 @@
 <app-pr-button text="Add new complementary innovation/ enabler/ solution" icon="add_box"
     *ngIf="!this.api.rolesSE.readOnly" [reverse]="true" [verticalMargin]="20" (click)="status = true"></app-pr-button>
 
-<p-dialog class="support_information" header="Create complementary innovation" [(visible)]="status" [draggable]="false"
+<p-dialog class="support_information"  [(visible)]="status" [draggable]="false"
     [modal]="true" [closeOnEscape]="true" [showHeader]="true" [dismissableMask]="true"
     [style]="{padding: '0px', margin:'0px', width:'70vw'}" [blockScroll]="true" appendTo="body">
 
