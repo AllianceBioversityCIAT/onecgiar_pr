@@ -61,7 +61,10 @@ export class StepN3CurrentUseComponent {
     // console.log(list);
     return list;
   }
+
+  executeTimer = null;
   validateWomenAndYouth(i) {
+    clearTimeout(this.executeTimer);
     if (this.body.innovatonUse.actors[i].women_youth < 0 || this.body.innovatonUse.actors[i].women < 0) {
       if (this.body.innovatonUse.actors[i].women_youth < 0)
         setTimeout(() => {
@@ -73,23 +76,24 @@ export class StepN3CurrentUseComponent {
         }, 90);
     }
     if (this.body.innovatonUse.actors[i].women - this.body.innovatonUse.actors[i].women_youth < 0) {
-      setTimeout(() => {
+      this.executeTimer = setTimeout(() => {
+        console.log('execute');
         this.body.innovatonUse.actors[i].women_youth = this.body.innovatonUse.actors[i].previousWomen_youth;
         this.body.innovatonUse.actors[i].women = this.body.innovatonUse.actors[i].previousWomen;
-      }, 100);
 
-      this.showWomenExplanation = true;
-      const element: any = document.getElementById('removeFocus');
-      element.focus();
-      setTimeout(() => {
-        this.showWomenExplanation = false;
-      }, 3000);
+        this.showWomenExplanation = true;
+        const element: any = document.getElementById('removeFocus');
+        element.focus();
+        setTimeout(() => {
+          this.showWomenExplanation = false;
+        }, 3000);
+      }, 1000);
     } else {
       this.body.innovatonUse.actors[i].previousWomen = this.body.innovatonUse.actors[i].women;
       this.body.innovatonUse.actors[i].previousWomen_youth = this.body.innovatonUse.actors[i].women_youth;
     }
     setTimeout(() => {
       this.body.innovatonUse.actors[i].women_non_youth = this.body.innovatonUse.actors[i].women - this.body.innovatonUse.actors[i].women_youth;
-    }, 100);
+    }, 1100);
   }
 }
