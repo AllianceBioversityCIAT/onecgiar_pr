@@ -21,13 +21,13 @@
             </div>
             <div class="right_content">
                 <app-pr-input placeholder="Write some..." label="Women" type="number" [required]="false"
-                    [(ngModel)]="this.actorItem.women">
+                    [(ngModel)]="this.actorItem.women" (ngModelChange)="validateWomenAndYouth(i)">
                 </app-pr-input>
                 <app-pr-input placeholder="Write some..." label="Youth" type="number" [required]="false"
-                    [(ngModel)]="this.actorItem.women_youth">
+                    [(ngModel)]="this.actorItem.women_youth" (ngModelChange)="validateWomenAndYouth(i)">
                 </app-pr-input>
-                <app-pr-input noDataText="Save to calculate" placeholder="Write some..." label="Non-youth" type="number"
-                    [required]="false" [readOnly]="true" [(ngModel)]="this.actorItem.women_non_youth">
+                <app-pr-input placeholder="Write some..." label="Non-youth" type="number" [required]="false"
+                    [readOnly]="true" [(ngModel)]="this.actorItem.women_non_youth">
                 </app-pr-input>
             </div>
             <div class="right_content">
