@@ -251,7 +251,7 @@ export class ResultInnovationPackageService {
         result_code: last_code + 1,
         title: innovationTitle,
         reported_year_id: result.reported_year_id,
-        result_level_id: result.result_level_id,
+        result_level_id: 3,
         result_type_id: 10,
         has_regions: regions
           ? true
