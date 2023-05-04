@@ -60,4 +60,28 @@ export class StepN3CurrentUseComponent {
     // console.log(list);
     return list;
   }
+  validateWomenAndYouth(i) {
+    if (this.body.innovatonUse.actors[i].women_youth < 0 || this.body.innovatonUse.actors[i].women < 0) {
+      if (this.body.innovatonUse.actors[i].women_youth < 0)
+        setTimeout(() => {
+          this.body.innovatonUse.actors[i].women_youth = null;
+        }, 90);
+      if (this.body.innovatonUse.actors[i].women < 0)
+        setTimeout(() => {
+          this.body.innovatonUse.actors[i].women = 0;
+        }, 90);
+    }
+    if (this.body.innovatonUse.actors[i].women - this.body.innovatonUse.actors[i].women_youth < 0) {
+      setTimeout(() => {
+        this.body.innovatonUse.actors[i].women_youth = this.body.innovatonUse.actors[i].previousWomen_youth;
+        this.body.innovatonUse.actors[i].women = this.body.innovatonUse.actors[i].previousWomen;
+      }, 100);
+    } else {
+      this.body.innovatonUse.actors[i].previousWomen = this.body.innovatonUse.actors[i].women;
+      this.body.innovatonUse.actors[i].previousWomen_youth = this.body.innovatonUse.actors[i].women_youth;
+    }
+    setTimeout(() => {
+      this.body.innovatonUse.actors[i].women_non_youth = this.body.innovatonUse.actors[i].women - this.body.innovatonUse.actors[i].women_youth;
+    }, 100);
+  }
 }
