@@ -53,14 +53,12 @@ export class ResultIpAAOutcomeRepository extends Repository<ResultIpAAOutcome> {
     const query = `
     SELECT 
       riaa.action_area_outcome_id,
-      (
-        SELECT 
-          caao.outcomeStatement
-        FROM clarisa_action_area_outcome caao
-        WHERE id = action_area_outcome_id
-      ) AS outcomeStatement
+      caao.actionAreaId,
+      caao.outcomeSMOcode,
+      caao.outcomeStatement
     FROM
       result_ip_action_area_outcome riaa
+      LEFT JOIN clarisa_action_area_outcome caao ON caao.id = riaa.action_area_outcome_id
     WHERE riaa.is_active > 0
         AND riaa.result_by_innovation_package_id = ?
     `;

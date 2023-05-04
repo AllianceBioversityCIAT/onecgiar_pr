@@ -23,24 +23,32 @@ import { ResultsInnovationPackagesEnablerTypeModule } from './results-innovation
 import { ResultsIpInstitutionTypeModule } from './results-ip-institution-type/results-ip-institution-type.module';
 import { ResultsIpActorsModule } from './results-ip-actors/results-ip-actors.module';
 import { ResultsByIpInnovationUseMeasuresModule } from './results-by-ip-innovation-use-measures/results-by-ip-innovation-use-measures.module';
+import { ResultsInnovationPackagesValidationModuleModule } from './results-innovation-packages-validation-module/results-innovation-packages-validation-module.module';
 
 @Module({
   controllers: [IpsrController],
   providers: [IpsrService, IpsrRepository, HandlersError],
   imports: [
-    RouterModule.register(IpsrRoutes), 
-    ResultInnovationPackageModule, 
-    ResultsPackageByInitiativesModule, 
-    ResultsPackageTocResultModule, 
-    ResultsPackageCentersModule, 
-    NonPooledPackageProjectsModule, 
-    ShareResultInnovationPackageRequestModule, 
-    InnovationPathwayModule, 
-    InnovationPackagingExpertsModule, 
-    ResultIpMeasuresModule, ResultsComplementaryInnovationsModule, ResultsComplementaryInnovationsFunctionsModule, ResultsInnovationPackagesEnablerTypeModule, ResultsIpInstitutionTypeModule, ResultsIpActorsModule, ResultsByIpInnovationUseMeasuresModule,
+    RouterModule.register(IpsrRoutes),
+    ResultInnovationPackageModule,
+    ResultsPackageByInitiativesModule,
+    ResultsPackageTocResultModule,
+    ResultsPackageCentersModule,
+    NonPooledPackageProjectsModule,
+    ShareResultInnovationPackageRequestModule,
+    InnovationPathwayModule,
+    InnovationPackagingExpertsModule,
+    ResultIpMeasuresModule,
+    ResultsComplementaryInnovationsModule,
+    ResultsComplementaryInnovationsFunctionsModule,
+    ResultsInnovationPackagesEnablerTypeModule,
+    ResultsIpInstitutionTypeModule,
+    ResultsIpActorsModule,
+    ResultsByIpInnovationUseMeasuresModule,
+    ResultsInnovationPackagesValidationModuleModule,
   ],
   exports: [
     IpsrRepository
   ]
 })
-export class IpsrModule {}
+export class IpsrModule { }

@@ -4,7 +4,7 @@ import { Version } from '../../../results/versions/entities/version.entity';
 import { ResultInnovationPackage } from '../../result-innovation-package/entities/result-innovation-package.entity';
 
 @Entity('result_ip_measure')
-export class ResultIpMeasure extends BaseEntity{
+export class ResultIpMeasure extends BaseEntity {
 
     @PrimaryGeneratedColumn({
         name: 'result_ip_measure_id',
@@ -21,7 +21,7 @@ export class ResultIpMeasure extends BaseEntity{
 
     @Column({
         name: 'quantity',
-        type: 'bigint',
+        type: 'float',
         nullable: true
     })
     quantity!: number;
@@ -36,7 +36,7 @@ export class ResultIpMeasure extends BaseEntity{
     @JoinColumn({
         name: 'result_ip_id'
     })
-    obj_result:ResultInnovationPackage;
+    obj_result: ResultInnovationPackage;
 
     @ManyToOne(() => Version, v => v.id)
     @JoinColumn({

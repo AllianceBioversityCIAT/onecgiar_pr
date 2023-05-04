@@ -20,6 +20,7 @@ export class StepN3Component implements OnInit {
   ngOnInit(): void {
     this.GETAllClarisaInnovationReadinessLevels();
     this.getSectionInformation();
+    this.api.setTitle('Step 3');
   }
 
   getSectionInformation() {
@@ -73,5 +74,10 @@ export class StepN3Component implements OnInit {
         item.institution_types_id = item.institution_sub_type_id;
       }
     });
+  }
+  cleanEvidence() {
+    if (this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true) return;
+    this.ipsrStep3Body.result_innovation_package.readiness_level_evidence_based = null;
+    this.ipsrStep3Body.result_innovation_package.use_level_evidence_based = null;
   }
 }

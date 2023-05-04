@@ -33,6 +33,12 @@ import { YearRepository } from '../../../api/results/years/year.repository';
 import { ResultByInitiativesRepository } from '../../../api/results/results_by_inititiatives/resultByInitiatives.repository';
 import { ComplementaryInnovationFunctionsRepository } from '../results-complementary-innovations-functions/repositories/complementary-innovation-functions.repository';
 import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
+import { InnovationPathwayStepFourService } from './innovation-pathway-step-four.service';
+import { ResultInitiativeBudgetRepository } from '../../../api/results/result_budget/repositories/result_initiative_budget.repository';
+import { NonPooledProjectRepository } from '../../../api/results/non-pooled-projects/non-pooled-projects.repository';
+import { NonPooledProjectBudgetRepository } from '../../results/result_budget/repositories/non_pooled_proyect_budget.repository';
+import { ResultInstitutionsBudgetRepository } from '../../results/result_budget/repositories/result_institutions_budget.repository';
+import { ResultIpExpertisesRepository } from '../innovation-packaging-experts/repositories/result-ip-expertises.repository';
 
 @Module({
   controllers: [InnovationPathwayController],
@@ -69,7 +75,13 @@ import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institut
     YearRepository,
     ResultByInitiativesRepository,
     ComplementaryInnovationFunctionsRepository,
-    ClarisaInstitutionsRepository
+    ClarisaInstitutionsRepository,
+    InnovationPathwayStepFourService,
+    ResultInitiativeBudgetRepository,
+    NonPooledProjectRepository,
+    NonPooledProjectBudgetRepository,
+    ResultInstitutionsBudgetRepository,
+    ResultIpExpertisesRepository
   ]
 })
-export class InnovationPathwayModule { }
+export class InnovationPathwayModule {}

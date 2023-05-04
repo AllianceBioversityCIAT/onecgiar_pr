@@ -30,6 +30,12 @@ import { ResultByIntitutionsRepository } from '../../../api/results/results_by_i
 import { ResultByIntitutionsTypeRepository } from '../../../api/results/results_by_institution_types/result_by_intitutions_type.repository';
 import { resultValidationRepository } from '../../../api/results/results-validation-module/results-validation-module.repository';
 import { ResultIpSdgTargetRepository } from '../innovation-pathway/repository/result-ip-sdg-targets.repository';
+import { ResultInitiativeBudgetRepository } from '../../../api/results/result_budget/repositories/result_initiative_budget.repository';
+import { UnitTimeRepository } from './repositories/unit_time.repository';
+import { TocResultsRepository } from '../../../toc/toc-results/toc-results.repository';
+import { ResultIpEoiOutcomeRepository } from '../innovation-pathway/repository/result-ip-eoi-outcomes.repository';
+import { ResultIpEoiOutcome } from '../innovation-pathway/entities/result-ip-eoi-outcome.entity';
+import { TocResult } from '../../../toc/toc-results/entities/toc-result.entity';
 
 @Injectable()
 export class ResultInnovationPackageService {
@@ -56,7 +62,24 @@ export class ResultInnovationPackageService {
     private readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
     private readonly _resultByIntitutionsTypeRepository: ResultByIntitutionsTypeRepository,
     private readonly _resultValidationRepository: resultValidationRepository,
+    protected readonly _resultInitiativesBudgetRepository: ResultInitiativeBudgetRepository,
+    protected readonly _unitTimeRepository: UnitTimeRepository,
+    protected readonly _tocResult: TocResultsRepository,
+    protected readonly _resultIpEoiOutcomesRepository: ResultIpEoiOutcomeRepository,
   ) { }
+
+  async findUnitTime() {
+    try {
+      const unit_time = await this._unitTimeRepository.find();
+      return {
+        response: unit_time,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
 
   async findRelevantCountry() {
     try {
@@ -202,18 +225,18 @@ export class ResultInnovationPackageService {
 
       if (CreateResultInnovationPackageDto.geo_scope_id === 2) {
         const regionsList = regions.map(r => r.name);
-        innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${result.title} in ${regionsList.slice(0, -1).join(', ')}${regionsList.length > 1 ? ' and ' : ''}${regionsList[regionsList.length - 1]}`;
+        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${result.title} in ${regionsList.slice(0, -1).join(', ')}${regionsList.length > 1 ? ' and ' : ''}${regionsList[regionsList.length - 1]}`;
       } else if (CreateResultInnovationPackageDto.geo_scope_id === 3 || CreateResultInnovationPackageDto.geo_scope_id === 4) {
         const countriesList = countries.map(c => c.name);
-        innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${result.title} in ${countriesList.slice(0, -1).join(', ')}${countriesList.length > 1 ? ' and ' : ''}${countriesList[countriesList.length - 1]}`;
+        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${result.title} in ${countriesList.slice(0, -1).join(', ')}${countriesList.length > 1 ? ' and ' : ''}${countriesList[countriesList.length - 1]}`;
       } else {
-        innovationTitle = `Innovation Packaging and Scaling Readiness assessment for ${result.title}.`;
+        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${result.title}.`;
       }
 
 
       const titleValidate = await this._resultRepository
         .createQueryBuilder('result')
-        .where('result.title like :title', { title: `${innovationTitle}` })
+        .where('result.title like :title AND is_active = true', { title: `${innovationTitle}` })
         .getMany();
 
       if (titleValidate.length) {
@@ -227,7 +250,6 @@ export class ResultInnovationPackageService {
       const newInnovationHeader = await this._resultRepository.save({
         result_code: last_code + 1,
         title: innovationTitle,
-        description: result.description,
         reported_year_id: result.reported_year_id,
         result_level_id: result.result_level_id,
         result_type_id: 10,
@@ -239,10 +261,6 @@ export class ResultInnovationPackageService {
           : false,
         geographic_scope_id: innovationGeoScope,
         initiative_id: CreateResultInnovationPackageDto.initiative_id,
-        gender_tag_level_id: result.gender_tag_level_id,
-        climate_change_tag_level_id: result.climate_change_tag_level_id,
-        is_krs: result.is_krs,
-        krs_url: result.krs_url,
         version_id: vrs.id,
         created_by: user.id,
         last_updated_by: user.id,
@@ -256,6 +274,14 @@ export class ResultInnovationPackageService {
         version_id: vrs.id,
         created_by: user.id,
         last_updated_by: user.id
+      });
+
+      const resultByInitiativesId = newInnovationByInitiative.id;
+      const newresultInitiativeBudget = await this._resultInitiativesBudgetRepository.save({
+        result_initiative_id: resultByInitiativesId,
+        version_id: vrs.id,
+        created_by: user.id,
+        last_updated_by: user.id,
       });
 
       const newResultInnovationPackage = await this._resultInnovationPackageRepository.save({
@@ -301,17 +327,29 @@ export class ResultInnovationPackageService {
       }
       const newInnovationRegions = await this._resultRegionRepository.save(resultRegions);
       const newInnovationCountries = await this._resultCountryRepository.save(resultCountries);
+      // ! This method it's no necesary
+      // const retrievedEoi = await this.retrievedEoi(CreateResultInnovationPackageDto.initiative_id, user.id, resultByInnivationPackage, vrs.id);
       const retriveAAOutcome = await this.retrievedAAOutcome(CreateResultInnovationPackageDto.initiative_id, user.id, resultByInnivationPackage, vrs.id);
       const retrievedImpactArea = await this.retrievedImpactArea(result.id, user.id, resultByInnivationPackage, vrs.id);
 
+      await this._resultInnovationPackageRepository.update(
+        newResultInnovationPackage.result_innovation_package_id,
+        {
+          relevant_country_id: await this.defaultRelevantCountry(result.geographic_scope_id, result.id),
+          regional_leadership_id: result.geographic_scope_id == 1 ? 3 : null,
+          regional_integrated_id: result.geographic_scope_id == 1 ? 3 : null
+        }
+      )
 
 
       return {
         response: {
           newInnovationHeader,
+          // retrievedEoi,
           retriveAAOutcome,
           retrievedImpactArea,
           newInnovationByInitiative,
+          newresultInitiativeBudget,
           newResultInnovationPackage,
           newInnovationByResult,
           newInnovationRegions,
@@ -324,6 +362,57 @@ export class ResultInnovationPackageService {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
+
+  async defaultRelevantCountry(geoscope: number, resultId: number) {
+    if ([1, 2, 3, 4].includes(geoscope)) {
+      if ([1, 2].includes(geoscope)) {
+        return 3;
+      }
+      if ([3, 4].includes(geoscope)) {
+        const rc = await this._resultCountryRepository.findOne({ where: { result_id: resultId, is_active: true } });
+        return rc ? 3 : null;
+      }
+    }
+    return null;
+  }
+
+  // async retrievedEoi(initId: number, user: number, resultByIpId: number, version: number) {
+  //   try {
+  //     let saveEoiOutcome: any;
+  //     const searchEoi: TocResult[] = await this._tocResult.getEoiIp(initId);
+
+  //     if (!searchEoi.length) {
+  //       return {
+  //         response: { valid: true },
+  //         message: 'No End of Initiative Outcomes were found'
+  //       }
+  //     }
+
+
+  //     for (const eoi of searchEoi) {
+  //       const newEoi = new ResultIpEoiOutcome();
+  //       newEoi.toc_result_id = eoi.toc_result_id;
+  //       newEoi.result_by_innovation_package_id = resultByIpId;
+  //       newEoi.created_by = user;
+  //       newEoi.last_updated_by = user;
+  //       newEoi.version_id = version;
+  //       newEoi.created_date = new Date();
+  //       newEoi.last_updated_date = new Date();
+  //       saveEoiOutcome = await this._resultIpEoiOutcomesRepository.save(newEoi);
+  //     }
+
+  //     return {
+  //       response: {
+  //         saveEoiOutcome
+  //       },
+  //       message: 'Successfully created',
+  //       status: HttpStatus.OK
+  //     }
+
+  //   } catch (error) {
+  //     return this._handlersError.returnErrorRes({ error, debug: true });
+  //   }
+  // }
 
   async retrievedAAOutcome(initId: number, user: number, resultByIpId: number, version: number) {
     try {
@@ -412,22 +501,14 @@ export class ResultInnovationPackageService {
         }
       }
 
-      if (req.lead_contact_person === '' || req.lead_contact_person === null) {
-        return {
-          response: { valid: false },
-          message: 'Please add a lead contact person',
-          status: HttpStatus.BAD_REQUEST,
-        };
-      }
-
       const updateResult = await this._resultRepository.update(resultId, {
-        title: req.title,
-        description: req.description || resultExist.description,
-        lead_contact_person: req.lead_contact_person,
-        gender_tag_level_id: req.gender_tag_level_id,
-        climate_change_tag_level_id: req.climate_change_tag_level_id,
-        is_krs: req.is_krs,
-        krs_url: req.krs_url,
+        title: req?.title,
+        description: req?.description,
+        lead_contact_person: req?.lead_contact_person,
+        gender_tag_level_id: req?.gender_tag_level_id,
+        climate_change_tag_level_id: req?.climate_change_tag_level_id,
+        is_krs: req?.is_krs,
+        krs_url: req?.krs_url,
         geographic_scope_id: resultExist.geographic_scope_id,
         last_updated_by: user.id,
       });

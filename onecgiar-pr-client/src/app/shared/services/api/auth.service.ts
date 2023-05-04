@@ -8,7 +8,7 @@ import { map } from 'rxjs';
   providedIn: 'root'
 })
 export class AuthService {
-  inLogin = true;
+  inLogin = false;
   apiBaseUrl = environment.apiBaseUrl + 'auth/';
   constructor(public http: HttpClient, private router: Router) {}
 
@@ -58,12 +58,12 @@ export class AuthService {
 
     var cookies = document.cookie.split(';');
     for (let i = 0; i < cookies.length; i++) {
-      let cookie = cookies[i];
+      const cookie = cookies[i];
 
       if (cookie?.split('=')[0]?.includes('twk')) {
         const eqPos = cookie.indexOf('=');
         // console.log(cookie + ' ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^');
-        let name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+        const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
         document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT';
       }
     }

@@ -12,6 +12,12 @@ export class IpsrStep1Body {
   institutions: Institutions[] = [];
   experts: Expert[] = [];
   result_ip = new Result_ip();
+  scalig_ambition: Scalig_ambition = new Scalig_ambition();
+}
+
+class Scalig_ambition {
+  body: string = null;
+  title: string = null;
 }
 
 export class Expert {
@@ -19,7 +25,8 @@ export class Expert {
   last_name: string;
   email: string;
   organization_id: number;
-  expertises_id: number;
+  // expertises_id: number;
+  expertises = [];
   is_active: boolean;
 }
 
@@ -53,9 +60,9 @@ class InnovatonUse {
 }
 
 export class Measure {
-  unit_of_measure: string;
-  quantity: number;
-  is_active: boolean;
+  unit_of_measure: string = null;
+  quantity: number = null;
+  is_active: boolean = null;
 }
 
 export class Organization {
@@ -74,23 +81,31 @@ export class Actor {
   men: number;
   men_youth: number;
   is_active: boolean;
+  women_non_youth: any;
+  men_non_youth: any;
 }
 
 interface SdgTarget {
   clarisa_sdg_usnd_code: number;
   clarisa_sdg_target_id: number;
   sdg_target: string;
+  full_name: string;
+  sdg_target_code: string;
 }
 
 interface ImpactArea {
   impact_area_indicator_id: number;
   target: string;
+  full_name: string;
+  name: string;
 }
 
 interface ActionAreaOutcome {
   action_area_outcome_id: number;
   outcomeStatement: string;
   is_active: boolean;
+  full_name: string;
+  outcomeSMOcode: string;
 }
 
 interface EoiOutcome {

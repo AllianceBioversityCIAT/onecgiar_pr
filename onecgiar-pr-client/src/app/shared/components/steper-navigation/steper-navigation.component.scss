@@ -33,6 +33,12 @@
             position: relative;
             z-index: 1;
 
+            .green_check_absolute {
+                position: absolute;
+                top: -17px;
+                right: -17px;
+            }
+
             .name {
                 position: absolute;
                 top: 45px;
@@ -55,6 +61,9 @@
         //     transform: translateX(-50%);
         //     z-index: 0;
         // }
+        .name {
+            color: var(--pr-color-primary) !important;
+        }
     }
 
 }

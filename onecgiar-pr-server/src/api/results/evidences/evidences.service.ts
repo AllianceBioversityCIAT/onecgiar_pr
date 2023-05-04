@@ -43,6 +43,7 @@ export class EvidencesService {
           evidencesArray.map((e) => e.link.trim()),
           user.id,
           false,
+          1
         );
         const long: number =
           evidencesArray.length > 3 ? 3 : evidencesArray.length;
@@ -54,6 +55,7 @@ export class EvidencesService {
               result.id,
               evidence.link,
               false,
+              1
             );
           if (!eExists) {
             let newEvidence = new Evidence();
@@ -66,6 +68,7 @@ export class EvidencesService {
             newEvidence.is_supplementary = false;
             newEvidence.link = evidence.link;
             newEvidence.result_id = result.id;
+            newEvidence.evidence_type_id = 1;
             newEvidence.version_id = vr.id;
 
             const hasQuery = (evidence.link ?? '').indexOf('?');
@@ -127,6 +130,7 @@ export class EvidencesService {
           supplementaryArray.map((e) => e.link.trim()),
           user.id,
           true,
+          1
         );
         const long: number =
           supplementaryArray.length > 3 ? 3 : supplementaryArray.length;
@@ -138,6 +142,7 @@ export class EvidencesService {
               result.id,
               supplementary.link,
               true,
+              1
             );
           if (!eExists) {
             let newEvidnece = new Evidence();
@@ -148,6 +153,7 @@ export class EvidencesService {
             newEvidnece.link = supplementary.link;
             newEvidnece.result_id = result.id;
             newEvidnece.version_id = vr.id;
+            newEvidnece.evidence_type_id = 1;
             newsEvidencesArray.push(newEvidnece);
           } else {
             eExists.description = supplementary?.description ?? null;
@@ -180,9 +186,10 @@ export class EvidencesService {
       const evidences = await this._evidencesRepository.getEvidencesByResultId(
         resultId,
         false,
+        1
       );
       const supplementary =
-        await this._evidencesRepository.getEvidencesByResultId(resultId, true);
+        await this._evidencesRepository.getEvidencesByResultId(resultId, true, 1);
 
       evidences.map((e) => {
         e.gender_related = !!e.gender_related;

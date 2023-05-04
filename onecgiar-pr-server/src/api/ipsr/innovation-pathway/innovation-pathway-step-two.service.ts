@@ -67,7 +67,8 @@ export class InnovationPathwayStepTwoService {
 
   async findInnovationsAndComplementary() {
     try {
-      const results = await this._resultRepository.getResultByTypes([7, 11]);
+      const results =
+        await this._resultRepository.getResultByTypes([7, 11]);
       return {
         response: results,
         message: 'Successful response',

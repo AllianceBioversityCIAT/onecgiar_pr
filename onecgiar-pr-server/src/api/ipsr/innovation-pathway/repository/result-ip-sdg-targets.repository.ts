@@ -19,6 +19,13 @@ export class ResultIpSdgTargetRepository extends Repository<ResultIpSdgTargets>{
             ris.clarisa_sdg_target_id AS id,
             (
                 SELECT
+                    cst.sdg_target_code
+                FROM
+                    clarisa_sdgs_targets cst
+                WHERE cst.id = ris.clarisa_sdg_target_id
+            ) AS sdg_target_code,
+            (
+                SELECT
                     cst.sdg_target
                 FROM
                     clarisa_sdgs_targets cst

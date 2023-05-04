@@ -29,6 +29,13 @@ export class ClarisaGobalTargetRepository extends Repository<ClarisaGlobalTarget
     SELECT
     	cgt.target,
     	cgt.targetId,
+      (
+        SELECT 
+          cia.name
+        FROM 
+          clarisa_impact_areas cia
+        WHERE cia.id = cgt.impactAreaId
+      ) AS name,
     	cgt.impactAreaId
     FROM
     	clarisa_global_targets cgt;

@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { ApiService } from 'src/app/shared/services/api/api.service';
 
 @Component({
   selector: 'app-ipsr-link-to-results',
@@ -6,6 +7,8 @@ import { Component, OnInit } from '@angular/core';
   styleUrls: ['./ipsr-link-to-results.component.scss']
 })
 export class IpsrLinkToResultsComponent {
-  constructor() {}
+  constructor(private api: ApiService) {
+    this.api.setTitle('Step 1');
+  }
   onSaveSection() {}
 }

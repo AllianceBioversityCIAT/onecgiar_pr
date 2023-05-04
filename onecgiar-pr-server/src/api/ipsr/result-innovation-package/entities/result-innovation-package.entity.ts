@@ -10,7 +10,7 @@ import { Result } from '../../../results/entities/result.entity';
 import { Ipsr } from '../../entities/ipsr.entity';
 import { ResultsInnovationPackagesEnablerType } from '../../results-innovation-packages-enabler-type/entities/results-innovation-packages-enabler-type.entity';
 import { ClarisaInnovationReadinessLevel } from '../../../../clarisa/clarisa-innovation-readiness-levels/entities/clarisa-innovation-readiness-level.entity';
-
+import { UnitTime } from './unit-time.entity';
 @Entity('result_innovation_package')
 export class ResultInnovationPackage extends BaseEntity{
     @Column({
@@ -90,6 +90,58 @@ export class ResultInnovationPackage extends BaseEntity{
     })
     is_expert_workshop_organized!: boolean;
 
+    @Column({
+        name: 'initiative_expected_time',
+        type: 'varchar',
+        length: 45,
+        nullable: true
+    })
+    initiative_expected_time!: string;
+
+    @Column({
+        name: 'initiative_unit_time_id',
+        type: 'bigint',
+        nullable: true
+    })
+    initiative_unit_time_id!: number;
+
+    @Column({
+        name: 'bilateral_expected_time',
+        type: 'varchar',
+        length: 45,
+        nullable: true
+    })
+    bilateral_expected_time!: string;
+
+    @Column({
+        name: 'bilateral_unit_time_id',
+        type: 'bigint',
+        nullable: true
+    })
+    bilateral_unit_time_id!: number;
+
+    @Column({
+        name: 'partner_expected_time',
+        type: 'varchar',
+        length: 45,
+        nullable: true
+    })
+    partner_expected_time!: string;
+
+    @Column({
+        name: 'partner_unit_time_id',
+        type: 'bigint',
+        nullable: true
+    })
+    partner_unit_time_id!: number;
+
+    @Column({
+        name: 'is_result_ip_published',
+        type: 'boolean',
+        nullable: true
+    })
+    is_result_ip_published!: boolean;
+
     @ManyToOne(() => consensusInitiativeWorkPackage , ciwp => ciwp.consensus_initiative_work_package_id, {nullable: true})
     @JoinColumn({
         name: 'consensus_initiative_work_package_id'
@@ -149,4 +201,22 @@ export class ResultInnovationPackage extends BaseEntity{
         name: 'readiness_level_evidence_based'
     })
     obj_readiness_level_evidence_based: ClarisaInnovationReadinessLevel;
+
+    @ManyToOne(() => UnitTime, ut => ut.unit_time_id)
+    @JoinColumn({
+        name: 'initiative_unit_time_id'
+    })
+    obj_initiative_unit_time_id: UnitTime;
+
+    @ManyToOne(() => UnitTime, ut => ut.unit_time_id)
+    @JoinColumn({
+        name: 'bilateral_unit_time_id'
+    })
+    obj_bilateral_unit_time_id: UnitTime;
+
+    @ManyToOne(() => UnitTime, ut => ut.unit_time_id)
+    @JoinColumn({
+        name: 'partner_unit_time_id'
+    })
+    obj_partner_unit_time: UnitTime;
 }

@@ -40,7 +40,7 @@ export class NonPooledProjectRepository extends Repository<NonPooledProject> {
     }
   }
 
-  async getAllNPProjectById(resultId: number, grantTitle: string) {
+  async getAllNPProjectById(resultId: number, grantTitle: string, role: number) {
     const queryData = `
     select 
       npp.id,
@@ -57,10 +57,11 @@ export class NonPooledProjectRepository extends Repository<NonPooledProject> {
       from non_pooled_project npp
       WHERE npp.results_id = ?
       	and npp.grant_title ${!grantTitle?`is null`: `= '${grantTitle}'`}
+        and npp.non_pooled_project_type_id = ?
       order by npp.id desc;
     `;
     try {
-      const npProject: NonPooledProject[] = await this.query(queryData, [resultId]);
+      const npProject: NonPooledProject[] = await this.query(queryData, [resultId, role]);
       return npProject?.length? npProject[0]: undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -71,7 +72,7 @@ export class NonPooledProjectRepository extends Repository<NonPooledProject> {
     }
   }
 
-  async getAllNPProjectByNPId(resultId: number, nppId: number) {
+  async getAllNPProjectByNPId(resultId: number, nppId: number, role: number) {
     const queryData = `
     select 
       npp.id,
@@ -87,10 +88,11 @@ export class NonPooledProjectRepository extends Repository<NonPooledProject> {
       npp.last_updated_by
       from non_pooled_project npp
       WHERE npp.results_id = ?
-      	and npp.id = ?;
+      	and npp.id = ?
+        and npp.non_pooled_project_type_id = ?;
     `;
     try {
-      const npProject: NonPooledProject[] = await this.query(queryData, [resultId, nppId || null]);
+      const npProject: NonPooledProject[] = await this.query(queryData, [resultId, nppId || null, role]);
       return npProject?.length? npProject[0]: undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -101,7 +103,7 @@ export class NonPooledProjectRepository extends Repository<NonPooledProject> {
     }
   }
 
-  async getAllNPProjectByResultId(resultId: number) {
+  async getAllNPProjectByResultId(resultId: number, type: number) {
     const queryData = `
     select 
       npp.id,
@@ -117,10 +119,11 @@ export class NonPooledProjectRepository extends Repository<NonPooledProject> {
       npp.last_updated_by
       from non_pooled_project npp
       WHERE npp.results_id = ?
-        and npp.is_active > 0;
+        and npp.is_active > 0
+        and npp.non_pooled_project_type_id = ?;
     `;
     try {
-      const npProject: NonPooledProject[] = await this.query(queryData, [resultId]);
+      const npProject: NonPooledProject[] = await this.query(queryData, [resultId, type]);
       return npProject;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -131,7 +134,7 @@ export class NonPooledProjectRepository extends Repository<NonPooledProject> {
     }
   }
 
-  async updateNPProjectById(resultId: number, titleArray: string[], userId: number) {
+  async updateNPProjectById(resultId: number, titleArray: string[], userId: number, role:number) {
     const titles = titleArray??[];
     const upDateInactive = `
         update non_pooled_project  
@@ -140,6 +143,7 @@ export class NonPooledProjectRepository extends Repository<NonPooledProject> {
           last_updated_by = ?
         where is_active > 0 
           and results_id = ?
+          and non_pooled_project_type_id = ?
           and grant_title not in (${`'${titles.toString().replace(/,/g,'\',\'')}'`});
     `;
 
@@ -149,6 +153,7 @@ export class NonPooledProjectRepository extends Repository<NonPooledProject> {
           last_updated_date = NOW(),
           last_updated_by = ?
         where results_id = ?
+          and non_pooled_project_type_id = ?
           and grant_title in (${`'${titles.toString().replace(/,/g,'\',\'')}'`});
     `;
 
@@ -158,21 +163,22 @@ export class NonPooledProjectRepository extends Repository<NonPooledProject> {
           last_updated_date = NOW(),
           last_updated_by = ?
         where is_active > 0 
-          and results_id = ?;
+          and results_id = ?
+          and non_pooled_project_type_id = ?;
     `;
 
     try {
       if(titles?.length){
         const upDateInactiveResult = await this.query(upDateInactive, [
-          userId, resultId
+          userId, resultId, role
         ]);
   
         return await this.query(upDateActive, [
-          userId, resultId
+          userId, resultId, role
         ]);
       }else{
         return await this.query(upDateAllInactive, [
-          userId, resultId
+          userId, resultId, role
         ]);
       }
     } catch (error) {

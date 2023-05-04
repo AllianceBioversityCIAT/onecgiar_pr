@@ -1,22 +1,19 @@
 <div *ngIf="informationComplementaryInnovation.length != 0">
     <div class="search_input">
         <i class="material-icons-round">search</i>
-        <input type="text" placeholder="Find Innovation Package..." [(ngModel)]="searchText" >
+        <input type="text" placeholder="Find Innovation" [(ngModel)]="searchText">
     </div>
     <div class="table">
-        <p-table 
-        #dt1
-        sortField="result_code" [sortOrder]="-1"
+        <p-table #dt1 sortField="result_code" [sortOrder]="-1"
             [value]="(informationComplementaryInnovation| filterByText:searchText)" responsiveLayout="scroll"
-            [paginator]="!!((informationComplementaryInnovation| filterByText:searchText)?.length) "
-            [rows]="10" styleClass="p-datatable-gridlines p-datatable-sm" selectionMode="single"
-            [rowsPerPageOptions]="[10,50,100]" >
+            [paginator]="!!((informationComplementaryInnovation| filterByText:searchText)?.length) " [rows]="10"
+            styleClass="p-datatable-gridlines p-datatable-sm" selectionMode="single" [rowsPerPageOptions]="[10,50,100]">
             <ng-template pTemplate="header">
                 <tr>
                     <th pSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder">
                         <p-sortIcon field="{{column.attr}}"></p-sortIcon>{{column.title}}
                     </th>
-                    <th *ngIf="!this.api.dataControlSE.platformIsClosed">Action</th>
+                    <th *ngIf="!this.api.dataControlSE.platformIsClosed && !this.api.rolesSE.readOnly">Action</th>
                 </tr>
             </ng-template>
             <ng-template pTemplate="body" let-result>
@@ -26,21 +23,21 @@
                             <div class="point"
                                 [style.background]="'var(--pr-color-result-level-'+result?.result_level_id+')'"
                                 *ngIf="column.attr === 'result_type'"></div>
-    
-                            
+
+
                             {{column.attr !=='created_date' ?
-                            column.attr !=='status' ? result[column.attr] : result[column.attr] == 1 ? 'Yes': 'No' : (result[column.attr] | date: 'YYYY-MM-dd')}}
+                            column.attr !=='status' ? result[column.attr] : result[column.attr] == 1 ? 'Yes': 'No' :
+                            (result[column.attr] | date: 'YYYY-MM-dd')}}
                         </a>
                         <div class="transparent_text">
                             {{ result[column.attr]}}
                         </div>
                     </td>
-                    <td class="actions" *ngIf="!this.api.dataControlSE.platformIsClosed">
-                        
-                        <div class="link_button"
-                            
-                            [ngClass]="{'globalDisabled': result.selected}"
-                            (click)="!result.selected ? selectInnovation(result) : null">{{result.selected || findResultSelected(result)? 'Selected' :
+                    <td class="actions" *ngIf="!this.api.dataControlSE.platformIsClosed && !this.api.rolesSE.readOnly">
+
+                        <div class="link_button" [ngClass]="{'globalDisabled': findResultSelected(result)}"
+                            (click)="!result.selected ? selectInnovation(result) : null">{{findResultSelected(result)?
+                            'Selected' :
                             'Select'}}</div>
                     </td>
                 </tr>

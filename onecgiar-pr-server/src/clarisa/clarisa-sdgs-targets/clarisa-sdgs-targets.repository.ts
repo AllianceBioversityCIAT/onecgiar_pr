@@ -145,6 +145,14 @@ export class ClarisaSdgsTargetsRepository extends Repository<ClarisaSdgsTarget> 
         WHERE usnd_code = 17;
         `;
 
+        const sdgNameQuery = `
+        SELECT
+            usnd_code,
+            short_name
+        FROM 
+            clarisa_sdgs;
+        `;
+
         try {
             const sdgOne = await this.query(sdgOneQuery);
             const sdgTwo = await this.query(sdgTwoQuery);
@@ -164,73 +172,75 @@ export class ClarisaSdgsTargetsRepository extends Repository<ClarisaSdgsTarget> 
             const sdgSixteen = await this.query(sdgSixteenQuery);
             const sdgSeventeen = await this.query(sdgSeventeenQuery);
 
+            const sdgNameList = await this.query(sdgNameQuery);
+
             return [
                 {
-                    sdgId: 1,
+                    sdg: sdgNameList.find(sdg => sdg.usnd_code == 1),
                     sdgList: sdgOne
                 },
                 {
-                    sdgId: 2,
+                    sdg: sdgNameList.find(sdg => sdg.usnd_code == 2),
                     sdgList: sdgTwo
                 },
                 {
-                    sdgId: 3,
+                    sdg: sdgNameList.find(sdg => sdg.usnd_code == 3),
                     sdgList: sdgThree
                 },
                 {
-                    sdgId: 4,
+                    sdg: sdgNameList.find(sdg => sdg.usnd_code == 4),
                     sdgList: sdgFour
                 },
                 {
-                    sdgId: 5,
+                    sdg: sdgNameList.find(sdg => sdg.usnd_code == 5),
                     sdgList: sdgFive
                 },
                 {
-                    sdgId: 6,
+                    sdg: sdgNameList.find(sdg => sdg.usnd_code == 6),
                     sdgList: sdgSix
                 },
                 {
-                    sdgId: 7,
+                    sdg: sdgNameList.find(sdg => sdg.usnd_code == 7),
                     sdgList: sdgSeven
                 },
                 {
-                    sdgId: 8,
+                    sdg: sdgNameList.find(sdg => sdg.usnd_code == 8),
                     sdgList: sdgEight
                 },
                 {
-                    sdgId: 9,
+                    sdg: sdgNameList.find(sdg => sdg.usnd_code == 9),
                     sdgList: sdgNine
                 },
                 {
-                    sdgId: 10,
+                    sdg: sdgNameList.find(sdg => sdg.usnd_code == 10),
                     sdgList: sdgTen
                 },
                 {
-                    sdgId: 11,
+                    sdg: sdgNameList.find(sdg => sdg.usnd_code == 11),
                     sdgList: sdgEleven
                 },
                 {
-                    sdgId: 12,
+                    sdg: sdgNameList.find(sdg => sdg.usnd_code == 12),
                     sdgList: sdgTwelve
                 },
                 {
-                    sdgId: 13,
+                    sdg: sdgNameList.find(sdg => sdg.usnd_code == 13),
                     sdgList: sdgThirteen
                 },
                 {
-                    sdgId: 14,
+                    sdg: sdgNameList.find(sdg => sdg.usnd_code == 14),
                     sdgList: sdgFourteen
                 },
                 {
-                    sdgId: 15,
+                    sdg: sdgNameList.find(sdg => sdg.usnd_code == 15),
                     sdgList: sdgFifteen
                 },
                 {
-                    sdgId: 16,
+                    sdg: sdgNameList.find(sdg => sdg.usnd_code == 16),
                     sdgList: sdgSixteen
                 },
                 {
-                    sdgId: 17,
+                    sdg: sdgNameList.find(sdg => sdg.usnd_code == 17),
                     sdgList: sdgSeventeen
                 }
             ];

@@ -1,5 +1,5 @@
 <app-pr-field-header
-    label="Specify to which CGIAR Impact Area Target(s) the scaling of the core innovation is expected to contribute to by 2030 in the specific country/ subnational context"></app-pr-field-header>
+    label="Specify to which CGIAR Impact Area Target(s) the scaling of the core innovation is expected to contribute by 2024 in the selected geolocation"></app-pr-field-header>
 
 <div>Select an Impact Area to filter the list of targets:</div>
 <div class="impact_areas_circles">
@@ -15,32 +15,37 @@
 
 <div *ngIf="this.allImpactAreaIndicators?.length">
     <div class="dropdown-50p" *ngIf="this.currentImpactAreaID == 1">
-        <app-pr-multi-select [options]="this.filterImpactAreaIndicatorsByImpactAreaID(1)" optionLabel="target"
-            optionValue="targetId" selectedOptionLabel="indicator_statement" placeholder="Select Impact Area target(s)"
+        <app-pr-multi-select [options]="this.filterImpactAreaIndicatorsByImpactAreaID(1)" optionLabel="full_name"
+            optionValue="targetId" selectedOptionLabel="indicator_statement"
+            [placeholder]="'Select '+ this.filterImpactAreaIndicatorsByImpactAreaID(1)[0]?.name+' target(s)'"
             [(ngModel)]="this.body.impactAreas">
         </app-pr-multi-select>
     </div>
     <div class="dropdown-50p" *ngIf="this.currentImpactAreaID == 2">
-        <app-pr-multi-select [options]="this.filterImpactAreaIndicatorsByImpactAreaID(2)" optionLabel="target"
-            optionValue="targetId" selectedOptionLabel="indicator_statement" placeholder="Select Impact Area target(s)"
+        <app-pr-multi-select [options]="this.filterImpactAreaIndicatorsByImpactAreaID(2)" optionLabel="full_name"
+            optionValue="targetId" selectedOptionLabel="indicator_statement"
+            [placeholder]="'Select '+ this.filterImpactAreaIndicatorsByImpactAreaID(2)[0]?.name+' target(s)'"
             [(ngModel)]="this.body.impactAreas">
         </app-pr-multi-select>
     </div>
     <div class="dropdown-50p" *ngIf="this.currentImpactAreaID == 3">
-        <app-pr-multi-select [options]="this.filterImpactAreaIndicatorsByImpactAreaID(3)" optionLabel="target"
-            optionValue="targetId" selectedOptionLabel="indicator_statement" placeholder="Select Impact Area target(s)"
+        <app-pr-multi-select [options]="this.filterImpactAreaIndicatorsByImpactAreaID(3)" optionLabel="full_name"
+            optionValue="targetId" selectedOptionLabel="indicator_statement"
+            [placeholder]="'Select '+ this.filterImpactAreaIndicatorsByImpactAreaID(3)[0]?.name+' target(s)'"
             [(ngModel)]="this.body.impactAreas">
         </app-pr-multi-select>
     </div>
     <div class="dropdown-50p" *ngIf="this.currentImpactAreaID == 4">
-        <app-pr-multi-select [options]="this.filterImpactAreaIndicatorsByImpactAreaID(4)" optionLabel="target"
-            optionValue="targetId" selectedOptionLabel="indicator_statement" placeholder="Select Impact Area target(s)"
+        <app-pr-multi-select [options]="this.filterImpactAreaIndicatorsByImpactAreaID(4)" optionLabel="full_name"
+            optionValue="targetId" selectedOptionLabel="indicator_statement"
+            [placeholder]="'Select '+ this.filterImpactAreaIndicatorsByImpactAreaID(4)[0]?.name+' target(s)'"
             [(ngModel)]="this.body.impactAreas">
         </app-pr-multi-select>
     </div>
     <div class="dropdown-50p" *ngIf="this.currentImpactAreaID == 5">
-        <app-pr-multi-select [options]="this.filterImpactAreaIndicatorsByImpactAreaID(5)" optionLabel="target"
-            optionValue="targetId" selectedOptionLabel="indicator_statement" placeholder="Select Impact Area target(s)"
+        <app-pr-multi-select [options]="this.filterImpactAreaIndicatorsByImpactAreaID(5)" optionLabel="full_name"
+            optionValue="targetId" selectedOptionLabel="indicator_statement"
+            [placeholder]="'Select '+ this.filterImpactAreaIndicatorsByImpactAreaID(5)[0]?.name+' target(s)'"
             [(ngModel)]="this.body.impactAreas">
         </app-pr-multi-select>
     </div>
@@ -53,8 +58,8 @@
     <div class="chips_container">
         <div class="pr_chip_selected" *ngFor="let option of this.body.impactAreas; let i=index"
             [ngClass]="{'is_active_false': false}">
-            <div class="name" [innerHtml]="option.target"></div><i class="material-icons-round"
-                (click)="removeOption(option)">remove_circle
+            <div class="name" [innerHtml]="option.full_name"></div><i *ngIf="!this.api.rolesSE.readOnly"
+                class="material-icons-round" (click)="removeOption(option)">remove_circle
             </i>
         </div>
     </div>

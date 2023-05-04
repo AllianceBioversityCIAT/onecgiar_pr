@@ -26,6 +26,10 @@ export class IpsrContributorsTocComponent {
     });
   }
 
+  get getcontributingInitiativesList() {
+    return this.contributingInitiativesList.filter(init => init.id != this.contributorsBody.result_toc_result.initiative_id);
+  }
+
   // onSelectContributingInitiative() {
   //   // console.log();
   //   // console.log('onSelectContributingInitiative');

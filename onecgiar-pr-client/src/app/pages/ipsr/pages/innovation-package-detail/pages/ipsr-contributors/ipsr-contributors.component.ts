@@ -16,6 +16,8 @@ export class IpsrContributorsComponent {
 
   ngOnInit(): void {
     this.getSectionInformation();
+    this.requestEvent();
+    this.api.setTitle('Contributors');
   }
 
   getSectionInformation() {
@@ -31,6 +33,22 @@ export class IpsrContributorsComponent {
     this.api.resultsSE.PATCHContributorsByIpsrResultId(this.contributorsBody).subscribe(({ response }) => {
       console.log(response);
       this.getSectionInformation();
+    });
+  }
+  requestEvent() {
+    this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
+      try {
+        document.querySelector('.alert-event').addEventListener('click', e => {
+          this.api.dataControlSE.showPartnersRequest = true;
+        });
+      } catch (error) {}
+    });
+    this.api.dataControlSE.findClassTenSeconds('alert-event-2').then(resp => {
+      try {
+        document.querySelector('.alert-event-2').addEventListener('click', e => {
+          this.api.dataControlSE.showPartnersRequest = true;
+        });
+      } catch (error) {}
     });
   }
 }

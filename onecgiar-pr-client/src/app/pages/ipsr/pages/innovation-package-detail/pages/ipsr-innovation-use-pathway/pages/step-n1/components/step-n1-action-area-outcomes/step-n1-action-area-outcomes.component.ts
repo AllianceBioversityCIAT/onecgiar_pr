@@ -20,7 +20,11 @@ export class StepN1ActionAreaOutcomesComponent {
     this.api.resultsSE.GETAllClarisaActionAreasOutcomes().subscribe(
       ({ response }) => {
         this.actionAreasOutcomesList = response;
-        console.log(response);
+        this.actionAreasOutcomesList.geneticInnovation.map(item => (item.full_name = `<strong>${item.outcomeSMOcode}</strong> - ${item.outcomeStatement}`));
+        this.actionAreasOutcomesList.resilientAgrifoodSystems.map(item => (item.full_name = `<strong>${item.outcomeSMOcode}</strong> - ${item.outcomeStatement}`));
+        this.actionAreasOutcomesList.systemTrasnformation.map(item => (item.full_name = `<strong>${item.outcomeSMOcode}</strong> - ${item.outcomeStatement}`));
+
+        // console.log(this.actionAreasOutcomesList);
       },
       err => {
         console.log(err);
@@ -41,5 +45,9 @@ export class StepN1ActionAreaOutcomesComponent {
   removeOption(option) {
     const index = this.body.actionAreaOutcomes.findIndex(valueItem => valueItem.action_area_outcome_id == option.action_area_outcome_id);
     this.body.actionAreaOutcomes.splice(index, 1);
+  }
+  filterByAAOId(id) {
+    // console.log(this.body.actionAreaOutcomes);
+    return this.body.actionAreaOutcomes.filter((item: any) => item?.actionAreaId == id);
   }
 }

@@ -1,5 +1,5 @@
 <app-alert-status *ngIf="!this.rolesSE.readOnly"
-    description="If you don't find the partner you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list">
+    description="If you don't find the partner you are looking for, <a class='open_route alert-event-2'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list">
 </app-alert-status>
 
 <div class="auto_fit_container fadeIn">
@@ -14,7 +14,7 @@
             </app-pr-field-header>
         </div>
 
-        <div class="chips_container  custom_scroll partners_selected">
+        <div class="chips_container  custom_scroll partners_selected" [ngClass]="{'chips_container_expand': showInfo}">
             <div class="pr_chip_selected" *ngFor="let option of contributorsBody.institutions; let i=index">
                 <div class="name">{{option?.institutions_name}}</div>
                 <div class="type"> <strong>Institution type:</strong> {{option?.institutions_type_name}}</div>

@@ -21,6 +21,8 @@ import { CreateTocShareResult } from '../../results/share-result-request/dto/cre
 import { ShareResultRequestService } from '../../results/share-result-request/share-result-request.service';
 import { ShareResultRequestRepository } from '../../results/share-result-request/share-result-request.repository';
 import { NonPooledProject } from '../../results/non-pooled-projects/entities/non-pooled-project.entity';
+import { ResultIpEoiOutcomeRepository } from '../innovation-pathway/repository/result-ip-eoi-outcomes.repository';
+import { ResultInnovationPackageRepository } from '../result-innovation-package/repositories/result-innovation-package.repository';
 
 @Injectable()
 export class ResultsPackageTocResultService {
@@ -32,6 +34,7 @@ export class ResultsPackageTocResultService {
     protected readonly _resultsTocResultRepository: ResultsTocResultRepository,
     protected readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
     protected readonly _resultByInstitutionsByDeliveriesTypeRepository: ResultByInstitutionsByDeliveriesTypeRepository,
+    protected readonly _resultIpEoiOutcomesRepository: ResultIpEoiOutcomeRepository,
     protected readonly _shareResultRequestService: ShareResultRequestService,
     protected readonly _shareResultRequestRepository: ShareResultRequestRepository,
     protected readonly _resultRepository: ResultRepository,
@@ -103,14 +106,14 @@ export class ResultsPackageTocResultService {
         const { contributing_np_projects: cnpp } = crtr;
         const titles = cnpp.map(el => el.grant_title);
 
-        await this._nonPooledProjectRepository.updateNPProjectById(rip.id, titles, user.id)
+        await this._nonPooledProjectRepository.updateNPProjectById(rip.id, titles, user.id, 1)
         for (const cpnp of cnpp) {
           let nonPP: NonPooledProject = null;
           if (cpnp?.grant_title?.length) {
-            if(cpnp?.id){
-              nonPP = await this._nonPooledProjectRepository.getAllNPProjectByNPId(rip.id, cpnp.id);
-            }else{
-              nonPP = await this._nonPooledProjectRepository.getAllNPProjectById(rip.id, cpnp.grant_title);
+            if (cpnp?.id) {
+              nonPP = await this._nonPooledProjectRepository.getAllNPProjectByNPId(rip.id, cpnp.id, 1);
+            } else {
+              nonPP = await this._nonPooledProjectRepository.getAllNPProjectById(rip.id, cpnp.grant_title, 1);
             }
             if (nonPP) {
               this._nonPooledProjectRepository.update(
@@ -133,13 +136,14 @@ export class ResultsPackageTocResultService {
                 lead_center_id: cpnp.lead_center,
                 version_id: version.id,
                 created_by: user.id,
-                last_updated_by: user.id
+                last_updated_by: user.id,
+                non_pooled_project_type_id: 1
               })
             }
           }
         }
       } else {
-        await this._nonPooledProjectRepository.updateNPProjectById(rip.id, [], user.id);
+        await this._nonPooledProjectRepository.updateNPProjectById(rip.id, [], user.id, 1);
       }
 
 
@@ -181,8 +185,12 @@ export class ResultsPackageTocResultService {
 
 
       // !result_toc_result
-
       await this.saveResultPackageTocResult(rip, user, version, true, result_toc_result);
+
+      // * Save EOI
+      const saveIpEoi = await this.saveIpEoi(result_toc_result.toc_result_id, rip.id, user, version);
+
+
       // !agregar la logica de cancelacion iniciativa
       // !con_result_toc_result
 
@@ -213,7 +221,7 @@ export class ResultsPackageTocResultService {
           if (ins?.deliveries?.length) {
             const { deliveries } = ins;
             await this.saveDeliveries(instExist ? instExist : rbi, deliveries, user.id, version);
-          }else{
+          } else {
             await this._resultByInstitutionsByDeliveriesTypeRepository.inactiveResultDeLivery((instExist ? instExist : rbi).id, [], user.id);
           }
         }
@@ -274,12 +282,68 @@ export class ResultsPackageTocResultService {
     }
   }
 
+  async saveIpEoi(tocResultId: number, resultByInnovationPackageId: number, user: TokenDto, version: Version) {
+    try {
+      const searchTocResult = await this._resultsTocResultRepository.findOne({ where: { toc_result_id: tocResultId, is_active: true } });
+
+      if (!searchTocResult) {
+        return {
+          response: { valid: true },
+          message: 'No End of Initiative Outcomes were found',
+          status: HttpStatus.NOT_FOUND
+        }
+      }
+
+      const searchIpEoi = await this._resultIpEoiOutcomesRepository.findOne({ where: { toc_result_id: tocResultId } });
+      const resultByInnoPckg = await this._ipsrRepository.findOne({ where: { result_innovation_package_id: resultByInnovationPackageId, is_active: true, ipsr_role_id: 1 } });
+
+      if (resultByInnoPckg) {
+        if (!searchIpEoi) {
+          const saveNewEoi = await this._resultIpEoiOutcomesRepository.save({
+            toc_result_id: tocResultId,
+            result_by_innovation_package_id: resultByInnoPckg.result_by_innovation_package_id,
+            created_by: user.id,
+            last_updated_by: user.id,
+            version_id: version.id,
+          });
+          return {
+            response: {
+              saveNewEoi
+            },
+            message: 'Successfully created',
+            status: HttpStatus.OK
+          }
+        }
+      } else {
+        return {
+          response: {
+            valid: false
+          },
+          message: 'The Result By  Innovation Package was not found',
+          status: HttpStatus.NOT_FOUND
+        }
+      }
+
+      return {
+        response: {
+          valid: true
+        },
+        message: 'The EOI Its already created',
+        status: HttpStatus.OK
+      }
+
+
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
   async findOne(resultId: number) {
     try {
     const resultInit = await this._resultByInitiativesRepository.getOwnerInitiativeByResult(resultId);
     const conInit = await this._resultByInitiativesRepository.getContributorInitiativeByResult(resultId);
     const conPending = await this._resultByInitiativesRepository.getPendingInit(resultId);
-    const npProject = await this._nonPooledProjectRepository.getAllNPProjectByResultId(resultId);
+    const npProject = await this._nonPooledProjectRepository.getAllNPProjectByResultId(resultId, 1);
     const resCenters = await this._resultsCenterRepository.getAllResultsCenterByResultId(resultId);
     const institutions = await this._resultByIntitutionsRepository.getGenericAllResultByInstitutionByRole(resultId, 2);
     const deliveries = await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByResultByInstitution(institutions?.map(el => el.id));
@@ -306,25 +370,25 @@ export class ResultsPackageTocResultService {
       el['toc_level_id'] = el['planned_result'] == 0 && el['planned_result'] != null ? 3 : el['toc_level_id'];
     })
 
-    return {
-      response: {
-        contributing_initiatives: conInit,
-        pending_contributing_initiatives: conPending,
-        contributing_np_projects: npProject,
-        contributing_center: resCenters,
-        result_toc_result: resTocRes[0],
-        contributors_result_toc_result: conResTocRes,
-        institutions: institutions
-      },
-      message: 'The toc data is successfully',
-      status: HttpStatus.OK,
-    };
+      return {
+        response: {
+          contributing_initiatives: conInit,
+          pending_contributing_initiatives: conPending,
+          contributing_np_projects: npProject,
+          contributing_center: resCenters,
+          result_toc_result: resTocRes[0],
+          contributors_result_toc_result: conResTocRes,
+          institutions: institutions
+        },
+        message: 'The toc data is successfully',
+        status: HttpStatus.OK,
+      };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
   }
 
-  
+
 
 }
 

@@ -12,6 +12,7 @@ export class RolesService {
   currentInitiativeRole = null;
   roles: any;
   isAdmin = false;
+  firstValidationOfReadOnly = false;
   restrictions = [
     {
       id: 1,
@@ -44,6 +45,7 @@ export class RolesService {
 
   async validateReadOnly(result?) {
     // console.log('%cvalidateReadOnly', 'background: #222; color: #52cd47');
+    // console.log(result);
     if (environment?.platformIsClosed) {
       this.readOnly = true;
       this.updateRolesListFromLocalStorage();
@@ -58,6 +60,9 @@ export class RolesService {
       if (isAdmin) return null;
       if (!result) return null;
       const { initiative_id } = result;
+      // console.log(initiative_id);
+      // console.log(initiative);
+
       const initiativeFinded = initiative.find(init => init.initiative_id == initiative_id);
       this.readOnly = Boolean(!initiativeFinded);
       // this.readOnly ? console.log('%cIs ReadOnly => ' + this.readOnly, 'background: #222; color: #d84242') : console.log('%cNot ReadOnly => ' + this.readOnly, 'background: #222; color: #aaeaf5');
@@ -75,6 +80,7 @@ export class RolesService {
   async updateRolesListFromLocalStorage() {
     this.roles = JSON.parse(localStorage.getItem('roles'));
     this.getIsAdminValue();
+    this.firstValidationOfReadOnly = true;
   }
 
   async updateRolesList() {
@@ -87,6 +93,7 @@ export class RolesService {
           this.getIsAdminValue();
 
           //?
+          this.firstValidationOfReadOnly = true;
           resolve(response);
         },
         err => {

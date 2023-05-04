@@ -26,6 +26,7 @@ export class NewComplementaryInnovationComponent implements OnInit {
   linksRegister:number = 1;
   inputs:any = [1];
   disabled:boolean = true;
+  statusAdd:boolean = false;
   @Input() complementaryInnovationFunction:any;
   linksComplemntary:any;
   linksComplemntaryInnovation:any =[];
@@ -48,6 +49,9 @@ export class NewComplementaryInnovationComponent implements OnInit {
       }
       
     }
+    if (this.linksRegister == 3) {
+      this.statusAdd = true;
+    }
   }
 
   onSave(){
@@ -64,10 +68,13 @@ export class NewComplementaryInnovationComponent implements OnInit {
     
     this.api.resultsSE.POSTNewCompletaryInnovation(this.bodyNewComplementaryInnovation).subscribe((resp)=>{
       console.log(resp);
-      
+      this.selectInnovationEvent.emit(resp['response']['createResult'])
+      location.reload();
     });
     this.bodyNewComplementaryInnovation = new CreateComplementaryInnovationDto();
     this.status = false;
+    this.selectedValues = [];
+    
   }
 
   change(id_select:any){

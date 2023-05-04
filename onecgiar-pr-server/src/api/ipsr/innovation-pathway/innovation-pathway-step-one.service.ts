@@ -39,6 +39,9 @@ import { ResultsByInstitutionType } from '../../results/results_by_institution_t
 import { ClarisaInstitutionsTypeRepository } from '../../../clarisa/clarisa-institutions-type/ClariasaInstitutionsType.repository';
 import { ResultByInitiativesRepository } from '../../results/results_by_inititiatives/resultByInitiatives.repository';
 import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
+import { ResultIpExpertisesRepository } from '../innovation-packaging-experts/repositories/result-ip-expertises.repository';
+import { ResultIpExpertises } from '../innovation-packaging-experts/entities/result_ip_expertises.entity';
+import e from 'express';
 
 @Injectable()
 export class InnovationPathwayStepOneService {
@@ -64,6 +67,7 @@ export class InnovationPathwayStepOneService {
     protected readonly _clarisaInstitutionsTypeRepository: ClarisaInstitutionsTypeRepository,
     protected readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
     protected readonly _clarisaInstitutionsRepository: ClarisaInstitutionsRepository,
+    protected readonly _resultIpExpertisesRepository: ResultIpExpertisesRepository
   ) { }
 
   async getStepOne(resultId: number) {
@@ -108,8 +112,25 @@ export class InnovationPathwayStepOneService {
           is_active: true
         }
       });
+
+      await experts.map(async el => {
+        el.expertises = await this._resultIpExpertisesRepository.find({
+          where: {
+            result_ip_expert_id: el.result_ip_expert_id,
+            is_active: true
+          },
+          relations: {
+            obj_expertises: true
+          }
+        })
+      })
+      let actorsData = await this._resultActorRepository.find({ where: { result_id: result.id, is_active: true }, relations: { obj_actor_type: true } });
+      actorsData.map(el => {
+        el['men_non_youth'] = el.men - el.men_youth;
+        el['women_non_youth'] = el.women - el.women_youth;
+      });
       const innovatonUse = {
-        actors: (await this._resultActorRepository.find({ where: { result_id: result.id, is_active: true }, relations: {obj_actor_type: true} })).map(el => ({ ...el, men_non_youth: el.men - el.men_youth, women_non_youth: el.women - el.women_youth })),
+        actors: actorsData,
         measures: await this._resultIpMeasureRepository.find({ where: { result_ip_id: result.id, is_active: true } }),
         organization: (await this._resultByIntitutionsTypeRepository.find({ where: { results_id: result.id, institution_roles_id: 5, is_active: true }, relations: { obj_institution_types: { obj_parent: { obj_parent: true } } } })).map(el => ({ ...el, parent_institution_type_id: el.obj_institution_types?.obj_parent?.obj_parent?.code || null }))
       }
@@ -119,26 +140,26 @@ export class InnovationPathwayStepOneService {
           is_active: true
         }
       });
-      
+
       const resInitLead = await this._resultByInitiativesRepository.findOne({
         where: {
           result_id: result.id,
           is_active: true,
           initiative_role_id: 1
         },
-        relations:{
+        relations: {
           obj_initiative: true
         }
       })
 
-      const coreData = await this._innovationByResultRepository.findOne({where: {result_innovation_package_id: result.id, is_active: true, ipsr_role_id: 1}, relations: {obj_result: true}});
+      const coreData = await this._innovationByResultRepository.findOne({ where: { result_innovation_package_id: result.id, is_active: true, ipsr_role_id: 1 }, relations: { obj_result: true } });
+
       const scalig_ambition = {
         title: `2024 Scaling Ambition blurb`,
-        body: `By 2024, the ${resInitLead?.obj_initiative?.short_name} and partners will work together with${this.arrayToStringAnd(institutions?.map(el => el['institutions_name']))} to accomplish the use of ${coreData?.obj_result?.title} by ${this.arrayToStringActorsAnd(innovatonUse.actors)} ${geo_scope_id == 1?'':`in ${this.arrayToStringGeoScopeAnd(geo_scope_id, regions, countries)}`} to contribute achieving ${this.arrayToStringAnd(eoiOutcomes?.map(el => el['title']))}.`
+        body: `By 2024, the ${resInitLead?.obj_initiative?.short_name} and partners will work together with${this.arrayToStringAnd(institutions?.map(el => el['institutions_name']))} to accomplish the use of ${coreData?.obj_result?.title} by ${this.arrayToStringActorsAnd(innovatonUse.actors.map(el => el))} ${geo_scope_id == 1 ? '' : `in ${this.arrayToStringGeoScopeAnd(geo_scope_id, regions.map(el => el), countries.map(el => el))}`} to contribute achieving ${this.arrayToStringAnd(eoiOutcomes?.map(el => el['title']))}.`
       };
-
       return {
-        response: {
+        response: await {
           result_id: result.id,
           scalig_ambition,
           geo_scope_id,
@@ -166,30 +187,30 @@ export class InnovationPathwayStepOneService {
     }
   }
 
-  arrayToStringAnd(arrayData: any[]){
+  arrayToStringAnd(arrayData: any[]) {
     const count = arrayData?.length;
     const lastElement = arrayData.pop();
-    return count?`${arrayData.toString().replace(/,/g,', ')}${count > 1?' and':''} ${lastElement}`: '<Data not provided>';
+    return count ? `${arrayData.toString().replace(/,/g, ', ')}${count > 1 ? ' and' : ''} ${lastElement}` : '<Data not provided>';
   }
 
-  arrayToStringGeoScopeAnd(geoId: number, r: ResultRegion[], c:ResultCountry[]){
+  arrayToStringGeoScopeAnd(geoId: number, r: ResultRegion[], c: ResultCountry[]) {
     let returnData: string = '';
-    if(geoId == 1){
+    if (geoId == 1) {
       return
-    }else if(geoId == 2){
+    } else if (geoId == 2) {
       returnData = this.arrayToStringAnd(r.map(el => el['name']));
-    }else if(geoId == 3 || geoId == 4){
+    } else if (geoId == 3 || geoId == 4) {
       returnData = this.arrayToStringAnd(c.map(el => el['name']));
-    }else if(geoId == 5){
+    } else if (geoId == 5) {
       returnData = '<Data not provided>';
     }
 
     return returnData;
   }
 
-  arrayToStringActorsAnd(arrayData: ResultActor[]){
+  arrayToStringActorsAnd(arrayData: ResultActor[]) {
     const count = arrayData?.length;
-    if(!count){
+    if (!count) {
       return '<Data not provided>';
     }
     const lastElement = arrayData.pop();
@@ -197,7 +218,7 @@ export class InnovationPathwayStepOneService {
     for (const i of arrayData) {
       actors += `${i.men + i.women} ${i?.obj_actor_type?.name}`
     }
-    return `${actors} ${count > 1?'and ':''}${lastElement.men + lastElement.women} ${lastElement?.obj_actor_type?.name}`;
+    return `${actors} ${count > 1 ? 'and ' : ''}${lastElement.men + lastElement.women} ${lastElement?.obj_actor_type?.name}`;
   }
 
   async updateMain(resultId: number, UpdateInnovationPathwayDto: UpdateInnovationPathwayDto, user: TokenDto) {
@@ -276,6 +297,21 @@ export class InnovationPathwayStepOneService {
       let updateRegions: any;
       let updateCountries: any;
 
+
+      let innovationGeoScope: number;
+
+      // * Check Geo Scope
+      if (UpdateInnovationPathwayDto.geo_scope_id === 1) {
+        innovationGeoScope = 1;
+      } else if (UpdateInnovationPathwayDto.geo_scope_id === 2) {
+        innovationGeoScope = 2;
+      } else if (countries?.length > 1) {
+        innovationGeoScope = 3
+      } else {
+        innovationGeoScope = 4
+      }
+
+
       if (UpdateInnovationPathwayDto.geo_scope_id !== 2) {
         await this._resultRegionRepository.updateRegions(id, [])
       } else if (UpdateInnovationPathwayDto.geo_scope_id === 2) {
@@ -298,9 +334,9 @@ export class InnovationPathwayStepOneService {
         }
       }
 
-      if (UpdateInnovationPathwayDto.geo_scope_id !== 3) {
+      if (UpdateInnovationPathwayDto.geo_scope_id === 1 || UpdateInnovationPathwayDto.geo_scope_id === 2) {
         await this._resultCountryRepository.updateCountries(id, []);
-      } else if (UpdateInnovationPathwayDto.geo_scope_id === 3) {
+      } else if (UpdateInnovationPathwayDto.geo_scope_id === 3 || UpdateInnovationPathwayDto.geo_scope_id === 4) {
         await this._resultCountryRepository.updateCountries(id, UpdateInnovationPathwayDto.countries.map(c => c.id));
         if (countries?.length) {
           for (let i = 0; i < countries.length; i++) {
@@ -316,19 +352,6 @@ export class InnovationPathwayStepOneService {
             updateCountries = await this._resultCountryRepository.save(resultCountries);
           }
         }
-      }
-
-      let innovationGeoScope: number;
-
-      // * Check Geo Scope
-      if (UpdateInnovationPathwayDto.geo_scope_id === 1) {
-        innovationGeoScope = 1;
-      } else if (UpdateInnovationPathwayDto.geo_scope_id === 2) {
-        innovationGeoScope = 2;
-      } else if (countries?.length > 1) {
-        innovationGeoScope = 3
-      } else {
-        innovationGeoScope = 4
       }
 
       const ipsrResult =
@@ -676,10 +699,17 @@ export class InnovationPathwayStepOneService {
               result_id: result.id
             }
           });
-        } else {
+        } else if (!innExp && ex?.email) {
           innExp = await this._innovationPackagingExpertRepository.findOne({
             where: {
               email: ex.email,
+              result_id: result.id
+            }
+          });
+        } else if (!innExp) {
+          innExp = await this._innovationPackagingExpertRepository.findOne({
+            where: {
+              email: IsNull(),
               result_id: result.id
             }
           });
@@ -688,38 +718,78 @@ export class InnovationPathwayStepOneService {
         if (innExp) {
           await this._innovationPackagingExpertRepository.update(
             innExp.result_ip_expert_id,
-            ex.is_active ? {
-              first_name: ex.first_name,
-              last_name: ex.last_name,
+            {
+              first_name: ex?.first_name,
+              last_name: ex?.last_name,
               version_id: v.id,
-              is_active: ex.is_active,
-              email: ex.email,
+              is_active: ex.is_active == undefined ? true : ex.is_active,
+              email: ex?.email,
               last_updated_by: user.id,
-              expertises_id: ex.expertises_id,
-              organization_id: ex.organization_id
-            } :
-              {
-                is_active: ex.is_active
-              }
+              expertises_id: ex?.expertises_id,
+              organization_id: ex?.organization_id
+            }
           )
         } else {
-          await this._innovationPackagingExpertRepository.save(
+          innExp = await this._innovationPackagingExpertRepository.save(
             {
-              first_name: ex.first_name,
-              last_name: ex.last_name,
+              first_name: ex?.first_name,
+              last_name: ex?.last_name,
               version_id: v.id,
-              is_active: ex.is_active,
-              email: ex.email,
+              is_active: ex?.is_active,
+              email: ex?.email,
               last_updated_by: user.id,
               created_by: user.id,
-              expertises_id: ex.expertises_id,
-              organization_id: ex.organization_id,
+              expertises_id: ex?.expertises_id,
+              organization_id: ex?.organization_id,
               result_id: result.id
             }
           )
         }
+
+
+        await this.saveExpertises(ex.expertises, innExp.result_ip_expert_id, user, v);
       }
     }
+  }
+
+  private async saveExpertises(exps: ResultIpExpertises[], result_ip_expert_id: number, user: TokenDto, v: Version) {
+    await exps.map(async (el) => {
+      let riesEx: ResultIpExpertises = null;
+      if (el?.result_ip_expertises_id) {
+        riesEx = await this._resultIpExpertisesRepository.findOne({
+          where: {
+            result_ip_expertises_id: el?.result_ip_expertises_id
+          }
+        });
+      } else if (el?.expertises_id) {
+        riesEx = await this._resultIpExpertisesRepository.findOne({
+          where: {
+            expertises_id: el.expertises_id,
+            result_ip_expert_id: result_ip_expert_id
+          }
+        });
+      }
+
+      if (riesEx) {
+        await this._resultIpExpertisesRepository.update(
+          riesEx.result_ip_expertises_id,
+          {
+            is_active: el.is_active == undefined ? true : el.is_active,
+            expertises_id: el.expertises_id,
+            last_updated_by: user.id
+          }
+        );
+      } else {
+        await this._resultIpExpertisesRepository.save({
+          created_by: user.id,
+          last_updated_by: user.id,
+          expertises_id: el.expertises_id,
+          result_ip_expert_id: result_ip_expert_id,
+          version_id: v.id,
+        });
+      }
+
+    });
   }
 
   private async saveConsensus(result: Result, user: TokenDto, version: Version, rip: CreateResultIPDto) {
@@ -814,28 +884,28 @@ export class InnovationPathwayStepOneService {
     if (crtr?.actors?.length) {
       const { actors } = crtr;
       actors.map(async (el: ResultActor) => {
+        console.log(el)
         let actorExists: ResultActor = null;
         if (el?.actor_type_id) {
           actorExists = await this._resultActorRepository.findOne({ where: { actor_type_id: el.actor_type_id, result_id: result.id } });
-        }
-
-        if (!actorExists && el?.result_actors_id) {
+        } else if (!actorExists && el?.result_actors_id) {
           actorExists = await this._resultActorRepository.findOne({ where: { result_actors_id: el.result_actors_id, result_id: result.id } });
+        } else if (!actorExists) {
+          actorExists = await this._resultActorRepository.findOne({ where: { actor_type_id: IsNull(), result_id: result.id } });
         }
-
         if (actorExists) {
           await this._resultActorRepository.update(
             actorExists.result_actors_id,
             {
-              actor_type_id: el.actor_type_id,
-              is_active: el.is_active,
-              men: el.men,
-              men_youth: el.men_youth,
-              women: el.women,
-              women_youth: el.women_youth,
+              actor_type_id: this.isNullData(el?.actor_type_id),
+              is_active: el.is_active == undefined ? true : el.is_active,
+              men: this.isNullData(el?.men),
+              men_youth: this.isNullData(el?.men_youth),
+              women: this.isNullData(el?.women),
+              women_youth: this.isNullData(el?.women_youth),
               last_updated_by: user.id
             }
-          )
+          );
         } else {
           await this._resultActorRepository.save({
             actor_type_id: el.actor_type_id,
@@ -848,7 +918,7 @@ export class InnovationPathwayStepOneService {
             created_by: user.id,
             result_id: result.id,
             version_id: version.id
-          })
+          });
         }
       })
     }
@@ -898,11 +968,18 @@ export class InnovationPathwayStepOneService {
               result_ip_measure_id: el.result_ip_measure_id
             }
           });
-        } else {
+        } else if (!ripm && el?.unit_of_measure) {
           ripm = await this._resultIpMeasureRepository.findOne({
             where: {
               unit_of_measure: el.unit_of_measure,
-              result_ip_id: el.result_ip_id
+              result_ip_id: result.id
+            }
+          });
+        } else if (!ripm) {
+          ripm = await this._resultIpMeasureRepository.findOne({
+            where: {
+              unit_of_measure: IsNull(),
+              result_ip_id: result.id
             }
           });
         }
@@ -911,10 +988,10 @@ export class InnovationPathwayStepOneService {
           await this._resultIpMeasureRepository.update(
             ripm.result_ip_measure_id,
             {
-              unit_of_measure: el.unit_of_measure,
-              quantity: el.quantity,
+              unit_of_measure: this.isNullData(el.unit_of_measure),
+              quantity: this.isNullData(el.quantity),
               last_updated_by: user.id,
-              is_active: el.is_active
+              is_active: el.is_active == undefined ? true : el.is_active
             }
           )
         } else {
@@ -929,5 +1006,9 @@ export class InnovationPathwayStepOneService {
         }
       });
     }
+  }
+
+  isNullData(data: any) {
+    return data == undefined ? null : data;
   }
 }

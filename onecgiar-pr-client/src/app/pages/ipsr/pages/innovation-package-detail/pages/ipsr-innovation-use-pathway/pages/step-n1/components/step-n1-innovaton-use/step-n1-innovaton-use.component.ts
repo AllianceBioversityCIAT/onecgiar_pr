@@ -11,10 +11,11 @@ export class StepN1InnovatonUseComponent {
   actorsTypeList = [];
   institutionsTypeTreeList = [];
   @Input() body = new IpsrStep1Body();
-  constructor(private api: ApiService) {
+  constructor(public api: ApiService) {
     this.GETAllActorsTypes();
     this.GETInstitutionsTypeTree();
   }
+
   GETAllActorsTypes() {
     this.api.resultsSE.GETAllActorsTypes().subscribe(({ response }) => {
       // console.log(response);
@@ -48,5 +49,16 @@ export class StepN1InnovatonUseComponent {
   }
   addOther() {
     this.body.innovatonUse.measures.push(new Measure());
+    console.log(this.body.innovatonUse.measures);
+  }
+  get getAllSubTypes() {
+    const list = [];
+    // console.log(this.body.innovatonUse.organization);
+    this.body.innovatonUse.organization.forEach(resp => {
+      // console.log(resp.institution_sub_type_id);
+      list.push({ code: resp.institution_sub_type_id });
+    });
+    // console.log(list);
+    return list;
   }
 }

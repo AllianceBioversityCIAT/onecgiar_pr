@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { Version } from '../../versions/entities/version.entity';
 import { Result } from '../../entities/result.entity';
+import { EvidenceType } from '../../evidence_types/entities/evidence_type.entity';
 
 @Entity('evidence')
 export class Evidence {
@@ -33,11 +34,18 @@ export class Evidence {
   })
   description!: string;
 
+  @Column({
+    name: 'result_id',
+    type: 'bigint',
+    nullable: true
+  })
+  result_id: number;
+
   @ManyToOne(() => Result, (r) => r.id)
   @JoinColumn({
     name: 'result_id',
   })
-  result_id!: number;
+  obj_result!: Result;
 
   @Column({
     name: 'gender_related',
@@ -69,11 +77,18 @@ export class Evidence {
   })
   knowledge_product_related!: number;
 
+  @Column({
+    name: 'version_id',
+    type: 'bigint',
+    nullable: false
+  })
+  version_id: number;
+
   @ManyToOne(() => Version, (v) => v.id, { nullable: false })
   @JoinColumn({
     name: 'version_id',
   })
-  version_id: number;
+  obj_version: Version;
 
   @Column({
     name: 'is_active',
@@ -106,4 +121,17 @@ export class Evidence {
     nullable: true,
   })
   last_updated_date!: Date;
+
+  @Column({
+    name: 'evidence_type_id',
+    type: 'bigint',
+    nullable: true
+  })
+  evidence_type_id: number;
+
+  @ManyToOne(() => EvidenceType, et => et.id)
+  @JoinColumn({
+    name: 'evidence_type_id'
+  })
+  evidence_type: EvidenceType;
 }

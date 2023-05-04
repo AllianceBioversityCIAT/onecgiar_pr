@@ -21,6 +21,8 @@ export class IpsrRepository extends Repository<Ipsr>{
             r.result_code,
             r.title,
             r.description,
+            r.result_type_id,
+            r.result_level_id,
             rbi.inititiative_id AS initiative_id,
             (
                 SELECT
@@ -74,14 +76,9 @@ export class IpsrRepository extends Repository<Ipsr>{
             r.result_code,
             r.title,
             rbi.inititiative_id,
-            (
-                SELECT
-                    CONCAT(ci.official_code, ' - ', ci.short_name)
-                FROM
-                    clarisa_initiatives ci
-                WHERE
-                    ci.id = rbi.inititiative_id
-            ) AS official_code,
+            ci.official_code AS initiative_official_code,
+            ci.short_name AS initiative_short_name,
+            ci.name AS initiative_name,
             (
                 SELECT
                     rl.name
@@ -101,7 +98,7 @@ export class IpsrRepository extends Repository<Ipsr>{
         FROM
             result r
             LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
-            LEFT JOIN clarisa_geographic_scope cgs ON cgs.id = r.geographic_scope_id
+            LEFT JOIN clarisa_initiatives ci ON ci.id = rbi.inititiative_id
         WHERE
             r.is_active = 1
             AND r.id = ?;
@@ -240,11 +237,13 @@ export class IpsrRepository extends Repository<Ipsr>{
                     clarisa_initiatives ci
                 WHERE
                     ci.id = rbi.inititiative_id
-            ) AS official_code
+            ) AS official_code,
+            rt.name AS result_type , r.result_level_id 
         FROM
             result r
             LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
             LEFT JOIN result_by_innovation_package ibr ON ibr.result_innovation_package_id = r.id
+            LEFT JOIN result_type rt ON rt.id = r.result_type_id 
         WHERE
             r.is_active = 1
             AND r.id = ibr.result_innovation_package_id
