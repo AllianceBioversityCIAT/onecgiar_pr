@@ -80,20 +80,20 @@ export class StepN3CurrentUseComponent {
         console.log('execute');
         this.body.innovatonUse.actors[i].women_youth = this.body.innovatonUse.actors[i].previousWomen_youth;
         this.body.innovatonUse.actors[i].women = this.body.innovatonUse.actors[i].previousWomen;
-      }, 2000);
 
-      // this.showWomenExplanation = true;
-      // const element: any = document.getElementById('removeFocus');
-      // element.focus();
-      // setTimeout(() => {
-      //   this.showWomenExplanation = false;
-      // }, 3000);
+        this.showWomenExplanation = true;
+        const element: any = document.getElementById('removeFocus');
+        element.focus();
+        setTimeout(() => {
+          this.showWomenExplanation = false;
+        }, 3000);
+      }, 1000);
     } else {
       this.body.innovatonUse.actors[i].previousWomen = this.body.innovatonUse.actors[i].women;
       this.body.innovatonUse.actors[i].previousWomen_youth = this.body.innovatonUse.actors[i].women_youth;
     }
     setTimeout(() => {
       this.body.innovatonUse.actors[i].women_non_youth = this.body.innovatonUse.actors[i].women - this.body.innovatonUse.actors[i].women_youth;
-    }, 100);
+    }, 1100);
   }
 }
