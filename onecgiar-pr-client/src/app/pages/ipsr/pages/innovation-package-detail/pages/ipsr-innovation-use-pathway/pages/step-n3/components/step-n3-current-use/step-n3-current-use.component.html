@@ -5,7 +5,7 @@
 
 <app-pr-field-header [required]="false" label="Actors"
     description="If the innovation does not target use by specific groups of actors or people, then please specify the expected innovation use at organizational level or other use below."></app-pr-field-header>
-
+<input type="text" id="removeFocus" style="position: absolute; opacity: 0;">
 <div class="fields_list" *ngIf="this.body.innovatonUse.actors?.length">
     <div class="fields" appYmzListStructureItem (deleteEvent)="actorItem.is_active = false"
         *ngFor="let actorItem of this.body.innovatonUse.actors; let i=index"
@@ -20,6 +20,9 @@
                     description="CGIAR follows the United Nations definition of 'youth' as those persons between the ages of 15 and 24 years"></app-pr-field-header>
             </div>
             <div class="right_content">
+                <div class="explanation_message" *ngIf="showWomenExplanation">
+                    Remember that the value of Youth cannot be greater than Women
+                </div>
                 <app-pr-input placeholder="Write some..." label="Women" type="number" [required]="false"
                     [(ngModel)]="this.actorItem.women" (ngModelChange)="validateWomenAndYouth(i)">
                 </app-pr-input>

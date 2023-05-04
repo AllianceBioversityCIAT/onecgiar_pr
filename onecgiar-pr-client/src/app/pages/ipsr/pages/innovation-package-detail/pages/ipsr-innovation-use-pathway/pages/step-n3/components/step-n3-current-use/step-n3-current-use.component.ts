@@ -10,6 +10,7 @@ import { ApiService } from 'src/app/shared/services/api/api.service';
 export class StepN3CurrentUseComponent {
   actorsTypeList = [];
   institutionsTypeTreeList = [];
+  showWomenExplanation = false;
   @Input() body = new IpsrStep3Body();
   constructor(public api: ApiService) {
     this.GETAllActorsTypes();
@@ -76,6 +77,13 @@ export class StepN3CurrentUseComponent {
         this.body.innovatonUse.actors[i].women_youth = this.body.innovatonUse.actors[i].previousWomen_youth;
         this.body.innovatonUse.actors[i].women = this.body.innovatonUse.actors[i].previousWomen;
       }, 100);
+
+      this.showWomenExplanation = true;
+      const element: any = document.getElementById('removeFocus');
+      element.focus();
+      setTimeout(() => {
+        this.showWomenExplanation = false;
+      }, 3000);
     } else {
       this.body.innovatonUse.actors[i].previousWomen = this.body.innovatonUse.actors[i].women;
       this.body.innovatonUse.actors[i].previousWomen_youth = this.body.innovatonUse.actors[i].women_youth;
