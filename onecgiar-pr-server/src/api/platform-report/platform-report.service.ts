@@ -1,21 +1,27 @@
 import { Injectable } from '@nestjs/common';
+import { PlatformReportRepository } from './platform-report.repository';
+import { PlatformReportEnum } from './entities/platform-report.enum';
 import { create as createPDF } from 'pdf-creator-node';
-import { readFileSync } from 'fs';
-import { join } from 'path';
-import { DataSource } from 'typeorm';
 
 @Injectable()
-export class ResultReportService {
-  constructor(private _dataSource: DataSource) {}
+export class PlatformReportService {
+  public constructor(
+    private readonly _platformReportRepository: PlatformReportRepository,
+  ) {}
 
-  async findOne(id: number) {
-    const templateRead =
+  async getFullResultReportByResultCode(result_code: number) {
+    const report = await this._platformReportRepository.findOne({
+      where: { id: PlatformReportEnum.FULL_RESULT_REPORT.id },
+      relations: { template_object: true },
+    });
+
+    const data =
       (
-        await this._dataSource.query(
-          'select fullHtmlReportTemplateByResultCode(?)',
-          [id],
+        await this._platformReportRepository.getDataFromProcedure(
+          report.function_data_name,
+          [result_code],
         )
-      )?.[0]?.[`fullHtmlReportTemplateByResultCode(${id})`] ?? '';
+      )?.[0]?.result ?? '';
 
     const options = {
       format: 'A3',
@@ -37,9 +43,9 @@ export class ResultReportService {
       },
     };
 
-    var document = {
-      html: templateRead,
-      data: {},
+    const document = {
+      html: report.template_object.template,
+      data: data,
       type: 'buffer',
     };
 
@@ -52,5 +58,7 @@ export class ResultReportService {
         console.error(error);
         return null;
       });
+
+    return pdf;
   }
 }
