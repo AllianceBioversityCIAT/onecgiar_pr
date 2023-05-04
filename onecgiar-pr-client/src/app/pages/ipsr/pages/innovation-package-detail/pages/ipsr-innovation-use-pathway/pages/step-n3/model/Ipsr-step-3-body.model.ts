@@ -72,10 +72,12 @@ export class ActorN3 {
   actor_type_id: number;
   women: number;
   women_youth: number;
+  previousWomen: number;
+  previousWomen_youth: number;
   men: number;
   men_youth: number;
   is_active: boolean;
   evidence_link: string;
-  women_non_youth: string;
+  women_non_youth: string | number;
   men_non_youth: string;
 }
