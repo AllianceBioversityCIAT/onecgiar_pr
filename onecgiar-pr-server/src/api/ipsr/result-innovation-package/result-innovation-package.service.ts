@@ -36,6 +36,8 @@ import { TocResultsRepository } from '../../../toc/toc-results/toc-results.repos
 import { ResultIpEoiOutcomeRepository } from '../innovation-pathway/repository/result-ip-eoi-outcomes.repository';
 import { ResultIpEoiOutcome } from '../innovation-pathway/entities/result-ip-eoi-outcome.entity';
 import { TocResult } from '../../../toc/toc-results/entities/toc-result.entity';
+import { Year } from '../../results/years/entities/year.entity';
+import { YearRepository } from '../../results/years/year.repository';
 
 @Injectable()
 export class ResultInnovationPackageService {
@@ -66,6 +68,7 @@ export class ResultInnovationPackageService {
     protected readonly _unitTimeRepository: UnitTimeRepository,
     protected readonly _tocResult: TocResultsRepository,
     protected readonly _resultIpEoiOutcomesRepository: ResultIpEoiOutcomeRepository,
+    private readonly _yearRepository: YearRepository
   ) { }
 
   async findUnitTime() {
@@ -246,11 +249,22 @@ export class ResultInnovationPackageService {
           status: HttpStatus.BAD_REQUEST,
         }
       }
+      const year: Year = await this._yearRepository.findOne({
+        where: { active: true },
+      });
+
+      if (!year) {
+        throw {
+          response: {},
+          message: 'Active year Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
 
       const newInnovationHeader = await this._resultRepository.save({
         result_code: last_code + 1,
         title: innovationTitle,
-        reported_year_id: result.reported_year_id,
+        reported_year_id: year.year,
         result_level_id: 3,
         result_type_id: 10,
         has_regions: regions
