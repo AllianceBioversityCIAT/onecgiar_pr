@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { PlatformReportService } from './platform-report.service';
 import { PlatformReportController } from './platform-report.controller';
-import Handlebars from 'handlebars';
+import Handlebars, { Exception } from 'handlebars';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { PlatformReportRepository } from './platform-report.repository';
 
@@ -43,20 +43,38 @@ export class PlatformReportModule {
     );
 
     Handlebars.registerHelper(
-      'operator',
-      function (lvalue, operator, rvalue, options) {
-        return {
-          '==': lvalue == rvalue ? options.fn(this) : options.inverse(this),
-          '===': lvalue === rvalue ? options.fn(this) : options.inverse(this),
-          '!=': lvalue != rvalue ? options.fn(this) : options.inverse(this),
-          '!==': lvalue !== rvalue ? options.fn(this) : options.inverse(this),
-          '<': lvalue < rvalue ? options.fn(this) : options.inverse(this),
-          '<=': lvalue <= rvalue ? options.fn(this) : options.inverse(this),
-          '>': lvalue > rvalue ? options.fn(this) : options.inverse(this),
-          '>=': lvalue >= rvalue ? options.fn(this) : options.inverse(this),
-          '&&': lvalue && rvalue ? options.fn(this) : options.inverse(this),
-          '||': lvalue || rvalue ? options.fn(this) : options.inverse(this),
-        }[operator];
+      'stringContentCompare',
+      function (lvalue, rvalue, options) {
+        if (arguments.length != 3) {
+          throw new Exception(
+            '#stringContentCompare requires exactly one two arguments',
+          );
+        }
+
+        if (
+          !(
+            (typeof lvalue === 'string' || lvalue instanceof String) &&
+            (typeof rvalue === 'string' || rvalue instanceof String)
+          )
+        ) {
+          throw new Exception(
+            '#stringContentCompare requires the two arguments provided being strings',
+          );
+        }
+
+        /*
+          now that we know they are strings, here we are forcing the String objects
+          (note the capital "S") to be converted to strings (primitive type), 
+          to correctly use the localeCompare function
+        */
+        lvalue = lvalue.toString();
+        rvalue = rvalue.toString();
+
+        if (lvalue.localeCompare(rvalue, 'en', { sensitivity: 'base' }) == 0) {
+          return options.fn(this);
+        } else {
+          return options.inverse(this);
+        }
       },
     );
   }
