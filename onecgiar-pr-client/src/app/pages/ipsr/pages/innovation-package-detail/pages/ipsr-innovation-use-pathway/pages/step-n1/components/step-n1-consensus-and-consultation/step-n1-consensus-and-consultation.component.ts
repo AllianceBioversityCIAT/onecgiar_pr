@@ -14,7 +14,7 @@ export class StepN1ConsensusAndConsultationComponent {
     { idAttr: 'relevant_country_id', label: 'Can you confirm that the relevant CGIAR country convener is aware of the proposed innovation package and scaling readiness exercise', radioOptions: [] },
     { idAttr: 'regional_leadership_id', label: 'Can you confirm that the CGIAR Regional Leadership is aware of the proposed innovation package and scaling readiness exercise', radioOptions: [] },
     { idAttr: 'regional_integrated_id', label: 'Can you confirm that the CGIAR Regional Integrated Initiative leadership is aware of the proposed innovation package and scaling readiness exercise', radioOptions: [] },
-    { idAttr: 'active_backstopping_id', label: 'Would you be interested in receiving active support to ensure (gender-)responsible scaling', radioOptions: [] }
+    { idAttr: 'active_backstopping_id', label: 'Would you be interested in receiving active support to ensure (gender-)responsible scaling?', radioOptions: [] }
   ];
   constructor(private api: ApiService) {
     this.getInformation();
