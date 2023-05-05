@@ -334,7 +334,7 @@ export class InnovationPathwayStepTwoService {
     try {
 
       const resultIpResults: Result[] = await this._resultRepository.findBy({ id: resultId });
-      const year: Year[] = await this._yearRepository.findBy({ active: true });
+      const year = await this._yearRepository.findOne({ where: { active: true } });
 
       if (!resultIpResults) {
         throw {
@@ -367,7 +367,7 @@ export class InnovationPathwayStepTwoService {
         result_code: last_code + 1,
         result_level_id: 4,
         result_type_id: 11,
-        year: year[0].year,
+        year: year.year,
         version_id: version.id,
         created_by: User.id,
         last_updated_by: User.id,
