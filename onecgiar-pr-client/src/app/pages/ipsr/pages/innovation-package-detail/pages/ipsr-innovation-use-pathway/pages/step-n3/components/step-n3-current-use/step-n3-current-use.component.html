@@ -20,25 +20,28 @@
                     description="CGIAR follows the United Nations definition of 'youth' as those persons between the ages of 15 and 24 years"></app-pr-field-header>
             </div>
             <div class="right_content">
-                <div class="explanation_message" *ngIf="showWomenExplanation">
-                    Remember that the value of Youth cannot be greater than Women
+                <div class="explanation_message" *ngIf="this.actorItem['showWomenExplanationwomen']">
+                    Remember that the value of Youth cannot be greater than total of Women
                 </div>
                 <app-pr-input placeholder="Write some..." label="Women" type="number" [required]="false"
-                    [(ngModel)]="this.actorItem.women" (ngModelChange)="validateWomenAndYouth(i)">
+                    [(ngModel)]="this.actorItem.women" (ngModelChange)="validateYouth(i,true)">
                 </app-pr-input>
                 <app-pr-input placeholder="Write some..." label="Youth" type="number" [required]="false"
-                    [(ngModel)]="this.actorItem.women_youth" (ngModelChange)="validateWomenAndYouth(i)">
+                    [(ngModel)]="this.actorItem.women_youth" (ngModelChange)="validateYouth(i,true)">
                 </app-pr-input>
                 <app-pr-input placeholder="Write some..." label="Non-youth" type="number" [required]="false"
                     [readOnly]="true" [(ngModel)]="this.actorItem.women_non_youth">
                 </app-pr-input>
             </div>
             <div class="right_content">
+                <div class="explanation_message" *ngIf="this.actorItem['showWomenExplanationmen']">
+                    Remember that the value of Youth cannot be greater than total of Men
+                </div>
                 <app-pr-input placeholder="Write some..." label="Men" type="number" [required]="false"
-                    [(ngModel)]="this.actorItem.men">
+                    [(ngModel)]="this.actorItem.men" (ngModelChange)="validateYouth(i,false)">
                 </app-pr-input>
                 <app-pr-input placeholder="Write some..." label="Youth" type="number" [required]="false"
-                    [(ngModel)]="this.actorItem.men_youth">
+                    [(ngModel)]="this.actorItem.men_youth" (ngModelChange)="validateYouth(i,false)">
                 </app-pr-input>
                 <app-pr-input noDataText="Save to calculate" placeholder="Write some..." label="Non-youth" type="number"
                     [required]="false" [readOnly]="true" [(ngModel)]="this.actorItem.men_non_youth">

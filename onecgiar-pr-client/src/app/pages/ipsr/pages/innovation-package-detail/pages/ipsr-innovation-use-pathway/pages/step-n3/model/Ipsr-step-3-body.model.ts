@@ -79,5 +79,6 @@ export class ActorN3 {
   is_active: boolean;
   evidence_link: string;
   women_non_youth: string | number;
-  men_non_youth: string;
+  men_non_youth: string | number;
+  showWomenExplanation: boolean;
 }
