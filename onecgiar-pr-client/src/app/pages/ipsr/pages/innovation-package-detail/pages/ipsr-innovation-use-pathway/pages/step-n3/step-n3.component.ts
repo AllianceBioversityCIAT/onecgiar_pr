@@ -56,7 +56,7 @@ export class StepN3Component implements OnInit {
     return `<a href="https://drive.google.com/file/d/1muDLtqpeaSCIX60g6qQG_GGOPR61Rq7E/view"  class="open_route" target="_blank">Click here</a> to see the definition of all readiness levels`;
   }
   useLevelDelfAssessment() {
-    return `<a href="https://drive.google.com/file/d/1muDLtqpeaSCIX60g6qQG_GGOPR61Rq7E/view"  class="open_route" target="_blank">Click here</a> to see the definition of all readiness levels`;
+    return `<a href="https://drive.google.com/file/d/1muDLtqpeaSCIX60g6qQG_GGOPR61Rq7E/view"  class="open_route" target="_blank">Click here</a> to see all innovation readiness levels`;
   }
 
   convertOrganizations(organizations) {
