@@ -83,6 +83,8 @@ export class Actor {
   is_active: boolean;
   women_non_youth: any;
   men_non_youth: any;
+  previousWomen: any;
+  previousWomen_youth: any;
 }
 
 interface SdgTarget {
