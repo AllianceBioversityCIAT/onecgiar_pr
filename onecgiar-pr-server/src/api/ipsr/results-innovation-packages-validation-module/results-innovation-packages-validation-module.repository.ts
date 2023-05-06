@@ -36,7 +36,6 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
 
         try {
             const generalInformation: GetValidationSectionInnoPckgDto[] = await this.query(giQuery, [resultId]);
-            console.log("🚀 ~ file: results-innovation-packages-validation-module.repository.ts:38 ~ ResultsInnovationPackagesValidationModuleRepository ~ generalInformation ~ generalInformation:", generalInformation)
             return generalInformation[0];
         } catch (error) {
             throw this._handlersError.returnErrorRepository({
