@@ -1,0 +1,86 @@
+<div class="step_title"> <strong>Step 3:</strong>Scaling readiness assessment</div>
+
+<app-pr-radio-button
+    label="Was an Innovation Packaging and Scaling Readiness online or in-person expert workshop organized?"
+    optionLabel="name" optionValue="id" [options]="this.radioOptions" (selectOptionEvent)="cleanEvidence()"
+    [(ngModel)]="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized">
+</app-pr-radio-button>
+
+<div *ngIf="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true">
+    <app-pr-field-header label="Innovation Readiness level self-assessment" [required]="false"
+        [description]="this.readinessLevelSelfAssessmentText()"></app-pr-field-header>
+    <app-pr-range-level optionLabel="name" optionValue="id" [options]="this.rangesOptions" itemTitle="name"
+        itemDescription="definition"
+        [(ngModel)]="this.ipsrStep3Body.result_innovation_package.readiness_level_evidence_based"></app-pr-range-level>
+
+    <app-pr-field-header label="Innovation use level self-assessment" [required]="false"
+        [description]="this.useLevelDelfAssessment()"></app-pr-field-header>
+
+    <app-pr-range-level itemTitle="name" itemDescription="definition" optionLabel="name" optionValue="id"
+        [options]="this.rangesOptions"
+        [(ngModel)]="this.ipsrStep3Body.result_innovation_package.use_level_evidence_based"></app-pr-range-level>
+</div>
+
+
+<div class="step_divider"></div>
+
+<app-pr-field-header
+    label="Fill the Scaling Readiness evidence-based assessment (post workshop and supported by available evidence)"
+    [required]="false"></app-pr-field-header>
+
+
+<app-pr-field-header label="Core innovation" [required]="false"></app-pr-field-header>
+
+<app-pr-field-header label="Innovation Readiness level evidence-based" [required]="false"
+    [description]="this.readinessLevelSelfAssessmentText()"></app-pr-field-header>
+
+<app-pr-range-level itemTitle="name" itemDescription="definition" optionLabel="name" optionValue="id"
+    [options]="this.rangesOptions"
+    [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.readiness_level_evidence_based"></app-pr-range-level>
+
+<app-pr-input label="Evidence link" placeholder="Link goes here"
+    [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.readinees_evidence_link">
+</app-pr-input>
+
+<app-pr-textarea placeholder="Write some..."
+    label="Please provide details of where evidence can be found within the source link (e.g. page number, slide number, table number)"
+    type="text" [required]="true"
+    [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.readiness_details_of_evidence"></app-pr-textarea>
+
+<div class="fragment_section_divider"></div>
+
+<app-pr-field-header label="Innovation use level evidence-based" [required]="false"
+    [description]="this.useLevelDelfAssessment()"></app-pr-field-header>
+
+<app-pr-range-level itemTitle="name" itemDescription="definition" optionLabel="name" optionValue="id"
+    [options]="this.rangesOptions"
+    [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.use_level_evidence_based"></app-pr-range-level>
+
+<app-pr-input label="Evidence link" placeholder="Link goes here"
+    [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.use_evidence_link">
+</app-pr-input>
+
+<app-pr-textarea placeholder="Write some..."
+    label="Please provide details of where evidence can be found within the source link (e.g. page number, slide number, table number)"
+    type="text" [required]="true"
+    [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.use_details_of_evidence"></app-pr-textarea>
+
+<div class="fragment_section_divider"></div>
+
+<app-step-n3-current-use [body]="this.ipsrStep3Body"></app-step-n3-current-use>
+
+<div class="step_divider"></div>
+
+
+<app-step-n3-complementary-innovations [body]="this.ipsrStep3Body" [rangesOptions]="this.rangesOptions"
+    *ngIf="this.rangesOptions?.length && this.ipsrStep3Body.result_ip_result_complementary?.length"></app-step-n3-complementary-innovations>
+<app-save-button class="position_sticky" (clickSave)="onSaveSection()">
+</app-save-button>
+<div class="toggle_change_step">
+    <app-pr-button
+        [routerLink]="'/ipsr/detail/'+this.ipsrDataControlSE.resultInnovationCode+'/ipsr-innovation-use-pathway/step-2'"
+        padding="big" text="Go to previous step" icon="arrow_circle_left" [reverse]="true"></app-pr-button>
+    <app-pr-button
+        [routerLink]="'/ipsr/detail/'+this.ipsrDataControlSE.resultInnovationCode+'/ipsr-innovation-use-pathway/step-4'"
+        padding="big" text="Go to next step" icon="arrow_circle_right"></app-pr-button>
+</div>

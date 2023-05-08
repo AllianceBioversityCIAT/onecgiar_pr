@@ -11,6 +11,8 @@ export class RolesService {
   readOnly = true;
   currentInitiativeRole = null;
   roles: any;
+  isAdmin = false;
+  firstValidationOfReadOnly = false;
   restrictions = [
     {
       id: 1,
@@ -43,6 +45,7 @@ export class RolesService {
 
   async validateReadOnly(result?) {
     // console.log('%cvalidateReadOnly', 'background: #222; color: #52cd47');
+    // console.log(result);
     if (environment?.platformIsClosed) {
       this.readOnly = true;
       this.updateRolesListFromLocalStorage();
@@ -57,6 +60,9 @@ export class RolesService {
       if (isAdmin) return null;
       if (!result) return null;
       const { initiative_id } = result;
+      // console.log(initiative_id);
+      // console.log(initiative);
+
       const initiativeFinded = initiative.find(init => init.initiative_id == initiative_id);
       this.readOnly = Boolean(!initiativeFinded);
       // this.readOnly ? console.log('%cIs ReadOnly => ' + this.readOnly, 'background: #222; color: #d84242') : console.log('%cNot ReadOnly => ' + this.readOnly, 'background: #222; color: #aaeaf5');
@@ -65,11 +71,16 @@ export class RolesService {
     };
     updateMyRoles(this.updateRolesListFromLocalStorage());
     updateMyRoles(this.updateRolesList());
-    // console.log(this.roles);
+  }
+
+  getIsAdminValue() {
+    this.roles?.application?.role_id == 1 ? (this.isAdmin = true) : (this.isAdmin = false);
   }
 
   async updateRolesListFromLocalStorage() {
     this.roles = JSON.parse(localStorage.getItem('roles'));
+    this.getIsAdminValue();
+    this.firstValidationOfReadOnly = true;
   }
 
   async updateRolesList() {
@@ -79,7 +90,10 @@ export class RolesService {
           //? Update role list
           this.roles = response;
           localStorage.setItem('roles', JSON.stringify(response));
+          this.getIsAdminValue();
+
           //?
+          this.firstValidationOfReadOnly = true;
           resolve(response);
         },
         err => {
@@ -90,19 +104,14 @@ export class RolesService {
     });
   }
 
-  get isAdmin() {
-    if (this.roles?.application.role_id == 1) return true;
-    return false;
-  }
-
   validateInitiative(initiative_id) {
     return !!this.roles?.initiative?.find(item => item.initiative_id == initiative_id);
   }
 
   //TODO App roles
   /*
-  Admin  
-  Guest 
+  Admin
+  Guest
   */
 
   //TODO Roles by initiative

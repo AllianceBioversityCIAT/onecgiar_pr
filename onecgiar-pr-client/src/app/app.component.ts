@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { AuthService } from './shared/services/api/auth.service';
 import { environment } from '../environments/environment';
+import { RolesService } from './shared/services/global/roles.service';
 
 @Component({
   selector: 'app-root',
@@ -10,8 +11,11 @@ import { environment } from '../environments/environment';
 export class AppComponent implements OnInit {
   title = 'onecgiar-pr-client';
   isProduction = environment.production;
-  constructor(public AuthService: AuthService) {}
+  constructor(public AuthService: AuthService, public rolesSE: RolesService) {}
   ngOnInit(): void {
-    this.AuthService.inLogin = false;
+    // this.AuthService.inLogin = false;
+    setTimeout(() => {
+      if (!this.AuthService.inLogin) this.rolesSE.validateReadOnly();
+    }, 500);
   }
 }

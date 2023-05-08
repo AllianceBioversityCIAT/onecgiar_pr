@@ -1,4 +1,4 @@
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryColumn, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryColumn, PrimaryGeneratedColumn } from "typeorm";
 import { ClarisaInstitution } from '../../clarisa-institutions/entities/clarisa-institution.entity';
 
 @Entity('clarisa_center')
@@ -10,7 +10,7 @@ export class ClarisaCenter {
         name: 'code',
         primary: true,
     })
-    code: number;
+    code: string;
 
     @ManyToOne(() => ClarisaInstitution, ci => ci.id)
     @JoinColumn({
@@ -24,4 +24,7 @@ export class ClarisaCenter {
         nullable: true
     })
     financial_code: string;
+
+    //-------
+
 }

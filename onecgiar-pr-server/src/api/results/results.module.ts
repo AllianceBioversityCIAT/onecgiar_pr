@@ -60,6 +60,8 @@ import { ResultsValidationModuleModule } from './results-validation-module/resul
 import { SubmissionsModule } from './submissions/submissions.module';
 import { AdminPanelModule } from './admin-panel/admin-panel.module';
 import { LogRepository } from '../../connection/dynamodb-logs/dynamodb-logs.repository';
+import { ResultActorsModule } from './result-actors/result-actors.module';
+import { ResultBudgetModule } from './result_budget/result_budget.module';
 
 @Module({
   controllers: [ResultsController],
@@ -105,6 +107,8 @@ import { LogRepository } from '../../connection/dynamodb-logs/dynamodb-logs.repo
     ResultsValidationModuleModule,
     SubmissionsModule,
     AdminPanelModule,
+    ResultActorsModule,
+    ResultBudgetModule,
   ],
   providers: [
     ResultsService,
@@ -130,6 +134,10 @@ export class ResultsModule implements NestModule {
       },
       {
         path: '/api/clarisa/*',
+        method: RequestMethod.ALL,
+      },
+      {
+        path: '/api/ipsr/*',
         method: RequestMethod.ALL,
       },
       {

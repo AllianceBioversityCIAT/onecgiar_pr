@@ -1,0 +1,25 @@
+.first_text {
+    text-align: center;
+    padding: 0px 100px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+.blurb {
+    margin-left: 5vw;
+    margin-right: 5vw;
+    padding: 30px 100px 50px 100px;
+
+    .title {
+        text-align: center;
+        font-weight: 700;
+        font-size: 1.5em;
+        margin-bottom: 20px;
+    }
+
+    .text {
+        text-align: justify;
+        font-size: 1em;
+
+    }
+}

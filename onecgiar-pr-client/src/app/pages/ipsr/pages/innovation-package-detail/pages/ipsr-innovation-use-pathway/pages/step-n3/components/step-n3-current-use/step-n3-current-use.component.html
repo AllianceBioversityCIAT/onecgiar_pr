@@ -1,0 +1,117 @@
+<div class="ipsr-sub-title">Current use of the core innovation</div>
+
+<app-pr-field-header
+    label="Specify the current use of the core innovation by actors, organizations, hectares or other innovation users/ beneficiaries. The numbers should reflect the current innovation use that can be supported by evidence"></app-pr-field-header>
+
+<app-pr-field-header [required]="false" label="Actors"
+    description="If the innovation does not target use by specific groups of actors or people, then please specify the expected innovation use at organizational level or other use below."></app-pr-field-header>
+<input type="text" id="removeFocus" style="position: absolute; opacity: 0;">
+<div class="fields_list" *ngIf="this.body.innovatonUse.actors?.length">
+    <div class="fields" appYmzListStructureItem (deleteEvent)="actorItem.is_active = false"
+        *ngFor="let actorItem of this.body.innovatonUse.actors; let i=index"
+        [ngClass]="{'hideElement': actorItem.is_active == false}">
+        <app-pr-select [options]="this.actorsTypeList" label="Actor type" optionLabel="name" optionValue="actor_type_id"
+            [(ngModel)]="actorItem.actor_type_id" [disableOptions]="this.body.innovatonUse.actors" [indexReference]="i"
+            placeholder="Select actor type">
+        </app-pr-select>
+        <div class="">
+            <div style="margin-top: 20px;margin-bottom: -20px;">
+                <app-pr-field-header
+                    description="CGIAR follows the United Nations definition of 'youth' as those persons between the ages of 15 and 24 years"></app-pr-field-header>
+            </div>
+            <div class="right_content">
+                <div class="explanation_message" *ngIf="this.actorItem['showWomenExplanationwomen']">
+                    Remember that the value of Youth cannot be greater than total of Women
+                </div>
+                <app-pr-input placeholder="Write some..." label="Women" type="number" [required]="true"
+                    [(ngModel)]="this.actorItem.women" (ngModelChange)="validateYouth(i,true)">
+                </app-pr-input>
+                <app-pr-input placeholder="Write some..." label="Youth" type="number" [required]="true"
+                    [(ngModel)]="this.actorItem.women_youth" (ngModelChange)="validateYouth(i,true)">
+                </app-pr-input>
+                <app-pr-input placeholder="Write some..." label="Non-youth" type="number" [required]="false"
+                    [readOnly]="true" [(ngModel)]="this.actorItem.women_non_youth">
+                </app-pr-input>
+            </div>
+            <div class="right_content">
+                <div class="explanation_message" *ngIf="this.actorItem['showWomenExplanationmen']">
+                    Remember that the value of Youth cannot be greater than total of Men
+                </div>
+                <app-pr-input placeholder="Write some..." label="Men" type="number" [required]="true"
+                    [(ngModel)]="this.actorItem.men" (ngModelChange)="validateYouth(i,false)">
+                </app-pr-input>
+                <app-pr-input placeholder="Write some..." label="Youth" type="number" [required]="true"
+                    [(ngModel)]="this.actorItem.men_youth" (ngModelChange)="validateYouth(i,false)">
+                </app-pr-input>
+                <app-pr-input noDataText="Save to calculate" placeholder="Write some..." label="Non-youth" type="number"
+                    [required]="false" [readOnly]="true" [(ngModel)]="this.actorItem.men_non_youth">
+                </app-pr-input>
+            </div>
+            <div class="right_content">
+                <app-pr-input placeholder="Write some..." label="Evidence link" type="text"
+                    [(ngModel)]="this.actorItem.evidence_link">
+                </app-pr-input>
+            </div>
+        </div>
+    </div>
+</div>
+<br>
+<app-add-button name="Add actor" *ngIf="!this.api.rolesSE.readOnly" (clickEvent)="addActor()"></app-add-button>
+<div class="fragment_section_divider"></div>
+
+<div class="fields_list" *ngIf="this.body.innovatonUse.organization?.length">
+    <div class="fields" appYmzListStructureItem (deleteEvent)="organizationItem.is_active = false"
+        [ngClass]="{'hideElement': organizationItem.is_active == false}"
+        *ngFor="let organizationItem of this.body.innovatonUse.organization">
+        <app-pr-select [options]="this.institutionsTypeTreeList" label="Organization" optionLabel="name"
+            optionValue="code" [(ngModel)]="organizationItem.institution_types_id" placeholder="Select organization"
+            (selectOptionEvent)="reloadSelect(organizationItem)">
+        </app-pr-select>
+        <div>
+            <div class="right_content">
+                <app-pr-select
+                    *ngIf="organizationItem.institution_types_id && !organizationItem.hide && getInstitutionsTypeTreeChildrens(organizationItem.institution_types_id)?.length"
+                    [options]="getInstitutionsTypeTreeChildrens(organizationItem.institution_types_id)" label="Sub-type"
+                    optionLabel="name" optionValue="code" [(ngModel)]="organizationItem.institution_sub_type_id"
+                    placeholder="Select Sub-type" [disableOptions]="getAllSubTypes">
+                </app-pr-select>
+                <app-pr-input placeholder="Write some..." label="How many" type="text" [required]="true"
+                    [(ngModel)]="this.organizationItem.how_many">
+                </app-pr-input>
+            </div>
+            <div class="right_content">
+                <app-pr-input placeholder="Write some..." label="Evidence link" type="text"
+                    [(ngModel)]="this.organizationItem.evidence_link">
+                </app-pr-input>
+            </div>
+        </div>
+    </div>
+</div>
+
+<app-add-button name="Add organization" *ngIf="!this.api.rolesSE.readOnly"
+    (clickEvent)="addOrganization()"></app-add-button>
+<div class="fragment_section_divider"></div>
+
+<div class="fields_list" *ngIf="this.body.innovatonUse.measures?.length">
+    <app-pr-field-header label="Other quantitative measures of innovation use (e.g. # of hectares)"
+        [required]="false"></app-pr-field-header>
+    <div class="fields" appYmzListStructureItem (deleteEvent)="measuresItem.is_active = false"
+        *ngFor="let measuresItem of this.body.innovatonUse.measures"
+        [ngClass]="{'hideElement': measuresItem.is_active == false}">
+        <div class="right_content">
+            <app-pr-input placeholder="Write some..." label="Unit of measure" type="text" [required]="true"
+                [(ngModel)]="this.measuresItem.unit_of_measure">
+            </app-pr-input>
+            <app-pr-input placeholder="Write some..." label="Quantity" type="number" [required]="true"
+                [(ngModel)]="this.measuresItem.quantity">
+            </app-pr-input>
+        </div>
+        <div class="right_content">
+            <app-pr-input placeholder="Write some..." label="Evidence link" type="text"
+                [(ngModel)]="this.measuresItem.evidence_link">
+            </app-pr-input>
+        </div>
+
+    </div>
+</div>
+<app-add-button name="Add other" *ngIf="!this.api.rolesSE.readOnly" (clickEvent)="addOther()"></app-add-button>

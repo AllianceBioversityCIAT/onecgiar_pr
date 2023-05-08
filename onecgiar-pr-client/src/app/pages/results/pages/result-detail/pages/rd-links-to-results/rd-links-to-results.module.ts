@@ -6,10 +6,10 @@ import { RdLinksToResultsComponent } from '../rd-links-to-results/rd-links-to-re
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { TableModule } from 'primeng/table';
 import { ResultsListFilterPipeModule } from '../../../results-outlet/pages/results-list/pipes/results-list-filter-pipe.module';
-import { FilterResultNotLinkedPipe } from './pipe/filter-result-not-linked.pipe';
+import { LinksToResultsGlobalModule } from '../../../../../../shared/sections-components/links-to-results-global/links-to-results-global.module';
 
 @NgModule({
-  declarations: [RdLinksToResultsComponent, FilterResultNotLinkedPipe],
-  imports: [CommonModule, RdLinksToResultsRoutingModule, CustomFieldsModule, TableModule, ResultsListFilterPipeModule]
+  declarations: [RdLinksToResultsComponent],
+  imports: [CommonModule, RdLinksToResultsRoutingModule, CustomFieldsModule, TableModule, ResultsListFilterPipeModule, LinksToResultsGlobalModule]
 })
 export class RdLinksToResultsModule {}

@@ -9,6 +9,7 @@ export class TocInitiativeOutcomeListsService {
   constructor(private api: ApiService) {
     this.api.tocApiSE.GET_AllTocLevels().subscribe(
       ({ response }) => {
+        console.log(response);
         this.outcomeLevelList = response;
       },
       err => {

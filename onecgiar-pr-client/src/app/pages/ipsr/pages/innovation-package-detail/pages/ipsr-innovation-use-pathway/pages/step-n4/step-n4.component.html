@@ -1,0 +1,36 @@
+<div class="step_title"> <strong>Step 4:</strong>Additional information</div>
+
+<app-step-n4-picture-links [body]="this.ipsrStep4Body"></app-step-n4-picture-links>
+
+<app-step-n4-reference-material-links [body]="this.ipsrStep4Body"></app-step-n4-reference-material-links>
+
+<app-pr-input label="Provide the link to the workshop list of participants" [description]="workshopDescription()"
+    [required]="false" placeholder="Link" [(ngModel)]="this.ipsrStep4Body.link_workshop_list">
+</app-pr-input>
+
+<div class="step_divider"></div>
+
+<app-step-n4-initiative-investment-table [body]="this.ipsrStep4Body"></app-step-n4-initiative-investment-table>
+
+<div class="fragment_section_divider"></div>
+
+<app-step-n4-bilateral-investment-table [body]="this.ipsrStep4Body"></app-step-n4-bilateral-investment-table>
+
+<div class="fragment_section_divider"></div>
+
+<app-step-n4-partner-co-investment-table [body]="this.ipsrStep4Body"></app-step-n4-partner-co-investment-table>
+
+<app-pr-radio-button
+    label="Would you like this IPSR innovation use result to be published as a stand-alone CGIAR IPSR Innovation Packaging and Scaling Readiness report (PDF)?"
+    optionLabel="name" optionValue="id" [options]="this.radioOptions"
+    [(ngModel)]="this.ipsrStep4Body.is_result_ip_published">
+</app-pr-radio-button>
+
+<div class="toggle_change_step">
+    <app-pr-button
+        [routerLink]="'/ipsr/detail/'+this.ipsrDataControlSE.resultInnovationCode+'/ipsr-innovation-use-pathway/step-3'"
+        padding="big" text="Go to previous step" icon="arrow_circle_left" [reverse]="true"></app-pr-button>
+</div>
+
+<app-save-button class="position_sticky" (clickSave)="onSaveSection()">
+</app-save-button>

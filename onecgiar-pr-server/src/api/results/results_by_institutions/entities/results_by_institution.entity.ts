@@ -14,6 +14,7 @@ import { Result } from '../../entities/result.entity';
 import { InstitutionRole } from '../../institution_roles/entities/institution_role.entity';
 import { ClarisaInstitution } from '../../../../clarisa/clarisa-institutions/entities/clarisa-institution.entity';
 import { ResultsKnowledgeProductInstitution } from '../../results-knowledge-products/entities/results-knowledge-product-institution.entity';
+import { ResultInstitutionsBudget } from '../../result_budget/entities/result_institutions_budget.entity';
 
 @Entity()
 export class ResultsByInstitution {
@@ -22,21 +23,42 @@ export class ResultsByInstitution {
   })
   id!: number;
 
+  @Column({
+    name: 'result_id',
+    type: 'bigint',
+    nullable: false
+  })
+  result_id: number;
+
   @ManyToOne(() => Result, (r) => r.id, { nullable: false })
   @JoinColumn({
     name: 'result_id',
   })
-  result_id: number;
+  obj_result: Result;
+
+  @Column({
+    name: 'institutions_id',
+    type: 'int',
+    nullable: true
+  })
+  institutions_id: number;
 
   @ManyToOne(() => ClarisaInstitution, (ci) => ci.id, { nullable: true })
   @JoinColumn({
     name: 'institutions_id',
   })
-  institutions_id: number;
+  obj_institutions: ClarisaInstitution;
+
+  @Column({
+    name: 'institution_roles_id',
+    type: 'bigint',
+    nullable: false
+  })
+  institution_roles_id: number;
 
   @ManyToOne(() => InstitutionRole, (i) => i.id, { nullable: false })
   @JoinColumn({ name: 'institution_roles_id' })
-  institution_roles_id: number;
+  obj_institution_roles: InstitutionRole;
 
   @Column({
     name: 'is_active',
@@ -84,4 +106,7 @@ export class ResultsByInstitution {
     (rkpi) => rkpi.results_by_institutions_object,
   )
   result_knowledge_product_institution_array: ResultsKnowledgeProductInstitution[];
+
+  @OneToMany(() => ResultInstitutionsBudget, rib => rib.obj_result_institution)
+  obj_result_institution_array: ResultInstitutionsBudget[];
 }

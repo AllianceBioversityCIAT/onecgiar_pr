@@ -1,0 +1,84 @@
+<div class="section_container">
+    <a routerLink="/ipsr/list">
+        <app-pr-button text="Back to Innovation packages list" icon="arrow_back" [reverse]="true"
+            [showBackground]="false" optionLabel="name" optionValue="code"></app-pr-button>
+    </a>
+
+    <app-section-header titleText="Creation of innovation package"
+        description="Here you can create an innovation package by filling out a variety of fields."></app-section-header>
+
+    <div class="dropdown-50p">
+        <app-pr-select *ngIf="!this.api.rolesSE.isAdmin" class="segment_title_margin"
+            [options]="this.api.dataControlSE.myInitiativesList" label="Primary submitter of the innovation package"
+            [isStatic]="true" optionLabel="full_name" optionValue="initiative_id" placeholder="Select initiative"
+            description="Select an initiative"
+            (selectOptionEvent)="this.manageInnovationsListSE.GETallInnovations(this.innovationPackageCreatorBody.initiative_id);"
+            [(ngModel)]="this.innovationPackageCreatorBody.initiative_id">
+        </app-pr-select>
+
+        <app-pr-select *ngIf="this.api.rolesSE.isAdmin" class="segment_title_margin" [options]="this.allInitiatives"
+            label="Primary submitter of the innovation package" [isStatic]="true" optionLabel="full_name"
+            optionValue="initiative_id" placeholder="Select initiative" description="Select an initiative"
+            (selectOptionEvent)="this.manageInnovationsListSE.GETallInnovations(this.innovationPackageCreatorBody.initiative_id); status= false;"
+            [(ngModel)]="this.innovationPackageCreatorBody.initiative_id">
+        </app-pr-select>
+    </div>
+
+    
+
+
+
+    <app-pr-field-header label="Select Core Innovation for innovation packaging and scaling readiness assessment"
+        [required]="false"
+        description="Only one can be selected. Only QAed innovations will be listed."></app-pr-field-header>
+
+        <app-pr-button text="Select Core Innovation." [ngClass]="{'globalDisabled' : status }" (click)="statusPdialog = true"></app-pr-button>
+
+
+    <div appFeedbackValidation labelText="Innovation package"
+        [isComplete]="!!this.innovationPackageCreatorBody.result_id">
+    </div>
+
+    <div *ngIf="this.innovationPackageCreatorBody.result_id">
+        <app-pr-field-header label="Core innovation selected and CGIAR Initiative leading the development"
+            [required]="false"></app-pr-field-header>
+
+        <div class="core_innovation_selected ">
+            <div>
+                <strong>{{this.innovationPackageCreatorBody.result_code}}</strong> -
+                {{this.innovationPackageCreatorBody.title}}
+                -
+                <strong>{{this.innovationPackageCreatorBody.official_code}}</strong>
+            </div>
+            <i class="material-icons-round" (click)="this.innovationPackageCreatorBody.result_id = null">
+                cancel
+            </i>
+
+        </div>
+    </div>
+
+    <app-ipsr-geoscope-creator *ngIf="this.innovationPackageCreatorBody.result_id"
+        [body]="this.innovationPackageCreatorBody"></app-ipsr-geoscope-creator>
+
+    <app-save-button class="position_sticky" (clickSave)="onSaveSection()" text="Save and continue"
+        [disabled]="!this.innovationPackageCreatorBody.result_id  || !this.innovationPackageCreatorBody.initiative_id">
+    </app-save-button>
+
+</div>
+
+
+
+
+<p-dialog class="support_information" header="Select core Innovation" [(visible)]="statusPdialog"
+[draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="true" 
+[dismissableMask]="true" [style]="{padding: '0px', margin:'0px', width:'70vw'}" [blockScroll]="true" appendTo="body">
+
+<div style="display: flex; justify-content: center; flex-direction: column;">
+   
+   <div class="modal_container">
+    <app-results-innovation-output-list *ngIf="this.innovationPackageCreatorBody.initiative_id"
+    [body]="this.innovationPackageCreatorBody"
+    (selectInnovationEvent)="selectInnovationEvent($event)"></app-results-innovation-output-list>
+   </div>
+</div>
+</p-dialog>

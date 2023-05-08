@@ -109,11 +109,11 @@ export class ResultsTocResultsService {
       }
 
       if (contributing_np_projects?.length) {
-        await this._nonPooledProjectRepository.updateNPProjectById(result_id, titleArray, user.id);
+        await this._nonPooledProjectRepository.updateNPProjectById(result_id, titleArray, user.id, 1);
         let resultTocResultArray: NonPooledProject[] = [];
         for (let index = 0; index < contributing_np_projects.length; index++) {
           if (contributing_np_projects[index]?.grant_title?.length) {
-            const resultData = await this._nonPooledProjectRepository.getAllNPProjectById(result_id, contributing_np_projects[index].grant_title);
+            const resultData = await this._nonPooledProjectRepository.getAllNPProjectById(result_id, contributing_np_projects[index].grant_title, 1);
 
             if (resultData) {
               resultData.center_grant_id = contributing_np_projects[index].center_grant_id;
@@ -131,6 +131,7 @@ export class ResultsTocResultsService {
               newNpProject.grant_title = contributing_np_projects[index].grant_title || null;
               newNpProject.created_by = user.id;
               newNpProject.last_updated_by = user.id;
+              newNpProject.non_pooled_project_type_id = 1;
               resultTocResultArray.push(newNpProject);
             }
           }
@@ -138,7 +139,7 @@ export class ResultsTocResultsService {
 
         await this._nonPooledProjectRepository.save(resultTocResultArray);
       } else {
-        await this._nonPooledProjectRepository.updateNPProjectById(result_id, [], user.id);
+        await this._nonPooledProjectRepository.updateNPProjectById(result_id, [], user.id, 1);
       }
 
       if (contributing_center?.length) {
@@ -312,7 +313,7 @@ export class ResultsTocResultsService {
       const resultInit = await this._resultByInitiativesRepository.getOwnerInitiativeByResult(resultId);
       const conInit = await this._resultByInitiativesRepository.getContributorInitiativeByResult(resultId);
       const conPending = await this._resultByInitiativesRepository.getPendingInit(resultId);
-      const npProject = await this._nonPooledProjectRepository.getAllNPProjectByResultId(resultId);
+      const npProject = await this._nonPooledProjectRepository.getAllNPProjectByResultId(resultId, 1);
       const resCenters = await this._resultsCenterRepository.getAllResultsCenterByResultId(resultId);
       let impactAreaArray = await this._clarisaImpactAreaRepository.getAllImpactArea();
       let resTocRes: any[] = [];

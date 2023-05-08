@@ -20,23 +20,44 @@ export class ResultsByInstitutionType {
   })
   id: number;
 
+  @Column({
+    name: 'results_id',
+    type: 'bigint',
+    nullable: false
+  })
+  results_id: number;
+
   @ManyToOne(() => Result, (r) => r.id, { nullable: false })
   @JoinColumn({
     name: 'results_id',
   })
-  results_id: number;
+  obj_results: Result;
+
+  @Column({
+    name: 'institution_types_id',
+    type: 'int',
+    nullable: true
+  })
+  institution_types_id: number;
 
   @ManyToOne(() => ClarisaInstitutionsType, cit => cit.code, {nullable: true})
   @JoinColumn({
     name: 'institution_types_id'
   })
-  institution_types_id!: number;
+  obj_institution_types!: ClarisaInstitutionsType;
+
+  @Column({
+    name: 'institution_roles_id',
+    type: 'bigint',
+    nullable: false
+  })
+  institution_roles_id: number;
 
   @ManyToOne(() => InstitutionRole, (ir) => ir.id, { nullable: false })
   @JoinColumn({
     name: 'institution_roles_id',
   })
-  institution_roles_id: number;
+  obj_institution_roles: InstitutionRole;
 
   @Column({
     name: 'is_active',
@@ -45,6 +66,13 @@ export class ResultsByInstitutionType {
     default: true,
   })
   is_active: boolean;
+
+  @Column({
+    name: 'how_many',
+    type: 'bigint',
+    nullable: true
+  })
+  how_many!: number;
 
   @ManyToOne(() => Version, (v) => v.id, { nullable: false })
   @JoinColumn({

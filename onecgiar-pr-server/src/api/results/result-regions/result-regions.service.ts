@@ -7,6 +7,8 @@ import { ClarisaGeographicScopeRepository } from '../../../clarisa/clarisa-geogr
 import { ResultRepository } from '../result.repository';
 import { Result } from '../entities/result.entity';
 import { ResultRegion } from './entities/result-region.entity';
+import { Version } from '../versions/entities/version.entity';
+import { VersionsService } from '../versions/versions.service';
 
 @Injectable()
 export class ResultRegionsService {
@@ -15,6 +17,7 @@ export class ResultRegionsService {
     private readonly _handlersError: HandlersError,
     private readonly _resultRegionRepository: ResultRegionRepository,
     private readonly _resultRepository: ResultRepository,
+    private readonly _versionsService: VersionsService,
     private readonly _clarisaGeographicScopeRepository: ClarisaGeographicScopeRepository
   ) { }
 
@@ -36,6 +39,12 @@ export class ResultRegionsService {
           status: HttpStatus.NOT_FOUND,
         };
       }
+      const vTemp = await this._versionsService.findBaseVersion();
+      if (vTemp.status >= 300) {
+        throw this._handlersError.returnErrorRes({ error: vTemp });
+      }
+      const version: Version = <Version>vTemp.response;
+
       const regions = createResultRegionDto.regions;
       if(!createResultRegionDto.has_regions && createResultRegionDto.scope_id != 2 || createResultRegionDto.scope_id == 4 || createResultRegionDto.scope_id == 3){
         await this._resultRegionRepository.updateRegions(result.id, []);
@@ -51,6 +60,7 @@ export class ResultRegionsService {
                 const newRegions = new ResultRegion();
                 newRegions.region_id = regions[index].id;
                 newRegions.result_id = result.id;
+                newRegions.version_id = version.id;
                 resultRegionArray.push(newRegions);
               }
               await this._resultRegionRepository.save(resultRegionArray);

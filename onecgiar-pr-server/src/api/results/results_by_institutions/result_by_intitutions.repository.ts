@@ -12,6 +12,33 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     super(ResultsByInstitution, dataSource.createEntityManager());
   }
 
+  async getResultByInstitutionById(resultId: number, rbiId: number) {
+    const queryData = `
+    select 
+    	rbi.id,
+    	rbi.institutions_id,
+    	rbi.institution_roles_id,
+    	rbi.version_id
+    from results_by_institution rbi 
+    where rbi.result_id = ?
+      and rbi.id = ?
+    	and rbi.is_active > 0;
+    `;
+    try {
+      const completeIntitutions: ResultsByInstitution[] = await this.query(queryData, [
+        resultId,
+        rbiId
+      ]);
+      return completeIntitutions;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultByIntitutionsRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async getResultByInstitutionFull(resultId: number) {
     const queryData = `
     select 
@@ -162,7 +189,7 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
   async getGenericResultByInstitutionExists(
     resultId: number,
     institutionsId: number,
-    institutionRolesId: 1 | 2 | 3| 4,
+    institutionRolesId: 1 | 2 | 3| 4| 5,
   ): Promise<ResultsByInstitution> {
     const queryData = `
     select 
@@ -199,7 +226,7 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
 
   async getGenericAllResultByInstitutionByRole(
     resultId: number,
-    institutionRolesId: 1 | 2 | 3| 4,
+    institutionRolesId: 1 | 2 | 3| 4| 5| 6| 7,
   ): Promise<ResultsByInstitution[]> {
     const queryData = `
     select 
@@ -333,7 +360,7 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
   async updateGenericIstitutions(
     resultId: number,
     institutionsArray: institutionsInterface[],
-    institutionRole: 1|2|3|4,
+    institutionRole: 1|2|3|4 |5,
     userId: number,
     applicablePartner: boolean = false,
   ) {

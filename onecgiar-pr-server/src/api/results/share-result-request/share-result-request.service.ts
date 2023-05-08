@@ -16,6 +16,7 @@ import { ResultsTocResult } from '../results-toc-results/entities/results-toc-re
 import { ResultsTocResultRepository } from '../results-toc-results/results-toc-results.repository';
 import { Result } from '../entities/result.entity';
 import { getRepository } from 'typeorm';
+import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/result_initiative_budget.repository';
 
 @Injectable()
 export class ShareResultRequestService {
@@ -27,6 +28,7 @@ export class ShareResultRequestService {
     private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
     private readonly _versionsService: VersionsService,
     private readonly _resultsTocResultRepository: ResultsTocResultRepository,
+    private readonly _resultInitiativeBudgetRepository: ResultInitiativeBudgetRepository
   ) { }
 
   create(createShareResultRequestDto: CreateShareResultRequestDto) {
@@ -49,7 +51,7 @@ export class ShareResultRequestService {
             newShare.result_id = resultId;
             newShare.request_status_id = 1;
             newShare.owner_initiative_id = result.initiative_id;
-            newShare.requester_initiative_id = createTocShareResult?.isToc? result.initiative_id: shareInitId;
+            newShare.requester_initiative_id = createTocShareResult?.isToc ? result.initiative_id : shareInitId;
             newShare.shared_inititiative_id = shareInitId;
             newShare.approving_inititiative_id = createTocShareResult?.isToc ? shareInitId : result.initiative_id;
             if (!createTocShareResult?.isToc) {
@@ -151,19 +153,26 @@ export class ShareResultRequestService {
             newRtR.toc_result_id = toc_result_id || null;
           }
 
-          await this._resultByInitiativesRepository.save(newResultByInitiative);
-          const resultTocResult = await this._resultsTocResultRepository.existsResultTocResult(result.id, shared_inititiative_id);
-          if(!resultTocResult){
-            await this._resultsTocResultRepository.save(newRtR);
-          }else{
-            await this._resultsTocResultRepository.update(resultTocResult.result_toc_result_id, {planned_result: planned_result, toc_result_id: toc_result_id, action_area_outcome_id: action_area_outcome_id});
-          }
-        }else{
-          const result = await this._resultRepository.getResultById(result_id);
-          await this._resultByInitiativesRepository.update(exists.id, {is_active: true, last_updated_by: user.id});
+          const newReIni = await this._resultByInitiativesRepository.save(newResultByInitiative);
+          await this._resultInitiativeBudgetRepository.save({
+            result_initiative_id: newReIni.id,
+            version_id: vrs.id,
+            created_by: user.id,
+            last_updated_by: user.id,
+          });
 
           const resultTocResult = await this._resultsTocResultRepository.existsResultTocResult(result.id, shared_inititiative_id);
-          if(!resultTocResult){
+          if (!resultTocResult) {
+            await this._resultsTocResultRepository.save(newRtR);
+          } else {
+            await this._resultsTocResultRepository.update(resultTocResult.result_toc_result_id, { planned_result: planned_result, toc_result_id: toc_result_id, action_area_outcome_id: action_area_outcome_id });
+          }
+        } else {
+          const result = await this._resultRepository.getResultById(result_id);
+          await this._resultByInitiativesRepository.update(exists.id, { is_active: true, last_updated_by: user.id });
+
+          const resultTocResult = await this._resultsTocResultRepository.existsResultTocResult(result.id, shared_inititiative_id);
+          if (!resultTocResult) {
             const newRtR = new ResultsTocResult();
             newRtR.version_id = vrs.id;
             newRtR.planned_result = planned_result;
@@ -177,7 +186,7 @@ export class ShareResultRequestService {
               newRtR.toc_result_id = toc_result_id || null;
             }
             await this._resultsTocResultRepository.save(newRtR);
-          }else{
+          } else {
             resultTocResult.is_active = true;
             resultTocResult.planned_result = planned_result;
             if (result.result_level_id == 2) {
@@ -186,7 +195,7 @@ export class ShareResultRequestService {
               resultTocResult.toc_result_id = toc_result_id || null;
             }
             await this._resultsTocResultRepository.save(resultTocResult);
-            
+
           }
         }
       }

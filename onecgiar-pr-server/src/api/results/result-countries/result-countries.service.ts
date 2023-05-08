@@ -6,6 +6,8 @@ import { Result } from '../entities/result.entity';
 import { ResultCountryRepository } from './result-countries.repository';
 import { ResultCountry } from './entities/result-country.entity';
 import { HandlersError } from '../../../shared/handlers/error.utils';
+import { Version } from '../versions/entities/version.entity';
+import { VersionsService } from '../versions/versions.service';
 
 @Injectable()
 export class ResultCountriesService {
@@ -13,6 +15,7 @@ export class ResultCountriesService {
   constructor(
     private readonly _resultRepository: ResultRepository,
     private readonly _resultCountryRepository: ResultCountryRepository,
+    private readonly _versionsService: VersionsService,
     private readonly _handlersError: HandlersError,
   ) { }
 
@@ -34,6 +37,11 @@ export class ResultCountriesService {
           status: HttpStatus.NOT_FOUND,
         };
       }
+      const vTemp = await this._versionsService.findBaseVersion();
+      if (vTemp.status >= 300) {
+        throw this._handlersError.returnErrorRes({ error: vTemp });
+      }
+      const version: Version = <Version>vTemp.response;
       const countries = createResultCountryDto.countries;
       if (!createResultCountryDto.has_countries && createResultCountryDto.scope_id != 3 || createResultCountryDto.scope_id == 4) {
         await this._resultCountryRepository.updateCountries(result.id, []);
@@ -49,6 +57,7 @@ export class ResultCountriesService {
                 const newRegions = new ResultCountry();
                 newRegions.country_id = countries[index].id;
                 newRegions.result_id = result.id;
+                newRegions.version_id = version.id;
                 resultRegionArray.push(newRegions);
               }
   

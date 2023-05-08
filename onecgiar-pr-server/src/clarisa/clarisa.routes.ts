@@ -17,11 +17,19 @@ import { ClarisaInnovationReadinessLevelsModule } from './clarisa-innovation-rea
 import { ClarisaInnovationCharacteristicsModule } from './clarisa-innovation-characteristics/clarisa-innovation-characteristics.module';
 import { ClarisaPolicyStagesModule } from './clarisa-policy-stages/clarisa-policy-stages.module';
 import { ClarisaPolicyTypesModule } from './clarisa-policy-types/clarisa-policy-types.module';
+import { ClarisaSdgsModule } from './clarisa-sdgs/clarisa-sdgs.module';
+import { ClarisaSdgsTargetsModule } from './clarisa-sdgs-targets/clarisa-sdgs-targets.module';
+import { ClarisaActionAreaOutcomeModule } from './clarisa-action-area-outcome/clarisa-action-area-outcome.module';
+import { ClarisaInnovationUseLevelsModule } from './clarisa-innovation-use-levels/clarisa-innovation-use-levels.module';
 
 export const ClarisaRoutes: Routes = [
   {
     path: 'action-areas',
     module: ClarisaActionAreasModule,
+  },
+  {
+    path: 'action-areas-outcomes',
+    module: ClarisaActionAreaOutcomeModule
   },
   {
     path: 'action-areas-outcomes-indicators',
@@ -72,15 +80,15 @@ export const ClarisaRoutes: Routes = [
     module: ClarisaInitiativesModule
   },
   {
-    path:'innovation-type',
+    path: 'innovation-type',
     module: ClarisaInnovationTypeModule
   },
   {
-    path:'innovation-readiness-levels',
+    path: 'innovation-readiness-levels',
     module: ClarisaInnovationReadinessLevelsModule
   },
   {
-    path:'innovation-characteristics',
+    path: 'innovation-characteristics',
     module: ClarisaInnovationCharacteristicsModule
   },
   {
@@ -90,5 +98,17 @@ export const ClarisaRoutes: Routes = [
   {
     path: 'policy-types',
     module: ClarisaPolicyTypesModule
+  },
+  {
+    path: 'sdgs',
+    module: ClarisaSdgsModule,
+  },
+  {
+    path: 'sdgs-targets',
+    module: ClarisaSdgsTargetsModule,
+  },
+  {
+    path: 'innovation-use-levels',
+    module: ClarisaInnovationUseLevelsModule
   }
 ];

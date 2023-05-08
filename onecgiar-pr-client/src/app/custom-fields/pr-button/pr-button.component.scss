@@ -7,7 +7,17 @@
 }
 
 .pr_button.big {
-    padding: 30px 40px;
+    padding: 10px 15px;
+    gap: 20px;
+    font-size: 1.1em;
+
+    i {
+        font-size: 1.7em;
+    }
+}
+
+.under_construction {
+    width: 25px;
 }
 
 .pr_button {

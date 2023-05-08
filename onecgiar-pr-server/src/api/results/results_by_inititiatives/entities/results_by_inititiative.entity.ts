@@ -5,6 +5,7 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -12,29 +13,51 @@ import { Result } from '../../entities/result.entity';
 import { InitiativeRole } from '../../initiative_roles/entities/initiative_role.entity';
 import { Version } from '../../versions/entities/version.entity';
 import { ClarisaInitiative } from '../../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
+import { ResultInitiativeBudget } from '../../result_budget/entities/result_initiative_budget.entity';
 
 @Entity()
 export class ResultsByInititiative {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => Result, (r) => r.id)
+  @Column({
+    name: 'result_id',
+    type: 'bigint',
+    nullable: true
+  })
+  result_id: number;
+
+  @ManyToOne(() => Result, (r) => r.obj_result_by_initiatives)
   @JoinColumn({
     name: 'result_id',
   })
-  result_id: number;
+  obj_result: Result;
+
+  @Column({
+    name: 'inititiative_id',
+    type: 'int',
+    nullable: true
+  })
+  initiative_id: number;
 
   @ManyToOne(() => ClarisaInitiative, (i) => i.id)
   @JoinColumn({
     name: 'inititiative_id',
   })
-  initiative_id: number;
+  obj_initiative: ClarisaInitiative;
+
+  @Column({
+    name: 'initiative_role_id',
+    type: 'bigint',
+    nullable: false
+  })
+  initiative_role_id: number;
 
   @ManyToOne(() => InitiativeRole, (v) => v.id, { nullable: false })
   @JoinColumn({
     name: 'initiative_role_id',
   })
-  initiative_role_id: number;
+  obj_initiative_role: InitiativeRole;
 
   @Column({
     name: 'is_active',
@@ -44,17 +67,31 @@ export class ResultsByInititiative {
   })
   is_active: boolean;
 
+  @Column({
+    name: 'version_id',
+    type: 'bigint',
+    nullable: false
+  })
+  version_id: number;
+
   @ManyToOne(() => Version, (v) => v.id, { nullable: false })
   @JoinColumn({
     name: 'version_id',
   })
-  version_id: number;
+  obj_version: Version;
+
+  @Column({
+    name: 'created_by',
+    type: 'int',
+    nullable: false
+  })
+  created_by: number;
 
   @ManyToOne(() => User, (u) => u.id, { nullable: false })
   @JoinColumn({
     name: 'created_by',
   })
-  created_by: number;
+  obj_created: User;
 
   @CreateDateColumn({
     name: 'created_date',
@@ -63,16 +100,26 @@ export class ResultsByInititiative {
   })
   created_date: Date;
 
+  @Column({
+    name: 'last_updated_by',
+    type: 'int',
+    nullable: true
+  })
+  last_updated_by: number;
+
   @ManyToOne(() => User, (u) => u.id, { nullable: true })
   @JoinColumn({
     name: 'last_updated_by',
   })
-  last_updated_by!: number;
-
+  obj_last_updated!: User;
+  
   @UpdateDateColumn({
     name: 'last_updated_date',
     type: 'timestamp',
     nullable: true,
   })
   last_updated_date!: Date;
+  
+  @OneToMany(() => ResultInitiativeBudget, rib => rib.obj_result_initiative)
+  obj_result_initiative_array: ResultInitiativeBudget[];
 }

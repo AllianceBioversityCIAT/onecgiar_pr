@@ -11,6 +11,7 @@ export class TocInitiativeOutComponent {
   @Input() editable: boolean;
   @Input() initiative: any;
   @Input() resultLevelId: number | string;
+  @Input() isIpsr: boolean = false;
   outcomeList = [];
   outputList = [];
   eoiList = [];
@@ -19,11 +20,19 @@ export class TocInitiativeOutComponent {
   constructor(public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public api: ApiService) {}
 
   ngOnInit(): void {
+    console.log(this.initiative);
+    
     this.GET_outcomeList();
     this.GET_fullInitiativeTocByinitId();
     this.GET_outputList();
     this.GET_EOIList();
     this.valdiateEOI(this.initiative);
+  }
+
+  getDescription(official_code, short_name) {
+    const tocText = `<strong>${official_code} ${short_name}</strong> - Are you able to match your reported result to a planned result in this Initiative's Theory of Change?`;
+    const contributorsText = `Is this result planned in the <strong>${official_code} ${short_name}</strong> ToC?`;
+    return this.isIpsr ? contributorsText : tocText;
   }
 
   GET_outputList() {

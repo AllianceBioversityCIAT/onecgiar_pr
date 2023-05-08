@@ -32,6 +32,7 @@ export class PrSelectComponent implements ControlValueAccessor {
   @Input() disabled: any = false;
   @Input() editable: boolean = false;
   @Input() extraInformation: boolean = false;
+  @Input() indexReference: number = null;
 
   @Output() selectOptionEvent = new EventEmitter();
   private _optionsIntance: any[];
@@ -66,7 +67,7 @@ export class PrSelectComponent implements ControlValueAccessor {
   //? Extra
   removeFocus(option?) {
     if (option?.disabled) return;
-    const element: any = document.getElementById(this.optionValue);
+    const element: any = document.getElementById(this.optionValue + this.indexReference ?? '');
     element.blur();
   }
   get optionsIntance() {
@@ -78,8 +79,8 @@ export class PrSelectComponent implements ControlValueAccessor {
     });
 
     this.disableOptions?.map(disableOption => {
-      let itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == disableOption[this.optionValue]);
-      if (itemFinded) itemFinded.disabled = true;
+      const itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == disableOption[this.optionValue]);
+      if (itemFinded && itemFinded[this.optionValue] != this.value) itemFinded.disabled = true;
     });
     this.fullValue[this.optionValue] = this.value;
 

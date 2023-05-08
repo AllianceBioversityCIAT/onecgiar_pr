@@ -13,6 +13,13 @@ export class PartnerDeliveryType {
     name: string;
 
     @Column({
+        name: 'description',
+        type: 'text',
+        nullable: true
+    })
+    description!: string;
+
+    @Column({
         name: 'is_active',
         type: 'boolean',
         default: true

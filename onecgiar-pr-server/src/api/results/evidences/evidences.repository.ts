@@ -12,6 +12,78 @@ export class EvidencesRepository extends Repository<Evidence> {
     super(Evidence, dataSource.createEntityManager());
   }
 
+  async getPictures(resultId: number) {
+    const queryData = `
+    SELECT 
+      e.id,
+      e.link,
+      e.evidence_type_id,
+      e.result_id,
+      e.is_active
+    FROM evidence e 
+    WHERE e.result_id = ?
+      AND e.evidence_type_id = 3;
+    `;
+    try {
+      const evidence: Evidence[] = await this.query(queryData, [resultId]);
+      return evidence;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: EvidencesRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async getMaterials(resultId: number) {
+    const queryData = `
+    SELECT 
+      e.id,
+      e.link,
+      e.evidence_type_id,
+      e.result_id,
+      e.is_active
+    FROM evidence e 
+    WHERE e.result_id = ?
+      AND e.evidence_type_id = 4;
+    `;
+    try {
+      const evidence: Evidence[] = await this.query(queryData, [resultId]);
+      return evidence;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: EvidencesRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async getWokrshop(resultId: number) {
+    const queryData = `
+    SELECT 
+      e.id,
+      e.link,
+      e.evidence_type_id,
+      e.result_id,
+      e.is_active
+    FROM evidence e 
+    WHERE e.result_id = ?
+      AND e.evidence_type_id = 5;
+    `;
+    try {
+      const evidence: Evidence[] = await this.query(queryData, [resultId]);
+      return evidence;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: EvidencesRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async getEvidenceFull(evidenceId: number) {
     const queryData = `
     select 
@@ -44,7 +116,7 @@ export class EvidencesRepository extends Repository<Evidence> {
     }
   }
 
-  async getEvidencesByResultIdAndLink(resultId: number, link: string, is_supplementary: boolean){
+  async getEvidencesByResultIdAndLink(resultId: number, link: string, is_supplementary: boolean, type: number){
     const query = `
     select 
     e.id,
@@ -54,11 +126,12 @@ export class EvidencesRepository extends Repository<Evidence> {
     where e.result_id = ?
     	and e.is_active > 0
     	and e.link = ?
-      and is_supplementary = ?;
+      and e.is_supplementary = ?
+      and e.evidence_type_id = ?;
     `;
 
     try {
-      const evidence: Evidence[] = await this.query(query, [resultId, link, is_supplementary]);
+      const evidence: Evidence[] = await this.query(query, [resultId, link, is_supplementary, type]);
       return evidence?.length?evidence[0]:undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -69,7 +142,7 @@ export class EvidencesRepository extends Repository<Evidence> {
     }
   }
 
-  async updateEvidences(resultId: number, linkArray: string[], userId: number, is_supplementary: boolean) {
+  async updateEvidences(resultId: number, linkArray: string[], userId: number, is_supplementary: boolean, type: number) {
     const evidences = linkArray??[];
     const upDateInactive = `
       update evidence 
@@ -79,7 +152,8 @@ export class EvidencesRepository extends Repository<Evidence> {
       where is_active  > 0 
         and result_id = ${resultId}
         and link not in (${`'${evidences.toString().replace(/,/g,'\',\'')}'`})
-        and is_supplementary = ${is_supplementary};
+        and is_supplementary = ${is_supplementary}
+        and evidence_type_id = ${type};
     `;
 
     const upDateActive = `
@@ -89,7 +163,8 @@ export class EvidencesRepository extends Repository<Evidence> {
         last_updated_by  = ${userId}
       where result_id = ${resultId}
         and link in (${`'${evidences.toString().replace(/,/g,'\',\'')}'`})
-        and is_supplementary = ${is_supplementary};
+        and is_supplementary = ${is_supplementary}
+        and evidence_type_id = ${type};
     `;
 
     const upDateAllInactive = `
@@ -99,7 +174,8 @@ export class EvidencesRepository extends Repository<Evidence> {
         last_updated_by  = ${userId}
       where is_active  > 0 
       and result_id = ${resultId}
-      and is_supplementary = ${is_supplementary};
+      and is_supplementary = ${is_supplementary}
+      and evidence_type_id = ${type};
     `;
 
     try {
@@ -119,7 +195,7 @@ export class EvidencesRepository extends Repository<Evidence> {
     }
   }
 
-  async getEvidencesByResultId(resultId: number, is_supplementary: boolean){
+  async getEvidencesByResultId(resultId: number, is_supplementary: boolean, type: number){
     const query = `
     select 
     e.id,
@@ -139,11 +215,12 @@ export class EvidencesRepository extends Repository<Evidence> {
     from evidence e 
     where e.result_id = ?
       and e.is_supplementary = ?
-      and e.is_active > 0;
+      and e.is_active > 0
+      and e.evidence_type_id = ?;
     `;
 
     try {
-      const evidence: Evidence[] = await this.query(query, [resultId, is_supplementary]);
+      const evidence: Evidence[] = await this.query(query, [resultId, is_supplementary, type]);
       return evidence;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

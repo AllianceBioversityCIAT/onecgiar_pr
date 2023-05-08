@@ -19,7 +19,6 @@ export class CompletenessStatusComponent {
   constructor(public api: ApiService, public resultHistoryOfChangesModalSE: ResultHistoryOfChangesModalService, public exportTablesSE: ExportTablesService) {}
   ngOnInit(): void {
     this.POST_reportSesultsCompleteness([], 1);
-    this.api.rolesSE.validateReadOnly();
     this.GET_AllInitiatives();
   }
   POST_reportSesultsCompleteness(inits: any[], role?: number) {

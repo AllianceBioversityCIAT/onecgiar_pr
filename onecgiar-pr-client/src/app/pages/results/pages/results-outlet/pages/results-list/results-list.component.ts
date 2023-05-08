@@ -66,7 +66,7 @@ export class ResultsListComponent implements OnInit {
   constructor(public api: ApiService, public resultsListService: ResultsListService, private ResultLevelSE: ResultLevelService, private exportTablesSE: ExportTablesService, private shareRequestModalSE: ShareRequestModalService, private retrieveModalSE: RetrieveModalService) {}
 
   ngOnInit(): void {
-    this.api.rolesSE.validateReadOnly();
+    // this.api.rolesSE.validateReadOnly();
     this.api.updateResultsList();
     this.items;
     this.api.alertsFs.show({
@@ -117,5 +117,8 @@ export class ResultsListComponent implements OnInit {
         }
       );
     });
+  }
+  ngOnDestroy(): void {
+    this.api.dataControlSE?.myInitiativesList.map(item => (item.selected = true));
   }
 }

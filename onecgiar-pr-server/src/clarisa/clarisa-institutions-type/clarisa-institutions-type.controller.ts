@@ -10,6 +10,7 @@ import {
 import { ClarisaInstitutionsTypeService } from './clarisa-institutions-type.service';
 import { CreateClarisaInstitutionsTypeDto } from './dto/create-clarisa-institutions-type.dto';
 import { UpdateClarisaInstitutionsTypeDto } from './dto/update-clarisa-institutions-type.dto';
+import { HttpException } from '@nestjs/common';
 
 @Controller()
 export class ClarisaInstitutionsTypeController {
@@ -26,9 +27,11 @@ export class ClarisaInstitutionsTypeController {
     );
   }
 
-  @Get()
-  findAll() {
-    return this.clarisaInstitutionsTypeService.findAll();
+  @Get('tree')
+  async findAll() {
+    const { message, response, status } =
+    await this.clarisaInstitutionsTypeService.findAllNotLegacy();
+    throw new HttpException({ message, response }, status);
   }
 
   @Get(':id')

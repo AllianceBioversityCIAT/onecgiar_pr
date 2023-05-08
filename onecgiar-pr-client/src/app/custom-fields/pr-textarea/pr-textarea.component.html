@@ -6,7 +6,7 @@
     </div>
     <div class="p-fluid input_container" *ngSwitchCase="false">
         <!-- <input pInputText [type]="this.type" [placeholder]="this.placeholder" /> -->
-        <textarea [rows]="5" [cols]="30" pInputTextarea [autoResize]="true" [(ngModel)]="value"
+        <textarea [rows]="rows" [cols]="30" pInputTextarea [autoResize]="true" [(ngModel)]="value"
             [placeholder]="this.placeholder"></textarea>
 
         <div class="hints_container">

@@ -1,0 +1,30 @@
+<p-dialog class="support_information" header="Title" [(visible)]="this.visible" (onHide)="cleanObject()"
+    [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true"
+    [style]="{padding: '0px'}">
+    <div class="modal_title">Add bilateral</div>
+    <div class="modal_container partners-request-container" *ngIf="showForm">
+
+
+        <app-alert-status *ngIf="!this.rolesSE.readOnly"
+            description="If you don't find the partner you are looking for, <a class='open_route alert-event-3'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list">
+        </app-alert-status>
+
+        <app-pr-select [options]="this.institutionsSE.institutionsList" label="Organization" optionLabel="full_name"
+            optionValue="institutions_id" placeholder="Select organization"
+            [(ngModel)]="this.partnerBody.institutions_id">
+        </app-pr-select>
+
+
+    </div>
+    <div class="buttons">
+        <app-pr-button padding="medium" text="Cancel" icon="cancel_schedule_send" colorType="secondary"
+            (click)="this.visible = false">
+        </app-pr-button>
+        <app-pr-button [ngClass]="{'globalDisabled': this.requesting || formIsInvalid}"
+            [text]="this.requesting?'Adding partner':'Add partner'" [rotating]="this.requesting"
+            [icon]="this.requesting?'loop':'send'" padding="medium" (click)="onAddPartner()"></app-pr-button>
+    </div>
+
+</p-dialog>
+<app-pr-button (click)="visible= true;" padding="small" text="Add partner" icon="add_box"
+    *ngIf="!this.rolesSE.readOnly"></app-pr-button>

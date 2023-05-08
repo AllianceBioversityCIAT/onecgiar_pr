@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { internationalizationData } from '../../shared/data/internationalizationData';
 import { AuthService } from '../../shared/services/api/auth.service';
 import { CustomizedAlertsFeService } from '../../shared/services/customized-alerts-fe.service';
+import { RolesService } from 'src/app/shared/services/global/roles.service';
 
 @Component({
   selector: 'app-login',
@@ -14,7 +15,7 @@ export class LoginComponent implements OnDestroy, OnInit {
   internationalizationData = internationalizationData;
   userLoginData = new UserAuth();
   successLogin = false;
-  constructor(private authService: AuthService, private customAlertService: CustomizedAlertsFeService, private router: Router) {
+  constructor(private authService: AuthService, private customAlertService: CustomizedAlertsFeService, private router: Router, private rolesSE: RolesService) {
     this.authService.inLogin = true;
     if (!!this.authService.localStorageUser) this.router.navigate(['/']);
   }
@@ -40,6 +41,7 @@ export class LoginComponent implements OnDestroy, OnInit {
         this.successLogin = true;
         setTimeout(() => {
           this.router.navigate(['/']);
+          this.rolesSE.validateReadOnly();
         }, 1500);
       },
       err => {
