@@ -10,7 +10,6 @@ import { ApiService } from 'src/app/shared/services/api/api.service';
 export class StepN3CurrentUseComponent {
   actorsTypeList = [];
   institutionsTypeTreeList = [];
-  showWomenExplanation = false;
   @Input() body = new IpsrStep3Body();
   constructor(public api: ApiService) {
     this.GETAllActorsTypes();
@@ -63,37 +62,38 @@ export class StepN3CurrentUseComponent {
   }
 
   executeTimer = null;
-  validateWomenAndYouth(i) {
+  validateYouth(i, isWomen: boolean) {
+    const gender = isWomen ? 'women' : 'men';
+    const genderYouth = isWomen ? 'women_youth' : 'men_youth';
+    const genderNonYouth = isWomen ? 'women_non_youth' : 'men_non_youth';
     clearTimeout(this.executeTimer);
-    if (this.body.innovatonUse.actors[i].women_youth < 0 || this.body.innovatonUse.actors[i].women < 0) {
-      if (this.body.innovatonUse.actors[i].women_youth < 0)
+    if (this.body.innovatonUse.actors[i][genderYouth] < 0 || this.body.innovatonUse.actors[i][gender] < 0) {
+      if (this.body.innovatonUse.actors[i][genderYouth] < 0)
         setTimeout(() => {
-          this.body.innovatonUse.actors[i].women_youth = null;
+          this.body.innovatonUse.actors[i][genderYouth] = null;
         }, 90);
-      if (this.body.innovatonUse.actors[i].women < 0)
+      if (this.body.innovatonUse.actors[i][gender] < 0)
         setTimeout(() => {
-          this.body.innovatonUse.actors[i].women = 0;
+          this.body.innovatonUse.actors[i][gender] = 0;
         }, 90);
     }
-    if (this.body.innovatonUse.actors[i].women - this.body.innovatonUse.actors[i].women_youth < 0) {
+    if (this.body.innovatonUse.actors[i][gender] - this.body.innovatonUse.actors[i][genderYouth] < 0) {
       this.executeTimer = setTimeout(() => {
-        console.log('execute');
-        this.body.innovatonUse.actors[i].women_youth = this.body.innovatonUse.actors[i].previousWomen_youth;
-        this.body.innovatonUse.actors[i].women = this.body.innovatonUse.actors[i].previousWomen;
-
-        this.showWomenExplanation = true;
+        this.body.innovatonUse.actors[i][genderYouth] = this.body.innovatonUse.actors[i].previousWomen_youth;
+        this.body.innovatonUse.actors[i][gender] = this.body.innovatonUse.actors[i].previousWomen;
+        this.body.innovatonUse.actors[i]['showWomenExplanation' + gender] = true;
         const element: any = document.getElementById('removeFocus');
         element.focus();
         setTimeout(() => {
-          this.showWomenExplanation = false;
+          this.body.innovatonUse.actors[i]['showWomenExplanation' + gender] = false;
         }, 3000);
       }, 1000);
     } else {
-      this.body.innovatonUse.actors[i].previousWomen = this.body.innovatonUse.actors[i].women;
-      this.body.innovatonUse.actors[i].previousWomen_youth = this.body.innovatonUse.actors[i].women_youth;
+      this.body.innovatonUse.actors[i].previousWomen = this.body.innovatonUse.actors[i][gender];
+      this.body.innovatonUse.actors[i].previousWomen_youth = this.body.innovatonUse.actors[i][genderYouth];
     }
     setTimeout(() => {
-      this.body.innovatonUse.actors[i].women_non_youth = this.body.innovatonUse.actors[i].women - this.body.innovatonUse.actors[i].women_youth;
+      this.body.innovatonUse.actors[i][genderNonYouth] = this.body.innovatonUse.actors[i][gender] - this.body.innovatonUse.actors[i][genderYouth];
     }, 1100);
   }
 }

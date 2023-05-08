@@ -44,6 +44,12 @@
                 top: 45px;
                 left: 0;
                 white-space: nowrap;
+                font-weight: bold;
+            }
+            .subName{
+                position: absolute;
+                top: 65px;
+                white-space: nowrap;
             }
         }
     }
@@ -62,6 +68,9 @@
         //     z-index: 0;
         // }
         .name {
+            color: var(--pr-color-primary) !important;
+        }
+        .subName{
             color: var(--pr-color-primary) !important;
         }
     }

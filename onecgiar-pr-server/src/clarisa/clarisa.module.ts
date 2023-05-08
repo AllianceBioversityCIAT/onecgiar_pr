@@ -34,6 +34,7 @@ import { ClarisaPolicyTypesModule } from './clarisa-policy-types/clarisa-policy-
 import { ClarisaRegionsCgiarModule } from './clarisa-regions-cgiar/clarisa-regions-cgiar.module';
 import { ClarisaSdgsModule } from './clarisa-sdgs/clarisa-sdgs.module';
 import { ClarisaSdgsTargetsModule } from './clarisa-sdgs-targets/clarisa-sdgs-targets.module';
+import { ClarisaInnovationUseLevelsModule } from './clarisa-innovation-use-levels/clarisa-innovation-use-levels.module';
 
 @Module({
   imports: [
@@ -64,7 +65,8 @@ import { ClarisaSdgsTargetsModule } from './clarisa-sdgs-targets/clarisa-sdgs-ta
     ClarisaPolicyTypesModule,
     ClarisaRegionsCgiarModule,
     ClarisaSdgsModule,
-    ClarisaSdgsTargetsModule
+    ClarisaSdgsTargetsModule,
+    ClarisaInnovationUseLevelsModule
     
   ],
   controllers: [],
