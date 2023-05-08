@@ -30,6 +30,7 @@ import { UnitTimeRepository } from './repositories/unit_time.repository';
 import { TocResultsRepository } from '../../../toc/toc-results/toc-results.repository';
 import { ResultIpEoiOutcomeRepository } from '../innovation-pathway/repository/result-ip-eoi-outcomes.repository';
 import { YearRepository } from '../../results/years/year.repository';
+import { LinkedResultRepository } from '../../results/linked-results/linked-results.repository';
 
 
 @Module({
@@ -63,7 +64,8 @@ import { YearRepository } from '../../results/years/year.repository';
     UnitTimeRepository,
     TocResultsRepository,
     ResultIpEoiOutcomeRepository,
-    YearRepository
+    YearRepository,
+    LinkedResultRepository
   ],
   imports: [VersionsModule],
   exports: [
