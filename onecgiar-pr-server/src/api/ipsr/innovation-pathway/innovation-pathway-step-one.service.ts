@@ -190,7 +190,7 @@ export class InnovationPathwayStepOneService {
   arrayToStringAnd(arrayData: any[]) {
     const count = arrayData?.length;
     const lastElement = arrayData.pop();
-    return count ? `${arrayData.toString().replace(/,/g, ', ')}${count > 1 ? ' and' : ''} ${lastElement}` : '<Data not provided>';
+    return count ? ` ${arrayData.toString().replace(/,/g, ', ')}${count > 1 ? ' and' : ''} ${lastElement}` : ' <Data not provided>';
   }
 
   arrayToStringGeoScopeAnd(geoId: number, r: ResultRegion[], c: ResultCountry[]) {
@@ -202,7 +202,7 @@ export class InnovationPathwayStepOneService {
     } else if (geoId == 3 || geoId == 4) {
       returnData = this.arrayToStringAnd(c.map(el => el['name']));
     } else if (geoId == 5) {
-      returnData = '<Data not provided>';
+      returnData = ' <Data not provided>';
     }
 
     return returnData;
@@ -216,9 +216,9 @@ export class InnovationPathwayStepOneService {
     const lastElement = arrayData.pop();
     let actors: string = '';
     for (const i of arrayData) {
-      actors += `${i.men + i.women} ${i?.obj_actor_type?.name}`
+      actors += `${+i.men + +i.women} ${i?.obj_actor_type?.name || `<Actor type not provided>`} `
     }
-    return `${actors} ${count > 1 ? 'and ' : ''}${lastElement.men + lastElement.women} ${lastElement?.obj_actor_type?.name}`;
+    return `${actors} ${count > 1 ? 'and ' : ''}${+lastElement.men + +lastElement.women} ${lastElement?.obj_actor_type?.name || `<Actor type not provided>`}`;
   }
 
   async updateMain(resultId: number, UpdateInnovationPathwayDto: UpdateInnovationPathwayDto, user: TokenDto) {
