@@ -13,6 +13,7 @@ import { StepN1ActionAreaOutcomesComponent } from './step-n1-action-area-outcome
 import { StepN1ScalingAmbitionBlurbComponent } from './step-n1-scaling-ambition-blurb/step-n1-scaling-ambition-blurb.component';
 import { YmzListStructureItemModule } from 'src/app/shared/directives/ymz-list-structure-item/ymz-list-structure-item.module';
 import { ClipboardModule } from '@angular/cdk/clipboard';
+import { TooltipModule } from 'primeng/tooltip';
 
 const components = [StepN1ScalingAmbitionBlurbComponent, StepN1ActionAreaOutcomesComponent, StepN1GeoscopeComponent, StepN1EoiOutcomesComponent, StepN1ImpactAreasComponent, StepN1SdgTargetsComponent, StepN1InnovatonUseComponent, StepN1InstitutionsComponent, StepN1ExpertsComponent, StepN1ConsensusAndConsultationComponent];
 @NgModule({
