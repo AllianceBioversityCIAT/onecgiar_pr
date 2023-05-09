@@ -10,7 +10,7 @@ import { ApiService } from 'src/app/shared/services/api/api.service';
 })
 export class InnovationPackagesNotificationComponent implements OnInit {
 
-  constructor(public api: ApiService, private shareRequestModalSE: ShareRequestModalService, public resultsNotificationsSE: ResultsNotificationsService) {}
+  constructor(public api: ApiService, private shareRequestModalSE: ShareRequestModalService, public resultsNotificationsSE: ResultsNotificationsService) { }
   ngOnInit(): void {
     //Called after the constructor, initializing input properties, and the first call to ngOnChanges.
     //Add 'implements OnInit' to the class.
@@ -18,8 +18,8 @@ export class InnovationPackagesNotificationComponent implements OnInit {
       this.resultsNotificationsSE.get_section_innovation_packages();
     });
     //console.log(this.resultsNotificationsSE);
-    
-    this.shareRequestModalSE.inNotifications = true;
+
+    this.api.dataControlSE.inNotifications = true;
   }
 
 }
