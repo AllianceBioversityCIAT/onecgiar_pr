@@ -12,11 +12,11 @@ export class StepN1ImpactAreasComponent {
   allImpactAreaIndicators = [];
   currentImpactAreaID = null;
   impactAreasData = [
-    { id: 1, imageRoute: '1', selected: false, color: '#ec7427' },
-    { id: 2, imageRoute: '2', selected: false, color: '#1275ba' },
-    { id: 3, imageRoute: '3', selected: false, color: '#fdca3d' },
-    { id: 4, imageRoute: '4', selected: false, color: '#377431' },
-    { id: 5, imageRoute: '5', selected: false, color: '#8ebf3e' }
+    { id: 1, imageRoute: '1', selected: false, color: '#ec7427', name: 'Nutrition, Health and Food Security' },
+    { id: 2, imageRoute: '2', selected: false, color: '#1275ba', name: 'Poverty Reduction, Livelihoods and Jobs' },
+    { id: 3, imageRoute: '3', selected: false, color: '#fdca3d', name: 'Gender Equality, Youth and Social Inclusion' },
+    { id: 4, imageRoute: '4', selected: false, color: '#377431', name: 'Climate Adaptation and Mitigation' },
+    { id: 5, imageRoute: '5', selected: false, color: '#8ebf3e', name: 'Environmental Health and Biodiversity' }
   ];
   constructor(public api: ApiService) {}
   ngOnInit(): void {
@@ -25,7 +25,7 @@ export class StepN1ImpactAreasComponent {
 
   GET_AllClarisaImpactAreaIndicators() {
     this.api.resultsSE.GET_AllglobalTarget().subscribe(({ response }) => {
-      // console.log(response);
+      console.log(response);
       this.allImpactAreaIndicators = response;
       this.allImpactAreaIndicators.map(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
     });

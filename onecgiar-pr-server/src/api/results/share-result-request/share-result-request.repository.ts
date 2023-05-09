@@ -6,15 +6,15 @@ import { RequestStatus } from './entities/request-status.entity';
 
 @Injectable()
 export class ShareResultRequestRepository extends Repository<ShareResultRequest> {
-  constructor(
-    private dataSource: DataSource,
-    private _handlersError: HandlersError
-  ) {
-    super(ShareResultRequest, dataSource.createEntityManager());
-  }
+	constructor(
+		private dataSource: DataSource,
+		private _handlersError: HandlersError
+	) {
+		super(ShareResultRequest, dataSource.createEntityManager());
+	}
 
-  async shareResultRequestExists(resultId: number, ownerInitId: number, shareInitId: number) {
-    const queryData = `
+	async shareResultRequestExists(resultId: number, ownerInitId: number, shareInitId: number) {
+		const queryData = `
     SELECT
     	srr.share_result_request_id,
     	srr.is_active,
@@ -38,20 +38,20 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
       and srr.request_status_id in (1)
 	  and srr.is_active > 0;
     `;
-    try {
-      const shareResultRequest: ShareResultRequest[] = await this.query(queryData, [resultId, ownerInitId, shareInitId]);
-      return shareResultRequest.length ? shareResultRequest[0] : undefined;
-    } catch (error) {
-      throw this._handlersError.returnErrorRepository({
-        className: ShareResultRequestRepository.name,
-        error: error,
-        debug: true,
-      });
-    }
-  }
+		try {
+			const shareResultRequest: ShareResultRequest[] = await this.query(queryData, [resultId, ownerInitId, shareInitId]);
+			return shareResultRequest.length ? shareResultRequest[0] : undefined;
+		} catch (error) {
+			throw this._handlersError.returnErrorRepository({
+				className: ShareResultRequestRepository.name,
+				error: error,
+				debug: true,
+			});
+		}
+	}
 
-  async getAllRequestStatus() {
-    const queryData = `
+	async getAllRequestStatus() {
+		const queryData = `
     SELECT
     	rs.request_status_id,
     	rs.name,
@@ -59,20 +59,20 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     FROM
     	request_status rs;
     `;
-    try {
-      const shareResultRequest: RequestStatus[] = await this.query(queryData);
-      return shareResultRequest;
-    } catch (error) {
-      throw this._handlersError.returnErrorRepository({
-        className: ShareResultRequestRepository.name,
-        error: error,
-        debug: true,
-      });
-    }
-  }
+		try {
+			const shareResultRequest: RequestStatus[] = await this.query(queryData);
+			return shareResultRequest;
+		} catch (error) {
+			throw this._handlersError.returnErrorRepository({
+				className: ShareResultRequestRepository.name,
+				error: error,
+				debug: true,
+			});
+		}
+	}
 
-  async getRequestByUser(userId: number, version: number = 1) {
-    const queryData = `
+	async getRequestByUser(userId: number, version: number = 1) {
+		const queryData = `
     SELECT
     	srr.share_result_request_id,
     	srr.is_active,
@@ -84,8 +84,10 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     	srr.shared_inititiative_id,
     	srr.approving_inititiative_id,
     	ci.official_code as approving_official_code,
+		ci.short_name as approving_short_name,
 		srr.requester_initiative_id,
 		ci2.official_code as requester_official_code,
+		ci2.short_name as requester_short_name,
     	srr.toc_result_id,
     	srr.action_area_outcome_id,
     	srr.request_status_id,
@@ -129,20 +131,20 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
 		and srr.is_active > 0
 	order by srr.request_status_id ASC;
     `;
-    try {
-      const shareResultRequest: ShareResultRequest[] = await this.query(queryData, [version, userId]);
-      return shareResultRequest;
-    } catch (error) {
-      throw this._handlersError.returnErrorRepository({
-        className: ShareResultRequestRepository.name,
-        error: error,
-        debug: true,
-      });
-    }
-  }
+		try {
+			const shareResultRequest: ShareResultRequest[] = await this.query(queryData, [version, userId]);
+			return shareResultRequest;
+		} catch (error) {
+			throw this._handlersError.returnErrorRepository({
+				className: ShareResultRequestRepository.name,
+				error: error,
+				debug: true,
+			});
+		}
+	}
 
-  async getPendingByUser(userId: number, version: number = 1) {
-    const queryData = `
+	async getPendingByUser(userId: number, version: number = 1) {
+		const queryData = `
     SELECT
     	srr.share_result_request_id,
     	srr.is_active,
@@ -197,20 +199,20 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     	)
 		and srr.is_active > 0;
     `;
-    try {
-      const shareResultRequest: ShareResultRequest[] = await this.query(queryData, [version, userId]);
-      return shareResultRequest;
-    } catch (error) {
-      throw this._handlersError.returnErrorRepository({
-        className: ShareResultRequestRepository.name,
-        error: error,
-        debug: true,
-      });
-    }
-  }
+		try {
+			const shareResultRequest: ShareResultRequest[] = await this.query(queryData, [version, userId]);
+			return shareResultRequest;
+		} catch (error) {
+			throw this._handlersError.returnErrorRepository({
+				className: ShareResultRequestRepository.name,
+				error: error,
+				debug: true,
+			});
+		}
+	}
 
-  async getInitiativeOnlyPendingByResult(userId: number, version: number = 1) {
-    const queryData = `
+	async getInitiativeOnlyPendingByResult(userId: number, version: number = 1) {
+		const queryData = `
     SELECT
     	srr.share_result_request_id,
     	srr.is_active,
@@ -249,20 +251,20 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     	)
 		and srr.is_active > 0;
     `;
-    try {
-      const shareResultRequest: ShareResultRequest[] = await this.query(queryData, [userId, version]);
-      return shareResultRequest;
-    } catch (error) {
-      throw this._handlersError.returnErrorRepository({
-        className: ShareResultRequestRepository.name,
-        error: error,
-        debug: true,
-      });
-    }
-  }
+		try {
+			const shareResultRequest: ShareResultRequest[] = await this.query(queryData, [userId, version]);
+			return shareResultRequest;
+		} catch (error) {
+			throw this._handlersError.returnErrorRepository({
+				className: ShareResultRequestRepository.name,
+				error: error,
+				debug: true,
+			});
+		}
+	}
 
-  async getRequestByUserId(userId: number) {
-    const queryData = `
+	async getRequestByUserId(userId: number) {
+		const queryData = `
     SELECT
     	srr.share_result_request_id,
     	srr.is_active,
@@ -285,36 +287,36 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     	and srr.shared_inititiative_id = ?
 		and srr.is_active > 0;
     `;
-    try {
-      const shareResultRequest: ShareResultRequest[] = await this.query(queryData, [userId]);
-      return shareResultRequest.length ? shareResultRequest[0] : undefined;
-    } catch (error) {
-      throw this._handlersError.returnErrorRepository({
-        className: ShareResultRequestRepository.name,
-        error: error,
-        debug: true,
-      });
-    }
-  }
+		try {
+			const shareResultRequest: ShareResultRequest[] = await this.query(queryData, [userId]);
+			return shareResultRequest.length ? shareResultRequest[0] : undefined;
+		} catch (error) {
+			throw this._handlersError.returnErrorRepository({
+				className: ShareResultRequestRepository.name,
+				error: error,
+				debug: true,
+			});
+		}
+	}
 
-  async cancelRequest(requestIds: number[]) {
-    const queryData = `
+	async cancelRequest(requestIds: number[]) {
+		const queryData = `
     update share_result_request 
 	set is_active = FALSE 
 	where is_active > 0
 		and share_result_request_id in (${requestIds.toString()})
     `;
-    try {
-      const shareResultRequest = await this.query(queryData);
-      return shareResultRequest;
-    } catch (error) {
-      throw this._handlersError.returnErrorRepository({
-        className: ShareResultRequestRepository.name,
-        error: error,
-        debug: true,
-      });
-    }
-  }
+		try {
+			const shareResultRequest = await this.query(queryData);
+			return shareResultRequest;
+		} catch (error) {
+			throw this._handlersError.returnErrorRepository({
+				className: ShareResultRequestRepository.name,
+				error: error,
+				debug: true,
+			});
+		}
+	}
 
 }
 
