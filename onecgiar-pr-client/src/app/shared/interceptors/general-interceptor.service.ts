@@ -5,13 +5,12 @@ import { environment } from 'src/environments/environment';
 import { AuthService } from '../services/api/auth.service';
 import { ApiService } from '../services/api/api.service';
 import { GreenChecksService } from '../services/global/green-checks.service';
-import { IpsrCompletenessStatusService } from 'src/app/pages/ipsr/services/ipsr-completeness-status.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class GeneralInterceptorService implements HttpInterceptor {
-  constructor(private authService: AuthService, private greenChecksSE: GreenChecksService, private apiService: ApiService, private ipsrCompletenessStatusSE: IpsrCompletenessStatusService) {}
+  constructor(private authService: AuthService, private greenChecksSE: GreenChecksService) {}
 
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
     if (!this.authService?.localStorageToken && !req.url.indexOf(environment.apiBaseUrl)) return next.handle(req.clone());
@@ -28,32 +27,13 @@ export class GeneralInterceptorService implements HttpInterceptor {
       headers
     });
 
-    if (reqClone.method === 'PATCH' || reqClone.method === 'POST') {
-      return next.handle(reqClone).pipe(
-        tap((event: any) => {
-          if (event && event.status >= 200 && event.status < 300) {
-            const validateGreenCheckRoute = req.url.indexOf('green-checks') > 0;
-            const inResultsModule = req.url.includes('/api/results/');
-            const inIPSRModule = req.url.includes('/api/ipsr/');
-            if (!validateGreenCheckRoute && inResultsModule) {
-              this.greenChecksSE.updateGreenChecks();
-            }
-            if (inIPSRModule) {
-              this.ipsrCompletenessStatusSE.updateGreenChecks();
-            }
-          }
-        }),
-        catchError((error: any) => {
-          return this.manageError(error);
-        })
-      );
-    }
-
     return next.handle(reqClone).pipe(
-      catchError((error: any) => {
-        return this.manageError(error);
+      tap((resp: any) => {
+        const validateGreenCheckRoute = req.url.indexOf('green-checks') > 0;
+        if ((req.method == 'PATCH' || req.method == 'POST') && !validateGreenCheckRoute) this.greenChecksSE.updateGreenChecks();
       })
     );
+    // .pipe(catchError(this.manageError))
   }
 
   manageError(error: HttpErrorResponse) {

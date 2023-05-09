@@ -20,8 +20,6 @@ export class TocInitiativeOutComponent {
   constructor(public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public api: ApiService) {}
 
   ngOnInit(): void {
-    console.log(this.initiative);
-    
     this.GET_outcomeList();
     this.GET_fullInitiativeTocByinitId();
     this.GET_outputList();

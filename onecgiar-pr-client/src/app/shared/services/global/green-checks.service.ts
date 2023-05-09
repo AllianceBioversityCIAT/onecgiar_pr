@@ -10,13 +10,15 @@ export class GreenChecksService {
   constructor(private api: ApiService, private resultsApiSE: ResultsApiService) {}
 
   updateGreenChecks() {
-    if (this.resultsApiSE.currentResultId) {
-      this.api.resultsSE.GET_greenChecksByResultId().subscribe(({ response }) => {
-        console.log('updateGreenChecks');
-        this.submit = Boolean(response?.submit);
-        this.api.dataControlSE.green_checks = response?.green_checks;
-        this.api.resultsSE.PATCH_greenChecksByResultId().subscribe();
-      });
-    }
+    setTimeout(() => {
+      if (this.resultsApiSE.currentResultId) {
+        this.api.resultsSE.GET_greenChecksByResultId().subscribe(({ response }) => {
+          // console.log('updateGreenChecks');
+          this.submit = Boolean(response?.submit);
+          this.api.dataControlSE.green_checks = response?.green_checks;
+          this.api.resultsSE.PATCH_greenChecksByResultId().subscribe();
+        });
+      }
+    }, 1000);
   }
 }

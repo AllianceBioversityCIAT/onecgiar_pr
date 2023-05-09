@@ -3,7 +3,6 @@ import { InnovationPathwayModule } from './innovation-pathway/innovation-pathway
 import { ResultInnovationPackageModule } from './result-innovation-package/result-innovation-package.module';
 import { ResultsPackageTocResultModule } from './results-package-toc-result/results-package-toc-result.module';
 import { InnovationPackagingExpertsModule } from './innovation-packaging-experts/innovation-packaging-experts.module';
-import { ResultsInnovationPackagesValidationModuleModule } from './results-innovation-packages-validation-module/results-innovation-packages-validation-module.module';
 
 export const IpsrRoutes: Routes = [
   {
@@ -21,9 +20,5 @@ export const IpsrRoutes: Routes = [
   {
     path: 'innovation-packaging-experts',
     module: InnovationPackagingExpertsModule
-  },
-  {
-    path: 'results-innovation-packages-validation-module',
-    module: ResultsInnovationPackagesValidationModuleModule
   }
 ];

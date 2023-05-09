@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 
 import { BasicInfoRoutingModule } from './basic-info-routing.module';
 import { BasicInfoComponent } from './basic-info.component';
-import { CustomFieldsModule } from '../../../../../../../../../../custom-fields/custom-fields.module';
 
 
 @NgModule({
@@ -12,11 +11,7 @@ import { CustomFieldsModule } from '../../../../../../../../../../custom-fields/
   ],
   imports: [
     CommonModule,
-    BasicInfoRoutingModule,
-    CustomFieldsModule,
-  ],
-  exports:[
-    BasicInfoComponent
+    BasicInfoRoutingModule
   ]
 })
 export class BasicInfoModule { }

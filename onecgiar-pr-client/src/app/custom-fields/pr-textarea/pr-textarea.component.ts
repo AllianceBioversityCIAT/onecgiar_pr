@@ -24,7 +24,6 @@ export class PrTextareaComponent implements ControlValueAccessor {
   @Input() isStatic: boolean = false;
   @Input() required: boolean = true;
   @Input() hint: string = null;
-  @Input() rows: number = 5;
 
   private _value: string;
   private beforeValue: string;

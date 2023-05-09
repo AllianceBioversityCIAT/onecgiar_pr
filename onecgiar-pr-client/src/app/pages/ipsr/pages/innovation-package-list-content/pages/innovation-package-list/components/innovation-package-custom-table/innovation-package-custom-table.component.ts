@@ -77,11 +77,9 @@ export class InnovationPackageCustomTableComponent  {
   }
   onPressAction(result) {
     console.log(result);
-    const onlyNumbers = result?.official_code.replace(/[^0-9]+/g, "");
     this.currentInnovationPackageToAction.id = result?.id;
     this.currentInnovationPackageToAction.title = result.title;
     this.retrieveModalSE.title = result?.title;
-    this.retrieveModalSE.requester_initiative_id = onlyNumbers;
      this.api.resultsSE.currentResultId = result?.id;
     this.api.dataControlSE.currentResult = result;
   }

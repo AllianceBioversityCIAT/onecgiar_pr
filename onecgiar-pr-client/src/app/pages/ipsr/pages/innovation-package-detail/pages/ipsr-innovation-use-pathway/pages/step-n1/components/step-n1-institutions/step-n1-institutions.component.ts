@@ -23,8 +23,7 @@ export class StepN1InstitutionsComponent {
   }
   onSelectDelivery(option, deliveryId) {
     if (option?.deliveries?.find((deliveryId: any) => deliveryId == 4) && deliveryId != 4) {
-      const index = option?.deliveries?.indexOf(4) == undefined ? -1 : option?.deliveries?.indexOf(4);
-      option?.deliveries.splice(index, 1);
+      return;
     }
     const index = option?.deliveries?.indexOf(deliveryId) == undefined ? -1 : option?.deliveries?.indexOf(deliveryId);
     if (deliveryId == 4 && index < 0) option.deliveries = [];

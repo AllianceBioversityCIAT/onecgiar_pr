@@ -15,7 +15,6 @@ import { NonPooledProjectRepository } from '../../results/non-pooled-projects/no
 import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
 import { ResultByInstitutionsByDeliveriesTypeRepository } from '../../results/result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';
 import { ResultInitiativeBudgetRepository } from '../../results/result_budget/repositories/result_initiative_budget.repository';
-import { ResultIpEoiOutcomeRepository } from '../innovation-pathway/repository/result-ip-eoi-outcomes.repository';
 
 @Module({
   controllers: [ResultsPackageTocResultController],
@@ -34,8 +33,7 @@ import { ResultIpEoiOutcomeRepository } from '../innovation-pathway/repository/r
     ResultByIntitutionsRepository,
     ResultByInstitutionsByDeliveriesTypeRepository,
     HandlersError,
-    ResultInitiativeBudgetRepository,
-    ResultIpEoiOutcomeRepository,
+    ResultInitiativeBudgetRepository
   ],
   exports: []
 })

@@ -17,57 +17,29 @@ export class RoleByUser {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({
-    name: 'role',
-    type: 'int',
-    nullable: true,
-  })
-  role: number;
-
   @ManyToOne(() => Role, (r) => r.id)
   @JoinColumn({
     name: 'role',
   })
-  obj_role: Role;
-
-  @Column({
-    name: 'initiative_id',
-    type: 'int',
-    nullable: true,
-  })
-  initiative_id!: number;
+  role: number;
 
   @ManyToOne(() => ClarisaInitiative, (ci) => ci.id, { nullable: true })
   @JoinColumn({
     name: 'initiative_id',
   })
-  obj_initiative!: ClarisaInitiative;
-
-  @Column({
-    name: 'action_area_id',
-    type: 'int',
-    nullable: true,
-  })
-  action_area_id!: number;
+  initiative_id!: number;
 
   @ManyToOne(() => ClarisaActionArea, (ca) => ca.id, { nullable: true })
   @JoinColumn({
     name: 'action_area_id',
   })
-  obj_action_area!: ClarisaActionArea;
-
-  @Column({
-    name: 'user',
-    type: 'int',
-    nullable: true,
-  })
-  user: number;
+  action_area_id!: number;
 
   @ManyToOne(() => User, (u) => u.id)
   @JoinColumn({
     name: 'user',
   })
-  obj_user: User;
+  user: number;
 
   @Column({
     name: 'active',

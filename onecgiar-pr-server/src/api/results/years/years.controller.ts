@@ -10,32 +10,33 @@ import {
 import { YearsService } from './years.service';
 import { CreateYearDto } from './dto/create-year.dto';
 import { UpdateYearDto } from './dto/update-year.dto';
-import { UserToken } from '../../../shared/decorators/user-token.decorator';
-import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
-import { HttpException } from '@nestjs/common';
 
-@Controller()
+@Controller('years')
 export class YearsController {
-  constructor(private readonly yearsService: YearsService) { }
+  constructor(private readonly yearsService: YearsService) {}
 
-  @Post('create/:year')
-  async create(
-    @UserToken() user: TokenDto,
-    @Body() createYear: CreateYearDto,
-    @Param('year') year: string
-  ) {
-    const { message, response, status } =
-      await this.yearsService.create(year, user, createYear);
-    throw new HttpException({ message, response }, status);
+  @Post()
+  create(@Body() createYearDto: CreateYearDto) {
+    return this.yearsService.create(createYearDto);
   }
 
-  @Patch('active/:year')
-  async findAll(
-    @UserToken() user: TokenDto,
-    @Param('year') year: string
-  ) {
-    const { message, response, status } =
-      await this.yearsService.activeYear(year, user);
-    throw new HttpException({ message, response }, status);
+  @Get()
+  findAll() {
+    return this.yearsService.findAll();
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.yearsService.findOne(+id);
+  }
+
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() updateYearDto: UpdateYearDto) {
+    return this.yearsService.update(+id, updateYearDto);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.yearsService.remove(+id);
   }
 }

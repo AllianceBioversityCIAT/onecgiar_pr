@@ -27,7 +27,6 @@ import { ShareResultRequestModule } from './share-result-request/share-result-re
 import { SubmissionsModule } from './submissions/submissions.module';
 import { AdminPanelModule } from './admin-panel/admin-panel.module';
 import { ResultActorsModule } from './result-actors/result-actors.module';
-import { YearsModule } from './years/years.module';
 
 export const ResultsRoutes: Routes = [
   {
@@ -141,9 +140,5 @@ export const ResultsRoutes: Routes = [
   {
     path: 'actors',
     module: ResultActorsModule
-  },
-  {
-    path: 'years',
-    module: YearsModule,
   }
 ];
