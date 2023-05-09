@@ -42,8 +42,6 @@ import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institut
 import { ResultIpExpertisesRepository } from '../innovation-packaging-experts/repositories/result-ip-expertises.repository';
 import { ResultIpExpertises } from '../innovation-packaging-experts/entities/result_ip_expertises.entity';
 import e from 'express';
-import { ResultCountriesSubNationalRepository } from '../../results/result-countries-sub-national/result-countries-sub-national.repository';
-import { ResultCountriesSubNational } from '../../results/result-countries-sub-national/entities/result-countries-sub-national.entity';
 
 @Injectable()
 export class InnovationPathwayStepOneService {
@@ -69,8 +67,7 @@ export class InnovationPathwayStepOneService {
     protected readonly _clarisaInstitutionsTypeRepository: ClarisaInstitutionsTypeRepository,
     protected readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
     protected readonly _clarisaInstitutionsRepository: ClarisaInstitutionsRepository,
-    protected readonly _resultIpExpertisesRepository: ResultIpExpertisesRepository,
-    protected readonly _resultCountriesSubNationalRepository: ResultCountriesSubNationalRepository
+    protected readonly _resultIpExpertisesRepository: ResultIpExpertisesRepository
   ) { }
 
   async getStepOne(resultId: number) {
@@ -298,7 +295,22 @@ export class InnovationPathwayStepOneService {
       let resultRegions: ResultRegion[] = [];
       let resultCountries: ResultCountry[] = [];
       let updateRegions: any;
-      let updateCountries: any[];
+      let updateCountries: any;
+
+
+      let innovationGeoScope: number;
+
+      // * Check Geo Scope
+      if (UpdateInnovationPathwayDto.geo_scope_id === 1) {
+        innovationGeoScope = 1;
+      } else if (UpdateInnovationPathwayDto.geo_scope_id === 2) {
+        innovationGeoScope = 2;
+      } else if (countries?.length > 1) {
+        innovationGeoScope = 3
+      } else {
+        innovationGeoScope = 4
+      }
+
 
       if (UpdateInnovationPathwayDto.geo_scope_id !== 2) {
         await this._resultRegionRepository.updateRegions(id, [])
@@ -322,45 +334,24 @@ export class InnovationPathwayStepOneService {
         }
       }
 
-      if (UpdateInnovationPathwayDto.geo_scope_id !== 3) {
+      if (UpdateInnovationPathwayDto.geo_scope_id === 1 || UpdateInnovationPathwayDto.geo_scope_id === 2) {
         await this._resultCountryRepository.updateCountries(id, []);
-      } else if (UpdateInnovationPathwayDto.geo_scope_id === 3) {
+      } else if (UpdateInnovationPathwayDto.geo_scope_id === 3 || UpdateInnovationPathwayDto.geo_scope_id === 4) {
         await this._resultCountryRepository.updateCountries(id, UpdateInnovationPathwayDto.countries.map(c => c.id));
-        const inactiveCountries = await this._resultCountryRepository.find({
-          where: {
-            is_active: false,
-            result_id: id,
-          }
-        });
-        await this._resultCountriesSubNationalRepository.inactiveAllIds(inactiveCountries.map(el => el.result_country_id));
         if (countries?.length) {
-          for (const ct of countries) {
-            let rce: ResultCountry = null;
-            const countriExist = await this._resultCountryRepository.getResultCountrieByIdResultAndCountryId(id, ct.id);
+          for (let i = 0; i < countries.length; i++) {
+            const countriExist = await this._resultCountryRepository.getResultCountrieByIdResultAndCountryId(id, countries[i].id);
             if (!countriExist) {
-              rce = await this._resultCountryRepository.save({
-                country_id: ct.id,
-                result_id: id,
-                version_id: version.id,
-              });
-              updateCountries.push(rce);
+              const newCountries = new ResultCountry();
+              newCountries.country_id = countries[i].id;
+              newCountries.result_id = id;
+              newCountries.version_id = version.id
+              resultCountries.push(newCountries);
             }
-            await this.saveSubNational(countriExist ? countriExist.result_country_id : rce.result_country_id, ct.result_countries_sub_national, user);
+
+            updateCountries = await this._resultCountryRepository.save(resultCountries);
           }
         }
-      }
-
-      let innovationGeoScope: number;
-
-      // * Check Geo Scope
-      if (UpdateInnovationPathwayDto.geo_scope_id === 1) {
-        innovationGeoScope = 1;
-      } else if (UpdateInnovationPathwayDto.geo_scope_id === 2) {
-        innovationGeoScope = 2;
-      } else if (countries?.length > 1) {
-        innovationGeoScope = 3
-      } else {
-        innovationGeoScope = 4
       }
 
       const ipsrResult =
@@ -419,53 +410,6 @@ export class InnovationPathwayStepOneService {
       }
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
-    }
-  }
-
-  async saveSubNational(reCoId: number, subNationals: ResultCountriesSubNational[], user: TokenDto) {
-    if (subNationals?.length) {
-      subNationals.forEach(async el => {
-        let reCoSub: ResultCountriesSubNational = null;
-        const whereConditions = el?.result_countries_sub_national_id
-          ? { result_countries_sub_national_id: el.result_countries_sub_national_id }
-          : el?.sub_level_one_id && el?.sub_level_two_id
-            ? { sub_level_one_id: el.sub_level_one_id, sub_level_two_id: el.sub_level_two_id, result_countries_id: reCoId }
-            : !reCoId && el?.sub_level_one_id && !el?.sub_level_two_id
-              ? { sub_level_one_id: el.sub_level_one_id, sub_level_two_id: IsNull(), result_countries_id: reCoId }
-              : !reCoId && !el?.sub_level_one_id && !el?.sub_level_two_id
-                ? { sub_level_one_id: IsNull(), sub_level_two_id: IsNull(), result_countries_id: reCoId }
-                : null;
-
-        if (whereConditions) {
-          reCoSub = await this._resultCountriesSubNationalRepository.findOne({
-            where: whereConditions
-          });
-        }
-
-        if (reCoSub) {
-          await this._resultCountriesSubNationalRepository.update(
-            reCoSub.result_countries_sub_national_id,
-            {
-              is_active: el?.is_active == undefined ? true : el.is_active,
-              sub_level_one_id: el?.sub_level_one_id,
-              sub_level_one_name: el?.sub_level_one_name,
-              sub_level_two_id: el?.sub_level_two_id,
-              sub_level_two_name: el?.sub_level_two_name,
-              last_updated_by: user.id
-            }
-          );
-        } else {
-          await this._resultCountriesSubNationalRepository.save({
-            created_by: user.id,
-            last_updated_by: user.id,
-            sub_level_one_id: el?.sub_level_one_id,
-            sub_level_two_id: el?.sub_level_two_id,
-            sub_level_one_name: el?.sub_level_one_name,
-            sub_level_two_name: el?.sub_level_two_name,
-            result_countries_id: reCoId,
-          });
-        }
-      })
     }
   }
 
@@ -940,7 +884,7 @@ export class InnovationPathwayStepOneService {
     if (crtr?.actors?.length) {
       const { actors } = crtr;
       actors.map(async (el: ResultActor) => {
-
+        console.log(el)
         let actorExists: ResultActor = null;
         if (el?.actor_type_id) {
           actorExists = await this._resultActorRepository.findOne({ where: { actor_type_id: el.actor_type_id, result_id: result.id } });
@@ -949,7 +893,6 @@ export class InnovationPathwayStepOneService {
         } else if (!actorExists) {
           actorExists = await this._resultActorRepository.findOne({ where: { actor_type_id: IsNull(), result_id: result.id } });
         }
-
         if (actorExists) {
           await this._resultActorRepository.update(
             actorExists.result_actors_id,
@@ -1029,14 +972,14 @@ export class InnovationPathwayStepOneService {
           ripm = await this._resultIpMeasureRepository.findOne({
             where: {
               unit_of_measure: el.unit_of_measure,
-              result_ip_id: el.result_ip_id
+              result_ip_id: result.id
             }
           });
         } else if (!ripm) {
           ripm = await this._resultIpMeasureRepository.findOne({
             where: {
               unit_of_measure: IsNull(),
-              result_ip_id: el.result_ip_id
+              result_ip_id: result.id
             }
           });
         }

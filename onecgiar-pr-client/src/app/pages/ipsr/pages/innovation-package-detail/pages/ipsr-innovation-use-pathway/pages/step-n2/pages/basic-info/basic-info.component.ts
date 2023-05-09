@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 
 @Component({
   selector: 'app-basic-info',
@@ -7,6 +8,7 @@ import { Component, OnInit } from '@angular/core';
 })
 export class BasicInfoComponent implements OnInit {
 
+  innovationPackagesCompletary:any = [];
   constructor() { }
 
   ngOnInit(): void {

@@ -1,0 +1,19 @@
+<div class="all_notifications">
+    <div *ngFor="let notification of this.resultsNotificationsSE.interactiveNotisList">
+        
+        <app-notification-item-innovation [comes]="true" [readOnly]="notification.readOnly"
+            (requestEvent)="this.resultsNotificationsSE.get_section_innovation_packages()" [notification]="notification">
+        </app-notification-item-innovation>
+    </div>
+</div>
+<br>
+<div class="all_notifications">
+    <div *ngFor="let notification of this.resultsNotificationsSE.staticNotisList">
+            <app-notification-item-innovation  [comes]="false" [notification]="notification">
+            </app-notification-item-innovation>
+    </div>
+</div>
+
+<app-no-data-text title="No notifications"
+    *ngIf="!this.resultsNotificationsSE.interactiveNotisList?.length && !this.resultsNotificationsSE.staticNotisList?.length">
+</app-no-data-text>
