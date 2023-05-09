@@ -22,4 +22,20 @@
         font-size: 1em;
 
     }
+
+    .copy_button {
+        background-color: white;
+        padding: 10px;
+        border: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: max-content;
+        align-self: flex-end;
+        cursor: pointer;
+
+        i {
+            color: rgb(156, 156, 156);
+        }
+    }
 }
