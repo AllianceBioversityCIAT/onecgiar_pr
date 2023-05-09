@@ -38,6 +38,7 @@ import { ResultIpEoiOutcome } from '../innovation-pathway/entities/result-ip-eoi
 import { TocResult } from '../../../toc/toc-results/entities/toc-result.entity';
 import { Year } from '../../results/years/entities/year.entity';
 import { YearRepository } from '../../results/years/year.repository';
+import { LinkedResultRepository } from '../../results/linked-results/linked-results.repository';
 
 @Injectable()
 export class ResultInnovationPackageService {
@@ -68,7 +69,8 @@ export class ResultInnovationPackageService {
     protected readonly _unitTimeRepository: UnitTimeRepository,
     protected readonly _tocResult: TocResultsRepository,
     protected readonly _resultIpEoiOutcomesRepository: ResultIpEoiOutcomeRepository,
-    private readonly _yearRepository: YearRepository
+    protected readonly _yearRepository: YearRepository,
+    protected readonly _linkedResultRepository: LinkedResultRepository
   ) { }
 
   async findUnitTime() {
@@ -315,6 +317,14 @@ export class ResultInnovationPackageService {
       });
       const resultByInnivationPackage = newInnovationByResult.result_by_innovation_package_id;
 
+      const linkedResult = await this._linkedResultRepository.save({
+        linked_results_id: result.id,
+        origin_result_id: newResult,
+        version_id: vrs.id,
+        created_by: user.id,
+        last_updated_by: user.id
+      });
+
       let resultRegions: ResultRegion[] = [];
       let resultCountries: ResultCountry[] = [];
 
@@ -341,8 +351,6 @@ export class ResultInnovationPackageService {
       }
       const newInnovationRegions = await this._resultRegionRepository.save(resultRegions);
       const newInnovationCountries = await this._resultCountryRepository.save(resultCountries);
-      // ! This method it's no necesary
-      // const retrievedEoi = await this.retrievedEoi(CreateResultInnovationPackageDto.initiative_id, user.id, resultByInnivationPackage, vrs.id);
       const retriveAAOutcome = await this.retrievedAAOutcome(CreateResultInnovationPackageDto.initiative_id, user.id, resultByInnivationPackage, vrs.id);
       const retrievedImpactArea = await this.retrievedImpactArea(result.id, user.id, resultByInnivationPackage, vrs.id);
 
@@ -359,13 +367,13 @@ export class ResultInnovationPackageService {
       return {
         response: {
           newInnovationHeader,
-          // retrievedEoi,
           retriveAAOutcome,
           retrievedImpactArea,
           newInnovationByInitiative,
           newresultInitiativeBudget,
           newResultInnovationPackage,
           newInnovationByResult,
+          linkedResult,
           newInnovationRegions,
           newInnovationCountries
         },

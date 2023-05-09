@@ -334,6 +334,7 @@ export class InnovationPathwayStepTwoService {
     try {
 
       const resultIpResults: Result[] = await this._resultRepository.findBy({ id: resultId });
+      const findInit = await this._resultByInitiativeRepository.getOwnerInitiativeByResult(resultId);
       const year = await this._yearRepository.findOne({ where: { active: true } });
 
       if (!resultIpResults) {
@@ -457,6 +458,7 @@ export class InnovationPathwayStepTwoService {
 
       return {
         response: {
+          initiative: findInit,
           createResult,
           newResultIpResults,
           newResultComplemetaryInnovation,
