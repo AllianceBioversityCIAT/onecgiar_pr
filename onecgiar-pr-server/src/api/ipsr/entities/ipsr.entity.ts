@@ -10,9 +10,10 @@ import { ResultsIpActor } from '../results-ip-actors/entities/results-ip-actor.e
 import { ResultsIpInstitutionType } from '../results-ip-institution-type/entities/results-ip-institution-type.entity';
 import { ResultsByIpInnovationUseMeasure } from '../results-by-ip-innovation-use-measures/entities/results-by-ip-innovation-use-measure.entity';
 import { ClarisaInnovationReadinessLevel } from '../../../clarisa/clarisa-innovation-readiness-levels/entities/clarisa-innovation-readiness-level.entity';
+import { ClarisaInnovationUseLevel } from '../../../clarisa/clarisa-innovation-use-levels/entities/clarisa-innovation-use-level.entity';
 
 @Entity('result_by_innovation_package')
-export class Ipsr extends BaseEntity{
+export class Ipsr extends BaseEntity {
     @PrimaryGeneratedColumn({
         name: 'result_by_innovation_package_id',
         type: 'bigint'
@@ -22,7 +23,7 @@ export class Ipsr extends BaseEntity{
     @Column({
         name: 'result_innovation_package_id',
         type: 'bigint'
-    }) 
+    })
     result_innovation_package_id: number;
 
     @Column({
@@ -124,9 +125,9 @@ export class Ipsr extends BaseEntity{
     })
     obj_readiness_level_evidence_based: ClarisaInnovationReadinessLevel;
 
-    @ManyToOne(() => ClarisaInnovationReadinessLevel, cirl => cirl.id)
+    @ManyToOne(() => ClarisaInnovationUseLevel, cirl => cirl.id)
     @JoinColumn({
         name: 'use_level_evidence_based'
     })
-    obj_use_level_evidence_based: ClarisaInnovationReadinessLevel;
+    obj_use_level_evidence_based: ClarisaInnovationUseLevel;
 }

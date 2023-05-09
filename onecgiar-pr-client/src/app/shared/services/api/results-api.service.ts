@@ -16,12 +16,14 @@ import { KnowledgeProductBodyMapped } from '../../../pages/results/pages/result-
 import { KnowledgeProductSaveDto } from '../../../pages/results/pages/result-detail/pages/rd-result-types-pages/knowledge-product-info/model/knowledge-product-save.dto';
 import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-control.service';
 import { getInnovationComInterface } from '../../../../../../onecgiar-pr-server/src/api/ipsr/ipsr.repository';
+import { Observable } from 'rxjs';
+import { IpsrCompletenessStatusService } from '../../../pages/ipsr/services/ipsr-completeness-status.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ResultsApiService {
-  constructor(public http: HttpClient, private saveButtonSE: SaveButtonService, private ipsrDataControlSE: IpsrDataControlService) {}
+  constructor(public http: HttpClient, private saveButtonSE: SaveButtonService, public ipsrDataControlSE: IpsrDataControlService) {}
   apiBaseUrl = environment.apiBaseUrl + 'api/results/';
   currentResultId: number | string = null;
   currentResultCode: number | string = null;
@@ -157,7 +159,8 @@ export class ResultsApiService {
   }
 
   POST_partnerRequest(body: PartnersRequestBody) {
-    return this.http.post<any>(`${environment.apiBaseUrl}api/clarisa/partner-request/${this.currentResultId}`, body);
+    console.log(`${environment.apiBaseUrl}api/clarisa/partner-request/${this.ipsrDataControlSE.inIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId}`);
+    return this.http.post<any>(`${environment.apiBaseUrl}api/clarisa/partner-request/${this.ipsrDataControlSE.inIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId}`, body);
   }
 
   GET_AllCLARISACountries() {
@@ -605,5 +608,14 @@ export class ResultsApiService {
 
   PATCHInnovationPathwayStep4Bilaterals(body) {
     return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-four/bilaterals/${this.ipsrDataControlSE.resultInnovationId}`, body);
+  }
+
+  getCompletenessStatus(): Observable<any> {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-packages-validation-module/get/green-checks/${this.ipsrDataControlSE.resultInnovationId}`);
+  }
+
+
+  getSubNationalLevelOne(isoAlpha){
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/first-order-administrative-division/iso-alpha-2/${isoAlpha}`);
   }
 }

@@ -1,0 +1,13 @@
+<div style="height: 100%;">
+
+    <h2>Basic info on the innovation package elements</h2>
+
+        <app-pr-select [options]="this.innovationCompletary" [isStatic]="true" optionValue="result_id" label="Select the complementary innovation for which you want to display basic information" 
+        optionLabel="title" placeholder="Select omplementary innovation"  [required]="false"
+        ></app-pr-select>
+        <app-pr-field-header label="Type of enabler" [required]="false"
+    description="Select multiple"></app-pr-field-header>
+    <app-item-options *ngFor="let info of informartion" [title]="info.group" [optionsInnovations]="info" ></app-item-options>
+
+    
+</div>

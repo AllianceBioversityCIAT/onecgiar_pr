@@ -1,0 +1,19 @@
+<app-pr-field-header label="{{title}}" [required]="false"></app-pr-field-header>
+<ul>
+<div *ngFor="let category of optionsInnovations?.subElements" class="field-checkbox">
+    <li>
+        <p-checkbox name="group" [value]="category.group" [inputId]="category.id"></p-checkbox>
+        <label> {{ category.group }}</label>
+    </li>
+    <ul>
+        <li>
+            <div *ngFor="let categories of category?.subElements" class="field-checkbox">
+                <p-checkbox name="group" [value]="categories.group" [inputId]="categories.id" [(ngModel)]="category.group" ></p-checkbox>
+                <label >{{ categories.group }}</label>
+                
+            </div>
+        </li>
+    </ul>    
+</div>
+</ul>
+

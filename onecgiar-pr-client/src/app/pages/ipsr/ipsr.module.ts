@@ -5,6 +5,7 @@ import { IpsrRoutingModule } from './ipsr-routing.module';
 import { IpsrComponent } from './ipsr.component';
 import { SectionHeaderModule } from './components/section-header/section-header.module';
 
+
 @NgModule({
   declarations: [IpsrComponent],
   imports: [CommonModule, IpsrRoutingModule, SectionHeaderModule]

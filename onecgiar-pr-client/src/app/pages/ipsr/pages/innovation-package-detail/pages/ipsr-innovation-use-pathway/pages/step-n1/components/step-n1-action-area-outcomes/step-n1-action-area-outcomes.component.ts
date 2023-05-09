@@ -24,7 +24,7 @@ export class StepN1ActionAreaOutcomesComponent {
         this.actionAreasOutcomesList.resilientAgrifoodSystems.map(item => (item.full_name = `<strong>${item.outcomeSMOcode}</strong> - ${item.outcomeStatement}`));
         this.actionAreasOutcomesList.systemTrasnformation.map(item => (item.full_name = `<strong>${item.outcomeSMOcode}</strong> - ${item.outcomeStatement}`));
 
-        console.log(this.actionAreasOutcomesList);
+        // console.log(this.actionAreasOutcomesList);
       },
       err => {
         console.log(err);

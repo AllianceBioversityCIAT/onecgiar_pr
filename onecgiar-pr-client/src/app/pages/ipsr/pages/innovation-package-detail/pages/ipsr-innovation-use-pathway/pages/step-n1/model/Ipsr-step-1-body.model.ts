@@ -12,6 +12,12 @@ export class IpsrStep1Body {
   institutions: Institutions[] = [];
   experts: Expert[] = [];
   result_ip = new Result_ip();
+  scalig_ambition: Scalig_ambition = new Scalig_ambition();
+}
+
+class Scalig_ambition {
+  body: string = null;
+  title: string = null;
 }
 
 export class Expert {
@@ -77,6 +83,8 @@ export class Actor {
   is_active: boolean;
   women_non_youth: any;
   men_non_youth: any;
+  previousWomen: any;
+  previousWomen_youth: any;
 }
 
 interface SdgTarget {

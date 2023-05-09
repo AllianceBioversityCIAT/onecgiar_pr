@@ -62,7 +62,6 @@ import { AdminPanelModule } from './admin-panel/admin-panel.module';
 import { LogRepository } from '../../connection/dynamodb-logs/dynamodb-logs.repository';
 import { ResultActorsModule } from './result-actors/result-actors.module';
 import { ResultBudgetModule } from './result_budget/result_budget.module';
-import { ResultCountriesSubNationalModule } from './result-countries-sub-national/result-countries-sub-national.module';
 
 @Module({
   controllers: [ResultsController],
@@ -110,7 +109,6 @@ import { ResultCountriesSubNationalModule } from './result-countries-sub-nationa
     AdminPanelModule,
     ResultActorsModule,
     ResultBudgetModule,
-    ResultCountriesSubNationalModule,
   ],
   providers: [
     ResultsService,

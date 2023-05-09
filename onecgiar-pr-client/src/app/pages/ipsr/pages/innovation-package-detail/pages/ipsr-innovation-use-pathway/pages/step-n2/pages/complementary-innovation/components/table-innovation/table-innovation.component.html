@@ -1,7 +1,7 @@
 <div *ngIf="informationComplementaryInnovation.length != 0">
     <div class="search_input">
         <i class="material-icons-round">search</i>
-        <input type="text" placeholder="Find Innovation Package..." [(ngModel)]="searchText">
+        <input type="text" placeholder="Find Innovation" [(ngModel)]="searchText">
     </div>
     <div class="table">
         <p-table #dt1 sortField="result_code" [sortOrder]="-1"

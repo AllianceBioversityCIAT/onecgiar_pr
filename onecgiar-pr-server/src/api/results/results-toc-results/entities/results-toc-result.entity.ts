@@ -5,64 +5,78 @@ import { ClarisaActionAreaOutcome } from '../../../../clarisa/clarisa-action-are
 import { Version } from '../../versions/entities/version.entity';
 import { User } from '../../../../auth/modules/user/entities/user.entity';
 import { ClarisaInitiative } from '../../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
+import { ClarisaActionArea } from '../../../../clarisa/clarisa-action-areas/entities/clarisa-action-area.entity';
 
 @Entity('results_toc_result')
 export class ResultsTocResult {
 
-    @PrimaryGeneratedColumn({
-        type:'bigint',
-        name: 'result_toc_result_id'
-    })
-    result_toc_result_id: number;
+  @PrimaryGeneratedColumn({
+    type: 'bigint',
+    name: 'result_toc_result_id'
+  })
+  result_toc_result_id: number;
 
-    @ManyToOne(() => TocResult, tr => tr.toc_result_id, { nullable: true})
-    @JoinColumn({
-        name: 'toc_result_id'
-    })
-    toc_result_id!: number;
+  @ManyToOne(() => TocResult, tr => tr.toc_result_id, { nullable: true })
+  @JoinColumn({
+    name: 'toc_result_id'
+  })
+  toc_result_id!: number;
 
-    @ManyToOne(() => Result, r => r.id)
-    @JoinColumn({
-        name: 'results_id'
-    })
-    results_id: number;
+  @ManyToOne(() => Result, r => r.id)
+  @JoinColumn({
+    name: 'results_id'
+  })
+  results_id: number;
 
-    @ManyToOne(() => ClarisaActionAreaOutcome, caao => caao.id, {nullable: true})
-    @JoinColumn({
-        name: 'action_area_outcome_id'
-    })
-    action_area_outcome_id!: number;
+  @ManyToOne(() => ClarisaActionAreaOutcome, caao => caao.id, { nullable: true })
+  @JoinColumn({
+    name: 'action_area_outcome_id'
+  })
+  action_area_outcome_id!: number;
 
-    @Column({
-        name: 'planned_result',
-        type: 'boolean',
-        nullable: true
+  @Column({
+    name: 'planned_result',
+    type: 'boolean',
+    nullable: true
 
-    })
-    planned_result!: boolean;
+  })
+  planned_result!: boolean;
 
-    @ManyToOne(() => ClarisaInitiative, ci => ci.id, {nullable: true})
-    @JoinColumn({
-        name: 'initiative_id'
-    })
-    initiative_id!: number;
+  @Column({
+    name: 'action_area_id',
+    type: 'int',
+    nullable: true
+  })
+  action_area_id: number;
+
+  @ManyToOne(() => ClarisaActionArea, caa => caa.obj_results_toc_result)
+  @JoinColumn({
+    name: 'action_area_id'
+  })
+  action_areas: ClarisaActionArea;
+
+  @ManyToOne(() => ClarisaInitiative, ci => ci.id, { nullable: true })
+  @JoinColumn({
+    name: 'initiative_id'
+  })
+  initiative_id!: number;
 
 
-    @Column({
-        name: 'is_active',
-        type: 'boolean',
-        nullable: false,
-        default: true
-    })
-    is_active: boolean;
+  @Column({
+    name: 'is_active',
+    type: 'boolean',
+    nullable: false,
+    default: true
+  })
+  is_active: boolean;
 
-    @ManyToOne(() => Version, v => v.id)
-    @JoinColumn({
-        name: 'version_id'
-    })
-    version_id: number;
+  @ManyToOne(() => Version, v => v.id)
+  @JoinColumn({
+    name: 'version_id'
+  })
+  version_id: number;
 
-    @ManyToOne(() => User, (u) => u.id, { nullable: false })
+  @ManyToOne(() => User, (u) => u.id, { nullable: false })
   @JoinColumn({
     name: 'created_by',
   })

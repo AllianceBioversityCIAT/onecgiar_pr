@@ -1,6 +1,5 @@
 import { ResultInnovationPackage } from '../entities/result-innovation-package.entity';
 import { CreateInnovationPackagingExpertDto } from '../../innovation-packaging-experts/dto/create-innovation-packaging-expert.dto';
-import { ResultCountriesSubNational } from '../../../results/result-countries-sub-national/entities/result-countries-sub-national.entity';
 export class CreateResultInnovationPackageDto {
     public result_id: number;
     public initiative_id: number;
@@ -16,5 +15,4 @@ export interface regionsInterface {
 export interface countriesInterface {
     id: number;
     name: string;
-    result_countries_sub_national?: ResultCountriesSubNational[];
 }

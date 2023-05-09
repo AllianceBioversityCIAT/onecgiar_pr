@@ -1,26 +1,118 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
 import { CreateYearDto } from './dto/create-year.dto';
 import { UpdateYearDto } from './dto/update-year.dto';
+import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
+import { YearRepository } from './year.repository';
+import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
+import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
+import { IsNull } from 'typeorm';
+import { HandlersError } from '../../../shared/handlers/error.utils';
 
 @Injectable()
 export class YearsService {
-  create(createYearDto: CreateYearDto) {
-    return createYearDto;
+
+  constructor(
+    private readonly _yearRepository: YearRepository,
+    private readonly _roleByUserRepository: RoleByUserRepository,
+    private readonly _handlersError: HandlersError
+  ) { }
+
+  async create(year: string, user: TokenDto, options?: CreateYearDto) {
+    try {
+      const userRole = await this._roleByUserRepository.findOne({ where: { user: user.id, action_area_id: IsNull(), initiative_id: IsNull(), role: 1 } });
+      if (!userRole) {
+        throw {
+          response: user,
+          message: 'The user does not have the necessary permissions for this action, please contact the technical team.',
+          status: HttpStatus.UNAUTHORIZED,
+        };
+      }
+      const yearExists = await this._yearRepository.findOne({ where: { year: +year } });
+      if (yearExists) {
+        throw {
+          response: yearExists,
+          message: 'The year already exists, please choose a different year.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+      const currentYear = await this._yearRepository.findOne({ where: { active: true } });
+      const newYear = await this._yearRepository.create({
+        year: +year,
+        start_date: options?.start_date || null,
+        end_date: options?.end_date || null,
+        active: options?.set_active_year || false
+      });
+
+      if (options?.set_active_year) {
+        await this._yearRepository.update(
+          currentYear.year,
+          {
+            active: false
+          }
+        );
+      }
+
+      return {
+        response: newYear,
+        message: 'The year has been created successfully.',
+        status: HttpStatus.CREATED,
+      }
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
   }
 
-  findAll() {
-    return `This action returns all years`;
-  }
+  async activeYear(year: string, user: TokenDto) {
+    try {
+      const userRole = await this._roleByUserRepository.findOne({ where: { user: user.id, action_area_id: IsNull(), initiative_id: IsNull(), role: 1 } });
+      if (!userRole) {
+        throw {
+          response: user,
+          message: 'The user does not have the necessary permissions for this action, please contact the technical team.',
+          status: HttpStatus.UNAUTHORIZED,
+        };
+      }
 
-  findOne(id: number) {
-    return `This action returns a #${id} year`;
-  }
+      const yearExists = await this._yearRepository.findOne({ where: { year: +year } });
+      if (!yearExists) {
+        throw {
+          response: yearExists,
+          message: 'The year does not exist.',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+      const oldYear = await this._yearRepository.findOne({ where: { active: true } });
+      if (oldYear.year == yearExists.year) {
+        throw {
+          response: yearExists,
+          message: 'The year is already active.',
+          status: HttpStatus.BAD_REQUEST,
+        }
+      }
+      await this._yearRepository.update(
+        oldYear.year,
+        {
+          active: false
+        }
+      );
 
-  update(id: number, updateYearDto: UpdateYearDto) {
-    return `This action updates a #${id} year ${updateYearDto}`;
-  }
+      await this._yearRepository.update(
+        yearExists.year,
+        {
+          active: true
+        }
+      );
 
-  remove(id: number) {
-    return `This action removes a #${id} year`;
+      return {
+        response: {
+          newYear: yearExists,
+          oldYear: oldYear
+        },
+        message: 'The year has been activated successfully.',
+        status: HttpStatus.OK,
+      }
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
   }
 }

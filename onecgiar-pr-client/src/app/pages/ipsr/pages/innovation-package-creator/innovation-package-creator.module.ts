@@ -9,6 +9,7 @@ import { ResultsInnovationOutputListModule } from './components/results-innovati
 import { IpsrGeoscopeCreatorModule } from './components/ipsr-geoscope-creator/ipsr-geoscope-creator.module';
 import { FeedbackValidationDirectiveModule } from '../../../../shared/directives/feedback-validation-directive.module';
 import { DialogModule } from 'primeng/dialog';
+
 @NgModule({
   declarations: [InnovationPackageCreatorComponent],
   imports: [CommonModule, InnovationPackageCreatorRoutingModule, CustomFieldsModule, SectionHeaderModule, ResultsInnovationOutputListModule, IpsrGeoscopeCreatorModule, FeedbackValidationDirectiveModule,

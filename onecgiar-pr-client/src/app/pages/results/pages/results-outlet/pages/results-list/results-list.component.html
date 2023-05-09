@@ -21,6 +21,7 @@
           <p-sortIcon field="{{column.attr}}"></p-sortIcon>{{column.title}}
         </th>
         <th *ngIf="!this.api.dataControlSE.platformIsClosed">Action</th>
+        <th *ngIf="false">PDF</th>
       </tr>
     </ng-template>
     <ng-template pTemplate="body" let-result>
@@ -41,6 +42,9 @@
         <td *ngIf="!this.api.dataControlSE.platformIsClosed">
           <div class="icon_container"><i class="pi pi-ellipsis-v"
               (click)="menu.toggle($event);onPressAction(result)"></i></div>
+        </td>
+        <td *ngIf="false">
+          <i class="material-icons-round pdf_icon">description</i>
         </td>
       </tr>
     </ng-template>

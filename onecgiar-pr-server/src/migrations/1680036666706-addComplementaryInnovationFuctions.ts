@@ -5,7 +5,7 @@ export class addComplementaryInnovationFuctions1680036666706 implements Migratio
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`
         INSERT INTO
-                prdb.complementary_innovation_functions (name)
+                    complementary_innovation_functions (name)
         VALUES
                 (
                         'Improves beneficiary / user awareness of the core innovation'
