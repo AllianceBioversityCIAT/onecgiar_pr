@@ -68,13 +68,10 @@ export class NewComplementaryInnovationComponent implements OnInit {
     
     this.api.resultsSE.POSTNewCompletaryInnovation(this.bodyNewComplementaryInnovation).subscribe((resp)=>{
       console.log(resp);
-      this.selectInnovationEvent.emit(resp['response']['createResult'])
-      location.reload();
+      
     });
     this.bodyNewComplementaryInnovation = new CreateComplementaryInnovationDto();
     this.status = false;
-    this.selectedValues = [];
-    
   }
 
   change(id_select:any){

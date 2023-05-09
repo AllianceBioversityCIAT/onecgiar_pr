@@ -1,6 +1,5 @@
 <app-pr-radio-button [options]="this.geoscopeOptions" optionLabel="full_name" optionValue="id"
     label="Select country/ geoscope for which packaging and scaling readiness assessment will be conducted"
-    description="Select country/ geoscope for which innovation packaging and scaling readiness assessment will be conducted"
     [(ngModel)]="body.geo_scope_id">
 </app-pr-radio-button>
 
@@ -14,6 +13,3 @@
     label="Select countries" selectedLabel="Countries selected" selectedOptionLabel="name" optionLabel="full_name"
     optionValue="id" placeholder="Select countries" [(ngModel)]="body.countries">
 </app-pr-multi-select>
-
-<app-pr-button text="Add sub-national level" *ngIf="body.geo_scope_id == 4" (click)="onClicked()"></app-pr-button>
-<app-sub-geoscope *ngFor="let geoScope of sub_scope; let i = index" [body]="body.countries" [index]="i" (selectOptionEvent)="deleteItem($event)"></app-sub-geoscope>

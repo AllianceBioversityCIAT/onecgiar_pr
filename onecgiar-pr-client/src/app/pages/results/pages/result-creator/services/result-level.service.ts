@@ -35,19 +35,8 @@ export class ResultLevelService {
   GET_TypeByResultLevel() {
     this.api.resultsSE.GET_TypeByResultLevel().subscribe(resp => {
       // console.log(resp.response);
-      this.removeResultTypes(resp.response);
       this.resultLevelList = resp.response;
       this.resultsListFilterSE.setFiltersByResultLevelTypes(this.resultLevelList);
     });
-  }
-
-  removeResultTypes(list) {
-    const resultlevel = list.find(item => item.id == 3);
-    const removetType = (id: any) => {
-      const index = resultlevel.result_type.findIndex(item => item.id == id);
-      if (index >= 0) resultlevel.result_type.splice(index, 1);
-    };
-    removetType(10);
-    removetType(11);
   }
 }

@@ -153,14 +153,14 @@ export class ShareResultRequestService {
             newRtR.toc_result_id = toc_result_id || null;
           }
 
-          const newReIni = await this._resultByInitiativesRepository.save(newResultByInitiative);
           await this._resultInitiativeBudgetRepository.save({
-            result_initiative_id: newReIni.id,
+            result_initiative_id: newResultByInitiative.id,
             version_id: vrs.id,
             created_by: user.id,
             last_updated_by: user.id,
           });
 
+          await this._resultByInitiativesRepository.save(newResultByInitiative);
           const resultTocResult = await this._resultsTocResultRepository.existsResultTocResult(result.id, shared_inititiative_id);
           if (!resultTocResult) {
             await this._resultsTocResultRepository.save(newRtR);

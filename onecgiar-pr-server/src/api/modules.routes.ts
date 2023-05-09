@@ -7,7 +7,6 @@ import { ClarisaConnectionsModule } from '../clarisa/clarisa-connections/clarisa
 import { typeOneReportRoutes } from './type-one-report/type-one-report.routes';
 import { IpsrModule } from './ipsr/ipsr.module';
 import { IpsrRoutes } from './ipsr/ipsr.routes';
-import { PlatformReportModule } from './platform-report/platform-report.module';
 
 export const ModulesRoutes: Routes = [
   {
@@ -27,14 +26,10 @@ export const ModulesRoutes: Routes = [
   {
     path: 'ipsr',
     module: IpsrModule,
-    children: IpsrRoutes,
+    children: IpsrRoutes
   },
   {
-    path: 'clarisa',
-    module: ClarisaConnectionsModule,
-  },
-  {
-    path: 'platform-report',
-    module: PlatformReportModule,
-  },
+    path:'clarisa',
+    module: ClarisaConnectionsModule
+  }
 ];
