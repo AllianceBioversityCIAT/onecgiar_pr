@@ -8,7 +8,7 @@
 .blurb {
     margin-left: 5vw;
     margin-right: 5vw;
-    padding: 30px 100px 50px 100px;
+    padding: 30px 100px 15px 100px;
 
     .title {
         text-align: center;
@@ -38,7 +38,6 @@
             width: max-content;
             align-self: flex-end;
             cursor: pointer;
-            margin-top: 20px;
             color: rgb(156, 156, 156);
             gap: 10px;
             transition: all ease-in-out .3s;
