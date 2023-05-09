@@ -2,12 +2,34 @@
     display: flex;
     gap: 2vw;
     justify-content: center;
+    margin-top: 10px;
 
     .no_selected {
         opacity: .3;
         transform: scale(1) !important;
         border-radius: 100px !important;
 
+
+    }
+
+    .name_no_selected {
+        opacity: .4;
+        color: black !important;
+    }
+
+    .iaitem {
+        flex-direction: column;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+
+        .name {
+            text-align: center;
+            width: 200px;
+            transition: all ease-in-out .3s;
+            color: var(--pr-color-secondary);
+        }
     }
 
     .impact_area_circle_item {
@@ -29,6 +51,8 @@
             max-height: 50px;
             object-fit: fill;
         }
+
+
     }
 }
 
