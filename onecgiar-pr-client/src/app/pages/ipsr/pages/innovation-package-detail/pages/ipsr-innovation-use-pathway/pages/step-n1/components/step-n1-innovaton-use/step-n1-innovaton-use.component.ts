@@ -35,10 +35,8 @@ export class StepN1InnovatonUseComponent {
     // console.log(fundedList?.childrens);
     return fundedList?.childrens ?? [];
   }
-
   reloadSelect(organizationItem) {
     organizationItem.hide = true;
-    organizationItem.institution_sub_type_id = null;
     setTimeout(() => {
       organizationItem.hide = false;
     }, 300);
@@ -51,30 +49,51 @@ export class StepN1InnovatonUseComponent {
   }
   addOther() {
     this.body.innovatonUse.measures.push(new Measure());
-    //console.log(this.body.innovatonUse.measures);
+    console.log(this.body.innovatonUse.measures);
   }
   get getAllSubTypes() {
     const list = [];
+    // console.log(this.body.innovatonUse.organization);
     this.body.innovatonUse.organization.forEach(resp => {
+      // console.log(resp.institution_sub_type_id);
       list.push({ code: resp.institution_sub_type_id });
     });
+    // console.log(list);
     return list;
   }
-
-  get disableOrganizations() {
-    // console.log(this.institutionsTypeTreeList);
-    const list = [];
-    this.body.innovatonUse.organization.forEach(resp => {
-      // console.log(resp);
-      if (!resp.institution_sub_type_id) list.push({ code: resp.institution_types_id });
-    });
-    return list;
-  }
-
-  removeOrganization(organizationItem) {
-    console.log(organizationItem);
-    organizationItem.institution_sub_type_id = null;
-    organizationItem.institution_types_id = null;
-    organizationItem.is_active = false;
+  executeTimer = null;
+  validateYouth(i, isWomen: boolean) {
+    const gender = isWomen ? 'women' : 'men';
+    const genderYouth = isWomen ? 'women_youth' : 'men_youth';
+    const genderNonYouth = isWomen ? 'women_non_youth' : 'men_non_youth';
+    clearTimeout(this.executeTimer);
+    if (this.body.innovatonUse.actors[i][genderYouth] < 0 || this.body.innovatonUse.actors[i][gender] < 0) {
+      if (this.body.innovatonUse.actors[i][genderYouth] < 0)
+        setTimeout(() => {
+          this.body.innovatonUse.actors[i][genderYouth] = null;
+        }, 90);
+      if (this.body.innovatonUse.actors[i][gender] < 0)
+        setTimeout(() => {
+          this.body.innovatonUse.actors[i][gender] = 0;
+        }, 90);
+    }
+    if (this.body.innovatonUse.actors[i][gender] - this.body.innovatonUse.actors[i][genderYouth] < 0) {
+      this.executeTimer = setTimeout(() => {
+        this.body.innovatonUse.actors[i][genderYouth] = this.body.innovatonUse.actors[i].previousWomen_youth;
+        this.body.innovatonUse.actors[i][gender] = this.body.innovatonUse.actors[i].previousWomen;
+        this.body.innovatonUse.actors[i]['showWomenExplanation' + gender] = true;
+        const element: any = document.getElementById('removeFocus');
+        element.focus();
+        setTimeout(() => {
+          this.body.innovatonUse.actors[i]['showWomenExplanation' + gender] = false;
+        }, 3000);
+      }, 1000);
+    } else {
+      this.body.innovatonUse.actors[i].previousWomen = this.body.innovatonUse.actors[i][gender];
+      this.body.innovatonUse.actors[i].previousWomen_youth = this.body.innovatonUse.actors[i][genderYouth];
+    }
+    setTimeout(() => {
+      this.body.innovatonUse.actors[i][genderNonYouth] = this.body.innovatonUse.actors[i][gender] - this.body.innovatonUse.actors[i][genderYouth];
+    }, 1100);
   }
 }
