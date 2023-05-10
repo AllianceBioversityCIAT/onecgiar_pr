@@ -4,10 +4,11 @@
     label="Specify targeted innovation user and also specify how many users are expected to benefit from scaling the core innovation by end of 2024?"></app-pr-field-header>
 
 <app-pr-field-header [required]="false" label="Actors"
-    description="If the innovation does not target specific groups of actors or people, then please specify the expected innovation use at organizational level or other use below. The numbers should reflect the expected innovation use by end of 2024"></app-pr-field-header>
+    description="{{narrativeActors()}}"></app-pr-field-header>
 <input type="text" id="removeFocus" style="position: absolute; opacity: 0;">
 <div class="fields_list" *ngIf="this.body.innovatonUse.actors?.length">
-    <div class="fields" appYmzListStructureItem (deleteEvent)="actorItem.is_active = false"
+    <div class="fields" appYmzListStructureItem
+        (deleteEvent)="actorItem.is_active = false; actorItem.actor_type_id = null"
         *ngFor="let actorItem of this.body.innovatonUse.actors; let i=index"
         [ngClass]="{'hideElement': actorItem.is_active == false}">
         <app-pr-select [options]="this.actorsTypeList" label="Actor type" optionLabel="name" optionValue="actor_type_id"
@@ -55,12 +56,12 @@
 <div class="fragment_section_divider"></div>
 
 <div class="fields_list" *ngIf="this.body.innovatonUse.organization?.length">
-    <div class="fields" appYmzListStructureItem (deleteEvent)="organizationItem.is_active = false"
+    <div class="fields" appYmzListStructureItem (deleteEvent)="removeOrganization(organizationItem)"
         [ngClass]="{'hideElement': organizationItem.is_active == false}"
         *ngFor="let organizationItem of this.body.innovatonUse.organization">
         <app-pr-select [options]="this.institutionsTypeTreeList" label="Organization" optionLabel="name"
             optionValue="code" [(ngModel)]="organizationItem.institution_types_id" placeholder="Select organization"
-            (selectOptionEvent)="reloadSelect(organizationItem)">
+            (selectOptionEvent)="reloadSelect(organizationItem)" [disableOptions]="disableOrganizations">
         </app-pr-select>
         <div class="right_content">
             <app-pr-select
@@ -69,7 +70,7 @@
                 optionLabel="name" optionValue="code" [(ngModel)]="organizationItem.institution_sub_type_id"
                 [disableOptions]="getAllSubTypes" placeholder="Select Sub-type">
             </app-pr-select>
-            <app-pr-input placeholder="Write some..." label="How many" type="text" [required]="false"
+            <app-pr-input placeholder="Write some..." label="How many" type="number" [required]="false"
                 [(ngModel)]="this.organizationItem.how_many">
             </app-pr-input>
         </div>

@@ -5,15 +5,15 @@
     <app-pr-select [options]="this.body" [isStatic]="true" optionValue="id" label="Country" 
         optionLabel="name" placeholder="Select Country" [(ngModel)]="countrySelected" 
         (selectOptionEvent)="getSubNationalLevelOne()"></app-pr-select>
-    <app-pr-select [options]="this.body" label="Sub-national level 1" placeholder="Select Sub-national level 1" optionLabel="name" 
-    [isStatic]="true" optionValue="id"></app-pr-select>
-    <app-pr-select [options]="this.body" label="Sub-national level 2" placeholder="Select Sub-national level 2" optionLabel="name" 
-    [isStatic]="true" optionValue="id"></app-pr-select>
+    <app-pr-select [options]="this.subNationalOne" label="Sub-national level 1" placeholder="Select Sub-national level 1" optionLabel="name" 
+    [isStatic]="true" optionValue="geonameId" (selectOptionEvent)="getSSubNationalLevelTwo()" [(ngModel)]="subNationalOneSelected" ></app-pr-select>
+
+    <app-pr-select [options]="this.subNationalTwo" label="Sub-national level 2" placeholder="Select Sub-national level 2" optionLabel="name" 
+    [isStatic]="true" optionValue="geonameId"  [(ngModel)]="subNationalTwoSelected" ></app-pr-select>
     
-    <div>
+    <div style="display: flex; justify-content: center; align-items: flex-end; height: 100%; ">
         <div class="delete" (click)="delete(index)">
             <i class="clickEvent material-icons-round ymz-lsi-delete-icon" style="color: red; cursor: pointer;">delete</i>
         </div>
     </div>
 </div>
-{{countrySelected}}

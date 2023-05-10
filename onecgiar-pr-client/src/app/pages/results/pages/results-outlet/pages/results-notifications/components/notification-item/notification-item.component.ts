@@ -15,7 +15,7 @@ export class NotificationItemComponent {
   @Output() requestEvent = new EventEmitter<any>();
   requesting = false;
   submitter = true;
-  constructor(public api: ApiService, private shareRequestModalSE: ShareRequestModalService, private retrieveModalSE: RetrieveModalService) {}
+  constructor(public api: ApiService, private shareRequestModalSE: ShareRequestModalService, private retrieveModalSE: RetrieveModalService) { }
 
   mapAndAccept(notification) {
     if (this.api.dataControlSE.platformIsClosed) return;
@@ -37,6 +37,8 @@ export class NotificationItemComponent {
     this.api.dataControlSE.currentResult.result_type = notification.result_type_name;
     this.api.dataControlSE.currentNotification = notification;
     this.shareRequestModalSE.shareRequestBody.initiative_id = notification.approving_inititiative_id;
+    this.shareRequestModalSE.shareRequestBody['official_code'] = notification['approving_official_code'];
+    this.shareRequestModalSE.shareRequestBody['short_name'] = notification['approving_short_name'];
     // console.log(this.api.dataControlSE.currentResult);
     this.api.dataControlSE.showShareRequest = true;
   }

@@ -28,4 +28,18 @@ export class StepN1ExpertsComponent {
   addExpert() {
     this.body.experts.push(new Expert());
   }
+
+  narrativeActors(){
+    return `
+    <ul>
+    <li>
+    An IPSR expert workshop should have around 25 experts, confirmed through RSVPs to maintain a manageable group size.
+    </li>
+    <li>
+    To design a realistic innovation package, the engagement of a diverse group of experts is recommended. Please consider the following scaling expertises when developing the invitee list for the innovation packaging and scaling readiness assessment workshop</li>
+    </ul>
+
+    `
+    
+  }
 }

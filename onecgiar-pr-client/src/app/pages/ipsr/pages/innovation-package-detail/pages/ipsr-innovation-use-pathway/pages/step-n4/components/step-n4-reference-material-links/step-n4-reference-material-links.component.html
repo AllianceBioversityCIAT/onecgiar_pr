@@ -6,7 +6,12 @@
         <div class="number">{{i+1}}.</div>
         <app-pr-input [required]="true" placeholder="Link" [(ngModel)]="item.link">
         </app-pr-input>
+        <div class="delete" (click)="delete(i)">
+            <i class="clickEvent material-icons-round ymz-lsi-delete-icon" style="color: red; cursor: pointer;">delete</i>
+        </div>
     </div>
 </div>
-<app-pr-button (click)="addItem()" padding="small" text="Add another link to reference material" icon="add_box"
+<div style="width: 200px;">
+    <app-pr-button (click)="addItem()" padding="small" text="Add another link to reference material" icon="add_box"
     *ngIf="!this.rolesSE.readOnly"></app-pr-button>
+</div>

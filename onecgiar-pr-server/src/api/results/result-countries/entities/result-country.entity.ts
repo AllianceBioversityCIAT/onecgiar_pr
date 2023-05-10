@@ -10,6 +10,8 @@ import {
 import { Result } from '../../entities/result.entity';
 import { ClarisaCountry } from '../../../../clarisa/clarisa-countries/entities/clarisa-country.entity';
 import { Version } from '../../versions/entities/version.entity';
+import { OneToMany } from 'typeorm';
+import { ResultCountriesSubNational } from '../../result-countries-sub-national/entities/result-countries-sub-national.entity';
 
 @Entity('result_country')
 export class ResultCountry {
@@ -18,10 +20,10 @@ export class ResultCountry {
   })
   result_country_id: number;
 
-  @Column({type: 'bigint', nullable: true})
+  @Column({ type: 'bigint', nullable: true })
   result_id: number;
 
-  @Column({type: 'int', nullable: true})
+  @Column({ type: 'int', nullable: true })
   country_id: number;
 
   @Column({
@@ -61,4 +63,7 @@ export class ResultCountry {
     name: 'country_id',
   })
   country_object: ClarisaCountry;
+
+  @OneToMany(() => ResultCountriesSubNational, rcsn => rcsn.obj_result_countries)
+  result_countries_sub_national: ResultCountriesSubNational[];
 }

@@ -35,8 +35,10 @@ export class StepN1InnovatonUseComponent {
     // console.log(fundedList?.childrens);
     return fundedList?.childrens ?? [];
   }
+
   reloadSelect(organizationItem) {
     organizationItem.hide = true;
+    organizationItem.institution_sub_type_id = null;
     setTimeout(() => {
       organizationItem.hide = false;
     }, 300);
@@ -53,13 +55,27 @@ export class StepN1InnovatonUseComponent {
   }
   get getAllSubTypes() {
     const list = [];
-    // console.log(this.body.innovatonUse.organization);
     this.body.innovatonUse.organization.forEach(resp => {
-      // console.log(resp.institution_sub_type_id);
       list.push({ code: resp.institution_sub_type_id });
     });
-    // console.log(list);
     return list;
+  }
+
+  get disableOrganizations() {
+    // console.log(this.institutionsTypeTreeList);
+    const list = [];
+    this.body.innovatonUse.organization.forEach(resp => {
+      // console.log(resp);
+      if (!resp.institution_sub_type_id) list.push({ code: resp.institution_types_id });
+    });
+    return list;
+  }
+
+  removeOrganization(organizationItem) {
+    console.log(organizationItem);
+    organizationItem.institution_sub_type_id = null;
+    organizationItem.institution_types_id = null;
+    organizationItem.is_active = false;
   }
   executeTimer = null;
   validateYouth(i, isWomen: boolean) {
@@ -95,5 +111,20 @@ export class StepN1InnovatonUseComponent {
     setTimeout(() => {
       this.body.innovatonUse.actors[i][genderNonYouth] = this.body.innovatonUse.actors[i][gender] - this.body.innovatonUse.actors[i][genderYouth];
     }, 1100);
+  }
+
+  narrativeActors(){
+    return `
+    <ul>
+    <li>
+    If the innovation does not target specific groups of actors or people, then please specify the expected innovation use at organizational level or other use below. The numbers should reflect the expected innovation use by end of 2024.
+    </li>
+    <li>
+    The numbers for ‘youth' and 'non-youth' equal the total number for 'Women' or 'Men’.
+    </li>
+    </ul>
+
+    `
+    
   }
 }

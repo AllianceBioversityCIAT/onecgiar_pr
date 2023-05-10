@@ -10,6 +10,10 @@ export class SubGeoscopeComponent implements OnInit {
   @Input() body: any;
   @Input() index: any;
   countrySelected:any;
+  subNationalOne:any = [];
+  subNationalOneSelected = [];
+  subNationalTwo:any = [];
+  subNationalTwoSelected = [];
   @Output() selectOptionEvent = new EventEmitter();
   constructor(public api: ApiService) { }
 
@@ -19,9 +23,23 @@ export class SubGeoscopeComponent implements OnInit {
   }
 
   getSubNationalLevelOne(){
+    this.subNationalOne = []
     let isoAlpha = this.body.filter((resp) => this.countrySelected == resp.id)[0]['iso_alpha_2'];
     console.log(isoAlpha);
     this.api.resultsSE.getSubNationalLevelOne(isoAlpha).subscribe((resp) => {
+      this.subNationalOne = resp['response']
+      console.log(resp);
+    })
+    
+  }
+
+  getSSubNationalLevelTwo(){
+    this.subNationalTwo = []
+    let isoAlpha = this.body.filter((resp) => this.countrySelected == resp.id)[0]['iso_alpha_2'];
+    let adminCode = this.subNationalOne.filter((resp) => this.subNationalOneSelected == resp.geonameId)[0]['adminCode1'];
+    console.log(isoAlpha);
+    this.api.resultsSE.getSubNationalLevelTwo(isoAlpha,adminCode).subscribe((resp) => {
+    this.subNationalTwo = resp['response']
       console.log(resp);
     })
   }
