@@ -64,8 +64,8 @@ export class PlatformReportService {
           //2: 'Second page', // Any page number is working. 1-based index
           default: ` 
             <span>
-              <span style="width: 50%;float: left;text-align: left">This report was generated on ${data.generation_date}</span>
-              <span style="width: 50%;float: left;color: #444;text-align: right;">{{page}}/{{pages}}</span>
+              <span style="width: 75%;float: left;text-align: left">This report was generated on ${data.generation_date}</span>
+              <span style="width: 25%;float: left;color: #444;text-align: right;">{{page}}/{{pages}}</span>
             </span>
             `, // fallback value
           //last: 'Last Page',
