@@ -37,6 +37,7 @@ export class TableInnovationComponent implements OnInit {
   loading:boolean = true;
   @Output() selectInnovationEvent = new EventEmitter<ComplementaryInnovation>();
   @Input() selectionsInnovation :any [];
+  @Input() informationComplementaryInnovations :any [] = [];
   constructor(public api: ApiService, public manageInnovationsListSE: ManageInnovationsListService) {}
 
   ngOnInit(): void {
@@ -45,8 +46,8 @@ export class TableInnovationComponent implements OnInit {
   
   ngOnChanges(changes: SimpleChanges) {
     // changes.prop contains the old and the new value...
-    this.selectionsInnovation= changes['selectionsInnovation'].currentValue;
-    console.log('lol');
+    //this.selectionsInnovation= changes['selectionsInnovation'].currentValue;
+    console.log(changes);
     
   }
 
@@ -70,14 +71,7 @@ export class TableInnovationComponent implements OnInit {
   }
 
   cleanSelected() {
-    this.api.resultsSE.GETinnovationpathwayStepTwo().subscribe((resp) =>{
-      console.log(resp);
-      this.informationComplementaryInnovation = resp['response'];
-      this.informationComplementaryInnovation.map((inno: any) => {
-        inno.full_name = `${inno?.result_code} ${inno?.title} ${inno?.initiative_official_code} ${inno?.initiative_official_code} ${inno?.lead_contact_person} yes no `;
-        inno.result_code = Number(inno.result_code);
-      });
-    })
+
   }
 
   findResultSelected(result: ComplementaryInnovation){

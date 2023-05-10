@@ -32,7 +32,7 @@ export class NewComplementaryInnovationComponent implements OnInit {
   linksComplemntaryInnovation:any =[];
   bodyNewComplementaryInnovation = new CreateComplementaryInnovationDto();
   selectedValues: any[] = [];
-  @Output() selectInnovationEvent = new EventEmitter<any>();
+  @Output() createInnovationEvent = new EventEmitter<any>();
   ngOnInit(): void {
     console.log(this.complementaryInnovationFunction);
     this.linksComplemntaryInnovation = [
@@ -65,11 +65,18 @@ export class NewComplementaryInnovationComponent implements OnInit {
     console.log(this.bodyNewComplementaryInnovation);
     this.linksComplemntaryInnovation = [{link:''},{link:''},{link:''}]
     
-    
+    let innovation;
     this.api.resultsSE.POSTNewCompletaryInnovation(this.bodyNewComplementaryInnovation).subscribe((resp)=>{
       console.log(resp);
-      this.selectInnovationEvent.emit(resp['response']['createResult'])
-      location.reload();
+      innovation = resp['response']['createResult'];
+      if(innovation['initiative_id'] < 10){
+        innovation['initiative_official_code'] = 'INIT-0'+innovation['initiative_id']
+      }else{
+        innovation['initiative_official_code'] = 'INIT-'+innovation['initiative_id']
+      }
+      console.log(innovation);
+      
+      this.createInnovationEvent.emit(innovation)
     });
     this.bodyNewComplementaryInnovation = new CreateComplementaryInnovationDto();
     this.status = false;

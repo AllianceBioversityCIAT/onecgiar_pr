@@ -1,11 +1,11 @@
 <app-pr-field-header label="Select or specify complementary innovations/ enablers/ solutions" [required]="false"
     description="Please first consider the inclusion of other innovations/ enablers/ solutions that CGIAR and partners are already working on. Additional complementary innovations/ enablers/ solutions can be added below."></app-pr-field-header>
 <app-table-innovation (selectInnovationEvent)="selectInnovationEvent($event)"
-    [selectionsInnovation]="innovationPackageCreatorBody"></app-table-innovation>
+    [selectionsInnovation]="innovationPackageCreatorBody" [informationComplementaryInnovations]="informationComplementaryInnovations"></app-table-innovation>
 
 
 <app-new-complementary-innovation
-    [complementaryInnovationFunction]="complemntaryFunction" (selectInnovationEvent)="selectInnovationEvent($event)"></app-new-complementary-innovation>
+    [complementaryInnovationFunction]="complemntaryFunction" (createInnovationEvent)="createInnovationEvent($event)"></app-new-complementary-innovation>
 
 <div *ngIf="this.innovationPackageCreatorBody.length > 0">
     <app-pr-field-header [required]="false"
