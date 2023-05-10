@@ -357,8 +357,8 @@ export class ResultInnovationPackageService {
         }
       }
       const newInnovationRegions = await this._resultRegionRepository.save(resultRegions);
-      const retrievedEoi = await this.retrievedEoi(CreateResultInnovationPackageDto.initiative_id, user.id, resultByInnivationPackage, vrs.id);
-      const newInnovationCountries = await this._resultCountryRepository.save(resultCountries);
+      //const retrievedEoi = await this.retrievedEoi(CreateResultInnovationPackageDto.initiative_id, user.id, resultByInnivationPackage, vrs.id);
+      //const newInnovationCountries = await this._resultCountryRepository.save(resultCountries);
       const retriveAAOutcome = await this.retrievedAAOutcome(CreateResultInnovationPackageDto.initiative_id, user.id, resultByInnivationPackage, vrs.id);
       const retrievedImpactArea = await this.retrievedImpactArea(result.id, user.id, resultByInnivationPackage, vrs.id);
 
