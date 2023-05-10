@@ -8,5 +8,7 @@
         </app-pr-input>
     </div>
 </div>
-<app-pr-button (click)="addItem()" padding="small" text="Add another link to reference material" icon="add_box"
+<div style="width: 200px;">
+    <app-pr-button (click)="addItem()" padding="small" text="Add another link to reference material" icon="add_box"
     *ngIf="!this.rolesSE.readOnly"></app-pr-button>
+</div>
