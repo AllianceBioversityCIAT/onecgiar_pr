@@ -4,7 +4,7 @@
     label="Specify targeted innovation user and also specify how many users are expected to benefit from scaling the core innovation by end of 2024?"></app-pr-field-header>
 
 <app-pr-field-header [required]="false" label="Actors"
-    description="If the innovation does not target specific groups of actors or people, then please specify the expected innovation use at organizational level or other use below. The numbers should reflect the expected innovation use by end of 2024"></app-pr-field-header>
+    description="{{narrativeActors()}}"></app-pr-field-header>
 <input type="text" id="removeFocus" style="position: absolute; opacity: 0;">
 <div class="fields_list" *ngIf="this.body.innovatonUse.actors?.length">
     <div class="fields" appYmzListStructureItem
