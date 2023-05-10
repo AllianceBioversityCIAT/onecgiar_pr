@@ -3,4 +3,10 @@
   grid-template-columns: 20px repeat(3, 1fr) 10px;
   grid-gap: 10px;
 }
+.delete{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+ 
+}
 
