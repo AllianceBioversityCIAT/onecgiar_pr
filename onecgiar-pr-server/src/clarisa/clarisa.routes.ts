@@ -83,16 +83,13 @@ export const ClarisaRoutes: Routes = [
   },
   {
     path: 'innovation-type',
-    path: 'innovation-type',
     module: ClarisaInnovationTypeModule
   },
   {
     path: 'innovation-readiness-levels',
-    path: 'innovation-readiness-levels',
     module: ClarisaInnovationReadinessLevelsModule
   },
   {
-    path: 'innovation-characteristics',
     path: 'innovation-characteristics',
     module: ClarisaInnovationCharacteristicsModule
   },
@@ -119,7 +116,7 @@ export const ClarisaRoutes: Routes = [
   {
     path: 'first-order-administrative-division',
     module: ClarisaFirstOrderAdministrativeDivisionModule
-  }
+  },
   {
     path: 'innovation-use-levels',
     module: ClarisaInnovationUseLevelsModule

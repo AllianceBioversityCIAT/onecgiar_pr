@@ -5,10 +5,11 @@
     <app-pr-select [options]="this.body" [isStatic]="true" optionValue="id" label="Country" 
         optionLabel="name" placeholder="Select Country" [(ngModel)]="countrySelected" 
         (selectOptionEvent)="getSubNationalLevelOne()"></app-pr-select>
-    <app-pr-select [options]="this.body" label="Sub-national level 1" placeholder="Select Sub-national level 1" optionLabel="name" 
-    [isStatic]="true" optionValue="id"></app-pr-select>
-    <app-pr-select [options]="this.body" label="Sub-national level 2" placeholder="Select Sub-national level 2" optionLabel="name" 
-    [isStatic]="true" optionValue="id"></app-pr-select>
+    <app-pr-select [options]="this.subNationalOne" label="Sub-national level 1" placeholder="Select Sub-national level 1" optionLabel="name" 
+    [isStatic]="true" optionValue="geonameId" (selectOptionEvent)="getSSubNationalLevelTwo()" [(ngModel)]="subNationalOneSelected" ></app-pr-select>
+
+    <app-pr-select [options]="this.subNationalTwo" label="Sub-national level 2" placeholder="Select Sub-national level 2" optionLabel="name" 
+    [isStatic]="true" optionValue="geonameId"  [(ngModel)]="subNationalTwoSelected" ></app-pr-select>
     
     <div>
         <div class="delete" (click)="delete(index)">
@@ -16,4 +17,3 @@
         </div>
     </div>
 </div>
-{{countrySelected}}
