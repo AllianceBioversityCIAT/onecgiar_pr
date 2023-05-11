@@ -49,9 +49,7 @@ export class ResultsInnovationPackagesValidationModuleService {
       }
       const links = this._resultInnovationPackageValidationModuleRepository.links();
 
-      const validResult = {
-        validation: parseInt(gi?.validation) && parseInt(contributors?.validation) && pathway?.validation && parseInt(links?.validation)
-      }
+      const validResult = parseInt(gi?.validation) && parseInt(contributors?.validation) && pathway?.validation && parseInt(links?.validation)
 
       return {
         response: {
@@ -78,7 +76,7 @@ export class ResultsInnovationPackagesValidationModuleService {
           mainSection: [],
           stepSections: [
           ],
-          validResult: { validation: 0 }
+          validResult:  0
         },
         message: error,
         status: HttpStatus.BAD_REQUEST,
