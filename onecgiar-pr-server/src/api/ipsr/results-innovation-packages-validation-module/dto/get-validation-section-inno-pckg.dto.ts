@@ -11,9 +11,7 @@ export class GreenchecksResponse {
             validation: number | string;
         }[];
         stepSections: GetValidationSectionInnoPckgDto[];
-        validResult: {
-            validation: number;
-        };
+        validResult: number
     };
     message: string;
     status: number;

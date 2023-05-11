@@ -102,7 +102,7 @@ export class SubmissionsService {
       }
 
       const isValid = await this._resultInnovationPackageValidationService.getGreenchecksByinnovationPackage(result.id);
-      if (!isValid.response.validResult.validation) {
+      if (!isValid.response.validResult) {
         throw {
           response: {},
           message:
