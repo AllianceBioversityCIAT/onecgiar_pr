@@ -4,7 +4,9 @@
             {{this.ipsrDataControlSE.detailData?.title}}
         </div>
         <div class="submit_button">
-            <app-pr-button text="Submit" [verticalMargin]="0" [underConstruction]="true"></app-pr-button>
+            <app-pr-button [text]="this.ipsrDataControlSE?.detailData?.status ?'Un-submission' :'Submit'"
+                [verticalMargin]="0" [ngClass]="{'globalDisabled': !this.ipsrDataControlSE?.detailData?.validResult}"
+                (click)="this.ipsrDataControlSE?.detailData?.status?this.ipsrDataControlSE.modals.unsubmit = true : this.ipsrDataControlSE.modals.submission = true"></app-pr-button>
         </div>
     </div>
 
@@ -44,3 +46,5 @@
 </div>
 
 <app-partners-request></app-partners-request>
+<app-ipsr-unsubmit-modal></app-ipsr-unsubmit-modal>
+<app-ipsr-submission-modal></app-ipsr-submission-modal>

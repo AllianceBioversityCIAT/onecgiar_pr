@@ -614,12 +614,19 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-packages-validation-module/get/green-checks/${this.ipsrDataControlSE.resultInnovationId}`);
   }
 
-
-  getSubNationalLevelOne(isoAlpha){
+  getSubNationalLevelOne(isoAlpha) {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/first-order-administrative-division/iso-alpha-2/${isoAlpha}`);
   }
 
-  getSubNationalLevelTwo(isoAlpha, adminCode){
+  getSubNationalLevelTwo(isoAlpha, adminCode) {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/second-order-administrative-division/iso-alpha-2/${isoAlpha}/admin-code-1/${adminCode}`);
+  }
+
+  PATCHsubmissionsSubmitIpsr(comment) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/results/submissions/submit-ipsr/${this.ipsrDataControlSE.resultInnovationId}`, { comment });
+  }
+
+  PATCHSubmissionsUnsubmitIpsr(comment) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/results/submissions/unsubmit-ipsr/${this.ipsrDataControlSE.resultInnovationId}`, { comment });
   }
 }
