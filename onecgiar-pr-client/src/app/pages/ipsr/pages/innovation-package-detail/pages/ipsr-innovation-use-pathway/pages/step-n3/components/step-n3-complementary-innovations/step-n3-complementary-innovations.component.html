@@ -35,7 +35,7 @@
     <app-pr-field-header label="Innovation use level evidence-based" [required]="false"
         [description]="this.readinessLevelSelfAssessmentText()"></app-pr-field-header>
 
-    <app-pr-range-level itemTitle="name" itemDescription="definition" [options]="this.rangesOptions"
+    <app-pr-range-level itemTitle="name" itemDescription="definition" [options]="this.innovationUseList"
         *ngIf="this.rangesOptions?.length" optionLabel="name" optionValue="id"
         [(ngModel)]="this.body.result_ip_result_complementary[this.ci.index].use_level_evidence_based"></app-pr-range-level>
 
