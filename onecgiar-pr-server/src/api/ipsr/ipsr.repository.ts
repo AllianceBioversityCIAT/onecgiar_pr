@@ -76,6 +76,7 @@ export class IpsrRepository extends Repository<Ipsr>{
             r.id AS result_id,
             r.result_code,
             r.title,
+            r.status,
             rbi.inititiative_id,
             ci.official_code AS initiative_official_code,
             ci.short_name AS initiative_short_name,
