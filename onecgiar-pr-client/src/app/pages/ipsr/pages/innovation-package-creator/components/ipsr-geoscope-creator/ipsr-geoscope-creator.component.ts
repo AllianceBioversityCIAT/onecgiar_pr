@@ -30,4 +30,13 @@ export class IpsrGeoscopeCreatorComponent {
   deleteItem(item){
     this.sub_scope.splice(item, 1);
   }
+
+  descriptionGeoScope(){
+    return `
+    <ul>
+    <li>Select country/ geoscope for which innovation packaging and scaling readiness assessment will be conducted. </li>
+    <li>Please note that geoscope cannot be changed after innovation package creation. </li>
+    </ul>
+    `
+  }
 }

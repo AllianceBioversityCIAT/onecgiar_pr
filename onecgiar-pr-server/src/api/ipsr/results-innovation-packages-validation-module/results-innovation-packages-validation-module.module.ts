@@ -14,6 +14,9 @@ import { ResultRepository } from '../../results/result.repository';
     IpsrRepository,
     ResultRepository,
     HandlersError
+  ],
+  exports: [
+    ResultsInnovationPackagesValidationModuleService
   ]
 })
 export class ResultsInnovationPackagesValidationModuleModule {}
