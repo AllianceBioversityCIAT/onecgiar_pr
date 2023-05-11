@@ -21,6 +21,21 @@ export class PrRangeLevelComponent {
   @Input() options: any;
   @Input() itemTitle: string = '0- test';
   @Input() itemDescription: string = 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Exercitationem, perspiciatis.';
+  hoverData = {
+    show: false,
+    object: {},
+    index: null,
+    handleMouseEnter: (data: any, index: any) => {
+      this.hoverData.object = data;
+      this.hoverData.index = index;
+      this.hoverData.show = true;
+    },
+    handleMouseLeave: () => {
+      this.hoverData.object = {};
+      this.hoverData.index = null;
+      this.hoverData.show = false;
+    }
+  };
   public list = [];
   constructor(private rolesSE: RolesService) {}
 
