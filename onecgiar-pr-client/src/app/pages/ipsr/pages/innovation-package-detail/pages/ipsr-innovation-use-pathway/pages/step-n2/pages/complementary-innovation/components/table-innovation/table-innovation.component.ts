@@ -28,7 +28,7 @@ interface ComplementaryInnovation {
   
   styleUrls: ['./table-innovation.component.scss']
 })
-export class TableInnovationComponent implements OnInit {
+export class TableInnovationComponent{
 
   coreInnovationSelected: ComplementaryInnovation;
   searchText = '';
@@ -39,21 +39,6 @@ export class TableInnovationComponent implements OnInit {
   @Input() selectionsInnovation :any [];
   @Input() informationComplementaryInnovations :any [] = [];
   constructor(public api: ApiService, public manageInnovationsListSE: ManageInnovationsListService) {}
-
-  ngOnInit(): void {
-    this.cleanSelected();
-  }
-  
-  ngOnChanges(changes: SimpleChanges) {
-    // changes.prop contains the old and the new value...
-    //this.selectionsInnovation= changes['selectionsInnovation'].currentValue;
-    console.log(changes);
-    
-  }
-
-  ngOnDestroy(): void {
-    this.cleanSelected();
-  }
 
   columnOrder = [
     { title: 'Result code', attr: 'result_code'},
@@ -69,19 +54,4 @@ export class TableInnovationComponent implements OnInit {
     result.selected = true;
     this.selectInnovationEvent.emit(result);  
   }
-
-  cleanSelected() {
-
-  }
-
-  findResultSelected(result: ComplementaryInnovation){
-   let index =  this.selectionsInnovation.findIndex((resp)=> resp.result_id == result.result_id? result.selected = true:  result.selected = false);
-    if (index == -1) {
-        return false;
-    }else{
-      return true;
-    }
-  }
-
-
 }
