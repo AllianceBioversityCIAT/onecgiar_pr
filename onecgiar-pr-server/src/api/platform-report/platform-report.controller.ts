@@ -21,7 +21,7 @@ export class PlatformReportController {
   async getFullResultReportByResultCode(
     @Param('id', ParseIntPipe) id: number,
     @Res({ passthrough: true }) res: Response,
-  ) {
+  ): Promise<StreamableFile> {
     const utcDateString = new Date().toISOString();
     /*
       TODO to be fixed when the Temporal proposal on ECMA passes. This is a
@@ -37,12 +37,13 @@ export class PlatformReportController {
     const dateFormatted = DateFormatter.forFilename(hackyUtcDate);
 
     res.set({
-      'Content-Type': 'application/pdf',
+      //'Content-Type': 'application/pdf',
       'Content-Disposition': `filename="PRMS-Result-${id}_${dateFormatted.date}_${dateFormatted.time}.pdf"`,
     });
 
     return new StreamableFile(
       await this._platformReportService.getFullResultReportByResultCode(id),
+      { type: 'application/pdf' },
     );
   }
 }

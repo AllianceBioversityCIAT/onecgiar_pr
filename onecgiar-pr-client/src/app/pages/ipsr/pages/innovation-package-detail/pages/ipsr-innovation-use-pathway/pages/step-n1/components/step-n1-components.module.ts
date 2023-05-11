@@ -14,11 +14,12 @@ import { StepN1ScalingAmbitionBlurbComponent } from './step-n1-scaling-ambition-
 import { YmzListStructureItemModule } from 'src/app/shared/directives/ymz-list-structure-item/ymz-list-structure-item.module';
 import { ClipboardModule } from '@angular/cdk/clipboard';
 import { ToastModule } from 'primeng/toast';
+import { FeedbackValidationDirectiveModule } from 'src/app/shared/directives/feedback-validation-directive.module';
 
 const components = [StepN1ScalingAmbitionBlurbComponent, StepN1ActionAreaOutcomesComponent, StepN1GeoscopeComponent, StepN1EoiOutcomesComponent, StepN1ImpactAreasComponent, StepN1SdgTargetsComponent, StepN1InnovatonUseComponent, StepN1InstitutionsComponent, StepN1ExpertsComponent, StepN1ConsensusAndConsultationComponent];
 @NgModule({
   declarations: [...components],
   exports: [...components],
-  imports: [CommonModule, CustomFieldsModule, YmzListStructureItemModule, ClipboardModule, ToastModule]
+  imports: [CommonModule, CustomFieldsModule, YmzListStructureItemModule, ClipboardModule, ToastModule, FeedbackValidationDirectiveModule]
 })
 export class StepN1ComponentsModule {}
