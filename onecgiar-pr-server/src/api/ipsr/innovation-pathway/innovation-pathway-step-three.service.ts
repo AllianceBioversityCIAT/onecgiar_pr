@@ -159,7 +159,18 @@ export class InnovationPathwayStepThreeService {
         let actorExists: ResultsIpActor = null;
 
         if (el?.result_ip_actors_id) {
-          actorExists = await this._resultsIpActorRepository.findOne({ where: { result_ip_actors_id: el.result_ip_actors_id, result_ip_result_id: riprc.result_by_innovation_package_id } });
+          const { actor_type_id } = el;
+          const whereOptions: any = { result_ip_actors_id: el.result_ip_actors_id, result_ip_result_id: riprc.result_by_innovation_package_id };
+          switch (actor_type_id) {
+            case 5:
+              if (el?.other_actor_type) {
+                whereOptions.other_actor_type = el.other_actor_type;
+              } else {
+                whereOptions.other_actor_type = IsNull();
+              }
+              break;
+          }
+          actorExists = await this._resultsIpActorRepository.findOne({ where: whereOptions });
         } else if (!actorExists && el?.actor_type_id) {
           actorExists = await this._resultsIpActorRepository.findOne({ where: { actor_type_id: el.actor_type_id, result_ip_result_id: riprc.result_by_innovation_package_id } });
         } else if (!actorExists) {
@@ -178,6 +189,7 @@ export class InnovationPathwayStepThreeService {
               women: this.isNullData(el?.women),
               women_youth: this.isNullData(el?.women_youth),
               evidence_link: this.isNullData(el?.evidence_link),
+              other_actor_type: this.isNullData(el?.other_actor_type),
               last_updated_by: user.id
             }
           );
@@ -193,6 +205,7 @@ export class InnovationPathwayStepThreeService {
             created_by: user.id,
             evidence_link: el.evidence_link,
             result_ip_result_id: riprc.result_by_innovation_package_id,
+            other_actor_type: el.other_actor_type,
             version_id: version.id
           });
         }

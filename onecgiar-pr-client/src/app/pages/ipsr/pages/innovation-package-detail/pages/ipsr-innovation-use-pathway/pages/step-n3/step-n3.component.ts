@@ -11,6 +11,7 @@ import { ApiService } from 'src/app/shared/services/api/api.service';
 export class StepN3Component implements OnInit {
   rangesOptions = [];
   ipsrStep3Body = new IpsrStep3Body();
+  innovationUseList = [];
   radioOptions = [
     { id: true, name: 'Yes, an expert workshop was organized' },
     { id: false, name: 'No expert workshop was organized' }
@@ -19,26 +20,27 @@ export class StepN3Component implements OnInit {
 
   ngOnInit(): void {
     this.GETAllClarisaInnovationReadinessLevels();
+    this.GETAllClarisaInnovationUseLevels();
     this.getSectionInformation();
     this.api.setTitle('Step 3');
   }
 
   getSectionInformation() {
     this.api.resultsSE.GETInnovationPathwayByRiId().subscribe(({ response }) => {
-      console.log('%cGET', 'font-size: 20px; color: #2BBE28;');
-      console.log(response);
+      // console.log('%cGET', 'font-size: 20px; color: #2BBE28;');
+      // console.log(response);
       this.convertOrganizations(response?.innovatonUse?.organization);
-      console.log('%c____________________', 'font-size: 20px; color: #2BBE28;');
+      // console.log('%c____________________', 'font-size: 20px; color: #2BBE28;');
       this.ipsrStep3Body = response;
     });
   }
   onSaveSection() {
-    console.log('%cPATCH', 'font-size: 20px; color: #f68541;');
-    console.log(this.ipsrStep3Body);
-    console.log('%c____________________', 'font-size: 20px; color: #f68541;');
+    // console.log('%cPATCH', 'font-size: 20px; color: #f68541;');
+    // console.log(this.ipsrStep3Body);
+    // console.log('%c____________________', 'font-size: 20px; color: #f68541;');
     this.convertOrganizationsTosave();
     this.api.resultsSE.PATCHInnovationPathwayByRiId(this.ipsrStep3Body).subscribe(({ response }) => {
-      console.log(response);
+      // console.log(response);
       // setTimeout(() => {
       this.getSectionInformation();
       // }, 3000);
@@ -49,6 +51,13 @@ export class StepN3Component implements OnInit {
     this.api.resultsSE.GETAllClarisaInnovationReadinessLevels().subscribe(({ response }) => {
       console.log(response);
       this.rangesOptions = response;
+    });
+  }
+
+  GETAllClarisaInnovationUseLevels() {
+    this.api.resultsSE.GETAllClarisaInnovationUseLevels().subscribe(({ response }) => {
+      console.log(response);
+      this.innovationUseList = response;
     });
   }
 

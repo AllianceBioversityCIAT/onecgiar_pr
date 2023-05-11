@@ -590,6 +590,10 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/innovation-readiness-levels/get/all`);
   }
 
+  GETAllClarisaInnovationUseLevels() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/innovation-use-levels`);
+  }
+
   GETInnovationPathwayStepFourByRiId() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/step-four/${this.ipsrDataControlSE.resultInnovationId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }

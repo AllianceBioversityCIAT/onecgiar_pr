@@ -21,4 +21,11 @@ export class ClarisaInnovationUseLevel {
         nullable: true
     })
     name: string;
+
+    @Column({
+        name: 'definition',
+        type: 'text',
+        nullable: true
+    })
+    definition: string;
 }
