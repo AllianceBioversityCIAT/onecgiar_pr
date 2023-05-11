@@ -46,7 +46,7 @@ export class ResultsInnovationPackagesValidationModuleService {
       const stepFour: GetValidationSectionInnoPckgDto = await this._resultInnovationPackageValidationModuleRepository.stepFour(resultId);
       const pathway = {
         sectionName: 'IPSR Innovation use pathway',
-        validation: stepOne?.validation && stepTwo?.validation && stepThree?.validation && stepFour?.validation
+        validation: parseInt(stepOne?.validation) && parseInt(stepTwo?.validation) && parseInt(stepThree?.validation) && parseInt(stepFour?.validation)
       }
       const links = this._resultInnovationPackageValidationModuleRepository.links();
 

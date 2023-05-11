@@ -1,5 +1,5 @@
 export class GetValidationSectionInnoPckgDto {
     public sectionName: string;
-    public validation!: boolean;
+    public validation!: string;
     public step: string;
 }
