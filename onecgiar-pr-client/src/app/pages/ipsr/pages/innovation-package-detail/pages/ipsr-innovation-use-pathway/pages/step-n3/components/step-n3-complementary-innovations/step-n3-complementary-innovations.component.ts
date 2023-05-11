@@ -8,6 +8,7 @@ import { IpsrStep3Body } from '../../model/Ipsr-step-3-body.model';
 })
 export class StepN3ComplementaryInnovationsComponent implements OnInit {
   @Input() rangesOptions: any[] = [];
+  @Input() innovationUseList: any[] = [];
   @Input() body = new IpsrStep3Body();
   ci = {
     index: 0,
