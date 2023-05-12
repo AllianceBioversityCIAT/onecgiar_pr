@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException } from '@nestjs/common';
 import { InnovationPathwayStepOneService } from './innovation-pathway-step-one.service';
 import { CreateInnovationPathwayDto } from './dto/create-innovation-pathway.dto';
-import { UpdateInnovationPathwayDto } from './dto/update-innovation-pathway.dto';
+import { UpdateComplementaryInnovationDto, UpdateInnovationPathwayDto } from './dto/update-innovation-pathway.dto';
 import { CreateComplementaryInnovationDto } from './dto/create-complementary-innovation.dto'
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
@@ -58,6 +58,33 @@ export class InnovationPathwayController {
     @UserToken() User: TokenDto
   ) {
     const { message, response, status } = await this._innovationPathwayStepTwoService.saveComplementaryInnovation(+resultId, User, CreateComplementaryInnovationDto);
+    throw new HttpException({ message, response }, status);
+  }
+
+  @Get('get/complementary-innovation/:complementaryInnovationId')
+  async getComplementaryInnovationById(
+    @Param('complementaryInnovationId') complementaryInnovationId: number
+  ) {
+    const { message, response, status } = await this._innovationPathwayStepTwoService.getComplementaryInnovationById(+complementaryInnovationId);
+    throw new HttpException({ message, response }, status);
+  }
+
+  @Patch('updated/complementary-innovation/:complementaryInnovationId')
+  async updateComplementaryInnovation(
+    @Param('complementaryInnovationId') complementaryInnovationId: number,
+    @Body() updateComplementaryInnovationDto: UpdateComplementaryInnovationDto,
+    @UserToken() User: TokenDto
+  ) {
+    const { message, response, status } = await this._innovationPathwayStepTwoService.updateComplementaryInnovation(complementaryInnovationId, User, updateComplementaryInnovationDto);
+    throw new HttpException({ message, response }, status);
+  }
+
+  @Delete('delete/complementary-innovation/:complementaryInnovationId')
+  async inactiveComplementaryInnovation(
+    @Param('complementaryInnovationId') complementaryInnovationId: number,
+    @UserToken() User: TokenDto
+  ) {
+    const { message, response, status } = await this._innovationPathwayStepTwoService.inactiveComplementaryInnovation(+complementaryInnovationId, User);
     throw new HttpException({ message, response }, status);
   }
 
