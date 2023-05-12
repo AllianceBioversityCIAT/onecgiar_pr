@@ -72,6 +72,10 @@ export class StepN3CurrentUseComponent {
     organizationItem.is_active = false;
   }
 
+  removeOther(actors) {
+    return actors.filter(item => item.actor_type_id != 5);
+  }
+
   executeTimer = null;
   validateYouth(i, isWomen: boolean) {
     const gender = isWomen ? 'women' : 'men';
