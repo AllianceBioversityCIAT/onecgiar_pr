@@ -37,6 +37,7 @@ export class SubGeoscopeComponent implements OnInit {
     this.subNationalTwo = []
     let isoAlpha = this.body.filter((resp) => this.countrySelected == resp.id)[0]['iso_alpha_2'];
     let adminCode = this.subNationalOne.filter((resp) => this.subNationalOneSelected == resp.geonameId)[0]['adminCode1'];
+    this.body.filter((resp) => this.countrySelected == resp.id)[0]['result_countries_sub_national'].push(this.subNationalOne.filter((resp) => this.subNationalOneSelected == resp.geonameId)[0])
     console.log(isoAlpha);
     this.api.resultsSE.getSubNationalLevelTwo(isoAlpha,adminCode).subscribe((resp) => {
     this.subNationalTwo = resp['response']

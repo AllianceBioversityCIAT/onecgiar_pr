@@ -619,11 +619,11 @@ export class ResultsApiService {
   }
 
   getSubNationalLevelOne(isoAlpha) {
-    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/first-order-administrative-division/iso-alpha-2/${isoAlpha}`);
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/first-order-administrative-division/iso-alpha-2/${isoAlpha}`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   getSubNationalLevelTwo(isoAlpha, adminCode) {
-    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/second-order-administrative-division/iso-alpha-2/${isoAlpha}/admin-code-1/${adminCode}`);
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/second-order-administrative-division/iso-alpha-2/${isoAlpha}/admin-code-1/${adminCode}`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   PATCHsubmissionsSubmitIpsr(comment) {

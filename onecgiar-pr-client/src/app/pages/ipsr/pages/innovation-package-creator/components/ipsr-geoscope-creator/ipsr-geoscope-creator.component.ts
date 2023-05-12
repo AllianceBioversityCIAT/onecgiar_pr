@@ -25,6 +25,8 @@ export class IpsrGeoscopeCreatorComponent {
 
   onClicked(){
     this.sub_scope.push(this.sub_scope.length);
+    console.log(this.body);
+    
   }
 
   deleteItem(item){
