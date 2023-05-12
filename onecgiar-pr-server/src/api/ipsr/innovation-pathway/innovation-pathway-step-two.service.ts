@@ -351,28 +351,13 @@ export class InnovationPathwayStepTwoService {
     }
   }
 
-  async getComplementaryInnovationById(resultId: number, complementaryInnovationId: number) {
+  async getComplementaryInnovationById(complementaryInnovationId: number) {
     try {
       const findResult: Result = await this._resultRepository.findOneBy({
         id: complementaryInnovationId,
         is_active: true
       });
       if (!findResult) {
-        return {
-          response: { valid: false },
-          message: 'The Result was not found',
-          status: HttpStatus.NOT_FOUND,
-        }
-      }
-
-      const findResultByInnovation: Ipsr = await this._innovationByResultRepository.findOne({
-        where: {
-          result_innovation_package_id: resultId,
-          result_id: complementaryInnovationId,
-          is_active: true
-        }
-      });
-      if (!findResultByInnovation) {
         return {
           response: { valid: false },
           message: 'The Result was not found',
@@ -404,7 +389,6 @@ export class InnovationPathwayStepTwoService {
       return {
         response: {
           findResult,
-          findResultByInnovation,
           findResultComplementaryInnovation,
           findComplementaryInnovationFuctions,
           evidence
@@ -417,7 +401,7 @@ export class InnovationPathwayStepTwoService {
     }
   }
 
-  async updateComplementaryInnovation(resultId: number, complementaryInnovationId: number, User: TokenDto, updateComplementaryInnovationDto: UpdateComplementaryInnovationDto) {
+  async updateComplementaryInnovation(complementaryInnovationId: number, User: TokenDto, updateComplementaryInnovationDto: UpdateComplementaryInnovationDto) {
     try {
       const {
         title,
@@ -454,21 +438,6 @@ export class InnovationPathwayStepTwoService {
         }
       }
 
-      const findResultByInnovation: Ipsr = await this._innovationByResultRepository.findOne({
-        where: {
-          result_innovation_package_id: resultId,
-          result_id: complementaryInnovationId,
-          is_active: true
-        }
-      });
-      if (!findResultByInnovation) {
-        return {
-          response: { valid: false },
-          message: 'The Result was not found',
-          status: HttpStatus.NOT_FOUND,
-        }
-      }
-
       const findComplementaryInnovation: ResultsComplementaryInnovation = await this._resultComplementaryInnovation.findOne({
         where: {
           result_id: complementaryInnovationId,
@@ -486,10 +455,6 @@ export class InnovationPathwayStepTwoService {
       await this._resultRepository.update(findResult.id, {
         title,
         description,
-        last_updated_by: User.id,
-      });
-
-      await this._innovationByResultRepository.update(findResultByInnovation.result_by_innovation_package_id, {
         last_updated_by: User.id,
       });
 
@@ -593,11 +558,76 @@ export class InnovationPathwayStepTwoService {
         }
       }
 
-      const data = await this.getComplementaryInnovationById(resultId, complementaryInnovationId);
+      const data = await this.getComplementaryInnovationById(complementaryInnovationId);
 
       return {
         response: data.response,
         message: 'The Result Complementary Innovation have been updated successfully',
+        status: HttpStatus.OK
+      }
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async inactiveComplementaryInnovation(complementaryInnovationId: number, User: TokenDto) {
+    try {
+      const findResult: Result = await this._resultRepository.findOneBy({
+        id: complementaryInnovationId,
+        is_active: true
+      });
+      if (!findResult) {
+        return {
+          response: { valid: false },
+          message: 'The Result was not found',
+          status: HttpStatus.NOT_FOUND,
+        }
+      }
+
+      const findResultByInnovation: Ipsr[] = await this._innovationByResultRepository.find({
+        where: {
+          result_id: complementaryInnovationId,
+          ipsr_role_id: 2,
+          is_active: true
+        }
+      });
+      if (!findResultByInnovation) {
+        return {
+          response: { valid: false },
+          message: 'The Result was not found',
+          status: HttpStatus.NOT_FOUND,
+        }
+      }
+
+      const findComplementaryInnovation: ResultsComplementaryInnovation = await this._resultComplementaryInnovation.findOne({
+        where: {
+          result_id: complementaryInnovationId,
+          is_active: true
+        }
+      })
+
+      await this._resultRepository.update(findResult.id, {
+        is_active: false,
+        last_updated_by: User.id,
+      });
+
+      for(const cf of findResultByInnovation) {
+        await this._innovationByResultRepository.update(cf.result_by_innovation_package_id, {
+          is_active: false,
+          last_updated_by: User.id,
+        });
+      }
+
+      await this._resultComplementaryInnovation.update(findComplementaryInnovation.result_complementary_innovation_id, {
+        is_active: false,
+        last_updated_by: User.id
+      });
+
+
+      return { 
+        response: { valid: true },
+        title: 'The Result Complementary Innovation have been inactive successfully',
+        message: 'The Result Complementary Innovation have been inactive successfully',
         status: HttpStatus.OK
       }
     } catch (error) {

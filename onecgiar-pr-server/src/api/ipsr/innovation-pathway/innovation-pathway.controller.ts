@@ -61,23 +61,30 @@ export class InnovationPathwayController {
     throw new HttpException({ message, response }, status);
   }
 
-  @Get('get/complementary-innovation/:resultId/:complementaryInnovationId')
+  @Get('get/complementary-innovation/:complementaryInnovationId')
   async getComplementaryInnovationById(
-    @Param('resultId') resultId: number,
     @Param('complementaryInnovationId') complementaryInnovationId: number
   ) {
-    const { message, response, status } = await this._innovationPathwayStepTwoService.getComplementaryInnovationById(resultId, +complementaryInnovationId);
+    const { message, response, status } = await this._innovationPathwayStepTwoService.getComplementaryInnovationById(+complementaryInnovationId);
     throw new HttpException({ message, response }, status);
   }
 
-  @Patch('updated/complementary-innovation/:resultId/:complementaryInnovationId')
+  @Patch('updated/complementary-innovation/:complementaryInnovationId')
   async updateComplementaryInnovation(
-    @Param('resultId') resultId: number,
     @Param('complementaryInnovationId') complementaryInnovationId: number,
     @Body() updateComplementaryInnovationDto: UpdateComplementaryInnovationDto,
     @UserToken() User: TokenDto
   ) {
-    const { message, response, status } = await this._innovationPathwayStepTwoService.updateComplementaryInnovation(+resultId, complementaryInnovationId, User, updateComplementaryInnovationDto);
+    const { message, response, status } = await this._innovationPathwayStepTwoService.updateComplementaryInnovation(complementaryInnovationId, User, updateComplementaryInnovationDto);
+    throw new HttpException({ message, response }, status);
+  }
+
+  @Delete('delete/complementary-innovation/:complementaryInnovationId')
+  async inactiveComplementaryInnovation(
+    @Param('complementaryInnovationId') complementaryInnovationId: number,
+    @UserToken() User: TokenDto
+  ) {
+    const { message, response, status } = await this._innovationPathwayStepTwoService.inactiveComplementaryInnovation(+complementaryInnovationId, User);
     throw new HttpException({ message, response }, status);
   }
 
