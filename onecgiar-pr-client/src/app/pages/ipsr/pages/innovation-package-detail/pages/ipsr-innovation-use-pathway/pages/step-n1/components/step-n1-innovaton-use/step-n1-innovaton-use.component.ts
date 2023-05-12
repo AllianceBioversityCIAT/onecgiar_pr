@@ -61,6 +61,10 @@ export class StepN1InnovatonUseComponent {
     return list;
   }
 
+  removeOther(actors) {
+    return actors.filter(item => item.actor_type_id != 5);
+  }
+
   get disableOrganizations() {
     // console.log(this.institutionsTypeTreeList);
     const list = [];
@@ -113,7 +117,7 @@ export class StepN1InnovatonUseComponent {
     }, 1100);
   }
 
-  narrativeActors(){
+  narrativeActors() {
     return `
     <ul>
     <li>
@@ -124,7 +128,6 @@ export class StepN1InnovatonUseComponent {
     </li>
     </ul>
 
-    `
-    
+    `;
   }
 }
