@@ -85,6 +85,7 @@ export class Actor {
   men_non_youth: any;
   previousWomen: any;
   previousWomen_youth: any;
+  other_actor_type: any;
 }
 
 interface SdgTarget {
