@@ -228,9 +228,9 @@ export class InnovationPathwayStepThreeService {
       actors.map(async (el: ResultsIpActor) => {
         let actorExists: ResultsIpActor = null;
 
-        if (el?.result_ip_actors_id) {
+        if (el?.actor_type_id) {
           const { actor_type_id } = el;
-          const whereOptions: any = { result_ip_actors_id: el.result_ip_actors_id, result_ip_result_id: riprc.result_by_innovation_package_id };
+          const whereOptions: any = { actor_type_id: el.actor_type_id, result_ip_result_id: riprc.result_by_innovation_package_id, other_actor_type: null };
           switch (actor_type_id) {
             case 5:
               if (el?.other_actor_type) {
@@ -241,8 +241,8 @@ export class InnovationPathwayStepThreeService {
               break;
           }
           actorExists = await this._resultsIpActorRepository.findOne({ where: whereOptions });
-        } else if (!actorExists && el?.actor_type_id) {
-          actorExists = await this._resultsIpActorRepository.findOne({ where: { actor_type_id: el.actor_type_id, result_ip_result_id: riprc.result_by_innovation_package_id } });
+        } else if (!actorExists && el?.result_ip_actors_id) {
+          actorExists = await this._resultsIpActorRepository.findOne({ where: { result_ip_actors_id: el.result_ip_actors_id, result_ip_result_id: riprc.result_by_innovation_package_id } });
         } else if (!actorExists) {
           actorExists = await this._resultsIpActorRepository.findOne({ where: { actor_type_id: IsNull(), result_ip_result_id: riprc.result_by_innovation_package_id } });
         }
