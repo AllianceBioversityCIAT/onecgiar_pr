@@ -55,6 +55,8 @@ export class NewComplementaryInnovationComponent implements OnInit {
   }
 
   onSave(){
+    console.log(this.selectedValues);
+    
     this.linksComplemntaryInnovation = this.linksComplemntaryInnovation.filter(element => element.link != '');
     this.bodyNewComplementaryInnovation.referenceMaterials = this.linksComplemntaryInnovation;
     this.bodyNewComplementaryInnovation.complementaryFunctions = this.selectedValues;

@@ -44,9 +44,8 @@
                 <span style="display: flex;flex-direction: column; width: 50%;">
                     <div *ngFor="let innovation of complementaryInnovationFunction; let i = index">
                         <div *ngIf="i < 5" style="margin-top: 10px;">
-                            <app-pr-checkbox label="{{innovation.name}}"
-                                (click)="change(innovation.complementary_innovation_functions_id)"
-                                [optionLabel]="innovation.name" [optionValue]="innovation.name"></app-pr-checkbox>
+                            <p-checkbox name="group" [value]="innovation" [inputId]="innovation.complementary_innovation_functions_id" [(ngModel)]="selectedValues" ></p-checkbox>
+                                <label> {{ innovation.name }}</label> 
 
                         </div>
                     </div>
@@ -56,9 +55,8 @@
                 <span style="display: flex;flex-direction: column; width: 50%; margin-left: '10px';">
                     <div *ngFor="let innovation of complementaryInnovationFunction; let i = index">
                         <div *ngIf="i >= 5" style="margin-top: 10px;">
-                            <app-pr-checkbox label="{{innovation.name}}"
-                            (click)="change(innovation.complementary_innovation_functions_id)"
-                            [optionLabel]="innovation.name" [optionValue]="innovation.name"></app-pr-checkbox>
+                            <p-checkbox name="group" [value]="innovation" [inputId]="innovation.complementary_innovation_functions_id" [(ngModel)]="selectedValues" ></p-checkbox>
+                            <label> {{ innovation.name }}</label> 
                         </div>
 
                     </div>

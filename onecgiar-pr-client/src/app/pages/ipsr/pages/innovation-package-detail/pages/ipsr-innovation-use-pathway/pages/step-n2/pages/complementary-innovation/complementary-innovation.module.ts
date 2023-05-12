@@ -11,6 +11,7 @@ import { TableInnovationComponent } from './components/table-innovation/table-in
 import { CustomFieldsModule } from '../../../../../../../../../../custom-fields/custom-fields.module';
 import { NewComplementaryInnovationComponent } from './components/new-complementary-innovation/new-complementary-innovation.component';
 import { DialogModule } from 'primeng/dialog';
+import { CheckboxModule } from 'primeng/checkbox';
 
 
 @NgModule({
@@ -27,7 +28,8 @@ import { DialogModule } from 'primeng/dialog';
     FilterByTextModule,
     FormsModule,
     CustomFieldsModule,
-    DialogModule
+    DialogModule,
+    CheckboxModule
   ],
   exports:[
     ComplementaryInnovationComponent
