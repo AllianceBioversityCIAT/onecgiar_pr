@@ -13,5 +13,23 @@ export class ComplementaryInnovationEnablerTypesRepository extends Repository<Co
         super(ComplementaryInnovationEnablerTypes, dataSource.createEntityManager())
      }
 
+     async getAllComplementaryInnovationsType(){
+        let comentaryPrincipals = await this.query(`
+        SELECT ciet.complementary_innovation_enabler_types_id, ciet.group, ciet.type 
+            FROM prdb.complementary_innovation_enabler_types ciet 
+                where ciet.type is null;`)
+
+        comentaryPrincipals.map(async (resp) => {
+            let subComentaries = await this.query(`
+            SELECT ciet.complementary_innovation_enabler_types_id, ciet.group, ciet.type 
+                FROM prdb.complementary_innovation_enabler_types ciet 
+                    where ciet.type = ${resp.complementary_innovation_enabler_types_id};`)
+            resp['subCategories'] = subComentaries;
+        })
+        
+
+        return comentaryPrincipals;
+     }
+
     
 }
