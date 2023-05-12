@@ -951,7 +951,12 @@ export class InnovationPathwayStepOneService {
           switch (actor_type_id) {
             case 5:
               if (el?.other_actor_type) {
-                whereOptions.other_actor_type = el.other_actor_type;
+                if (el?.result_actors_id) {
+                  whereOptions.result_actors_id = el.result_actors_id;
+                  delete whereOptions.actor_type_id;
+                } else {
+                  whereOptions.other_actor_type = el.other_actor_type;
+                }
               } else {
                 whereOptions.other_actor_type = IsNull();
               }

@@ -106,7 +106,7 @@ export class InnovationPathwayStepThreeService {
           )
         }
       }
-      
+
       await this.saveWorkshop(result.id, user, saveData, version);
 
       const { response } = await this.getStepThree(resultId);
@@ -230,11 +230,16 @@ export class InnovationPathwayStepThreeService {
 
         if (el?.actor_type_id) {
           const { actor_type_id } = el;
-          const whereOptions: any = { actor_type_id: el.actor_type_id, result_ip_result_id: riprc.result_by_innovation_package_id, other_actor_type: null };
+          const whereOptions: any = { actor_type_id: el.actor_type_id, result_ip_result_id: riprc.result_by_innovation_package_id };
           switch (actor_type_id) {
             case 5:
               if (el?.other_actor_type) {
-                whereOptions.other_actor_type = el.other_actor_type;
+                if (el?.result_ip_actors_id) {
+                  whereOptions.result_ip_actors_id = el.result_ip_actors_id;
+                  delete whereOptions.actor_type_id;
+                } else {
+                  whereOptions.other_actor_type = el.other_actor_type;
+                }
               } else {
                 whereOptions.other_actor_type = IsNull();
               }
