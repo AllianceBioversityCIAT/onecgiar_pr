@@ -6,6 +6,8 @@ import { ResultActor } from '../../../results/result-actors/entities/result-acto
 import { ResultIpMeasure } from '../../result-ip-measures/entities/result-ip-measure.entity';
 import { CreateResultIPDto } from '../../result-innovation-package/dto/create-result-ip.dto';
 import { ResultCountriesSubNational } from '../../../results/result-countries-sub-national/entities/result-countries-sub-national.entity';
+import { PartialType } from '@nestjs/mapped-types';
+import { CreateComplementaryInnovationDto } from './create-complementary-innovation.dto';
 export class UpdateInnovationPathwayDto {
     public result_id: number;
     public geo_scope_id: number;
@@ -57,3 +59,5 @@ interface institutionsInterface {
     institutions_id: number;
     deliveries?: number[];
 }
+
+export class UpdateComplementaryInnovationDto extends PartialType(CreateComplementaryInnovationDto) {}
