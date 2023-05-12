@@ -81,4 +81,5 @@ export class ActorN3 {
   women_non_youth: string | number;
   men_non_youth: string | number;
   showWomenExplanation: boolean;
+  other_actor_type: any;
 }

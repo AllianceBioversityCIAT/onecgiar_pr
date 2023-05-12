@@ -3,7 +3,7 @@ import { ResultsInnovationPackagesEnablerTypeService } from './results-innovatio
 import { CreateResultsInnovationPackagesEnablerTypeDto } from './dto/create-results-innovation-packages-enabler-type.dto';
 import { UpdateResultsInnovationPackagesEnablerTypeDto } from './dto/update-results-innovation-packages-enabler-type.dto';
 
-@Controller('results-innovation-packages-enabler-type')
+@Controller()
 export class ResultsInnovationPackagesEnablerTypeController {
   constructor(private readonly resultsInnovationPackagesEnablerTypeService: ResultsInnovationPackagesEnablerTypeService) {}
 

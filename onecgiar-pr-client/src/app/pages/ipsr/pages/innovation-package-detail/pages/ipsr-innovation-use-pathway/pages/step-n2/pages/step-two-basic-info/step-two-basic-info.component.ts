@@ -20,6 +20,10 @@ innovationCompletary :any = [];
           inno.result_code = Number(inno.result_code);
         });
       })
+
+      this.api.resultsSE.getStepTwoComentariesInnovation().subscribe((resp) =>{
+        console.log(resp);
+      })
   }
 
   informartion:any = [    {

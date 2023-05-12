@@ -221,20 +221,19 @@ export class ResultInnovationPackageService {
       const regions = CreateResultInnovationPackageDto.regions;
       const countries = CreateResultInnovationPackageDto.countries;
 
-      if (CreateResultInnovationPackageDto.geo_scope_id === 1) {
-        innovationGeoScope = 1;
-      } else if (CreateResultInnovationPackageDto.geo_scope_id === 2) {
-        innovationGeoScope = 2;
-      } else if (countries?.length > 1) {
-        innovationGeoScope = 3
+      if ([1, 2, 5].includes(CreateResultInnovationPackageDto.geo_scope_id)) {
+        innovationGeoScope = CreateResultInnovationPackageDto.geo_scope_id;
       } else {
-        innovationGeoScope = 4
+        innovationGeoScope = countries?.length > 1 ? 3 : 4;
       }
 
       if (CreateResultInnovationPackageDto.geo_scope_id === 2) {
         const regionsList = regions.map(r => r.name);
         innovationTitle = `Innovation Package and Scaling Readiness assessment for ${result.title} in ${regionsList.slice(0, -1).join(', ')}${regionsList.length > 1 ? ' and ' : ''}${regionsList[regionsList.length - 1]}`;
       } else if (CreateResultInnovationPackageDto.geo_scope_id === 3 || CreateResultInnovationPackageDto.geo_scope_id === 4) {
+        const countriesList = countries.map(c => c.name);
+        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${result.title} in ${countriesList.slice(0, -1).join(', ')}${countriesList.length > 1 ? ' and ' : ''}${countriesList[countriesList.length - 1]}`;
+      } else if (CreateResultInnovationPackageDto.geo_scope_id === 5) {
         const countriesList = countries.map(c => c.name);
         innovationTitle = `Innovation Package and Scaling Readiness assessment for ${result.title} in ${countriesList.slice(0, -1).join(', ')}${countriesList.length > 1 ? ' and ' : ''}${countriesList[countriesList.length - 1]}`;
       } else {
@@ -338,6 +337,7 @@ export class ResultInnovationPackageService {
             newRegions.result_id = newResult;
             newRegions.region_id = regions[i].id;
             newRegions.is_active = true;
+            newRegions.version_id = vrs.id;
             resultRegions.push(newRegions);
           }
         }
@@ -347,11 +347,11 @@ export class ResultInnovationPackageService {
             const newRc = await this._resultCountryRepository.save({
               result_id: newResult,
               country_id: ct.id,
-
+              version_id: vrs.id
             });
             newInnovationCountries.push(newRc);
             if (CreateResultInnovationPackageDto.geo_scope_id === 5 && ct?.result_countries_sub_national?.length) {
-              await this.saveSubNational(newRc.result_country_id, ct.result_countries_sub_national, user);
+              await this.saveSubNational(newRc.result_country_id, ct.result_countries_sub_national, user, vrs);
             }
           }
         }
@@ -393,7 +393,7 @@ export class ResultInnovationPackageService {
     }
   }
 
-  async saveSubNational(reCoId: number, subNationals: ResultCountriesSubNational[], user: TokenDto) {
+  async saveSubNational(reCoId: number, subNationals: ResultCountriesSubNational[], user: TokenDto, v: Version) {
     if (subNationals?.length) {
       subNationals.forEach(async el => {
         let reCoSub: ResultCountriesSubNational = null;
@@ -434,6 +434,7 @@ export class ResultInnovationPackageService {
             sub_level_one_name: el?.sub_level_one_name,
             sub_level_two_name: el?.sub_level_two_name,
             result_countries_id: reCoId,
+            version_id: v.id
           });
         }
       })

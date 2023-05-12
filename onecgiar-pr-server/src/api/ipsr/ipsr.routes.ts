@@ -4,6 +4,7 @@ import { ResultInnovationPackageModule } from './result-innovation-package/resul
 import { ResultsPackageTocResultModule } from './results-package-toc-result/results-package-toc-result.module';
 import { InnovationPackagingExpertsModule } from './innovation-packaging-experts/innovation-packaging-experts.module';
 import { ResultsInnovationPackagesValidationModuleModule } from './results-innovation-packages-validation-module/results-innovation-packages-validation-module.module';
+import { ResultsInnovationPackagesEnablerTypeModule } from './results-innovation-packages-enabler-type/results-innovation-packages-enabler-type.module';
 
 export const IpsrRoutes: Routes = [
   {
@@ -25,5 +26,9 @@ export const IpsrRoutes: Routes = [
   {
     path: 'results-innovation-packages-validation-module',
     module: ResultsInnovationPackagesValidationModuleModule
-  }
+  },
+  {
+    path: 'results-innovation-packages-enabler-type',
+    module: ResultsInnovationPackagesEnablerTypeModule
+  },
 ];
