@@ -67,7 +67,7 @@ export class PlatformReportService {
           default: ` 
           <div style="display: table; width: 100%; height: 100%;">
             <div style="display: table-cell; vertical-align: middle; text-align: center;">
-              <span style="width: 75%;float: left;text-align: left">This report was generated on ${data.generation_date}</span>
+              <span style="width: 75%;float: left;text-align: left">This report was generated on ${data.generation_date_footer}</span>
               <span style="width: 25%;float: left;color: #444;text-align: right;">{{page}}/{{pages}}</span>
             </div>
           </div>
@@ -97,6 +97,6 @@ export class PlatformReportService {
         return null;
       });
 
-    return pdf;
+    return { pdf, filename_date: data.generation_date_filename };
   }
 }
