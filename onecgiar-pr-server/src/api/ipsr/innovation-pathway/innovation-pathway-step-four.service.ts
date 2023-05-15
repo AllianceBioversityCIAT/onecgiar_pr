@@ -345,21 +345,19 @@ export class InnovationPathwayStepFourService {
   async saveInitiativeInvestment(resultId: number, user: TokenDto, saveStepFourDto: SaveStepFour, version: Version) {
     try {
       if (saveStepFourDto?.initiative_expected_investment?.length) {
-        const {
-          initiative_expected_investment: iei
-        } = saveStepFourDto;
+        const initiativeInvestments = saveStepFourDto.initiative_expected_investment;
 
-        iei.forEach(async i => {
+        for (const initiative of initiativeInvestments) {
           const ibr = await this._resultByInitiativeRepository.findOne({
             where: {
               result_id: resultId,
               is_active: true,
-              initiative_id: i.initiative_id
+              id: initiative.result_initiative_id
             }
           });
 
           if (ibr) {
-            const rie = await this._resultInitiativesBudgetRepository.findOne({
+            let rie: ResultInitiativeBudget = await this._resultInitiativesBudgetRepository.findOne({
               where: {
                 result_initiative_id: ibr.id,
                 is_active: true
@@ -367,29 +365,31 @@ export class InnovationPathwayStepFourService {
             });
 
             if (rie) {
-              await this._resultInitiativesBudgetRepository.update(rie.result_initiative_budget_id, {
-                current_year: i.current_year,
-                next_year: i.next_year,
-                is_determined: i.is_determined,
-                last_updated_by: user.id,
-              });
+              rie.current_year = initiative.current_year;
+              rie.next_year = initiative.next_year;
+              rie.is_determined = initiative.is_determined;
+              rie.last_updated_by = user.id;
+
+              await this._resultInitiativesBudgetRepository.save(rie);
             } else {
-              await this._resultInitiativesBudgetRepository.save({
+              const newRie = this._resultInitiativesBudgetRepository.create({
                 result_initiative_id: ibr.id,
-                current_year: i.current_year,
-                next_year: i.next_year,
-                is_determined: i.is_determined,
+                current_year: initiative.current_year,
+                next_year: initiative.next_year,
+                is_determined: initiative.is_determined,
                 version_id: version.id,
                 created_by: user.id,
                 last_updated_by: user.id,
-              })
+              });
+
+              await this._resultInitiativesBudgetRepository.save(newRie);
             }
           }
-        })
+        }
 
         return {
           valid: true
-        }
+        };
       }
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
