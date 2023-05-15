@@ -8,6 +8,7 @@ export class SaveStepTwoThree {
     public result_innovation_package: ResultInnovationPackage;
     public result_ip_result_core: Ipsr;
     public innovatonUse: innovatonUseInterface;
+    public link_workshop_list: string;
     public result_ip_result_complementary: Ipsr[];
 }
 

@@ -72,6 +72,10 @@ export class StepN3CurrentUseComponent {
     organizationItem.is_active = false;
   }
 
+  removeOther(actors) {
+    return actors.filter(item => item.actor_type_id != 5);
+  }
+
   executeTimer = null;
   validateYouth(i, isWomen: boolean) {
     const gender = isWomen ? 'women' : 'men';
@@ -106,5 +110,18 @@ export class StepN3CurrentUseComponent {
     setTimeout(() => {
       this.body.innovatonUse.actors[i][genderNonYouth] = this.body.innovatonUse.actors[i][gender] - this.body.innovatonUse.actors[i][genderYouth];
     }, 1100);
+  }
+
+  narrativeActors(){
+    return `
+    <ul>
+    <li>
+    If the innovation does not target specific groups of actors or people, then please specify the expected innovation use at organizational level or other use below. The numbers should reflect the expected innovation use by end of 2024.
+    </li>
+    <li>
+    The numbers for ‘youth' and 'non-youth' equal the total number for 'Women' or 'Men’.
+    </li>
+    </ul>
+    `
   }
 }

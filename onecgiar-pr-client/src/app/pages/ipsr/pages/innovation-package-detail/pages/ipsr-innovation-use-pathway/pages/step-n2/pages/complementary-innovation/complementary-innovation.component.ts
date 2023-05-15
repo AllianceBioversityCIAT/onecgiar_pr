@@ -28,7 +28,6 @@ export class ComplementaryInnovation {
   styleUrls: ['./complementary-innovation.component.scss']
 })
 export class ComplementaryInnovationComponent implements OnInit {
-
   innovationPackageCreatorBody:ComplementaryInnovation[] = [];
   complemntaryFunction:any;
   status:boolean = false;
@@ -57,11 +56,13 @@ export class ComplementaryInnovationComponent implements OnInit {
 
   async createInnovationEvent(e) {
     this.innovationPackageCreatorBody.push(e);
-
+    this.getInformationInnovationComentary(true);
   }
 
   cancelInnovation(result_id:any){
     const index = this.innovationPackageCreatorBody.findIndex((resp)=> resp.result_id == result_id)
+    const innovationFind = this.informationComplementaryInnovations.find(resp => this.innovationPackageCreatorBody[index].result_code == resp.result_code)
+    innovationFind.selected = false;
     this.innovationPackageCreatorBody.splice(index,1)
   }
 
@@ -81,7 +82,7 @@ export class ComplementaryInnovationComponent implements OnInit {
     
     this.api.resultsSE.PATCHComplementaryInnovation({ complementaryInovatins:body}).subscribe((resp) =>{
       console.log(resp);
-      
+     
     })
     console.log(this.regiterInnovationComplementary(this.innovationPackageCreatorBody));
   }
@@ -90,6 +91,10 @@ export class ComplementaryInnovationComponent implements OnInit {
     this.api.resultsSE.GETinnovationpathwayStepTwo().subscribe((resp) =>{
       console.log(resp);
       this.informationComplementaryInnovations = resp['response'];
+      this.innovationPackageCreatorBody.map(seleccionado=>{
+        let encontrado = this.informationComplementaryInnovations.find(tablaItem=>tablaItem.result_code == seleccionado.result_code)
+        encontrado.selected = true;
+      })
       this.informationComplementaryInnovations.map((inno: any) => {
         inno.full_name = `${inno?.result_code} ${inno?.title} ${inno?.initiative_official_code} ${inno?.initiative_official_code} ${inno?.lead_contact_person} yes no `;
         inno.result_code = Number(inno.result_code);

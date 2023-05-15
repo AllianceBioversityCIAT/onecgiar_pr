@@ -35,8 +35,8 @@
                     </td>
                     <td class="actions" *ngIf="!this.api.dataControlSE.platformIsClosed && !this.api.rolesSE.readOnly">
 
-                        <div class="link_button" [ngClass]="{'globalDisabled': findResultSelected(result)}"
-                            (click)="!result.selected ? selectInnovation(result) : null">{{findResultSelected(result)?
+                        <div class="link_button" [ngClass]="{'globalDisabled': result.selected}"
+                            (click)="!result.selected ? selectInnovation(result) : null">{{result.selected?
                             'Selected' :
                             'Select'}}</div>
                     </td>

@@ -1,9 +1,5 @@
 <div class="step_title"> <strong>Step 4:</strong>Additional information</div>
-<div *ngIf="this.ipsrStep4Body.is_result_ip_published">
-    <app-step-n4-picture-links [body]="this.ipsrStep4Body"></app-step-n4-picture-links>
 
-    <app-step-n4-reference-material-links [body]="this.ipsrStep4Body"></app-step-n4-reference-material-links>
-</div>
 
 
 <app-pr-input label="Provide the link to the workshop list of participants" [description]="workshopDescription()"
@@ -27,7 +23,11 @@
     optionLabel="name" optionValue="id" [options]="this.radioOptions"
     [(ngModel)]="this.ipsrStep4Body.is_result_ip_published" (click)="this.ipsrStep4Body.is_result_ip_published">
 </app-pr-radio-button>
+<div *ngIf="this.ipsrStep4Body.is_result_ip_published">
+    <app-step-n4-picture-links [body]="this.ipsrStep4Body"></app-step-n4-picture-links>
 
+    <app-step-n4-reference-material-links [body]="this.ipsrStep4Body"></app-step-n4-reference-material-links>
+</div>
 <div class="toggle_change_step">
     <app-pr-button
         [routerLink]="'/ipsr/detail/'+this.ipsrDataControlSE.resultInnovationCode+'/ipsr-innovation-use-pathway/step-3'"

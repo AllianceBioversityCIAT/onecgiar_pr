@@ -944,8 +944,26 @@ export class InnovationPathwayStepOneService {
       actors.map(async (el: ResultActor) => {
 
         let actorExists: ResultActor = null;
+
         if (el?.actor_type_id) {
-          actorExists = await this._resultActorRepository.findOne({ where: { actor_type_id: el.actor_type_id, result_id: result.id } });
+          const { actor_type_id } = el;
+          const whereOptions: any = { actor_type_id, result_id: result.id };
+          switch (actor_type_id) {
+            case 5:
+              if (el?.other_actor_type) {
+                if (el?.result_actors_id) {
+                  whereOptions.result_actors_id = el.result_actors_id;
+                  delete whereOptions.actor_type_id;
+                } else {
+                  whereOptions.other_actor_type = el.other_actor_type;
+                }
+              } else {
+                whereOptions.other_actor_type = IsNull();
+              }
+              break;
+          }
+
+          actorExists = await this._resultActorRepository.findOne({ where: whereOptions });
         } else if (!actorExists && el?.result_actors_id) {
           actorExists = await this._resultActorRepository.findOne({ where: { result_actors_id: el.result_actors_id, result_id: result.id } });
         } else if (!actorExists) {
@@ -962,7 +980,8 @@ export class InnovationPathwayStepOneService {
               men_youth: this.isNullData(el?.men_youth),
               women: this.isNullData(el?.women),
               women_youth: this.isNullData(el?.women_youth),
-              last_updated_by: user.id
+              last_updated_by: user.id,
+              other_actor_type: this.isNullData(el?.other_actor_type)
             }
           );
         } else {
@@ -973,6 +992,7 @@ export class InnovationPathwayStepOneService {
             men_youth: el.men_youth,
             women: el.women,
             women_youth: el.women_youth,
+            other_actor_type: el.other_actor_type,
             last_updated_by: user.id,
             created_by: user.id,
             result_id: result.id,

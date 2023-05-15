@@ -18,6 +18,7 @@ import { ResultsByIpInnovationUseMeasure } from '../results-by-ip-innovation-use
 import { IpsrRepository } from '../ipsr.repository';
 import { IsNull } from 'typeorm';
 import { ResultsIpInstitutionType } from '../results-ip-institution-type/entities/results-ip-institution-type.entity';
+import { Evidence } from '../../results/evidences/entities/evidence.entity';
 
 @Injectable()
 export class InnovationPathwayStepThreeService {
@@ -33,7 +34,7 @@ export class InnovationPathwayStepThreeService {
     protected readonly _resultsByIpInnovationUseMeasureRepository: ResultsByIpInnovationUseMeasureRepository,
     protected readonly _resultsIpActorRepository: ResultsIpActorRepository,
     protected readonly _resultsIpInstitutionTypeRepository: ResultsIpInstitutionTypeRepository,
-    protected readonly _evidence: EvidencesRepository,
+    protected readonly _evidenceRepository: EvidencesRepository,
   ) { }
 
   async saveComplementaryinnovation(resultId: number, user: TokenDto, saveData: SaveStepTwoThree) {
@@ -106,7 +107,10 @@ export class InnovationPathwayStepThreeService {
         }
       }
 
+      await this.saveWorkshop(result.id, user, saveData, version);
+
       const { response } = await this.getStepThree(resultId);
+
 
       return {
         response: response,
@@ -120,6 +124,61 @@ export class InnovationPathwayStepThreeService {
 
   }
 
+
+  async saveWorkshop(resultId: number, user: TokenDto, saveStepTwoThree: SaveStepTwoThree, version: Version) {
+    const id: number = +resultId;
+    try {
+      const allEvidence: Evidence[] = await this._evidenceRepository.getWokrshop(+id);
+      const existingWorkshop = allEvidence.map(e => e.link);
+      const existingIds = allEvidence.map(e => e.id);
+
+      const ipsrWorkshop: string = saveStepTwoThree.link_workshop_list;
+
+      if (ipsrWorkshop === '' || ipsrWorkshop === undefined || ipsrWorkshop === null) {
+        for (const e of existingIds) {
+          await this._evidenceRepository.update(e, {
+            is_active: 0,
+            last_updated_by: user.id,
+            last_updated_date: new Date(),
+          })
+        }
+        throw {
+          message: 'Workshop was not found',
+          status: HttpStatus.NOT_FOUND,
+        }
+      }
+
+      if (existingWorkshop?.length) {
+        for (const e of existingIds) {
+          await this._evidenceRepository.update(e, {
+            link: ipsrWorkshop,
+            is_active: 1,
+            last_updated_by: user.id,
+            last_updated_date: new Date(),
+          })
+        }
+      } else {
+        await this._evidenceRepository.save({
+          result_id: resultId,
+          link: ipsrWorkshop,
+          evidence_type_id: 5,
+          version_id: version.id,
+          created_by: user.id,
+          creation_date: new Date(),
+          last_updated_by: user.id,
+          last_updated_date: new Date(),
+        })
+      }
+
+      return {
+        valid: true
+      }
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+
   async getStepThree(resultId: number) {
     try {
       const result_ip = await this._resultInnovationPackageRepository.findOne({ where: { result_innovation_package_id: resultId, is_active: true } });
@@ -132,16 +191,27 @@ export class InnovationPathwayStepThreeService {
       }
       const result_core = await this._innovationByResultRepository.findOne({ where: { ipsr_role_id: 1, result_innovation_package_id: result_ip.result_innovation_package_id, is_active: true } });
       const result_complementary = await this._innovationByResultRepository.find({ where: { ipsr_role_id: 2, result_innovation_package_id: result_ip.result_innovation_package_id, is_active: true }, relations: { obj_result: true } });
+
+      const link_workshop_list = await this._evidenceRepository.findOne({
+        where: {
+          result_id: resultId,
+          is_active: 1,
+          evidence_type_id: 5
+        }
+      });
+
       const returdata: SaveStepTwoThree = {
         innovatonUse: {
           actors: (await this._resultsIpActorRepository.find({ where: { is_active: true, result_ip_result_id: result_core.result_by_innovation_package_id } })).map(el => ({ ...el, men_non_youth: el.men - el.men_youth, women_non_youth: el.women - el.women_youth })),
           measures: await this._resultsByIpInnovationUseMeasureRepository.find({ where: { is_active: true, result_ip_result_id: result_core.result_by_innovation_package_id } }),
           organization: (await this._resultsIpInstitutionTypeRepository.find({ where: { result_ip_results_id: result_core.result_by_innovation_package_id, institution_roles_id: 6, is_active: true }, relations: { obj_institution_types: { obj_parent: { obj_parent: true } } } })).map(el => ({ ...el, parent_institution_type_id: el.obj_institution_types?.obj_parent?.obj_parent?.code || null }))
         },
+        link_workshop_list: link_workshop_list?.link,
         result_innovation_package: result_ip,
         result_ip_result_complementary: result_complementary,
         result_ip_result_core: result_core
       }
+
       return {
         response: returdata,
         message: 'Successful response',
@@ -158,10 +228,26 @@ export class InnovationPathwayStepThreeService {
       actors.map(async (el: ResultsIpActor) => {
         let actorExists: ResultsIpActor = null;
 
-        if (el?.result_ip_actors_id) {
+        if (el?.actor_type_id) {
+          const { actor_type_id } = el;
+          const whereOptions: any = { actor_type_id: el.actor_type_id, result_ip_result_id: riprc.result_by_innovation_package_id };
+          switch (actor_type_id) {
+            case 5:
+              if (el?.other_actor_type) {
+                if (el?.result_ip_actors_id) {
+                  whereOptions.result_ip_actors_id = el.result_ip_actors_id;
+                  delete whereOptions.actor_type_id;
+                } else {
+                  whereOptions.other_actor_type = el.other_actor_type;
+                }
+              } else {
+                whereOptions.other_actor_type = IsNull();
+              }
+              break;
+          }
+          actorExists = await this._resultsIpActorRepository.findOne({ where: whereOptions });
+        } else if (!actorExists && el?.result_ip_actors_id) {
           actorExists = await this._resultsIpActorRepository.findOne({ where: { result_ip_actors_id: el.result_ip_actors_id, result_ip_result_id: riprc.result_by_innovation_package_id } });
-        } else if (!actorExists && el?.actor_type_id) {
-          actorExists = await this._resultsIpActorRepository.findOne({ where: { actor_type_id: el.actor_type_id, result_ip_result_id: riprc.result_by_innovation_package_id } });
         } else if (!actorExists) {
           actorExists = await this._resultsIpActorRepository.findOne({ where: { actor_type_id: IsNull(), result_ip_result_id: riprc.result_by_innovation_package_id } });
         }
@@ -178,6 +264,7 @@ export class InnovationPathwayStepThreeService {
               women: this.isNullData(el?.women),
               women_youth: this.isNullData(el?.women_youth),
               evidence_link: this.isNullData(el?.evidence_link),
+              other_actor_type: this.isNullData(el?.other_actor_type),
               last_updated_by: user.id
             }
           );
@@ -193,6 +280,7 @@ export class InnovationPathwayStepThreeService {
             created_by: user.id,
             evidence_link: el.evidence_link,
             result_ip_result_id: riprc.result_by_innovation_package_id,
+            other_actor_type: el.other_actor_type,
             version_id: version.id
           });
         }

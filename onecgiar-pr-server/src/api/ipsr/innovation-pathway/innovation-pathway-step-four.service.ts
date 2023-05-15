@@ -61,14 +61,6 @@ export class InnovationPathwayStepFourService {
         }
       });
 
-      const link_workshop_list = await this._evidenceRepository.findOne({
-        where: {
-          result_id: resultId,
-          is_active: 1,
-          evidence_type_id: 5
-        }
-      });
-
       const initiatives = await this._resultByInitiativeRepository.find({
         where: {
           result_id: resultId,
@@ -137,7 +129,6 @@ export class InnovationPathwayStepFourService {
         response: {
           ipsr_pictures,
           ipsr_materials,
-          link_workshop_list: link_workshop_list?.link,
           initiative_expected_investment,
           initiative_unit_time_id: result_ip.initiative_unit_time_id,
           initiative_expected_time: result_ip.initiative_expected_time,
@@ -181,7 +172,7 @@ export class InnovationPathwayStepFourService {
 
       const pictures = await this.savePictures(result.id, user, saveStepFourDto, version);
       const materials = await this.saveMaterials(result.id, user, saveStepFourDto, version);
-      const workshop = await this.saveWorkshop(result.id, user, saveStepFourDto, version);
+      // const workshop = await this.saveWorkshop(result.id, user, saveStepFourDto, version);
       const initiativeInvestment = await this.saveInitiativeInvestment(result.id, user, saveStepFourDto, version);
       const billateralInvestment = await this.saveBillateralInvestment(result.id, user, saveStepFourDto, version);
       const partnertInvestment = await this.savePartnertInvestment(user, saveStepFourDto, version);
@@ -201,7 +192,7 @@ export class InnovationPathwayStepFourService {
         response: {
           pictures,
           materials,
-          workshop,
+          // workshop,
           initiativeInvestment,
           billateralInvestment,
           partnertInvestment,
@@ -350,60 +341,6 @@ export class InnovationPathwayStepFourService {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
-
-  async saveWorkshop(resultId: number, user: TokenDto, saveStepFourDto: SaveStepFour, version: Version) {
-    const id: number = +resultId;
-    try {
-      const allEvidence: Evidence[] = await this._evidenceRepository.getWokrshop(+id);
-      const existingWorkshop = allEvidence.map(e => e.link);
-      const existingIds = allEvidence.map(e => e.id);
-
-      const ipsrWorkshop: string = saveStepFourDto.link_workshop_list;
-
-      if (ipsrWorkshop === '' || ipsrWorkshop === undefined || ipsrWorkshop === null) {
-        for (const e of existingIds) {
-          await this._evidenceRepository.update(e, {
-            is_active: 0,
-            last_updated_by: user.id,
-            last_updated_date: new Date(),
-          })
-        }
-        throw {
-          message: 'Workshop was not found',
-          status: HttpStatus.NOT_FOUND,
-        }
-      }
-
-      if (existingWorkshop?.length) {
-        for (const e of existingIds) {
-          await this._evidenceRepository.update(e, {
-            link: ipsrWorkshop,
-            is_active: 1,
-            last_updated_by: user.id,
-            last_updated_date: new Date(),
-          })
-        }
-      } else {
-        await this._evidenceRepository.save({
-          result_id: resultId,
-          link: ipsrWorkshop,
-          evidence_type_id: 5,
-          version_id: version.id,
-          created_by: user.id,
-          creation_date: new Date(),
-          last_updated_by: user.id,
-          last_updated_date: new Date(),
-        })
-      }
-
-      return {
-        valid: true
-      }
-    } catch (error) {
-      return this._handlersError.returnErrorRes({ error, debug: true });
-    }
-  }
-
 
   async saveInitiativeInvestment(resultId: number, user: TokenDto, saveStepFourDto: SaveStepFour, version: Version) {
     try {
