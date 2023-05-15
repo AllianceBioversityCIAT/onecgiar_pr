@@ -66,7 +66,7 @@ export class SubGeoscopeComponent implements OnInit {
 
 
   selectSubLevelTwo(index){
-    let subContriesSave = this.body.filter((resp) => this.countrySelected == resp.id)[0]['result_countries_sub_national'];
+    let subContriesSave:any[] = this.body.filter((resp) => this.countrySelected == resp.id)[0]['result_countries_sub_national'];
     let infoSublevel = this.subNationalTwo.filter((resp) => this.subNationalTwoSelected == resp.geonameId)[0];
     let infoSublevelOne = this.subNationalOne.filter((resp) => this.subNationalOneSelected == resp.geonameId)[0];
     if(subContriesSave.length >= index + 1){
