@@ -190,6 +190,7 @@ export class InnovationPathwayStepThreeService {
         };
       }
       const result_core = await this._innovationByResultRepository.findOne({ where: { ipsr_role_id: 1, result_innovation_package_id: result_ip.result_innovation_package_id, is_active: true } });
+      const core_innovation = await this._resultRepository.findOne({ where: { id: result_core.result_id, is_active: true } });
       const result_complementary = await this._innovationByResultRepository.find({ where: { ipsr_role_id: 2, result_innovation_package_id: result_ip.result_innovation_package_id, is_active: true }, relations: { obj_result: true } });
 
       const link_workshop_list = await this._evidenceRepository.findOne({
@@ -209,7 +210,8 @@ export class InnovationPathwayStepThreeService {
         link_workshop_list: link_workshop_list?.link,
         result_innovation_package: result_ip,
         result_ip_result_complementary: result_complementary,
-        result_ip_result_core: result_core
+        result_ip_result_core: result_core,
+        result_core_innovation: { core_result_code: core_innovation.result_code, core_title: core_innovation.title }
       }
 
       return {

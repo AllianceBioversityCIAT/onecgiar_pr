@@ -517,7 +517,8 @@ export class InnovationPathwayStepTwoService {
       const evidenceExist = await this._evidence.find({
         where: {
           result_id: complementaryInnovationId,
-          is_active: 1
+          is_active: 1,
+          evidence_type_id: 4
         }
       });
 
