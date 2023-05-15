@@ -103,13 +103,16 @@ export class AuthService {
       }
       userLogin.email = userLogin.email.trim().toLowerCase();
       const user: User = await this._customUserRepository.findOne({
-        where: { email: userLogin.email },
+        where: {
+          email: userLogin.email,
+          active: true
+        },
       });
       let valid: any;
       if (user) {
         const { email, first_name, last_name, is_cgiar, id } = <
           FullUserRequestDto
-        >user;
+          >user;
         if (is_cgiar) {
           const { response, message, status }: any = await this.validateAD(
             email,
