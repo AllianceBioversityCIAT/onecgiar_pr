@@ -87,15 +87,15 @@ export class ComplementaryInnovationComponent implements OnInit {
     console.log(this.regiterInnovationComplementary(this.innovationPackageCreatorBody));
   }
 
-  async getInformationInnovationComentary(estado){
+  getInformationInnovationComentary(estado){
     this.api.resultsSE.GETinnovationpathwayStepTwo().subscribe((resp) =>{
       console.log(resp);
       this.informationComplementaryInnovations = resp['response'];
-      this.innovationPackageCreatorBody.map(seleccionado=>{
+      this.innovationPackageCreatorBody.forEach(seleccionado=>{
         let encontrado = this.informationComplementaryInnovations.find(tablaItem=>tablaItem.result_code == seleccionado.result_code)
         encontrado.selected = true;
       })
-      this.informationComplementaryInnovations.map((inno: any) => {
+      this.informationComplementaryInnovations.forEach((inno: any) => {
         inno.full_name = `${inno?.result_code} ${inno?.title} ${inno?.initiative_official_code} ${inno?.initiative_official_code} ${inno?.lead_contact_person} yes no `;
         inno.result_code = Number(inno.result_code);
       });
