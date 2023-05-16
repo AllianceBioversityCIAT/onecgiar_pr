@@ -82,5 +82,15 @@ export class PlatformReportModule {
       const listArr = (list ?? '').split(',');
       return listArr.includes(value.toString());
     });
+
+    Handlebars.registerHelper(
+      'yesNoHelper',
+      function (value, valueIfNotDefined) {
+        if (arguments.length == 2) {
+          return value == null ? valueIfNotDefined : value ? 'Yes' : 'No';
+        }
+        return value ? 'Yes' : 'No';
+      },
+    );
   }
 }
