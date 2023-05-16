@@ -1281,7 +1281,6 @@ export class InnovationPathwayStepOneService {
   ) {
     if (crtr?.actors?.length) {
       const { actors } = crtr;
-      console.log("🚀 ~ file: innovation-pathway-step-one.service.ts:1284 ~ InnovationPathwayStepOneService ~ crtr:", crtr)
       actors.map(async (el: ResultActor) => {
         let actorExists: ResultActor = null;
 
@@ -1293,16 +1292,16 @@ export class InnovationPathwayStepOneService {
             result_actors_id: el.result_actors_id,
           };
 
-          switch (`${actor_type_id}`) {
-            case '5':
-              if (el?.result_actors_id) {
-                delete whereOptions.actor_type_id;
-              } else {
+          if (!el?.result_actors_id) {
+            switch (`${actor_type_id}`) {
+              case '5':
                 whereOptions.other_actor_type =
                   el?.other_actor_type || IsNull();
-                delete whereOptions.result_actors_id;
-              }
-              break;
+                break;
+            }
+            delete whereOptions.result_actors_id;
+          } else {
+            delete whereOptions.actor_type_id;
           }
 
           actorExists = await this._resultActorRepository.findOne({

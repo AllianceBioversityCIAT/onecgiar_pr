@@ -315,16 +315,16 @@ export class InnovationPathwayStepThreeService {
             result_ip_actors_id: el.result_ip_actors_id,
           };
 
-          switch (`${actor_type_id}`) {
-            case '5':
-              if (el?.result_ip_actors_id) {
-                delete whereOptions.actor_type_id;
-              } else {
+          if (!el?.result_ip_actors_id) {
+            switch (`${actor_type_id}`) {
+              case '5':
                 whereOptions.other_actor_type =
                   el?.other_actor_type || IsNull();
-                delete whereOptions.result_ip_actors_id;
-              }
-              break;
+                break;
+            }
+            delete whereOptions.result_ip_actors_id;
+          } else {
+            delete whereOptions.actor_type_id;
           }
           actorExists = await this._resultsIpActorRepository.findOne({
             where: whereOptions,
