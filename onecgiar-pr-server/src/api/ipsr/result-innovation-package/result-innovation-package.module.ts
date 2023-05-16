@@ -32,6 +32,7 @@ import { ResultIpEoiOutcomeRepository } from '../innovation-pathway/repository/r
 import { ResultCountriesSubNationalRepository } from '../../results/result-countries-sub-national/result-countries-sub-national.repository';
 import { YearRepository } from '../../results/years/year.repository';
 import { LinkedResultRepository } from '../../results/linked-results/linked-results.repository';
+import { EvidencesRepository } from '../../results/evidences/evidences.repository';
 
 
 @Module({
@@ -67,7 +68,8 @@ import { LinkedResultRepository } from '../../results/linked-results/linked-resu
     ResultIpEoiOutcomeRepository,
     ResultCountriesSubNationalRepository,
     YearRepository,
-    LinkedResultRepository
+    LinkedResultRepository,
+    EvidencesRepository
   ],
   imports: [VersionsModule],
   exports: [
