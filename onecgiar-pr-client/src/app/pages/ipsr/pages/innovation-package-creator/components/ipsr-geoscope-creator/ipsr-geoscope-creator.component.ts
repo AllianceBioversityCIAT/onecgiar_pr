@@ -25,7 +25,14 @@ export class IpsrGeoscopeCreatorComponent {
 
   onClicked(){
     this.sub_scope.push(this.sub_scope.length);
-    console.log(this.body);
+
+    for (let index = 0; index < this.body.countries.length; index++) {
+      if(!this.body.countries[index].hasOwnProperty('result_countries_sub_national')){
+        this.body.countries[index]['result_countries_sub_national'] = []
+      }
+      
+    }
+    
     
   }
 

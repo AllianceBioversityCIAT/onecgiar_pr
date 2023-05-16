@@ -36,6 +36,7 @@ export interface InitiativeExpectedInvestment {
     current_year: number;
     next_year: number;
     is_determined: boolean;
+    result_initiative_id: number;
 }
 export interface BilateralExpectedInvestment {
     non_pooled_projetct_id: number;
