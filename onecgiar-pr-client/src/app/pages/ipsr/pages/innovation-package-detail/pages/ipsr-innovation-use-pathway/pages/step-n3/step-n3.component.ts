@@ -16,6 +16,7 @@ export class StepN3Component implements OnInit {
     { id: true, name: 'Yes, an expert workshop was organized' },
     { id: false, name: 'No expert workshop was organized' }
   ];
+  result_core_innovation:any;
   constructor(public ipsrDataControlSE: IpsrDataControlService, private api: ApiService) {}
 
   ngOnInit(): void {
@@ -28,9 +29,10 @@ export class StepN3Component implements OnInit {
   getSectionInformation() {
     this.api.resultsSE.GETInnovationPathwayByRiId().subscribe(({ response }) => {
       // console.log('%cGET', 'font-size: 20px; color: #2BBE28;');
-      // console.log(response);
+      console.log(response);
       this.convertOrganizations(response?.innovatonUse?.organization);
       // console.log('%c____________________', 'font-size: 20px; color: #2BBE28;');
+      this.result_core_innovation = response.result_core_innovation;
       this.ipsrStep3Body = response;
     });
   }
