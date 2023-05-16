@@ -155,6 +155,16 @@ export class IpsrRepository extends Repository<Ipsr>{
                 WHERE
                     gtl.id = r.gender_tag_level_id
             ) AS gender_tag_level,
+            (
+                SELECT
+                    e1.link
+                FROM
+                    evidence e1
+                WHERE
+                    e1.result_id = r.id
+                    AND e1.gender_related = TRUE
+                    AND e1.is_active = 1
+            ) AS evidence_gender_tag,
             r.climate_change_tag_level_id,
             (
                 SELECT
@@ -164,6 +174,16 @@ export class IpsrRepository extends Repository<Ipsr>{
                 WHERE
                     gtl2.id = r.climate_change_tag_level_id
             ) AS climate_tag_level,
+            (
+                SELECT
+                    e2.link
+                FROM
+                    evidence e2
+                WHERE
+                    e2.result_id = r.id
+                    AND e2.youth_related = TRUE
+                    AND e2.is_active = 1
+            ) AS evidence_climate_tag,
             IF((r.is_krs = 1), true, false ) AS is_krs,
             r.krs_url,
             r.lead_contact_person,
