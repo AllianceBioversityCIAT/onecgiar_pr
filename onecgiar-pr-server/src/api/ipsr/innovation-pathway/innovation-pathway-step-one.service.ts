@@ -116,6 +116,17 @@ export class InnovationPathwayStepOneService {
         }
       });
 
+      const sub_national_counties: ResultCountriesSubNational[] = await this._resultCountriesSubNationalRepository.find({
+        where: {
+          result_countries_id: In(countries.map(el => el.result_country_id)),
+          is_active: true
+        }
+      });
+
+      countries.map(el => {
+        el['result_countries_sub_national'] = sub_national_counties.filter(seb => seb.result_countries_id == el.result_country_id);
+      });
+
       await experts.map(async el => {
         el.expertises = await this._resultIpExpertisesRepository.find({
           where: {
