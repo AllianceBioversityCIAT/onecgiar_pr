@@ -91,4 +91,9 @@ export class StepN3Component implements OnInit {
     this.ipsrStep3Body.result_innovation_package.readiness_level_evidence_based = null;
     this.ipsrStep3Body.result_innovation_package.use_level_evidence_based = null;
   }
+
+  resultUrl(resultCode) {
+    
+    return `/result/result-detail/${resultCode}/general-information`;
+  }
 }
