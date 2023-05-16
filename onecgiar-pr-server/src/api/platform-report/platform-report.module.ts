@@ -77,5 +77,10 @@ export class PlatformReportModule {
         }
       },
     );
+
+    Handlebars.registerHelper('inList', function (value, list: string) {
+      const listArr = (list ?? '').split(',');
+      return listArr.includes(value.toString());
+    });
   }
 }

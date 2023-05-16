@@ -28,6 +28,7 @@ export class PlatformReportService {
     const options = {
       format: 'A3',
       orientation: 'portrait',
+      timeout: '100000',
       border: {
         //top: '0mm',
         right: '10mm',
