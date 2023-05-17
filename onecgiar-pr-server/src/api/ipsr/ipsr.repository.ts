@@ -164,6 +164,7 @@ export class IpsrRepository extends Repository<Ipsr>{
                     e1.result_id = r.id
                     AND e1.gender_related = TRUE
                     AND e1.is_active = 1
+                    LIMIT 1
             ) AS evidence_gender_tag,
             r.climate_change_tag_level_id,
             (
@@ -183,6 +184,7 @@ export class IpsrRepository extends Repository<Ipsr>{
                     e2.result_id = r.id
                     AND e2.youth_related = TRUE
                     AND e2.is_active = 1
+                    LIMIT 1
             ) AS evidence_climate_tag,
             IF((r.is_krs = 1), true, false ) AS is_krs,
             r.krs_url,
@@ -193,7 +195,8 @@ export class IpsrRepository extends Repository<Ipsr>{
             LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
             LEFT JOIN clarisa_geographic_scope cgs ON cgs.id = r.geographic_scope_id
         WHERE r.is_active = 1
-            AND r.id = ?;
+            AND r.id = ?
+            AND rbi.initiative_role_id = 1;
         `;
 
         const countryQuery = `
