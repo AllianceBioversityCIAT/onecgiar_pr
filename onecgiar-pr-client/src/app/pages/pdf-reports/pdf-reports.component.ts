@@ -28,6 +28,9 @@ export class PdfReportsComponent implements OnInit {
 
   getPdfData() {
     console.log(this.report.iframeRoute);
+    console.log(this.activatedRoute.snapshot.paramMap.get('id'));
+    console.log(!this.activatedRoute.snapshot.paramMap.get('id'));
+    if (!this.activatedRoute.snapshot.paramMap.get('id')) return (this.error.type = 'warning');
     this.http.get<any>(this.report.iframeRoute).subscribe(
       resp => {
         console.log(resp);
@@ -38,6 +41,7 @@ export class PdfReportsComponent implements OnInit {
         this.validateErrors(err);
       }
     );
+    return null;
   }
 
   validateErrors({ message, status }) {

@@ -9,7 +9,9 @@ import { internationalizationData } from '../../data/internationalizationData';
 export class PageAlertComponent {
   internationalizationData = internationalizationData;
   @Input() type: string;
-  constructor() {}
+  constructor() {
+    console.log(this.type);
+  }
 
   get title() {
     switch (this.type) {
