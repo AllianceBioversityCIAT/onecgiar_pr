@@ -12,6 +12,8 @@ import { CreatePlatformReportDto } from './dto/create-platform-report.dto';
 import { UpdatePlatformReportDto } from './dto/update-platform-report.dto';
 import { Response } from 'express';
 import { DateFormatter } from '../../shared/utils/date-formatter';
+import { returnErrorDto } from '../../shared/handlers/error.utils';
+import { ReadStream } from 'typeorm/platform/PlatformTools';
 
 @Controller()
 export class PlatformReportController {
@@ -21,9 +23,14 @@ export class PlatformReportController {
   async getFullResultReportByResultCode(
     @Param('id', ParseIntPipe) id: number,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<StreamableFile> {
-    const result =
+  ): Promise<StreamableFile | returnErrorDto> {
+    let result =
       await this._platformReportService.getFullResultReportByResultCode(id);
+
+    if (result?.['message']) {
+      return <returnErrorDto>result;
+    }
+    result = <{ pdf: ReadStream; filename_date: any }>result;
 
     res.set({
       //'Content-Type': 'application/pdf',
