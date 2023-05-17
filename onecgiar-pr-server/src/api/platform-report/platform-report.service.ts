@@ -16,8 +16,18 @@ export class PlatformReportService {
     private readonly _handlerError: HandlersError,
   ) {}
 
-  async getFullResultReportByResultCode(result_code: number) {
+  async getFullResultReportByResultCode(result_code: string) {
     try {
+      const cleanInput = Number(result_code);
+      if (Number.isNaN(cleanInput)) {
+        const error: returnErrorDto = {
+          status: 404,
+          message: `The provided number "${result_code}" is not valid`,
+          response: null,
+        };
+        throw error;
+      }
+
       const report = await this._platformReportRepository.findOne({
         where: { id: PlatformReportEnum.FULL_RESULT_REPORT.id },
         relations: { template_object: true },
@@ -27,7 +37,7 @@ export class PlatformReportService {
         (
           await this._platformReportRepository.getDataFromProcedure(
             report.function_data_name,
-            [result_code],
+            [cleanInput],
           )
         )?.[0]?.result ?? '';
 

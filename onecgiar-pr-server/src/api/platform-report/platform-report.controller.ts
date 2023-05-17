@@ -19,13 +19,14 @@ import { ReadStream } from 'typeorm/platform/PlatformTools';
 export class PlatformReportController {
   constructor(private readonly _platformReportService: PlatformReportService) {}
 
-  @Get('/result/:id')
+  @Get('/result/:code')
   async getFullResultReportByResultCode(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('code') code: string,
     @Res({ passthrough: true }) res: Response,
   ): Promise<StreamableFile | returnErrorDto> {
+    code = code.trim();
     let result =
-      await this._platformReportService.getFullResultReportByResultCode(id);
+      await this._platformReportService.getFullResultReportByResultCode(code);
 
     if (result?.['message']) {
       return <returnErrorDto>result;
@@ -34,7 +35,7 @@ export class PlatformReportController {
 
     res.set({
       //'Content-Type': 'application/pdf',
-      'Content-Disposition': `filename="PRMS-Result-${id}_${result.filename_date}.pdf"`,
+      'Content-Disposition': `filename="PRMS-Result-${code}_${result.filename_date}.pdf"`,
     });
 
     return new StreamableFile(result.pdf, { type: 'application/pdf' });
