@@ -10,8 +10,10 @@
                 ToC</span>
             <img src="assets/icons/toc_icon.png" alt="">
         </a>
+        
     </div>
-
+    <app-pr-field-header *ngIf="this.api.resultsSE.ipsrDataControlSE.inContributos == true" description="Specify to which Work Package or End-of-Initiative Outcomes the scaling of the core innovation is expected to contribute to by 2024 in the specific geolocation"></app-pr-field-header>
+        
     <div class="auto_fit_container" *ngIf="initiative.planned_result == true || initiative.planned_result == false ">
         <app-pr-select *ngIf="this.initiative?.planned_result && resultLevelId == 1" [options]="this.outputList"
             label="Output" optionLabel="extraInformation" optionValue="toc_result_id" [disabled]="!this.editable"

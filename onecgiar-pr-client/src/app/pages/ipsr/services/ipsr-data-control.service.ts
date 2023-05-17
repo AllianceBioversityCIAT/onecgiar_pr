@@ -7,6 +7,7 @@ export class IpsrDataControlService {
   resultInnovationCode = null;
   resultInnovationId = null;
   inIpsr = null;
+  inContributos = null;
   modals = {
     submission: false,
     unsubmit: false
