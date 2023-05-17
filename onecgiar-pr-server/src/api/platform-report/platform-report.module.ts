@@ -77,5 +77,20 @@ export class PlatformReportModule {
         }
       },
     );
+
+    Handlebars.registerHelper('inList', function (value, list: string) {
+      const listArr = (list ?? '').split(',');
+      return listArr.includes(value.toString());
+    });
+
+    Handlebars.registerHelper(
+      'yesNoHelper',
+      function (value, valueIfNotDefined) {
+        if (arguments.length == 2) {
+          return value == null ? valueIfNotDefined : value ? 'Yes' : 'No';
+        }
+        return value ? 'Yes' : 'No';
+      },
+    );
   }
 }

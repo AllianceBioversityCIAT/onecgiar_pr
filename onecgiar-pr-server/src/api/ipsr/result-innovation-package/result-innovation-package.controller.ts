@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException } from '@nestjs/common';
 import { ResultInnovationPackageService } from './result-innovation-package.service';
-import { CreateResultInnovationPackageDto } from './dto/create-result-innovation-package.dto';
+import { CreateResultInnovationPackageDto, UpdateGeneralInformationDto } from './dto/create-result-innovation-package.dto';
 import { UpdateResultInnovationPackageDto } from './dto/update-result-innovation-package.dto';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
@@ -23,11 +23,11 @@ export class ResultInnovationPackageController {
   @Patch('general-information/:resultId')
   async generalInformation(
     @Param('resultId') resultId: number,
-    @Body() updateResultInnovationPackageDto: any,
+    @Body() updateGeneralInformationDto: UpdateGeneralInformationDto,
     @UserToken() user: TokenDto
   ) {
     const { message, response, status } =
-      await this.resultInnovationPackageService.generalInformation(resultId, updateResultInnovationPackageDto, user);
+      await this.resultInnovationPackageService.generalInformation(resultId, updateGeneralInformationDto, user);
 
     throw new HttpException({ message, response }, status);
   }
