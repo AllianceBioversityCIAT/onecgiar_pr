@@ -1,4 +1,5 @@
-<iframe onload="iframeLoaded = true" [src]="this.report.sanitizedUrl" *ngIf="this.report.sanitizedUrl"
+<!-- (sandbox)="handleError($event)" -->
+<iframe onload="iframeLoaded = true;loaded()" [src]="this.report.sanitizedUrl" *ngIf="this.report.sanitizedUrl"
     frameborder="0"></iframe>
 
 <!-- <object data="https://prtest-back.ciat.cgiar.org/api/platform-report/result/56" type="application/pdf" width="100%"
@@ -6,3 +7,4 @@
     <p>Alternative text - include a link <a href="myfile.pdf">to the PDF!</a></p>
 </object> -->
 <!-- <div class="iframe_spinner" *ngIf="this.iframeLoaded || true"></div> -->
+<app-page-alert *ngIf="this.error.type" [type]="this.error.type"></app-page-alert>
