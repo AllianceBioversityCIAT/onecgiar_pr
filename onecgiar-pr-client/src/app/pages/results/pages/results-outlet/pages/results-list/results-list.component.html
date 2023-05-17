@@ -17,22 +17,15 @@
     [rowsPerPageOptions]="[10,50,100]">
     <ng-template pTemplate="header">
       <tr>
-        <th>PDF</th>
         <th pSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder">
           <p-sortIcon field="{{column.attr}}"></p-sortIcon>{{column.title}}
         </th>
+        <th>PDF</th>
         <th *ngIf="!this.api.dataControlSE.platformIsClosed">Action</th>
-
       </tr>
     </ng-template>
     <ng-template pTemplate="body" let-result>
       <tr>
-        <td>
-          <a [href]="'/reports/result-details/'+result?.result_code+'?phase=1'" target="_blank"
-            rel="noopener noreferrer">
-            <i class="material-icons-round pdf_icon">description</i>
-          </a>
-        </td>
         <td *ngFor="let column of columnOrder; let i=index" class="{{column.attr}}">
           <a class="{{column.class}}" [routerLink]="'/result/result-detail/' + result?.result_code">
             <div class="point" [style.background]="'var(--pr-color-result-level-'+result?.result_level_id+')'"
@@ -46,11 +39,16 @@
             {{ result[column.attr] }}
           </div>
         </td>
+        <td>
+          <a [href]="'/reports/result-details/'+result?.result_code+'?phase=1'" target="_blank"
+            rel="noopener noreferrer">
+            <i class="material-icons-round pdf_icon">description</i>
+          </a>
+        </td>
         <td *ngIf="!this.api.dataControlSE.platformIsClosed">
           <div class="icon_container"><i class="pi pi-ellipsis-v"
               (click)="menu.toggle($event);onPressAction(result)"></i></div>
         </td>
-
       </tr>
     </ng-template>
   </p-table>
