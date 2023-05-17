@@ -119,7 +119,12 @@ export class InnovationPathwayStepThreeService {
         }
       }
 
-      await this.saveWorkshop(result.id, user, saveData, version);
+      await this.saveWorkshop(
+        result.id,
+        user,
+        saveData,
+        version,
+      );
 
       const { response } = await this.getStepThree(resultId);
 
@@ -183,7 +188,6 @@ export class InnovationPathwayStepThreeService {
           evidence_type_id: 5,
           version_id: version.id,
           created_by: user.id,
-          creation_date: new Date(),
           last_updated_by: user.id,
           last_updated_date: new Date(),
         });
@@ -239,6 +243,7 @@ export class InnovationPathwayStepThreeService {
       });
 
       const returdata: SaveStepTwoThree = {
+        link_workshop_list: link_workshop_list?.link,
         innovatonUse: {
           actors: (
             await this._resultsIpActorRepository.find({
@@ -277,7 +282,6 @@ export class InnovationPathwayStepThreeService {
               el.obj_institution_types?.obj_parent?.obj_parent?.code || null,
           })),
         },
-        link_workshop_list: link_workshop_list?.link,
         result_innovation_package: result_ip,
         result_ip_result_complementary: result_complementary,
         result_ip_result_core: result_core,

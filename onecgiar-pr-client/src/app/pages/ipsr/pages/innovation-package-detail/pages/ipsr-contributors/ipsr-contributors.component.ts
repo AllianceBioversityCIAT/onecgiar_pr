@@ -18,6 +18,7 @@ export class IpsrContributorsComponent {
     this.getSectionInformation();
     this.requestEvent();
     this.api.setTitle('Contributors');
+    this.api.resultsSE.ipsrDataControlSE.inContributos = true;
   }
 
   getSectionInformation() {
