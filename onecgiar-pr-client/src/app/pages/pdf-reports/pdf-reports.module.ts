@@ -3,10 +3,11 @@ import { CommonModule } from '@angular/common';
 
 import { PdfReportsRoutingModule } from './pdf-reports-routing.module';
 import { PdfReportsComponent } from './pdf-reports.component';
+import { PageAlertModule } from 'src/app/shared/components/page-alert/page-alert.module';
 
 @NgModule({
   declarations: [PdfReportsComponent],
   exports: [PdfReportsComponent],
-  imports: [CommonModule, PdfReportsRoutingModule]
+  imports: [CommonModule, PdfReportsRoutingModule, PageAlertModule]
 })
 export class PdfReportsModule {}
