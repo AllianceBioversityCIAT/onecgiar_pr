@@ -11,10 +11,11 @@
             description="Select policy type" optionLabel="name" optionValue="id" placeholder="Select policy type"
             [(ngModel)]="innovationUseInfoBody.policy_type_id">
         </app-pr-select>
-        <app-pr-input label="USD amount" type="number" description="USD amount" placeholder="0"
+        <app-pr-input label="USD amount" type="text" description="USD amount" placeholder="0"
             *ngIf="innovationUseInfoBody.policy_type_id == 1" [required]="false"
-            [(ngModel)]="innovationUseInfoBody.amount">
+            [(ngModel)]="cantidad" (change)="updateValue($any($event.target).value)">
         </app-pr-input>
+        
         <app-pr-select [options]="[{id:1,name:'Confirmed'},{id:2,name:'Estimated'},{id:3,name:'Unknown'}]"
             *ngIf="innovationUseInfoBody.policy_type_id == 1" label="Status" description="Select Status"
             optionLabel="name" optionValue="id" placeholder="Select stage" [required]="false"
