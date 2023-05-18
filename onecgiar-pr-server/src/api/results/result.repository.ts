@@ -893,6 +893,9 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     const query = `
     select 
     r.result_code as "Result Code",
+    concat('${
+      env.FRONT_END_PDF_ENDPOINT
+    }', r.result_code,?, 'phase=1') as \`PDF Link\`,
     rl.name as "Result Level",
     rt.name as "Result Type",
     (case 
@@ -1057,7 +1060,7 @@ left join clarisa_countries cc3
     `;
 
     try {
-      const results = await this.query(query);
+      const results = await this.query(query, ['?']);
       return results;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -1074,6 +1077,7 @@ left join clarisa_countries cc3
     const query = `
     select 
     r.result_code as "Result Code",
+    concat('${env.FRONT_END_PDF_ENDPOINT}', r.result_code,?, 'phase=1') as \`PDF Link\`,
     rl.name as "Result Level",
     rt.name as "Result Type",
     (case 
@@ -1240,7 +1244,7 @@ left join clarisa_countries cc3
     `;
 
     try {
-      const results = await this.query(query);
+      const results = await this.query(query, ['?']);
       return results;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
