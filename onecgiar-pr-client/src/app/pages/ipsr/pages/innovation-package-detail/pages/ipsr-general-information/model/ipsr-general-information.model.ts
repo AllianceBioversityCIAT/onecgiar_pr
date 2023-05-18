@@ -7,4 +7,6 @@ export class IpsrGeneralInformationBody {
   is_krs: boolean = null;
   krs_url = null;
   reported_year_id = null;
+  evidence_gender_tag = null;
+  evidence_climate_tag = null;
 }
