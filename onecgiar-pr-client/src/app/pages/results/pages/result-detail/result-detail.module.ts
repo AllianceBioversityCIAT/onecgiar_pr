@@ -14,9 +14,11 @@ import { ResultTitleComponent } from './components/result-title/result-title.com
 import { SubmissionModalComponent } from './components/submission-modal/submission-modal.component';
 import { SubmissionModalModule } from './components/submission-modal/submission-modal.module';
 import { UnsubmitModalModule } from './components/unsubmit-modal/unsubmit-modal.module';
-
+import { PdfActionsComponent } from './components/pdf-actions/pdf-actions.component';
+import { PdfActionsModule } from './components/pdf-actions/pdf-actions.module';
+import { ToastModule } from 'primeng/toast';
 @NgModule({
   declarations: [ResultDetailComponent, PanelMenuComponent, PanelMenuPipe, NoEditContainerComponent, ResultTitleComponent],
-  imports: [CommonModule, ResultDetailRoutingModule, PartnersRequestModule, CustomFieldsModule, BreadcrumbModule, ButtonModule, SubmissionModalModule, UnsubmitModalModule]
+  imports: [CommonModule, ResultDetailRoutingModule, PartnersRequestModule, CustomFieldsModule, BreadcrumbModule, ButtonModule, SubmissionModalModule, UnsubmitModalModule, PdfActionsModule, ToastModule]
 })
 export class ResultDetailModule {}
