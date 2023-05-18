@@ -68,6 +68,21 @@ export class ResultsIpActor extends BaseEntity {
     })
     evidence_link!: string;
 
+    @Column({
+        name: 'sex_and_age_disaggregation',
+        type: 'boolean',
+        nullable: true,
+        default: false
+    })
+    sex_and_age_disaggregation: boolean;
+
+    @Column({
+        name: 'how_many',
+        type: 'bigint',
+        nullable: true,
+    })
+    how_many: number;
+
     @ManyToOne(() => Ipsr, ir => ir.obj_result_ip_actors)
     @JoinColumn({
         name: 'result_ip_result_id'
