@@ -3,6 +3,7 @@ export class IpsrStep3Body {
   result_innovation_package = new Resultinnovationpackage();
   result_ip_result_complementary: Resultipresultcomplementary[] = [];
   result_ip_result_core = new Resultipresultcomplementary();
+  link_workshop_list: string;
 }
 
 class Resultipresultcomplementary {

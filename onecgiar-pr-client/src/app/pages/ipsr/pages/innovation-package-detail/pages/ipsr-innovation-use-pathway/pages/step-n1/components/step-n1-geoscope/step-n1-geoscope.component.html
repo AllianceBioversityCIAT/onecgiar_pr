@@ -14,4 +14,21 @@
     optionValue="id" placeholder="Select countries" [(ngModel)]="body.countries" [ngClass]="{'globalDisabled': true}">
 </app-pr-multi-select>
 
+<app-pr-multi-select *ngIf="body.geo_scope_id == 5" [options]="this.regionsCountriesSE.countriesList"
+    label="Select countries" selectedLabel="Countries selected" selectedOptionLabel="name" optionLabel="name"
+    optionValue="id" placeholder="Select countries" [(ngModel)]="body.countries" [ngClass]="{'globalDisabled': true}">
+</app-pr-multi-select>
+
+<div *ngIf="body.geo_scope_id == 5">
+    <div *ngFor="let countrie of body.countries">
+        <div class="geoscope" *ngFor="let subCountri of countrie['result_countries_sub_national']">
+            <app-pr-input label="Country" [required]="false" [(ngModel)]="countrie.name" [ngClass]="{'globalDisabled': true}"></app-pr-input>
+            <app-pr-input label="Sub-national level 1" [required]="false" [(ngModel)]="subCountri.sub_level_one_name" [ngClass]="{'globalDisabled': true}"></app-pr-input>
+            <app-pr-input label="Sub-national level 2" [required]="false" [(ngModel)]="subCountri.sub_level_two_name" [ngClass]="{'globalDisabled': true}"></app-pr-input>
+        </div>
+    </div>
+   
+</div>
+
+
 <div class="step_divider" [ngClass]="{'globalDisabled': true}"></div>

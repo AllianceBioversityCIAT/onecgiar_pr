@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
-import { IpsrStep1Body, CoreResult, Measure } from './model/Ipsr-step-1-body.model';
+import { IpsrStep1Body, CoreResult, Measure, Actor, Organization, Expert } from './model/Ipsr-step-1-body.model';
 import { IpsrDataControlService } from '../../../../../../services/ipsr-data-control.service';
 
 @Component({
@@ -23,7 +23,8 @@ export class StepN1Component implements OnInit {
     this.api.resultsSE.GETInnovationPathwayByStepOneResultId().subscribe(({ response }) => {
       this.convertOrganizations(response?.innovatonUse?.organization);
       this.ipsrStep1Body = response;
-
+      console.log(response);
+      
       this.ipsrStep1Body.geo_scope_id = response.geo_scope_id == 3 ? 4 : response.geo_scope_id;
       this.coreResult = response?.coreResult;
 
@@ -37,6 +38,16 @@ export class StepN1Component implements OnInit {
       this.ipsrStep1Body.impactAreas.map(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
       this.ipsrStep1Body.experts.forEach(expert => expert.expertises.map(expertItem => (expertItem.name = expertItem.obj_expertises.name)));
       //? console.log(this.ipsrStep1Body);
+
+      if (this.ipsrStep1Body.innovatonUse.actors.length == 0) {
+        this.ipsrStep1Body.innovatonUse.actors.push(new Actor());
+      }
+      if (this.ipsrStep1Body.innovatonUse.organization.length == 0) {
+        this.ipsrStep1Body.innovatonUse.organization.push(new Organization());
+      }
+      if (this.ipsrStep1Body.experts.length == 0) {
+        this.ipsrStep1Body.experts.push(new Expert());
+      }
     });
   }
   onSaveSection() {
