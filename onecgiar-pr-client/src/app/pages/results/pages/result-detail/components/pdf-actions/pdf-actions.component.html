@@ -1,0 +1,23 @@
+<div class="pdf_actions_container">
+    <div class="header">PDF</div>
+    <div class="content">
+        <div class="actions">
+            <a class="action" pTooltip="Click to view the pdf" tooltipPosition="bottom" [href]="link" target="_blank">
+                <app-pdf-icon hexadecimalColor="#2196F3"></app-pdf-icon>
+                <div class="name">
+                    View
+                </div>
+            </a>
+            <div class="line"></div>
+            <div class="action" pTooltip="Copy to the clipboard" tooltipPosition="bottom" [cdkCopyToClipboard]="link"
+                (click)="copyLink()">
+                <i class="material-icons-round">
+                    content_copy
+                </i>
+                <div class="name">
+                    Copy link
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

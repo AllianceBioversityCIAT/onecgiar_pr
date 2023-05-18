@@ -1,4 +1,4 @@
-<div class="panel_menu shadow-1">
+<div class="panel_menu custom_scroll shadow-1">
   <div>
     <div class="back_button">
       <a routerLink="/result/results-list" class="open_link_in_new_page">
@@ -24,6 +24,11 @@
       </div>
     </div>
   </div>
+
+  <div style="padding: 0px 35px;">
+    <app-pdf-actions (copyEvent)="copyEvent.emit()"></app-pdf-actions>
+  </div>
+
   <div class="submit_button"
     *ngIf="validateMember(this.api.dataControlSE?.myInitiativesList) != 6  && !this.api.rolesSE.readOnly">
     <app-pr-button [ngClass]="{'globalDisabled': !this.greenChecksSE.submit}"
