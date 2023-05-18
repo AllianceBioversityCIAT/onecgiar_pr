@@ -8,6 +8,7 @@ import {
   HandlersError,
   returnErrorDto,
 } from '../../shared/handlers/error.utils';
+import { env } from 'process';
 
 @Injectable()
 export class PlatformReportService {
@@ -16,13 +17,24 @@ export class PlatformReportService {
     private readonly _handlerError: HandlersError,
   ) {}
 
-  async getFullResultReportByResultCode(result_code: string) {
+  async getFullResultReportByResultCode(result_code: string, phase: string) {
     try {
-      const cleanInput = Number(result_code);
-      if (Number.isNaN(cleanInput)) {
+      const cleanResultCodeInput = Number(result_code);
+      if (Number.isNaN(cleanResultCodeInput)) {
         const error: returnErrorDto = {
           status: 404,
-          message: `The provided number "${result_code}" is not valid`,
+          message: `The provided result code "${result_code}" is not valid`,
+          response: null,
+        };
+        throw error;
+      }
+
+      //FIXME when the versioning is implemented to take the last active phase as the default parameter
+      const cleanPhaseInput = Number(phase ?? '1');
+      if (Number.isNaN(cleanPhaseInput)) {
+        const error: returnErrorDto = {
+          status: 404,
+          message: `The provided phase code "${phase}" is not valid`,
           response: null,
         };
         throw error;
@@ -37,14 +49,14 @@ export class PlatformReportService {
         (
           await this._platformReportRepository.getDataFromProcedure(
             report.function_data_name,
-            [cleanInput],
+            [cleanResultCodeInput, cleanPhaseInput, env.FRONT_END_PDF_ENDPOINT],
           )
         )?.[0]?.result ?? '';
 
-      if (data['error']) {
+      if (data['error'] || data['internal_error']) {
         const error: returnErrorDto = {
-          status: 404,
-          message: data['error'],
+          status: data['error'] ? 404 : 500,
+          message: data['error'] ?? data['internal_error'],
           response: null,
         };
         throw error;
