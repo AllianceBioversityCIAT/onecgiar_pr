@@ -22,6 +22,7 @@ import { IpsrRepository } from '../ipsr.repository';
 import { IsNull } from 'typeorm';
 import { ResultsIpInstitutionType } from '../results-ip-institution-type/entities/results-ip-institution-type.entity';
 import { Evidence } from '../../results/evidences/entities/evidence.entity';
+import { Ipsr } from '../entities/ipsr.entity';
 
 @Injectable()
 export class InnovationPathwayStepThreeService {
@@ -80,42 +81,21 @@ export class InnovationPathwayStepThreeService {
           readiness_level_evidence_based:
             result_ip.readiness_level_evidence_based,
           use_level_evidence_based: result_ip.use_level_evidence_based,
+          assessed_during_expert_workshop_id:
+            result_ip?.is_expert_workshop_organized
+              ? result_ip.assessed_during_expert_workshop_id
+              : null,
           last_updated_by: user.id,
         },
       );
 
-      await this._innovationByResultRepository.update(
-        result_ip_core.result_by_innovation_package_id,
-        {
-          readiness_level_evidence_based:
-            result_ip_core.readiness_level_evidence_based,
-          readinees_evidence_link: result_ip_core.readinees_evidence_link,
-          use_level_evidence_based: result_ip_core.use_level_evidence_based,
-          use_evidence_link: result_ip_core.use_evidence_link,
-          use_details_of_evidence: result_ip_core.use_details_of_evidence,
-          readiness_details_of_evidence:
-            result_ip_core.readiness_details_of_evidence,
-          last_updated_by: user.id,
-        },
-      );
+      await this.saveinnovationWorkshop(user, result_ip_core);
 
       await this.saveInnovationUse(user, version, saveData);
 
       if (result_ip_complementary?.length) {
         for (const ripc of result_ip_complementary) {
-          this._innovationByResultRepository.update(
-            ripc.result_by_innovation_package_id,
-            {
-              readiness_level_evidence_based:
-                ripc.readiness_level_evidence_based,
-              readinees_evidence_link: ripc.readinees_evidence_link,
-              use_level_evidence_based: ripc.use_level_evidence_based,
-              use_evidence_link: ripc.use_evidence_link,
-              use_details_of_evidence: ripc.use_details_of_evidence,
-              readiness_details_of_evidence: ripc.readiness_details_of_evidence,
-              last_updated_by: user.id,
-            },
-          );
+          await this.saveinnovationWorkshop(user, ripc);
         }
       }
 
@@ -129,6 +109,48 @@ export class InnovationPathwayStepThreeService {
           'The Result Complementary Innovation have been saved successfully',
         status: HttpStatus.OK,
       };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async saveinnovationWorkshop(user: TokenDto, rbi: Ipsr) {
+    try {
+      await this._innovationByResultRepository.update(
+        rbi.result_by_innovation_package_id,
+        {
+          readiness_level_evidence_based: this.isNullData(
+            rbi?.readiness_level_evidence_based,
+          ),
+          readinees_evidence_link: this.isNullData(
+            rbi?.readinees_evidence_link,
+          ),
+          use_level_evidence_based: this.isNullData(
+            rbi?.use_level_evidence_based,
+          ),
+          use_evidence_link: this.isNullData(rbi?.use_evidence_link),
+          use_details_of_evidence: this.isNullData(
+            rbi?.use_details_of_evidence,
+          ),
+          readiness_details_of_evidence: this.isNullData(
+            rbi?.readiness_details_of_evidence,
+          ),
+          potential_innovation_readiness_level: this.isNullData(
+            rbi?.potential_innovation_readiness_level,
+          ),
+          potential_innovation_use_level: this.isNullData(
+            rbi?.potential_innovation_use_level,
+          ),
+          current_innovation_readiness_level: this.isNullData(
+            rbi?.current_innovation_readiness_level,
+          ),
+          current_innovation_use_level: this.isNullData(
+            rbi?.current_innovation_use_level,
+          ),
+          last_updated_by: this.isNullData(user?.id),
+        },
+      );
+      return;
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }

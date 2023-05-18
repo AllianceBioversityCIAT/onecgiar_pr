@@ -67,3 +67,9 @@ export class returnDataDto {
   public data: Type;
   public logs: returnErrorDto;
 }
+
+export class ReturnResponseDto<T>{
+  public response: T;
+  public message: string;
+  public statusCode: HttpStatus;
+}
