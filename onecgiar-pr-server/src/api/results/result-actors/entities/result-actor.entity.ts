@@ -61,6 +61,21 @@ export class ResultActor extends BaseEntity {
     })
     other_actor_type!: string;
 
+    @Column({
+        name: 'sex_and_age_disaggregation',
+        type: 'boolean',
+        nullable: true,
+        default: false
+    })
+    sex_and_age_disaggregation: boolean;
+
+    @Column({
+        name: 'how_many',
+        type: 'bigint',
+        nullable: true,
+    })
+    how_many: number;
+
     @ManyToOne(() => Result, r => r.obj_result_actor)
     @JoinColumn({
         name: 'result_id'
