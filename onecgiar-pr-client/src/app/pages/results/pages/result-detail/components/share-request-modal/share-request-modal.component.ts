@@ -24,27 +24,27 @@ export class ShareRequestModalComponent {
       initiative_id: 10
     }
   ];
-  constructor(public retrieveModalSE: RetrieveModalService, public api: ApiService, public rolesSE: RolesService, public shareRequestModalSE: ShareRequestModalService, private router: Router, public resultsNotificationsSE: ResultsNotificationsService) {}
+  constructor(public retrieveModalSE: RetrieveModalService, public api: ApiService, public rolesSE: RolesService, public shareRequestModalSE: ShareRequestModalService, private router: Router, public resultsNotificationsSE: ResultsNotificationsService) { }
   ngOnInit(): void {
-  
-    
+
+
     this.shareRequestModalSE.shareRequestBody = new ShareRequestBody();
     //Called after the constructor, initializing input properties, and the first call to ngOnChanges.
     //Add 'implements OnInit' to the class.
     console.log(this.api.resultsSE.ipsrDataControlSE.inIpsr);
-    
+
     this.GET_AllInitiatives();
-    
+
   }
 
   cleanObject() {
     // console.log('cleanForm');
     this.showForm = false;
     this.shareRequestModalSE.shareRequestBody = new ShareRequestBody();
-    
+
     setTimeout(() => {
       console.log(this.allInitiatives);
-      
+
       this.showForm = true;
     }, 0);
   }
@@ -60,9 +60,9 @@ export class ShareRequestModalComponent {
 
         this.api.alertsFe.show({ id: 'requesqshared', title: `Request sent`, description: `Once your request is accepted, the result can be mapped to your Initiative's ToC.`, status: 'success' });
         this.requesting = false;
-        if(this.api.resultsSE.ipsrDataControlSE.inIpsr) {
+        if (this.api.resultsSE.ipsrDataControlSE.inIpsr) {
           this.router.navigate([`/ipsr/list/innovation-list`]);
-        }else{
+        } else {
           this.router.navigate([`/result/results-outlet/results-list`]);
         }
       },
@@ -90,23 +90,21 @@ export class ShareRequestModalComponent {
 
   acceptOrReject() {
     let body = { ...this.api.dataControlSE.currentNotification, ...this.shareRequestModalSE.shareRequestBody, request_status_id: 2 };
-    console.log(this.api.resultsSE.ipsrDataControlSE.inIpsr);
-    // console.log(this.shareRequestModalSE.shareRequestBody);
+    // console.log(this.api.resultsSE.ipsrDataControlSE.inIpsr);
     this.requesting = true;
-
     this.api.resultsSE.PATCH_updateRequest(body).subscribe(
       resp => {
         // console.log(resp);
         this.api.dataControlSE.showShareRequest = false;
         this.api.alertsFe.show({ id: 'noti', title: `Request sent`, description: `Once your request is accepted, the result can be mapped to your Initiative's ToC.`, status: 'success' });
         this.requesting = false;
-        if(this.api.resultsSE.ipsrDataControlSE.inIpsr){
-          
+        if (this.api.resultsSE.ipsrDataControlSE.inIpsr) {
+
           this.resultsNotificationsSE.get_section_innovation_packages();
-        }else{
+        } else {
           this.resultsNotificationsSE.get_section_information();
         }
-        
+
       },
       err => {
         this.api.dataControlSE.showShareRequest = false;

@@ -1,28 +1,49 @@
 import {
   Controller,
   Get,
-  Post,
-  Body,
-  Patch,
   Param,
-  Delete,
   Header,
   ParseIntPipe,
   StreamableFile,
+  Res,
+  Query,
 } from '@nestjs/common';
 import { PlatformReportService } from './platform-report.service';
 import { CreatePlatformReportDto } from './dto/create-platform-report.dto';
 import { UpdatePlatformReportDto } from './dto/update-platform-report.dto';
+import { Response, query } from 'express';
+import { DateFormatter } from '../../shared/utils/date-formatter';
+import { returnErrorDto } from '../../shared/handlers/error.utils';
+import { ReadStream } from 'typeorm/platform/PlatformTools';
 
 @Controller()
 export class PlatformReportController {
   constructor(private readonly _platformReportService: PlatformReportService) {}
 
-  @Get('/result/:id')
-  @Header('Content-Type', 'application/pdf')
-  async getFullResultReportByResultCode(@Param('id', ParseIntPipe) id: number) {
-    return new StreamableFile(
-      await this._platformReportService.getFullResultReportByResultCode(id),
-    );
+  @Get('/result/:code')
+  async getFullResultReportByResultCode(
+    @Param('code') code: string,
+    @Query() query: { phase: string },
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile | returnErrorDto> {
+    code = code?.trim();
+    query.phase = query.phase?.trim();
+    let result =
+      await this._platformReportService.getFullResultReportByResultCode(
+        code,
+        query.phase,
+      );
+
+    if (result?.['message']) {
+      return <returnErrorDto>result;
+    }
+    result = <{ pdf: ReadStream; filename_date: any }>result;
+
+    res.set({
+      //'Content-Type': 'application/pdf',
+      'Content-Disposition': `filename="PRMS-Result-${code}_${result.filename_date}.pdf"`,
+    });
+
+    return new StreamableFile(result.pdf, { type: 'application/pdf' });
   }
 }

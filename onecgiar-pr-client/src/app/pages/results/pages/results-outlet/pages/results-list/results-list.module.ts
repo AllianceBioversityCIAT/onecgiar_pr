@@ -12,8 +12,11 @@ import { ReportNewResultButtonComponent } from './components/report-new-result-b
 import { FormsModule } from '@angular/forms';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { ResultsListFilterPipeModule } from './pipes/results-list-filter-pipe.module';
+import { PdfIconModule } from 'src/app/shared/icon-components/pdf-icon/pdf-icon.module';
+import { TooltipModule } from 'primeng/tooltip';
+
 @NgModule({
   declarations: [ResultsListComponent, ResultsListFiltersComponent, ReportNewResultButtonComponent],
-  imports: [CommonModule, ResultsListRoutingModule, TableModule, ButtonModule, MenuModule, RouterModule, FormsModule, CustomFieldsModule, ResultsListFilterPipeModule]
+  imports: [CommonModule, ResultsListRoutingModule, TableModule, ButtonModule, MenuModule, RouterModule, FormsModule, CustomFieldsModule, ResultsListFilterPipeModule, PdfIconModule, TooltipModule]
 })
 export class ResultsListModule {}

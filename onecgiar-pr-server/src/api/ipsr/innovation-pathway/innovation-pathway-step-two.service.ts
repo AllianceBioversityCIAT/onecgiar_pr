@@ -35,6 +35,7 @@ import { ResultInnovationPackage } from '../result-innovation-package/entities/r
 import { ResultsByInititiative } from 'src/api/results/results_by_inititiatives/entities/results_by_inititiative.entity';
 import { ResultsComplementaryInnovation } from '../results-complementary-innovations/entities/results-complementary-innovation.entity';
 import { ComplementaryInnovationFunctionsRepository } from '../results-complementary-innovations-functions/repositories/complementary-innovation-functions.repository';
+import { UpdateComplementaryInnovationDto } from './dto/update-innovation-pathway.dto';
 
 @Injectable()
 export class InnovationPathwayStepTwoService {
@@ -181,129 +182,8 @@ export class InnovationPathwayStepTwoService {
 
       await Promise.all(savePromises);
 
-      // const result = await this._resultRepository.findOne({
-      //   where: {
-      //     id: resultId,
-      //     is_active: true
-      //   }
-      // });
-
-      // if (!result) {
-      //   throw {
-      //     response: result,
-      //     message: 'The result was not found',
-      //     status: HttpStatus.NOT_FOUND,
-      //   };
-      // }
-
-      // const vTemp = await this._versionsService.findBaseVersion();
-      // if (vTemp.status >= 300) {
-      //   throw this._handlersError.returnErrorRes({ error: vTemp });
-      // }
-      // const version: Version = <Version>vTemp.response;
-
-      // const complementaryInnovation = saveData;
-
-      // const allComplementary = await this._innovationByResultRepository.find({
-      //   where: {
-      //     result_innovation_package_id: resultId,
-      //     ipsr_role_id: 2
-      //   }
-      // });
-
-      // const existingIds: number[] = allComplementary.map(ac => ac.result_id);
-
-      // const ciToActive = allComplementary.filter(
-      //   ac =>
-      //     complementaryInnovation.find(ci => ci.result_id == ac.result_id) &&
-      //     ac.is_active === false
-      // );
-
-      // const ciToInactive = allComplementary.filter(
-      //   ac =>
-      //     !complementaryInnovation.find(e => e.result_id == ac.result_id) &&
-      //     ac.is_active === false
-      // );
-
-      // const ciToSave = complementaryInnovation.filter(
-      //   ci => !existingIds.includes(ci.result_id)
-      // );
-
-      // const saveComplementaryInnovation = [];
-
-      // if (ciToSave?.length > 0) {
-      //   for (const entity of ciToSave) {
-      //     const newCi = new Ipsr();
-      //     newCi.version_id = version.id;
-      //     newCi.last_updated_by = user.id;
-      //     newCi.created_by = user.id;
-      //     newCi.result_id = entity.result_id;
-      //     newCi.result_innovation_package_id = result.id;
-      //     newCi.ipsr_role_id = 1;
-      //     newCi.created_by = user.id;
-      //     newCi.last_updated_by = user.id;
-      //     newCi.created_date = new Date();
-      //     newCi.last_updated_date = new Date();
-      //     saveComplementaryInnovation.push(this._innovationByResultRepository.save(entity));
-      //   }
-      // }
-
-      // if (ciToActive?.length > 0) {
-      //   for (const entity of ciToActive) {
-      //     entity.is_active = true;
-      //     saveComplementaryInnovation.push(this._innovationByResultRepository.save(entity));
-      //   }
-      // }
-
-      // if (ciToInactive?.length > 0) {
-      //   for (const entity of ciToInactive) {
-      //     entity.is_active = false;
-      //     saveComplementaryInnovation.push(this._innovationByResultRepository.save(entity));
-      //   }
-      // }
-
-      // if (saveData?.length) {
-      //   for (const rbip of saveData) {
-      //     let exists: Ipsr = null;
-      //     if (rbip?.result_by_innovation_package_id) {
-      //       exists = await this._innovationByResultRepository.findOne({
-      //         where: {
-      //           result_by_innovation_package_id: resultId,
-      //           ipsr_role_id: 2
-      //         }
-      //       });
-      //     } else {
-      //       exists = await this._innovationByResultRepository.findOne({
-      //         where: {
-      //           result_id: rbip.result_id,
-      //           ipsr_role_id: 2
-      //         }
-      //       });
-      //     }
-
-      //     if (exists) {
-      //       await this._innovationByResultRepository.update(
-      //         exists.result_by_innovation_package_id,
-      //         {
-      //           is_active: rbip.is_active,
-      //           last_updated_by: user.id
-      //         }
-      //       );
-      //     } else {
-      //       await this._innovationByResultRepository.save({
-      //         version_id: version.id,
-      //         last_updated_by: user.id,
-      //         created_by: user.id,
-      //         result_id: rbip.result_id,
-      //         result_innovation_package_id: result.id,
-      //         ipsr_role_id: 2
-      //       });
-      //     }
-      //   }
-      // }
       return {
         response: {
-          // saveComplementaryInnovation
           complementaryInnovationsToSave,
           complementaryInnovationsToActivate,
           complementaryInnovationsToInactivate
@@ -334,6 +214,7 @@ export class InnovationPathwayStepTwoService {
     try {
 
       const resultIpResults: Result[] = await this._resultRepository.findBy({ id: resultId });
+      const findInit = await this._resultByInitiativeRepository.getOwnerInitiativeByResult(resultId);
       const year = await this._yearRepository.findOne({ where: { active: true } });
 
       if (!resultIpResults) {
@@ -392,8 +273,6 @@ export class InnovationPathwayStepTwoService {
         ipsr_role_id: 2,
         created_by: User.id,
         last_updated_by: User.id,
-        created_date: new Date(),
-        last_updated_date: new Date(),
         version_id: version.id
       });
 
@@ -403,8 +282,6 @@ export class InnovationPathwayStepTwoService {
         other_funcions: CreateComplementaryInnovationDto.other_funcions,
         created_by: User.id,
         last_updated_by: User.id,
-        created_date: new Date(),
-        last_updated_date: new Date(),
         version_id: version.id
       });
 
@@ -443,6 +320,7 @@ export class InnovationPathwayStepTwoService {
           const newMaterial = new Evidence();
           newMaterial.result_id = newResult;
           newMaterial.link = entity;
+          newMaterial.evidence_type_id = 4;
           newMaterial.created_by = User.id;
           newMaterial.last_updated_by = User.id;
           newMaterial.creation_date = new Date();
@@ -457,6 +335,7 @@ export class InnovationPathwayStepTwoService {
 
       return {
         response: {
+          initiative: findInit,
           createResult,
           newResultIpResults,
           newResultComplemetaryInnovation,
@@ -470,6 +349,290 @@ export class InnovationPathwayStepTwoService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
 
+  async getComplementaryInnovationById(complementaryInnovationId: number) {
+    try {
+      const findResult: Result = await this._resultRepository.findOneBy({
+        id: complementaryInnovationId,
+        is_active: true
+      });
+      if (!findResult) {
+        return {
+          response: { valid: false },
+          message: 'The Result was not found',
+          status: HttpStatus.NOT_FOUND,
+        }
+      }
+
+      const findResultComplementaryInnovation: ResultsComplementaryInnovation = await this._resultComplementaryInnovation.findOne({
+        where: {
+          result_id: complementaryInnovationId,
+          is_active: true
+        },
+      });
+
+      const findComplementaryInnovationFuctions: ResultsComplementaryInnovationsFunction[] = await this._resultComplementaryInnovationFunctions.find({
+        where: {
+          result_complementary_innovation_id: findResultComplementaryInnovation.result_complementary_innovation_id,
+          is_active: true
+        }
+      });
+
+      const evidence: Evidence[] = await this._evidence.find({
+        where: {
+          result_id: findResult.id,
+          is_active: 1
+        }
+      });
+
+      return {
+        response: {
+          findResult,
+          findResultComplementaryInnovation,
+          findComplementaryInnovationFuctions,
+          evidence
+        },
+        message: 'The Result Complementary Innovation have been found successfully',
+        status: HttpStatus.OK
+      }
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async updateComplementaryInnovation(complementaryInnovationId: number, User: TokenDto, updateComplementaryInnovationDto: UpdateComplementaryInnovationDto) {
+    try {
+      const {
+        title,
+        short_title,
+        description,
+        other_funcions,
+        complementaryFunctions,
+        referenceMaterials,
+      } = updateComplementaryInnovationDto;
+
+      if (!title || !short_title || !description || !complementaryFunctions.length) {
+        return {
+          response: { valid: false },
+          message: 'Missing fields',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const vTemp = await this._versionsService.findBaseVersion();
+      if (vTemp.status >= 300) {
+        throw this._handlersError.returnErrorRes({ error: vTemp });
+      }
+      const version: Version = <Version>vTemp.response;
+
+      const findResult: Result = await this._resultRepository.findOneBy({
+        id: complementaryInnovationId,
+        is_active: true
+      });
+      if (!findResult) {
+        return {
+          response: { valid: false },
+          message: 'The Result was not found',
+          status: HttpStatus.NOT_FOUND,
+        }
+      }
+
+      const findComplementaryInnovation: ResultsComplementaryInnovation = await this._resultComplementaryInnovation.findOne({
+        where: {
+          result_id: complementaryInnovationId,
+          is_active: true
+        }
+      });
+      if (!findComplementaryInnovation) {
+        return {
+          response: { valid: false },
+          message: 'The Complementary Innovation was not found',
+          status: HttpStatus.NOT_FOUND,
+        }
+      };
+
+      await this._resultRepository.update(findResult.id, {
+        title,
+        description,
+        last_updated_by: User.id,
+      });
+
+      await this._resultComplementaryInnovation.update(findComplementaryInnovation.result_complementary_innovation_id, {
+        short_title,
+        other_funcions,
+        last_updated_by: User.id
+      });
+
+      const updateCF = [];
+      const existingComplementaryFunctions: ResultsComplementaryInnovationsFunction[] = await this._resultComplementaryInnovationFunctions.findBy({
+        result_complementary_innovation_id: findComplementaryInnovation.result_complementary_innovation_id,
+        is_active: true
+      });
+
+      for (const ecf of existingComplementaryFunctions) {
+        const isFound = complementaryFunctions.some(cf => cf.complementary_innovation_functions_id === ecf.complementary_innovation_function_id);
+        if (!isFound) {
+          ecf.results_complementary_innovations_function_id;
+          ecf.is_active = false;
+          ecf.last_updated_by = User.id;
+          updateCF.push(await this._resultComplementaryInnovationFunctions.save(ecf));
+        }
+      }
+
+      const saveCF = [];
+      if (complementaryFunctions.length) {
+        for (const cf of complementaryFunctions) {
+          const findComplementaryInnovationFuctions: ResultsComplementaryInnovationsFunction = await this._resultComplementaryInnovationFunctions.findOne({
+            where: {
+              result_complementary_innovation_id: findComplementaryInnovation.result_complementary_innovation_id,
+              complementary_innovation_function_id: cf.complementary_innovation_functions_id,
+              is_active: true
+            }
+          });
+
+          if (!findComplementaryInnovationFuctions) {
+            const newCF = new ResultsComplementaryInnovationsFunction();
+            newCF.result_complementary_innovation_id = findComplementaryInnovation.result_complementary_innovation_id;
+            newCF.complementary_innovation_function_id = cf.complementary_innovation_functions_id;
+            newCF.created_by = User.id;
+            newCF.last_updated_by = User.id;
+            newCF.version_id = version.id;
+            saveCF.push(await this._resultComplementaryInnovationFunctions.save(newCF));
+          }
+        }
+      }
+
+      const referenceMaterialsObj = referenceMaterials.map(rm => rm.link);
+      if (referenceMaterialsObj.length > 3) {
+        return {
+          response: {
+            valid: false
+          },
+          message: 'The Reference Materials must be three',
+          status: HttpStatus.BAD_REQUEST
+        }
+      }
+
+      const evidenceExist = await this._evidence.find({
+        where: {
+          result_id: complementaryInnovationId,
+          is_active: 1,
+          evidence_type_id: 4
+        }
+      });
+
+      for (const e of evidenceExist) {
+        const isFound = referenceMaterialsObj.some(rm => rm === e.link);
+
+        if (!isFound) {
+          await this._evidence.update(e.id, {
+            is_active: 0,
+            last_updated_by: User.id,
+          });
+        }
+      }
+
+      const saveEvidence = [];
+      if (referenceMaterialsObj.length > 0) {
+        for (const entity of referenceMaterials) {
+          const findEvidence: Evidence = await this._evidence.findOne({
+            where: {
+              result_id: complementaryInnovationId,
+              link: entity.link,
+              is_active: 1
+            }
+          });
+
+          if (!findEvidence) {
+            const newMaterial = new Evidence();
+            newMaterial.result_id = complementaryInnovationId;
+            newMaterial.link = entity.link;
+            newMaterial.evidence_type_id = 4
+            newMaterial.created_by = User.id;
+            newMaterial.last_updated_by = User.id;
+            newMaterial.creation_date = new Date();
+            newMaterial.last_updated_date = new Date();
+            newMaterial.version_id = version.id;
+            saveEvidence.push(await this._evidence.save(newMaterial));
+          }
+        }
+      }
+
+      const data = await this.getComplementaryInnovationById(complementaryInnovationId);
+
+      return {
+        response: data.response,
+        message: 'The Result Complementary Innovation have been updated successfully',
+        status: HttpStatus.OK
+      }
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async inactiveComplementaryInnovation(complementaryInnovationId: number, User: TokenDto) {
+    try {
+      const findResult: Result = await this._resultRepository.findOneBy({
+        id: complementaryInnovationId,
+        is_active: true
+      });
+      if (!findResult) {
+        return {
+          response: { valid: false },
+          message: 'The Result was not found',
+          status: HttpStatus.NOT_FOUND,
+        }
+      }
+
+      const findResultByInnovation: Ipsr[] = await this._innovationByResultRepository.find({
+        where: {
+          result_id: complementaryInnovationId,
+          ipsr_role_id: 2,
+          is_active: true
+        }
+      });
+      if (!findResultByInnovation) {
+        return {
+          response: { valid: false },
+          message: 'The Result was not found',
+          status: HttpStatus.NOT_FOUND,
+        }
+      }
+
+      const findComplementaryInnovation: ResultsComplementaryInnovation = await this._resultComplementaryInnovation.findOne({
+        where: {
+          result_id: complementaryInnovationId,
+          is_active: true
+        }
+      })
+
+      await this._resultRepository.update(findResult.id, {
+        is_active: false,
+        last_updated_by: User.id,
+      });
+
+      for(const cf of findResultByInnovation) {
+        await this._innovationByResultRepository.update(cf.result_by_innovation_package_id, {
+          is_active: false,
+          last_updated_by: User.id,
+        });
+      }
+
+      await this._resultComplementaryInnovation.update(findComplementaryInnovation.result_complementary_innovation_id, {
+        is_active: false,
+        last_updated_by: User.id
+      });
+
+
+      return { 
+        response: { valid: true },
+        title: 'The Result Complementary Innovation have been inactive successfully',
+        message: 'The Result Complementary Innovation have been inactive successfully',
+        status: HttpStatus.OK
+      }
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
   }
 }

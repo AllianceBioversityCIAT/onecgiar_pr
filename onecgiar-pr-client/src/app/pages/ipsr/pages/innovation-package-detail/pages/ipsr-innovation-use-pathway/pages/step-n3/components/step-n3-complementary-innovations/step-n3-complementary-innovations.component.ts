@@ -8,6 +8,7 @@ import { IpsrStep3Body } from '../../model/Ipsr-step-3-body.model';
 })
 export class StepN3ComplementaryInnovationsComponent implements OnInit {
   @Input() rangesOptions: any[] = [];
+  @Input() innovationUseList: any[] = [];
   @Input() body = new IpsrStep3Body();
   ci = {
     index: 0,
@@ -19,6 +20,9 @@ export class StepN3ComplementaryInnovationsComponent implements OnInit {
   ngOnInit(): void {}
 
   readinessLevelSelfAssessmentText() {
-    return `<a href="https://drive.google.com/file/d/1muDLtqpeaSCIX60g6qQG_GGOPR61Rq7E/view"  class="open_route" target="_blank">Click here</a> to see the definition of all readiness levels`;
+    return `<a href="https://drive.google.com/file/d/1muDLtqpeaSCIX60g6qQG_GGOPR61Rq7E/view"  class="open_route" target="_blank">Click here</a>  to see all innovation readiness levels`;
+  }
+  useLevelDelfAssessment() {
+    return `<a href="https://drive.google.com/file/d/1RFDAx3m5ziisZPcFgYdyBYH9oTzOYLvC/view"  class="open_route" target="_blank">Click here</a> to see all innovation use levels`;
   }
 }

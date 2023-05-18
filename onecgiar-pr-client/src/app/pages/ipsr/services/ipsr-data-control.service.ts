@@ -7,6 +7,11 @@ export class IpsrDataControlService {
   resultInnovationCode = null;
   resultInnovationId = null;
   inIpsr = null;
+  inContributos = null;
+  modals = {
+    submission: false,
+    unsubmit: false
+  };
   constructor() {}
 }
 
@@ -18,4 +23,6 @@ interface DetailData {
   result_level: string;
   result_type: string;
   inititiative_id: string;
+  status: string;
+  validResult: string | number;
 }

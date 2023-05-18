@@ -4,7 +4,6 @@ import { ResultInstitutionsBudget } from '../../../results/result_budget/entitie
 export class SaveStepFour {
     ipsr_pictures: IpsrPictures[];
     ipsr_materials: IpsrMaterials[];
-    link_workshop_list: string;
     initiative_expected_investment: InitiativeExpectedInvestment[];
     initiative_unit_time_id: number;
     initiative_expected_time: string;
@@ -37,6 +36,7 @@ export interface InitiativeExpectedInvestment {
     current_year: number;
     next_year: number;
     is_determined: boolean;
+    result_initiative_id: number;
 }
 export interface BilateralExpectedInvestment {
     non_pooled_projetct_id: number;

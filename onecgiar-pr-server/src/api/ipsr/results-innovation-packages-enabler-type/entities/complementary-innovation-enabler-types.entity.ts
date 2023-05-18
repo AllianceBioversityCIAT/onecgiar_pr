@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToOne, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from '../../../../shared/entities/base-entity';
 
 @Entity('complementary_innovation_enabler_types')
@@ -18,8 +18,12 @@ export class ComplementaryInnovationEnablerTypes extends BaseEntity {
 
     @Column({
         name: 'type',
-        type: 'text',
+        type: 'bigint',
         nullable: true
     })
-    type!: string;
+    type!: number;
+
+    @ManyToOne(()=> ComplementaryInnovationEnablerTypes, ciet => ciet.complementary_innovation_enabler_types_id)
+    @JoinColumn({name:'type'})
+    objType:ComplementaryInnovationEnablerTypes[];
 }

@@ -2,7 +2,11 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { HandlersError } from 'src/shared/handlers/error.utils';
 import { ResultRepository } from '../../../api/results/result.repository';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
-import { CreateResultInnovationPackageDto } from './dto/create-result-innovation-package.dto';
+import {
+  countriesInterface,
+  CreateResultInnovationPackageDto,
+  UpdateGeneralInformationDto,
+} from './dto/create-result-innovation-package.dto';
 import { Version } from '../../results/versions/entities/version.entity';
 import { VersionsService } from '../../../api/results/versions/versions.service';
 import { ResultRegion } from '../../../api/results/result-regions/entities/result-region.entity';
@@ -15,7 +19,7 @@ import { ResultTypeRepository } from 'src/api/results/result_types/resultType.re
 import { ResultInnovationPackageRepository } from './repositories/result-innovation-package.repository';
 import { ResultIpAAOutcomeRepository } from '../innovation-pathway/repository/result-ip-action-area-outcome.repository';
 import { ClarisaActionAreaOutcomeRepository } from '../../../clarisa/clarisa-action-area-outcome/clarisa-action-area-outcome.repository';
-import { In } from 'typeorm';
+import { In, IsNull } from 'typeorm';
 import { ResultIpAAOutcome } from '../innovation-pathway/entities/result-ip-action-area-outcome.entity';
 import { ResultsImpactAreaIndicatorRepository } from 'src/api/results/results-impact-area-indicators/results-impact-area-indicators.repository';
 import { ResultIpImpactArea } from '../innovation-pathway/entities/result-ip-impact-area.entity';
@@ -36,8 +40,12 @@ import { TocResultsRepository } from '../../../toc/toc-results/toc-results.repos
 import { ResultIpEoiOutcomeRepository } from '../innovation-pathway/repository/result-ip-eoi-outcomes.repository';
 import { ResultIpEoiOutcome } from '../innovation-pathway/entities/result-ip-eoi-outcome.entity';
 import { TocResult } from '../../../toc/toc-results/entities/toc-result.entity';
+import { ResultCountriesSubNationalRepository } from '../../results/result-countries-sub-national/result-countries-sub-national.repository';
+import { ResultCountriesSubNational } from '../../results/result-countries-sub-national/entities/result-countries-sub-national.entity';
 import { Year } from '../../results/years/entities/year.entity';
 import { YearRepository } from '../../results/years/year.repository';
+import { LinkedResultRepository } from '../../results/linked-results/linked-results.repository';
+import { EvidencesRepository } from '../../results/evidences/evidences.repository';
 
 @Injectable()
 export class ResultInnovationPackageService {
@@ -64,12 +72,14 @@ export class ResultInnovationPackageService {
     private readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
     private readonly _resultByIntitutionsTypeRepository: ResultByIntitutionsTypeRepository,
     private readonly _resultValidationRepository: resultValidationRepository,
-    protected readonly _resultInitiativesBudgetRepository: ResultInitiativeBudgetRepository,
-    protected readonly _unitTimeRepository: UnitTimeRepository,
-    protected readonly _tocResult: TocResultsRepository,
-    protected readonly _resultIpEoiOutcomesRepository: ResultIpEoiOutcomeRepository,
-    private readonly _yearRepository: YearRepository
-  ) { }
+    private readonly _resultInitiativesBudgetRepository: ResultInitiativeBudgetRepository,
+    private readonly _unitTimeRepository: UnitTimeRepository,
+    private readonly _tocResult: TocResultsRepository,
+    private readonly _resultCountriesSubNationalRepository: ResultCountriesSubNationalRepository,
+    protected readonly _yearRepository: YearRepository,
+    protected readonly _linkedResultRepository: LinkedResultRepository,
+    protected readonly _evidenceRepository: EvidencesRepository,
+  ) {}
 
   async findUnitTime() {
     try {
@@ -125,7 +135,8 @@ export class ResultInnovationPackageService {
 
   async findConsensusInitiativeWorkPackage() {
     try {
-      const request = await this._consensusInitiativeWorkPackageRepository.find();
+      const request =
+        await this._consensusInitiativeWorkPackageRepository.find();
       return {
         response: request,
         message: 'Successful response',
@@ -149,15 +160,17 @@ export class ResultInnovationPackageService {
     }
   }
 
-  async createHeader(CreateResultInnovationPackageDto: CreateResultInnovationPackageDto, user: TokenDto) {
+  async createHeader(
+    CreateResultInnovationPackageDto: CreateResultInnovationPackageDto,
+    user: TokenDto,
+  ) {
     try {
       let innovationTitle: string;
       let innovationGeoScope: number;
 
-      const resultExist =
-        await this._resultRepository.getResultById(
-          CreateResultInnovationPackageDto.result_id
-        );
+      const resultExist = await this._resultRepository.getResultById(
+        CreateResultInnovationPackageDto.result_id,
+      );
 
       if (!resultExist) {
         throw {
@@ -167,13 +180,20 @@ export class ResultInnovationPackageService {
         };
       }
 
-      const initiativeRole = await this._resultByInitiativeRepository.InitiativeByResult(+resultExist.id);
-      const mapInits = initiativeRole.find(i => i.inititiative_id === CreateResultInnovationPackageDto.initiative_id);
+      const initiativeRole =
+        await this._resultByInitiativeRepository.InitiativeByResult(
+          +resultExist.id,
+        );
+      const mapInits = initiativeRole.find(
+        (i) =>
+          i.inititiative_id === CreateResultInnovationPackageDto.initiative_id,
+      );
 
       if (!mapInits) {
         return {
           response: mapInits,
-          message: 'If your initiative is not primary or does not contribute to the Core Innovation, you cannot create an Innovatio Package with the result.',
+          message:
+            'If your initiative is not primary or does not contribute to the Core Innovation, you cannot create an Innovatio Package with the result.',
           status: HttpStatus.BAD_REQUEST,
         };
       }
@@ -181,7 +201,8 @@ export class ResultInnovationPackageService {
       if (!CreateResultInnovationPackageDto.initiative_id) {
         throw {
           response: `Initiative id: ${CreateResultInnovationPackageDto.initiative_id}`,
-          message: 'Please enter a Initiative Official Code to create a new Innovation Package',
+          message:
+            'Please enter a Initiative Official Code to create a new Innovation Package',
           status: HttpStatus.BAD_REQUEST,
         };
       }
@@ -189,7 +210,8 @@ export class ResultInnovationPackageService {
       if (!CreateResultInnovationPackageDto.geo_scope_id) {
         throw {
           response: `Geo Scope id: ${CreateResultInnovationPackageDto.geo_scope_id}`,
-          message: 'Please enter a Geo Scope to create a new Innovation Package',
+          message:
+            'Please enter a Geo Scope to create a new Innovation Package',
           status: HttpStatus.BAD_REQUEST,
         };
       }
@@ -206,7 +228,8 @@ export class ResultInnovationPackageService {
       if (result.result_type_id != 7) {
         throw {
           response: result.result_type_id,
-          message: 'This is not a valid result type. Only Innovation Develpments can be used to create a new Innovation Package.',
+          message:
+            'This is not a valid result type. Only Innovation Develpments can be used to create a new Innovation Package.',
           status: HttpStatus.BAD_REQUEST,
         };
       }
@@ -216,38 +239,95 @@ export class ResultInnovationPackageService {
       const regions = CreateResultInnovationPackageDto.regions;
       const countries = CreateResultInnovationPackageDto.countries;
 
-      if (CreateResultInnovationPackageDto.geo_scope_id === 1) {
-        innovationGeoScope = 1;
-      } else if (CreateResultInnovationPackageDto.geo_scope_id === 2) {
-        innovationGeoScope = 2;
-      } else if (countries?.length > 1) {
-        innovationGeoScope = 3
+      if ([1, 2, 5].includes(CreateResultInnovationPackageDto.geo_scope_id)) {
+        innovationGeoScope = CreateResultInnovationPackageDto.geo_scope_id;
       } else {
-        innovationGeoScope = 4
+        innovationGeoScope = countries?.length > 1 ? 3 : 4;
       }
 
       if (CreateResultInnovationPackageDto.geo_scope_id === 2) {
-        const regionsList = regions.map(r => r.name);
-        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${result.title} in ${regionsList.slice(0, -1).join(', ')}${regionsList.length > 1 ? ' and ' : ''}${regionsList[regionsList.length - 1]}`;
-      } else if (CreateResultInnovationPackageDto.geo_scope_id === 3 || CreateResultInnovationPackageDto.geo_scope_id === 4) {
-        const countriesList = countries.map(c => c.name);
-        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${result.title} in ${countriesList.slice(0, -1).join(', ')}${countriesList.length > 1 ? ' and ' : ''}${countriesList[countriesList.length - 1]}`;
+        const regionsList = regions.map((r) => r.name);
+        if (result.title.endsWith('.')) {
+          result.title = result.title.replace(/\.$/, '');
+        }
+        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${
+          result.title
+        } in ${regionsList.slice(0, -1).join(', ')}${
+          regionsList.length > 1 ? ' and ' : ''
+        }${regionsList[regionsList.length - 1]}`;
+      } else if (
+        CreateResultInnovationPackageDto.geo_scope_id === 3 ||
+        CreateResultInnovationPackageDto.geo_scope_id === 4
+      ) {
+        const countriesList = countries.map((c) => c.name);
+        if (result.title.endsWith('.')) {
+          result.title = result.title.replace(/\.$/, '');
+        }
+        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${result.title.toLocaleLowerCase()} in ${countriesList
+          .slice(0, -1)
+          .join(', ')}${countriesList.length > 1 ? ' and ' : ''}${
+          countriesList[countriesList.length - 1]
+        }`;
+      } else if (CreateResultInnovationPackageDto.geo_scope_id === 5) {
+        const countriesList = countries.map((c) => c.name);
+        if (result.title.endsWith('.')) {
+          result.title = result.title.replace(/\.$/, '');
+        }
+        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${result.title.toLocaleLowerCase()} in ${countriesList
+          .slice(0, -1)
+          .join(', ')}${countriesList.length > 1 ? ' and ' : ''}${
+          countriesList[countriesList.length - 1]
+        }`;
       } else {
-        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${result.title}.`;
+        if (result.title.endsWith('.')) {
+          result.title = result.title.replace(/\.$/, '');
+        }
+        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${result.title.toLocaleLowerCase()}.`;
       }
 
+      // if (CreateResultInnovationPackageDto.geo_scope_id === 2) {
+      //   const regionsList = regions.map((r) => r.name);
+      //   innovationTitle = `Innovation Package and Scaling Readiness assessment for ${
+      //     result.title
+      //   } in ${regionsList.slice(0, -1).join(', ')}${
+      //     regionsList.length > 1 ? ' and ' : ''
+      //   }${regionsList[regionsList.length - 1]}`;
+      // } else if (
+      //   CreateResultInnovationPackageDto.geo_scope_id === 3 ||
+      //   CreateResultInnovationPackageDto.geo_scope_id === 4
+      // ) {
+      //   const countriesList = countries.map((c) => c.name);
+      //   innovationTitle = `Innovation Package and Scaling Readiness assessment for ${
+      //     result.title.toLocaleLowerCase()
+      //   } in ${countriesList.slice(0, -1).join(', ')}${
+      //     countriesList.length > 1 ? ' and ' : ''
+      //   }${countriesList[countriesList.length - 1]}`;
+      // } else if (CreateResultInnovationPackageDto.geo_scope_id === 5) {
+      //   const countriesList = countries.map((c) => c.name);
+      //   innovationTitle = `Innovation Package and Scaling Readiness assessment for ${
+      //     result.title.toLocaleLowerCase()
+      //   } in ${countriesList.slice(0, -1).join(', ')}${
+      //     countriesList.length > 1 ? ' and ' : ''
+      //   }${countriesList[countriesList.length - 1]}`;
+      // } else {
+      //   innovationTitle = `Innovation Package and Scaling Readiness assessment for ${result.title.toLocaleLowerCase()}.`;
+      // }
 
       const titleValidate = await this._resultRepository
         .createQueryBuilder('result')
-        .where('result.title like :title AND is_active = true', { title: `${innovationTitle}` })
+        .where('result.title like :title AND is_active = true', {
+          title: `${innovationTitle}`,
+        })
         .getMany();
 
       if (titleValidate.length) {
         throw {
-          response: titleValidate.map(tv => tv.id),
-          message: `The title already exists, in the following result: ${titleValidate.map(tv => tv.result_code)}. Please change the Regions or Countries.`,
+          response: titleValidate.map((tv) => tv.id),
+          message: `The title already exists, in the following result: ${titleValidate.map(
+            (tv) => tv.result_code,
+          )}. Please change the Regions or Countries.`,
           status: HttpStatus.BAD_REQUEST,
-        }
+        };
       }
       const year: Year = await this._yearRepository.findOne({
         where: { active: true },
@@ -267,12 +347,8 @@ export class ResultInnovationPackageService {
         reported_year_id: year.year,
         result_level_id: 3,
         result_type_id: 10,
-        has_regions: regions
-          ? true
-          : false,
-        has_countries: countries
-          ? true
-          : false,
+        has_regions: regions ? true : false,
+        has_countries: countries ? true : false,
         geographic_scope_id: innovationGeoScope,
         initiative_id: CreateResultInnovationPackageDto.initiative_id,
         version_id: vrs.id,
@@ -281,42 +357,55 @@ export class ResultInnovationPackageService {
       });
 
       const newResult = newInnovationHeader.id;
-      const newInnovationByInitiative = await this._resultByInitiativeRepository.save({
-        result_id: newResult,
-        initiative_id: CreateResultInnovationPackageDto.initiative_id,
-        initiative_role_id: 1,
-        version_id: vrs.id,
-        created_by: user.id,
-        last_updated_by: user.id
-      });
+      const newInnovationByInitiative =
+        await this._resultByInitiativeRepository.save({
+          result_id: newResult,
+          initiative_id: CreateResultInnovationPackageDto.initiative_id,
+          initiative_role_id: 1,
+          version_id: vrs.id,
+          created_by: user.id,
+          last_updated_by: user.id,
+        });
 
       const resultByInitiativesId = newInnovationByInitiative.id;
-      const newresultInitiativeBudget = await this._resultInitiativesBudgetRepository.save({
-        result_initiative_id: resultByInitiativesId,
+      const newresultInitiativeBudget =
+        await this._resultInitiativesBudgetRepository.save({
+          result_initiative_id: resultByInitiativesId,
+          version_id: vrs.id,
+          created_by: user.id,
+          last_updated_by: user.id,
+        });
+
+      const newResultInnovationPackage =
+        await this._resultInnovationPackageRepository.save({
+          result_innovation_package_id: newResult,
+          version_id: vrs.id,
+          created_by: user.id,
+          last_updated_by: user.id,
+        });
+
+      const newInnovationByResult =
+        await this._innovationByResultRepository.save({
+          result_innovation_package_id: newResult,
+          result_id: result.id,
+          ipsr_role_id: 1,
+          version_id: vrs.id,
+          created_by: user.id,
+          last_updated_by: user.id,
+        });
+      const resultByInnivationPackage =
+        newInnovationByResult.result_by_innovation_package_id;
+
+      const linkedResult = await this._linkedResultRepository.save({
+        linked_results_id: result.id,
+        origin_result_id: newResult,
         version_id: vrs.id,
         created_by: user.id,
         last_updated_by: user.id,
       });
-
-      const newResultInnovationPackage = await this._resultInnovationPackageRepository.save({
-        result_innovation_package_id: newResult,
-        version_id: vrs.id,
-        created_by: user.id,
-        last_updated_by: user.id,
-      });
-
-      const newInnovationByResult = await this._innovationByResultRepository.save({
-        result_innovation_package_id: newResult,
-        result_id: result.id,
-        ipsr_role_id: 1,
-        version_id: vrs.id,
-        created_by: user.id,
-        last_updated_by: user.id
-      });
-      const resultByInnivationPackage = newInnovationByResult.result_by_innovation_package_id;
 
       let resultRegions: ResultRegion[] = [];
-      let resultCountries: ResultCountry[] = [];
+      let newInnovationCountries: ResultCountry[] = [];
 
       if (CreateResultInnovationPackageDto.geo_scope_id === 2) {
         if (regions) {
@@ -325,55 +414,152 @@ export class ResultInnovationPackageService {
             newRegions.result_id = newResult;
             newRegions.region_id = regions[i].id;
             newRegions.is_active = true;
+            newRegions.version_id = vrs.id;
             resultRegions.push(newRegions);
           }
         }
-      } else if (CreateResultInnovationPackageDto.geo_scope_id === 3 || CreateResultInnovationPackageDto.geo_scope_id === 4) {
+      } else if (
+        CreateResultInnovationPackageDto.geo_scope_id === 3 ||
+        CreateResultInnovationPackageDto.geo_scope_id === 4 ||
+        CreateResultInnovationPackageDto.geo_scope_id === 5
+      ) {
         if (countries) {
-          for (let i = 0; i < countries.length; i++) {
-            const newCountries = new ResultCountry();
-            newCountries.result_id = newResult;
-            newCountries.country_id = countries[i].id;
-            newCountries.is_active = true;
-            resultCountries.push(newCountries);
+          for (const ct of countries) {
+            const newRc = await this._resultCountryRepository.save({
+              result_id: newResult,
+              country_id: ct.id,
+              version_id: vrs.id,
+            });
+            newInnovationCountries.push(newRc);
+            if (
+              CreateResultInnovationPackageDto.geo_scope_id === 5 &&
+              ct?.result_countries_sub_national?.length
+            ) {
+              await this.saveSubNational(
+                newRc.result_country_id,
+                ct.result_countries_sub_national,
+                user,
+                vrs,
+              );
+            }
           }
         }
       }
-      const newInnovationRegions = await this._resultRegionRepository.save(resultRegions);
-      const newInnovationCountries = await this._resultCountryRepository.save(resultCountries);
-      // ! This method it's no necesary
-      // const retrievedEoi = await this.retrievedEoi(CreateResultInnovationPackageDto.initiative_id, user.id, resultByInnivationPackage, vrs.id);
-      const retriveAAOutcome = await this.retrievedAAOutcome(CreateResultInnovationPackageDto.initiative_id, user.id, resultByInnivationPackage, vrs.id);
-      const retrievedImpactArea = await this.retrievedImpactArea(result.id, user.id, resultByInnivationPackage, vrs.id);
+      const newInnovationRegions = await this._resultRegionRepository.save(
+        resultRegions,
+      );
+      //const newInnovationCountries = await this._resultCountryRepository.save(resultCountries);
+      const retriveAAOutcome = await this.retrievedAAOutcome(
+        CreateResultInnovationPackageDto.initiative_id,
+        user.id,
+        resultByInnivationPackage,
+        vrs.id,
+      );
+      const retrievedImpactArea = await this.retrievedImpactArea(
+        result.id,
+        user.id,
+        resultByInnivationPackage,
+        vrs.id,
+      );
 
       await this._resultInnovationPackageRepository.update(
         newResultInnovationPackage.result_innovation_package_id,
         {
-          relevant_country_id: await this.defaultRelevantCountry(result.geographic_scope_id, result.id),
+          relevant_country_id: await this.defaultRelevantCountry(
+            result.geographic_scope_id,
+            result.id,
+          ),
           regional_leadership_id: result.geographic_scope_id == 1 ? 3 : null,
-          regional_integrated_id: result.geographic_scope_id == 1 ? 3 : null
-        }
-      )
-
+          regional_integrated_id: result.geographic_scope_id == 1 ? 3 : null,
+        },
+      );
 
       return {
         response: {
           newInnovationHeader,
-          // retrievedEoi,
           retriveAAOutcome,
           retrievedImpactArea,
           newInnovationByInitiative,
           newresultInitiativeBudget,
           newResultInnovationPackage,
           newInnovationByResult,
+          linkedResult,
           newInnovationRegions,
-          newInnovationCountries
+          newInnovationCountries,
         },
         message: 'Successfully created',
-        status: HttpStatus.OK
-      }
+        status: HttpStatus.OK,
+      };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async saveSubNational(
+    reCoId: number,
+    subNationals: ResultCountriesSubNational[],
+    user: TokenDto,
+    v: Version,
+  ) {
+    if (subNationals?.length) {
+      subNationals.forEach(async (el) => {
+        let reCoSub: ResultCountriesSubNational = null;
+        const whereConditions = el?.result_countries_sub_national_id
+          ? {
+              result_countries_sub_national_id:
+                el.result_countries_sub_national_id,
+            }
+          : el?.sub_level_one_id && el?.sub_level_two_id
+          ? {
+              sub_level_one_id: el.sub_level_one_id,
+              sub_level_two_id: el.sub_level_two_id,
+              result_countries_id: reCoId,
+            }
+          : !reCoId && el?.sub_level_one_id && !el?.sub_level_two_id
+          ? {
+              sub_level_one_id: el.sub_level_one_id,
+              sub_level_two_id: IsNull(),
+              result_countries_id: reCoId,
+            }
+          : !reCoId && !el?.sub_level_one_id && !el?.sub_level_two_id
+          ? {
+              sub_level_one_id: IsNull(),
+              sub_level_two_id: IsNull(),
+              result_countries_id: reCoId,
+            }
+          : null;
+
+        if (whereConditions) {
+          reCoSub = await this._resultCountriesSubNationalRepository.findOne({
+            where: whereConditions,
+          });
+        }
+
+        if (reCoSub) {
+          await this._resultCountriesSubNationalRepository.update(
+            reCoSub.result_countries_sub_national_id,
+            {
+              is_active: el?.is_active == undefined ? true : el.is_active,
+              sub_level_one_id: el?.sub_level_one_id,
+              sub_level_one_name: el?.sub_level_one_name,
+              sub_level_two_id: el?.sub_level_two_id,
+              sub_level_two_name: el?.sub_level_two_name,
+              last_updated_by: user.id,
+            },
+          );
+        } else {
+          await this._resultCountriesSubNationalRepository.save({
+            created_by: user.id,
+            last_updated_by: user.id,
+            sub_level_one_id: el?.sub_level_one_id,
+            sub_level_two_id: el?.sub_level_two_id,
+            sub_level_one_name: el?.sub_level_one_name,
+            sub_level_two_name: el?.sub_level_two_name,
+            result_countries_id: reCoId,
+            version_id: v.id,
+          });
+        }
+      });
     }
   }
 
@@ -383,58 +569,28 @@ export class ResultInnovationPackageService {
         return 3;
       }
       if ([3, 4].includes(geoscope)) {
-        const rc = await this._resultCountryRepository.findOne({ where: { result_id: resultId, is_active: true } });
+        const rc = await this._resultCountryRepository.findOne({
+          where: { result_id: resultId, is_active: true },
+        });
         return rc ? 3 : null;
       }
     }
     return null;
   }
 
-  // async retrievedEoi(initId: number, user: number, resultByIpId: number, version: number) {
-  //   try {
-  //     let saveEoiOutcome: any;
-  //     const searchEoi: TocResult[] = await this._tocResult.getEoiIp(initId);
-
-  //     if (!searchEoi.length) {
-  //       return {
-  //         response: { valid: true },
-  //         message: 'No End of Initiative Outcomes were found'
-  //       }
-  //     }
-
-
-  //     for (const eoi of searchEoi) {
-  //       const newEoi = new ResultIpEoiOutcome();
-  //       newEoi.toc_result_id = eoi.toc_result_id;
-  //       newEoi.result_by_innovation_package_id = resultByIpId;
-  //       newEoi.created_by = user;
-  //       newEoi.last_updated_by = user;
-  //       newEoi.version_id = version;
-  //       newEoi.created_date = new Date();
-  //       newEoi.last_updated_date = new Date();
-  //       saveEoiOutcome = await this._resultIpEoiOutcomesRepository.save(newEoi);
-  //     }
-
-  //     return {
-  //       response: {
-  //         saveEoiOutcome
-  //       },
-  //       message: 'Successfully created',
-  //       status: HttpStatus.OK
-  //     }
-
-  //   } catch (error) {
-  //     return this._handlersError.returnErrorRes({ error, debug: true });
-  //   }
-  // }
-
-  async retrievedAAOutcome(initId: number, user: number, resultByIpId: number, version: number) {
+  async retrievedAAOutcome(
+    initId: number,
+    user: number,
+    resultByIpId: number,
+    version: number,
+  ) {
     try {
       let saveAAOutcome: any;
-      const searchTocData = await this._resultIpAAOutcomeRepository.mapActionAreaOutcome(initId);
-      const smoAAOutcomeToc = searchTocData.map(stc => stc.outcome_smo_code);
+      const searchTocData =
+        await this._resultIpAAOutcomeRepository.mapActionAreaOutcome(initId);
+      const smoAAOutcomeToc = searchTocData.map((stc) => stc.outcome_smo_code);
       const mapAAOutcome = await this._clarisaAAOutcome.find({
-        where: { outcomeSMOcode: In(smoAAOutcomeToc) }
+        where: { outcomeSMOcode: In(smoAAOutcomeToc) },
       });
 
       for (const data of mapAAOutcome) {
@@ -446,26 +602,39 @@ export class ResultInnovationPackageService {
         newAAOutcome.version_id = version;
         newAAOutcome.created_date = new Date();
         newAAOutcome.last_updated_date = new Date();
-        saveAAOutcome = await this._resultIpAAOutcomeRepository.save(newAAOutcome);
+        saveAAOutcome = await this._resultIpAAOutcomeRepository.save(
+          newAAOutcome,
+        );
       }
       return {
         response: {
-          saveAAOutcome
+          saveAAOutcome,
         },
         message: 'Successfully created',
-        status: HttpStatus.OK
-      }
+        status: HttpStatus.OK,
+      };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 
-  async retrievedImpactArea(resultId: number, user: number, resultByIpId: number, version: number) {
+  async retrievedImpactArea(
+    resultId: number,
+    user: number,
+    resultByIpId: number,
+    version: number,
+  ) {
     const id = resultId;
     try {
       let savImpactArea: any;
-      const searchImpactDataInResult = await this._resultIpImpactAreaIndicatorsRespository.findBy({ result_id: id });
-      const mapImpactsIds = searchImpactDataInResult.map(sid => sid.impact_area_indicator_id);
+      const searchImpactDataInResult =
+        await this._resultIpImpactAreaIndicatorsRespository.findBy({
+          result_id: id,
+        });
+
+      const mapImpactsIds = searchImpactDataInResult.map(
+        (sid) => sid.impact_area_indicator_id,
+      );
 
       for (const data of mapImpactsIds) {
         const newImpactArea = new ResultIpImpactArea();
@@ -476,26 +645,42 @@ export class ResultInnovationPackageService {
         newImpactArea.version_id = version;
         newImpactArea.created_date = new Date();
         newImpactArea.last_updated_date = new Date();
-        savImpactArea = await this._resultIpImpactAreaRespository.save(newImpactArea);
+        savImpactArea = await this._resultIpImpactAreaRespository.save(
+          newImpactArea,
+        );
       }
       return {
         response: {
-          savImpactArea
+          savImpactArea,
         },
         message: 'Successfully created',
-        status: HttpStatus.OK
-      }
+        status: HttpStatus.OK,
+      };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 
-  async generalInformation(resultId: number, updateResultInnovationPackageDto: any, user: TokenDto) {
+  async generalInformation(
+    resultId: number,
+    updateGeneralInformationDto: UpdateGeneralInformationDto,
+    user: TokenDto,
+  ) {
     try {
       const resultExist = await this._resultRepository.findOneBy({
         id: resultId,
       });
-      const req = updateResultInnovationPackageDto;
+      const req = updateGeneralInformationDto;
+
+      const version = await this._versionsService.findBaseVersion();
+      if (version.status >= 300) {
+        throw this._handlersError.returnErrorRes({
+          error: version,
+          debug: true,
+        });
+      }
+
+      const vrs: Version = <Version>version.response;
 
       const titleValidate = await this._resultRepository
         .createQueryBuilder('result')
@@ -527,6 +712,76 @@ export class ResultInnovationPackageService {
         last_updated_by: user.id,
       });
 
+      if (req?.gender_tag_level_id === 3) {
+        if (!req?.evidence_gender_tag) {
+          return {
+            response: { valid: false },
+            message: 'The evidence for Gender tag is required',
+            status: HttpStatus.BAD_REQUEST,
+          };
+        }
+
+        const genderEvidenceExist = await this._evidenceRepository.findOne({
+          where: {
+            result_id: resultId,
+            is_active: 1,
+            gender_related: true,
+          },
+        });
+
+        if (genderEvidenceExist) {
+          await this._evidenceRepository.update(genderEvidenceExist.id, {
+            link: req?.evidence_gender_tag,
+            last_updated_by: user.id,
+            gender_related: true,
+          });
+        } else {
+          await this._evidenceRepository.save({
+            result_id: resultId,
+            link: req?.evidence_gender_tag,
+            created_by: user.id,
+            last_updated_by: user.id,
+            gender_related: true,
+            version_id: vrs.id,
+          });
+        }
+      }
+
+      if (req?.climate_change_tag_level_id === 3) {
+        if (!req?.evidence_climate_tag) {
+          return {
+            response: { valid: false },
+            message: 'The evidence for Climate tag is required',
+            status: HttpStatus.BAD_REQUEST,
+          };
+        }
+
+        const climateEvidenceExist = await this._evidenceRepository.findOne({
+          where: {
+            result_id: resultId,
+            is_active: 1,
+            youth_related: true,
+          },
+        });
+
+        if (climateEvidenceExist) {
+          await this._evidenceRepository.update(climateEvidenceExist.id, {
+            link: req?.evidence_climate_tag,
+            last_updated_by: user.id,
+            youth_related: true,
+          });
+        } else {
+          await this._evidenceRepository.save({
+            result_id: resultId,
+            link: req?.evidence_climate_tag,
+            created_by: user.id,
+            last_updated_by: user.id,
+            youth_related: true,
+            version_id: vrs.id,
+          });
+        }
+      }
+
       return {
         response: updateResult,
         message: 'Successfully updated',
@@ -539,7 +794,7 @@ export class ResultInnovationPackageService {
 
   async delete(resultId: number, user: TokenDto) {
     const resultToUpdate = await this._resultRepository.find({
-      where: { id: resultId }
+      where: { id: resultId },
     });
 
     if (!resultToUpdate) {
@@ -550,26 +805,98 @@ export class ResultInnovationPackageService {
       };
     }
 
-    const resultByInnovationPackageToUpdate = await this._innovationByResultRepository.find({
-      where: { result_innovation_package_id: resultId, is_active: true }
-    });
+    const resultByInnovationPackageToUpdate =
+      await this._innovationByResultRepository.find({
+        where: { result_innovation_package_id: resultId, is_active: true },
+      });
 
     const id = resultToUpdate[0].id;
-    const result_by_innovation_package_id = resultByInnovationPackageToUpdate[0].result_by_innovation_package_id;
+    const result_by_innovation_package_id =
+      resultByInnovationPackageToUpdate[0].result_by_innovation_package_id;
 
-    const result = await this._resultRepository.update({ id }, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
-    const regions = await this._resultRegionRepository.update({ result_id: id }, { is_active: false, last_updated_date: new Date() });
-    const countries = await this._resultCountryRepository.update({ result_id: id }, { is_active: false, last_updated_date: new Date() });
-    const resultByInit = await this._resultByInitiativeRepository.update({ result_id: id }, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
-    const resultByInnoPackage = await this._innovationByResultRepository.update({ result_id: id }, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
-    const resultInnoPackage = await this._resultInnovationPackageRepository.update({ result_innovation_package_id: id }, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
-    const resultByInstitutionsType = await this._resultByIntitutionsTypeRepository.update({ results_id: id }, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
-    const resultBInstitutions = await this._resultByIntitutionsRepository.update({ result_id: id }, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
-    const resultByevidencce = await this._resultByEvidencesRepository.update({ results_id: id }, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
-    const resultValidattion = await this._resultValidationRepository.update({ results_id: id }, { is_active: false, last_updated_date: new Date() });
-    const resultIpAAOutcome = await this._resultIpAAOutcomeRepository.update({ result_by_innovation_package_id }, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
-    const resultIpImpactArea = await this._resultIpImpactAreaRespository.update({ result_by_innovation_package_id }, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
-    const resultIpSdg = await this._resultIpSdgRespository.update({ result_by_innovation_package_id }, { is_active: false, last_updated_date: new Date(), last_updated_by: user.id });
+    const result = await this._resultRepository.update(id, {
+      is_active: false,
+      last_updated_date: new Date(),
+      last_updated_by: user.id,
+    });
+    const regions = await this._resultRegionRepository.update(id, {
+      is_active: false,
+      last_updated_date: new Date(),
+    });
+    const countries = await this._resultCountryRepository.update(id, {
+      is_active: false,
+      last_updated_date: new Date(),
+    });
+    const resultByInit = await this._resultByInitiativeRepository.update(id, {
+      is_active: false,
+      last_updated_date: new Date(),
+      last_updated_by: user.id,
+    });
+    const resultByInnoPackage = await this._innovationByResultRepository.update(
+      id,
+      {
+        is_active: false,
+        last_updated_date: new Date(),
+        last_updated_by: user.id,
+      },
+    );
+    const resultInnoPackage =
+      await this._resultInnovationPackageRepository.update(
+        { result_innovation_package_id: id },
+        {
+          is_active: false,
+          last_updated_date: new Date(),
+          last_updated_by: user.id,
+        },
+      );
+    const resultByInstitutionsType =
+      await this._resultByIntitutionsTypeRepository.update(id, {
+        is_active: false,
+        last_updated_date: new Date(),
+        last_updated_by: user.id,
+      });
+    const resultBInstitutions =
+      await this._resultByIntitutionsRepository.update(id, {
+        is_active: false,
+        last_updated_date: new Date(),
+        last_updated_by: user.id,
+      });
+    const resultByevidencce = await this._resultByEvidencesRepository.update(
+      id,
+      {
+        is_active: false,
+        last_updated_date: new Date(),
+        last_updated_by: user.id,
+      },
+    );
+    const resultValidattion = await this._resultValidationRepository.update(
+      id,
+      { is_active: false, last_updated_date: new Date() },
+    );
+    const resultIpAAOutcome = await this._resultIpAAOutcomeRepository.update(
+      result_by_innovation_package_id,
+      {
+        is_active: false,
+        last_updated_date: new Date(),
+        last_updated_by: user.id,
+      },
+    );
+    const resultIpImpactArea = await this._resultIpImpactAreaRespository.update(
+      result_by_innovation_package_id,
+      {
+        is_active: false,
+        last_updated_date: new Date(),
+        last_updated_by: user.id,
+      },
+    );
+    const resultIpSdg = await this._resultIpSdgRespository.update(
+      result_by_innovation_package_id,
+      {
+        is_active: false,
+        last_updated_date: new Date(),
+        last_updated_by: user.id,
+      },
+    );
 
     return {
       response: {
@@ -588,7 +915,7 @@ export class ResultInnovationPackageService {
         resultIpSdg,
       },
       message: 'The result was deleted successfully',
-      status: HttpStatus.ACCEPTED
-    }
+      status: HttpStatus.ACCEPTED,
+    };
   }
 }

@@ -3,17 +3,25 @@
 <app-pr-field-header
     label="Specify targeted innovation user and also specify how many users are expected to benefit from scaling the core innovation by end of 2024?"></app-pr-field-header>
 
-<app-pr-field-header [required]="false" label="Actors"
-    description="If the innovation does not target specific groups of actors or people, then please specify the expected innovation use at organizational level or other use below. The numbers should reflect the expected innovation use by end of 2024"></app-pr-field-header>
+<app-pr-field-header [required]="false" label="Actors" description="{{narrativeActors()}}"></app-pr-field-header>
 <input type="text" id="removeFocus" style="position: absolute; opacity: 0;">
 <div class="fields_list" *ngIf="this.body.innovatonUse.actors?.length">
-    <div class="fields" appYmzListStructureItem (deleteEvent)="actorItem.is_active = false"
+    <div class="fields" appYmzListStructureItem
+        (deleteEvent)="actorItem.is_active = false; actorItem.actor_type_id = null"
         *ngFor="let actorItem of this.body.innovatonUse.actors; let i=index"
         [ngClass]="{'hideElement': actorItem.is_active == false}">
-        <app-pr-select [options]="this.actorsTypeList" label="Actor type" optionLabel="name" optionValue="actor_type_id"
-            [(ngModel)]="actorItem.actor_type_id" placeholder="Select actor type"
-            [disableOptions]="this.body.innovatonUse.actors">
-        </app-pr-select>
+        <div>
+            <app-pr-select [options]="this.actorsTypeList" [indexReference]="i" label="Actor type" optionLabel="name"
+                optionValue="actor_type_id" [(ngModel)]="actorItem.actor_type_id"
+                (ngModelChange)="this.actorItem.other_actor_type = null" placeholder="Select actor type"
+                [disableOptions]="removeOther(this.body.innovatonUse.actors)">
+            </app-pr-select>
+            <div style="margin-top: 13px;"></div>
+            <app-pr-input *ngIf="actorItem.actor_type_id == 5"
+                description="Specify the other actor type in the text box below" placeholder="Specify other.."
+                type="text" [required]="false" [(ngModel)]="this.actorItem.other_actor_type">
+            </app-pr-input>
+        </div>
         <div class="">
             <div style="margin-top: 20px;margin-bottom: -20px;">
                 <app-pr-field-header
@@ -55,12 +63,13 @@
 <div class="fragment_section_divider"></div>
 
 <div class="fields_list" *ngIf="this.body.innovatonUse.organization?.length">
-    <div class="fields" appYmzListStructureItem (deleteEvent)="organizationItem.is_active = false"
+    <div class="fields" appYmzListStructureItem (deleteEvent)="removeOrganization(organizationItem)"
         [ngClass]="{'hideElement': organizationItem.is_active == false}"
-        *ngFor="let organizationItem of this.body.innovatonUse.organization">
-        <app-pr-select [options]="this.institutionsTypeTreeList" label="Organization" optionLabel="name"
-            optionValue="code" [(ngModel)]="organizationItem.institution_types_id" placeholder="Select organization"
-            (selectOptionEvent)="reloadSelect(organizationItem)">
+        *ngFor="let organizationItem of this.body.innovatonUse.organization; let i=index">
+        <app-pr-select [options]="this.institutionsTypeTreeList" [indexReference]="i" label="Organization"
+            optionLabel="name" optionValue="code" [(ngModel)]="organizationItem.institution_types_id"
+            placeholder="Select organization" (selectOptionEvent)="reloadSelect(organizationItem)"
+            [disableOptions]="disableOrganizations">
         </app-pr-select>
         <div class="right_content">
             <app-pr-select
@@ -69,7 +78,7 @@
                 optionLabel="name" optionValue="code" [(ngModel)]="organizationItem.institution_sub_type_id"
                 [disableOptions]="getAllSubTypes" placeholder="Select Sub-type">
             </app-pr-select>
-            <app-pr-input placeholder="Write some..." label="How many" type="text" [required]="false"
+            <app-pr-input placeholder="Write some..." label="How many" type="number" [required]="false"
                 [(ngModel)]="this.organizationItem.how_many">
             </app-pr-input>
         </div>

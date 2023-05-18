@@ -1,13 +1,14 @@
 import { Injectable } from '@angular/core';
 import { tap, catchError, retry, throwError, pipe } from 'rxjs';
 import { ApiService } from 'src/app/shared/services/api/api.service';
+import { IpsrDataControlService } from './ipsr-data-control.service';
 @Injectable({
   providedIn: 'root'
 })
 export class IpsrCompletenessStatusService {
   flatList = {};
 
-  constructor(private api: ApiService) {}
+  constructor(private api: ApiService, private ipsrDataControlSE: IpsrDataControlService) {}
   flattenObject(obj, prefix = '') {
     return Object.keys(obj).reduce((acc, k) => {
       const pre = prefix.length ? prefix + '.' : '';
@@ -24,7 +25,8 @@ export class IpsrCompletenessStatusService {
     // if (this.api.resultsApiSE.currentResultId) {
     this.api.resultsSE.getCompletenessStatus().subscribe(({ response }) => {
       // console.log('updateGreenChecks');
-
+      console.log(response);
+      this.ipsrDataControlSE.detailData.validResult = response?.validResult;
       this.flatList = this.flattenObject(response, '');
       // console.log(this.flatList);
       // this.submit = Boolean(response?.submit);

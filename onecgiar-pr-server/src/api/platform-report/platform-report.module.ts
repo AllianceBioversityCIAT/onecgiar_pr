@@ -23,7 +23,7 @@ export class PlatformReportModule {
     });
 
     Handlebars.registerHelper('percentage', function (options) {
-      return new Handlebars.SafeString(`${options.fn(this) * 100}`);
+      return new Handlebars.SafeString(`${options.fn(this) * 100}%`);
     });
 
     //taken from https://stackoverflow.com/a/30122739
@@ -75,6 +75,21 @@ export class PlatformReportModule {
         } else {
           return options.inverse(this);
         }
+      },
+    );
+
+    Handlebars.registerHelper('inList', function (value, list: string) {
+      const listArr = (list ?? '').split(',');
+      return listArr.includes(value.toString());
+    });
+
+    Handlebars.registerHelper(
+      'yesNoHelper',
+      function (value, valueIfNotDefined) {
+        if (arguments.length == 2) {
+          return value == null ? valueIfNotDefined : value ? 'Yes' : 'No';
+        }
+        return value ? 'Yes' : 'No';
       },
     );
   }

@@ -10,7 +10,7 @@ export class StepTwoBasicInfoComponent implements OnInit {
 
 innovationCompletary :any = [];
   constructor(public api: ApiService,) { }
-
+  informartion:any = []
   ngOnInit(): void {
     this.api.resultsSE.GETinnovationpathwayStepTwo().subscribe((resp) =>{
         console.log(resp);
@@ -20,81 +20,15 @@ innovationCompletary :any = [];
           inno.result_code = Number(inno.result_code);
         });
       })
+
+      this.api.resultsSE.getStepTwoComentariesInnovation().subscribe((resp) =>{
+        console.log(resp);
+        this.informartion = resp['response']['comentaryPrincipals']
+      })
   }
 
-  informartion:any = [    {
-        group:"(Bio)physical enablers",
-        type:"1",
-        id:1,
-        subElements:[{
-            group:"Access to quality infrastructure",
-            type:"",
-            id:1,
-            subElements:[{
-                group:"Road / transport",
-                type:"",
-                id:1,
-            },
-            {
-                group:"Energy / Power",
-                type:"",
-                id:1,
-            },
-            {
-                group:"Irrigation",
-                type:"",
-                id:1,
-            },
-            {
-                group:"Other",
-                type:"",
-                id:1,
-            }]
-        },
-        {
-            group:"Access to productive assets (e.g. labor)",
-            type:"",
-            id:1,
-            subElements:[]
-        },
-        {
-            group:"Agro-climatic conditions/ resilience",
-            type:"",
-            id:1,
-            subElements:[]
-        }
-    ]
-    },
-    {
-        group:"One",
-        type:"1",
-        id:1,
-        subElements:[{
-            group:"two",
-            type:"",
-            id:1,
-            subElements:[{
-                group:"tree",
-                type:"",
-                id:1,
-            }]
-        }]
-    },
-    {
-        group:"One",
-        type:"1",
-        id:1,
-        subElements:[{
-            group:"two",
-            type:"",
-            id:1,
-            subElements:[{
-                group:"tree",
-                type:"",
-                id:1,
-            }]
-        }]
-    }
-]
+  onSaveSection(){
+    
+  }
 
 }

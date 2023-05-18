@@ -7,7 +7,24 @@
         ></app-pr-select>
         <app-pr-field-header label="Type of enabler" [required]="false"
     description="Select multiple"></app-pr-field-header>
-    <app-item-options *ngFor="let info of informartion" [title]="info.group" [optionsInnovations]="info" ></app-item-options>
+    <div style="display: flex; flex-direction: row;" >
+        <div style="padding-right: 40px; margin-right: 40px; border-right: 1px solid #5569DD99 ;" >
+            <div *ngFor="let info of informartion; let i = index">
+                <app-item-options  *ngIf="i < 3" [title]="info.group" [optionsInnovations]="info" ></app-item-options>
+            </div>
+            
+        </div>
+        <div>
+            <div *ngFor="let info of informartion; let i = index">
+                <app-item-options  *ngIf="i >= 3" [title]="info.group" [optionsInnovations]="info" ></app-item-options>
+            </div>
+            <app-pr-input label="Other enablers" [required]="false" placeholder="Other enablers"></app-pr-input>
+        </div>
+        
+    </div>
+    
 
     
 </div>
+
+<app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>

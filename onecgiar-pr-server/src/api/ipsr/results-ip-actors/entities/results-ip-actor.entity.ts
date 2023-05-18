@@ -5,7 +5,7 @@ import { ActorType } from '../../../results/result-actors/entities/actor-type.en
 import { BaseEntity } from '../../../../shared/entities/base-entity';
 
 @Entity('result_ip_result_actors')
-export class ResultsIpActor extends BaseEntity{
+export class ResultsIpActor extends BaseEntity {
     @PrimaryGeneratedColumn({
         name: 'result_ip_actors_id',
         type: 'bigint'
@@ -55,11 +55,33 @@ export class ResultsIpActor extends BaseEntity{
     actor_type_id!: number;
 
     @Column({
-        name:'evidence_link',
+        name: 'other_actor_type',
+        type: 'text',
+        nullable: true
+    })
+    other_actor_type!: string;
+
+    @Column({
+        name: 'evidence_link',
         type: 'text',
         nullable: true
     })
     evidence_link!: string;
+
+    @Column({
+        name: 'sex_and_age_disaggregation',
+        type: 'boolean',
+        nullable: true,
+        default: false
+    })
+    sex_and_age_disaggregation: boolean;
+
+    @Column({
+        name: 'how_many',
+        type: 'bigint',
+        nullable: true,
+    })
+    how_many: number;
 
     @ManyToOne(() => Ipsr, ir => ir.obj_result_ip_actors)
     @JoinColumn({

@@ -27,15 +27,15 @@
 
     <app-pr-textarea placeholder="Write some..."
         label="Please provide details of where evidence can be found within the source link (e.g. page number, slide number, table number)"
-        type="text" [required]="true"
+        type="text" [required]="false"
         [(ngModel)]="this.body.result_ip_result_complementary[this.ci.index].readiness_details_of_evidence"></app-pr-textarea>
 
     <div class="fragment_section_divider"></div>
 
     <app-pr-field-header label="Innovation use level evidence-based" [required]="false"
-        [description]="this.readinessLevelSelfAssessmentText()"></app-pr-field-header>
+        [description]="this.useLevelDelfAssessment()"></app-pr-field-header>
 
-    <app-pr-range-level itemTitle="name" itemDescription="definition" [options]="this.rangesOptions"
+    <app-pr-range-level itemTitle="name" itemDescription="definition" [options]="this.innovationUseList"
         *ngIf="this.rangesOptions?.length" optionLabel="name" optionValue="id"
         [(ngModel)]="this.body.result_ip_result_complementary[this.ci.index].use_level_evidence_based"></app-pr-range-level>
 
@@ -45,6 +45,6 @@
 
     <app-pr-textarea placeholder="Write some..."
         label="Please provide details of where evidence can be found within the source link (e.g. page number, slide number, table number)"
-        type="text" [required]="true"
+        type="text" [required]="false"
         [(ngModel)]="this.body.result_ip_result_complementary[this.ci.index].use_details_of_evidence"></app-pr-textarea>
 </div>

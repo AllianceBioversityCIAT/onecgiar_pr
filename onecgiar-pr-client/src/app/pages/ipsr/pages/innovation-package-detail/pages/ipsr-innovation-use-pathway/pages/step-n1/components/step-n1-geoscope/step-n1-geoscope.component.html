@@ -1,17 +1,17 @@
 <app-pr-radio-button [options]="this.geoscopeOptions" optionLabel="full_name" optionValue="id"
     label="Select country/ geoscope for which packaging and scaling readiness assessment will be conducted"
-    [(ngModel)]="body.geo_scope_id">
+    [(ngModel)]="body.geo_scope_id" [ngClass]="{'globalDisabled': true}">
 </app-pr-radio-button>
 
 <app-pr-multi-select *ngIf="body.geo_scope_id == 2" [options]="this.regionsCountriesSE.regionsList"
     [description]="selectRegionsDescription" label="Select regions" selectedLabel="Regions(s) selected"
     selectedOptionLabel="name" optionLabel="name" optionValue="id" placeholder="Select regions"
-    [(ngModel)]="body.regions">
+    [(ngModel)]="body.regions" [ngClass]="{'globalDisabled': true}">
 </app-pr-multi-select>
 
 <app-pr-multi-select *ngIf="body.geo_scope_id == 4" [options]="this.regionsCountriesSE.countriesList"
     label="Select countries" selectedLabel="Countries selected" selectedOptionLabel="name" optionLabel="name"
-    optionValue="id" placeholder="Select countries" [(ngModel)]="body.countries">
+    optionValue="id" placeholder="Select countries" [(ngModel)]="body.countries" [ngClass]="{'globalDisabled': true}">
 </app-pr-multi-select>
 
-<div class="step_divider"></div>
+<div class="step_divider" [ngClass]="{'globalDisabled': true}"></div>

@@ -69,7 +69,8 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                         results_toc_result rtr2
                     WHERE
                         rtr2.results_id = r.id
-                        AND rtr2.planned_result IS NOT NULL
+                        AND rtr2.planned_result IS NULL
+                        AND rtr2.toc_result_id IS NULL
                         AND rtr2.initiative_id IN (
                             SELECT
                                 rbi2.inititiative_id

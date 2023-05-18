@@ -22,6 +22,19 @@ export class SubmissionsController {
     throw new HttpException({ message, response }, status);
   }
 
+  @Patch('submit-ipsr/:resultId')
+  async submitFunctionIPSR(
+    @Param('resultId') resultId: number,
+    @Headers() auth: HeadersDto,
+    @Body() createSubmissionDto: CreateSubmissionDto
+  ) {
+    const token: TokenDto = <TokenDto>(
+      JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
+    );
+    const {message,response, status} = await this.submissionsService.submitFunctionIPSR(resultId, token, createSubmissionDto);
+    throw new HttpException({ message, response }, status);
+  }
+
   @Patch('unsubmit/:resultId')
   async unsubmit(
     @Param('resultId') resultId: number,
@@ -32,6 +45,19 @@ export class SubmissionsController {
       JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
     );
     const {message,response, status} = await this.submissionsService.unsubmitFunction(resultId, token, createSubmissionDto);
+    throw new HttpException({ message, response }, status);
+  }
+
+  @Patch('unsubmit-ipsr/:resultId')
+  async unsubmitFunctionIPSR(
+    @Param('resultId') resultId: number,
+    @Headers() auth: HeadersDto,
+    @Body() createSubmissionDto: CreateSubmissionDto
+  ) {
+    const token: TokenDto = <TokenDto>(
+      JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
+    );
+    const {message,response, status} = await this.submissionsService.unsubmitFunctionIPSR(resultId, token, createSubmissionDto);
     throw new HttpException({ message, response }, status);
   }
 

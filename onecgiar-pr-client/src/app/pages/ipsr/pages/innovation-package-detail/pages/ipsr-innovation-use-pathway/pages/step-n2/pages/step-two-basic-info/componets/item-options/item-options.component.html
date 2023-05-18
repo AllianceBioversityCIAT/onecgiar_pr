@@ -1,14 +1,14 @@
 <app-pr-field-header label="{{title}}" [required]="false"></app-pr-field-header>
 <ul>
-<div *ngFor="let category of optionsInnovations?.subElements" class="field-checkbox">
+<div *ngFor="let category of optionsInnovations?.subCategories" class="field-checkbox">
     <li>
-        <p-checkbox name="group" [value]="category.group" [inputId]="category.id"></p-checkbox>
+        <p-checkbox name="group" [value]="category" [inputId]="category.id" [(ngModel)]="selectedCategories" (click)="selectes(category)"></p-checkbox>
         <label> {{ category.group }}</label>
     </li>
     <ul>
         <li>
-            <div *ngFor="let categories of category?.subElements" class="field-checkbox">
-                <p-checkbox name="group" [value]="categories.group" [inputId]="categories.id" [(ngModel)]="category.group" ></p-checkbox>
+            <div *ngFor="let categories of category?.subCategories" class="field-checkbox">
+                <p-checkbox name="group" [value]="categories" [inputId]="categories.id" [(ngModel)]="selectedOne" (click)="subSelectes()"></p-checkbox>
                 <label >{{ categories.group }}</label>
                 
             </div>

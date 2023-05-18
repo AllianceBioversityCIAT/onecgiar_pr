@@ -14,4 +14,8 @@ export class StepN4PictureLinksComponent {
   addItem() {
     this.body.ipsr_pictures.push(new IpsrpictureStep4());
   }
+  delete(index){
+   
+    this.body.ipsr_pictures.splice(index, 1);;
+  }
 }

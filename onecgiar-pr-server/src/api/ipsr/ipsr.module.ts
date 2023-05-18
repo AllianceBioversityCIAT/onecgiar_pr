@@ -48,7 +48,8 @@ import { ResultsInnovationPackagesValidationModuleModule } from './results-innov
     ResultsInnovationPackagesValidationModuleModule,
   ],
   exports: [
-    IpsrRepository
+    IpsrRepository,
+    IpsrService,
   ]
 })
 export class IpsrModule { }

@@ -5,7 +5,7 @@ import { Version } from '../../versions/entities/version.entity';
 import { ActorType } from './actor-type.entity';
 
 @Entity('result_actors')
-export class ResultActor extends BaseEntity{
+export class ResultActor extends BaseEntity {
 
     @PrimaryGeneratedColumn({
         name: 'result_actors_id',
@@ -54,6 +54,27 @@ export class ResultActor extends BaseEntity{
     })
     actor_type_id!: number;
 
+    @Column({
+        name: 'other_actor_type',
+        type: 'text',
+        nullable: true
+    })
+    other_actor_type!: string;
+
+    @Column({
+        name: 'sex_and_age_disaggregation',
+        type: 'boolean',
+        nullable: true,
+        default: false
+    })
+    sex_and_age_disaggregation: boolean;
+
+    @Column({
+        name: 'how_many',
+        type: 'bigint',
+        nullable: true,
+    })
+    how_many: number;
 
     @ManyToOne(() => Result, r => r.obj_result_actor)
     @JoinColumn({

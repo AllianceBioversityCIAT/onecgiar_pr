@@ -25,9 +25,27 @@ export class IpsrGeoscopeCreatorComponent {
 
   onClicked(){
     this.sub_scope.push(this.sub_scope.length);
+
+    for (let index = 0; index < this.body.countries.length; index++) {
+      if(!this.body.countries[index].hasOwnProperty('result_countries_sub_national')){
+        this.body.countries[index]['result_countries_sub_national'] = []
+      }
+      
+    }
+    
+    
   }
 
   deleteItem(item){
     this.sub_scope.splice(item, 1);
+  }
+
+  descriptionGeoScope(){
+    return `
+    <ul>
+    <li>Select country/ geoscope for which innovation packaging and scaling readiness assessment will be conducted. </li>
+    <li>Please note that geoscope cannot be changed after innovation package creation. </li>
+    </ul>
+    `
   }
 }

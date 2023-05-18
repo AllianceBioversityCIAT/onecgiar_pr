@@ -3,6 +3,7 @@ import { Injectable } from "@nestjs/common";
 import { DataSource, Repository } from "typeorm";
 import { Ipsr } from "./entities/ipsr.entity";
 import { HandlersError } from '../../shared/handlers/error.utils';
+import { ResultCountriesSubNational } from '../results/result-countries-sub-national/entities/result-countries-sub-national.entity';
 
 
 @Injectable()
@@ -75,6 +76,7 @@ export class IpsrRepository extends Repository<Ipsr>{
             r.id AS result_id,
             r.result_code,
             r.title,
+            r.status,
             rbi.inititiative_id,
             ci.official_code AS initiative_official_code,
             ci.short_name AS initiative_short_name,
@@ -153,6 +155,17 @@ export class IpsrRepository extends Repository<Ipsr>{
                 WHERE
                     gtl.id = r.gender_tag_level_id
             ) AS gender_tag_level,
+            (
+                SELECT
+                    e1.link
+                FROM
+                    evidence e1
+                WHERE
+                    e1.result_id = r.id
+                    AND e1.gender_related = TRUE
+                    AND e1.is_active = 1
+                    LIMIT 1
+            ) AS evidence_gender_tag,
             r.climate_change_tag_level_id,
             (
                 SELECT
@@ -162,6 +175,17 @@ export class IpsrRepository extends Repository<Ipsr>{
                 WHERE
                     gtl2.id = r.climate_change_tag_level_id
             ) AS climate_tag_level,
+            (
+                SELECT
+                    e2.link
+                FROM
+                    evidence e2
+                WHERE
+                    e2.result_id = r.id
+                    AND e2.youth_related = TRUE
+                    AND e2.is_active = 1
+                    LIMIT 1
+            ) AS evidence_climate_tag,
             IF((r.is_krs = 1), true, false ) AS is_krs,
             r.krs_url,
             r.lead_contact_person,
@@ -171,11 +195,13 @@ export class IpsrRepository extends Repository<Ipsr>{
             LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
             LEFT JOIN clarisa_geographic_scope cgs ON cgs.id = r.geographic_scope_id
         WHERE r.is_active = 1
-            AND r.id = ?;
+            AND r.id = ?
+            AND rbi.initiative_role_id = 1;
         `;
 
         const countryQuery = `
         SELECT
+            rc.result_country_id,
             rc.country_id AS id,
             cc.name,
             rc.result_id,
@@ -186,8 +212,26 @@ export class IpsrRepository extends Repository<Ipsr>{
             AND rc.is_active = 1;
         `;
 
+        const subNationalQuery = `
+        SELECT
+        	*
+        from
+        	result_countries_sub_national rcsn
+        WHERE
+        	rcsn.result_countries_id in (
+        	SELECT
+        		rc.result_country_id
+        	FROM
+        		result_country rc
+        	WHERE
+        		rc.result_id = ?
+        		AND rc.is_active = 1)
+        and rcsn.is_active = true;
+        `
+
         const regionsQuery = `
         SELECT
+            rr.result_region_id,
             rr.region_id AS id,
             cr.name,
             rr.result_id
@@ -201,6 +245,7 @@ export class IpsrRepository extends Repository<Ipsr>{
             const resultInnovation: any[] = await this.dataSource.query(resultInnovationByIdQuery, [resultId]);
             const regions: any[] = await this.dataSource.query(regionsQuery, [resultId]);
             const countries: any[] = await this.dataSource.query(countryQuery, [resultId]);
+            const sub_national: ResultCountriesSubNational[] = await this.dataSource.query(subNationalQuery, [resultId]);
 
             resultInnovation.map(ri => {
                 ri['hasRegions'] = regions.filter(r => {
@@ -209,6 +254,9 @@ export class IpsrRepository extends Repository<Ipsr>{
 
                 ri['hasCountries'] = countries.filter(c => {
                     return c.result_id === ri.result_id;
+                }).map(cid => {
+                    cid['result_countries_sub_national'] = sub_national.filter(el => el.result_countries_id == cid['result_country_id']);
+                    return cid;
                 });
             });
 
@@ -304,7 +352,7 @@ export class IpsrRepository extends Repository<Ipsr>{
             });
         }
     }
-    
+
     async getInnovationCoreStepOne(resultId: number) {
         const innovationByIdQuery = `
         SELECT

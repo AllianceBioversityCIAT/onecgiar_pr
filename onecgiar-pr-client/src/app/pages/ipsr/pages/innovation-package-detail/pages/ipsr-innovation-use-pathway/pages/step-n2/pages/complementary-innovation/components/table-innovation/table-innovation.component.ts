@@ -28,7 +28,7 @@ interface ComplementaryInnovation {
   
   styleUrls: ['./table-innovation.component.scss']
 })
-export class TableInnovationComponent implements OnInit {
+export class TableInnovationComponent{
 
   coreInnovationSelected: ComplementaryInnovation;
   searchText = '';
@@ -37,22 +37,8 @@ export class TableInnovationComponent implements OnInit {
   loading:boolean = true;
   @Output() selectInnovationEvent = new EventEmitter<ComplementaryInnovation>();
   @Input() selectionsInnovation :any [];
+  @Input() informationComplementaryInnovations :any [] = [];
   constructor(public api: ApiService, public manageInnovationsListSE: ManageInnovationsListService) {}
-
-  ngOnInit(): void {
-    this.cleanSelected();
-  }
-  
-  ngOnChanges(changes: SimpleChanges) {
-    // changes.prop contains the old and the new value...
-    this.selectionsInnovation= changes['selectionsInnovation'].currentValue;
-    console.log('lol');
-    
-  }
-
-  ngOnDestroy(): void {
-    this.cleanSelected();
-  }
 
   columnOrder = [
     { title: 'Result code', attr: 'result_code'},
@@ -68,26 +54,4 @@ export class TableInnovationComponent implements OnInit {
     result.selected = true;
     this.selectInnovationEvent.emit(result);  
   }
-
-  cleanSelected() {
-    this.api.resultsSE.GETinnovationpathwayStepTwo().subscribe((resp) =>{
-      console.log(resp);
-      this.informationComplementaryInnovation = resp['response'];
-      this.informationComplementaryInnovation.map((inno: any) => {
-        inno.full_name = `${inno?.result_code} ${inno?.title} ${inno?.initiative_official_code} ${inno?.initiative_official_code} ${inno?.lead_contact_person} yes no `;
-        inno.result_code = Number(inno.result_code);
-      });
-    })
-  }
-
-  findResultSelected(result: ComplementaryInnovation){
-   let index =  this.selectionsInnovation.findIndex((resp)=> resp.result_id == result.result_id? result.selected = true:  result.selected = false);
-    if (index == -1) {
-        return false;
-    }else{
-      return true;
-    }
-  }
-
-
 }
