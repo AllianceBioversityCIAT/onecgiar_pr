@@ -40,14 +40,18 @@
           </div>
         </td>
         <td>
-          <a [href]="'/reports/result-details/'+result?.result_code+'?phase=1'" target="_blank"
+          <a pTooltip="Click to view the pdf" tooltipPosition="bottom"
+            [href]="'/reports/result-details/'+result?.result_code+'?phase=1'" target="_blank"
             rel="noopener noreferrer">
-            <i class="material-icons-round pdf_icon">description</i>
+            <!-- <i class="material-icons-round pdf_icon">description</i> -->
+            <app-pdf-icon></app-pdf-icon>
           </a>
         </td>
         <td *ngIf="!this.api.dataControlSE.platformIsClosed">
-          <div class="icon_container"><i class="pi pi-ellipsis-v"
-              (click)="menu.toggle($event);onPressAction(result)"></i></div>
+          <div class="icon_container">
+            <i class="pi pi-ellipsis-v" (click)="menu.toggle($event);onPressAction(result)">
+            </i>
+          </div>
         </td>
       </tr>
     </ng-template>
