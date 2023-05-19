@@ -3,6 +3,7 @@ import { DataSource, Repository, QueryRunner } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { FilterInitiativesDto } from './dto/filter-initiatives.dto';
 import { FilterResultsDto } from './dto/filter-results.dto';
+import { env } from 'process';
 
 @Injectable()
 export class AdminPanelRepository {
@@ -81,7 +82,8 @@ export class AdminPanelRepository {
     v.geographic_location +
     v.links_to_results +
     v.evidence)* 100) / if(v.section_seven is null, 6, 7)) as completeness,
-    if((SELECT if(s.id is null, 0, 1)  from submission s WHERE s.results_id = r.id and is_active > 0 LIMIT 1) > 0, 1, 0) as have_a_history
+    if((SELECT if(s.id is null, 0, 1)  from submission s WHERE s.results_id = r.id and is_active > 0 LIMIT 1) > 0, 1, 0) as have_a_history,
+    concat('${env.FRONT_END_PDF_ENDPOINT}', r.result_code,?, 'phase=1') as pdf_link
   FROM
   result r
   left join validation v on
@@ -102,7 +104,9 @@ export class AdminPanelRepository {
     `;
 
     try {
-      let submissionsByResult: any = await this.dataSource.query(queryData);
+      let submissionsByResult: any = await this.dataSource.query(queryData, [
+        '?',
+      ]);
 
       return submissionsByResult;
     } catch (error) {

@@ -10,17 +10,24 @@ import { PusherService } from '../../../../shared/services/pusher.service';
 import { GreenChecksService } from '../../../../shared/services/global/green-checks.service';
 import { ShareRequestModalService } from './components/share-request-modal/share-request-modal.service';
 import { CurrentResultService } from '../../../../shared/services/current-result.service';
+import { MessageService } from 'primeng/api';
 
 @Component({
   selector: 'app-result-detail',
   templateUrl: './result-detail.component.html',
-  styleUrls: ['./result-detail.component.scss']
+  styleUrls: ['./result-detail.component.scss'],
+  providers: [MessageService]
 })
 export class ResultDetailComponent {
-  constructor(public currentResultSE: CurrentResultService, private shareRequestModalSE: ShareRequestModalService, public navigationBarSE: NavigationBarService, private activatedRoute: ActivatedRoute, public api: ApiService, public saveButtonSE: SaveButtonService, private resultLevelSE: ResultLevelService, private rolesSE: RolesService, private router: Router, public dataControlSE: DataControlService, private pusherService: PusherService, private greenChecksSE: GreenChecksService) {}
+  constructor(private messageSE: MessageService, public currentResultSE: CurrentResultService, private shareRequestModalSE: ShareRequestModalService, public navigationBarSE: NavigationBarService, private activatedRoute: ActivatedRoute, public api: ApiService, public saveButtonSE: SaveButtonService, private resultLevelSE: ResultLevelService, private rolesSE: RolesService, private router: Router, public dataControlSE: DataControlService, private pusherService: PusherService, private greenChecksSE: GreenChecksService) {}
   closeInfo = false;
   ngOnInit(): void {
     this.getData();
+  }
+
+  onCopy() {
+    console.log('onCopy');
+    this.messageSE.add({ key: 'copyResultLinkPdf', severity: 'success', summary: 'PDF link copied' });
   }
 
   async getData() {

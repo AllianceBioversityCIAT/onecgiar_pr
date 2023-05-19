@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { IpsrStep3Body } from './model/Ipsr-step-3-body.model';
+import { ActorN3, IpsrStep3Body, MeasureN3, OrganizationN3 } from './model/Ipsr-step-3-body.model';
 import { IpsrDataControlService } from 'src/app/pages/ipsr/services/ipsr-data-control.service';
 import { ApiService } from 'src/app/shared/services/api/api.service';
 
@@ -28,12 +28,18 @@ export class StepN3Component implements OnInit {
 
   getSectionInformation() {
     this.api.resultsSE.GETInnovationPathwayByRiId().subscribe(({ response }) => {
-      // console.log('%cGET', 'font-size: 20px; color: #2BBE28;');
+      console.log('%cGET', 'font-size: 20px; color: #2BBE28;');
       console.log(response);
       this.convertOrganizations(response?.innovatonUse?.organization);
       // console.log('%c____________________', 'font-size: 20px; color: #2BBE28;');
       this.result_core_innovation = response.result_core_innovation;
       this.ipsrStep3Body = response;
+      if(this.ipsrStep3Body.innovatonUse.actors.length == 0){
+        this.ipsrStep3Body.innovatonUse.actors.push(new ActorN3())
+      }
+      if(this.ipsrStep3Body.innovatonUse.organization.length == 0){
+        this.ipsrStep3Body.innovatonUse.organization.push(new OrganizationN3())
+      }
     });
   }
   onSaveSection() {
@@ -95,5 +101,9 @@ export class StepN3Component implements OnInit {
   resultUrl(resultCode) {
     
     return `/result/result-detail/${resultCode}/general-information`;
+  }
+
+  workshopDescription() {
+    return `A template participant list can be downloaded <a href=""  class="open_route" target="_blank">here</a>`;
   }
 }

@@ -28,7 +28,7 @@
                 </app-pr-select>
             </div>
             <div>
-                <app-pr-input placeholder="Write some..." label="Email" type="text" [(ngModel)]="this.expert.email">
+                <app-pr-input placeholder="Write some..." label="Email" type="text" [required]="false" [(ngModel)]="this.expert.email">
                 </app-pr-input>
 
                 <app-pr-multi-select

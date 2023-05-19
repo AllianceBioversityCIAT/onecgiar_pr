@@ -6,6 +6,16 @@
     [(ngModel)]="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized">
 </app-pr-radio-button>
 
+<app-pr-input *ngIf="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true" label="Provide the link to the workshop list of participants" [description]="workshopDescription()"
+    [required]="false" placeholder="Link" [(ngModel)]="this.ipsrStep3Body.link_workshop_list">
+</app-pr-input>
+
+<div class="infoPersons" *ngIf="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === null && false" >
+    <app-pr-input label="First Name" [required]="false" placeholder="First Name" ></app-pr-input>
+    <app-pr-input  label="Last Name"  [required]="false" placeholder="Last Name" ></app-pr-input>
+    <app-pr-input label="Email" [required]="false" placeholder="Email" ></app-pr-input>
+</div>
+
 <div *ngIf="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true">
     <app-pr-field-header label="Innovation Readiness level self-assessment" [required]="false"
         [description]="this.readinessLevelSelfAssessmentText()"></app-pr-field-header>
