@@ -189,6 +189,10 @@ export class ShareResultRequestService {
             newRtR.toc_result_id = toc_result_id || null;
           }
 
+          const newReIni = await this._resultByInitiativesRepository.save(
+            newResultByInitiative,
+          );
+
           const resultTocResult =
             await this._resultsTocResultRepository.existsResultTocResult(
               result.id,
