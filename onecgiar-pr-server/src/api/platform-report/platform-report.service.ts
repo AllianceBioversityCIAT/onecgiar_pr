@@ -103,12 +103,31 @@ export class PlatformReportService {
             //first: 'Cover page',
             //2: 'Second page', // Any page number is working. 1-based index
             default: ` 
-            <div style="display: table; width: 100%; height: 100%;">
-              <div style="display: table-cell; vertical-align: middle; text-align: center;">
-                <span style="width: 75%;float: left;text-align: left">This report was generated on ${data.generation_date_footer}</span>
-                <span style="width: 25%;float: left;color: #444;text-align: right;">{{page}}/{{pages}}</span>
-              </div>
-            </div>
+            <style>
+              .footer {
+                width: 100%;
+                height: 100%;
+                color: #303030;
+              }
+              .text {
+                font-style: italic;
+                width: 100%;
+                font-size: .7rem !important;
+              }
+              .page_counter {
+                min-width: 150px;
+                text-align: right;
+                font-size: .8rem;
+              }
+            </style>
+            <table class="footer">
+              <tr>
+                <td class="text">
+                  This report was generated on ${data.generation_date_footer}. Please note that the contents of this report may change in the future as it is dependent on the data entered into the PRMS Reporting tool at a given time during a specific phase
+                </td>
+                <td class="page_counter">{{page}}/{{pages}}</td>
+              </tr>
+            </table>
               `, // fallback value
             //last: 'Last Page',
           },
