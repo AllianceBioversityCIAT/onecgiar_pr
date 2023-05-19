@@ -1,4 +1,4 @@
-<p-dialog class="support_information" header="Title" [(visible)]="this.visible" (onHide)="cleanObject()"
+<p-dialog class="support_information" header="Title" [(visible)]="this.visible"
     [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true"
     [style]="{padding: '0px'}">
     <div class="modal_title">Add bilateral</div>
@@ -8,7 +8,7 @@
 
         <app-pr-select class="segment_title_margin" [options]="this.institutionsSE?.institutionsList"
             label="Funder name" optionLabel="full_name" optionValue="institutions_id" placeholder="Select funder"
-            [(ngModel)]="biltarealBody.funder">
+            [(ngModel)]="biltarealBody.funder_institution_id">
         </app-pr-select>
 
         <div class="auto_fit_container">
@@ -22,7 +22,7 @@
 
         <app-pr-select [options]="this.centersSE.centersList" [required]="true" label="Lead/Contract Center"
             optionLabel="full_name" optionValue="lead_center" placeholder="Select donor"
-            [(ngModel)]="biltarealBody.lead_center" placeholder="Lead/Contract Center goes here...">
+            [(ngModel)]="biltarealBody.lead_center_id" placeholder="Lead/Contract Center goes here...">
         </app-pr-select>
 
 
@@ -39,7 +39,9 @@
     </div>
 
 </p-dialog>
-<div style="width: 120px;">
-    <app-pr-button (click)="visible= true;" padding="small" text="Add bilateral" icon="add_box"
-    *ngIf="!this.api.rolesSE.readOnly"></app-pr-button>
+
+<div class="step-4-edit-button" (click)="visible=true">
+    <i class="material-icons-round">
+        edit
+    </i>
 </div>
