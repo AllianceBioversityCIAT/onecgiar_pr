@@ -29,15 +29,17 @@
     <app-pdf-actions (copyEvent)="copyEvent.emit()"></app-pdf-actions>
   </div>
 
-  <div class="submit_button"
-    *ngIf="validateMember(this.api.dataControlSE?.myInitiativesList) != 6  && !this.api.rolesSE.readOnly">
-    <app-pr-button [ngClass]="{'globalDisabled': !this.greenChecksSE.submit}"
-      (click)="this.submissionModalSE.showModal = true;" text="Submit"
-      *ngIf="this.dataControlSE?.currentResult?.status == 0"></app-pr-button>
-    <app-pr-button text="Unsubmit" *ngIf="this.dataControlSE?.currentResult?.status == 1"
-      (click)="this.unsubmitModalSE.showModal = true;"></app-pr-button>
-    <div class="button_access_information" *ngIf="this.dataControlSE?.currentResult?.status == 0">
-      This button will be available once all sections are available.
+  <div>
+    <div class="submit_button"
+      *ngIf="validateMember(this.api.dataControlSE?.myInitiativesList) != 6  && !this.api.rolesSE.readOnly">
+      <app-pr-button [ngClass]="{'globalDisabled': !this.greenChecksSE.submit}"
+        (click)="this.submissionModalSE.showModal = true;" text="Submit"
+        *ngIf="this.dataControlSE?.currentResult?.status == 0"></app-pr-button>
+      <app-pr-button text="Unsubmit" *ngIf="this.dataControlSE?.currentResult?.status == 1"
+        (click)="this.unsubmitModalSE.showModal = true;"></app-pr-button>
+      <div class="button_access_information" *ngIf="this.dataControlSE?.currentResult?.status == 0">
+        This button will be available once all sections are available.
+      </div>
     </div>
   </div>
 
