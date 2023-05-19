@@ -66,10 +66,11 @@ export class InitCompletenessStatusComponent implements OnInit {
       geographic_location: 'Geographic location',
       links_to_results: 'Links to results',
       evidence: 'Evidence',
-      section_seven: 'Section seven'
+      section_seven: 'Section seven',
+      pdf_link: 'PDF Link'
     });
     resultsList.map(result => {
-      const { result_code, result_title, official_code, completeness, result_type_name, general_information, theory_of_change, partners, geographic_location, links_to_results, evidence, section_seven, is_submitted } = result;
+      const { result_code, result_title, official_code, completeness, result_type_name, general_information, theory_of_change, partners, geographic_location, links_to_results, evidence, section_seven, is_submitted, pdf_link } = result;
       // console.log(is_submitted);
       // content
       resultsListMapped.push({
@@ -85,7 +86,8 @@ export class InitCompletenessStatusComponent implements OnInit {
         geographic_location: this.convertToYesOrNot(geographic_location.value),
         links_to_results: this.convertToYesOrNot(links_to_results.value),
         evidence: this.convertToYesOrNot(evidence.value),
-        section_seven: this.convertToYesOrNot(section_seven.value)
+        section_seven: this.convertToYesOrNot(section_seven.value),
+        pdf_link: pdf_link
       });
     });
     // console.table(resultsListMapped);

@@ -28,10 +28,8 @@ export class PdfReportsComponent implements OnInit {
   }
 
   getPdfData() {
-    console.log(this.report.iframeRoute);
-    console.log(this.activatedRoute.snapshot.paramMap.get('id'));
-    console.log(!this.activatedRoute.snapshot.paramMap.get('id'));
     if (!this.activatedRoute.snapshot.paramMap.get('id')) return (this.error.type = 'warning');
+    console.log(this.report.iframeRoute);
     this.http.get<any>(this.report.iframeRoute).subscribe(
       resp => {
         console.log(resp);
@@ -48,29 +46,14 @@ export class PdfReportsComponent implements OnInit {
   validateErrors({ message, status }) {
     const statusText = String(status);
     this.error.type = statusText[0] == '5' ? 'error' : statusText[0] == '4' ? 'warning' : null;
-    console.log(this.error.type);
-    switch (status) {
-      case '404':
-        return '';
+    // switch (status) {
+    //   case '404':
+    //     return '';
 
-      default:
-        return '';
-    }
+    //   default:
+    //     return '';
+    // }
   }
-
-  // handleError(error: Event) {
-  //   // Imprimir el error en la consola
-  //   console.log('Se produjo un error al cargar el iframe:', error);
-
-  //   // Otra lógica adicional si se requiere
-  //   // ...
-  // }
-
-  loaded() {
-    console.log('loaded');
-  }
-
-  getRouteData() {}
 
   ngOnDestroy(): void {
     this.authService.inLogin = false;
@@ -88,10 +71,19 @@ class Report {
 
   sanitizeUrl() {
     this.sanitizedUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.iframeRoute);
-    // console.log(this.activatedRoute.snapshot.queryParamMap);
   }
 
   get iframeRoute() {
-    return `${environment.apiBaseUrl}api/platform-report/result/${this.activatedRoute.snapshot.paramMap.get('id')}`;
+    return `${environment.apiBaseUrl}api/platform-report/result/${this.activatedRoute.snapshot.paramMap.get('id')}${this.qParamsObjectToqueryParams()}`;
+  }
+
+  qParamsObjectToqueryParams() {
+    const objectKeys = Object.keys(this.activatedRoute.snapshot.queryParamMap.params);
+    if (!objectKeys.length) return '';
+    let queryParamsText = '';
+    const params = this.activatedRoute.snapshot.queryParamMap.params;
+    objectKeys.forEach((key, i) => (queryParamsText += (i > 0 && params[key] ? '&' : '') + (params[key] ? `${key}=${params[key]}` : '')));
+
+    return queryParamsText ? '?' + queryParamsText : '';
   }
 }
