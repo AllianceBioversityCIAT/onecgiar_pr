@@ -225,15 +225,21 @@ export class InnovationPathwayStepThreeService {
         };
       }
 
-      await this._evidenceRepository.save({
-        result_id: resultId,
-        link: lwl,
-        evidence_type_id: 5,
-        version_id: version.id,
-        created_by: user.id,
-        last_updated_by: user.id,
-        last_updated_date: new Date(),
-      });
+      if (!workShopEvidence) {
+        await this._evidenceRepository.save({
+          result_id: resultId,
+          link: lwl,
+          evidence_type_id: 5,
+          version_id: version.id,
+          created_by: user.id,
+          last_updated_by: user.id,
+        });
+      } else {
+        await this._evidenceRepository.update(workShopEvidence.id, {
+          link: lwl,
+          last_updated_by: user.id,
+        });
+      }
 
       if (ripewo?.length) {
         for (const entity of ripewo) {
