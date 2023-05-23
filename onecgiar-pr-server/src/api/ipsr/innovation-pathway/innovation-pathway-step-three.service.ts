@@ -2,7 +2,8 @@ import { HttpStatus, Injectable, Type } from '@nestjs/common';
 import { ResultRepository } from '../../results/result.repository';
 import {
   HandlersError,
-  returnDataDto,
+  ReturnResponse,
+  ReturnResponseDto,
 } from '../../../shared/handlers/error.utils';
 import { ResultInnovationPackageRepository } from '../result-innovation-package/repositories/result-innovation-package.repository';
 import { VersionsService } from '../../results/versions/versions.service';
@@ -23,6 +24,8 @@ import { IsNull } from 'typeorm';
 import { ResultsIpInstitutionType } from '../results-ip-institution-type/entities/results-ip-institution-type.entity';
 import { Evidence } from '../../results/evidences/entities/evidence.entity';
 import { Ipsr } from '../entities/ipsr.entity';
+import { ResultIpExpertWorkshopOrganizedRepostory } from './repository/result-ip-expert-workshop-organized.repository';
+import { ResultIpExpertWorkshopOrganized } from './entities/result-ip-expert-workshop-organized.entity';
 
 @Injectable()
 export class InnovationPathwayStepThreeService {
@@ -39,13 +42,15 @@ export class InnovationPathwayStepThreeService {
     protected readonly _resultsIpActorRepository: ResultsIpActorRepository,
     protected readonly _resultsIpInstitutionTypeRepository: ResultsIpInstitutionTypeRepository,
     protected readonly _evidenceRepository: EvidencesRepository,
+    protected readonly _resultIpExpertWorkshopRepository: ResultIpExpertWorkshopOrganizedRepostory,
+    protected readonly _returnResponse: ReturnResponse,
   ) {}
 
   async saveComplementaryinnovation(
     resultId: number,
     user: TokenDto,
     saveData: SaveStepTwoThree,
-  ) {
+  ): Promise<ReturnResponseDto<any>> {
     try {
       const result = await this._resultRepository.findOne({
         where: {
@@ -103,14 +108,14 @@ export class InnovationPathwayStepThreeService {
 
       const { response } = await this.getStepThree(resultId);
 
-      return {
+      return this._returnResponse.format({
         response: response,
         message:
           'The Result Complementary Innovation have been saved successfully',
-        status: HttpStatus.OK,
-      };
+        statusCode: HttpStatus.OK,
+      });
     } catch (error) {
-      return this._handlersError.returnErrorRes({ error, debug: true });
+      return this._returnResponse.format(error, true);
     }
   }
 
@@ -164,50 +169,140 @@ export class InnovationPathwayStepThreeService {
   ) {
     const id: number = +resultId;
     try {
-      const allEvidence: Evidence[] =
-        await this._evidenceRepository.getWokrshop(+id);
-      const existingWorkshop = allEvidence.map((e) => e.link);
-      const existingIds = allEvidence.map((e) => e.id);
+      const workShopEvidence: Evidence = await this._evidenceRepository.findOne(
+        {
+          where: {
+            result_id: +id,
+            evidence_type_id: 5,
+            is_active: 1,
+          },
+        },
+      );
 
-      const ipsrWorkshop: string = saveStepTwoThree.link_workshop_list;
+      const {
+        result_innovation_package: rip,
+        link_workshop_list: lwl,
+        result_ip_expert_workshop_organized: ripewo,
+      } = saveStepTwoThree;
 
-      if (
-        ipsrWorkshop === '' ||
-        ipsrWorkshop === undefined ||
-        ipsrWorkshop === null
-      ) {
-        for (const e of existingIds) {
-          await this._evidenceRepository.update(e, {
+      if (rip.is_expert_workshop_organized === false) {
+        await this._evidenceRepository.update(
+          { id: workShopEvidence?.id },
+          {
             is_active: 0,
             last_updated_by: user.id,
-            last_updated_date: new Date(),
+          },
+        );
+
+        const expertWorkshopExist: ResultIpExpertWorkshopOrganized[] =
+          await this._resultIpExpertWorkshopRepository.find({
+            where: {
+              result_id: resultId,
+            },
           });
+
+        if (expertWorkshopExist.length) {
+          for (const ewo of expertWorkshopExist) {
+            await this._resultIpExpertWorkshopRepository.update(
+              ewo.result_ip_expert_workshop_organized_id,
+              {
+                is_active: false,
+                last_updated_by: user.id,
+              },
+            );
+          }
         }
-        throw {
-          message: 'Workshop was not found',
-          status: HttpStatus.NOT_FOUND,
+
+        return {
+          message: 'The link workshop list have been inactive successfully',
+        };
+      }
+      if (rip.is_expert_workshop_organized === true && !lwl) {
+        return {
+          response: { valid: false },
+          message: 'The link workshop list is required',
+          status: HttpStatus.BAD_REQUEST,
         };
       }
 
-      if (existingWorkshop?.length) {
-        for (const e of existingIds) {
-          await this._evidenceRepository.update(e, {
-            link: ipsrWorkshop,
-            is_active: 1,
-            last_updated_by: user.id,
-            last_updated_date: new Date(),
-          });
+      await this._evidenceRepository.save({
+        result_id: resultId,
+        link: lwl,
+        evidence_type_id: 5,
+        version_id: version.id,
+        created_by: user.id,
+        last_updated_by: user.id,
+        last_updated_date: new Date(),
+      });
+
+      if (ripewo?.length) {
+        for (const entity of ripewo) {
+          if (!entity.first_name || !entity.last_name) {
+            return {
+              response: { valid: false },
+              message: 'The expert workshop organized is required',
+              status: HttpStatus.BAD_REQUEST,
+            };
+          }
+
+          const expertWorkshopExist: ResultIpExpertWorkshopOrganized =
+            await this._resultIpExpertWorkshopRepository.findOne({
+              where: {
+                result_id: resultId,
+                is_active: true,
+                first_name: entity.first_name,
+                last_name: entity.last_name,
+              },
+            });
+
+          if (!expertWorkshopExist) {
+            await this._resultIpExpertWorkshopRepository.save({
+              result_id: resultId,
+              first_name: entity.first_name,
+              last_name: entity.last_name,
+              email: entity.email,
+              workshop_role: entity.workshop_role,
+              version_id: version.id,
+              created_by: user.id,
+              last_updated_by: user.id,
+            });
+          } else {
+            await this._resultIpExpertWorkshopRepository.update(
+              expertWorkshopExist.result_ip_expert_workshop_organized_id,
+              {
+                first_name: entity.first_name,
+                last_name: entity.last_name,
+                email: entity.email,
+                workshop_role: entity.workshop_role,
+                last_updated_by: user.id,
+              },
+            );
+          }
         }
-      } else {
-        await this._evidenceRepository.save({
-          result_id: resultId,
-          link: ipsrWorkshop,
-          evidence_type_id: 5,
-          version_id: version.id,
-          created_by: user.id,
-          last_updated_by: user.id,
-          last_updated_date: new Date(),
-        });
+
+        const expertWorkshopExist: ResultIpExpertWorkshopOrganized[] =
+          await this._resultIpExpertWorkshopRepository.find({
+            where: {
+              result_id: resultId,
+              is_active: true,
+            },
+          });
+
+        for (const ewe of expertWorkshopExist) {
+          const isExist = ripewo.find(
+            (x) =>
+              x.first_name === ewe.first_name && x.last_name === ewe.last_name,
+          );
+          if (!isExist) {
+            await this._resultIpExpertWorkshopRepository.update(
+              ewe.result_ip_expert_workshop_organized_id,
+              {
+                is_active: false,
+                last_updated_by: user.id,
+              },
+            );
+          }
+        }
       }
 
       return {
@@ -259,8 +354,17 @@ export class InnovationPathwayStepThreeService {
         },
       });
 
+      const result_ip_expert_workshop_organized =
+        await this._resultIpExpertWorkshopRepository.find({
+          where: {
+            result_id: resultId,
+            is_active: true,
+          },
+        });
+
       const returdata: SaveStepTwoThree = {
         link_workshop_list: link_workshop_list?.link,
+        result_ip_expert_workshop_organized,
         innovatonUse: {
           actors: (
             await this._resultsIpActorRepository.find({

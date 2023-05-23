@@ -40,6 +40,7 @@ import { NonPooledProjectBudgetRepository } from '../../results/result_budget/re
 import { ResultInstitutionsBudgetRepository } from '../../results/result_budget/repositories/result_institutions_budget.repository';
 import { ResultIpExpertisesRepository } from '../innovation-packaging-experts/repositories/result-ip-expertises.repository';
 import { ResultCountriesSubNationalRepository } from '../../results/result-countries-sub-national/result-countries-sub-national.repository';
+import { ResultIpExpertWorkshopOrganizedRepostory } from './repository/result-ip-expert-workshop-organized.repository';
 
 @Module({
   controllers: [InnovationPathwayController],
@@ -83,7 +84,8 @@ import { ResultCountriesSubNationalRepository } from '../../results/result-count
     NonPooledProjectBudgetRepository,
     ResultInstitutionsBudgetRepository,
     ResultIpExpertisesRepository,
-    ResultCountriesSubNationalRepository
+    ResultCountriesSubNationalRepository,
+    ResultIpExpertWorkshopOrganizedRepostory
   ]
 })
 export class InnovationPathwayModule { }
