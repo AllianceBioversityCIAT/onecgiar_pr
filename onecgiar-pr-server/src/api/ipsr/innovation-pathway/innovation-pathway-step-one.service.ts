@@ -245,7 +245,11 @@ export class InnovationPathwayStepOneService {
           coreData?.obj_result?.title
         } by ${this.arrayToStringActorsAnd(
           innovatonUse.actors.map((el) => el),
-        )} ${
+        )} ${this.arrayOrganizationToString(
+          innovatonUse.organization.map((el) => el),
+        )}, ${this.arrayMeasureToString(
+          innovatonUse.measures.map((el) => el),
+        )}, ${
           geo_scope_id == 1
             ? ''
             : `in ${this.arrayToStringGeoScopeAnd(
@@ -282,6 +286,45 @@ export class InnovationPathwayStepOneService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  arrayOrganizationToString(arrayData: ResultsByInstitutionType[]) {
+    const count = arrayData?.length;
+    if (!count) {
+      return '<Data not provided>';
+    }
+    const lastElement = arrayData.pop();
+    let actors: string = '';
+    for (const i of arrayData) {
+      actors += `${i?.how_many} ${
+        i?.obj_institution_types?.name || `<Institution type not provided>`
+      }${arrayData?.length > 1 ? ',' : ''} `;
+    }
+    return `${actors.replace(/(,.)$/, '')} ${count > 1 ? 'and ' : ''}${
+      lastElement?.how_many
+    } ${
+      lastElement?.obj_institution_types?.name ||
+      `<Institution type not provided>`
+    }`;
+  }
+
+  arrayMeasureToString(arrayData: ResultIpMeasure[]) {
+    const count = arrayData?.length;
+    if (!count) {
+      return '<Data not provided>';
+    }
+    const lastElement = arrayData.pop();
+    let actors: string = '';
+    for (const i of arrayData) {
+      actors += `${+i?.quantity} ${
+        i?.unit_of_measure || `<Unit of measure not provided>`
+      }${arrayData?.length > 1 ? ',' : ''} `;
+    }
+    return `${actors.replace(/(,.)$/, '')} ${
+      count > 1 ? 'and ' : ''
+    }${+lastElement?.quantity} ${
+      lastElement?.unit_of_measure || `<Unit of measure not provided>`
+    }`;
   }
 
   arrayToStringAnd(arrayData: any[]) {
@@ -323,9 +366,9 @@ export class InnovationPathwayStepOneService {
     for (const i of arrayData) {
       actors += `${+i.men + +i.women} ${
         i?.obj_actor_type?.name || `<Actor type not provided>`
-      } `;
+      }${arrayData?.length > 1 ? ',' : ''} `;
     }
-    return `${actors} ${count > 1 ? 'and ' : ''}${
+    return `${actors.replace(/(,.)$/, '')} ${count > 1 ? 'and ' : ''}${
       +lastElement.men + +lastElement.women
     } ${lastElement?.obj_actor_type?.name || `<Actor type not provided>`}`;
   }
@@ -1284,12 +1327,12 @@ export class InnovationPathwayStepOneService {
       actors.map(async (el: ResultActor) => {
         let actorExists: ResultActor = null;
 
-        if(el.sex_and_age_disaggregation === true && !el.how_many){
+        if (el.sex_and_age_disaggregation === true && !el.how_many) {
           return {
             response: { status: 'Error' },
             message: 'The field how many is required',
             status: HttpStatus.BAD_REQUEST,
-          }
+          };
         }
 
         if (el?.actor_type_id) {
