@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { InnovationPathwayStepOneService } from './innovation-pathway-step-one.service';
 import { InnovationPathwayController } from './innovation-pathway.controller';
 import { ResultRepository } from '../../../api/results/result.repository';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import { HandlersError, ReturnResponse } from '../../../shared/handlers/error.utils';
 import { ResultRegionRepository } from '../../../api/results/result-regions/result-regions.repository';
 import { ResultCountryRepository } from '../../../api/results/result-countries/result-countries.repository';
 import { ExpertisesRepository } from '../innovation-packaging-experts/repositories/expertises.repository';
@@ -48,6 +48,7 @@ import { ResultIpExpertWorkshopOrganizedRepostory } from './repository/result-ip
     InnovationPathwayStepOneService,
     InnovationPathwayStepTwoService,
     HandlersError,
+    ReturnResponse,
     ResultRepository,
     ResultRegionRepository,
     ResultCountryRepository,
