@@ -19,11 +19,11 @@ export class ResponseInterceptor implements NestInterceptor {
     const request: Request = ctx.getRequest<Request>();
     const ip = request.socket.remoteAddress;
     return next.handle().pipe(
-      map((data: returnFormatService) => {
+      map((data: any) => {
         const modifiedData = {
           response: data?.response || {},
-          statusCode: data?.status || 200,
-          message: data?.message || 'Unknown error',
+          statusCode: (data?.status ? data?.status : data?.statusCode) || 200,
+          message: data?.message || 'Unknown message',
           timestamp: new Date().toISOString(),
           path: request.url,
         };
