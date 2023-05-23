@@ -1,13 +1,20 @@
 import { HttpStatus, Injectable, Type } from '@nestjs/common';
 import { ResultRepository } from '../../results/result.repository';
-import { HandlersError, returnErrorDto } from '../../../shared/handlers/error.utils';
+import {
+  HandlersError,
+  returnErrorDto,
+} from '../../../shared/handlers/error.utils';
 import { ResultInnovationPackageRepository } from '../result-innovation-package/repositories/result-innovation-package.repository';
 import { VersionsService } from '../../results/versions/versions.service';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { Version } from '../../results/versions/entities/version.entity';
 import { EvidencesRepository } from '../../results/evidences/evidences.repository';
 import { IpsrRepository } from '../ipsr.repository';
-import { donorInterfaceToc, institutionsInterface, SaveStepFour } from './dto/save-step-four.dto';
+import {
+  donorInterfaceToc,
+  institutionsInterface,
+  SaveStepFour,
+} from './dto/save-step-four.dto';
 import { ResultByInitiativesRepository } from '../../../api/results/results_by_inititiatives/resultByInitiatives.repository';
 import { Evidence } from '../../../api/results/evidences/entities/evidence.entity';
 import { ResultInitiativeBudgetRepository } from 'src/api/results/result_budget/repositories/result_initiative_budget.repository';
@@ -40,8 +47,8 @@ export class InnovationPathwayStepFourService {
     protected readonly _resultBilateralBudgetRepository: NonPooledProjectBudgetRepository,
     protected readonly _resultByInstitutionsRepository: ResultByIntitutionsRepository,
     protected readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
-    protected readonly _resultByInstitutionsByDeliveriesTypeRepository: ResultByInstitutionsByDeliveriesTypeRepository
-  ) { }
+    protected readonly _resultByInstitutionsByDeliveriesTypeRepository: ResultByInstitutionsByDeliveriesTypeRepository,
+  ) {}
 
   async getStepFour(resultId: number) {
     try {
@@ -49,81 +56,96 @@ export class InnovationPathwayStepFourService {
         where: {
           result_id: resultId,
           is_active: 1,
-          evidence_type_id: 3
-        }
+          evidence_type_id: 3,
+        },
       });
 
       const ipsr_materials = await this._evidenceRepository.find({
         where: {
           result_id: resultId,
           is_active: 1,
-          evidence_type_id: 4
-        }
+          evidence_type_id: 4,
+        },
       });
 
-      const initiatives = await this._resultByInitiativeRepository.find({
+      const initiatives = await this._resultByInitiativeRepository.findOne({
         where: {
           result_id: resultId,
-          is_active: true
-        }
+          is_active: true,
+          initiative_role_id: 1,
+        },
       });
 
-      const initiative_expected_investment = await this._resultInitiativesBudgetRepository.find({
-        where: {
-          result_initiative_id: In(initiatives.map(el => el.id)),
-          is_active: true
-        },
-        relations: {
-          obj_result_initiative: {
-            obj_initiative: true
-          }
-        }
-      });
+      const initiative_expected_investment =
+        await this._resultInitiativesBudgetRepository.find({
+          where: {
+            result_initiative_id: initiatives.id,
+            is_active: true,
+          },
+          relations: {
+            obj_result_initiative: {
+              obj_initiative: true,
+            },
+          },
+        });
 
       const result_ip = await this._resultInnovationPackageRepository.findOne({
         where: {
           result_innovation_package_id: resultId,
-          is_active: true
-        }
+          is_active: true,
+        },
       });
 
       const npp = await this._nonPooledProjectRepository.find({
         where: {
           results_id: resultId,
           is_active: true,
-          non_pooled_project_type_id: 2
-        }
-      })
-
-      const bilateral_expected_investment = await this._resultBilateralBudgetRepository.find({
-        where: {
-          non_pooled_projetct_id: In(npp.map(el => el.id)),
-          is_active: true
+          non_pooled_project_type_id: 2,
         },
-        relations: {
-          obj_non_pooled_projetct: true
-        }
       });
 
-      const institutions: ResultsByInstitution[] = await this._resultByInstitutionsRepository.getGenericAllResultByInstitutionByRole(resultId, 7);
-      const deliveries: ResultByInstitutionsByDeliveriesType[] = await await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByResultByInstitution(institutions?.map(el => el.id));
-      institutions?.map(int => {
-        int['deliveries'] = deliveries?.filter(del => del.result_by_institution_id == int.id).map(del => del.partner_delivery_type_id);
+      const bilateral_expected_investment =
+        await this._resultBilateralBudgetRepository.find({
+          where: {
+            non_pooled_projetct_id: In(npp.map((el) => el.id)),
+            is_active: true,
+          },
+          relations: {
+            obj_non_pooled_projetct: true,
+          },
+        });
+
+      const institutions: ResultsByInstitution[] =
+        await this._resultByInstitutionsRepository.getGenericAllResultByInstitutionByRole(
+          resultId,
+          7,
+        );
+      const deliveries: ResultByInstitutionsByDeliveriesType[] =
+        await await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByResultByInstitution(
+          institutions?.map((el) => el.id),
+        );
+      institutions?.map((int) => {
+        int['deliveries'] = deliveries
+          ?.filter((del) => del.result_by_institution_id == int.id)
+          .map((del) => del.partner_delivery_type_id);
       });
 
-      const intitutins_budget = await this._resultInstitutionsBudgetRepository.find({
-        where: {
-          result_institution_id: In(institutions.map(el => el.id)),
-          is_active: true
-        }
-      });
+      const intitutins_budget =
+        await this._resultInstitutionsBudgetRepository.find({
+          where: {
+            result_institution_id: In(institutions.map((el) => el.id)),
+            is_active: true,
+          },
+        });
 
-      const institutions_expected_investment = institutions.map(el => {
+      const institutions_expected_investment = institutions.map((el) => {
         return {
           institution: el,
-          budget: intitutins_budget.filter(b => b.result_institution_id == el.id)
-        }
-      })
+          budget: intitutins_budget.filter(
+            (b) => b.result_institution_id == el.id,
+          ),
+        };
+      });
 
       return {
         response: {
@@ -142,19 +164,23 @@ export class InnovationPathwayStepFourService {
         },
         message: 'Successful response',
         status: HttpStatus.OK,
-      }
+      };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 
-  async saveMain(resultId: number, user: TokenDto, saveStepFourDto: SaveStepFour) {
+  async saveMain(
+    resultId: number,
+    user: TokenDto,
+    saveStepFourDto: SaveStepFour,
+  ) {
     try {
       const result = await this._resultRepository.findOne({
         where: {
           id: resultId,
-          is_active: true
-        }
+          is_active: true,
+        },
       });
       if (!result) {
         throw {
@@ -170,23 +196,49 @@ export class InnovationPathwayStepFourService {
       }
       const version: Version = <Version>vTemp.response;
 
-      const pictures = await this.savePictures(result.id, user, saveStepFourDto, version);
-      const materials = await this.saveMaterials(result.id, user, saveStepFourDto, version);
+      const pictures = await this.savePictures(
+        result.id,
+        user,
+        saveStepFourDto,
+        version,
+      );
+      const materials = await this.saveMaterials(
+        result.id,
+        user,
+        saveStepFourDto,
+        version,
+      );
       // const workshop = await this.saveWorkshop(result.id, user, saveStepFourDto, version);
-      const initiativeInvestment = await this.saveInitiativeInvestment(result.id, user, saveStepFourDto, version);
-      const billateralInvestment = await this.saveBillateralInvestment(result.id, user, saveStepFourDto, version);
-      const partnertInvestment = await this.savePartnertInvestment(user, saveStepFourDto, version);
+      const initiativeInvestment = await this.saveInitiativeInvestment(
+        result.id,
+        user,
+        saveStepFourDto,
+        version,
+      );
+      const billateralInvestment = await this.saveBillateralInvestment(
+        result.id,
+        user,
+        saveStepFourDto,
+        version,
+      );
+      const partnertInvestment = await this.savePartnertInvestment(
+        user,
+        saveStepFourDto,
+        version,
+      );
 
-      const investment = await this._resultInnovationPackageRepository.update(resultId, {
-        initiative_unit_time_id: saveStepFourDto.initiative_unit_time_id,
-        initiative_expected_time: saveStepFourDto.initiative_expected_time,
-        bilateral_unit_time_id: saveStepFourDto.bilateral_unit_time_id,
-        bilateral_expected_time: saveStepFourDto.bilateral_expected_time,
-        partner_unit_time_id: saveStepFourDto.partner_unit_time_id,
-        partner_expected_time: saveStepFourDto.partner_expected_time,
-        is_result_ip_published: saveStepFourDto.is_result_ip_published
-      });
-
+      const investment = await this._resultInnovationPackageRepository.update(
+        resultId,
+        {
+          initiative_unit_time_id: saveStepFourDto.initiative_unit_time_id,
+          initiative_expected_time: saveStepFourDto.initiative_expected_time,
+          bilateral_unit_time_id: saveStepFourDto.bilateral_unit_time_id,
+          bilateral_expected_time: saveStepFourDto.bilateral_expected_time,
+          partner_unit_time_id: saveStepFourDto.partner_unit_time_id,
+          partner_expected_time: saveStepFourDto.partner_expected_time,
+          is_result_ip_published: saveStepFourDto.is_result_ip_published,
+        },
+      );
 
       return {
         response: {
@@ -200,18 +252,23 @@ export class InnovationPathwayStepFourService {
         },
         message: 'Successful response',
         status: HttpStatus.OK,
-      }
+      };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 
-  async savePictures(resultId: number, user: TokenDto, saveStepFourDto: SaveStepFour, version: Version) {
+  async savePictures(
+    resultId: number,
+    user: TokenDto,
+    saveStepFourDto: SaveStepFour,
+    version: Version,
+  ) {
     const id = +resultId;
     try {
       const allEvidence = await this._evidenceRepository.getPictures(id);
-      const existingPictures = allEvidence.map(e => e.link);
-      const existingIds = allEvidence.map(e => e.id);
+      const existingPictures = allEvidence.map((e) => e.link);
+      const existingIds = allEvidence.map((e) => e.id);
       const ipsrPictures = saveStepFourDto.ipsr_pictures;
       if (!ipsrPictures.length) {
         for (const e of existingIds) {
@@ -219,14 +276,14 @@ export class InnovationPathwayStepFourService {
             is_active: 0,
             last_updated_by: user.id,
             last_updated_date: new Date(),
-          })
+          });
         }
       }
 
       const savePictures = [];
 
       for (const entity of allEvidence) {
-        if (ipsrPictures.find(ip => ip.link === entity.link)) {
+        if (ipsrPictures.find((ip) => ip.link === entity.link)) {
           if (entity.is_active === 0) {
             entity.is_active = 1;
             entity.last_updated_by = user.id;
@@ -250,7 +307,7 @@ export class InnovationPathwayStepFourService {
             response: { valid: false },
             message: 'Please provide a link',
             status: HttpStatus.NOT_ACCEPTABLE,
-          }
+          };
         }
 
         if (!existingPictures.includes(entity.link)) {
@@ -268,18 +325,22 @@ export class InnovationPathwayStepFourService {
       }
 
       return { savePictures };
-
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 
-  async saveMaterials(resultId: number, user: TokenDto, saveStepFourDto: SaveStepFour, version: Version) {
+  async saveMaterials(
+    resultId: number,
+    user: TokenDto,
+    saveStepFourDto: SaveStepFour,
+    version: Version,
+  ) {
     const id = +resultId;
     try {
       const allEvidence = await this._evidenceRepository.getMaterials(id);
-      const existingMaterials = allEvidence.map(e => e.link);
-      const existingIds = allEvidence.map(e => e.id);
+      const existingMaterials = allEvidence.map((e) => e.link);
+      const existingIds = allEvidence.map((e) => e.id);
       const ipsrMaterials = saveStepFourDto.ipsr_materials;
       if (!ipsrMaterials.length) {
         for (const e of existingIds) {
@@ -287,14 +348,14 @@ export class InnovationPathwayStepFourService {
             is_active: 0,
             last_updated_by: user.id,
             last_updated_date: new Date(),
-          })
+          });
         }
       }
 
       const saveMaterial = [];
 
       for (const entity of allEvidence) {
-        if (ipsrMaterials.find(ip => ip.link === entity.link)) {
+        if (ipsrMaterials.find((ip) => ip.link === entity.link)) {
           if (entity.is_active === 0) {
             entity.is_active = 1;
             entity.last_updated_by = user.id;
@@ -318,7 +379,7 @@ export class InnovationPathwayStepFourService {
             response: { valid: false },
             message: 'Please provide a link',
             status: HttpStatus.NOT_ACCEPTABLE,
-          }
+          };
         }
 
         if (!existingMaterials.includes(entity.link)) {
@@ -336,33 +397,39 @@ export class InnovationPathwayStepFourService {
       }
 
       return { saveMaterial };
-
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 
-  async saveInitiativeInvestment(resultId: number, user: TokenDto, saveStepFourDto: SaveStepFour, version: Version) {
+  async saveInitiativeInvestment(
+    resultId: number,
+    user: TokenDto,
+    saveStepFourDto: SaveStepFour,
+    version: Version,
+  ) {
     try {
       if (saveStepFourDto?.initiative_expected_investment?.length) {
-        const initiativeInvestments = saveStepFourDto.initiative_expected_investment;
+        const initiativeInvestments =
+          saveStepFourDto.initiative_expected_investment;
 
         for (const initiative of initiativeInvestments) {
           const ibr = await this._resultByInitiativeRepository.findOne({
             where: {
               result_id: resultId,
               is_active: true,
-              id: initiative.result_initiative_id
-            }
+              id: initiative.result_initiative_id,
+            },
           });
 
           if (ibr) {
-            let rie: ResultInitiativeBudget = await this._resultInitiativesBudgetRepository.findOne({
-              where: {
-                result_initiative_id: ibr.id,
-                is_active: true
-              }
-            });
+            let rie: ResultInitiativeBudget =
+              await this._resultInitiativesBudgetRepository.findOne({
+                where: {
+                  result_initiative_id: ibr.id,
+                  is_active: true,
+                },
+              });
 
             if (rie) {
               rie.current_year = initiative.current_year;
@@ -388,7 +455,7 @@ export class InnovationPathwayStepFourService {
         }
 
         return {
-          valid: true
+          valid: true,
         };
       }
     } catch (error) {
@@ -396,57 +463,63 @@ export class InnovationPathwayStepFourService {
     }
   }
 
-  async saveBillateralInvestment(resultId: number, user: TokenDto, saveStepFourDto: SaveStepFour, version: Version) {
+  async saveBillateralInvestment(
+    resultId: number,
+    user: TokenDto,
+    saveStepFourDto: SaveStepFour,
+    version: Version,
+  ) {
     try {
       if (saveStepFourDto?.bilateral_expected_investment?.length) {
-        const {
-          bilateral_expected_investment: bei
-        } = saveStepFourDto;
+        const { bilateral_expected_investment: bei } = saveStepFourDto;
 
-        bei.forEach(async i => {
+        bei.forEach(async (i) => {
           if (i?.is_active != undefined && i?.is_active == false) {
             await this._nonPooledProjectRepository.update(
               i.non_pooled_projetct_id,
               {
-                is_active: false
-              }
+                is_active: false,
+              },
             );
             const rbb = await this._resultBilateralBudgetRepository.findOne({
               where: {
                 non_pooled_projetct_id: i.non_pooled_projetct_id,
-                is_active: true
-              }
+                is_active: true,
+              },
             });
             await this._resultBilateralBudgetRepository.update(
               rbb.non_pooled_projetct_budget_id,
               {
-                is_active: false
-              }
-            )
+                is_active: false,
+              },
+            );
           } else {
             const npp = await this._nonPooledProjectRepository.findOne({
               where: {
                 results_id: resultId,
                 is_active: true,
-                id: i.non_pooled_projetct_id
-              }
+                id: i.non_pooled_projetct_id,
+              },
             });
 
             if (npp) {
               const rbb = await this._resultBilateralBudgetRepository.findOne({
                 where: {
                   non_pooled_projetct_id: npp.id,
-                  is_active: true
-                }
+                  is_active: true,
+                },
               });
 
               if (rbb) {
-                await this._resultBilateralBudgetRepository.update(rbb.non_pooled_projetct_budget_id, {
-                  in_kind: i.in_kind,
-                  in_cash: i.in_cash,
-                  is_determined: i.is_determined,
-                  last_updated_by: user.id,
-                });
+                await this._resultBilateralBudgetRepository.update(
+                  rbb.non_pooled_projetct_budget_id,
+                  {
+                    in_kind: i.in_kind,
+                    in_cash: i.in_cash,
+                    is_determined: i.is_determined,
+                    last_updated_by: user.id,
+                  },
+                );
               } else {
                 await this._resultBilateralBudgetRepository.save({
                   non_pooled_projetct_id: npp.id,
@@ -456,39 +529,63 @@ export class InnovationPathwayStepFourService {
                   version_id: version.id,
                   created_by: user.id,
                   last_updated_by: user.id,
-                })
+                });
               }
             }
           }
-        })
+        });
 
         return {
-          valid: true
-        }
+          valid: true,
+        };
       }
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 
-  async savePartnertInvestment(user: TokenDto, saveStepFourDto: SaveStepFour, version: Version) {
+  async savePartnertInvestment(
+    user: TokenDto,
+    saveStepFourDto: SaveStepFour,
+    version: Version,
+  ) {
     try {
       if (saveStepFourDto?.institutions_expected_investment?.length) {
         const { institutions_expected_investment: iei } = saveStepFourDto;
 
         iei.forEach(async (el) => {
           if (!el?.institution?.is_active) {
-            await this._resultByInstitutionsRepository.update(el.institution.id, { is_active: false });
-            await this._resultInstitutionsBudgetRepository.update({ result_institution_id: el?.institution?.id }, { is_active: false });
+            await this._resultByInstitutionsRepository.update(
+              el.institution.id,
+              { is_active: false },
+            );
+            await this._resultInstitutionsBudgetRepository.update(
+              { result_institution_id: el?.institution?.id },
+              { is_active: false },
+            );
           } else {
             const { budget } = el;
-            budget.map(async i => {
-              await this.saveDeliveries(el.institution, el.institution.deliveries, user.id, version);
+            budget.map(async (i) => {
+              await this.saveDeliveries(
+                el.institution,
+                el.institution.deliveries,
+                user.id,
+                version,
+              );
               let existBud: ResultInstitutionsBudget = null;
               if (i?.result_institutions_budget_id) {
-                existBud = await this._resultInstitutionsBudgetRepository.findOne({ where: { result_institutions_budget_id: i?.result_institutions_budget_id } });
+                existBud =
+                  await this._resultInstitutionsBudgetRepository.findOne({
+                    where: {
+                      result_institutions_budget_id:
+                        i?.result_institutions_budget_id,
+                    },
+                  });
               } else if (!existBud) {
-                existBud = await this._resultInstitutionsBudgetRepository.findOne({ where: { result_institution_id: el.institution.id } });
+                existBud =
+                  await this._resultInstitutionsBudgetRepository.findOne({
+                    where: { result_institution_id: el.institution.id },
+                  });
               }
 
               if (existBud) {
@@ -498,9 +595,9 @@ export class InnovationPathwayStepFourService {
                     last_updated_by: user?.id,
                     is_determined: i?.is_determined,
                     in_kind: i?.in_kind,
-                    in_cash: i?.in_cash
-                  }
-                )
+                    in_cash: i?.in_cash,
+                  },
+                );
               } else {
                 await this._resultInstitutionsBudgetRepository.save({
                   result_institution_id: el.institution.id,
@@ -510,10 +607,9 @@ export class InnovationPathwayStepFourService {
                   in_cash: i?.in_cash,
                   version_id: version.id,
                   created_by: user.id,
-                })
-
+                });
               }
-            })
+            });
           }
         });
       }
@@ -522,7 +618,11 @@ export class InnovationPathwayStepFourService {
     }
   }
 
-  async savePartners(resultId: number, user: TokenDto, crtr: institutionsInterface) {
+  async savePartners(
+    resultId: number,
+    user: TokenDto,
+    crtr: institutionsInterface,
+  ) {
     try {
       let institutions_expected_investment: any;
       const vTemp = await this._versionsService.findBaseVersion();
@@ -531,19 +631,22 @@ export class InnovationPathwayStepFourService {
       }
       const version: Version = <Version>vTemp.response;
       if (crtr) {
-        const instExist = await this._resultByInstitutionsRepository.findOne({ where: { institutions_id: crtr.institutions_id, institution_roles_id: 7, result_id: resultId } });
+        const instExist = await this._resultByInstitutionsRepository.findOne({
+          where: {
+            institutions_id: crtr.institutions_id,
+            institution_roles_id: 7,
+            result_id: resultId,
+          },
+        });
         let rbi: ResultsByInstitution = null;
         if (instExist) {
-          await this._resultByInstitutionsRepository.update(
-            instExist.id,
-            {
-              is_active: true
-            }
-          );
+          await this._resultByInstitutionsRepository.update(instExist.id, {
+            is_active: true,
+          });
           return {
             message: 'The institution already exists',
-            status: HttpStatus.NOT_ACCEPTABLE
-          }
+            status: HttpStatus.NOT_ACCEPTABLE,
+          };
         } else {
           rbi = await this._resultByInstitutionsRepository.save({
             institution_roles_id: 7,
@@ -551,54 +654,70 @@ export class InnovationPathwayStepFourService {
             result_id: resultId,
             version_id: version.id,
             created_by: user.id,
-            last_updated_by: user.id
+            last_updated_by: user.id,
           });
 
-          const newIbe = await this._resultInstitutionsBudgetRepository.save(
-            {
-              result_institution_id: rbi.id,
-              version_id: version.id,
-              created_by: user.id,
-              last_updated_by: user.id
-            }
-          )
-
-          const institutions = await this._resultByInstitutionsRepository.find({ where: { id: rbi.id, institution_roles_id: 7 }, relations: { obj_institutions: true } });
-          const deliveries = await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByResultByInstitution(institutions?.map(el => el.id));
-          institutions?.map(int => {
-            int['deliveries'] = deliveries?.filter(del => del.result_by_institution_id == int.id).map(del => del.partner_delivery_type_id);
+          const newIbe = await this._resultInstitutionsBudgetRepository.save({
+            result_institution_id: rbi.id,
+            version_id: version.id,
+            created_by: user.id,
+            last_updated_by: user.id,
           });
 
-
-          const intitutins_budget = await this._resultInstitutionsBudgetRepository.find({
-            where: {
-              result_institution_id: In(institutions.map(el => el.id)),
-              is_active: true
-            }
+          const institutions = await this._resultByInstitutionsRepository.find({
+            where: { id: rbi.id, institution_roles_id: 7 },
+            relations: { obj_institutions: true },
+          });
+          const deliveries =
+            await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByResultByInstitution(
+              institutions?.map((el) => el.id),
+            );
+          institutions?.map((int) => {
+            int['deliveries'] = deliveries
+              ?.filter((del) => del.result_by_institution_id == int.id)
+              .map((del) => del.partner_delivery_type_id);
           });
 
-          institutions_expected_investment = institutions.map(el => {
+          const intitutins_budget =
+            await this._resultInstitutionsBudgetRepository.find({
+              where: {
+                result_institution_id: In(institutions.map((el) => el.id)),
+                is_active: true,
+              },
+            });
+
+          institutions_expected_investment = institutions.map((el) => {
             return {
               institution: el,
-              budget: intitutins_budget.filter(b => b.result_institution_id == el.id)
-            }
-          })
+              budget: intitutins_budget.filter(
+                (b) => b.result_institution_id == el.id,
+              ),
+            };
+          });
         }
         const delData = crtr?.deliveries?.length ? crtr?.deliveries : [];
-        await this.saveDeliveries(instExist ? instExist : rbi, delData, user.id, version);
-
+        await this.saveDeliveries(
+          instExist ? instExist : rbi,
+          delData,
+          user.id,
+          version,
+        );
       }
       return {
         response: institutions_expected_investment[0],
         message: 'Successful response',
         status: HttpStatus.OK,
-      }
+      };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 
-  async saveBilaterals(resultId: number, user: TokenDto, bltl: donorInterfaceToc) {
+  async saveBilaterals(
+    resultId: number,
+    user: TokenDto,
+    bltl: donorInterfaceToc,
+  ) {
     try {
       let bilateral_expected_investment: any;
       let newBie: any;
@@ -613,22 +732,19 @@ export class InnovationPathwayStepFourService {
           where: {
             grant_title: bltl.grant_title,
             non_pooled_project_type_id: 2,
-            results_id: resultId
-          }
+            results_id: resultId,
+          },
         });
 
         if (nppEx) {
-          await this._nonPooledProjectRepository.update(
-            nppEx.id,
-            {
-              is_active: true,
-              center_grant_id: bltl.center_grant_id,
-              funder_institution_id: bltl.funder,
-              lead_center_id: bltl.lead_center,
-              last_updated_by: user.id,
-              grant_title: bltl.grant_title
-            }
-          );
+          await this._nonPooledProjectRepository.update(nppEx.id, {
+            is_active: true,
+            center_grant_id: bltl.center_grant_id,
+            funder_institution_id: bltl.funder,
+            lead_center_id: bltl.lead_center,
+            last_updated_by: user.id,
+            grant_title: bltl.grant_title,
+          });
         } else {
           newNpp = await this._nonPooledProjectRepository.save({
             results_id: resultId,
@@ -639,52 +755,64 @@ export class InnovationPathwayStepFourService {
             version_id: version.id,
             created_by: user.id,
             last_updated_by: user.id,
-            non_pooled_project_type_id: 2
-          })
+            non_pooled_project_type_id: 2,
+          });
 
           const newBie = await this._resultBilateralBudgetRepository.save({
             non_pooled_projetct_id: newNpp?.id,
             version_id: version.id,
             created_by: user.id,
             last_updated_by: user.id,
-          })
-
-          bilateral_expected_investment = await this._resultBilateralBudgetRepository.find({
-            where: {
-              non_pooled_projetct_id: newNpp?.id,
-              is_active: true
-            },
-            relations: {
-              obj_non_pooled_projetct: true
-            }
           });
+
+          bilateral_expected_investment =
+            await this._resultBilateralBudgetRepository.find({
+              where: {
+                non_pooled_projetct_id: newNpp?.id,
+                is_active: true,
+              },
+              relations: {
+                obj_non_pooled_projetct: true,
+              },
+            });
         }
       }
       return {
         response: bilateral_expected_investment[0],
         message: 'Successful response',
         status: HttpStatus.OK,
-      }
+      };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 
-  protected async saveDeliveries(inst: institutionsInterface, deliveries: number[], userId: number, v: Version) {
-    await this._resultByInstitutionsByDeliveriesTypeRepository.inactiveResultDeLivery(inst.id, deliveries, userId);
+  protected async saveDeliveries(
+    inst: institutionsInterface,
+    deliveries: number[],
+    userId: number,
+    v: Version,
+  ) {
+    await this._resultByInstitutionsByDeliveriesTypeRepository.inactiveResultDeLivery(
+      inst.id,
+      deliveries,
+      userId,
+    );
     for (const deli of deliveries) {
-      const deliExist = await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByTypeAndResultByInstitution(inst.id, deli);
+      const deliExist =
+        await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByTypeAndResultByInstitution(
+          inst.id,
+          deli,
+        );
       if (!deliExist) {
         await this._resultByInstitutionsByDeliveriesTypeRepository.save({
           partner_delivery_type_id: deli,
           result_by_institution_id: inst.id,
           last_updated_by: userId,
           created_by: userId,
-          versions_id: v.id
+          versions_id: v.id,
         });
       }
     }
   }
-
-
 }

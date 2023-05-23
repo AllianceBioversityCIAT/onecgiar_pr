@@ -2,10 +2,10 @@
 <div class="local_container section_container">
     <div class="tabs">
         <a class="tab" routerLinkActive="active" routerLink="complementary-innovation">2.1 Complementary
-            innovations/enavlers/solutions
+            innovations/enablers/solutions
             <app-ipsr-green-check objectReference="stepSections.1.stepSubSections.0"></app-ipsr-green-check>
         </a>
-        <a class="tab" routerLinkActive="active" routerLink="basic-info" >2.2 Basic
+        <a class="tab" routerLinkActive="active" routerLink="basic-info" *ngIf="this.api.rolesSE.isAdmin">2.2 Basic
             info
             <app-ipsr-green-check objectReference="stepSections.1.stepSubSections.1"></app-ipsr-green-check>
             <img class="under_construction" src="assets/work-in-progress.png" alt="" srcset="" style="width: 20px;"></a>
@@ -17,7 +17,7 @@
 
 
 
-<button pButton label="Go to previous step" routerLink="../step-1" class="pass_steps"
+<button pButton label="Go to previous step" routerLink="{{routerStepBack()}}" class="pass_steps"
     icon="pi pi-arrow-circle-left"></button>
-<button pButton label="Go to next step" routerLink="../step-3" class="pass_steps" icon="pi pi-arrow-circle-right"
+<button pButton label="Go to next step" routerLink="{{routerStep()}}" class="pass_steps" icon="pi pi-arrow-circle-right"
     iconPos="right" style="margin-left: 20px;"></button>

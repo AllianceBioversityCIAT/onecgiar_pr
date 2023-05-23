@@ -247,6 +247,9 @@ export class ResultInnovationPackageService {
 
       if (CreateResultInnovationPackageDto.geo_scope_id === 2) {
         const regionsList = regions.map((r) => r.name);
+        if (result.title.endsWith('.')) {
+          result.title = result.title.replace(/\.$/, '');
+        }
         innovationTitle = `Innovation Package and Scaling Readiness assessment for ${
           result.title
         } in ${regionsList.slice(0, -1).join(', ')}${
@@ -257,21 +260,58 @@ export class ResultInnovationPackageService {
         CreateResultInnovationPackageDto.geo_scope_id === 4
       ) {
         const countriesList = countries.map((c) => c.name);
-        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${
-          result.title
-        } in ${countriesList.slice(0, -1).join(', ')}${
-          countriesList.length > 1 ? ' and ' : ''
-        }${countriesList[countriesList.length - 1]}`;
+        if (result.title.endsWith('.')) {
+          result.title = result.title.replace(/\.$/, '');
+        }
+        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${result.title.toLocaleLowerCase()} in ${countriesList
+          .slice(0, -1)
+          .join(', ')}${countriesList.length > 1 ? ' and ' : ''}${
+          countriesList[countriesList.length - 1]
+        }`;
       } else if (CreateResultInnovationPackageDto.geo_scope_id === 5) {
         const countriesList = countries.map((c) => c.name);
-        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${
-          result.title
-        } in ${countriesList.slice(0, -1).join(', ')}${
-          countriesList.length > 1 ? ' and ' : ''
-        }${countriesList[countriesList.length - 1]}`;
+        if (result.title.endsWith('.')) {
+          result.title = result.title.replace(/\.$/, '');
+        }
+        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${result.title.toLocaleLowerCase()} in ${countriesList
+          .slice(0, -1)
+          .join(', ')}${countriesList.length > 1 ? ' and ' : ''}${
+          countriesList[countriesList.length - 1]
+        }`;
       } else {
-        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${result.title}.`;
+        if (result.title.endsWith('.')) {
+          result.title = result.title.replace(/\.$/, '');
+        }
+        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${result.title.toLocaleLowerCase()}.`;
       }
+
+      // if (CreateResultInnovationPackageDto.geo_scope_id === 2) {
+      //   const regionsList = regions.map((r) => r.name);
+      //   innovationTitle = `Innovation Package and Scaling Readiness assessment for ${
+      //     result.title
+      //   } in ${regionsList.slice(0, -1).join(', ')}${
+      //     regionsList.length > 1 ? ' and ' : ''
+      //   }${regionsList[regionsList.length - 1]}`;
+      // } else if (
+      //   CreateResultInnovationPackageDto.geo_scope_id === 3 ||
+      //   CreateResultInnovationPackageDto.geo_scope_id === 4
+      // ) {
+      //   const countriesList = countries.map((c) => c.name);
+      //   innovationTitle = `Innovation Package and Scaling Readiness assessment for ${
+      //     result.title.toLocaleLowerCase()
+      //   } in ${countriesList.slice(0, -1).join(', ')}${
+      //     countriesList.length > 1 ? ' and ' : ''
+      //   }${countriesList[countriesList.length - 1]}`;
+      // } else if (CreateResultInnovationPackageDto.geo_scope_id === 5) {
+      //   const countriesList = countries.map((c) => c.name);
+      //   innovationTitle = `Innovation Package and Scaling Readiness assessment for ${
+      //     result.title.toLocaleLowerCase()
+      //   } in ${countriesList.slice(0, -1).join(', ')}${
+      //     countriesList.length > 1 ? ' and ' : ''
+      //   }${countriesList[countriesList.length - 1]}`;
+      // } else {
+      //   innovationTitle = `Innovation Package and Scaling Readiness assessment for ${result.title.toLocaleLowerCase()}.`;
+      // }
 
       const titleValidate = await this._resultRepository
         .createQueryBuilder('result')

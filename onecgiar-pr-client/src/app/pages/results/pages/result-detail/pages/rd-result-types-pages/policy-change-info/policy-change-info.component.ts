@@ -3,14 +3,16 @@ import { ApiService } from '../../../../../../../shared/services/api/api.service
 import { InnovationUseInfoBody } from './model/innovationUseInfoBody';
 import { PolicyControlListService } from '../../../../../../../shared/services/global/policy-control-list.service';
 import { InstitutionsService } from '../../../../../../../shared/services/global/institutions.service';
+import {formatCurrency, getCurrencySymbol} from '@angular/common';
 
 @Component({
   selector: 'app-policy-change-info',
   templateUrl: './policy-change-info.component.html',
-  styleUrls: ['./policy-change-info.component.scss']
+  styleUrls: ['./policy-change-info.component.scss'],
 })
 export class PolicyChangeInfoComponent implements OnInit {
   innovationUseInfoBody = new InnovationUseInfoBody();
+  cantidad:string = '';
   constructor(public api: ApiService, public policyControlListSE: PolicyControlListService, public institutionsService: InstitutionsService) {}
 
   ngOnInit(): void {
@@ -44,4 +46,15 @@ export class PolicyChangeInfoComponent implements OnInit {
     });
   }
   showAlerts() {}
+
+  updateValue(value: string) {
+    let val = parseInt(value);
+    this.innovationUseInfoBody.amount = val;
+    if (Number.isNaN(val)) {
+      val = 0;
+    }
+    this.cantidad = formatCurrency(val, 'en-US', getCurrencySymbol('USD', 'wide'));
+    console.log(this.innovationUseInfoBody.amount);
+    
+}
 }

@@ -119,3 +119,20 @@
 
     }
 }
+
+.step-4-edit-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50px;
+    background-color: var(--pr-color-primary);
+    color: white;
+    width: 35px;
+    height: 35px;
+    cursor: pointer;
+    margin-left: 6px;
+    i {
+        font-size: 1.3em;
+
+    }
+}

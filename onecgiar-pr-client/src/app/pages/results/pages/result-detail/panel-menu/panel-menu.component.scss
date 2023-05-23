@@ -10,6 +10,7 @@
     display: flex;
     justify-content: space-between;
     flex-direction: column;
+    overflow-y: auto;
 
     .back_button {
         display: flex;

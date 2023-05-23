@@ -1,7 +1,7 @@
 <div class="local_grid">
   <div>
     <div class="panel_menu" [ngClass]="{'expand_menu': this.navigationBarSE.navbar_fixed }">
-      <app-panel-menu></app-panel-menu>
+      <app-panel-menu (copyEvent)="onCopy()"></app-panel-menu>
     </div>
   </div>
   <div>
@@ -38,3 +38,4 @@
 <app-unsubmit-modal></app-unsubmit-modal>
 <app-partners-request></app-partners-request>
 <app-no-edit-container></app-no-edit-container>
+<p-toast key="copyResultLinkPdf" position="bottom-center"></p-toast>

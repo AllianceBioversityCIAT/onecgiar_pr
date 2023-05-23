@@ -205,7 +205,6 @@ export class InnovationPathwayStepThreeService {
           evidence_type_id: 5,
           version_id: version.id,
           created_by: user.id,
-          creation_date: new Date(),
           last_updated_by: user.id,
           last_updated_date: new Date(),
         });
@@ -261,6 +260,7 @@ export class InnovationPathwayStepThreeService {
       });
 
       const returdata: SaveStepTwoThree = {
+        link_workshop_list: link_workshop_list?.link,
         innovatonUse: {
           actors: (
             await this._resultsIpActorRepository.find({
@@ -299,7 +299,6 @@ export class InnovationPathwayStepThreeService {
               el.obj_institution_types?.obj_parent?.obj_parent?.code || null,
           })),
         },
-        link_workshop_list: link_workshop_list?.link,
         result_innovation_package: result_ip,
         result_ip_result_complementary: result_complementary,
         result_ip_result_core: result_core,
@@ -328,6 +327,14 @@ export class InnovationPathwayStepThreeService {
       const { actors } = crtr;
       actors.map(async (el: ResultsIpActor) => {
         let actorExists: ResultsIpActor = null;
+
+        if (el?.sex_and_age_disaggregation === true && !el?.how_many) {
+          return {
+            response: { status: 'Error' },
+            message: 'The field how many is required',
+            status: HttpStatus.BAD_REQUEST,
+          };
+        }
 
         if (el?.actor_type_id) {
           const { actor_type_id } = el;
@@ -380,6 +387,10 @@ export class InnovationPathwayStepThreeService {
               evidence_link: this.isNullData(el?.evidence_link),
               other_actor_type: this.isNullData(el?.other_actor_type),
               last_updated_by: user.id,
+              sex_and_age_disaggregation:
+                el?.sex_and_age_disaggregation === true ? true : false,
+              how_many:
+                el?.sex_and_age_disaggregation === true ? el?.how_many : null,
             },
           );
         } else {
@@ -396,6 +407,10 @@ export class InnovationPathwayStepThreeService {
             result_ip_result_id: riprc.result_by_innovation_package_id,
             other_actor_type: el.other_actor_type,
             version_id: version.id,
+            sex_and_age_disaggregation:
+              el?.sex_and_age_disaggregation === true ? true : false,
+            how_many:
+              el?.sex_and_age_disaggregation === true ? el?.how_many : null,
           });
         }
       });

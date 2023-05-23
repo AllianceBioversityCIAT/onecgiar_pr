@@ -1284,6 +1284,14 @@ export class InnovationPathwayStepOneService {
       actors.map(async (el: ResultActor) => {
         let actorExists: ResultActor = null;
 
+        if(el.sex_and_age_disaggregation === true && !el.how_many){
+          return {
+            response: { status: 'Error' },
+            message: 'The field how many is required',
+            status: HttpStatus.BAD_REQUEST,
+          }
+        }
+
         if (el?.actor_type_id) {
           const { actor_type_id } = el;
           const whereOptions: any = {
@@ -1332,6 +1340,10 @@ export class InnovationPathwayStepOneService {
               women_youth: this.isNullData(el?.women_youth),
               last_updated_by: user.id,
               other_actor_type: this.isNullData(el?.other_actor_type),
+              sex_and_age_disaggregation:
+                el?.sex_and_age_disaggregation === true ? true : false,
+              how_many:
+                el?.sex_and_age_disaggregation === true ? el?.how_many : null,
             },
           );
         } else {
@@ -1347,6 +1359,10 @@ export class InnovationPathwayStepOneService {
             created_by: user.id,
             result_id: result.id,
             version_id: version.id,
+            sex_and_age_disaggregation:
+              el?.sex_and_age_disaggregation === true ? true : false,
+            how_many:
+              el?.sex_and_age_disaggregation === true ? el?.how_many : null,
           });
         }
       });

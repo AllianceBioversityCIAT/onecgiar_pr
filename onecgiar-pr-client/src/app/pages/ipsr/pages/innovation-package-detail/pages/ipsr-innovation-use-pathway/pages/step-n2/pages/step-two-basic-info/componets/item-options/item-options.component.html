@@ -8,7 +8,7 @@
     <ul>
         <li>
             <div *ngFor="let categories of category?.subCategories" class="field-checkbox">
-                <p-checkbox name="group" [value]="categories" [inputId]="categories.id" [(ngModel)]="selectedOne" (click)="subSelectes()"></p-checkbox>
+                <p-checkbox name="group" [value]="categories" [inputId]="categories.id" [(ngModel)]="selectedOne" (click)="subSelectes(category)"></p-checkbox>
                 <label >{{ categories.group }}</label>
                 
             </div>

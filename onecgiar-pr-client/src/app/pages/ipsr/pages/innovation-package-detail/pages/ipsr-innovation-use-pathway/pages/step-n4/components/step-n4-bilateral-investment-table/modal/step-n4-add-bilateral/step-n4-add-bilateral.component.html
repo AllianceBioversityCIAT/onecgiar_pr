@@ -39,5 +39,7 @@
     </div>
 
 </p-dialog>
-<app-pr-button (click)="visible= true;" padding="small" text="Add bilateral" icon="add_box"
+<div style="width: 120px;">
+    <app-pr-button (click)="visible= true;" padding="small" text="Add bilateral" icon="add_box"
     *ngIf="!this.api.rolesSE.readOnly"></app-pr-button>
+</div>

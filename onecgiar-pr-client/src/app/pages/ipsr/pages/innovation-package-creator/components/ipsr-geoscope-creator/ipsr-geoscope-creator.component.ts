@@ -45,6 +45,7 @@ export class IpsrGeoscopeCreatorComponent {
     <ul>
     <li>Select country/ geoscope for which innovation packaging and scaling readiness assessment will be conducted. </li>
     <li>Please note that geoscope cannot be changed after innovation package creation. </li>
+    <li>To optimize the effectiveness of innovation packages, it is strongly advised to tailor them to specific contexts or geographies. If your intention is to design innovation packages for multiple countries or regions, it is crucial to consider creating separate packages for each geolocation. </li>
     </ul>
     `
   }
