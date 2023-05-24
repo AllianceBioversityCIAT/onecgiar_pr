@@ -1,50 +1,45 @@
-<div class="complementary_innovation">
-    <app-pr-field-header label="<strong>Complementary innovations/ enablers/ solutions</strong>"
-        [required]="false"></app-pr-field-header>
-    <div class="toggle_change_buttons">
-        <app-pr-button (click)="this.ci.previous()" padding="medium" [ngClass]="{'hideButton': !this.ci.index}"
-            [text]="'Previous ('+ (this.ci.index)+'/'+this.body.result_ip_result_complementary?.length+')'"
-            icon="arrow_circle_left" [reverse]="true"></app-pr-button>
-        <app-pr-button (click)="this.ci.next()" padding="medium"
-            *ngIf="this.body.result_ip_result_complementary?.length >= this.ci.index+2"
-            [text]="'Next ('+ (this.ci.index+2)+'/'+this.body.result_ip_result_complementary?.length+')'"
-            icon="arrow_circle_right"></app-pr-button>
-    </div>
-    <app-pr-field-header
-        [label]="'<strong>Complementary innovations/ enablers/ solutions #'+(this.ci.index+1)+':</strong> '+this.body?.result_ip_result_complementary[this.ci?.index]?.obj_result?.title"
-        [required]="false"></app-pr-field-header>
+<div class="complementary_innovations" *ngFor="let bodyItem of this.body.result_ip_result_complementary; let i=index">
+    <app-collapsible-container [collapse]="bodyItem.open">
+        <div header><strong>{{i+1}}. </strong> {{bodyItem.obj_result.title}} </div>
+        <div content>
+            <div class="complementary_innovation">
+                <app-pr-field-header [useColon]="false"
+                    [label]="'<strong>Complementary innovation/ enabler/ solution:</strong> '+bodyItem?.obj_result?.title"
+                    [required]="false"></app-pr-field-header>
 
-    <app-pr-field-header label="Innovation Readiness level evidence-based" [required]="false"
-        [description]="this.readinessLevelSelfAssessmentText()"></app-pr-field-header>
+                <app-pr-field-header label="Innovation Readiness level evidence-based"
+                    [description]="this.readinessLevelSelfAssessmentText()"></app-pr-field-header>
 
-    <app-pr-range-level itemTitle="name" itemDescription="definition" [options]="this.rangesOptions" optionLabel="name"
-        optionValue="id"
-        [(ngModel)]="this.body.result_ip_result_complementary[this.ci.index].readiness_level_evidence_based"></app-pr-range-level>
+                <app-pr-range-level itemTitle="name" itemDescription="definition" [options]="this.rangesOptions"
+                    optionLabel="name" optionValue="id"
+                    [(ngModel)]="bodyItem.readiness_level_evidence_based"></app-pr-range-level>
 
-    <app-pr-input label="Evidence link" placeholder="Link goes here..."
-        [(ngModel)]="this.body.result_ip_result_complementary[this.ci.index].readinees_evidence_link">
-    </app-pr-input>
+                <app-pr-input label="Evidence link" placeholder="Link goes here..."
+                    [(ngModel)]="bodyItem.readinees_evidence_link">
+                </app-pr-input>
 
-    <app-pr-textarea placeholder="Write some..."
-        label="Please provide details of where evidence can be found within the source link (e.g. page number, slide number, table number)"
-        type="text" [required]="false"
-        [(ngModel)]="this.body.result_ip_result_complementary[this.ci.index].readiness_details_of_evidence"></app-pr-textarea>
+                <app-pr-textarea placeholder="Write some..."
+                    label="Please provide details of where evidence can be found within the source link (e.g. page number, slide number, table number)"
+                    type="text" [required]="false"
+                    [(ngModel)]="bodyItem.readiness_details_of_evidence"></app-pr-textarea>
 
-    <div class="fragment_section_divider"></div>
+                <div class="fragment_section_divider"></div>
 
-    <app-pr-field-header label="Innovation use level evidence-based" [required]="false"
-        [description]="this.useLevelDelfAssessment()"></app-pr-field-header>
+                <app-pr-field-header label="Innovation use level evidence-based"
+                    [description]="this.useLevelDelfAssessment()"></app-pr-field-header>
 
-    <app-pr-range-level itemTitle="name" itemDescription="definition" [options]="this.innovationUseList"
-        *ngIf="this.rangesOptions?.length" optionLabel="name" optionValue="id"
-        [(ngModel)]="this.body.result_ip_result_complementary[this.ci.index].use_level_evidence_based"></app-pr-range-level>
+                <app-pr-range-level itemTitle="name" itemDescription="definition" [options]="this.innovationUseList"
+                    *ngIf="this.rangesOptions?.length" optionLabel="name" optionValue="id"
+                    [(ngModel)]="bodyItem.use_level_evidence_based"></app-pr-range-level>
 
-    <app-pr-input label="Evidence link" placeholder="Link goes here..."
-        [(ngModel)]="this.body.result_ip_result_complementary[this.ci.index].use_evidence_link">
-    </app-pr-input>
+                <app-pr-input label="Evidence link" placeholder="Link goes here..."
+                    [(ngModel)]="bodyItem.use_evidence_link">
+                </app-pr-input>
 
-    <app-pr-textarea placeholder="Write some..."
-        label="Please provide details of where evidence can be found within the source link (e.g. page number, slide number, table number)"
-        type="text" [required]="false"
-        [(ngModel)]="this.body.result_ip_result_complementary[this.ci.index].use_details_of_evidence"></app-pr-textarea>
+                <app-pr-textarea placeholder="Write some..."
+                    label="Please provide details of where evidence can be found within the source link (e.g. page number, slide number, table number)"
+                    type="text" [required]="false" [(ngModel)]="bodyItem.use_details_of_evidence"></app-pr-textarea>
+            </div>
+        </div>
+    </app-collapsible-container>
 </div>
