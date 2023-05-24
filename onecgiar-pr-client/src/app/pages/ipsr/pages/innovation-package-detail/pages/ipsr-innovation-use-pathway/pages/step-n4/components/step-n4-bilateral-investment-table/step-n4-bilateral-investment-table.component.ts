@@ -14,7 +14,8 @@ export class StepN4BilateralInvestmentTableComponent implements OnInit {
 
   constructor(public rolesSE: RolesService, public manageRipUnitTimeSE: ManageRipUnitTimeService) {}
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+  }
 
   deleteBilateral(bilateral) {
     bilateral.is_active = false;

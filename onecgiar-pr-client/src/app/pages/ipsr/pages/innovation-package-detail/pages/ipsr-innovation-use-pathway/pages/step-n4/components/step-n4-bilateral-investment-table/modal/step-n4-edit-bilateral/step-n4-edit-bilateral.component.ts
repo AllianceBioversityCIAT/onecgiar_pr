@@ -12,6 +12,7 @@ import { ApiService } from 'src/app/shared/services/api/api.service';
 export class StepN4EditBilateralComponent implements OnInit {
 
   @Input() body: any;
+  @Input() isonlyread: boolean;
   visible = false;
   biltarealBody = new AddBilateralBody();
   showForm = true;

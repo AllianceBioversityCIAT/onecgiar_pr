@@ -8,21 +8,21 @@
 
         <app-pr-select class="segment_title_margin" [options]="this.institutionsSE?.institutionsList"
             label="Funder name" optionLabel="full_name" optionValue="institutions_id" placeholder="Select funder"
-            [(ngModel)]="biltarealBody.funder_institution_id">
+            [(ngModel)]="biltarealBody.funder_institution_id" [readOnly]="this.isonlyread">
         </app-pr-select>
 
         <div class="auto_fit_container">
             <app-pr-input label="Grant title" [required]="true" [(ngModel)]="biltarealBody.grant_title"
-                placeholder="Grant title goes here...">
+                placeholder="Grant title goes here..." [readOnly]="this.isonlyread">
             </app-pr-input>
             <app-pr-input label="Center Grant ID" [required]="true" [(ngModel)]="biltarealBody.center_grant_id"
-                placeholder="e.g. G184">
+                placeholder="e.g. G184 " [readOnly]="this.isonlyread">
             </app-pr-input>
         </div>
 
         <app-pr-select [options]="this.centersSE.centersList" [required]="true" label="Lead/Contract Center"
             optionLabel="full_name" optionValue="lead_center" placeholder="Select donor"
-            [(ngModel)]="biltarealBody.lead_center_id" placeholder="Lead/Contract Center goes here...">
+            [(ngModel)]="biltarealBody.lead_center_id" placeholder="Lead/Contract Center goes here..." [readOnly]="this.isonlyread">
         </app-pr-select>
 
 
@@ -33,15 +33,21 @@
         <app-pr-button padding="medium" text="Cancel" icon="cancel_schedule_send" colorType="secondary"
             (click)="this.visible = false">
         </app-pr-button>
-        <app-pr-button [ngClass]="{'globalDisabled': this.requesting || formIsInvalid}"
+        <app-pr-button *ngIf="this.isonlyread == false"  [ngClass]="{'globalDisabled': this.requesting || formIsInvalid}"
             [text]="this.requesting?'Adding bilateral':'Add bilateral'" [rotating]="this.requesting"
-            [icon]="this.requesting?'loop':'send'" padding="medium" (click)="onAddBilateral()"></app-pr-button>
+            [icon]="this.requesting?'loop':'send'" padding="medium" (click)="onAddBilateral()" ></app-pr-button>
     </div>
 
 </p-dialog>
 
-<div class="step-4-edit-button" (click)="visible=true">
+<div class="step-4-edit-button" (click)="visible=true" *ngIf="this.isonlyread == false">
     <i class="material-icons-round">
         edit
+    </i>
+</div>
+
+<div class="step-4-edit-button" (click)="visible=true" *ngIf="this.isonlyread == true">
+    <i class="material-icons-round">
+        visibility
     </i>
 </div>

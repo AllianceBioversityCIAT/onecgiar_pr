@@ -113,4 +113,8 @@ export class StepN3Component implements OnInit {
   addExpert(){
     this.ipsrStep3Body.result_ip_expert_workshop_organized.push(new expert_workshop_organized())
   }
+
+  delete(index){
+    this.ipsrStep3Body.result_ip_expert_workshop_organized.splice(index,1);
+  }
 }

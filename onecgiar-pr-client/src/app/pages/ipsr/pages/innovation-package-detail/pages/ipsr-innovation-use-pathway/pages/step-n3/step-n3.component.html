@@ -5,25 +5,28 @@
     optionLabel="name" optionValue="id" [options]="this.radioOptions" (selectOptionEvent)="cleanEvidence()"
     [(ngModel)]="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized">
 </app-pr-radio-button>
-
-<app-pr-input *ngIf="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true" label="Provide the link to the workshop list of participants" [description]="workshopDescription()"
-    [required]="false" placeholder="Link" [(ngModel)]="this.ipsrStep3Body.link_workshop_list">
-</app-pr-input>
-
 <div  *ngIf="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true" 
 
 >
-<div class="infoPersons" *ngFor="let expertItem of this.ipsrStep3Body.result_ip_expert_workshop_organized">
+<div class="infoPersons" *ngFor="let expertItem of this.ipsrStep3Body.result_ip_expert_workshop_organized; let i = index;">
     <app-pr-input label="First Name" [required]="true" placeholder="First Name" [(ngModel)]="expertItem.first_name"></app-pr-input>
     <app-pr-input  label="Last Name"  [required]="true" placeholder="Last Name" [(ngModel)]="expertItem.last_name"></app-pr-input>
     <app-pr-input label="Email" [required]="false" placeholder="Email" [(ngModel)]="expertItem.email"></app-pr-input>
     <app-pr-input label="Role" [required]="false" placeholder="Role" [(ngModel)]="expertItem.workshop_role"></app-pr-input>
+    <div class="delete" (click)="delete(i)">
+        <i class="clickEvent material-icons-round ymz-lsi-delete-icon" style="color: red; cursor: pointer;">delete</i>
+    </div>
 </div>
     
 </div>
 <div *ngIf="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true">
     <app-add-button name="Add Lead/Co-Lead"  (clickEvent)="addExpert()"></app-add-button>
 </div>
+<app-pr-input *ngIf="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true" label="Provide the link to the workshop list of participants" [description]="workshopDescription()"
+    [required]="false" placeholder="Link" [(ngModel)]="this.ipsrStep3Body.link_workshop_list">
+</app-pr-input>
+
+
 
 <div *ngIf="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true">
     <app-pr-field-header label="Innovation Readiness level self-assessment" [required]="false"
