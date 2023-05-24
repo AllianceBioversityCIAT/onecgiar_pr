@@ -93,10 +93,18 @@
 
 <div class="step_divider"></div>
 
+<div class="Complementary_innovations">
+    <app-pr-field-header label="<strong>Complementary innovations/ enablers/ solutions</strong>" [required]="false"
+        [description]="this.ipsrStep3Body.result_ip_result_complementary?.length?'In case you want to add one more complementary innovation / enabler / solution'+(goToStep()|lowercase):''"></app-pr-field-header>
+    <app-step-n3-complementary-innovations [body]="this.ipsrStep3Body" [rangesOptions]="this.rangesOptions"
+        [innovationUseList]="this.innovationUseList"
+        *ngIf="this.rangesOptions?.length && this.ipsrStep3Body.result_ip_result_complementary?.length">
+    </app-step-n3-complementary-innovations>
 
-<app-step-n3-complementary-innovations [body]="this.ipsrStep3Body" [rangesOptions]="this.rangesOptions"
-    [innovationUseList]="this.innovationUseList"
-    *ngIf="this.rangesOptions?.length && this.ipsrStep3Body.result_ip_result_complementary?.length"></app-step-n3-complementary-innovations>
+    <app-no-data-text *ngIf="!this.ipsrStep3Body.result_ip_result_complementary.length"
+        title="There are no complementary innovations / enablers / solutions selected for this innovation package. {{goToStep()}} to add them."></app-no-data-text>
+</div>
+
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()">
 </app-save-button>
 <div class="toggle_change_step">

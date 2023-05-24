@@ -11,5 +11,6 @@ export class PrFieldHeaderComponent {
   @Input() description: string;
   @Input() required: boolean = true;
   @Input() readOnly: boolean;
+  @Input() useColon: boolean = true;
   constructor() {}
 }

@@ -72,6 +72,10 @@ export class StepN3Component implements OnInit {
     });
   }
 
+  goToStep() {
+    return `<a class='open_route' href='/ipsr/detail/${this.ipsrDataControlSE.resultInnovationCode}/ipsr-innovation-use-pathway/step-2/complementary-innovation' target='_blank'> Go to step 2.1</a>`;
+  }
+
   readinessLevelSelfAssessmentText() {
     return `<a href="https://drive.google.com/file/d/1muDLtqpeaSCIX60g6qQG_GGOPR61Rq7E/view"  class="open_route" target="_blank">Click here</a>  to see all innovation readiness levels`;
   }
