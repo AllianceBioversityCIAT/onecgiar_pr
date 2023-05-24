@@ -34,6 +34,15 @@ export class StepN3CurrentUseComponent {
     // console.log(fundedList?.childrens);
     return fundedList?.childrens ?? [];
   }
+  cleanActor(actorItem) {
+    actorItem.women = null;
+    actorItem.women_youth = null;
+    actorItem.women_non_youth = null;
+    actorItem.men = null;
+    actorItem.men_youth = null;
+    actorItem.men_non_youth = null;
+    actorItem.how_many = null;
+  }
   reloadSelect(organizationItem) {
     organizationItem.hide = true;
     organizationItem.institution_sub_type_id = null;
@@ -112,7 +121,7 @@ export class StepN3CurrentUseComponent {
     }, 1100);
   }
 
-  narrativeActors(){
+  narrativeActors() {
     return `
     <ul>
     <li>
@@ -122,6 +131,6 @@ export class StepN3CurrentUseComponent {
     The numbers for ‘youth' and 'non-youth' equal the total number for 'Women' or 'Men’.
     </li>
     </ul>
-    `
+    `;
   }
 }

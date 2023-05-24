@@ -4,7 +4,7 @@ export class IpsrStep3Body {
   result_ip_result_complementary: Resultipresultcomplementary[] = [];
   result_ip_result_core = new Resultipresultcomplementary();
   link_workshop_list: string;
-  result_ip_expert_workshop_organized:expert_workshop_organized[];
+  result_ip_expert_workshop_organized: expert_workshop_organized[];
 }
 
 class Resultipresultcomplementary {
@@ -52,7 +52,7 @@ export class expert_workshop_organized {
   first_name: string;
   last_name: string;
   email: string;
-  workshop_role: string
+  workshop_role: string;
 }
 
 class InnovatonUse {
@@ -92,4 +92,6 @@ export class ActorN3 {
   men_non_youth: string | number;
   showWomenExplanation: boolean;
   other_actor_type: any;
+  sex_and_age_disaggregation: any;
+  how_many: any;
 }

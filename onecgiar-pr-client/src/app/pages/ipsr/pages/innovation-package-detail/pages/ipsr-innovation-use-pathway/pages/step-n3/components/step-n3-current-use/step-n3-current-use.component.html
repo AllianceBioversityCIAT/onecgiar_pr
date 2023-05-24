@@ -3,8 +3,7 @@
 <app-pr-field-header
     label="Specify the current use of the core innovation by actors, organizations, hectares or other innovation users/ beneficiaries. The numbers should reflect the current innovation use that can be supported by evidence"></app-pr-field-header>
 
-<app-pr-field-header [required]="false" label="Actors"
-    description="{{narrativeActors()}}"></app-pr-field-header>
+<app-pr-field-header [required]="false" label="Actors" description="{{narrativeActors()}}"></app-pr-field-header>
 <input type="text" id="removeFocus" style="position: absolute; opacity: 0;">
 <div class="fields_list" *ngIf="this.body.innovatonUse.actors?.length">
     <div class="fields" appYmzListStructureItem
@@ -30,7 +29,12 @@
                 <app-pr-field-header
                     description="CGIAR follows the United Nations definition of 'youth' as those persons between the ages of 15 and 24 years"></app-pr-field-header>
             </div>
-            <div class="right_content">
+            <br>
+            <app-pr-checkbox label="Sex and age disaggregation does not apply"
+                (selectOptionEvent)="cleanActor(this.actorItem)"
+                [(ngModel)]="this.actorItem.sex_and_age_disaggregation">
+            </app-pr-checkbox>
+            <div class="right_content" *ngIf="!this.actorItem.sex_and_age_disaggregation">
                 <div class="explanation_message" *ngIf="this.actorItem['showWomenExplanationwomen']">
                     Remember that the value of Youth cannot be greater than total of Women
                 </div>
@@ -44,7 +48,7 @@
                     [readOnly]="true" [(ngModel)]="this.actorItem.women_non_youth">
                 </app-pr-input>
             </div>
-            <div class="right_content">
+            <div class="right_content" *ngIf="!this.actorItem.sex_and_age_disaggregation">
                 <div class="explanation_message" *ngIf="this.actorItem['showWomenExplanationmen']">
                     Remember that the value of Youth cannot be greater than total of Men
                 </div>
@@ -56,6 +60,11 @@
                 </app-pr-input>
                 <app-pr-input noDataText="Save to calculate" placeholder="Write some..." label="Non-youth" type="number"
                     [required]="false" [readOnly]="true" [(ngModel)]="this.actorItem.men_non_youth">
+                </app-pr-input>
+            </div>
+            <div class="right_content" *ngIf="this.actorItem.sex_and_age_disaggregation">
+                <app-pr-input placeholder="Write some..." label="How many" type="number" [required]="true"
+                    [(ngModel)]="this.actorItem.how_many" (ngModelChange)="validateYouth(i,true)">
                 </app-pr-input>
             </div>
             <div class="right_content">
