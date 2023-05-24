@@ -17,6 +17,10 @@ export class SubGeoscopeComponent implements OnInit {
   @Output() selectOptionEvent = new EventEmitter();
   showNationalLevelSelect:boolean = true;
   showNationalLevelTwoSelect:boolean = true;
+  exitsSubLevelOne:boolean = true;
+  exitsSubLevelTwo:boolean = true;
+  nameCountry:string ;
+  nameCountryTwo:string ;
   constructor(public api: ApiService) { }
 
   ngOnInit(): void {
@@ -25,36 +29,70 @@ export class SubGeoscopeComponent implements OnInit {
   }
 
   getSubNationalLevelOne(index){
-    this.subNationalOne = []
+    this.subNationalOne = [];
+    this.subNationalTwo =[];
+    this.exitsSubLevelOne = true;
+      
     let isoAlpha = this.body.filter((resp) => this.countrySelected == resp.id)[0]['iso_alpha_2'];
     console.log(isoAlpha);
     this.api.resultsSE.getSubNationalLevelOne(isoAlpha).subscribe((resp) => {
       this.subNationalOne = resp['response']
       console.log(resp);
+      if (this.subNationalOne.length == 0) {
+        this.exitsSubLevelOne = false;
+        this.exitsSubLevelTwo = false;
+        
+        this.nameCountry = this.body.filter((resp) => this.countrySelected == resp.id)[0]['name'];
+        this.nameCountryTwo = this.body.filter((resp) => this.countrySelected == resp.id)[0]['name'];
+      }
     })
     this.subNationalOneSelected = null;
     this.showNationalLevelSelect = false;
+    this.showNationalLevelTwoSelect = false;
     setTimeout(() => {
       this.showNationalLevelSelect = true;
+      this.showNationalLevelTwoSelect = true;
     }, 300);
+    console.log(this.countrySelected);
+    
   }
 
   getSSubNationalLevelTwo(index){
     this.subNationalTwo = []
+    this.exitsSubLevelTwo = true;
     let isoAlpha = this.body.filter((resp) => this.countrySelected == resp.id)[0]['iso_alpha_2'];
     let adminCode = this.subNationalOne.filter((resp) => this.subNationalOneSelected == resp.geonameId)[0]['adminCode1'];
+    let infoSublevelOne = this.subNationalOne.filter((resp) => this.subNationalOneSelected == resp.geonameId)[0];
+    let subContriesSave:any[] = this.body.filter((resp) => this.countrySelected == resp.id)[0]['result_countries_sub_national'];
     this.api.resultsSE.getSubNationalLevelTwo(isoAlpha,adminCode).subscribe((resp) => {
     this.subNationalTwo = resp['response']
       console.log(resp);
+      if (this.subNationalTwo.length == 0) {
+        this.exitsSubLevelTwo = false;
+       
+        this.nameCountryTwo =  infoSublevelOne['name'];
+      }
     })
-
+    if(subContriesSave.length >= index + 1){
+      const subCountriesSave = {
+        sub_level_one_id: infoSublevelOne['geonameId'],
+        sub_level_one_name:infoSublevelOne['name'],
+      }
+      subContriesSave[index] =  subCountriesSave;
+    }else{
+      const subCountriesSave = {
+        sub_level_one_id: infoSublevelOne['geonameId'],
+        sub_level_one_name:infoSublevelOne['name'],
+      }
+      subContriesSave.push(subCountriesSave);
+    }
     this.subNationalTwoSelected = null;
     this.showNationalLevelTwoSelect = false;
     setTimeout(() => {
       this.showNationalLevelTwoSelect = true;
     }, 300);
+    console.log(this.body);
    
-    
   }
 
   delete(index){
