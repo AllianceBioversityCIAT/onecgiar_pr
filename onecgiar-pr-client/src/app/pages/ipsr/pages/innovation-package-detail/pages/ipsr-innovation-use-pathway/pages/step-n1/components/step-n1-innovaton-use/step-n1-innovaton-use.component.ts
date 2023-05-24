@@ -36,6 +36,16 @@ export class StepN1InnovatonUseComponent {
     return fundedList?.childrens ?? [];
   }
 
+  cleanActor(actorItem) {
+    actorItem.women = null;
+    actorItem.women_youth = null;
+    actorItem.women_non_youth = null;
+    actorItem.men = null;
+    actorItem.men_youth = null;
+    actorItem.men_non_youth = null;
+    actorItem.how_many = null;
+  }
+
   reloadSelect(organizationItem) {
     organizationItem.hide = true;
     organizationItem.institution_sub_type_id = null;

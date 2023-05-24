@@ -1,4 +1,4 @@
-import { Component, forwardRef, Input } from '@angular/core';
+import { Component, EventEmitter, forwardRef, Input, Output } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { GreenChecksService } from '../../shared/services/global/green-checks.service';
 
@@ -24,6 +24,7 @@ export class PrCheckboxComponent {
   @Input() description: string;
   @Input() readOnly: boolean;
   @Input() required: boolean = true;
+  @Output() selectOptionEvent = new EventEmitter();
   private _value: string;
 
   get value() {

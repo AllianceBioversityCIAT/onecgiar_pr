@@ -86,6 +86,8 @@ export class Actor {
   previousWomen: any;
   previousWomen_youth: any;
   other_actor_type: any;
+  sex_and_age_disaggregation: boolean;
+  how_many: any;
 }
 
 interface SdgTarget {

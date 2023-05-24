@@ -23,11 +23,16 @@
             </app-pr-input>
         </div>
         <div class="">
-            <div style="margin-top: 20px;margin-bottom: -20px;">
+            <div style="margin-top: 20px;margin-bottom: -20px;" *ngIf="!this.actorItem.sex_and_age_disaggregation">
                 <app-pr-field-header
                     description="CGIAR follows the United Nations definition of 'youth' as those persons between the ages of 15 and 24 years"></app-pr-field-header>
             </div>
-            <div class="right_content">
+            <br>
+            <app-pr-checkbox label="Sex and age disaggregation does not apply"
+                (selectOptionEvent)="cleanActor(this.actorItem)"
+                [(ngModel)]="this.actorItem.sex_and_age_disaggregation">
+            </app-pr-checkbox>
+            <div class="right_content" *ngIf="!this.actorItem.sex_and_age_disaggregation">
                 <div class="explanation_message" *ngIf="this.actorItem['showWomenExplanationwomen']">
                     Remember that the value of Youth cannot be greater than total of Women
                 </div>
@@ -41,7 +46,7 @@
                     [required]="false" [readOnly]="true" [(ngModel)]="this.actorItem.women_non_youth">
                 </app-pr-input>
             </div>
-            <div class="right_content">
+            <div class="right_content" *ngIf="!this.actorItem.sex_and_age_disaggregation">
                 <div class="explanation_message" *ngIf="this.actorItem['showWomenExplanationmen']">
                     Remember that the value of Youth cannot be greater than total of Men
                 </div>
@@ -53,6 +58,11 @@
                 </app-pr-input>
                 <app-pr-input noDataText="Save to calculate" placeholder="Write some..." label="Non-youth" type="number"
                     [required]="false" [readOnly]="true" [(ngModel)]="this.actorItem.men_non_youth">
+                </app-pr-input>
+            </div>
+            <div class="right_content" *ngIf="this.actorItem.sex_and_age_disaggregation">
+                <app-pr-input placeholder="Write some..." label="How many" type="number" [required]="true"
+                    [(ngModel)]="this.actorItem.how_many" (ngModelChange)="validateYouth(i,true)">
                 </app-pr-input>
             </div>
         </div>
