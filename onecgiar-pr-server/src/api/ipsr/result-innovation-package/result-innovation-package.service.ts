@@ -461,7 +461,7 @@ export class ResultInnovationPackageService {
         resultByInnivationPackage,
         vrs.id,
       );
-
+      /*
       await this._resultInnovationPackageRepository.update(
         newResultInnovationPackage.result_innovation_package_id,
         {
@@ -472,7 +472,7 @@ export class ResultInnovationPackageService {
           regional_leadership_id: result.geographic_scope_id == 1 ? 3 : null,
           regional_integrated_id: result.geographic_scope_id == 1 ? 3 : null,
         },
-      );
+      );*/
 
       return {
         response: {

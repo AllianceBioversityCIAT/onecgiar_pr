@@ -162,7 +162,7 @@ export class ResultInnovationPackage extends BaseEntity {
   @JoinColumn({
     name: 'assessed_during_expert_workshop_id',
   })
-  obj_assessed_during_expert_workshop!: number;
+  obj_assessed_during_expert_workshop!: AssessedDuringExpertWorkshop;
 
   @ManyToOne(
     () => consensusInitiativeWorkPackage,
