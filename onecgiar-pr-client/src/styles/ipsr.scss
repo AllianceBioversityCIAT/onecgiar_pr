@@ -76,6 +76,11 @@
     // border: 1px solid red;
     align-items: center;
     gap: 10px;
+    margin-bottom: 10px;
+
+    .unitW {
+        width: 150px !important;
+    }
 
     &>div:first-child {
         width: max-content;

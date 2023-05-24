@@ -3,14 +3,14 @@
         <app-pr-field-header label="Expected CGIAR Bilateral investments in Innovation Package in next"
             [required]="false"></app-pr-field-header>
     </div>
-    <div>
-        <app-pr-input placeholder="Number" type="number" [required]="false"
+    <div class="unitW">
+        <app-pr-input placeholder="Number" type="number" [required]="false" [readOnly]="true"
             [(ngModel)]="this.body.bilateral_expected_time">
         </app-pr-input>
     </div>
     <div>
         <app-pr-select [options]="this.manageRipUnitTimeSE.unitTimeList" optionLabel="name" optionValue="unit_time_id"
-            [(ngModel)]="this.body.bilateral_unit_time_id" placeholder="Select">
+            [(ngModel)]="this.body.bilateral_unit_time_id" placeholder="Select" [readOnly]="true">
         </app-pr-select>
     </div>
 </div>
