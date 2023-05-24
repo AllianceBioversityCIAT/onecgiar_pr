@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { ActorN3, IpsrStep3Body, MeasureN3, OrganizationN3 } from './model/Ipsr-step-3-body.model';
+import { ActorN3, IpsrStep3Body, MeasureN3, OrganizationN3, expert_workshop_organized } from './model/Ipsr-step-3-body.model';
 import { IpsrDataControlService } from 'src/app/pages/ipsr/services/ipsr-data-control.service';
 import { ApiService } from 'src/app/shared/services/api/api.service';
 
@@ -39,6 +39,9 @@ export class StepN3Component implements OnInit {
       }
       if(this.ipsrStep3Body.innovatonUse.organization.length == 0){
         this.ipsrStep3Body.innovatonUse.organization.push(new OrganizationN3())
+      }
+      if(this.ipsrStep3Body.result_ip_expert_workshop_organized.length == 0){
+        this.ipsrStep3Body.result_ip_expert_workshop_organized.push(new expert_workshop_organized())
       }
     });
   }
@@ -105,5 +108,9 @@ export class StepN3Component implements OnInit {
 
   workshopDescription() {
     return `A template participant list can be downloaded <a href=""  class="open_route" target="_blank">here</a>`;
+  }
+
+  addExpert(){
+    this.ipsrStep3Body.result_ip_expert_workshop_organized.push(new expert_workshop_organized())
   }
 }

@@ -4,6 +4,7 @@ export class IpsrStep3Body {
   result_ip_result_complementary: Resultipresultcomplementary[] = [];
   result_ip_result_core = new Resultipresultcomplementary();
   link_workshop_list: string;
+  result_ip_expert_workshop_organized:expert_workshop_organized[];
 }
 
 class Resultipresultcomplementary {
@@ -44,6 +45,13 @@ class Resultinnovationpackage {
   use_level_evidence_based = null;
   readiness_level_evidence_based = null;
   is_expert_workshop_organized = null;
+}
+
+export class expert_workshop_organized {
+  first_name: string;
+  last_name: string;
+  email: string;
+  workshop_role: string
 }
 
 class InnovatonUse {
