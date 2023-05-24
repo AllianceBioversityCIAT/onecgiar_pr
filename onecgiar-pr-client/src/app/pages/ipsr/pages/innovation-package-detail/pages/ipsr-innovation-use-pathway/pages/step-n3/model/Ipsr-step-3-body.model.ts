@@ -23,6 +23,7 @@ class Resultipresultcomplementary {
   obj_result: any;
   readiness_details_of_evidence: string;
   use_details_of_evidence: string;
+  open: boolean = true;
 }
 
 class Resultinnovationpackage {
