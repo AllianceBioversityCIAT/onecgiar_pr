@@ -12,6 +12,8 @@ innovationCompletary :any = [];
   constructor(public api: ApiService,) { }
   informartion:any = []
   ngOnInit(): void {
+    this.api.isStepTwoTwo = true;
+    this.api.isStepTwoOne = false;
     this.api.resultsSE.GETinnovationpathwayStepTwo().subscribe((resp) =>{
         console.log(resp);
         this.innovationCompletary = resp['response'];

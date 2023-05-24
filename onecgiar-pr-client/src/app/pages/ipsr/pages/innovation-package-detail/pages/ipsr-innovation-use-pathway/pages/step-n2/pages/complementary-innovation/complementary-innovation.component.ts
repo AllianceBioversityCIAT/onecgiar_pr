@@ -35,6 +35,9 @@ export class ComplementaryInnovationComponent implements OnInit {
   constructor(public api: ApiService, private ipsrDataControlSE: IpsrDataControlService) {}
 
   ngOnInit(): void {
+    this.api.isStepTwoOne = true;
+    this.api.isStepTwoTwo = false;
+    
     this.api.resultsSE.GETInnovationPathwayStepTwoInnovationSelect().subscribe((resp) => {
       this.innovationPackageCreatorBody = resp['response']
       console.log(resp);

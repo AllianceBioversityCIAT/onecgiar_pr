@@ -17,7 +17,9 @@ import { Title } from '@angular/platform-browser';
 })
 export class ApiService {
   constructor(private titleService: Title, public resultsSE: ResultsApiService, public alertsFs: CustomizedAlertsFsService, private qaSE: QualityAssuranceService, public authSE: AuthService, public alertsFe: CustomizedAlertsFeService, public dataControlSE: DataControlService, public resultsListFilterSE: ResultsListFilterService, public wordCounterSE: WordCounterService, public rolesSE: RolesService, public tocApiSE: TocApiService) {}
-
+  isStepTwoTwo:boolean = false;
+  isStepTwoOne:boolean = false;
+  
   updateUserData(callback) {
     if (!this.authSE?.localStorageUser?.id) return;
     forkJoin([this.authSE.GET_allRolesByUser(), this.authSE.GET_initiativesByUser()]).subscribe(

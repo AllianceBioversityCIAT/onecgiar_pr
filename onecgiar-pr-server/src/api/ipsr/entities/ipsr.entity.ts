@@ -1,4 +1,11 @@
-import { Column, Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
+import {
+  Column,
+  Entity,
+  PrimaryGeneratedColumn,
+  ManyToOne,
+  JoinColumn,
+  OneToMany,
+} from 'typeorm';
 import { BaseEntity } from '../../../shared/entities/base-entity';
 import { Version } from '../../results/versions/entities/version.entity';
 import { Result } from '../../results/entities/result.entity';
@@ -14,120 +21,187 @@ import { ClarisaInnovationUseLevel } from '../../../clarisa/clarisa-innovation-u
 
 @Entity('result_by_innovation_package')
 export class Ipsr extends BaseEntity {
-    @PrimaryGeneratedColumn({
-        name: 'result_by_innovation_package_id',
-        type: 'bigint'
-    })
-    result_by_innovation_package_id: number;
+  @PrimaryGeneratedColumn({
+    name: 'result_by_innovation_package_id',
+    type: 'bigint',
+  })
+  result_by_innovation_package_id: number;
 
-    @Column({
-        name: 'result_innovation_package_id',
-        type: 'bigint'
-    })
-    result_innovation_package_id: number;
+  @Column({
+    name: 'result_innovation_package_id',
+    type: 'bigint',
+  })
+  result_innovation_package_id: number;
 
-    @Column({
-        name: 'result_id',
-        type: 'bigint'
-    })
-    result_id: number;
+  @Column({
+    name: 'result_id',
+    type: 'bigint',
+  })
+  result_id: number;
 
-    @Column({
-        name: 'ipsr_role_id',
-        type: 'bigint'
-    })
-    ipsr_role_id: number;
+  @Column({
+    name: 'ipsr_role_id',
+    type: 'bigint',
+  })
+  ipsr_role_id: number;
 
-    @Column({
-        name: 'readinees_evidence_link',
-        type: 'text',
-        nullable: true
-    })
-    readinees_evidence_link: string;
+  @Column({
+    name: 'readinees_evidence_link',
+    type: 'text',
+    nullable: true,
+  })
+  readinees_evidence_link: string;
 
-    @Column({
-        name: 'use_evidence_link',
-        type: 'text',
-        nullable: true
-    })
-    use_evidence_link: string;
+  @Column({
+    name: 'use_evidence_link',
+    type: 'text',
+    nullable: true,
+  })
+  use_evidence_link: string;
 
-    @Column({
-        name: 'readiness_level_evidence_based',
-        type: 'bigint',
-        nullable: true
-    })
-    readiness_level_evidence_based: number;
+  @Column({
+    name: 'readiness_level_evidence_based',
+    type: 'bigint',
+    nullable: true,
+  })
+  readiness_level_evidence_based: number;
 
-    @Column({
-        name: 'use_level_evidence_based',
-        type: 'bigint',
-        nullable: true
-    })
-    use_level_evidence_based: number;
+  @Column({
+    name: 'use_level_evidence_based',
+    type: 'bigint',
+    nullable: true,
+  })
+  use_level_evidence_based: number;
 
-    @Column({
-        name: 'use_details_of_evidence',
-        type: 'text',
-        nullable: true
-    })
-    use_details_of_evidence!: string;
+  @Column({
+    name: 'current_innovation_readiness_level',
+    type: 'bigint',
+    nullable: true,
+  })
+  current_innovation_readiness_level!: number;
 
-    @Column({
-        name: 'readiness_details_of_evidence',
-        type: 'text',
-        nullable: true
-    })
-    readiness_details_of_evidence!: string;
+  @Column({
+    name: 'current_innovation_use_level',
+    type: 'bigint',
+    nullable: true,
+  })
+  current_innovation_use_level!: number;
 
-    @ManyToOne(() => IpsrRole, ir => ir.obj_ipsr_role)
-    @JoinColumn({
-        name: 'ipsr_role_id'
-    })
-    obj_ipsr_role: IpsrRole;
+  @Column({
+    name: 'potential_innovation_readiness_level',
+    type: 'bigint',
+    nullable: true,
+  })
+  potential_innovation_readiness_level!: number;
 
-    @ManyToOne(() => Version, v => v.innovation_by_result)
-    @JoinColumn({
-        name: 'version_id'
-    })
-    obj_version: Version;
+  @Column({
+    name: 'potential_innovation_use_level',
+    type: 'bigint',
+    nullable: true,
+  })
+  potential_innovation_use_level!: number;
 
-    @ManyToOne(() => ResultInnovationPackage, r => r.result_innovation_package_id)
-    @JoinColumn({
-        name: 'result_innovation_package_id'
-    })
-    obj_result_by_innovation_package: ResultInnovationPackage;
+  @Column({
+    name: 'use_details_of_evidence',
+    type: 'text',
+    nullable: true,
+  })
+  use_details_of_evidence!: string;
 
-    @ManyToOne(() => Result, r => r.obj_result)
-    @JoinColumn({
-        name: 'result_id'
-    })
-    obj_result: Result;
+  @Column({
+    name: 'readiness_details_of_evidence',
+    type: 'text',
+    nullable: true,
+  })
+  readiness_details_of_evidence!: string;
 
-    @OneToMany(() => ResultIpEoiOutcome, rio => rio.obj_result_by_innovation_package)
-    obj_result_by_innovation_package_eoi_outcome: ResultIpEoiOutcome[];
+  @ManyToOne(() => IpsrRole, (ir) => ir.obj_ipsr_role)
+  @JoinColumn({
+    name: 'ipsr_role_id',
+  })
+  obj_ipsr_role: IpsrRole;
 
-    @OneToMany(() => ResultIpSdgTargets, ris => ris.obj_result_by_innovation_package_sdg_targets)
-    obj_result_by_innovation_package_sdg_targets: ResultIpSdgTargets[];
+  @ManyToOne(() => Version, (v) => v.innovation_by_result)
+  @JoinColumn({
+    name: 'version_id',
+  })
+  obj_version: Version;
 
-    @OneToMany(() => ResultsIpActor, ripa => ripa.obj_result_ip_result_id)
-    obj_result_ip_actors: ResultsIpActor[];
+  @ManyToOne(
+    () => ResultInnovationPackage,
+    (r) => r.result_innovation_package_id,
+  )
+  @JoinColumn({
+    name: 'result_innovation_package_id',
+  })
+  obj_result_by_innovation_package: ResultInnovationPackage;
 
-    @OneToMany(() => ResultsByIpInnovationUseMeasure, ripa => ripa.obj_result_ip_result)
-    obj_result_ip_result_measures: ResultsByIpInnovationUseMeasure[];
+  @ManyToOne(() => Result, (r) => r.obj_result)
+  @JoinColumn({
+    name: 'result_id',
+  })
+  obj_result: Result;
 
-    @OneToMany(() => ResultsIpInstitutionType, ripa => ripa.obj_result_ip_results)
-    obj_result_ip_result_institutions_type: ResultsIpInstitutionType[];
+  @OneToMany(
+    () => ResultIpEoiOutcome,
+    (rio) => rio.obj_result_by_innovation_package,
+  )
+  obj_result_by_innovation_package_eoi_outcome: ResultIpEoiOutcome[];
 
-    @ManyToOne(() => ClarisaInnovationReadinessLevel, cirl => cirl.id)
-    @JoinColumn({
-        name: 'readiness_level_evidence_based'
-    })
-    obj_readiness_level_evidence_based: ClarisaInnovationReadinessLevel;
+  @OneToMany(
+    () => ResultIpSdgTargets,
+    (ris) => ris.obj_result_by_innovation_package_sdg_targets,
+  )
+  obj_result_by_innovation_package_sdg_targets: ResultIpSdgTargets[];
 
-    @ManyToOne(() => ClarisaInnovationUseLevel, cirl => cirl.id)
-    @JoinColumn({
-        name: 'use_level_evidence_based'
-    })
-    obj_use_level_evidence_based: ClarisaInnovationUseLevel;
+  @OneToMany(() => ResultsIpActor, (ripa) => ripa.obj_result_ip_result_id)
+  obj_result_ip_actors: ResultsIpActor[];
+
+  @OneToMany(
+    () => ResultsByIpInnovationUseMeasure,
+    (ripa) => ripa.obj_result_ip_result,
+  )
+  obj_result_ip_result_measures: ResultsByIpInnovationUseMeasure[];
+
+  @OneToMany(
+    () => ResultsIpInstitutionType,
+    (ripa) => ripa.obj_result_ip_results,
+  )
+  obj_result_ip_result_institutions_type: ResultsIpInstitutionType[];
+
+  @ManyToOne(() => ClarisaInnovationReadinessLevel, (cirl) => cirl.id)
+  @JoinColumn({
+    name: 'readiness_level_evidence_based',
+  })
+  obj_readiness_level_evidence_based: ClarisaInnovationReadinessLevel;
+
+  @ManyToOne(() => ClarisaInnovationUseLevel, (cirl) => cirl.id)
+  @JoinColumn({
+    name: 'use_level_evidence_based',
+  })
+  obj_use_level_evidence_based: ClarisaInnovationUseLevel;
+
+  @ManyToOne(() => ClarisaInnovationReadinessLevel, (cirl) => cirl.id)
+  @JoinColumn({
+    name: 'current_innovation_readiness_level',
+  })
+  obj_current_innovation_readiness_level!: number;
+
+  @ManyToOne(() => ClarisaInnovationUseLevel, (cirl) => cirl.id)
+  @JoinColumn({
+    name: 'current_innovation_use_level',
+  })
+  obj_current_innovation_use_level!: ClarisaInnovationUseLevel;
+
+  @ManyToOne(() => ClarisaInnovationReadinessLevel, (cirl) => cirl.id)
+  @JoinColumn({
+    name: 'potential_innovation_readiness_level',
+  })
+  obj_potential_innovation_readiness_level!: number;
+
+  @ManyToOne(() => ClarisaInnovationUseLevel, (cirl) => cirl.id)
+  @JoinColumn({
+    name: 'potential_innovation_use_level',
+  })
+  obj_potential_innovation_use_level!: ClarisaInnovationUseLevel;
 }

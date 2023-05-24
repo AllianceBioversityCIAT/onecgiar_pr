@@ -27,7 +27,7 @@ export class HandlersError {
         response: error?.response ? error.response : { error: true },
         message: error?.message ? error.message : 'INTERNAL_SERVER_ERROR',
         status: error?.status ? error.status : HttpStatus.INTERNAL_SERVER_ERROR,
-      }
+      },
     };
   }
 
@@ -66,4 +66,28 @@ export class returnErrorDto {
 export class returnDataDto {
   public data: Type;
   public logs: returnErrorDto;
+}
+
+@Injectable()
+export class ReturnResponse {
+  private readonly _logger = new Logger(ReturnResponse.name);
+  public format(
+    { message, statusCode, response }: ReturnResponseDto<any>,
+    debug: boolean = false,
+  ): ReturnResponseDto<any> {
+    if (debug) {
+      this._logger.debug({ message, statusCode, response });
+    }
+    return {
+      response: response || {},
+      message: message || `Internal Server Error`,
+      statusCode: statusCode || HttpStatus.INTERNAL_SERVER_ERROR,
+    };
+  }
+}
+
+export class ReturnResponseDto<T> {
+  public response?: T;
+  public message?: string;
+  public statusCode?: HttpStatus;
 }

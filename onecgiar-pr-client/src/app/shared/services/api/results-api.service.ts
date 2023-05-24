@@ -610,6 +610,10 @@ export class ResultsApiService {
     return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-four/partners/${this.ipsrDataControlSE.resultInnovationId}`, body);
   }
 
+  PATCHInnovationPathwayStep4BilateralsnonPooledProjects(idNonPoolen,body) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/results/non-pooled-projects/${idNonPoolen}`, body);
+  }
+
   PATCHInnovationPathwayStep4Bilaterals(body) {
     return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-four/bilaterals/${this.ipsrDataControlSE.resultInnovationId}`, body);
   }

@@ -5,6 +5,7 @@ import { ResultsPackageTocResultModule } from './results-package-toc-result/resu
 import { InnovationPackagingExpertsModule } from './innovation-packaging-experts/innovation-packaging-experts.module';
 import { ResultsInnovationPackagesValidationModuleModule } from './results-innovation-packages-validation-module/results-innovation-packages-validation-module.module';
 import { ResultsInnovationPackagesEnablerTypeModule } from './results-innovation-packages-enabler-type/results-innovation-packages-enabler-type.module';
+import { AssessedDuringExpertWorkshopModule } from './assessed-during-expert-workshop/assessed-during-expert-workshop.module';
 
 export const IpsrRoutes: Routes = [
   {
@@ -13,22 +14,26 @@ export const IpsrRoutes: Routes = [
   },
   {
     path: 'contributors',
-    module: ResultsPackageTocResultModule
+    module: ResultsPackageTocResultModule,
   },
   {
     path: 'innovation-pathway',
-    module: InnovationPathwayModule
+    module: InnovationPathwayModule,
   },
   {
     path: 'innovation-packaging-experts',
-    module: InnovationPackagingExpertsModule
+    module: InnovationPackagingExpertsModule,
   },
   {
     path: 'results-innovation-packages-validation-module',
-    module: ResultsInnovationPackagesValidationModuleModule
+    module: ResultsInnovationPackagesValidationModuleModule,
   },
   {
     path: 'results-innovation-packages-enabler-type',
-    module: ResultsInnovationPackagesEnablerTypeModule
+    module: ResultsInnovationPackagesEnablerTypeModule,
+  },
+  {
+    path: 'assessed-during-expert-workshop',
+    module: AssessedDuringExpertWorkshopModule,
   },
 ];

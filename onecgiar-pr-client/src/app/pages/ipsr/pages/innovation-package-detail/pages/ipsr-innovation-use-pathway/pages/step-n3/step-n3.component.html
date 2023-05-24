@@ -10,10 +10,19 @@
     [required]="false" placeholder="Link" [(ngModel)]="this.ipsrStep3Body.link_workshop_list">
 </app-pr-input>
 
-<div class="infoPersons" *ngIf="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === null && false" >
-    <app-pr-input label="First Name" [required]="false" placeholder="First Name" ></app-pr-input>
-    <app-pr-input  label="Last Name"  [required]="false" placeholder="Last Name" ></app-pr-input>
-    <app-pr-input label="Email" [required]="false" placeholder="Email" ></app-pr-input>
+<div  *ngIf="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true" 
+
+>
+<div class="infoPersons" *ngFor="let expertItem of this.ipsrStep3Body.result_ip_expert_workshop_organized">
+    <app-pr-input label="First Name" [required]="true" placeholder="First Name" [(ngModel)]="expertItem.first_name"></app-pr-input>
+    <app-pr-input  label="Last Name"  [required]="true" placeholder="Last Name" [(ngModel)]="expertItem.last_name"></app-pr-input>
+    <app-pr-input label="Email" [required]="false" placeholder="Email" [(ngModel)]="expertItem.email"></app-pr-input>
+    <app-pr-input label="Role" [required]="false" placeholder="Role" [(ngModel)]="expertItem.workshop_role"></app-pr-input>
+</div>
+    
+</div>
+<div *ngIf="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true">
+    <app-add-button name="Add Lead/Co-Lead"  (clickEvent)="addExpert()"></app-add-button>
 </div>
 
 <div *ngIf="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true">
@@ -81,10 +90,18 @@
 
 <div class="step_divider"></div>
 
+<div class="Complementary_innovations">
+    <app-pr-field-header label="<strong>Complementary innovations/ enablers/ solutions</strong>" [required]="false"
+        [description]="this.ipsrStep3Body.result_ip_result_complementary?.length?'In case you want to add one more complementary innovation / enabler / solution'+(goToStep()|lowercase):''"></app-pr-field-header>
+    <app-step-n3-complementary-innovations [body]="this.ipsrStep3Body" [rangesOptions]="this.rangesOptions"
+        [innovationUseList]="this.innovationUseList"
+        *ngIf="this.rangesOptions?.length && this.ipsrStep3Body.result_ip_result_complementary?.length">
+    </app-step-n3-complementary-innovations>
 
-<app-step-n3-complementary-innovations [body]="this.ipsrStep3Body" [rangesOptions]="this.rangesOptions"
-    [innovationUseList]="this.innovationUseList"
-    *ngIf="this.rangesOptions?.length && this.ipsrStep3Body.result_ip_result_complementary?.length"></app-step-n3-complementary-innovations>
+    <app-no-data-text *ngIf="!this.ipsrStep3Body.result_ip_result_complementary.length"
+        title="There are no complementary innovations / enablers / solutions selected for this innovation package. {{goToStep()}} to add them."></app-no-data-text>
+</div>
+
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()">
 </app-save-button>
 <div class="toggle_change_step">
