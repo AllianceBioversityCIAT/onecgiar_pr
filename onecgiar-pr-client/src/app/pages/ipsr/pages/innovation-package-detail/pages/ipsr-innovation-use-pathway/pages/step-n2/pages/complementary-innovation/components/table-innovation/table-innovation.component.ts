@@ -41,10 +41,10 @@ export class TableInnovationComponent{
   constructor(public api: ApiService, public manageInnovationsListSE: ManageInnovationsListService) {}
 
   columnOrder = [
-    { title: 'Result code', attr: 'result_code'},
+    { title: 'Code', attr: 'result_code'},
     { title: 'Title', attr: 'title' , class: 'notCenter' },
     { title: 'Lead', attr: 'initiative_official_code'},
-    { title: 'is QAed', attr: 'status' },
+    { title: 'Innovation Type', attr: 'result_type_name' },
     { title: 'Creation date', attr: 'created_date' }
   ];
   openInNewPage(link) {
