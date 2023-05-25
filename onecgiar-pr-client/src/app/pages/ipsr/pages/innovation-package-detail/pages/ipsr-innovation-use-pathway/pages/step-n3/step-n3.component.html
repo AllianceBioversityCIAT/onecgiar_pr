@@ -9,10 +9,10 @@
 
 >
 <div class="infoPersons" *ngFor="let expertItem of this.ipsrStep3Body.result_ip_expert_workshop_organized; let i = index;">
-    <app-pr-input label="First Name" [required]="true" placeholder="First Name" [(ngModel)]="expertItem.first_name"></app-pr-input>
+    <app-pr-input label="Facilitators" [required]="true" placeholder="First Name" [(ngModel)]="expertItem.first_name"></app-pr-input>
     <app-pr-input  label="Last Name"  [required]="true" placeholder="Last Name" [(ngModel)]="expertItem.last_name"></app-pr-input>
     <app-pr-input label="Email" [required]="false" placeholder="Email" [(ngModel)]="expertItem.email"></app-pr-input>
-    <app-pr-input label="Role" [required]="false" placeholder="Role" [(ngModel)]="expertItem.workshop_role"></app-pr-input>
+    <app-pr-input label="Role" [required]="false" placeholder="Lead/Co-lead" [(ngModel)]="expertItem.workshop_role"></app-pr-input>
     <div class="delete" (click)="delete(i)">
         <i class="clickEvent material-icons-round ymz-lsi-delete-icon" style="color: red; cursor: pointer;">delete</i>
     </div>
