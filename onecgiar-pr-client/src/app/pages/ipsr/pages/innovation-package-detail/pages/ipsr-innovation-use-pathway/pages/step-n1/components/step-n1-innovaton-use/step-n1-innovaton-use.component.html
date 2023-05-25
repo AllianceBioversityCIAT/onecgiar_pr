@@ -106,10 +106,10 @@
         *ngFor="let measuresItem of this.body.innovatonUse.measures"
         [ngClass]="{'hideElement': measuresItem.is_active == false}">
         <div class="right_content">
-            <app-pr-input placeholder="e.g. # of projects" label="Unit of measure" type="text" [required]="false"
+            <app-pr-input placeholder="e.g. # of projects" label="Unit of measure" type="text" [required]="true"
                 [(ngModel)]="this.measuresItem.unit_of_measure">
             </app-pr-input>
-            <app-pr-input placeholder="Write some..." label="Quantity" type="number" [required]="false"
+            <app-pr-input placeholder="Write some..." label="Quantity" type="number" [required]="true"
                 [(ngModel)]="this.measuresItem.quantity">
             </app-pr-input>
         </div>
