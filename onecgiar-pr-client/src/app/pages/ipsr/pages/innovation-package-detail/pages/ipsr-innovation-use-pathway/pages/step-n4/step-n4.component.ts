@@ -52,4 +52,14 @@ export class StepN4Component implements OnInit {
   workshopDescription() {
     return `A template participant list can be downloaded <a href=""  class="open_route" target="_blank">here</a>`;
   }
+
+  descriptionInnovation(){
+    return `
+    Description:Are there any specific investors or donors – other than the <a href="https://www.cgiar.org/funders/"  class="open_route" target="_blank">CGIAR Fund Donors</a> – who provide core/pooled funding – that you wish to acknowledge for their critical contribution to the continued development, testing, and scaling of this innovation?
+    <ul>
+    <li>Please separate donor/investor names by a semicolon.</li>
+    <li>Donors/investors will be included in the acknowledgment section in the Innovation Profile.</li>
+    </ul>
+    `
+  }
 }
