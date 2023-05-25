@@ -1,4 +1,5 @@
 import { Component, Input, OnInit } from '@angular/core';
+import { RolesService } from '../../shared/services/global/roles.service';
 
 @Component({
   selector: 'app-pr-field-header',
@@ -12,5 +13,10 @@ export class PrFieldHeaderComponent {
   @Input() required: boolean = true;
   @Input() readOnly: boolean;
   @Input() useColon: boolean = true;
-  constructor() {}
+  @Input() showDescriptionLabel: boolean = true;
+  constructor(public rolesSE: RolesService) {}
+  get descriptionLabel() {
+    // console.log(this.rolesSE.readOnly);
+    return this.showDescriptionLabel && !this.rolesSE.readOnly ? `<strong class="description_header">Description:</strong>` : '';
+  }
 }

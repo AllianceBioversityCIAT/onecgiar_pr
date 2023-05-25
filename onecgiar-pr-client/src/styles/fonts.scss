@@ -21,6 +21,12 @@ html {
     cursor: pointer;
 }
 
+.description_header {
+    font-weight: 600;
+    color: black !important;
+    margin-right: 5px !important;
+}
+
 .read-only {
     color: var(--pr-color-secondary);
 }
