@@ -14,6 +14,7 @@ export class SaveStepFour {
     partner_unit_time_id: number;
     partner_expected_time: string;
     is_result_ip_published: boolean;
+    ipsr_pdf_report: string;
 }
 
 export interface institutionsFour {

@@ -161,6 +161,7 @@ export class InnovationPathwayStepFourService {
           bilateral_expected_investment,
           institutions_expected_investment,
           is_result_ip_published: result_ip.is_result_ip_published,
+          ipsr_pdf_report: result_ip.ipsr_pdf_report,
         },
         message: 'Successful response',
         status: HttpStatus.OK,
@@ -237,6 +238,10 @@ export class InnovationPathwayStepFourService {
           partner_unit_time_id: saveStepFourDto.partner_unit_time_id,
           partner_expected_time: saveStepFourDto.partner_expected_time,
           is_result_ip_published: saveStepFourDto.is_result_ip_published,
+          ipsr_pdf_report:
+            saveStepFourDto.is_result_ip_published === true
+              ? saveStepFourDto.ipsr_pdf_report
+              : null,
         },
       );
 

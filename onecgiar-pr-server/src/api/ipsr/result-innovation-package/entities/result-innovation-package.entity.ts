@@ -152,6 +152,13 @@ export class ResultInnovationPackage extends BaseEntity {
   is_result_ip_published!: boolean;
 
   @Column({
+    name: 'ipsr_pdf_report',
+    type: 'text',
+    nullable: true,
+  })
+  ipsr_pdf_report!: string;
+
+  @Column({
     name: 'assessed_during_expert_workshop_id',
     type: 'bigint',
     nullable: true,
