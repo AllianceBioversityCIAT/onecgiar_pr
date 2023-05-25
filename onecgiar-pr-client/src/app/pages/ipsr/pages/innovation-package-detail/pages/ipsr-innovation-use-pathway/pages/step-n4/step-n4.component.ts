@@ -25,6 +25,8 @@ export class StepN4Component implements OnInit {
         });
       } catch (error) {}
     });
+
+    
   }
 
   getSectionInformation() {

@@ -24,7 +24,18 @@
         <th *ngIf="!this.rolesSE.readOnly"></th>
     </tr>
     <tr *ngFor="let item of this.body.bilateral_expected_investment; let i=index" [hidden]="item.is_active == false">
-        <td>{{item?.obj_non_pooled_projetct?.grant_title}}</td>
+        <td>
+            <div class="editBilateral" >
+                <div style="display: flex; align-items: center;">
+                    {{item?.obj_non_pooled_projetct?.grant_title}} 
+                </div>
+                <div style=" margin-top: 0px;margin-right: 0px;">
+                    <app-step-n4-edit-bilateral [body]="item" [isonlyread]="true" ></app-step-n4-edit-bilateral>
+                    <app-step-n4-edit-bilateral [body]="item" [isonlyread]="false" *ngIf="isInitiative"></app-step-n4-edit-bilateral>
+                    
+                </div>
+            </div>
+        </td>
         <td>
             <app-pr-input placeholder="Write some..." type="number" [required]="false" [(ngModel)]="this.item.in_kind">
             </app-pr-input>
@@ -40,13 +51,12 @@
         </td>
         <td *ngIf="!this.rolesSE.readOnly">
             <div class="center_flex_100">
-                <div class="step-4-delete-button" (click)="deleteBilateral(item)">
+                <div class="step-4-delete-button" (click)="deleteBilateral(item)" *ngIf="isInitiative">
                     <i class="material-icons-round">
                         delete
                     </i>
                 </div>
-                <app-step-n4-edit-bilateral [body]="item" [isonlyread]="false"></app-step-n4-edit-bilateral>
-                <app-step-n4-edit-bilateral [body]="item" [isonlyread]="true"></app-step-n4-edit-bilateral>
+               
             </div>
 
         </td>

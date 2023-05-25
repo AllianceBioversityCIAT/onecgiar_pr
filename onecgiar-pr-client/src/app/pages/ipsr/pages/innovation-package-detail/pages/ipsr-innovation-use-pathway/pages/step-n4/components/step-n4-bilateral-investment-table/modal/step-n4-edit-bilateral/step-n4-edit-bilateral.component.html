@@ -40,14 +40,14 @@
 
 </p-dialog>
 
-<div class="step-4-edit-button" (click)="visible=true" *ngIf="this.isonlyread == false">
-    <i class="material-icons-round">
+<div class="buttonOpen" (click)="visible=true" *ngIf="this.isonlyread == false">
+    <i class="material-icons-round" style="font-size: 17px;">
         edit
     </i>
 </div>
 
-<div class="step-4-edit-button" (click)="visible=true" *ngIf="this.isonlyread == true">
-    <i class="material-icons-round">
+<div class="buttonOpen" (click)="visible=true" *ngIf="this.isonlyread == true" style="font-size: 17px; margin-bottom: 5px;">
+    <i class="material-icons-round" style="font-size: 17px;">
         visibility
     </i>
 </div>
