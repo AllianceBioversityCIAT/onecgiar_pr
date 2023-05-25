@@ -26,6 +26,7 @@ export class IpsrContributorsComponent {
       console.log(response);
       this.contributorsBody = response;
       this.contributorsBody.contributors_result_toc_result.map(item => (item.planned_result = Boolean(item.planned_result)));
+      this.contributorsBody.institutions.map(item => (item.institutions_type_name = item.institutions_name));
     });
   }
 

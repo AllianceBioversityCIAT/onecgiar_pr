@@ -31,7 +31,7 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   @Input() isStatic: boolean = false;
   @Input() showSelectAll: boolean = false;
   @Input() required: boolean = true;
-  @Input() showPartnerAlert: boolean = true;
+  @Input() showPartnerAlert: boolean = false;
   @Input() flagsCode: string;
   @Input() confirmDeletion: boolean = false;
   @Input() logicalDeletion: boolean = false;
