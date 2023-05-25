@@ -21,7 +21,10 @@ export class IpsrGeoscopeCreatorComponent {
     return `The list of regions below follows the UN <a class="open_route" href="https://unstats.un.org/unsd/methodology/m49/" target='_blank'>(M.49)</a> standard`;
   }
 
-  onSaveSection() {}
+  onSaveSection() {
+    console.log('entre en save');
+    
+  }
 
   onClicked(){
     this.sub_scope.push(this.sub_scope.length);

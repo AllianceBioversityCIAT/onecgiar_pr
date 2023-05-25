@@ -44,6 +44,14 @@ export class InnovationPackageCreatorComponent {
   }
 
   onSaveSection() {
+    this.innovationPackageCreatorBody.geoScopeSubNatinals.forEach((resp) => {
+      let subCountry = this.innovationPackageCreatorBody.countries.filter((country) => resp.idCountry == country.id)[0];
+      if(resp.isRegister != 0){
+        subCountry['result_countries_sub_national'].push(resp);
+      }
+      
+    });
+
     this.api.resultsSE.POSTResultInnovationPackage(this.innovationPackageCreatorBody).subscribe(
       ({ response }) => {
         this.router.navigateByUrl(`/ipsr/detail/${response.newInnovationHeader.result_code}`);
@@ -51,6 +59,9 @@ export class InnovationPackageCreatorComponent {
       },
       err => {
         this.api.alertsFe.show({ id: 'ipsr-creator-error', title: 'Error!', description: err?.error?.message, status: 'error' });
+        this.innovationPackageCreatorBody.countries.forEach((resp)=>{
+          resp['result_countries_sub_national'] = [];
+        })
       }
     );
   }
