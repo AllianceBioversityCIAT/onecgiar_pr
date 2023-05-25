@@ -31,6 +31,7 @@ export class PrSelectComponent implements ControlValueAccessor {
   @Input() disableOptionsText: any = '';
   @Input() disabled: any = false;
   @Input() editable: boolean = false;
+  @Input() showPartnerAlert: boolean = false;
   @Input() extraInformation: boolean = false;
   @Input() indexReference: number = null;
 
