@@ -33,6 +33,7 @@ import { ResultCountriesSubNationalRepository } from '../../results/result-count
 import { YearRepository } from '../../results/years/year.repository';
 import { LinkedResultRepository } from '../../results/linked-results/linked-results.repository';
 import { EvidencesRepository } from '../../results/evidences/evidences.repository';
+import { IpsrService } from '../ipsr.service';
 
 
 @Module({
@@ -69,7 +70,8 @@ import { EvidencesRepository } from '../../results/evidences/evidences.repositor
     ResultCountriesSubNationalRepository,
     YearRepository,
     LinkedResultRepository,
-    EvidencesRepository
+    EvidencesRepository,
+    IpsrService
   ],
   imports: [VersionsModule],
   exports: [
