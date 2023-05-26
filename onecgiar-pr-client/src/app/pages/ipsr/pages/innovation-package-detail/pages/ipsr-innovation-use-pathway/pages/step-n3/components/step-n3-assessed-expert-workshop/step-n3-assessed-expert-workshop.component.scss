@@ -2,9 +2,14 @@ table,
 th,
 td {
     border: 1px solid black;
+    padding: 10px;
 }
 
 table {
     border-collapse: collapse;
     width: 100%;
+}
+
+.first_col {
+    max-width: 250px;
 }
