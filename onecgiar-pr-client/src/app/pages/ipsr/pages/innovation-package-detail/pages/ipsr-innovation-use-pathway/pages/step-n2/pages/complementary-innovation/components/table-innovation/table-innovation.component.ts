@@ -35,6 +35,7 @@ export class TableInnovationComponent{
   InnovationSelect:any;
   status = false;
   statusAdd = false;
+  isReadonly = false;
   informationComplementaryInnovation:ComplementaryInnovation[] = [];
   loading:boolean = true;
   informationComplentary:complementaryInnovation = new complementaryInnovation();
@@ -58,9 +59,14 @@ export class TableInnovationComponent{
     this.selectInnovationEvent.emit(result);  
   }
 
-  getComplementaryInnovation(id){
+  getComplementaryInnovation(id, isRead){
     this.status = true;
+    if(isRead == 0){
+      this.isReadonly = true;
+    }
+    
     console.log(id);
+
     
     this.api.resultsSE.GETComplementaryById(id).subscribe((resp) =>{
       console.log(resp['response']['findResult']['title']);

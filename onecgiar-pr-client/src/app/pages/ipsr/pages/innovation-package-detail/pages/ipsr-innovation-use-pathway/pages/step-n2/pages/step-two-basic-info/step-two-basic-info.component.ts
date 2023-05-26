@@ -128,6 +128,7 @@ export class StepTwoBasicInfoComponent implements OnInit {
         console.log(index);
         if(index != -1){
           this.bodyStep22[i].complementary_innovation_enabler_types_one[index] = category;
+          this.bodyStep22[i].complementary_innovation_enabler_types_one = this.removeDuplicates(this.bodyStep22[i].complementary_innovation_enabler_types_one , "complementary_innovation_enabler_types_id");
           this.bodyStep22[i].complementary_innovation_enabler_types_two = this.bodyStep22[i].complementary_innovation_enabler_types_two.concat(category.subCategories);
           this.bodyStep22[i].complementary_innovation_enabler_types_two = this.removeDuplicates(this.bodyStep22[i].complementary_innovation_enabler_types_two, "complementary_innovation_enabler_types_id");
         }
