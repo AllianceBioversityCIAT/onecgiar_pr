@@ -36,7 +36,7 @@ export class StepTwoBasicInfoComponent implements OnInit {
         
       }
     });
-
+    setTimeout(() => {
       this.api.resultsSE.getStepTwoComentariesInnovation().subscribe((resp) =>{
         this.update = false;
         this.innovationCompletary = resp['response']['comentaryPrincipals'];
@@ -45,6 +45,8 @@ export class StepTwoBasicInfoComponent implements OnInit {
         this.update = true;
         
       })
+    }, 1000);
+      
   }
 
   saveInInnovationPackages(id, i){
@@ -52,7 +54,6 @@ export class StepTwoBasicInfoComponent implements OnInit {
     let iter:any
     this.api.resultsSE.getStepTwoComentariesInnovationId(id).subscribe((resp) =>{
       iter=  resp['response'];
-      console.log(iter);
       if(id == iter.result_by_innovation_package_id){
         iter.complementary_innovation_enabler_types_two.map(elem =>{
           delete elem['level'];

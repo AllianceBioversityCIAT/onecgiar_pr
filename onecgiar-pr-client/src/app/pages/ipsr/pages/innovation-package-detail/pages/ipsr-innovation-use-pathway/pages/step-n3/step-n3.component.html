@@ -9,8 +9,9 @@
 <div  *ngIf="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true" 
 
 >
+<app-pr-field-header label="Facilitators" [required]="false"></app-pr-field-header>
 <div style="margin-top: 20px;" *ngFor="let expertItem of this.ipsrStep3Body.result_ip_expert_workshop_organized; let i = index;" appYmzListStructureItem (deleteEvent)="delete(i)">
-    <app-pr-field-header label="Facilitators" [required]="false"></app-pr-field-header>
+    
     <div class="infoPersons" >
         
         <app-pr-input label="First Name" [required]="true" placeholder="First Name" [(ngModel)]="expertItem.first_name"></app-pr-input>
