@@ -22,7 +22,7 @@ export class ResultsInnovationPackagesEnablerTypeService {
   }
 
   findOne(id: number) {
-    return `This action returns a #${id} resultsInnovationPackagesEnablerType`;
+    return this._ipsrReposotory.getInnovationComplementary(id);
   }
 
   update(id: number, updateResultsInnovationPackagesEnablerTypeDto: UpdateResultsInnovationPackagesEnablerTypeDto) {

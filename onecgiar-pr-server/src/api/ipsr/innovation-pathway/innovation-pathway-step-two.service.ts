@@ -79,6 +79,8 @@ export class InnovationPathwayStepTwoService {
     }
   }
 
+
+
   async getStepTwoOne(resultId: number) {
     try {
       const result = await this._resultRepository.findOne({
@@ -94,8 +96,12 @@ export class InnovationPathwayStepTwoService {
           status: HttpStatus.NOT_FOUND,
         };
       }
+
       const comInnovation =
         await this._innovationByResultRepository.getStepTwoOne(result.id);
+
+       
+
 
       return {
         response: comInnovation,
@@ -721,4 +727,11 @@ export class InnovationPathwayStepTwoService {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
+}
+
+export class getEnablersType {
+  complementary_innovation_enabler_types_id: string;
+  group: string;
+  type: string;
+  level:number;
 }

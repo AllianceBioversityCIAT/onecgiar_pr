@@ -23,6 +23,13 @@ export class ComplementaryInnovationEnablerTypes extends BaseEntity {
     })
     type!: number;
 
+    @Column({
+        name: 'type',
+        type: 'bigint',
+        nullable: true
+    })
+    level!: number;
+
     @ManyToOne(()=> ComplementaryInnovationEnablerTypes, ciet => ciet.complementary_innovation_enabler_types_id)
     @JoinColumn({name:'type'})
     objType:ComplementaryInnovationEnablerTypes[];

@@ -7,6 +7,7 @@ import { CustomFieldsModule } from 'src/app/custom-fields/custom-fields.module';
 import { ItemOptionsComponent } from './componets/item-options/item-options.component';
 import { CheckboxModule } from 'primeng/checkbox';
 import { CollapsibleContainerModule } from 'src/app/shared/components/collapsible-container/collapsible-container.module';
+import { RouterModule } from '@angular/router';
 
 @NgModule({
   declarations: [
@@ -18,7 +19,8 @@ import { CollapsibleContainerModule } from 'src/app/shared/components/collapsibl
     StepTwoBasicInfoRoutingModule,
     CustomFieldsModule,
     CheckboxModule,
-    CollapsibleContainerModule
+    CollapsibleContainerModule,
+    RouterModule
   ],
   exports:[
     StepTwoBasicInfoComponent

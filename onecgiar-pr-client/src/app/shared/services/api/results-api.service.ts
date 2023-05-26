@@ -662,9 +662,19 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-packages-enabler-type`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
-  PostStepTwoComentariesInnovation(body) {
-    return this.http.post<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-packages-enabler-type/createInnovationEnablers`, body).pipe(this.saveButtonSE.isGettingSectionPipe());
+
+  PostStepTwoComentariesInnovation(body){
+    return this.http.post<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-packages-enabler-type/createInnovationEnablers`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
+
+  PostStepTwoComentariesInnovationPrevius(body,descrip){
+    return this.http.post<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-packages-enabler-type/createInnovationEnablers`, body).pipe(this.saveButtonSE.isSavingPipeNextStep(descrip));
+  }
+
+  getStepTwoComentariesInnovationId(id){
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-packages-enabler-type/${id}`).pipe(this.saveButtonSE.isGettingSectionPipe());}
+
+
   getAssessedDuringExpertWorkshop() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/assessed-during-expert-workshop`);
   }

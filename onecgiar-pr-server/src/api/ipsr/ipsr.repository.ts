@@ -340,10 +340,10 @@ export class IpsrRepository extends Repository<Ipsr>{
             and rbip.ipsr_role_id = 2
         	and rbip.is_active = true;
         `;
-
         try {
-            const results: getInnovationComInterface[] = await this.query(query, [resultId]);
+            const results: getInnovationComInterface[] = await this.query(query, [resultId]);     
             return results;
+
         } catch (error) {
             throw this._handlersError.returnErrorRepository({
                 className: IpsrRepository.name,
@@ -410,6 +410,8 @@ export class getInnovationComInterface {
     public is_active: boolean;
     public complementaryFunctions: ComplementaryFunctionsInterface[];
     public referenceMaterials: ReferenceMaterialsInterface[];
+    complementary_innovation_enabler_types_one:getEnablersType[];
+    complementary_innovation_enabler_types_two:getEnablersType[];
 }
 
 export interface ComplementaryFunctionsInterface {
@@ -417,4 +419,11 @@ export interface ComplementaryFunctionsInterface {
 }
 export interface ReferenceMaterialsInterface {
     link: string;
+}
+
+export class getEnablersType {
+    complementary_innovation_enabler_types_id: string;
+    group: string;
+    type: string;
+    level:number;
 }
