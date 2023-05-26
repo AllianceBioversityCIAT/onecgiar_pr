@@ -55,7 +55,7 @@
                     <div>{{resultComplementary?.obj_result?.title}}</div>
                 </div>
                 <app-pr-select *ngIf="j > 0" class="segment_title_margin" [indexReference]="j+i"
-                    [options]="this.rangeListByIndex(j)" optionLabel="value" optionValue="value"
+                    [options]="this.rangeListByIndex(j)" optionLabel="index" optionValue="id"
                     placeholder="Select a level" [(ngModel)]="resultComplementary[attrList[j]]">
                 </app-pr-select>
             </td>
