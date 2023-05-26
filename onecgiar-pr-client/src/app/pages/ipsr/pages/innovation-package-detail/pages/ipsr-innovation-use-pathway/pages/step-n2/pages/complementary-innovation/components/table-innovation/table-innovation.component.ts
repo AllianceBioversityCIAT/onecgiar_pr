@@ -34,8 +34,10 @@ export class TableInnovationComponent{
   searchText = '';
   InnovationSelect:any;
   status = false;
+  statusAdd = false;
   informationComplementaryInnovation:ComplementaryInnovation[] = [];
   loading:boolean = true;
+  informationComplentary:complementaryInnovation = new complementaryInnovation();
   @Output() selectInnovationEvent = new EventEmitter<ComplementaryInnovation>();
   @Input() selectionsInnovation :any [];
   @Input() informationComplementaryInnovations :any [] = [];
@@ -61,8 +63,35 @@ export class TableInnovationComponent{
     console.log(id);
     
     this.api.resultsSE.GETComplementaryById(id).subscribe((resp) =>{
-      console.log(resp);
+      console.log(resp['response']['findResult']['title']);
+
+      this.informationComplentary.title = resp['response']['findResult']['title']
+      this.informationComplentary.description = resp['response']['findResult']['description']
+      this.informationComplentary.short_title = resp['response']['findResultComplementaryInnovation']['short_title']
+      this.informationComplentary.referencesMaterial = resp['response']['evidence']
+
+      console.log(this.informationComplentary);
       
     });
   }
+
+  addNewInput(){
+    if(this.informationComplentary.referencesMaterial.length  < 3){
+      this.informationComplentary.referencesMaterial.push(new references() );
+    }else{
+      this.statusAdd = true;
+    }
+  }
+
+}
+
+export class complementaryInnovation{
+  short_title:string = null;
+  title:string= null;
+  description:string= null;
+  referencesMaterial:references[] =[];
+}
+
+export class references{
+  link:string = null;
 }

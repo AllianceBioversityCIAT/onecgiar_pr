@@ -43,7 +43,7 @@
                     </td>
                     <td class="actions" *ngIf="!this.api.dataControlSE.platformIsClosed && !this.api.rolesSE.readOnly">
 
-                        <div class="link_button" (click)="getComplementaryInnovation(result['result_code'])">
+                        <div class="link_button" (click)="getComplementaryInnovation(result['result_id'])">
                             <i class="material-icons-round" style="font-size: 20px;" >visibility</i>
                         </div>
                         <div class="link_button" >
@@ -85,14 +85,14 @@
             <li>If not essential, avoid making reference to specific countries or regions</li> 
             <li>Avoid the use of CGIAR Center, Initiative or organization names in the short title</li>"></app-pr-field-header>
 
-            <app-pr-input placeholder="Complementary innovation short title" [maxWords]="10" [required]="true"
+            <app-pr-input placeholder="Complementary innovation short title" [maxWords]="10" [required]="true" [(ngModel)]="this.informationComplentary.short_title"
                ></app-pr-input>
 
             <app-pr-field-header label="Long title" [required]="true" description='
             <li>More elaborate explanation of "what it is", "what it does" and "for whom"</li>
             <li>Avoid abbreviations or (technical) jargon.</li>'></app-pr-field-header>
 
-            <app-pr-input placeholder="Complementary innovation long title" [maxWords]="30 " [required]="true"
+            <app-pr-input placeholder="Complementary innovation long title" [maxWords]="30 " [required]="true" [(ngModel)]="this.informationComplentary.title"
                 > </app-pr-input>
 
             <app-pr-field-header label="Description" [required]="false"
@@ -101,7 +101,7 @@
            <li> Avoid acronyms and technical jargon</li>
            <li> Avoid repetition of the title</li>
            <li> Try to explain in clear language what kind of challenge this innovation/ enabler/ solution addresses, and what kind of solution it offers</li>'></app-pr-field-header>
-            <app-pr-textarea placeholder="Description" [maxWords]="150" [required]="false"
+            <app-pr-textarea placeholder="Description" [maxWords]="150" [required]="false"  [(ngModel)]="this.informationComplentary.description"
                 ></app-pr-textarea>
 
 
@@ -113,8 +113,17 @@
             <app-pr-field-header label="Reference materials" [required]="false" description='
             Max 3.'></app-pr-field-header>
             
-            <app-pr-button text="Add reference material" padding="medium" 
-                ></app-pr-button>
+           
+                <div style="display: flex; flex-direction: row;" *ngFor="let item of this.informationComplentary.referencesMaterial; let i = index">
+                   
+                    <div
+                        style="background-color:aliceblue ; width: 5%; display: flex; align-items: center; justify-content: center; color: black;">
+                        {{i+1}}</div>
+                    <div style="width: 95%;"><app-pr-input placeholder="Link"
+                        [(ngModel)]="item.link"> </app-pr-input></div>
+                </div>
+                <app-pr-button text="Add reference material" padding="medium" (click)="addNewInput()"
+                    [ngClass]="{'globalDisabled': statusAdd}"></app-pr-button>
             <!-- flagsCode="iso_alpha_2" -->
         </div>
     </div>
