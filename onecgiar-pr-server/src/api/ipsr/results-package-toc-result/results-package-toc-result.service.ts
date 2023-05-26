@@ -441,17 +441,9 @@ export class ResultsPackageTocResultService {
             toc_result_id: tocResultId,
           },
         });
-      console.log(
-        '🚀 ~ file: results-package-toc-result.service.ts:436 ~ ResultsPackageTocResultService ~ searchContributingToc:',
-        searchContributingToc,
-      );
 
       const filterEoiToc = searchContributingToc.filter(
         (i) => i.toc_result_id !== searchIpEoi?.toc_result_id,
-      );
-      console.log(
-        '🚀 ~ file: results-package-toc-result.service.ts:448 ~ ResultsPackageTocResultService ~ filterEoiToc:',
-        filterEoiToc,
       );
 
       if (filterEoiToc.length) {
