@@ -30,3 +30,12 @@
 
 
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>
+
+<div class="toggle_change_step" style="margin-top: 50px;">
+    <app-pr-button
+    (click) = "onSavePreviuosNext('previous')"
+        padding="big" text="Save & go to previous step" icon="arrow_circle_left" [reverse]="true"></app-pr-button>
+    <app-pr-button
+    (click) = "onSavePreviuosNext('next')"
+        padding="big" text="Save & go to next step" icon="arrow_circle_right"></app-pr-button>
+</div>

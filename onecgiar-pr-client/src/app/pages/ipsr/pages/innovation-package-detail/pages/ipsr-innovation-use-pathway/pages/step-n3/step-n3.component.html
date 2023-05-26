@@ -1,5 +1,6 @@
 <div class="step_title"> <strong>Step 3:</strong>Scaling readiness assessment</div>
 
+<div class="ipsr-sub-title" style="margin-top: 20px;">Self-assessment (IPSR workshop scoring)</div>
 <app-pr-radio-button
     label="Was an Innovation Packaging and Scaling Readiness online or in-person expert workshop organized?"
     optionLabel="name" optionValue="id" [options]="this.radioOptions" (selectOptionEvent)="cleanEvidence()"
@@ -46,12 +47,15 @@
 
 <div class="step_divider"></div>
 
+<div class="ipsr-sub-title" style="margin-top: 20px;">Evidence-based assessment (adjusted scoring post IPSR workshop based on available evidence)</div>
+
+<!--
 <app-pr-field-header
     label="Fill the Scaling Readiness evidence-based assessment (post workshop and supported by available evidence)"
-    [required]="false"></app-pr-field-header>
+    [required]="false"></app-pr-field-header>-->
 
 
-<app-pr-field-header label="Core innovation " [required]="false" description='<a href="{{resultUrl(result_core_innovation?.core_result_code)}}" target="_blank"> {{result_core_innovation?.core_title}} </a>'></app-pr-field-header> 
+<app-pr-field-header label="Core innovation" style="margin-left: 20px;" [required]="false" description='<a href="{{resultUrl(result_core_innovation?.core_result_code)}}" target="_blank"> {{result_core_innovation?.core_title}} </a>'></app-pr-field-header> 
 
 <app-pr-field-header label="Innovation Readiness level evidence-based" [required]="false"
     [description]="this.readinessLevelSelfAssessmentText()"></app-pr-field-header>

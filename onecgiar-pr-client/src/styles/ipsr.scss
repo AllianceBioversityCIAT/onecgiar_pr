@@ -63,6 +63,25 @@
     }
 }
 
+.ipsr-sub-title-sub {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 1.2em;
+    font-weight: 500;
+    background: rgb(85, 105, 221);
+    background: linear-gradient(87deg, rgba(85, 106, 221, 0.116) 4%, rgba(255, 255, 255, 0) 100%);
+    width: max-content;
+    color: var(--pr-color-secondary);
+
+    &::before {
+        content: '';
+        width: 8px;
+        height: 35px;
+        background-color: var(--pr-color-primary);
+    }
+}
+
 .toggle_change_step {
     display: flex;
     gap: 10px;
