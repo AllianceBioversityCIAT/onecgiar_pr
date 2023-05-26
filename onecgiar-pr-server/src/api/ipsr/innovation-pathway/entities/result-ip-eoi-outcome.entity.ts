@@ -21,6 +21,13 @@ export class ResultIpEoiOutcome extends BaseEntity{
     })
     toc_result_id: number;
 
+    @Column({
+        type: 'boolean',
+        name: 'contributing_toc',
+        default: false
+    })
+    contributing_toc: boolean;
+
     @ManyToOne(() => Ipsr, i => i.result_by_innovation_package_id)
     @JoinColumn({
         name: 'result_by_innovation_package_id'
