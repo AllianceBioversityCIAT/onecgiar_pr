@@ -14,7 +14,7 @@ export class StepN4BilateralInvestmentTableComponent implements OnInit {
   @Input() body = new IpsrStep4Body();
   showModal = false;
   isInitiative = true;
-  constructor(public rolesSE: RolesService, public manageRipUnitTimeSE: ManageRipUnitTimeService, public ipsrDataControlSE: IpsrDataControlService, private api: ApiService ) {}
+  constructor(public rolesSE: RolesService, public manageRipUnitTimeSE: ManageRipUnitTimeService, public ipsrDataControlSE: IpsrDataControlService, public api: ApiService ) {}
 
   ngOnInit(): void {
     setTimeout(() => {
