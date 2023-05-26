@@ -73,10 +73,20 @@ export class ComplementaryInnovationComponent implements OnInit {
 
   regiterInnovationComplementary(complementaryInnovcation){
     let seletedInnovation = []
+    console.log(complementaryInnovcation);
     complementaryInnovcation.forEach(element => {
-      seletedInnovation.push({
-        result_id:element['result_id'],
-      })
+      
+      
+      if(element.hasOwnProperty('result_id')){
+        seletedInnovation.push({
+          result_id:element['result_id'],
+        })
+      }else{
+        seletedInnovation.push({
+          result_id:element['id'],
+        })
+      }
+      
     });
 
     return seletedInnovation;
@@ -84,6 +94,7 @@ export class ComplementaryInnovationComponent implements OnInit {
 
   async onSaveSection(){
     this.body= await this.regiterInnovationComplementary(this.innovationPackageCreatorBody);
+    console.log(this.body);
     
     this.api.resultsSE.PATCHComplementaryInnovation({ complementaryInovatins:this.body}).subscribe((resp) =>{
       console.log(resp);
