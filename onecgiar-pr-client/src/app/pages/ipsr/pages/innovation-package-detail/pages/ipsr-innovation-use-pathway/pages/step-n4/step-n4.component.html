@@ -28,8 +28,8 @@
 </div>
 <div class="toggle_change_step">
     <app-pr-button
-        [routerLink]="'/ipsr/detail/'+this.ipsrDataControlSE.resultInnovationCode+'/ipsr-innovation-use-pathway/step-3'"
-        padding="big" text="Go to previous step" icon="arrow_circle_left" [reverse]="true"></app-pr-button>
+        (click)="onSavePrevious('previous')"
+        padding="big" text="Save & go to previous step" icon="arrow_circle_left" [reverse]="true"></app-pr-button>
 </div>
 
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()">

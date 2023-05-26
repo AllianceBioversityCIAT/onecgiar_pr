@@ -519,6 +519,10 @@ export class ResultsApiService {
     return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-one/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
+  PATCHInnovationPathwayByStepOneResultIdNextStep(body, descrip) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-one/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipeNextStep(descrip));
+  }
+
   GETAllClarisaActionAreasOutcomes() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/action-areas-outcomes/all`);
   }
@@ -586,6 +590,10 @@ export class ResultsApiService {
     return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-three/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
+  PATCHInnovationPathwayByRiIdNextPrevius(body, descrip) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-three/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipeNextStep(descrip));
+  }
+
   GETAllClarisaInnovationReadinessLevels() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/innovation-readiness-levels/get/all`);
   }
@@ -600,6 +608,10 @@ export class ResultsApiService {
 
   PATCHInnovationPathwayStepFourByRiId(body) {
     return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-four/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+  }
+
+  PATCHInnovationPathwayStepFourByRiIdPrevious(body,descrip) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-four/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipeNextStep(descrip));
   }
 
   GETAllResultsInnovationPackageUnitTime() {

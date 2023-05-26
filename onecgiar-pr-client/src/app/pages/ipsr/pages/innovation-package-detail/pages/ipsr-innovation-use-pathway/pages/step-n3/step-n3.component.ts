@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { ActorN3, IpsrStep3Body, MeasureN3, OrganizationN3, expert_workshop_organized } from './model/Ipsr-step-3-body.model';
 import { IpsrDataControlService } from 'src/app/pages/ipsr/services/ipsr-data-control.service';
 import { ApiService } from 'src/app/shared/services/api/api.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-step-n3',
@@ -17,7 +18,7 @@ export class StepN3Component implements OnInit {
     { id: false, name: 'No expert workshop was organized' }
   ];
   result_core_innovation:any;
-  constructor(public ipsrDataControlSE: IpsrDataControlService, private api: ApiService) {}
+  constructor(public ipsrDataControlSE: IpsrDataControlService, private api: ApiService, private router: Router) {}
 
   ngOnInit(): void {
     this.GETAllClarisaInnovationReadinessLevels();
@@ -47,14 +48,34 @@ export class StepN3Component implements OnInit {
   }
   onSaveSection() {
     // console.log('%cPATCH', 'font-size: 20px; color: #f68541;');
-    // console.log(this.ipsrStep3Body);
+    //console.log(this.ipsrStep3Body);
     // console.log('%c____________________', 'font-size: 20px; color: #f68541;');
     this.convertOrganizationsTosave();
     this.api.resultsSE.PATCHInnovationPathwayByRiId(this.ipsrStep3Body).subscribe(({ response }) => {
-      // console.log(response);
+      console.log(response);
       // setTimeout(() => {
       this.getSectionInformation();
       // }, 3000);
+    });
+  }
+
+  onsaveSection(descrip){
+    this.convertOrganizationsTosave();
+    this.api.resultsSE.PATCHInnovationPathwayByRiIdNextPrevius(this.ipsrStep3Body,descrip).subscribe(({ response }) => {
+      console.log(response);
+      // setTimeout(() => {
+      this.getSectionInformation();
+      // }, 3000);
+      setTimeout(() => {
+        if(descrip == 'next'){
+          this.router.navigate(['/ipsr/detail/'+this.ipsrDataControlSE.resultInnovationCode+'/ipsr-innovation-use-pathway/step-2']);
+          
+        }else{
+          this.router.navigate(['/ipsr/detail/'+this.ipsrDataControlSE.resultInnovationCode+'/ipsr-innovation-use-pathway/step-4']);
+          
+        }
+        
+      }, 1000);
     });
   }
 

@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { IpsrDataControlService } from 'src/app/pages/ipsr/services/ipsr-data-control.service';
 import { IpsrStep4Body } from './model/Ipsr-step-4-body.model';
 import { ApiService } from 'src/app/shared/services/api/api.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-step-n4',
@@ -10,7 +11,7 @@ import { ApiService } from 'src/app/shared/services/api/api.service';
 })
 export class StepN4Component implements OnInit {
   ipsrStep4Body = new IpsrStep4Body();
-  constructor(public ipsrDataControlSE: IpsrDataControlService, private api: ApiService) {}
+  constructor(public ipsrDataControlSE: IpsrDataControlService, private api: ApiService, private router: Router) {}
   radioOptions = [
     { id: true, name: 'Yes' },
     { id: false, name: 'No, not necessary at this stage' }
@@ -46,6 +47,19 @@ export class StepN4Component implements OnInit {
       // setTimeout(() => {
       this.getSectionInformation();
       // }, 3000);
+      
+    });
+  }
+
+  onSavePrevious(descrip){
+    this.api.resultsSE.PATCHInnovationPathwayStepFourByRiIdPrevious(this.ipsrStep4Body,descrip).subscribe(({ response }) => {
+      console.log(response);
+      // setTimeout(() => {
+      this.getSectionInformation();
+      // }, 3000);
+      setTimeout(() => {
+        this.router.navigate(['/ipsr/detail/'+this.ipsrDataControlSE.resultInnovationCode+'/ipsr-innovation-use-pathway/step-3']);
+      }, 1000);
     });
   }
 

@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { IpsrStep1Body, CoreResult, Measure, Actor, Organization, Expert } from './model/Ipsr-step-1-body.model';
 import { IpsrDataControlService } from '../../../../../../services/ipsr-data-control.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-step-n1',
@@ -11,7 +12,7 @@ import { IpsrDataControlService } from '../../../../../../services/ipsr-data-con
 export class StepN1Component implements OnInit {
   ipsrStep1Body = new IpsrStep1Body();
   coreResult = new CoreResult();
-  constructor(private api: ApiService, public ipsrDataControlSE: IpsrDataControlService) {}
+  constructor(private api: ApiService, public ipsrDataControlSE: IpsrDataControlService, private router: Router) {}
 
   ngOnInit(): void {
     this.getSectionInformation();
@@ -59,6 +60,18 @@ export class StepN1Component implements OnInit {
       console.log(resp?.response[0].response);
       this.ipsrDataControlSE.detailData.title = resp?.response[0].response;
       this.getSectionInformation();
+    });
+  }
+
+  saveAndNextStep(descrip:string){
+    this.convertOrganizationsTosave();
+    this.api.resultsSE.PATCHInnovationPathwayByStepOneResultIdNextStep(this.ipsrStep1Body, descrip).subscribe((resp: any) => {
+      console.log(resp?.response[0].response);
+      this.ipsrDataControlSE.detailData.title = resp?.response[0].response;
+      this.getSectionInformation();
+      setTimeout(() => {
+        this.router.navigate(['/ipsr/detail/'+this.ipsrDataControlSE.resultInnovationCode+'/ipsr-innovation-use-pathway/step-2']);
+      }, 1000);
     });
   }
 
