@@ -25,6 +25,7 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
   @Input() hideOptions: boolean;
   @Input() readOnly: boolean;
   @Input() isStatic: boolean = false;
+  @Input() verticalAlignment: boolean = false;
   @Output() selectOptionEvent = new EventEmitter<any>();
   private _value: string;
   constructor(public rolesSE: RolesService, public dataControlSE: DataControlService) {}
