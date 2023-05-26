@@ -243,11 +243,9 @@ export class InnovationPathwayStepOneService {
           institutions?.map((el) => el['institutions_name']),
         )} to accomplish the use of ${
           coreData?.obj_result?.title
-        } by ${this.arrayToStringActorsAnd(
+        } by${this.innovationUseString(
           innovatonUse.actors.map((el) => el),
-        )} ${this.arrayOrganizationToString(
           innovatonUse.organization.map((el) => el),
-        )}, ${this.arrayMeasureToString(
           innovatonUse.measures.map((el) => el),
         )}, ${
           geo_scope_id == 1
@@ -286,6 +284,40 @@ export class InnovationPathwayStepOneService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  innovationUseString(
+    ra: ResultActor[],
+    ri: ResultsByInstitutionType[],
+    rim: ResultIpMeasure[],
+  ) {
+    const temp_ra = ra.filter(
+      (el) => el?.obj_actor_type?.name && +el?.men + +el.women > 0,
+    );
+    const temp_ri = ri.filter(
+      (el) => el?.obj_institution_types?.name && el?.how_many,
+    );
+    const temp_rim = rim.filter((el) => el?.unit_of_measure && el?.quantity);
+
+    const temp_string = `${
+      temp_ra?.length ? ` ${this.arrayToStringActorsAnd([...temp_ra])}` : ''
+    }${
+      temp_ri?.length
+        ? `${temp_ra?.length ? ',' : ''} ${this.arrayOrganizationToString([
+            ...temp_ri,
+          ])}`
+        : ''
+    }${
+      temp_rim?.length
+        ? `${temp_ri?.length ? ',' : ''} ${this.arrayMeasureToString([
+            ...temp_rim,
+          ])}`
+        : ''
+    }`;
+
+    return temp_ri?.length || temp_ra?.length || temp_rim?.length
+      ? temp_string
+      : ' <Innovation use not provided>';
   }
 
   arrayOrganizationToString(arrayData: ResultsByInstitutionType[]) {
