@@ -6,6 +6,7 @@ import { StepTwoBasicInfoComponent } from './step-two-basic-info.component';
 import { CustomFieldsModule } from 'src/app/custom-fields/custom-fields.module';
 import { ItemOptionsComponent } from './componets/item-options/item-options.component';
 import { CheckboxModule } from 'primeng/checkbox';
+import { CollapsibleContainerModule } from 'src/app/shared/components/collapsible-container/collapsible-container.module';
 
 @NgModule({
   declarations: [
@@ -16,7 +17,8 @@ import { CheckboxModule } from 'primeng/checkbox';
     CommonModule,
     StepTwoBasicInfoRoutingModule,
     CustomFieldsModule,
-    CheckboxModule
+    CheckboxModule,
+    CollapsibleContainerModule
   ],
   exports:[
     StepTwoBasicInfoComponent

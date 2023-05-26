@@ -9,13 +9,17 @@ export class ItemOptionsComponent implements OnInit {
 
   @Input() optionsInnovations :any;
   @Input() title:any;
-  selectedOne:any[] =[]; 
+  @Input() typeOne :any[] = [];
+  @Input() typeTwo:any[] = [];
+  selectedOne:any[] = []; 
   selectedCategories:any[] = [];
     constructor() { 
     }
 
   ngOnInit(): void {
     console.log(this.optionsInnovations);
+    this.selectedOne = Array.from(this.typeOne);
+    this.selectedCategories = Array.from(this.typeTwo);
   }
 
   selectes(category){
@@ -24,13 +28,14 @@ export class ItemOptionsComponent implements OnInit {
     console.log(index);
     if (index !=-1) {
     this.selectedOne = this.selectedOne.concat(category.subCategories)
-   }if(index ==-1){
+   }if(index ==-1 && category.subCategories.length != 0){
     this.selectedOne = []
    }
     console.log(this.selectedOne);
     console.log(this.selectedCategories);
     
-    
+    this.typeOne =  this.selectedOne;
+    this.typeTwo = this.selectedCategories;
   }
 
   subSelectes(category){
@@ -39,14 +44,11 @@ export class ItemOptionsComponent implements OnInit {
       let index = this.selectedCategories.findIndex(resp => category.complementary_innovation_enabler_types_id == resp.complementary_innovation_enabler_types_id);
       if(index != -1){
         this.selectedCategories.splice(index,1)
-        console.log(this.selectedCategories);
-        
+        console.log(this.selectedCategories); 
       }
-      
-    }else{
+    }if(category.subCategories.length == this.selectedOne.length){
       this.selectedCategories.push(category);
       console.log(this.selectedCategories);
-      
     }
   }
 

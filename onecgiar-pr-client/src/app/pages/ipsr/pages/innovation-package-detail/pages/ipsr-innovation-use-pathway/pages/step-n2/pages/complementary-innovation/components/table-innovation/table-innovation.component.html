@@ -10,6 +10,7 @@
             styleClass="p-datatable-gridlines p-datatable-sm" selectionMode="single" [rowsPerPageOptions]="[10,50,100]">
             <ng-template pTemplate="header">
                 <tr>
+                    <th *ngIf="!this.api.dataControlSE.platformIsClosed && !this.api.rolesSE.readOnly">Select</th>
                     <th pSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder">
                         <p-sortIcon field="{{column.attr}}"></p-sortIcon>{{column.title}}
                     </th>
@@ -18,6 +19,13 @@
             </ng-template>
             <ng-template pTemplate="body" let-result>
                 <tr>
+                    <td class="actionsSelect" *ngIf="!this.api.dataControlSE.platformIsClosed && !this.api.rolesSE.readOnly">
+
+                        <div class="link_button" [ngClass]="{'globalDisabled': result.selected}"
+                            (click)="!result.selected ? selectInnovation(result) : null">
+                            <i class="material-icons-round" style="font-size: 20px;">check_circle</i>
+                            </div>
+                    </td>
                     <td *ngFor="let column of columnOrder; let i=index" class="{{column.attr}}">
                         <a class="{{column.class}}">
                             <div class="point"
@@ -35,10 +43,15 @@
                     </td>
                     <td class="actions" *ngIf="!this.api.dataControlSE.platformIsClosed && !this.api.rolesSE.readOnly">
 
-                        <div class="link_button" [ngClass]="{'globalDisabled': result.selected}"
-                            (click)="!result.selected ? selectInnovation(result) : null">{{result.selected?
-                            'Selected' :
-                            'Select'}}</div>
+                        <div class="link_button" (click)="getComplementaryInnovation(result['result_code'])">
+                            <i class="material-icons-round" style="font-size: 20px;" >visibility</i>
+                        </div>
+                        <div class="link_button" >
+                            <i class="material-icons-round" style="font-size: 20px;">edit</i>
+                        </div>
+                        <div class="link_button" style="background-color: red;">
+                            <i class="material-icons-round" style="font-size: 20px;">delete</i>
+                        </div>
                     </td>
                 </tr>
             </ng-template>
@@ -52,3 +65,62 @@
         </div>
     </div>
 </div>
+
+
+
+
+<p-dialog class="support_information"  [(visible)]="status" [draggable]="false"
+    [modal]="true" [closeOnEscape]="true" [showHeader]="true" [dismissableMask]="true"
+    [style]="{padding: '0px', margin:'0px', width:'70vw'}" [blockScroll]="true" appendTo="body">
+
+    <div style="display: flex; justify-content: center; flex-direction: column;">
+        <div class="modal_title">New complementary innovation/ enabler/ solution</div>
+        <div class="modal_container">
+
+            <app-pr-field-header label="Short title" [required]="true"
+                description="
+            <li> Short title that facilitates clear communication about the innovation/ enabler/ solution </li> 
+            <li>Avoid abbreviations or (technical) jargon.</li> 
+            <li>Varieties or breeds should be described by their generic traits or characteristics</li> 
+            <li>If not essential, avoid making reference to specific countries or regions</li> 
+            <li>Avoid the use of CGIAR Center, Initiative or organization names in the short title</li>"></app-pr-field-header>
+
+            <app-pr-input placeholder="Complementary innovation short title" [maxWords]="10" [required]="true"
+               ></app-pr-input>
+
+            <app-pr-field-header label="Long title" [required]="true" description='
+            <li>More elaborate explanation of "what it is", "what it does" and "for whom"</li>
+            <li>Avoid abbreviations or (technical) jargon.</li>'></app-pr-field-header>
+
+            <app-pr-input placeholder="Complementary innovation long title" [maxWords]="30 " [required]="true"
+                > </app-pr-input>
+
+            <app-pr-field-header label="Description" [required]="false"
+                description='
+           <li> Ensure the description is understandable for a non-specialist reader.</li>
+           <li> Avoid acronyms and technical jargon</li>
+           <li> Avoid repetition of the title</li>
+           <li> Try to explain in clear language what kind of challenge this innovation/ enabler/ solution addresses, and what kind of solution it offers</li>'></app-pr-field-header>
+            <app-pr-textarea placeholder="Description" [maxWords]="150" [required]="false"
+                ></app-pr-textarea>
+
+
+            <app-pr-field-header label="Function" [required]="true"
+                description='
+            What the complementary innovation/ enabler/ solution tries to achieve (select multiple):'></app-pr-field-header>
+            
+
+            <app-pr-field-header label="Reference materials" [required]="false" description='
+            Max 3.'></app-pr-field-header>
+            
+            <app-pr-button text="Add reference material" padding="medium" 
+                ></app-pr-button>
+            <!-- flagsCode="iso_alpha_2" -->
+        </div>
+    </div>
+    <div class="buttons">
+
+        <app-pr-button text="Save and continue" padding="medium" colorType="success" ></app-pr-button>
+    </div>
+
+</p-dialog>

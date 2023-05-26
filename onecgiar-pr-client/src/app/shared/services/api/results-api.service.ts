@@ -578,6 +578,11 @@ export class ResultsApiService {
     return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-two/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipeNextStep(descrip));
   }
 
+  GETComplementaryById(idInnovationPackages){
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/complementary-innovation/${idInnovationPackages}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+  
+  }
+
   GETComplementataryInnovationFunctions() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/complementary-innovations-functions`);
   }
@@ -656,5 +661,10 @@ export class ResultsApiService {
 
   getStepTwoComentariesInnovation(){
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-packages-enabler-type`).pipe(this.saveButtonSE.isGettingSectionPipe());
+  }
+
+
+  PostStepTwoComentariesInnovation(body){
+    return this.http.post<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-packages-enabler-type/createInnovationEnablers`, body).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 }

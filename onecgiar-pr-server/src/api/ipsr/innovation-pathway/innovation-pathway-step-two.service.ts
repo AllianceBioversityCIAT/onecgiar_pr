@@ -416,7 +416,7 @@ export class InnovationPathwayStepTwoService {
         await this._resultComplementaryInnovationFunctions.find({
           where: {
             result_complementary_innovation_id:
-              findResultComplementaryInnovation.result_complementary_innovation_id,
+              findResultComplementaryInnovation?.result_complementary_innovation_id,
             is_active: true,
           },
         });

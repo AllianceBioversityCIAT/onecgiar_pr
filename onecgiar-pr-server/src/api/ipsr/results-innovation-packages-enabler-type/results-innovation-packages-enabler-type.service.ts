@@ -13,8 +13,8 @@ export class ResultsInnovationPackagesEnablerTypeService {
     private readonly _resultRepository: ComplementaryInnovationEnablerTypesRepository,
     private readonly _ipsrReposotory: ResultsInnovationPackagesEnablerTypeRepository,
   ) { }
-  create(createResultsInnovationPackagesEnablerTypeDto: CreateResultsInnovationPackagesEnablerTypeDto) {
-    return 'This action adds a new resultsInnovationPackagesEnablerType';
+  create(createResultsInnovationPackagesEnablerTypeDto: CreateResultsInnovationPackagesEnablerTypeDto[]) {
+    return this._ipsrReposotory.createResultInnovationPackages(createResultsInnovationPackagesEnablerTypeDto);
   }
 
   findAll() {

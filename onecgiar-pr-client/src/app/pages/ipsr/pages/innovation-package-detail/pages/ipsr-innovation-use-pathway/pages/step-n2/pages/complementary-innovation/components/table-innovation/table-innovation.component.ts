@@ -33,6 +33,7 @@ export class TableInnovationComponent{
   coreInnovationSelected: ComplementaryInnovation;
   searchText = '';
   InnovationSelect:any;
+  status = false;
   informationComplementaryInnovation:ComplementaryInnovation[] = [];
   loading:boolean = true;
   @Output() selectInnovationEvent = new EventEmitter<ComplementaryInnovation>();
@@ -53,5 +54,15 @@ export class TableInnovationComponent{
   selectInnovation(result: ComplementaryInnovation) {
     result.selected = true;
     this.selectInnovationEvent.emit(result);  
+  }
+
+  getComplementaryInnovation(id){
+    this.status = true;
+    console.log(id);
+    
+    this.api.resultsSE.GETComplementaryById(id).subscribe((resp) =>{
+      console.log(resp);
+      
+    });
   }
 }
