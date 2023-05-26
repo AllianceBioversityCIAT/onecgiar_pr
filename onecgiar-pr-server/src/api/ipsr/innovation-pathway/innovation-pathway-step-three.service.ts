@@ -339,6 +339,7 @@ export class InnovationPathwayStepThreeService {
     try {
       const result_ip = await this._resultInnovationPackageRepository.findOne({
         where: { result_innovation_package_id: resultId, is_active: true },
+        relations: { obj_result_innovation_package: true },
       });
       if (!result_ip) {
         throw {
@@ -353,6 +354,7 @@ export class InnovationPathwayStepThreeService {
           result_innovation_package_id: result_ip.result_innovation_package_id,
           is_active: true,
         },
+        relations: { obj_result: true },
       });
       const core_innovation = await this._resultRepository.findOne({
         where: { id: result_core.result_id, is_active: true },
