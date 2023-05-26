@@ -686,7 +686,7 @@ export class ResultInnovationPackageService {
         last_updated_by: user.id,
       });
 
-      if (req?.gender_tag_level_id === 3) {
+      if (Number(req?.gender_tag_level_id) == 3) {
         const genderEvidenceExist = await this._evidenceRepository.findOne({
           where: {
             result_id: resultId,
@@ -695,14 +695,18 @@ export class ResultInnovationPackageService {
           },
         });
 
+        let update: any;
         if (genderEvidenceExist) {
-          await this._evidenceRepository.update(genderEvidenceExist.id, {
-            link: req?.evidence_gender_tag,
-            last_updated_by: user.id,
-            gender_related: true,
-          });
+          update = await this._evidenceRepository.update(
+            genderEvidenceExist.id,
+            {
+              link: req?.evidence_gender_tag,
+              last_updated_by: user.id,
+              gender_related: true,
+            },
+          );
         } else {
-          await this._evidenceRepository.save({
+          update = await this._evidenceRepository.save({
             result_id: resultId,
             link: req?.evidence_gender_tag,
             created_by: user.id,
@@ -713,7 +717,7 @@ export class ResultInnovationPackageService {
         }
       }
 
-      if (req?.climate_change_tag_level_id === 3) {
+      if (Number(req?.climate_change_tag_level_id) == 3) {
         const climateEvidenceExist = await this._evidenceRepository.findOne({
           where: {
             result_id: resultId,
