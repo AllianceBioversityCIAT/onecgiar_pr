@@ -578,9 +578,8 @@ export class ResultsApiService {
     return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-two/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipeNextStep(descrip));
   }
 
-  GETComplementaryById(idInnovationPackages){
+  GETComplementaryById(idInnovationPackages) {
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/complementary-innovation/${idInnovationPackages}`).pipe(this.saveButtonSE.isGettingSectionPipe());
-  
   }
 
   GETComplementataryInnovationFunctions() {
@@ -619,7 +618,7 @@ export class ResultsApiService {
     return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-four/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
-  PATCHInnovationPathwayStepFourByRiIdPrevious(body,descrip) {
+  PATCHInnovationPathwayStepFourByRiIdPrevious(body, descrip) {
     return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-four/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipeNextStep(descrip));
   }
 
@@ -631,7 +630,7 @@ export class ResultsApiService {
     return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-four/partners/${this.ipsrDataControlSE.resultInnovationId}`, body);
   }
 
-  PATCHInnovationPathwayStep4BilateralsnonPooledProjects(idNonPoolen,body) {
+  PATCHInnovationPathwayStep4BilateralsnonPooledProjects(idNonPoolen, body) {
     return this.http.patch<any>(`${environment.apiBaseUrl}api/results/non-pooled-projects/${idNonPoolen}`, body);
   }
 
@@ -659,7 +658,7 @@ export class ResultsApiService {
     return this.http.patch<any>(`${environment.apiBaseUrl}api/results/submissions/unsubmit-ipsr/${this.ipsrDataControlSE.resultInnovationId}`, { comment });
   }
 
-  getStepTwoComentariesInnovation(){
+  getStepTwoComentariesInnovation() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-packages-enabler-type`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
@@ -673,6 +672,10 @@ export class ResultsApiService {
   }
 
   getStepTwoComentariesInnovationId(id){
-    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-packages-enabler-type/${id}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-packages-enabler-type/${id}`).pipe(this.saveButtonSE.isGettingSectionPipe());}
+
+
+  getAssessedDuringExpertWorkshop() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/assessed-during-expert-workshop`);
   }
 }
