@@ -1,7 +1,8 @@
 <p-dialog class="support_information" header="Title" [(visible)]="this.visible"
     [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true"
     [style]="{padding: '0px'}">
-    <div class="modal_title">Add bilateral</div>
+    <div class="modal_title" *ngIf="this.isonlyread == false">Edit bilateral</div>
+    <div class="modal_title" *ngIf="this.isonlyread == true">Bilateral Info</div>
     <div class="modal_container partners-request-container" *ngIf="showForm">
 
 
@@ -30,11 +31,14 @@
 
     </div>
     <div class="buttons">
-        <app-pr-button padding="medium" text="Cancel" icon="cancel_schedule_send" colorType="secondary"
+        <app-pr-button padding="medium" *ngIf="this.isonlyread == false" text="Cancel" icon="cancel_schedule_send" colorType="secondary"
+            (click)="this.visible = false">
+        </app-pr-button>
+        <app-pr-button padding="medium" *ngIf="this.isonlyread == true" text="Close" icon="cancel_schedule_send" colorType="secondary"
             (click)="this.visible = false">
         </app-pr-button>
         <app-pr-button *ngIf="this.isonlyread == false"  [ngClass]="{'globalDisabled': this.requesting || formIsInvalid}"
-            [text]="this.requesting?'Adding bilateral':'Add bilateral'" [rotating]="this.requesting"
+            [text]="this.requesting?'Edited bilateral':'Edit bilateral'" [rotating]="this.requesting"
             [icon]="this.requesting?'loop':'send'" padding="medium" (click)="onAddBilateral()" ></app-pr-button>
     </div>
 
