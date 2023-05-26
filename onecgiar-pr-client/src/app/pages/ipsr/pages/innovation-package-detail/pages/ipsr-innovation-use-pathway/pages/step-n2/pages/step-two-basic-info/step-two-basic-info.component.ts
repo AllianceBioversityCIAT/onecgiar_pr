@@ -45,7 +45,7 @@ export class StepTwoBasicInfoComponent implements OnInit {
         this.update = true;
         
       })
-    }, 1000);
+    }, 2000);
       
   }
 
@@ -142,7 +142,7 @@ export class StepTwoBasicInfoComponent implements OnInit {
           this.update = false;
           setTimeout(() => {
             this.update = true;
-          }, 50);
+          }, 500);
         }
       }
     }
