@@ -2,25 +2,28 @@
 
     <h2>Basic info on the innovation package elements</h2>
     <div class="complementary_innovations" *ngFor="let bodyItem of this.informartion; let i=index">
-        <app-collapsible-container [collapse]="bodyItem.open">
+        <app-collapsible-container [collapse]="bodyItem.open" *ngIf="allInformation == true">
             <div header><strong>{{i+1}}. </strong> {{bodyItem.title}} </div>
             <div content style="display: flex; flex-direction: column; align-content: center;">
                 <app-pr-field-header label="Type of enabler" [required]="false" description="Select multiple" style="padding: 0 30px 0 30px;"></app-pr-field-header>
-                <div style="display: flex; flex-direction: row; margin-left: 80px;" >
-                    <div style="padding-right: 40px; margin-right: 40px; border-right: 1px solid #5569DD99 ;" >
-                        <div *ngFor="let info of innovationCompletary; let i = index">
-                            <div *ngIf="i < 3">
-                                <app-pr-field-header label="{{info.group}}" [required]="false"></app-pr-field-header>
-                                <ul>
-                                <div *ngFor="let category of info?.subCategories" class="field-checkbox">
-                                    <li>
-                                        <p-checkbox name="group" [value]="category" [inputId]="category.id" [(ngModel)]="bodyItem.complementary_innovation_enabler_types_one" (click)="selectes(category, i)"></p-checkbox>
+                <div class="container">
+                    <div class="col-{{in}}" *ngFor="let item of cols; let in = index">
+                        <div *ngFor="let subItem of item">
+                            <app-pr-field-header label="{{subItem.group}}" [required]="false"></app-pr-field-header>
+                            <ul>
+                                <div *ngFor="let category of subItem?.subCategories" class="field-checkbox">
+                                    <li >
+                                        <p-checkbox name="group" [value]="category" *ngIf="update == true"  [inputId]="category.id" [(ngModel)]="bodyStep22[i].complementary_innovation_enabler_types_one"
+                                        (ngModelChange)="selectedOneLevel(category, i,1)"
+                                        ></p-checkbox>
                                         <label> {{ category.group }}</label>
                                     </li>
-                                    <ul>
+                                    <ul >
                                         <li>
-                                            <div *ngFor="let categories of category?.subCategories" class="field-checkbox">
-                                                <p-checkbox name="group" [value]="categories" [inputId]="categories.id" [(ngModel)]="bodyItem.complementary_innovation_enabler_types_two" (click)="subSelectes(category, i)"></p-checkbox>
+                                            <div *ngFor="let categories of category?.subCategories" class="field-checkbox" >
+                                                <p-checkbox name="group" [value]="categories" *ngIf="update == true" [inputId]="categories.id" [(ngModel)]="bodyStep22[i].complementary_innovation_enabler_types_two"
+                                                (ngModelChange)=" selectedTwo(category, i)"
+                                                ></p-checkbox>
                                                 <label >{{ categories.group }}</label>
                                                 
                                             </div>
@@ -28,44 +31,28 @@
                                     </ul>    
                                 </div>
                                 </ul>
-                            </div>
-                            
                         </div>
                         
-                    </div>
-                    <div>
-                        <div *ngFor="let info of innovationCompletary; let i = index">
-                            <div *ngIf="i >= 3">
-                                <app-pr-field-header label="{{info.group}}" [required]="false"></app-pr-field-header>
-                                <ul>
-                                <div *ngFor="let category of info?.subCategories" class="field-checkbox">
-                                    <li>
-                                        <p-checkbox name="group" [value]="category" [inputId]="category.id" [(ngModel)]="bodyItem.complementary_innovation_enabler_types_one" (click)="selectes(category, i)"></p-checkbox>
-                                        <label> {{ category.group }}</label>
-                                    </li>
-                                    <ul>
-                                        <li>
-                                            <div *ngFor="let categories of category?.subCategories" class="field-checkbox">
-                                                <p-checkbox name="group" [value]="categories" [inputId]="categories.id" [(ngModel)]="bodyItem.complementary_innovation_enabler_types_two" (click)="subSelectes(category, i)"></p-checkbox>
-                                                <label >{{ categories.group }}</label>
-                                                
-                                            </div>
-                                        </li>
-                                    </ul>    
-                                </div>
-                                </ul>
-                            </div>
-                            
-                        </div>
-                        <app-pr-input label="Other enablers" [required]="false" placeholder="Other enablers"></app-pr-input>
-                        </div>
                         
                     </div>
-                    
                 </div>
-           
+            </div>
         </app-collapsible-container>
+        
+    
     </div>
+    <app-no-data-text *ngIf="this.informartion.length == 0"
+    title="There are no complementary innovations / enablers / solutions selected for this innovation package. {{goToStep()}} to add them."></app-no-data-text>
+</div>
+
+
+<div class="toggle_change_step" style="margin-top: 50px;">
+    <app-pr-button
+    (click) = "onSavePreviuosNext('previous')"
+        padding="big" text="Save & go to previous step" icon="arrow_circle_left" [reverse]="true"></app-pr-button>
+    <app-pr-button
+    (click) = "onSavePreviuosNext('next')"
+        padding="big" text="Save & go to next step" icon="arrow_circle_right"></app-pr-button>
 </div>
 
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>
