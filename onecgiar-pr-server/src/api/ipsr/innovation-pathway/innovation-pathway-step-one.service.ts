@@ -747,36 +747,18 @@ export class InnovationPathwayStepOneService {
         resultByInnovationPackageId.result_by_innovation_package_id;
       const eoiOutcomes = UpdateInnovationPathwayDto.eoiOutcomes;
 
-      const allTocByResult = await this._resultIpEoiOutcomes.find({
-        where: {
-          result_by_innovation_package_id: result_by_innovation_package_id,
-        },
-      });
+      for (const eoi of eoiOutcomes) {
+        const eoiExist = await this._resultIpEoiOutcomes.findOne({
+          where: {
+            result_by_innovation_package_id,
+            toc_result_id: eoi.toc_result_id,
+            is_active: true,
+          },
+        });
 
-      const existingIds = allTocByResult.map((et) => et.toc_result_id);
-
-      const tocsToActive = allTocByResult.filter(
-        (eoi) =>
-          eoiOutcomes.find((e) => e.toc_result_id === eoi.toc_result_id) &&
-          eoi.is_active === false,
-      );
-
-      const tocsToInactive = allTocByResult.filter(
-        (eoi) =>
-          !eoiOutcomes.find((e) => e.toc_result_id === eoi.toc_result_id) &&
-          eoi.is_active === true,
-      );
-
-      const tocsToSave = eoiOutcomes?.filter(
-        (eoi) => !existingIds.includes(eoi.toc_result_id),
-      );
-
-      const saveToc = [];
-
-      if (tocsToSave?.length > 0) {
-        for (const entity of tocsToSave) {
+        if (!eoiExist) {
           const newEoi = new ResultIpEoiOutcome();
-          newEoi.toc_result_id = entity.toc_result_id;
+          newEoi.toc_result_id = eoi.toc_result_id;
           newEoi.result_by_innovation_package_id =
             result_by_innovation_package_id;
           newEoi.version_id = version.id;
@@ -784,21 +766,36 @@ export class InnovationPathwayStepOneService {
           newEoi.last_updated_by = user.id;
           newEoi.created_date = new Date();
           newEoi.last_updated_date = new Date();
-          saveToc.push(this._resultIpEoiOutcomes.save(newEoi));
+          await this._resultIpEoiOutcomes.save(newEoi);
+        } else {
+          await this._resultIpEoiOutcomes.update(
+            eoiExist?.result_ip_eoi_outcome_id,
+            {
+              is_active: true,
+              last_updated_by: user.id,
+              last_updated_date: new Date(),
+            },
+          );
         }
       }
 
-      if (tocsToActive?.length > 0) {
-        for (const entity of tocsToActive) {
-          entity.is_active = true;
-          saveToc.push(this._resultIpEoiOutcomes.save(entity));
-        }
-      }
+      const allTocByResult = await this._resultIpEoiOutcomes.find({
+        where: {
+          result_by_innovation_package_id: result_by_innovation_package_id,
+          is_active: true,
+        },
+      });
 
-      if (tocsToInactive?.length > 0) {
-        for (const entity of tocsToInactive) {
-          entity.is_active = false;
-          saveToc.push(this._resultIpEoiOutcomes.save(entity));
+      for (const toc of allTocByResult) {
+        const exist = eoiOutcomes.some(
+          (eoi) => eoi.toc_result_id === toc.toc_result_id,
+        );
+
+        if (!exist) {
+          await this._resultIpEoiOutcomes.update(toc.result_ip_eoi_outcome_id, {
+            is_active: false,
+            last_updated_by: user.id,
+          });
         }
       }
 
