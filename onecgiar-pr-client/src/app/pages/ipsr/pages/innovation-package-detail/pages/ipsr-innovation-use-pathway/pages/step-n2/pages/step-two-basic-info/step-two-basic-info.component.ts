@@ -127,7 +127,9 @@ export class StepTwoBasicInfoComponent implements OnInit {
         let index = this.bodyStep22[i].complementary_innovation_enabler_types_one.findIndex(ele => ele.complementary_innovation_enabler_types_id == category.complementary_innovation_enabler_types_id);
         console.log(index);
         if(index != -1){
+          this.bodyStep22[i].complementary_innovation_enabler_types_one[index] = category;
           this.bodyStep22[i].complementary_innovation_enabler_types_two = this.bodyStep22[i].complementary_innovation_enabler_types_two.concat(category.subCategories);
+          this.bodyStep22[i].complementary_innovation_enabler_types_two = this.removeDuplicates(this.bodyStep22[i].complementary_innovation_enabler_types_two, "complementary_innovation_enabler_types_id");
         }
         else{
           category.subCategories.forEach(element => {
@@ -149,6 +151,19 @@ export class StepTwoBasicInfoComponent implements OnInit {
     
   }
   
+  removeDuplicates(originalArray, prop) {
+    var newArray = [];
+    var lookupObject  = {};
+
+    for(var i in originalArray) {
+       lookupObject[originalArray[i][prop]] = originalArray[i];
+    }
+
+    for(i in lookupObject) {
+        newArray.push(lookupObject[i]);
+    }
+     return newArray;
+}
 
   selectedTwo(category, i){
     let index = this.bodyStep22[i].complementary_innovation_enabler_types_one.findIndex(ele => ele.complementary_innovation_enabler_types_id == category.complementary_innovation_enabler_types_id);

@@ -27,7 +27,9 @@ export class ResultsInnovationPackagesEnablerTypeRepository extends Repository<R
                         is_active: true,
                         version_id: 1
                     }
+                    await this.delete({result_by_innovation_package_id:createIn.result_by_innovation_package_id})
                     let aux = await this.save(createInnovations)
+                    
                     returnVariable.push(aux);
                 })
             }
@@ -40,6 +42,7 @@ export class ResultsInnovationPackagesEnablerTypeRepository extends Repository<R
                         is_active: true,
                         version_id: 1
                     }
+                    
                     let aux = await this.save(createInnovations)
                     returnVariable.push(aux);
                 })
