@@ -18,8 +18,11 @@ export class ResultsInnovationPackagesEnablerTypeRepository extends Repository<R
 
         let returnVariable = [];
         
-        createInnovation.forEach((createIn)=>{
+        createInnovation.forEach(async (createIn)=>{
             if(createIn.hasOwnProperty('complementary_innovation_enabler_types_one')){
+                if(createIn.complementary_innovation_enabler_types_one.length == 0){
+                    await this.delete({result_by_innovation_package_id:createIn.result_by_innovation_package_id})
+                }
                 createIn.complementary_innovation_enabler_types_one.forEach(async (innovation) =>{
                     let createInnovations = {
                         result_by_innovation_package_id: createIn.result_by_innovation_package_id,
