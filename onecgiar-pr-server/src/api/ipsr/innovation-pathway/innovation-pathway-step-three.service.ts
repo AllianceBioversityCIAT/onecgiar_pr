@@ -186,13 +186,10 @@ export class InnovationPathwayStepThreeService {
       } = saveStepTwoThree;
 
       if (rip.is_expert_workshop_organized === false) {
-        await this._evidenceRepository.update(
-          { id: workShopEvidence?.id },
-          {
-            is_active: 0,
-            last_updated_by: user.id,
-          },
-        );
+        await this._evidenceRepository.update(workShopEvidence?.id, {
+          is_active: 0,
+          last_updated_by: user.id,
+        });
 
         const expertWorkshopExist: ResultIpExpertWorkshopOrganized[] =
           await this._resultIpExpertWorkshopRepository.find({
@@ -217,13 +214,14 @@ export class InnovationPathwayStepThreeService {
           message: 'The link workshop list have been inactive successfully',
         };
       }
-      if (rip.is_expert_workshop_organized === true && !lwl) {
-        return {
-          response: { valid: false },
-          message: 'The link workshop list is required',
-          status: HttpStatus.BAD_REQUEST,
-        };
-      }
+
+      // if (rip.is_expert_workshop_organized === true && !lwl) {
+      //   return {
+      //     response: { valid: false },
+      //     message: 'The link workshop list is required',
+      //     status: HttpStatus.BAD_REQUEST,
+      //   };
+      // }
 
       if (!workShopEvidence) {
         await this._evidenceRepository.save({
@@ -300,6 +298,24 @@ export class InnovationPathwayStepThreeService {
               x.first_name === ewe.first_name && x.last_name === ewe.last_name,
           );
           if (!isExist) {
+            await this._resultIpExpertWorkshopRepository.update(
+              ewe.result_ip_expert_workshop_organized_id,
+              {
+                is_active: false,
+                last_updated_by: user.id,
+              },
+            );
+          }
+        }
+      } else {
+        const isExist = await this._resultIpExpertWorkshopRepository.find({
+          where: {
+            result_id: resultId,
+            is_active: true,
+          },
+        });
+        if (isExist.length) {
+          for (const ewe of isExist) {
             await this._resultIpExpertWorkshopRepository.update(
               ewe.result_ip_expert_workshop_organized_id,
               {
