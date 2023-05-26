@@ -469,22 +469,8 @@ export class ResultsPackageTocResultService {
           message: 'The EOI have been updated',
           status: HttpStatus.OK,
         };
-      } else if (searchIpEoi) {
-        await this._resultIpEoiOutcomesRepository.update(
-          searchIpEoi.result_ip_eoi_outcome_id,
-          {
-            contributing_toc: true,
-            last_updated_by: user.id,
-          },
-        );
-
-        return {
-          response: { valid: true },
-          message: 'The EOI have been updated',
-          status: HttpStatus.OK,
-        };
       } else {
-        const saveNewEoi = await this._resultIpEoiOutcomesRepository.save({
+        await this._resultIpEoiOutcomesRepository.save({
           toc_result_id: tocResultId,
           result_by_innovation_package_id:
             resultByInnoPckg?.result_by_innovation_package_id,
@@ -494,11 +480,14 @@ export class ResultsPackageTocResultService {
           contributing_toc: true,
         });
 
-        return {
-          response: { valid: true },
-          message: 'The EOI Its already created',
-          status: HttpStatus.OK,
-        };
+        await this._resultIpEoiOutcomesRepository.update(
+          searchIpEoi.result_ip_eoi_outcome_id,
+          {
+            is_active: false,
+            contributing_toc: false,
+            last_updated_by: user.id,
+          },
+        );
       }
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
