@@ -136,8 +136,10 @@ export class StepTwoBasicInfoComponent implements OnInit {
           category.subCategories.forEach(element => {
             let aux = this.bodyStep22[i].complementary_innovation_enabler_types_two.findIndex(ele => ele.complementary_innovation_enabler_types_id == element.complementary_innovation_enabler_types_id);
             console.log(aux);
+            if(aux != -1){
+              this.bodyStep22[i].complementary_innovation_enabler_types_two.splice(aux,1);
+            }
             
-            this.bodyStep22[i].complementary_innovation_enabler_types_two.splice(aux,1);
           });
           this.update = false;
           setTimeout(() => {
