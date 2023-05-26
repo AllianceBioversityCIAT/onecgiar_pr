@@ -69,16 +69,16 @@
     gap: 7px;
     font-size: 1.2em;
     font-weight: 500;
-    background: rgb(85, 105, 221);
+    background: rgb(0, 0, 0);
     background: linear-gradient(87deg, rgba(85, 106, 221, 0.116) 4%, rgba(255, 255, 255, 0) 100%);
     width: max-content;
     color: var(--pr-color-secondary);
-
+    margin-left: 30px;
     &::before {
         content: '';
         width: 8px;
         height: 35px;
-        background-color: var(--pr-color-primary);
+        background-color: black;
     }
 }
 

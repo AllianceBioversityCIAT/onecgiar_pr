@@ -55,14 +55,12 @@
     label="Fill the Scaling Readiness evidence-based assessment (post workshop and supported by available evidence)"
     [required]="false"></app-pr-field-header>-->
 
+    <div class="ipsr-sub-title-2" style="margin-top: 20px;">Core innovation</div>
 
-    <<<<<<< HEAD <app-pr-field-header label="Core innovation" style="margin-left: 20px;" [required]="false"
+    <app-pr-field-header label="" style="margin-left: 20px;" [required]="false"
         description='<a href="{{resultUrl(result_core_innovation?.core_result_code)}}" target="_blank"> {{result_core_innovation?.core_title}} </a>'>
         </app-pr-field-header>
-        =======
-        <app-pr-field-header label="Core innovation " [required]="false"
-            description='<a href="{{resultUrl(result_core_innovation?.core_result_code)}}" target="_blank"> {{result_core_innovation?.core_title}} </a>'></app-pr-field-header>
-        >>>>>>> LFUB-538-Step-3-Revamp-workshop-question-and-fields-below
+
 
         <app-pr-field-header label="Innovation Readiness level evidence-based" [required]="false"
             [description]="this.readinessLevelSelfAssessmentText()"></app-pr-field-header>
@@ -112,10 +110,10 @@
         <app-step-n3-current-use [body]="this.ipsrStep3Body"></app-step-n3-current-use>
 
         <div class="step_divider"></div>
-
+        <div class="ipsr-sub-title" style="margin-top: 20px; margin-bottom: 10px;">Complementary innovations/ enablers/ solutions</div>
         <div class="Complementary_innovations">
-            <app-pr-field-header label="<strong>Complementary innovations/ enablers/ solutions</strong>"
-                [required]="false"
+            <app-pr-field-header label=""
+                [required]="false" style="margin-top: 20px;"
                 [description]="this.ipsrStep3Body.result_ip_result_complementary?.length?'In case you want to add one more complementary innovation / enabler / solution'+(goToStep()|lowercase):''"></app-pr-field-header>
             <app-step-n3-complementary-innovations [body]="this.ipsrStep3Body" [rangesOptions]="this.rangesOptions"
                 [innovationUseList]="this.innovationUseList"
