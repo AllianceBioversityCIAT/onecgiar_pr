@@ -25,7 +25,7 @@ export class StepN1Component implements OnInit {
       this.convertOrganizations(response?.innovatonUse?.organization);
       this.ipsrStep1Body = response;
       console.log(response);
-      
+
       this.ipsrStep1Body.geo_scope_id = response.geo_scope_id == 3 ? 4 : response.geo_scope_id;
       this.coreResult = response?.coreResult;
 
@@ -38,6 +38,9 @@ export class StepN1Component implements OnInit {
       this.ipsrStep1Body.sdgTargets.map(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
       this.ipsrStep1Body.impactAreas.map(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
       this.ipsrStep1Body.experts.forEach(expert => expert.expertises.map(expertItem => (expertItem.name = expertItem.obj_expertises.name)));
+
+      this.ipsrStep1Body.institutions.map(item => (item.institutions_type_name = item.institutions_name));
+
       //? console.log(this.ipsrStep1Body);
 
       if (this.ipsrStep1Body.innovatonUse.actors.length == 0) {
@@ -63,14 +66,14 @@ export class StepN1Component implements OnInit {
     });
   }
 
-  saveAndNextStep(descrip:string){
+  saveAndNextStep(descrip: string) {
     this.convertOrganizationsTosave();
     this.api.resultsSE.PATCHInnovationPathwayByStepOneResultIdNextStep(this.ipsrStep1Body, descrip).subscribe((resp: any) => {
       console.log(resp?.response[0].response);
       this.ipsrDataControlSE.detailData.title = resp?.response[0].response;
       this.getSectionInformation();
       setTimeout(() => {
-        this.router.navigate(['/ipsr/detail/'+this.ipsrDataControlSE.resultInnovationCode+'/ipsr-innovation-use-pathway/step-2']);
+        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2']);
       }, 1000);
     });
   }
