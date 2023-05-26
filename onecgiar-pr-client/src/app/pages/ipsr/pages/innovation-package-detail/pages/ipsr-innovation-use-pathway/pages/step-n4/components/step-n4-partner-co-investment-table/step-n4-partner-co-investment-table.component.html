@@ -27,13 +27,12 @@
     <tr *ngFor="let option of this.body.institutions_expected_investment; let i=index"
         [hidden]="option.institution.is_active == false">
         <td>
-            {{option.institution.institutions_name}}
-            <app-pr-field-header label="Delivery type"></app-pr-field-header>
-
-
-
-
-
+            <div class="name">{{option.institution.institutions_name}}</div>
+            <div class="type"> <strong>Delivery type:</strong> {{option?.institution?.institutions_type_name}}</div>
+            <div style="margin-top: -10px;margin-bottom: 5px;">
+                <app-pr-field-header label="Partner role">
+                </app-pr-field-header>
+            </div>
 
             <div class="deliveries" [ngClass]="{'readOnly_deliveries': this.rolesSE.readOnly}">
                 <div class="delivery"

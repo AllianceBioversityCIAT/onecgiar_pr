@@ -26,8 +26,6 @@ export class StepN4Component implements OnInit {
         });
       } catch (error) {}
     });
-
-    
   }
 
   getSectionInformation() {
@@ -36,6 +34,7 @@ export class StepN4Component implements OnInit {
       console.log(response);
       console.log('%c____________________', 'font-size: 20px; color: #2BBE28;');
       this.ipsrStep4Body = response;
+      // this.ipsrStep4Body.institutions_expected_investment.map(item => (item.institutions_type_name = item.institutions_name));
     });
   }
   onSaveSection() {
@@ -47,18 +46,17 @@ export class StepN4Component implements OnInit {
       // setTimeout(() => {
       this.getSectionInformation();
       // }, 3000);
-      
     });
   }
 
-  onSavePrevious(descrip){
-    this.api.resultsSE.PATCHInnovationPathwayStepFourByRiIdPrevious(this.ipsrStep4Body,descrip).subscribe(({ response }) => {
+  onSavePrevious(descrip) {
+    this.api.resultsSE.PATCHInnovationPathwayStepFourByRiIdPrevious(this.ipsrStep4Body, descrip).subscribe(({ response }) => {
       console.log(response);
       // setTimeout(() => {
       this.getSectionInformation();
       // }, 3000);
       setTimeout(() => {
-        this.router.navigate(['/ipsr/detail/'+this.ipsrDataControlSE.resultInnovationCode+'/ipsr-innovation-use-pathway/step-3']);
+        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-3']);
       }, 1000);
     });
   }
@@ -67,13 +65,13 @@ export class StepN4Component implements OnInit {
     return `A template participant list can be downloaded <a href=""  class="open_route" target="_blank">here</a>`;
   }
 
-  descriptionInnovation(){
+  descriptionInnovation() {
     return `
     Description:Are there any specific investors or donors – other than the <a href="https://www.cgiar.org/funders/"  class="open_route" target="_blank">CGIAR Fund Donors</a> – who provide core/pooled funding – that you wish to acknowledge for their critical contribution to the continued development, testing, and scaling of this innovation?
     <ul>
     <li>Please separate donor/investor names by a semicolon.</li>
     <li>Donors/investors will be included in the acknowledgment section in the Innovation Profile.</li>
     </ul>
-    `
+    `;
   }
 }
