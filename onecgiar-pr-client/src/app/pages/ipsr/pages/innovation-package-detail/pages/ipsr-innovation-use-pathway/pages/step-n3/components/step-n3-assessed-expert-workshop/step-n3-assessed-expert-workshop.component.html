@@ -27,14 +27,14 @@
         </tr>
         <tr>
 
-            <td *ngFor="let attr of attrList; let j=index"
+            <td *ngFor="let attr of attrList; let j=index" [ngClass]="{'first_col': j <= 0}"
                 [hidden]="j>= 3 && this.body.result_innovation_package.assessed_during_expert_workshop_id != 2">
 
                 <!-- <div>{{attrList[j]}} {{j}}</div> -->
 
                 <div *ngIf="j <= 0">
                     <strong>Core innovation</strong>
-                    <!-- <div>{{this.body?.result_ip_result_core?.obj_result?.title}}</div> -->
+                    <div>{{this.body?.result_ip_result_core?.obj_result?.title}}</div>
                 </div>
                 <app-pr-select *ngIf="j > 0" class="segment_title_margin" [indexReference]="j"
                     [options]="this.rangeListByIndex(j)" optionLabel="index" optionValue="id"
@@ -55,7 +55,7 @@
                     <div>{{resultComplementary?.obj_result?.title}}</div>
                 </div>
                 <app-pr-select *ngIf="j > 0" class="segment_title_margin" [indexReference]="j+i"
-                    [options]="this.rangeListByIndex(j)" optionLabel="value" optionValue="value"
+                    [options]="this.rangeListByIndex(j)" optionLabel="index" optionValue="id"
                     placeholder="Select a level" [(ngModel)]="resultComplementary[attrList[j]]">
                 </app-pr-select>
             </td>

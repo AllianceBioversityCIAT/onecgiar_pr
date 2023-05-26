@@ -25,10 +25,10 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     	and rbi.is_active > 0;
     `;
     try {
-      const completeIntitutions: ResultsByInstitution[] = await this.query(queryData, [
-        resultId,
-        rbiId
-      ]);
+      const completeIntitutions: ResultsByInstitution[] = await this.query(
+        queryData,
+        [resultId, rbiId],
+      );
       return completeIntitutions;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -189,7 +189,7 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
   async getGenericResultByInstitutionExists(
     resultId: number,
     institutionsId: number,
-    institutionRolesId: 1 | 2 | 3| 4| 5,
+    institutionRolesId: 1 | 2 | 3 | 4 | 5,
   ): Promise<ResultsByInstitution> {
     const queryData = `
     select 
@@ -226,7 +226,7 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
 
   async getGenericAllResultByInstitutionByRole(
     resultId: number,
-    institutionRolesId: 1 | 2 | 3| 4| 5| 6| 7,
+    institutionRolesId: 1 | 2 | 3 | 4 | 5 | 6 | 7,
   ): Promise<ResultsByInstitution[]> {
     const queryData = `
     select 
@@ -241,9 +241,11 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     	rbi.last_updated_date,
     	rbi.last_updated_by,
       ci.name as institutions_name,
-		  ci.acronym as institutions_acronym
+		  ci.acronym as institutions_acronym,
+      cit.name as institutions_type_name
     from results_by_institution rbi 
     inner join clarisa_institutions ci on ci.id  = rbi.institutions_id 
+    inner join clarisa_institution_types cit on cit.code = ci.institution_type_code
     and ci.is_active > 0
     where rbi.result_id = ?
       and rbi.institution_roles_id = ?
@@ -252,7 +254,7 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     try {
       const completeUser: ResultsByInstitution[] = await this.query(queryData, [
         resultId,
-        institutionRolesId
+        institutionRolesId,
       ]);
       return completeUser;
     } catch (error) {
@@ -360,7 +362,7 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
   async updateGenericIstitutions(
     resultId: number,
     institutionsArray: institutionsInterface[],
-    institutionRole: 1|2|3|4 |5,
+    institutionRole: 1 | 2 | 3 | 4 | 5,
     userId: number,
     applicablePartner: boolean = false,
   ) {
@@ -454,4 +456,3 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
 interface institutionsInterface {
   institutions_id: number;
 }
-

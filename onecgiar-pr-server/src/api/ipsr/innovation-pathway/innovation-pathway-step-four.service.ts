@@ -671,7 +671,9 @@ export class InnovationPathwayStepFourService {
 
           const institutions = await this._resultByInstitutionsRepository.find({
             where: { id: rbi.id, institution_roles_id: 7 },
-            relations: { obj_institutions: true },
+            relations: {
+              obj_institutions: { obj_institution_type_code: true },
+            },
           });
           const deliveries =
             await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByResultByInstitution(
