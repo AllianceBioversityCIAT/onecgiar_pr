@@ -8,9 +8,10 @@ import { StepN3CurrentUseComponent } from './components/step-n3-current-use/step
 import { YmzListStructureItemModule } from 'src/app/shared/directives/ymz-list-structure-item/ymz-list-structure-item.module';
 import { StepN3ComplementaryInnovationsComponent } from './components/step-n3-complementary-innovations/step-n3-complementary-innovations.component';
 import { CollapsibleContainerModule } from 'src/app/shared/components/collapsible-container/collapsible-container.module';
+import { StepN3AssessedExpertWorkshopComponent } from './components/step-n3-assessed-expert-workshop/step-n3-assessed-expert-workshop.component';
 
 @NgModule({
-  declarations: [StepN3Component, StepN3CurrentUseComponent, StepN3ComplementaryInnovationsComponent],
+  declarations: [StepN3Component, StepN3CurrentUseComponent, StepN3ComplementaryInnovationsComponent, StepN3AssessedExpertWorkshopComponent],
   imports: [CommonModule, StepN3RoutingModule, CustomFieldsModule, YmzListStructureItemModule, CollapsibleContainerModule]
 })
 export class StepN3Module {}

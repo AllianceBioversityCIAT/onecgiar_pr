@@ -5,30 +5,37 @@
     optionLabel="name" optionValue="id" [options]="this.radioOptions" (selectOptionEvent)="cleanEvidence()"
     [(ngModel)]="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized">
 </app-pr-radio-button>
-<div  *ngIf="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true" 
-
->
-<div class="infoPersons" *ngFor="let expertItem of this.ipsrStep3Body.result_ip_expert_workshop_organized; let i = index;">
-    <app-pr-input label="First Name" [required]="true" placeholder="First Name" [(ngModel)]="expertItem.first_name"></app-pr-input>
-    <app-pr-input  label="Last Name"  [required]="true" placeholder="Last Name" [(ngModel)]="expertItem.last_name"></app-pr-input>
-    <app-pr-input label="Email" [required]="false" placeholder="Email" [(ngModel)]="expertItem.email"></app-pr-input>
-    <app-pr-input label="Role" [required]="false" placeholder="Role" [(ngModel)]="expertItem.workshop_role"></app-pr-input>
-    <div class="delete" (click)="delete(i)">
-        <i class="clickEvent material-icons-round ymz-lsi-delete-icon" style="color: red; cursor: pointer;">delete</i>
+<div *ngIf="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true">
+    <div class="infoPersons"
+        *ngFor="let expertItem of this.ipsrStep3Body.result_ip_expert_workshop_organized; let i = index;">
+        <app-pr-input label="First Name" [required]="true" placeholder="First Name"
+            [(ngModel)]="expertItem.first_name"></app-pr-input>
+        <app-pr-input label="Last Name" [required]="true" placeholder="Last Name"
+            [(ngModel)]="expertItem.last_name"></app-pr-input>
+        <app-pr-input label="Email" [required]="false" placeholder="Email"
+            [(ngModel)]="expertItem.email"></app-pr-input>
+        <app-pr-input label="Role" [required]="false" placeholder="Role"
+            [(ngModel)]="expertItem.workshop_role"></app-pr-input>
+        <div class="delete" (click)="delete(i)">
+            <i class="clickEvent material-icons-round ymz-lsi-delete-icon"
+                style="color: red; cursor: pointer;">delete</i>
+        </div>
     </div>
-</div>
-    
+
 </div>
 <div *ngIf="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true">
-    <app-add-button name="Add Lead/Co-Lead"  (clickEvent)="addExpert()"></app-add-button>
+    <app-add-button name="Add Lead/Co-Lead" (clickEvent)="addExpert()"></app-add-button>
 </div>
-<app-pr-input *ngIf="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true" label="Provide the link to the workshop list of participants" [description]="workshopDescription()"
+<app-pr-input *ngIf="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true"
+    label="Provide the link to the workshop list of participants" [description]="workshopDescription()"
     [required]="false" placeholder="Link" [(ngModel)]="this.ipsrStep3Body.link_workshop_list">
 </app-pr-input>
 
-
-
 <div *ngIf="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true">
+    <app-step-n3-assessed-expert-workshop [body]="this.ipsrStep3Body"></app-step-n3-assessed-expert-workshop>
+</div>
+
+<!-- <div *ngIf="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true">
     <app-pr-field-header label="Innovation Readiness level self-assessment" [required]="false"
         [description]="this.readinessLevelSelfAssessmentText()"></app-pr-field-header>
     <app-pr-range-level optionLabel="name" optionValue="id" [options]="this.rangesOptions" itemTitle="name"
@@ -41,7 +48,7 @@
     <app-pr-range-level itemTitle="name" itemDescription="definition" optionLabel="name" optionValue="id"
         [options]="this.rangesOptions"
         [(ngModel)]="this.ipsrStep3Body.result_innovation_package.use_level_evidence_based"></app-pr-range-level>
-</div>
+</div> -->
 
 
 <div class="step_divider"></div>
@@ -51,41 +58,51 @@
     [required]="false"></app-pr-field-header>
 
 
-<app-pr-field-header label="Core innovation " [required]="false" description='<a href="{{resultUrl(result_core_innovation?.core_result_code)}}" target="_blank"> {{result_core_innovation?.core_title}} </a>'></app-pr-field-header> 
+<app-pr-field-header label="Core innovation " [required]="false"
+    description='<a href="{{resultUrl(result_core_innovation?.core_result_code)}}" target="_blank"> {{result_core_innovation?.core_title}} </a>'></app-pr-field-header>
 
 <app-pr-field-header label="Innovation Readiness level evidence-based" [required]="false"
     [description]="this.readinessLevelSelfAssessmentText()"></app-pr-field-header>
 
-<app-pr-range-level itemTitle="name" itemDescription="definition" optionLabel="name" optionValue="id"
-    [options]="this.rangesOptions"
-    [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.readiness_level_evidence_based"></app-pr-range-level>
 
-<app-pr-input label="Evidence link" placeholder="Link goes here"
-    [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.readinees_evidence_link">
-</app-pr-input>
+<div>
 
-<app-pr-textarea placeholder="Write some..."
-    label="Please provide details of where evidence can be found within the source link (e.g. page number, slide number, table number)"
-    type="text" [required]="false"
-    [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.readiness_details_of_evidence"></app-pr-textarea>
+</div>
 
-<div class="fragment_section_divider"></div>
+<div>
+    <app-pr-range-level itemTitle="name" itemDescription="definition" optionLabel="name" optionValue="id"
+        [options]="this.rangesOptions"
+        [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.readiness_level_evidence_based"></app-pr-range-level>
 
-<app-pr-field-header label="Innovation use level evidence-based" [required]="false"
-    [description]="this.useLevelDelfAssessment()"></app-pr-field-header>
+    <app-pr-input label="Evidence link" placeholder="Link goes here"
+        [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.readinees_evidence_link">
+    </app-pr-input>
 
-<app-pr-range-level itemTitle="name" itemDescription="definition" optionLabel="name" optionValue="id"
-    [options]="this.innovationUseList"
-    [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.use_level_evidence_based"></app-pr-range-level>
+    <app-pr-textarea placeholder="Write some..."
+        label="Please provide details of where evidence can be found within the source link (e.g. page number, slide number, table number)"
+        type="text" [required]="false"
+        [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.readiness_details_of_evidence"></app-pr-textarea>
 
-<app-pr-input label="Evidence link" placeholder="Link goes here"
-    [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.use_evidence_link">
-</app-pr-input>
+    <div class="fragment_section_divider"></div>
 
-<app-pr-textarea placeholder="Write some..."
-    label="Please provide details of where evidence can be found within the source link (e.g. page number, slide number, table number)"
-    type="text" [required]="false"
-    [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.use_details_of_evidence"></app-pr-textarea>
+    <app-pr-field-header label="Innovation use level evidence-based" [required]="false"
+        [description]="this.useLevelDelfAssessment()"></app-pr-field-header>
+
+    <app-pr-range-level itemTitle="name" itemDescription="definition" optionLabel="name" optionValue="id"
+        [options]="this.innovationUseList"
+        [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.use_level_evidence_based"></app-pr-range-level>
+
+    <app-pr-input label="Evidence link" placeholder="Link goes here"
+        [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.use_evidence_link">
+    </app-pr-input>
+
+    <app-pr-textarea placeholder="Write some..."
+        label="Please provide details of where evidence can be found within the source link (e.g. page number, slide number, table number)"
+        type="text" [required]="false"
+        [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.use_details_of_evidence"></app-pr-textarea>
+</div>
+
+
 
 <div class="fragment_section_divider"></div>
 

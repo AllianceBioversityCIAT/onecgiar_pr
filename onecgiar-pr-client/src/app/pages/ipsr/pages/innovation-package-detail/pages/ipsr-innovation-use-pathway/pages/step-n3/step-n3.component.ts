@@ -16,11 +16,11 @@ export class StepN3Component implements OnInit {
     { id: true, name: 'Yes, an expert workshop was organized' },
     { id: false, name: 'No expert workshop was organized' }
   ];
-  result_core_innovation:any;
+  result_core_innovation: any;
   constructor(public ipsrDataControlSE: IpsrDataControlService, private api: ApiService) {}
 
   ngOnInit(): void {
-    this.GETAllClarisaInnovationReadinessLevels();
+    // this.GETAllClarisaInnovationReadinessLevels();
     this.GETAllClarisaInnovationUseLevels();
     this.getSectionInformation();
     this.api.setTitle('Step 3');
@@ -34,21 +34,21 @@ export class StepN3Component implements OnInit {
       // console.log('%c____________________', 'font-size: 20px; color: #2BBE28;');
       this.result_core_innovation = response.result_core_innovation;
       this.ipsrStep3Body = response;
-      if(this.ipsrStep3Body.innovatonUse.actors.length == 0){
-        this.ipsrStep3Body.innovatonUse.actors.push(new ActorN3())
+      if (this.ipsrStep3Body.innovatonUse.actors.length == 0) {
+        this.ipsrStep3Body.innovatonUse.actors.push(new ActorN3());
       }
-      if(this.ipsrStep3Body.innovatonUse.organization.length == 0){
-        this.ipsrStep3Body.innovatonUse.organization.push(new OrganizationN3())
+      if (this.ipsrStep3Body.innovatonUse.organization.length == 0) {
+        this.ipsrStep3Body.innovatonUse.organization.push(new OrganizationN3());
       }
-      if(this.ipsrStep3Body.result_ip_expert_workshop_organized.length == 0){
-        this.ipsrStep3Body.result_ip_expert_workshop_organized.push(new expert_workshop_organized())
+      if (this.ipsrStep3Body.result_ip_expert_workshop_organized.length == 0) {
+        this.ipsrStep3Body.result_ip_expert_workshop_organized.push(new expert_workshop_organized());
       }
     });
   }
   onSaveSection() {
-    // console.log('%cPATCH', 'font-size: 20px; color: #f68541;');
-    // console.log(this.ipsrStep3Body);
-    // console.log('%c____________________', 'font-size: 20px; color: #f68541;');
+    console.log('%cPATCH', 'font-size: 20px; color: #f68541;');
+    console.log(this.ipsrStep3Body);
+    console.log('%c____________________', 'font-size: 20px; color: #f68541;');
     this.convertOrganizationsTosave();
     this.api.resultsSE.PATCHInnovationPathwayByRiId(this.ipsrStep3Body).subscribe(({ response }) => {
       // console.log(response);
@@ -58,12 +58,12 @@ export class StepN3Component implements OnInit {
     });
   }
 
-  GETAllClarisaInnovationReadinessLevels() {
-    this.api.resultsSE.GETAllClarisaInnovationReadinessLevels().subscribe(({ response }) => {
-      console.log(response);
-      this.rangesOptions = response;
-    });
-  }
+  // GETAllClarisaInnovationReadinessLevels() {
+  //   this.api.resultsSE.GETAllClarisaInnovationReadinessLevels().subscribe(({ response }) => {
+  //     console.log(response);
+  //     this.rangesOptions = response;
+  //   });
+  // }
 
   GETAllClarisaInnovationUseLevels() {
     this.api.resultsSE.GETAllClarisaInnovationUseLevels().subscribe(({ response }) => {
@@ -106,7 +106,6 @@ export class StepN3Component implements OnInit {
   }
 
   resultUrl(resultCode) {
-    
     return `/result/result-detail/${resultCode}/general-information`;
   }
 
@@ -114,11 +113,11 @@ export class StepN3Component implements OnInit {
     return `A template participant list can be downloaded <a href=""  class="open_route" target="_blank">here</a>`;
   }
 
-  addExpert(){
-    this.ipsrStep3Body.result_ip_expert_workshop_organized.push(new expert_workshop_organized())
+  addExpert() {
+    this.ipsrStep3Body.result_ip_expert_workshop_organized.push(new expert_workshop_organized());
   }
 
-  delete(index){
-    this.ipsrStep3Body.result_ip_expert_workshop_organized.splice(index,1);
+  delete(index) {
+    this.ipsrStep3Body.result_ip_expert_workshop_organized.splice(index, 1);
   }
 }
