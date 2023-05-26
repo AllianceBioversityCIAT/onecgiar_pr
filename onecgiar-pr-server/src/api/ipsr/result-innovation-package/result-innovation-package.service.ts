@@ -46,6 +46,7 @@ import { Year } from '../../results/years/entities/year.entity';
 import { YearRepository } from '../../results/years/year.repository';
 import { LinkedResultRepository } from '../../results/linked-results/linked-results.repository';
 import { EvidencesRepository } from '../../results/evidences/evidences.repository';
+import { IpsrService } from '../ipsr.service';
 
 @Injectable()
 export class ResultInnovationPackageService {
@@ -79,6 +80,7 @@ export class ResultInnovationPackageService {
     protected readonly _yearRepository: YearRepository,
     protected readonly _linkedResultRepository: LinkedResultRepository,
     protected readonly _evidenceRepository: EvidencesRepository,
+    protected readonly _ipsrService: IpsrService,
   ) {}
 
   async findUnitTime() {
@@ -284,34 +286,6 @@ export class ResultInnovationPackageService {
         }
         innovationTitle = `Innovation Package and Scaling Readiness assessment for ${result.title.toLocaleLowerCase()}.`;
       }
-
-      // if (CreateResultInnovationPackageDto.geo_scope_id === 2) {
-      //   const regionsList = regions.map((r) => r.name);
-      //   innovationTitle = `Innovation Package and Scaling Readiness assessment for ${
-      //     result.title
-      //   } in ${regionsList.slice(0, -1).join(', ')}${
-      //     regionsList.length > 1 ? ' and ' : ''
-      //   }${regionsList[regionsList.length - 1]}`;
-      // } else if (
-      //   CreateResultInnovationPackageDto.geo_scope_id === 3 ||
-      //   CreateResultInnovationPackageDto.geo_scope_id === 4
-      // ) {
-      //   const countriesList = countries.map((c) => c.name);
-      //   innovationTitle = `Innovation Package and Scaling Readiness assessment for ${
-      //     result.title.toLocaleLowerCase()
-      //   } in ${countriesList.slice(0, -1).join(', ')}${
-      //     countriesList.length > 1 ? ' and ' : ''
-      //   }${countriesList[countriesList.length - 1]}`;
-      // } else if (CreateResultInnovationPackageDto.geo_scope_id === 5) {
-      //   const countriesList = countries.map((c) => c.name);
-      //   innovationTitle = `Innovation Package and Scaling Readiness assessment for ${
-      //     result.title.toLocaleLowerCase()
-      //   } in ${countriesList.slice(0, -1).join(', ')}${
-      //     countriesList.length > 1 ? ' and ' : ''
-      //   }${countriesList[countriesList.length - 1]}`;
-      // } else {
-      //   innovationTitle = `Innovation Package and Scaling Readiness assessment for ${result.title.toLocaleLowerCase()}.`;
-      // }
 
       const titleValidate = await this._resultRepository
         .createQueryBuilder('result')
@@ -700,7 +674,7 @@ export class ResultInnovationPackageService {
         }
       }
 
-      const updateResult = await this._resultRepository.update(resultId, {
+      await this._resultRepository.update(resultId, {
         title: req?.title,
         description: req?.description,
         lead_contact_person: req?.lead_contact_person,
@@ -713,14 +687,6 @@ export class ResultInnovationPackageService {
       });
 
       if (req?.gender_tag_level_id === 3) {
-        if (!req?.evidence_gender_tag) {
-          return {
-            response: { valid: false },
-            message: 'The evidence for Gender tag is required',
-            status: HttpStatus.BAD_REQUEST,
-          };
-        }
-
         const genderEvidenceExist = await this._evidenceRepository.findOne({
           where: {
             result_id: resultId,
@@ -748,14 +714,6 @@ export class ResultInnovationPackageService {
       }
 
       if (req?.climate_change_tag_level_id === 3) {
-        if (!req?.evidence_climate_tag) {
-          return {
-            response: { valid: false },
-            message: 'The evidence for Climate tag is required',
-            status: HttpStatus.BAD_REQUEST,
-          };
-        }
-
         const climateEvidenceExist = await this._evidenceRepository.findOne({
           where: {
             result_id: resultId,
@@ -782,8 +740,10 @@ export class ResultInnovationPackageService {
         }
       }
 
+      const { response } = await this._ipsrService.findOneInnovation(resultId);
+
       return {
-        response: updateResult,
+        response: response,
         message: 'Successfully updated',
         status: HttpStatus.OK,
       };
