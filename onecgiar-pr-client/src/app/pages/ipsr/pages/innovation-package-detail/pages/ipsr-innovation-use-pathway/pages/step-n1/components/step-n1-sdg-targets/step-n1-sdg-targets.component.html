@@ -1,6 +1,7 @@
 <app-pr-field-header
     label="Specify to which SDG Target(s) the scaling of the core innovation is expected to contribute to by 2030 in the specific country/ subnational context"></app-pr-field-header>
 
+<div>Select an SDG to filter the list of targets:</div>
 <div class="sdg_targets">
     <div class="sdg_item" *ngFor="let sdgItem of this.sdgTargetLis" (click)="onSelectSDG(sdgItem)">
         <img [src]="'assets/sdg/'+sdgItem?.sdgId+'.png'" alt="" srcset=""

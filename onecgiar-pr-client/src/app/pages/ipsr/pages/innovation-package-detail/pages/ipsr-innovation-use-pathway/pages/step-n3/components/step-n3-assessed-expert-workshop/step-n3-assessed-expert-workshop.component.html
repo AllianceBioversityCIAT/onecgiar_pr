@@ -32,7 +32,10 @@
 
                 <!-- <div>{{attrList[j]}} {{j}}</div> -->
 
-                <div *ngIf="j <= 0">Core innovation</div>
+                <div *ngIf="j <= 0">
+                    <strong>Core innovation</strong>
+                    <!-- <div>{{this.body?.result_ip_result_core?.obj_result?.title}}</div> -->
+                </div>
                 <app-pr-select *ngIf="j > 0" class="segment_title_margin" [indexReference]="j"
                     [options]="this.rangeListByIndex(j)" optionLabel="index" optionValue="id"
                     placeholder="Select a level" [(ngModel)]="this.body.result_ip_result_core[attrList[j]]">
@@ -47,7 +50,10 @@
 
                 <!-- <div>{{attrList[j]}} {{j}}</div> -->
 
-                <div *ngIf="j <= 0">Complementary innovation / enabler / solution #{{i+1}}</div>
+                <div *ngIf="j <= 0">
+                    <strong>Complementary innovation / enabler / solution #{{i+1}}</strong>
+                    <div>{{resultComplementary?.obj_result?.title}}</div>
+                </div>
                 <app-pr-select *ngIf="j > 0" class="segment_title_margin" [indexReference]="j+i"
                     [options]="this.rangeListByIndex(j)" optionLabel="value" optionValue="value"
                     placeholder="Select a level" [(ngModel)]="resultComplementary[attrList[j]]">

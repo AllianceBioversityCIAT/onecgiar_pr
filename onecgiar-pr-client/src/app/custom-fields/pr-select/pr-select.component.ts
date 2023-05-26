@@ -34,6 +34,7 @@ export class PrSelectComponent implements ControlValueAccessor {
   @Input() showPartnerAlert: boolean = false;
   @Input() extraInformation: boolean = false;
   @Input() indexReference: number = null;
+  @Input() noDataText: string = '';
 
   @Output() selectOptionEvent = new EventEmitter();
   private _optionsIntance: any[];

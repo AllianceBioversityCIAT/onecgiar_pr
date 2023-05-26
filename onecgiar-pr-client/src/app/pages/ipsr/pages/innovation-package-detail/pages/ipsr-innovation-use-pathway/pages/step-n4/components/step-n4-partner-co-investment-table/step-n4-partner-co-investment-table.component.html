@@ -4,13 +4,14 @@
             [required]="false"></app-pr-field-header>
     </div>
     <div class="unitW">
-        <app-pr-input placeholder="Number" type="number" [required]="false" [readOnly]="true"
+        <app-pr-input placeholder="Number" type="number" [required]="false" noDataText="#" [readOnly]="true"
             [(ngModel)]="this.body.partner_expected_time">
         </app-pr-input>
     </div>
     <div>
-        <app-pr-select [options]="this.manageRipUnitTimeSE.unitTimeList" [readOnly]="true" optionLabel="name"
-            optionValue="unit_time_id" [(ngModel)]="this.body.partner_unit_time_id" placeholder="Select">
+        <app-pr-select [options]="this.manageRipUnitTimeSE.unitTimeList" noDataText="Month(s)/Year(s)" [readOnly]="true"
+            optionLabel="name" optionValue="unit_time_id" [(ngModel)]="this.body.partner_unit_time_id"
+            placeholder="Select">
         </app-pr-select>
     </div>
 </div>
@@ -26,13 +27,12 @@
     <tr *ngFor="let option of this.body.institutions_expected_investment; let i=index"
         [hidden]="option.institution.is_active == false">
         <td>
-            {{option.institution.institutions_name}}
-            <app-pr-field-header label="Delivery type"></app-pr-field-header>
-
-
-
-
-
+            <div class="name">{{option.institution.institutions_name}}</div>
+            <div class="type"> <strong>Delivery type:</strong> {{option?.institution?.institutions_type_name}}</div>
+            <div style="margin-top: -10px;margin-bottom: 5px;">
+                <app-pr-field-header label="Partner role">
+                </app-pr-field-header>
+            </div>
 
             <div class="deliveries" [ngClass]="{'readOnly_deliveries': this.rolesSE.readOnly}">
                 <div class="delivery"
