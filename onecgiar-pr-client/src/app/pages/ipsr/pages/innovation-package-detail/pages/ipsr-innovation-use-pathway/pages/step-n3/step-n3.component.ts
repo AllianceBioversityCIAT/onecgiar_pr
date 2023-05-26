@@ -21,7 +21,7 @@ export class StepN3Component implements OnInit {
   constructor(public ipsrDataControlSE: IpsrDataControlService, private api: ApiService, private router: Router) {}
 
   ngOnInit(): void {
-    // this.GETAllClarisaInnovationReadinessLevels();
+    this.GETAllClarisaInnovationReadinessLevels();
     this.GETAllClarisaInnovationUseLevels();
     this.getSectionInformation();
     this.api.setTitle('Step 3');
