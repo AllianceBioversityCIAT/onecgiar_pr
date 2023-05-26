@@ -9,13 +9,20 @@
 <div  *ngIf="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true" 
 
 >
-<div class="infoPersons" *ngFor="let expertItem of this.ipsrStep3Body.result_ip_expert_workshop_organized; let i = index;" appYmzListStructureItem (deleteEvent)="delete(i)">
-    <app-pr-input label="Facilitators" [required]="true" placeholder="First Name" [(ngModel)]="expertItem.first_name"></app-pr-input>
-    <app-pr-input  label="Last Name"  [required]="true" placeholder="Last Name" [(ngModel)]="expertItem.last_name"></app-pr-input>
-    <app-pr-input label="Email" [required]="false" placeholder="Email" [(ngModel)]="expertItem.email"></app-pr-input>
-    <app-pr-input label="Role" [required]="false" placeholder="Lead/Co-lead" [(ngModel)]="expertItem.workshop_role"></app-pr-input>
-   
+<app-pr-field-header label="Facilitators" [required]="false"></app-pr-field-header>
+<div style="margin-top: 20px;" *ngFor="let expertItem of this.ipsrStep3Body.result_ip_expert_workshop_organized; let i = index;" appYmzListStructureItem (deleteEvent)="delete(i)">
+    
+    <div class="infoPersons" >
+        
+        <app-pr-input label="First Name" [required]="true" placeholder="First Name" [(ngModel)]="expertItem.first_name"></app-pr-input>
+        <app-pr-input  label="Last Name"  [required]="true" placeholder="Last Name" [(ngModel)]="expertItem.last_name"></app-pr-input>
+        <app-pr-input label="Email" [required]="false" placeholder="Email" [(ngModel)]="expertItem.email"></app-pr-input>
+        <app-pr-input label="Role" [required]="false" placeholder="Lead/Co-lead" [(ngModel)]="expertItem.workshop_role"></app-pr-input>
+       
+    </div>
 </div>
+
+
     
 </div>
 <div *ngIf="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true">

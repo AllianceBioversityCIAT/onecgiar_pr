@@ -233,10 +233,10 @@ export class InnovationPathwayStepFourService {
         {
           initiative_unit_time_id: saveStepFourDto.initiative_unit_time_id,
           initiative_expected_time: saveStepFourDto.initiative_expected_time,
-          bilateral_unit_time_id: saveStepFourDto.bilateral_unit_time_id,
-          bilateral_expected_time: saveStepFourDto.bilateral_expected_time,
-          partner_unit_time_id: saveStepFourDto.partner_unit_time_id,
-          partner_expected_time: saveStepFourDto.partner_expected_time,
+          bilateral_unit_time_id: saveStepFourDto.initiative_unit_time_id,
+          bilateral_expected_time: saveStepFourDto.initiative_expected_time,
+          partner_unit_time_id: saveStepFourDto.initiative_unit_time_id,
+          partner_expected_time: saveStepFourDto.initiative_expected_time,
           is_result_ip_published: saveStepFourDto.is_result_ip_published,
           ipsr_pdf_report:
             saveStepFourDto.is_result_ip_published === true
