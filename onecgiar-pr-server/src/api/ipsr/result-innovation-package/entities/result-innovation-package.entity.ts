@@ -228,12 +228,6 @@ export class ResultInnovationPackage extends BaseEntity {
   @OneToMany(() => Ipsr, (i) => i.obj_result_by_innovation_package)
   obj_result: Ipsr[];
 
-  @OneToMany(
-    () => ResultsInnovationPackagesEnablerType,
-    (ripet) => ripet.obj_result_by_innovation_package,
-  )
-  children_innovation_packages_enabler_type: ResultsInnovationPackagesEnablerType[];
-
   @ManyToOne(() => ClarisaInnovationReadinessLevel, (cirl) => cirl.id)
   @JoinColumn({
     name: 'use_level_evidence_based',

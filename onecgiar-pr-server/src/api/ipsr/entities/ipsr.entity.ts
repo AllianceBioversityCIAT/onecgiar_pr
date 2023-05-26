@@ -18,6 +18,7 @@ import { ResultsIpInstitutionType } from '../results-ip-institution-type/entitie
 import { ResultsByIpInnovationUseMeasure } from '../results-by-ip-innovation-use-measures/entities/results-by-ip-innovation-use-measure.entity';
 import { ClarisaInnovationReadinessLevel } from '../../../clarisa/clarisa-innovation-readiness-levels/entities/clarisa-innovation-readiness-level.entity';
 import { ClarisaInnovationUseLevel } from '../../../clarisa/clarisa-innovation-use-levels/entities/clarisa-innovation-use-level.entity';
+import { ResultsInnovationPackagesEnablerType } from '../results-innovation-packages-enabler-type/entities/results-innovation-packages-enabler-type.entity';
 
 @Entity('result_by_innovation_package')
 export class Ipsr extends BaseEntity {
@@ -204,4 +205,10 @@ export class Ipsr extends BaseEntity {
     name: 'potential_innovation_use_level',
   })
   obj_potential_innovation_use_level!: ClarisaInnovationUseLevel;
+
+  @OneToMany(
+    () => ResultsInnovationPackagesEnablerType,
+    (ripet) => ripet.obj_result_by_innovation_package,
+  )
+  children_innovation_packages_enabler_type: ResultsInnovationPackagesEnablerType[];
 }
