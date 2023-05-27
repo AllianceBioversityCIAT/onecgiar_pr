@@ -128,7 +128,7 @@ export class TableInnovationComponent{
   }
 
   Ondelete(id){
-    this.api.alertsFe.show({ id: 'confirm-delete-result', title: `Are you sure you want to remove this complementary innovation?`, description: `If you delete this result it will no longer be displayed in the list of results.`, status: 'success', confirmText: 'Yes, delete' }, () => {
+    this.api.alertsFe.show({ id: 'confirm-delete-result', title: `Are you sure you want to remove this complementary innovation?`, description: ``, status: 'success', confirmText: 'Yes, delete' }, () => {
       // console.log('delete');
       this.api.resultsSE.DELETEcomplementaryinnovation(id).subscribe((resp) =>{
         console.log(resp);
