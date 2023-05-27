@@ -118,6 +118,8 @@ export class InnovationPathwayStepTwoService {
     user: TokenDto,
     saveData: getInnovationComInterface[],
   ) {
+    console.log("🚀 ~ file: innovation-pathway-step-two.service.ts:121 ~ InnovationPathwayStepTwoService ~ resultId:", resultId)
+    console.log("🚀 ~ file: innovation-pathway-step-two.service.ts:121 ~ InnovationPathwayStepTwoService ~ saveData:", saveData)
     try {
       const result = await this._resultRepository.findOne({
         where: {
@@ -464,19 +466,6 @@ export class InnovationPathwayStepTwoService {
         complementaryFunctions,
         referenceMaterials,
       } = updateComplementaryInnovationDto;
-
-      if (
-        !title ||
-        !short_title ||
-        !description ||
-        !complementaryFunctions.length
-      ) {
-        return {
-          response: { valid: false },
-          message: 'Missing fields',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
 
       const vTemp = await this._versionsService.findBaseVersion();
       if (vTemp.status >= 300) {
