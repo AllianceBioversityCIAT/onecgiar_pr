@@ -77,7 +77,8 @@ export class TableInnovationComponent{
     
     this.api.resultsSE.GETComplementaryById(id).subscribe((resp) =>{
       console.log(resp['response']);
-
+      this.complementaries = false;
+      this.selectComplementary = []
       this.informationComplentary.title = resp['response']['findResult']['title']
       this.informationComplentary.description = resp['response']['findResult']['description']
       this.informationComplentary.short_title = resp['response']['findResultComplementaryInnovation']['short_title']
@@ -90,7 +91,7 @@ export class TableInnovationComponent{
       console.log(this.selectComplementary);
       setTimeout(() => {
         this.complementaries = true;
-      }, 500);
+      }, 100);
       
       
       
@@ -127,7 +128,7 @@ export class TableInnovationComponent{
   }
 
   Ondelete(id){
-    this.api.alertsFe.show({ id: 'confirm-delete-result', title: `Are you sure you want to remove this complementary innovation?`, description: `If you delete this result it will no longer be displayed in the list of results.`, status: 'success', confirmText: 'Yes, delete' }, () => {
+    this.api.alertsFe.show({ id: 'confirm-delete-result', title: `Are you sure you want to remove this complementary innovation?`, description: ``, status: 'success', confirmText: 'Yes, delete' }, () => {
       // console.log('delete');
       this.api.resultsSE.DELETEcomplementaryinnovation(id).subscribe((resp) =>{
         console.log(resp);
