@@ -112,7 +112,10 @@ export class TableInnovationComponent{
   }
 
   onSave(){
+    this.informationComplentary.complementaryFunctions = []
     for (let index = 0; index < this.selectComplementary.length; index++) {
+      console.log(this.selectComplementary.length);
+      
       const complementaryFunctions = {
         complementary_innovation_functions_id:  this.selectComplementary[index]
       }
