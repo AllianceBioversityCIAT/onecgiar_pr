@@ -77,7 +77,8 @@ export class TableInnovationComponent{
     
     this.api.resultsSE.GETComplementaryById(id).subscribe((resp) =>{
       console.log(resp['response']);
-
+      this.complementaries = false;
+      this.selectComplementary = []
       this.informationComplentary.title = resp['response']['findResult']['title']
       this.informationComplentary.description = resp['response']['findResult']['description']
       this.informationComplentary.short_title = resp['response']['findResultComplementaryInnovation']['short_title']
@@ -90,7 +91,7 @@ export class TableInnovationComponent{
       console.log(this.selectComplementary);
       setTimeout(() => {
         this.complementaries = true;
-      }, 500);
+      }, 100);
       
       
       
