@@ -27,7 +27,7 @@
         </tr>
         <tr>
 
-            <td *ngFor="let attr of attrList; let j=index" [ngClass]="{'first_col': j <= 0}"
+            <td *ngFor="let attr of attrList; let j=index" [ngClass]="{'first_col': j <= 0,'min_select':j>=1}"
                 [hidden]="j>= 3 && this.body.result_innovation_package.assessed_during_expert_workshop_id != 2">
 
                 <!-- <div>{{attrList[j]}} {{j}}</div> -->
