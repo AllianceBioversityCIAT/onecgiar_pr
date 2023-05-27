@@ -40,8 +40,13 @@ export class TableInnovationComponent{
   loading:boolean = true;
   informationComplentary:complementaryInnovation = new complementaryInnovation();
   @Output() selectInnovationEvent = new EventEmitter<ComplementaryInnovation>();
+  @Output() saveedit = new EventEmitter<any>();
   @Input() selectionsInnovation :any [];
   @Input() informationComplementaryInnovations :any [] = [];
+  @Input() columns:any[];
+  selectComplementary:any[] = [];
+  complementaries = false;
+  idInnovation:number;
   constructor(public api: ApiService, public manageInnovationsListSE: ManageInnovationsListService) {}
 
   columnOrder = [
@@ -63,30 +68,79 @@ export class TableInnovationComponent{
     this.status = true;
     if(isRead == 0){
       this.isReadonly = true;
+    }else{
+      this.isReadonly = false;
     }
-    
+    this.idInnovation = id;
     console.log(id);
 
     
     this.api.resultsSE.GETComplementaryById(id).subscribe((resp) =>{
-      console.log(resp['response']['findResult']['title']);
+      console.log(resp['response']);
 
       this.informationComplentary.title = resp['response']['findResult']['title']
       this.informationComplentary.description = resp['response']['findResult']['description']
       this.informationComplentary.short_title = resp['response']['findResultComplementaryInnovation']['short_title']
-      this.informationComplentary.referencesMaterial = resp['response']['evidence']
-
+      this.informationComplentary.other_funcions = resp['response']['findResultComplementaryInnovation']['other_funcions']
+      this.informationComplentary.referenceMaterials = resp['response']['evidence']
+      resp['response']['findComplementaryInnovationFuctions'].forEach(element => {
+        this.selectComplementary.push(element['complementary_innovation_function_id'])
+      });
       console.log(this.informationComplentary);
+      console.log(this.selectComplementary);
+      setTimeout(() => {
+        this.complementaries = true;
+      }, 500);
+      
+      
       
     });
   }
 
   addNewInput(){
-    if(this.informationComplentary.referencesMaterial.length  < 3){
-      this.informationComplentary.referencesMaterial.push(new references() );
+    if(this.informationComplentary.referenceMaterials.length  < 3){
+      this.informationComplentary.referenceMaterials.push(new references() );
     }else{
       this.statusAdd = true;
     }
+  }
+
+  selected(){
+    console.log(this.selectComplementary);
+    
+  }
+
+  onSave(){
+    for (let index = 0; index < this.selectComplementary.length; index++) {
+      const complementaryFunctions = {
+        complementary_innovation_functions_id:  this.selectComplementary[index]
+      }
+      this.informationComplentary.complementaryFunctions.push(complementaryFunctions);
+    }
+    this.api.resultsSE.PATCHcomplementaryinnovation(this.informationComplentary,this.idInnovation).subscribe((resp) =>{
+      console.log(resp);
+      this.status = false;
+      this.saveedit.emit(true);
+    })
+    console.log(this.informationComplentary);
+    
+  }
+
+  Ondelete(id){
+    this.api.alertsFe.show({ id: 'confirm-delete-result', title: `Are you sure you want to remove this complementary innovation?`, description: `If you delete this result it will no longer be displayed in the list of results.`, status: 'success', confirmText: 'Yes, delete' }, () => {
+      // console.log('delete');
+      this.api.resultsSE.DELETEcomplementaryinnovation(id).subscribe((resp) =>{
+        console.log(resp);
+        this.status = false;
+        this.saveedit.emit(true);
+      },
+      err => {
+        console.log(err);
+        this.api.alertsFe.show({ id: 'delete-error', title: 'Error when delete result', description: '', status: 'error' });
+      }
+      )
+      
+    });
   }
 
 }
@@ -95,7 +149,9 @@ export class complementaryInnovation{
   short_title:string = null;
   title:string= null;
   description:string= null;
-  referencesMaterial:references[] =[];
+  referenceMaterials:references[] =[];
+  complementaryFunctions:any[] = new Array();
+  other_funcions:string;
 }
 
 export class references{

@@ -34,21 +34,21 @@ export class ComplementaryInnovationComponent implements OnInit {
   complemntaryFunction:any;
   status:boolean = false;
   informationComplementaryInnovations:any[] = [];
+  cols = [];
   constructor(public api: ApiService, private ipsrDataControlSE: IpsrDataControlService, private router: Router) {}
 
   ngOnInit(): void {
     this.api.isStepTwoOne = true;
     this.api.isStepTwoTwo = false;
     
-    this.api.resultsSE.GETInnovationPathwayStepTwoInnovationSelect().subscribe((resp) => {
-      this.innovationPackageCreatorBody = resp['response']
-      console.log(resp);
-      
-    });
+    this.innovationSving();
 
     this.api.resultsSE.GETComplementataryInnovationFunctions().subscribe((resp) => {
       console.log(resp);
       this.complemntaryFunction = resp['response']
+      this.columns();
+      console.log(this.cols);
+      
     });
 
     this.getInformationInnovationComentary(false);
@@ -59,9 +59,39 @@ export class ComplementaryInnovationComponent implements OnInit {
     
   }
 
+  innovationSving(){
+    this.api.resultsSE.GETInnovationPathwayStepTwoInnovationSelect().subscribe((resp) => {
+      this.innovationPackageCreatorBody = resp['response']
+      console.log(resp);
+      
+    });
+  }
+
+
   async createInnovationEvent(e) {
     this.innovationPackageCreatorBody.push(e);
     this.getInformationInnovationComentary(true);
+  }
+
+  columns(){
+    let contador = 0;
+    let auxCols = [];
+    this.complemntaryFunction.forEach(element => {
+      if(contador < 5){
+        auxCols.push(element);
+      }else{
+        if (contador == 5) {
+          this.cols.push(auxCols);
+          auxCols = [];
+        }
+        
+        auxCols.push(element);
+      }
+      
+      contador++;
+    });
+
+    this.cols.push(auxCols);
   }
 
   cancelInnovation(result_id:any){
@@ -133,5 +163,10 @@ export class ComplementaryInnovationComponent implements OnInit {
         inno.result_code = Number(inno.result_code);
       });
     })
+  }
+
+  saveEdit(e){
+    this.getInformationInnovationComentary(true);
+    this.innovationSving();
   }
 }

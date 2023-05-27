@@ -46,11 +46,11 @@
                         <div class="link_button" (click)="getComplementaryInnovation(result['result_id'], 0)">
                             <i class="material-icons-round" style="font-size: 20px;" >visibility</i>
                         </div>
-                        <div class="link_button" >
-                            <i class="material-icons-round" style="font-size: 20px;">edit</i>
+                        <div class="link_button" (click)="getComplementaryInnovation(result['result_id'], 1)">
+                            <i class="material-icons-round" style="font-size: 20px;" >edit</i>
                         </div>
-                        <div class="link_button" style="background-color: red;">
-                            <i class="material-icons-round" style="font-size: 20px;">delete</i>
+                        <div class="link_button" style="background-color: red;" (click)="Ondelete(result['result_id'])">
+                            <i class="material-icons-round" style="font-size: 20px;" >delete</i>
                         </div>
                     </td>
                 </tr>
@@ -112,14 +112,27 @@
             <app-pr-field-header label="Function" [required]="true"
                 description='
             What the complementary innovation/ enabler/ solution tries to achieve (select multiple):'></app-pr-field-header>
-            
-            
+            <div class="container" *ngIf="complementaries">
+                <div class="col{{i}}" *ngFor="let item of columns; let i = index" >
+                    <div *ngFor="let subItem of item" style="margin-bottom: 10px;">
+                        <p-checkbox name="name" [value]="subItem.complementary_innovation_functions_id" 
+                        [inputId]="subItem.complementary_innovation_functions_id" 
+                        [(ngModel)]="selectComplementary" (ngModelChange)=" selected()" [disabled]="isReadonly"></p-checkbox>
+                            <label> {{ subItem.name }}</label> 
+                    </div>
+                    
+                </div>
+               
+            </div>
+            <div style="display: flex; align-content: flex-end; width: 100%;  justify-content: flex-end;" *ngIf="complementaries">
+                <app-pr-input [readOnly]="isReadonly" style="width: 47%;margin-top: -40px;margin-left: 20px;" label="Other enabler functions" [required]="false" [(ngModel)]="this.informationComplentary.other_funcions" placeholder=""></app-pr-input>
+            </div>
 
             <app-pr-field-header label="Reference materials" [required]="false" description='
             Max 3.'></app-pr-field-header>
             
            
-                <div style="display: flex; flex-direction: row;" *ngFor="let item of this.informationComplentary.referencesMaterial; let i = index">
+                <div style="display: flex; flex-direction: row;" *ngFor="let item of this.informationComplentary.referenceMaterials; let i = index">
                    
                     <div
                         style="background-color:aliceblue ; width: 5%; display: flex; align-items: center; justify-content: center; color: black;">
@@ -127,14 +140,14 @@
                     <div style="width: 95%;"><app-pr-input placeholder="Link"
                         [(ngModel)]="item.link" [readOnly]="isReadonly"> </app-pr-input></div>
                 </div>
-                <app-pr-button text="Add reference material" padding="medium" (click)="addNewInput()"
+                <app-pr-button text="Add reference material" padding="medium" *ngIf="isReadonly == false" (click)="addNewInput()"
                     [ngClass]="{'globalDisabled': statusAdd}"></app-pr-button>
             <!-- flagsCode="iso_alpha_2" -->
         </div>
     </div>
     <div class="buttons">
 
-        <app-pr-button text="Save and continue" padding="medium" colorType="success" ></app-pr-button>
+        <app-pr-button text="Save and continue" *ngIf="isReadonly == false" padding="medium" colorType="success" (click)="onSave()"></app-pr-button>
     </div>
 
 </p-dialog>

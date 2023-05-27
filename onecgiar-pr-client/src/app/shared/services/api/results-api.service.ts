@@ -678,4 +678,12 @@ export class ResultsApiService {
   getAssessedDuringExpertWorkshop() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/assessed-during-expert-workshop`);
   }
+
+  PATCHcomplementaryinnovation(body, idResult) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/updated/complementary-innovation/${idResult}`, body).pipe(this.saveButtonSE.isSavingPipe());
+  }
+
+  DELETEcomplementaryinnovation( idResult) {
+    return this.http.delete<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/delete/complementary-innovation/${idResult}`);
+  }
 }
