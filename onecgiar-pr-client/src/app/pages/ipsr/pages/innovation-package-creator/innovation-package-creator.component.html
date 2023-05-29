@@ -12,7 +12,7 @@
             [options]="this.api.dataControlSE.myInitiativesList" label="Primary submitter of the innovation package"
             [isStatic]="true" optionLabel="full_name" optionValue="initiative_id" placeholder="Select initiative"
             description="Select an initiative"
-            (selectOptionEvent)="this.manageInnovationsListSE.GETallInnovations(this.innovationPackageCreatorBody.initiative_id);"
+            (selectOptionEvent)="this.manageInnovationsListSE.GETallInnovations(this.innovationPackageCreatorBody.initiative_id); status= false;"
             [(ngModel)]="this.innovationPackageCreatorBody.initiative_id">
         </app-pr-select>
 
