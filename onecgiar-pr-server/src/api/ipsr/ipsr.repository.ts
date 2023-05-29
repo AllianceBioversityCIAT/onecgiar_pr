@@ -25,13 +25,26 @@ export class IpsrRepository extends Repository<Ipsr>{
             r.result_type_id,
             r.result_level_id,
             rbi.inititiative_id AS initiative_id,
-            (
-                SELECT
-                    ci.official_code
-                FROM
-                    clarisa_initiatives ci
-                WHERE
-                    ci.id = rbi.inititiative_id
+            IF(
+                (rbi.initiative_role_id = 2),
+                (
+                    SELECT
+                        ci2.official_code
+                    FROM
+                        clarisa_initiatives ci2
+                        LEFT JOIN results_by_inititiative rbi2 ON rbi2.inititiative_id = ci2.id
+                    WHERE
+                        rbi2.initiative_role_id = 1
+                        AND rbi2.result_id = r.id
+                ),
+                (
+                    SELECT
+                        ci.official_code
+                    FROM
+                        clarisa_initiatives ci
+                    WHERE
+                        ci.id = rbi.inititiative_id
+                )
             ) AS official_code,
             r.created_date AS creation_date,
             (
@@ -51,11 +64,12 @@ export class IpsrRepository extends Repository<Ipsr>{
             AND r.is_active = 1
             AND rbi.inititiative_id IN (?)
             AND (
-                rbi.initiative_role_id = 1 
+                rbi.initiative_role_id = 1
                 OR rbi.initiative_role_id = 2
             )
             AND r.result_type_id = 7
-        ORDER BY r.created_date ASC;
+        ORDER BY
+            r.created_date ASC;
         `;
 
         try {
