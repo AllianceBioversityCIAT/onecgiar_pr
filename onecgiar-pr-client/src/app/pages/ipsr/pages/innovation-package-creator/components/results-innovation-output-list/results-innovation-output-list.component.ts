@@ -28,6 +28,8 @@ export class ResultsInnovationOutputListComponent {
   ngOnInit(): void {
     this.cleanSelected();
     this.manageInnovationsListSE.GETallInnovations(this.body.initiative_id);
+    console.log(this.api.rolesSE.readOnly);
+    
   }
 
   ngOnDestroy(): void {

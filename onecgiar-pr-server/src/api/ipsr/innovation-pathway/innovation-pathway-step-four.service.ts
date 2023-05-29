@@ -68,18 +68,17 @@ export class InnovationPathwayStepFourService {
         },
       });
 
-      const initiatives = await this._resultByInitiativeRepository.findOne({
+      const initiatives = await this._resultByInitiativeRepository.find({
         where: {
           result_id: resultId,
           is_active: true,
-          initiative_role_id: 1,
         },
       });
 
       const initiative_expected_investment =
         await this._resultInitiativesBudgetRepository.find({
           where: {
-            result_initiative_id: initiatives.id,
+            result_initiative_id: In(initiatives.map((el) => el.id)),
             is_active: true,
           },
           relations: {
