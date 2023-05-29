@@ -5,12 +5,12 @@ iframe {
     // height: 500px;
 }
 
-// .iframe_spinner {
-//     background-color: red;
-//     position: absolute;
-//     top: 0;
-//     left: 0;
-//     width: 100px;
-//     height: 100px;
-//     z-index: 10000;
-// }
+.iframe_spinner {
+    background-color: rgb(51, 51, 51);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+}

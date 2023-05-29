@@ -1,11 +1,16 @@
 <!-- (sandbox)="handleError($event)" -->
-<iframe onload="iframeLoaded = true;loaded()" [src]="this.report.sanitizedUrl" *ngIf="this.report.sanitizedUrl"
-    frameborder="0"></iframe>
+<iframe [src]="this.report.sanitizedUrl" *ngIf="this.report.sanitizedUrl" frameborder="0"></iframe>
 
 <!-- <object data="https://prtest-back.ciat.cgiar.org/api/platform-report/result/56" type="application/pdf" width="100%"
     height="100%">
     <p>Alternative text - include a link <a href="myfile.pdf">to the PDF!</a></p>
 </object> -->
-<!-- <div class="iframe_spinner" *ngIf="this.iframeLoaded || true"></div> -->
-<h1>Hola {{this.error.type}}</h1>
+<div class="iframe_spinner" *ngIf="this.iframeLoaded">
+    <div class="spinner">
+        <div class="info">
+            <img src="assets/icons/spinner.png" class="rotating" alt="" srcset="">
+            <div class="text">Generating pdf, please wait...</div>
+        </div>
+    </div>
+</div>
 <app-page-alert *ngIf="this.error.type" [type]="this.error.type"></app-page-alert>
