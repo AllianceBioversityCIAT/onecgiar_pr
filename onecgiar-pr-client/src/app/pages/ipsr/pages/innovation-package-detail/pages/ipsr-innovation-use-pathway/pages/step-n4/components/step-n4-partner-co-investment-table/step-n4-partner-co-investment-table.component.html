@@ -1,9 +1,9 @@
 <div class="unit_of_time_container">
     <div>
-        <app-pr-field-header label="Expected partner co-investment (from own resources) in Innovation Package in next"
+        <app-pr-field-header label="Expected partner co-investment (from own resources) in Innovation Package in"
             [required]="false"></app-pr-field-header>
     </div>
-    <div class="unitW">
+    <!-- <div class="unitW">
         <app-pr-input placeholder="Number" type="number" [required]="false" noDataText="#" [readOnly]="true"
             [(ngModel)]="this.body.partner_expected_time">
         </app-pr-input>
@@ -13,14 +13,14 @@
             optionLabel="name" optionValue="unit_time_id" [(ngModel)]="this.body.partner_unit_time_id"
             placeholder="Select">
         </app-pr-select>
-    </div>
+    </div> -->
 </div>
 
 <table>
     <tr>
         <th>Partner</th>
-        <th>In-kind investment (staff time, etc.) USD</th>
-        <th>In-cash USD investment</th>
+        <th>Remainder of calendar year <br> (in-kind + in-cash USD value)</th>
+        <th>Next calendar year <br> (in-kind + in-cash USD value)</th>
         <th></th>
         <th *ngIf="!this.rolesSE.readOnly"></th>
     </tr>
@@ -29,11 +29,11 @@
         <td>
             <div class="name">{{option.institution.institutions_name}}</div>
             <div class="type"> <strong>Institution type:</strong> {{option?.institution?.institutions_type_name}}</div>
-            <div style="margin-top: -10px;margin-bottom: 5px;">
+            <!-- <div style="margin-top: -10px;margin-bottom: 5px;">
                 <app-pr-field-header label="Partner role">
                 </app-pr-field-header>
-            </div>
-
+            </div> -->
+            <!-- 
             <div class="deliveries" [ngClass]="{'readOnly_deliveries': this.rolesSE.readOnly}">
                 <div class="delivery"
                     *ngIf="this.rolesSE.readOnly ? validateDeliverySelection(option?.institution.deliveries,1) : true"
@@ -50,14 +50,14 @@
                 <div class="delivery"
                     *ngIf="this.rolesSE.readOnly ? validateDeliverySelection(option?.institution?.deliveries,4) : true"
                     [ngClass]="{'active': validateDeliverySelection(option?.institution?.deliveries,4)}"
-                    (click)="onSelectDelivery(option?.institution,4)">Other</div>
+                    (click)="onSelectDelivery(option?.institution,4)">Other</div> -->
 
-                <!-- <div class="info_button" (click)="showInfo = true">
+            <!-- <div class="info_button" (click)="showInfo = true">
 
                     <i class="material-icons-round">help_outline
                     </i>
                 </div> -->
-            </div>
+            <!-- </div> -->
 
 
 
