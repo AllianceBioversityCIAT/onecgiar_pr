@@ -17,7 +17,7 @@ export class StepN1Component implements OnInit {
   ngOnInit(): void {
     this.getSectionInformation();
     this.requestEvent();
-    this.api.setTitle('Step 1');
+    this.api.dataControlSE.detailSectionTitle('Step 1');
   }
 
   getSectionInformation() {

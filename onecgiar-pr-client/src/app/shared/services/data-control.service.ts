@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { ResultItem } from '../interfaces/result.interface';
 import { environment } from '../../../environments/environment';
+import { Title } from '@angular/platform-browser';
 
 @Injectable({
   providedIn: 'root'
@@ -23,7 +24,7 @@ export class DataControlService {
   showResultHistoryOfChangesModal = false;
   platformIsClosed = environment.platformIsClosed;
 
-  constructor() {}
+  constructor(private titleService: Title) {}
   validateBody(body: any) {
     return Object.entries(body).every((item: any) => item[1]);
   }
@@ -121,5 +122,10 @@ export class DataControlService {
       });
     } catch (error) {}
     return Boolean(inputs) || Boolean(selects);
+  }
+
+  detailSectionTitle(sectionName, title?) {
+    this.titleService.setTitle(title ? title : sectionName);
+    this.currentSectionName = title ? title : sectionName;
   }
 }

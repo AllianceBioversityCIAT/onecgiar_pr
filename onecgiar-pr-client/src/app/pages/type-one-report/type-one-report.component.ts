@@ -19,10 +19,10 @@ export class TypeOneReportComponent {
     // { path: 'ipi-cgiar-portfolio-linkages', icon: '', name: 'Impact pathway integration - CGIAR portfolio linkages' },
     { path: 'key-result-story', icon: '', name: 'Key result story', underConstruction: true }
   ];
-  constructor(private titleService: Title, public api: ApiService, public typeOneReportSE: TypeOneReportService, private rolesSE: RolesService, private router: Router) {}
+  constructor(public api: ApiService, public typeOneReportSE: TypeOneReportService, private rolesSE: RolesService, private router: Router) {}
   ngOnInit(): void {
     this.api.rolesSE.validateReadOnly();
-    this.titleService.setTitle('Type one report');
+    this.api.dataControlSE.detailSectionTitle('Type one report');
     this.GET_AllInitiatives();
     // if (!this.rolesSE.isAdmin) this.router.navigate(['/result/results-outlet/results-list']);
   }
@@ -41,7 +41,7 @@ export class TypeOneReportComponent {
     this.typeOneReportSE.sanitizeUrl();
   }
   selectInitiativeEvent() {
-    let currentUrl = this.router.url;
+    const currentUrl = this.router.url;
     this.router.navigateByUrl(`/type-one-report/ipi-cgiar-portfolio-linkages`).then(() => {
       setTimeout(() => {
         this.router.navigateByUrl(currentUrl);

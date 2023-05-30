@@ -17,7 +17,7 @@ export class StepN4Component implements OnInit {
     { id: false, name: 'No, not necessary at this stage' }
   ];
   ngOnInit(): void {
-    this.api.setTitle('Step 4');
+    this.api.dataControlSE.detailSectionTitle('Step 4');
     this.getSectionInformation();
     this.api.dataControlSE.findClassTenSeconds('alert-event-3').then(resp => {
       try {
