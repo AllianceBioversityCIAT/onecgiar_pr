@@ -43,13 +43,13 @@
                     </td>
                     <td class="actions" *ngIf="!this.api.dataControlSE.platformIsClosed && !this.api.rolesSE.readOnly">
 
-                        <div class="link_button" (click)="getComplementaryInnovation(result['result_id'], 0)">
+                        <div class="link_button" (click)="getComplementaryInnovation(result['result_id'], 0, result)">
                             <i class="material-icons-round" style="font-size: 20px;" >visibility</i>
                         </div>
-                        <div class="link_button" (click)="getComplementaryInnovation(result['result_id'], 1)">
+                        <div class="link_button" *ngIf="(this.api.rolesSE.isAdmin || result['permissos']) && result['result_type_id'] == 11" (click)="getComplementaryInnovation(result['result_id'], 1, result)">
                             <i class="material-icons-round" style="font-size: 20px;" >edit</i>
                         </div>
-                        <div class="link_button" style="background-color: red;" (click)="Ondelete(result['result_id'])">
+                        <div class="link_button" *ngIf="(this.api.rolesSE.isAdmin || result['permissos']) && result['result_type_id'] == 11"  style="background-color: red;" (click)="Ondelete(result['result_id'])">
                             <i class="material-icons-round" style="font-size: 20px;" >delete</i>
                         </div>
                     </td>
