@@ -46,5 +46,5 @@
 
 
 <p-menu #menu [popup]="true"
-    [model]="this.api.dataControlSE?.currentResult?.role_id || this.api.rolesSE.isAdmin?  itemsWithDelete:items">
+    [model]="this.api.rolesSE?.validateInitiative(this.api.dataControlSE?.currentResult?.initiative_id) || this.api.rolesSE.isAdmin?  itemsWithDelete:items">
 </p-menu>
