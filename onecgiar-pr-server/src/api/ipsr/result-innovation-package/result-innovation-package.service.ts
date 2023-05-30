@@ -737,42 +737,7 @@ export class ResultInnovationPackageService {
         },
       });
 
-      const climateEvidenceExist = await this._evidenceRepository.findOne({
-        where: {
-          result_id: resultId,
-          is_active: 1,
-          youth_related: true,
-        },
-      });
-
-      if (
-        Number(req?.climate_change_tag_level_id) != 3 ||
-        Number(req?.climate_change_tag_level_id) != 3
-      ) {
-        if (genderEvidenceExist) {
-          await this._evidenceRepository.update(genderEvidenceExist.id, {
-            is_active: 0,
-            last_updated_by: user.id,
-          });
-        }
-
-        if (climateEvidenceExist) {
-          await this._evidenceRepository.update(climateEvidenceExist.id, {
-            is_active: 0,
-            last_updated_by: user.id,
-          });
-        }
-      }
-
-      if (Number(req?.gender_tag_level_id) == 3) {
-        if (!req?.evidence_gender_tag) {
-          return {
-            response: { valid: false },
-            message: 'Please provide a link to the evidence for Gender Tag',
-            status: HttpStatus.BAD_REQUEST,
-          };
-        }
-
+      if (req?.evidence_gender_tag) {
         if (genderEvidenceExist) {
           await this._evidenceRepository.update(genderEvidenceExist.id, {
             link: req?.evidence_gender_tag,
@@ -791,15 +756,15 @@ export class ResultInnovationPackageService {
         }
       }
 
-      if (Number(req?.climate_change_tag_level_id) == 3) {
-        if (!req?.climate_change_tag_level_id) {
-          return {
-            response: { valid: false },
-            message: 'Please provide a link to the evidence for Gender Tag',
-            status: HttpStatus.BAD_REQUEST,
-          };
-        }
+      const climateEvidenceExist = await this._evidenceRepository.findOne({
+        where: {
+          result_id: resultId,
+          is_active: 1,
+          youth_related: true,
+        },
+      });
 
+      if (req?.evidence_climate_tag) {
         if (climateEvidenceExist) {
           await this._evidenceRepository.update(climateEvidenceExist.id, {
             link: req?.evidence_climate_tag,
