@@ -15,9 +15,9 @@ export class PolicyControlListService {
   GET_clarisaPolicyTypes() {
     this.api.resultsSE.GET_clarisaPolicyTypes().subscribe(
       ({ response }) => {
-        // console.log(response);
+        //(response);
         this.policyTypesList = response;
-        // console.log(response);
+        //(response);
       },
       err => {
         console.log(err);
@@ -27,9 +27,9 @@ export class PolicyControlListService {
   GET_clarisaPolicyStages() {
     this.api.resultsSE.GET_clarisaPolicyStages().subscribe(
       ({ response }) => {
-        // console.log(response);
+        //(response);
         this.policyStages = response;
-        // console.log(response);
+        //(response);
       },
       err => {
         console.log(err);

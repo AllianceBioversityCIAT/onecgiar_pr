@@ -16,7 +16,7 @@ export class RdPartnersService {
     return index < 0 ? false : true;
   }
   onSelectDelivery(option, deliveryId) {
-    // console.log('onSelectDelivery');
+    //('onSelectDelivery');
     if (!(typeof option?.deliveries == 'object')) option.deliveries = [];
     const index = option?.deliveries.indexOf(deliveryId);
     index < 0 ? option?.deliveries.push(deliveryId) : option?.deliveries.splice(index, 1);

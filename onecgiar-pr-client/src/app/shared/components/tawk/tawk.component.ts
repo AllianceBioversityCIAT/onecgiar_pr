@@ -23,10 +23,10 @@ export class TawkComponent implements OnInit {
   }
 
   initializeTawkIo() {
-    // console.log(this.user);
+    //(this.user);
 
     if (this.user != undefined) {
-      // console.log('Initializing tawkto');
+      //('Initializing tawkto');
 
       this.script.text = `
 

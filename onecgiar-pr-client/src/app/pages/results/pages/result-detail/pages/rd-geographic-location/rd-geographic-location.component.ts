@@ -57,7 +57,7 @@ export class RdGeographicLocationComponent {
     });
   }
   onSaveSection() {
-    // console.log(this.geographicLocationBody);
+    //(this.geographicLocationBody);
     this.api.resultsSE.PATCH_geographicSection(this.geographicLocationBody).subscribe(({ response }) => {
       this.getSectionInformation();
     });

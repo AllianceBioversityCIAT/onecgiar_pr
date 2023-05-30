@@ -93,7 +93,7 @@ export class PrSelectComponent implements ControlValueAccessor {
     itemFinded.selected = true;
     this.fullValue[this.optionLabel] = itemFinded[this.optionLabel];
 
-    // console.log(itemFinded);
+    //(itemFinded);
 
     return this._optionsIntance;
   }
@@ -102,8 +102,8 @@ export class PrSelectComponent implements ControlValueAccessor {
     this.fullValue = option;
     this.value = option[this.optionValue];
     option.selected = true;
-    // console.log(option);
-    // console.log(this._optionsIntance);
+    //(option);
+    //(this._optionsIntance);
     this.selectOptionEvent.emit(option);
   }
 

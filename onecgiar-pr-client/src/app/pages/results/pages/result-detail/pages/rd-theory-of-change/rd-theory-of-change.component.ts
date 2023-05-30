@@ -32,7 +32,7 @@ export class RdTheoryOfChangeComponent {
     await this.api.resultsSE.GET_toc().subscribe(
       ({ response }) => {
         this.theoryOfChangeBody = response;
-        // console.log(this.theoryOfChangeBody);
+        //(this.theoryOfChangeBody);
         setTimeout(() => {
           this.getConsumed = true;
         }, 100);
@@ -48,7 +48,7 @@ export class RdTheoryOfChangeComponent {
   }
 
   get validateGranTitle() {
-    // console.log(this.theoryOfChangeBody.contributing_np_projects);
+    //(this.theoryOfChangeBody.contributing_np_projects);
     for (const iterator of this.theoryOfChangeBody.contributing_np_projects) {
       const evidencesFinded = this.theoryOfChangeBody.contributing_np_projects.filter(evidence => evidence.grant_title == iterator.grant_title);
       if (evidencesFinded.length >= 2) {
@@ -60,9 +60,9 @@ export class RdTheoryOfChangeComponent {
   }
 
   onSaveSection() {
-    // console.log(this.theoryOfChangeBody);
+    //(this.theoryOfChangeBody);
     this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
-      // console.log(resp);
+      //(resp);
       this.getConsumed = false;
       this.getSectionInformation();
     });
@@ -72,19 +72,19 @@ export class RdTheoryOfChangeComponent {
     return Boolean(document.querySelector('.global-editable'));
   }
   onSelectContributingInitiative() {
-    // console.log();
-    // console.log('onSelectContributingInitiative');
+    //();
+    //('onSelectContributingInitiative');
     this.theoryOfChangeBody.contributing_initiatives?.map((resp: any) => {
-      // console.log(resp);
-      // console.log(this.theoryOfChangeBody.contributors_result_toc_result);
+      //(resp);
+      //(this.theoryOfChangeBody.contributors_result_toc_result);
       const contributorFinded = this.theoryOfChangeBody.contributors_result_toc_result?.find((result: any) => result?.initiative_id == resp.id);
-      // console.log(contributorFinded);
-      let contributorToPush = new resultToResultInterfaceToc();
+      //(contributorFinded);
+      const contributorToPush = new resultToResultInterfaceToc();
       contributorToPush.initiative_id = resp.id;
       contributorToPush.short_name = resp.short_name;
       contributorToPush.official_code = resp.official_code;
       if (!contributorFinded) this.theoryOfChangeBody.contributors_result_toc_result?.push(contributorToPush);
-      // console.log(contributorFinded);
+      //(contributorFinded);
     });
   }
 
@@ -94,14 +94,14 @@ export class RdTheoryOfChangeComponent {
 
   onRemoveContributingInitiative(e) {
     // console.clear();
-    // console.log(e);
+    //(e);
     const contributorFinded = this.theoryOfChangeBody.contributors_result_toc_result?.findIndex((result: any) => result?.initiative_id == e.remove.id);
     this.theoryOfChangeBody.contributors_result_toc_result.splice(contributorFinded, 1);
-    // console.log(contributorFinded);
+    //(contributorFinded);
   }
   addBilateralContribution() {
     this.theoryOfChangeBody.contributing_np_projects.push(new donorInterfaceToc());
-    // console.log(this.theoryOfChangeBody.contributing_np_projects);
+    //(this.theoryOfChangeBody.contributing_np_projects);
   }
   requestEvent() {
     this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
@@ -118,12 +118,12 @@ export class RdTheoryOfChangeComponent {
   }
 
   deletContributingCenter(index) {
-    // console.log(index);
+    //(index);
     this.theoryOfChangeBody?.contributing_center.splice(index, 1);
   }
 
   deleteEvidence(index) {
-    // console.log(index);
+    //(index);
     this.theoryOfChangeBody.contributing_np_projects.splice(index, 1);
   }
 

@@ -42,10 +42,10 @@ export class InitGeneralResultsReportComponent {
   }
 
   GET_AllInitiatives() {
-    // console.log(this.api.rolesSE.isAdmin);
+    //(this.api.rolesSE.isAdmin);
     if (!this.api.rolesSE.isAdmin) return;
     this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
-      // console.log(response);
+      //(response);
       this.allInitiatives = response;
     });
   }
@@ -92,7 +92,7 @@ export class InitGeneralResultsReportComponent {
         ({ response }) => {
           console.log(response);
           this.validateLength(response);
-          // console.log(response);
+          //(response);
           this.requestCounter++;
           this.dataToExport.push(...response);
           resolve(null);

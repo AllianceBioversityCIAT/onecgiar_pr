@@ -18,21 +18,21 @@ export class StepN1InnovatonUseComponent {
 
   GETAllActorsTypes() {
     this.api.resultsSE.GETAllActorsTypes().subscribe(({ response }) => {
-      // console.log(response);
+      //(response);
       this.actorsTypeList = response;
     });
   }
   GETInstitutionsTypeTree() {
     this.api.resultsSE.GETInstitutionsTypeTree().subscribe(({ response }) => {
-      // console.log(response);
+      //(response);
       // this.actorsTypeList = response;
       this.institutionsTypeTreeList = response;
     });
   }
   getInstitutionsTypeTreeChildrens(institution_types_id) {
-    // console.log(institution_types_id);
+    //(institution_types_id);
     const fundedList = this.institutionsTypeTreeList.find(inst => inst.code == institution_types_id);
-    // console.log(fundedList?.childrens);
+    //(fundedList?.childrens);
     return fundedList?.childrens ?? [];
   }
 
@@ -80,10 +80,10 @@ export class StepN1InnovatonUseComponent {
   }
 
   get disableOrganizations() {
-    // console.log(this.institutionsTypeTreeList);
+    //(this.institutionsTypeTreeList);
     const list = [];
     this.body.innovatonUse.organization.forEach(resp => {
-      // console.log(resp);
+      //(resp);
       if (!resp.institution_sub_type_id) list.push({ code: resp.institution_types_id });
     });
     return list;

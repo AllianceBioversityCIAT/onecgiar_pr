@@ -3,16 +3,16 @@ import { ApiService } from '../../../../../../../shared/services/api/api.service
 import { InnovationUseInfoBody } from './model/innovationUseInfoBody';
 import { PolicyControlListService } from '../../../../../../../shared/services/global/policy-control-list.service';
 import { InstitutionsService } from '../../../../../../../shared/services/global/institutions.service';
-import {formatCurrency, getCurrencySymbol} from '@angular/common';
+import { formatCurrency, getCurrencySymbol } from '@angular/common';
 
 @Component({
   selector: 'app-policy-change-info',
   templateUrl: './policy-change-info.component.html',
-  styleUrls: ['./policy-change-info.component.scss'],
+  styleUrls: ['./policy-change-info.component.scss']
 })
 export class PolicyChangeInfoComponent implements OnInit {
   innovationUseInfoBody = new InnovationUseInfoBody();
-  cantidad:string = '';
+  cantidad: string = '';
   constructor(public api: ApiService, public policyControlListSE: PolicyControlListService, public institutionsService: InstitutionsService) {}
 
   ngOnInit(): void {
@@ -28,7 +28,7 @@ export class PolicyChangeInfoComponent implements OnInit {
   }
   getSectionInformation() {
     this.api.resultsSE.GET_policyChanges().subscribe(({ response }) => {
-      // console.log(response);
+      //(response);
       this.innovationUseInfoBody = response;
     });
   }
@@ -41,7 +41,7 @@ export class PolicyChangeInfoComponent implements OnInit {
   }
   onSaveSection() {
     this.api.resultsSE.PATCH_policyChanges(this.innovationUseInfoBody).subscribe(resp => {
-      // console.log(resp);
+      //(resp);
       this.getSectionInformation();
     });
   }
@@ -55,6 +55,5 @@ export class PolicyChangeInfoComponent implements OnInit {
     }
     this.cantidad = formatCurrency(val, 'en-US', getCurrencySymbol('USD', 'wide'));
     console.log(this.innovationUseInfoBody.amount);
-    
-}
+  }
 }

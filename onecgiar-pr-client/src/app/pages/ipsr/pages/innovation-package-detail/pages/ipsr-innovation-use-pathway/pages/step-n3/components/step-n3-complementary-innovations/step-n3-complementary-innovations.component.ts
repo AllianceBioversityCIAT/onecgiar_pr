@@ -35,7 +35,7 @@ export class StepN3ComplementaryInnovationsComponent {
     attrListTovalidate.forEach((attr: any) => {
       if (bodyItem[attr] === null || bodyItem[attr] === undefined || bodyItem[attr] === '') oneEmpty = true;
     });
-    // console.log(oneEmpty);
+    //(oneEmpty);
     return !oneEmpty;
   }
 }

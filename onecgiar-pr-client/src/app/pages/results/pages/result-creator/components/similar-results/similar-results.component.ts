@@ -35,7 +35,7 @@ export class SimilarResultsComponent {
   // ];
 
   onPressAction(result) {
-    // console.log(result);
+    //(result);
     this.api.resultsSE.currentResultId = result?.id;
     this.api.dataControlSE.currentResult = JSON.parse(JSON.stringify(result));
     this.api.dataControlSE.currentResult.result_type = this.api.dataControlSE.currentResult.type;

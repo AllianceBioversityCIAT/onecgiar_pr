@@ -19,7 +19,7 @@ export class TorInitProgressAndKeyResultsComponent {
       ({ response }) => {
         console.log(response);
         this.exportTablesSE.exportExcel(response, 'Initiative-progress-and-key-results');
-        // console.log(response);
+        //(response);
         this.requesting = false;
         // TODO(Yecksin): clean console logs
       },

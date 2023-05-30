@@ -20,12 +20,12 @@ export class StepN1SdgTargetsComponent {
       ({ response }) => {
         this.sdgTargetLis = response;
         this.sdgTargetLis.forEach(sdg => {
-          // console.log(sdg);
+          //(sdg);
           sdg.sdgId = sdg.sdg.usnd_code;
           sdg.short_name = sdg.sdg.short_name;
           sdg.sdgList.map(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
         });
-        // console.log(this.sdgTargetLis);
+        //(this.sdgTargetLis);
 
         // this.mapSdgTargetListDropdowns(response);
       },

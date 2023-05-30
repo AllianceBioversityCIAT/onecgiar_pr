@@ -15,15 +15,15 @@ export class NotificationItemComponent {
   @Output() requestEvent = new EventEmitter<any>();
   requesting = false;
   submitter = true;
-  constructor(public api: ApiService, private shareRequestModalSE: ShareRequestModalService, private retrieveModalSE: RetrieveModalService) { }
+  constructor(public api: ApiService, private shareRequestModalSE: ShareRequestModalService, private retrieveModalSE: RetrieveModalService) {}
 
   mapAndAccept(notification) {
     if (this.api.dataControlSE.platformIsClosed) return;
-    // console.log(notification);
+    //(notification);
     this.retrieveModalSE.title = notification?.title;
     this.retrieveModalSE.requester_initiative_id = notification?.requester_initiative_id;
     this.api.resultsSE.currentResultId = notification?.result_id;
-    // console.log(this.api.dataControlSE.currentResult);
+    //(this.api.dataControlSE.currentResult);
     if (this.api.dataControlSE.currentResult == undefined) {
       this.api.dataControlSE.currentResult = { result_level_id: notification?.result_level_id };
     } else {
@@ -31,7 +31,7 @@ export class NotificationItemComponent {
     }
     // this.api.dataControlSE.currentResult = result;
     // this.api.dataControlSE.currentResult.is_legacy = this.api.dataControlSE.currentResult.is_legacy == 'true' ? true : false;
-    // console.log(this.api.dataControlSE.currentResult);
+    //(this.api.dataControlSE.currentResult);
     if (!this.api.dataControlSE.currentResult) this.api.dataControlSE.currentResult = {};
 
     this.api.dataControlSE.currentResult.result_type = notification.result_type_name;
@@ -39,7 +39,7 @@ export class NotificationItemComponent {
     this.shareRequestModalSE.shareRequestBody.initiative_id = notification.approving_inititiative_id;
     this.shareRequestModalSE.shareRequestBody['official_code'] = notification['approving_official_code'];
     this.shareRequestModalSE.shareRequestBody['short_name'] = notification['approving_short_name'];
-    // console.log(this.api.dataControlSE.currentResult);
+    //(this.api.dataControlSE.currentResult);
     this.api.dataControlSE.showShareRequest = true;
   }
 
@@ -53,14 +53,14 @@ export class NotificationItemComponent {
 
   acceptOrReject(response) {
     if (this.api.dataControlSE.platformIsClosed) return;
-    let body = { ...this.notification, request_status_id: response ? 2 : 3 };
+    const body = { ...this.notification, request_status_id: response ? 2 : 3 };
     console.log(body);
-    // console.log(response);
+    //(response);
     this.requesting = true;
     this.api.resultsSE.PATCH_updateRequest(body).subscribe(
       resp => {
         this.requesting = false;
-        // console.log(resp);
+        //(resp);
         this.api.alertsFe.show({ id: 'noti', title: response ? 'Request accepted' : 'Request rejected', status: 'success' });
         this.requestEvent.emit();
       },

@@ -29,7 +29,7 @@ export class TocInitiativeOutputSectionComponent {
       ({ response }) => {
         this.outputList = [];
         this.outputList = response;
-        // console.log(response);
+        //(response);
       },
       err => {
         this.outputList = [];
@@ -43,7 +43,7 @@ export class TocInitiativeOutputSectionComponent {
       ({ response }) => {
         this.outcomeList = [];
         this.outcomeList = response;
-        // console.log(response);
+        //(response);
       },
       err => {
         this.outcomeList = [];
@@ -56,7 +56,7 @@ export class TocInitiativeOutputSectionComponent {
   GET_fullInitiativeTocByinitId() {
     this.api.tocApiSE.GET_fullInitiativeTocByinitId(this.result_toc_result.initiative_id).subscribe(
       ({ response }) => {
-        // console.log(response);
+        //(response);
         this.fullInitiativeToc = response[0]?.toc_id;
       },
       err => {

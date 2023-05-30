@@ -19,7 +19,7 @@ export class InnovationUseInfoComponent implements OnInit {
     this.api.resultsSE.GET_innovationUse().subscribe(
       ({ response }) => {
         this.innovationUseInfoBody = response;
-        // console.log(response);
+        //(response);
       },
       err => {
         console.log(err);
@@ -27,7 +27,7 @@ export class InnovationUseInfoComponent implements OnInit {
     );
   }
   onSaveSection() {
-    // console.log(this.innovationUseInfoBody);
+    //(this.innovationUseInfoBody);
     this.api.resultsSE.PATCH_innovationUse(this.innovationUseInfoBody).subscribe(
       resp => {
         this.getSectionInformation();
@@ -42,7 +42,7 @@ export class InnovationUseInfoComponent implements OnInit {
     Please provide evidence of use claims in the <a href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultCode}/general-information" class="open_route" target="_blank">General information</a> section. `;
   }
   onAddMore() {
-    // console.log('onAddMore');
+    //('onAddMore');
     this.innovationUseInfoBody.other.push({});
   }
   onRemoveOne(index) {

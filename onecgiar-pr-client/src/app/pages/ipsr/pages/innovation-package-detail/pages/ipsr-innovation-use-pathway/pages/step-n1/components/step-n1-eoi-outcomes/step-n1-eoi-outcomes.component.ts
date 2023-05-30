@@ -17,10 +17,10 @@ export class StepN1EoiOutcomesComponent {
   }
 
   GET_EOIList() {
-    // console.log(this.ipsrDataControlSE?.detailData?.inititiative_id);
+    //(this.ipsrDataControlSE?.detailData?.inititiative_id);
     this.tocApiSE.GET_tocLevelsByresultId(this.ipsrDataControlSE?.detailData?.inititiative_id, 3).subscribe(
       ({ response }) => {
-        // console.log(response);
+        //(response);
         this.eoiList = response;
       },
       err => {

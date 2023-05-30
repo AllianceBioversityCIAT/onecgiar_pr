@@ -44,7 +44,7 @@ export class ResultCreatorComponent implements OnInit {
   }
   allInitiatives = [];
   GET_AllInitiatives() {
-    // console.log(this.api.rolesSE.isAdmin);
+    //(this.api.rolesSE.isAdmin);
     if (!this.api.rolesSE.isAdmin) return;
     this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
       this.allInitiatives = response;
@@ -68,7 +68,7 @@ export class ResultCreatorComponent implements OnInit {
     const cleanSpaces = text => text?.replaceAll(' ', '')?.toLowerCase();
     this.api.resultsSE.GET_FindResultsElastic(title).subscribe(
       response => {
-        // console.log(response);
+        //(response);
         this.depthSearchList = response;
         this.exactTitleFound = !!this.depthSearchList.find(result => cleanSpaces(result.title) === cleanSpaces(title));
       },
@@ -82,7 +82,7 @@ export class ResultCreatorComponent implements OnInit {
   onSaveSection() {
     if (this.resultLevelSE.resultBody.result_type_id != 6) {
       this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody);
-      // console.log(this.resultLevelSE.resultBody);
+      //(this.resultLevelSE.resultBody);
       this.api.resultsSE.POST_resultCreateHeader(this.resultLevelSE.resultBody).subscribe(
         (resp: any) => {
           this.router.navigate([`/result/result-detail/${resp?.response?.result_code}/general-information`]);
@@ -94,7 +94,7 @@ export class ResultCreatorComponent implements OnInit {
         }
       );
     } else {
-      // console.log({ ...this.mqapJson, result_data: this.resultLevelSE.resultBody });
+      //({ ...this.mqapJson, result_data: this.resultLevelSE.resultBody });
       this.api.resultsSE.POST_createWithHandle({ ...this.mqapJson, result_data: this.resultLevelSE.resultBody }).subscribe(
         (resp: any) => {
           console.log(resp);
@@ -124,11 +124,11 @@ export class ResultCreatorComponent implements OnInit {
     this.validating = true;
     this.api.resultsSE.GET_mqapValidation(this.resultLevelSE.resultBody.handler).subscribe(
       resp => {
-        // console.log(resp);
-        // console.log(resp.response);
+        //(resp);
+        //(resp.response);
         this.mqapJson = resp.response;
         this.resultLevelSE.resultBody.result_name = resp.response.title;
-        // console.log(first);
+        //(first);
         // TODO validate create
         this.validating = false;
         this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Metadata found successfully', description: 'Title: ' + this.resultLevelSE.resultBody.result_name, status: 'success' });

@@ -17,21 +17,21 @@ export class StepN3CurrentUseComponent {
   }
   GETAllActorsTypes() {
     this.api.resultsSE.GETAllActorsTypes().subscribe(({ response }) => {
-      // console.log(response);
+      //(response);
       this.actorsTypeList = response;
     });
   }
   GETInstitutionsTypeTree() {
     this.api.resultsSE.GETInstitutionsTypeTree().subscribe(({ response }) => {
-      // console.log(response);
+      //(response);
       // this.actorsTypeList = response;
       this.institutionsTypeTreeList = response;
     });
   }
   getInstitutionsTypeTreeChildrens(institution_types_id) {
-    // console.log(institution_types_id);
+    //(institution_types_id);
     const fundedList = this.institutionsTypeTreeList.find(inst => inst.code == institution_types_id);
-    // console.log(fundedList?.childrens);
+    //(fundedList?.childrens);
     return fundedList?.childrens ?? [];
   }
   actorTypeDescription() {

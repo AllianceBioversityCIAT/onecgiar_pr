@@ -37,7 +37,7 @@ export class PartnersRequestComponent {
   }
 
   cleanObject() {
-    // console.log('cleanForm');
+    //('cleanForm');
     this.showForm = false;
     this.partnersRequestBody = new PartnersRequestBody();
     setTimeout(() => {
@@ -72,7 +72,7 @@ export class PartnersRequestComponent {
     //     this.api.alertsFe.show({ id: 'partners', title: `Partner has been requested.`, description: `The partner request was sent successfully. You will receive a confirmation message as soon as it has been processed <strong>(Please note that the partner review process may take up to 2 business days)</strong>. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list. In case of any questions, please contact the technical support`, status: 'success' });
 
     //     // "${this.partnersRequestBody.name}"
-    //     // console.log(this.partnersRequestBody.name);
+    //     //(this.partnersRequestBody.name);
     //   },
     //   err => {
     //     this.api.alertsFe.show({ id: 'partners-error', title: 'Error when requesting partner', description: '', status: 'error' });

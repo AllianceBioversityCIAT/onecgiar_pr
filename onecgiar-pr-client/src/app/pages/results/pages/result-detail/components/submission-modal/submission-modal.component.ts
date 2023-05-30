@@ -19,7 +19,7 @@ export class SubmissionModalComponent {
   onSubmit() {
     this.api.resultsSE.PATCH_submit(this.comment).subscribe(
       resp => {
-        // console.log(resp);
+        //(resp);
         this.api.alertsFe.show({ id: 'submodal', title: `Success`, description: `The result has been submitted.`, status: 'success' });
         this.submissionModalSE.showModal = false;
         this.currentResultSE.GET_resultById();

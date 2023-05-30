@@ -118,14 +118,14 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   }
 
   removeFocus() {
-    // console.log('removeFocus');
+    //('removeFocus');
     const element: any = document.getElementById(this.optionValue);
     element.blur();
   }
 
   getUniqueId() {
     const id = (this.optionValue + this.optionLabel + this.label).replace(' ', '');
-    // console.log(id);
+    //(id);
     return id;
   }
 
@@ -139,12 +139,12 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
     this.selectAll = null;
     if (option?.disabled) return;
     // this.onChange(null);
-    // console.log('onSelectOption');
+    //('onSelectOption');
     const optionFinded = this.value.findIndex(valueItem => valueItem[this.optionValue] == option[this.optionValue]);
     if (optionFinded < 0) {
       this.value.push({ ...option, new: true });
     } else {
-      // console.log('lo enceutra');
+      //('lo enceutra');
       this.value.splice(optionFinded, 1);
       // let itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == option[this.optionValue]);
       // if (itemFinded) itemFinded.selected = false;
@@ -168,8 +168,8 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   }
 
   selectBySavedList(savedList: any[]) {
-    // console.log(this.options);
-    // console.log(savedList);
+    //(this.options);
+    //(savedList);
     // savedList?.map(savedListItem => {
     //   let itemFinded = listBr.find(listItem => listItem[this.optionValue] == savedListItem[this.optionValue]);
     //   if (itemFinded) itemFinded.selected = true;

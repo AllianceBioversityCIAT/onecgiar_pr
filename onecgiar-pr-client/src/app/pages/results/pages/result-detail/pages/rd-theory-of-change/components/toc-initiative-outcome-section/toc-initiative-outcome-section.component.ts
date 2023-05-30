@@ -34,7 +34,7 @@ export class TocInitiativeOutcomeSectionComponent {
       ({ response }) => {
         this.outputList = [];
         this.outputList = response;
-        // console.log(response);
+        //(response);
       },
       err => {
         this.outputList = [];
@@ -48,7 +48,7 @@ export class TocInitiativeOutcomeSectionComponent {
       ({ response }) => {
         this.eoiList = [];
         this.eoiList = response;
-        // console.log(response);
+        //(response);
       },
       err => {
         this.eoiList = [];
@@ -72,9 +72,9 @@ export class TocInitiativeOutcomeSectionComponent {
     this.api.tocApiSE.GET_tocLevelsByresultId(this.result_toc_result.initiative_id, 2).subscribe(
       ({ response }) => {
         this.outcomeList = response;
-        // console.log(response);
-        // console.log(response);
-        // console.log('%cOutput list', 'background: #222; color: #aaeaf5');
+        //(response);
+        //(response);
+        //('%cOutput list', 'background: #222; color: #aaeaf5');
       },
       err => {
         this.outcomeList = [];

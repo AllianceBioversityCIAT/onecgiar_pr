@@ -30,12 +30,12 @@ export class RdGeneralInformationComponent {
       this.generalInfoBody = response;
       this.generalInfoBody.reporting_year = '2022';
       this.generalInfoBody.institutions_type = [...this.generalInfoBody.institutions_type, ...this.generalInfoBody.institutions] as any;
-      // console.log(this.generalInfoBody);
+      //(this.generalInfoBody);
     });
   }
   onSaveSection() {
     this.generalInfoBody.institutions_type = this.generalInfoBody.institutions_type.filter(inst => !inst.hasOwnProperty('institutions_id'));
-    // console.log(this.generalInfoBody);
+    //(this.generalInfoBody);
     this.api.resultsSE.PATCH_generalInformation(this.generalInfoBody).subscribe(
       resp => {
         this.getSectionInformation();
@@ -83,9 +83,9 @@ export class RdGeneralInformationComponent {
   }
 
   sendIntitutionsTypes() {
-    // console.log(this.generalInfoBody.institutions_type);
+    //(this.generalInfoBody.institutions_type);
     this.generalInfoBody.institutions_type = this.generalInfoBody.institutions_type.filter(inst => !inst.hasOwnProperty('institutions_id'));
-    // console.log(this.generalInfoBody.institutions_type);
+    //(this.generalInfoBody.institutions_type);
     this.generalInfoBody.institutions_type = [...this.generalInfoBody?.institutions_type, ...this.generalInfoBody?.institutions] as any;
   }
   onChangeKrs() {

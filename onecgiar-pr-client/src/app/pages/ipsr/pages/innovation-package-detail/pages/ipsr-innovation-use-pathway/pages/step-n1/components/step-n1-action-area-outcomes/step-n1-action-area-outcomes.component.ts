@@ -24,7 +24,7 @@ export class StepN1ActionAreaOutcomesComponent {
         this.actionAreasOutcomesList.resilientAgrifoodSystems.map(item => (item.full_name = `<strong>${item.outcomeSMOcode}</strong> - ${item.outcomeStatement}`));
         this.actionAreasOutcomesList.systemTrasnformation.map(item => (item.full_name = `<strong>${item.outcomeSMOcode}</strong> - ${item.outcomeStatement}`));
 
-        // console.log(this.actionAreasOutcomesList);
+        //(this.actionAreasOutcomesList);
       },
       err => {
         console.log(err);
@@ -35,7 +35,7 @@ export class StepN1ActionAreaOutcomesComponent {
     this.api.tocApiSE.GET_tocLevelsByresultId(this.ipsrDataControlSE?.detailData?.inititiative_id, 4).subscribe(
       ({ response }) => {
         this.actionAreasOutcomesList = response;
-        // console.log(response);
+        //(response);
       },
       err => {
         console.log(err);
@@ -47,7 +47,7 @@ export class StepN1ActionAreaOutcomesComponent {
     this.body.actionAreaOutcomes.splice(index, 1);
   }
   filterByAAOId(id) {
-    // console.log(this.body.actionAreaOutcomes);
+    //(this.body.actionAreaOutcomes);
     return this.body.actionAreaOutcomes.filter((item: any) => item?.actionAreaId == id);
   }
 }

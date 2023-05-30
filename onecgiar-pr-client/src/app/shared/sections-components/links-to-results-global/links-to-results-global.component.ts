@@ -31,7 +31,7 @@ export class LinksToResultsGlobalComponent implements OnInit {
     this.getSectionInformation();
   }
   onLinkResult(result) {
-    // console.log(result);
+    //(result);
     this.linksToResultsBody.links.push(result);
     this.counterPipe++;
   }
@@ -42,7 +42,7 @@ export class LinksToResultsGlobalComponent implements OnInit {
 
   getSectionInformation() {
     this.api.resultsSE.GET_resultsLinked(this.isIpsr).subscribe(({ response }) => {
-      // console.log(response);
+      //(response);
       this.linksToResultsBody = response;
     });
   }
@@ -54,9 +54,9 @@ export class LinksToResultsGlobalComponent implements OnInit {
     this.linksToResultsBody.legacy_link.splice(index, 1);
   }
   onSaveSection() {
-    // console.log(this.linksToResultsBody);
+    //(this.linksToResultsBody);
     this.api.resultsSE.POST_resultsLinked(this.linksToResultsBody, this.isIpsr).subscribe((resp: any) => {
-      // console.log(resp);
+      //(resp);
       this.getSectionInformation();
     });
   }

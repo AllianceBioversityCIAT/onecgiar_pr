@@ -49,7 +49,7 @@ export class StepN3AssessedExpertWorkshopComponent {
   }
   GETAllClarisaInnovationReadinessLevels() {
     this.api.resultsSE.GETAllClarisaInnovationReadinessLevels().subscribe(({ response }) => {
-      // console.log(response);
+      //(response);
       this.readinessList = response;
       this.readinessList.map((option, index) => (option.index = String(index)));
     });
