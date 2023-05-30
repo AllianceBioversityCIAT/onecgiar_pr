@@ -290,6 +290,7 @@ export class IpsrRepository extends Repository<Ipsr>{
             DISTINCT r.id,
             r.result_code,
             r.title,
+            rbi.inititiative_id AS initiative_id,
             IF((r.status = 1), 'Submitted', 'Editing') AS status,
             r.reported_year_id,
             (
