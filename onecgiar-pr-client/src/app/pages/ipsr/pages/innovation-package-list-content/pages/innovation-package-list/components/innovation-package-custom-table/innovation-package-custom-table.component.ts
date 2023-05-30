@@ -8,8 +8,7 @@ import { MenuItem } from 'primeng/api';
   templateUrl: './innovation-package-custom-table.component.html',
   styleUrls: ['./innovation-package-custom-table.component.scss']
 })
-export class InnovationPackageCustomTableComponent  {
-
+export class InnovationPackageCustomTableComponent {
   @Input() tableData: any;
   @Input() total: number = 0;
   @Output() deleteEvent = new EventEmitter();
@@ -76,14 +75,12 @@ export class InnovationPackageCustomTableComponent  {
     });
   }
   onPressAction(result) {
-    console.log(result);
-    const onlyNumbers = result?.official_code.replace(/[^0-9]+/g, "");
+    const onlyNumbers = result?.official_code.replace(/[^0-9]+/g, '');
     this.currentInnovationPackageToAction.id = result?.id;
     this.currentInnovationPackageToAction.title = result.title;
     this.retrieveModalSE.title = result?.title;
     this.retrieveModalSE.requester_initiative_id = onlyNumbers;
-     this.api.resultsSE.currentResultId = result?.id;
+    this.api.resultsSE.currentResultId = result?.id;
     this.api.dataControlSE.currentResult = result;
   }
-
 }

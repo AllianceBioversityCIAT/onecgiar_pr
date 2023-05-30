@@ -10,11 +10,16 @@ export class StepN3ComplementaryInnovationsComponent {
   @Input() rangesOptions: any[] = [];
   @Input() innovationUseList: any[] = [];
   @Input() body = new IpsrStep3Body();
+  open = false;
 
   constructor() {}
 
   ngOnInit(): void {
     this.body.result_ip_result_complementary[0].open = false;
+  }
+
+  toggleCollapseItem(e, bodyItem) {
+    bodyItem.open = e;
   }
 
   readinessLevelSelfAssessmentText() {
@@ -24,5 +29,13 @@ export class StepN3ComplementaryInnovationsComponent {
     return `<a href="https://drive.google.com/file/d/1RFDAx3m5ziisZPcFgYdyBYH9oTzOYLvC/view"  class="open_route" target="_blank">Click here</a> to see all innovation use levels`;
   }
 
-  validateGreenCheckItem() {}
+  allFieldsRequired(bodyItem) {
+    const attrListTovalidate = ['readiness_level_evidence_based', 'readinees_evidence_link', 'use_level_evidence_based', 'use_evidence_link'];
+    let oneEmpty = false;
+    attrListTovalidate.forEach((attr: any) => {
+      if (bodyItem[attr] === null || bodyItem[attr] === undefined || bodyItem[attr] === '') oneEmpty = true;
+    });
+    // console.log(oneEmpty);
+    return !oneEmpty;
+  }
 }

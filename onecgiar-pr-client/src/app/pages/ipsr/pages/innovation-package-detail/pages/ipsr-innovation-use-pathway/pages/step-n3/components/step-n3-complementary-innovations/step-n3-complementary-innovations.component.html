@@ -1,6 +1,12 @@
 <div class="complementary_innovations" *ngFor="let bodyItem of this.body.result_ip_result_complementary; let i=index">
-    <app-collapsible-container [collapse]="bodyItem.open">
-        <div header><strong>{{i+1}}. </strong> {{bodyItem.obj_result.title}} </div>
+    <app-collapsible-container [collapse]="bodyItem.open" (toggleCollapseEvent)="toggleCollapseItem($event, bodyItem)">
+        <div header>
+            <div class="header">
+                <div> <strong>{{i+1}}. </strong> {{bodyItem.obj_result.title}}</div><i
+                    class="material-icons-round green_check"
+                    [ngClass]="{'isValid': this.allFieldsRequired(bodyItem)}">check_circle</i>
+            </div>
+        </div>
         <div content>
             <div class="complementary_innovation">
                 <app-pr-field-header [useColon]="false"

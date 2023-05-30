@@ -23,21 +23,23 @@ export class PdfReportsComponent implements OnInit {
     this.authService.inLogin = true;
     document.body.style.overflow = 'hidden';
     this.getPdfData();
-
     // this.validateErrors({ message: 'hi', status: '404' });
   }
 
   getPdfData() {
     if (!this.activatedRoute.snapshot.paramMap.get('id')) return (this.error.type = 'warning');
+    this.iframeLoaded = true;
     console.log(this.report.iframeRoute);
     this.http.get<any>(this.report.iframeRoute).subscribe(
       resp => {
         console.log(resp);
         this.validateErrors(resp);
+        this.iframeLoaded = false;
       },
       err => {
         console.log(err);
         this.validateErrors(err);
+        this.iframeLoaded = false;
       }
     );
     return null;

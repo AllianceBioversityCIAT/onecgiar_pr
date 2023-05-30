@@ -1,20 +1,20 @@
-import { Injectable } from "@nestjs/common";
-import { HandlersError } from "src/shared/handlers/error.utils";
-import { DataSource, Repository } from "typeorm";
-import { ResultIpSdgTargets } from "../entities/result-ip-sdg-targets.entity";
-
+import { Injectable } from '@nestjs/common';
+import { HandlersError } from 'src/shared/handlers/error.utils';
+import { DataSource, Repository } from 'typeorm';
+import { ResultIpSdgTargets } from '../entities/result-ip-sdg-targets.entity';
+const { env } = process;
 
 @Injectable()
-export class ResultIpSdgTargetRepository extends Repository<ResultIpSdgTargets>{
-    constructor(
-        private dataSource: DataSource,
-        private readonly _handlersError: HandlersError,
-    ) {
-        super(ResultIpSdgTargets, dataSource.createEntityManager())
-    }
+export class ResultIpSdgTargetRepository extends Repository<ResultIpSdgTargets> {
+  constructor(
+    private dataSource: DataSource,
+    private readonly _handlersError: HandlersError,
+  ) {
+    super(ResultIpSdgTargets, dataSource.createEntityManager());
+  }
 
-    async getSdgs(resultByInnovationPackageId: number) {
-        const query = `
+  async getSdgs(resultByInnovationPackageId: number) {
+    const query = `
         SELECT 
             ris.clarisa_sdg_target_id AS id,
             (
@@ -37,20 +37,25 @@ export class ResultIpSdgTargetRepository extends Repository<ResultIpSdgTargets>{
             AND result_by_innovation_package_id = ?
         `;
 
-        try {
-            const sdgsTarget: ResultIpSdgTargets[] = await this.query(query, [resultByInnovationPackageId]);
-            return sdgsTarget;
-        } catch (error) {
-            throw this._handlersError.returnErrorRepository({
-                className: ResultIpSdgTargetRepository.name,
-                error: error,
-                debug: true,
-            });
-        }
+    try {
+      const sdgsTarget: ResultIpSdgTargets[] = await this.query(query, [
+        resultByInnovationPackageId,
+      ]);
+      return sdgsTarget;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultIpSdgTargetRepository.name,
+        error: error,
+        debug: true,
+      });
     }
+  }
 
-    async getSdgsByIpAndSdgId(resultByInnovationPackageId: number, sdgId: number) {
-        const query = `
+  async getSdgsByIpAndSdgId(
+    resultByInnovationPackageId: number,
+    sdgId: number,
+  ) {
+    const query = `
         SELECT 
             *
         FROM
@@ -60,22 +65,29 @@ export class ResultIpSdgTargetRepository extends Repository<ResultIpSdgTargets>{
             AND clarisa_sdg_target_id = ?
         `;
 
-        try {
-            const sdgsTarget: ResultIpSdgTargets[] = await this.query(query, [resultByInnovationPackageId, sdgId]);
-            return sdgsTarget?.length ? sdgsTarget[0] : undefined;
-        } catch (error) {
-            throw this._handlersError.returnErrorRepository({
-                className: ResultIpSdgTargetRepository.name,
-                error: error,
-                debug: true,
-            });
-        }
+    try {
+      const sdgsTarget: ResultIpSdgTargets[] = await this.query(query, [
+        resultByInnovationPackageId,
+        sdgId,
+      ]);
+      return sdgsTarget?.length ? sdgsTarget[0] : undefined;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultIpSdgTargetRepository.name,
+        error: error,
+        debug: true,
+      });
     }
+  }
 
-    async updateSdg(resultByInnovationPackageId: number, sdgsArray: number[], user: number) {
-        const sdgs = sdgsArray ?? [];
+  async updateSdg(
+    resultByInnovationPackageId: number,
+    sdgsArray: number[],
+    user: number,
+  ) {
+    const sdgs = sdgsArray ?? [];
 
-        const updateInactive = `
+    const updateInactive = `
         UPDATE
             result_ip_sdg_targets
         SET
@@ -87,7 +99,7 @@ export class ResultIpSdgTargetRepository extends Repository<ResultIpSdgTargets>{
             AND clarisa_sdg_target_id NOT IN (${sdgs});
         `;
 
-        const updateActive = `
+    const updateActive = `
         UPDATE
             result_ip_sdg_targets
         SET
@@ -98,7 +110,7 @@ export class ResultIpSdgTargetRepository extends Repository<ResultIpSdgTargets>{
             AND clarisa_sdg_target_id IN (${sdgs});
         `;
 
-        const updateAllInactive = `
+    const updateAllInactive = `
         UPDATE
             result_ip_sdg_targets
         SET
@@ -108,26 +120,58 @@ export class ResultIpSdgTargetRepository extends Repository<ResultIpSdgTargets>{
         WHERE result_by_innovation_package_id = ?;
         `;
 
-        try {
-            if (sdgs?.length) {
-                await this.query(updateInactive, [
-                    resultByInnovationPackageId
-                ]);
+    try {
+      if (sdgs?.length) {
+        await this.query(updateInactive, [resultByInnovationPackageId]);
 
-                return await this.query(updateActive, [
-                    resultByInnovationPackageId
-                ]);
-            } else {
-                return await this.query(updateAllInactive, [
-                    resultByInnovationPackageId
-                ]);
-            }
-        } catch (error) {
-            throw this._handlersError.returnErrorRepository({
-                className: ResultIpSdgTargetRepository.name,
-                error: `Update SDGs ${error}`,
-                debug: true,
-            });
-        }
+        return await this.query(updateActive, [resultByInnovationPackageId]);
+      } else {
+        return await this.query(updateAllInactive, [
+          resultByInnovationPackageId,
+        ]);
+      }
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultIpSdgTargetRepository.name,
+        error: `Update SDGs ${error}`,
+        debug: true,
+      });
     }
+  }
+
+  async mapSdgsToc(initId: number) {
+    try {
+      const query = `
+        SELECT
+            DISTINCT cst.id AS clarisa_sdg_target_id,
+            tsr.sdg_id AS clarisa_sdg_usnd_code
+        FROM
+            ${env.DB_OST}.clarisa_sdg_targets cst  
+            LEFT JOIN ${env.DB_OST}.toc_sdg_results_sdg_targets tsrst ON tsrst.sdg_target_id = cst.id
+            LEFT JOIN ${env.DB_OST}.toc_sdg_results tsr ON tsr.toc_result_id = tsrst.sdg_toc_result_id
+            LEFT JOIN ${env.DB_OST}.toc_results_sdg_results trsr ON trsr.sdg_toc_result_id = tsr.toc_result_id
+            LEFT JOIN ${env.DB_OST}.toc_results tr1 ON tr1.toc_result_id = trsr.toc_result_id
+        WHERE
+            tsrst.is_active = 1
+            AND tr1.toc_result_id IN (
+            SELECT
+                tr2.toc_internal_id
+            FROM
+                prdb.toc_result tr2
+            WHERE
+                tr2.inititiative_id = ?
+                AND tr2.is_active = 1
+            );
+        `;
+
+      const sdgsTarget: any[] = await this.dataSource.query(query, [initId]);
+      return sdgsTarget;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultIpSdgTargetRepository.name,
+        error: `Map SDGs ToC ${error}`,
+        debug: true,
+      });
+    }
+  }
 }

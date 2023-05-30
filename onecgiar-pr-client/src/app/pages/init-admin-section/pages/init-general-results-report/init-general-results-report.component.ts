@@ -28,7 +28,7 @@ export class InitGeneralResultsReportComponent {
   }
 
   onSelectInit() {
-    let inits = [];
+    const inits = [];
     this.initiativesSelected.map(init => {
       inits.push(init.initiative_id);
       // this.initiativesSelected.push({ id: init.initiative_id, full_name: init.full_name });
@@ -69,7 +69,7 @@ export class InitGeneralResultsReportComponent {
     this.requesting = true;
     this.requestCounter = 0;
 
-    let list = [];
+    const list = [];
     resultsRelected?.forEach(element => {
       list.push(element?.result_code);
     });
@@ -81,11 +81,17 @@ export class InitGeneralResultsReportComponent {
     this.requesting = false;
   }
 
+  validateLength(obj) {
+    console.log(obj);
+    Object.keys(obj[0]).forEach(item => console.log(item + ': ' + obj[0][item]?.length));
+  }
+
   POST_excelFullReportPromise(result, key) {
     return new Promise((resolve, reject) => {
       this.api.resultsSE.POST_excelFullReport([result]).subscribe(
         ({ response }) => {
-          // console.log(response);
+          console.log(response);
+          this.validateLength(response);
           // console.log(response);
           this.requestCounter++;
           this.dataToExport.push(...response);

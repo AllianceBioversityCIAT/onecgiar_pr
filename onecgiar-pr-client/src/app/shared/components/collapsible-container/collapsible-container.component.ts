@@ -1,4 +1,4 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core';
 import { trigger, state, style, transition, animate } from '@angular/animations';
 
 @Component({
@@ -10,6 +10,7 @@ import { trigger, state, style, transition, animate } from '@angular/animations'
 export class CollapsibleContainerComponent implements OnInit {
   @Input() collapse: boolean = true;
   @Input() contentStyles = {};
+  @Output() toggleCollapseEvent = new EventEmitter();
   constructor() {}
 
   ngOnInit(): void {
@@ -23,5 +24,6 @@ export class CollapsibleContainerComponent implements OnInit {
 
   toggleCollapse() {
     this.collapse = !this.collapse;
+    this.toggleCollapseEvent.emit(this.collapse);
   }
 }
