@@ -729,27 +729,58 @@ export class ResultInnovationPackageService {
         last_updated_by: user.id,
       });
 
-      if (Number(req?.gender_tag_level_id) == 3) {
-        const genderEvidenceExist = await this._evidenceRepository.findOne({
-          where: {
-            result_id: resultId,
-            is_active: 1,
-            gender_related: true,
-          },
-        });
+      const genderEvidenceExist = await this._evidenceRepository.findOne({
+        where: {
+          result_id: resultId,
+          is_active: 1,
+          gender_related: true,
+        },
+      });
 
-        let update: any;
+      const climateEvidenceExist = await this._evidenceRepository.findOne({
+        where: {
+          result_id: resultId,
+          is_active: 1,
+          youth_related: true,
+        },
+      });
+
+      if (
+        Number(req?.climate_change_tag_level_id) != 3 ||
+        Number(req?.climate_change_tag_level_id) != 3
+      ) {
         if (genderEvidenceExist) {
-          update = await this._evidenceRepository.update(
-            genderEvidenceExist.id,
-            {
-              link: req?.evidence_gender_tag,
-              last_updated_by: user.id,
-              gender_related: true,
-            },
-          );
+          await this._evidenceRepository.update(genderEvidenceExist.id, {
+            is_active: 0,
+            last_updated_by: user.id,
+          });
+        }
+
+        if (climateEvidenceExist) {
+          await this._evidenceRepository.update(climateEvidenceExist.id, {
+            is_active: 0,
+            last_updated_by: user.id,
+          });
+        }
+      }
+
+      if (Number(req?.gender_tag_level_id) == 3) {
+        if (!req?.evidence_gender_tag) {
+          return {
+            response: { valid: false },
+            message: 'Please provide a link to the evidence for Gender Tag',
+            status: HttpStatus.BAD_REQUEST,
+          };
+        }
+
+        if (genderEvidenceExist) {
+          await this._evidenceRepository.update(genderEvidenceExist.id, {
+            link: req?.evidence_gender_tag,
+            last_updated_by: user.id,
+            gender_related: true,
+          });
         } else {
-          update = await this._evidenceRepository.save({
+          await this._evidenceRepository.save({
             result_id: resultId,
             link: req?.evidence_gender_tag,
             created_by: user.id,
@@ -761,13 +792,13 @@ export class ResultInnovationPackageService {
       }
 
       if (Number(req?.climate_change_tag_level_id) == 3) {
-        const climateEvidenceExist = await this._evidenceRepository.findOne({
-          where: {
-            result_id: resultId,
-            is_active: 1,
-            youth_related: true,
-          },
-        });
+        if (!req?.climate_change_tag_level_id) {
+          return {
+            response: { valid: false },
+            message: 'Please provide a link to the evidence for Gender Tag',
+            status: HttpStatus.BAD_REQUEST,
+          };
+        }
 
         if (climateEvidenceExist) {
           await this._evidenceRepository.update(climateEvidenceExist.id, {
