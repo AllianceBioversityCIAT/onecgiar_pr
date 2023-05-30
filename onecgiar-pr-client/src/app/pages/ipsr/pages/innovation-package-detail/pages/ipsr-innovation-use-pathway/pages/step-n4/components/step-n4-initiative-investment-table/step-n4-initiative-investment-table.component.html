@@ -8,13 +8,13 @@
     </div>
     <div class="unitW">
         <app-pr-input placeholder="Number" type="number" [required]="false" noDataText="#"
-            [(ngModel)]="this.body.initiative_expected_time">
+            [(ngModel)]="this.body.initiative_expected_time" (ngModelChange)="syncLocalData()">
         </app-pr-input>
     </div>
     <div>
         <app-pr-select noDataText="Month(s)/Year(s)" [options]="this.manageRipUnitTimeSE.unitTimeList"
             optionLabel="name" optionValue="unit_time_id" [(ngModel)]="this.body.initiative_unit_time_id"
-            placeholder="Select">
+            (ngModelChange)="syncLocalData()" placeholder="Select">
         </app-pr-select>
     </div>
 </div>
