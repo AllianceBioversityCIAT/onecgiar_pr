@@ -13,9 +13,7 @@ export class ResultIpAAOutcomeRepository extends Repository<ResultIpAAOutcome> {
     super(ResultIpAAOutcome, dataSource.createEntityManager());
   }
 
-  async mapActionAreaOutcome(
-    initId: number
-  ) {
+  async mapActionAreaOutcome(initId: number) {
     try {
       const aaOutcomeQuery = `
       SELECT
@@ -37,9 +35,10 @@ export class ResultIpAAOutcomeRepository extends Repository<ResultIpAAOutcome> {
         );
       `;
 
-      const aaOutcome: any[] = await this.dataSource.query(aaOutcomeQuery, [initId]);
+      const aaOutcome: any[] = await this.dataSource.query(aaOutcomeQuery, [
+        initId,
+      ]);
       return aaOutcome;
-
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultIpAAOutcomeRepository.name,
@@ -64,7 +63,9 @@ export class ResultIpAAOutcomeRepository extends Repository<ResultIpAAOutcome> {
     `;
 
     try {
-      const aaOutcome: any[] = await this.query(query, [resultByInnovationPackageId]);
+      const aaOutcome: any[] = await this.query(query, [
+        resultByInnovationPackageId,
+      ]);
       return aaOutcome;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
