@@ -37,7 +37,7 @@ export class TorKeyResultStoryComponent {
         this.api.alertsFe.show({ id: 'save-button', title: 'Key result story informaion saved correctly', description: '', status: 'success', closeIn: 500 });
       },
       err => {
-        console.log(err);
+        console.error(err);
       }
     );
   }

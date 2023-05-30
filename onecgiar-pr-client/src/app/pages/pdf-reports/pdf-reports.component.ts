@@ -37,7 +37,7 @@ export class PdfReportsComponent implements OnInit {
         this.iframeLoaded = false;
       },
       err => {
-        console.log(err);
+        console.error(err);
         this.validateErrors(err);
         this.iframeLoaded = false;
       }

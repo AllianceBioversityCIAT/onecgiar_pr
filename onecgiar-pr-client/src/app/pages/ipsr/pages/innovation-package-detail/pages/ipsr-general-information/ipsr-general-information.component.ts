@@ -30,7 +30,7 @@ export class IpsrGeneralInformationComponent {
   onSaveSection() {
     this.api.resultsSE.PATCHIpsrGeneralInfo(this.ipsrGeneralInformationBody, this.ipsrDataControlSE.resultInnovationId).subscribe(
       resp => {
-        console.log(resp);
+        // (resp);
         this.getSectionInformation();
         this.api.alertsFe.show({ id: 'save-button', title: 'Section saved correctly', description: '', status: 'success', closeIn: 500 });
       },

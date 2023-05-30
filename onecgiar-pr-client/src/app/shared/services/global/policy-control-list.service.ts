@@ -20,7 +20,7 @@ export class PolicyControlListService {
         //(response);
       },
       err => {
-        console.log(err);
+        console.error(err);
       }
     );
   }
@@ -32,7 +32,7 @@ export class PolicyControlListService {
         //(response);
       },
       err => {
-        console.log(err);
+        console.error(err);
       }
     );
   }

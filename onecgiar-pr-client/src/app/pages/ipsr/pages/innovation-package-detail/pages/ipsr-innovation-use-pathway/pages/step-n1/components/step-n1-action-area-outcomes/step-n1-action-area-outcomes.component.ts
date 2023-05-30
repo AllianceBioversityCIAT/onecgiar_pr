@@ -27,7 +27,7 @@ export class StepN1ActionAreaOutcomesComponent {
         //(this.actionAreasOutcomesList);
       },
       err => {
-        console.log(err);
+        console.error(err);
       }
     );
   }
@@ -38,7 +38,7 @@ export class StepN1ActionAreaOutcomesComponent {
         //(response);
       },
       err => {
-        console.log(err);
+        console.error(err);
       }
     );
   }

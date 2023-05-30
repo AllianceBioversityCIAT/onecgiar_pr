@@ -24,7 +24,7 @@ export class StepN1EoiOutcomesComponent {
         this.eoiList = response;
       },
       err => {
-        console.log(err);
+        console.error(err);
       }
     );
   }

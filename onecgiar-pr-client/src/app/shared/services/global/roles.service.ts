@@ -97,7 +97,7 @@ export class RolesService {
           resolve(response);
         },
         err => {
-          console.log(err);
+          console.error(err);
           reject();
         }
       );

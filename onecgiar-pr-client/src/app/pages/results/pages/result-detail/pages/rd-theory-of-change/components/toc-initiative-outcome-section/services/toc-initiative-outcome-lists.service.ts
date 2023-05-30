@@ -13,7 +13,7 @@ export class TocInitiativeOutcomeListsService {
         this.outcomeLevelList = response;
       },
       err => {
-        console.log(err);
+        console.error(err);
       }
     );
   }

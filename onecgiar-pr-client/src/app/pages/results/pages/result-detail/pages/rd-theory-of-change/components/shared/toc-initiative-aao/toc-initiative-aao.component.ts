@@ -25,7 +25,7 @@ export class TocInitiativeAaoComponent {
         //(response);
       },
       err => {
-        console.log(err);
+        console.error(err);
       }
     );
   }

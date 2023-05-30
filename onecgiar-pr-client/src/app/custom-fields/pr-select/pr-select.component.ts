@@ -113,7 +113,7 @@ export class PrSelectComponent implements ControlValueAccessor {
 
   // toggleSelectOption(option) {
   //   if (option?.disabled === true) return;
-  //   console.log('toggleSelectOption');
+  //   ('toggleSelectOption');
   //   option.selected = !option.selected;
   // }
 }

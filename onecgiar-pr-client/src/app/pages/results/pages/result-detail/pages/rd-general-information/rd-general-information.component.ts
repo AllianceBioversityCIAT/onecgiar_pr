@@ -41,7 +41,7 @@ export class RdGeneralInformationComponent {
         this.getSectionInformation();
       },
       err => {
-        console.log(err);
+        console.error(err);
         this.getSectionInformation();
       }
     );

@@ -26,7 +26,7 @@ export class UnsubmitModalComponent {
         this.currentResultSE.GET_resultById();
       },
       err => {
-        console.log(err);
+        console.error(err);
         this.api.alertsFe.show({ id: 'unsubmodalerror', title: 'Error in unsubmitted', description: '', status: 'error' });
       }
     );

@@ -42,7 +42,7 @@ export class RdTheoryOfChangeComponent {
       },
       err => {
         this.getConsumed = true;
-        console.log(err);
+        console.error(err);
       }
     );
   }

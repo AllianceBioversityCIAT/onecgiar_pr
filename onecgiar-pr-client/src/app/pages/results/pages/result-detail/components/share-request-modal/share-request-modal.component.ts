@@ -64,7 +64,7 @@ export class ShareRequestModalComponent {
         }
       },
       err => {
-        console.log(err);
+        console.error(err);
         this.api.dataControlSE.showShareRequest = false;
 
         this.api.alertsFe.show({ id: 'requesqsharederror', title: 'Error when requesting', description: '', status: 'error' });
@@ -77,7 +77,7 @@ export class ShareRequestModalComponent {
     //('modelChange');
     this.showTocOut = false;
     setTimeout(() => {
-      let iniciativeSelected = this.allInitiatives.filter(resp => resp.initiative_id == this.shareRequestModalSE.shareRequestBody.initiative_id);
+      const iniciativeSelected = this.allInitiatives.filter(resp => resp.initiative_id == this.shareRequestModalSE.shareRequestBody.initiative_id);
       this.shareRequestModalSE.shareRequestBody['official_code'] = iniciativeSelected[0].official_code;
       this.shareRequestModalSE.shareRequestBody['short_name'] = iniciativeSelected[0].short_name;
       this.showTocOut = true;
@@ -86,7 +86,7 @@ export class ShareRequestModalComponent {
   }
 
   acceptOrReject() {
-    let body = { ...this.api.dataControlSE.currentNotification, ...this.shareRequestModalSE.shareRequestBody, request_status_id: 2 };
+    const body = { ...this.api.dataControlSE.currentNotification, ...this.shareRequestModalSE.shareRequestBody, request_status_id: 2 };
     //(this.api.resultsSE.ipsrDataControlSE.inIpsr);
     this.requesting = true;
     this.api.resultsSE.PATCH_updateRequest(body).subscribe(

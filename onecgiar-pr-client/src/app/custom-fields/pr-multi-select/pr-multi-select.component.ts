@@ -51,13 +51,13 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
       resp.disabled = false;
       resp.selected = false;
     });
-    this.disableOptions?.map(disableOption => {
-      const itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == disableOption[this.optionValue]);
+    this.disableOptions?.map((disableOption) => {
+      const itemFinded = this._optionsIntance.find((listItem) => listItem[this.optionValue] == disableOption[this.optionValue]);
       if (itemFinded) itemFinded.disabled = true;
     });
 
-    this.value?.map(savedListItem => {
-      const itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == savedListItem[this.optionValue]);
+    this.value?.map((savedListItem) => {
+      const itemFinded = this._optionsIntance.find((listItem) => listItem[this.optionValue] == savedListItem[this.optionValue]);
       if (itemFinded) itemFinded.selected = true;
     });
 
@@ -140,7 +140,7 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
     if (option?.disabled) return;
     // this.onChange(null);
     //('onSelectOption');
-    const optionFinded = this.value.findIndex(valueItem => valueItem[this.optionValue] == option[this.optionValue]);
+    const optionFinded = this.value.findIndex((valueItem) => valueItem[this.optionValue] == option[this.optionValue]);
     if (optionFinded < 0) {
       this.value.push({ ...option, new: true });
     } else {
@@ -153,14 +153,14 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   }
 
   removeOption(option) {
-    console.log('removeOption');
+    // ('removeOption');
     if (this.logicalDeletion && !option.new) {
       option.is_active = false;
     } else {
-      const optionFinded = this.value.findIndex(valueItem => valueItem[this.optionValue] == option[this.optionValue]);
+      const optionFinded = this.value.findIndex((valueItem) => valueItem[this.optionValue] == option[this.optionValue]);
       this.value.splice(optionFinded, 1);
     }
-    console.log(option);
+    // (option);
 
     // let itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == option[this.optionValue]);
     // if (itemFinded) itemFinded.selected = false;

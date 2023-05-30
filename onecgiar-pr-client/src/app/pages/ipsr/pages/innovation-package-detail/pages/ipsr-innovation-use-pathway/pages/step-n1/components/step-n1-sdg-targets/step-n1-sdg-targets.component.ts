@@ -30,7 +30,7 @@ export class StepN1SdgTargetsComponent {
         // this.mapSdgTargetListDropdowns(response);
       },
       err => {
-        console.log(err);
+        console.error(err);
       }
     );
   }
@@ -39,12 +39,12 @@ export class StepN1SdgTargetsComponent {
     this.body.sdgTargets.splice(index, 1);
   }
   // mapSdgTargetListDropdowns(objectList) {
-  //   console.log(objectList);
-  //   console.log(Object.keys(objectList));
+  //   (objectList);
+  //   (Object.keys(objectList));
   //   Object.keys(objectList).forEach(key => {
   //     this.sdgTargetListDropdowns.push({ list: objectList[key], key });
   //   });
-  //   console.log(this.sdgTargetListDropdowns);
+  //   (this.sdgTargetListDropdowns);
   // }
   onSelectSDG(sdgItem) {
     this.sdgTargetLis.map(sdg => (sdg.selected = false));

@@ -23,7 +23,7 @@ export class InnovationDevInfoComponent implements OnInit {
         this.innovationDevInfoBody = response;
       },
       err => {
-        console.log(err);
+        console.error(err);
       }
     );
   }
@@ -40,7 +40,7 @@ export class InnovationDevInfoComponent implements OnInit {
         this.getSectionInformation();
       },
       err => {
-        console.log(err);
+        console.error(err);
       }
     );
   }

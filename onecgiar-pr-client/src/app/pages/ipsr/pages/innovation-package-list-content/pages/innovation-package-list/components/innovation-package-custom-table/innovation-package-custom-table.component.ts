@@ -68,7 +68,7 @@ export class InnovationPackageCustomTableComponent {
           this.deleteEvent.emit();
         },
         err => {
-          console.log(err);
+          console.error(err);
           this.api.alertsFe.show({ id: 'delete-error', title: 'Error when delete Innovation Package', description: '', status: 'error' });
         }
       );

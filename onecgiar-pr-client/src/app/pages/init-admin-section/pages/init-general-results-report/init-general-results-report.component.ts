@@ -33,7 +33,7 @@ export class InitGeneralResultsReportComponent {
       inits.push(init.initiative_id);
       // this.initiativesSelected.push({ id: init.initiative_id, full_name: init.full_name });
     });
-    console.log(inits);
+    // (inits);
     this.POST_reportSesultsCompleteness(inits);
   }
 
@@ -57,7 +57,7 @@ export class InitGeneralResultsReportComponent {
   POST_reportSesultsCompleteness(inits: any[]) {
     this.resultsList = [];
     this.api.resultsSE.POST_reportSesultsCompleteness(inits, 2).subscribe(({ response }) => {
-      console.log(response);
+      // (response);
       this.resultsList = response;
     });
   }
@@ -74,7 +74,6 @@ export class InitGeneralResultsReportComponent {
       list.push(element?.result_code);
     });
     for (const key in list) {
-      console.log();
       await this.POST_excelFullReportPromise(list[key], key);
     }
     this.exportTablesSE.exportExcel(this.dataToExport, 'results_list');
@@ -82,7 +81,6 @@ export class InitGeneralResultsReportComponent {
   }
 
   validateLength(obj) {
-    console.log(obj);
     Object.keys(obj[0]).forEach(item => console.log(item + ': ' + obj[0][item]?.length));
   }
 
@@ -90,7 +88,7 @@ export class InitGeneralResultsReportComponent {
     return new Promise((resolve, reject) => {
       this.api.resultsSE.POST_excelFullReport([result]).subscribe(
         ({ response }) => {
-          console.log(response);
+          // (response);
           this.validateLength(response);
           //(response);
           this.requestCounter++;

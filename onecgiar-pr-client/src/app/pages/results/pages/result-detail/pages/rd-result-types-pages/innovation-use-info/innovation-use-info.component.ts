@@ -22,7 +22,7 @@ export class InnovationUseInfoComponent implements OnInit {
         //(response);
       },
       err => {
-        console.log(err);
+        console.error(err);
       }
     );
   }
@@ -33,7 +33,7 @@ export class InnovationUseInfoComponent implements OnInit {
         this.getSectionInformation();
       },
       err => {
-        console.log(err);
+        console.error(err);
       }
     );
   }

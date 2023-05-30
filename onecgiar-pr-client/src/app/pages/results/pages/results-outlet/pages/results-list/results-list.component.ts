@@ -95,7 +95,7 @@ export class ResultsListComponent implements OnInit {
         this.gettingReport = false;
       },
       err => {
-        console.log(err);
+        console.error(err);
         this.gettingReport = false;
       }
     );
@@ -112,7 +112,7 @@ export class ResultsListComponent implements OnInit {
           this.api.updateResultsList();
         },
         err => {
-          console.log(err);
+          console.error(err);
           this.api.alertsFe.show({ id: 'delete-error', title: 'Error when delete result', description: '', status: 'error' });
         }
       );

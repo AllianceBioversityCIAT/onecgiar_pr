@@ -52,7 +52,7 @@ export class RetrieveModalComponent implements OnInit {
         this.router.navigate([`/result/result-detail/${resp?.response?.newResultHeader?.result_code}/general-information`]);
       },
       err => {
-        console.log(err);
+        console.error(err);
         this.api.alertsFe.show({ id: 'partners-error', title: err.error.message || 'Error', description: '', status: 'error' });
         this.requesting = false;
       }
