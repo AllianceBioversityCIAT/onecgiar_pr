@@ -27,8 +27,7 @@
         </div>
         <div class="">
             <div style="margin-top: 20px;margin-bottom: -20px;" *ngIf="!this.actorItem.sex_and_age_disaggregation">
-                <app-pr-field-header
-                    description="CGIAR follows the United Nations definition of 'youth' as those persons between the ages of 15 and 24 years"></app-pr-field-header>
+                <app-pr-field-header [description]="this.actorTypeDescription()"></app-pr-field-header>
             </div>
             <br>
             <app-pr-checkbox label="Sex and age disaggregation does not apply"

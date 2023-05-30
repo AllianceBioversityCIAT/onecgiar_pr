@@ -36,6 +36,10 @@ export class StepN1InnovatonUseComponent {
     return fundedList?.childrens ?? [];
   }
 
+  actorTypeDescription() {
+    return `<li>CGIAR follows the United Nations definition of 'youth' as those persons between the ages of 15 and 24 years</li><li>If age disaggregation does not apply, then please apply a 50/50% rule in dividing women or men across the youth/non-youth category</li>`;
+  }
+
   cleanActor(actorItem) {
     actorItem.women = null;
     actorItem.women_youth = null;
