@@ -79,8 +79,6 @@ export class InnovationPathwayStepTwoService {
     }
   }
 
-
-
   async getStepTwoOne(resultId: number) {
     try {
       const result = await this._resultRepository.findOne({
@@ -100,9 +98,6 @@ export class InnovationPathwayStepTwoService {
       const comInnovation =
         await this._innovationByResultRepository.getStepTwoOne(result.id);
 
-       
-
-
       return {
         response: comInnovation,
         message: 'Successful response',
@@ -118,8 +113,6 @@ export class InnovationPathwayStepTwoService {
     user: TokenDto,
     saveData: getInnovationComInterface[],
   ) {
-    console.log("🚀 ~ file: innovation-pathway-step-two.service.ts:121 ~ InnovationPathwayStepTwoService ~ resultId:", resultId)
-    console.log("🚀 ~ file: innovation-pathway-step-two.service.ts:121 ~ InnovationPathwayStepTwoService ~ saveData:", saveData)
     try {
       const result = await this._resultRepository.findOne({
         where: {
@@ -722,5 +715,5 @@ export class getEnablersType {
   complementary_innovation_enabler_types_id: string;
   group: string;
   type: string;
-  level:number;
+  level: number;
 }

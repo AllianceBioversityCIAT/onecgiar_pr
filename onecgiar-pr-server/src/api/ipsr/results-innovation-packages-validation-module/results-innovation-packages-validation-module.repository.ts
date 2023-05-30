@@ -18,19 +18,50 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
     async generalInformation(resultId: number) {
         const giQuery = `
         SELECT
-            'General information' as sectionName,
-            CASE 
-                WHEN 
-                    r.title IS NULL OR r.title = '' OR
-                    r.description IS NULL OR r.description = '' OR
-                    r.lead_contact_person IS NULL OR r.lead_contact_person = '' OR
-                    r.gender_tag_level_id IS NULL OR
-                    r.climate_change_tag_level_id IS NULL
-                THEN FALSE
-                ELSE TRUE
+            'general-information' as sectionName,
+            CASE
+            WHEN r.title IS NULL
+            OR r.title = ''
+            OR r.description IS NULL
+            OR r.description = ''
+            OR r.lead_contact_person IS NULL
+            OR r.lead_contact_person = ''
+            OR r.gender_tag_level_id IS NULL
+            OR r.gender_tag_level_id = 0
+            OR r.climate_change_tag_level_id IS NULL
+            OR r.climate_change_tag_level_id = 0
+            OR (
+                r.gender_tag_level_id = 3
+                AND (
+                SELECT
+                    COUNT(*)
+                FROM
+                    evidence e
+                WHERE
+                    e.result_id = r.id
+                    AND e.gender_related
+                    AND e.is_active = 1
+                ) = 0
+            )
+            OR (
+                r.climate_change_tag_level_id = 3
+                AND (
+                SELECT
+                    COUNT(*)
+                FROM
+                    evidence e
+                WHERE
+                    e.result_id = r.id
+                    AND e.youth_related
+                    AND e.is_active = 1
+                ) = 0
+            ) THEN FALSE
+            ELSE TRUE
             END AS validation
-        FROM result r
-        WHERE r.is_active = true
+        FROM
+            result r
+        WHERE
+            r.is_active = true
             AND r.id = ?;
         `;
 
