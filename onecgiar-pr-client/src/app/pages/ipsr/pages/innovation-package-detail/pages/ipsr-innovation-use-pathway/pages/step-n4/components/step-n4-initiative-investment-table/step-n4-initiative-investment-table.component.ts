@@ -16,4 +16,7 @@ export class StepN4InitiativeInvestmentTableComponent {
     this.body.partner_expected_time = this.body.initiative_expected_time;
     this.body.partner_unit_time_id = this.body.initiative_unit_time_id;
   }
+  usdQuestionDescription() {
+    return `<li>The USD-value here can be an estimation and will be used to get an overall impression of the expected investment in improving the Scaling Readiness of the innovation package.</li><li>The investment estimation will by no means be used in official financial reporting or planning.</li>`;
+  }
 }
