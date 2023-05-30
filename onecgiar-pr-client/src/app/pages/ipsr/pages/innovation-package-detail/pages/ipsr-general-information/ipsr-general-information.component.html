@@ -27,8 +27,8 @@
             </app-alert-status>
         </div>
     </div>
-    <div *ngIf="this.ipsrGeneralInformationBody.gender_tag_level_id == 3">
-        <app-pr-input label="Evidence of the gender tag" [required]="true" placeholder="Link"
+    <div *ngIf="this.ipsrGeneralInformationBody.gender_tag_level_id != null">
+        <app-pr-input label="Evidence of the gender tag" [required]="this.ipsrGeneralInformationBody.gender_tag_level_id == 3" placeholder="Link"
             [(ngModel)]="this.ipsrGeneralInformationBody.evidence_gender_tag">
         </app-pr-input>
     </div>
@@ -52,8 +52,8 @@
         </div>
 
     </div>
-    <div *ngIf="this.ipsrGeneralInformationBody.climate_change_tag_level_id == 3">
-        <app-pr-input label="Evidence of the climate change tag" [required]="true" placeholder="Link"
+    <div *ngIf="this.ipsrGeneralInformationBody.climate_change_tag_level_id != null">
+        <app-pr-input label="Evidence of the climate change tag" [required]="this.ipsrGeneralInformationBody.climate_change_tag_level_id == 3" placeholder="Link"
             [(ngModel)]="this.ipsrGeneralInformationBody.evidence_climate_tag">
         </app-pr-input>
     </div>
