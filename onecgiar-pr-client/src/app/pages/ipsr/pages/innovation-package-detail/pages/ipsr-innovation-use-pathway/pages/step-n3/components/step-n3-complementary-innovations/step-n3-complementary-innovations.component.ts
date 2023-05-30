@@ -10,11 +10,16 @@ export class StepN3ComplementaryInnovationsComponent {
   @Input() rangesOptions: any[] = [];
   @Input() innovationUseList: any[] = [];
   @Input() body = new IpsrStep3Body();
+  open = false;
 
   constructor() {}
 
   ngOnInit(): void {
     this.body.result_ip_result_complementary[0].open = false;
+  }
+
+  toggleCollapseItem(e, bodyItem) {
+    bodyItem.open = e;
   }
 
   readinessLevelSelfAssessmentText() {
