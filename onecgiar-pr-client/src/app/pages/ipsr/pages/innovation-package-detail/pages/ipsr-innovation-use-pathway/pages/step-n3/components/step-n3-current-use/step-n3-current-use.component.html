@@ -78,7 +78,9 @@
 <br>
 <app-add-button name="Add actor" *ngIf="!this.api.rolesSE.readOnly" (clickEvent)="addActor()"></app-add-button>
 <div class="fragment_section_divider"></div>
-
+<div class="title_list">
+    <app-pr-field-header label="Organizations" [required]="false"></app-pr-field-header>
+</div>
 <div class="fields_list" *ngIf="this.body.innovatonUse.organization?.length">
     <div class="fields" appYmzListStructureItem (deleteEvent)="removeOrganization(organizationItem)"
         [ngClass]="{'hideElement': organizationItem.is_active == false}"
