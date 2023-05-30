@@ -60,6 +60,7 @@ export class ResultIpAAOutcomeRepository extends Repository<ResultIpAAOutcome> {
       LEFT JOIN clarisa_action_area_outcome caao ON caao.id = riaa.action_area_outcome_id
     WHERE riaa.is_active > 0
         AND riaa.result_by_innovation_package_id = ?
+    ORDER BY caao.outcomeSMOcode ASC;
     `;
 
     try {

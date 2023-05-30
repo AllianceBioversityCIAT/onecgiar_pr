@@ -35,6 +35,7 @@ export class ResultIpSdgTargetRepository extends Repository<ResultIpSdgTargets> 
             result_ip_sdg_targets ris
         WHERE ris.is_active > 0
             AND result_by_innovation_package_id = ?
+        ORDER BY ris.clarisa_sdg_target_id ASC;
         `;
 
     try {
