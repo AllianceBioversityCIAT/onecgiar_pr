@@ -24,7 +24,7 @@ export class StepN3Component implements OnInit {
     this.GETAllClarisaInnovationReadinessLevels();
     this.GETAllClarisaInnovationUseLevels();
     this.getSectionInformation();
-    this.api.setTitle('Step 3');
+    this.api.dataControlSE.detailSectionTitle('Step 3');
   }
 
   openClosed(response) {

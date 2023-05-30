@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Title } from '@angular/platform-browser';
+import { DataControlService } from 'src/app/shared/services/data-control.service';
 
 @Component({
   selector: 'app-init-admin-section',
@@ -11,8 +12,8 @@ export class InitAdminSectionComponent {
     { name: 'Completeness status', icon: 'check_circle', path: '/init-admin-module/init-completeness-status' },
     { name: 'General results report', icon: 'task', path: '/init-admin-module/init-general-results-report' }
   ];
-  constructor(private titleService: Title) {}
+  constructor(private dataControlSE: DataControlService) {}
   ngOnInit(): void {
-    this.titleService.setTitle('INIT Admin Module');
+    this.dataControlSE.detailSectionTitle('INIT Admin Module');
   }
 }

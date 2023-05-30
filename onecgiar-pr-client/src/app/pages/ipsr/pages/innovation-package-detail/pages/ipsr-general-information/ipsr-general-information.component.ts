@@ -13,10 +13,8 @@ export class IpsrGeneralInformationComponent {
   ipsrGeneralInformationBody = new IpsrGeneralInformationBody();
   constructor(private api: ApiService, public scoreSE: ScoreService, public ipsrDataControlSE: IpsrDataControlService) {}
   ngOnInit(): void {
-    //Called after the constructor, initializing input properties, and the first call to ngOnChanges.
-    //Add 'implements OnInit' to the class.
     this.getSectionInformation();
-    this.api.setTitle('General information');
+    this.api.dataControlSE.detailSectionTitle('General information');
   }
   getSectionInformation() {
     this.ipsrDataControlSE.resultInnovationId;
