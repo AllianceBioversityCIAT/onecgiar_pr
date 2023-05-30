@@ -5,6 +5,9 @@
 
 <app-pr-field-header [required]="false" label="Actors" description="{{narrativeActors()}}"></app-pr-field-header>
 <input type="text" id="removeFocus" style="position: absolute; opacity: 0;">
+<div class="title_list">
+    <app-pr-field-header label="Actor types" [required]="false"></app-pr-field-header>
+</div>
 <div class="fields_list" *ngIf="this.body.innovatonUse.actors?.length">
     <div class="fields" appYmzListStructureItem
         (deleteEvent)="actorItem.is_active = false; actorItem.actor_type_id = null"
@@ -72,6 +75,9 @@
 <app-add-button name="Add actor" *ngIf="!this.api.rolesSE.readOnly" (clickEvent)="addActor()"></app-add-button>
 <div class="fragment_section_divider"></div>
 
+<div class="title_list">
+    <app-pr-field-header label="Organizations" [required]="false"></app-pr-field-header>
+</div>
 <div class="fields_list" *ngIf="this.body.innovatonUse.organization?.length">
     <div class="fields" appYmzListStructureItem (deleteEvent)="removeOrganization(organizationItem)"
         [ngClass]="{'hideElement': organizationItem.is_active == false}"
@@ -98,7 +104,6 @@
 <app-add-button name="Add organization" *ngIf="!this.api.rolesSE.readOnly"
     (clickEvent)="addOrganization()"></app-add-button>
 <div class="fragment_section_divider"></div>
-
 <div class="fields_list" *ngIf="this.body.innovatonUse.measures?.length">
     <app-pr-field-header label="Other quantitative measures of innovation use (e.g. # of hectares)"
         [required]="false"></app-pr-field-header>
