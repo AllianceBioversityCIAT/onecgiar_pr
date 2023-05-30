@@ -19,7 +19,7 @@ export class NotificationItemInnovationComponent {
 
   mapAndAccept(notification) {
     if (this.api.dataControlSE.platformIsClosed) return;
-    console.log(notification);
+    //(notification);
     this.retrieveModalSE.title = notification?.title;
     this.retrieveModalSE.requester_initiative_id = notification?.requester_initiative_id;
     this.api.resultsSE.currentResultId = notification?.result_id;
@@ -54,13 +54,13 @@ export class NotificationItemInnovationComponent {
   acceptOrReject(response) {
     if (this.api.dataControlSE.platformIsClosed) return;
     const body = { ...this.notification, request_status_id: response ? 2 : 3 };
-    console.log(body);
+    //(body);
     //(response);
     this.requesting = true;
     this.api.resultsSE.PATCH_updateRequest(body).subscribe(
       resp => {
         this.requesting = false;
-        console.log(resp);
+        //(resp);
         this.api.alertsFe.show({ id: 'noti', title: response ? 'Request accepted' : 'Request rejected', status: 'success' });
         this.requestEvent.emit();
       },

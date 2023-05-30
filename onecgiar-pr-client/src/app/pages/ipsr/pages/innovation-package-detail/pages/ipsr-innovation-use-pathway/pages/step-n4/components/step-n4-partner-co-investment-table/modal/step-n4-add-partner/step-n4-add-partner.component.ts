@@ -23,10 +23,10 @@ export class StepN4AddPartnerComponent implements OnInit {
   onAddPartner() {
     this.requesting = true;
 
-    console.log(this.partnerBody);
+    //(this.partnerBody);
     this.api.resultsSE.PATCHInnovationPathwayStep4Partners(this.partnerBody).subscribe(
       ({ response }) => {
-        console.log(response);
+        //(response);
         response.institution.institutions_name = response.institution.obj_institutions.name;
         this.requesting = false;
         this.body.institutions_expected_investment.push(response);
@@ -42,7 +42,7 @@ export class StepN4AddPartnerComponent implements OnInit {
   }
 
   cleanObject() {
-    console.log('cleanForm');
+    //('cleanForm');
     this.showForm = false;
     this.partnerBody = new AddPartnerBody();
     setTimeout(() => {

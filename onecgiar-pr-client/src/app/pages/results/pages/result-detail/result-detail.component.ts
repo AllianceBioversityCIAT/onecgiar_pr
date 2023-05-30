@@ -26,7 +26,7 @@ export class ResultDetailComponent {
   }
 
   onCopy() {
-    console.log('onCopy');
+    //('onCopy');
     this.messageSE.add({ key: 'copyResultLinkPdf', severity: 'success', summary: 'PDF link copied' });
   }
 

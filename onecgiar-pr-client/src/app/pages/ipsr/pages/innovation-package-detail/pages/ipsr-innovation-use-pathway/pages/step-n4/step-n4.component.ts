@@ -30,19 +30,19 @@ export class StepN4Component implements OnInit {
 
   getSectionInformation() {
     this.api.resultsSE.GETInnovationPathwayStepFourByRiId().subscribe(({ response }) => {
-      console.log('%cGET', 'font-size: 20px; color: #2BBE28;');
-      console.log(response);
-      console.log('%c____________________', 'font-size: 20px; color: #2BBE28;');
+      //('%cGET', 'font-size: 20px; color: #2BBE28;');
+      //(response);
+      //('%c____________________', 'font-size: 20px; color: #2BBE28;');
       this.ipsrStep4Body = response;
       // this.ipsrStep4Body.institutions_expected_investment.map(item => (item.institutions_type_name = item.institutions_name));
     });
   }
   onSaveSection() {
-    console.log('%cPATCH', 'font-size: 20px; color: #f68541;');
-    console.log(this.ipsrStep4Body);
-    console.log('%c____________________', 'font-size: 20px; color: #f68541;');
+    //('%cPATCH', 'font-size: 20px; color: #f68541;');
+    //(this.ipsrStep4Body);
+    //('%c____________________', 'font-size: 20px; color: #f68541;');
     this.api.resultsSE.PATCHInnovationPathwayStepFourByRiId(this.ipsrStep4Body).subscribe(({ response }) => {
-      console.log(response);
+      //(response);
       // setTimeout(() => {
       this.getSectionInformation();
       // }, 3000);
@@ -51,7 +51,7 @@ export class StepN4Component implements OnInit {
 
   onSavePrevious(descrip) {
     this.api.resultsSE.PATCHInnovationPathwayStepFourByRiIdPrevious(this.ipsrStep4Body, descrip).subscribe(({ response }) => {
-      console.log(response);
+      //(response);
       // setTimeout(() => {
       this.getSectionInformation();
       // }, 3000);

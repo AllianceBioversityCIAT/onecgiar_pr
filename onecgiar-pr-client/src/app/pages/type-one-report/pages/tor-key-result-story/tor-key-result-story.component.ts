@@ -20,7 +20,7 @@ export class TorKeyResultStoryComponent {
   GET_keyResultStoryInitiativeId() {
     this.api.resultsSE.GET_keyResultStoryInitiativeId(this.typeOneReportSE.getInitiativeID(this.typeOneReportSE.initiativeSelected)?.id).subscribe(({ response }) => {
       this.typeOneReportSE.keyResultStoryData = response;
-      console.log(response);
+      //(response);
       this.tablesList = [];
       response.forEach(table => {
         this.formatTable(table);
@@ -29,10 +29,10 @@ export class TorKeyResultStoryComponent {
   }
 
   onSaveSection() {
-    console.log(this.typeOneReportSE.keyResultStoryData);
+    //(this.typeOneReportSE.keyResultStoryData);
     this.api.resultsSE.PATCH_primaryImpactAreaKrs(this.typeOneReportSE.keyResultStoryData).subscribe(
       resp => {
-        console.log(resp);
+        //(resp);
         this.GET_keyResultStoryInitiativeId();
         this.api.alertsFe.show({ id: 'save-button', title: 'Key result story informaion saved correctly', description: '', status: 'success', closeIn: 500 });
       },
@@ -43,7 +43,7 @@ export class TorKeyResultStoryComponent {
   }
 
   // onSave() {
-  //   console.log(this.typeOneReportSE.keyResultStoryData);
+  //   //(this.typeOneReportSE.keyResultStoryData);
 
   //   this.isSaving = true;
   //   setTimeout(() => {

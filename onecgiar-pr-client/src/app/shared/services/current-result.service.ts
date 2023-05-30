@@ -16,7 +16,7 @@ export class CurrentResultService {
     await this.api.resultsSE.GET_resultById().subscribe(
       ({ response }) => {
         //('GET_resultById');
-        console.log(response);
+        //(response);
         this.rolesSE.validateReadOnly(response);
         this.resultLevelSE.currentResultLevelName = response.result_level_name;
         this.resultLevelSE.currentResultLevelId = response.result_level_id;
@@ -25,7 +25,7 @@ export class CurrentResultService {
         this.dataControlSE.currentResult = response;
       },
       err => {
-        console.log(err.error);
+        //(err.error);
         if (err.error.statusCode == 404) this.router.navigate([`/`]);
         this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: 'result not found', status: 'error' });
       }

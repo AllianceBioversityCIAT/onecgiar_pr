@@ -28,7 +28,7 @@ export class SimilarResultsComponent {
   //     label: 'Retrieve',
   //     icon: 'pi pi-fw pi-sort-alt',
   //     command: () => {
-  //       console.log('showRetrieveRequest');
+  //       //('showRetrieveRequest');
   //       this.api.dataControlSE.showRetrieveRequest = true;
   //     }
   //   }

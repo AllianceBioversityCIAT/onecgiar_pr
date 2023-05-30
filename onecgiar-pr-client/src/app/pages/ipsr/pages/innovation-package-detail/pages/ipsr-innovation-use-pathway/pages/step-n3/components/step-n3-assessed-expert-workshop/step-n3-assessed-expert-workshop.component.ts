@@ -31,7 +31,7 @@ export class StepN3AssessedExpertWorkshopComponent {
   constructor(private api: ApiService, private ipsrDataControlSE: IpsrDataControlService) {}
   ngOnInit(): void {
     this.api.resultsSE.getAssessedDuringExpertWorkshop().subscribe(({ response }) => {
-      console.log(response);
+      //(response);
       this.radioOptions = response;
     });
     this.GETAllClarisaInnovationReadinessLevels();

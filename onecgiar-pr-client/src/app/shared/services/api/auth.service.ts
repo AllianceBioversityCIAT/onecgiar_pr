@@ -45,7 +45,7 @@ export class AuthService {
         };
         this.cleanTWKCookies();
       } catch (error) {
-        console.log(error);
+        //(error);
       }
       // if (window['Tawk_API'].isChatMaximized()) {
       // }

@@ -63,7 +63,7 @@ export class InnovationPackageCustomTableComponent {
       //('delete');
       this.api.resultsSE.DELETEInnovationPackage(this.currentInnovationPackageToAction.id).subscribe(
         resp => {
-          console.log(resp);
+          //(resp);
           this.api.alertsFe.show({ id: 'confirm-delete-result-su', title: `The Innovation Package "${this.currentInnovationPackageToAction.title}" was deleted`, description: ``, status: 'success' });
           this.deleteEvent.emit();
         },

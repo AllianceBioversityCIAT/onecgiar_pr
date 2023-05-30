@@ -54,7 +54,7 @@ export class NotificationItemComponent {
   acceptOrReject(response) {
     if (this.api.dataControlSE.platformIsClosed) return;
     const body = { ...this.notification, request_status_id: response ? 2 : 3 };
-    console.log(body);
+    //(body);
     //(response);
     this.requesting = true;
     this.api.resultsSE.PATCH_updateRequest(body).subscribe(

@@ -29,10 +29,10 @@ export class PdfReportsComponent implements OnInit {
   getPdfData() {
     if (!this.activatedRoute.snapshot.paramMap.get('id')) return (this.error.type = 'warning');
     this.iframeLoaded = true;
-    console.log(this.report.iframeRoute);
+    //(this.report.iframeRoute);
     this.http.get<any>(this.report.iframeRoute).subscribe(
       resp => {
-        console.log(resp);
+        //(resp);
         this.validateErrors(resp);
         this.iframeLoaded = false;
       },

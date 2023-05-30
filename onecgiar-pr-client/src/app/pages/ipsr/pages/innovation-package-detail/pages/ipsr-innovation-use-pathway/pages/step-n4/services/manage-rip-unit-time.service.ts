@@ -12,7 +12,7 @@ export class ManageRipUnitTimeService {
 
   GETAllResultsInnovationPackageUnitTime() {
     this.api.resultsSE.GETAllResultsInnovationPackageUnitTime().subscribe(({ response }) => {
-      console.log(response);
+      //(response);
       this.unitTimeList = response;
     });
   }

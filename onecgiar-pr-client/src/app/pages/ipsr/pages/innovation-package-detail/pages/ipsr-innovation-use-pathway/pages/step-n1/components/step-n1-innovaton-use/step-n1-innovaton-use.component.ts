@@ -65,7 +65,7 @@ export class StepN1InnovatonUseComponent {
   }
   addOther() {
     this.body.innovatonUse.measures.push(new Measure());
-    console.log(this.body.innovatonUse.measures);
+    //(this.body.innovatonUse.measures);
   }
   get getAllSubTypes() {
     const list = [];
@@ -90,7 +90,7 @@ export class StepN1InnovatonUseComponent {
   }
 
   removeOrganization(organizationItem) {
-    console.log(organizationItem);
+    //(organizationItem);
     organizationItem.institution_sub_type_id = null;
     organizationItem.institution_types_id = null;
     organizationItem.is_active = false;

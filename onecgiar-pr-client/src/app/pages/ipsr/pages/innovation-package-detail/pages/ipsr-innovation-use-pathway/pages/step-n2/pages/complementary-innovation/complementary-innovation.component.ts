@@ -60,7 +60,7 @@ export class ComplementaryInnovationComponent implements OnInit {
   innovationSving() {
     this.api.resultsSE.GETInnovationPathwayStepTwoInnovationSelect().subscribe(resp => {
       this.innovationPackageCreatorBody = resp['response'];
-      //console.log(resp);
+      ////(resp);
     });
   }
 
@@ -99,7 +99,7 @@ export class ComplementaryInnovationComponent implements OnInit {
 
   regiterInnovationComplementary(complementaryInnovcation) {
     const seletedInnovation = [];
-    //console.log(complementaryInnovcation);
+    ////(complementaryInnovcation);
     complementaryInnovcation.forEach(element => {
       if (element.hasOwnProperty('result_id')) {
         seletedInnovation.push({
@@ -117,18 +117,18 @@ export class ComplementaryInnovationComponent implements OnInit {
 
   async onSaveSection() {
     this.body = await this.regiterInnovationComplementary(this.innovationPackageCreatorBody);
-    //console.log(this.body);
+    ////(this.body);
 
     this.api.resultsSE.PATCHComplementaryInnovation({ complementaryInovatins: this.body }).subscribe(resp => {
-      //console.log(resp);
+      ////(resp);
     });
-    //console.log(this.regiterInnovationComplementary(this.innovationPackageCreatorBody));
+    ////(this.regiterInnovationComplementary(this.innovationPackageCreatorBody));
   }
 
   async onSavePreviuosNext(descrip) {
     this.body = await this.regiterInnovationComplementary(this.innovationPackageCreatorBody);
     this.api.resultsSE.PATCHComplementaryInnovationPrevious({ complementaryInovatins: this.body }, descrip).subscribe(resp => {
-      //console.log(resp);
+      ////(resp);
       if (this.api.rolesSE.isAdmin && this.api.isStepTwoTwo == false && descrip == 'next') {
         this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2/basic-info']);
       }

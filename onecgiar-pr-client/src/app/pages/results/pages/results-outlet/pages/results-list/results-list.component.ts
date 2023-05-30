@@ -80,7 +80,7 @@ export class ResultsListComponent implements OnInit {
     this.shareRequestModalSE.inNotifications = false;
   }
   onPressAction(result) {
-    console.log(result);
+    //(result);
     this.retrieveModalSE.title = result?.title;
     this.api.resultsSE.currentResultId = result?.id;
     this.api.dataControlSE.currentResult = result;

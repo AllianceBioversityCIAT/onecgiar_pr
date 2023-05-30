@@ -65,7 +65,7 @@ export class RolesService {
 
       const initiativeFinded = initiative.find(init => init.initiative_id == initiative_id);
       this.readOnly = Boolean(!initiativeFinded);
-      // this.readOnly ? console.log('%cIs ReadOnly => ' + this.readOnly, 'background: #222; color: #d84242') : console.log('%cNot ReadOnly => ' + this.readOnly, 'background: #222; color: #aaeaf5');
+      // this.readOnly ? //('%cIs ReadOnly => ' + this.readOnly, 'background: #222; color: #d84242') : //('%cNot ReadOnly => ' + this.readOnly, 'background: #222; color: #aaeaf5');
       //('%c******END OF validateReadOnly*******', 'background: #222; color: #52cd47');
       return null;
     };

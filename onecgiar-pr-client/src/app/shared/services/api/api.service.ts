@@ -79,7 +79,7 @@ export class ApiService {
         //('ENDING CHAT');
       };
     } catch (error) {
-      console.log(error);
+      //(error);
     }
   }
   setTitle(title) {

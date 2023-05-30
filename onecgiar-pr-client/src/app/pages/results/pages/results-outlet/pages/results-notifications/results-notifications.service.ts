@@ -10,9 +10,9 @@ export class ResultsNotificationsService {
   constructor(private api: ApiService) {}
 
   get_section_information() {
-    console.log('get_section_information');
+    //('get_section_information');
     this.api.resultsSE.GET_allRequest().subscribe(({ response }) => {
-      console.log(response);
+      //(response);
       this.interactiveNotisList = null;
       this.staticNotisList = null;
       if (response) {
@@ -38,9 +38,9 @@ export class ResultsNotificationsService {
   }
 
   get_section_innovation_packages() {
-    console.log('get_section_innovation_packages');
+    //('get_section_innovation_packages');
     this.api.resultsSE.GET_allRequest().subscribe(({ response }) => {
-      console.log(response);
+      //(response);
       this.interactiveNotisList = null;
       this.staticNotisList = null;
       if (response) {

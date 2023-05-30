@@ -78,7 +78,7 @@ export class StepN3CurrentUseComponent {
     return list;
   }
   removeOrganization(organizationItem) {
-    console.log(organizationItem);
+    //(organizationItem);
     organizationItem.institution_sub_type_id = null;
     organizationItem.institution_types_id = null;
     organizationItem.is_active = false;

@@ -35,11 +35,11 @@ export class KnowledgeProductInfoComponent implements OnInit {
     });
     this.api.resultsSE.GET_allClarisaMeliaStudyTypes().subscribe(({ response }) => {
       this.meliaTypes = response;
-      //console.log(this.meliaTypes);
+      ////(this.meliaTypes);
     });
     this.api.resultsSE.GET_ostMeliaStudiesByResultId().subscribe(({ response }) => {
       this.ostMeliaStudies = response;
-      //console.log(this.meliaTypes);
+      ////(this.meliaTypes);
     });
   }
 
@@ -114,7 +114,7 @@ export class KnowledgeProductInfoComponent implements OnInit {
   }
 
   onSaveSection() {
-    //console.log(this.sectionData);
+    ////(this.sectionData);
     this.api.resultsSE.PATCH_knowledgeProductSection(this.sectionData).subscribe(({ response }) => {
       this.getSectionInformation();
     });

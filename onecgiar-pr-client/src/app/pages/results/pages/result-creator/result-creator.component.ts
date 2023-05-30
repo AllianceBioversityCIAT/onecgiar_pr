@@ -86,7 +86,7 @@ export class ResultCreatorComponent implements OnInit {
       this.api.resultsSE.POST_resultCreateHeader(this.resultLevelSE.resultBody).subscribe(
         (resp: any) => {
           this.router.navigate([`/result/result-detail/${resp?.response?.result_code}/general-information`]);
-          console.log(resp);
+          //(resp);
           this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
         },
         err => {
@@ -97,7 +97,7 @@ export class ResultCreatorComponent implements OnInit {
       //({ ...this.mqapJson, result_data: this.resultLevelSE.resultBody });
       this.api.resultsSE.POST_createWithHandle({ ...this.mqapJson, result_data: this.resultLevelSE.resultBody }).subscribe(
         (resp: any) => {
-          console.log(resp);
+          //(resp);
           this.router.navigate([`/result/result-detail/${resp?.response?.result_code}/general-information`]);
           this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
         },
@@ -134,7 +134,7 @@ export class ResultCreatorComponent implements OnInit {
         this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Metadata found successfully', description: 'Title: ' + this.resultLevelSE.resultBody.result_name, status: 'success' });
       },
       err => {
-        console.log(err.error.message);
+        //(err.error.message);
         this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
         this.validating = false;
         this.resultLevelSE.resultBody.result_name = '';
