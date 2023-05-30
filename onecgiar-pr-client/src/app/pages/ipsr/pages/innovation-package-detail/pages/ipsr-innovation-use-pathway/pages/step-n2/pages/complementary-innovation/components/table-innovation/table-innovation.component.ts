@@ -2,6 +2,8 @@ import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnInit, Output
 import { ApiService } from '../../../../../../../../../../../../shared/services/api/api.service';
 import { ManageInnovationsListService } from '../../../../../../../../../../services/manage-innovations-list.service';
 import { Observable } from 'rxjs';
+import { IpsrDataControlService } from 'src/app/pages/ipsr/services/ipsr-data-control.service';
+import { Router } from '@angular/router';
 
 interface ComplementaryInnovation {
   climate_change_tag_level_id:string;
@@ -38,6 +40,7 @@ export class TableInnovationComponent{
   isReadonly = false;
   informationComplementaryInnovation:ComplementaryInnovation[] = [];
   loading:boolean = true;
+  isInitiative:boolean = true;
   informationComplentary:complementaryInnovation = new complementaryInnovation();
   @Output() selectInnovationEvent = new EventEmitter<ComplementaryInnovation>();
   @Output() saveedit = new EventEmitter<any>();
@@ -47,7 +50,7 @@ export class TableInnovationComponent{
   selectComplementary:any[] = [];
   complementaries = false;
   idInnovation:number;
-  constructor(public api: ApiService, public manageInnovationsListSE: ManageInnovationsListService) {}
+  constructor(public api: ApiService, public ipsrDataControlSE: IpsrDataControlService, public manageInnovationsListSE: ManageInnovationsListService, private router: Router) {}
 
   columnOrder = [
     { title: 'Code', attr: 'result_code'},
@@ -64,38 +67,43 @@ export class TableInnovationComponent{
     this.selectInnovationEvent.emit(result);  
   }
 
-  getComplementaryInnovation(id, isRead){
-    this.status = true;
-    if(isRead == 0){
-      this.isReadonly = true;
+  getComplementaryInnovation(id, isRead, result){
+      this.isInitiative =  this.api.rolesSE.validateInitiative(this.ipsrDataControlSE.initiative_id);
+    if(result.result_type_id == 11){
+      this.status = true;
+      if(isRead == 0){
+        this.isReadonly = true;
+      }else{
+        this.isReadonly = false;
+      }
+      this.idInnovation = id;
+      this.api.resultsSE.GETComplementaryById(id).subscribe((resp) =>{
+        this.complementaries = false;
+        this.selectComplementary = []
+        this.informationComplentary.title = resp['response']['findResult']['title']
+        this.informationComplentary.description = resp['response']['findResult']['description']
+        this.informationComplentary.short_title = resp['response']['findResultComplementaryInnovation']['short_title']
+        this.informationComplentary.other_funcions = resp['response']['findResultComplementaryInnovation']['other_funcions']
+        this.informationComplentary.referenceMaterials = resp['response']['evidence']
+        resp['response']['findComplementaryInnovationFuctions'].forEach(element => {
+          this.selectComplementary.push(element['complementary_innovation_function_id'])
+        });
+        setTimeout(() => {
+          this.complementaries = true;
+        }, 100);
+        
+        
+        
+      });
     }else{
-      this.isReadonly = false;
+      let url = '/result/result-detail/'+result['result_code']+'/general-information';
+      //this.router.navigate(['/result/result-detail/'+result['result_code']+'/general-information'], "_blank");
+      window.open(url, '_blank');
     }
-    this.idInnovation = id;
-    console.log(id);
+    
+    
 
     
-    this.api.resultsSE.GETComplementaryById(id).subscribe((resp) =>{
-      console.log(resp['response']);
-      this.complementaries = false;
-      this.selectComplementary = []
-      this.informationComplentary.title = resp['response']['findResult']['title']
-      this.informationComplentary.description = resp['response']['findResult']['description']
-      this.informationComplentary.short_title = resp['response']['findResultComplementaryInnovation']['short_title']
-      this.informationComplentary.other_funcions = resp['response']['findResultComplementaryInnovation']['other_funcions']
-      this.informationComplentary.referenceMaterials = resp['response']['evidence']
-      resp['response']['findComplementaryInnovationFuctions'].forEach(element => {
-        this.selectComplementary.push(element['complementary_innovation_function_id'])
-      });
-      console.log(this.informationComplentary);
-      console.log(this.selectComplementary);
-      setTimeout(() => {
-        this.complementaries = true;
-      }, 100);
-      
-      
-      
-    });
   }
 
   addNewInput(){
@@ -107,14 +115,12 @@ export class TableInnovationComponent{
   }
 
   selected(){
-    console.log(this.selectComplementary);
     
   }
 
   onSave(){
     this.informationComplentary.complementaryFunctions = []
     for (let index = 0; index < this.selectComplementary.length; index++) {
-      console.log(this.selectComplementary.length);
       
       const complementaryFunctions = {
         complementary_innovation_functions_id:  this.selectComplementary[index]
@@ -122,11 +128,9 @@ export class TableInnovationComponent{
       this.informationComplentary.complementaryFunctions.push(complementaryFunctions);
     }
     this.api.resultsSE.PATCHcomplementaryinnovation(this.informationComplentary,this.idInnovation).subscribe((resp) =>{
-      console.log(resp);
       this.status = false;
       this.saveedit.emit(true);
     })
-    console.log(this.informationComplentary);
     
   }
 
@@ -134,12 +138,10 @@ export class TableInnovationComponent{
     this.api.alertsFe.show({ id: 'confirm-delete-result', title: `Are you sure you want to remove this complementary innovation?`, description: ``, status: 'success', confirmText: 'Yes, delete' }, () => {
       // console.log('delete');
       this.api.resultsSE.DELETEcomplementaryinnovation(id).subscribe((resp) =>{
-        console.log(resp);
         this.status = false;
         this.saveedit.emit(true);
       },
       err => {
-        console.log(err);
         this.api.alertsFe.show({ id: 'delete-error', title: 'Error when delete result', description: '', status: 'error' });
       }
       )

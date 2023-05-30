@@ -35,6 +35,7 @@ export class ComplementaryInnovationComponent implements OnInit {
   status:boolean = false;
   informationComplementaryInnovations:any[] = [];
   cols = [];
+  isInitiative:boolean = true;
   constructor(public api: ApiService, private ipsrDataControlSE: IpsrDataControlService, private router: Router) {}
 
   ngOnInit(): void {
@@ -44,10 +45,10 @@ export class ComplementaryInnovationComponent implements OnInit {
     this.innovationSving();
 
     this.api.resultsSE.GETComplementataryInnovationFunctions().subscribe((resp) => {
-      console.log(resp);
+      //console.log(resp);
       this.complemntaryFunction = resp['response']
       this.columns();
-      console.log(this.cols);
+      //console.log(this.cols);
       
     });
 
@@ -62,7 +63,7 @@ export class ComplementaryInnovationComponent implements OnInit {
   innovationSving(){
     this.api.resultsSE.GETInnovationPathwayStepTwoInnovationSelect().subscribe((resp) => {
       this.innovationPackageCreatorBody = resp['response']
-      console.log(resp);
+      //console.log(resp);
       
     });
   }
@@ -103,7 +104,7 @@ export class ComplementaryInnovationComponent implements OnInit {
 
   regiterInnovationComplementary(complementaryInnovcation){
     let seletedInnovation = []
-    console.log(complementaryInnovcation);
+    //console.log(complementaryInnovcation);
     complementaryInnovcation.forEach(element => {
       
       
@@ -124,19 +125,19 @@ export class ComplementaryInnovationComponent implements OnInit {
 
   async onSaveSection(){
     this.body= await this.regiterInnovationComplementary(this.innovationPackageCreatorBody);
-    console.log(this.body);
+    //console.log(this.body);
     
     this.api.resultsSE.PATCHComplementaryInnovation({ complementaryInovatins:this.body}).subscribe((resp) =>{
-      console.log(resp);
+      //console.log(resp);
      
     })
-    console.log(this.regiterInnovationComplementary(this.innovationPackageCreatorBody));
+    //console.log(this.regiterInnovationComplementary(this.innovationPackageCreatorBody));
   }
 
   async onSavePreviuosNext(descrip){
     this.body= await this.regiterInnovationComplementary(this.innovationPackageCreatorBody);
     this.api.resultsSE.PATCHComplementaryInnovationPrevious({ complementaryInovatins:this.body}, descrip).subscribe((resp) =>{
-      console.log(resp);
+      //console.log(resp);
       if(this.api.rolesSE.isAdmin && this.api.isStepTwoTwo == false && descrip == 'next'){
         this.router.navigate(['/ipsr/detail/'+this.ipsrDataControlSE.resultInnovationCode+'/ipsr-innovation-use-pathway/step-2/basic-info']);
       }
@@ -152,15 +153,17 @@ export class ComplementaryInnovationComponent implements OnInit {
 
   getInformationInnovationComentary(estado){
     this.api.resultsSE.GETinnovationpathwayStepTwo().subscribe((resp) =>{
-      console.log(resp);
       this.informationComplementaryInnovations = resp['response'];
       this.innovationPackageCreatorBody.forEach(seleccionado=>{
         let encontrado = this.informationComplementaryInnovations.find(tablaItem=>tablaItem.result_code == seleccionado.result_code)
         encontrado.selected = true;
+       
       })
       this.informationComplementaryInnovations.forEach((inno: any) => {
         inno.full_name = `${inno?.result_code} ${inno?.title} ${inno?.initiative_official_code} ${inno?.initiative_official_code} ${inno?.lead_contact_person} yes no `;
         inno.result_code = Number(inno.result_code);
+        this.isInitiative =  this.api.rolesSE.validateInitiative(inno.initiative_id);
+        inno.permissos = this.isInitiative;
       });
     })
   }
