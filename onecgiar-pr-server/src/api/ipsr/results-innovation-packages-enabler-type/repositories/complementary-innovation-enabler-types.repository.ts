@@ -14,26 +14,26 @@ export class ComplementaryInnovationEnablerTypesRepository extends Repository<Co
      }
 
      async getAllComplementaryInnovationsType(){
-        let comentaryPrincipals = await this.query(`
+        let comentaryPrincipals:any[] = await this.query(`
         SELECT ciet.complementary_innovation_enabler_types_id, ciet.group, ciet.type 
             FROM prdb.complementary_innovation_enabler_types ciet 
-                where ciet.type is null;`)
+                where ciet.type is null and ciet.level = 0;`)
+        
+        let comentarySubPrincipals:any[] = await this.query(`
+            SELECT ciet.complementary_innovation_enabler_types_id, ciet.group, ciet.type 
+                    FROM prdb.complementary_innovation_enabler_types ciet 
+                        where ciet.level = 1;`)
+
+        let comentarySub:any[] = await this.query(`
+            SELECT ciet.complementary_innovation_enabler_types_id, ciet.group, ciet.type 
+                    FROM prdb.complementary_innovation_enabler_types ciet 
+                        where ciet.level = 2;`)        
+        comentarySubPrincipals.forEach((elemt) =>{
+            elemt.subCategories = comentarySub.filter(element => element.type ==  elemt.complementary_innovation_enabler_types_id);
+        })
 
         for (let index = 0; index < comentaryPrincipals.length; index++) {
-            let subComentaries = await this.query(`
-            SELECT ciet.complementary_innovation_enabler_types_id, ciet.group, ciet.type 
-                FROM prdb.complementary_innovation_enabler_types ciet 
-                    where ciet.type = ${comentaryPrincipals[index].complementary_innovation_enabler_types_id};`)
-            for (let index = 0; index < subComentaries.length; index++) {
-                let subComentariesTypeTree = await this.query(`
-            SELECT ciet.complementary_innovation_enabler_types_id, ciet.group, ciet.type 
-                FROM prdb.complementary_innovation_enabler_types ciet 
-                    where ciet.type = ${subComentaries[index].complementary_innovation_enabler_types_id};`)
-                    subComentaries[index].subCategories = subComentariesTypeTree;
-            }
-
-            comentaryPrincipals[index].subCategories = subComentaries;
-            
+            comentaryPrincipals[index].subCategories = comentarySubPrincipals.filter(element => element.type ==  comentaryPrincipals[index].complementary_innovation_enabler_types_id);
         }
 
         return {

@@ -48,12 +48,13 @@ export class PolicyChangeInfoComponent implements OnInit {
   showAlerts() {}
 
   updateValue(value: string) {
-    let val = parseInt(value);
+    let val = parseFloat(value);
     this.innovationUseInfoBody.amount = val;
     if (Number.isNaN(val)) {
       val = 0;
     }
     this.cantidad = formatCurrency(val, 'en-US', getCurrencySymbol('USD', 'wide'));
     //(this.innovationUseInfoBody.amount);
+    console.log(this.innovationUseInfoBody.amount);
   }
 }

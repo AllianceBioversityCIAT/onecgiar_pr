@@ -1423,7 +1423,6 @@ export class InnovationPathwayStepOneService {
             where: { actor_type_id: IsNull(), result_id: result.id },
           });
         }
-        console.log(actorExists);
         if (actorExists) {
           await this._resultActorRepository.update(
             actorExists.result_actors_id,
