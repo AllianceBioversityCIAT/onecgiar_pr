@@ -48,7 +48,7 @@ export class PolicyChangeInfoComponent implements OnInit {
   showAlerts() {}
 
   updateValue(value: string) {
-    let val = parseFloat(value);
+    let val = parseFloat(value.replace(/\$/g, ''));
     this.innovationUseInfoBody.amount = val;
     if (Number.isNaN(val)) {
       val = 0;
