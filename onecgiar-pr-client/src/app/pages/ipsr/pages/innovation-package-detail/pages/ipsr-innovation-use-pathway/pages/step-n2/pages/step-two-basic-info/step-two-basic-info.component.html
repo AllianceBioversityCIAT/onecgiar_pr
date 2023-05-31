@@ -6,14 +6,15 @@
             <div header><strong>{{i+1}}. </strong> {{bodyItem.title}} </div>
             <div content style="display: flex; flex-direction: column; align-content: center;">
                 <app-pr-field-header label="Type of enabler" [required]="false" description="Select multiple" style="padding: 0 30px 0 30px;"></app-pr-field-header>
-                <div class="container">
+                <div class="container" *ngIf="init == true">
                     <div class="col-{{in}}" *ngFor="let item of cols; let in = index">
                         <div *ngFor="let subItem of item">
                             <app-pr-field-header label="{{subItem.group}}" [required]="false"></app-pr-field-header>
                             <ul>
                                 <div *ngFor="let category of subItem?.subCategories" class="field-checkbox">
                                     <li >
-                                        <p-checkbox name="group" [value]="category" *ngIf="update == true"  [inputId]="category.id" [(ngModel)]="bodyStep22[i].complementary_innovation_enabler_types_one"
+                                        <p-checkbox name="group" [value]="category.complementary_innovation_enabler_types_id" *ngIf="update == true"  [inputId]="category.complementary_innovation_enabler_types_id"
+                                         [(ngModel)]="this.bodyStep2[i].complementary_innovation_enabler_types_one"
                                         (ngModelChange)="selectedOneLevel(category, i,1)"
                                         ></p-checkbox>
                                         <label> {{ category.group }}</label>
@@ -21,7 +22,8 @@
                                     <ul >
                                         <li>
                                             <div *ngFor="let categories of category?.subCategories" class="field-checkbox" >
-                                                <p-checkbox name="group" [value]="categories" *ngIf="update == true" [inputId]="categories.id" [(ngModel)]="bodyStep22[i].complementary_innovation_enabler_types_two"
+                                                <p-checkbox name="group" [value]="categories.complementary_innovation_enabler_types_id" *ngIf="update == true" [inputId]="categories.complementary_innovation_enabler_types_id" 
+                                                [(ngModel)]="this.bodyStep2[i].complementary_innovation_enabler_types_two"
                                                 (ngModelChange)=" selectedTwo(category, i)"
                                                 ></p-checkbox>
                                                 <label >{{ categories.group }}</label>

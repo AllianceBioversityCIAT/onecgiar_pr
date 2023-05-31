@@ -1,6 +1,6 @@
 export class CreateResultsInnovationPackagesEnablerTypeDto {
-    complementary_innovation_enabler_types_one:innovationEnabler[] = [];
-    complementary_innovation_enabler_types_two:innovationEnabler[]= [];
+    complementary_innovation_enabler_types_one:any[] = [];
+    complementary_innovation_enabler_types_two:any[]= [];
     result_by_innovation_package_id:number;
 }
 
