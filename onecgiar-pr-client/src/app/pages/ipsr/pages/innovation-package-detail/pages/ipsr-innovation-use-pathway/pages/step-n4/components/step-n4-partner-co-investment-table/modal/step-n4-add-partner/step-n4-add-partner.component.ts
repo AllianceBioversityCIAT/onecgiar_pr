@@ -29,6 +29,7 @@ export class StepN4AddPartnerComponent {
     this.api.resultsSE.PATCHInnovationPathwayStep4Partners(this.partnerBody).subscribe(
       ({ response }) => {
         console.log(response);
+        response.institution.institutions_type_name = response?.institution?.obj_institutions?.obj_institution_type_code?.name;
         response.institution.institutions_name = response.institution.obj_institutions.name;
         this.requesting = false;
         this.body.institutions_expected_investment.push(response);
