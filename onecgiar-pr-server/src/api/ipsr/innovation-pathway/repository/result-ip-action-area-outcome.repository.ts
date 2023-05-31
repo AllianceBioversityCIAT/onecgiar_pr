@@ -13,9 +13,7 @@ export class ResultIpAAOutcomeRepository extends Repository<ResultIpAAOutcome> {
     super(ResultIpAAOutcome, dataSource.createEntityManager());
   }
 
-  async mapActionAreaOutcome(
-    initId: number
-  ) {
+  async mapActionAreaOutcome(initId: number) {
     try {
       const aaOutcomeQuery = `
       SELECT
@@ -37,9 +35,10 @@ export class ResultIpAAOutcomeRepository extends Repository<ResultIpAAOutcome> {
         );
       `;
 
-      const aaOutcome: any[] = await this.dataSource.query(aaOutcomeQuery, [initId]);
+      const aaOutcome: any[] = await this.dataSource.query(aaOutcomeQuery, [
+        initId,
+      ]);
       return aaOutcome;
-
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultIpAAOutcomeRepository.name,
@@ -61,10 +60,13 @@ export class ResultIpAAOutcomeRepository extends Repository<ResultIpAAOutcome> {
       LEFT JOIN clarisa_action_area_outcome caao ON caao.id = riaa.action_area_outcome_id
     WHERE riaa.is_active > 0
         AND riaa.result_by_innovation_package_id = ?
+    ORDER BY caao.outcomeSMOcode ASC;
     `;
 
     try {
-      const aaOutcome: any[] = await this.query(query, [resultByInnovationPackageId]);
+      const aaOutcome: any[] = await this.query(query, [
+        resultByInnovationPackageId,
+      ]);
       return aaOutcome;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

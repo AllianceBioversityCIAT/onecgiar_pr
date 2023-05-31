@@ -16,12 +16,12 @@ export class IpsrNonPooledProjectsComponent {
     // this.requestEvent();
   }
   deleteEvidence(index) {
-    // console.log(index);
+    //(index);
     this.contributorsBody.contributing_np_projects.splice(index, 1);
   }
   addBilateralContribution() {
     this.contributorsBody.contributing_np_projects.push(new donorInterfaceToc());
-    // console.log(this.theoryOfChangeBody.contributing_np_projects);
+    //(this.theoryOfChangeBody.contributing_np_projects);
   }
   // requestEvent() {
   //   this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {

@@ -636,10 +636,6 @@ WHERE
   }
 
   async getResultByTypes(typesId: number[]): Promise<Result[]> {
-    console.log(
-      '🚀 ~ file: result.repository.ts:633 ~ ResultRepository ~ getResultByTypes ~ typesId:',
-      typesId,
-    );
     const queryData = `
     SELECT
         r.id as result_id,
@@ -663,7 +659,11 @@ WHERE
         r.geographic_scope_id,
         rbi.inititiative_id as initiative_id,
         rl.name as result_level_name,
-        rt.name as result_type_name,
+        IF(
+            r.result_type_id = 7,
+            CONCAT(rt.name, ' (QAed)'),
+            rt.name
+        ) as result_type_name,
         r.has_regions,
         r.has_countries,
         ci.name as initiative_name,

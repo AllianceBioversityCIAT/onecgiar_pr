@@ -30,7 +30,6 @@ export class PrimaryImpactAreaService {
               impact_area_id: impactArea,
             });
           } else {
-            console.log('push');
             listImpactAreaPrimary.push({
               result_code: resp.result_code,
               impact_area_id: resp.impact_area_id,

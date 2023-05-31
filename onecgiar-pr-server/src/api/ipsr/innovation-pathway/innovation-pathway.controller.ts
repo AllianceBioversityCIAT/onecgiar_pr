@@ -114,8 +114,8 @@ export class InnovationPathwayController {
     @Body() saveData: SaveStepTwoThree,
     @UserToken() user: TokenDto
   ) {
-    const { message, response, status } = await this._innovationPathwayStepThreeService.saveComplementaryinnovation(+resultId, user, saveData);
-    throw new HttpException({ message, response }, status);
+    const { message, response, statusCode } = await this._innovationPathwayStepThreeService.saveComplementaryinnovation(+resultId, user, saveData);
+    throw new HttpException({ message, response }, statusCode);
   }
 
   @Get('get/step-three/:resultId')

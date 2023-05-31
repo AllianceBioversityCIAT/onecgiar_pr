@@ -5,7 +5,10 @@ import { ClarisaSecondOrderAdministrativeDivision } from './entities/clarisa-sec
 import { lastValueFrom, map } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { env } from 'process';
-import { OrderAministrativeDivisionDto, geonameResponseDto } from '../../shared/extendsGlobalDTO/order-administrative-division.dto';
+import {
+  OrderAministrativeDivisionDto,
+  geonameResponseDto,
+} from '../../shared/extendsGlobalDTO/order-administrative-division.dto';
 import { AxiosResponse } from 'axios';
 
 @Injectable()
@@ -13,18 +16,27 @@ export class ClarisaSecondOrderAdministrativeDivisionRepository extends Reposito
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
-    private readonly _httpService: HttpService
+    private readonly _httpService: HttpService,
   ) {
-    super(ClarisaSecondOrderAdministrativeDivision, dataSource.createEntityManager());
+    super(
+      ClarisaSecondOrderAdministrativeDivision,
+      dataSource.createEntityManager(),
+    );
   }
 
-  async getIsoAlpha2AdminCode(isoAlpha2: string, adminCode1: string): Promise<OrderAministrativeDivisionDto[]> {
-    const response = await <Promise<geonameResponseDto>>lastValueFrom(
-      await this._httpService.get(
-        `${env.CLA_URL}/api/second-order-administrative-division/iso-alpha-2/${isoAlpha2}/admin-code-1/${adminCode1}`
-      ).pipe(map((resp) => resp.data))
-    );
+  async getIsoAlpha2AdminCode(
+    isoAlpha2: string,
+    adminCode1: string,
+  ): Promise<OrderAministrativeDivisionDto[]> {
+    const response = await (<Promise<geonameResponseDto>>(
+      lastValueFrom(
+        await this._httpService
+          .get(
+            `${env.CLA_URL}/api/second-order-administrative-division/iso-alpha-2/${isoAlpha2}/admin-code-1/${adminCode1}`,
+          )
+          .pipe(map((resp: any) => resp.data)),
+      )
+    ));
     return response.geonames;
   }
-
 }

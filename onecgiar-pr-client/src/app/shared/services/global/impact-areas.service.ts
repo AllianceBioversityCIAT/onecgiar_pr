@@ -14,17 +14,17 @@ export class ImpactAreasService {
 
   private getLists() {
     this.api.resultsSE.GET_AllClarisaImpactAreaIndicators().subscribe(({ response }) => {
-      // console.log(response);
+      //(response);
       this.impactAreaIndicators = response;
     });
 
     this.api.resultsSE.GET_AllLarisaImpactArea().subscribe(({ response }) => {
-      // console.log(response);
+      //(response);
       this.impactArea = response;
     });
 
     this.api.resultsSE.GET_AllglobalTarget().subscribe(({ response }) => {
-      // console.log(response);
+      //(response);
       this.globalTarget = response;
     });
   }

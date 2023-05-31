@@ -8,8 +8,7 @@ import { MenuItem } from 'primeng/api';
   templateUrl: './innovation-package-custom-table.component.html',
   styleUrls: ['./innovation-package-custom-table.component.scss']
 })
-export class InnovationPackageCustomTableComponent  {
-
+export class InnovationPackageCustomTableComponent {
   @Input() tableData: any;
   @Input() total: number = 0;
   @Output() deleteEvent = new EventEmitter();
@@ -27,9 +26,9 @@ export class InnovationPackageCustomTableComponent  {
       label: 'Map to TOC',
       icon: 'pi pi-fw pi-sitemap',
       command: () => {
-        // console.log('showShareRequest');
+        //('showShareRequest');
         this.api.dataControlSE.showShareRequest = true;
-        // console.log(this.api.resultsSE.currentResultId);
+        //(this.api.resultsSE.currentResultId);
         // event
       }
     }
@@ -42,9 +41,9 @@ export class InnovationPackageCustomTableComponent  {
       label: 'Map to TOC',
       icon: 'pi pi-fw pi-sitemap',
       command: () => {
-        // console.log('showShareRequest');
+        //('showShareRequest');
         this.api.dataControlSE.showShareRequest = true;
-        // console.log(this.api.resultsSE.currentResultId);
+        //(this.api.resultsSE.currentResultId);
         // event
       }
     },
@@ -59,31 +58,29 @@ export class InnovationPackageCustomTableComponent  {
     // { label: 'Submit', icon: 'pi pi-fw pi-reply' }
   ];
   onDelete() {
-    // console.log(this.api.dataControlSE.currentResult);
+    //(this.api.dataControlSE.currentResult);
     this.api.alertsFe.show({ id: 'confirm-delete-result', title: `Are you sure you want to delete the Innovation Package "${this.currentInnovationPackageToAction.title}"?`, description: `If you delete this Innovation Package it will no longer be displayed in the list of Innovation Packages.`, status: 'success', confirmText: 'Yes, delete' }, () => {
-      // console.log('delete');
+      //('delete');
       this.api.resultsSE.DELETEInnovationPackage(this.currentInnovationPackageToAction.id).subscribe(
         resp => {
-          console.log(resp);
+          //(resp);
           this.api.alertsFe.show({ id: 'confirm-delete-result-su', title: `The Innovation Package "${this.currentInnovationPackageToAction.title}" was deleted`, description: ``, status: 'success' });
           this.deleteEvent.emit();
         },
         err => {
-          console.log(err);
+          console.error(err);
           this.api.alertsFe.show({ id: 'delete-error', title: 'Error when delete Innovation Package', description: '', status: 'error' });
         }
       );
     });
   }
   onPressAction(result) {
-    console.log(result);
-    const onlyNumbers = result?.official_code.replace(/[^0-9]+/g, "");
+    const onlyNumbers = result?.official_code.replace(/[^0-9]+/g, '');
     this.currentInnovationPackageToAction.id = result?.id;
     this.currentInnovationPackageToAction.title = result.title;
     this.retrieveModalSE.title = result?.title;
     this.retrieveModalSE.requester_initiative_id = onlyNumbers;
-     this.api.resultsSE.currentResultId = result?.id;
+    this.api.resultsSE.currentResultId = result?.id;
     this.api.dataControlSE.currentResult = result;
   }
-
 }

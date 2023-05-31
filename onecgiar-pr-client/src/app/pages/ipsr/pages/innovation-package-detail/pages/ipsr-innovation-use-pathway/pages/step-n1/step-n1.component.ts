@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { IpsrStep1Body, CoreResult, Measure, Actor, Organization, Expert } from './model/Ipsr-step-1-body.model';
 import { IpsrDataControlService } from '../../../../../../services/ipsr-data-control.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-step-n1',
@@ -11,20 +12,20 @@ import { IpsrDataControlService } from '../../../../../../services/ipsr-data-con
 export class StepN1Component implements OnInit {
   ipsrStep1Body = new IpsrStep1Body();
   coreResult = new CoreResult();
-  constructor(private api: ApiService, public ipsrDataControlSE: IpsrDataControlService) {}
+  constructor(private api: ApiService, public ipsrDataControlSE: IpsrDataControlService, private router: Router) {}
 
   ngOnInit(): void {
     this.getSectionInformation();
     this.requestEvent();
-    this.api.setTitle('Step 1');
+    this.api.dataControlSE.detailSectionTitle('Step 1');
   }
 
   getSectionInformation() {
     this.api.resultsSE.GETInnovationPathwayByStepOneResultId().subscribe(({ response }) => {
       this.convertOrganizations(response?.innovatonUse?.organization);
       this.ipsrStep1Body = response;
-      console.log(response);
-      
+      // (response);
+
       this.ipsrStep1Body.geo_scope_id = response.geo_scope_id == 3 ? 4 : response.geo_scope_id;
       this.coreResult = response?.coreResult;
 
@@ -37,7 +38,10 @@ export class StepN1Component implements OnInit {
       this.ipsrStep1Body.sdgTargets.map(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
       this.ipsrStep1Body.impactAreas.map(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
       this.ipsrStep1Body.experts.forEach(expert => expert.expertises.map(expertItem => (expertItem.name = expertItem.obj_expertises.name)));
-      //? console.log(this.ipsrStep1Body);
+
+      this.ipsrStep1Body.institutions.map(item => (item.institutions_type_name = item.institutions_name));
+
+      //? // (this.ipsrStep1Body);
 
       if (this.ipsrStep1Body.innovatonUse.actors.length == 0) {
         this.ipsrStep1Body.innovatonUse.actors.push(new Actor());
@@ -51,14 +55,26 @@ export class StepN1Component implements OnInit {
     });
   }
   onSaveSection() {
-    // console.log("body");
+    //("body");
 
-    //? console.log(this.ipsrStep1Body);
+    //? //(this.ipsrStep1Body);
     this.convertOrganizationsTosave();
     this.api.resultsSE.PATCHInnovationPathwayByStepOneResultId(this.ipsrStep1Body).subscribe((resp: any) => {
-      console.log(resp?.response[0].response);
+      //(resp?.response[0].response);
       this.ipsrDataControlSE.detailData.title = resp?.response[0].response;
       this.getSectionInformation();
+    });
+  }
+
+  saveAndNextStep(descrip: string) {
+    this.convertOrganizationsTosave();
+    this.api.resultsSE.PATCHInnovationPathwayByStepOneResultIdNextStep(this.ipsrStep1Body, descrip).subscribe((resp: any) => {
+      //(resp?.response[0].response);
+      this.ipsrDataControlSE.detailData.title = resp?.response[0].response;
+      this.getSectionInformation();
+      setTimeout(() => {
+        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2']);
+      }, 1000);
     });
   }
 

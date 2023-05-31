@@ -2,12 +2,19 @@
     <div class="first_options">
 
         <div class="initiatives_selector">
-            <app-pr-multi-select [options]="this.api.dataControlSE.myInitiativesList | filterInitWithRoleCoordAndLead"
+            <app-pr-multi-select *ngIf="this.api.rolesSE.isAdmin" [options]="this.allInitiatives "
+                optionLabel="full_name" [isStatic]="true" optionValue="id" (selectOptionEvent)="onSelectInit()"
+                [required]="false" (removeOptionEvent)="onRemoveinit($event)" selectedOptionLabel="full_name"
+                [(ngModel)]="this.initiativesSelected" [confirmDeletion]="true" placeholder="Select initiative(s)">
+            </app-pr-multi-select>
+            <app-pr-multi-select *ngIf="!this.api.rolesSE.isAdmin"
+                [options]="this.api.dataControlSE.myInitiativesList | filterInitWithRoleCoordAndLead"
                 optionLabel="full_name" [isStatic]="true" optionValue="id" (selectOptionEvent)="onSelectInit()"
                 [required]="false" (removeOptionEvent)="onRemoveinit($event)" selectedOptionLabel="full_name"
                 [(ngModel)]="this.initiativesSelected" [confirmDeletion]="true" placeholder="Select initiative(s)">
             </app-pr-multi-select>
         </div>
+
 
         <div class="search_input">
             <i class="material-icons-round">search</i>
@@ -117,7 +124,7 @@
     </p-table>
     <div class="counter">
         <div class="name">Results: </div> {{(this.resultsList |
-        filterByText:this.textToFind).length}}/{{this.resultsList?.length}}
+        filterByText:this.textToFind)?.length}}/{{this.resultsList?.length}}
     </div>
 </div>
 

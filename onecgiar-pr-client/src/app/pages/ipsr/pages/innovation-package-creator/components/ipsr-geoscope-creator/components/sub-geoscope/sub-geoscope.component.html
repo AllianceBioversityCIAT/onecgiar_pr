@@ -1,20 +1,30 @@
 <div class="geo-scope">
-    <div style="display: flex; justify-content: center; align-items: center;">
+    <div style="display: flex; justify-content: center; align-items: center; width: 60px; ">
         <h4>{{index+1}}.</h4>
     </div>
-    <app-pr-select [options]="body" [isStatic]="true" optionValue="id" label="Country" 
+    <div style="width: 30%;margin-right: 10px;margin-top: 40px;">
+        <app-pr-select [options]="body.countries" [isStatic]="true" optionValue="id" label="Country" 
         optionLabel="name" placeholder="Select Country" [(ngModel)]="countrySelected" 
         (selectOptionEvent)="getSubNationalLevelOne(index)"></app-pr-select>
-        
-    <app-pr-select *ngIf="this.showNationalLevelSelect" [options]="subNationalOne" label="Sub-national level 1" placeholder="Select Sub-national level 1" optionLabel="name" 
-    [isStatic]="true" optionValue="geonameId" (selectOptionEvent)="getSSubNationalLevelTwo(index)" [(ngModel)]="subNationalOneSelected" ></app-pr-select>
-
-    <app-pr-select [options]="subNationalTwo" *ngIf="this.showNationalLevelTwoSelect" label="Sub-national level 2" placeholder="Select Sub-national level 2" optionLabel="name" 
-    [isStatic]="true" optionValue="geonameId"  [(ngModel)]="subNationalTwoSelected" 
-    [ngClass]="{'globalDisabled': subNationalOneSelected == null}" (selectOptionEvent)="selectSubLevelTwo(index)"
-        ></app-pr-select>
+    </div>
     
-    <div style="display: flex; justify-content: center; align-items: flex-end; height: 100%; ">
+     <div style="width: 30%;margin-right: 10px; margin-top: 40px;" id="notProvaider">
+       
+            <app-pr-select *ngIf="this.showNationalLevelSelect" [options]="subNationalOne" label="Sub-national level 1" placeholder="{{exitsSubLevelOne ? 'Select Sub-national level 1' : 'Not applicable'}}" optionLabel="name" 
+            [isStatic]="true" optionValue="geonameId" (selectOptionEvent)="getSSubNationalLevelTwo(index)" [ngClass]="{'globalDisabled': subNationalOne.length == 0}" 
+            [(ngModel)]="subNationalOneSelected" ></app-pr-select>
+            <app-pr-field-header description="There is no sub-national level 1 for {{nameCountry}}" *ngIf="exitsSubLevelOne == false"></app-pr-field-header>
+        
+     </div>   
+    
+    <div style="width: 30%;margin-right: 10px; margin-top: 40px;" id="notProvaidertwo">
+        <app-pr-select [options]="subNationalTwo" *ngIf="this.showNationalLevelTwoSelect" label="Sub-national level 2" placeholder="{{exitsSubLevelTwo ? 'Select Sub-national level 2' : 'Not applicable'}}" optionLabel="name" 
+    [isStatic]="true" optionValue="geonameId"  [(ngModel)]="subNationalTwoSelected"  [ngClass]="{'globalDisabled': subNationalTwo.length == 0}"  (selectOptionEvent)="selectSubLevelTwo(index)"
+        ></app-pr-select>
+        <app-pr-field-header description="There is no sub-national level 2 for {{nameCountryTwo}}" *ngIf="exitsSubLevelTwo == false"></app-pr-field-header>
+    </div>
+    
+    <div style="display: flex; justify-content: center; align-items: center; height: 100%; ">
         <div class="delete" (click)="delete(index)" *ngIf="this.showNationalLevelTwoSelect">
             <i class="clickEvent material-icons-round ymz-lsi-delete-icon" style="color: red; cursor: pointer;">delete</i>
         </div>

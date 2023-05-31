@@ -20,7 +20,7 @@ export class TorKeyResultStoryComponent {
   GET_keyResultStoryInitiativeId() {
     this.api.resultsSE.GET_keyResultStoryInitiativeId(this.typeOneReportSE.getInitiativeID(this.typeOneReportSE.initiativeSelected)?.id).subscribe(({ response }) => {
       this.typeOneReportSE.keyResultStoryData = response;
-      console.log(response);
+      //(response);
       this.tablesList = [];
       response.forEach(table => {
         this.formatTable(table);
@@ -29,21 +29,21 @@ export class TorKeyResultStoryComponent {
   }
 
   onSaveSection() {
-    console.log(this.typeOneReportSE.keyResultStoryData);
+    //(this.typeOneReportSE.keyResultStoryData);
     this.api.resultsSE.PATCH_primaryImpactAreaKrs(this.typeOneReportSE.keyResultStoryData).subscribe(
       resp => {
-        console.log(resp);
+        //(resp);
         this.GET_keyResultStoryInitiativeId();
         this.api.alertsFe.show({ id: 'save-button', title: 'Key result story informaion saved correctly', description: '', status: 'success', closeIn: 500 });
       },
       err => {
-        console.log(err);
+        console.error(err);
       }
     );
   }
 
   // onSave() {
-  //   console.log(this.typeOneReportSE.keyResultStoryData);
+  //   //(this.typeOneReportSE.keyResultStoryData);
 
   //   this.isSaving = true;
   //   setTimeout(() => {
@@ -52,7 +52,7 @@ export class TorKeyResultStoryComponent {
   // }
 
   formatTable(tableData) {
-    let header = [{ attr: 'category' }, { attr: 'value' }];
+    const header = [{ attr: 'category' }, { attr: 'value' }];
     let data = [
       { category: 'Result title', value: '', id: null },
       { category: 'Primary submitter', value: '' },
@@ -66,8 +66,8 @@ export class TorKeyResultStoryComponent {
       { category: 'Does this key result build on work or previous results from one or more CRPs?', value: '' }
     ];
 
-    let table = tableData;
-    // console.log(table);
+    const table = tableData;
+    //(table);
     if (!table) return (data = null);
 
     const is_impact = Boolean(Number(table.is_impact));

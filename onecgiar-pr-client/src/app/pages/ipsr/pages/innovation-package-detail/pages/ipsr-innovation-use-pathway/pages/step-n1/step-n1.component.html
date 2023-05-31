@@ -1,5 +1,4 @@
 <div class="step_title"> <strong>Step 1:</strong>Scaling Ambition, Experts and Consultation </div>
-
 <app-pr-field-header [required]="false"
     label="Core innovation selected and CGIAR Initiative leading the development"></app-pr-field-header>
 
@@ -11,21 +10,26 @@
 </div>
 
 <app-step-n1-geoscope [body]="this.ipsrStep1Body"></app-step-n1-geoscope>
-<app-step-n1-eoi-outcomes [body]="this.ipsrStep1Body"
-    *ngIf="this.ipsrDataControlSE?.detailData?.inititiative_id"></app-step-n1-eoi-outcomes>
-<app-step-n1-action-area-outcomes [body]="this.ipsrStep1Body"
-    *ngIf="this.ipsrDataControlSE?.detailData?.inititiative_id"></app-step-n1-action-area-outcomes>
-<app-step-n1-impact-areas [body]="this.ipsrStep1Body"></app-step-n1-impact-areas>
-<app-step-n1-sdg-targets [body]="this.ipsrStep1Body"></app-step-n1-sdg-targets>
-<app-step-n1-innovaton-use [body]="this.ipsrStep1Body"></app-step-n1-innovaton-use>
-<app-step-n1-institutions [body]="this.ipsrStep1Body"></app-step-n1-institutions>
-<app-step-n1-scaling-ambition-blurb [body]="this.ipsrStep1Body"></app-step-n1-scaling-ambition-blurb>
+<div class="step_sub_section">
+
+
+    <app-step-n1-eoi-outcomes [body]="this.ipsrStep1Body"
+        *ngIf="this.ipsrDataControlSE?.detailData?.inititiative_id"></app-step-n1-eoi-outcomes>
+    <app-step-n1-action-area-outcomes [body]="this.ipsrStep1Body"
+        *ngIf="this.ipsrDataControlSE?.detailData?.inititiative_id"></app-step-n1-action-area-outcomes>
+    <app-step-n1-impact-areas [body]="this.ipsrStep1Body"></app-step-n1-impact-areas>
+    <app-step-n1-sdg-targets [body]="this.ipsrStep1Body"></app-step-n1-sdg-targets>
+    <app-step-n1-innovaton-use [body]="this.ipsrStep1Body"></app-step-n1-innovaton-use>
+    <app-step-n1-institutions [body]="this.ipsrStep1Body"></app-step-n1-institutions>
+    <app-step-n1-scaling-ambition-blurb [body]="this.ipsrStep1Body"></app-step-n1-scaling-ambition-blurb>
+
+</div>
+
 <app-step-n1-experts [body]="this.ipsrStep1Body"></app-step-n1-experts>
 <app-step-n1-consensus-and-consultation [body]="this.ipsrStep1Body"></app-step-n1-consensus-and-consultation>
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()">
 </app-save-button>
 <div class="toggle_change_step">
-    <app-pr-button
-        [routerLink]="'/ipsr/detail/'+this.ipsrDataControlSE.resultInnovationCode+'/ipsr-innovation-use-pathway/step-2'"
-        padding="big" text="Go to next step" icon="arrow_circle_right"></app-pr-button>
+    <app-pr-button (click)="saveAndNextStep('next')" padding="big" text="Save & go to next step"
+        icon="arrow_circle_right"></app-pr-button>
 </div>

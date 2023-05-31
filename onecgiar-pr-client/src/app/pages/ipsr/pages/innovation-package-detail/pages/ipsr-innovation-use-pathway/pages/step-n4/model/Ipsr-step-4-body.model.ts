@@ -11,6 +11,7 @@ export class IpsrStep4Body {
   partner_unit_time_id: number = null;
   partner_expected_time: string = null;
   is_result_ip_published: boolean = null;
+  ipsr_pdf_report: string = null;
 }
 
 export class InstitutionsexpectedinvestmentStep4 {
@@ -31,6 +32,7 @@ class Institution {
   is_active: boolean;
   deliveries: number[];
   institutions_name: string;
+  institutions_type_name: string;
 }
 
 export class BilateralexpectedinvestmentStep4 {

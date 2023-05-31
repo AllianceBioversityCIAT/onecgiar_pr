@@ -193,6 +193,13 @@ export class ShareResultRequestService {
             newResultByInitiative,
           );
 
+          await this._resultInitiativeBudgetRepository.save({
+            result_initiative_id: newReIni.id,
+            version_id: vrs.id,
+            created_by: user.id,
+            last_updated_by: user.id,
+          });
+
           const resultTocResult =
             await this._resultsTocResultRepository.existsResultTocResult(
               result.id,
@@ -216,6 +223,27 @@ export class ShareResultRequestService {
             is_active: true,
             last_updated_by: user.id,
           });
+
+          const initBudget =
+            await this._resultInitiativeBudgetRepository.findOne({
+              where: {
+                result_initiative_id: exists.id,
+              },
+            });
+
+          if (!initBudget) {
+            await this._resultInitiativeBudgetRepository.save({
+              result_initiative_id: exists.id,
+              version_id: vrs.id,
+              created_by: user.id,
+              last_updated_by: user.id,
+            });
+          } else {
+            await this._resultInitiativeBudgetRepository.update(exists.id, {
+              is_active: true,
+              last_updated_by: user.id,
+            });
+          }
 
           const resultTocResult =
             await this._resultsTocResultRepository.existsResultTocResult(
@@ -252,27 +280,11 @@ export class ShareResultRequestService {
 
       return {
         response: requestData,
-        message: 'The requests have been updated corrector',
+        message: 'The requests have been updated successfully',
         status: HttpStatus.OK,
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
-  }
-
-  findAll() {
-    return `This action returns all shareResultRequest`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} shareResultRequest`;
-  }
-
-  update(id: number, updateShareResultRequestDto: UpdateShareResultRequestDto) {
-    return `This action updates a #${id} shareResultRequest`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} shareResultRequest`;
   }
 }

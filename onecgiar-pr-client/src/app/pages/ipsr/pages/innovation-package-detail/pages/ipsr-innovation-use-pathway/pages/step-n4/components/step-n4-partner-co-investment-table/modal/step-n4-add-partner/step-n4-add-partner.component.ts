@@ -9,7 +9,7 @@ import { ApiService } from 'src/app/shared/services/api/api.service';
   templateUrl: './step-n4-add-partner.component.html',
   styleUrls: ['./step-n4-add-partner.component.scss']
 })
-export class StepN4AddPartnerComponent implements OnInit {
+export class StepN4AddPartnerComponent {
   @Input() body: IpsrStep4Body = new IpsrStep4Body();
   visible = false;
   partnerBody = new AddPartnerBody();
@@ -18,16 +18,19 @@ export class StepN4AddPartnerComponent implements OnInit {
   formIsInvalid = false;
   constructor(public rolesSE: RolesService, public institutionsSE: InstitutionsService, private api: ApiService) {}
 
-  ngOnInit(): void {}
+  openPartner() {
+    this.api.dataControlSE.showPartnersRequest = true;
+  }
 
   onAddPartner() {
     this.requesting = true;
 
-    console.log(this.partnerBody);
+    //(this.partnerBody);
     this.api.resultsSE.PATCHInnovationPathwayStep4Partners(this.partnerBody).subscribe(
       ({ response }) => {
         console.log(response);
-        response.institution.institutions_name = response.institution.obj_institutions.name;
+        response.institution.institutions_type_name = response?.institution?.obj_institutions?.obj_institution_type_code?.name;
+        response.institution.institutions_name = response?.institution?.obj_institutions?.name;
         this.requesting = false;
         this.body.institutions_expected_investment.push(response);
         this.visible = false;
@@ -42,7 +45,7 @@ export class StepN4AddPartnerComponent implements OnInit {
   }
 
   cleanObject() {
-    console.log('cleanForm');
+    //('cleanForm');
     this.showForm = false;
     this.partnerBody = new AddPartnerBody();
     setTimeout(() => {

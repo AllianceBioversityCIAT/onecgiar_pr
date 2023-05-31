@@ -6,6 +6,7 @@ export class IpsrDataControlService {
   detailData: DetailData = null;
   resultInnovationCode = null;
   resultInnovationId = null;
+  initiative_id = null;
   inIpsr = null;
   inContributos = null;
   modals = {

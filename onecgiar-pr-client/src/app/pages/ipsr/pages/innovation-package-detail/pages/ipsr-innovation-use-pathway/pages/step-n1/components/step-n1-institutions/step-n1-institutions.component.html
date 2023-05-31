@@ -10,7 +10,8 @@
     <div class="dropdown-50p">
         <app-pr-multi-select [options]="this.institutionsSE.institutionsList" label="Partners"
             selectedOptionLabel="institutions_name" optionLabel="full_name" optionValue="institutions_id"
-            [(ngModel)]="body.institutions" placeholder="Select Partners" (selectOptionEvent)="toggle = toggle+1">
+            [(ngModel)]="body.institutions" placeholder="Select Partners"
+            (selectOptionEvent)="onSelectPartner($event);toggle = toggle+1">
         </app-pr-multi-select>
         <div class="partners_selected_header" [style]="this.rolesSE.readOnly?'margin-top: -15px':''">
             <app-pr-field-header [description]="'Partner(s) selected ('+body.institutions?.length+'):'">
@@ -21,6 +22,10 @@
             <div class="pr_chip_selected" *ngFor="let option of body.institutions; let i=index">
                 <div class="name">{{option?.institutions_name}}</div>
                 <div class="type"> <strong>Institution type:</strong> {{option?.institutions_type_name}}</div>
+                <div style="margin-top: -10px;margin-bottom: -20px;">
+                    <app-pr-field-header label="Partner role">
+                    </app-pr-field-header>
+                </div>
                 <div class="deliveries" [ngClass]="{'readOnly_deliveries': this.rolesSE.readOnly}">
                     <div class="delivery"
                         *ngIf="this.rolesSE.readOnly ? validateDeliverySelection(option?.deliveries,1) : true"

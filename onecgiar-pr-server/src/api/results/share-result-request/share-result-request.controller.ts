@@ -61,14 +61,4 @@ export class ShareResultRequestController {
       await this.shareResultRequestService.getAllStatus();
     throw new HttpException({ message, response }, status);
   }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateShareResultRequestDto: UpdateShareResultRequestDto) {
-    return this.shareResultRequestService.update(+id, updateShareResultRequestDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.shareResultRequestService.remove(+id);
-  }
 }

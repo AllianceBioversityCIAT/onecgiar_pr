@@ -7,11 +7,10 @@ import { HandlersError } from '../../shared/handlers/error.utils';
 
 @Injectable()
 export class ClarisaInstitutionsTypeService {
-
   constructor(
     protected readonly _clarisaInstitutionsTypeRepository: ClarisaInstitutionsTypeRepository,
     private readonly _handlersError: HandlersError,
-  ){}
+  ) {}
 
   create(createClarisaInstitutionsTypeDto: CreateClarisaInstitutionsTypeDto) {
     return 'This action adds a new clarisaInstitutionsType';
@@ -22,21 +21,24 @@ export class ClarisaInstitutionsTypeService {
       const dataParent = await this._clarisaInstitutionsTypeRepository.find({
         where: {
           is_legacy: false,
-          id_parent: IsNull()
-        }, 
-        relations:{ 
+          id_parent: IsNull(),
+        },
+        relations: {
           children: {
-            children: true
-          }
-        }
+            children: true,
+          },
+        },
       });
-      dataParent.map(el => {
-        el['childrens'] = el.children.map(es => {
-          return es.children.map(et => {
-            delete et.id_parent;
-            return et;
-          });
-        }).flat();
+      dataParent.map((el) => {
+        el['childrens'] = el.children
+          .map((es) => {
+            if (!es.children.length) return es;
+            return es.children.map((et) => {
+              delete et.id_parent;
+              return et;
+            });
+          })
+          .flat();
         delete el.id_parent;
         delete el.children;
       });

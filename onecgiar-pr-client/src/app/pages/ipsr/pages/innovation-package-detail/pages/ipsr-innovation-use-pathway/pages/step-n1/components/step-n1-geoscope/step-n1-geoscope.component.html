@@ -1,30 +1,30 @@
 <app-pr-radio-button [options]="this.geoscopeOptions" optionLabel="full_name" optionValue="id"
     label="Select country/ geoscope for which packaging and scaling readiness assessment will be conducted"
-    [(ngModel)]="body.geo_scope_id" [ngClass]="{'globalDisabled': true}">
+    [(ngModel)]="body.geo_scope_id" [readOnly]="true">
 </app-pr-radio-button>
 
 <app-pr-multi-select *ngIf="body.geo_scope_id == 2" [options]="this.regionsCountriesSE.regionsList"
     [description]="selectRegionsDescription" label="Select regions" selectedLabel="Regions(s) selected"
     selectedOptionLabel="name" optionLabel="name" optionValue="id" placeholder="Select regions"
-    [(ngModel)]="body.regions" [ngClass]="{'globalDisabled': true}">
+    [(ngModel)]="body.regions" [readOnly]="true">
 </app-pr-multi-select>
 
 <app-pr-multi-select *ngIf="body.geo_scope_id == 4" [options]="this.regionsCountriesSE.countriesList"
     label="Select countries" selectedLabel="Countries selected" selectedOptionLabel="name" optionLabel="name"
-    optionValue="id" placeholder="Select countries" [(ngModel)]="body.countries" [ngClass]="{'globalDisabled': true}">
+    optionValue="id" placeholder="Select countries" [(ngModel)]="body.countries" [readOnly]="true">
 </app-pr-multi-select>
 
 <app-pr-multi-select *ngIf="body.geo_scope_id == 5" [options]="this.regionsCountriesSE.countriesList"
     label="Select countries" selectedLabel="Countries selected" selectedOptionLabel="name" optionLabel="name"
-    optionValue="id" placeholder="Select countries" [(ngModel)]="body.countries" [ngClass]="{'globalDisabled': true}">
+    optionValue="id" placeholder="Select countries" [(ngModel)]="body.countries" [readOnly]="true">
 </app-pr-multi-select>
 
 <div *ngIf="body.geo_scope_id == 5">
     <div *ngFor="let countrie of body.countries">
         <div class="geoscope" *ngFor="let subCountri of countrie['result_countries_sub_national']">
-            <app-pr-input label="Country" [required]="false" [(ngModel)]="countrie.name" [ngClass]="{'globalDisabled': true}"></app-pr-input>
-            <app-pr-input label="Sub-national level 1" [required]="false" [(ngModel)]="subCountri.sub_level_one_name" [ngClass]="{'globalDisabled': true}"></app-pr-input>
-            <app-pr-input label="Sub-national level 2" [required]="false" [(ngModel)]="subCountri.sub_level_two_name" [ngClass]="{'globalDisabled': true}"></app-pr-input>
+            <app-pr-input label="Country" [required]="false" [(ngModel)]="countrie.name" [readOnly]="true"></app-pr-input>
+            <app-pr-input label="Sub-national level 1" [required]="false" [(ngModel)]="subCountri.sub_level_one_name" [readOnly]="true"></app-pr-input>
+            <app-pr-input label="Sub-national level 2" [required]="false" [(ngModel)]="subCountri.sub_level_two_name" [readOnly]="true"></app-pr-input>
         </div>
     </div>
    

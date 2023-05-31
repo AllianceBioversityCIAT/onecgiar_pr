@@ -7,8 +7,8 @@ import { UpdateResultsInnovationPackagesEnablerTypeDto } from './dto/update-resu
 export class ResultsInnovationPackagesEnablerTypeController {
   constructor(private readonly resultsInnovationPackagesEnablerTypeService: ResultsInnovationPackagesEnablerTypeService) {}
 
-  @Post()
-  create(@Body() createResultsInnovationPackagesEnablerTypeDto: CreateResultsInnovationPackagesEnablerTypeDto) {
+  @Post('createInnovationEnablers')
+  create(@Body() createResultsInnovationPackagesEnablerTypeDto: CreateResultsInnovationPackagesEnablerTypeDto[]) {
     return this.resultsInnovationPackagesEnablerTypeService.create(createResultsInnovationPackagesEnablerTypeDto);
   }
 

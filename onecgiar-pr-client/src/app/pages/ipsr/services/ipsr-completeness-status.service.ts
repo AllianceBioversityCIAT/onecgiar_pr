@@ -24,11 +24,11 @@ export class IpsrCompletenessStatusService {
   updateGreenChecks(): any {
     // if (this.api.resultsApiSE.currentResultId) {
     this.api.resultsSE.getCompletenessStatus().subscribe(({ response }) => {
-      // console.log('updateGreenChecks');
-      console.log(response);
+      //('updateGreenChecks');
+      //(response);
       this.ipsrDataControlSE.detailData.validResult = response?.validResult;
       this.flatList = this.flattenObject(response, '');
-      // console.log(this.flatList);
+      //(this.flatList);
       // this.submit = Boolean(response?.submit);
       // this.api.dataControlSE.green_checks = response?.green_checks;
       // this.api.resultsSE.PATCH_greenChecksByResultId().subscribe();

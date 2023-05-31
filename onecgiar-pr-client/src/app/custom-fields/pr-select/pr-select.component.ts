@@ -31,8 +31,10 @@ export class PrSelectComponent implements ControlValueAccessor {
   @Input() disableOptionsText: any = '';
   @Input() disabled: any = false;
   @Input() editable: boolean = false;
+  @Input() showPartnerAlert: boolean = false;
   @Input() extraInformation: boolean = false;
   @Input() indexReference: number = null;
+  @Input() noDataText: string = '';
 
   @Output() selectOptionEvent = new EventEmitter();
   private _optionsIntance: any[];
@@ -91,7 +93,7 @@ export class PrSelectComponent implements ControlValueAccessor {
     itemFinded.selected = true;
     this.fullValue[this.optionLabel] = itemFinded[this.optionLabel];
 
-    // console.log(itemFinded);
+    //(itemFinded);
 
     return this._optionsIntance;
   }
@@ -100,8 +102,8 @@ export class PrSelectComponent implements ControlValueAccessor {
     this.fullValue = option;
     this.value = option[this.optionValue];
     option.selected = true;
-    // console.log(option);
-    // console.log(this._optionsIntance);
+    //(option);
+    //(this._optionsIntance);
     this.selectOptionEvent.emit(option);
   }
 
@@ -111,7 +113,7 @@ export class PrSelectComponent implements ControlValueAccessor {
 
   // toggleSelectOption(option) {
   //   if (option?.disabled === true) return;
-  //   console.log('toggleSelectOption');
+  //   ('toggleSelectOption');
   //   option.selected = !option.selected;
   // }
 }

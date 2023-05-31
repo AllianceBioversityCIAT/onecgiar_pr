@@ -3,6 +3,7 @@ import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultsImpactAreaIndicator } from './entities/results-impact-area-indicator.entity';
 import { GetImpactIndicatorAreaDto } from './dto/get-impact-indicator-area.dto';
+import { env } from 'process';
 
 
 @Injectable()
@@ -134,6 +135,44 @@ export class ResultsImpactAreaIndicatorRepository extends Repository<ResultsImpa
       throw this._handlersError.returnErrorRepository({
         className: ResultsImpactAreaIndicatorRepository.name,
         error: `updateResultImpactAreaIndicators ${error}`,
+        debug: true,
+      });
+    }
+  }
+
+  async mapImpactAreaOutcomeToc(initId: number) {
+    try {
+      const query = `
+      SELECT
+        DISTINCT cgt.id AS impact_area_indicator_id
+      FROM
+        ${env.DB_OST}.clarisa_global_targets cgt
+        LEFT JOIN ${env.DB_OST}.toc_impact_area_results_global_targets tiargt ON tiargt.global_target_id  = cgt.id
+        LEFT JOIN ${env.DB_OST}.toc_impact_area_results tiar ON tiar.toc_result_id = tiargt.impact_area_toc_result_id
+        LEFT JOIN ${env.DB_OST}.toc_results_impact_area_results triar ON triar.impact_area_toc_result_id = tiar.toc_result_id
+        LEFT JOIN ${env.DB_OST}.toc_results tr1 ON tr1.toc_result_id = triar.toc_result_id 
+      WHERE
+        tiargt.is_active = 1
+        AND tr1.toc_result_id IN (
+          SELECT
+            tr2.toc_internal_id
+          FROM
+            prdb.toc_result tr2
+          WHERE
+            tr2.inititiative_id = ?
+            AND tr2.is_active = 1
+        );
+      `;
+
+      const impactAreaOutcome: any[] = await this.dataSource.query(query, [
+        initId,
+      ]);
+
+      return impactAreaOutcome;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsImpactAreaIndicatorRepository.name,
+        error: error,
         debug: true,
       });
     }

@@ -1,7 +1,8 @@
 import { Component, OnInit } from '@angular/core';
-import { ActorN3, IpsrStep3Body, MeasureN3, OrganizationN3 } from './model/Ipsr-step-3-body.model';
+import { ActorN3, IpsrStep3Body, MeasureN3, OrganizationN3, expert_workshop_organized } from './model/Ipsr-step-3-body.model';
 import { IpsrDataControlService } from 'src/app/pages/ipsr/services/ipsr-data-control.service';
 import { ApiService } from 'src/app/shared/services/api/api.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-step-n3',
@@ -16,57 +17,101 @@ export class StepN3Component implements OnInit {
     { id: true, name: 'Yes, an expert workshop was organized' },
     { id: false, name: 'No expert workshop was organized' }
   ];
-  result_core_innovation:any;
-  constructor(public ipsrDataControlSE: IpsrDataControlService, private api: ApiService) {}
+  result_core_innovation: any;
+  constructor(public ipsrDataControlSE: IpsrDataControlService, private api: ApiService, private router: Router) {}
 
   ngOnInit(): void {
     this.GETAllClarisaInnovationReadinessLevels();
     this.GETAllClarisaInnovationUseLevels();
     this.getSectionInformation();
-    this.api.setTitle('Step 3');
+    this.api.dataControlSE.detailSectionTitle('Step 3');
+  }
+
+  openClosed(response) {
+    if (this.ipsrStep3Body.result_ip_result_complementary.length) {
+      this.ipsrStep3Body.result_ip_result_complementary.forEach((item: any) => {
+        const itemFind = response.result_ip_result_complementary.find(responseItem => responseItem.result_by_innovation_package_id == item.result_by_innovation_package_id);
+        if (itemFind) itemFind.open = item?.open;
+      });
+    }
+    return response;
   }
 
   getSectionInformation() {
     this.api.resultsSE.GETInnovationPathwayByRiId().subscribe(({ response }) => {
-      console.log('%cGET', 'font-size: 20px; color: #2BBE28;');
-      console.log(response);
+      //('%cGET', 'font-size: 20px; color: #2BBE28;');
+      //(response);
+      this.ipsrStep3Body = this.openClosed(response);
+
       this.convertOrganizations(response?.innovatonUse?.organization);
-      // console.log('%c____________________', 'font-size: 20px; color: #2BBE28;');
+      //('%c____________________', 'font-size: 20px; color: #2BBE28;');
       this.result_core_innovation = response.result_core_innovation;
-      this.ipsrStep3Body = response;
-      if(this.ipsrStep3Body.innovatonUse.actors.length == 0){
-        this.ipsrStep3Body.innovatonUse.actors.push(new ActorN3())
+
+      if (this.ipsrStep3Body.innovatonUse.actors.length == 0) {
+        this.ipsrStep3Body.innovatonUse.actors.push(new ActorN3());
       }
-      if(this.ipsrStep3Body.innovatonUse.organization.length == 0){
-        this.ipsrStep3Body.innovatonUse.organization.push(new OrganizationN3())
+      if (this.ipsrStep3Body.innovatonUse.organization.length == 0) {
+        this.ipsrStep3Body.innovatonUse.organization.push(new OrganizationN3());
+      }
+      if (this.ipsrStep3Body.result_ip_expert_workshop_organized.length == 0) {
+        this.ipsrStep3Body.result_ip_expert_workshop_organized.push(new expert_workshop_organized());
       }
     });
   }
   onSaveSection() {
-    // console.log('%cPATCH', 'font-size: 20px; color: #f68541;');
-    // console.log(this.ipsrStep3Body);
-    // console.log('%c____________________', 'font-size: 20px; color: #f68541;');
+    //('%cPATCH', 'font-size: 20px; color: #f68541;');
+    //(this.ipsrStep3Body);
+    //('%c____________________', 'font-size: 20px; color: #f68541;');
     this.convertOrganizationsTosave();
     this.api.resultsSE.PATCHInnovationPathwayByRiId(this.ipsrStep3Body).subscribe(({ response }) => {
-      // console.log(response);
+      //(response);
       // setTimeout(() => {
       this.getSectionInformation();
       // }, 3000);
     });
   }
 
-  GETAllClarisaInnovationReadinessLevels() {
-    this.api.resultsSE.GETAllClarisaInnovationReadinessLevels().subscribe(({ response }) => {
-      console.log(response);
-      this.rangesOptions = response;
+  onsaveSection(descrip) {
+    this.convertOrganizationsTosave();
+    // result_ip_result_complementary
+
+    this.api.resultsSE.PATCHInnovationPathwayByRiIdNextPrevius(this.ipsrStep3Body, descrip).subscribe(({ response }) => {
+      //(response);
+      // setTimeout(() => {
+      this.getSectionInformation();
+      // }, 3000);
+      setTimeout(() => {
+        if (descrip == 'next') {
+          this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2']);
+        } else {
+          this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-4']);
+        }
+      }, 1000);
     });
   }
 
+  GETAllClarisaInnovationReadinessLevels() {
+    this.api.resultsSE.GETAllClarisaInnovationReadinessLevels().subscribe(({ response }) => {
+      //(response);
+      this.rangesOptions = response;
+    });
+  }
+  // GETAllClarisaInnovationReadinessLevels() {
+  //   this.api.resultsSE.GETAllClarisaInnovationReadinessLevels().subscribe(({ response }) => {
+  //     //(response);
+  //     this.rangesOptions = response;
+  //   });
+  // }
+
   GETAllClarisaInnovationUseLevels() {
     this.api.resultsSE.GETAllClarisaInnovationUseLevels().subscribe(({ response }) => {
-      console.log(response);
+      //(response);
       this.innovationUseList = response;
     });
+  }
+
+  goToStep() {
+    return `<a class='open_route' href='/ipsr/detail/${this.ipsrDataControlSE.resultInnovationCode}/ipsr-innovation-use-pathway/step-2/complementary-innovation' target='_blank'> Go to step 2</a>`;
   }
 
   readinessLevelSelfAssessmentText() {
@@ -99,11 +144,18 @@ export class StepN3Component implements OnInit {
   }
 
   resultUrl(resultCode) {
-    
     return `/result/result-detail/${resultCode}/general-information`;
   }
 
   workshopDescription() {
-    return `A template participant list can be downloaded <a href=""  class="open_route" target="_blank">here</a>`;
+    return `A template participant list can be downloaded <a href="https://cgiar.sharepoint.com/:x:/s/PPUInterim/EYOL3e1B-YlGnU8lZmlFkc4BKVDNgLH3G__z6SSjNkBTfA?e=pkpT0d"  class="open_route" target="_blank">here</a>`;
+  }
+
+  addExpert() {
+    this.ipsrStep3Body.result_ip_expert_workshop_organized.push(new expert_workshop_organized());
+  }
+
+  delete(index) {
+    this.ipsrStep3Body.result_ip_expert_workshop_organized.splice(index, 1);
   }
 }

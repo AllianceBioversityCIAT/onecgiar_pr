@@ -17,6 +17,8 @@ import { Title } from '@angular/platform-browser';
 })
 export class ApiService {
   constructor(private titleService: Title, public resultsSE: ResultsApiService, public alertsFs: CustomizedAlertsFsService, private qaSE: QualityAssuranceService, public authSE: AuthService, public alertsFe: CustomizedAlertsFeService, public dataControlSE: DataControlService, public resultsListFilterSE: ResultsListFilterService, public wordCounterSE: WordCounterService, public rolesSE: RolesService, public tocApiSE: TocApiService) {}
+  isStepTwoTwo: boolean = false;
+  isStepTwoOne: boolean = false;
 
   updateUserData(callback) {
     if (!this.authSE?.localStorageUser?.id) return;
@@ -74,10 +76,10 @@ export class ApiService {
       window['Tawk_API'].onChatEnded = function () {
         window['Tawk_API'].hideWidget();
         window['Tawk_API'].minimize();
-        // console.log('ENDING CHAT');
+        //('ENDING CHAT');
       };
     } catch (error) {
-      console.log(error);
+      //(error);
     }
   }
   setTitle(title) {

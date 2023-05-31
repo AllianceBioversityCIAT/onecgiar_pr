@@ -46,3 +46,10 @@
         pointer-events: none;
     }
 }
+
+.pr-field .read-only {
+    padding: 8px 10px;
+    // border: 1px solid #ebebeb;
+    box-shadow: 0px 0px 14px 0px #dcdcdc;
+    border-radius: 5px;
+}

@@ -25,13 +25,13 @@ export class PusherService {
   firstUser = false;
   secondUser = null;
   validaeFirstUserToEdit() {
-    // console.log(this.presenceChannel?.members);
+    //(this.presenceChannel?.members);
     if (!this.presenceChannel?.members) return false;
     let { members, myID } = this.presenceChannel?.members;
 
     // if (this.firstUser) return true;
     if (!Object.keys(members).length) return true;
-    // console.log(members)
+    //(members)
 
     let membersList: any = [];
 
@@ -45,7 +45,7 @@ export class PusherService {
 
       // TODO: Tener ene cuenta estado de la iniciativa
       let oldDate = new Date('4000-05-31T20:40:34.081Z');
-      // console.log(members)
+      //(members)
 
       membersList.push({
         userId: item,
@@ -67,20 +67,20 @@ export class PusherService {
     sortByDate(membersList);
     this.membersList = membersList;
     this.firstUser = membersList[0]?.userId == myID;
-    // console.log(this.firstUser +' - '+this.secondUser)
+    //(this.firstUser +' - '+this.secondUser)
     if (!this.firstUser) this.secondUser = true;
     if (this.firstUser && this.secondUser) {
       let currentUrl = this.router.url;
-      // console.log(currentUrl);
+      //(currentUrl);
       this.router.navigateByUrl(`/result/result-detail/${this.api.resultsSE.currentResultId}`).then(() => {
         setTimeout(() => {
-          // console.log('volver');
-          // console.log(currentUrl);
+          //('volver');
+          //(currentUrl);
           this.router.navigateByUrl(currentUrl);
         }, 1000);
       });
     }
-    // console.log(membersList);
+    //(membersList);
     return membersList[0]?.userId == myID;
   }
 
@@ -109,7 +109,7 @@ export class PusherService {
     // if (pusherBlocked.blockedRoute()) return;
 
     PRRoute = PRRoute.split('/').join('').split('-').join('');
-    // console.log(this.api.authSE.localStorageUser.id);
+    //(this.api.authSE.localStorageUser.id);
     this.pusher = new Pusher(environment.pusher.key, {
       cluster: environment.pusher.cluster,
       encrypted: true,
@@ -117,11 +117,11 @@ export class PusherService {
         endpoint: `${environment.apiBaseUrl}auth/signin/pusher/result/${resultId}/${this.api.authSE.localStorageUser.id}`
       }
     });
-    // console.log('presence-prms' + PRRoute);
+    //('presence-prms' + PRRoute);
 
     this.presenceChannel = this.pusher.subscribe('presence-prms' + PRRoute);
     this.beforeRoute = PRRoute;
-    // console.log(this.presenceChannel);
-    // console.log(this.presenceChannel?.members);
+    //(this.presenceChannel);
+    //(this.presenceChannel?.members);
   }
 }

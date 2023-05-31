@@ -31,9 +31,9 @@ export class RdPartnersComponent {
   }
 
   onSaveSection() {
-    // console.log(this.rdPartnersSE.partnersBody);
+    //(this.rdPartnersSE.partnersBody);
     this.api.resultsSE.PATCH_partnersSection(this.rdPartnersSE.partnersBody).subscribe(resp => {
-      // console.log(resp);
+      //(resp);
       this.rdPartnersSE.getSectionInformation();
     });
   }
