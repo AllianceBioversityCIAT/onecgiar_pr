@@ -423,8 +423,10 @@ export class InnovationPathwayStepThreeService {
             })
           ).map((el) => ({
             ...el,
-            parent_institution_type_id:
-              el.obj_institution_types?.obj_parent?.obj_parent?.code || null,
+            parent_institution_type_id: el.obj_institution_types?.obj_parent
+              ?.obj_parent?.code
+              ? el.obj_institution_types?.obj_parent?.obj_parent?.code
+              : el.obj_institution_types?.obj_parent?.code || null,
           })),
         },
         result_innovation_package: result_ip,
