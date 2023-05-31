@@ -148,7 +148,7 @@ export class StepN3Component implements OnInit {
   }
 
   workshopDescription() {
-    return `A template participant list can be downloaded <a href=""  class="open_route" target="_blank">here</a>`;
+    return `A template participant list can be downloaded <a href="https://cgiar.sharepoint.com/:x:/s/PPUInterim/EYOL3e1B-YlGnU8lZmlFkc4BKVDNgLH3G__z6SSjNkBTfA?e=pkpT0d"  class="open_route" target="_blank">here</a>`;
   }
 
   addExpert() {
