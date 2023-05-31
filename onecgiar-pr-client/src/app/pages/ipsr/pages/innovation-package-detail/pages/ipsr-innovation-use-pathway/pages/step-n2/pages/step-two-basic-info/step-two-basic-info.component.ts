@@ -100,7 +100,7 @@ export class StepTwoBasicInfoComponent implements OnInit {
 
   async onSavePreviuosNext(descrip){
     console.log(this.informartion);
-    this.api.resultsSE.PostStepTwoComentariesInnovationPrevius(this.bodyStep22,descrip).subscribe((resp) =>{
+    this.api.resultsSE.PostStepTwoComentariesInnovationPrevius(this.bodyStep2,descrip).subscribe((resp) =>{
       console.log(resp);
       if(this.api.isStepTwoTwo&& descrip == 'next'){
         this.router.navigate(['/ipsr/detail/'+this.ipsrDataControlSE.resultInnovationCode+'/ipsr-innovation-use-pathway/step-3']);
