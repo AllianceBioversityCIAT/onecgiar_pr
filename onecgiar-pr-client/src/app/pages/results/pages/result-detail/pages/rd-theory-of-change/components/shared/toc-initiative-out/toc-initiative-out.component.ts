@@ -20,8 +20,8 @@ export class TocInitiativeOutComponent {
   constructor(public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public api: ApiService) {}
 
   ngOnInit(): void {
-    console.log(this.initiative);
-    
+    //(this.initiative);
+
     this.GET_outcomeList();
     this.GET_fullInitiativeTocByinitId();
     this.GET_outputList();
@@ -40,11 +40,11 @@ export class TocInitiativeOutComponent {
       ({ response }) => {
         this.outputList = [];
         this.outputList = response;
-        // console.log(response);
+        //(response);
       },
       err => {
         this.outputList = [];
-        console.log(err);
+        console.error(err);
       }
     );
   }
@@ -53,11 +53,11 @@ export class TocInitiativeOutComponent {
     this.api.tocApiSE.GET_tocLevelsByresultId(this.initiative.initiative_id, 2).subscribe(
       ({ response }) => {
         this.outcomeList = response;
-        // console.log(this.outcomeList);
+        //(this.outcomeList);
       },
       err => {
         this.outcomeList = [];
-        console.log(err);
+        console.error(err);
       }
     );
   }
@@ -66,11 +66,11 @@ export class TocInitiativeOutComponent {
     this.api.tocApiSE.GET_tocLevelsByresultId(this.initiative.initiative_id, 3).subscribe(
       ({ response }) => {
         this.eoiList = response;
-        // console.log(this.eoiList);
+        //(this.eoiList);
       },
       err => {
         this.eoiList = [];
-        console.log(err);
+        console.error(err);
       }
     );
   }
@@ -78,11 +78,11 @@ export class TocInitiativeOutComponent {
   GET_fullInitiativeTocByinitId() {
     this.api.tocApiSE.GET_fullInitiativeTocByinitId(this.initiative.initiative_id).subscribe(
       ({ response }) => {
-        // console.log(response);
+        //(response);
         this.fullInitiativeToc = response[0]?.toc_id;
       },
       err => {
-        console.log(err);
+        console.error(err);
       }
     );
   }

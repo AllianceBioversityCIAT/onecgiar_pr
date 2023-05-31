@@ -2,7 +2,8 @@ import { HttpStatus, Injectable, Type } from '@nestjs/common';
 import { ResultRepository } from '../../results/result.repository';
 import {
   HandlersError,
-  returnDataDto,
+  ReturnResponse,
+  ReturnResponseDto,
 } from '../../../shared/handlers/error.utils';
 import { ResultInnovationPackageRepository } from '../result-innovation-package/repositories/result-innovation-package.repository';
 import { VersionsService } from '../../results/versions/versions.service';
@@ -22,6 +23,9 @@ import { IpsrRepository } from '../ipsr.repository';
 import { IsNull } from 'typeorm';
 import { ResultsIpInstitutionType } from '../results-ip-institution-type/entities/results-ip-institution-type.entity';
 import { Evidence } from '../../results/evidences/entities/evidence.entity';
+import { Ipsr } from '../entities/ipsr.entity';
+import { ResultIpExpertWorkshopOrganizedRepostory } from './repository/result-ip-expert-workshop-organized.repository';
+import { ResultIpExpertWorkshopOrganized } from './entities/result-ip-expert-workshop-organized.entity';
 
 @Injectable()
 export class InnovationPathwayStepThreeService {
@@ -38,13 +42,15 @@ export class InnovationPathwayStepThreeService {
     protected readonly _resultsIpActorRepository: ResultsIpActorRepository,
     protected readonly _resultsIpInstitutionTypeRepository: ResultsIpInstitutionTypeRepository,
     protected readonly _evidenceRepository: EvidencesRepository,
+    protected readonly _resultIpExpertWorkshopRepository: ResultIpExpertWorkshopOrganizedRepostory,
+    protected readonly _returnResponse: ReturnResponse,
   ) {}
 
   async saveComplementaryinnovation(
     resultId: number,
     user: TokenDto,
     saveData: SaveStepTwoThree,
-  ) {
+  ): Promise<ReturnResponseDto<any>> {
     try {
       const result = await this._resultRepository.findOne({
         where: {
@@ -80,42 +86,21 @@ export class InnovationPathwayStepThreeService {
           readiness_level_evidence_based:
             result_ip.readiness_level_evidence_based,
           use_level_evidence_based: result_ip.use_level_evidence_based,
+          assessed_during_expert_workshop_id:
+            result_ip?.is_expert_workshop_organized
+              ? result_ip.assessed_during_expert_workshop_id
+              : null,
           last_updated_by: user.id,
         },
       );
 
-      await this._innovationByResultRepository.update(
-        result_ip_core.result_by_innovation_package_id,
-        {
-          readiness_level_evidence_based:
-            result_ip_core.readiness_level_evidence_based,
-          readinees_evidence_link: result_ip_core.readinees_evidence_link,
-          use_level_evidence_based: result_ip_core.use_level_evidence_based,
-          use_evidence_link: result_ip_core.use_evidence_link,
-          use_details_of_evidence: result_ip_core.use_details_of_evidence,
-          readiness_details_of_evidence:
-            result_ip_core.readiness_details_of_evidence,
-          last_updated_by: user.id,
-        },
-      );
+      await this.saveinnovationWorkshop(user, result_ip_core);
 
       await this.saveInnovationUse(user, version, saveData);
 
       if (result_ip_complementary?.length) {
         for (const ripc of result_ip_complementary) {
-          this._innovationByResultRepository.update(
-            ripc.result_by_innovation_package_id,
-            {
-              readiness_level_evidence_based:
-                ripc.readiness_level_evidence_based,
-              readinees_evidence_link: ripc.readinees_evidence_link,
-              use_level_evidence_based: ripc.use_level_evidence_based,
-              use_evidence_link: ripc.use_evidence_link,
-              use_details_of_evidence: ripc.use_details_of_evidence,
-              readiness_details_of_evidence: ripc.readiness_details_of_evidence,
-              last_updated_by: user.id,
-            },
-          );
+          await this.saveinnovationWorkshop(user, ripc);
         }
       }
 
@@ -123,12 +108,54 @@ export class InnovationPathwayStepThreeService {
 
       const { response } = await this.getStepThree(resultId);
 
-      return {
+      return this._returnResponse.format({
         response: response,
         message:
           'The Result Complementary Innovation have been saved successfully',
-        status: HttpStatus.OK,
-      };
+        statusCode: HttpStatus.OK,
+      });
+    } catch (error) {
+      return this._returnResponse.format(error, true);
+    }
+  }
+
+  async saveinnovationWorkshop(user: TokenDto, rbi: Ipsr) {
+    try {
+      await this._innovationByResultRepository.update(
+        rbi.result_by_innovation_package_id,
+        {
+          readiness_level_evidence_based: this.isNullData(
+            rbi?.readiness_level_evidence_based,
+          ),
+          readinees_evidence_link: this.isNullData(
+            rbi?.readinees_evidence_link,
+          ),
+          use_level_evidence_based: this.isNullData(
+            rbi?.use_level_evidence_based,
+          ),
+          use_evidence_link: this.isNullData(rbi?.use_evidence_link),
+          use_details_of_evidence: this.isNullData(
+            rbi?.use_details_of_evidence,
+          ),
+          readiness_details_of_evidence: this.isNullData(
+            rbi?.readiness_details_of_evidence,
+          ),
+          potential_innovation_readiness_level: this.isNullData(
+            rbi?.potential_innovation_readiness_level,
+          ),
+          potential_innovation_use_level: this.isNullData(
+            rbi?.potential_innovation_use_level,
+          ),
+          current_innovation_readiness_level: this.isNullData(
+            rbi?.current_innovation_readiness_level,
+          ),
+          current_innovation_use_level: this.isNullData(
+            rbi?.current_innovation_use_level,
+          ),
+          last_updated_by: this.isNullData(user?.id),
+        },
+      );
+      return;
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
@@ -142,50 +169,162 @@ export class InnovationPathwayStepThreeService {
   ) {
     const id: number = +resultId;
     try {
-      const allEvidence: Evidence[] =
-        await this._evidenceRepository.getWokrshop(+id);
-      const existingWorkshop = allEvidence.map((e) => e.link);
-      const existingIds = allEvidence.map((e) => e.id);
+      const workShopEvidence: Evidence = await this._evidenceRepository.findOne(
+        {
+          where: {
+            result_id: +id,
+            evidence_type_id: 5,
+            is_active: 1,
+          },
+        },
+      );
 
-      const ipsrWorkshop: string = saveStepTwoThree.link_workshop_list;
+      const {
+        result_innovation_package: rip,
+        link_workshop_list: lwl,
+        result_ip_expert_workshop_organized: ripewo,
+      } = saveStepTwoThree;
 
-      if (
-        ipsrWorkshop === '' ||
-        ipsrWorkshop === undefined ||
-        ipsrWorkshop === null
-      ) {
-        for (const e of existingIds) {
-          await this._evidenceRepository.update(e, {
-            is_active: 0,
-            last_updated_by: user.id,
-            last_updated_date: new Date(),
+      if (rip.is_expert_workshop_organized === false) {
+        await this._evidenceRepository.update(workShopEvidence?.id, {
+          is_active: 0,
+          last_updated_by: user.id,
+        });
+
+        const expertWorkshopExist: ResultIpExpertWorkshopOrganized[] =
+          await this._resultIpExpertWorkshopRepository.find({
+            where: {
+              result_id: resultId,
+            },
           });
+
+        if (expertWorkshopExist.length) {
+          for (const ewo of expertWorkshopExist) {
+            await this._resultIpExpertWorkshopRepository.update(
+              ewo.result_ip_expert_workshop_organized_id,
+              {
+                is_active: false,
+                last_updated_by: user.id,
+              },
+            );
+          }
         }
-        throw {
-          message: 'Workshop was not found',
-          status: HttpStatus.NOT_FOUND,
+
+        return {
+          message: 'The link workshop list have been inactive successfully',
         };
       }
 
-      if (existingWorkshop?.length) {
-        for (const e of existingIds) {
-          await this._evidenceRepository.update(e, {
-            link: ipsrWorkshop,
-            is_active: 1,
-            last_updated_by: user.id,
-            last_updated_date: new Date(),
-          });
-        }
-      } else {
+      // if (rip.is_expert_workshop_organized === true && !lwl) {
+      //   return {
+      //     response: { valid: false },
+      //     message: 'The link workshop list is required',
+      //     status: HttpStatus.BAD_REQUEST,
+      //   };
+      // }
+
+      if (!workShopEvidence) {
         await this._evidenceRepository.save({
           result_id: resultId,
-          link: ipsrWorkshop,
+          link: lwl,
           evidence_type_id: 5,
           version_id: version.id,
           created_by: user.id,
           last_updated_by: user.id,
-          last_updated_date: new Date(),
         });
+      } else {
+        await this._evidenceRepository.update(workShopEvidence.id, {
+          link: lwl,
+          last_updated_by: user.id,
+        });
+      }
+
+      if (ripewo?.length) {
+        for (const entity of ripewo) {
+          if (!entity.first_name || !entity.last_name) {
+            return {
+              response: { valid: false },
+              message: 'The expert workshop organized is required',
+              status: HttpStatus.BAD_REQUEST,
+            };
+          }
+
+          const expertWorkshopExist: ResultIpExpertWorkshopOrganized =
+            await this._resultIpExpertWorkshopRepository.findOne({
+              where: {
+                result_id: resultId,
+                is_active: true,
+                first_name: entity.first_name,
+                last_name: entity.last_name,
+              },
+            });
+
+          if (!expertWorkshopExist) {
+            await this._resultIpExpertWorkshopRepository.save({
+              result_id: resultId,
+              first_name: entity.first_name,
+              last_name: entity.last_name,
+              email: entity.email,
+              workshop_role: entity.workshop_role,
+              version_id: version.id,
+              created_by: user.id,
+              last_updated_by: user.id,
+            });
+          } else {
+            await this._resultIpExpertWorkshopRepository.update(
+              expertWorkshopExist.result_ip_expert_workshop_organized_id,
+              {
+                first_name: entity.first_name,
+                last_name: entity.last_name,
+                email: entity.email,
+                workshop_role: entity.workshop_role,
+                last_updated_by: user.id,
+              },
+            );
+          }
+        }
+
+        const expertWorkshopExist: ResultIpExpertWorkshopOrganized[] =
+          await this._resultIpExpertWorkshopRepository.find({
+            where: {
+              result_id: resultId,
+              is_active: true,
+            },
+          });
+
+        for (const ewe of expertWorkshopExist) {
+          const isExist = ripewo.find(
+            (x) =>
+              x.first_name === ewe.first_name && x.last_name === ewe.last_name,
+          );
+          if (!isExist) {
+            await this._resultIpExpertWorkshopRepository.update(
+              ewe.result_ip_expert_workshop_organized_id,
+              {
+                is_active: false,
+                last_updated_by: user.id,
+              },
+            );
+          }
+        }
+      } else {
+        const isExist = await this._resultIpExpertWorkshopRepository.find({
+          where: {
+            result_id: resultId,
+            is_active: true,
+          },
+        });
+        if (isExist.length) {
+          for (const ewe of isExist) {
+            await this._resultIpExpertWorkshopRepository.update(
+              ewe.result_ip_expert_workshop_organized_id,
+              {
+                is_active: false,
+                last_updated_by: user.id,
+              },
+            );
+          }
+        }
       }
 
       return {
@@ -200,6 +339,7 @@ export class InnovationPathwayStepThreeService {
     try {
       const result_ip = await this._resultInnovationPackageRepository.findOne({
         where: { result_innovation_package_id: resultId, is_active: true },
+        relations: { obj_result_innovation_package: true },
       });
       if (!result_ip) {
         throw {
@@ -214,6 +354,7 @@ export class InnovationPathwayStepThreeService {
           result_innovation_package_id: result_ip.result_innovation_package_id,
           is_active: true,
         },
+        relations: { obj_result: true },
       });
       const core_innovation = await this._resultRepository.findOne({
         where: { id: result_core.result_id, is_active: true },
@@ -237,8 +378,17 @@ export class InnovationPathwayStepThreeService {
         },
       });
 
+      const result_ip_expert_workshop_organized =
+        await this._resultIpExpertWorkshopRepository.find({
+          where: {
+            result_id: resultId,
+            is_active: true,
+          },
+        });
+
       const returdata: SaveStepTwoThree = {
         link_workshop_list: link_workshop_list?.link,
+        result_ip_expert_workshop_organized,
         innovatonUse: {
           actors: (
             await this._resultsIpActorRepository.find({
@@ -273,8 +423,10 @@ export class InnovationPathwayStepThreeService {
             })
           ).map((el) => ({
             ...el,
-            parent_institution_type_id:
-              el.obj_institution_types?.obj_parent?.obj_parent?.code || null,
+            parent_institution_type_id: el.obj_institution_types?.obj_parent
+              ?.obj_parent?.code
+              ? el.obj_institution_types?.obj_parent?.obj_parent?.code
+              : el.obj_institution_types?.obj_parent?.code || null,
           })),
         },
         result_innovation_package: result_ip,

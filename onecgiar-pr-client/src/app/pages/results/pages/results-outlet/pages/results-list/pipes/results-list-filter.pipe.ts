@@ -17,7 +17,7 @@ export class ResultsListFilterPipe implements PipeTransform {
     resultList.map(item => {
       item.joinAll = '';
       Object.keys(item).map(attr => {
-        // console.log(attr);
+        //(attr);
         if (attr != 'created_date' && attr != 'id') item.joinAll += (item[attr] ? item[attr] : '') + ' ';
       });
     });
@@ -31,7 +31,7 @@ export class ResultsListFilterPipe implements PipeTransform {
     for (const option of submitter?.options) if (option?.selected === true && option?.cleanAll !== true) resultsFilters.push(option);
     if (!resultsFilters.length) return resultList;
     resultList = resultList.filter(result => {
-      // console.log(result);
+      //(result);
       for (const filter of resultsFilters) if (filter?.id == result?.submitter_id || (filter?.attr == 'is_legacy' && result.legacy_id)) return true;
       return false;
     });

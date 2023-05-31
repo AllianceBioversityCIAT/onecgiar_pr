@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { ResultItem } from '../interfaces/result.interface';
 import { environment } from '../../../environments/environment';
+import { Title } from '@angular/platform-browser';
 
 @Injectable({
   providedIn: 'root'
@@ -23,7 +24,7 @@ export class DataControlService {
   showResultHistoryOfChangesModal = false;
   platformIsClosed = environment.platformIsClosed;
 
-  constructor() {}
+  constructor(private titleService: Title) {}
   validateBody(body: any) {
     return Object.entries(body).every((item: any) => item[1]);
   }
@@ -39,7 +40,7 @@ export class DataControlService {
     let seconds = 0;
     return new Promise((resolve, reject) => {
       const timer = setInterval(() => {
-        // console.log('sdsd  ' + seconds);
+        //('sdsd  ' + seconds);
         seconds++;
         if (text) {
           resolve(text);
@@ -76,12 +77,12 @@ export class DataControlService {
   }
 
   get isKnowledgeProduct() {
-    // console.log(this.currentResult);
+    //(this.currentResult);
     return this.currentResult?.result_type_id == 6;
   }
 
   someMandatoryFieldIncomplete(container) {
-    // console.log('-  ');
+    //('-  ');
     const htmlContainer = document.querySelector(container);
     if (!htmlContainer) return true;
     let inputs;
@@ -94,7 +95,7 @@ export class DataControlService {
   }
 
   someMandatoryFieldIncompleteResultDetail(container) {
-    // console.log('-  ');
+    //('-  ');
     this.fieldFeedbackList = [];
     const htmlContainer = document.querySelector(container);
     if (!htmlContainer) return true;
@@ -104,7 +105,7 @@ export class DataControlService {
       inputs = Array.prototype.slice.call(htmlContainer.querySelectorAll('.pr-input.mandatory input')).filter(field => {
         const tagValue = field?.parentElement?.parentElement?.parentElement?.querySelector('.pr_label')?.innerText;
         const isEmpty = !Boolean(field.value);
-        // console.log(tagValue);
+        //(tagValue);
 
         if (tagValue && isEmpty) this.fieldFeedbackList.push(tagValue);
 
@@ -121,5 +122,10 @@ export class DataControlService {
       });
     } catch (error) {}
     return Boolean(inputs) || Boolean(selects);
+  }
+
+  detailSectionTitle(sectionName, title?) {
+    this.titleService.setTitle(title ? title : sectionName);
+    this.currentSectionName = title ? title : sectionName;
   }
 }

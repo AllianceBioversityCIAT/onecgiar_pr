@@ -21,7 +21,7 @@ export class StepN1ExpertsComponent {
   }
   GETAllInnovationPackagingExpertsExpertises() {
     this.api.resultsSE.GETAllInnovationPackagingExpertsExpertises().subscribe(({ response }) => {
-      // console.log(response);
+      //(response);
       this.expertisesList = response;
     });
   }
@@ -29,7 +29,7 @@ export class StepN1ExpertsComponent {
     this.body.experts.push(new Expert());
   }
 
-  narrativeActors(){
+  narrativeActors() {
     return `
     <ul>
     <li>
@@ -39,7 +39,6 @@ export class StepN1ExpertsComponent {
     To design a realistic innovation package, the engagement of a diverse group of experts is recommended. Please consider the following scaling expertises when developing the invitee list for the innovation packaging and scaling readiness assessment workshop</li>
     </ul>
 
-    `
-    
+    `;
   }
 }

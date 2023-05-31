@@ -25,13 +25,26 @@ export class IpsrRepository extends Repository<Ipsr>{
             r.result_type_id,
             r.result_level_id,
             rbi.inititiative_id AS initiative_id,
-            (
-                SELECT
-                    ci.official_code
-                FROM
-                    clarisa_initiatives ci
-                WHERE
-                    ci.id = rbi.inititiative_id
+            IF(
+                (rbi.initiative_role_id = 2),
+                (
+                    SELECT
+                        ci2.official_code
+                    FROM
+                        clarisa_initiatives ci2
+                        LEFT JOIN results_by_inititiative rbi2 ON rbi2.inititiative_id = ci2.id
+                    WHERE
+                        rbi2.initiative_role_id = 1
+                        AND rbi2.result_id = r.id
+                ),
+                (
+                    SELECT
+                        ci.official_code
+                    FROM
+                        clarisa_initiatives ci
+                    WHERE
+                        ci.id = rbi.inititiative_id
+                )
             ) AS official_code,
             r.created_date AS creation_date,
             (
@@ -51,11 +64,12 @@ export class IpsrRepository extends Repository<Ipsr>{
             AND r.is_active = 1
             AND rbi.inititiative_id IN (?)
             AND (
-                rbi.initiative_role_id = 1 
+                rbi.initiative_role_id = 1
                 OR rbi.initiative_role_id = 2
             )
             AND r.result_type_id = 7
-        ORDER BY r.created_date ASC;
+        ORDER BY
+            r.created_date ASC;
         `;
 
         try {
@@ -276,6 +290,7 @@ export class IpsrRepository extends Repository<Ipsr>{
             DISTINCT r.id,
             r.result_code,
             r.title,
+            rbi.inititiative_id AS initiative_id,
             IF((r.status = 1), 'Submitted', 'Editing') AS status,
             r.reported_year_id,
             (
@@ -340,10 +355,10 @@ export class IpsrRepository extends Repository<Ipsr>{
             and rbip.ipsr_role_id = 2
         	and rbip.is_active = true;
         `;
-
         try {
-            const results: getInnovationComInterface[] = await this.query(query, [resultId]);
+            const results: getInnovationComInterface[] = await this.query(query, [resultId]);     
             return results;
+
         } catch (error) {
             throw this._handlersError.returnErrorRepository({
                 className: IpsrRepository.name,
@@ -410,6 +425,8 @@ export class getInnovationComInterface {
     public is_active: boolean;
     public complementaryFunctions: ComplementaryFunctionsInterface[];
     public referenceMaterials: ReferenceMaterialsInterface[];
+    complementary_innovation_enabler_types_one:getEnablersType[];
+    complementary_innovation_enabler_types_two:getEnablersType[];
 }
 
 export interface ComplementaryFunctionsInterface {
@@ -417,4 +434,11 @@ export interface ComplementaryFunctionsInterface {
 }
 export interface ReferenceMaterialsInterface {
     link: string;
+}
+
+export class getEnablersType {
+    complementary_innovation_enabler_types_id: string;
+    group: string;
+    type: string;
+    level:number;
 }

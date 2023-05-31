@@ -27,7 +27,7 @@ export class LinkedResultRepository extends Repository<LinkedResult> {
     }
   }
 
-  async getLinkResultByIdResultAndLinkId(resultId: number, link: number){
+  async getLinkResultByIdResultAndLinkId(resultId: number, link: number) {
     const query = `
     select 
     lr.id,
@@ -46,7 +46,7 @@ export class LinkedResultRepository extends Repository<LinkedResult> {
 
     try {
       const linked: LinkedResult[] = await this.query(query, [resultId, link]);
-      return linked?.length?linked[0]:undefined;
+      return linked?.length ? linked[0] : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: LinkedResultRepository.name,
@@ -56,7 +56,7 @@ export class LinkedResultRepository extends Repository<LinkedResult> {
     }
   }
 
-  async getLinkResultByIdResultAndLegacyLinkId(resultId: number, link: string){
+  async getLinkResultByIdResultAndLegacyLinkId(resultId: number, link: string) {
     const query = `
     select 
     lr.id,
@@ -75,7 +75,7 @@ export class LinkedResultRepository extends Repository<LinkedResult> {
 
     try {
       const linked: LinkedResult[] = await this.query(query, [resultId, link]);
-      return linked?.length?linked[0]:undefined;
+      return linked?.length ? linked[0] : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: LinkedResultRepository.name,
@@ -85,7 +85,7 @@ export class LinkedResultRepository extends Repository<LinkedResult> {
     }
   }
 
-  async getLinkResultByIdResult(resultId: number){
+  async getLinkResultByIdResult(resultId: number) {
     const query = `
     select 
     lr.id as link_result_id,
@@ -137,9 +137,15 @@ export class LinkedResultRepository extends Repository<LinkedResult> {
     }
   }
 
-  async updateLink(resultId: number, resultsArray: number[], legacyLinkArray: string[], userId: number, isLegacy: boolean) {
-    const results = resultsArray??[];
-    const legacy = legacyLinkArray??[];
+  async updateLink(
+    resultId: number,
+    resultsArray: number[],
+    legacyLinkArray: string[],
+    userId: number,
+    isLegacy: boolean,
+  ) {
+    const results = resultsArray ?? [];
+    const legacy = legacyLinkArray ?? [];
     const upDateInactive = `
     update linked_result  
       set is_active = 0, 
@@ -147,9 +153,15 @@ export class LinkedResultRepository extends Repository<LinkedResult> {
         last_updated_by = ?
       where is_active > 0 
         and origin_result_id = ?
-        ${resultsArray?.reduce((acum, val) => acum + val, 0) > 0 && !isLegacy?
-            `and linked_results_id not in (${!results.length?`''`: results.toString()})`:
-            `and legacy_link not in (${`'${legacy.toString().replace(/,/g,'\',\'')}'`})`}
+        ${
+          resultsArray?.reduce((acum, val) => acum + val, 0) > 0 && !isLegacy
+            ? `and linked_results_id not in (${
+                !results.length ? `''` : results.toString()
+              })`
+            : `and legacy_link not in (${`'${legacy
+                .toString()
+                .replace(/,/g, "','")}'`})`
+        }
         ;
     `;
 
@@ -159,9 +171,15 @@ export class LinkedResultRepository extends Repository<LinkedResult> {
         last_updated_date = NOW(),
         last_updated_by = ?
       where origin_result_id = ?
-      ${resultsArray?.reduce((acum, val) => acum + val, 0) > 0 && !isLegacy?
-        `and linked_results_id in (${!results.length?`''`: results.toString()})`:
-        `and legacy_link in (${`'${legacy.toString().replace(/,/g,'\',\'')}'`})`}
+      ${
+        resultsArray?.reduce((acum, val) => acum + val, 0) > 0 && !isLegacy
+          ? `and linked_results_id in (${
+              !results.length ? `''` : results.toString()
+            })`
+          : `and legacy_link in (${`'${legacy
+              .toString()
+              .replace(/,/g, "','")}'`})`
+      }
         ;
     `;
 
@@ -175,20 +193,15 @@ export class LinkedResultRepository extends Repository<LinkedResult> {
     `;
 
     try {
-      console.log(upDateInactive)
-      console.log(upDateActive)
-      if(results?.length || legacy?.length){
+      if (results?.length || legacy?.length) {
         const upDateInactiveResult = await this.query(upDateInactive, [
-          userId, resultId
+          userId,
+          resultId,
         ]);
-  
-        return await this.query(upDateActive, [
-          userId, resultId
-        ]);
-      }else{
-        return await this.query(upDateAllInactive, [
-          userId, resultId
-        ]);
+
+        return await this.query(upDateActive, [userId, resultId]);
+      } else {
+        return await this.query(upDateAllInactive, [userId, resultId]);
       }
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

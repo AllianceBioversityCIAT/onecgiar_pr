@@ -12,17 +12,17 @@ export class TorKrsOthersPrimaryImpactAreaComponent implements OnInit {
   ngOnInit(): void {}
 
   getImpactAreasList(keyResultStoryData) {
-    console.log(this.resultIndex);
-    console.log(keyResultStoryData);
-    console.log(keyResultStoryData?.impact_area_id);
-    let impact_areas = JSON.parse(keyResultStoryData.impact_areas);
+    //(this.resultIndex);
+    //(keyResultStoryData);
+    //(keyResultStoryData?.impact_area_id);
+    const impact_areas = JSON.parse(keyResultStoryData.impact_areas);
     let text = '';
     impact_areas?.forEach(element => {
       text += `${element.nameImpact}${'; '}`;
     });
     text = text.substring(0, text.length - 2);
     text += '<br>';
-    console.log(text);
+    //(text);
     return text;
   }
 

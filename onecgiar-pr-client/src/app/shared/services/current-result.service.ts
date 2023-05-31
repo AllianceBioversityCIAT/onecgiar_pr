@@ -15,17 +15,17 @@ export class CurrentResultService {
   async GET_resultById() {
     await this.api.resultsSE.GET_resultById().subscribe(
       ({ response }) => {
-        // console.log('GET_resultById');
-        console.log(response);
+        //('GET_resultById');
+        //(response);
         this.rolesSE.validateReadOnly(response);
         this.resultLevelSE.currentResultLevelName = response.result_level_name;
         this.resultLevelSE.currentResultLevelId = response.result_level_id;
         this.resultLevelSE.currentResultTypeId = response.result_type_id;
-        // console.log(response);
+        //(response);
         this.dataControlSE.currentResult = response;
       },
       err => {
-        console.log(err.error);
+        //(err.error);
         if (err.error.statusCode == 404) this.router.navigate([`/`]);
         this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: 'result not found', status: 'error' });
       }

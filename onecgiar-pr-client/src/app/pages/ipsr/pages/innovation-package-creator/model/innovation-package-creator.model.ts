@@ -8,6 +8,7 @@ export class InnovationPackageCreatorBody {
   geo_scope_id = null;
   regions: regionsOrCountries[] = [];
   countries: regionsOrCountries[] = [];
+  geoScopeSubNatinals:any = [];
 }
 
 interface regionsOrCountries {

@@ -21,6 +21,12 @@ html {
     cursor: pointer;
 }
 
+.description_header {
+    font-weight: 600;
+    color: black !important;
+    margin-right: 5px !important;
+}
+
 .read-only {
     color: var(--pr-color-secondary);
 }
@@ -61,7 +67,7 @@ html {
 
 @media only screen and (min-width: 1400px) {
     html {
-        font-size: 14px;
+        font-size: 13px;
     }
 }
 

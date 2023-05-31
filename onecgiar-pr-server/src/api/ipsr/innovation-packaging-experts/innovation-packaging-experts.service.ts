@@ -7,14 +7,15 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 
 @Injectable()
 export class InnovationPackagingExpertsService {
-
   constructor(
     protected readonly _innovationPackagingExpertRepository: InnovationPackagingExpertRepository,
     protected readonly _expertisesRepository: ExpertisesRepository,
-    protected readonly _handlersError: HandlersError
-  ){}
+    protected readonly _handlersError: HandlersError,
+  ) {}
 
-  create(createInnovationPackagingExpertDto: CreateInnovationPackagingExpertDto) {
+  create(
+    createInnovationPackagingExpertDto: CreateInnovationPackagingExpertDto,
+  ) {
     return 'This action adds a new innovationPackagingExpert';
   }
 
@@ -22,9 +23,11 @@ export class InnovationPackagingExpertsService {
     return `This action returns all innovationPackagingExperts`;
   }
 
-  async findAllExpertises(){
+  async findAllExpertises() {
     try {
-      const request = await this._expertisesRepository.find();
+      const request = await this._expertisesRepository.find({
+        order: { order: 'ASC' },
+      });
       return {
         response: request,
         message: 'Successful response',
@@ -39,7 +42,10 @@ export class InnovationPackagingExpertsService {
     return `This action returns a #${id} innovationPackagingExpert`;
   }
 
-  update(id: number, updateInnovationPackagingExpertDto: UpdateInnovationPackagingExpertDto) {
+  update(
+    id: number,
+    updateInnovationPackagingExpertDto: UpdateInnovationPackagingExpertDto,
+  ) {
     return `This action updates a #${id} innovationPackagingExpert`;
   }
 

@@ -42,7 +42,7 @@ export class TorFactSheetComponent {
     //Add 'implements OnInit' to the class.
     this.loadingData = true;
     this.api.resultsSE.GET_factSheetByInitiativeId(this.typeOneReportSE.getInitiativeID(this.typeOneReportSE.initiativeSelected)?.id).subscribe(({ response }) => {
-      let data = response;
+      const data = response;
       this.convertBudgetData(data);
       this.data[0].value = data.initiative_name;
       this.data[1].value = data.short_name;
@@ -54,7 +54,7 @@ export class TorFactSheetComponent {
       //* Geographic location
       this.concatGeo(data);
       this.concatEoiOutcome(data);
-      console.log(data);
+      //(data);
       const genderDescription = 'This score is derived from assessing the Initiative Proposal against adapted OECD gender equity scoring criteria.';
       this.data[9].value = data?.climateGenderScore[0]?.adaptation_score ? `<strong>${data?.climateGenderScore[0]?.adaptation_score}</strong><br>${data?.climateGenderScore[0]?.adaptation_desc}` : '<div class="no-data-text-format">This initiative does not have OECD DAC Climate marker Adaptation score</strong>';
       this.data[10].value = data.climateGenderScore[0]?.mitigation_score ? `<strong>${data.climateGenderScore[0]?.mitigation_score}</strong><br>${data.climateGenderScore[0]?.mitigation_desc}` : '<div class="no-data-text-format">This initiative does not have OECD DAC Climate marker Mitigation score</strong>';
@@ -65,9 +65,9 @@ export class TorFactSheetComponent {
   }
 
   getDateWithFormat(dateString: string) {
-    console.log(dateString);
+    //(dateString);
     const date = new Date(dateString);
-    console.log(date);
+    //(date);
 
     /* const month = date.toLocaleString('default', { month: 'long' });
     const day = date.getDay();
@@ -75,7 +75,7 @@ export class TorFactSheetComponent {
     const yyyy = date.getFullYear();
     let mm: any = date.getMonth() + 1; // Months start at 0!
     let dd: any = date.getDate();
-    console.log(dd + ' ' + mm + ' ' + yyyy);
+    //(dd + ' ' + mm + ' ' + yyyy);
 
     if (dd < 10) dd = '0' + dd;
     if (mm < 10) mm = '0' + mm;

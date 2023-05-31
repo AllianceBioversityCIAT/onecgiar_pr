@@ -18,7 +18,7 @@ export class IpsrUnsubmitModalComponent {
     this.requesting = true;
     this.api.resultsSE.PATCHSubmissionsUnsubmitIpsr(this.comment).subscribe(
       resp => {
-        console.log(resp.response.innoPckg.status);
+        //(resp.response.innoPckg.status);
         this.ipsrDataControlSE.detailData.status = resp.response?.innoPckg?.status;
         this.requesting = false;
         this.api.alertsFe.show({ id: 'unsubmodal', title: `Success`, description: `The result has been unsubmitted.`, status: 'success' });
@@ -26,7 +26,7 @@ export class IpsrUnsubmitModalComponent {
         // this.currentResultSE.GET_resultById();
       },
       err => {
-        console.log(err);
+        console.error(err);
         this.api.alertsFe.show({ id: 'unsubmodalerror', title: 'Error in unsubmitted', description: '', status: 'error' });
       }
     );

@@ -17,22 +17,23 @@ export class IpsrContributorsComponent {
   ngOnInit(): void {
     this.getSectionInformation();
     this.requestEvent();
-    this.api.setTitle('Contributors');
+    this.api.dataControlSE.detailSectionTitle('Contributors');
     this.api.resultsSE.ipsrDataControlSE.inContributos = true;
   }
 
   getSectionInformation() {
     this.api.resultsSE.GETContributorsByIpsrResultId().subscribe(({ response }) => {
-      console.log(response);
+      //(response);
       this.contributorsBody = response;
       this.contributorsBody.contributors_result_toc_result.map(item => (item.planned_result = Boolean(item.planned_result)));
+      this.contributorsBody.institutions.map(item => (item.institutions_type_name = item.institutions_name));
     });
   }
 
   onSaveSection() {
-    console.log(this.contributorsBody);
+    //(this.contributorsBody);
     this.api.resultsSE.PATCHContributorsByIpsrResultId(this.contributorsBody).subscribe(({ response }) => {
-      console.log(response);
+      //(response);
       this.getSectionInformation();
     });
   }

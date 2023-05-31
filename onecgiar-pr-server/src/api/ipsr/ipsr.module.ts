@@ -24,6 +24,7 @@ import { ResultsIpInstitutionTypeModule } from './results-ip-institution-type/re
 import { ResultsIpActorsModule } from './results-ip-actors/results-ip-actors.module';
 import { ResultsByIpInnovationUseMeasuresModule } from './results-by-ip-innovation-use-measures/results-by-ip-innovation-use-measures.module';
 import { ResultsInnovationPackagesValidationModuleModule } from './results-innovation-packages-validation-module/results-innovation-packages-validation-module.module';
+import { AssessedDuringExpertWorkshopModule } from './assessed-during-expert-workshop/assessed-during-expert-workshop.module';
 
 @Module({
   controllers: [IpsrController],
@@ -46,6 +47,7 @@ import { ResultsInnovationPackagesValidationModuleModule } from './results-innov
     ResultsIpActorsModule,
     ResultsByIpInnovationUseMeasuresModule,
     ResultsInnovationPackagesValidationModuleModule,
+    AssessedDuringExpertWorkshopModule,
   ],
   exports: [
     IpsrRepository,

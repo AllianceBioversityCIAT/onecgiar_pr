@@ -16,8 +16,8 @@ export class LinkedResultsService {
     private readonly _linkedResultRepository: LinkedResultRepository,
     private readonly _handlersError: HandlersError,
     private readonly _versionsService: VersionsService,
-    private readonly _resultRepository: ResultRepository
-  ){}
+    private readonly _resultRepository: ResultRepository,
+  ) {}
   async create(createLinkedResultDto: CreateLinkedResultDto, user: TokenDto) {
     try {
       if (!createLinkedResultDto?.result_id) {
@@ -27,8 +27,10 @@ export class LinkedResultsService {
           status: HttpStatus.BAD_REQUEST,
         };
       }
-      
-      const result: Result = await this._resultRepository.getResultById(createLinkedResultDto.result_id);
+
+      const result: Result = await this._resultRepository.getResultById(
+        createLinkedResultDto.result_id,
+      );
       if (!result) {
         throw {
           response: {},
@@ -42,19 +44,31 @@ export class LinkedResultsService {
         throw this._handlersError.returnErrorRes({ error: vTemp });
       }
       const version: Version = <Version>vTemp.response;
-      
-      let isExistsNew:number[] =[];
-      let isExistsNewLegacy:string[] =[];
+
+      let isExistsNew: number[] = [];
+      let isExistsNewLegacy: string[] = [];
       createLinkedResultDto.links = createLinkedResultDto.links ?? [];
-      createLinkedResultDto.legacy_link = createLinkedResultDto.legacy_link ?? [];
-      const links: interfaceLinkResults[]  = createLinkedResultDto.links;
-      let legacyLinks: interfaceLinkResults[]  = createLinkedResultDto.legacy_link;
-      if(createLinkedResultDto?.links?.length){
+      createLinkedResultDto.legacy_link =
+        createLinkedResultDto.legacy_link ?? [];
+      const links: interfaceLinkResults[] = createLinkedResultDto.links;
+      let legacyLinks: interfaceLinkResults[] =
+        createLinkedResultDto.legacy_link;
+      if (createLinkedResultDto?.links?.length) {
         const newLinks: LinkedResult[] = [];
-        await this._linkedResultRepository.updateLink(createLinkedResultDto.result_id,links.map(e => e.id), legacyLinks.map(e => e.legacy_link),user.id, false);
+        await this._linkedResultRepository.updateLink(
+          createLinkedResultDto.result_id,
+          links.map((e) => e.id),
+          legacyLinks.map((e) => e.legacy_link),
+          user.id,
+          false,
+        );
         for (let index = 0; index < links.length; index++) {
-          const linkExists = await this._linkedResultRepository.getLinkResultByIdResultAndLinkId(result.id, links[index].id);
-          if(!linkExists && !isExistsNew.includes(links[index].id)){
+          const linkExists =
+            await this._linkedResultRepository.getLinkResultByIdResultAndLinkId(
+              result.id,
+              links[index].id,
+            );
+          if (!linkExists && !isExistsNew.includes(links[index].id)) {
             const newLink = new LinkedResult();
             newLink.created_by = user.id;
             newLink.last_updated_by = user.id;
@@ -66,17 +80,35 @@ export class LinkedResultsService {
           }
         }
         await this._linkedResultRepository.save(newLinks);
-        
-      }else{
-        await this._linkedResultRepository.updateLink(createLinkedResultDto.result_id,[], legacyLinks.map(e => e.legacy_link),user.id, false);
+      } else {
+        await this._linkedResultRepository.updateLink(
+          createLinkedResultDto.result_id,
+          [],
+          legacyLinks.map((e) => e.legacy_link),
+          user.id,
+          false,
+        );
       }
-      if(createLinkedResultDto?.legacy_link?.length){
+      if (createLinkedResultDto?.legacy_link?.length) {
         const newLinks: LinkedResult[] = [];
-        legacyLinks = legacyLinks.filter(el => el.legacy_link?.length > 0);
-        await this._linkedResultRepository.updateLink(createLinkedResultDto.result_id,links.map(e => e.id), legacyLinks.map(e => e.legacy_link),user.id, true);
+        legacyLinks = legacyLinks.filter((el) => el.legacy_link?.length > 0);
+        await this._linkedResultRepository.updateLink(
+          createLinkedResultDto.result_id,
+          links.map((e) => e.id),
+          legacyLinks.map((e) => e.legacy_link),
+          user.id,
+          true,
+        );
         for (let index = 0; index < legacyLinks.length; index++) {
-          const linkExists = await this._linkedResultRepository.getLinkResultByIdResultAndLegacyLinkId(result.id, legacyLinks[index].legacy_link);
-          if(!linkExists && !isExistsNewLegacy.includes(legacyLinks[index].legacy_link)){
+          const linkExists =
+            await this._linkedResultRepository.getLinkResultByIdResultAndLegacyLinkId(
+              result.id,
+              legacyLinks[index].legacy_link,
+            );
+          if (
+            !linkExists &&
+            !isExistsNewLegacy.includes(legacyLinks[index].legacy_link)
+          ) {
             const newLink = new LinkedResult();
             newLink.created_by = user.id;
             newLink.last_updated_by = user.id;
@@ -87,11 +119,15 @@ export class LinkedResultsService {
             newLinks.push(newLink);
           }
         }
-        console.log(newLinks);
         await this._linkedResultRepository.save(newLinks);
-
-      }else{
-        await this._linkedResultRepository.updateLink(createLinkedResultDto.result_id,links.map(e => e.id), [],user.id, true);
+      } else {
+        await this._linkedResultRepository.updateLink(
+          createLinkedResultDto.result_id,
+          links.map((e) => e.id),
+          [],
+          user.id,
+          true,
+        );
       }
       return {
         response: {},
@@ -105,12 +141,14 @@ export class LinkedResultsService {
 
   async findAllLinksByResult(resultId: number) {
     try {
-      const links = await this._linkedResultRepository.getLinkResultByIdResult(resultId);
+      const links = await this._linkedResultRepository.getLinkResultByIdResult(
+        resultId,
+      );
 
       return {
         response: {
-          links: links.filter(el => !!el.id),
-          legacy_link: links.filter(el => !el.id)
+          links: links.filter((el) => !!el.id),
+          legacy_link: links.filter((el) => !el.id),
         },
         message: 'The data was updated correctly',
         status: HttpStatus.OK,
@@ -133,7 +171,7 @@ export class LinkedResultsService {
   }
 }
 
-interface interfaceLinkResults{
+interface interfaceLinkResults {
   id?: number;
   legacy_link?: string;
 }

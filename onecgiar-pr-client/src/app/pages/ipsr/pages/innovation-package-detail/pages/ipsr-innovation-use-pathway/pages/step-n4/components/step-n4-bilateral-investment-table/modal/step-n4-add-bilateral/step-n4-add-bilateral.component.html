@@ -8,7 +8,7 @@
 
         <app-pr-select class="segment_title_margin" [options]="this.institutionsSE?.institutionsList"
             label="Funder name" optionLabel="full_name" optionValue="institutions_id" placeholder="Select funder"
-            [(ngModel)]="biltarealBody.funder">
+            [(ngModel)]="biltarealBody.funder" [showPartnerAlert]="true">
         </app-pr-select>
 
         <div class="auto_fit_container">
@@ -39,5 +39,7 @@
     </div>
 
 </p-dialog>
-<app-pr-button (click)="visible= true;" padding="small" text="Add bilateral" icon="add_box"
-    *ngIf="!this.api.rolesSE.readOnly"></app-pr-button>
+<div style="width: 120px;">
+    <app-pr-button (click)="visible= true;" padding="small" text="Add bilateral" icon="add_box"
+        *ngIf="!this.api.rolesSE.readOnly"></app-pr-button>
+</div>

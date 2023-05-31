@@ -6,7 +6,7 @@ import { Pipe, PipeTransform } from '@angular/core';
 export class FilterIndicatorsPipe implements PipeTransform {
   transform(list: any[], impact_area_id: number): any {
     if (!list.length) return [];
-    // console.log(list);
+    //(list);
     return list.filter(item => item.impact_area_id == impact_area_id);
   }
 }

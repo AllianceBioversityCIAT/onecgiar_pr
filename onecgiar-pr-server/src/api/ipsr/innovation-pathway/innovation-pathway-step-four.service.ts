@@ -68,18 +68,17 @@ export class InnovationPathwayStepFourService {
         },
       });
 
-      const initiatives = await this._resultByInitiativeRepository.findOne({
+      const initiatives = await this._resultByInitiativeRepository.find({
         where: {
           result_id: resultId,
           is_active: true,
-          initiative_role_id: 1,
         },
       });
 
       const initiative_expected_investment =
         await this._resultInitiativesBudgetRepository.find({
           where: {
-            result_initiative_id: initiatives.id,
+            result_initiative_id: In(initiatives.map((el) => el.id)),
             is_active: true,
           },
           relations: {
@@ -161,6 +160,7 @@ export class InnovationPathwayStepFourService {
           bilateral_expected_investment,
           institutions_expected_investment,
           is_result_ip_published: result_ip.is_result_ip_published,
+          ipsr_pdf_report: result_ip.ipsr_pdf_report,
         },
         message: 'Successful response',
         status: HttpStatus.OK,
@@ -232,11 +232,15 @@ export class InnovationPathwayStepFourService {
         {
           initiative_unit_time_id: saveStepFourDto.initiative_unit_time_id,
           initiative_expected_time: saveStepFourDto.initiative_expected_time,
-          bilateral_unit_time_id: saveStepFourDto.bilateral_unit_time_id,
-          bilateral_expected_time: saveStepFourDto.bilateral_expected_time,
-          partner_unit_time_id: saveStepFourDto.partner_unit_time_id,
-          partner_expected_time: saveStepFourDto.partner_expected_time,
+          bilateral_unit_time_id: saveStepFourDto.initiative_unit_time_id,
+          bilateral_expected_time: saveStepFourDto.initiative_expected_time,
+          partner_unit_time_id: saveStepFourDto.initiative_unit_time_id,
+          partner_expected_time: saveStepFourDto.initiative_expected_time,
           is_result_ip_published: saveStepFourDto.is_result_ip_published,
+          ipsr_pdf_report:
+            saveStepFourDto.is_result_ip_published === true
+              ? saveStepFourDto.ipsr_pdf_report
+              : null,
         },
       );
 
@@ -666,7 +670,9 @@ export class InnovationPathwayStepFourService {
 
           const institutions = await this._resultByInstitutionsRepository.find({
             where: { id: rbi.id, institution_roles_id: 7 },
-            relations: { obj_institutions: true },
+            relations: {
+              obj_institutions: { obj_institution_type_code: true },
+            },
           });
           const deliveries =
             await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByResultByInstitution(

@@ -26,7 +26,7 @@ export class GoogleAnalyticsComponent implements OnInit {
       `;
       document.getElementsByTagName('head')[0].appendChild(script2);
     } catch (error) {
-      console.log(error);
+      //(error);
     }
   }
 }

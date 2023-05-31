@@ -204,8 +204,10 @@ export class InnovationPathwayStepOneService {
           })
         ).map((el) => ({
           ...el,
-          parent_institution_type_id:
-            el.obj_institution_types?.obj_parent?.obj_parent?.code || null,
+          parent_institution_type_id: el.obj_institution_types?.obj_parent
+            ?.obj_parent?.code
+            ? el.obj_institution_types?.obj_parent?.obj_parent?.code
+            : el.obj_institution_types?.obj_parent?.code || null,
         })),
       };
       const result_ip = await this._resultInnovationPackageRepository.findOne({
@@ -243,9 +245,11 @@ export class InnovationPathwayStepOneService {
           institutions?.map((el) => el['institutions_name']),
         )} to accomplish the use of ${
           coreData?.obj_result?.title
-        } by ${this.arrayToStringActorsAnd(
+        } by${this.innovationUseString(
           innovatonUse.actors.map((el) => el),
-        )} ${
+          innovatonUse.organization.map((el) => el),
+          innovatonUse.measures.map((el) => el),
+        )}, ${
           geo_scope_id == 1
             ? ''
             : `in ${this.arrayToStringGeoScopeAnd(
@@ -282,6 +286,83 @@ export class InnovationPathwayStepOneService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  innovationUseString(
+    ra: ResultActor[],
+    ri: ResultsByInstitutionType[],
+    rim: ResultIpMeasure[],
+  ) {
+    const temp_ra = ra.filter((el) =>
+      el?.obj_actor_type?.actor_type_id == 5
+        ? el?.other_actor_type
+        : el?.obj_actor_type?.name && el?.sex_and_age_disaggregation
+        ? el?.how_many
+        : el?.men && el?.women,
+    );
+    const temp_ri = ri.filter(
+      (el) => el?.obj_institution_types?.name && el?.how_many,
+    );
+    const temp_rim = rim.filter((el) => el?.unit_of_measure && el?.quantity);
+
+    const temp_string = `${
+      temp_ra?.length ? ` ${this.arrayToStringActorsAnd([...temp_ra])}` : ''
+    }${
+      temp_ri?.length
+        ? `${temp_ra?.length ? ',' : ''} ${this.arrayOrganizationToString([
+            ...temp_ri,
+          ])}`
+        : ''
+    }${
+      temp_rim?.length
+        ? `${temp_ri?.length ? ',' : ''} ${this.arrayMeasureToString([
+            ...temp_rim,
+          ])}`
+        : ''
+    }`;
+
+    return temp_ri?.length || temp_ra?.length || temp_rim?.length
+      ? temp_string
+      : ' <Innovation use not provided>';
+  }
+
+  arrayOrganizationToString(arrayData: ResultsByInstitutionType[]) {
+    const count = arrayData?.length;
+    if (!count) {
+      return '<Data not provided>';
+    }
+    const lastElement = arrayData.pop();
+    let actors: string = '';
+    for (const i of arrayData) {
+      actors += `${i?.how_many} ${
+        i?.obj_institution_types?.name || `<Institution type not provided>`
+      }${arrayData?.length > 1 ? ',' : ''} `;
+    }
+    return `${actors.replace(/(,.)$/, '')} ${count > 1 ? 'and ' : ''}${
+      lastElement?.how_many
+    } ${
+      lastElement?.obj_institution_types?.name ||
+      `<Institution type not provided>`
+    }`;
+  }
+
+  arrayMeasureToString(arrayData: ResultIpMeasure[]) {
+    const count = arrayData?.length;
+    if (!count) {
+      return '<Data not provided>';
+    }
+    const lastElement = arrayData.pop();
+    let actors: string = '';
+    for (const i of arrayData) {
+      actors += `${+i?.quantity} ${
+        i?.unit_of_measure || `<Unit of measure not provided>`
+      }${arrayData?.length > 1 ? ',' : ''} `;
+    }
+    return `${actors.replace(/(,.)$/, '')} ${
+      count > 1 ? 'and ' : ''
+    }${+lastElement?.quantity} ${
+      lastElement?.unit_of_measure || `<Unit of measure not provided>`
+    }`;
   }
 
   arrayToStringAnd(arrayData: any[]) {
@@ -321,13 +402,33 @@ export class InnovationPathwayStepOneService {
     const lastElement = arrayData.pop();
     let actors: string = '';
     for (const i of arrayData) {
-      actors += `${+i.men + +i.women} ${
-        i?.obj_actor_type?.name || `<Actor type not provided>`
-      } `;
+      actors += `${
+        i?.sex_and_age_disaggregation
+          ? +i.how_many
+          : `${i.women} women (${i.women_youth} youth / ${
+              +i.women - +i.women_youth
+            } non-youth) & ${i.men} men (${i.men_youth} youth / ${
+              +i.men - +i.men_youth
+            } non-youth)`
+      } ${
+        i?.obj_actor_type?.actor_type_id == 5
+          ? i?.other_actor_type
+          : i?.obj_actor_type?.name || `<Actor type not provided>`
+      }${arrayData?.length > 1 ? ',' : ''} `;
     }
-    return `${actors} ${count > 1 ? 'and ' : ''}${
-      +lastElement.men + +lastElement.women
-    } ${lastElement?.obj_actor_type?.name || `<Actor type not provided>`}`;
+    return `${actors.replace(/(,.)$/, '')} ${count > 1 ? 'and ' : ''}${
+      lastElement?.sex_and_age_disaggregation
+        ? +lastElement.how_many
+        : `${lastElement.women} women (${lastElement.women_youth} youth / ${
+            +lastElement.women - +lastElement.women_youth
+          } non-youth) & ${lastElement.men} men (${
+            lastElement.men_youth
+          } youth / ${+lastElement.men - +lastElement.men_youth} non-youth)`
+    } ${
+      lastElement?.obj_actor_type?.actor_type_id == 5
+        ? lastElement?.other_actor_type
+        : lastElement?.obj_actor_type?.name || `<Actor type not provided>`
+    }`;
   }
 
   async updateMain(
@@ -704,36 +805,18 @@ export class InnovationPathwayStepOneService {
         resultByInnovationPackageId.result_by_innovation_package_id;
       const eoiOutcomes = UpdateInnovationPathwayDto.eoiOutcomes;
 
-      const allTocByResult = await this._resultIpEoiOutcomes.find({
-        where: {
-          result_by_innovation_package_id: result_by_innovation_package_id,
-        },
-      });
+      for (const eoi of eoiOutcomes) {
+        const eoiExist = await this._resultIpEoiOutcomes.findOne({
+          where: {
+            result_by_innovation_package_id,
+            toc_result_id: eoi.toc_result_id,
+            is_active: true,
+          },
+        });
 
-      const existingIds = allTocByResult.map((et) => et.toc_result_id);
-
-      const tocsToActive = allTocByResult.filter(
-        (eoi) =>
-          eoiOutcomes.find((e) => e.toc_result_id === eoi.toc_result_id) &&
-          eoi.is_active === false,
-      );
-
-      const tocsToInactive = allTocByResult.filter(
-        (eoi) =>
-          !eoiOutcomes.find((e) => e.toc_result_id === eoi.toc_result_id) &&
-          eoi.is_active === true,
-      );
-
-      const tocsToSave = eoiOutcomes?.filter(
-        (eoi) => !existingIds.includes(eoi.toc_result_id),
-      );
-
-      const saveToc = [];
-
-      if (tocsToSave?.length > 0) {
-        for (const entity of tocsToSave) {
+        if (!eoiExist) {
           const newEoi = new ResultIpEoiOutcome();
-          newEoi.toc_result_id = entity.toc_result_id;
+          newEoi.toc_result_id = eoi.toc_result_id;
           newEoi.result_by_innovation_package_id =
             result_by_innovation_package_id;
           newEoi.version_id = version.id;
@@ -741,21 +824,36 @@ export class InnovationPathwayStepOneService {
           newEoi.last_updated_by = user.id;
           newEoi.created_date = new Date();
           newEoi.last_updated_date = new Date();
-          saveToc.push(this._resultIpEoiOutcomes.save(newEoi));
+          await this._resultIpEoiOutcomes.save(newEoi);
+        } else {
+          await this._resultIpEoiOutcomes.update(
+            eoiExist?.result_ip_eoi_outcome_id,
+            {
+              is_active: true,
+              last_updated_by: user.id,
+              last_updated_date: new Date(),
+            },
+          );
         }
       }
 
-      if (tocsToActive?.length > 0) {
-        for (const entity of tocsToActive) {
-          entity.is_active = true;
-          saveToc.push(this._resultIpEoiOutcomes.save(entity));
-        }
-      }
+      const allTocByResult = await this._resultIpEoiOutcomes.find({
+        where: {
+          result_by_innovation_package_id: result_by_innovation_package_id,
+          is_active: true,
+        },
+      });
 
-      if (tocsToInactive?.length > 0) {
-        for (const entity of tocsToInactive) {
-          entity.is_active = false;
-          saveToc.push(this._resultIpEoiOutcomes.save(entity));
+      for (const toc of allTocByResult) {
+        const exist = eoiOutcomes.some(
+          (eoi) => eoi.toc_result_id === toc.toc_result_id,
+        );
+
+        if (!exist) {
+          await this._resultIpEoiOutcomes.update(toc.result_ip_eoi_outcome_id, {
+            is_active: false,
+            last_updated_by: user.id,
+          });
         }
       }
 
@@ -1284,12 +1382,12 @@ export class InnovationPathwayStepOneService {
       actors.map(async (el: ResultActor) => {
         let actorExists: ResultActor = null;
 
-        if(el.sex_and_age_disaggregation === true && !el.how_many){
+        if (el.sex_and_age_disaggregation === true && !el.how_many) {
           return {
             response: { status: 'Error' },
             message: 'The field how many is required',
             status: HttpStatus.BAD_REQUEST,
-          }
+          };
         }
 
         if (el?.actor_type_id) {
@@ -1327,7 +1425,6 @@ export class InnovationPathwayStepOneService {
             where: { actor_type_id: IsNull(), result_id: result.id },
           });
         }
-        console.log(actorExists);
         if (actorExists) {
           await this._resultActorRepository.update(
             actorExists.result_actors_id,

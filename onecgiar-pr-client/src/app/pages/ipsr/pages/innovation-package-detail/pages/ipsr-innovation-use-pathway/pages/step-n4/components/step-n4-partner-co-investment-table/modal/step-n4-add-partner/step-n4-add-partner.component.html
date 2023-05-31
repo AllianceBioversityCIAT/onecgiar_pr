@@ -1,11 +1,10 @@
 <p-dialog class="support_information" header="Title" [(visible)]="this.visible" (onHide)="cleanObject()"
     [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true"
     [style]="{padding: '0px'}">
-    <div class="modal_title">Add bilateral</div>
+    <div class="modal_title">Add Partner</div>
     <div class="modal_container partners-request-container" *ngIf="showForm">
 
-
-        <app-alert-status *ngIf="!this.rolesSE.readOnly"
+        <app-alert-status *ngIf="!this.rolesSE.readOnly" (click)=" openPartner()"
             description="If you don't find the partner you are looking for, <a class='open_route alert-event-3'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list">
         </app-alert-status>
 
@@ -26,5 +25,7 @@
     </div>
 
 </p-dialog>
-<app-pr-button (click)="visible= true;" padding="small" text="Add partner" icon="add_box"
-    *ngIf="!this.rolesSE.readOnly"></app-pr-button>
+<div style="width: 120px;">
+    <app-pr-button (click)="visible= true;" padding="small" text="Add partner" icon="add_box"
+        *ngIf="!this.rolesSE.readOnly"></app-pr-button>
+</div>

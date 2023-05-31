@@ -20,14 +20,16 @@
     [(ngModel)]="this.ipsrStep4Body.is_result_ip_published" (click)="this.ipsrStep4Body.is_result_ip_published">
 </app-pr-radio-button>
 <div *ngIf="this.ipsrStep4Body.is_result_ip_published">
+    <app-pr-field-header label=" Innovation acknowledgement" description="{{descriptionInnovation()}}"></app-pr-field-header>
+    <app-pr-textarea placeholder="Contact personas info goes here..." [(ngModel)]="this.ipsrStep4Body.ipsr_pdf_report"></app-pr-textarea>
     <app-step-n4-picture-links [body]="this.ipsrStep4Body"></app-step-n4-picture-links>
 
     <app-step-n4-reference-material-links [body]="this.ipsrStep4Body"></app-step-n4-reference-material-links>
 </div>
 <div class="toggle_change_step">
     <app-pr-button
-        [routerLink]="'/ipsr/detail/'+this.ipsrDataControlSE.resultInnovationCode+'/ipsr-innovation-use-pathway/step-3'"
-        padding="big" text="Go to previous step" icon="arrow_circle_left" [reverse]="true"></app-pr-button>
+        (click)="onSavePrevious('previous')"
+        padding="big" text="Save & go to previous step" icon="arrow_circle_left" [reverse]="true"></app-pr-button>
 </div>
 
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()">

@@ -21,6 +21,10 @@ export class StepN1InstitutionsComponent {
     const index = deliveries.indexOf(deliveryId);
     return index < 0 ? false : true;
   }
+  onSelectPartner(e) {
+    const institutionFind: any = this.body.institutions.find(inst => inst.institutions_id == e.option.institutions_id);
+    institutionFind.deliveries = [1];
+  }
   onSelectDelivery(option, deliveryId) {
     if (option?.deliveries?.find((deliveryId: any) => deliveryId == 4) && deliveryId != 4) {
       const index = option?.deliveries?.indexOf(4) == undefined ? -1 : option?.deliveries?.indexOf(4);
