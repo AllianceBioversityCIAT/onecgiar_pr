@@ -150,7 +150,6 @@ export class PlatformReportService {
           return res;
         })
         .catch((error) => {
-          console.error(error);
           return null;
         });
 
