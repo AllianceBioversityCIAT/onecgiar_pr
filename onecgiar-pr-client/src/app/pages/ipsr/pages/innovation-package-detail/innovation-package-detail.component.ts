@@ -24,11 +24,11 @@ export class InnovationPackageDetailComponent {
 
   GETInnovationPackageDetail() {
     this.api.resultsSE.GETInnovationPackageDetail().subscribe(({ response }) => {
-      // console.log(response);
+      //(response);
       response.initiative_id = response?.inititiative_id;
       response.official_code = response?.initiative_official_code;
       this.api.rolesSE.validateReadOnly(response);
-      // console.log(response);
+      //(response);
       response.status == 1 ? (this.api.rolesSE.readOnly = true) : null;
       this.dataControlSE.currentResult = response;
 
@@ -41,7 +41,7 @@ export class InnovationPackageDetailComponent {
   GET_resultIdToCode(callback) {
     this.api.resultsSE.GET_resultIdToCode(this.ipsrDataControlSE.resultInnovationCode).subscribe(
       ({ response }) => {
-        // console.log(response);
+        //(response);
         this.ipsrDataControlSE.resultInnovationId = response;
         callback();
       },

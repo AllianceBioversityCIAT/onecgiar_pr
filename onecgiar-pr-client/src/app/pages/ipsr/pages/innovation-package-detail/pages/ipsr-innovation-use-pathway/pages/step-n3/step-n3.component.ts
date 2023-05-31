@@ -39,12 +39,12 @@ export class StepN3Component implements OnInit {
 
   getSectionInformation() {
     this.api.resultsSE.GETInnovationPathwayByRiId().subscribe(({ response }) => {
-      console.log('%cGET', 'font-size: 20px; color: #2BBE28;');
-      console.log(response);
+      //('%cGET', 'font-size: 20px; color: #2BBE28;');
+      //(response);
       this.ipsrStep3Body = this.openClosed(response);
 
       this.convertOrganizations(response?.innovatonUse?.organization);
-      // console.log('%c____________________', 'font-size: 20px; color: #2BBE28;');
+      //('%c____________________', 'font-size: 20px; color: #2BBE28;');
       this.result_core_innovation = response.result_core_innovation;
 
       if (this.ipsrStep3Body.innovatonUse.actors.length == 0) {
@@ -59,12 +59,12 @@ export class StepN3Component implements OnInit {
     });
   }
   onSaveSection() {
-    console.log('%cPATCH', 'font-size: 20px; color: #f68541;');
-    console.log(this.ipsrStep3Body);
-    console.log('%c____________________', 'font-size: 20px; color: #f68541;');
+    //('%cPATCH', 'font-size: 20px; color: #f68541;');
+    //(this.ipsrStep3Body);
+    //('%c____________________', 'font-size: 20px; color: #f68541;');
     this.convertOrganizationsTosave();
     this.api.resultsSE.PATCHInnovationPathwayByRiId(this.ipsrStep3Body).subscribe(({ response }) => {
-      console.log(response);
+      //(response);
       // setTimeout(() => {
       this.getSectionInformation();
       // }, 3000);
@@ -76,7 +76,7 @@ export class StepN3Component implements OnInit {
     // result_ip_result_complementary
 
     this.api.resultsSE.PATCHInnovationPathwayByRiIdNextPrevius(this.ipsrStep3Body, descrip).subscribe(({ response }) => {
-      console.log(response);
+      //(response);
       // setTimeout(() => {
       this.getSectionInformation();
       // }, 3000);
@@ -92,20 +92,20 @@ export class StepN3Component implements OnInit {
 
   GETAllClarisaInnovationReadinessLevels() {
     this.api.resultsSE.GETAllClarisaInnovationReadinessLevels().subscribe(({ response }) => {
-      // console.log(response);
+      //(response);
       this.rangesOptions = response;
     });
   }
   // GETAllClarisaInnovationReadinessLevels() {
   //   this.api.resultsSE.GETAllClarisaInnovationReadinessLevels().subscribe(({ response }) => {
-  //     console.log(response);
+  //     //(response);
   //     this.rangesOptions = response;
   //   });
   // }
 
   GETAllClarisaInnovationUseLevels() {
     this.api.resultsSE.GETAllClarisaInnovationUseLevels().subscribe(({ response }) => {
-      // console.log(response);
+      //(response);
       this.innovationUseList = response;
     });
   }

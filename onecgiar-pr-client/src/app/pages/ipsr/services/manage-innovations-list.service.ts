@@ -21,11 +21,9 @@ export class ManageInnovationsListService {
   GETallInnovations(initiativesList) {
     const body = { initiativeId: [initiativesList] };
     this.api.resultsSE.GETallInnovations(body).subscribe(({ response }) => {
-      console.log(response);
+      //(response);
       this.allInnovationsList = response;
       this.allInnovationsList.map((inno: any) => (inno.full_name = `${inno?.result_code} ${inno?.title} ${inno?.official_code}`));
     });
   }
-
-
 }

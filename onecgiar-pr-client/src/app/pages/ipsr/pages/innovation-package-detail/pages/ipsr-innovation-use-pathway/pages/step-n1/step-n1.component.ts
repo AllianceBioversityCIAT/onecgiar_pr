@@ -24,7 +24,7 @@ export class StepN1Component implements OnInit {
     this.api.resultsSE.GETInnovationPathwayByStepOneResultId().subscribe(({ response }) => {
       this.convertOrganizations(response?.innovatonUse?.organization);
       this.ipsrStep1Body = response;
-      console.log(response);
+      // (response);
 
       this.ipsrStep1Body.geo_scope_id = response.geo_scope_id == 3 ? 4 : response.geo_scope_id;
       this.coreResult = response?.coreResult;
@@ -41,7 +41,7 @@ export class StepN1Component implements OnInit {
 
       this.ipsrStep1Body.institutions.map(item => (item.institutions_type_name = item.institutions_name));
 
-      //? console.log(this.ipsrStep1Body);
+      //? // (this.ipsrStep1Body);
 
       if (this.ipsrStep1Body.innovatonUse.actors.length == 0) {
         this.ipsrStep1Body.innovatonUse.actors.push(new Actor());
@@ -55,12 +55,12 @@ export class StepN1Component implements OnInit {
     });
   }
   onSaveSection() {
-    // console.log("body");
+    //("body");
 
-    //? console.log(this.ipsrStep1Body);
+    //? //(this.ipsrStep1Body);
     this.convertOrganizationsTosave();
     this.api.resultsSE.PATCHInnovationPathwayByStepOneResultId(this.ipsrStep1Body).subscribe((resp: any) => {
-      console.log(resp?.response[0].response);
+      //(resp?.response[0].response);
       this.ipsrDataControlSE.detailData.title = resp?.response[0].response;
       this.getSectionInformation();
     });
@@ -69,7 +69,7 @@ export class StepN1Component implements OnInit {
   saveAndNextStep(descrip: string) {
     this.convertOrganizationsTosave();
     this.api.resultsSE.PATCHInnovationPathwayByStepOneResultIdNextStep(this.ipsrStep1Body, descrip).subscribe((resp: any) => {
-      console.log(resp?.response[0].response);
+      //(resp?.response[0].response);
       this.ipsrDataControlSE.detailData.title = resp?.response[0].response;
       this.getSectionInformation();
       setTimeout(() => {

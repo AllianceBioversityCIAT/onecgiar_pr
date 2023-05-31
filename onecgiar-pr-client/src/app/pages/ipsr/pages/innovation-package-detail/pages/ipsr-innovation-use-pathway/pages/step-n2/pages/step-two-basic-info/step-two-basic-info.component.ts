@@ -36,21 +36,21 @@ export class StepTwoBasicInfoComponent implements OnInit {
     })
   }
 
-  convertCols(){
+  convertCols() {
     let contador = 0;
     let auxCols = [];
     this.innovationCompletary.forEach(element => {
-      if(contador < 3){
+      if (contador < 3) {
         auxCols.push(element);
-      }else{
+      } else {
         if (contador == 3) {
           this.cols.push(auxCols);
           auxCols = [];
         }
-        
+
         auxCols.push(element);
       }
-      
+
       contador++;
     });
 
@@ -90,25 +90,26 @@ export class StepTwoBasicInfoComponent implements OnInit {
     if(this.bodyStep2[i].complementary_innovation_enabler_types_one.includes(category['complementary_innovation_enabler_types_id']) == false){
       this.bodyStep2[i].complementary_innovation_enabler_types_one.push(category.complementary_innovation_enabler_types_id);
       this.update = false;
-          setTimeout(() => {
-            this.update = true;
-          }, 50);
+      setTimeout(() => {
+        this.update = true;
+      }, 50);
     }
 
   }
 
 
   async onSavePreviuosNext(descrip){
-    
-    this.api.resultsSE.PostStepTwoComentariesInnovationPrevius(this.bodyStep2,descrip).subscribe((resp) =>{
+    console.log(this.informartion);
+    this.api.resultsSE.PostStepTwoComentariesInnovationPrevius(this.bodyStep22,descrip).subscribe((resp) =>{
+      console.log(resp);
       if(this.api.isStepTwoTwo&& descrip == 'next'){
         this.router.navigate(['/ipsr/detail/'+this.ipsrDataControlSE.resultInnovationCode+'/ipsr-innovation-use-pathway/step-3']);
       }
 
       if (descrip == 'previous') {
-        this.router.navigate(['/ipsr/detail/'+this.ipsrDataControlSE.resultInnovationCode+'/ipsr-innovation-use-pathway/step-2/complementary-innovation']);
+        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2/complementary-innovation']);
       }
-    })
+    });
   }
 
   getInnovationComplementaries(){

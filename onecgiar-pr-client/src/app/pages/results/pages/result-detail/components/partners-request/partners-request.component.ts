@@ -23,7 +23,7 @@ export class PartnersRequestComponent {
   ngOnInit(): void {
     //Called after the constructor, initializing input properties, and the first call to ngOnChanges.
     //Add 'implements OnInit' to the class.
-    console.log(this.api.dataControlSE.myInitiativesList);
+    //(this.api.dataControlSE.myInitiativesList);
     this.getInitiativeAndRole();
   }
 
@@ -32,12 +32,12 @@ export class PartnersRequestComponent {
     this.api.dataControlSE.myInitiativesList.forEach((initiative: any) => {
       text += `[${initiative.official_code} - ${initiative.role}] `;
     });
-    console.log(text);
+    //(text);
     return text;
   }
 
   cleanObject() {
-    // console.log('cleanForm');
+    //('cleanForm');
     this.showForm = false;
     this.partnersRequestBody = new PartnersRequestBody();
     setTimeout(() => {
@@ -49,7 +49,7 @@ export class PartnersRequestComponent {
     const { application, initiative } = this.api.rolesSE.roles;
     const { id, email, user_name } = this.api.authSE.localStorageUser;
     const { initiative_official_code, initiative_short_name, initiative_name, initiative_id } = this.ipsrDataControlSE.inIpsr ? this.ipsrDataControlSE.detailData : this.api?.dataControlSE?.currentResult || {};
-    console.log(this.ipsrDataControlSE.detailData);
+    //(this.ipsrDataControlSE.detailData);
     const initiativeFinded = this.api.rolesSE.roles.initiative.find(initiative => (initiative.initiative_id = initiative_id));
     this.partnersRequestBody.externalUserName = user_name;
     this.partnersRequestBody.externalUserMail = email;
@@ -61,18 +61,18 @@ export class PartnersRequestComponent {
     Digital tool: PRMS Reporting Tool,
     Section: ${this.api.dataControlSE.currentSectionName}
     `;
-    console.log(this.partnersRequestBody);
+    //(this.partnersRequestBody);
 
     // this.api.resultsSE.POST_partnerRequest(this.partnersRequestBody).subscribe(
     //   resp => {
     //     this.requesting = false;
-    //     console.log(resp);
+    //     //(resp);
     //     this.api.dataControlSE.showPartnersRequest = false;
     //     if (resp.status == 500) return this.api.alertsFe.show({ id: 'partners-error', title: 'Error when requesting partner', description: 'Server problems', status: 'error' });
     //     this.api.alertsFe.show({ id: 'partners', title: `Partner has been requested.`, description: `The partner request was sent successfully. You will receive a confirmation message as soon as it has been processed <strong>(Please note that the partner review process may take up to 2 business days)</strong>. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list. In case of any questions, please contact the technical support`, status: 'success' });
 
     //     // "${this.partnersRequestBody.name}"
-    //     // console.log(this.partnersRequestBody.name);
+    //     //(this.partnersRequestBody.name);
     //   },
     //   err => {
     //     this.api.alertsFe.show({ id: 'partners-error', title: 'Error when requesting partner', description: '', status: 'error' });

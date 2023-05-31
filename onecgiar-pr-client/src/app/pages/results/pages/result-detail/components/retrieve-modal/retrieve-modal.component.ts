@@ -27,7 +27,7 @@ export class RetrieveModalComponent implements OnInit {
   }
 
   cleanObject() {
-    // console.log('cleanForm');
+    //('cleanForm');
     this.showForm = false;
     this.retrieveModalSE.retrieveRequestBody = new RetrieveRequestBody();
     setTimeout(() => {
@@ -41,18 +41,18 @@ export class RetrieveModalComponent implements OnInit {
     this.retrieveModalSE.retrieveRequestBody.result_type_id = this.resultLevelSE.resultBody.result_type_id;
     //? get result type
     // this.getResultType();
-    // console.log(this.retrieveModalSE.retrieveRequestBody);
+    //(this.retrieveModalSE.retrieveRequestBody);
     this.api.resultsSE.POST_updateRequest(this.retrieveModalSE.retrieveRequestBody).subscribe(
       resp => {
-        // console.log(resp?.response?.newResultHeader?.id);
+        //(resp?.response?.newResultHeader?.id);
         this.api.alertsFe.show({ id: 'partners', title: `The Legacy Result was retrieved successfully!`, description: `The selected result is already list in the reported results.`, status: 'success' });
         this.requesting = false;
         this.api.dataControlSE.showRetrieveRequest = false;
-        console.log(resp);
+        //(resp);
         this.router.navigate([`/result/result-detail/${resp?.response?.newResultHeader?.result_code}/general-information`]);
       },
       err => {
-        console.log(err);
+        console.error(err);
         this.api.alertsFe.show({ id: 'partners-error', title: err.error.message || 'Error', description: '', status: 'error' });
         this.requesting = false;
       }

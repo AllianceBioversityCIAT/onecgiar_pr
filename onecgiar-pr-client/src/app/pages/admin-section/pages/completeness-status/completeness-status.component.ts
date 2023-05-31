@@ -24,7 +24,7 @@ export class CompletenessStatusComponent {
   POST_reportSesultsCompleteness(inits: any[], role?: number) {
     this.api.resultsSE.POST_reportSesultsCompleteness(inits, role).subscribe(({ response }) => {
       this.resultsList = response;
-      // console.log(response);
+      //(response);
     });
   }
 
@@ -53,7 +53,7 @@ export class CompletenessStatusComponent {
     });
     resultsList.map(result => {
       const { result_code, result_title, official_code, completeness, result_type_name, general_information, theory_of_change, partners, geographic_location, links_to_results, evidence, section_seven, is_submitted, pdf_link } = result;
-      // console.log(is_submitted);
+      //(is_submitted);
       // content
       resultsListMapped.push({
         result_code,
@@ -79,10 +79,10 @@ export class CompletenessStatusComponent {
   }
 
   GET_AllInitiatives() {
-    // console.log(this.api.rolesSE.isAdmin);
+    //(this.api.rolesSE.isAdmin);
     if (!this.api.rolesSE.isAdmin) return;
     this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
-      // console.log(response);
+      //(response);
       this.allInitiatives = response;
     });
   }
@@ -90,7 +90,7 @@ export class CompletenessStatusComponent {
   onSelectInit() {
     let inits = [];
     this.initiativesSelected.map(init => {
-      // console.log(init);
+      //(init);
       inits.push(init.id);
     });
     this.POST_reportSesultsCompleteness(inits, inits?.length ? null : 1);
@@ -111,9 +111,9 @@ export class CompletenessStatusComponent {
     this.api.dataControlSE.showResultHistoryOfChangesModal = true;
     this.resultHistoryOfChangesModalSE.historyOfChangesList = [];
     this.api.resultsSE.GET_historicalByResultId(resultId).subscribe(({ response }) => {
-      // console.log(response);
+      //(response);
       this.resultHistoryOfChangesModalSE.historyOfChangesList = response;
     });
-    // console.log(resultId);
+    //(resultId);
   }
 }

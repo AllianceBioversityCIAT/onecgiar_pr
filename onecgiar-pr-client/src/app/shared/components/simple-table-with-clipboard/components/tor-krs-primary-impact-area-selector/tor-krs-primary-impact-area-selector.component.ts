@@ -19,10 +19,10 @@ export class TorKrsPrimaryImpactAreaSelectorComponent {
   }
 
   impactAreaName(index) {
-    console.log(index);
-    console.log(this.selectOptions);
-    console.log(this.typeOneReportSE.keyResultStoryData[index]?.impact_area_id);
-    console.log(this.selectOptions?.find(item => item.id_impactArea == this.typeOneReportSE.keyResultStoryData[index]?.impact_area_id));
+    //(index);
+    //(this.selectOptions);
+    //(this.typeOneReportSE.keyResultStoryData[index]?.impact_area_id);
+    //(this.selectOptions?.find(item => item.id_impactArea == this.typeOneReportSE.keyResultStoryData[index]?.impact_area_id));
     const impactReaObject = this.selectOptions?.find(item => item.id_impactArea == this.typeOneReportSE.keyResultStoryData[index]?.impact_area_id);
     return impactReaObject?.nameImpact;
   }

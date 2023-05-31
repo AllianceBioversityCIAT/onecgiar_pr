@@ -22,7 +22,7 @@ export class InitCompletenessStatusComponent implements OnInit {
     this.api.authSE.GET_initiativesByUser().subscribe(({ response }) => {
       let inits = [];
       response.map(init => {
-        // console.log(init);
+        //(init);
         inits.push(init.initiative_id);
         this.initiativesSelected.push({ id: init.initiative_id, full_name: init.full_name });
       });
@@ -30,18 +30,18 @@ export class InitCompletenessStatusComponent implements OnInit {
     });
   }
   POST_reportSesultsCompleteness(inits: any[]) {
-    // console.log(inits);
+    //(inits);
     this.resultsList = [];
     this.api.resultsSE.POST_reportSesultsCompleteness(inits).subscribe(({ response }) => {
       this.resultsList = response;
-      // console.log(response);
+      //(response);
     });
   }
 
   onSelectInit() {
     let inits = [];
     this.initiativesSelected.map(init => {
-      // console.log(init);
+      //(init);
       inits.push(init.id);
     });
     this.POST_reportSesultsCompleteness(inits);
@@ -71,7 +71,7 @@ export class InitCompletenessStatusComponent implements OnInit {
     });
     resultsList.map(result => {
       const { result_code, result_title, official_code, completeness, result_type_name, general_information, theory_of_change, partners, geographic_location, links_to_results, evidence, section_seven, is_submitted, pdf_link } = result;
-      // console.log(is_submitted);
+      //(is_submitted);
       // content
       resultsListMapped.push({
         result_code,
@@ -110,9 +110,9 @@ export class InitCompletenessStatusComponent implements OnInit {
     this.api.dataControlSE.showResultHistoryOfChangesModal = true;
     this.resultHistoryOfChangesModalSE.historyOfChangesList = [];
     this.api.resultsSE.GET_historicalByResultId(resultId).subscribe(({ response }) => {
-      // console.log(response);
+      //(response);
       this.resultHistoryOfChangesModalSE.historyOfChangesList = response;
     });
-    // console.log(resultId);
+    //(resultId);
   }
 }

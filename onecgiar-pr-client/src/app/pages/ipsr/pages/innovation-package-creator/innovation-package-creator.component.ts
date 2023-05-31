@@ -13,17 +13,15 @@ export class InnovationPackageCreatorComponent {
   innovationPackageCreatorBody = new InnovationPackageCreatorBody();
   searchText = '';
   allInitiatives = [];
-  status:boolean = true;
-  statusPdialog:boolean = false;
+  status: boolean = true;
+  statusPdialog: boolean = false;
   constructor(public api: ApiService, private router: Router, public manageInnovationsListSE: ManageInnovationsListService) {
     this.GET_AllInitiatives();
   }
   selectInnovationEvent(e) {
-    
-    
     this.innovationPackageCreatorBody.result_id = e.result_id;
     this.api.resultsSE.GETInnovationByResultId(e.result_id).subscribe(({ response }) => {
-      console.log(response);
+      //(response);
       this.innovationPackageCreatorBody.geo_scope_id = response.geographic_scope_id == 3 ? 4 : response.geographic_scope_id;
       this.innovationPackageCreatorBody.regions = response.hasRegions;
       this.innovationPackageCreatorBody.countries = response.hasCountries;
@@ -35,21 +33,20 @@ export class InnovationPackageCreatorComponent {
   }
 
   GET_AllInitiatives() {
-    console.log(this.api.rolesSE.isAdmin);
+    //(this.api.rolesSE.isAdmin);
     if (!this.api.rolesSE.isAdmin) return;
     this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
-      console.log(response);
+      //(response);
       this.allInitiatives = response;
     });
   }
 
   onSaveSection() {
-    this.innovationPackageCreatorBody.geoScopeSubNatinals.forEach((resp) => {
-      let subCountry = this.innovationPackageCreatorBody.countries.filter((country) => resp.idCountry == country.id)[0];
-      if(resp.isRegister != 0){
+    this.innovationPackageCreatorBody.geoScopeSubNatinals.forEach(resp => {
+      const subCountry = this.innovationPackageCreatorBody.countries.filter(country => resp.idCountry == country.id)[0];
+      if (resp.isRegister != 0) {
         subCountry['result_countries_sub_national'].push(resp);
       }
-      
     });
 
     this.api.resultsSE.POSTResultInnovationPackage(this.innovationPackageCreatorBody).subscribe(
@@ -59,9 +56,9 @@ export class InnovationPackageCreatorComponent {
       },
       err => {
         this.api.alertsFe.show({ id: 'ipsr-creator-error', title: 'Error!', description: err?.error?.message, status: 'error' });
-        this.innovationPackageCreatorBody.countries.forEach((resp)=>{
+        this.innovationPackageCreatorBody.countries.forEach(resp => {
           resp['result_countries_sub_national'] = [];
-        })
+        });
       }
     );
   }

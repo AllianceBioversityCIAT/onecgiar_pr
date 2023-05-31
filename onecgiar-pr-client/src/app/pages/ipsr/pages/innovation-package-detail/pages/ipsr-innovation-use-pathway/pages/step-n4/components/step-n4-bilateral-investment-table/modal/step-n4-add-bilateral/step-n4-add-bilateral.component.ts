@@ -22,15 +22,15 @@ export class StepN4AddBilateralComponent implements OnInit {
 
   onAddBilateral() {
     this.requesting = true;
-    console.log(this.body.bilateral_expected_investment);
-    console.log(this.biltarealBody);
+    //(this.body.bilateral_expected_investment);
+    //(this.biltarealBody);
     this.api.resultsSE.PATCHInnovationPathwayStep4Bilaterals(this.biltarealBody).subscribe(
       ({ response }) => {
         this.requesting = false;
-        console.log('add bilateral');
-        console.log(this.biltarealBody);
+        //('add bilateral');
+        //(this.biltarealBody);
         this.body.bilateral_expected_investment.push(response);
-        console.log(this.body.bilateral_expected_investment);
+        //(this.body.bilateral_expected_investment);
 
         this.visible = false;
         this.api.alertsFe.show({ id: 'biltareal', title: `Biltareal has been added.`, status: 'success' });
@@ -46,7 +46,7 @@ export class StepN4AddBilateralComponent implements OnInit {
   }
 
   cleanObject() {
-    console.log('cleanForm');
+    //('cleanForm');
     this.showForm = false;
     this.biltarealBody = new AddBilateralBody();
     setTimeout(() => {

@@ -34,7 +34,7 @@ export class ResultLevelService {
 
   GET_TypeByResultLevel() {
     this.api.resultsSE.GET_TypeByResultLevel().subscribe(resp => {
-      // console.log(resp.response);
+      //(resp.response);
       this.removeResultTypes(resp.response);
       this.resultLevelList = resp.response;
       this.resultsListFilterSE.setFiltersByResultLevelTypes(this.resultLevelList);

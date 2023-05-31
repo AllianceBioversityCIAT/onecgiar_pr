@@ -40,7 +40,7 @@ export class DataControlService {
     let seconds = 0;
     return new Promise((resolve, reject) => {
       const timer = setInterval(() => {
-        // console.log('sdsd  ' + seconds);
+        //('sdsd  ' + seconds);
         seconds++;
         if (text) {
           resolve(text);
@@ -77,12 +77,12 @@ export class DataControlService {
   }
 
   get isKnowledgeProduct() {
-    // console.log(this.currentResult);
+    //(this.currentResult);
     return this.currentResult?.result_type_id == 6;
   }
 
   someMandatoryFieldIncomplete(container) {
-    // console.log('-  ');
+    //('-  ');
     const htmlContainer = document.querySelector(container);
     if (!htmlContainer) return true;
     let inputs;
@@ -95,7 +95,7 @@ export class DataControlService {
   }
 
   someMandatoryFieldIncompleteResultDetail(container) {
-    // console.log('-  ');
+    //('-  ');
     this.fieldFeedbackList = [];
     const htmlContainer = document.querySelector(container);
     if (!htmlContainer) return true;
@@ -105,7 +105,7 @@ export class DataControlService {
       inputs = Array.prototype.slice.call(htmlContainer.querySelectorAll('.pr-input.mandatory input')).filter(field => {
         const tagValue = field?.parentElement?.parentElement?.parentElement?.querySelector('.pr_label')?.innerText;
         const isEmpty = !Boolean(field.value);
-        // console.log(tagValue);
+        //(tagValue);
 
         if (tagValue && isEmpty) this.fieldFeedbackList.push(tagValue);
 

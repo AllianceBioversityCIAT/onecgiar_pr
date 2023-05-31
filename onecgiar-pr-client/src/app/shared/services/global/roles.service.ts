@@ -35,7 +35,7 @@ export class RolesService {
 
   fieldValidation(restrictionId) {
     const restrictionFinded = this.restrictions.find(restriction => restriction.id == restrictionId);
-    // console.log(restrictionFinded);
+    //(restrictionFinded);
     return Boolean(restrictionFinded.roleIds.find(roleId => roleId == this.currentInitiativeRole));
   }
   validateApplication(application) {
@@ -44,8 +44,8 @@ export class RolesService {
   }
 
   async validateReadOnly(result?) {
-    // console.log('%cvalidateReadOnly', 'background: #222; color: #52cd47');
-    // console.log(result);
+    //('%cvalidateReadOnly', 'background: #222; color: #52cd47');
+    //(result);
     if (environment?.platformIsClosed) {
       this.readOnly = true;
       this.updateRolesListFromLocalStorage();
@@ -60,13 +60,13 @@ export class RolesService {
       if (isAdmin) return null;
       if (!result) return null;
       const { initiative_id } = result;
-      // console.log(initiative_id);
-      // console.log(initiative);
+      //(initiative_id);
+      //(initiative);
 
       const initiativeFinded = initiative.find(init => init.initiative_id == initiative_id);
       this.readOnly = Boolean(!initiativeFinded);
-      // this.readOnly ? console.log('%cIs ReadOnly => ' + this.readOnly, 'background: #222; color: #d84242') : console.log('%cNot ReadOnly => ' + this.readOnly, 'background: #222; color: #aaeaf5');
-      // console.log('%c******END OF validateReadOnly*******', 'background: #222; color: #52cd47');
+      // this.readOnly ? //('%cIs ReadOnly => ' + this.readOnly, 'background: #222; color: #d84242') : //('%cNot ReadOnly => ' + this.readOnly, 'background: #222; color: #aaeaf5');
+      //('%c******END OF validateReadOnly*******', 'background: #222; color: #52cd47');
       return null;
     };
     updateMyRoles(this.updateRolesListFromLocalStorage());
@@ -97,7 +97,7 @@ export class RolesService {
           resolve(response);
         },
         err => {
-          console.log(err);
+          console.error(err);
           reject();
         }
       );

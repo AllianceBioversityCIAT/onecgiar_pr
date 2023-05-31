@@ -10,7 +10,7 @@ export class PageAlertComponent {
   internationalizationData = internationalizationData;
   @Input() type: string;
   constructor() {
-    console.log(this.type);
+    //(this.type);
   }
 
   get title() {
