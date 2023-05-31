@@ -18,6 +18,6 @@ export class PdfActionsComponent {
   }
 
   get link() {
-    return `${environment.frontBaseUrl}/reports/result-details/${this.api.currentResultCode}?phase=1`;
+    return `${environment.frontBaseUrl}reports/result-details/${this.api.currentResultCode}?phase=1`;
   }
 }
