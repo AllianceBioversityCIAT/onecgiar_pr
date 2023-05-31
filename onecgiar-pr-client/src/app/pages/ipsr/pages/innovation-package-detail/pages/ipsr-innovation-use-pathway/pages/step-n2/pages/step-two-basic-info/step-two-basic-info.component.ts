@@ -143,15 +143,12 @@ export class StepTwoBasicInfoComponent implements OnInit {
   }
 
   getComplementaryTypes(){
-    setTimeout(() => {
       this.api.resultsSE.getStepTwoComentariesInnovation().subscribe((resp) =>{
         this.innovationCompletary = resp['response']['comentaryPrincipals'];
-        
         this.convertCols();
         this.init = true;
         
       })
-    }, 2000);
   }
 
 }
