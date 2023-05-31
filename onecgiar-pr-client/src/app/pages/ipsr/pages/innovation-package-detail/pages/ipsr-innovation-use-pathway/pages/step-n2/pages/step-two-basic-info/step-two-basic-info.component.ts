@@ -29,7 +29,7 @@ export class StepTwoBasicInfoComponent implements OnInit {
   }
 
   onSaveSection(){
-    //console.log(this.bodyStep2);
+    console.log(this.bodyStep2);
     this.api.resultsSE.PostStepTwoComentariesInnovation(this.bodyStep2).subscribe((resp) =>{
 
       
