@@ -23,18 +23,19 @@ export class ResultsInnovationPackagesEnablerTypeRepository extends Repository<R
                 if(createIn.complementary_innovation_enabler_types_one.length == 0){
                     await this.delete({result_by_innovation_package_id:createIn.result_by_innovation_package_id})
                 }
-                createIn.complementary_innovation_enabler_types_one.forEach(async (innovation) =>{
-                    let createInnovations = {
-                        result_by_innovation_package_id: createIn.result_by_innovation_package_id,
-                        complementary_innovation_enable_type_id: innovation,
-                        is_active: true,
-                        version_id: 1
-                    }
+                
+                else{
                     await this.delete({result_by_innovation_package_id:createIn.result_by_innovation_package_id})
-                    let aux = await this.save(createInnovations)
-                    
-                    returnVariable.push(aux);
+                    createIn.complementary_innovation_enabler_types_one.forEach(async (innovation) =>{
+                        let createInnovations = {
+                            result_by_innovation_package_id: createIn.result_by_innovation_package_id,
+                            complementary_innovation_enable_type_id: innovation,
+                            is_active: true,
+                            version_id: 1
+                        }
+                        await this.save(createInnovations)
                 })
+               }
             }
     
             if(createIn.hasOwnProperty('complementary_innovation_enabler_types_two')){
@@ -45,13 +46,12 @@ export class ResultsInnovationPackagesEnablerTypeRepository extends Repository<R
                         is_active: true,
                         version_id: 1
                     }
-                    
-                    let aux = await this.save(createInnovations)
-                    returnVariable.push(aux);
+                    await this.save(createInnovations)
                 })
             }
         })
         
+        console.log(returnVariable);
         
 
         return {
