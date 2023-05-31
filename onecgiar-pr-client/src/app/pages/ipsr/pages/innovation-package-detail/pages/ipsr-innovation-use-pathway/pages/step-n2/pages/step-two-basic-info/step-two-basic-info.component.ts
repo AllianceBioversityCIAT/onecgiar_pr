@@ -32,6 +32,7 @@ export class StepTwoBasicInfoComponent implements OnInit {
     console.log(this.bodyStep2);
     this.api.resultsSE.PostStepTwoComentariesInnovation(this.bodyStep2).subscribe((resp) =>{
 
+      console.log(resp);
       
     })
   }
