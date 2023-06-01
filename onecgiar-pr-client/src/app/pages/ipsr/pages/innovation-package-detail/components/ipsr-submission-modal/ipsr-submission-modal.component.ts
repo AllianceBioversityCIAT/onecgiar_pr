@@ -27,7 +27,7 @@ export class IpsrSubmissionModalComponent {
       },
       err => {
         console.error(err);
-        this.api.alertsFe.show({ id: 'unsubmodalerror', title: 'Error in unsubmitted', description: '', status: 'error' });
+        this.api.alertsFe.show({ id: 'unsubmodalerror', title: 'Error in submission', description: '', status: 'error' });
       }
     );
   }
