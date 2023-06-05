@@ -1,22 +1,24 @@
-import { Injectable } from "@nestjs/common";
-import { DataSource, Repository } from "typeorm";
-import { HandlersError } from "../../../shared/handlers/error.utils";
-import { ResultsInnovationPackagesValidationModule } from "./entities/results-innovation-packages-validation-module.entity";
-import { GetValidationSectionInnoPckgDto } from "./dto/get-validation-section-inno-pckg.dto";
-import { BooleanModel } from "aws-sdk/clients/gamelift";
-
+import { Injectable } from '@nestjs/common';
+import { DataSource, Repository } from 'typeorm';
+import { HandlersError } from '../../../shared/handlers/error.utils';
+import { ResultsInnovationPackagesValidationModule } from './entities/results-innovation-packages-validation-module.entity';
+import { GetValidationSectionInnoPckgDto } from './dto/get-validation-section-inno-pckg.dto';
+import { BooleanModel } from 'aws-sdk/clients/gamelift';
 
 @Injectable()
 export class ResultsInnovationPackagesValidationModuleRepository extends Repository<ResultsInnovationPackagesValidationModule> {
-    constructor(
-        private dataSource: DataSource,
-        private readonly _handlersError: HandlersError,
-    ) {
-        super(ResultsInnovationPackagesValidationModule, dataSource.createEntityManager());
-    }
+  constructor(
+    private dataSource: DataSource,
+    private readonly _handlersError: HandlersError,
+  ) {
+    super(
+      ResultsInnovationPackagesValidationModule,
+      dataSource.createEntityManager(),
+    );
+  }
 
-    async generalInformation(resultId: number) {
-        const giQuery = `
+  async generalInformation(resultId: number) {
+    const giQuery = `
         SELECT
             'general-information' as sectionName,
             CASE
@@ -65,20 +67,21 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
             AND r.id = ?;
         `;
 
-        try {
-            const generalInformation: GetValidationSectionInnoPckgDto[] = await this.query(giQuery, [resultId]);
-            return generalInformation[0];
-        } catch (error) {
-            throw this._handlersError.returnErrorRepository({
-                className: ResultsInnovationPackagesValidationModuleRepository.name,
-                error: error,
-                debug: true,
-            });
-        }
+    try {
+      const generalInformation: GetValidationSectionInnoPckgDto[] =
+        await this.query(giQuery, [resultId]);
+      return generalInformation[0];
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsInnovationPackagesValidationModuleRepository.name,
+        error: error,
+        debug: true,
+      });
     }
+  }
 
-    async contributors(resultId: number) {
-        const contributorsQuery = `
+  async contributors(resultId: number) {
+    const contributorsQuery = `
         SELECT
             'Contributors' as sectionName,
             CASE
@@ -161,21 +164,23 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
             AND r.id = ?;
         `;
 
-        try {
-            const contributors: GetValidationSectionInnoPckgDto[] = await this.query(contributorsQuery, [resultId]);
-            return contributors[0];
-        } catch (error) {
-            throw this._handlersError.returnErrorRepository({
-                className: ResultsInnovationPackagesValidationModuleRepository.name,
-                error: error,
-                debug: true,
-            });
-        }
-
+    try {
+      const contributors: GetValidationSectionInnoPckgDto[] = await this.query(
+        contributorsQuery,
+        [resultId],
+      );
+      return contributors[0];
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsInnovationPackagesValidationModuleRepository.name,
+        error: error,
+        debug: true,
+      });
     }
+  }
 
-    async stepOne(resultId: number) {
-        const stepOneQuery = `
+  async stepOne(resultId: number) {
+    const stepOneQuery = `
         SELECT
             1 AS step,
             'Step 1' AS sectionName,
@@ -458,21 +463,23 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
             AND r.id = ?;
         `;
 
-        try {
-            const stepOne: GetValidationSectionInnoPckgDto[] = await this.query(stepOneQuery, [resultId]);
-            return stepOne[0];
-        } catch (error) {
-            throw this._handlersError.returnErrorRepository({
-                className: ResultsInnovationPackagesValidationModuleRepository.name,
-                error: error,
-                debug: true,
-            });
-        }
+    try {
+      const stepOne: GetValidationSectionInnoPckgDto[] = await this.query(
+        stepOneQuery,
+        [resultId],
+      );
+      return stepOne[0];
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsInnovationPackagesValidationModuleRepository.name,
+        error: error,
+        debug: true,
+      });
     }
+  }
 
-
-    async stepTwo(resultId: number) {
-        const stepTwoOneQuery = `
+  async stepTwo(resultId: number) {
+    const stepTwoOneQuery = `
         SELECT
             2.1 AS subSection,
             'Step 2.1' AS sectionName,
@@ -496,7 +503,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
             AND r.id = ?;
         `;
 
-        const stepTwoTwoQuery = `
+    const stepTwoTwoQuery = `
         SELECT
             2.2 AS subSection,
             'Step 2.2' AS sectionName,
@@ -520,40 +527,45 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
             AND r.id = ?;
         `;
 
-        try {
-            const [stepTwoOne, stepTwoTwo]: GetValidationSectionInnoPckgDto[][] = await Promise.all(
-                [
-                    this.query(stepTwoOneQuery, [resultId]),
-                    this.query(stepTwoTwoQuery, [resultId]),
-                ]
-            );
+    try {
+      const [stepTwoOne, stepTwoTwo]: GetValidationSectionInnoPckgDto[][] =
+        await Promise.all([
+          this.query(stepTwoOneQuery, [resultId]),
+          this.query(stepTwoTwoQuery, [resultId]),
+        ]);
 
-            const stepTwoValidation = stepTwoOne[0].validation && stepTwoTwo[0].validation;
+      const stepTwoValidation =
+        stepTwoOne[0].validation && stepTwoTwo[0].validation;
 
-            return {
-                step: '2',
-                sectionName: 'Step 2',
-                validation: stepTwoValidation,
-                stepSubSections: [stepTwoOne[0]]
-            };
-        } catch (error) {
-            throw this._handlersError.returnErrorRepository({
-                className: ResultsInnovationPackagesValidationModuleRepository.name,
-                error: error, debug: true,
-            });
-        }
-
+      return {
+        step: '2',
+        sectionName: 'Step 2',
+        validation: stepTwoValidation,
+        stepSubSections: [stepTwoOne[0]],
+      };
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsInnovationPackagesValidationModuleRepository.name,
+        error: error,
+        debug: true,
+      });
     }
+  }
 
-    async stepThree(resultId: number) {
-        const stepThreeQuery = `
-        SELECT
-            3 AS step,
-            'Step 3' AS sectionName,
-            CASE
-                WHEN rip.is_expert_workshop_organized IS NULL THEN FALSE
-                WHEN rip.assessed_during_expert_workshop_id IS NULL THEN FALSE
-                WHEN (
+  async stepThree(resultId: number) {
+    const stepThreeQuery = `
+    SELECT
+        3 AS step,
+        'Step 3' AS sectionName,
+        CASE
+            WHEN rip.is_expert_workshop_organized IS NULL THEN FALSE
+            WHEN (
+                rip.is_expert_workshop_organized = 1
+                AND rip.assessed_during_expert_workshop_id IS NULL
+            ) THEN FALSE
+            WHEN (
+                rip.is_expert_workshop_organized = 1
+                AND (
                     rip.assessed_during_expert_workshop_id = 1
                     AND (
                         SELECT
@@ -568,8 +580,11 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                                 OR rbip.current_innovation_use_level IS NULL
                             )
                     ) > 0
-                ) THEN FALSE
-                WHEN (
+                )
+            ) THEN FALSE
+            WHEN (
+                rip.is_expert_workshop_organized = 1
+                AND (
                     rip.assessed_during_expert_workshop_id = 2
                     AND (
                         SELECT
@@ -586,82 +601,26 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                                 OR rbip.potential_innovation_use_level IS NULL
                             )
                     ) > 0
-                ) THEN FALSE
-                WHEN (
-                    rbip.readiness_level_evidence_based IS NULL
-                    OR rbip.readiness_level_evidence_based = ''
                 )
-                OR (
-                    rbip.use_level_evidence_based IS NULL
-                    OR rbip.use_level_evidence_based = ''
-                )
-                OR (
-                    rbip.readinees_evidence_link IS NULL
-                    OR rbip.readinees_evidence_link = ''
-                )
-                OR (
-                    rbip.use_evidence_link IS NULL
-                    OR rbip.use_evidence_link = ''
-                ) THEN FALSE
-                WHEN (
-                    (
-                        SELECT
-                            COUNT(*)
-                        FROM
-                            result_ip_result_actors rira
-                        WHERE
-                            rira.result_ip_result_id = rbip.result_by_innovation_package_id
-                            AND rira.is_active = TRUE
-                            AND (
-                                (
-                                    rira.sex_and_age_disaggregation = 0
-                                    AND (
-                                        rira.actor_type_id IS NOT NULL
-                                        AND rira.women IS NOT NULL
-                                        AND rira.women_youth IS NOT NULL
-                                        AND rira.men IS NOT NULL
-                                        AND rira.men_youth IS NOT NULL
-                                        AND rira.evidence_link IS NOT NULL
-                                    )
-                                )
-                                OR (
-                                    rira.sex_and_age_disaggregation = 1
-                                    AND (
-                                        rira.actor_type_id IS NOT NULL
-                                        AND rira.evidence_link IS NOT NULL
-                                        AND rira.how_many IS NOT NULL
-                                    )
-                                )
-                            )
-                    ) = 0
-                    OR (
-                        SELECT
-                            COUNT(*)
-                        FROM
-                            result_ip_result_institution_types ririt
-                        WHERE
-                            ririt.result_ip_results_id = rbip.result_by_innovation_package_id
-                            AND ririt.is_active = TRUE
-                            AND institution_types_id IS NOT NULL
-                            AND institution_roles_id IS NOT NULL
-                            AND ririt.how_many IS NOT NULL
-                            AND ririt.evidence_link IS NOT NULL
-                            AND ririt.institution_types_id IS NOT NULL
-                            AND ririt.institution_types_id IS NOT NULL
-                    ) = 0
-                    OR (
-                        SELECT
-                            COUNT(*)
-                        FROM
-                            result_ip_result_measures rirm
-                        WHERE
-                            rirm.result_ip_result_id = rbip.result_by_innovation_package_id
-                            AND rirm.is_active = TRUE
-                            AND rirm.unit_of_measure IS NOT NULL
-                            AND rirm.quantity IS NOT NULL
-                    ) = 0
-                ) THEN FALSE
-                WHEN (
+            ) THEN FALSE
+            WHEN (
+                rbip.readiness_level_evidence_based IS NULL
+                OR rbip.readiness_level_evidence_based = ''
+            )
+            OR (
+                rbip.use_level_evidence_based IS NULL
+                OR rbip.use_level_evidence_based = ''
+            )
+            OR (
+                rbip.readinees_evidence_link IS NULL
+                OR rbip.readinees_evidence_link = ''
+            )
+            OR (
+                rbip.use_evidence_link IS NULL
+                OR rbip.use_evidence_link = ''
+            ) THEN FALSE
+            WHEN (
+                (
                     SELECT
                         COUNT(*)
                     FROM
@@ -690,8 +649,8 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                                 )
                             )
                         )
-                ) > 0 THEN FALSE
-                WHEN (
+                ) > 0
+                AND (
                     SELECT
                         COUNT(*)
                     FROM
@@ -707,8 +666,8 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                             OR ririt.institution_types_id IS NULL
                             OR ririt.institution_types_id IS NULL
                         )
-                ) > 0 THEN FALSE
-                WHEN (
+                ) > 0
+                AND (
                     SELECT
                         COUNT(*)
                     FROM
@@ -720,53 +679,117 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                             rirm.unit_of_measure IS NULL
                             OR rirm.quantity IS NULL
                         )
-                ) > 0 THEN FALSE
-                WHEN (
-                    SELECT
-                        COUNT(*)
-                    FROM
-                        result_by_innovation_package rbip2
-                    WHERE
-                        rbip2.is_active = TRUE
-                        AND rbip2.ipsr_role_id = 2
-                        AND rbip2.result_innovation_package_id = r.id
-                        AND (
-                            rbip2.readiness_level_evidence_based IS NULL
-                            OR rbip2.readiness_level_evidence_based = ''
-                            OR rbip2.use_level_evidence_based IS NULL
-                            OR rbip2.use_level_evidence_based = ''
-                            OR rbip2.readinees_evidence_link IS NULL
-                            OR rbip2.readinees_evidence_link = ''
-                            OR rbip2.use_evidence_link IS NULL
-                            OR rbip2.use_evidence_link = ''
+                ) > 0
+            ) THEN FALSE
+            WHEN (
+                SELECT
+                    COUNT(*)
+                FROM
+                    result_ip_result_actors rira
+                WHERE
+                    rira.result_ip_result_id = rbip.result_by_innovation_package_id
+                    AND rira.is_active = TRUE
+                    AND (
+                        (
+                            rira.sex_and_age_disaggregation = 0
+                            AND (
+                                rira.actor_type_id IS NULL
+                                OR rira.women IS NULL
+                                OR rira.women_youth IS NULL
+                                OR rira.men IS NULL
+                                OR rira.men_youth IS NULL
+                                OR rira.evidence_link IS NULL
+                            )
                         )
-                ) > 0 THEN FALSE
-                ELSE TRUE
-            END AS validation
-        FROM
-            result r
-            LEFT JOIN result_innovation_package rip ON rip.result_innovation_package_id = r.id
-            LEFT JOIN result_by_innovation_package rbip ON rbip.result_innovation_package_id = rip.result_innovation_package_id
-            AND rbip.ipsr_role_id = 1
-        WHERE
-            r.is_active = 1
-            AND r.id = ?;
+                        OR (
+                            rira.sex_and_age_disaggregation = 1
+                            AND (
+                                rira.actor_type_id IS NULL
+                                OR rira.evidence_link IS NULL
+                                OR rira.how_many IS NULL
+                            )
+                        )
+                    )
+            ) > 0 THEN FALSE
+            WHEN (
+                SELECT
+                    COUNT(*)
+                FROM
+                    result_ip_result_institution_types ririt
+                WHERE
+                    ririt.result_ip_results_id = rbip.result_by_innovation_package_id
+                    AND ririt.is_active = TRUE
+                    AND (
+                        institution_types_id IS NULL
+                        OR institution_roles_id IS NULL
+                        OR ririt.how_many IS NULL
+                        OR ririt.evidence_link IS NULL
+                        OR ririt.institution_types_id IS NULL
+                        OR ririt.institution_types_id IS NULL
+                    )
+            ) > 0 THEN FALSE
+            WHEN (
+                SELECT
+                    COUNT(*)
+                FROM
+                    result_ip_result_measures rirm
+                WHERE
+                    rirm.result_ip_result_id = rbip.result_by_innovation_package_id
+                    AND rirm.is_active = TRUE
+                    AND (
+                        rirm.unit_of_measure IS NULL
+                        OR rirm.quantity IS NULL
+                    )
+            ) > 0 THEN FALSE
+            WHEN (
+                SELECT
+                    COUNT(*)
+                FROM
+                    result_by_innovation_package rbip2
+                WHERE
+                    rbip2.is_active = TRUE
+                    AND rbip2.ipsr_role_id = 2
+                    AND rbip2.result_innovation_package_id = r.id
+                    AND (
+                        rbip2.readiness_level_evidence_based IS NULL
+                        OR rbip2.readiness_level_evidence_based = ''
+                        OR rbip2.use_level_evidence_based IS NULL
+                        OR rbip2.use_level_evidence_based = ''
+                        OR rbip2.readinees_evidence_link IS NULL
+                        OR rbip2.readinees_evidence_link = ''
+                        OR rbip2.use_evidence_link IS NULL
+                        OR rbip2.use_evidence_link = ''
+                    )
+            ) > 0 THEN FALSE
+            ELSE TRUE
+        END AS validation
+    FROM
+        result r
+        LEFT JOIN result_innovation_package rip ON rip.result_innovation_package_id = r.id
+        LEFT JOIN result_by_innovation_package rbip ON rbip.result_innovation_package_id = rip.result_innovation_package_id
+        AND rbip.ipsr_role_id = 1
+    WHERE
+        r.is_active = 1
+        AND r.id = ?;
         `;
 
-        try {
-            const stepThree: GetValidationSectionInnoPckgDto[] = await this.query(stepThreeQuery, [resultId]);
-            return stepThree[0];
-        } catch (error) {
-            throw this._handlersError.returnErrorRepository({
-                className: ResultsInnovationPackagesValidationModuleRepository.name,
-                error: error,
-                debug: true,
-            });
-        }
+    try {
+      const stepThree: GetValidationSectionInnoPckgDto[] = await this.query(
+        stepThreeQuery,
+        [resultId],
+      );
+      return stepThree[0];
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsInnovationPackagesValidationModuleRepository.name,
+        error: error,
+        debug: true,
+      });
     }
+  }
 
-    async stepFour(resultId: number) {
-        const stepFourQuery = `
+  async stepFour(resultId: number) {
+    const stepFourQuery = `
         SELECT
             4 AS step,
             'Step 4' AS sectionName,
@@ -870,23 +893,25 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
             AND r.id = ?;
         `;
 
-        try {
-            const stepFour: GetValidationSectionInnoPckgDto[] = await this.query(stepFourQuery, [resultId]);
-            return stepFour[0];
-        } catch (error) {
-            throw this._handlersError.returnErrorRepository({
-                className: ResultsInnovationPackagesValidationModuleRepository.name,
-                error: error,
-                debug: true,
-            });
-        }
+    try {
+      const stepFour: GetValidationSectionInnoPckgDto[] = await this.query(
+        stepFourQuery,
+        [resultId],
+      );
+      return stepFour[0];
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsInnovationPackagesValidationModuleRepository.name,
+        error: error,
+        debug: true,
+      });
     }
+  }
 
-    links = () => {
-        return {
-            sectionName: 'Link to results',
-            validation: '1'
-        }
-    }
-
-} 
+  links = () => {
+    return {
+      sectionName: 'Link to results',
+      validation: '1',
+    };
+  };
+}
