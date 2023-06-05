@@ -112,7 +112,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                                 AND rbi2.initiative_role_id = 2
                                 AND rbi2.is_active = true
                         )
-                ) != 0 THEN FALSE
+                ) > 0 THEN FALSE
                 WHEN (
                     SELECT
                         COUNT(*)
@@ -157,6 +157,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
             AND rbi.is_active = 1
         WHERE
             r.is_active = 1
+            AND rbi.initiative_role_id = 1
             AND r.id = ?;
         `;
 
@@ -222,7 +223,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                         FROM
                             result_actors ra
                         WHERE
-                            ra.result_id = 4817
+                            ra.result_id = r.id
                             AND ra.is_active = 1
                             AND (
                                 (
@@ -232,15 +233,29 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                                         AND ra.women_youth IS NOT NULL
                                         AND ra.men IS NOT NULL
                                         AND ra.men_youth IS NOT NULL
+                                        AND (
+                                            ra.actor_type_id = 5
+                                            AND (
+                                                ra.other_actor_type IS NOT NULL
+                                                OR TRIM(ra.other_actor_type) <> ''
+                                            )
+                                        )
                                     )
                                 )
                                 OR (
                                     ra.sex_and_age_disaggregation = 1
                                     AND ra.how_many IS NOT NULL
+                                    AND (
+                                        ra.actor_type_id = 5
+                                        AND (
+                                            ra.other_actor_type IS NOT NULL
+                                            AND TRIM(ra.other_actor_type) <> ''
+                                        )
+                                    )
                                 )
                             )
-                    ) = 0
-                    OR (
+                    ) > 0
+                    AND (
                         SELECT
                             COUNT(*)
                         FROM
@@ -251,7 +266,17 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                             AND rbit.institution_roles_id IS NOT NULL
                             AND rbit.institution_types_id IS NOT NULL
                             AND rbit.how_many IS NOT NULL
-                    ) = 0
+                    ) > 0
+                    AND (
+                        SELECT
+                            COUNT(*)
+                        FROM
+                            result_ip_measure rim
+                        WHERE
+                            rim.result_ip_id = r.id
+                            AND rim.is_active = TRUE
+                            AND rim.unit_of_measure IS NOT NULL
+                    ) > 0
                 ) THEN FALSE
                 WHEN(
                     SELECT
@@ -269,11 +294,25 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                                     OR ra.women_youth IS NULL
                                     OR ra.men IS NULL
                                     OR ra.men_youth IS NULL
+                                    OR (
+                                        ra.actor_type_id = 5
+                                        AND (
+                                            ra.other_actor_type IS NULL
+                                            OR TRIM(ra.other_actor_type) = ''
+                                        )
+                                    )
                                 )
                             )
                             OR (
                                 ra.sex_and_age_disaggregation = 1
                                 AND ra.how_many IS NULL
+                                OR (
+                                    ra.actor_type_id = 5
+                                    AND (
+                                        ra.other_actor_type IS NULL
+                                        OR TRIM(ra.other_actor_type) = ''
+                                    )
+                                )
                             )
                         )
                 ) > 0 THEN FALSE
@@ -310,7 +349,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                     FROM
                         results_by_institution rbi
                     WHERE
-                        rbi.result_id = 4817
+                        rbi.result_id = r.id
                         AND rbi.institution_roles_id = 5
                         AND rbi.is_active = TRUE
                 ) != (
@@ -326,7 +365,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                             FROM
                                 results_by_institution rbi2
                             WHERE
-                                rbi2.result_id = 4817
+                                rbi2.result_id = r.id
                                 AND rbi2.institution_roles_id = 5
                                 AND rbi2.is_active = TRUE
                         )
@@ -550,19 +589,19 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                 ) THEN FALSE
                 WHEN (
                     rbip.readiness_level_evidence_based IS NULL
-                    OR ''
+                    OR rbip.readiness_level_evidence_based = ''
                 )
                 OR (
                     rbip.use_level_evidence_based IS NULL
-                    OR ''
+                    OR rbip.use_level_evidence_based = ''
                 )
                 OR (
                     rbip.readinees_evidence_link IS NULL
-                    OR ''
+                    OR rbip.readinees_evidence_link = ''
                 )
                 OR (
                     rbip.use_evidence_link IS NULL
-                    OR ''
+                    OR rbip.use_evidence_link = ''
                 ) THEN FALSE
                 WHEN (
                     (
@@ -693,13 +732,13 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                         AND rbip2.result_innovation_package_id = r.id
                         AND (
                             rbip2.readiness_level_evidence_based IS NULL
-                            OR ''
+                            OR rbip2.readiness_level_evidence_based = ''
                             OR rbip2.use_level_evidence_based IS NULL
-                            OR ''
+                            OR rbip2.use_level_evidence_based = ''
                             OR rbip2.readinees_evidence_link IS NULL
-                            OR ''
+                            OR rbip2.readinees_evidence_link = ''
                             OR rbip2.use_evidence_link IS NULL
-                            OR ''
+                            OR rbip2.use_evidence_link = ''
                         )
                 ) > 0 THEN FALSE
                 ELSE TRUE
@@ -813,6 +852,14 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                             OR ribu.in_cash = 0
                         )
                 ) > 0 THEN FALSE
+                WHEN rip.is_result_ip_published IS NULL THEN FALSE
+                WHEN (
+                    rip.is_result_ip_published = 1
+                    AND (
+                        rip.ipsr_pdf_report IS NULL
+                        OR rip.ipsr_pdf_report = ''
+                    )
+                ) THEN FALSE
                 ELSE TRUE
             END AS validation
         FROM
