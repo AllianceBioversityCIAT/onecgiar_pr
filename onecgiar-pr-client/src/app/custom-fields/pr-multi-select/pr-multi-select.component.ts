@@ -51,14 +51,18 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
       resp.disabled = false;
       resp.selected = false;
     });
-    this.disableOptions?.map((disableOption) => {
-      const itemFinded = this._optionsIntance.find((listItem) => listItem[this.optionValue] == disableOption[this.optionValue]);
+    this.disableOptions?.map(disableOption => {
+      const itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == disableOption[this.optionValue]);
       if (itemFinded) itemFinded.disabled = true;
     });
 
-    this.value?.map((savedListItem) => {
-      const itemFinded = this._optionsIntance.find((listItem) => listItem[this.optionValue] == savedListItem[this.optionValue]);
+    this.value?.map(savedListItem => {
+      const itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == savedListItem[this.optionValue]);
+      // console.log(itemFinded);
+      // console.log(savedListItem);
       if (itemFinded) itemFinded.selected = true;
+
+      if (itemFinded && this.logicalDeletion) itemFinded.selected = savedListItem.is_active;
     });
 
     this._beforeValueLength = this._value?.length;
@@ -136,19 +140,31 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   }
 
   onSelectOption(option) {
+    console.log('onSelectOption');
     this.selectAll = null;
     if (option?.disabled) return;
     // this.onChange(null);
     //('onSelectOption');
-    const optionFinded = this.value.findIndex((valueItem) => valueItem[this.optionValue] == option[this.optionValue]);
-    if (optionFinded < 0) {
-      this.value.push({ ...option, new: true });
+    const indexFind = this.value.findIndex(valueItem => valueItem[this.optionValue] == option[this.optionValue]);
+    if (indexFind < 0) {
+      this.value.push({ ...option, new: true, is_active: true });
     } else {
       //('lo enceutra');
-      this.value.splice(optionFinded, 1);
-      // let itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == option[this.optionValue]);
+      // this.value.splice(indexFind, 1);
+      const valueItemFind = this.value.find(valueItem => valueItem[this.optionValue] == option[this.optionValue]);
       // if (itemFinded) itemFinded.selected = false;
+
+      if (this.logicalDeletion && !valueItemFind.new) {
+        if (!option.selected) {
+          valueItemFind.is_active = true;
+        } else {
+          valueItemFind.is_active = false;
+        }
+      } else {
+        this.value.splice(indexFind, 1);
+      }
     }
+
     this.selectOptionEvent.emit({ option });
   }
 
@@ -157,7 +173,7 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
     if (this.logicalDeletion && !option.new) {
       option.is_active = false;
     } else {
-      const optionFinded = this.value.findIndex((valueItem) => valueItem[this.optionValue] == option[this.optionValue]);
+      const optionFinded = this.value.findIndex(valueItem => valueItem[this.optionValue] == option[this.optionValue]);
       this.value.splice(optionFinded, 1);
     }
     // (option);
