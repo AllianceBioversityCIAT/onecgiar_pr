@@ -1,5 +1,5 @@
 <app-pr-field-header label="Provide any reference materials that show the Innovation Package in action/ use"
-    [required]="false"></app-pr-field-header>
+    [required]="false" description="{{addReferenceDescription()}}"></app-pr-field-header>
 
 <div class="fields">
     <div class="field" *ngFor="let item of this.body.ipsr_materials; let i=index">

@@ -16,7 +16,7 @@ export class PrFieldHeaderComponent {
   @Input() showDescriptionLabel: boolean = true;
   constructor(public rolesSE: RolesService) {}
   get descriptionLabel() {
-    // console.log(this.rolesSE.readOnly);
+    //(this.rolesSE.readOnly);
     return this.showDescriptionLabel && !this.rolesSE.readOnly ? `<strong class="description_header">Description:</strong>` : '';
   }
 }

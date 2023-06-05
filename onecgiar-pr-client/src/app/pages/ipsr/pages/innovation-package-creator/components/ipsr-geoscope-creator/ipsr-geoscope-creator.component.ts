@@ -8,7 +8,7 @@ import { RegionsCountriesService } from '../../../../../../shared/services/globa
 })
 export class IpsrGeoscopeCreatorComponent {
   @Input() body: any;
-  sub_scope:any = [];
+  sub_scope: any = [];
   geoscopeOptions = [
     { full_name: 'Global', id: 1 },
     { full_name: 'Regional', id: 2 },
@@ -22,34 +22,30 @@ export class IpsrGeoscopeCreatorComponent {
   }
 
   onSaveSection() {
-    console.log('entre en save');
-    
+    //('entre en save');
   }
 
-  onClicked(){
+  onClicked() {
     this.sub_scope.push(this.sub_scope.length);
 
     for (let index = 0; index < this.body.countries.length; index++) {
-      if(!this.body.countries[index].hasOwnProperty('result_countries_sub_national')){
-        this.body.countries[index]['result_countries_sub_national'] = []
+      if (!this.body.countries[index].hasOwnProperty('result_countries_sub_national')) {
+        this.body.countries[index]['result_countries_sub_national'] = [];
       }
-      
     }
-    
-    
   }
 
-  deleteItem(item){
+  deleteItem(item) {
     this.sub_scope.splice(item, 1);
   }
 
-  descriptionGeoScope(){
+  descriptionGeoScope() {
     return `
     <ul>
     <li>Select country/ geoscope for which innovation packaging and scaling readiness assessment will be conducted. </li>
     <li>Please note that geoscope cannot be changed after innovation package creation. </li>
     <li>To optimize the effectiveness of innovation packages, it is strongly advised to tailor them to specific contexts or geographies. If your intention is to design innovation packages for multiple countries or regions, it is crucial to consider creating separate packages for each geolocation. </li>
     </ul>
-    `
+    `;
   }
 }

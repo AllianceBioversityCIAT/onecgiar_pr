@@ -20,13 +20,13 @@ export class UnsubmitModalComponent {
   onSubmit() {
     this.api.resultsSE.PATCH_unsubmit(this.comment).subscribe(
       resp => {
-        // console.log(resp);
+        //(resp);
         this.api.alertsFe.show({ id: 'unsubmodal', title: `Success`, description: `The result has been unsubmitted.`, status: 'success' });
         this.unsubmitModalSE.showModal = false;
         this.currentResultSE.GET_resultById();
       },
       err => {
-        console.log(err);
+        console.error(err);
         this.api.alertsFe.show({ id: 'unsubmodalerror', title: 'Error in unsubmitted', description: '', status: 'error' });
       }
     );

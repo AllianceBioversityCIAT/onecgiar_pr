@@ -53,11 +53,11 @@ export class RdGeographicLocationComponent {
   getSectionInformation() {
     this.api.resultsSE.GET_geographicSection().subscribe(({ response }) => {
       this.geographicLocationBody = response;
-      console.log(response);
+      //(response);
     });
   }
   onSaveSection() {
-    // console.log(this.geographicLocationBody);
+    //(this.geographicLocationBody);
     this.api.resultsSE.PATCH_geographicSection(this.geographicLocationBody).subscribe(({ response }) => {
       this.getSectionInformation();
     });

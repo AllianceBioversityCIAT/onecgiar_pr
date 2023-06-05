@@ -37,24 +37,39 @@ export class ClarisaInstitution {
   })
   website_link!: string;
 
+  @Column({
+    name: 'institution_type_code',
+    type: 'int',
+    nullable: true,
+  })
+  institution_type_code: number;
+
   @ManyToOne(() => ClarisaInstitutionsType, (cit) => cit.code)
   @JoinColumn({
     name: 'institution_type_code',
   })
-  institution_type_code: number;
+  obj_institution_type_code: ClarisaInstitutionsType;
+
+  @Column({
+    name: 'headquarter_country_iso2',
+    type: 'varchar',
+    length: 5,
+    nullable: true,
+  })
+  headquarter_country_iso2: number;
 
   @ManyToOne(() => ClarisaCountry, (cr) => cr.iso_alpha_2, { nullable: true })
   @JoinColumn({
     name: 'headquarter_country_iso2',
     referencedColumnName: 'iso_alpha_2',
   })
-  headquarter_country_iso2: number;
+  obj_headquarter_country_iso2: ClarisaCountry;
 
   @Column({
     nullable: true,
     name: 'is_active',
     type: 'boolean',
-    default: true
+    default: true,
   })
   is_active: boolean;
 

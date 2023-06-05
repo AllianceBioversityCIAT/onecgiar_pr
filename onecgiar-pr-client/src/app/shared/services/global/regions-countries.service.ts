@@ -10,11 +10,11 @@ export class RegionsCountriesService {
   constructor(private api: ApiService) {
     this.api.resultsSE.GET_AllCLARISARegions().subscribe(({ response }) => {
       this.regionsList = response;
-      // console.log(response);
+      //(response);
     });
     this.api.resultsSE.GET_AllCLARISACountries().subscribe(({ response }) => {
       this.countriesList = response;
-      // console.log(response);
+      //(response);
     });
   }
 }

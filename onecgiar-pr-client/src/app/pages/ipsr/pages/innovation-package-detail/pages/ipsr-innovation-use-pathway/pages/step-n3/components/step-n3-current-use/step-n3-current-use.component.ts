@@ -17,22 +17,25 @@ export class StepN3CurrentUseComponent {
   }
   GETAllActorsTypes() {
     this.api.resultsSE.GETAllActorsTypes().subscribe(({ response }) => {
-      // console.log(response);
+      //(response);
       this.actorsTypeList = response;
     });
   }
   GETInstitutionsTypeTree() {
     this.api.resultsSE.GETInstitutionsTypeTree().subscribe(({ response }) => {
-      // console.log(response);
+      //(response);
       // this.actorsTypeList = response;
       this.institutionsTypeTreeList = response;
     });
   }
   getInstitutionsTypeTreeChildrens(institution_types_id) {
-    // console.log(institution_types_id);
+    //(institution_types_id);
     const fundedList = this.institutionsTypeTreeList.find(inst => inst.code == institution_types_id);
-    // console.log(fundedList?.childrens);
+    //(fundedList?.childrens);
     return fundedList?.childrens ?? [];
+  }
+  actorTypeDescription() {
+    return `<li>CGIAR follows the United Nations definition of 'youth' as those persons between the ages of 15 and 24 years</li><li>If age disaggregation does not apply, then please apply a 50/50% rule in dividing women or men across the youth/non-youth category</li>`;
   }
   cleanActor(actorItem) {
     actorItem.women = null;
@@ -75,7 +78,7 @@ export class StepN3CurrentUseComponent {
     return list;
   }
   removeOrganization(organizationItem) {
-    console.log(organizationItem);
+    //(organizationItem);
     organizationItem.institution_sub_type_id = null;
     organizationItem.institution_types_id = null;
     organizationItem.is_active = false;

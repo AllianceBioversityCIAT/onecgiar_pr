@@ -7,9 +7,16 @@ import { ManageRipUnitTimeService } from '../../services/manage-rip-unit-time.se
   templateUrl: './step-n4-initiative-investment-table.component.html',
   styleUrls: ['./step-n4-initiative-investment-table.component.scss']
 })
-export class StepN4InitiativeInvestmentTableComponent implements OnInit {
+export class StepN4InitiativeInvestmentTableComponent {
   @Input() body = new IpsrStep4Body();
   constructor(public manageRipUnitTimeSE: ManageRipUnitTimeService) {}
-
-  ngOnInit(): void {}
+  syncLocalData() {
+    this.body.bilateral_expected_time = this.body.initiative_expected_time;
+    this.body.bilateral_unit_time_id = this.body.initiative_unit_time_id;
+    this.body.partner_expected_time = this.body.initiative_expected_time;
+    this.body.partner_unit_time_id = this.body.initiative_unit_time_id;
+  }
+  usdQuestionDescription() {
+    return `<li>The USD-value here can be an estimation and will be used to get an overall impression of the expected investment in improving the Scaling Readiness of the innovation package.</li><li>The investment estimation will by no means be used in official financial reporting or planning.</li>`;
+  }
 }

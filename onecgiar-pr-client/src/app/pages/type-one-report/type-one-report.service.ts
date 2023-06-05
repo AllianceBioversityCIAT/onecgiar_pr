@@ -19,7 +19,7 @@ export class TypeOneReportService {
   }
 
   getInitiativeID(official_code) {
-    // console.log(official_code);
+    //(official_code);
     if (!this.api.rolesSE.isAdmin) return this.api.dataControlSE.myInitiativesList.find(init => init.official_code == official_code);
     return this.allInitiatives.find(init => init.official_code == official_code);
   }

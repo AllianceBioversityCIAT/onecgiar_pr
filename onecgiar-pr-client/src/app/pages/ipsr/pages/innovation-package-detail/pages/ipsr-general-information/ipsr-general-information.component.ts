@@ -13,10 +13,8 @@ export class IpsrGeneralInformationComponent {
   ipsrGeneralInformationBody = new IpsrGeneralInformationBody();
   constructor(private api: ApiService, public scoreSE: ScoreService, public ipsrDataControlSE: IpsrDataControlService) {}
   ngOnInit(): void {
-    //Called after the constructor, initializing input properties, and the first call to ngOnChanges.
-    //Add 'implements OnInit' to the class.
     this.getSectionInformation();
-    this.api.setTitle('General information');
+    this.api.dataControlSE.detailSectionTitle('General information');
   }
   getSectionInformation() {
     this.ipsrDataControlSE.resultInnovationId;
@@ -32,7 +30,7 @@ export class IpsrGeneralInformationComponent {
   onSaveSection() {
     this.api.resultsSE.PATCHIpsrGeneralInfo(this.ipsrGeneralInformationBody, this.ipsrDataControlSE.resultInnovationId).subscribe(
       resp => {
-        console.log(resp);
+        // (resp);
         this.getSectionInformation();
         this.api.alertsFe.show({ id: 'save-button', title: 'Section saved correctly', description: '', status: 'success', closeIn: 500 });
       },

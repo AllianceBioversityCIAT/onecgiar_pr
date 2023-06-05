@@ -26,8 +26,7 @@
 
         <div class="">
             <div style="margin-top: 20px;margin-bottom: -20px;">
-                <app-pr-field-header
-                    description="CGIAR follows the United Nations definition of 'youth' as those persons between the ages of 15 and 24 years"></app-pr-field-header>
+                <app-pr-field-header [description]="actorTypeDescription()"></app-pr-field-header>
             </div>
             <br>
             <app-pr-checkbox label="Sex and age disaggregation does not apply"
@@ -78,7 +77,9 @@
 <br>
 <app-add-button name="Add actor" *ngIf="!this.api.rolesSE.readOnly" (clickEvent)="addActor()"></app-add-button>
 <div class="fragment_section_divider"></div>
-
+<div class="title_list">
+    <app-pr-field-header label="Organizations" [required]="false"></app-pr-field-header>
+</div>
 <div class="fields_list" *ngIf="this.body.innovatonUse.organization?.length">
     <div class="fields" appYmzListStructureItem (deleteEvent)="removeOrganization(organizationItem)"
         [ngClass]="{'hideElement': organizationItem.is_active == false}"

@@ -20,7 +20,7 @@ export class IpsrContributorsCentersComponent {
     center.primary = true;
   }
   deletContributingCenter(index) {
-    // console.log(index);
+    //(index);
     this.contributorsBody?.contributing_center.splice(index, 1);
   }
 }

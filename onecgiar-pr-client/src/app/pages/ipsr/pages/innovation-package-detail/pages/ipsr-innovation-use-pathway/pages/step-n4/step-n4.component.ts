@@ -17,7 +17,7 @@ export class StepN4Component implements OnInit {
     { id: false, name: 'No, not necessary at this stage' }
   ];
   ngOnInit(): void {
-    this.api.setTitle('Step 4');
+    this.api.dataControlSE.detailSectionTitle('Step 4');
     this.getSectionInformation();
     this.api.dataControlSE.findClassTenSeconds('alert-event-3').then(resp => {
       try {
@@ -30,19 +30,19 @@ export class StepN4Component implements OnInit {
 
   getSectionInformation() {
     this.api.resultsSE.GETInnovationPathwayStepFourByRiId().subscribe(({ response }) => {
-      console.log('%cGET', 'font-size: 20px; color: #2BBE28;');
-      console.log(response);
-      console.log('%c____________________', 'font-size: 20px; color: #2BBE28;');
+      //('%cGET', 'font-size: 20px; color: #2BBE28;');
+      //(response);
+      //('%c____________________', 'font-size: 20px; color: #2BBE28;');
       this.ipsrStep4Body = response;
       // this.ipsrStep4Body.institutions_expected_investment.map(item => (item.institutions_type_name = item.institutions_name));
     });
   }
   onSaveSection() {
-    console.log('%cPATCH', 'font-size: 20px; color: #f68541;');
-    console.log(this.ipsrStep4Body);
-    console.log('%c____________________', 'font-size: 20px; color: #f68541;');
+    //('%cPATCH', 'font-size: 20px; color: #f68541;');
+    //(this.ipsrStep4Body);
+    //('%c____________________', 'font-size: 20px; color: #f68541;');
     this.api.resultsSE.PATCHInnovationPathwayStepFourByRiId(this.ipsrStep4Body).subscribe(({ response }) => {
-      console.log(response);
+      //(response);
       // setTimeout(() => {
       this.getSectionInformation();
       // }, 3000);
@@ -51,7 +51,7 @@ export class StepN4Component implements OnInit {
 
   onSavePrevious(descrip) {
     this.api.resultsSE.PATCHInnovationPathwayStepFourByRiIdPrevious(this.ipsrStep4Body, descrip).subscribe(({ response }) => {
-      console.log(response);
+      //(response);
       // setTimeout(() => {
       this.getSectionInformation();
       // }, 3000);
@@ -67,10 +67,10 @@ export class StepN4Component implements OnInit {
 
   descriptionInnovation() {
     return `
-    Description:Are there any specific investors or donors – other than the <a href="https://www.cgiar.org/funders/"  class="open_route" target="_blank">CGIAR Fund Donors</a> – who provide core/pooled funding – that you wish to acknowledge for their critical contribution to the continued development, testing, and scaling of this innovation?
+    Are there any specific funders – other than the <a href="https://www.cgiar.org/funders/"  class="open_route" target="_blank">CGIAR Fund Donors</a> – who provide core/pooled funding – that you wish to acknowledge for their critical contribution to the continued development, testing, and scaling of this innovation?
     <ul>
-    <li>Please separate donor/investor names by a semicolon.</li>
-    <li>Donors/investors will be included in the acknowledgment section in the Innovation Profile.</li>
+    <li>Please separate funder names by a semicolon.</li>
+    <li>Acknowledged funders will be included in the acknowledgment section of the Innovation Packages and Scaling Readiness report.</li>
     </ul>
     `;
   }

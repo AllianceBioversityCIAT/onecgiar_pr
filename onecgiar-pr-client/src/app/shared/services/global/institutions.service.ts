@@ -11,12 +11,12 @@ export class InstitutionsService {
   constructor(private api: ApiService) {
     this.api.resultsSE.GET_allInstitutions().subscribe(({ response }) => {
       this.institutionsList = response;
-      // console.log(this.institutionsList);
+      //(this.institutionsList);
     });
     this.api.resultsSE.GET_allInstitutionTypes().subscribe(({ response }) => {
       this.institutionsTypesList = response;
       this.institutionsTypesPartnerRequestList = this.institutionsTypesList.filter(it => !it.is_legacy);
-      // console.log(this.institutionsTypesList);
+      //(this.institutionsTypesList);
     });
   }
 }

@@ -204,8 +204,10 @@ export class InnovationPathwayStepOneService {
           })
         ).map((el) => ({
           ...el,
-          parent_institution_type_id:
-            el.obj_institution_types?.obj_parent?.obj_parent?.code || null,
+          parent_institution_type_id: el.obj_institution_types?.obj_parent
+            ?.obj_parent?.code
+            ? el.obj_institution_types?.obj_parent?.obj_parent?.code
+            : el.obj_institution_types?.obj_parent?.code || null,
         })),
       };
       const result_ip = await this._resultInnovationPackageRepository.findOne({
@@ -243,11 +245,9 @@ export class InnovationPathwayStepOneService {
           institutions?.map((el) => el['institutions_name']),
         )} to accomplish the use of ${
           coreData?.obj_result?.title
-        } by ${this.arrayToStringActorsAnd(
+        } by${this.innovationUseString(
           innovatonUse.actors.map((el) => el),
-        )} ${this.arrayOrganizationToString(
           innovatonUse.organization.map((el) => el),
-        )}, ${this.arrayMeasureToString(
           innovatonUse.measures.map((el) => el),
         )}, ${
           geo_scope_id == 1
@@ -286,6 +286,44 @@ export class InnovationPathwayStepOneService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  innovationUseString(
+    ra: ResultActor[],
+    ri: ResultsByInstitutionType[],
+    rim: ResultIpMeasure[],
+  ) {
+    const temp_ra = ra.filter((el) =>
+      el?.obj_actor_type?.actor_type_id == 5
+        ? el?.other_actor_type
+        : el?.obj_actor_type?.name && el?.sex_and_age_disaggregation
+        ? el?.how_many
+        : el?.men && el?.women,
+    );
+    const temp_ri = ri.filter(
+      (el) => el?.obj_institution_types?.name && el?.how_many,
+    );
+    const temp_rim = rim.filter((el) => el?.unit_of_measure && el?.quantity);
+
+    const temp_string = `${
+      temp_ra?.length ? ` ${this.arrayToStringActorsAnd([...temp_ra])}` : ''
+    }${
+      temp_ri?.length
+        ? `${temp_ra?.length ? ',' : ''} ${this.arrayOrganizationToString([
+            ...temp_ri,
+          ])}`
+        : ''
+    }${
+      temp_rim?.length
+        ? `${temp_ri?.length ? ',' : ''} ${this.arrayMeasureToString([
+            ...temp_rim,
+          ])}`
+        : ''
+    }`;
+
+    return temp_ri?.length || temp_ra?.length || temp_rim?.length
+      ? temp_string
+      : ' <Innovation use not provided>';
   }
 
   arrayOrganizationToString(arrayData: ResultsByInstitutionType[]) {
@@ -364,13 +402,33 @@ export class InnovationPathwayStepOneService {
     const lastElement = arrayData.pop();
     let actors: string = '';
     for (const i of arrayData) {
-      actors += `${+i.men + +i.women} ${
-        i?.obj_actor_type?.name || `<Actor type not provided>`
+      actors += `${
+        i?.sex_and_age_disaggregation
+          ? +i.how_many
+          : `${i.women} women (${i.women_youth} youth / ${
+              +i.women - +i.women_youth
+            } non-youth) & ${i.men} men (${i.men_youth} youth / ${
+              +i.men - +i.men_youth
+            } non-youth)`
+      } ${
+        i?.obj_actor_type?.actor_type_id == 5
+          ? i?.other_actor_type
+          : i?.obj_actor_type?.name || `<Actor type not provided>`
       }${arrayData?.length > 1 ? ',' : ''} `;
     }
     return `${actors.replace(/(,.)$/, '')} ${count > 1 ? 'and ' : ''}${
-      +lastElement.men + +lastElement.women
-    } ${lastElement?.obj_actor_type?.name || `<Actor type not provided>`}`;
+      lastElement?.sex_and_age_disaggregation
+        ? +lastElement.how_many
+        : `${lastElement.women} women (${lastElement.women_youth} youth / ${
+            +lastElement.women - +lastElement.women_youth
+          } non-youth) & ${lastElement.men} men (${
+            lastElement.men_youth
+          } youth / ${+lastElement.men - +lastElement.men_youth} non-youth)`
+    } ${
+      lastElement?.obj_actor_type?.actor_type_id == 5
+        ? lastElement?.other_actor_type
+        : lastElement?.obj_actor_type?.name || `<Actor type not provided>`
+    }`;
   }
 
   async updateMain(
@@ -1367,7 +1425,6 @@ export class InnovationPathwayStepOneService {
             where: { actor_type_id: IsNull(), result_id: result.id },
           });
         }
-        console.log(actorExists);
         if (actorExists) {
           await this._resultActorRepository.update(
             actorExists.result_actors_id,

@@ -6,9 +6,7 @@ import { CreateDynamodbLogDto } from './dto/create-dynamodb-log.dto';
 
 @Controller()
 export class DynamodbLogsController {
-  constructor(
-    private readonly _dynamodbLogsService: DynamodbLogsService
-  ) {}
+  constructor(private readonly _dynamodbLogsService: DynamodbLogsService) {}
 
   @Get()
   async findAll() {
@@ -18,13 +16,8 @@ export class DynamodbLogsController {
   @Post()
   async createLog(
     @Body() createDynamodbLogDto: CreateDynamodbLogDto,
-    @UserToken() user: TokenDto
+    @UserToken() user: TokenDto,
   ) {
-    console.log('entro')
     return await this._dynamodbLogsService.create(createDynamodbLogDto, user);
   }
 }
-
-
-
-

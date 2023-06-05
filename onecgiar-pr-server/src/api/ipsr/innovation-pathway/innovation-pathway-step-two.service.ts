@@ -79,8 +79,6 @@ export class InnovationPathwayStepTwoService {
     }
   }
 
-
-
   async getStepTwoOne(resultId: number) {
     try {
       const result = await this._resultRepository.findOne({
@@ -99,9 +97,6 @@ export class InnovationPathwayStepTwoService {
 
       const comInnovation =
         await this._innovationByResultRepository.getStepTwoOne(result.id);
-
-       
-
 
       return {
         response: comInnovation,
@@ -465,19 +460,6 @@ export class InnovationPathwayStepTwoService {
         referenceMaterials,
       } = updateComplementaryInnovationDto;
 
-      if (
-        !title ||
-        !short_title ||
-        !description ||
-        !complementaryFunctions.length
-      ) {
-        return {
-          response: { valid: false },
-          message: 'Missing fields',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
-
       const vTemp = await this._versionsService.findBaseVersion();
       if (vTemp.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: vTemp });
@@ -733,5 +715,5 @@ export class getEnablersType {
   complementary_innovation_enabler_types_id: string;
   group: string;
   type: string;
-  level:number;
+  level: number;
 }

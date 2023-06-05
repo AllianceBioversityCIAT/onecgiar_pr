@@ -24,17 +24,29 @@ export class StepN3Component implements OnInit {
     this.GETAllClarisaInnovationReadinessLevels();
     this.GETAllClarisaInnovationUseLevels();
     this.getSectionInformation();
-    this.api.setTitle('Step 3');
+    this.api.dataControlSE.detailSectionTitle('Step 3');
+  }
+
+  openClosed(response) {
+    if (this.ipsrStep3Body.result_ip_result_complementary.length) {
+      this.ipsrStep3Body.result_ip_result_complementary.forEach((item: any) => {
+        const itemFind = response.result_ip_result_complementary.find(responseItem => responseItem.result_by_innovation_package_id == item.result_by_innovation_package_id);
+        if (itemFind) itemFind.open = item?.open;
+      });
+    }
+    return response;
   }
 
   getSectionInformation() {
     this.api.resultsSE.GETInnovationPathwayByRiId().subscribe(({ response }) => {
-      console.log('%cGET', 'font-size: 20px; color: #2BBE28;');
-      console.log(response);
+      //('%cGET', 'font-size: 20px; color: #2BBE28;');
+      //(response);
+      this.ipsrStep3Body = this.openClosed(response);
+
       this.convertOrganizations(response?.innovatonUse?.organization);
-      // console.log('%c____________________', 'font-size: 20px; color: #2BBE28;');
+      //('%c____________________', 'font-size: 20px; color: #2BBE28;');
       this.result_core_innovation = response.result_core_innovation;
-      this.ipsrStep3Body = response;
+
       if (this.ipsrStep3Body.innovatonUse.actors.length == 0) {
         this.ipsrStep3Body.innovatonUse.actors.push(new ActorN3());
       }
@@ -47,12 +59,12 @@ export class StepN3Component implements OnInit {
     });
   }
   onSaveSection() {
-    console.log('%cPATCH', 'font-size: 20px; color: #f68541;');
-    console.log(this.ipsrStep3Body);
-    console.log('%c____________________', 'font-size: 20px; color: #f68541;');
+    //('%cPATCH', 'font-size: 20px; color: #f68541;');
+    //(this.ipsrStep3Body);
+    //('%c____________________', 'font-size: 20px; color: #f68541;');
     this.convertOrganizationsTosave();
     this.api.resultsSE.PATCHInnovationPathwayByRiId(this.ipsrStep3Body).subscribe(({ response }) => {
-      console.log(response);
+      //(response);
       // setTimeout(() => {
       this.getSectionInformation();
       // }, 3000);
@@ -61,8 +73,10 @@ export class StepN3Component implements OnInit {
 
   onsaveSection(descrip) {
     this.convertOrganizationsTosave();
+    // result_ip_result_complementary
+
     this.api.resultsSE.PATCHInnovationPathwayByRiIdNextPrevius(this.ipsrStep3Body, descrip).subscribe(({ response }) => {
-      console.log(response);
+      //(response);
       // setTimeout(() => {
       this.getSectionInformation();
       // }, 3000);
@@ -78,26 +92,26 @@ export class StepN3Component implements OnInit {
 
   GETAllClarisaInnovationReadinessLevels() {
     this.api.resultsSE.GETAllClarisaInnovationReadinessLevels().subscribe(({ response }) => {
-      console.log(response);
+      //(response);
       this.rangesOptions = response;
     });
   }
   // GETAllClarisaInnovationReadinessLevels() {
   //   this.api.resultsSE.GETAllClarisaInnovationReadinessLevels().subscribe(({ response }) => {
-  //     console.log(response);
+  //     //(response);
   //     this.rangesOptions = response;
   //   });
   // }
 
   GETAllClarisaInnovationUseLevels() {
     this.api.resultsSE.GETAllClarisaInnovationUseLevels().subscribe(({ response }) => {
-      console.log(response);
+      //(response);
       this.innovationUseList = response;
     });
   }
 
   goToStep() {
-    return `<a class='open_route' href='/ipsr/detail/${this.ipsrDataControlSE.resultInnovationCode}/ipsr-innovation-use-pathway/step-2/complementary-innovation' target='_blank'> Go to step 2.1</a>`;
+    return `<a class='open_route' href='/ipsr/detail/${this.ipsrDataControlSE.resultInnovationCode}/ipsr-innovation-use-pathway/step-2/complementary-innovation' target='_blank'> Go to step 2</a>`;
   }
 
   readinessLevelSelfAssessmentText() {
@@ -134,7 +148,7 @@ export class StepN3Component implements OnInit {
   }
 
   workshopDescription() {
-    return `A template participant list can be downloaded <a href=""  class="open_route" target="_blank">here</a>`;
+    return `A template participant list can be downloaded <a href="https://cgiar.sharepoint.com/:x:/s/PPUInterim/EYOL3e1B-YlGnU8lZmlFkc4BKVDNgLH3G__z6SSjNkBTfA?e=pkpT0d"  class="open_route" target="_blank">here</a>`;
   }
 
   addExpert() {

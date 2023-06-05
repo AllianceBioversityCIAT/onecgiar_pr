@@ -18,19 +18,50 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
     async generalInformation(resultId: number) {
         const giQuery = `
         SELECT
-            'General information' as sectionName,
-            CASE 
-                WHEN 
-                    r.title IS NULL OR r.title = '' OR
-                    r.description IS NULL OR r.description = '' OR
-                    r.lead_contact_person IS NULL OR r.lead_contact_person = '' OR
-                    r.gender_tag_level_id IS NULL OR
-                    r.climate_change_tag_level_id IS NULL
-                THEN FALSE
-                ELSE TRUE
+            'general-information' as sectionName,
+            CASE
+            WHEN r.title IS NULL
+            OR r.title = ''
+            OR r.description IS NULL
+            OR r.description = ''
+            OR r.lead_contact_person IS NULL
+            OR r.lead_contact_person = ''
+            OR r.gender_tag_level_id IS NULL
+            OR r.gender_tag_level_id = 0
+            OR r.climate_change_tag_level_id IS NULL
+            OR r.climate_change_tag_level_id = 0
+            OR (
+                r.gender_tag_level_id = 3
+                AND (
+                SELECT
+                    COUNT(*)
+                FROM
+                    evidence e
+                WHERE
+                    e.result_id = r.id
+                    AND e.gender_related
+                    AND e.is_active = 1
+                ) = 0
+            )
+            OR (
+                r.climate_change_tag_level_id = 3
+                AND (
+                SELECT
+                    COUNT(*)
+                FROM
+                    evidence e
+                WHERE
+                    e.result_id = r.id
+                    AND e.youth_related
+                    AND e.is_active = 1
+                ) = 0
+            ) THEN FALSE
+            ELSE TRUE
             END AS validation
-        FROM result r
-        WHERE r.is_active = true
+        FROM
+            result r
+        WHERE
+            r.is_active = true
             AND r.id = ?;
         `;
 
@@ -81,7 +112,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                                 AND rbi2.initiative_role_id = 2
                                 AND rbi2.is_active = true
                         )
-                ) != 0 THEN FALSE
+                ) > 0 THEN FALSE
                 WHEN (
                     SELECT
                         COUNT(*)
@@ -126,6 +157,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
             AND rbi.is_active = 1
         WHERE
             r.is_active = 1
+            AND rbi.initiative_role_id = 1
             AND r.id = ?;
         `;
 
@@ -148,38 +180,6 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
             1 AS step,
             'Step 1' AS sectionName,
             CASE
-                WHEN r.geographic_scope_id IS NULL
-                OR r.geographic_scope_id = 0 THEN FALSE
-                WHEN r.geographic_scope_id = 2
-                AND (
-                    SELECT
-                        COUNT(*)
-                    FROM
-                        result_region rr
-                    WHERE
-                        rr.result_id = r.id
-                        AND rr.is_active = true
-                ) = 0 THEN FALSE
-                WHEN r.geographic_scope_id = 3
-                AND (
-                    SELECT
-                        COUNT(*)
-                    FROM
-                        result_country rc
-                    WHERE
-                        rc.result_id = r.id
-                        AND rc.is_active = true
-                ) = 0 THEN FALSE
-                WHEN r.geographic_scope_id = 4
-                AND (
-                    SELECT
-                        COUNT(*)
-                    FROM
-                        result_country rc
-                    WHERE
-                        rc.result_id = r.id
-                        AND rc.is_active = true
-                ) = 0 THEN FALSE
                 WHEN (
                     SELECT
                         COUNT(*)
@@ -217,19 +217,106 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                         AND rist.is_active = 1
                 ) = 0 THEN FALSE
                 WHEN (
+                    (
+                        SELECT
+                            COUNT(*)
+                        FROM
+                            result_actors ra
+                        WHERE
+                            ra.result_id = r.id
+                            AND ra.is_active = 1
+                            AND (
+                                (
+                                    ra.sex_and_age_disaggregation = 0
+                                    AND (
+                                        ra.women IS NOT NULL
+                                        AND ra.women_youth IS NOT NULL
+                                        AND ra.men IS NOT NULL
+                                        AND ra.men_youth IS NOT NULL
+                                        AND (
+                                            ra.actor_type_id = 5
+                                            AND (
+                                                ra.other_actor_type IS NOT NULL
+                                                OR TRIM(ra.other_actor_type) <> ''
+                                            )
+                                        )
+                                    )
+                                )
+                                OR (
+                                    ra.sex_and_age_disaggregation = 1
+                                    AND ra.how_many IS NOT NULL
+                                    AND (
+                                        ra.actor_type_id = 5
+                                        AND (
+                                            ra.other_actor_type IS NOT NULL
+                                            AND TRIM(ra.other_actor_type) <> ''
+                                        )
+                                    )
+                                )
+                            )
+                    ) > 0
+                    AND (
+                        SELECT
+                            COUNT(*)
+                        FROM
+                            results_by_institution_type rbit
+                        WHERE
+                            rbit.results_id = r.id
+                            AND rbit.is_active = true
+                            AND rbit.institution_roles_id IS NOT NULL
+                            AND rbit.institution_types_id IS NOT NULL
+                            AND rbit.how_many IS NOT NULL
+                    ) > 0
+                    AND (
+                        SELECT
+                            COUNT(*)
+                        FROM
+                            result_ip_measure rim
+                        WHERE
+                            rim.result_ip_id = r.id
+                            AND rim.is_active = TRUE
+                            AND rim.unit_of_measure IS NOT NULL
+                    ) > 0
+                ) THEN FALSE
+                WHEN(
                     SELECT
                         COUNT(*)
                     FROM
                         result_actors ra
                     WHERE
                         ra.result_id = r.id
-                        AND ra.is_active = true
-                        AND ra.women IS NOT NULL
-                        AND ra.women_youth IS NOT NULL
-                        AND ra.men IS NOT NULL
-                        AND ra.men_youth IS NOT NULL
-                ) = 0
-                AND (
+                        AND ra.is_active = 1
+                        AND (
+                            (
+                                ra.sex_and_age_disaggregation = 0
+                                AND (
+                                    ra.women IS NULL
+                                    OR ra.women_youth IS NULL
+                                    OR ra.men IS NULL
+                                    OR ra.men_youth IS NULL
+                                    OR (
+                                        ra.actor_type_id = 5
+                                        AND (
+                                            ra.other_actor_type IS NULL
+                                            OR TRIM(ra.other_actor_type) = ''
+                                        )
+                                    )
+                                )
+                            )
+                            OR (
+                                ra.sex_and_age_disaggregation = 1
+                                AND ra.how_many IS NULL
+                                OR (
+                                    ra.actor_type_id = 5
+                                    AND (
+                                        ra.other_actor_type IS NULL
+                                        OR TRIM(ra.other_actor_type) = ''
+                                    )
+                                )
+                            )
+                        )
+                ) > 0 THEN FALSE
+                WHEN(
                     SELECT
                         COUNT(*)
                     FROM
@@ -237,10 +324,12 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                     WHERE
                         rbit.results_id = r.id
                         AND rbit.is_active = true
-                        AND rbit.institution_roles_id IS NOT NULL
-                        AND rbit.institution_types_id IS NOT NULL
-                        AND rbit.how_many IS NOT NULL
-                ) = 0 THEN FALSE
+                        AND (
+                            rbit.institution_roles_id IS NULL
+                            OR rbit.institution_types_id IS NULL
+                            OR rbit.how_many IS NULL
+                        )
+                ) > 0 THEN FALSE
                 WHEN (
                     SELECT
                         COUNT(*)
@@ -249,10 +338,14 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                     WHERE
                         rim.result_ip_id = r.id
                         AND rim.is_active = TRUE
-                ) = 0 THEN FALSE
+                        AND (
+                            rim.unit_of_measure IS NULL
+                            OR rim.quantity IS NULL
+                        )
+                ) > 0 THEN FALSE
                 WHEN (
                     SELECT
-                        COUNT(*)
+                        COUNT(rbi.id)
                     FROM
                         results_by_institution rbi
                     WHERE
@@ -261,7 +354,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                         AND rbi.is_active = TRUE
                 ) != (
                     SELECT
-                        DISTINCT COUNT(*)
+                        COUNT(DISTINCT rbibdt.result_by_institution_id)
                     FROM
                         result_by_institutions_by_deliveries_type rbibdt
                     WHERE
@@ -301,7 +394,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                 ) = 0 THEN FALSE
                 WHEN (
                     SELECT
-                        rie3.result_ip_expert_id
+                        COUNT(*)
                     FROM
                         result_ip_expert rie3
                     WHERE
@@ -322,6 +415,22 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                             )
                         )
                 ) > 1 THEN FALSE
+                WHEN (
+                    SELECT
+                        COUNT(*)
+                    FROM
+                        result_innovation_package rip
+                    WHERE
+                        result_innovation_package_id = r.id
+                        AND is_active = TRUE
+                        AND (
+                            rip.experts_is_diverse IS NULL
+                            OR (
+                                rip.experts_is_diverse = FALSE
+                                AND rip.is_not_diverse_justification IS NULL
+                            )
+                        )
+                ) = 1 THEN FALSE
                 WHEN (
                     SELECT
                         COUNT(*)
@@ -425,7 +534,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                 step: '2',
                 sectionName: 'Step 2',
                 validation: stepTwoValidation,
-                stepSubSections: [stepTwoOne[0], stepTwoTwo[0]]
+                stepSubSections: [stepTwoOne[0]]
             };
         } catch (error) {
             throw this._handlersError.returnErrorRepository({
@@ -442,29 +551,115 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
             3 AS step,
             'Step 3' AS sectionName,
             CASE
-                WHEN rip.is_expert_workshop_organized IS NULL
-                OR '' THEN FALSE
-                WHEN rip.is_expert_workshop_organized = 1
-                AND rip.use_level_evidence_based IS NULL
-                OR '' THEN FALSE
-                WHEN rip.is_expert_workshop_organized = 1
-                AND rip.readiness_level_evidence_based IS NULL
-                OR '' THEN FALSE
+                WHEN rip.is_expert_workshop_organized IS NULL THEN FALSE
+                WHEN rip.assessed_during_expert_workshop_id IS NULL THEN FALSE
+                WHEN (
+                    rip.assessed_during_expert_workshop_id = 1
+                    AND (
+                        SELECT
+                            COUNT(*)
+                        FROM
+                            result_by_innovation_package rbip
+                        WHERE
+                            rbip.result_innovation_package_id = r.id
+                            AND rbip.is_active = TRUE
+                            AND (
+                                rbip.current_innovation_readiness_level IS NULL
+                                OR rbip.current_innovation_use_level IS NULL
+                            )
+                    ) > 0
+                ) THEN FALSE
+                WHEN (
+                    rip.assessed_during_expert_workshop_id = 2
+                    AND (
+                        SELECT
+                            COUNT(*)
+                        FROM
+                            result_by_innovation_package rbip
+                        WHERE
+                            rbip.result_innovation_package_id = r.id
+                            AND rbip.is_active = TRUE
+                            AND (
+                                rbip.current_innovation_readiness_level IS NULL
+                                OR rbip.current_innovation_use_level IS NULL
+                                OR rbip.potential_innovation_readiness_level IS NULL
+                                OR rbip.potential_innovation_use_level IS NULL
+                            )
+                    ) > 0
+                ) THEN FALSE
                 WHEN (
                     rbip.readiness_level_evidence_based IS NULL
-                    OR ''
+                    OR rbip.readiness_level_evidence_based = ''
                 )
                 OR (
                     rbip.use_level_evidence_based IS NULL
-                    OR ''
+                    OR rbip.use_level_evidence_based = ''
                 )
                 OR (
                     rbip.readinees_evidence_link IS NULL
-                    OR ''
+                    OR rbip.readinees_evidence_link = ''
                 )
                 OR (
                     rbip.use_evidence_link IS NULL
-                    OR ''
+                    OR rbip.use_evidence_link = ''
+                ) THEN FALSE
+                WHEN (
+                    (
+                        SELECT
+                            COUNT(*)
+                        FROM
+                            result_ip_result_actors rira
+                        WHERE
+                            rira.result_ip_result_id = rbip.result_by_innovation_package_id
+                            AND rira.is_active = TRUE
+                            AND (
+                                (
+                                    rira.sex_and_age_disaggregation = 0
+                                    AND (
+                                        rira.actor_type_id IS NOT NULL
+                                        AND rira.women IS NOT NULL
+                                        AND rira.women_youth IS NOT NULL
+                                        AND rira.men IS NOT NULL
+                                        AND rira.men_youth IS NOT NULL
+                                        AND rira.evidence_link IS NOT NULL
+                                    )
+                                )
+                                OR (
+                                    rira.sex_and_age_disaggregation = 1
+                                    AND (
+                                        rira.actor_type_id IS NOT NULL
+                                        AND rira.evidence_link IS NOT NULL
+                                        AND rira.how_many IS NOT NULL
+                                    )
+                                )
+                            )
+                    ) = 0
+                    OR (
+                        SELECT
+                            COUNT(*)
+                        FROM
+                            result_ip_result_institution_types ririt
+                        WHERE
+                            ririt.result_ip_results_id = rbip.result_by_innovation_package_id
+                            AND ririt.is_active = TRUE
+                            AND institution_types_id IS NOT NULL
+                            AND institution_roles_id IS NOT NULL
+                            AND ririt.how_many IS NOT NULL
+                            AND ririt.evidence_link IS NOT NULL
+                            AND ririt.institution_types_id IS NOT NULL
+                            AND ririt.institution_types_id IS NOT NULL
+                    ) = 0
+                    OR (
+                        SELECT
+                            COUNT(*)
+                        FROM
+                            result_ip_result_measures rirm
+                        WHERE
+                            rirm.result_ip_result_id = rbip.result_by_innovation_package_id
+                            AND rirm.is_active = TRUE
+                            AND rirm.unit_of_measure IS NOT NULL
+                            AND rirm.quantity IS NOT NULL
+                    ) = 0
                 ) THEN FALSE
                 WHEN (
                     SELECT
@@ -475,71 +670,75 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                         rira.result_ip_result_id = rbip.result_by_innovation_package_id
                         AND rira.is_active = TRUE
                         AND (
-                            rira.women IS NOT NULL
-                            AND rira.women_youth IS NOT NULL
-                            AND rira.men IS NOT NULL
-                            AND rira.men_youth IS NOT NULL
-                            AND rira.evidence_link IS NOT NULL
-                        )
-                ) = 0 THEN FALSE
-                WHEN (
-                    SELECT
-                        COUNT(*)
-                    FROM
-                        result_ip_result_actors rira
-                    WHERE
-                        rira.result_ip_result_id = rbip.result_by_innovation_package_id
-                        AND rira.is_active = TRUE
-                        AND (
-                            rira.women IS NULL
-                            OR rira.women_youth IS NULL
-                            OR rira.men IS NULL
-                            OR rira.men_youth IS NULL
-                            OR rira.evidence_link IS NULL
+                            (
+                                rira.sex_and_age_disaggregation = 0
+                                AND (
+                                    rira.actor_type_id IS NULL
+                                    OR rira.women IS NULL
+                                    OR rira.women_youth IS NULL
+                                    OR rira.men IS NULL
+                                    OR rira.men_youth IS NULL
+                                    OR rira.evidence_link IS NULL
+                                )
+                            )
+                            OR (
+                                rira.sex_and_age_disaggregation = 1
+                                AND (
+                                    rira.actor_type_id IS NULL
+                                    OR rira.evidence_link IS NULL
+                                    OR rira.how_many IS NULL
+                                )
+                            )
                         )
                 ) > 0 THEN FALSE
                 WHEN (
                     SELECT
                         COUNT(*)
                     FROM
-                        result_ip_result_institution_types ririt 
+                        result_ip_result_institution_types ririt
                     WHERE
-                        ririt.result_ip_results_id = rbip.result_by_innovation_package_id 
+                        ririt.result_ip_results_id = rbip.result_by_innovation_package_id
                         AND ririt.is_active = TRUE
                         AND (
-                            ririt.how_many IS NOT NULL
-                            AND ririt.evidence_link IS NOT NULL
-                            AND ririt.institution_types_id IS NOT NULL
-                            AND ririt.institution_types_id IS NOT NULL 
-                        )
-                ) = 0 THEN FALSE
-                WHEN (
-                    SELECT
-                        COUNT(*)
-                    FROM
-                        result_ip_result_institution_types ririt 
-                    WHERE
-                        ririt.result_ip_results_id = rbip.result_by_innovation_package_id 
-                        AND ririt.is_active = TRUE
-                        AND (
-                            ririt.how_many IS NULL
+                            institution_types_id IS NULL
+                            OR institution_roles_id IS NULL
+                            OR ririt.how_many IS NULL
                             OR ririt.evidence_link IS NULL
                             OR ririt.institution_types_id IS NULL
-                            OR ririt.institution_types_id IS NULL 
+                            OR ririt.institution_types_id IS NULL
                         )
                 ) > 0 THEN FALSE
                 WHEN (
-                    SELECT 
+                    SELECT
                         COUNT(*)
-                    FROM result_by_innovation_package rbip2
-                    WHERE rbip2.is_active = TRUE 
+                    FROM
+                        result_ip_result_measures rirm
+                    WHERE
+                        rirm.result_ip_result_id = rbip.result_by_innovation_package_id
+                        AND rirm.is_active = TRUE
+                        AND (
+                            rirm.unit_of_measure IS NULL
+                            OR rirm.quantity IS NULL
+                        )
+                ) > 0 THEN FALSE
+                WHEN (
+                    SELECT
+                        COUNT(*)
+                    FROM
+                        result_by_innovation_package rbip2
+                    WHERE
+                        rbip2.is_active = TRUE
                         AND rbip2.ipsr_role_id = 2
                         AND rbip2.result_innovation_package_id = r.id
                         AND (
-                            rbip2.readiness_level_evidence_based IS NULL OR ''
-                            OR rbip2.use_level_evidence_based IS NULL OR ''
-                            OR rbip2.readinees_evidence_link IS NULL OR ''
-                            OR rbip2.use_evidence_link IS NULL OR ''
+                            rbip2.readiness_level_evidence_based IS NULL
+                            OR rbip2.readiness_level_evidence_based = ''
+                            OR rbip2.use_level_evidence_based IS NULL
+                            OR rbip2.use_level_evidence_based = ''
+                            OR rbip2.readinees_evidence_link IS NULL
+                            OR rbip2.readinees_evidence_link = ''
+                            OR rbip2.use_evidence_link IS NULL
+                            OR rbip2.use_evidence_link = ''
                         )
                 ) > 0 THEN FALSE
                 ELSE TRUE
@@ -573,37 +772,99 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
             'Step 4' AS sectionName,
             CASE
                 WHEN (
-                    rip.initiative_expected_time IS NULL
-                    AND rip.initiative_unit_time_id IS NULL
-                ) THEN FALSE
+                    SELECT
+                        COUNT(*)
+                    FROM
+                        result_initiative_budget ripb
+                    WHERE
+                        result_initiative_id IN (
+                            SELECT
+                                rbi.id
+                            FROM
+                                results_by_inititiative rbi
+                            WHERE
+                                rbi.is_active = 1
+                                AND rbi.result_id = r.id
+                        )
+                        AND is_active = TRUE
+                        AND (
+                            ripb.is_determined != 1
+                            OR ripb.is_determined IS NULL
+                        )
+                        AND(
+                            ripb.current_year IS NULL
+                            OR ripb.current_year = 0
+                            OR ripb.next_year IS NULL
+                            OR ripb.next_year = 0
+                        )
+                ) > 0 THEN FALSE
                 WHEN (
-                    ripb.is_determined IS NULL
-                    OR ripb.is_determined != 1
-                )
-                AND (
-                    ripb.current_year IS NULL
-                    OR ripb.current_year = 0
-                    OR ripb.next_year IS NULL
-                    OR ripb.next_year = 0
-                ) THEN FALSE
+                    SELECT
+                        COUNT(*)
+                    FROM
+                        non_pooled_projetct_budget nppb
+                    WHERE
+                        nppb.non_pooled_projetct_id IN (
+                            SELECT
+                                npp.id
+                            FROM
+                                non_pooled_project npp
+                            WHERE
+                                npp.is_active = 1
+                                AND npp.results_id = r.id
+                        )
+                        AND nppb.is_active = 1
+                        AND (
+                            nppb.is_determined != 1
+                            OR nppb.is_determined IS NULL
+                        )
+                        AND(
+                            nppb.in_kind IS NULL
+                            OR nppb.in_kind = 0
+                            OR nppb.in_cash IS NULL
+                            OR nppb.in_cash = 0
+                        )
+                ) > 0 THEN FALSE
                 WHEN (
-                    ripb.is_determined = 1
-                )
-                AND (
-                    ripb.current_year IS NULL
-                    OR ''
-                    OR ripb.next_year IS NULL
-                    OR ''
-                ) THEN TRUE
+                    SELECT
+                        COUNT(*)
+                    FROM
+                        result_institutions_budget ribu
+                    WHERE
+                        ribu.result_institution_id IN (
+                            SELECT
+                                rbi.id
+                            FROM
+                                results_by_institution rbi
+                            WHERE
+                                rbi.is_active = 1
+                                AND rbi.result_id = r.id
+                        )
+                        AND ribu.is_active = 1
+                        AND (
+                            ribu.is_determined != 1
+                            OR ribu.is_determined IS NULL
+                        )
+                        AND (
+                            ribu.in_kind IS NULL
+                            OR ribu.in_kind = 0
+                            OR ribu.in_cash IS NULL
+                            OR ribu.in_cash = 0
+                        )
+                ) > 0 THEN FALSE
+                WHEN rip.is_result_ip_published IS NULL THEN FALSE
+                WHEN (
+                    rip.is_result_ip_published = 1
+                    AND (
+                        rip.ipsr_pdf_report IS NULL
+                        OR rip.ipsr_pdf_report = ''
+                    )
+                ) THEN FALSE
                 ELSE TRUE
             END AS validation
         FROM
             result r
-            LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
-            AND rbi.initiative_role_id = 1
             LEFT JOIN result_innovation_package rip ON rip.result_innovation_package_id = r.id
-            LEFT JOIN result_initiative_budget ripb ON ripb.result_initiative_id = rbi.id
-            AND ripb.is_active = TRUE
         WHERE
             r.is_active = 1
             AND r.id = ?;

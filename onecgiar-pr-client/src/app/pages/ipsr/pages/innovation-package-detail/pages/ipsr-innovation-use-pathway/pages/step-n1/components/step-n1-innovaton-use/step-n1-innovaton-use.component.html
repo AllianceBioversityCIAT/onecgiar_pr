@@ -1,4 +1,4 @@
-<div class="ipsr-sub-title">Targeted innovation use</div>
+<div class="ipsr-sub-title-2">Targeted innovation use</div>
 
 <app-pr-field-header
     label="Specify targeted innovation user and also specify how many users are expected to benefit from scaling the core innovation by end of 2024?"></app-pr-field-header>
@@ -24,8 +24,7 @@
         </div>
         <div class="">
             <div style="margin-top: 20px;margin-bottom: -20px;" *ngIf="!this.actorItem.sex_and_age_disaggregation">
-                <app-pr-field-header
-                    description="CGIAR follows the United Nations definition of 'youth' as those persons between the ages of 15 and 24 years"></app-pr-field-header>
+                <app-pr-field-header [description]="this.actorTypeDescription()"></app-pr-field-header>
             </div>
             <br>
             <app-pr-checkbox label="Sex and age disaggregation does not apply"
@@ -72,6 +71,9 @@
 <app-add-button name="Add actor" *ngIf="!this.api.rolesSE.readOnly" (clickEvent)="addActor()"></app-add-button>
 <div class="fragment_section_divider"></div>
 
+<div class="title_list">
+    <app-pr-field-header label="Organizations" [required]="false"></app-pr-field-header>
+</div>
 <div class="fields_list" *ngIf="this.body.innovatonUse.organization?.length">
     <div class="fields" appYmzListStructureItem (deleteEvent)="removeOrganization(organizationItem)"
         [ngClass]="{'hideElement': organizationItem.is_active == false}"
@@ -98,7 +100,6 @@
 <app-add-button name="Add organization" *ngIf="!this.api.rolesSE.readOnly"
     (clickEvent)="addOrganization()"></app-add-button>
 <div class="fragment_section_divider"></div>
-
 <div class="fields_list" *ngIf="this.body.innovatonUse.measures?.length">
     <app-pr-field-header label="Other quantitative measures of innovation use (e.g. # of hectares)"
         [required]="false"></app-pr-field-header>

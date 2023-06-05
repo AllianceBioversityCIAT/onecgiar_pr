@@ -18,4 +18,14 @@ export class StepN4PictureLinksComponent {
    
     this.body.ipsr_pictures.splice(index, 1);;
   }
+
+  addPictureDescription(){
+    return `
+      <ul>
+      <li>Provide URLs to high-resolution images, photos or pictures that clearly visualize the innovation in use (e.g., how it provides a specific solution to a problem, its use in practice, etc.)</li>
+      <li>The image(s) will be used in the final report, therefore consent to use the image(s) is needed.</li>
+      </ul>
+    `
+
+  }
 }

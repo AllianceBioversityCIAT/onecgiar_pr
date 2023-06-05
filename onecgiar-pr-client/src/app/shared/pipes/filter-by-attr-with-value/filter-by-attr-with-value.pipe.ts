@@ -8,7 +8,7 @@ export class FilterByAttrWithValuePipe implements PipeTransform {
     if (value === null) return list;
     const resultList = list.filter(item => item[attr] == value);
     if (!resultList?.length) return [];
-    console.log(resultList);
+    //(resultList);
     return resultList;
   }
 }

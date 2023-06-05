@@ -7,7 +7,6 @@ export class BcryptPasswordEncoder {
     try {
       return bcrypt.compareSync(incomingPassword, hashedPassword);
     } catch (error) {
-      console.log(error);
       return false;
     }
   }

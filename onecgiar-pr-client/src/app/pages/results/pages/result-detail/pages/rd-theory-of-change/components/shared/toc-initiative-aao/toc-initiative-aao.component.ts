@@ -22,10 +22,10 @@ export class TocInitiativeAaoComponent {
     this.api.tocApiSE.GET_tocLevelsByresultId(this.initiative.initiative_id, 4).subscribe(
       ({ response }) => {
         this.actionAreasOutcomesList = response;
-        // console.log(response);
+        //(response);
       },
       err => {
-        console.log(err);
+        console.error(err);
       }
     );
   }

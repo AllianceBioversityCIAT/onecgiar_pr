@@ -31,9 +31,9 @@ export class ResultsListComponent implements OnInit {
       label: 'Map to TOC',
       icon: 'pi pi-fw pi-sitemap',
       command: () => {
-        // console.log('showShareRequest');
+        //('showShareRequest');
         this.api.dataControlSE.showShareRequest = true;
-        // console.log(this.api.resultsSE.currentResultId);
+        //(this.api.resultsSE.currentResultId);
         // event
       }
     }
@@ -46,9 +46,9 @@ export class ResultsListComponent implements OnInit {
       label: 'Map to TOC',
       icon: 'pi pi-fw pi-sitemap',
       command: () => {
-        // console.log('showShareRequest');
+        //('showShareRequest');
         this.api.dataControlSE.showShareRequest = true;
-        // console.log(this.api.resultsSE.currentResultId);
+        //(this.api.resultsSE.currentResultId);
         // event
       }
     },
@@ -80,7 +80,7 @@ export class ResultsListComponent implements OnInit {
     this.shareRequestModalSE.inNotifications = false;
   }
   onPressAction(result) {
-    // console.log(result);
+    //(result);
     this.retrieveModalSE.title = result?.title;
     this.api.resultsSE.currentResultId = result?.id;
     this.api.dataControlSE.currentResult = result;
@@ -90,29 +90,29 @@ export class ResultsListComponent implements OnInit {
     this.gettingReport = true;
     this.api.resultsSE.GET_reportingList().subscribe(
       ({ response }) => {
-        // console.log(response);
+        //(response);
         this.exportTablesSE.exportExcel(response, 'results_list');
         this.gettingReport = false;
       },
       err => {
-        console.log(err);
+        console.error(err);
         this.gettingReport = false;
       }
     );
   }
 
   onDeleteREsult() {
-    // console.log(this.api.dataControlSE.currentResult);
+    //(this.api.dataControlSE.currentResult);
     this.api.alertsFe.show({ id: 'confirm-delete-result', title: `Are you sure you want to delete the result "${this.api.dataControlSE?.currentResult?.title}"?`, description: `If you delete this result it will no longer be displayed in the list of results.`, status: 'success', confirmText: 'Yes, delete' }, () => {
-      // console.log('delete');
+      //('delete');
       this.api.resultsSE.PATCH_DeleteResult(this.api.dataControlSE.currentResult.id).subscribe(
         resp => {
-          // console.log(resp);
+          //(resp);
           this.api.alertsFe.show({ id: 'confirm-delete-result-su', title: `The result "${this.api.dataControlSE?.currentResult?.title}" was deleted`, description: ``, status: 'success' });
           this.api.updateResultsList();
         },
         err => {
-          console.log(err);
+          console.error(err);
           this.api.alertsFe.show({ id: 'delete-error', title: 'Error when delete result', description: '', status: 'error' });
         }
       );

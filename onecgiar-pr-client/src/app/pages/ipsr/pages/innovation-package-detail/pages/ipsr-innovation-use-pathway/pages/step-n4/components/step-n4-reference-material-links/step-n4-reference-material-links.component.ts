@@ -18,4 +18,12 @@ export class StepN4ReferenceMaterialLinksComponent {
    
     this.body.ipsr_materials.splice(index, 1);;
   }
+  addReferenceDescription(){
+    return `
+      <ul>
+      <li>Reference materials may include (science) publications, websites, newsletters, reports, newspaper articles, videos, etc.</li>
+      <li>The image(s) will be used in the final report, therefore consent to use the image(s) is needed.</li>
+      </ul>
+    `
+  }
 }

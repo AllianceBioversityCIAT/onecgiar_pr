@@ -12,7 +12,7 @@ import { QualityAssuranceService } from './quality-assurance.service';
   styleUrls: ['./quality-assurance.component.scss']
 })
 export class QualityAssuranceComponent implements OnInit {
-  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public sanitizer: DomSanitizer, private titleService: Title, private qaSE: QualityAssuranceService) {}
+  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public sanitizer: DomSanitizer, private qaSE: QualityAssuranceService) {}
   allInitiatives = [];
   clarisaQaToken = null;
   official_code = null;
@@ -21,7 +21,8 @@ export class QualityAssuranceComponent implements OnInit {
   sanitizedUrl: any = null;
   ngOnInit(): void {
     this.api.rolesSE.validateReadOnly();
-    this.titleService.setTitle('Quality Assurance');
+    this.api.dataControlSE.detailSectionTitle('Quality Assurance');
+
     new Observable((observer: any) => {
       observer.next();
       this.qaSE.$qaFirstInitObserver = observer;

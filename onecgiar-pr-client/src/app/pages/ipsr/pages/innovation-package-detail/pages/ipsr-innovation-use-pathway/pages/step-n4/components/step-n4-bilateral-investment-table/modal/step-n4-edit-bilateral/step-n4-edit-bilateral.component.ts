@@ -10,7 +10,6 @@ import { ApiService } from 'src/app/shared/services/api/api.service';
   styleUrls: ['./step-n4-edit-bilateral.component.scss']
 })
 export class StepN4EditBilateralComponent implements OnInit {
-
   @Input() body: any;
   @Input() isonlyread: boolean;
   visible = false;
@@ -21,28 +20,25 @@ export class StepN4EditBilateralComponent implements OnInit {
   constructor(public institutionsSE: InstitutionsService, public centersSE: CentersService, public api: ApiService) {}
 
   ngOnInit(): void {
-    console.log(this.body);
+    //(this.body);
     this.biltarealBody.center_grant_id = this.body.obj_non_pooled_projetct?.center_grant_id;
     this.biltarealBody.funder_institution_id = this.body.obj_non_pooled_projetct?.funder_institution_id;
     this.biltarealBody.grant_title = this.body.obj_non_pooled_projetct?.grant_title;
     this.biltarealBody.lead_center_id = this.body.obj_non_pooled_projetct?.lead_center_id;
   }
 
-  
-
-
   ngDoCheck(): void {
     this.formIsInvalid = this.api.dataControlSE.someMandatoryFieldIncomplete('.partners-request-container');
   }
 
-  onAddBilateral(){
-    console.log(this.biltarealBody);
-    
-    this.api.resultsSE.PATCHInnovationPathwayStep4BilateralsnonPooledProjects(this.body.obj_non_pooled_projetct?.id,this.biltarealBody).subscribe(
+  onAddBilateral() {
+    //(this.biltarealBody);
+
+    this.api.resultsSE.PATCHInnovationPathwayStep4BilateralsnonPooledProjects(this.body.obj_non_pooled_projetct?.id, this.biltarealBody).subscribe(
       ({ response }) => {
         this.requesting = false;
-        console.log('edit bilateral');
-        console.log(response);
+        //('edit bilateral');
+        //(response);
         this.body.obj_non_pooled_projetct = response;
         this.visible = false;
         this.api.alertsFe.show({ id: 'biltareal', title: `Biltareal has been edited.`, status: 'success' });
@@ -56,7 +52,6 @@ export class StepN4EditBilateralComponent implements OnInit {
       }
     );
   }
-
 }
 
 class AddBilateralBody extends BilateralexpectedinvestmentStep4 {

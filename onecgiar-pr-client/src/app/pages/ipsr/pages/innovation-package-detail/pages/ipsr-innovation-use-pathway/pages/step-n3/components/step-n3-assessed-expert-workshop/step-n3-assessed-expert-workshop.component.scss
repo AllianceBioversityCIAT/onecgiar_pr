@@ -2,9 +2,18 @@ table,
 th,
 td {
     border: 1px solid black;
+    padding: 7px;
 }
 
 table {
     border-collapse: collapse;
     width: 100%;
+}
+
+.first_col {
+    max-width: 250px;
+}
+
+.min_select {
+    min-width: 170px;
 }

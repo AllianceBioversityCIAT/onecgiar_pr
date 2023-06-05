@@ -8,7 +8,7 @@ import { ApiService } from 'src/app/shared/services/api/api.service';
 })
 export class IpsrLinkToResultsComponent {
   constructor(private api: ApiService) {
-    this.api.setTitle('Step 1');
+    this.api.dataControlSE.detailSectionTitle('Step 1');
   }
   onSaveSection() {}
 }

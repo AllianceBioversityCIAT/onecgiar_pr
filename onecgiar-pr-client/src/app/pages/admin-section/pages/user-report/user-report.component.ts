@@ -18,13 +18,13 @@ export class UserReportComponent implements OnInit {
 
   GET_reportUsers() {
     this.api.resultsSE.GET_reportUsers().subscribe(({ response }) => {
-      // console.log(response);
+      //(response);
       this.usersList = response;
     });
   }
 
   exportExcel(usersList) {
-    // console.log(usersList);
+    //(usersList);
     let usersListMapped = [];
     usersListMapped.push({
       user_id: 'User id',
@@ -37,7 +37,7 @@ export class UserReportComponent implements OnInit {
     });
     usersList.map(result => {
       const { user_id, init_name_official_code, user_email, user_first_name, user_last_name, app_role_name, initiative_role_name } = result;
-      // console.log(is_submitted);
+      //(is_submitted);
       usersListMapped.push({
         user_id: this.convertToNodata(user_id),
         init_name_official_code: this.convertToNodata(init_name_official_code),

@@ -28,12 +28,12 @@ export class InitGeneralResultsReportComponent {
   }
 
   onSelectInit() {
-    let inits = [];
+    const inits = [];
     this.initiativesSelected.map(init => {
       inits.push(init.initiative_id);
       // this.initiativesSelected.push({ id: init.initiative_id, full_name: init.full_name });
     });
-    console.log(inits);
+    // (inits);
     this.POST_reportSesultsCompleteness(inits);
   }
 
@@ -42,10 +42,10 @@ export class InitGeneralResultsReportComponent {
   }
 
   GET_AllInitiatives() {
-    // console.log(this.api.rolesSE.isAdmin);
+    //(this.api.rolesSE.isAdmin);
     if (!this.api.rolesSE.isAdmin) return;
     this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
-      // console.log(response);
+      //(response);
       this.allInitiatives = response;
     });
   }
@@ -57,7 +57,7 @@ export class InitGeneralResultsReportComponent {
   POST_reportSesultsCompleteness(inits: any[]) {
     this.resultsList = [];
     this.api.resultsSE.POST_reportSesultsCompleteness(inits, 2).subscribe(({ response }) => {
-      console.log(response);
+      // (response);
       this.resultsList = response;
     });
   }
@@ -69,24 +69,28 @@ export class InitGeneralResultsReportComponent {
     this.requesting = true;
     this.requestCounter = 0;
 
-    let list = [];
+    const list = [];
     resultsRelected?.forEach(element => {
       list.push(element?.result_code);
     });
     for (const key in list) {
-      console.log();
       await this.POST_excelFullReportPromise(list[key], key);
     }
     this.exportTablesSE.exportExcel(this.dataToExport, 'results_list');
     this.requesting = false;
   }
 
+  validateLength(obj) {
+    Object.keys(obj[0]).forEach(item => console.log(item + ': ' + obj[0][item]?.length));
+  }
+
   POST_excelFullReportPromise(result, key) {
     return new Promise((resolve, reject) => {
       this.api.resultsSE.POST_excelFullReport([result]).subscribe(
         ({ response }) => {
-          // console.log(response);
-          // console.log(response);
+          // (response);
+          this.validateLength(response);
+          //(response);
           this.requestCounter++;
           this.dataToExport.push(...response);
           resolve(null);

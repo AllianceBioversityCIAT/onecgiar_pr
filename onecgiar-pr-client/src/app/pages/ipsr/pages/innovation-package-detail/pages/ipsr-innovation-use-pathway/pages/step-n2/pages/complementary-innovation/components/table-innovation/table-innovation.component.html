@@ -43,14 +43,14 @@
                     </td>
                     <td class="actions" *ngIf="!this.api.dataControlSE.platformIsClosed && !this.api.rolesSE.readOnly">
 
-                        <div class="link_button" (click)="getComplementaryInnovation(result['result_code'])">
+                        <div class="link_button" (click)="getComplementaryInnovation(result['result_id'], 0, result)">
                             <i class="material-icons-round" style="font-size: 20px;" >visibility</i>
                         </div>
-                        <div class="link_button" >
-                            <i class="material-icons-round" style="font-size: 20px;">edit</i>
+                        <div class="link_button" *ngIf="(this.api.rolesSE.isAdmin || result['permissos']) && result['result_type_id'] == 11" (click)="getComplementaryInnovation(result['result_id'], 1, result)">
+                            <i class="material-icons-round" style="font-size: 20px;" >edit</i>
                         </div>
-                        <div class="link_button" style="background-color: red;">
-                            <i class="material-icons-round" style="font-size: 20px;">delete</i>
+                        <div class="link_button" *ngIf="(this.api.rolesSE.isAdmin || result['permissos']) && result['result_type_id'] == 11"  style="background-color: red;" (click)="Ondelete(result['result_id'])">
+                            <i class="material-icons-round" style="font-size: 20px;" >delete</i>
                         </div>
                     </td>
                 </tr>
@@ -74,7 +74,7 @@
     [style]="{padding: '0px', margin:'0px', width:'70vw'}" [blockScroll]="true" appendTo="body">
 
     <div style="display: flex; justify-content: center; flex-direction: column;">
-        <div class="modal_title">New complementary innovation/ enabler/ solution</div>
+        <div class="modal_title">{{isReadonly ? 'Info':'Edit'}} complementary innovation/ enabler/ solution</div>
         <div class="modal_container">
 
             <app-pr-field-header label="Short title" [required]="true"
@@ -85,14 +85,16 @@
             <li>If not essential, avoid making reference to specific countries or regions</li> 
             <li>Avoid the use of CGIAR Center, Initiative or organization names in the short title</li>"></app-pr-field-header>
 
-            <app-pr-input placeholder="Complementary innovation short title" [maxWords]="10" [required]="true"
+            <app-pr-input placeholder="Complementary innovation short title" [maxWords]="10" [required]="true" [readOnly]="isReadonly" [(ngModel)]="this.informationComplentary.short_title"
                ></app-pr-input>
 
             <app-pr-field-header label="Long title" [required]="true" description='
             <li>More elaborate explanation of "what it is", "what it does" and "for whom"</li>
             <li>Avoid abbreviations or (technical) jargon.</li>'></app-pr-field-header>
 
-            <app-pr-input placeholder="Complementary innovation long title" [maxWords]="30 " [required]="true"
+            <app-pr-input placeholder="Complementary innovation long title" [maxWords]="30 " [required]="true" 
+            [readOnly]="isReadonly"
+            [(ngModel)]="this.informationComplentary.title"
                 > </app-pr-input>
 
             <app-pr-field-header label="Description" [required]="false"
@@ -101,26 +103,51 @@
            <li> Avoid acronyms and technical jargon</li>
            <li> Avoid repetition of the title</li>
            <li> Try to explain in clear language what kind of challenge this innovation/ enabler/ solution addresses, and what kind of solution it offers</li>'></app-pr-field-header>
-            <app-pr-textarea placeholder="Description" [maxWords]="150" [required]="false"
+            <app-pr-textarea placeholder="Description" 
+            [readOnly]="isReadonly"
+            [maxWords]="150" [required]="false"  [(ngModel)]="this.informationComplentary.description"
                 ></app-pr-textarea>
 
 
             <app-pr-field-header label="Function" [required]="true"
                 description='
             What the complementary innovation/ enabler/ solution tries to achieve (select multiple):'></app-pr-field-header>
-            
+            <div class="container" *ngIf="complementaries">
+                <div class="col{{i}}" *ngFor="let item of columns; let i = index" >
+                    <div *ngFor="let subItem of item" style="margin-bottom: 10px;">
+                        <p-checkbox name="name" [value]="subItem.complementary_innovation_functions_id" 
+                        [inputId]="subItem.complementary_innovation_functions_id" 
+                        [(ngModel)]="selectComplementary" (ngModelChange)=" selected()" [disabled]="isReadonly"></p-checkbox>
+                            <label> {{ subItem.name }}</label> 
+                    </div>
+                    
+                </div>
+               
+            </div>
+            <div style="display: flex; align-content: flex-end; width: 100%;  justify-content: flex-end;" *ngIf="complementaries">
+                <app-pr-input [readOnly]="isReadonly" style="width: 47%;margin-top: -40px;margin-left: 20px;" label="Other enabler functions" [required]="false" [(ngModel)]="this.informationComplentary.other_funcions" placeholder=""></app-pr-input>
+            </div>
 
             <app-pr-field-header label="Reference materials" [required]="false" description='
             Max 3.'></app-pr-field-header>
             
-            <app-pr-button text="Add reference material" padding="medium" 
-                ></app-pr-button>
+           
+                <div style="display: flex; flex-direction: row;" *ngFor="let item of this.informationComplentary.referenceMaterials; let i = index">
+                   
+                    <div
+                        style="background-color:aliceblue ; width: 5%; display: flex; align-items: center; justify-content: center; color: black;">
+                        {{i+1}}</div>
+                    <div style="width: 95%;"><app-pr-input placeholder="Link"
+                        [(ngModel)]="item.link" [readOnly]="isReadonly"> </app-pr-input></div>
+                </div>
+                <app-pr-button text="Add reference material" padding="medium" *ngIf="isReadonly == false" (click)="addNewInput()"
+                    [ngClass]="{'globalDisabled': statusAdd}"></app-pr-button>
             <!-- flagsCode="iso_alpha_2" -->
         </div>
     </div>
     <div class="buttons">
 
-        <app-pr-button text="Save and continue" padding="medium" colorType="success" ></app-pr-button>
+        <app-pr-button text="Save and continue" *ngIf="isReadonly == false" padding="medium" colorType="success" (click)="onSave()"></app-pr-button>
     </div>
 
 </p-dialog>

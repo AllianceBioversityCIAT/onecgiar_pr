@@ -26,7 +26,7 @@ export class InnovationPackagingExpertsService {
   async findAllExpertises() {
     try {
       const request = await this._expertisesRepository.find({
-        order: { name: 'ASC' },
+        order: { order: 'ASC' },
       });
       return {
         response: request,
