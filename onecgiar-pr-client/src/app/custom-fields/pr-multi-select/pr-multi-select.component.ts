@@ -149,11 +149,7 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
     if (indexFind < 0) {
       this.value.push({ ...option, new: true, is_active: true });
     } else {
-      //('lo enceutra');
-      // this.value.splice(indexFind, 1);
       const valueItemFind = this.value.find(valueItem => valueItem[this.optionValue] == option[this.optionValue]);
-      // if (itemFinded) itemFinded.selected = false;
-
       if (this.logicalDeletion && !valueItemFind.new) {
         if (!option.selected) {
           valueItemFind.is_active = true;
