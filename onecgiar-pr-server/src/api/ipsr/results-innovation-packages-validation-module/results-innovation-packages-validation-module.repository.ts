@@ -94,10 +94,12 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                     rtr1.results_id = r.id
                     AND rtr1.initiative_id = rbi.inititiative_id
                     AND rbi.initiative_role_id = 1
-                    AND rtr1.planned_result IS NOT NULL
-                    AND rtr1.toc_result_id IS NOT NULL
-            ) = 0
-            OR (
+                    AND (
+                        rtr1.planned_result IS NULL
+                        OR rtr1.toc_result_id IS NULL
+                    )
+            ) > 0 THEN FALSE
+            WHEN (
                 SELECT
                     COUNT(*)
                 FROM
@@ -105,7 +107,6 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                 WHERE
                     rtr2.results_id = r.id
                     AND rtr2.planned_result IS NOT NULL
-                    AND rtr2.toc_result_id IS NOT NULL
                     AND rtr2.initiative_id IN (
                         SELECT
                             rbi2.inititiative_id
@@ -116,7 +117,11 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                             AND rbi2.initiative_role_id = 2
                             AND rbi2.is_active = true
                     )
-            ) = 0 THEN FALSE
+                    AND (
+                        rtr2.planned_result IS NULL
+                        OR rtr2.toc_result_id IS NULL
+                    )
+            ) > 0 THEN FALSE
             WHEN (
                 SELECT
                     COUNT(*)
