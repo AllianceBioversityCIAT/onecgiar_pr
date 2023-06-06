@@ -659,6 +659,13 @@ export class InnovationPathwayStepThreeService {
             },
           );
         } else {
+          if (!el?.unit_of_measure) {
+            return {
+              response: { status: 'Error' },
+              message: 'The field unit of measure is required',
+              status: HttpStatus.BAD_REQUEST,
+            };
+          }
           await this._resultsByIpInnovationUseMeasureRepository.save({
             result_ip_result_id: riprc.result_by_innovation_package_id,
             unit_of_measure: el.unit_of_measure,

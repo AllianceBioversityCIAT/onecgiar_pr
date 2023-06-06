@@ -281,6 +281,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                             rim.result_ip_id = r.id
                             AND rim.is_active = TRUE
                             AND rim.unit_of_measure IS NOT NULL
+                            AND rim.quantity IS NOT NULL
                     ) = 0
                 ) THEN FALSE
                 WHEN(
@@ -385,7 +386,6 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                         AND rie.result_id = r.id
                         AND rie.first_name IS NOT NULL
                         AND rie.last_name IS NOT NULL
-                        AND rie.email IS NOT NULL
                         AND rie.organization_id IS NOT NULL
                         AND rie.result_ip_expert_id IN (
                             SELECT
@@ -407,7 +407,6 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                         AND (
                             rie3.first_name IS NULL
                             OR rie3.last_name IS NULL
-                            OR rie3.email IS NULL
                             OR rie3.organization_id IS NULL
                             OR NOT EXISTS (
                                 SELECT
