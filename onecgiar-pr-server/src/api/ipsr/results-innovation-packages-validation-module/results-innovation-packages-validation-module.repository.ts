@@ -82,86 +82,87 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
 
   async contributors(resultId: number) {
     const contributorsQuery = `
-        SELECT
-            'Contributors' as sectionName,
-            CASE
-                WHEN (
-                    SELECT
-                        COUNT(*)
-                    FROM
-                        results_toc_result rtr1
-                    WHERE
-                        rtr1.results_id = r.id
-                        AND rtr1.planned_result IS NOT NULL
-                        AND rtr1.initiative_id = rbi.inititiative_id
-                        AND rbi.initiative_role_id = 1
-                ) = 0
-                OR (
-                    SELECT
-                        COUNT(*)
-                    FROM
-                        results_toc_result rtr2
-                    WHERE
-                        rtr2.results_id = r.id
-                        AND rtr2.planned_result IS NULL
-                        AND rtr2.toc_result_id IS NULL
-                        AND rtr2.initiative_id IN (
-                            SELECT
-                                rbi2.inititiative_id
-                            FROM
-                                results_by_inititiative rbi2
-                            WHERE
-                                rbi2.result_id = r.id
-                                AND rbi2.initiative_role_id = 2
-                                AND rbi2.is_active = true
-                        )
-                ) > 0 THEN FALSE
-                WHEN (
-                    SELECT
-                        COUNT(*)
-                    FROM
-                        results_by_institution rbi3
-                    WHERE
-                        rbi3.result_id = r.id
-                        AND rbi3.institution_roles_id = 2
-                        AND rbi3.is_active = TRUE
-                ) != (
-                    SELECT
-                        COUNT(DISTINCT rbibdt.result_by_institution_id)
-                    FROM
-                        result_by_institutions_by_deliveries_type rbibdt
-                    WHERE
-                        rbibdt.is_active = true
-                        AND rbibdt.result_by_institution_id IN (
-                            SELECT
-                                rbi4.id
-                            FROM
-                                results_by_institution rbi4
-                            WHERE
-                                rbi4.result_id = r.id
-                                AND rbi4.institution_roles_id = 2
-                                AND rbi4.is_active = true
-                        )
-                ) THEN FALSE
-                WHEN (
-                    SELECT
-                        COUNT(*)
-                    FROM
-                        results_center rc
-                    WHERE
-                        rc.result_id = r.id
-                        AND rc.is_active = true
-                ) < 1 THEN FALSE
-                ELSE TRUE
-            END AS validation
-        FROM
-            result r
-            INNER JOIN results_by_inititiative rbi ON rbi.result_id = r.id
-            AND rbi.is_active = 1
-        WHERE
-            r.is_active = 1
-            AND rbi.initiative_role_id = 1
-            AND r.id = ?;
+    SELECT
+        'Contributors' as sectionName,
+        CASE
+            WHEN (
+                SELECT
+                    COUNT(*)
+                FROM
+                    results_toc_result rtr1
+                WHERE
+                    rtr1.results_id = r.id
+                    AND rtr1.initiative_id = rbi.inititiative_id
+                    AND rbi.initiative_role_id = 1
+                    AND rtr1.planned_result IS NOT NULL
+                    AND rtr1.toc_result_id IS NOT NULL
+            ) = 0
+            OR (
+                SELECT
+                    COUNT(*)
+                FROM
+                    results_toc_result rtr2
+                WHERE
+                    rtr2.results_id = r.id
+                    AND rtr2.planned_result IS NOT NULL
+                    AND rtr2.toc_result_id IS NOT NULL
+                    AND rtr2.initiative_id IN (
+                        SELECT
+                            rbi2.inititiative_id
+                        FROM
+                            results_by_inititiative rbi2
+                        WHERE
+                            rbi2.result_id = r.id
+                            AND rbi2.initiative_role_id = 2
+                            AND rbi2.is_active = true
+                    )
+            ) = 0 THEN FALSE
+            WHEN (
+                SELECT
+                    COUNT(*)
+                FROM
+                    results_by_institution rbi3
+                WHERE
+                    rbi3.result_id = r.id
+                    AND rbi3.institution_roles_id = 2
+                    AND rbi3.is_active = TRUE
+            ) != (
+                SELECT
+                    COUNT(DISTINCT rbibdt.result_by_institution_id)
+                FROM
+                    result_by_institutions_by_deliveries_type rbibdt
+                WHERE
+                    rbibdt.is_active = true
+                    AND rbibdt.result_by_institution_id IN (
+                        SELECT
+                            rbi4.id
+                        FROM
+                            results_by_institution rbi4
+                        WHERE
+                            rbi4.result_id = r.id
+                            AND rbi4.institution_roles_id = 2
+                            AND rbi4.is_active = true
+                    )
+            ) THEN FALSE
+            WHEN (
+                SELECT
+                    COUNT(*)
+                FROM
+                    results_center rc
+                WHERE
+                    rc.result_id = r.id
+                    AND rc.is_active = true
+            ) < 1 THEN FALSE
+            ELSE TRUE
+        END AS validation
+    FROM
+        result r
+        INNER JOIN results_by_inititiative rbi ON rbi.result_id = r.id
+        AND rbi.is_active = 1
+    WHERE
+        r.is_active = 1
+        AND rbi.initiative_role_id = 1
+        AND r.id = ?;
         `;
 
     try {
