@@ -32,8 +32,8 @@
                         [(ngModel)]="this.expert.email">
                     </app-pr-input>
 
-                    <app-pr-multi-select [logicalDeletion]="true"
-                        description="What expertises will this expert contribute?* - To design a realistic innovation package, the engagement of a diverse group of experts is recommended. Please consider the following scaling expertises when developing the invitee list for the innovation packaging and scaling readiness assessment workshop"
+                    <app-pr-multi-select [logicalDeletion]="true" label="What expertises will this expert contribute?"
+                        description="To design a realistic innovation package, the engagement of a diverse group of experts is recommended. Please consider the following scaling expertises when developing the invitee list for the innovation packaging and scaling readiness assessment workshop"
                         [options]="this.expertisesList" optionLabel="name" optionValue="expertises_id"
                         selectedLabel="Expertises(s) selected" placeholder="Select expertises"
                         selectedOptionLabel="name" [(ngModel)]="this.expert.expertises">
