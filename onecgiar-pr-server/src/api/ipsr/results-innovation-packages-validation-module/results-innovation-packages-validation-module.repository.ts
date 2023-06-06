@@ -259,7 +259,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                                     )
                                 )
                             )
-                    ) > 0
+                    ) = 0
                     AND (
                         SELECT
                             COUNT(*)
@@ -271,7 +271,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                             AND rbit.institution_roles_id IS NOT NULL
                             AND rbit.institution_types_id IS NOT NULL
                             AND rbit.how_many IS NOT NULL
-                    ) > 0
+                    ) = 0
                     AND (
                         SELECT
                             COUNT(*)
@@ -281,7 +281,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                             rim.result_ip_id = r.id
                             AND rim.is_active = TRUE
                             AND rim.unit_of_measure IS NOT NULL
-                    ) > 0
+                    ) = 0
                 ) THEN FALSE
                 WHEN(
                     SELECT
