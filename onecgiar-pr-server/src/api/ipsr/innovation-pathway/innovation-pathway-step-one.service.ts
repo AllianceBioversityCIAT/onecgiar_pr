@@ -683,7 +683,7 @@ export class InnovationPathwayStepOneService {
       }
 
       if (result.title === innovationTitle) {
-        throw {
+        return {
           response: innovationTitle,
           message: `The title no needs to be upgraded`,
           status: HttpStatus.NOT_MODIFIED,
@@ -696,7 +696,7 @@ export class InnovationPathwayStepOneService {
           .getMany();
 
         if (titleValidate.find((tv) => tv.id === id)) {
-          throw {
+          return {
             response: titleValidate.map((tv) => tv.id),
             message: `The title already exists, in the following results: ${titleValidate.map(
               (tv) => tv.result_code,
@@ -1380,6 +1380,8 @@ export class InnovationPathwayStepOneService {
     if (crtr?.actors?.length) {
       const { actors } = crtr;
       actors.map(async (el: ResultActor) => {
+        console.log(el);
+
         let actorExists: ResultActor = null;
 
         if (el.sex_and_age_disaggregation === true && !el.how_many) {
@@ -1425,7 +1427,15 @@ export class InnovationPathwayStepOneService {
             where: { actor_type_id: IsNull(), result_id: result.id },
           });
         }
+
         if (actorExists) {
+          if (!el?.actor_type_id && el?.is_active !== false) {
+            return {
+              response: { status: 'Error' },
+              message: 'The field actor type is required',
+              status: HttpStatus.BAD_REQUEST,
+            };
+          }
           await this._resultActorRepository.update(
             actorExists.result_actors_id,
             {
@@ -1444,6 +1454,13 @@ export class InnovationPathwayStepOneService {
             },
           );
         } else {
+          if (!el?.actor_type_id) {
+            return {
+              response: { status: 'Error' },
+              message: 'The field actor type is required',
+              status: HttpStatus.BAD_REQUEST,
+            };
+          }
           await this._resultActorRepository.save({
             actor_type_id: el.actor_type_id,
             is_active: el.is_active,
@@ -1469,6 +1486,7 @@ export class InnovationPathwayStepOneService {
       const { organization } = crtr;
       organization.map(async (el) => {
         let ite: ResultsByInstitutionType = null;
+
         if (el?.institution_types_id) {
           ite =
             await this._resultByIntitutionsTypeRepository.getNewResultByInstitutionTypeExists(
@@ -1487,13 +1505,28 @@ export class InnovationPathwayStepOneService {
             );
         }
         if (ite) {
-          await this._resultByIntitutionsTypeRepository.update(ite.id, {
-            institution_types_id: el.institution_types_id,
-            last_updated_by: user.id,
-            how_many: el.how_many,
-            is_active: el.is_active,
-          });
+          if (!el?.institution_types_id && el?.is_active !== false) {
+            return {
+              response: { status: 'Error' },
+              message: 'The field institution type is required',
+              status: HttpStatus.BAD_REQUEST,
+            };
+          } else {
+            await this._resultByIntitutionsTypeRepository.update(ite.id, {
+              institution_types_id: el.institution_types_id,
+              last_updated_by: user.id,
+              how_many: el.how_many,
+              is_active: el.is_active,
+            });
+          }
         } else {
+          if (!el?.institution_types_id) {
+            return {
+              response: { status: 'Error' },
+              message: 'The field institution type is required',
+              status: HttpStatus.BAD_REQUEST,
+            };
+          }
           await this._resultByIntitutionsTypeRepository.save({
             results_id: result.id,
             created_by: user.id,

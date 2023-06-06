@@ -505,6 +505,13 @@ export class InnovationPathwayStepThreeService {
         }
 
         if (actorExists) {
+          if (!el?.actor_type_id && el?.is_active !== false) {
+            return {
+              response: { status: 'Error' },
+              message: 'The field actor type is required',
+              status: HttpStatus.BAD_REQUEST,
+            };
+          }
           await this._resultsIpActorRepository.update(
             actorExists.result_ip_actors_id,
             {
@@ -524,6 +531,13 @@ export class InnovationPathwayStepThreeService {
             },
           );
         } else {
+          if (!el?.actor_type_id) {
+            return {
+              response: { status: 'Error' },
+              message: 'The field actor type is required',
+              status: HttpStatus.BAD_REQUEST,
+            };
+          }
           await this._resultsIpActorRepository.save({
             actor_type_id: el.actor_type_id,
             is_active: el.is_active,
@@ -568,6 +582,13 @@ export class InnovationPathwayStepThreeService {
         }
 
         if (ite) {
+          if (!el?.institution_types_id && el?.is_active !== false) {
+            return {
+              response: { status: 'Error' },
+              message: 'The field actor type is required',
+              status: HttpStatus.BAD_REQUEST,
+            };
+          }
           await this._resultsIpInstitutionTypeRepository.update(ite.id, {
             last_updated_by: user.id,
             institution_types_id: el.institution_types_id,
@@ -576,6 +597,13 @@ export class InnovationPathwayStepThreeService {
             evidence_link: this.isNullData(el.evidence_link),
           });
         } else {
+          if (!el?.institution_types_id) {
+            return {
+              response: { status: 'Error' },
+              message: 'The field actor type is required',
+              status: HttpStatus.BAD_REQUEST,
+            };
+          }
           await this._resultsIpInstitutionTypeRepository.save({
             result_ip_results_id: riprc.result_by_innovation_package_id,
             created_by: user.id,

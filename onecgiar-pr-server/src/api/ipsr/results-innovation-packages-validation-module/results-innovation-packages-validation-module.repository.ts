@@ -632,24 +632,26 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                             (
                                 rira.sex_and_age_disaggregation = 0
                                 AND (
-                                    rira.actor_type_id IS NULL
-                                    OR rira.women IS NULL
-                                    OR rira.women_youth IS NULL
-                                    OR rira.men IS NULL
-                                    OR rira.men_youth IS NULL
-                                    OR rira.evidence_link IS NULL
+                                    rira.actor_type_id IS NOT NULL
+                                    AND rira.women IS NOT NULL
+                                    AND rira.women_youth IS NOT NULL
+                                    AND rira.men IS NOT NULL
+                                    AND rira.men_youth IS NOT NULL
+                                    AND rira.evidence_link IS NOT NULL
+                                    AND rira.evidence_link != ''
                                 )
                             )
                             OR (
                                 rira.sex_and_age_disaggregation = 1
                                 AND (
-                                    rira.actor_type_id IS NULL
-                                    OR rira.evidence_link IS NULL
-                                    OR rira.how_many IS NULL
+                                    rira.actor_type_id IS NOT NULL
+                                    AND rira.evidence_link IS NOT NULL
+                                    AND rira.evidence_link != ''
+                                    AND rira.how_many IS NOT NULL
                                 )
                             )
                         )
-                ) > 0
+                ) = 0
                 AND (
                     SELECT
                         COUNT(*)
@@ -659,14 +661,15 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                         ririt.result_ip_results_id = rbip.result_by_innovation_package_id
                         AND ririt.is_active = TRUE
                         AND (
-                            institution_types_id IS NULL
-                            OR institution_roles_id IS NULL
-                            OR ririt.how_many IS NULL
-                            OR ririt.evidence_link IS NULL
-                            OR ririt.institution_types_id IS NULL
-                            OR ririt.institution_types_id IS NULL
+                            institution_types_id IS NOT NULL
+                            AND institution_roles_id IS NOT NULL
+                            AND ririt.how_many IS NOT NULL
+                            AND ririt.evidence_link IS NOT NULL
+                            AND ririt.evidence_link != ''
+                            AND ririt.institution_types_id IS NOT NULL
+                            AND ririt.institution_types_id IS NOT NULL
                         )
-                ) > 0
+                ) = 0
                 AND (
                     SELECT
                         COUNT(*)
@@ -676,10 +679,11 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                         rirm.result_ip_result_id = rbip.result_by_innovation_package_id
                         AND rirm.is_active = TRUE
                         AND (
-                            rirm.unit_of_measure IS NULL
-                            OR rirm.quantity IS NULL
+                            rirm.unit_of_measure IS NOT NULL
+                            AND rirm.quantity IS NOT NULL
+                            AND rirm.evidence_link IS NOT NULL
                         )
-                ) > 0
+                ) = 0
             ) THEN FALSE
             WHEN (
                 SELECT
@@ -699,6 +703,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                                 OR rira.men IS NULL
                                 OR rira.men_youth IS NULL
                                 OR rira.evidence_link IS NULL
+                                OR rira.evidence_link = ''
                             )
                         )
                         OR (
@@ -706,6 +711,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                             AND (
                                 rira.actor_type_id IS NULL
                                 OR rira.evidence_link IS NULL
+                                OR rira.evidence_link = ''
                                 OR rira.how_many IS NULL
                             )
                         )
@@ -724,6 +730,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                         OR institution_roles_id IS NULL
                         OR ririt.how_many IS NULL
                         OR ririt.evidence_link IS NULL
+                        OR ririt.evidence_link = ''
                         OR ririt.institution_types_id IS NULL
                         OR ririt.institution_types_id IS NULL
                     )
