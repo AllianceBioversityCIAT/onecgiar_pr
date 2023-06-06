@@ -883,13 +883,6 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                         )
                 ) > 0 THEN FALSE
                 WHEN rip.is_result_ip_published IS NULL THEN FALSE
-                WHEN (
-                    rip.is_result_ip_published = 1
-                    AND (
-                        rip.ipsr_pdf_report IS NULL
-                        OR rip.ipsr_pdf_report = ''
-                    )
-                ) THEN FALSE
                 ELSE TRUE
             END AS validation
         FROM
