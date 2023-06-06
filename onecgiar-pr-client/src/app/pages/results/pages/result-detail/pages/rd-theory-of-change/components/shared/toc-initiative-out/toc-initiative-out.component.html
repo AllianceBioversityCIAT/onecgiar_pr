@@ -3,8 +3,8 @@
         <app-pr-yes-or-not [label]="getDescription(initiative?.official_code,initiative?.short_name)"
             (selectOptionEvent)="valdiateEOI(initiative);initiative.toc_result_id = null"
             [(ngModel)]="initiative.planned_result"
-            [description]=" initiative.planned_result == false? 'Please select the End of Initiative (EOI)-Outcome that most closely matches this result. You will have time during the reflect moment to update your ToC':''"
-            [readOnly]="!editable" [editable]="editable">
+            [description]="this.headerDescription(initiative.planned_result == false)" [readOnly]="!editable"
+            [editable]="editable">
         </app-pr-yes-or-not>
         <a [href]="'https://toc.mel.cgiar.org/toc/'+this.fullInitiativeToc" target="_blank" class="toc_button"><span>See
                 ToC</span>
@@ -12,8 +12,7 @@
         </a>
 
     </div>
-    <app-pr-field-header *ngIf="this.api.resultsSE.ipsrDataControlSE.inContributos == true"
-        description="Specify to which Work Package or End-of-Initiative Outcomes the scaling of the core innovation is expected to contribute to by 2024 in the specific geolocation"></app-pr-field-header>
+
 
     <div class="auto_fit_container" *ngIf="initiative.planned_result == true || initiative.planned_result == false ">
         <app-pr-select *ngIf="this.initiative?.planned_result && resultLevelId == 1" [options]="this.outputList"
