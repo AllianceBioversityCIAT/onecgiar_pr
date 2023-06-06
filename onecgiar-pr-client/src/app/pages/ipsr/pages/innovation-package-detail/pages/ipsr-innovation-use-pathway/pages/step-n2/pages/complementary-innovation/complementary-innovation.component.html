@@ -1,13 +1,13 @@
-<app-pr-field-header label="Select or specify complementary innovations/ enablers/ solutions" [required]="false"
+<app-pr-field-header label="Select or specify complementary innovations/ enablers/ solutions"
     description="Please first consider the inclusion of other innovations/ enablers/ solutions that CGIAR and partners are already working on. Additional complementary innovations/ enablers/ solutions can be added below."></app-pr-field-header>
 <app-table-innovation (selectInnovationEvent)="selectInnovationEvent($event)"
-    [selectionsInnovation]="innovationPackageCreatorBody" [informationComplementaryInnovations]="informationComplementaryInnovations"
-    [columns]="cols" (saveedit)="saveEdit($event)"
-    ></app-table-innovation>
+    [selectionsInnovation]="innovationPackageCreatorBody"
+    [informationComplementaryInnovations]="informationComplementaryInnovations" [columns]="cols"
+    (saveedit)="saveEdit($event)"></app-table-innovation>
 
 
-<app-new-complementary-innovation
-    [complementaryInnovationFunction]="complemntaryFunction" (createInnovationEvent)="createInnovationEvent($event)"></app-new-complementary-innovation>
+<app-new-complementary-innovation [complementaryInnovationFunction]="complemntaryFunction"
+    (createInnovationEvent)="createInnovationEvent($event)"></app-new-complementary-innovation>
 
 <div *ngIf="this.innovationPackageCreatorBody.length > 0">
     <app-pr-field-header [required]="false"
@@ -34,10 +34,8 @@
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>
 
 <div class="toggle_change_step" style="margin-top: 50px;">
-    <app-pr-button
-    (click) = "onSavePreviuosNext('previous')"
-        padding="big" text="Save & go to previous step" icon="arrow_circle_left" [reverse]="true"></app-pr-button>
-    <app-pr-button
-    (click) = "onSavePreviuosNext('next')"
-        padding="big" text="Save & go to next step" icon="arrow_circle_right"></app-pr-button>
+    <app-pr-button (click)="onSavePreviuosNext('previous')" padding="big" text="Save & go to previous step"
+        icon="arrow_circle_left" [reverse]="true"></app-pr-button>
+    <app-pr-button (click)="onSavePreviuosNext('next')" padding="big" text="Save & go to next step"
+        icon="arrow_circle_right"></app-pr-button>
 </div>
