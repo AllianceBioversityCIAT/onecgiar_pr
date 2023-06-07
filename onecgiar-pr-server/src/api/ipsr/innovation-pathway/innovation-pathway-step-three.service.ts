@@ -526,8 +526,7 @@ export class InnovationPathwayStepThreeService {
               last_updated_by: user.id,
               sex_and_age_disaggregation:
                 el?.sex_and_age_disaggregation === true ? true : false,
-              how_many:
-                el?.sex_and_age_disaggregation === true ? el?.how_many : null,
+              how_many: el?.how_many,
             },
           );
         } else {
@@ -553,8 +552,7 @@ export class InnovationPathwayStepThreeService {
             version_id: version.id,
             sex_and_age_disaggregation:
               el?.sex_and_age_disaggregation === true ? true : false,
-            how_many:
-              el?.sex_and_age_disaggregation === true ? el?.how_many : null,
+            how_many: el?.how_many,
           });
         }
       });
