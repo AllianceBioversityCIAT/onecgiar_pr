@@ -564,18 +564,21 @@ export class InnovationPathwayStepThreeService {
       const { organization } = crtr;
       organization.map(async (el) => {
         let ite: ResultsIpInstitutionType = null;
-        if (el?.id) {
+        if (el?.institution_types_id && el?.institution_types_id != 78) {
           ite = await this._resultsIpInstitutionTypeRepository.findOne({
             where: {
-              id: el.id,
+              institution_types_id: el.institution_types_id,
+              result_ip_results_id: riprc.result_by_innovation_package_id,
               institution_roles_id: 6,
             },
           });
-        } else if (!ite && el?.institution_types_id) {
+        }
+
+        if (!ite && el?.id) {
           ite = await this._resultsIpInstitutionTypeRepository.findOne({
             where: {
+              id: el.id,
               result_ip_results_id: riprc.result_by_innovation_package_id,
-              institution_types_id: el.institution_types_id,
               institution_roles_id: 6,
             },
           });
