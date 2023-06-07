@@ -78,11 +78,18 @@
     <div class="fields" appYmzListStructureItem (deleteEvent)="removeOrganization(organizationItem)"
         [ngClass]="{'hideElement': organizationItem.is_active == false}"
         *ngFor="let organizationItem of this.body.innovatonUse.organization; let i=index">
-        <app-pr-select [options]="this.institutionsTypeTreeList" [indexReference]="i" label="Organization"
-            optionLabel="name" optionValue="code" [(ngModel)]="organizationItem.institution_types_id"
-            placeholder="Select organization" (selectOptionEvent)="reloadSelect(organizationItem)"
-            [disableOptions]="disableOrganizations">
-        </app-pr-select>
+        <div>
+            <app-pr-select [options]="this.institutionsTypeTreeList" [indexReference]="i" label="Organization"
+                optionLabel="name" optionValue="code" [(ngModel)]="organizationItem.institution_types_id"
+                placeholder="Select organization" (selectOptionEvent)="reloadSelect(organizationItem)"
+                [disableOptions]="disableOrganizations">
+            </app-pr-select>
+            <div style="margin-top: 13px;"></div>
+            <app-pr-input *ngIf="organizationItem.institution_types_id == 78"
+                description="Specify the other organization type in the text box below" placeholder="Specify other.."
+                type="text" [required]="false" [(ngModel)]="this.organizationItem.other_institution">
+            </app-pr-input>
+        </div>
         <div class="right_content">
             <app-pr-select
                 *ngIf="organizationItem.institution_types_id && !organizationItem.hide && getInstitutionsTypeTreeChildrens(organizationItem.institution_types_id)?.length"
