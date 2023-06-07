@@ -76,6 +76,7 @@ export class OrganizationN3 {
   hide: boolean;
   is_active: boolean;
   evidence_link: string;
+  other_institution: string;
 }
 
 export class ActorN3 {
