@@ -82,6 +82,7 @@
             <app-pr-select [options]="this.institutionsTypeTreeList" [indexReference]="i" label="Organization"
                 optionLabel="name" optionValue="code" [(ngModel)]="organizationItem.institution_types_id"
                 placeholder="Select organization" (selectOptionEvent)="reloadSelect(organizationItem)"
+                (ngModelChange)="this.organizationItem.other_institution = null"
                 [disableOptions]="removeOtherInOrg(disableOrganizations)">
             </app-pr-select>
             <div style="margin-top: 13px;"></div>
