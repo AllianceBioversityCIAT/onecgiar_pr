@@ -1566,6 +1566,13 @@ export class InnovationPathwayStepOneService {
         }
 
         if (ripm) {
+          if (!el?.unit_of_measure && el?.is_active != false) {
+            return {
+              response: { valid: false },
+              message: 'The field Unit of Measure is required',
+              status: HttpStatus.BAD_REQUEST,
+            };
+          }
           await this._resultIpMeasureRepository.update(
             ripm.result_ip_measure_id,
             {
@@ -1576,6 +1583,13 @@ export class InnovationPathwayStepOneService {
             },
           );
         } else {
+          if (!el?.unit_of_measure || !el?.quantity) {
+            return {
+              response: { valid: false },
+              message: 'The field Unit of Measure and Quantity is required',
+              status: HttpStatus.BAD_REQUEST,
+            };
+          }
           await this._resultIpMeasureRepository.save({
             result_ip_id: result.id,
             unit_of_measure: el.unit_of_measure,
