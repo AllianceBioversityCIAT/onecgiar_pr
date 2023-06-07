@@ -47,6 +47,13 @@ export class ResultsIpInstitutionType extends BaseEntity{
     })
     evidence_link: string;
 
+    @Column({
+        name: 'other_institution',
+        type: 'text',
+        nullable: true
+    })
+    other_institution!: string;
+
     @ManyToOne(() => Version, (v) => v.id)
     @JoinColumn({
         name: 'version_id',

@@ -1515,6 +1515,7 @@ export class InnovationPathwayStepOneService {
             await this._resultByIntitutionsTypeRepository.update(ite.id, {
               institution_types_id: el.institution_types_id,
               last_updated_by: user.id,
+              other_institution: el?.other_institution,
               how_many: el.how_many,
               is_active: el.is_active,
             });
@@ -1531,6 +1532,7 @@ export class InnovationPathwayStepOneService {
             results_id: result.id,
             created_by: user.id,
             last_updated_by: user.id,
+            other_institution: el?.other_institution,
             institution_types_id: el.institution_types_id,
             institution_roles_id: 5,
             how_many: el.how_many,
