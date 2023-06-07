@@ -87,6 +87,9 @@ export class StepN3CurrentUseComponent {
   removeOther(actors) {
     return actors.filter(item => item.actor_type_id != 5);
   }
+  removeOtherInOrg(disableOrganizations) {
+    return disableOrganizations.filter(item => item.code != 78);
+  }
 
   executeTimer = null;
   validateYouth(i, isWomen: boolean) {

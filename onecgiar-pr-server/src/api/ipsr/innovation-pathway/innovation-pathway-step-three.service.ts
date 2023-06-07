@@ -526,8 +526,7 @@ export class InnovationPathwayStepThreeService {
               last_updated_by: user.id,
               sex_and_age_disaggregation:
                 el?.sex_and_age_disaggregation === true ? true : false,
-              how_many:
-                el?.sex_and_age_disaggregation === true ? el?.how_many : null,
+              how_many: el?.how_many,
             },
           );
         } else {
@@ -553,8 +552,7 @@ export class InnovationPathwayStepThreeService {
             version_id: version.id,
             sex_and_age_disaggregation:
               el?.sex_and_age_disaggregation === true ? true : false,
-            how_many:
-              el?.sex_and_age_disaggregation === true ? el?.how_many : null,
+            how_many: el?.how_many,
           });
         }
       });
@@ -564,18 +562,21 @@ export class InnovationPathwayStepThreeService {
       const { organization } = crtr;
       organization.map(async (el) => {
         let ite: ResultsIpInstitutionType = null;
-        if (el?.id) {
+        if (el?.institution_types_id && el?.institution_types_id != 78) {
           ite = await this._resultsIpInstitutionTypeRepository.findOne({
             where: {
-              id: el.id,
+              institution_types_id: el.institution_types_id,
+              result_ip_results_id: riprc.result_by_innovation_package_id,
               institution_roles_id: 6,
             },
           });
-        } else if (!ite && el?.institution_types_id) {
+        }
+
+        if (!ite && el?.id) {
           ite = await this._resultsIpInstitutionTypeRepository.findOne({
             where: {
+              id: el.id,
               result_ip_results_id: riprc.result_by_innovation_package_id,
-              institution_types_id: el.institution_types_id,
               institution_roles_id: 6,
             },
           });
@@ -593,6 +594,7 @@ export class InnovationPathwayStepThreeService {
             last_updated_by: user.id,
             institution_types_id: el.institution_types_id,
             how_many: this.isNullData(el.how_many),
+            other_institution: el?.other_institution,
             is_active: el.is_active == undefined ? true : el.is_active,
             evidence_link: this.isNullData(el.evidence_link),
           });
@@ -608,11 +610,12 @@ export class InnovationPathwayStepThreeService {
             result_ip_results_id: riprc.result_by_innovation_package_id,
             created_by: user.id,
             last_updated_by: user.id,
-            institution_types_id: el.institution_types_id,
+            institution_types_id: el?.institution_types_id,
+            other_institution: el?.other_institution,
             institution_roles_id: 6,
-            how_many: el.how_many,
+            how_many: el?.how_many,
             version_id: version.id,
-            evidence_link: el.evidence_link,
+            evidence_link: el?.evidence_link,
           });
         }
       });

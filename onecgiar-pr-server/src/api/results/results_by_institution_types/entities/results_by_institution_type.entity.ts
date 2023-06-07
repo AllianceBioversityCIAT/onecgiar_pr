@@ -23,7 +23,7 @@ export class ResultsByInstitutionType {
   @Column({
     name: 'results_id',
     type: 'bigint',
-    nullable: false
+    nullable: false,
   })
   results_id: number;
 
@@ -36,20 +36,22 @@ export class ResultsByInstitutionType {
   @Column({
     name: 'institution_types_id',
     type: 'int',
-    nullable: true
+    nullable: true,
   })
   institution_types_id: number;
 
-  @ManyToOne(() => ClarisaInstitutionsType, cit => cit.code, {nullable: true})
+  @ManyToOne(() => ClarisaInstitutionsType, (cit) => cit.code, {
+    nullable: true,
+  })
   @JoinColumn({
-    name: 'institution_types_id'
+    name: 'institution_types_id',
   })
   obj_institution_types!: ClarisaInstitutionsType;
 
   @Column({
     name: 'institution_roles_id',
     type: 'bigint',
-    nullable: false
+    nullable: false,
   })
   institution_roles_id: number;
 
@@ -70,9 +72,16 @@ export class ResultsByInstitutionType {
   @Column({
     name: 'how_many',
     type: 'bigint',
-    nullable: true
+    nullable: true,
   })
   how_many!: number;
+
+  @Column({
+    name: 'other_institution',
+    type: 'text',
+    nullable: true,
+  })
+  other_institution!: string;
 
   @ManyToOne(() => Version, (v) => v.id, { nullable: false })
   @JoinColumn({

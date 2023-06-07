@@ -1380,8 +1380,6 @@ export class InnovationPathwayStepOneService {
     if (crtr?.actors?.length) {
       const { actors } = crtr;
       actors.map(async (el: ResultActor) => {
-        console.log(el);
-
         let actorExists: ResultActor = null;
 
         if (el.sex_and_age_disaggregation === true && !el.how_many) {
@@ -1449,8 +1447,7 @@ export class InnovationPathwayStepOneService {
               other_actor_type: this.isNullData(el?.other_actor_type),
               sex_and_age_disaggregation:
                 el?.sex_and_age_disaggregation === true ? true : false,
-              how_many:
-                el?.sex_and_age_disaggregation === true ? el?.how_many : null,
+              how_many: el?.how_many,
             },
           );
         } else {
@@ -1475,8 +1472,7 @@ export class InnovationPathwayStepOneService {
             version_id: version.id,
             sex_and_age_disaggregation:
               el?.sex_and_age_disaggregation === true ? true : false,
-            how_many:
-              el?.sex_and_age_disaggregation === true ? el?.how_many : null,
+            how_many: el?.how_many,
           });
         }
       });
@@ -1487,7 +1483,7 @@ export class InnovationPathwayStepOneService {
       organization.map(async (el) => {
         let ite: ResultsByInstitutionType = null;
 
-        if (el?.institution_types_id) {
+        if (el?.institution_types_id && el?.institution_types_id != 78) {
           ite =
             await this._resultByIntitutionsTypeRepository.getNewResultByInstitutionTypeExists(
               result.id,
@@ -1504,6 +1500,7 @@ export class InnovationPathwayStepOneService {
               5,
             );
         }
+
         if (ite) {
           if (!el?.institution_types_id && el?.is_active !== false) {
             return {
@@ -1515,6 +1512,7 @@ export class InnovationPathwayStepOneService {
             await this._resultByIntitutionsTypeRepository.update(ite.id, {
               institution_types_id: el.institution_types_id,
               last_updated_by: user.id,
+              other_institution: el?.other_institution,
               how_many: el.how_many,
               is_active: el.is_active,
             });
@@ -1531,6 +1529,7 @@ export class InnovationPathwayStepOneService {
             results_id: result.id,
             created_by: user.id,
             last_updated_by: user.id,
+            other_institution: el?.other_institution,
             institution_types_id: el.institution_types_id,
             institution_roles_id: 5,
             how_many: el.how_many,
