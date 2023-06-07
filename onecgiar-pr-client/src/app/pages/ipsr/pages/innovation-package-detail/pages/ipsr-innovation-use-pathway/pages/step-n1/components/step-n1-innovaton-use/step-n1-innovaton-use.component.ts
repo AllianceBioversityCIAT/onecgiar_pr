@@ -79,6 +79,10 @@ export class StepN1InnovatonUseComponent {
     return actors.filter(item => item.actor_type_id != 5);
   }
 
+  removeOtherInOrg(disableOrganizations) {
+    return disableOrganizations.filter(item => item.code != 78);
+  }
+
   get disableOrganizations() {
     //(this.institutionsTypeTreeList);
     const list = [];
