@@ -410,6 +410,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                         result_ip_expert rie3
                     WHERE
                         rie3.result_id = r.id
+                        AND rie3.is_active = TRUE
                         AND (
                             rie3.first_name IS NULL
                             OR rie3.last_name IS NULL
