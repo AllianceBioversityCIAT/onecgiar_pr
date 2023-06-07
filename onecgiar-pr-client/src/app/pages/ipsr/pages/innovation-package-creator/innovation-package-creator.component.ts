@@ -17,6 +17,11 @@ export class InnovationPackageCreatorComponent {
   statusPdialog: boolean = false;
   constructor(public api: ApiService, private router: Router, public manageInnovationsListSE: ManageInnovationsListService) {
     this.GET_AllInitiatives();
+    console.log(this.api.dataControlSE.myInitiativesList.length);
+    if (this.api.dataControlSE.myInitiativesList.length) {
+      this.api.rolesSE.readOnly = false;
+      if (this.api?.dataControlSE?.currentResult?.status) this.api.dataControlSE.currentResult.status = null;
+    }
   }
   selectInnovationEvent(e) {
     this.innovationPackageCreatorBody.result_id = e.result_id;
