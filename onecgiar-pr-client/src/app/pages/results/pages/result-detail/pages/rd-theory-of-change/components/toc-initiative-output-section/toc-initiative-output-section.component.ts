@@ -13,7 +13,7 @@ import { environment } from '../../../../../../../../../environments/environment
 export class TocInitiativeOutputSectionComponent {
   outcomeList = [];
   outputList = [];
-  platformIsClosed = environment.platformIsClosed;
+
   @Input() result_toc_result = new resultToResultInterfaceToc();
   @Input() contributors_result_toc_result: any;
   fullInitiativeToc = null;

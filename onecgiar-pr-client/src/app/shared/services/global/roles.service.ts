@@ -8,6 +8,7 @@ import { environment } from 'src/environments/environment';
   providedIn: 'root'
 })
 export class RolesService {
+  platformIsClosed = false;
   readOnly = true;
   currentInitiativeRole = null;
   roles: any;
@@ -46,7 +47,7 @@ export class RolesService {
   async validateReadOnly(result?) {
     //('%cvalidateReadOnly', 'background: #222; color: #52cd47');
     //(result);
-    if (environment?.platformIsClosed) {
+    if (this.platformIsClosed) {
       this.readOnly = true;
       this.updateRolesListFromLocalStorage();
       this.updateRolesList();

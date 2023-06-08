@@ -11,7 +11,6 @@ import { RolesService } from '../../../../../../../../shared/services/global/rol
 })
 export class IpsrContributorsTocComponent {
   @Input() contributorsBody = new ContributorsBody();
-  platformIsClosed = environment.platformIsClosed;
   contributingInitiativesList = [];
   constructor(public api: ApiService, public rolesSE: RolesService) {}
 
