@@ -12,6 +12,8 @@ export class CreateComplementaryInnovationDto {
   is_active: boolean;
   complementaryFunctions: any[];
   referenceMaterials: any[];
+  projects_organizations_working_on_innovation: boolean;
+  specify_projects_organizations: string;
 }
 
 @Component({
@@ -26,6 +28,10 @@ export class NewComplementaryInnovationComponent implements OnInit {
   inputs: any = [1];
   disabled: boolean = true;
   statusAdd: boolean = false;
+  awareOptions = [
+    { name: 'Yes', value: true },
+    { name: 'No', value: false }
+  ];
   @Input() complementaryInnovationFunction: any;
   linksComplemntary: any;
   linksComplemntaryInnovation: any = [];
