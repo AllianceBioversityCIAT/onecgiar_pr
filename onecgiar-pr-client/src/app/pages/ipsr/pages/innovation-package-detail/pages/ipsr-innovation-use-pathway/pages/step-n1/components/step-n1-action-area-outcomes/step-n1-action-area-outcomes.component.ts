@@ -11,7 +11,7 @@ import { ApiService } from '../../../../../../../../../../shared/services/api/ap
 export class StepN1ActionAreaOutcomesComponent {
   @Input() body = new IpsrStep1Body();
   actionAreasOutcomesList: any = null;
-  constructor(private ipsrDataControlSE: IpsrDataControlService, private api: ApiService) {}
+  constructor(private ipsrDataControlSE: IpsrDataControlService, public api: ApiService) {}
   ngOnInit(): void {
     //Called after the constructor, initializing input properties, and the first call to ngOnChanges.
     //Add 'implements OnInit' to the class.

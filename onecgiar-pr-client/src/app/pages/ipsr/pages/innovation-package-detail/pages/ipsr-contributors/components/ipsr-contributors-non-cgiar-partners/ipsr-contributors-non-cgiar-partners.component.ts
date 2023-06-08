@@ -22,6 +22,7 @@ export class IpsrContributorsNonCgiarPartnersComponent {
     return index < 0 ? false : true;
   }
   onSelectDelivery(option, deliveryId) {
+    if (this.rolesSE.readOnly) return;
     if (option?.deliveries?.find((deliveryId: any) => deliveryId == 4) && deliveryId != 4) {
       const index = option?.deliveries?.indexOf(4) == undefined ? -1 : option?.deliveries?.indexOf(4);
       option?.deliveries.splice(index, 1);
