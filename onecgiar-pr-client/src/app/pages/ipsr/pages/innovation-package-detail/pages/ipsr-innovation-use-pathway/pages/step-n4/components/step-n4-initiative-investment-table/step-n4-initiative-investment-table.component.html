@@ -31,11 +31,12 @@
         <td>{{item.obj_result_initiative.obj_initiative.official_code}} -
             {{item.obj_result_initiative.obj_initiative.name}}</td>
         <td>
-            <app-pr-input [(ngModel)]="item.current_year" placeholder="Write some..." type="number" [required]="false">
+            <app-pr-input [(ngModel)]="item.current_year" placeholder="Write some..." type="currency"
+                [required]="false">
             </app-pr-input>
         </td>
         <td>
-            <app-pr-input [(ngModel)]="item.next_year" placeholder="Write some..." type="number" [required]="false">
+            <app-pr-input [(ngModel)]="item.next_year" placeholder="Write some..." type="currency" [required]="false">
             </app-pr-input>
         </td>
         <td>
