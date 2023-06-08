@@ -11,6 +11,6 @@ import { environment } from 'src/environments/environment';
 export class IpsrComponent {
   constructor(public api: ApiService, private ipsrDataControlSE: IpsrDataControlService) {
     this.ipsrDataControlSE.inIpsr = true;
-    if (environment.IPSRModuleIsClosed) this.api.rolesSE.platformIsClosed = true;
+    this.api.rolesSE.platformIsClosed = environment.IPSRModuleIsClosed;
   }
 }

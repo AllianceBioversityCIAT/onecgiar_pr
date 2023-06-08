@@ -14,6 +14,6 @@ export class ResultsComponent {
   ngOnInit(): void {
     this.api.dataControlSE.detailSectionTitle('Results');
     this.ipsrDataControlSE.inIpsr = false;
-    if (environment.resultModuleIsClosed) this.api.rolesSE.platformIsClosed = true;
+    this.api.rolesSE.platformIsClosed = environment.resultModuleIsClosed;
   }
 }
