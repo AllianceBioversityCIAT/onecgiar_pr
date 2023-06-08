@@ -11,8 +11,12 @@
             'Not provided' :
             'Not applicable'))}}</div>
         <div class="p-fluid input_container" *ngSwitchCase="false">
-            <input [disabled]="this.disabled" pInputText [type]="this.type" [placeholder]="this.placeholder"
-                [(ngModel)]="value" [attr.prValid]="true" [ngClass]="{'pr-valid': true}" />
+            <input *ngIf="this.type != 'currency'" [disabled]="this.disabled" pInputText [type]="this.type"
+                [placeholder]="this.placeholder" [(ngModel)]="value" [attr.prValid]="true"
+                [ngClass]="{'pr-valid': true}" />
+            <p-inputNumber *ngIf="this.type == 'currency'" [(ngModel)]="value" [disabled]="this.disabled"
+                [placeholder]="this.placeholder">
+            </p-inputNumber>
             <div class="hints_container">
                 <div class="hint">{{this.hint}}</div>
                 <app-pr-word-counter *ngIf="maxWords" [wordCount]="wordCount" [maxWords]="maxWords">
