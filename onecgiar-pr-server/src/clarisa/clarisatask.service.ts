@@ -106,8 +106,8 @@ export class ClarisaTaskService {
     count = await this.cloneResultTocRepository(count);
     count = await this.cloneClarisaCenterRepository(count);
     count = await this.cloneClarisaPolicyTypeRepository(count);
-    // count = await this.cloneClarisaSdgs(count);
-    // count = await this.cloneClarisaSdgsTargets(count);
+    count = await this.cloneClarisaSdgs(count);
+    count = await this.cloneClarisaSdgsTargets(count);
   }
 
   public async clarisaBootstrapImportantData() {
