@@ -171,29 +171,30 @@ export class ResultInnovationPackageService {
       let innovationTitle: string;
       let innovationGeoScope: number;
 
-      const resultExist = await this._resultRepository.getResultById(
+      const coreInnovationResult = await this._resultRepository.getResultById(
         CreateResultInnovationPackageDto.result_id,
       );
 
-      if (!resultExist) {
+      if (!coreInnovationResult) {
         throw {
-          response: resultExist,
+          response: coreInnovationResult,
           message: 'The result was not found',
           status: HttpStatus.NOT_FOUND,
         };
       }
 
-      const coreInnovation = await this._resultByInitiativeRepository.findOne({
-        where: {
-          result_id: CreateResultInnovationPackageDto.result_id,
-          initiative_role_id: 1,
-          is_active: true,
-        },
-      });
+      const coreInnovationInitiative =
+        await this._resultByInitiativeRepository.findOne({
+          where: {
+            result_id: CreateResultInnovationPackageDto.result_id,
+            initiative_role_id: 1,
+            is_active: true,
+          },
+        });
 
-      if (!coreInnovation) {
+      if (!coreInnovationInitiative) {
         throw {
-          response: coreInnovation,
+          response: coreInnovationInitiative,
           message: 'An error occurred while creating the Innovation Package',
           status: HttpStatus.BAD_REQUEST,
         };
@@ -201,7 +202,7 @@ export class ResultInnovationPackageService {
 
       const initiativeRole =
         await this._resultByInitiativeRepository.InitiativeByResult(
-          +resultExist.id,
+          +coreInnovationResult.id,
         );
       const mapInits = initiativeRole.find(
         (i) =>
@@ -243,7 +244,7 @@ export class ResultInnovationPackageService {
         });
       }
 
-      const result = resultExist;
+      const result = coreInnovationResult;
       if (result.result_type_id != 7) {
         throw {
           response: result.result_type_id,
@@ -335,6 +336,10 @@ export class ResultInnovationPackageService {
       const newInnovationHeader = await this._resultRepository.save({
         result_code: last_code + 1,
         title: innovationTitle,
+        description: result.description,
+        gender_tag_level_id: result.gender_tag_level_id,
+        climate_change_tag_level_id: result.climate_change_tag_level_id,
+        lead_contact_person: result.lead_contact_person,
         reported_year_id: year.year,
         result_level_id: 3,
         result_type_id: 10,
@@ -441,21 +446,21 @@ export class ResultInnovationPackageService {
       );
 
       const retriveAAOutcome = await this.retrievedAAOutcome(
-        coreInnovation.initiative_id,
+        coreInnovationInitiative.initiative_id,
         user.id,
         resultByInnivationPackage,
         vrs.id,
       );
 
       const retrievedImpactArea = await this.retrievedImpactArea(
-        coreInnovation.initiative_id,
+        coreInnovationInitiative.initiative_id,
         user.id,
         resultByInnivationPackage,
         vrs.id,
       );
 
       const retrieveSdgs = await this.retrievedSdgs(
-        coreInnovation.initiative_id,
+        coreInnovationInitiative.initiative_id,
         user.id,
         resultByInnivationPackage,
         vrs.id,

@@ -19,8 +19,8 @@ export class PrRangeLevelComponent {
   @Input() optionLabel: string;
   @Input() optionValue: string;
   @Input() options: any;
-  @Input() itemTitle: string = '0- test';
-  @Input() itemDescription: string = 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Exercitationem, perspiciatis.';
+  @Input() itemTitle: string = null;
+  @Input() itemDescription: string = null;
   hoverData = {
     show: false,
     object: {},

@@ -505,6 +505,13 @@ export class InnovationPathwayStepThreeService {
         }
 
         if (actorExists) {
+          if (!el?.actor_type_id && el?.is_active !== false) {
+            return {
+              response: { status: 'Error' },
+              message: 'The field actor type is required',
+              status: HttpStatus.BAD_REQUEST,
+            };
+          }
           await this._resultsIpActorRepository.update(
             actorExists.result_ip_actors_id,
             {
@@ -519,11 +526,17 @@ export class InnovationPathwayStepThreeService {
               last_updated_by: user.id,
               sex_and_age_disaggregation:
                 el?.sex_and_age_disaggregation === true ? true : false,
-              how_many:
-                el?.sex_and_age_disaggregation === true ? el?.how_many : null,
+              how_many: el?.how_many,
             },
           );
         } else {
+          if (!el?.actor_type_id) {
+            return {
+              response: { status: 'Error' },
+              message: 'The field actor type is required',
+              status: HttpStatus.BAD_REQUEST,
+            };
+          }
           await this._resultsIpActorRepository.save({
             actor_type_id: el.actor_type_id,
             is_active: el.is_active,
@@ -539,8 +552,7 @@ export class InnovationPathwayStepThreeService {
             version_id: version.id,
             sex_and_age_disaggregation:
               el?.sex_and_age_disaggregation === true ? true : false,
-            how_many:
-              el?.sex_and_age_disaggregation === true ? el?.how_many : null,
+            how_many: el?.how_many,
           });
         }
       });
@@ -550,41 +562,62 @@ export class InnovationPathwayStepThreeService {
       const { organization } = crtr;
       organization.map(async (el) => {
         let ite: ResultsIpInstitutionType = null;
-        if (el?.id) {
+        if (el?.institution_types_id && el?.institution_types_id != 78) {
           ite = await this._resultsIpInstitutionTypeRepository.findOne({
             where: {
-              id: el.id,
+              institution_types_id: el.institution_types_id,
+              result_ip_results_id: riprc.result_by_innovation_package_id,
               institution_roles_id: 6,
             },
           });
-        } else if (!ite && el?.institution_types_id) {
+        }
+
+        if (!ite && el?.id) {
           ite = await this._resultsIpInstitutionTypeRepository.findOne({
             where: {
+              id: el.id,
               result_ip_results_id: riprc.result_by_innovation_package_id,
-              institution_types_id: el.institution_types_id,
               institution_roles_id: 6,
             },
           });
         }
 
         if (ite) {
+          if (!el?.institution_types_id && el?.is_active !== false) {
+            return {
+              response: { status: 'Error' },
+              message: 'The field actor type is required',
+              status: HttpStatus.BAD_REQUEST,
+            };
+          }
           await this._resultsIpInstitutionTypeRepository.update(ite.id, {
             last_updated_by: user.id,
             institution_types_id: el.institution_types_id,
             how_many: this.isNullData(el.how_many),
+            other_institution: el?.other_institution,
+            graduate_students: el?.graduate_students,
             is_active: el.is_active == undefined ? true : el.is_active,
             evidence_link: this.isNullData(el.evidence_link),
           });
         } else {
+          if (!el?.institution_types_id) {
+            return {
+              response: { status: 'Error' },
+              message: 'The field actor type is required',
+              status: HttpStatus.BAD_REQUEST,
+            };
+          }
           await this._resultsIpInstitutionTypeRepository.save({
             result_ip_results_id: riprc.result_by_innovation_package_id,
             created_by: user.id,
             last_updated_by: user.id,
-            institution_types_id: el.institution_types_id,
+            institution_types_id: el?.institution_types_id,
+            other_institution: el?.other_institution,
+            graduate_students: el?.graduate_students,
             institution_roles_id: 6,
-            how_many: el.how_many,
+            how_many: el?.how_many,
             version_id: version.id,
-            evidence_link: el.evidence_link,
+            evidence_link: el?.evidence_link,
           });
         }
       });
@@ -631,6 +664,13 @@ export class InnovationPathwayStepThreeService {
             },
           );
         } else {
+          if (!el?.unit_of_measure) {
+            return {
+              response: { status: 'Error' },
+              message: 'The field unit of measure is required',
+              status: HttpStatus.BAD_REQUEST,
+            };
+          }
           await this._resultsByIpInnovationUseMeasureRepository.save({
             result_ip_result_id: riprc.result_by_innovation_package_id,
             unit_of_measure: el.unit_of_measure,

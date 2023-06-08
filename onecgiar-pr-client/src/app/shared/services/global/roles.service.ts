@@ -8,6 +8,7 @@ import { environment } from 'src/environments/environment';
   providedIn: 'root'
 })
 export class RolesService {
+  platformIsClosed = false;
   readOnly = true;
   currentInitiativeRole = null;
   roles: any;
@@ -46,7 +47,7 @@ export class RolesService {
   async validateReadOnly(result?) {
     //('%cvalidateReadOnly', 'background: #222; color: #52cd47');
     //(result);
-    if (environment?.platformIsClosed) {
+    if (this.platformIsClosed) {
       this.readOnly = true;
       this.updateRolesListFromLocalStorage();
       this.updateRolesList();
@@ -106,6 +107,12 @@ export class RolesService {
 
   validateInitiative(initiative_id) {
     return !!this.roles?.initiative?.find(item => item.initiative_id == initiative_id);
+  }
+
+  accessToIPSRSubmit(initiative_id) {
+    const initiativeFind = this.roles?.initiative?.find(item => item.initiative_id == initiative_id);
+    if (initiativeFind?.role_id == 6) return false;
+    return !!initiativeFind;
   }
 
   //TODO App roles

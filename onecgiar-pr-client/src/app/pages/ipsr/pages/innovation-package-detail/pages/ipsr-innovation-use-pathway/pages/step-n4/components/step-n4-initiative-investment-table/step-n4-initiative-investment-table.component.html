@@ -4,8 +4,7 @@
 <div class="unit_of_time_container">
     <div>
         <app-pr-field-header
-            label="Expected CGIAR Initiative investment in improving the scaling readiness of the Innovation Package in"
-            [required]="false"></app-pr-field-header>
+            label="Expected CGIAR Initiative investment in improving the scaling readiness of the Innovation Package in"></app-pr-field-header>
     </div>
     <!-- <div class="unitW">
         <app-pr-input placeholder="Number" type="number" [required]="false" noDataText="#"
@@ -32,11 +31,12 @@
         <td>{{item.obj_result_initiative.obj_initiative.official_code}} -
             {{item.obj_result_initiative.obj_initiative.name}}</td>
         <td>
-            <app-pr-input [(ngModel)]="item.current_year" placeholder="Write some..." type="number" [required]="false">
+            <app-pr-input [(ngModel)]="item.current_year" placeholder="Write some..." type="currency"
+                [required]="false">
             </app-pr-input>
         </td>
         <td>
-            <app-pr-input [(ngModel)]="item.next_year" placeholder="Write some..." type="number" [required]="false">
+            <app-pr-input [(ngModel)]="item.next_year" placeholder="Write some..." type="currency" [required]="false">
             </app-pr-input>
         </td>
         <td>

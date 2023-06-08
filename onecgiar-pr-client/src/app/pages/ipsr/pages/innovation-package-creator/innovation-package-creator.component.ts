@@ -17,6 +17,11 @@ export class InnovationPackageCreatorComponent {
   statusPdialog: boolean = false;
   constructor(public api: ApiService, private router: Router, public manageInnovationsListSE: ManageInnovationsListService) {
     this.GET_AllInitiatives();
+    console.log(this.api.dataControlSE.myInitiativesList.length);
+    if (this.api.dataControlSE.myInitiativesList.length) {
+      this.api.rolesSE.readOnly = false;
+      if (this.api?.dataControlSE?.currentResult?.status) this.api.dataControlSE.currentResult.status = null;
+    }
   }
   selectInnovationEvent(e) {
     this.innovationPackageCreatorBody.result_id = e.result_id;
@@ -32,6 +37,22 @@ export class InnovationPackageCreatorComponent {
     });
   }
 
+  get areLists(): boolean {
+    switch (this.innovationPackageCreatorBody?.geo_scope_id) {
+      case 1:
+        return true;
+      case 2:
+        return !!this.innovationPackageCreatorBody.regions.length;
+      case 4:
+        return !!this.innovationPackageCreatorBody.countries.length;
+      case 5:
+        return !!this.innovationPackageCreatorBody.countries.length && this.innovationPackageCreatorBody?.geoScopeSubNatinals?.length >= 1;
+
+      default:
+        return false;
+    }
+  }
+
   GET_AllInitiatives() {
     //(this.api.rolesSE.isAdmin);
     if (!this.api.rolesSE.isAdmin) return;
@@ -42,6 +63,7 @@ export class InnovationPackageCreatorComponent {
   }
 
   onSaveSection() {
+    console.log(this.innovationPackageCreatorBody);
     this.innovationPackageCreatorBody.geoScopeSubNatinals.forEach(resp => {
       const subCountry = this.innovationPackageCreatorBody.countries.filter(country => resp.idCountry == country.id)[0];
       if (resp.isRegister != 0) {

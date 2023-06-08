@@ -25,7 +25,8 @@
                 <div class="name" [ngClass]="{'text_inactive': !item.is_active}"
                     [innerHtml]="'<strong>'+item.official_code+'</strong> '+item.initiative_name">
                 </div>
-                <i class="material-icons-round" [style.color]="item.is_active?'#fd6d6d':'#5569dd'"
+                <i *ngIf="!this.api.rolesSE.readOnly" class="material-icons-round"
+                    [style.color]="item.is_active?'#fd6d6d':'#5569dd'"
                     (click)="toggleActiveContributor(item)">{{item.is_active?'backspace':'undo'}}</i>
             </div>
         </div>

@@ -35,6 +35,13 @@ export class TocInitiativeOutComponent {
     return this.isIpsr ? contributorsText : tocText;
   }
 
+  headerDescription(allText) {
+    let text = '<ul> <li>Specify to which Work Package or End-of-Initiative Outcomes the scaling of the core innovation is expected to contribute to by 2024 in the specific geolocation</li>';
+    if (allText) text += '<li>Please select the End of Initiative (EOI)-Outcome that most closely matches this result. You will have time during the reflect moment to update your ToC</li> ';
+    text += '</ul>';
+    return text;
+  }
+
   GET_outputList() {
     this.api.tocApiSE.GET_tocLevelsByresultId(this.initiative.initiative_id, 1).subscribe(
       ({ response }) => {

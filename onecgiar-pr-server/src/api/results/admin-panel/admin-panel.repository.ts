@@ -19,88 +19,123 @@ export class AdminPanelRepository {
         : '';
     const queryData = `
     SELECT
-    v.id,
-    r.result_code,
-    r.id as results_id,
-    r.reported_year_id as year,
-    ci.official_code,
-    r.title as result_title,
-    rt.name as result_type_name,
-    JSON_OBJECT('name',
-    'General Information',
-    'value',
-    v.general_information) as general_information,
-    JSON_OBJECT('name',
-    'Theory of change',
-    'value',
-    v.theory_of_change) as theory_of_change,
-    JSON_OBJECT('name',
-    'Geographic location',
-    'value',
-    v.geographic_location) as geographic_location,
-    JSON_OBJECT('name',
-    'Partners',
-    'value',
-    v.partners) as partners,
-    JSON_OBJECT('name',
-    'Evidence',
-    'value',
-    v.evidence) as evidence,
-    JSON_OBJECT('name',
-    'Links to results',
-    'value',
-    v.links_to_results) as links_to_results,
-    JSON_OBJECT('name',
-    if(r.result_type_id = 5,
-    'CapDev Info',
-    if(r.result_type_id = 7,
-    'Innovation Dev Info',
-    if(r.result_type_id = 2,
-    'Innovation Use Info',
-    if(r.result_type_id = 6,
-    'Knowledge Product Info',
-    if(r.result_type_id = 1,
-    'Policy Change Info',
-    null)))
-    )
-    ),
-    'value',
-    v.section_seven) as section_seven,
-    r.is_active,
-    (IFNULL(v.section_seven, 1) *
-    v.general_information *
-    v.theory_of_change *
-    v.partners *
-    v.geographic_location *
-    v.links_to_results *
-    v.evidence) as validation,
-    r.status as is_submitted,
-    ROUND(((IF(v.section_seven is null, 0, 1) +
-    v.general_information +
-    v.theory_of_change +
-    v.partners +
-    v.geographic_location +
-    v.links_to_results +
-    v.evidence)* 100) / if(v.section_seven is null, 6, 7)) as completeness,
-    if((SELECT if(s.id is null, 0, 1)  from submission s WHERE s.results_id = r.id and is_active > 0 LIMIT 1) > 0, 1, 0) as have_a_history,
-    concat('${env.FRONT_END_PDF_ENDPOINT}', r.result_code,?, 'phase=1') as pdf_link
-  FROM
-  result r
-  left join validation v on
-    r.id = v.results_id
-    and r.is_active > 0
-    and v.is_active > 0
-  inner JOIN results_by_inititiative rbi on
-    rbi.result_id = r.id
-    and rbi.is_active > 0
-    and rbi.initiative_role_id = 1
-  INNER JOIN clarisa_initiatives ci on
-    ci.id = rbi.inititiative_id
-  inner join result_type rt on
-    rt.id = r.result_type_id
-  WHERE r.is_active > 0 ${complement}
-  order by
-     rbi.inititiative_id ASC,r.result_code ASC;
+      v.id,
+      r.result_code,
+      r.id AS results_id,
+      r.reported_year_id AS year,
+      ci.official_code,
+      r.title AS result_title,
+      rt.name AS result_type_name,
+      JSON_OBJECT(
+        'name',
+        'General Information',
+        'value',
+        v.general_information
+      ) AS general_information,
+      JSON_OBJECT(
+        'name',
+        'Theory of change',
+        'value',
+        v.theory_of_change
+      ) AS theory_of_change,
+      JSON_OBJECT(
+        'name',
+        'Geographic location',
+        'value',
+        v.geographic_location
+      ) AS geographic_location,
+      JSON_OBJECT(
+        'name',
+        'Partners',
+        'value',
+        v.partners
+      ) AS partners,
+      JSON_OBJECT(
+        'name',
+        'Evidence',
+        'value',
+        v.evidence
+      ) AS evidence,
+      JSON_OBJECT(
+        'name',
+        'Links to results',
+        'value',
+        v.links_to_results
+      ) AS links_to_results,
+      JSON_OBJECT(
+        'name',
+        IF(
+          r.result_type_id = 5,
+          'CapDev Info',
+          IF(
+            r.result_type_id = 7,
+            'Innovation Dev Info',
+            IF(
+              r.result_type_id = 2,
+              'Innovation Use Info',
+              IF(
+                r.result_type_id = 6,
+                'Knowledge Product Info',
+                IF(
+                  r.result_type_id = 1,
+                  'Policy Change Info',
+                  NULL
+                )
+              )
+            )
+          )
+        ),
+        'value',
+        v.section_seven
+      ) AS section_seven,
+      r.is_active,
+      (
+        IFNULL(v.section_seven, 1) * v.general_information * v.theory_of_change * v.partners * v.geographic_location * v.links_to_results * v.evidence
+      ) AS validation,
+      r.status AS is_submitted,
+      ROUND(
+        (
+          (
+            IF(v.section_seven IS NULL, 0, 1) + v.general_information + v.theory_of_change + v.partners + v.geographic_location + v.links_to_results + v.evidence
+          ) * 100
+        ) / IF(v.section_seven IS NULL, 6, 7)
+      ) AS completeness,
+      IF(
+        (
+          SELECT
+            IF(s.id IS NULL, 0, 1)
+          FROM
+            submission s
+          WHERE
+            s.results_id = r.id
+            AND is_active > 0
+          LIMIT
+            1
+        ) > 0, 1, 0
+      ) AS have_a_history,
+      CONCAT(
+        '${env.FRONT_END_PDF_ENDPOINT}',
+        r.result_code,
+        ?,
+        'phase=1'
+      ) AS pdf_link
+    FROM
+      result r
+      LEFT JOIN validation v ON r.id = v.results_id
+      AND r.is_active > 0
+      AND v.is_active > 0
+      INNER JOIN results_by_inititiative rbi ON rbi.result_id = r.id
+      AND rbi.is_active > 0
+      AND rbi.initiative_role_id = 1
+      INNER JOIN clarisa_initiatives ci ON ci.id = rbi.inititiative_id
+      INNER JOIN result_type rt ON rt.id = r.result_type_id
+    WHERE
+      r.is_active > 0 
+      AND r.result_type_id NOT IN (10, 11)
+      ${complement}
+    ORDER BY
+      rbi.inititiative_id ASC,
+      r.result_code ASC;
     `;
 
     try {

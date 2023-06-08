@@ -3,7 +3,8 @@
         <div class="circle" [ngClass]="{'active': (options ? item[optionValue] : item) == this.value}" #circle
             *ngFor="let item of (options ? options :sizeArray); let i=index"
             (click)="onSelectLevel(options ? item[optionValue] : item,circle)"
-            (mouseenter)="this.hoverData.handleMouseEnter(item,i)" (mouseleave)="this.hoverData.handleMouseLeave()">
+            (mouseenter)="itemTitle || itemDescription?this.hoverData.handleMouseEnter(item,i):null"
+            (mouseleave)="itemTitle || itemDescription?this.hoverData.handleMouseLeave():null">
             {{options
             ? i : item}}</div>
     </div>

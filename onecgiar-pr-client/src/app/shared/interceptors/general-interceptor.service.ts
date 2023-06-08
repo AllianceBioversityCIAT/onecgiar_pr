@@ -59,6 +59,7 @@ export class GeneralInterceptorService implements HttpInterceptor {
   manageError(error: HttpErrorResponse) {
     //(error);
     //(error?.error?.message);
-    return throwError('Error intercepted');
+    // return throwError('Error intercepted');
+    return throwError(error);
   }
 }

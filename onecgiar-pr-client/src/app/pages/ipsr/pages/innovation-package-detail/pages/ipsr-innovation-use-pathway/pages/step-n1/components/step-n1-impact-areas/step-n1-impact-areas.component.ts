@@ -41,6 +41,7 @@ export class StepN1ImpactAreasComponent {
   }
 
   selectImpactArea(impactAreaItem) {
+    if (this.api.rolesSE.readOnly) return;
     this.impactAreasData.map((iaitem: any) => (iaitem.selected = false));
     impactAreaItem.selected = true;
     this.currentImpactAreaID = impactAreaItem.id;

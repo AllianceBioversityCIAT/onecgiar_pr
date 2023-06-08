@@ -26,17 +26,17 @@
         <div class="buttons">
             <app-pr-button text="Map and accept" colorType="success" (click)="mapAndAccept(notification)"
                 [rotating]="this.requesting" [icon]="this.requesting?'loop':''"
-                [ngClass]="{'globalDisabled': this.requesting || this.api.dataControlSE.platformIsClosed|| this.isSubmitted}"
+                [ngClass]="{'globalDisabled': this.requesting || this.api.rolesSE.platformIsClosed|| this.isSubmitted}"
                 *ngIf="!notification?.action_area_outcome_id && !notification?.toc_result_id"></app-pr-button>
 
             <app-pr-button text="Accept" colorType="success" (click)="acceptOrReject(true)" [rotating]="this.requesting"
                 [icon]="this.requesting?'loop':''"
-                [ngClass]="{'globalDisabled': this.requesting || this.api.dataControlSE.platformIsClosed|| this.isSubmitted}"
+                [ngClass]="{'globalDisabled': this.requesting || this.api.rolesSE.platformIsClosed|| this.isSubmitted}"
                 *ngIf="notification?.action_area_outcome_id || notification?.toc_result_id"></app-pr-button>
 
             <app-pr-button text="Reject" colorType="danger" (click)="acceptOrReject(false)" [rotating]="this.requesting"
                 [icon]="this.requesting?'loop':''"
-                [ngClass]="{'globalDisabled': this.requesting || this.api.dataControlSE.platformIsClosed}"></app-pr-button>
+                [ngClass]="{'globalDisabled': this.requesting || this.api.rolesSE.platformIsClosed}"></app-pr-button>
 
             <!-- <button pButton type="button" label="Accept" class="p-button-success"
                 *ngIf="!notification?.action_area_outcome_id && !notification?.toc_result_id"
@@ -98,5 +98,7 @@
             </i>
         </div>
     </div>
-    <div class="result_submitted_text" *ngIf="this.isSubmitted">This result cannot be mapped to your initiative as it is currently submitted, and no modifications are allowed. Please ask the initiative to open it for edits so that you can provide the necessary information.</div>
+    <div class="result_submitted_text" *ngIf="this.isSubmitted">This result cannot be mapped to your initiative as it is
+        currently submitted, and no modifications are allowed. Please ask the initiative to open it for edits so that
+        you can provide the necessary information.</div>
 </div>

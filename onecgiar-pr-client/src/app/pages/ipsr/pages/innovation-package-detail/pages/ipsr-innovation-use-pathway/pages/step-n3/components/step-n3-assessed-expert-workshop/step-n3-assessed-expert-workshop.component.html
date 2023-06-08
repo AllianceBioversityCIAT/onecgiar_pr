@@ -1,5 +1,6 @@
 <app-pr-radio-button label="What was assessed during the expert workshop?" optionLabel="name" optionValue="id"
-    [options]="this.radioOptions" [verticalAlignment]="true" [required]="false"
+    [options]="this.radioOptions" [verticalAlignment]="true"
+    [required]="this.body.result_innovation_package.is_expert_workshop_organized"
     [(ngModel)]="this.body.result_innovation_package.assessed_during_expert_workshop_id">
 </app-pr-radio-button>
 

@@ -13,7 +13,7 @@ import { environment } from 'src/environments/environment';
 })
 export class TocInitiativeOutcomeSectionComponent {
   constructor(private api: ApiService, public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public rolesSE: RolesService, public dataControlSE: DataControlService) {}
-  platformIsClosed = environment.platformIsClosed;
+
   outcomeList = [];
   outputList = [];
   eoiList = [];
