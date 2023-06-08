@@ -66,6 +66,7 @@ export class MeasureN3 {
   quantity: number;
   is_active: boolean;
   evidence_link: string;
+  result_ip_result_measures_id: any;
 }
 
 export class OrganizationN3 {
@@ -77,6 +78,7 @@ export class OrganizationN3 {
   is_active: boolean;
   evidence_link: string;
   other_institution: string;
+  id: any;
 }
 
 export class ActorN3 {
@@ -95,4 +97,5 @@ export class ActorN3 {
   other_actor_type: any;
   sex_and_age_disaggregation: any;
   how_many: any;
+  result_ip_actors_id: any;
 }

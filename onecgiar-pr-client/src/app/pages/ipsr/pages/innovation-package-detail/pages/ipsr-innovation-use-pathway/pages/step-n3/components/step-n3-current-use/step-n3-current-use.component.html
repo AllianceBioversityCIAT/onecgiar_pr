@@ -15,7 +15,8 @@
                 optionValue="actor_type_id" [(ngModel)]="actorItem.actor_type_id"
                 [disableOptions]="this.body.innovatonUse.actors" [indexReference]="i"
                 (ngModelChange)="this.actorItem.other_actor_type = null" placeholder="Select actor type"
-                [disableOptions]="removeOther(this.body.innovatonUse.actors)">
+                [disableOptions]="removeOther(this.body.innovatonUse.actors)"
+                [required]="!!this.actorItem?.result_ip_actors_id">
             </app-pr-select>
             <div style="margin-top: 13px;"></div>
             <app-pr-input *ngIf="actorItem.actor_type_id == 5"
@@ -37,11 +38,13 @@
                 <div class="explanation_message" *ngIf="this.actorItem['showWomenExplanationwomen']">
                     Remember that the value of Youth cannot be greater than total of Women
                 </div>
-                <app-pr-input placeholder="Write some..." label="Women" type="number" [required]="true"
-                    [(ngModel)]="this.actorItem.women" (ngModelChange)="validateYouth(i,true,actorItem)">
+                <app-pr-input placeholder="Write some..." label="Women" type="number"
+                    [required]="!!this.actorItem?.result_ip_actors_id" [(ngModel)]="this.actorItem.women"
+                    (ngModelChange)="validateYouth(i,true,actorItem)">
                 </app-pr-input>
-                <app-pr-input placeholder="Write some..." label="Youth" type="number" [required]="true"
-                    [(ngModel)]="this.actorItem.women_youth" (ngModelChange)="validateYouth(i,true,actorItem)">
+                <app-pr-input placeholder="Write some..." label="Youth" type="number"
+                    [required]="!!this.actorItem?.result_ip_actors_id" [(ngModel)]="this.actorItem.women_youth"
+                    (ngModelChange)="validateYouth(i,true,actorItem)">
                 </app-pr-input>
                 <app-pr-input placeholder="Write some..." label="Non-youth" type="number" [required]="false"
                     [readOnly]="true" [(ngModel)]="this.actorItem.women_non_youth">
@@ -51,11 +54,13 @@
                 <div class="explanation_message" *ngIf="this.actorItem['showWomenExplanationmen']">
                     Remember that the value of Youth cannot be greater than total of Men
                 </div>
-                <app-pr-input placeholder="Write some..." label="Men" type="number" [required]="true"
-                    [(ngModel)]="this.actorItem.men" (ngModelChange)="validateYouth(i,false,actorItem)">
+                <app-pr-input placeholder="Write some..." label="Men" type="number"
+                    [required]="!!this.actorItem?.result_ip_actors_id" [(ngModel)]="this.actorItem.men"
+                    (ngModelChange)="validateYouth(i,false,actorItem)">
                 </app-pr-input>
-                <app-pr-input placeholder="Write some..." label="Youth" type="number" [required]="true"
-                    [(ngModel)]="this.actorItem.men_youth" (ngModelChange)="validateYouth(i,false,actorItem)">
+                <app-pr-input placeholder="Write some..." label="Youth" type="number"
+                    [required]="!!this.actorItem?.result_ip_actors_id" [(ngModel)]="this.actorItem.men_youth"
+                    (ngModelChange)="validateYouth(i,false,actorItem)">
                 </app-pr-input>
                 <app-pr-input noDataText="Save to calculate" placeholder="Write some..." label="Non-youth" type="number"
                     [required]="false" [readOnly]="true" [(ngModel)]="this.actorItem.men_non_youth">
@@ -68,13 +73,14 @@
                 </app-pr-input>
             </div>
             <div class="right_content" *ngIf="this.actorItem.sex_and_age_disaggregation">
-                <app-pr-input placeholder="Write some..." label="How many" type="number" [required]="true"
-                    [(ngModel)]="this.actorItem.how_many" (ngModelChange)="validateYouth(i,true,actorItem)">
+                <app-pr-input placeholder="Write some..." label="How many" type="number"
+                    [required]="!!this.actorItem?.result_ip_actors_id" [(ngModel)]="this.actorItem.how_many"
+                    (ngModelChange)="validateYouth(i,true,actorItem)">
                 </app-pr-input>
             </div>
             <div class="right_content">
                 <app-pr-input placeholder="Write some..." label="Evidence link" type="text"
-                    [(ngModel)]="this.actorItem.evidence_link">
+                    [required]="!!this.actorItem?.result_ip_actors_id" [(ngModel)]="this.actorItem.evidence_link">
                 </app-pr-input>
             </div>
         </div>
@@ -91,8 +97,9 @@
         [ngClass]="{'hideElement': organizationItem.is_active == false}"
         *ngFor="let organizationItem of this.body.innovatonUse.organization">
         <div>
-            <app-pr-select [options]="this.institutionsTypeTreeList" label="Organization" optionLabel="name"
-                optionValue="code" [(ngModel)]="organizationItem.institution_types_id" placeholder="Select organization"
+            <app-pr-select [required]="!!organizationItem?.id" [options]="this.institutionsTypeTreeList"
+                label="Organization" optionLabel="name" optionValue="code"
+                [(ngModel)]="organizationItem.institution_types_id" placeholder="Select organization"
                 (selectOptionEvent)="reloadSelect(organizationItem)"
                 (ngModelChange)="this.organizationItem.other_institution = null"
                 [disableOptions]="removeOtherInOrg(disableOrganizations)">
@@ -100,7 +107,7 @@
             <div style="margin-top: 13px;"></div>
             <app-pr-input *ngIf="organizationItem.institution_types_id == 78"
                 description="Specify the other organization type in the text box below" placeholder="Specify other.."
-                type="text" [required]="false" [(ngModel)]="this.organizationItem.other_institution">
+                type="text" [required]="!!organizationItem?.id" [(ngModel)]="this.organizationItem.other_institution">
             </app-pr-input>
         </div>
         <div>
@@ -109,15 +116,15 @@
                     *ngIf="organizationItem.institution_types_id && !organizationItem.hide && getInstitutionsTypeTreeChildrens(organizationItem.institution_types_id)?.length"
                     [options]="getInstitutionsTypeTreeChildrens(organizationItem.institution_types_id)" label="Sub-type"
                     optionLabel="name" optionValue="code" [(ngModel)]="organizationItem.institution_sub_type_id"
-                    placeholder="Select Sub-type" [disableOptions]="getAllSubTypes">
+                    placeholder="Select Sub-type" [disableOptions]="getAllSubTypes" [required]="!!organizationItem?.id">
                 </app-pr-select>
-                <app-pr-input placeholder="Write some..." label="How many" type="number" [required]="true"
-                    [(ngModel)]="this.organizationItem.how_many">
+                <app-pr-input placeholder="Write some..." label="How many" type="number"
+                    [required]="!!organizationItem?.id" [(ngModel)]="this.organizationItem.how_many">
                 </app-pr-input>
             </div>
             <div class="right_content">
                 <app-pr-input placeholder="Write some..." label="Evidence link" type="text"
-                    [(ngModel)]="this.organizationItem.evidence_link">
+                    [(ngModel)]="this.organizationItem.evidence_link" [required]="!!organizationItem?.id">
                 </app-pr-input>
             </div>
         </div>
@@ -135,16 +142,17 @@
         *ngFor="let measuresItem of this.body.innovatonUse.measures"
         [ngClass]="{'hideElement': measuresItem.is_active == false}">
         <div class="right_content">
-            <app-pr-input placeholder="Write some..." label="Unit of measure" type="text" [required]="true"
+            <app-pr-input placeholder="Write some..." label="Unit of measure" type="text"
+                [required]="!!measuresItem?.result_ip_result_measures_id"
                 [(ngModel)]="this.measuresItem.unit_of_measure">
             </app-pr-input>
-            <app-pr-input placeholder="Write some..." label="Quantity" type="number" [required]="true"
-                [(ngModel)]="this.measuresItem.quantity">
+            <app-pr-input placeholder="Write some..." label="Quantity" type="number"
+                [required]="!!measuresItem?.result_ip_result_measures_id" [(ngModel)]="this.measuresItem.quantity">
             </app-pr-input>
         </div>
         <div class="right_content">
             <app-pr-input placeholder="Write some..." label="Evidence link" type="text"
-                [(ngModel)]="this.measuresItem.evidence_link">
+                [required]="!!measuresItem?.result_ip_result_measures_id" [(ngModel)]="this.measuresItem.evidence_link">
             </app-pr-input>
         </div>
 

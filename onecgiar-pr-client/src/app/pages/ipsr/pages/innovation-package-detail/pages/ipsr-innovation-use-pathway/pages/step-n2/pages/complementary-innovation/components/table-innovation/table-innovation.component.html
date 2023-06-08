@@ -150,7 +150,7 @@
 
             <app-pr-radio-button
                 label="Are you aware of any projects or organizations already working on this complementary innovation/ enabler/ solution?"
-                [options]="this.awareOptions" optionLabel="name" optionValue="value"
+                [options]="this.awareOptions" optionLabel="name" optionValue="value" [required]="false"
                 [(ngModel)]="this.informationComplentary.projects_organizations_working_on_innovation"
                 (ngModelChange)="this.informationComplentary.specify_projects_organizations = null"
                 [readOnly]="isReadonly">
