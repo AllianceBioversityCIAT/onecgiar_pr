@@ -58,6 +58,10 @@ export class TableInnovationComponent {
     { title: 'Innovation Type', attr: 'result_type_name' },
     { title: 'Creation date', attr: 'created_date' }
   ];
+  awareOptions = [
+    { name: 'Yes', value: true },
+    { name: 'No', value: false }
+  ];
   openInNewPage(link) {
     window.open(link, '_blank');
   }
@@ -145,6 +149,8 @@ export class complementaryInnovation {
   referenceMaterials: references[] = [];
   complementaryFunctions: any[] = new Array();
   other_funcions: string;
+  projects_organizations_working_on_innovation: string;
+  specify_projects_organizations: boolean;
 }
 
 export class references {

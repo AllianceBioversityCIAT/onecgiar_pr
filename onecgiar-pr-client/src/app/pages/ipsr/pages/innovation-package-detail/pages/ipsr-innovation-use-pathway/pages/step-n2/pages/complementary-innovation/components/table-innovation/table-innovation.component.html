@@ -146,6 +146,21 @@
             </div>
             <app-pr-button text="Add reference material" padding="medium" *ngIf="isReadonly == false"
                 (click)="addNewInput()" [ngClass]="{'globalDisabled': statusAdd}"></app-pr-button>
+
+
+            <app-pr-radio-button
+                label="Are you aware of any projects or organizations already working on this complementary innovation/ enabler/ solution?"
+                [options]="this.awareOptions" optionLabel="name" optionValue="value"
+                [(ngModel)]="this.informationComplentary.projects_organizations_working_on_innovation"
+                (ngModelChange)="this.informationComplentary.specify_projects_organizations = null"
+                [readOnly]="isReadonly">
+            </app-pr-radio-button>
+            <div style="margin-top: 10px;"></div>
+            <app-pr-textarea *ngIf="this.informationComplentary.projects_organizations_working_on_innovation"
+                [readOnly]="isReadonly" placeholder="Please specify..."
+                description="Please specify those projects or organizations."
+                [(ngModel)]="this.informationComplentary.specify_projects_organizations"></app-pr-textarea>
+
             <!-- flagsCode="iso_alpha_2" -->
         </div>
     </div>
