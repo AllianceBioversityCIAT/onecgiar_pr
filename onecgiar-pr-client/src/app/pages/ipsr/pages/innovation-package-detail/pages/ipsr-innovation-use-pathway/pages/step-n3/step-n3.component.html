@@ -32,7 +32,8 @@
 
     </div>
     <div *ngIf="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true">
-        <app-add-button name="Add Lead/Co-Lead" (clickEvent)="addExpert()"></app-add-button>
+        <app-add-button *ngIf="!this.api.rolesSE.readOnly" name="Add Lead/Co-Lead"
+            (clickEvent)="addExpert()"></app-add-button>
     </div>
     <app-pr-input *ngIf="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true"
         label="Provide the link to the workshop list of participants" [description]="workshopDescription()"
@@ -75,7 +76,7 @@
     </app-pr-field-header>
 
 
-    <app-pr-field-header label="Innovation Readiness level evidence-based" [required]="false"
+    <app-pr-field-header label="Innovation Readiness level evidence-based"
         [description]="this.readinessLevelSelfAssessmentText()"></app-pr-field-header>
 
 
@@ -99,7 +100,7 @@
 
         <div class="fragment_section_divider"></div>
 
-        <app-pr-field-header label="Innovation use level evidence-based" [required]="false"
+        <app-pr-field-header label="Innovation use level evidence-based"
             [description]="this.useLevelDelfAssessment()"></app-pr-field-header>
 
         <app-pr-range-level itemTitle="name" itemDescription="definition" optionLabel="name" optionValue="id"

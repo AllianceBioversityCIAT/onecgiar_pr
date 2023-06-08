@@ -47,14 +47,14 @@ export class PolicyChangeInfoComponent implements OnInit {
   }
   showAlerts() {}
 
-  updateValue(value: string) {
-    let val = parseFloat(value.replace(/\$/g, ''));
-    this.innovationUseInfoBody.amount = val;
-    if (Number.isNaN(val)) {
-      val = 0;
-    }
-    this.cantidad = formatCurrency(val, 'en-US', getCurrencySymbol('USD', 'wide'));
-    //(this.innovationUseInfoBody.amount);
-    console.log(this.innovationUseInfoBody.amount);
-  }
+  // updateValue(value: string) {
+  //   let val = parseFloat(value.replace(/\$/g, ''));
+  //   this.innovationUseInfoBody.amount = val;
+  //   if (Number.isNaN(val)) {
+  //     val = 0;
+  //   }
+  //   this.cantidad = formatCurrency(val, 'en-US', getCurrencySymbol('USD', 'wide'));
+  //   //(this.innovationUseInfoBody.amount);
+  //   console.log(this.innovationUseInfoBody.amount);
+  // }
 }

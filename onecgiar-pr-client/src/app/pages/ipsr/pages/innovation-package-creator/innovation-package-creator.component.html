@@ -24,7 +24,7 @@
         </app-pr-select>
     </div>
 
-    
+
 
 
 
@@ -32,7 +32,8 @@
         [required]="false"
         description="Only one can be selected. Only QAed innovations will be listed."></app-pr-field-header>
 
-        <app-pr-button text="Select Core Innovation." [ngClass]="{'globalDisabled' : status }" (click)="statusPdialog = true"></app-pr-button>
+    <app-pr-button text="Select Core Innovation." [ngClass]="{'globalDisabled' : status }"
+        (click)="statusPdialog = true"></app-pr-button>
 
 
     <div appFeedbackValidation labelText="Innovation package"
@@ -61,7 +62,7 @@
         [body]="this.innovationPackageCreatorBody"></app-ipsr-geoscope-creator>
 
     <app-save-button class="position_sticky" (clickSave)="onSaveSection()" text="Save and continue"
-        [disabled]="!this.innovationPackageCreatorBody.result_id  || !this.innovationPackageCreatorBody.initiative_id">
+        [disabled]="!this.innovationPackageCreatorBody.result_id  || !this.innovationPackageCreatorBody.initiative_id || !this.areLists">
     </app-save-button>
 
 </div>
@@ -69,16 +70,16 @@
 
 
 
-<p-dialog class="support_information" header="Select core Innovation" [(visible)]="statusPdialog"
-[draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="true" 
-[dismissableMask]="true" [style]="{padding: '0px', margin:'0px', width:'70vw'}" [blockScroll]="true" appendTo="body">
+<p-dialog class="support_information" header="Select core Innovation" [(visible)]="statusPdialog" [draggable]="false"
+    [modal]="true" [closeOnEscape]="true" [showHeader]="true" [dismissableMask]="true"
+    [style]="{padding: '0px', margin:'0px', width:'70vw'}" [blockScroll]="true" appendTo="body">
 
-<div style="display: flex; justify-content: center; flex-direction: column;">
-   
-   <div class="modal_container">
-    <app-results-innovation-output-list *ngIf="this.innovationPackageCreatorBody.initiative_id"
-    [body]="this.innovationPackageCreatorBody"
-    (selectInnovationEvent)="selectInnovationEvent($event)"></app-results-innovation-output-list>
-   </div>
-</div>
+    <div style="display: flex; justify-content: center; flex-direction: column;">
+
+        <div class="modal_container">
+            <app-results-innovation-output-list *ngIf="this.innovationPackageCreatorBody.initiative_id"
+                [body]="this.innovationPackageCreatorBody"
+                (selectInnovationEvent)="selectInnovationEvent($event)"></app-results-innovation-output-list>
+        </div>
+    </div>
 </p-dialog>

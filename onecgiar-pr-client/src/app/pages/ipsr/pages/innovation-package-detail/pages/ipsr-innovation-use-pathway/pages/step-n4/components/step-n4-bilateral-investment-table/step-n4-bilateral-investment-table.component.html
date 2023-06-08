@@ -39,11 +39,13 @@
             </div>
         </td>
         <td>
-            <app-pr-input placeholder="Write some..." type="number" [required]="false" [(ngModel)]="this.item.in_kind">
+            <app-pr-input placeholder="Write some..." type="currency" [required]="false"
+                [(ngModel)]="this.item.in_kind">
             </app-pr-input>
         </td>
         <td>
-            <app-pr-input placeholder="Write some..." type="number" [required]="false" [(ngModel)]="this.item.in_cash">
+            <app-pr-input placeholder="Write some..." type="currency" [required]="false"
+                [(ngModel)]="this.item.in_cash">
             </app-pr-input>
         </td>
         <td>

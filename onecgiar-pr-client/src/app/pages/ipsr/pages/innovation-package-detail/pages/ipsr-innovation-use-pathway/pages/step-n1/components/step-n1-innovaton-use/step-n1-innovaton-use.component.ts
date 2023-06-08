@@ -79,6 +79,14 @@ export class StepN1InnovatonUseComponent {
     return actors.filter(item => item.actor_type_id != 5);
   }
 
+  removeOtherInOrg(disableOrganizations) {
+    return disableOrganizations.filter(item => item.code != 78);
+  }
+
+  calculateTotalField(actorItem) {
+    if (!actorItem.sex_and_age_disaggregation) actorItem.how_many = Number(actorItem.women || 0) + Number(actorItem.men || 0);
+  }
+
   get disableOrganizations() {
     //(this.institutionsTypeTreeList);
     const list = [];
@@ -96,7 +104,7 @@ export class StepN1InnovatonUseComponent {
     organizationItem.is_active = false;
   }
   executeTimer = null;
-  validateYouth(i, isWomen: boolean) {
+  validateYouth(i, isWomen: boolean, actorItem) {
     const gender = isWomen ? 'women' : 'men';
     const genderYouth = isWomen ? 'women_youth' : 'men_youth';
     const genderNonYouth = isWomen ? 'women_non_youth' : 'men_non_youth';
@@ -118,8 +126,10 @@ export class StepN1InnovatonUseComponent {
         this.body.innovatonUse.actors[i]['showWomenExplanation' + gender] = true;
         const element: any = document.getElementById('removeFocus');
         element.focus();
+        this.calculateTotalField(actorItem);
         setTimeout(() => {
           this.body.innovatonUse.actors[i]['showWomenExplanation' + gender] = false;
+          this.calculateTotalField(actorItem);
         }, 3000);
       }, 1000);
     } else {
@@ -128,7 +138,9 @@ export class StepN1InnovatonUseComponent {
     }
     setTimeout(() => {
       this.body.innovatonUse.actors[i][genderNonYouth] = this.body.innovatonUse.actors[i][gender] - this.body.innovatonUse.actors[i][genderYouth];
+      this.calculateTotalField(actorItem);
     }, 1100);
+    this.calculateTotalField(actorItem);
   }
 
   narrativeActors() {

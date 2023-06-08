@@ -4,6 +4,8 @@ export class CreateComplementaryInnovationDto {
     public short_title: string;
     public description: string;
     public other_funcions: string;
+    public projects_organizations_working_on_innovation: boolean;
+    public specify_projects_organizations: string;
     public initiative_id: number;
     public is_active: boolean;
     public complementaryFunctions: ComplementaryFunctionsInterface[];

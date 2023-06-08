@@ -1,6 +1,7 @@
 import { Component, EventEmitter, forwardRef, Input, Output } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { GreenChecksService } from '../../shared/services/global/green-checks.service';
+import { RolesService } from '../../shared/services/global/roles.service';
 
 @Component({
   selector: 'app-pr-checkbox',
@@ -15,7 +16,7 @@ import { GreenChecksService } from '../../shared/services/global/green-checks.se
   ]
 })
 export class PrCheckboxComponent {
-  constructor(public greenChecksSE: GreenChecksService) {}
+  constructor(public greenChecksSE: GreenChecksService, public rolesSE: RolesService) {}
   @Input() optionLabel: string;
   @Input() optionValue: string;
   @Input() options: any;

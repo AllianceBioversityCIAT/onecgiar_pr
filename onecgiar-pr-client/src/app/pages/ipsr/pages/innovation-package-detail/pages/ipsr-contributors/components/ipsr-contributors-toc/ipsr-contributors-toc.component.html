@@ -5,7 +5,7 @@
 <div *ngIf="this.contributorsBody?.result_toc_result?.initiative_id">
     <div class="date"><strong>Updated on:&nbsp;</strong> 6 October, 2022 - 2:00:22 PM - (CET)</div>
     <app-toc-initiative-out [initiative]="this.contributorsBody.result_toc_result" [isIpsr]="true"
-        [editable]="!platformIsClosed && (this.rolesSE.validateInitiative(this.contributorsBody.result_toc_result?.initiative_id) || this.rolesSE.isAdmin) && !this.api.dataControlSE?.currentResult?.status"
+        [editable]="!this.api.rolesSE.platformIsClosed && (this.rolesSE.validateInitiative(this.contributorsBody.result_toc_result?.initiative_id) || this.rolesSE.isAdmin) && !this.api.dataControlSE?.currentResult?.status"
         [resultLevelId]="2">
     </app-toc-initiative-out>
 </div>
@@ -25,7 +25,7 @@
 </app-pr-field-header>
 <div *ngFor="let initiativetocre of this.contributorsBody.contributors_result_toc_result">
     <app-toc-initiative-out [initiative]="initiativetocre" [isIpsr]="true"
-        [editable]="!platformIsClosed && (this.rolesSE.validateInitiative(initiativetocre?.initiative_id) || this.rolesSE.isAdmin) && !this.api.dataControlSE?.currentResult?.status"
+        [editable]="!this.api.rolesSE.platformIsClosed && (this.rolesSE.validateInitiative(initiativetocre?.initiative_id) || this.rolesSE.isAdmin) && !this.api.dataControlSE?.currentResult?.status"
         [resultLevelId]="2">
     </app-toc-initiative-out>
 </div>
@@ -40,7 +40,8 @@
             <div class="name" [ngClass]="{'text_inactive': !item.is_active}"
                 [innerHtml]="'<strong>'+item.official_code+'</strong> '+item.initiative_name">
             </div>
-            <i class="material-icons-round" [style.color]="item.is_active?'#fd6d6d':'#5569dd'"
+            <i *ngIf="!this.rolesSE.readOnly" class="material-icons-round"
+                [style.color]="item.is_active?'#fd6d6d':'#5569dd'"
                 (click)="toggleActiveContributor(item)">{{item.is_active?'backspace':'undo'}}</i>
         </div>
     </div>

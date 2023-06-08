@@ -1,9 +1,9 @@
 <app-pr-button text="Add new complementary innovation/ enabler/ solution" icon="add_box"
     *ngIf="!this.api.rolesSE.readOnly" [reverse]="true" [verticalMargin]="20" (click)="status = true"></app-pr-button>
 
-<p-dialog class="support_information"  [(visible)]="status" [draggable]="false"
-    [modal]="true" [closeOnEscape]="true" [showHeader]="true" [dismissableMask]="true"
-    [style]="{padding: '0px', margin:'0px', width:'70vw'}" [blockScroll]="true" appendTo="body">
+<p-dialog class="support_information" [(visible)]="status" [draggable]="false" [modal]="true" [closeOnEscape]="true"
+    [showHeader]="true" [dismissableMask]="true" [style]="{padding: '0px', margin:'0px', width:'70vw'}"
+    [blockScroll]="true" appendTo="body">
 
     <div style="display: flex; justify-content: center; flex-direction: column;">
         <div class="modal_title">New complementary innovation/ enabler/ solution</div>
@@ -44,8 +44,10 @@
                 <span style="display: flex;flex-direction: column; width: 50%;">
                     <div *ngFor="let innovation of complementaryInnovationFunction; let i = index">
                         <div *ngIf="i < 5" style="margin-top: 10px;">
-                            <p-checkbox name="group" [value]="innovation" [inputId]="innovation.complementary_innovation_functions_id" [(ngModel)]="selectedValues" ></p-checkbox>
-                                <label> {{ innovation.name }}</label> 
+                            <p-checkbox name="group" [value]="innovation"
+                                [inputId]="innovation.complementary_innovation_functions_id"
+                                [(ngModel)]="selectedValues"></p-checkbox>
+                            <label> {{ innovation.name }}</label>
 
                         </div>
                     </div>
@@ -55,8 +57,10 @@
                 <span style="display: flex;flex-direction: column; width: 50%; margin-left: '10px';">
                     <div *ngFor="let innovation of complementaryInnovationFunction; let i = index">
                         <div *ngIf="i >= 5" style="margin-top: 10px;">
-                            <p-checkbox name="group" [value]="innovation" [inputId]="innovation.complementary_innovation_functions_id" [(ngModel)]="selectedValues" ></p-checkbox>
-                            <label> {{ innovation.name }}</label> 
+                            <p-checkbox name="group" [value]="innovation"
+                                [inputId]="innovation.complementary_innovation_functions_id"
+                                [(ngModel)]="selectedValues"></p-checkbox>
+                            <label> {{ innovation.name }}</label>
                         </div>
 
                     </div>
@@ -79,6 +83,19 @@
             <app-pr-button text="Add reference material" padding="medium" (click)="addNewInput()"
                 [ngClass]="{'globalDisabled': statusAdd}"></app-pr-button>
             <!-- flagsCode="iso_alpha_2" -->
+
+
+            <app-pr-radio-button
+                label="Are you aware of any projects or organizations already working on this complementary innovation/ enabler/ solution?"
+                [options]="this.awareOptions" optionLabel="name" optionValue="value" [required]="false"
+                [(ngModel)]="this.bodyNewComplementaryInnovation.projects_organizations_working_on_innovation"
+                (ngModelChange)="this.bodyNewComplementaryInnovation.specify_projects_organizations = null">
+            </app-pr-radio-button>
+            <div style="margin-top: 10px;"></div>
+            <app-pr-textarea *ngIf="this.bodyNewComplementaryInnovation.projects_organizations_working_on_innovation"
+                placeholder="Please specify..." description="Please specify those projects or organizations."
+                [(ngModel)]="this.bodyNewComplementaryInnovation.specify_projects_organizations"></app-pr-textarea>
+
         </div>
     </div>
     <div class="buttons">

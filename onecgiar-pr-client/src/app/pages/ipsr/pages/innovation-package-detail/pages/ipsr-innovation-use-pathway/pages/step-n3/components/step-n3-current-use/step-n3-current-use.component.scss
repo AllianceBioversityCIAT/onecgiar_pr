@@ -41,3 +41,8 @@
 .title_list {
     margin-bottom: 22px;
 }
+
+.one_field {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr 1fr;
+}

@@ -147,7 +147,8 @@ export class ResultByIntitutionsTypeRepository extends Repository<ResultsByInsti
     	rbit.version_id,
     	rbit.created_by,
     	rbit.last_updated_by,
-      rbit.how_many 
+      rbit.how_many,
+      rbit.other_institution 
     from results_by_institution_type rbit
     where rbit.results_id  = ?
       and institution_roles_id = ?
@@ -184,7 +185,8 @@ export class ResultByIntitutionsTypeRepository extends Repository<ResultsByInsti
     	rbit.version_id,
     	rbit.created_by,
     	rbit.last_updated_by,
-      rbit.how_many 
+      rbit.how_many,
+      rbit.other_institution
     from results_by_institution_type rbit
     where rbit.results_id  = ?
       and rbit.institution_roles_id = ?

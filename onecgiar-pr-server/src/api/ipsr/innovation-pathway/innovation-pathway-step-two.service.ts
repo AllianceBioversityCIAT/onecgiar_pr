@@ -313,6 +313,13 @@ export class InnovationPathwayStepTwoService {
           short_title: CreateComplementaryInnovationDto.short_title,
           other_funcions: CreateComplementaryInnovationDto.other_funcions,
           created_by: User.id,
+          projects_organizations_working_on_innovation:
+            CreateComplementaryInnovationDto.projects_organizations_working_on_innovation,
+          specify_projects_organizations:
+            CreateComplementaryInnovationDto.projects_organizations_working_on_innovation ==
+            true
+              ? CreateComplementaryInnovationDto.specify_projects_organizations
+              : null,
           last_updated_by: User.id,
           version_id: version.id,
         });
@@ -458,6 +465,8 @@ export class InnovationPathwayStepTwoService {
         other_funcions,
         complementaryFunctions,
         referenceMaterials,
+        projects_organizations_working_on_innovation,
+        specify_projects_organizations
       } = updateComplementaryInnovationDto;
 
       const vTemp = await this._versionsService.findBaseVersion();
@@ -504,6 +513,8 @@ export class InnovationPathwayStepTwoService {
         {
           short_title,
           other_funcions,
+          projects_organizations_working_on_innovation,
+          specify_projects_organizations,
           last_updated_by: User.id,
         },
       );

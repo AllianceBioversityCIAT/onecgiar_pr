@@ -63,15 +63,19 @@ export class Measure {
   unit_of_measure: string = null;
   quantity: number = null;
   is_active: boolean = null;
+  result_ip_measure_id: any;
 }
 
 export class Organization {
   institution_types_id: number;
   institution_sub_type_id: number;
   how_many: number;
+  other_institution: string;
+  graduate_students: string;
   // Aux
   hide: boolean;
   is_active: boolean;
+  id: any;
 }
 
 export class Actor {
@@ -88,6 +92,7 @@ export class Actor {
   other_actor_type: any;
   sex_and_age_disaggregation: boolean;
   how_many: any;
+  result_actors_id: number;
 }
 
 interface SdgTarget {

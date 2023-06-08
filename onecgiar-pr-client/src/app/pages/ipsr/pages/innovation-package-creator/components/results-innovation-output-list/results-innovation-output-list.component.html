@@ -7,13 +7,13 @@
         [value]="(this.manageInnovationsListSE.allInnovationsList | filterByText:searchText)" responsiveLayout="scroll"
         [paginator]="!!((this.manageInnovationsListSE.allInnovationsList| filterByText:searchText)?.length) "
         [rows]="10" styleClass="p-datatable-gridlines p-datatable-sm" selectionMode="single"
-        [rowsPerPageOptions]="[10,50,100]"  paginatorDropdownAppendTo="body">
+        [rowsPerPageOptions]="[10,50,100]" paginatorDropdownAppendTo="body">
         <ng-template pTemplate="header">
             <tr>
-                <th pSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder">
+                <th pSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder" class="{{column.attr}}">
                     <p-sortIcon field="{{column.attr}}"></p-sortIcon>{{column.title}}
                 </th>
-                <th *ngIf="!this.api.dataControlSE.platformIsClosed">Action</th>
+                <th *ngIf="!this.api.rolesSE.platformIsClosed">Action</th>
             </tr>
         </ng-template>
         <ng-template pTemplate="body" let-result>
@@ -33,7 +33,7 @@
                         {{ result[column.attr] }}
                     </div>
                 </td>
-                <td class="actions" *ngIf="!this.api.dataControlSE.platformIsClosed">
+                <td class="actions" *ngIf="!this.api.rolesSE.platformIsClosed">
                     <div class="link_button view"
                         (click)="openInNewPage('/result/result-detail/' + result?.result_code)">View
                     </div>

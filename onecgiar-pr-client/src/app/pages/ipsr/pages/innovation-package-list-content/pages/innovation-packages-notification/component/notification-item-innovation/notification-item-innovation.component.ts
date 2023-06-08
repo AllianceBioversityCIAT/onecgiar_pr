@@ -18,7 +18,7 @@ export class NotificationItemInnovationComponent {
   constructor(public api: ApiService, private shareRequestModalSE: ShareRequestModalService, private retrieveModalSE: RetrieveModalService) {}
 
   mapAndAccept(notification) {
-    if (this.api.dataControlSE.platformIsClosed) return;
+    if (this.api.rolesSE.platformIsClosed) return;
     //(notification);
     this.retrieveModalSE.title = notification?.title;
     this.retrieveModalSE.requester_initiative_id = notification?.requester_initiative_id;
@@ -52,7 +52,7 @@ export class NotificationItemInnovationComponent {
   }
 
   acceptOrReject(response) {
-    if (this.api.dataControlSE.platformIsClosed) return;
+    if (this.api.rolesSE.platformIsClosed) return;
     const body = { ...this.notification, request_status_id: response ? 2 : 3 };
     //(body);
     //(response);
