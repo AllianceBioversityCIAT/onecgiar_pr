@@ -107,6 +107,9 @@
             <app-pr-input placeholder="Write some..." label="How many" type="number" [required]="true"
                 [(ngModel)]="this.organizationItem.how_many">
             </app-pr-input>
+            <app-pr-input *ngIf="organizationItem.institution_types_id == 50" label="Graduate students" placeholder="Graduate students.."
+                type="text" [required]="false" [(ngModel)]="this.organizationItem.graduate_students">
+            </app-pr-input>
         </div>
     </div>
 </div>
