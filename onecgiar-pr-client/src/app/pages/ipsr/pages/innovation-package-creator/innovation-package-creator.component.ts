@@ -37,6 +37,22 @@ export class InnovationPackageCreatorComponent {
     });
   }
 
+  get areLists(): boolean {
+    switch (this.innovationPackageCreatorBody?.geo_scope_id) {
+      case 1:
+        return true;
+      case 2:
+        return !!this.innovationPackageCreatorBody.regions.length;
+      case 4:
+        return !!this.innovationPackageCreatorBody.countries.length;
+      case 5:
+        return !!this.innovationPackageCreatorBody.countries.length;
+
+      default:
+        return false;
+    }
+  }
+
   GET_AllInitiatives() {
     //(this.api.rolesSE.isAdmin);
     if (!this.api.rolesSE.isAdmin) return;
