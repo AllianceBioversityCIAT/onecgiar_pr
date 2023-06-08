@@ -32,7 +32,8 @@
 
     </div>
     <div *ngIf="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true">
-        <app-add-button name="Add Lead/Co-Lead" (clickEvent)="addExpert()"></app-add-button>
+        <app-add-button *ngIf="!this.api.rolesSE.readOnly" name="Add Lead/Co-Lead"
+            (clickEvent)="addExpert()"></app-add-button>
     </div>
     <app-pr-input *ngIf="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true"
         label="Provide the link to the workshop list of participants" [description]="workshopDescription()"

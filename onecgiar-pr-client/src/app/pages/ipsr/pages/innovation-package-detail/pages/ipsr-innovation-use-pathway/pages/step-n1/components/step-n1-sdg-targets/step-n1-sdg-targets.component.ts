@@ -11,7 +11,7 @@ export class StepN1SdgTargetsComponent {
   currentsdgID = null;
   @Input() body = new IpsrStep1Body();
   sdgTargetLis = [];
-  constructor(private api: ApiService) {}
+  constructor(public api: ApiService) {}
   ngOnInit(): void {
     this.GETAllClarisaSdgsTargets();
   }

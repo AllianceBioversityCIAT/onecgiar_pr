@@ -18,7 +18,7 @@ export class StepN3Component implements OnInit {
     { id: false, name: 'No expert workshop was organized' }
   ];
   result_core_innovation: any;
-  constructor(public ipsrDataControlSE: IpsrDataControlService, private api: ApiService, private router: Router) {}
+  constructor(public ipsrDataControlSE: IpsrDataControlService, public api: ApiService, private router: Router) {}
 
   ngOnInit(): void {
     this.GETAllClarisaInnovationReadinessLevels();
