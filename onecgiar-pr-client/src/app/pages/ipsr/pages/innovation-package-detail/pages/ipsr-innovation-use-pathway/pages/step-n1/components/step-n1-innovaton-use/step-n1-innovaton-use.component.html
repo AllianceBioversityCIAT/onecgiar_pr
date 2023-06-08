@@ -97,19 +97,23 @@
                 type="text" [required]="false" [(ngModel)]="this.organizationItem.other_institution">
             </app-pr-input>
         </div>
-        <div class="right_content">
-            <app-pr-select
-                *ngIf="organizationItem.institution_types_id && !organizationItem.hide && getInstitutionsTypeTreeChildrens(organizationItem.institution_types_id)?.length"
-                [options]="getInstitutionsTypeTreeChildrens(organizationItem.institution_types_id)" label="Sub-type"
-                optionLabel="name" optionValue="code" [(ngModel)]="organizationItem.institution_sub_type_id"
-                [disableOptions]="getAllSubTypes" placeholder="Select Sub-type">
-            </app-pr-select>
-            <app-pr-input placeholder="Write some..." label="How many" type="number" [required]="true"
-                [(ngModel)]="this.organizationItem.how_many">
-            </app-pr-input>
-            <app-pr-input *ngIf="organizationItem.institution_types_id == 50" label="Graduate students" placeholder="Graduate students.."
-                type="text" [required]="false" [(ngModel)]="this.organizationItem.graduate_students">
-            </app-pr-input>
+        <div>
+            <div class="right_content">
+                <app-pr-select
+                    *ngIf="organizationItem.institution_types_id && !organizationItem.hide && getInstitutionsTypeTreeChildrens(organizationItem.institution_types_id)?.length"
+                    [options]="getInstitutionsTypeTreeChildrens(organizationItem.institution_types_id)" label="Sub-type"
+                    optionLabel="name" optionValue="code" [(ngModel)]="organizationItem.institution_sub_type_id"
+                    [disableOptions]="getAllSubTypes" placeholder="Select Sub-type">
+                </app-pr-select>
+            </div>
+            <div class="right_content">
+                <app-pr-input placeholder="Write some..." label="How many" type="number" [required]="true"
+                    [(ngModel)]="this.organizationItem.how_many">
+                </app-pr-input>
+                <app-pr-input *ngIf="organizationItem.institution_types_id == 50" label="# of graduate students" placeholder="Write the number..." 
+                    type="number" [required]="false" [(ngModel)]="this.organizationItem.graduate_students">
+                </app-pr-input>
+            </div>
         </div>
     </div>
 </div>
