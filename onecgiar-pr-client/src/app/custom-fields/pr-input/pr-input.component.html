@@ -14,8 +14,8 @@
             <input *ngIf="this.type != 'currency'" [disabled]="this.disabled" pInputText [type]="this.type"
                 [placeholder]="this.placeholder" [(ngModel)]="value" [attr.prValid]="true"
                 [ngClass]="{'pr-valid': true}" />
-            <p-inputNumber *ngIf="this.type == 'currency'" [(ngModel)]="value" [disabled]="this.disabled"
-                [placeholder]="this.placeholder">
+            <p-inputNumber *ngIf="this.type == 'currency'" [(ngModel)]="value" mode="currency" currency="USD"
+                locale="en-US" [disabled]="this.disabled" [placeholder]="this.placeholder">
             </p-inputNumber>
             <div class="hints_container">
                 <div class="hint">{{this.hint}}</div>
