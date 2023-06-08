@@ -46,7 +46,7 @@ export class InnovationPackageCreatorComponent {
       case 4:
         return !!this.innovationPackageCreatorBody.countries.length;
       case 5:
-        return !!this.innovationPackageCreatorBody.countries.length;
+        return !!this.innovationPackageCreatorBody.countries.length && this.innovationPackageCreatorBody?.geoScopeSubNatinals?.length >= 1;
 
       default:
         return false;
@@ -63,6 +63,7 @@ export class InnovationPackageCreatorComponent {
   }
 
   onSaveSection() {
+    console.log(this.innovationPackageCreatorBody);
     this.innovationPackageCreatorBody.geoScopeSubNatinals.forEach(resp => {
       const subCountry = this.innovationPackageCreatorBody.countries.filter(country => resp.idCountry == country.id)[0];
       if (resp.isRegister != 0) {
