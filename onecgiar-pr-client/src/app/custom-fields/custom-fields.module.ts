@@ -31,12 +31,13 @@ import { UnderConstructionPointComponent } from './under-construction-point/unde
 import { LabelNamePipe } from './pr-select/label-name.pipe';
 import { SyncButtonComponent } from './sync-button/sync-button.component';
 import { YesOrNotByBooleanPipe } from './pipes/yes-or-not-by-boolean.pipe';
+import { InputNumberModule } from 'primeng/inputnumber';
 
 const fieldComponents = [PrInputComponent, PrSelectComponent, PrRadioButtonComponent, DetailSectionTitleComponent, PrMultiSelectComponent, PrFieldHeaderComponent, PrYesOrNotComponent, PrTextareaComponent, PrCheckboxComponent, SaveButtonComponent, PrButtonComponent, AlertStatusComponent, EditOrDeleteItemButtonComponent, NoDataTextComponent, AddButtonComponent, PrRangeLevelComponent, SyncButtonComponent];
 
 @NgModule({
   declarations: [...fieldComponents, PrFieldValidationsComponent, PrWordCounterComponent, ListFilterByTextAndAttrPipe, UnderConstructionPointComponent, LabelNamePipe, YesOrNotByBooleanPipe],
   exports: [...fieldComponents, FormsModule],
-  imports: [CommonModule, FormsModule, InputTextModule, DropdownModule, RadioButtonModule, MultiSelectModule, InputTextareaModule, CheckboxModule, ScrollingModule]
+  imports: [CommonModule, FormsModule, InputTextModule, DropdownModule, RadioButtonModule, MultiSelectModule, InputTextareaModule, CheckboxModule, ScrollingModule, InputNumberModule]
 })
 export class CustomFieldsModule {}
