@@ -83,6 +83,13 @@ export class ResultsByInstitutionType {
   })
   other_institution!: string;
 
+  @Column({
+    name: 'graduate_students',
+    type: 'text',
+    nullable: true,
+  })
+  graduate_students!: string;
+
   @ManyToOne(() => Version, (v) => v.id, { nullable: false })
   @JoinColumn({
     name: 'version_id',

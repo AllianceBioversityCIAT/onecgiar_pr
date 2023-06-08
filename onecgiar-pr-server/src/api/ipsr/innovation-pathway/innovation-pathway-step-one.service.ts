@@ -1513,8 +1513,9 @@ export class InnovationPathwayStepOneService {
               institution_types_id: el.institution_types_id,
               last_updated_by: user.id,
               other_institution: el?.other_institution,
-              how_many: el.how_many,
-              is_active: el.is_active,
+              how_many: el?.how_many,
+              is_active: el?.is_active,
+              graduate_students: el?.graduate_students,
             });
           }
         } else {
@@ -1531,6 +1532,7 @@ export class InnovationPathwayStepOneService {
             last_updated_by: user.id,
             other_institution: el?.other_institution,
             institution_types_id: el.institution_types_id,
+            graduate_students: el?.graduate_students,
             institution_roles_id: 5,
             how_many: el.how_many,
             version_id: version.id,

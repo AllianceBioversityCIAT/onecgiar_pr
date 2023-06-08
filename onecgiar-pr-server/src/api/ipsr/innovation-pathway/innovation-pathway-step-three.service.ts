@@ -595,6 +595,7 @@ export class InnovationPathwayStepThreeService {
             institution_types_id: el.institution_types_id,
             how_many: this.isNullData(el.how_many),
             other_institution: el?.other_institution,
+            graduate_students: el?.graduate_students,
             is_active: el.is_active == undefined ? true : el.is_active,
             evidence_link: this.isNullData(el.evidence_link),
           });
@@ -612,6 +613,7 @@ export class InnovationPathwayStepThreeService {
             last_updated_by: user.id,
             institution_types_id: el?.institution_types_id,
             other_institution: el?.other_institution,
+            graduate_students: el?.graduate_students,
             institution_roles_id: 6,
             how_many: el?.how_many,
             version_id: version.id,
