@@ -8,6 +8,5 @@ import { environment } from 'src/environments/environment';
   styleUrls: ['./report-new-result-button.component.scss']
 })
 export class ReportNewResultButtonComponent {
-  platformIsClosed = environment.platformIsClosed;
   constructor(public api: ApiService) {}
 }

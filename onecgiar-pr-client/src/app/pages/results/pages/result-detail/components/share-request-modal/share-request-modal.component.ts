@@ -14,7 +14,6 @@ import { ResultsNotificationsService } from '../../../results-outlet/pages/resul
   styleUrls: ['./share-request-modal.component.scss']
 })
 export class ShareRequestModalComponent {
-  platformIsClosed = environment.platformIsClosed;
   requesting = false;
   allInitiatives = [];
   showForm = true;

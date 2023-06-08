@@ -7,7 +7,7 @@
                 <th pSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder">
                     <p-sortIcon field="{{column.attr}}"></p-sortIcon>{{column.title}}
                 </th>
-                <th *ngIf="!this.api.dataControlSE.platformIsClosed">Action</th>
+                <th *ngIf="!this.api.rolesSE.platformIsClosed">Action</th>
             </tr>
         </ng-template>
         <ng-template pTemplate="body" let-result>
@@ -27,7 +27,7 @@
                         {{ result[column.attr] }}
                     </div>
                 </td>
-                <td *ngIf="!this.api.dataControlSE.platformIsClosed">
+                <td *ngIf="!this.api.rolesSE.platformIsClosed">
                     <div class="icon_container"><i class="pi pi-ellipsis-v"
                             (click)="menu.toggle($event);onPressAction(result)"></i></div>
                     <!-- (click)="menu.toggle($event);onPressAction(result)" -->
