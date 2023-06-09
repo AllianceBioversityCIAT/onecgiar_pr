@@ -104,38 +104,45 @@
                 type="text" [required]="!!organizationItem?.id" [(ngModel)]="this.organizationItem.other_institution">
             </app-pr-input>
         </div>
-        <div class="right_content">
-            <app-pr-select
-                *ngIf="organizationItem.institution_types_id && !organizationItem.hide && getInstitutionsTypeTreeChildrens(organizationItem.institution_types_id)?.length"
-                [options]="getInstitutionsTypeTreeChildrens(organizationItem.institution_types_id)" label="Sub-type"
-                optionLabel="name" optionValue="code" [(ngModel)]="organizationItem.institution_sub_type_id"
-                [disableOptions]="getAllSubTypes" placeholder="Select Sub-type" [required]="!!organizationItem?.id">
-            </app-pr-select>
-            <app-pr-input placeholder="Write some..." label="How many" type="number" [required]="!!organizationItem?.id"
-                [(ngModel)]="this.organizationItem.how_many">
-            </app-pr-input>
+        <div>
+            <div class="right_content">
+                <app-pr-select
+                    *ngIf="organizationItem.institution_types_id && !organizationItem.hide && getInstitutionsTypeTreeChildrens(organizationItem.institution_types_id)?.length"
+                    [options]="getInstitutionsTypeTreeChildrens(organizationItem.institution_types_id)" label="Sub-type"
+                    optionLabel="name" optionValue="code" [(ngModel)]="organizationItem.institution_sub_type_id"
+                    [disableOptions]="getAllSubTypes" placeholder="Select Sub-type" [required]="!!organizationItem?.id">
+                </app-pr-select>
+            </div>
+            <div class="right_content">
+                <app-pr-input placeholder="Write some..." label="How many" type="number"
+                    [required]="!!organizationItem?.id" [(ngModel)]="this.organizationItem.how_many">
+                </app-pr-input>
+                <app-pr-input *ngIf="organizationItem.institution_types_id == 50" label="# of graduate students"
+                    placeholder="Write the number..." type="number" [required]="false"
+                    [(ngModel)]="this.organizationItem.graduate_students">
+                </app-pr-input>
+            </div>
         </div>
     </div>
-</div>
 
-<app-add-button name="Add organization" *ngIf="!this.api.rolesSE.readOnly"
-    (clickEvent)="addOrganization()"></app-add-button>
-<div class="fragment_section_divider"></div>
-<div class="fields_list" *ngIf="this.body.innovatonUse.measures?.length">
-    <app-pr-field-header label="Other quantitative measures of innovation use (e.g. # of hectares)"
-        [required]="false"></app-pr-field-header>
-    <div class="fields" appYmzListStructureItem (deleteEvent)="measuresItem.is_active = false"
-        *ngFor="let measuresItem of this.body.innovatonUse.measures"
-        [ngClass]="{'hideElement': measuresItem.is_active == false}">
-        <div class="right_content">
-            <app-pr-input placeholder="e.g. # of projects" label="Unit of measure" type="text"
-                [required]="!!measuresItem?.result_ip_measure_id" [(ngModel)]="this.measuresItem.unit_of_measure">
-            </app-pr-input>
-            <app-pr-input placeholder="Write some..." label="Quantity" type="number"
-                [required]="!!measuresItem?.result_ip_measure_id" [(ngModel)]="this.measuresItem.quantity">
-            </app-pr-input>
+    <app-add-button name="Add organization" *ngIf="!this.api.rolesSE.readOnly"
+        (clickEvent)="addOrganization()"></app-add-button>
+    <div class="fragment_section_divider"></div>
+    <div class="fields_list" *ngIf="this.body.innovatonUse.measures?.length">
+        <app-pr-field-header label="Other quantitative measures of innovation use (e.g. # of hectares)"
+            [required]="false"></app-pr-field-header>
+        <div class="fields" appYmzListStructureItem (deleteEvent)="measuresItem.is_active = false"
+            *ngFor="let measuresItem of this.body.innovatonUse.measures"
+            [ngClass]="{'hideElement': measuresItem.is_active == false}">
+            <div class="right_content">
+                <app-pr-input placeholder="e.g. # of projects" label="Unit of measure" type="text"
+                    [required]="!!measuresItem?.result_ip_measure_id" [(ngModel)]="this.measuresItem.unit_of_measure">
+                </app-pr-input>
+                <app-pr-input placeholder="Write some..." label="Quantity" type="number"
+                    [required]="!!measuresItem?.result_ip_measure_id" [(ngModel)]="this.measuresItem.quantity">
+                </app-pr-input>
+            </div>
+
         </div>
-
     </div>
-</div>
-<app-add-button name="Add other" *ngIf="!this.api.rolesSE.readOnly" (clickEvent)="addOther()"></app-add-button>
+    <app-add-button name="Add other" *ngIf="!this.api.rolesSE.readOnly" (clickEvent)="addOther()"></app-add-button>

@@ -73,6 +73,7 @@ export class InnovationPackageCreatorComponent {
   }
 
   onSaveSection() {
+    console.log(this.innovationPackageCreatorBody);
     this.innovationPackageCreatorBody.geoScopeSubNatinals.forEach(resp => {
       const subCountry = this.innovationPackageCreatorBody.countries.filter(country => resp.idCountry == country.id)[0];
       if (resp.isRegister != 0) {

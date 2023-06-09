@@ -85,10 +85,10 @@ export class ResultsByInstitutionType {
 
   @Column({
     name: 'graduate_students',
-    type: 'text',
+    type: 'bigint',
     nullable: true,
   })
-  graduate_students!: string;
+  graduate_students!: number;
 
   @ManyToOne(() => Version, (v) => v.id, { nullable: false })
   @JoinColumn({

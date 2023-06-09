@@ -277,6 +277,13 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                             AND rbit.institution_roles_id IS NOT NULL
                             AND rbit.institution_types_id IS NOT NULL
                             AND rbit.how_many IS NOT NULL
+                            AND (
+                                rbit.institution_types_id = 78
+                                AND (
+                                    rbit.other_institution IS NOT NULL
+                                    OR rbit.other_institution != ''
+                                )
+                            )
                     ) = 0
                     AND (
                         SELECT
@@ -340,6 +347,13 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                             rbit.institution_roles_id IS NULL
                             OR rbit.institution_types_id IS NULL
                             OR rbit.how_many IS NULL
+                            OR (
+                                rbit.institution_types_id = 78
+                                AND (
+                                    rbit.other_institution IS NULL
+                                    OR rbit.other_institution = ''
+                                )
+                            )
                         )
                 ) > 0 THEN FALSE
                 WHEN (
@@ -645,6 +659,13 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                                     AND rira.men_youth IS NOT NULL
                                     AND rira.evidence_link IS NOT NULL
                                     AND rira.evidence_link != ''
+                                    AND (
+                                        rira.actor_type_id = 5
+                                        AND (
+                                            rira.other_actor_type IS NOT NULL
+                                            OR TRIM(rira.other_actor_type) <> ''
+                                        )
+                                    )
                                 )
                             )
                             OR (
@@ -654,6 +675,13 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                                     AND rira.evidence_link IS NOT NULL
                                     AND rira.evidence_link != ''
                                     AND rira.how_many IS NOT NULL
+                                    AND (
+                                        rira.actor_type_id = 5
+                                        AND (
+                                            rira.other_actor_type IS NOT NULL
+                                            AND TRIM(rira.other_actor_type) <> ''
+                                        )
+                                    )
                                 )
                             )
                         )
@@ -674,6 +702,13 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                             AND ririt.evidence_link != ''
                             AND ririt.institution_types_id IS NOT NULL
                             AND ririt.institution_types_id IS NOT NULL
+                            AND (
+                                ririt.institution_types_id = 78
+                                AND (
+                                    ririt.other_institution IS NOT NULL
+                                    OR ririt.other_institution != ''
+                                )
+                            )
                         )
                 ) = 0
                 AND (
@@ -710,6 +745,13 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                                 OR rira.men_youth IS NULL
                                 OR rira.evidence_link IS NULL
                                 OR rira.evidence_link = ''
+                                OR (
+                                    rira.actor_type_id = 5
+                                    AND (
+                                        rira.other_actor_type IS NULL
+                                        OR TRIM(rira.other_actor_type) = ''
+                                    )
+                                )
                             )
                         )
                         OR (
@@ -719,6 +761,13 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                                 OR rira.evidence_link IS NULL
                                 OR rira.evidence_link = ''
                                 OR rira.how_many IS NULL
+                                OR (
+                                    rira.actor_type_id = 5
+                                    AND (
+                                        rira.other_actor_type IS NULL
+                                        OR TRIM(rira.other_actor_type) = ''
+                                    )
+                                )
                             )
                         )
                     )
@@ -739,6 +788,13 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                         OR ririt.evidence_link = ''
                         OR ririt.institution_types_id IS NULL
                         OR ririt.institution_types_id IS NULL
+                        OR (
+                            ririt.institution_types_id = 78
+                            AND (
+                                ririt.other_institution IS NULL
+                                OR ririt.other_institution = ''
+                            )
+                        )
                     )
             ) > 0 THEN FALSE
             WHEN (

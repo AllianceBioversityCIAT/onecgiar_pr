@@ -118,11 +118,17 @@
                     optionLabel="name" optionValue="code" [(ngModel)]="organizationItem.institution_sub_type_id"
                     placeholder="Select Sub-type" [disableOptions]="getAllSubTypes" [required]="!!organizationItem?.id">
                 </app-pr-select>
+            </div>
+            <div class="right_content">
                 <app-pr-input placeholder="Write some..." label="How many" type="number"
                     [required]="!!organizationItem?.id" [(ngModel)]="this.organizationItem.how_many">
                 </app-pr-input>
-            </div>
-            <div class="right_content">
+
+                <app-pr-input *ngIf="organizationItem.institution_types_id == 50" label="# of graduate students"
+                    placeholder="Write the number..." type="number" [required]="false"
+                    [(ngModel)]="this.organizationItem.graduate_students">
+                </app-pr-input>
+
                 <app-pr-input placeholder="Write some..." label="Evidence link" type="text"
                     [(ngModel)]="this.organizationItem.evidence_link" [required]="!!organizationItem?.id">
                 </app-pr-input>

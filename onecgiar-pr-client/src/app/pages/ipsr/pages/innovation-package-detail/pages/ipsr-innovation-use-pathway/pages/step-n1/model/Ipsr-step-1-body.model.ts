@@ -71,6 +71,7 @@ export class Organization {
   institution_sub_type_id: number;
   how_many: number;
   other_institution: string;
+  graduate_students: string;
   // Aux
   hide: boolean;
   is_active: boolean;

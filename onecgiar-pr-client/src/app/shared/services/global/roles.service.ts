@@ -109,6 +109,12 @@ export class RolesService {
     return !!this.roles?.initiative?.find(item => item.initiative_id == initiative_id);
   }
 
+  accessToIPSRSubmit(initiative_id) {
+    const initiativeFind = this.roles?.initiative?.find(item => item.initiative_id == initiative_id);
+    if (initiativeFind?.role_id == 6) return false;
+    return !!initiativeFind;
+  }
+
   //TODO App roles
   /*
   Admin

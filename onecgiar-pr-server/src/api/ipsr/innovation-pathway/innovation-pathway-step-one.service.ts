@@ -1585,7 +1585,7 @@ export class InnovationPathwayStepOneService {
             },
           );
         } else {
-          if (!el?.unit_of_measure || !el?.quantity) {
+          if (!el?.unit_of_measure || !el?.quantity || el?.quantity == null) {
             return {
               response: { valid: false },
               message: 'The field Unit of Measure and Quantity is required',
