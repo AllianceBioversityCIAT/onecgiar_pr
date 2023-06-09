@@ -1,7 +1,6 @@
 <app-pr-radio-button [options]="this.geoscopeOptions" optionLabel="full_name" optionValue="id"
     label="Select country/ geoscope for which packaging and scaling readiness assessment will be conducted"
-    description="{{descriptionGeoScope()}}"
-    [(ngModel)]="body.geo_scope_id">
+    description="{{descriptionGeoScope()}}" [(ngModel)]="body.geo_scope_id">
 </app-pr-radio-button>
 
 <app-pr-multi-select *ngIf="body.geo_scope_id == 2" [options]="this.regionsCountriesSE.regionsList"
@@ -15,13 +14,20 @@
     optionValue="id" placeholder="Select countries" [(ngModel)]="body.countries">
 </app-pr-multi-select>
 <div *ngIf="body.geo_scope_id == 5">
-    <app-pr-field-header label="Select countries" [required]="true" description="The list of countries below follows the <a href='https://www.iso.org/iso-3166-country-codes.html'>ISO 3166</a> standard"></app-pr-field-header>
-    <app-pr-multi-select  [options]="this.regionsCountriesSE.countriesList"
-    selectedLabel="Countries selected" selectedOptionLabel="name" optionLabel="full_name"
-    optionValue="id" placeholder="Select countries" [(ngModel)]="body.countries">
-</app-pr-multi-select>
+    <app-pr-field-header label="Select countries" [required]="true"
+        description="The list of countries below follows the <a href='https://www.iso.org/iso-3166-country-codes.html'>ISO 3166</a> standard"></app-pr-field-header>
+    <app-pr-multi-select [options]="this.regionsCountriesSE.countriesList" selectedLabel="Countries selected"
+        selectedOptionLabel="name" optionLabel="full_name" optionValue="id" placeholder="Select countries"
+        [(ngModel)]="body.countries">
+    </app-pr-multi-select>
 </div>
 
 
-<app-pr-button text="Add sub-national level" *ngIf="body.geo_scope_id == 5" (click)="onClicked()"></app-pr-button>
-<app-sub-geoscope *ngFor="let geoScope of sub_scope; let i = index" [body]="body" [index]="i" (selectOptionEvent)="deleteItem($event)" ></app-sub-geoscope>
+
+<div *ngIf="body.geo_scope_id == 5">
+    <app-pr-button text="Add sub-national level" (click)="onClicked()"></app-pr-button>
+    <div class="geo_scope_elements">
+        <app-sub-geoscope *ngFor="let geoScope of sub_scope; let i = index" [body]="body" [index]="i"
+            (selectOptionEvent)="deleteItem($event)"></app-sub-geoscope>
+    </div>
+</div>
