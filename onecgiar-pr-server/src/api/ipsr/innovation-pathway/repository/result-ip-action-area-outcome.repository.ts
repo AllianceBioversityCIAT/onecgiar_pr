@@ -13,7 +13,7 @@ export class ResultIpAAOutcomeRepository extends Repository<ResultIpAAOutcome> {
     super(ResultIpAAOutcome, dataSource.createEntityManager());
   }
 
-  async mapActionAreaOutcome(initId: number) {
+  async mapActionAreaOutcome(coreId: number, initId: number) {
     try {
       const aaOutcomeQuery = `
       SELECT
@@ -26,16 +26,22 @@ export class ResultIpAAOutcomeRepository extends Repository<ResultIpAAOutcome> {
         taar.is_active = 1
         AND traar.toc_result_id IN (
           SELECT
-            tr.toc_internal_id
+              tr2.toc_internal_id
           FROM
-            prdb.toc_result tr
+              prdb.toc_result tr2
+              LEFT JOIN prdb.results_toc_result rtr ON rtr.toc_result_id = tr2.toc_result_id
+              AND rtr.is_active = 1
           WHERE
-            tr.inititiative_id = ?
-            AND tr.is_active = 1
+              rtr.results_id = ?
+              AND rtr.initiative_id = ?
+              AND tr2.inititiative_id = ?
+              AND tr2.is_active = 1
         );
       `;
 
       const aaOutcome: any[] = await this.dataSource.query(aaOutcomeQuery, [
+        coreId,
+        initId,
         initId,
       ]);
       return aaOutcome;

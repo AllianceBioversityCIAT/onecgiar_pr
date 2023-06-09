@@ -5,17 +5,19 @@ import { ResultsImpactAreaIndicator } from './entities/results-impact-area-indic
 import { GetImpactIndicatorAreaDto } from './dto/get-impact-indicator-area.dto';
 import { env } from 'process';
 
-
 @Injectable()
 export class ResultsImpactAreaIndicatorRepository extends Repository<ResultsImpactAreaIndicator> {
   constructor(
     private dataSource: DataSource,
-    private _handlersError: HandlersError
+    private _handlersError: HandlersError,
   ) {
     super(ResultsImpactAreaIndicator, dataSource.createEntityManager());
   }
 
-  async ResultsImpactAreaIndicatorExists(resultId: number, indicatorId: number) {
+  async ResultsImpactAreaIndicatorExists(
+    resultId: number,
+    indicatorId: number,
+  ) {
     const queryData = `
     SELECT
     	riai.results_impact_area_indicator_id,
@@ -34,7 +36,10 @@ export class ResultsImpactAreaIndicatorRepository extends Repository<ResultsImpa
     	and riai.impact_area_indicator_id = ?;
     `;
     try {
-      const resultTocResult: ResultsImpactAreaIndicator[] = await this.query(queryData, [resultId, indicatorId]);
+      const resultTocResult: ResultsImpactAreaIndicator[] = await this.query(
+        queryData,
+        [resultId, indicatorId],
+      );
       return resultTocResult.length ? resultTocResult[0] : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -67,7 +72,10 @@ export class ResultsImpactAreaIndicatorRepository extends Repository<ResultsImpa
       and riai.is_active > 0;
     `;
     try {
-      const resultTocResult: GetImpactIndicatorAreaDto[] = await this.query(queryData, [resultId]);
+      const resultTocResult: GetImpactIndicatorAreaDto[] = await this.query(
+        queryData,
+        [resultId],
+      );
       return resultTocResult;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -78,8 +86,13 @@ export class ResultsImpactAreaIndicatorRepository extends Repository<ResultsImpa
     }
   }
 
-  async updateResultImpactAreaIndicators(resultId: number, impactId: number, indicatorsId: number[], userId: number) {
-    const indicators = indicatorsId??[];
+  async updateResultImpactAreaIndicators(
+    resultId: number,
+    impactId: number,
+    indicatorsId: number[],
+    userId: number,
+  ) {
+    const indicators = indicatorsId ?? [];
     const upDateInactive = `
     update results_impact_area_indicators riai
 	    inner join clarisa_impact_area_indicator ciai on ciai.id = riai.impact_area_indicator_id 
@@ -118,17 +131,19 @@ export class ResultsImpactAreaIndicatorRepository extends Repository<ResultsImpa
     `;
 
     try {
-      if(indicators?.length){
+      if (indicators?.length) {
         const upDateInactiveResult = await this.query(upDateInactive, [
-          userId, resultId, impactId
+          userId,
+          resultId,
+          impactId,
         ]);
-  
-        return await this.query(upDateActive, [
-          userId, resultId, impactId
-        ]);
-      }else{
+
+        return await this.query(upDateActive, [userId, resultId, impactId]);
+      } else {
         return await this.query(upDateAllInactive, [
-          userId, resultId, impactId
+          userId,
+          resultId,
+          impactId,
         ]);
       }
     } catch (error) {
@@ -140,7 +155,7 @@ export class ResultsImpactAreaIndicatorRepository extends Repository<ResultsImpa
     }
   }
 
-  async mapImpactAreaOutcomeToc(initId: number) {
+  async mapImpactAreaOutcomeToc(coreId: number, initId: number) {
     try {
       const query = `
       SELECT
@@ -155,16 +170,22 @@ export class ResultsImpactAreaIndicatorRepository extends Repository<ResultsImpa
         tiargt.is_active = 1
         AND tr1.toc_result_id IN (
           SELECT
-            tr2.toc_internal_id
+              tr2.toc_internal_id
           FROM
-            prdb.toc_result tr2
+              prdb.toc_result tr2
+              LEFT JOIN prdb.results_toc_result rtr ON rtr.toc_result_id = tr2.toc_result_id
+              AND rtr.is_active = 1
           WHERE
-            tr2.inititiative_id = ?
-            AND tr2.is_active = 1
+              rtr.results_id = ?
+              AND rtr.initiative_id = ?
+              AND tr2.inititiative_id = ?
+              AND tr2.is_active = 1
         );
       `;
 
       const impactAreaOutcome: any[] = await this.dataSource.query(query, [
+        coreId,
+        initId,
         initId,
       ]);
 
