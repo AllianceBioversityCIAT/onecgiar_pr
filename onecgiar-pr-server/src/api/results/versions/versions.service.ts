@@ -1,7 +1,7 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { CreateVersionDto } from './dto/create-version.dto';
 import { UpdateVersionDto } from './dto/update-version.dto';
-import { VersionRepository } from '../../versioning/version.repository';
+import { VersionRepository } from '../../versioning/versioning.repository';
 import { MessageResponse } from '../../../shared/constants/Responses.constant';
 import {
   HandlersError,

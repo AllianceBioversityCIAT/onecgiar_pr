@@ -10,7 +10,7 @@ import { MQAPService } from '../../m-qap/m-qap.service';
 import { Result } from '../entities/result.entity';
 import { ResultRepository } from '../result.repository';
 import { Version } from '../../versioning/entities/version.entity';
-import { VersionRepository } from '../../versioning/version.repository';
+import { VersionRepository } from '../../versioning/versioning.repository';
 import { CreateResultsKnowledgeProductFromHandleDto } from './dto/create-results-knowledge-product-from-handle.dto';
 import { UpdateResultsKnowledgeProductDto } from './dto/update-results-knowledge-product.dto';
 import { ResultsKnowledgeProduct } from './entities/results-knowledge-product.entity';

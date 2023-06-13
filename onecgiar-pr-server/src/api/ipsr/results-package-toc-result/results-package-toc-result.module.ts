@@ -4,7 +4,7 @@ import { ResultsPackageTocResultController } from './results-package-toc-result.
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultRepository } from '../../results/result.repository';
 import { VersionsService } from '../../results/versions/versions.service';
-import { VersionRepository } from '../../versioning/version.repository';
+import { VersionRepository } from '../../versioning/versioning.repository';
 import { IpsrRepository } from '../repository/ipsr.repository';
 import { ResultsCenterRepository } from '../../results/results-centers/results-centers.repository';
 import { ResultByInitiativesRepository } from '../../results/results_by_inititiatives/resultByInitiatives.repository';

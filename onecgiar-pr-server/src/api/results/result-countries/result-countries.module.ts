@@ -4,7 +4,7 @@ import { ResultCountriesController } from './result-countries.controller';
 import { ResultCountryRepository } from './result-countries.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultRepository } from '../result.repository';
-import { VersionRepository } from '../../versioning/version.repository';
+import { VersionRepository } from '../../versioning/versioning.repository';
 import { VersionsService } from '../versions/versions.service';
 
 @Module({

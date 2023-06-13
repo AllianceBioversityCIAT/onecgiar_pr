@@ -6,7 +6,7 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResultRepository } from '../result.repository';
 import { Evidence } from './entities/evidence.entity';
-import { VersionRepository } from '../../versioning/version.repository';
+import { VersionRepository } from '../../versioning/versioning.repository';
 import { ResultsKnowledgeProductsRepository } from '../results-knowledge-products/repositories/results-knowledge-products.repository';
 import { Like } from 'typeorm';
 import { Result } from '../entities/result.entity';

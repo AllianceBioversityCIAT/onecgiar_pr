@@ -12,7 +12,7 @@ import { ExpertisesRepository } from '../innovation-packaging-experts/repositori
 import { InnovationPackagingExpertRepository } from '../innovation-packaging-experts/repositories/innovation-packaging-expert.repository';
 import { ResultInnovationPackageRepository } from '../result-innovation-package/repositories/result-innovation-package.repository';
 import { VersionsService } from '../../results/versions/versions.service';
-import { VersionRepository } from 'src/api/versioning/version.repository';
+import { VersionRepository } from 'src/api/versioning/versioning.repository';
 import { IpsrRepository } from '../ipsr.repository';
 import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
 import { ResultByInstitutionsByDeliveriesTypeRepository } from '../../results/result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';

@@ -5,7 +5,7 @@ import { ResultsInnovationsUseRepository } from './repositories/results-innovati
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultsInnovationsUseMeasuresRepository } from './repositories/results-innovations-use-measures.repository';
 import { VersionsService } from '../versions/versions.service';
-import { VersionRepository } from '../../versioning/version.repository';
+import { VersionRepository } from '../../versioning/versioning.repository';
 import { ResultsCapacityDevelopmentsRepository } from './repositories/results-capacity-developments.repository';
 import { ResultByIntitutionsRepository } from '../results_by_institutions/result_by_intitutions.repository';
 import { ResultsInnovationsDevRepository } from './repositories/results-innovations-dev.repository';

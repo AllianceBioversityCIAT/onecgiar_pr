@@ -6,7 +6,7 @@ import { ResultRepository } from '../result.repository';
 import { MQAPService } from '../../m-qap/m-qap.service';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { HttpModule } from '@nestjs/axios';
-import { VersionRepository } from '../../versioning/version.repository';
+import { VersionRepository } from '../../versioning/versioning.repository';
 import { ResultsKnowledgeProductMapper } from './results-knowledge-products.mapper';
 import { ResultsKnowledgeProductAltmetricRepository } from './repositories/results-knowledge-product-altmetrics.repository';
 import { ResultsKnowledgeProductAuthorRepository } from './repositories/results-knowledge-product-authors.repository';
