@@ -62,7 +62,7 @@ export class StepN1Component implements OnInit {
     this.convertOrganizationsTosave();
     this.api.resultsSE.PATCHInnovationPathwayByStepOneResultId(this.ipsrStep1Body).subscribe((resp: any) => {
       //(resp?.response[0].response);
-      this.ipsrDataControlSE.detailData.title = resp?.response[0].response;
+      // this.ipsrDataControlSE.detailData.title = resp?.response[0].response;
       this.getSectionInformation();
     });
   }
@@ -71,7 +71,7 @@ export class StepN1Component implements OnInit {
     this.convertOrganizationsTosave();
     this.api.resultsSE.PATCHInnovationPathwayByStepOneResultIdNextStep(this.ipsrStep1Body, descrip).subscribe((resp: any) => {
       //(resp?.response[0].response);
-      this.ipsrDataControlSE.detailData.title = resp?.response[0].response;
+      // this.ipsrDataControlSE.detailData.title = resp?.response[0].response;
       this.getSectionInformation();
       setTimeout(() => {
         this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2']);
