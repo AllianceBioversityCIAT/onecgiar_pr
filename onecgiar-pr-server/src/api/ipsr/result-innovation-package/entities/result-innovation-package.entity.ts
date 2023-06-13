@@ -13,7 +13,7 @@ import { RelevantCountry } from './relevant-country.entity';
 import { RegionalLeadership } from './regional-leadership.entity';
 import { RegionalIntegrated } from './regional-integrated.entity';
 import { ActiveBackstopping } from './active-backstopping.entity';
-import { Version } from '../../../results/versions/entities/version.entity';
+import { Version } from '../../../versioning/entities/version.entity';
 import { Result } from '../../../results/entities/result.entity';
 import { Ipsr } from '../../entities/ipsr.entity';
 import { ResultsInnovationPackagesEnablerType } from '../../results-innovation-packages-enabler-type/entities/results-innovation-packages-enabler-type.entity';

@@ -4,7 +4,7 @@ import { ResultsPackageTocResultController } from './results-package-toc-result.
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultRepository } from '../../results/result.repository';
 import { VersionsService } from '../../results/versions/versions.service';
-import { VersionRepository } from '../../results/versions/version.repository';
+import { VersionRepository } from '../../versioning/version.repository';
 import { IpsrRepository } from '../repository/ipsr.repository';
 import { ResultsCenterRepository } from '../../results/results-centers/results-centers.repository';
 import { ResultByInitiativesRepository } from '../../results/results_by_inititiatives/resultByInitiatives.repository';
@@ -20,8 +20,8 @@ import { ResultIpEoiOutcomeRepository } from '../innovation-pathway/repository/r
 @Module({
   controllers: [ResultsPackageTocResultController],
   providers: [
-    ResultsPackageTocResultService, 
-    ResultRepository, 
+    ResultsPackageTocResultService,
+    ResultRepository,
     VersionsService,
     VersionRepository,
     IpsrRepository,
@@ -37,6 +37,6 @@ import { ResultIpEoiOutcomeRepository } from '../innovation-pathway/repository/r
     ResultInitiativeBudgetRepository,
     ResultIpEoiOutcomeRepository,
   ],
-  exports: []
+  exports: [],
 })
 export class ResultsPackageTocResultModule {}

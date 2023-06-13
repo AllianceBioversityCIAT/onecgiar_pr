@@ -8,7 +8,7 @@ import { Result } from '../entities/result.entity';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { LinkedResult } from './entities/linked-result.entity';
 import { VersionsService } from '../versions/versions.service';
-import { Version } from '../versions/entities/version.entity';
+import { Version } from '../../versioning/entities/version.entity';
 
 @Injectable()
 export class LinkedResultsService {

@@ -3,7 +3,7 @@ import { ResultInnovationPackageService } from './result-innovation-package.serv
 import { ResultInnovationPackageController } from './result-innovation-package.controller';
 import { ResultRepository } from '../../../api/results/result.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
-import { VersionRepository } from '../../../api/results/versions/version.repository';
+import { VersionRepository } from '../../versioning/version.repository';
 import { ResultInnovationPackageByInitiativeRepository } from '../results-package-by-initiatives/results-package-by-initiatives.respository';
 import { VersionsModule } from '../../../api/results/versions/versions.module';
 import { ResultRegionRepository } from '../../../api/results/result-regions/result-regions.repository';
@@ -34,7 +34,6 @@ import { YearRepository } from '../../results/years/year.repository';
 import { LinkedResultRepository } from '../../results/linked-results/linked-results.repository';
 import { EvidencesRepository } from '../../results/evidences/evidences.repository';
 import { IpsrService } from '../ipsr.service';
-
 
 @Module({
   controllers: [ResultInnovationPackageController],
@@ -71,11 +70,9 @@ import { IpsrService } from '../ipsr.service';
     YearRepository,
     LinkedResultRepository,
     EvidencesRepository,
-    IpsrService
+    IpsrService,
   ],
   imports: [VersionsModule],
-  exports: [
-    ResultInnovationPackageRepository
-  ]
+  exports: [ResultInnovationPackageRepository],
 })
-export class ResultInnovationPackageModule { }
+export class ResultInnovationPackageModule {}

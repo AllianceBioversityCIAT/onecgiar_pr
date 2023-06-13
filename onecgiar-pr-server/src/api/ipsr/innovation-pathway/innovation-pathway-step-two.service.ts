@@ -20,7 +20,7 @@ import { ResultIpImpactAreaRepository } from './repository/result-ip-impact-area
 import { In } from 'typeorm';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { Ipsr } from '../entities/ipsr.entity';
-import { Version } from '../../results/versions/entities/version.entity';
+import { Version } from '../../versioning/entities/version.entity';
 import { ResultsComplementaryInnovationRepository } from '../results-complementary-innovations/repositories/results-complementary-innovation.repository';
 import { ResultsComplementaryInnovationsFunctionRepository } from '../results-complementary-innovations-functions/repositories/results-complementary-innovations-function.repository';
 import { ResultsComplementaryInnovationsFunction } from '../results-complementary-innovations-functions/entities/results-complementary-innovations-function.entity';
@@ -466,7 +466,7 @@ export class InnovationPathwayStepTwoService {
         complementaryFunctions,
         referenceMaterials,
         projects_organizations_working_on_innovation,
-        specify_projects_organizations
+        specify_projects_organizations,
       } = updateComplementaryInnovationDto;
 
       const vTemp = await this._versionsService.findBaseVersion();

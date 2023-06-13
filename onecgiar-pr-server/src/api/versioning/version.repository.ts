@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { Version } from './entities/version.entity';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import { HandlersError } from '../../shared/handlers/error.utils';
 
 @Injectable()
 export class VersionRepository extends Repository<Version> {

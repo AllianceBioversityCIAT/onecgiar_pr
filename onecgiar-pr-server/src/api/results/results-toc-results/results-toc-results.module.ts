@@ -7,7 +7,7 @@ import { NonPooledProjectRepository } from '../non-pooled-projects/non-pooled-pr
 import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
 import { VersionsService } from '../versions/versions.service';
-import { VersionRepository } from '../versions/version.repository';
+import { VersionRepository } from '../../versioning/version.repository';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 import { ResultRepository } from '../result.repository';
 import { TocResultsRepository } from '../../../toc/toc-results/toc-results.repository';
@@ -20,7 +20,8 @@ import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/
 
 @Module({
   controllers: [ResultsTocResultsController],
-  providers: [ResultsTocResultsService,
+  providers: [
+    ResultsTocResultsService,
     HandlersError,
     ResultsTocResultRepository,
     NonPooledProjectRepository,
@@ -36,10 +37,8 @@ import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/
     ClarisaImpactAreaRepository,
     ShareResultRequestService,
     ShareResultRequestRepository,
-    ResultInitiativeBudgetRepository
+    ResultInitiativeBudgetRepository,
   ],
-  exports: [
-    ResultsTocResultRepository
-  ]
+  exports: [ResultsTocResultRepository],
 })
 export class ResultsTocResultsModule {}

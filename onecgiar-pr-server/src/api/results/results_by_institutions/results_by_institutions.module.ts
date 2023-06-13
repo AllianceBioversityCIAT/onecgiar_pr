@@ -5,7 +5,7 @@ import { ResultByIntitutionsRepository } from './result_by_intitutions.repositor
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultRepository } from '../result.repository';
 import { VersionsService } from '../versions/versions.service';
-import { VersionRepository } from '../versions/version.repository';
+import { VersionRepository } from '../../versioning/version.repository';
 import { ResultByInstitutionsByDeliveriesTypeRepository } from '../result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 import { ResultsKnowledgeProductsRepository } from '../results-knowledge-products/repositories/results-knowledge-products.repository';

@@ -7,7 +7,7 @@ import {
 import { ResultInnovationPackageRepository } from '../result-innovation-package/repositories/result-innovation-package.repository';
 import { VersionsService } from '../../results/versions/versions.service';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
-import { Version } from '../../results/versions/entities/version.entity';
+import { Version } from '../../versioning/entities/version.entity';
 import { EvidencesRepository } from '../../results/evidences/evidences.repository';
 import { IpsrRepository } from '../ipsr.repository';
 import {

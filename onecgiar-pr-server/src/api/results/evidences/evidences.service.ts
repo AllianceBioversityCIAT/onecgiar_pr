@@ -6,7 +6,7 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResultRepository } from '../result.repository';
 import { Evidence } from './entities/evidence.entity';
-import { VersionRepository } from '../versions/version.repository';
+import { VersionRepository } from '../../versioning/version.repository';
 import { ResultsKnowledgeProductsRepository } from '../results-knowledge-products/repositories/results-knowledge-products.repository';
 import { Like } from 'typeorm';
 import { Result } from '../entities/result.entity';
@@ -43,7 +43,7 @@ export class EvidencesService {
           evidencesArray.map((e) => e.link.trim()),
           user.id,
           false,
-          1
+          1,
         );
         const long: number =
           evidencesArray.length > 3 ? 3 : evidencesArray.length;
@@ -55,7 +55,7 @@ export class EvidencesService {
               result.id,
               evidence.link,
               false,
-              1
+              1,
             );
           if (!eExists) {
             let newEvidence = new Evidence();
@@ -80,7 +80,7 @@ export class EvidencesService {
             const knowledgeProduct =
               await this._resultsKnowledgeProductsRepository.findOne({
                 where: { handle: Like(handleId) },
-                relations: {result_object: true}
+                relations: { result_object: true },
               });
 
             if (knowledgeProduct) {
@@ -130,7 +130,7 @@ export class EvidencesService {
           supplementaryArray.map((e) => e.link.trim()),
           user.id,
           true,
-          1
+          1,
         );
         const long: number =
           supplementaryArray.length > 3 ? 3 : supplementaryArray.length;
@@ -142,7 +142,7 @@ export class EvidencesService {
               result.id,
               supplementary.link,
               true,
-              1
+              1,
             );
           if (!eExists) {
             let newEvidnece = new Evidence();
@@ -174,7 +174,9 @@ export class EvidencesService {
 
   async findAll(resultId: number) {
     try {
-      const result: Result = await this._resultRepository.getResultById(resultId);
+      const result: Result = await this._resultRepository.getResultById(
+        resultId,
+      );
       if (!result) {
         throw {
           response: {},
@@ -186,10 +188,14 @@ export class EvidencesService {
       const evidences = await this._evidencesRepository.getEvidencesByResultId(
         resultId,
         false,
-        1
+        1,
       );
       const supplementary =
-        await this._evidencesRepository.getEvidencesByResultId(resultId, true, 1);
+        await this._evidencesRepository.getEvidencesByResultId(
+          resultId,
+          true,
+          1,
+        );
 
       evidences.map((e) => {
         e.gender_related = !!e.gender_related;

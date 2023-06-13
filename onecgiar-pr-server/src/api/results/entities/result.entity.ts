@@ -12,7 +12,7 @@ import {
 } from 'typeorm';
 import { GenderTagLevel } from '../gender_tag_levels/entities/gender_tag_level.entity';
 import { ResultType } from '../result_types/entities/result_type.entity';
-import { Version } from '../versions/entities/version.entity';
+import { Version } from '../../versioning/entities/version.entity';
 import { Year } from '../years/entities/year.entity';
 import { ResultLevel } from '../result_levels/entities/result_level.entity';
 import { LegacyResult } from '../legacy-result/entities/legacy-result.entity';
@@ -57,7 +57,7 @@ export class Result {
   @Column({
     name: 'result_type_id',
     type: 'int',
-    nullable: true
+    nullable: true,
   })
   result_type_id: number;
 
@@ -70,7 +70,7 @@ export class Result {
   @Column({
     name: 'result_level_id',
     type: 'int',
-    nullable: true
+    nullable: true,
   })
   result_level_id: number;
 
@@ -83,7 +83,7 @@ export class Result {
   @Column({
     name: 'gender_tag_level_id',
     type: 'bigint',
-    nullable: true
+    nullable: true,
   })
   gender_tag_level_id!: number;
 
@@ -96,7 +96,7 @@ export class Result {
   @Column({
     name: 'climate_change_tag_level_id',
     type: 'bigint',
-    nullable: true
+    nullable: true,
   })
   climate_change_tag_level_id!: number;
 
@@ -227,7 +227,7 @@ export class Result {
   @Column({
     name: 'geographic_scope_id',
     type: 'int',
-    nullable: true
+    nullable: true,
   })
   geographic_scope_id: number;
 
@@ -276,9 +276,12 @@ export class Result {
   @OneToMany(() => ResultActor, (rc) => rc.obj_result)
   obj_result_actor: ResultActor[];
 
-  @OneToMany(() => ResultsByInititiative, rbi => rbi.obj_result)
+  @OneToMany(() => ResultsByInititiative, (rbi) => rbi.obj_result)
   obj_result_by_initiatives: ResultsByInititiative[];
 
-  @OneToMany(() => ResultIpExpertWorkshopOrganized, ripewo => ripewo.obj_result_expert_workshop)
+  @OneToMany(
+    () => ResultIpExpertWorkshopOrganized,
+    (ripewo) => ripewo.obj_result_expert_workshop,
+  )
   obj_result_expert_workshop: ResultIpExpertWorkshopOrganized[];
 }

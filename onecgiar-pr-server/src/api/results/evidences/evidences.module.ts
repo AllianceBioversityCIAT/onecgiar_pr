@@ -11,7 +11,7 @@ import { JwtMiddleware } from '../../../auth/Middlewares/jwt.middleware';
 import { EvidencesRepository } from './evidences.repository';
 import { HandlersError } from 'src/shared/handlers/error.utils';
 import { ResultRepository } from '../result.repository';
-import { VersionRepository } from '../versions/version.repository';
+import { VersionRepository } from '../../versioning/version.repository';
 import { ResultsKnowledgeProductsRepository } from '../results-knowledge-products/repositories/results-knowledge-products.repository';
 
 @Module({

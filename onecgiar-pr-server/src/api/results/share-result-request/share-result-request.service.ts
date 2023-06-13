@@ -11,7 +11,7 @@ import { getResultIdFullData } from '../dto/get-result-id-full.dto';
 import { ResultsByInititiative } from '../results_by_inititiatives/entities/results_by_inititiative.entity';
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
 import { VersionsService } from '../versions/versions.service';
-import { Version } from '../versions/entities/version.entity';
+import { Version } from '../../versioning/entities/version.entity';
 import { ResultsTocResult } from '../results-toc-results/entities/results-toc-result.entity';
 import { ResultsTocResultRepository } from '../results-toc-results/results-toc-results.repository';
 import { Result } from '../entities/result.entity';

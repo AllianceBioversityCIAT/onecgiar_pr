@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { VersionsService } from './versions.service';
 import { VersionsController } from './versions.controller';
-import { VersionRepository } from './version.repository';
+import { VersionRepository } from '../../versioning/version.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { AuthModule } from '../../../auth/auth.module';
 import { JwtMiddleware } from '../../../auth/Middlewares/jwt.middleware';

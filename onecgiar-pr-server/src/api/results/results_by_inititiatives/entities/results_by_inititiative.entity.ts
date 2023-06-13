@@ -11,7 +11,7 @@ import {
 } from 'typeorm';
 import { Result } from '../../entities/result.entity';
 import { InitiativeRole } from '../../initiative_roles/entities/initiative_role.entity';
-import { Version } from '../../versions/entities/version.entity';
+import { Version } from '../../../versioning/entities/version.entity';
 import { ClarisaInitiative } from '../../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { ResultInitiativeBudget } from '../../result_budget/entities/result_initiative_budget.entity';
 
@@ -23,7 +23,7 @@ export class ResultsByInititiative {
   @Column({
     name: 'result_id',
     type: 'bigint',
-    nullable: true
+    nullable: true,
   })
   result_id: number;
 
@@ -36,7 +36,7 @@ export class ResultsByInititiative {
   @Column({
     name: 'inititiative_id',
     type: 'int',
-    nullable: true
+    nullable: true,
   })
   initiative_id: number;
 
@@ -49,7 +49,7 @@ export class ResultsByInititiative {
   @Column({
     name: 'initiative_role_id',
     type: 'bigint',
-    nullable: false
+    nullable: false,
   })
   initiative_role_id: number;
 
@@ -70,7 +70,7 @@ export class ResultsByInititiative {
   @Column({
     name: 'version_id',
     type: 'bigint',
-    nullable: false
+    nullable: false,
   })
   version_id: number;
 
@@ -83,7 +83,7 @@ export class ResultsByInititiative {
   @Column({
     name: 'created_by',
     type: 'int',
-    nullable: false
+    nullable: false,
   })
   created_by: number;
 
@@ -103,7 +103,7 @@ export class ResultsByInititiative {
   @Column({
     name: 'last_updated_by',
     type: 'int',
-    nullable: true
+    nullable: true,
   })
   last_updated_by: number;
 
@@ -112,14 +112,14 @@ export class ResultsByInititiative {
     name: 'last_updated_by',
   })
   obj_last_updated!: User;
-  
+
   @UpdateDateColumn({
     name: 'last_updated_date',
     type: 'timestamp',
     nullable: true,
   })
   last_updated_date!: Date;
-  
-  @OneToMany(() => ResultInitiativeBudget, rib => rib.obj_result_initiative)
+
+  @OneToMany(() => ResultInitiativeBudget, (rib) => rib.obj_result_initiative)
   obj_result_initiative_array: ResultInitiativeBudget[];
 }

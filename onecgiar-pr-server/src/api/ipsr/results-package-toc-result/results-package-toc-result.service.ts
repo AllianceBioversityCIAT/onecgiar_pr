@@ -4,7 +4,7 @@ import { UpdateResultsPackageTocResultDto } from './dto/update-results-package-t
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { VersionsService } from '../../results/versions/versions.service';
 import { ResultRepository } from '../../results/result.repository';
-import { Version } from '../../results/versions/entities/version.entity';
+import { Version } from '../../versioning/entities/version.entity';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { Result } from '../../results/entities/result.entity';
 import { CreateResultsTocResultDto } from '../../results/results-toc-results/dto/create-results-toc-result.dto';

@@ -14,7 +14,7 @@ import { ExpertisesRepository } from '../innovation-packaging-experts/repositori
 import { InnovationPackagingExpertRepository } from '../innovation-packaging-experts/repositories/innovation-packaging-expert.repository';
 import { InnovationPackagingExpert } from '../innovation-packaging-experts/entities/innovation-packaging-expert.entity';
 import { Result } from '../../results/entities/result.entity';
-import { Version } from '../../results/versions/entities/version.entity';
+import { Version } from '../../versioning/entities/version.entity';
 import { ResultInnovationPackageRepository } from '../result-innovation-package/repositories/result-innovation-package.repository';
 import { VersionsService } from '../../results/versions/versions.service';
 import { IpsrRepository } from '../ipsr.repository';

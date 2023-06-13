@@ -9,7 +9,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Version } from '../../versions/entities/version.entity';
+import { Version } from '../../../versioning/entities/version.entity';
 import { Result } from '../../entities/result.entity';
 import { InstitutionRole } from '../../institution_roles/entities/institution_role.entity';
 import { ClarisaInstitution } from '../../../../clarisa/clarisa-institutions/entities/clarisa-institution.entity';
@@ -26,7 +26,7 @@ export class ResultsByInstitution {
   @Column({
     name: 'result_id',
     type: 'bigint',
-    nullable: false
+    nullable: false,
   })
   result_id: number;
 
@@ -39,7 +39,7 @@ export class ResultsByInstitution {
   @Column({
     name: 'institutions_id',
     type: 'int',
-    nullable: true
+    nullable: true,
   })
   institutions_id: number;
 
@@ -52,7 +52,7 @@ export class ResultsByInstitution {
   @Column({
     name: 'institution_roles_id',
     type: 'bigint',
-    nullable: false
+    nullable: false,
   })
   institution_roles_id: number;
 
@@ -107,6 +107,9 @@ export class ResultsByInstitution {
   )
   result_knowledge_product_institution_array: ResultsKnowledgeProductInstitution[];
 
-  @OneToMany(() => ResultInstitutionsBudget, rib => rib.obj_result_institution)
+  @OneToMany(
+    () => ResultInstitutionsBudget,
+    (rib) => rib.obj_result_institution,
+  )
   obj_result_institution_array: ResultInstitutionsBudget[];
 }

@@ -7,7 +7,7 @@ import {
   CreateResultInnovationPackageDto,
   UpdateGeneralInformationDto,
 } from './dto/create-result-innovation-package.dto';
-import { Version } from '../../results/versions/entities/version.entity';
+import { Version } from '../../versioning/entities/version.entity';
 import { VersionsService } from '../../../api/results/versions/versions.service';
 import { ResultRegion } from '../../../api/results/result-regions/entities/result-region.entity';
 import { ResultRegionRepository } from '../../../api/results/result-regions/result-regions.repository';
@@ -584,7 +584,10 @@ export class ResultInnovationPackageService {
     try {
       let saveAAOutcome: any;
       const searchTocData =
-        await this._resultIpAAOutcomeRepository.mapActionAreaOutcome(coreId, initId);
+        await this._resultIpAAOutcomeRepository.mapActionAreaOutcome(
+          coreId,
+          initId,
+        );
       const smoAAOutcomeToc = searchTocData.map((stc) => stc.outcome_smo_code);
       const mapAAOutcome = await this._clarisaAAOutcome.find({
         where: { outcomeSMOcode: In(smoAAOutcomeToc) },

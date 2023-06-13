@@ -6,7 +6,7 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultRepository } from '../result.repository';
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
 import { VersionsService } from '../versions/versions.service';
-import { VersionRepository } from '../versions/version.repository';
+import { VersionRepository } from '../../versioning/version.repository';
 import { ResultsTocResultRepository } from '../results-toc-results/results-toc-results.repository';
 import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/result_initiative_budget.repository';
 
@@ -21,10 +21,8 @@ import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/
     VersionsService,
     VersionRepository,
     ResultsTocResultRepository,
-    ResultInitiativeBudgetRepository
+    ResultInitiativeBudgetRepository,
   ],
-  exports: [
-    ShareResultRequestRepository
-  ]
+  exports: [ShareResultRequestRepository],
 })
-export class ShareResultRequestModule { }
+export class ShareResultRequestModule {}

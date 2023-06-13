@@ -9,8 +9,8 @@ import { MQAPResultDto } from '../../m-qap/dtos/m-qap.dto';
 import { MQAPService } from '../../m-qap/m-qap.service';
 import { Result } from '../entities/result.entity';
 import { ResultRepository } from '../result.repository';
-import { Version } from '../versions/entities/version.entity';
-import { VersionRepository } from '../versions/version.repository';
+import { Version } from '../../versioning/entities/version.entity';
+import { VersionRepository } from '../../versioning/version.repository';
 import { CreateResultsKnowledgeProductFromHandleDto } from './dto/create-results-knowledge-product-from-handle.dto';
 import { UpdateResultsKnowledgeProductDto } from './dto/update-results-knowledge-product.dto';
 import { ResultsKnowledgeProduct } from './entities/results-knowledge-product.entity';
@@ -367,8 +367,8 @@ export class ResultsKnowledgeProductsService {
         where: { is_active: true },
       });
 
-    const countries = (resultsKnowledgeProductDto.cgspace_countries ?? [])
-      .map((c) => {
+    const countries = (resultsKnowledgeProductDto.cgspace_countries ?? []).map(
+      (c) => {
         let country: ResultCountry;
         if (upsert) {
           country = (
@@ -651,7 +651,7 @@ export class ResultsKnowledgeProductsService {
                 {
                   knowledge_product_related: newResult.id,
                   result_id: newResult.id,
-                  evidence_type_id: 1
+                  evidence_type_id: 1,
                 },
               );
             }),
@@ -666,7 +666,7 @@ export class ResultsKnowledgeProductsService {
         created_by: user.id,
         version_id: currentVersion.id,
         is_supplementary: false,
-        evidence_type_id: 1
+        evidence_type_id: 1,
       });
 
       return {

@@ -8,7 +8,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Version } from '../../versions/entities/version.entity';
+import { Version } from '../../../versioning/entities/version.entity';
 import { Result } from '../../entities/result.entity';
 import { EvidenceType } from '../../evidence_types/entities/evidence_type.entity';
 
@@ -37,7 +37,7 @@ export class Evidence {
   @Column({
     name: 'result_id',
     type: 'bigint',
-    nullable: true
+    nullable: true,
   })
   result_id: number;
 
@@ -80,7 +80,7 @@ export class Evidence {
   @Column({
     name: 'version_id',
     type: 'bigint',
-    nullable: false
+    nullable: false,
   })
   version_id: number;
 
@@ -125,13 +125,13 @@ export class Evidence {
   @Column({
     name: 'evidence_type_id',
     type: 'bigint',
-    nullable: true
+    nullable: true,
   })
   evidence_type_id: number;
 
-  @ManyToOne(() => EvidenceType, et => et.id)
+  @ManyToOne(() => EvidenceType, (et) => et.id)
   @JoinColumn({
-    name: 'evidence_type_id'
+    name: 'evidence_type_id',
   })
   evidence_type: EvidenceType;
 }

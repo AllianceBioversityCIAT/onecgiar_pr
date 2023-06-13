@@ -8,7 +8,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Version } from '../../results/versions/entities/version.entity';
+import { Version } from '../../versioning/entities/version.entity';
 import { User } from '../../../auth/modules/user/entities/user.entity';
 import { PlatformReport } from './platform-report.entity';
 

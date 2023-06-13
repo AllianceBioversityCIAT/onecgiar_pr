@@ -11,7 +11,7 @@ import {
 import { Result } from '../../entities/result.entity';
 import { Evidence } from '../../evidences/entities/evidence.entity';
 import { EvidenceType } from '../../evidence_types/entities/evidence_type.entity';
-import { Version } from '../../versions/entities/version.entity';
+import { Version } from '../../../versioning/entities/version.entity';
 
 @Entity('results_by_evidence')
 export class ResultsByEvidence {

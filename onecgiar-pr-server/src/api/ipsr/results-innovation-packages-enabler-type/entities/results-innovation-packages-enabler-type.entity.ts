@@ -9,7 +9,7 @@ import {
 import { BaseEntity } from '../../../../shared/entities/base-entity';
 import { ComplementaryInnovationEnablerTypes } from './complementary-innovation-enabler-types.entity';
 import { ResultInnovationPackage } from '../../result-innovation-package/entities/result-innovation-package.entity';
-import { Version } from '../../../results/versions/entities/version.entity';
+import { Version } from '../../../versioning/entities/version.entity';
 import { Ipsr } from '../../entities/ipsr.entity';
 
 @Entity('results_innovatio_packages_enabler_type')
@@ -43,10 +43,7 @@ export class ResultsInnovationPackagesEnablerType extends BaseEntity {
   })
   obj_complementary_innovation_enable_type: ComplementaryInnovationEnablerTypes;
 
-  @ManyToOne(
-    () => Ipsr,
-    (ipsr) => ipsr.result_by_innovation_package_id,
-  )
+  @ManyToOne(() => Ipsr, (ipsr) => ipsr.result_by_innovation_package_id)
   @JoinColumn({
     name: 'result_by_innovation_package_id',
   })

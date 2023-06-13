@@ -6,14 +6,19 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ClarisaGeographicScopeRepository } from '../../../clarisa/clarisa-geographic-scopes/clarisa-geographic-scopes.repository';
 import { ResultRepository } from '../result.repository';
 import { VersionsService } from '../versions/versions.service';
-import { VersionRepository } from '../versions/version.repository';
+import { VersionRepository } from '../../versioning/version.repository';
 
 @Module({
   controllers: [ResultRegionsController],
-  providers: [ResultRegionsService, ResultRegionRepository, HandlersError, ClarisaGeographicScopeRepository, ResultRepository, VersionsService, VersionRepository],
-  exports: [
+  providers: [
+    ResultRegionsService,
     ResultRegionRepository,
-    ResultRegionsService
-  ]
+    HandlersError,
+    ClarisaGeographicScopeRepository,
+    ResultRepository,
+    VersionsService,
+    VersionRepository,
+  ],
+  exports: [ResultRegionRepository, ResultRegionsService],
 })
 export class ResultRegionsModule {}

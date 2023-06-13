@@ -10,7 +10,7 @@ import {
 import { User } from '../../../../auth/modules/user/entities/user.entity';
 import { ClarisaInstitution } from '../../../../clarisa/clarisa-institutions/entities/clarisa-institution.entity';
 import { ResultsByInstitution } from '../../results_by_institutions/entities/results_by_institution.entity';
-import { Version } from '../../versions/entities/version.entity';
+import { Version } from '../../../versioning/entities/version.entity';
 import { ResultsKnowledgeProduct } from './results-knowledge-product.entity';
 
 @Entity('results_kp_mqap_institutions')
