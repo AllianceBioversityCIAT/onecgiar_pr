@@ -97,6 +97,12 @@ export class StepN1InnovatonUseComponent {
     return list;
   }
 
+  hasElementsWithId(list, attr) {
+    const finalList = this.api.rolesSE.readOnly ? list.filter(item => item[attr]) : list.filter(item => item.is_active != false);
+    console.log(list);
+    return finalList.length;
+  }
+
   removeOrganization(organizationItem) {
     //(organizationItem);
     organizationItem.institution_sub_type_id = null;
