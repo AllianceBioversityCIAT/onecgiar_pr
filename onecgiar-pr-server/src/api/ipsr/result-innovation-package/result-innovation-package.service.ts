@@ -446,6 +446,7 @@ export class ResultInnovationPackageService {
       );
 
       const retriveAAOutcome = await this.retrievedAAOutcome(
+        result.id,
         coreInnovationInitiative.initiative_id,
         user.id,
         resultByInnivationPackage,
@@ -453,6 +454,7 @@ export class ResultInnovationPackageService {
       );
 
       const retrievedImpactArea = await this.retrievedImpactArea(
+        result.id,
         coreInnovationInitiative.initiative_id,
         user.id,
         resultByInnivationPackage,
@@ -460,6 +462,7 @@ export class ResultInnovationPackageService {
       );
 
       const retrieveSdgs = await this.retrievedSdgs(
+        result.id,
         coreInnovationInitiative.initiative_id,
         user.id,
         resultByInnivationPackage,
@@ -572,6 +575,7 @@ export class ResultInnovationPackageService {
   }
 
   async retrievedAAOutcome(
+    coreId: number,
     initId: number,
     user: number,
     resultByIpId: number,
@@ -580,7 +584,7 @@ export class ResultInnovationPackageService {
     try {
       let saveAAOutcome: any;
       const searchTocData =
-        await this._resultIpAAOutcomeRepository.mapActionAreaOutcome(initId);
+        await this._resultIpAAOutcomeRepository.mapActionAreaOutcome(coreId, initId);
       const smoAAOutcomeToc = searchTocData.map((stc) => stc.outcome_smo_code);
       const mapAAOutcome = await this._clarisaAAOutcome.find({
         where: { outcomeSMOcode: In(smoAAOutcomeToc) },
@@ -612,6 +616,7 @@ export class ResultInnovationPackageService {
   }
 
   async retrievedImpactArea(
+    coreId: number,
     initId: number,
     user: number,
     resultByIpId: number,
@@ -621,6 +626,7 @@ export class ResultInnovationPackageService {
       let saveImpactArea: any;
       const searchTocData =
         await this._resultIpImpactAreaIndicatorsRespository.mapImpactAreaOutcomeToc(
+          coreId,
           initId,
         );
 
@@ -649,6 +655,7 @@ export class ResultInnovationPackageService {
   }
 
   async retrievedSdgs(
+    coreId: number,
     initId: number,
     user: number,
     resultByIpId: number,
@@ -657,6 +664,7 @@ export class ResultInnovationPackageService {
     try {
       let saveSdgs: any;
       const searchTocData = await this._resultIpSdgRespository.mapSdgsToc(
+        coreId,
         initId,
       );
 
