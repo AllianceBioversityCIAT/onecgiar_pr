@@ -1,4 +1,4 @@
-import { Injectable, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpStatus, Logger } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { Result } from './entities/result.entity';
 import { HandlersError } from '../../shared/handlers/error.utils';
@@ -10,14 +10,118 @@ import { ResultDataToMapDto } from './dto/result-data-to-map.dto';
 import { LegacyIndicatorsPartner } from './legacy_indicators_partners/entities/legacy_indicators_partner.entity';
 import { env } from 'process';
 import { ResultTypeDto } from './dto/result-types.dto';
+import { ReplicableInterface } from '../../shared/globalInterfaces/replicable.interface';
+import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 
 @Injectable()
-export class ResultRepository extends Repository<Result> {
+export class ResultRepository
+  extends Repository<Result>
+  implements ReplicableInterface<Result>
+{
+  private readonly _logger: Logger = new Logger(ResultRepository.name);
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
   ) {
     super(Result, dataSource.createEntityManager());
+  }
+  async replicable(
+    phases: number,
+    user: TokenDto,
+    old_result_id: number,
+    new_result_id?: number,
+    f?: {
+      custonFunction?: (res: Result) => Result;
+      errorFunction?: (error: any) => void;
+      completeFunction?: (res: Result) => void;
+    },
+  ): Promise<Result> {
+    let final_data: Result = null;
+    try {
+      if (f?.custonFunction) {
+        const response = await this.findOne({
+          where: { id: old_result_id, is_active: true },
+        });
+        delete response.id;
+        delete response.created_date;
+        delete response.last_updated_date;
+        response.version_id = phases;
+        const new_response = await this.save(response);
+        const response_edit = f.custonFunction(new_response);
+        const id = response_edit.id;
+        delete response_edit.id;
+        await this.update(id, response_edit);
+        final_data = {
+          ...response_edit,
+          id,
+        };
+      } else {
+        const queryData: string = `
+        insert into \`result\` (
+          description
+          ,is_active
+          ,last_updated_date
+          ,gender_tag_level_id
+          ,version_id
+          ,result_type_id
+          ,status
+          ,created_by
+          ,last_updated_by
+          ,reported_year_id
+          ,created_date
+          ,result_level_id
+          ,title
+          ,legacy_id
+          ,krs_url
+          ,is_krs
+          ,climate_change_tag_level_id
+          ,no_applicable_partner
+          ,has_regions
+          ,has_countries
+          ,geographic_scope_id
+          ,lead_contact_person
+          ,result_code
+          ) select
+          r2.description,
+          r2.is_active,
+          null as last_updated_date,
+          r2.gender_tag_level_id,
+          ? as version_id,
+          r2.result_type_id,
+          r2.status,
+          ? as created_by,
+          ? as last_updated_by,
+          r2.reported_year_id,
+          now() as created_date,
+          r2.result_level_id,
+          r2.title,
+          r2.legacy_id,
+          r2.krs_url,
+          r2.is_krs,
+          r2.climate_change_tag_level_id,
+          r2.no_applicable_partner,
+          r2.has_regions,
+          r2.has_countries,
+          r2.geographic_scope_id,
+          r2.lead_contact_person,
+          r2.result_code
+          from \`result\` r2 WHERE r2.id = ? and r2.is_active > 0`;
+        const [response]: { insert_id }[] = await this.query(queryData, [
+          phases,
+          user.id,
+          user.id,
+          old_result_id,
+        ]);
+        final_data = await this.findOne({ where: { id: response.insert_id } });
+      }
+    } catch (error) {
+      f?.errorFunction ? f.errorFunction(error) : this._logger.error(error);
+      final_data = null;
+    }
+
+    f?.completeFunction ? f.completeFunction({ ...final_data }) : null;
+
+    return final_data;
   }
 
   async getResultByName(
