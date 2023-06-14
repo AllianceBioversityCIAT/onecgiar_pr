@@ -140,32 +140,40 @@ export class ResultIpSdgTargetRepository extends Repository<ResultIpSdgTargets> 
     }
   }
 
-  async mapSdgsToc(initId: number) {
+  async mapSdgsToc(coreId: number, initId: number) {
     try {
       const query = `
-        SELECT
-            DISTINCT cst.id AS clarisa_sdg_target_id,
-            tsr.sdg_id AS clarisa_sdg_usnd_code
-        FROM
-            ${env.DB_OST}.clarisa_sdg_targets cst  
-            LEFT JOIN ${env.DB_OST}.toc_sdg_results_sdg_targets tsrst ON tsrst.sdg_target_id = cst.id
-            LEFT JOIN ${env.DB_OST}.toc_sdg_results tsr ON tsr.toc_result_id = tsrst.sdg_toc_result_id
-            LEFT JOIN ${env.DB_OST}.toc_results_sdg_results trsr ON trsr.sdg_toc_result_id = tsr.toc_result_id
-            LEFT JOIN ${env.DB_OST}.toc_results tr1 ON tr1.toc_result_id = trsr.toc_result_id
-        WHERE
-            tsrst.is_active = 1
-            AND tr1.toc_result_id IN (
-            SELECT
-                tr2.toc_internal_id
-            FROM
-                prdb.toc_result tr2
-            WHERE
-                tr2.inititiative_id = ?
-                AND tr2.is_active = 1
-            );
+      SELECT
+          DISTINCT cst.id AS clarisa_sdg_target_id,
+          tsr.sdg_id AS clarisa_sdg_usnd_code
+      FROM
+          ${env.DB_OST}.clarisa_sdg_targets cst
+          LEFT JOIN ${env.DB_OST}.toc_sdg_results_sdg_targets tsrst ON tsrst.sdg_target_id = cst.id
+          LEFT JOIN ${env.DB_OST}.toc_sdg_results tsr ON tsr.toc_result_id = tsrst.sdg_toc_result_id
+          LEFT JOIN ${env.DB_OST}.toc_results_sdg_results trsr ON trsr.sdg_toc_result_id = tsr.toc_result_id
+          LEFT JOIN ${env.DB_OST}.toc_results tr1 ON tr1.toc_result_id = trsr.toc_result_id
+      WHERE
+          tsrst.is_active = 1
+          AND tr1.toc_result_id IN (
+              SELECT
+                  tr2.toc_internal_id
+              FROM
+                  prdb.toc_result tr2
+                  LEFT JOIN prdb.results_toc_result rtr ON rtr.toc_result_id = tr2.toc_result_id
+                  AND rtr.is_active = 1
+              WHERE
+                  rtr.results_id = ?
+                  AND rtr.initiative_id = ?
+                  AND tr2.inititiative_id = ?
+                  AND tr2.is_active = 1
+          );
         `;
 
-      const sdgsTarget: any[] = await this.dataSource.query(query, [initId]);
+      const sdgsTarget: any[] = await this.dataSource.query(query, [
+        coreId,
+        initId,
+        initId,
+      ]);
       return sdgsTarget;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

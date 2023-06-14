@@ -46,8 +46,18 @@ export class InnovationPackageCreatorComponent {
       case 4:
         return !!this.innovationPackageCreatorBody.countries.length;
       case 5:
-        return !!this.innovationPackageCreatorBody.countries.length && this.innovationPackageCreatorBody?.geoScopeSubNatinals?.length >= 1;
-
+        const allFields = [];
+        document
+          ?.querySelector('.geo_scope_elements')
+          ?.querySelectorAll('.geo-scope')
+          ?.forEach(item => {
+            const fields = item?.querySelectorAll('.text');
+            const countryField = fields[0]?.classList?.contains('select_placeholder');
+            const SubNationalLevelOneField = fields[1]?.classList?.contains('select_placeholder');
+            allFields.push(countryField || SubNationalLevelOneField);
+          });
+        const someNull = allFields.some(item => item === true);
+        return !!this.innovationPackageCreatorBody.countries.length && !someNull;
       default:
         return false;
     }
