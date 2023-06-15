@@ -11,7 +11,7 @@
     <div class="experts">
 
         <div *ngFor="let expert of this.body.experts" appYmzListStructureItem (deleteEvent)="expert.is_active = false"
-            [ngClass]="{'hideElement': expert.is_active == false}">
+            [ngClass]="{'hideElement': expert.is_active == false|| (!this.expert?.result_ip_expert_id && this.rolesSE.readOnly)}">
             <div class="component_fields two_elements_grid">
                 <div>
                     <div class="two_elements_grid">
@@ -54,7 +54,8 @@
         </div>
     </div>
 
-
+    <app-no-data-text *ngIf="!hasElementsWithId(this.body.experts,'result_ip_expert_id')"
+        title="No experts provided"></app-no-data-text>
     <app-add-button name="Add expert" *ngIf="!this.rolesSE.readOnly" (clickEvent)="addExpert()"></app-add-button>
 
 

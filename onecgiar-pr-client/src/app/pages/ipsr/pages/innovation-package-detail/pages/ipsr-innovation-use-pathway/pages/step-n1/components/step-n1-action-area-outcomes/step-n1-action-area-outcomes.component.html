@@ -17,7 +17,8 @@
 
         <div class="selected_container custom_scroll ">
             <br>
-            <app-pr-field-header description="Systems Transformation Outcome(s) selected:">
+            <app-pr-field-header
+                [description]="'Systems Transformation Outcome(s) selected('+filterByAAOId(1)?.length+'):'">
             </app-pr-field-header>
             <div class="chips_container">
                 <div class="pr_chip_selected" *ngFor="let option of filterByAAOId(1); let i=index"
@@ -45,9 +46,10 @@
 
         <div class="selected_container custom_scroll">
             <br>
-            <app-pr-field-header description="Resilient Agrifood Systems Outcome(s) selected:">
+            <app-pr-field-header
+                [description]="'Resilient Agrifood Systems Outcome(s) selected('+filterByAAOId(1)?.length+'):'">
             </app-pr-field-header>
-            <div class="chips_container">
+            <div class=" chips_container">
                 <div class="pr_chip_selected" *ngFor="let option of filterByAAOId(2); let i=index"
                     [ngClass]="{'is_active_false': false}">
                     <div class="name" [innerHtml]="option.full_name"></div><i *ngIf="!this.api.rolesSE.readOnly"
@@ -73,7 +75,8 @@
 
         <div class="selected_container custom_scroll">
             <br>
-            <app-pr-field-header description="Genetic Innovation Outcome(s) selected:">
+            <app-pr-field-header
+                [description]="'Genetic Innovation Outcome(s) selected('+filterByAAOId(1)?.length+'):'">
             </app-pr-field-header>
             <div class="chips_container">
                 <div class="pr_chip_selected" *ngFor="let option of filterByAAOId(3); let i=index"

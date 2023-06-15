@@ -29,8 +29,8 @@
     </div>
 </div>
 <app-no-data-text
-    *ngIf="!this.contributorsBody?.contributing_np_projects?.length && !this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"
-    title="No Non-pooled added">
+    *ngIf="!this.contributorsBody?.contributing_np_projects?.length && !this.api.dataControlSE?.currentResult?.status"
+    title="No non-pooled projects added">
 </app-no-data-text>
 <app-add-button name="Add non-pooled project"
     *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"

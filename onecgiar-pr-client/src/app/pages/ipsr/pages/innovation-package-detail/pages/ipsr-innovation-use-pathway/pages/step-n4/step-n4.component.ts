@@ -33,6 +33,7 @@ export class StepN4Component implements OnInit {
       //('%cGET', 'font-size: 20px; color: #2BBE28;');
       //(response);
       //('%c____________________', 'font-size: 20px; color: #2BBE28;');
+      console.log(response);
       this.ipsrStep4Body = response;
       // this.ipsrStep4Body.institutions_expected_investment.map(item => (item.institutions_type_name = item.institutions_name));
     });
