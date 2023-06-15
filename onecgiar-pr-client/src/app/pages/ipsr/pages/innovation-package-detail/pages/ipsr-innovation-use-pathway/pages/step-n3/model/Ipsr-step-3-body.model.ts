@@ -84,6 +84,7 @@ export class OrganizationN3 {
 }
 
 export class ActorN3 {
+  result_actors_id: any;
   actor_type_id: number;
   women: number;
   women_youth: number;

@@ -3,7 +3,9 @@
 <div [ngSwitch]="(readOnly || this.rolesSE.readOnly || !!this.dataControlSE?.currentResult?.status) && (!isStatic)"
     class="pr-field"
     [ngClass]="{'mandatory': this.required,'complete': value,'readOnly':(readOnly || this.rolesSE.readOnly || !!this.dataControlSE?.currentResult?.status) && (!isStatic)}">
-    <div class="read-only" *ngSwitchCase="true" [innerHtml]="value || notProvidedText">
+    <div class="read-only" *ngSwitchCase="true" [innerHtml]="value || (this.required ?
+            'Not provided' :
+            'Not applicable')">
     </div>
     <div class="p-fluid input_container" *ngSwitchCase="false">
         <!-- <input pInputText [type]="this.type" [placeholder]="this.placeholder" /> -->
