@@ -78,6 +78,18 @@ export class StepN3Component implements OnInit {
   }
 
   onsaveSection(descrip) {
+    if (this.api.rolesSE.readOnly) {
+      if (descrip == 'next') {
+        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2']);
+      } else {
+        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-4']);
+      }
+      return;
+    }
+
+    if (descrip == 'previous') {
+      this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2/complementary-innovation']);
+    }
     this.convertOrganizationsTosave();
     // result_ip_result_complementary
 

@@ -170,6 +170,6 @@
     </div>
 </div>
 <app-no-data-text *ngIf="!hasElementsWithId(this.body.innovatonUse.measures,'result_ip_result_measures_id')"
-    title="No other provided">
+    title="Other quantitative measures not added">
 </app-no-data-text>
-<app-add-button name="Add other" *ngIf="!this.api.rolesSE.readOnly" (clickEvent)="addOther()"></app-add-button>
+<app-add-button name=" Add other" *ngIf="!this.api.rolesSE.readOnly" (clickEvent)="addOther()"></app-add-button>
