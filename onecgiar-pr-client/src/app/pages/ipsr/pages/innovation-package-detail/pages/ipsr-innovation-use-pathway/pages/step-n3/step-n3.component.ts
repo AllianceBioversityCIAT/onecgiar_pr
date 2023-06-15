@@ -27,6 +27,11 @@ export class StepN3Component implements OnInit {
     this.api.dataControlSE.detailSectionTitle('Step 3');
   }
 
+  hasElementsWithId(list, attr) {
+    const finalList = this.api.rolesSE.readOnly ? list.filter(item => item[attr]) : list.filter(item => item.is_active != false);
+    return finalList.length;
+  }
+
   openClosed(response) {
     if (this.ipsrStep3Body.result_ip_result_complementary.length) {
       this.ipsrStep3Body.result_ip_result_complementary.forEach((item: any) => {

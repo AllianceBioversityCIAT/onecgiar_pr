@@ -8,10 +8,10 @@
 
 <app-new-complementary-innovation [complementaryInnovationFunction]="complemntaryFunction"
     (createInnovationEvent)="createInnovationEvent($event)"></app-new-complementary-innovation>
-
+<app-pr-field-header [required]="false"
+    [description]="'Complementary innovation(s)/ enabler(s)/ solution(s) selected('+this.innovationPackageCreatorBody?.length+'):'"></app-pr-field-header>
 <div *ngIf="this.innovationPackageCreatorBody.length > 0">
-    <app-pr-field-header [required]="false"
-        description="Complementary innovation(s)/ enabler(s)/ solution(s) selected:"></app-pr-field-header>
+
 
     <div class="core_innovation_selected " *ngFor="let result of this.innovationPackageCreatorBody"
         style="margin-top: 10px;">

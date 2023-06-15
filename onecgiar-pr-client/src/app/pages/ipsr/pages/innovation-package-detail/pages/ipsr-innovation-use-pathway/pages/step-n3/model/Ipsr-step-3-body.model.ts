@@ -53,6 +53,7 @@ export class expert_workshop_organized {
   last_name: string;
   email: string;
   workshop_role: string;
+  result_ip_expert_workshop_organized_id: any;
 }
 
 class InnovatonUse {

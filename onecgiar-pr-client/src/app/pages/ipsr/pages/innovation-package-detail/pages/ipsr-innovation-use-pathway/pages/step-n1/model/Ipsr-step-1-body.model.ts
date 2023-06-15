@@ -26,6 +26,7 @@ export class Expert {
   email: string;
   organization_id: number;
   // expertises_id: number;
+  result_ip_expert_id: any;
   expertises = [];
   is_active: boolean;
 }

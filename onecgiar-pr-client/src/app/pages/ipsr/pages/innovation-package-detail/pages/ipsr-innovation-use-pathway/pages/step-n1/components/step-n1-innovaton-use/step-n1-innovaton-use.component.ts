@@ -99,7 +99,6 @@ export class StepN1InnovatonUseComponent {
 
   hasElementsWithId(list, attr) {
     const finalList = this.api.rolesSE.readOnly ? list.filter(item => item[attr]) : list.filter(item => item.is_active != false);
-    console.log(list);
     return finalList.length;
   }
 

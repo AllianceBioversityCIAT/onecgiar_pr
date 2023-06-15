@@ -12,7 +12,8 @@
         <app-pr-field-header label="Facilitators" [required]="false"></app-pr-field-header>
         <div style="margin-top: 20px;"
             *ngFor="let expertItem of this.ipsrStep3Body.result_ip_expert_workshop_organized; let i = index;"
-            appYmzListStructureItem (deleteEvent)="delete(i)">
+            appYmzListStructureItem (deleteEvent)="delete(i)"
+            [ngClass]="{'hideElement':(!this.expertItem?.result_ip_expert_workshop_organized_id && this.api.rolesSE.readOnly)}">
 
             <div class="infoPersons">
 
@@ -32,6 +33,10 @@
 
     </div>
     <div *ngIf="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true">
+        <app-no-data-text
+            *ngIf="!hasElementsWithId(this.ipsrStep3Body.result_ip_expert_workshop_organized,'result_ip_expert_workshop_organized_id')"
+            title="No facilitators provided">
+        </app-no-data-text>
         <app-add-button *ngIf="!this.api.rolesSE.readOnly" name="Add Lead/Co-Lead"
             (clickEvent)="addExpert()"></app-add-button>
     </div>
