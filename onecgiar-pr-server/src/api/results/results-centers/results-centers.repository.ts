@@ -1,15 +1,116 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultsCenter } from './entities/results-center.entity';
+import {
+  ReplicableConfigInterface,
+  ReplicableInterface,
+} from '../../../shared/globalInterfaces/replicable.interface';
 
 @Injectable()
-export class ResultsCenterRepository extends Repository<ResultsCenter> {
+export class ResultsCenterRepository
+  extends Repository<ResultsCenter>
+  implements ReplicableInterface<ResultsCenter>
+{
+  private readonly _logger: Logger = new Logger(ResultsCenterRepository.name);
+
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
   ) {
     super(ResultsCenter, dataSource.createEntityManager());
+  }
+
+  async replicable(
+    config: ReplicableConfigInterface<ResultsCenter>,
+  ): Promise<ResultsCenter[]> {
+    let final_data: ResultsCenter[] = null;
+    try {
+      if (config.f?.custonFunction) {
+        const queryData = `
+        select 
+        null as id,
+        rc.is_primary,
+        rc.is_active,
+        now() as created_date,
+        null as last_updated_date,
+        ? as result_id,
+        ? as created_by,
+        null as last_updated_by,
+        rc.center_id,
+        ? as version_id
+        from results_center rc WHERE rc.result_id = ? and rc.is_active > 0
+        `;
+        const response = await (<Promise<ResultsCenter[]>>(
+          this.query(queryData, [
+            config.new_result_id,
+            config.user.id,
+            config.phase,
+            config.old_result_id,
+          ])
+        ));
+        const response_edit = <ResultsCenter[]>(
+          config.f.custonFunction(response)
+        );
+        final_data = await this.save(response_edit);
+      } else {
+        const queryData: string = `
+        insert into results_center (
+        is_primary,
+        is_active,
+        created_date,
+        last_updated_date,
+        result_id,
+        created_by,
+        last_updated_by,
+        center_id,
+        version_id
+        )
+        select 
+        rc.is_primary,
+        rc.is_active,
+        now() as created_date,
+        null as last_updated_date,
+        ? as result_id,
+        ? as created_by,
+        null as last_updated_by,
+        rc.center_id,
+        ? as version_id
+        from results_center rc WHERE rc.result_id = ? and rc.is_active > 0`;
+        await this.query(queryData, [
+          config.new_result_id,
+          config.user.id,
+          config.phase,
+          config.old_result_id,
+        ]);
+
+        const queryFind = `
+        select 
+        rc.id,
+        rc.is_primary,
+        rc.is_active,
+        rc.created_date,
+        rc.last_updated_date,
+        rc.result_id,
+        rc.created_by,
+        rc.last_updated_by,
+        rc.center_id,
+        rc.version_id
+        from results_center rc WHERE rc.result_id = ?`;
+        final_data = await this.query(queryFind, [config.new_result_id]);
+      }
+    } catch (error) {
+      config.f?.errorFunction
+        ? config.f.errorFunction(error)
+        : this._logger.error(error);
+      final_data = null;
+    }
+
+    config.f?.completeFunction
+      ? config.f.completeFunction({ ...final_data })
+      : null;
+
+    return final_data;
   }
 
   async getAllResultsCenter() {
@@ -60,7 +161,9 @@ export class ResultsCenterRepository extends Repository<ResultsCenter> {
         and rc.is_active > 0;
     `;
     try {
-      const resultCenter: ResultsCenter[] = await this.query(queryData, [resultId]);
+      const resultCenter: ResultsCenter[] = await this.query(queryData, [
+        resultId,
+      ]);
       return resultCenter;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -71,7 +174,10 @@ export class ResultsCenterRepository extends Repository<ResultsCenter> {
     }
   }
 
-  async getAllResultsCenterByResultIdAndCenterId(resultId: number, centerId: string) {
+  async getAllResultsCenterByResultIdAndCenterId(
+    resultId: number,
+    centerId: string,
+  ) {
     const queryData = `
     select
       rc.id,
@@ -88,8 +194,11 @@ export class ResultsCenterRepository extends Repository<ResultsCenter> {
       	and rc.center_id = ?;
     `;
     try {
-      const resultCenter: ResultsCenter[] = await this.query(queryData, [resultId, centerId]);
-      return resultCenter?.length? resultCenter[0]: undefined;
+      const resultCenter: ResultsCenter[] = await this.query(queryData, [
+        resultId,
+        centerId,
+      ]);
+      return resultCenter?.length ? resultCenter[0] : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsCenterRepository.name,
@@ -100,7 +209,7 @@ export class ResultsCenterRepository extends Repository<ResultsCenter> {
   }
 
   async updateCenter(resultId: number, centerArray: string[], userId: number) {
-    const center = centerArray??[];
+    const center = centerArray ?? [];
     const upDateInactive = `
       update results_center  
       set is_active  = 0,
@@ -109,7 +218,7 @@ export class ResultsCenterRepository extends Repository<ResultsCenter> {
         last_updated_by = ?
       where is_active > 0 
         and result_id = ?
-        and center_id not in (${`'${center.toString().replace(/,/g,'\',\'')}'`});
+        and center_id not in (${`'${center.toString().replace(/,/g, "','")}'`});
     `;
 
     const upDateActive = `
@@ -119,7 +228,7 @@ export class ResultsCenterRepository extends Repository<ResultsCenter> {
         last_updated_date = NOW(),
         last_updated_by = ?
       where result_id = ?
-        and center_id in (${`'${center.toString().replace(/,/g,'\',\'')}'`});
+        and center_id in (${`'${center.toString().replace(/,/g, "','")}'`});
     `;
 
     const upDateAllInactive = `
@@ -133,18 +242,15 @@ export class ResultsCenterRepository extends Repository<ResultsCenter> {
     `;
 
     try {
-      if(center?.length){
+      if (center?.length) {
         const upDateInactiveResult = await this.query(upDateInactive, [
-          userId, resultId
+          userId,
+          resultId,
         ]);
-  
-        return await this.query(upDateActive, [
-          userId, resultId
-        ]);
-      }else{
-        return await this.query(upDateAllInactive, [
-          userId, resultId
-        ]);
+
+        return await this.query(upDateActive, [userId, resultId]);
+      } else {
+        return await this.query(upDateAllInactive, [userId, resultId]);
       }
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

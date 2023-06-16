@@ -1,17 +1,117 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultsImpactAreaIndicator } from './entities/results-impact-area-indicator.entity';
 import { GetImpactIndicatorAreaDto } from './dto/get-impact-indicator-area.dto';
 import { env } from 'process';
+import {
+  ReplicableConfigInterface,
+  ReplicableInterface,
+} from '../../../shared/globalInterfaces/replicable.interface';
 
 @Injectable()
-export class ResultsImpactAreaIndicatorRepository extends Repository<ResultsImpactAreaIndicator> {
+export class ResultsImpactAreaIndicatorRepository
+  extends Repository<ResultsImpactAreaIndicator>
+  implements ReplicableInterface<ResultsImpactAreaIndicator>
+{
+  private readonly _logger: Logger = new Logger(
+    ResultsImpactAreaIndicatorRepository.name,
+  );
+
   constructor(
     private dataSource: DataSource,
     private _handlersError: HandlersError,
   ) {
     super(ResultsImpactAreaIndicator, dataSource.createEntityManager());
+  }
+
+  async replicable(
+    config: ReplicableConfigInterface<ResultsImpactAreaIndicator>,
+  ): Promise<ResultsImpactAreaIndicator[]> {
+    let final_data: ResultsImpactAreaIndicator[] = null;
+    try {
+      if (config.f?.custonFunction) {
+        const queryData = `
+        select
+          null as results_impact_area_indicator_id,
+          riai.is_active,
+          now() as created_date,
+          null as last_updated_date,
+          riai.impact_area_indicator_id,
+          ? as result_id,
+          ? as version_id,
+          ? as created_by,
+          null as last_updated_by
+          from results_impact_area_indicators riai where riai.result_id = ? and riai.is_active > 0
+        `;
+        const response = await (<Promise<ResultsImpactAreaIndicator[]>>(
+          this.query(queryData, [
+            config.new_result_id,
+            config.phase,
+            config.user.id,
+            config.old_result_id,
+          ])
+        ));
+        const response_edit = <ResultsImpactAreaIndicator[]>(
+          config.f.custonFunction(response)
+        );
+        final_data = await this.save(response_edit);
+      } else {
+        const queryData: string = `
+        insert into results_impact_area_indicators 
+        (
+          is_active,
+          created_date,
+          last_updated_date,
+          impact_area_indicator_id,
+          result_id,
+          version_id,
+          created_by,
+          last_updated_by
+          )
+        select
+          riai.is_active,
+          now() as created_date,
+          null as last_updated_date,
+          riai.impact_area_indicator_id,
+          ? as result_id,
+          ? as version_id,
+          ? as created_by,
+          null as last_updated_by
+          from results_impact_area_indicators riai where riai.result_id = ? and riai.is_active > 0`;
+        await this.query(queryData, [
+          config.new_result_id,
+          config.phase,
+          config.user.id,
+          config.old_result_id,
+        ]);
+
+        const queryFind = `
+        select
+        riai.results_impact_area_indicator_id,
+        riai.is_active,
+        riai.created_date,
+        riai.last_updated_date,
+        riai.impact_area_indicator_id,
+        riai.result_id,
+        riai.version_id,
+        riai.created_by,
+        riai.last_updated_by
+        from results_impact_area_indicators riai where riai.result_id = ?`;
+        final_data = await this.query(queryFind, [config.new_result_id]);
+      }
+    } catch (error) {
+      config.f?.errorFunction
+        ? config.f.errorFunction(error)
+        : this._logger.error(error);
+      final_data = null;
+    }
+
+    config.f?.completeFunction
+      ? config.f.completeFunction({ ...final_data })
+      : null;
+
+    return final_data;
   }
 
   async ResultsImpactAreaIndicatorExists(
