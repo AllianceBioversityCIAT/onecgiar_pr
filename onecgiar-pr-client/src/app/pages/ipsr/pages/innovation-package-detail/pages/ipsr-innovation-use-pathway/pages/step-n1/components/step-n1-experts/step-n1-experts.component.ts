@@ -29,6 +29,11 @@ export class StepN1ExpertsComponent {
     this.body.experts.push(new Expert());
   }
 
+  hasElementsWithId(list, attr) {
+    const finalList = this.api.rolesSE.readOnly ? list.filter(item => item[attr]) : list.filter(item => item.is_active != false);
+    return finalList.length;
+  }
+
   narrativeActors() {
     return `
     <ul>

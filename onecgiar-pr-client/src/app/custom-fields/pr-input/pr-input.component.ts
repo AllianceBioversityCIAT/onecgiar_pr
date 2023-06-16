@@ -34,6 +34,8 @@ export class PrInputComponent implements ControlValueAccessor {
   private _value: any;
   private beforeValue: string;
   public wordCount: number = 0;
+  public notProvidedText = "<div class='not_provided_color'>Not provided</div>";
+
   constructor(private wordCounterSE: WordCounterService, public rolesSE: RolesService, public dataControlSE: DataControlService) {}
 
   get value() {

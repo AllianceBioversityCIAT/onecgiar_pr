@@ -126,6 +126,17 @@ export class ComplementaryInnovationComponent implements OnInit {
   }
 
   async onSavePreviuosNext(descrip) {
+    console.log(descrip);
+    if (this.api.rolesSE.readOnly) {
+      if (descrip == 'next') {
+        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-3']);
+      }
+
+      if (descrip == 'previous') {
+        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-1']);
+      }
+      return;
+    }
     this.body = await this.regiterInnovationComplementary(this.innovationPackageCreatorBody);
     this.api.resultsSE.PATCHComplementaryInnovationPrevious({ complementaryInovatins: this.body }, descrip).subscribe(resp => {
       ////(resp);

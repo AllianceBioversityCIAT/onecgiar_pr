@@ -33,4 +33,8 @@ export class StepN4PartnerCoInvestmentTableComponent implements OnInit {
   deletePartner(partner) {
     partner.institution.is_active = false;
   }
+  hasElementsWithId(list) {
+    const finalList = this.rolesSE.readOnly ? list.filter(item => item.institution.created_by) : list.filter(item => item.institution.is_active != false);
+    return finalList.length;
+  }
 }

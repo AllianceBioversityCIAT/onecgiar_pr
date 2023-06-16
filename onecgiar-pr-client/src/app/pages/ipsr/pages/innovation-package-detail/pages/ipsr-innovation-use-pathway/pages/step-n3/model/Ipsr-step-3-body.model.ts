@@ -53,6 +53,7 @@ export class expert_workshop_organized {
   last_name: string;
   email: string;
   workshop_role: string;
+  result_ip_expert_workshop_organized_id: any;
 }
 
 class InnovatonUse {
@@ -83,6 +84,7 @@ export class OrganizationN3 {
 }
 
 export class ActorN3 {
+  result_actors_id: any;
   actor_type_id: number;
   women: number;
   women_youth: number;

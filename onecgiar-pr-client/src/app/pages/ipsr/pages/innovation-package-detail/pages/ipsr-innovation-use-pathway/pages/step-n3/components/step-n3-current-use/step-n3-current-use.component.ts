@@ -28,6 +28,10 @@ export class StepN3CurrentUseComponent {
       this.institutionsTypeTreeList = response;
     });
   }
+  hasElementsWithId(list, attr) {
+    const finalList = this.api.rolesSE.readOnly ? list.filter(item => item[attr]) : list.filter(item => item.is_active != false);
+    return finalList.length;
+  }
   getInstitutionsTypeTreeChildrens(institution_types_id) {
     //(institution_types_id);
     const fundedList = this.institutionsTypeTreeList.find(inst => inst.code == institution_types_id);
