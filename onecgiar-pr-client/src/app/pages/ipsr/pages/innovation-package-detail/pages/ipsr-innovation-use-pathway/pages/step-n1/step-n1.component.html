@@ -30,6 +30,7 @@
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()">
 </app-save-button>
 <div class="toggle_change_step">
-    <app-pr-button (click)="saveAndNextStep('next')" padding="big" text="Save & go to next step"
+    <app-pr-button (click)="saveAndNextStep('next')" padding="big"
+        [text]="this.api.rolesSE.readOnly ? 'Go to next step':'Save & go to next step'"
         icon="arrow_circle_right"></app-pr-button>
 </div>

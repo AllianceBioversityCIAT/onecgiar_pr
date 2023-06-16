@@ -69,11 +69,13 @@
         </td>
         <td>
             <app-pr-input placeholder="Write some..." type="currency" [required]="false"
+                [noDataText]="option?.budget[0]?.is_determined ? 'Not applicable':'Not provided'"
                 [(ngModel)]="option.budget[0].in_kind">
             </app-pr-input>
         </td>
         <td>
             <app-pr-input placeholder="Write some..." type="currency" [required]="false"
+                [noDataText]="option?.budget[0]?.is_determined ? 'Not applicable':'Not provided'"
                 [(ngModel)]="option.budget[0].in_cash">
             </app-pr-input>
         </td>
@@ -94,5 +96,6 @@
         </td>
     </tr>
 </table>
-
+<app-no-data-text *ngIf="!hasElementsWithId(this.body.institutions_expected_investment)" title="No partners added">
+</app-no-data-text>
 <app-step-n4-add-partner [body]="this.body"></app-step-n4-add-partner>

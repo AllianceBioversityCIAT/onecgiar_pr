@@ -11,7 +11,7 @@ import { Router } from '@angular/router';
 })
 export class StepN4Component implements OnInit {
   ipsrStep4Body = new IpsrStep4Body();
-  constructor(public ipsrDataControlSE: IpsrDataControlService, private api: ApiService, private router: Router) {}
+  constructor(public ipsrDataControlSE: IpsrDataControlService, public api: ApiService, private router: Router) {}
   radioOptions = [
     { id: true, name: 'Yes' },
     { id: false, name: 'No, not necessary at this stage' }
@@ -33,6 +33,7 @@ export class StepN4Component implements OnInit {
       //('%cGET', 'font-size: 20px; color: #2BBE28;');
       //(response);
       //('%c____________________', 'font-size: 20px; color: #2BBE28;');
+      console.log(response);
       this.ipsrStep4Body = response;
       // this.ipsrStep4Body.institutions_expected_investment.map(item => (item.institutions_type_name = item.institutions_name));
     });
@@ -50,6 +51,7 @@ export class StepN4Component implements OnInit {
   }
 
   onSavePrevious(descrip) {
+    if (this.api.rolesSE.readOnly) return this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-3']);
     this.api.resultsSE.PATCHInnovationPathwayStepFourByRiIdPrevious(this.ipsrStep4Body, descrip).subscribe(({ response }) => {
       //(response);
       // setTimeout(() => {
@@ -59,6 +61,7 @@ export class StepN4Component implements OnInit {
         this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-3']);
       }, 1000);
     });
+    return null;
   }
 
   workshopDescription() {
