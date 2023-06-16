@@ -84,11 +84,18 @@ export class NonPooledProject {
   })
   is_active: boolean;
 
+  @Column({
+    name: 'created_by',
+    type: 'int',
+    nullable: false,
+  })
+  created_by: number;
+
   @ManyToOne(() => User, (u) => u.id, { nullable: false })
   @JoinColumn({
     name: 'created_by',
   })
-  created_by: number;
+  obj_created_by: User;
 
   @CreateDateColumn({
     name: 'created_date',
@@ -97,11 +104,18 @@ export class NonPooledProject {
   })
   created_date: Date;
 
+  @Column({
+    name: 'last_updated_by',
+    type: 'int',
+    nullable: true,
+  })
+  last_updated_by: number;
+
   @ManyToOne(() => User, (u) => u.id, { nullable: true })
   @JoinColumn({
     name: 'last_updated_by',
   })
-  last_updated_by!: number;
+  obj_last_updated_by!: User;
 
   @UpdateDateColumn({
     name: 'last_updated_date',

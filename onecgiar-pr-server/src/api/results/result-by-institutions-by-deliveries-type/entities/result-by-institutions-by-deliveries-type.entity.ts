@@ -17,17 +17,31 @@ export class ResultByInstitutionsByDeliveriesType {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Column({
+    name: 'partner_delivery_type_id',
+    type: 'int',
+    nullable: false,
+  })
+  partner_delivery_type_id: number;
+
   @ManyToOne(() => PartnerDeliveryType, (pd) => pd.id, { nullable: false })
   @JoinColumn({
     name: 'partner_delivery_type_id',
   })
-  partner_delivery_type_id: number;
+  obj_partner_delivery_type: PartnerDeliveryType;
+
+  @Column({
+    name: 'result_by_institution_id',
+    type: 'bigint',
+    nullable: false,
+  })
+  result_by_institution_id: number;
 
   @ManyToOne(() => ResultsByInstitution, (ri) => ri.id, { nullable: false })
   @JoinColumn({
     name: 'result_by_institution_id',
   })
-  result_by_institution_id: number;
+  obj_result_by_institution: ResultsByInstitution;
 
   @Column({
     name: 'is_active',
@@ -37,17 +51,31 @@ export class ResultByInstitutionsByDeliveriesType {
   })
   is_active: boolean;
 
+  @Column({
+    name: 'versions_id',
+    type: 'bigint',
+    nullable: false,
+  })
+  versions_id: number;
+
   @ManyToOne(() => Version, (v) => v.id, { nullable: false })
   @JoinColumn({
     name: 'versions_id',
   })
-  versions_id: number;
+  obj_versions: Version;
+
+  @Column({
+    name: 'created_by',
+    type: 'int',
+    nullable: false,
+  })
+  created_by: number;
 
   @ManyToOne(() => User, (u) => u.id, { nullable: false })
   @JoinColumn({
     name: 'created_by',
   })
-  created_by: number;
+  obj_created_by: User;
 
   @CreateDateColumn({
     name: 'created_date',
@@ -55,11 +83,18 @@ export class ResultByInstitutionsByDeliveriesType {
   })
   created_date: Date;
 
+  @Column({
+    name: 'last_updated_by',
+    type: 'int',
+    nullable: true,
+  })
+  last_updated_by: number;
+
   @ManyToOne(() => User, (u) => u.id, { nullable: true })
   @JoinColumn({
     name: 'last_updated_by',
   })
-  last_updated_by: number;
+  obj_last_updated_by: User;
 
   @UpdateDateColumn({
     name: 'last_updated_date',

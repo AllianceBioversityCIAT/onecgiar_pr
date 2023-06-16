@@ -1,15 +1,95 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { ResultsByInstitution } from './entities/results_by_institution.entity';
 import { HandlersError } from '../../../shared/handlers/error.utils';
+import {
+  ReplicableConfigInterface,
+  ReplicableInterface,
+} from '../../../shared/globalInterfaces/replicable.interface';
 
 @Injectable()
-export class ResultByIntitutionsRepository extends Repository<ResultsByInstitution> {
+export class ResultByIntitutionsRepository
+  extends Repository<ResultsByInstitution>
+  implements ReplicableInterface<ResultsByInstitution>
+{
+  private readonly _logger: Logger = new Logger(
+    ResultByIntitutionsRepository.name,
+  );
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
   ) {
     super(ResultsByInstitution, dataSource.createEntityManager());
+  }
+  async replicable(
+    config: ReplicableConfigInterface<ResultsByInstitution>,
+  ): Promise<ResultsByInstitution[]> {
+    let final_data: ResultsByInstitution[] = null;
+    try {
+      if (config.f?.custonFunction) {
+        const response = await this.find({
+          where: { result_id: config.old_result_id, is_active: true },
+        });
+        response.map((el) => {
+          delete el.id;
+          delete el.created_date;
+          delete el.last_updated_date;
+          el.version_id = config.phase;
+          el.result_id = config.new_result_id;
+        });
+        const response_edit = <ResultsByInstitution[]>(
+          config.f.custonFunction(response)
+        );
+        final_data = await this.save(response_edit);
+      } else {
+        const queryData: string = `
+        insert into results_by_institution (
+          institutions_id,
+          institution_roles_id,
+          is_active,
+          created_date,
+          last_updated_date,
+          version_id,
+          created_by,
+          last_updated_by,
+          result_id
+          )SELECT 
+          rbi.institutions_id,
+          rbi.institution_roles_id,
+          rbi.is_active,
+          now() as created_date,
+          null as last_updated_date,
+          ? as version_id,
+          ? as created_by,
+          ? as last_updated_by,
+          ? as result_id
+          from results_by_institution rbi WHERE rbi.result_id = ? and rbi.is_active > 0`;
+        await this.query(queryData, [
+          config.phase,
+          config.user.id,
+          config.user.id,
+          config.new_result_id,
+          config.old_result_id,
+        ]);
+        final_data = await this.find({
+          where: {
+            result_id: config.new_result_id,
+            version_id: config.phase,
+          },
+        });
+      }
+    } catch (error) {
+      config.f?.errorFunction
+        ? config.f.errorFunction(error)
+        : this._logger.error(error);
+      final_data = null;
+    }
+
+    config.f?.completeFunction
+      ? config.f.completeFunction({ ...final_data })
+      : null;
+
+    return final_data;
   }
 
   async getResultByInstitutionById(resultId: number, rbiId: number) {

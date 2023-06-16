@@ -10,7 +10,10 @@ import { ResultDataToMapDto } from './dto/result-data-to-map.dto';
 import { LegacyIndicatorsPartner } from './legacy_indicators_partners/entities/legacy_indicators_partner.entity';
 import { env } from 'process';
 import { ResultTypeDto } from './dto/result-types.dto';
-import { ReplicableInterface } from '../../shared/globalInterfaces/replicable.interface';
+import {
+  ReplicableConfigInterface,
+  ReplicableInterface,
+} from '../../shared/globalInterfaces/replicable.interface';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 
 @Injectable()
@@ -25,36 +28,19 @@ export class ResultRepository
   ) {
     super(Result, dataSource.createEntityManager());
   }
-  async replicable(
-    phases: number,
-    user: TokenDto,
-    old_result_id: number,
-    new_result_id?: number,
-    f?: {
-      custonFunction?: (res: Result) => Result;
-      errorFunction?: (error: any) => void;
-      completeFunction?: (res: Result) => void;
-    },
-  ): Promise<Result> {
+  async replicable(config: ReplicableConfigInterface<Result>): Promise<Result> {
     let final_data: Result = null;
     try {
-      if (f?.custonFunction) {
+      if (config.f?.custonFunction) {
         const response = await this.findOne({
-          where: { id: old_result_id, is_active: true },
+          where: { id: config.old_result_id, is_active: true },
         });
         delete response.id;
         delete response.created_date;
         delete response.last_updated_date;
-        response.version_id = phases;
-        const new_response = await this.save(response);
-        const response_edit = f.custonFunction(new_response);
-        const id = response_edit.id;
-        delete response_edit.id;
-        await this.update(id, response_edit);
-        final_data = {
-          ...response_edit,
-          id,
-        };
+        response.version_id = config.phase;
+        const response_edit = <Result>config.f.custonFunction(response);
+        final_data = await this.save(response_edit);
       } else {
         const queryData: string = `
         insert into \`result\` (
@@ -107,19 +93,23 @@ export class ResultRepository
           r2.result_code
           from \`result\` r2 WHERE r2.id = ? and r2.is_active > 0`;
         const [response]: { insert_id }[] = await this.query(queryData, [
-          phases,
-          user.id,
-          user.id,
-          old_result_id,
+          config.phase,
+          config.user.id,
+          config.user.id,
+          config.old_result_id,
         ]);
         final_data = await this.findOne({ where: { id: response.insert_id } });
       }
     } catch (error) {
-      f?.errorFunction ? f.errorFunction(error) : this._logger.error(error);
+      config.f?.errorFunction
+        ? config.f.errorFunction(error)
+        : this._logger.error(error);
       final_data = null;
     }
 
-    f?.completeFunction ? f.completeFunction({ ...final_data }) : null;
+    config.f?.completeFunction
+      ? config.f.completeFunction({ ...final_data })
+      : null;
 
     return final_data;
   }

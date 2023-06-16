@@ -1,15 +1,95 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { LinkedResult } from './entities/linked-result.entity';
+import {
+  ReplicableConfigInterface,
+  ReplicableInterface,
+} from '../../../shared/globalInterfaces/replicable.interface';
+import { VERSIONING } from '../../../shared/utils/versioning.utils';
 
 @Injectable()
-export class LinkedResultRepository extends Repository<LinkedResult> {
+export class LinkedResultRepository
+  extends Repository<LinkedResult>
+  implements ReplicableInterface<LinkedResult>
+{
+  private readonly _logger: Logger = new Logger(LinkedResultRepository.name);
+
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
   ) {
     super(LinkedResult, dataSource.createEntityManager());
+  }
+  async replicable(
+    config: ReplicableConfigInterface<LinkedResult>,
+  ): Promise<LinkedResult[]> {
+    let final_data: LinkedResult[] = null;
+    try {
+      if (config.f?.custonFunction) {
+        const response = await this.find({
+          where: { origin_result_id: config.old_result_id, is_active: true },
+        });
+        response.map((el) => {
+          delete el.id;
+          delete el.created_date;
+          delete el.last_updated_date;
+          el.version_id = config.phase;
+          el.origin_result_id = config.new_result_id;
+        });
+        const response_edit = <LinkedResult[]>config.f.custonFunction(response);
+        final_data = await this.save(response_edit);
+      } else {
+        const queryData: string = `
+        insert into linked_result (
+          is_active,
+          created_date,
+          last_updated_date,
+          linked_results_id,
+          origin_result_id,
+          created_by,
+          last_updated_by,
+          legacy_link,
+          version_id
+          )
+          select
+          lr.is_active,
+          now() as created_date,
+          null as last_updated_date,
+          ${VERSIONING.QUERY.Get_result_phases(
+            `lr.linked_results_id`,
+            config.phase,
+          )} as linked_results_id,
+          ? as origin_result_id,
+          lr.created_by,
+          lr.last_updated_by,
+          lr.legacy_link,
+          ? as version_id
+          from linked_result lr WHERE lr.origin_result_id = ? and is_active > 0`;
+        await this.query(queryData, [
+          config.new_result_id,
+          config.phase,
+          config.old_result_id,
+        ]);
+        final_data = await this.find({
+          where: {
+            origin_result_id: config.new_result_id,
+            version_id: config.phase,
+          },
+        });
+      }
+    } catch (error) {
+      config.f?.errorFunction
+        ? config.f.errorFunction(error)
+        : this._logger.error(error);
+      final_data = null;
+    }
+
+    config.f?.completeFunction
+      ? config.f.completeFunction({ ...final_data })
+      : null;
+
+    return final_data;
   }
 
   async deleteAllData() {

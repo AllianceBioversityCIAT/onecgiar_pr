@@ -33,11 +33,18 @@ export class ResultCountry {
   })
   is_active: boolean;
 
+  @Column({
+    name: 'version_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  version_id: number;
+
   @ManyToOne(() => Version, (v) => v.id, { nullable: true })
   @JoinColumn({
     name: 'version_id',
   })
-  version_id: number;
+  obj_version_id: Version;
 
   @CreateDateColumn({
     name: 'created_date',

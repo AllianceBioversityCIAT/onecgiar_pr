@@ -1,16 +1,117 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultsByInititiative } from './entities/results_by_inititiative.entity';
 import { InitiativeByResultDTO } from './dto/InitiativeByResult.dto';
+import {
+  ReplicableConfigInterface,
+  ReplicableInterface,
+} from '../../../shared/globalInterfaces/replicable.interface';
 
 @Injectable()
-export class ResultByInitiativesRepository extends Repository<ResultsByInititiative> {
+export class ResultByInitiativesRepository
+  extends Repository<ResultsByInititiative>
+  implements ReplicableInterface<ResultsByInititiative>
+{
+  private readonly _logger: Logger = new Logger(
+    ResultByInitiativesRepository.name,
+  );
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
   ) {
     super(ResultsByInititiative, dataSource.createEntityManager());
+  }
+  async replicable(
+    config: ReplicableConfigInterface<ResultsByInititiative>,
+  ): Promise<ResultsByInititiative[]> {
+    let final_data: ResultsByInititiative[] = null;
+    try {
+      if (config.f?.custonFunction) {
+        const queryData = `
+        select 
+          null as id,
+          rbi.is_active,
+          null as last_updated_date,
+          ? as result_id,
+          rbi.inititiative_id,
+          rbi.initiative_role_id,
+          ? as version_id,
+          ? as created_by,
+          null as last_updated_by,
+          now() as created_date
+          from results_by_inititiative rbi where rbi.result_id = ? and rbi.is_active > 0
+        `;
+        const response = await (<Promise<ResultsByInititiative[]>>(
+          this.query(queryData, [
+            config.new_result_id,
+            config.phase,
+            config.user.id,
+            config.old_result_id,
+          ])
+        ));
+        const response_edit = <ResultsByInititiative[]>(
+          config.f.custonFunction(response)
+        );
+        final_data = await this.save(response_edit);
+      } else {
+        const queryData: string = `
+        insert into results_by_inititiative (
+          is_active,
+          last_updated_date,
+          result_id,
+          inititiative_id,
+          initiative_role_id,
+          version_id,
+          created_by,
+          last_updated_by,
+          created_date
+          )
+          select 
+          rbi.is_active,
+          null as last_updated_date,
+          ? as result_id,
+          rbi.inititiative_id,
+          rbi.initiative_role_id,
+          ? as version_id,
+          ? as created_by,
+          null as last_updated_by,
+          now() as created_date
+          from results_by_inititiative rbi where rbi.result_id = ? and rbi.is_active > 0`;
+        await this.query(queryData, [
+          config.new_result_id,
+          config.phase,
+          config.user.id,
+          config.old_result_id,
+        ]);
+
+        const queryFind = `
+        select 
+          rbi.id,
+          rbi.is_active,
+          rbi.last_updated_date,
+          rbi.result_id,
+          rbi.inititiative_id,
+          rbi.initiative_role_id,
+          rbi.version_id,
+          rbi.created_by,
+          rbi.last_updated_by,
+          rbi.created_date
+          from results_by_inititiative rbi where rbi.result_id = ?`;
+        final_data = await this.query(queryFind, [config.new_result_id]);
+      }
+    } catch (error) {
+      config.f?.errorFunction
+        ? config.f.errorFunction(error)
+        : this._logger.error(error);
+      final_data = null;
+    }
+
+    config.f?.completeFunction
+      ? config.f.completeFunction({ ...final_data })
+      : null;
+
+    return final_data;
   }
 
   async deleteAllData() {
@@ -81,7 +182,7 @@ export class ResultByInitiativesRepository extends Repository<ResultsByInititiat
         queryData,
         [resultId],
       );
-      return completeUser?.length?completeUser[0]: undefined;
+      return completeUser?.length ? completeUser[0] : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByInitiativesRepository.name,
@@ -91,7 +192,7 @@ export class ResultByInitiativesRepository extends Repository<ResultsByInititiat
     }
   }
 
-  async getPendingInit (resultId: number) {
+  async getPendingInit(resultId: number) {
     const queryData = `
     SELECT
     	ci.id,
@@ -117,9 +218,9 @@ export class ResultByInitiativesRepository extends Repository<ResultsByInititiat
         queryData,
         [resultId],
       );
-      completeUser?.map(e => {
-        e['is_active'] = e['is_active'] == 1? 1:0;
-      })
+      completeUser?.map((e) => {
+        e['is_active'] = e['is_active'] == 1 ? 1 : 0;
+      });
       return completeUser;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -162,7 +263,10 @@ export class ResultByInitiativesRepository extends Repository<ResultsByInititiat
     }
   }
 
-  async getContributorInitiativeByResultAndInit(resultId: number, initiativeId: number) {
+  async getContributorInitiativeByResultAndInit(
+    resultId: number,
+    initiativeId: number,
+  ) {
     const queryData = `
     select 
     	ci.id,
@@ -185,7 +289,7 @@ export class ResultByInitiativesRepository extends Repository<ResultsByInititiat
         queryData,
         [resultId, initiativeId],
       );
-      return getInitiative?.length? getInitiative[0]: undefined;
+      return getInitiative?.length ? getInitiative[0] : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByInitiativesRepository.name,
@@ -250,7 +354,7 @@ export class ResultByInitiativesRepository extends Repository<ResultsByInititiat
         queryData,
         [resultId],
       );
-      return completeUser?.length?completeUser[0]:undefined;
+      return completeUser?.length ? completeUser[0] : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByInitiativesRepository.name,
@@ -260,7 +364,11 @@ export class ResultByInitiativesRepository extends Repository<ResultsByInititiat
     }
   }
 
-  async getResultsByInitiativeByResultIdAndInitiativeIdAndRole(resultId: number, initiativeId: number, isOwner: boolean) {
+  async getResultsByInitiativeByResultIdAndInitiativeIdAndRole(
+    resultId: number,
+    initiativeId: number,
+    isOwner: boolean,
+  ) {
     const queryData = `
     select 
       rbi.id,
@@ -281,9 +389,9 @@ export class ResultByInitiativesRepository extends Repository<ResultsByInititiat
     try {
       const completeUser: ResultsByInititiative[] = await this.query(
         queryData,
-        [resultId, initiativeId, isOwner?1:2],
+        [resultId, initiativeId, isOwner ? 1 : 2],
       );
-      return completeUser?.length?completeUser[0]:undefined;
+      return completeUser?.length ? completeUser[0] : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByInitiativesRepository.name,
@@ -354,17 +462,21 @@ export class ResultByInitiativesRepository extends Repository<ResultsByInititiat
     `;
 
     try {
-      if(initiative?.length){
+      if (initiative?.length) {
         return await this.query(upDateInactive, [
-          userId, resultId, isOwner?1:2
+          userId,
+          resultId,
+          isOwner ? 1 : 2,
         ]);
-  
+
         /*return await this.query(upDateActive, [
           userId, resultId, isOwner?1:2
         ]);*/
-      }else{
+      } else {
         return await this.query(upDateAllInactive, [
-          userId, resultId, isOwner?1:2
+          userId,
+          resultId,
+          isOwner ? 1 : 2,
         ]);
       }
     } catch (error) {
@@ -376,5 +488,3 @@ export class ResultByInitiativesRepository extends Repository<ResultsByInititiat
     }
   }
 }
-
-
