@@ -8,10 +8,10 @@
 
 <app-new-complementary-innovation [complementaryInnovationFunction]="complemntaryFunction"
     (createInnovationEvent)="createInnovationEvent($event)"></app-new-complementary-innovation>
-
+<app-pr-field-header [required]="false"
+    [description]="'Complementary innovation(s)/ enabler(s)/ solution(s) selected('+this.innovationPackageCreatorBody?.length+'):'"></app-pr-field-header>
 <div *ngIf="this.innovationPackageCreatorBody.length > 0">
-    <app-pr-field-header [required]="false"
-        description="Complementary innovation(s)/ enabler(s)/ solution(s) selected:"></app-pr-field-header>
+
 
     <div class="core_innovation_selected " *ngFor="let result of this.innovationPackageCreatorBody"
         style="margin-top: 10px;">
@@ -34,8 +34,10 @@
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>
 
 <div class="toggle_change_step" style="margin-top: 50px;">
-    <app-pr-button (click)="onSavePreviuosNext('previous')" padding="big" text="Save & go to previous step"
-        icon="arrow_circle_left" [reverse]="true"></app-pr-button>
-    <app-pr-button (click)="onSavePreviuosNext('next')" padding="big" text="Save & go to next step"
+    <app-pr-button (click)="onSavePreviuosNext('previous')" padding="big"
+        [text]="this.api.rolesSE.readOnly ? 'Go to previous step':'Save & go to previous step'" icon="arrow_circle_left"
+        [reverse]="true"></app-pr-button>
+    <app-pr-button (click)="onSavePreviuosNext('next')" padding="big"
+        [text]="this.api.rolesSE.readOnly ? 'Go to next step':'Save & go to next step'"
         icon="arrow_circle_right"></app-pr-button>
 </div>

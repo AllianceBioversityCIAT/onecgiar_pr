@@ -40,12 +40,12 @@
         </td>
         <td>
             <app-pr-input placeholder="Write some..." type="currency" [required]="false"
-                [(ngModel)]="this.item.in_kind">
+                [noDataText]="item.is_determined ? 'Not applicable':'Not provided'" [(ngModel)]="this.item.in_kind">
             </app-pr-input>
         </td>
         <td>
             <app-pr-input placeholder="Write some..." type="currency" [required]="false"
-                [(ngModel)]="this.item.in_cash">
+                [noDataText]="item.is_determined ? 'Not applicable':'Not provided'" [(ngModel)]="this.item.in_cash">
             </app-pr-input>
         </td>
         <td>
@@ -67,6 +67,10 @@
         </td>
     </tr>
 </table>
+
+<app-no-data-text *ngIf="!hasElementsWithId(this.body.bilateral_expected_investment,'non_pooled_projetct_budget_id')"
+    title="No bilaterals added">
+</app-no-data-text>
 
 
 <app-step-n4-add-bilateral [body]="this.body"></app-step-n4-add-bilateral>

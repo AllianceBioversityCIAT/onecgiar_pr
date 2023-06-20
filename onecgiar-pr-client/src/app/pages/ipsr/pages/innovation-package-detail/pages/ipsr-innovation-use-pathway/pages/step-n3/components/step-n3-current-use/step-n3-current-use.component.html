@@ -9,7 +9,7 @@
     <div class="fields" appYmzListStructureItem
         (deleteEvent)="actorItem.is_active = false; actorItem.actor_type_id = null"
         *ngFor="let actorItem of this.body.innovatonUse.actors; let i=index"
-        [ngClass]="{'hideElement': actorItem.is_active == false}">
+        [ngClass]="{'hideElement': actorItem.is_active == false|| (!this.actorItem?.result_ip_actors_id && this.api.rolesSE.readOnly)}">
         <div>
             <app-pr-select [options]="this.actorsTypeList" label="Actor type" optionLabel="name"
                 optionValue="actor_type_id" [(ngModel)]="actorItem.actor_type_id"
@@ -86,6 +86,9 @@
         </div>
     </div>
 </div>
+<app-no-data-text *ngIf="!hasElementsWithId(this.body.innovatonUse.actors,'result_ip_actors_id')"
+    title="No actors provided">
+</app-no-data-text>
 <br>
 <app-add-button name="Add actor" *ngIf="!this.api.rolesSE.readOnly" (clickEvent)="addActor()"></app-add-button>
 <div class="fragment_section_divider"></div>
@@ -94,7 +97,7 @@
 </div>
 <div class="fields_list" *ngIf="this.body.innovatonUse.organization?.length">
     <div class="fields" appYmzListStructureItem (deleteEvent)="removeOrganization(organizationItem)"
-        [ngClass]="{'hideElement': organizationItem.is_active == false}"
+        [ngClass]="{'hideElement': organizationItem.is_active == false|| (!this.organizationItem?.id && this.api.rolesSE.readOnly)}"
         *ngFor="let organizationItem of this.body.innovatonUse.organization">
         <div>
             <app-pr-select [required]="!!organizationItem?.id" [options]="this.institutionsTypeTreeList"
@@ -136,17 +139,19 @@
         </div>
     </div>
 </div>
-
+<app-no-data-text *ngIf="!hasElementsWithId(this.body.innovatonUse.organization,'id')"
+    title="No organizations provided">
+</app-no-data-text>
 <app-add-button name="Add organization" *ngIf="!this.api.rolesSE.readOnly"
     (clickEvent)="addOrganization()"></app-add-button>
 <div class="fragment_section_divider"></div>
 
-<div class="fields_list" *ngIf="this.body.innovatonUse.measures?.length">
+<div class="fields_list">
     <app-pr-field-header label="Other quantitative measures of innovation use (e.g. # of hectares)"
         [required]="false"></app-pr-field-header>
     <div class="fields" appYmzListStructureItem (deleteEvent)="measuresItem.is_active = false"
         *ngFor="let measuresItem of this.body.innovatonUse.measures"
-        [ngClass]="{'hideElement': measuresItem.is_active == false}">
+        [ngClass]="{'hideElement': measuresItem.is_active == false|| (!this.measuresItem?.result_ip_result_measures_id && this.api.rolesSE.readOnly)}">
         <div class="right_content">
             <app-pr-input placeholder="Write some..." label="Unit of measure" type="text"
                 [required]="!!measuresItem?.result_ip_result_measures_id"
@@ -164,4 +169,7 @@
 
     </div>
 </div>
-<app-add-button name="Add other" *ngIf="!this.api.rolesSE.readOnly" (clickEvent)="addOther()"></app-add-button>
+<app-no-data-text *ngIf="!hasElementsWithId(this.body.innovatonUse.measures,'result_ip_result_measures_id')"
+    title="Other quantitative measures not added">
+</app-no-data-text>
+<app-add-button name=" Add other" *ngIf="!this.api.rolesSE.readOnly" (clickEvent)="addOther()"></app-add-button>

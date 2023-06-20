@@ -29,8 +29,9 @@
     <app-step-n4-reference-material-links [body]="this.ipsrStep4Body"></app-step-n4-reference-material-links>
 </div>
 <div class="toggle_change_step">
-    <app-pr-button (click)="onSavePrevious('previous')" padding="big" text="Save & go to previous step"
-        icon="arrow_circle_left" [reverse]="true"></app-pr-button>
+    <app-pr-button (click)="onSavePrevious('previous')" padding="big"
+        [text]="this.api.rolesSE.readOnly ? 'Go to previous step':'Save & go to previous step'" icon="arrow_circle_left"
+        [reverse]="true"></app-pr-button>
 </div>
 
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()">

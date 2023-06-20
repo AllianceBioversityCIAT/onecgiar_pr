@@ -56,8 +56,10 @@ export class InnovationPackageCreatorComponent {
             const SubNationalLevelOneField = fields[1]?.classList?.contains('select_placeholder');
             allFields.push(countryField || SubNationalLevelOneField);
           });
-        const someNull = allFields.some(item => item === true);
-        return !!this.innovationPackageCreatorBody.countries.length && !someNull;
+        const someNull = allFields.length ? allFields.some(item => item === true) : true;
+        console.log(someNull);
+        console.log(this.innovationPackageCreatorBody.countries.length);
+        return !someNull;
       default:
         return false;
     }

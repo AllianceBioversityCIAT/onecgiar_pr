@@ -12,7 +12,7 @@ import { Router } from '@angular/router';
 export class StepN1Component implements OnInit {
   ipsrStep1Body = new IpsrStep1Body();
   coreResult = new CoreResult();
-  constructor(private api: ApiService, public ipsrDataControlSE: IpsrDataControlService, private router: Router) {}
+  constructor(public api: ApiService, public ipsrDataControlSE: IpsrDataControlService, private router: Router) {}
 
   ngOnInit(): void {
     this.getSectionInformation();
@@ -62,21 +62,23 @@ export class StepN1Component implements OnInit {
     this.convertOrganizationsTosave();
     this.api.resultsSE.PATCHInnovationPathwayByStepOneResultId(this.ipsrStep1Body).subscribe((resp: any) => {
       //(resp?.response[0].response);
-      this.ipsrDataControlSE.detailData.title = resp?.response[0].response;
+      // this.ipsrDataControlSE.detailData.title = resp?.response[0].response;
       this.getSectionInformation();
     });
   }
 
   saveAndNextStep(descrip: string) {
+    if (this.api.rolesSE.readOnly) return this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2']);
     this.convertOrganizationsTosave();
     this.api.resultsSE.PATCHInnovationPathwayByStepOneResultIdNextStep(this.ipsrStep1Body, descrip).subscribe((resp: any) => {
       //(resp?.response[0].response);
-      this.ipsrDataControlSE.detailData.title = resp?.response[0].response;
+      // this.ipsrDataControlSE.detailData.title = resp?.response[0].response;
       this.getSectionInformation();
       setTimeout(() => {
         this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2']);
       }, 1000);
     });
+    return null;
   }
 
   convertOrganizations(organizations) {
