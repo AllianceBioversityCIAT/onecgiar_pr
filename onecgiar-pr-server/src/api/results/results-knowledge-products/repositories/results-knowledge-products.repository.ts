@@ -1,15 +1,184 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
 import { ResultsKnowledgeProduct } from '../entities/results-knowledge-product.entity';
+import {
+  ReplicableConfigInterface,
+  ReplicableInterface,
+} from '../../../../shared/globalInterfaces/replicable.interface';
+import { VERSIONING } from '../../../../shared/utils/versioning.utils';
 
 @Injectable()
-export class ResultsKnowledgeProductsRepository extends Repository<ResultsKnowledgeProduct> {
+export class ResultsKnowledgeProductsRepository
+  extends Repository<ResultsKnowledgeProduct>
+  implements ReplicableInterface<ResultsKnowledgeProduct>
+{
+  private readonly _logger: Logger = new Logger(
+    ResultsKnowledgeProductsRepository.name,
+  );
+
   constructor(
     private dataSource: DataSource,
     private _handlersError: HandlersError,
   ) {
     super(ResultsKnowledgeProduct, dataSource.createEntityManager());
+  }
+
+  async replicable(
+    config: ReplicableConfigInterface<ResultsKnowledgeProduct>,
+  ): Promise<ResultsKnowledgeProduct> {
+    let final_data: ResultsKnowledgeProduct = null;
+    try {
+      if (config.f?.custonFunction) {
+        const queryData = `
+        select 
+          null as result_knowledge_product_id,
+          rkp.handle,
+          rkp.name,
+          rkp.description,
+          rkp.knowledge_product_type,
+          rkp.licence,
+          rkp.comodity,
+          rkp.sponsors,
+          rkp.findable,
+          rkp.accesible,
+          rkp.interoperable,
+          rkp.reusable,
+          rkp.is_melia,
+          rkp.melia_previous_submitted,
+          rkp.is_active,
+          now() as created_date,
+          null as last_updated_date,
+          ? as results_id,
+          rkp.melia_type_id,
+          ? as version_id,
+          ? as created_by,
+          null as last_updated_by,
+          rkp.doi,
+          rkp.cgspace_regions,
+          rkp.cgspace_countries,
+          rkp.ost_melia_study_id
+          from results_knowledge_product rkp WHERE rkp.results_id = ? and rkp.is_active > 0
+        `;
+        const response = await (<Promise<ResultsKnowledgeProduct[]>>(
+          this.query(queryData, [
+            config.new_result_id,
+            config.phase,
+            config.user.id,
+            config.old_result_id,
+          ])
+        ));
+        const response_edit = <ResultsKnowledgeProduct>(
+          config.f.custonFunction(response)
+        );
+        final_data = await this.save(response_edit);
+      } else {
+        const queryData: string = `
+        insert into results_knowledge_product (
+          handle,
+          name,
+          description,
+          knowledge_product_type,
+          licence,
+          comodity,
+          sponsors,
+          findable,
+          accesible,
+          interoperable,
+          reusable,
+          is_melia,
+          melia_previous_submitted,
+          is_active,
+          created_date,
+          last_updated_date,
+          results_id,
+          melia_type_id,
+          version_id,
+          created_by,
+          last_updated_by,
+          doi,
+          cgspace_regions,
+          cgspace_countries,
+          ost_melia_study_id
+          )
+          select 
+          rkp.handle,
+          rkp.name,
+          rkp.description,
+          rkp.knowledge_product_type,
+          rkp.licence,
+          rkp.comodity,
+          rkp.sponsors,
+          rkp.findable,
+          rkp.accesible,
+          rkp.interoperable,
+          rkp.reusable,
+          rkp.is_melia,
+          rkp.melia_previous_submitted,
+          rkp.is_active,
+          now() as created_date,
+          null as last_updated_date,
+          ? as results_id,
+          rkp.melia_type_id,
+          ? as version_id,
+          ? as created_by,
+          null as last_updated_by,
+          rkp.doi,
+          rkp.cgspace_regions,
+          rkp.cgspace_countries,
+          rkp.ost_melia_study_id
+          from results_knowledge_product rkp WHERE rkp.results_id = ? and rkp.is_active > 0`;
+        await this.query(queryData, [
+          config.new_result_id,
+          config.phase,
+          config.user.id,
+          config.old_result_id,
+        ]);
+
+        const queryFind = `
+        select 
+        rkp.result_knowledge_product_id,
+        rkp.handle,
+        rkp.name,
+        rkp.description,
+        rkp.knowledge_product_type,
+        rkp.licence,
+        rkp.comodity,
+        rkp.sponsors,
+        rkp.findable,
+        rkp.accesible,
+        rkp.interoperable,
+        rkp.reusable,
+        rkp.is_melia,
+        rkp.melia_previous_submitted,
+        rkp.is_active,
+        rkp.created_date,
+        rkp.last_updated_date,
+        rkp.results_id,
+        rkp.melia_type_id,
+        rkp.version_id,
+        rkp.created_by,
+        rkp.last_updated_by,
+        rkp.doi,
+        rkp.cgspace_regions,
+        rkp.cgspace_countries,
+        rkp.ost_melia_study_id
+        from results_knowledge_product rkp WHERE rkp.results_id = ?`;
+        const temp = await (<Promise<ResultsKnowledgeProduct[]>>(
+          this.query(queryFind, [config.new_result_id])
+        ));
+        final_data = temp?.length ? temp[0] : null;
+      }
+    } catch (error) {
+      config.f?.errorFunction
+        ? config.f.errorFunction(error)
+        : this._logger.error(error);
+      final_data = null;
+    }
+
+    config.f?.completeFunction ? config.f.completeFunction(final_data) : null;
+
+    return final_data;
   }
 
   async getSectionSevenDataForReport(resultCodesArray: number[]) {
@@ -69,15 +238,15 @@ export class ResultsKnowledgeProductsRepository extends Repository<ResultsKnowle
     }
   }
 
-  async statusElement(kpId: number, status: boolean){
+  async statusElement(kpId: number, status: boolean) {
     const query = `
     UPDATE results_knowledge_product 
     SET is_active = ?
     WHERE result_knowledge_product_id = ?;
     `;
-    try{
-      return await this.query(query, [status?1:0, kpId]);
-    }catch(error){
+    try {
+      return await this.query(query, [status ? 1 : 0, kpId]);
+    } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsKnowledgeProductsRepository.name,
         error: error,
