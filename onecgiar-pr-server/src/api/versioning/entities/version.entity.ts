@@ -1,4 +1,11 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { Ipsr } from '../../ipsr/entities/ipsr.entity';
 import { NonPooledProject } from '../../results/non-pooled-projects/entities/non-pooled-project.entity';
 import { ResultsCenter } from '../../results/results-centers/entities/results-center.entity';
@@ -6,9 +13,10 @@ import { ResultActor } from '../../results/result-actors/entities/result-actor.e
 import { ResultIpEoiOutcome } from '../../ipsr/innovation-pathway/entities/result-ip-eoi-outcome.entity';
 import { ResultIpAAOutcome } from '../../ipsr/innovation-pathway/entities/result-ip-action-area-outcome.entity';
 import { ResultsIpActor } from '../../ipsr/results-ip-actors/entities/results-ip-actor.entity';
+import { VersionBaseEntity } from '../../../shared/entities/version-base-entity';
 
 @Entity('version')
-export class Version {
+export class Version extends VersionBaseEntity {
   @PrimaryGeneratedColumn({
     name: 'id',
     type: 'bigint',
@@ -16,11 +24,11 @@ export class Version {
   id: number;
 
   @Column({
-    name: 'version_name',
+    name: 'phase_name',
     type: 'text',
     nullable: false,
   })
-  version_name: string;
+  phase_name: string;
 
   @Column({
     name: 'start_date',
@@ -35,6 +43,46 @@ export class Version {
     nullable: true,
   })
   end_date!: string;
+
+  @Column({
+    name: 'toc_pahse_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  toc_pahse_id: number;
+
+  @Column({
+    name: 'cgspace_year',
+    type: 'year',
+    nullable: true,
+  })
+  cgspace_year: number;
+
+  @Column({
+    name: 'phase_year',
+    type: 'year',
+    nullable: true,
+  })
+  phase_year: number;
+
+  @Column({
+    name: 'status',
+    type: 'boolean',
+    nullable: false,
+    default: false,
+  })
+  status: boolean;
+
+  @Column({
+    name: 'previous_phase',
+    type: 'bigint',
+    nullable: true,
+  })
+  previous_phase: number;
+
+  @ManyToOne(() => Version, (v) => v.id)
+  @JoinColumn({ name: 'previous_phase' })
+  obj_previous_phase: Version;
 
   @OneToMany(() => Ipsr, (i) => i.obj_version)
   innovation_by_result: Ipsr[];
