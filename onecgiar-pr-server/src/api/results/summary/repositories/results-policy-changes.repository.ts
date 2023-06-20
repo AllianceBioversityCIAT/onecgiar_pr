@@ -31,6 +31,7 @@ export class ResultsPolicyChangesRepository
       if (config.f?.custonFunction) {
         const queryData = `
         select 
+        null as result_policy_change_id,
         rpc.amount,
         rpc.is_active,
         now() as created_date,
