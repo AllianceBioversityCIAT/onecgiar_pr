@@ -25,6 +25,7 @@ export class VersionRepository extends Repository<Version> {
     		(v.end_date  = ''
     		or v.end_date is null)
         and v.status > 0
+        and v.is_active > 0
     group by v.id, v.phase_name;
     `;
     try {
