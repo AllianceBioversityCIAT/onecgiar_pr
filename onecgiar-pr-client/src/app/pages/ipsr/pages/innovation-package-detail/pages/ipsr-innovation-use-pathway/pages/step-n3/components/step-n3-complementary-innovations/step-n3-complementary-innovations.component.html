@@ -20,7 +20,7 @@
                     optionLabel="name" optionValue="id"
                     [(ngModel)]="bodyItem.readiness_level_evidence_based"></app-pr-range-level>
 
-                <app-pr-input label="Evidence link" placeholder="Link goes here..."
+                <app-pr-input label="Evidence link" placeholder="Link goes here..." type="link"
                     [(ngModel)]="bodyItem.readinees_evidence_link">
                 </app-pr-input>
 
@@ -38,7 +38,7 @@
                     *ngIf="this.rangesOptions?.length" optionLabel="name" optionValue="id"
                     [(ngModel)]="bodyItem.use_level_evidence_based"></app-pr-range-level>
 
-                <app-pr-input label="Evidence link" placeholder="Link goes here..."
+                <app-pr-input label="Evidence link" placeholder="Link goes here..." type="link"
                     [(ngModel)]="bodyItem.use_evidence_link">
                 </app-pr-input>
 

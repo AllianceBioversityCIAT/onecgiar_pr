@@ -9,6 +9,10 @@ import { empty } from 'rxjs';
   styleUrls: ['./rd-evidences.component.scss']
 })
 export class RdEvidencesComponent {
+  links1 = 'https://www.google.com/doodles/dragon-boat-festival-2023';
+  links2 = 'http://localhost:4200/result/result-detail/4800/evidences';
+  links3 = 'testing';
+  links4 = 'texto';
   evidencesBody = new EvidencesBody();
   alertStatus() {
     //(this.api.dataControlSE?.currentResult);
