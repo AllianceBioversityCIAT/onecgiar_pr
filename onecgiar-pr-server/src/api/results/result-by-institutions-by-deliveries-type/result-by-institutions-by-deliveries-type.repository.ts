@@ -46,6 +46,7 @@ export class ResultByInstitutionsByDeliveriesTypeRepository
               inner join results_by_institution rbi on rbi.id = rbibdt.result_by_institution_id
                                 and rbi.result_id = ?
               inner join results_by_institution rbi2 on rbi2.institutions_id = rbi.institutions_id 
+                                and rbi.institution_roles_id = rbi2.institution_roles_id
                                 and rbi2.result_id = ?`;
         const response = await (<
           Promise<ResultByInstitutionsByDeliveriesType[]>
@@ -86,6 +87,7 @@ export class ResultByInstitutionsByDeliveriesTypeRepository
           			inner join results_by_institution rbi on rbi.id = rbibdt.result_by_institution_id
           												and rbi.result_id = ?
           			inner join results_by_institution rbi2 on rbi2.institutions_id = rbi.institutions_id 
+                                  and rbi.institution_roles_id = rbi2.institution_roles_id
           												and rbi2.result_id = ? 
           where rbibdt.is_active > 0;
         `;

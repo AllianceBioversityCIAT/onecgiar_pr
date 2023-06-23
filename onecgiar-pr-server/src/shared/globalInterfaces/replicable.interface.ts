@@ -7,7 +7,7 @@ export interface ReplicableInterface<T> {
 export interface ReplicableConfigInterface<T> {
   phase: number;
   user: TokenDto;
-  new_result_id: number;
+  new_result_id?: number;
   old_result_id?: number;
   new_kp_id?: number;
   old_kp_id?: number;

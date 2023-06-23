@@ -27,16 +27,29 @@ export class ResultByIntitutionsRepository
     let final_data: ResultsByInstitution[] = null;
     try {
       if (config.f?.custonFunction) {
-        const response = await this.find({
-          where: { result_id: config.old_result_id, is_active: true },
-        });
-        response.map((el) => {
-          delete el.id;
-          delete el.created_date;
-          delete el.last_updated_date;
-          el.version_id = config.phase;
-          el.result_id = config.new_result_id;
-        });
+        const queryData = `
+        SELECT 
+          null as id,
+          rbi.institutions_id,
+          rbi.institution_roles_id,
+          rbi.is_active,
+          now() as created_date,
+          null as last_updated_date,
+          ? as version_id,
+          ? as created_by,
+          ? as last_updated_by,
+          ? as result_id
+          from results_by_institution rbi WHERE rbi.result_id = ? and rbi.is_active > 0
+        `;
+        const response = await (<Promise<ResultsByInstitution[]>>(
+          this.query(queryData, [
+            config.phase,
+            config.user.id,
+            config.user.id,
+            config.new_result_id,
+            config.old_result_id,
+          ])
+        ));
         const response_edit = <ResultsByInstitution[]>(
           config.f.custonFunction(response)
         );
@@ -71,12 +84,21 @@ export class ResultByIntitutionsRepository
           config.new_result_id,
           config.old_result_id,
         ]);
-        final_data = await this.find({
-          where: {
-            result_id: config.new_result_id,
-            version_id: config.phase,
-          },
-        });
+        const queryFind = `
+        SELECT 
+          rbi.id,
+          rbi.institutions_id,
+          rbi.institution_roles_id,
+          rbi.is_active,
+          rbi.created_date,
+          rbi.last_updated_date,
+          rbi.version_id,
+          rbi.created_by,
+          rbi.last_updated_by,
+          rbi.result_id
+          from results_by_institution rbi WHERE rbi.result_id = ?
+        `;
+        final_data = await this.query(queryFind, [config.new_result_id]);
       }
     } catch (error) {
       config.f?.errorFunction

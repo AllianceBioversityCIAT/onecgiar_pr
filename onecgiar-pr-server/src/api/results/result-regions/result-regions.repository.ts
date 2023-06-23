@@ -56,7 +56,7 @@ export class ResultRegionRepository
           result_id,
           version_id
           )
-          elect
+          select
           rr.is_active,
           now() as created_date,
           null as last_updated_date,

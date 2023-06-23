@@ -14,6 +14,7 @@ import { ResultIpEoiOutcome } from '../../ipsr/innovation-pathway/entities/resul
 import { ResultIpAAOutcome } from '../../ipsr/innovation-pathway/entities/result-ip-action-area-outcome.entity';
 import { ResultsIpActor } from '../../ipsr/results-ip-actors/entities/results-ip-actor.entity';
 import { VersionBaseEntity } from '../../../shared/entities/version-base-entity';
+import { ApplicationModules } from './application-modules.entity';
 
 @Entity('version')
 export class Version extends VersionBaseEntity {
@@ -79,6 +80,17 @@ export class Version extends VersionBaseEntity {
     nullable: true,
   })
   previous_phase: number;
+
+  @Column({
+    name: 'app_module_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  app_module_id: number;
+
+  @ManyToOne(() => ApplicationModules, (app) => app.obj_version)
+  @JoinColumn({ name: 'app_module_id' })
+  obj_app_module: ApplicationModules;
 
   @ManyToOne(() => Version, (v) => v.id)
   @JoinColumn({ name: 'previous_phase' })

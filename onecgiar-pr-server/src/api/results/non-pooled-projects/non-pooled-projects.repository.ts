@@ -29,16 +29,32 @@ export class NonPooledProjectRepository
     let final_data: NonPooledProject[] = null;
     try {
       if (config.f?.custonFunction) {
-        const response = await this.find({
-          where: { results_id: config.old_result_id, is_active: true },
-        });
-        response.map((el) => {
-          delete el.id;
-          delete el.created_date;
-          delete el.last_updated_date;
-          el.version_id = config.phase;
-          el.results_id = config.new_result_id;
-        });
+        const queryData = `
+        select 
+          null as id,
+          npp.grant_title,
+          npp.center_grant_id,
+          npp.is_active,
+          now() as created_date,
+          null as last_updated_date,
+          ? as results_id,
+          npp.funder_institution_id,
+          ? as created_by,
+          ? as last_updated_by,
+          npp.lead_center_id,
+          ? as version_id,
+          npp.non_pooled_project_type_id
+          from non_pooled_project npp where npp.results_id = ? and is_active > 0
+        `;
+        const response = await (<Promise<NonPooledProject[]>>(
+          this.query(queryData, [
+            config.new_result_id,
+            config.user.id,
+            config.user.id,
+            config.phase,
+            config.old_result_id,
+          ])
+        ));
         const response_edit = <NonPooledProject[]>(
           config.f.custonFunction(response)
         );
@@ -79,12 +95,27 @@ export class NonPooledProjectRepository
           config.phase,
           config.old_result_id,
         ]);
-        final_data = await this.find({
-          where: {
-            results_id: config.new_result_id,
-            version_id: config.phase,
-          },
-        });
+
+        const queryFind = `
+        select 
+          npp.id,
+          npp.grant_title,
+          npp.center_grant_id,
+          npp.is_active,
+          npp.created_date,
+          npp.last_updated_date,
+          npp.results_id,
+          npp.funder_institution_id,
+          npp.created_by,
+          npp.last_updated_by,
+          npp.lead_center_id,
+          npp.version_id,
+          npp.non_pooled_project_type_id
+          from non_pooled_project npp where npp.results_id = ?
+        `;
+        final_data = await (<Promise<NonPooledProject[]>>(
+          this.query(queryFind, [config.new_result_id])
+        ));
       }
     } catch (error) {
       config.f?.errorFunction

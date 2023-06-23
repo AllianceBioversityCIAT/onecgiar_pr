@@ -32,14 +32,44 @@ export class ResultRepository
     let final_data: Result = null;
     try {
       if (config.f?.custonFunction) {
-        const response = await this.findOne({
-          where: { id: config.old_result_id, is_active: true },
-        });
-        delete response.id;
-        delete response.created_date;
-        delete response.last_updated_date;
-        response.version_id = config.phase;
-        const response_edit = <Result>config.f.custonFunction(response);
+        const queryData = `
+        select
+          null as id,
+          r2.description,
+          r2.is_active,
+          null as last_updated_date,
+          r2.gender_tag_level_id,
+          ? as version_id,
+          r2.result_type_id,
+          r2.status,
+          ? as created_by,
+          ? as last_updated_by,
+          r2.reported_year_id,
+          now() as created_date,
+          r2.result_level_id,
+          r2.title,
+          r2.legacy_id,
+          r2.krs_url,
+          r2.is_krs,
+          r2.climate_change_tag_level_id,
+          r2.no_applicable_partner,
+          r2.has_regions,
+          r2.has_countries,
+          r2.geographic_scope_id,
+          r2.lead_contact_person,
+          r2.result_code
+          from \`result\` r2 WHERE r2.id = ? and r2.is_active > 0`;
+        const response = await (<Promise<Result[]>>(
+          this.query(queryData, [
+            config.phase,
+            config.user.id,
+            config.user.id,
+            config.old_result_id,
+          ])
+        ));
+        const response_edit = <Result>(
+          config.f.custonFunction(response?.length ? response[0] : null)
+        );
         final_data = await this.save(response_edit);
       } else {
         const queryData: string = `
@@ -92,13 +122,44 @@ export class ResultRepository
           r2.lead_contact_person,
           r2.result_code
           from \`result\` r2 WHERE r2.id = ? and r2.is_active > 0`;
-        const [response]: { insert_id }[] = await this.query(queryData, [
-          config.phase,
-          config.user.id,
-          config.user.id,
-          config.old_result_id,
-        ]);
-        final_data = await this.findOne({ where: { id: response.insert_id } });
+        const response = await (<Promise<{ insertId }>>(
+          this.query(queryData, [
+            config.phase,
+            config.user.id,
+            config.user.id,
+            config.old_result_id,
+          ])
+        ));
+
+        const queryFind = `
+        select
+          r2.id,
+          r2.description,
+          r2.is_active,
+          r2.last_updated_date,
+          r2.gender_tag_level_id,
+          r2.version_id,
+          r2.result_type_id,
+          r2.status,
+          r2.created_by,
+          r2.last_updated_by,
+          r2.reported_year_id,
+          r2.created_date,
+          r2.result_level_id,
+          r2.title,
+          r2.legacy_id,
+          r2.krs_url,
+          r2.is_krs,
+          r2.climate_change_tag_level_id,
+          r2.no_applicable_partner,
+          r2.has_regions,
+          r2.has_countries,
+          r2.geographic_scope_id,
+          r2.lead_contact_person,
+          r2.result_code
+          from \`result\` r2 WHERE r2.id = ?
+        `;
+        final_data = await this.query(queryFind, [response?.insertId]);
       }
     } catch (error) {
       config.f?.errorFunction

@@ -75,8 +75,8 @@ export class ResultCountryRepository
         rc.is_active,
         rc.result_id,
         rc.country_id,
-        rc.as created_date,
-        rc.as last_updated_date,
+        rc.created_date,
+        rc.last_updated_date,
         rc.version_id
         from result_country rc WHERE rc.result_id = ?`;
         final_data = await this.query(queryFind, [config.new_result_id]);
