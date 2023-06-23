@@ -6,7 +6,7 @@
     <div [ngSwitch]="(readOnly || this.rolesSE.readOnly || !!this.dataControlSE?.currentResult?.status) && (!isStatic)"
         [ngClass]="{'mandatory': this.required,'readOnly':(readOnly || this.rolesSE.readOnly || !!this.dataControlSE?.currentResult?.status) && (!isStatic)}"
         class="pr-input position-relative">
-        <div class="read-only" *ngSwitchCase="true" [innerHtml]="value == '0' ? 0 : ((value|yesOrNotByBoolean) ||this.noDataText ||
+        <div class="read-only" *ngSwitchCase="true" [innerHtml]="this.type == 'link'? aTag(value):(value == '0' ? 0 : ((value|yesOrNotByBoolean)) ||this.noDataText ||
         (this.required ?
         this.notProvidedText :
         'Not applicable'))"></div>
@@ -21,6 +21,10 @@
                 <div class="hint">{{this.hint}}</div>
                 <app-pr-word-counter *ngIf="maxWords" [wordCount]="wordCount" [maxWords]="maxWords">
                 </app-pr-word-counter>
+            </div>
+            <div class="custom_validation_tooltip_container"
+                *ngIf="this.type == 'link' && badLink && (!readOnly && !this.rolesSE.readOnly) && this.value">
+                <app-custom-validation-tooltip></app-custom-validation-tooltip>
             </div>
         </div>
         <app-pr-field-validations></app-pr-field-validations>
