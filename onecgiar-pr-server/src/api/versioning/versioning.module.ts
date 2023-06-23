@@ -19,6 +19,19 @@ import { ResultByIntitutionsTypeRepository } from '../results/results_by_institu
 import { ResultCountryRepository } from '../results/result-countries/result-countries.repository';
 import { ResultRegionRepository } from '../results/result-regions/result-regions.repository';
 import { LinkedResultRepository } from '../results/linked-results/linked-results.repository';
+import { EvidencesRepository } from '../results/evidences/evidences.repository';
+import { ResultsCapacityDevelopmentsRepository } from '../results/summary/repositories/results-capacity-developments.repository';
+import { ResultsImpactAreaIndicatorRepository } from '../results/results-impact-area-indicators/results-impact-area-indicators.repository';
+import { ResultsPolicyChangesRepository } from '../results/summary/repositories/results-policy-changes.repository';
+import { ResultsInnovationsDevRepository } from '../results/summary/repositories/results-innovations-dev.repository';
+import { ResultsInnovationsUseRepository } from '../results/summary/repositories/results-innovations-use.repository';
+import { ResultsInnovationsUseMeasuresRepository } from '../results/summary/repositories/results-innovations-use-measures.repository';
+import { ResultsKnowledgeProductsRepository } from '../results/results-knowledge-products/repositories/results-knowledge-products.repository';
+import { ResultsKnowledgeProductAltmetricRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-altmetrics.repository';
+import { ResultsKnowledgeProductAuthorRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-authors.repository';
+import { ResultsKnowledgeProductKeywordRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-keywords.repository';
+import { ResultsKnowledgeProductMetadataRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-metadata.repository';
+import { ResultsKnowledgeProductInstitutionRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-institution.repository';
 
 @Module({
   controllers: [VersioningController],
@@ -40,6 +53,19 @@ import { LinkedResultRepository } from '../results/linked-results/linked-results
     ResultCountryRepository,
     ResultRegionRepository,
     LinkedResultRepository,
+    EvidencesRepository,
+    ResultsCapacityDevelopmentsRepository,
+    ResultsImpactAreaIndicatorRepository,
+    ResultsPolicyChangesRepository,
+    ResultsInnovationsDevRepository,
+    ResultsInnovationsUseRepository,
+    ResultsInnovationsUseMeasuresRepository,
+    ResultsKnowledgeProductsRepository,
+    ResultsKnowledgeProductAltmetricRepository,
+    ResultsKnowledgeProductAuthorRepository,
+    ResultsKnowledgeProductKeywordRepository,
+    ResultsKnowledgeProductMetadataRepository,
+    ResultsKnowledgeProductInstitutionRepository,
   ],
 })
 export class VersioningModule {}

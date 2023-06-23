@@ -29,16 +29,38 @@ export class EvidencesRepository
     let final_data: Evidence[] = null;
     try {
       if (config.f?.custonFunction) {
-        const response = await this.find({
-          where: { result_id: config.old_result_id, is_active: 1 },
-        });
-        response.map((el) => {
-          delete el.id;
-          delete el.creation_date;
-          delete el.last_updated_date;
-          el.version_id = config.phase;
-          el.result_id = config.new_result_id;
-        });
+        const queryData = `
+        select
+          null as id,
+          e.description,
+          e.is_active,
+          now() as creation_date,
+          e.last_updated_date,
+          ? as version_id,
+          ? as created_by,
+          ? as last_updated_by,
+          e.gender_related,
+          e.link,
+          e.youth_related,
+          e.is_supplementary,
+          ? as result_id,
+          ${VERSIONING.QUERY.Get_result_phases(
+            `e.knowledge_product_related`,
+            config.phase,
+          )} as knowledge_product_related,
+          e.evidence_type_id
+          from evidence e where e.result_id = ? and is_active > 0
+        `;
+        const response = await (<Promise<Evidence[]>>(
+          this.query(queryData, [
+            config.phase,
+            config.user.id,
+            config.user.id,
+            config.new_result_id,
+            config.old_result_id,
+          ])
+        ));
+
         const response_edit = <Evidence[]>config.f.custonFunction(response);
         final_data = await this.save(response_edit);
       } else {
@@ -77,16 +99,33 @@ export class EvidencesRepository
           )} as knowledge_product_related,
           e.evidence_type_id
           from evidence e where e.result_id = ? and is_active > 0`;
-        const [response]: { insert_id }[] = await this.query(queryData, [
+        await this.query(queryData, [
           config.phase,
           config.user.id,
           config.user.id,
           config.new_result_id,
           config.old_result_id,
         ]);
-        final_data = await this.find({
-          where: { result_id: config.new_result_id, version_id: config.phase },
-        });
+        const queryFind = `
+        select
+          e.id,
+          e.description,
+          e.is_active,
+          e.creation_date,
+          e.last_updated_date,
+          e.version_id,
+          e.created_by,
+          e.last_updated_by,
+          e.gender_related,
+          e.link,
+          e.youth_related,
+          e.is_supplementary,
+          e.result_id,
+          e.knowledge_product_related,
+          e.evidence_type_id
+          from evidence e where e.result_id = ?
+        `;
+        final_data = await this.query(queryFind, [config.new_result_id]);
       }
     } catch (error) {
       config.f?.errorFunction

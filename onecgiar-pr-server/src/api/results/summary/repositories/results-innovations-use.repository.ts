@@ -100,7 +100,10 @@ export class ResultsInnovationsUseRepository
         riu.created_by,
         riu.last_updated_by
         from results_innovations_use riu where riu.results_id = ?`;
-        final_data = await this.query(queryFind, [config.new_result_id]);
+        const temp = await (<Promise<ResultsInnovationsUse[]>>(
+          this.query(queryFind, [config.new_result_id])
+        ));
+        final_data = temp?.length ? temp[0] : null;
       }
     } catch (error) {
       config.f?.errorFunction
