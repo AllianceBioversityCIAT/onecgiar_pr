@@ -17,6 +17,7 @@ export class RdTheoryOfChangeComponent {
   primaryText = ' - <strong>Primary</strong> ';
   getConsumed = false;
   psub = '';
+  allInitiatives = [];
   constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public centersSE: CentersService, public institutionsSE: InstitutionsService, public greenChecksSE: GreenChecksService) {}
   ngOnInit(): void {
     this.requestEvent();
@@ -45,6 +46,15 @@ export class RdTheoryOfChangeComponent {
         console.error(err);
       }
     );
+  }
+
+  GET_AllInitiatives() {
+    //(this.api.rolesSE.isAdmin);
+    if (!this.api.rolesSE.isAdmin) return;
+    this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
+      //(response);
+      this.allInitiatives = response;
+    });
   }
 
   get validateGranTitle() {
