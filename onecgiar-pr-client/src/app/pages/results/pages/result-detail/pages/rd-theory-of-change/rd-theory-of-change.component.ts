@@ -18,22 +18,31 @@ export class RdTheoryOfChangeComponent {
   getConsumed = false;
   psub = '';
   allInitiatives = [];
+  myInitiatives = [];
   constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public centersSE: CentersService, public institutionsSE: InstitutionsService, public greenChecksSE: GreenChecksService) {}
   ngOnInit(): void {
     this.requestEvent();
     this.getSectionInformation();
     this.GET_AllWithoutResults();
+    this.GET_AllInitiatives();
+  }
+  GET_initiativesByUser() {
+    this.api.authSE.GET_initiativesByUser().subscribe(resp => {
+      console.log(resp.response);
+      this.myInitiatives = resp.response;
+    });
   }
   GET_AllWithoutResults() {
     this.api.resultsSE.GET_AllWithoutResults().subscribe(({ response }) => {
       this.contributingInitiativesList = response;
     });
   }
+
   async getSectionInformation() {
     await this.api.resultsSE.GET_toc().subscribe(
       ({ response }) => {
         this.theoryOfChangeBody = response;
-        //(this.theoryOfChangeBody);
+        console.log(this.theoryOfChangeBody);
         setTimeout(() => {
           this.getConsumed = true;
         }, 100);
@@ -50,11 +59,15 @@ export class RdTheoryOfChangeComponent {
 
   GET_AllInitiatives() {
     //(this.api.rolesSE.isAdmin);
-    if (!this.api.rolesSE.isAdmin) return;
-    this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
-      //(response);
-      this.allInitiatives = response;
-    });
+    console.log(this.api.rolesSE.isAdmin);
+    if (!this.api.rolesSE.isAdmin) {
+      this.GET_initiativesByUser();
+    } else {
+      this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
+        console.log(response);
+        this.allInitiatives = response;
+      });
+    }
   }
 
   get validateGranTitle() {
@@ -70,10 +83,11 @@ export class RdTheoryOfChangeComponent {
   }
 
   onSaveSection() {
-    //(this.theoryOfChangeBody);
+    console.log(this.theoryOfChangeBody);
     this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
       //(resp);
       this.getConsumed = false;
+      this.theoryOfChangeBody.result_toc_result.initiative_id = null;
       this.getSectionInformation();
     });
   }

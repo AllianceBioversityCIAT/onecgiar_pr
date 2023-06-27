@@ -6,15 +6,17 @@
     <!-- <app-pr-input label="Primary submitter" [required]="false" [readOnly]="true" [(ngModel)]="psub">
     </app-pr-input> -->
 
-    <div class="dropdown-50p">
-        <app-pr-select *ngIf="!this.api.rolesSE.isAdmin" class="segment_title_margin"
-            [options]="this.api.dataControlSE.myInitiativesList" label="Primary submitter" optionLabel="full_name"
-            optionValue="initiative_id" placeholder="Select initiative" description="Select an initiative">
+    <div *ngIf="getConsumed">
+        <app-pr-select *ngIf="!this.api.rolesSE.isAdmin" class="segment_title_margin" [options]="this.myInitiatives"
+            label="Primary submitter" optionLabel="full_name" optionValue="initiative_id"
+            placeholder="Select initiative" description="Select an initiative"
+            [(ngModel)]="this.theoryOfChangeBody.result_toc_result.initiative_id">
         </app-pr-select>
 
         <app-pr-select *ngIf="this.api.rolesSE.isAdmin" class="segment_title_margin" [options]="this.allInitiatives"
             label="Primary submitter" optionLabel="full_name" optionValue="initiative_id"
-            placeholder="Select initiative" description="Select an initiative">
+            placeholder="Select initiative" description="Select an initiative"
+            [(ngModel)]="this.theoryOfChangeBody.result_toc_result.initiative_id">
         </app-pr-select>
     </div>
 
