@@ -159,7 +159,10 @@ export class ResultRepository
           r2.result_code
           from \`result\` r2 WHERE r2.id = ?
         `;
-        final_data = await this.query(queryFind, [response?.insertId]);
+        const temp = await (<Promise<Result[]>>(
+          this.query(queryFind, [response?.insertId])
+        ));
+        final_data = temp?.length ? temp[0] : null;
       }
     } catch (error) {
       config.f?.errorFunction
@@ -171,7 +174,6 @@ export class ResultRepository
     config.f?.completeFunction
       ? config.f.completeFunction({ ...final_data })
       : null;
-
     return final_data;
   }
 

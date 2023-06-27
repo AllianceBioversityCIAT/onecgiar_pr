@@ -23,6 +23,19 @@ import { ResultByIntitutionsTypeRepository } from '../results/results_by_institu
 import { ResultCountryRepository } from '../results/result-countries/result-countries.repository';
 import { ResultRegionRepository } from '../results/result-regions/result-regions.repository';
 import { LinkedResultRepository } from '../results/linked-results/linked-results.repository';
+import { EvidencesRepository } from '../results/evidences/evidences.repository';
+import { ResultsCapacityDevelopmentsRepository } from '../results/summary/repositories/results-capacity-developments.repository';
+import { ResultsImpactAreaIndicatorRepository } from '../results/results-impact-area-indicators/results-impact-area-indicators.repository';
+import { ResultsPolicyChangesRepository } from '../results/summary/repositories/results-policy-changes.repository';
+import { ResultsInnovationsDevRepository } from '../results/summary/repositories/results-innovations-dev.repository';
+import { ResultsInnovationsUseRepository } from '../results/summary/repositories/results-innovations-use.repository';
+import { ResultsInnovationsUseMeasuresRepository } from '../results/summary/repositories/results-innovations-use-measures.repository';
+import { ResultsKnowledgeProductsRepository } from '../results/results-knowledge-products/repositories/results-knowledge-products.repository';
+import { ResultsKnowledgeProductAltmetricRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-altmetrics.repository';
+import { ResultsKnowledgeProductAuthorRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-authors.repository';
+import { ResultsKnowledgeProductKeywordRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-keywords.repository';
+import { ResultsKnowledgeProductMetadataRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-metadata.repository';
+import { ResultsKnowledgeProductInstitutionRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-institution.repository';
 
 @Injectable()
 export class VersioningService {
@@ -43,6 +56,19 @@ export class VersioningService {
     private readonly _resultCountryRepository: ResultCountryRepository,
     private readonly _resultRegionRepository: ResultRegionRepository,
     private readonly _linkedResultRepository: LinkedResultRepository,
+    private readonly _evidencesRepository: EvidencesRepository,
+    private readonly _resultsCapacityDevelopmentsRepository: ResultsCapacityDevelopmentsRepository,
+    private readonly _resultsImpactAreaIndicatorRepository: ResultsImpactAreaIndicatorRepository,
+    private readonly _resultsPolicyChangesRepository: ResultsPolicyChangesRepository,
+    private readonly _resultsInnovationsDevRepository: ResultsInnovationsDevRepository,
+    private readonly _resultsInnovationsUseRepository: ResultsInnovationsUseRepository,
+    private readonly _resultsInnovationsUseMeasuresRepository: ResultsInnovationsUseMeasuresRepository,
+    private readonly _resultsKnowledgeProductsRepository: ResultsKnowledgeProductsRepository,
+    private readonly _resultsKnowledgeProductAltmetricRepository: ResultsKnowledgeProductAltmetricRepository,
+    private readonly _resultsKnowledgeProductAuthorRepository: ResultsKnowledgeProductAuthorRepository,
+    private readonly _resultsKnowledgeProductKeywordRepository: ResultsKnowledgeProductKeywordRepository,
+    private readonly _resultsKnowledgeProductMetadataRepository: ResultsKnowledgeProductMetadataRepository,
+    private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
   ) {}
 
   /**
@@ -93,33 +119,86 @@ export class VersioningService {
   async $_phaseChangeReporting(result: Result, phase: Version, user: TokenDto) {
     try {
       this._logger.log(
-        `REPORTING: Phase change in the ${result.id} result to the ${phase.phase_name} phase[${phase.id}].`,
+        `REPORTING: Phase change in the ${result.id} result to the phase [${phase.id}]:${phase.phase_name} .`,
       );
-      /*const data = await this._resultRepository.replicable({
+      const data = await this._resultRepository.replicable({
         old_result_id: result.id,
         phase: phase.id,
         user: user,
-      });*/
-      const data = { id: 4880, result_code: 224 };
+      });
+
       const config = {
         old_result_id: result.id,
         new_result_id: data.id,
         phase: phase.id,
         user: user,
       };
-      //await this._resultByInitiativesRepository.replicable(config);
-      //await this._nonPooledProjectRepository.replicable(config);
-      //await this._resultsCenterRepository.replicable(config);
-      //await this._resultsTocResultRepository.replicable(config);
-      //await this._resultByIntitutionsRepository.replicable(config);
-      //await this._resultByInstitutionsByDeliveriesTypeRepository.replicable(
-      //  config,
-      //);
-      //await this._resultByIntitutionsTypeRepository.replicable(config);
-      //await this._resultCountryRepository.replicable(config);
-      //await this._resultRegionRepository.replicable(config);
-      //await this._linkedResultRepository.replicable(config);
-    } catch (error) {}
+
+      await this._resultByInitiativesRepository.replicable(config);
+
+      switch (parseInt(`${result.result_type_id}`)) {
+        case 1:
+          await this._resultsPolicyChangesRepository.replicable(config);
+          break;
+        case 2:
+          await this._resultsInnovationsUseRepository.replicable(config);
+          await this._resultsInnovationsUseMeasuresRepository.replicable(
+            config,
+          );
+          break;
+        case 5:
+          await this._resultsCapacityDevelopmentsRepository.replicable(config);
+          break;
+        case 6:
+          await this._resultsKnowledgeProductsRepository.replicable(config);
+          await this._resultsKnowledgeProductAltmetricRepository.replicable(
+            config,
+          );
+          await this._resultsKnowledgeProductAuthorRepository.replicable(
+            config,
+          );
+          await this._resultsKnowledgeProductKeywordRepository.replicable(
+            config,
+          );
+          await this._resultsKnowledgeProductMetadataRepository.replicable(
+            config,
+          );
+          await this._resultsKnowledgeProductInstitutionRepository.replicable(
+            config,
+          );
+          break;
+        case 7:
+          await this._resultsInnovationsDevRepository.replicable(config);
+          break;
+      }
+
+      await this._nonPooledProjectRepository.replicable(config);
+      await this._resultsCenterRepository.replicable(config);
+      await this._resultsTocResultRepository.replicable(config);
+      await this._resultByIntitutionsRepository.replicable(config);
+      await this._resultByInstitutionsByDeliveriesTypeRepository.replicable(
+        config,
+      );
+      await this._resultByIntitutionsTypeRepository.replicable(config);
+      await this._resultCountryRepository.replicable(config);
+      await this._resultRegionRepository.replicable(config);
+      await this._linkedResultRepository.replicable(config);
+      await this._evidencesRepository.replicable(config);
+      //await this._resultsImpactAreaIndicatorRepository.replicable(config);
+
+      this._logger.log(
+        `REPORTING: The change of phase of result ${result.id} is completed correctly.`,
+      );
+      this._logger.log(
+        `REPORTING: New result reference in phase [${phase.id}]:${phase.phase_name} is ${data.id}`,
+      );
+      return data;
+    } catch (error) {
+      return {
+        result: result,
+        error: error,
+      };
+    }
   }
 
   async $_phaseChangeIPSR(result: Result, phase: Version, user: TokenDto) {}
@@ -132,7 +211,7 @@ export class VersioningService {
   ) {
     switch (module_id) {
       case 1:
-        await this.$_phaseChangeReporting(result, phase, user);
+        return await this.$_phaseChangeReporting(result, phase, user);
         break;
       case 2:
         await this.$_phaseChangeIPSR(result, phase, user);
@@ -165,6 +244,14 @@ export class VersioningService {
         });
       }
 
+      if (legacy_result.result_type_id == 6) {
+        throw this._returnResponse.format({
+          message: `Result ID: ${result_id} is a Knowledge Product, this type of result is not possible to phase shift it contact support`,
+          response: result_id,
+          statusCode: HttpStatus.CONFLICT,
+        });
+      }
+
       const module_id = this.$_validationModule(legacy_result.result_type_id);
 
       const phase = await this._versionRepository.findOne({
@@ -173,12 +260,27 @@ export class VersioningService {
           status: true,
         },
       });
-      //! @important: Quitar el true cuando se haya terminado de validar
-      if (
-        (await this.$_genericValidation(legacy_result.result_code, phase.id)) ||
-        true
-      ) {
-        await this.$_versionManagement(legacy_result, phase, user, module_id);
+      let res: any = null;
+      if (await this.$_genericValidation(legacy_result.result_code, phase.id)) {
+        res = await this.$_versionManagement(
+          legacy_result,
+          phase,
+          user,
+          module_id,
+        );
+        if (res?.error) {
+          throw this._returnResponse.format({
+            message: `Error in the version process of the result ${legacy_result.id}. Contact with support `,
+            response: res.error,
+            statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+          });
+        }
+
+        return this._returnResponse.format({
+          message: `The result ${legacy_result.result_code} is in the ${phase.phase_name} phase with id ${res.id}`,
+          response: res,
+          statusCode: HttpStatus.OK,
+        });
       } else {
         throw this._returnResponse.format({
           message: `The result ${legacy_result.result_code} is already in the ${phase.phase_name} phase`,
@@ -208,15 +310,106 @@ export class VersioningService {
     }
   }
 
-  create(createVersioningDto: CreateVersioningDto) {
-    return 'This action adds a new versioning';
+  async create(
+    user: TokenDto,
+    createVersioningDto: CreateVersioningDto,
+  ): Promise<ReturnResponseDto<Version>> {
+    try {
+      const res = await this._versionRepository.findOne({
+        where: {
+          phase_year: createVersioningDto?.phase_year,
+          app_module_id: createVersioningDto.app_module_id,
+          is_active: true,
+        },
+      });
+
+      if (res) {
+        throw this._returnResponse.format({
+          message: `A phase has already been created for the module ${createVersioningDto?.app_module_id} in the selected year ${createVersioningDto?.phase_year}.`,
+          response: createVersioningDto,
+          statusCode: HttpStatus.CONFLICT,
+        });
+      }
+
+      const newPhase = await this._versionRepository.save({
+        phase_name: createVersioningDto?.phase_name,
+        start_date: createVersioningDto?.start_date,
+        end_date: createVersioningDto?.end_date,
+        phase_year: createVersioningDto?.phase_year,
+        cgspace_year: createVersioningDto?.phase_year,
+        toc_pahse_id: createVersioningDto?.toc_pahse_id,
+        previous_phase: createVersioningDto?.previous_phase,
+        created_by: user.id,
+      });
+
+      return this._returnResponse.format({
+        message: `Phase ${newPhase.phase_name} created successfully`,
+        response: newPhase,
+        statusCode: HttpStatus.CREATED,
+      });
+    } catch (error) {
+      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+    }
   }
 
-  update(id: number, updateVersioningDto: UpdateVersioningDto) {
-    return `This action updates a #${id} versioning`;
+  async update(
+    id: number,
+    updateVersioningDto: UpdateVersioningDto,
+  ): Promise<ReturnResponseDto<Version>> {
+    try {
+      const res = await this._versionRepository.findOne({
+        where: {
+          id: id,
+          is_active: true,
+        },
+      });
+
+      if (!res) {
+        throw this._returnResponse.format({
+          message: `Phase ID: ${id} not found`,
+          response: id,
+          statusCode: HttpStatus.NOT_FOUND,
+        });
+      }
+
+      if (updateVersioningDto?.status) {
+        await this._versionRepository.$_closeAllPhases();
+      }
+      await this._versionRepository.update(id, updateVersioningDto);
+
+      return this._returnResponse.format({
+        message: `Phase ${res.phase_name} updated successfully`,
+        response: { ...res, ...updateVersioningDto },
+        statusCode: HttpStatus.OK,
+      });
+    } catch (error) {
+      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+    }
   }
 
-  delete(id: number) {
-    return `This action removes a #${id} versioning`;
+  async delete(id: number) {
+    try {
+      const res = await this._versionRepository.findOne({
+        where: {
+          id: id,
+          is_active: true,
+        },
+      });
+      if (!res) {
+        throw this._returnResponse.format({
+          message: `Phase ID: ${id} not found`,
+          response: id,
+          statusCode: HttpStatus.NOT_FOUND,
+        });
+      }
+
+      return this._returnResponse.format({
+        message: `Phase ${res.phase_name} deleted successfully`,
+        response: res,
+        statusCode: HttpStatus.OK,
+      });
+    } catch (error) {
+      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+    }
   }
 }

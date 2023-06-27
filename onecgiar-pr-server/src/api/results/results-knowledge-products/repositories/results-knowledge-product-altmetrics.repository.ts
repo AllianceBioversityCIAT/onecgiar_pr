@@ -59,7 +59,7 @@ export class ResultsKnowledgeProductAltmetricRepository
         rkpa.image_medium,
         rkpa.image_large,
         rkpa.is_active,
-        now() sd created_date,
+        now() as created_date,
         null as last_updated_date,
         ${VERSIONING.QUERY.Get_kp_phases(
           config.new_result_id,
@@ -82,37 +82,37 @@ export class ResultsKnowledgeProductAltmetricRepository
         const queryData: string = `
         insert into  results_kp_altmetrics 
         (
-        altmetric_id
-        journal
-        score
-        cited_by_posts
-        cited_by_delicious
-        cited_by_facebook_pages
-        cited_by_blogs
-        cited_by_forum_users
-        cited_by_google_plus_users
-        cited_by_linkedin_users
-        cited_by_news_outlets
-        cited_by_peer_review_sites
-        cited_by_pinterest_users
-        cited_by_policies
-        cited_by_stack_exchange_resources
-        cited_by_reddit_users
-        cited_by_research_highlight_platforms
-        cited_by_twitter_users
-        cited_by_youtube_channels
-        cited_by_weibo_users
-        cited_by_wikipedia_pages
-        last_updated
-        image_small
-        image_medium
-        image_large
-        is_active
-        created_date
-        last_updated_date
-        result_knowledge_product_id
-        version_id
-        created_by
+        altmetric_id,
+        journal,
+        score,
+        cited_by_posts,
+        cited_by_delicious,
+        cited_by_facebook_pages,
+        cited_by_blogs,
+        cited_by_forum_users,
+        cited_by_google_plus_users,
+        cited_by_linkedin_users,
+        cited_by_news_outlets,
+        cited_by_peer_review_sites,
+        cited_by_pinterest_users,
+        cited_by_policies,
+        cited_by_stack_exchange_resources,
+        cited_by_reddit_users,
+        cited_by_research_highlight_platforms,
+        cited_by_twitter_users,
+        cited_by_youtube_channels,
+        cited_by_weibo_users,
+        cited_by_wikipedia_pages,
+        last_updated,
+        image_small,
+        image_medium,
+        image_large,
+        is_active,
+        created_date,
+        last_updated_date,
+        result_knowledge_product_id,
+        version_id,
+        created_by,
         last_updated_by
         )
         select 
@@ -142,7 +142,7 @@ export class ResultsKnowledgeProductAltmetricRepository
         rkpa.image_medium,
         rkpa.image_large,
         rkpa.is_active,
-        now() sd created_date,
+        now() as created_date,
         null as last_updated_date,
         ${VERSIONING.QUERY.Get_kp_phases(
           config.new_result_id,

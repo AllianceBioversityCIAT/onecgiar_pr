@@ -1,13 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { Version } from './entities/version.entity';
-import { HandlersError } from '../../shared/handlers/error.utils';
+import {
+  HandlersError,
+  ReturnResponse,
+} from '../../shared/handlers/error.utils';
+import { env } from 'process';
 
 @Injectable()
 export class VersionRepository extends Repository<Version> {
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
+    private readonly _returnResponse: ReturnResponse,
   ) {
     super(Version, dataSource.createEntityManager());
   }
@@ -37,6 +42,20 @@ export class VersionRepository extends Repository<Version> {
         error: error,
         debug: true,
       });
+    }
+  }
+
+  async $_closeAllPhases(): Promise<boolean> {
+    try {
+      const queryData = `
+      update \`version\` 
+      set status = false
+      where is_active > 0 and status = true
+      `;
+      await this.query(queryData);
+      return true;
+    } catch (error) {
+      return false;
     }
   }
 }

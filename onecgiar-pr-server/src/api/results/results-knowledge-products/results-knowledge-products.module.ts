@@ -4,7 +4,10 @@ import { ResultsKnowledgeProductsController } from './results-knowledge-products
 import { ResultsKnowledgeProductsRepository } from './repositories/results-knowledge-products.repository';
 import { ResultRepository } from '../result.repository';
 import { MQAPService } from '../../m-qap/m-qap.service';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import {
+  HandlersError,
+  ReturnResponse,
+} from '../../../shared/handlers/error.utils';
 import { HttpModule } from '@nestjs/axios';
 import { VersionRepository } from '../../versioning/versioning.repository';
 import { ResultsKnowledgeProductMapper } from './results-knowledge-products.mapper';
@@ -59,6 +62,7 @@ import { ResultCountryRepository } from '../result-countries/result-countries.re
     ClarisaRegionsRepository,
     CGSpaceCountryMappingsRepository,
     ResultCountryRepository,
+    ReturnResponse,
   ],
   exports: [
     ResultsKnowledgeProductsRepository,

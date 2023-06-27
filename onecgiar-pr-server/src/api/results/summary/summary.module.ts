@@ -2,7 +2,10 @@ import { Module } from '@nestjs/common';
 import { SummaryService } from './summary.service';
 import { SummaryController } from './summary.controller';
 import { ResultsInnovationsUseRepository } from './repositories/results-innovations-use.repository';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import {
+  HandlersError,
+  ReturnResponse,
+} from '../../../shared/handlers/error.utils';
 import { ResultsInnovationsUseMeasuresRepository } from './repositories/results-innovations-use-measures.repository';
 import { VersionsService } from '../versions/versions.service';
 import { VersionRepository } from '../../versioning/versioning.repository';
@@ -27,6 +30,7 @@ import { ResultsPolicyChangesRepository } from './repositories/results-policy-ch
     ResultRepository,
     VersionsService,
     VersionRepository,
+    ReturnResponse,
   ],
   exports: [ResultsInnovationsUseRepository],
 })

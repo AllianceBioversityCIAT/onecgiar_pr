@@ -59,14 +59,14 @@ export class ResultsKnowledgeProductAuthorRepository
         const queryData: string = `
         insert into results_kp_authors 
         (
-        author_name
-        orcid
-        is_active
-        created_date
-        last_updated_date
-        result_knowledge_product_id
-        version_id
-        created_by
+        author_name,
+        orcid,
+        is_active,
+        created_date,
+        last_updated_date,
+        result_knowledge_product_id,
+        version_id,
+        created_by,
         last_updated_by
         )
         select 

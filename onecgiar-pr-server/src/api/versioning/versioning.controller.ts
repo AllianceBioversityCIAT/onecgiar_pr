@@ -10,10 +10,13 @@ import {
 import { VersioningService } from './versioning.service';
 import { CreateVersioningDto } from './dto/create-versioning.dto';
 import { UpdateVersioningDto } from './dto/update-versioning.dto';
-import { UseInterceptors } from '@nestjs/common';
+import { UseInterceptors, UseGuards } from '@nestjs/common';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 import { UserToken } from '../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
+import { Roles } from '../../shared/decorators/roles.decorator';
+import { RoleEnum, RoleTypeEnum } from '../../shared/constants/role-type.enum';
+import { ValidRoleGuard } from '../../shared/guards/valid-role.guard';
 
 @Controller()
 @UseInterceptors(ResponseInterceptor)
@@ -29,11 +32,18 @@ export class VersioningController {
   }
 
   @Post()
-  create(@Body() createVersioningDto: CreateVersioningDto) {
-    return this.versioningService.create(createVersioningDto);
+  @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
+  @UseGuards(ValidRoleGuard)
+  create(
+    @Body() createVersioningDto: CreateVersioningDto,
+    @UserToken() user: TokenDto,
+  ) {
+    return this.versioningService.create(user, createVersioningDto);
   }
 
   @Patch(':id')
+  @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
+  @UseGuards(ValidRoleGuard)
   update(
     @Param('id') id: string,
     @Body() updateVersioningDto: UpdateVersioningDto,
@@ -42,6 +52,8 @@ export class VersioningController {
   }
 
   @Delete(':id')
+  @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
+  @UseGuards(ValidRoleGuard)
   remove(@Param('id') id: string) {
     return this.versioningService.delete(+id);
   }
