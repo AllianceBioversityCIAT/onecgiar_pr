@@ -17,7 +17,7 @@ export class CapDevInfoComponent implements OnInit {
   deliveryMethodOptions = [];
   capdev_term_id_1 = null;
   capdev_term_id_2 = null;
-  yesornot = [];
+  yesornot = true;
   radioOptions = [
     { id: true, name: 'Yes' },
     { id: false, name: 'No' }
@@ -93,6 +93,8 @@ export class CapDevInfoComponent implements OnInit {
   onSaveSection() {
     //(this.capDevInfoRoutingBody);
     this.validate_capdev_term_id();
+
+    if (this.yesornot) this.cleanOrganizationsList();
     this.api.resultsSE.PATCH_capacityDevelopent(this.capDevInfoRoutingBody).subscribe(resp => {
       this.getSectionInformation();
     });
