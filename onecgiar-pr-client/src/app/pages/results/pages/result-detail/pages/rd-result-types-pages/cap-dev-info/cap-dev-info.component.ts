@@ -17,6 +17,11 @@ export class CapDevInfoComponent implements OnInit {
   deliveryMethodOptions = [];
   capdev_term_id_1 = null;
   capdev_term_id_2 = null;
+  yesornot = [];
+  radioOptions = [
+    { id: true, name: 'Yes' },
+    { id: false, name: 'No' }
+  ];
   constructor(public api: ApiService, public institutionsSE: InstitutionsService) {}
 
   ngOnInit(): void {
@@ -73,6 +78,10 @@ export class CapDevInfoComponent implements OnInit {
       this.capdev_term_id_2 = this.capDevInfoRoutingBody.capdev_term_id;
     }
     return null;
+  }
+
+  cleanOrganizationsList() {
+    this.capDevInfoRoutingBody.institutions = [];
   }
 
   validate_capdev_term_id() {
