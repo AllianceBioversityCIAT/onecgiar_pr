@@ -2,7 +2,10 @@ import { Module } from '@nestjs/common';
 import { ResultInnovationPackageService } from './result-innovation-package.service';
 import { ResultInnovationPackageController } from './result-innovation-package.controller';
 import { ResultRepository } from '../../../api/results/result.repository';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import {
+  HandlersError,
+  ReturnResponse,
+} from '../../../shared/handlers/error.utils';
 import { VersionRepository } from '../../versioning/versioning.repository';
 import { ResultInnovationPackageByInitiativeRepository } from '../results-package-by-initiatives/results-package-by-initiatives.respository';
 import { VersionsModule } from '../../../api/results/versions/versions.module';
@@ -71,6 +74,7 @@ import { IpsrService } from '../ipsr.service';
     LinkedResultRepository,
     EvidencesRepository,
     IpsrService,
+    ReturnResponse,
   ],
   imports: [VersionsModule],
   exports: [ResultInnovationPackageRepository],

@@ -7,7 +7,10 @@ import {
 import { ResultLevelsService } from './result_levels.service';
 import { ResultLevelsController } from './result_levels.controller';
 import { ResultLevelRepository } from './resultLevel.repository';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import {
+  HandlersError,
+  ReturnResponse,
+} from '../../../shared/handlers/error.utils';
 import { ResultTypesModule } from '../result_types/result_types.module';
 import { JwtMiddleware } from '../../../auth/Middlewares/jwt.middleware';
 import { AuthModule } from '../../../auth/auth.module';
@@ -15,7 +18,12 @@ import { AuthModule } from '../../../auth/auth.module';
 @Module({
   controllers: [ResultLevelsController],
   imports: [ResultTypesModule, AuthModule],
-  providers: [ResultLevelsService, ResultLevelRepository, HandlersError],
+  providers: [
+    ResultLevelsService,
+    ResultLevelRepository,
+    HandlersError,
+    ReturnResponse,
+  ],
   exports: [ResultLevelRepository, ResultLevelsService],
 })
 export class ResultLevelsModule implements NestModule {

@@ -9,10 +9,13 @@ import { EvidencesController } from './evidences.controller';
 import { AuthModule } from '../../../auth/auth.module';
 import { JwtMiddleware } from '../../../auth/Middlewares/jwt.middleware';
 import { EvidencesRepository } from './evidences.repository';
-import { HandlersError } from 'src/shared/handlers/error.utils';
 import { ResultRepository } from '../result.repository';
 import { VersionRepository } from '../../versioning/versioning.repository';
 import { ResultsKnowledgeProductsRepository } from '../results-knowledge-products/repositories/results-knowledge-products.repository';
+import {
+  HandlersError,
+  ReturnResponse,
+} from '../../../shared/handlers/error.utils';
 
 @Module({
   controllers: [EvidencesController],
@@ -23,6 +26,7 @@ import { ResultsKnowledgeProductsRepository } from '../results-knowledge-product
     ResultRepository,
     VersionRepository,
     ResultsKnowledgeProductsRepository,
+    ReturnResponse,
   ],
   imports: [AuthModule],
   exports: [EvidencesRepository],

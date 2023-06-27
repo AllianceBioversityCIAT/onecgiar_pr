@@ -1,7 +1,10 @@
 import { Module } from '@nestjs/common';
 import { ResultsTocResultsService } from './results-toc-results.service';
 import { ResultsTocResultsController } from './results-toc-results.controller';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import {
+  HandlersError,
+  ReturnResponse,
+} from '../../../shared/handlers/error.utils';
 import { ResultsTocResultRepository } from './results-toc-results.repository';
 import { NonPooledProjectRepository } from '../non-pooled-projects/non-pooled-projects.repository';
 import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
@@ -38,6 +41,7 @@ import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/
     ShareResultRequestService,
     ShareResultRequestRepository,
     ResultInitiativeBudgetRepository,
+    ReturnResponse,
   ],
   exports: [ResultsTocResultRepository],
 })

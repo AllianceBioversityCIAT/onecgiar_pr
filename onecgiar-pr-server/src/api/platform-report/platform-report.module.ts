@@ -2,12 +2,20 @@ import { Module } from '@nestjs/common';
 import { PlatformReportService } from './platform-report.service';
 import { PlatformReportController } from './platform-report.controller';
 import Handlebars, { Exception } from 'handlebars';
-import { HandlersError } from '../../shared/handlers/error.utils';
+import {
+  HandlersError,
+  ReturnResponse,
+} from '../../shared/handlers/error.utils';
 import { PlatformReportRepository } from './platform-report.repository';
 
 @Module({
   controllers: [PlatformReportController],
-  providers: [PlatformReportService, HandlersError, PlatformReportRepository],
+  providers: [
+    PlatformReportService,
+    HandlersError,
+    PlatformReportRepository,
+    ReturnResponse,
+  ],
 })
 export class PlatformReportModule {
   public constructor() {

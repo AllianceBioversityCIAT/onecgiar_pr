@@ -32,6 +32,7 @@ import { ResultsKnowledgeProductAuthorRepository } from '../results/results-know
 import { ResultsKnowledgeProductKeywordRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-keywords.repository';
 import { ResultsKnowledgeProductMetadataRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-metadata.repository';
 import { ResultsKnowledgeProductInstitutionRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-institution.repository';
+import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 
 @Module({
   controllers: [VersioningController],
@@ -66,6 +67,7 @@ import { ResultsKnowledgeProductInstitutionRepository } from '../results/results
     ResultsKnowledgeProductKeywordRepository,
     ResultsKnowledgeProductMetadataRepository,
     ResultsKnowledgeProductInstitutionRepository,
+    RoleByUserRepository,
   ],
 })
 export class VersioningModule {}

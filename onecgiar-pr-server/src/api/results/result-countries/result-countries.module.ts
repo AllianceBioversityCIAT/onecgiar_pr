@@ -2,7 +2,10 @@ import { Module } from '@nestjs/common';
 import { ResultCountriesService } from './result-countries.service';
 import { ResultCountriesController } from './result-countries.controller';
 import { ResultCountryRepository } from './result-countries.repository';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import {
+  HandlersError,
+  ReturnResponse,
+} from '../../../shared/handlers/error.utils';
 import { ResultRepository } from '../result.repository';
 import { VersionRepository } from '../../versioning/versioning.repository';
 import { VersionsService } from '../versions/versions.service';
@@ -16,6 +19,7 @@ import { VersionsService } from '../versions/versions.service';
     ResultRepository,
     VersionsService,
     VersionRepository,
+    ReturnResponse,
   ],
   exports: [ResultCountryRepository, ResultCountriesService],
 })

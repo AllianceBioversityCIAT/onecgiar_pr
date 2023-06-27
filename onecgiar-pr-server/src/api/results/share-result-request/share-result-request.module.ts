@@ -2,7 +2,10 @@ import { Module } from '@nestjs/common';
 import { ShareResultRequestService } from './share-result-request.service';
 import { ShareResultRequestController } from './share-result-request.controller';
 import { ShareResultRequestRepository } from './share-result-request.repository';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import {
+  HandlersError,
+  ReturnResponse,
+} from '../../../shared/handlers/error.utils';
 import { ResultRepository } from '../result.repository';
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
 import { VersionsService } from '../versions/versions.service';
@@ -22,6 +25,7 @@ import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/
     VersionRepository,
     ResultsTocResultRepository,
     ResultInitiativeBudgetRepository,
+    ReturnResponse,
   ],
   exports: [ShareResultRequestRepository],
 })

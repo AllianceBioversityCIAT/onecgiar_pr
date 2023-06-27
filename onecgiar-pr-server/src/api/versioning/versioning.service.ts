@@ -136,14 +136,41 @@ export class VersioningService {
 
       await this._resultByInitiativesRepository.replicable(config);
 
-      await this._resultsKnowledgeProductsRepository.replicable(config);
-      await this._resultsKnowledgeProductAltmetricRepository.replicable(config);
-      await this._resultsKnowledgeProductAuthorRepository.replicable(config);
-      await this._resultsKnowledgeProductKeywordRepository.replicable(config);
-      await this._resultsKnowledgeProductMetadataRepository.replicable(config);
-      await this._resultsKnowledgeProductInstitutionRepository.replicable(
-        config,
-      );
+      switch (parseInt(`${result.result_type_id}`)) {
+        case 1:
+          await this._resultsPolicyChangesRepository.replicable(config);
+          break;
+        case 2:
+          await this._resultsInnovationsUseRepository.replicable(config);
+          await this._resultsInnovationsUseMeasuresRepository.replicable(
+            config,
+          );
+          break;
+        case 5:
+          await this._resultsCapacityDevelopmentsRepository.replicable(config);
+          break;
+        case 6:
+          await this._resultsKnowledgeProductsRepository.replicable(config);
+          await this._resultsKnowledgeProductAltmetricRepository.replicable(
+            config,
+          );
+          await this._resultsKnowledgeProductAuthorRepository.replicable(
+            config,
+          );
+          await this._resultsKnowledgeProductKeywordRepository.replicable(
+            config,
+          );
+          await this._resultsKnowledgeProductMetadataRepository.replicable(
+            config,
+          );
+          await this._resultsKnowledgeProductInstitutionRepository.replicable(
+            config,
+          );
+          break;
+        case 7:
+          await this._resultsInnovationsDevRepository.replicable(config);
+          break;
+      }
 
       await this._nonPooledProjectRepository.replicable(config);
       await this._resultsCenterRepository.replicable(config);
@@ -157,12 +184,8 @@ export class VersioningService {
       await this._resultRegionRepository.replicable(config);
       await this._linkedResultRepository.replicable(config);
       await this._evidencesRepository.replicable(config);
-      await this._resultsCapacityDevelopmentsRepository.replicable(config);
       //await this._resultsImpactAreaIndicatorRepository.replicable(config);
-      await this._resultsPolicyChangesRepository.replicable(config);
-      await this._resultsInnovationsDevRepository.replicable(config);
-      await this._resultsInnovationsUseRepository.replicable(config);
-      await this._resultsInnovationsUseMeasuresRepository.replicable(config);
+
       this._logger.log(
         `REPORTING: The change of phase of result ${result.id} is completed correctly.`,
       );
@@ -170,7 +193,12 @@ export class VersioningService {
         `REPORTING: New result reference in phase [${phase.id}]:${phase.phase_name} is ${data.id}`,
       );
       return data;
-    } catch (error) {}
+    } catch (error) {
+      return {
+        result: result,
+        error: error,
+      };
+    }
   }
 
   async $_phaseChangeIPSR(result: Result, phase: Version, user: TokenDto) {}
@@ -183,7 +211,7 @@ export class VersioningService {
   ) {
     switch (module_id) {
       case 1:
-        await this.$_phaseChangeReporting(result, phase, user);
+        return await this.$_phaseChangeReporting(result, phase, user);
         break;
       case 2:
         await this.$_phaseChangeIPSR(result, phase, user);
@@ -216,6 +244,14 @@ export class VersioningService {
         });
       }
 
+      if (legacy_result.result_type_id == 6) {
+        throw this._returnResponse.format({
+          message: `Result ID: ${result_id} is a Knowledge Product, this type of result is not possible to phase shift it contact support`,
+          response: result_id,
+          statusCode: HttpStatus.CONFLICT,
+        });
+      }
+
       const module_id = this.$_validationModule(legacy_result.result_type_id);
 
       const phase = await this._versionRepository.findOne({
@@ -224,9 +260,27 @@ export class VersioningService {
           status: true,
         },
       });
-
+      let res: any = null;
       if (await this.$_genericValidation(legacy_result.result_code, phase.id)) {
-        await this.$_versionManagement(legacy_result, phase, user, module_id);
+        res = await this.$_versionManagement(
+          legacy_result,
+          phase,
+          user,
+          module_id,
+        );
+        if (res?.error) {
+          throw this._returnResponse.format({
+            message: `Error in the version process of the result ${legacy_result.id}. Contact with support `,
+            response: res.error,
+            statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+          });
+        }
+
+        return this._returnResponse.format({
+          message: `The result ${legacy_result.result_code} is in the ${phase.phase_name} phase with id ${res.id}`,
+          response: res,
+          statusCode: HttpStatus.OK,
+        });
       } else {
         throw this._returnResponse.format({
           message: `The result ${legacy_result.result_code} is already in the ${phase.phase_name} phase`,
@@ -256,15 +310,106 @@ export class VersioningService {
     }
   }
 
-  create(createVersioningDto: CreateVersioningDto) {
-    return 'This action adds a new versioning';
+  async create(
+    user: TokenDto,
+    createVersioningDto: CreateVersioningDto,
+  ): Promise<ReturnResponseDto<Version>> {
+    try {
+      const res = await this._versionRepository.findOne({
+        where: {
+          phase_year: createVersioningDto?.phase_year,
+          app_module_id: createVersioningDto.app_module_id,
+          is_active: true,
+        },
+      });
+
+      if (res) {
+        throw this._returnResponse.format({
+          message: `A phase has already been created for the module ${createVersioningDto?.app_module_id} in the selected year ${createVersioningDto?.phase_year}.`,
+          response: createVersioningDto,
+          statusCode: HttpStatus.CONFLICT,
+        });
+      }
+
+      const newPhase = await this._versionRepository.save({
+        phase_name: createVersioningDto?.phase_name,
+        start_date: createVersioningDto?.start_date,
+        end_date: createVersioningDto?.end_date,
+        phase_year: createVersioningDto?.phase_year,
+        cgspace_year: createVersioningDto?.phase_year,
+        toc_pahse_id: createVersioningDto?.toc_pahse_id,
+        previous_phase: createVersioningDto?.previous_phase,
+        created_by: user.id,
+      });
+
+      return this._returnResponse.format({
+        message: `Phase ${newPhase.phase_name} created successfully`,
+        response: newPhase,
+        statusCode: HttpStatus.CREATED,
+      });
+    } catch (error) {
+      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+    }
   }
 
-  update(id: number, updateVersioningDto: UpdateVersioningDto) {
-    return `This action updates a #${id} versioning`;
+  async update(
+    id: number,
+    updateVersioningDto: UpdateVersioningDto,
+  ): Promise<ReturnResponseDto<Version>> {
+    try {
+      const res = await this._versionRepository.findOne({
+        where: {
+          id: id,
+          is_active: true,
+        },
+      });
+
+      if (!res) {
+        throw this._returnResponse.format({
+          message: `Phase ID: ${id} not found`,
+          response: id,
+          statusCode: HttpStatus.NOT_FOUND,
+        });
+      }
+
+      if (updateVersioningDto?.status) {
+        await this._versionRepository.$_closeAllPhases();
+      }
+      await this._versionRepository.update(id, updateVersioningDto);
+
+      return this._returnResponse.format({
+        message: `Phase ${res.phase_name} updated successfully`,
+        response: { ...res, ...updateVersioningDto },
+        statusCode: HttpStatus.OK,
+      });
+    } catch (error) {
+      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+    }
   }
 
-  delete(id: number) {
-    return `This action removes a #${id} versioning`;
+  async delete(id: number) {
+    try {
+      const res = await this._versionRepository.findOne({
+        where: {
+          id: id,
+          is_active: true,
+        },
+      });
+      if (!res) {
+        throw this._returnResponse.format({
+          message: `Phase ID: ${id} not found`,
+          response: id,
+          statusCode: HttpStatus.NOT_FOUND,
+        });
+      }
+
+      return this._returnResponse.format({
+        message: `Phase ${res.phase_name} deleted successfully`,
+        response: res,
+        statusCode: HttpStatus.OK,
+      });
+    } catch (error) {
+      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+    }
   }
 }
