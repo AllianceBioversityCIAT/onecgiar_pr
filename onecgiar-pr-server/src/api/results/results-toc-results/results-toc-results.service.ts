@@ -69,6 +69,7 @@ export class ResultsTocResultsService {
       }
       const vrs: Version = <Version>version.response;
       const titleArray = contributing_np_projects.map((el) => el.grant_title);
+      const iniciativeSubmitter = this._resultByInitiativesRepository.updateIniciativeSubmitter(result_id, result_toc_result.initiative_id)
       if (contributing_center.filter((el) => el.primary == true).length > 1) {
         contributing_center.map((el) => {
           el.primary = false;

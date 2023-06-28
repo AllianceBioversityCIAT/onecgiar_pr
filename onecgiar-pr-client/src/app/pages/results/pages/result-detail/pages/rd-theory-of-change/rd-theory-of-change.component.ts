@@ -87,7 +87,7 @@ export class RdTheoryOfChangeComponent {
     this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
       //(resp);
       this.getConsumed = false;
-      this.theoryOfChangeBody.result_toc_result.initiative_id = null;
+      // this.theoryOfChangeBody.result_toc_result.initiative_id = null;
       this.getSectionInformation();
     });
   }
