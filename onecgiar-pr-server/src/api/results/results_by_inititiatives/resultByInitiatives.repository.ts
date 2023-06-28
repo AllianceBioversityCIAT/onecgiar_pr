@@ -487,4 +487,25 @@ export class ResultByInitiativesRepository
       });
     }
   }
+  updateIniciativeSubmitter(resultId: number,  initiative_id: number){
+    try {
+      let updateIniciative ;
+      if(resultId != null){
+        updateIniciative = this.update({result_id: resultId }, {
+          initiative_id:initiative_id
+        });
+      }
+
+      return {
+        initiative_id:initiative_id,
+        response:updateIniciative
+      }
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultByInitiativesRepository.name,
+        error: `updateResultByInitiativeSubmitter ${error}`,
+        debug: true,
+      });
+    }
+  }
 }
