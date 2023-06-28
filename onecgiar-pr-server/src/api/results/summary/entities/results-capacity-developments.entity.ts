@@ -96,4 +96,11 @@ export class ResultsCapacityDevelopments {
     nullable: true,
   })
   last_updated_date!: Date;
+
+  @Column({
+    name: 'is_attending_for_organization',
+    type: 'boolean',
+    nullable: true,
+  })
+  is_attending_for_organization!: boolean;
 }

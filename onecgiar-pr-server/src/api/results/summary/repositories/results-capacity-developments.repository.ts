@@ -138,6 +138,7 @@ export class ResultsCapacityDevelopmentsRepository
     	rcd.female_using,
     	rcd.capdev_delivery_method_id,
     	rcd.capdev_term_id,
+      rcd.is_attending_for_organization,
     	ct.name as capdev_term_name,
     	ct.term as capdev_term_term,
     	ct.description as capdev_term_description
