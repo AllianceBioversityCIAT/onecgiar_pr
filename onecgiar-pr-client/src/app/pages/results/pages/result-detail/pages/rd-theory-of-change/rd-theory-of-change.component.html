@@ -3,8 +3,25 @@
     <app-alert-status
         description="Initiatives and non-pooled projects that you collaborated with to generated this result/contributed to this result.">
     </app-alert-status>
-    <app-pr-input label="Primary submitter" [required]="false" [readOnly]="true" [(ngModel)]="psub">
-    </app-pr-input>
+    <!-- <app-pr-input label="Primary submitter" [required]="false" [readOnly]="true" [(ngModel)]="psub">
+    </app-pr-input> -->
+
+    <div *ngIf="getConsumed">
+        <app-pr-select *ngIf="!this.api.rolesSE.isAdmin" class="segment_title_margin" [options]="this.myInitiatives"
+            label="Primary submitter" optionLabel="full_name" optionValue="initiative_id"
+            placeholder="Select initiative" description="Select an initiative"
+            [(ngModel)]="this.theoryOfChangeBody.result_toc_result.initiative_id">
+        </app-pr-select>
+
+        <app-pr-select *ngIf="this.api.rolesSE.isAdmin" class="segment_title_margin" [options]="this.allInitiatives"
+            label="Primary submitter" optionLabel="full_name" optionValue="initiative_id"
+            placeholder="Select initiative" description="Select an initiative"
+            [(ngModel)]="this.theoryOfChangeBody.result_toc_result.initiative_id">
+        </app-pr-select>
+    </div>
+
+
+
     <app-pr-multi-select [options]="this.contributingInitiativesList" label="Contributing Initiatives"
         [disableOptions]="this.theoryOfChangeBody?.pending_contributing_initiatives"
         selectedLabel="Contributing Initiatives" optionLabel="full_name" optionValue="id"
