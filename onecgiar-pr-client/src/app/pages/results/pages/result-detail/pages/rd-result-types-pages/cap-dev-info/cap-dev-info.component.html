@@ -38,13 +38,14 @@
     </app-alert-status>
 
     <app-pr-radio-button label="Were the trainees attending on behalf of an organization?" optionLabel="name"
-        optionValue="id" [options]="this.radioOptions" [(ngModel)]="this.yesornot">
+        optionValue="id" [options]="this.radioOptions"
+        [(ngModel)]="this.capDevInfoRoutingBody.is_attending_for_organization">
     </app-pr-radio-button>
     <br>
-    <app-pr-multi-select *ngIf="this.yesornot" [options]="this.institutionsSE.institutionsList" [required]="false"
-        selectedLabel="organization(s) selected" selectedOptionLabel="full_name" optionLabel="full_name"
-        optionValue="institutions_id" placeholder="Select organizations"
-        [(ngModel)]="this.capDevInfoRoutingBody.institutions">
+    <app-pr-multi-select *ngIf="this.capDevInfoRoutingBody.is_attending_for_organization"
+        [options]="this.institutionsSE.institutionsList" [required]="false" selectedLabel="organization(s) selected"
+        selectedOptionLabel="full_name" optionLabel="full_name" optionValue="institutions_id"
+        placeholder="Select organizations" [(ngModel)]="this.capDevInfoRoutingBody.institutions">
     </app-pr-multi-select>
 
 </div>

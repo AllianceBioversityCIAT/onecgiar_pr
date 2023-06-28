@@ -17,7 +17,6 @@ export class CapDevInfoComponent implements OnInit {
   deliveryMethodOptions = [];
   capdev_term_id_1 = null;
   capdev_term_id_2 = null;
-  yesornot = true;
   radioOptions = [
     { id: true, name: 'Yes' },
     { id: false, name: 'No' }
@@ -94,8 +93,8 @@ export class CapDevInfoComponent implements OnInit {
     //(this.capDevInfoRoutingBody);
     this.validate_capdev_term_id();
 
-    if (this.yesornot) this.cleanOrganizationsList();
-    this.api.resultsSE.PATCH_capacityDevelopent(this.capDevInfoRoutingBody).subscribe(resp => {
+    if (this.capDevInfoRoutingBody.is_attending_for_organization) this.cleanOrganizationsList();
+    this.api.resultsSE.PATCH_capacityDevelopent(this.capDevInfoRoutingBody).subscribe((resp: any) => {
       this.getSectionInformation();
     });
   }
@@ -105,12 +104,14 @@ export class CapDevInfoComponent implements OnInit {
   }
 
   requestEvent() {
-    this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
+    this.api.dataControlSE.findClassTenSeconds('alert-event').then((resp: any) => {
       try {
-        document.querySelector('.alert-event').addEventListener('click', e => {
+        document.querySelector('.alert-event').addEventListener('click', (e: any) => {
           this.api.dataControlSE.showPartnersRequest = true;
         });
-      } catch (error) {}
+      } catch (error) {
+        console.error(error);
+      }
     });
   }
 }
