@@ -93,7 +93,7 @@ export class CapDevInfoComponent implements OnInit {
     //(this.capDevInfoRoutingBody);
     this.validate_capdev_term_id();
 
-    if (this.capDevInfoRoutingBody.is_attending_for_organization) this.cleanOrganizationsList();
+    if (!this.capDevInfoRoutingBody.is_attending_for_organization) this.cleanOrganizationsList();
     this.api.resultsSE.PATCH_capacityDevelopent(this.capDevInfoRoutingBody).subscribe((resp: any) => {
       this.getSectionInformation();
     });
