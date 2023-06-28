@@ -102,6 +102,21 @@ export class VersioningService {
     }
   }
 
+  async $_findPhase(phase_id: number): Promise<Version> {
+    try {
+      const version = await this._versionRepository.findOne({
+        where: {
+          id: phase_id,
+          is_active: true,
+        },
+      });
+
+      return version;
+    } catch (error) {
+      return null;
+    }
+  }
+
   async $_genericValidation(
     result_code: number,
     phase_id: number,

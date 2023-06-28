@@ -2,45 +2,31 @@
   <div>
     <div class="back_button">
       <a routerLink="/result/results-list" class="open_link_in_new_page">
-        <app-pr-button text="Back to results" icon="arrow_back" [reverse]="true" [showBackground]="false">
-        </app-pr-button>
+        <app-pr-button text="Back to results" icon="arrow_back" [reverse]="true" [showBackground]="false"> </app-pr-button>
       </a>
     </div>
     <div class="segment">
       <div class="name">Sections</div>
       <div class="sections">
-        <a *ngFor="let navOption of navigationOptions | panelMenu:this.resultLevelSE.currentResultTypeId:green_checks_string; let i=index"
-          [hidden]="hideKP(navOption)"
-          [routerLink]="'/result/result-detail/'+this.dataControlSE?.currentResult?.result_code+'/' + navOption.path"
-          routerLinkActive="section_active">{{i+1}}.
-          {{navOption.prName }} <img *ngIf="navOption.underConstruction === true" class="under_construction"
-            src="assets/work-in-progress.png" alt="" srcset="">
+        <a *ngFor="let navOption of navigationOptions | panelMenu : this.resultLevelSE.currentResultTypeId : green_checks_string; let i = index" [hidden]="hideKP(navOption)" [routerLink]="'/result/result-detail/' + this.dataControlSE?.currentResult?.result_code + '/' + navOption.path" [queryParams]="{ phase: this.dataControlSE?.currentResult?.version_id }" routerLinkActive="section_active"
+          >{{ i + 1 }}. {{ navOption.prName }} <img *ngIf="navOption.underConstruction === true" class="under_construction" src="assets/work-in-progress.png" alt="" srcset="" />
           <div class="check">
-            <i class="material-icons-round {{navOption.validation?'valid':'invalid'}}">
-              check_circle
-            </i>
+            <i class="material-icons-round {{ navOption.validation ? 'valid' : 'invalid' }}"> check_circle </i>
           </div>
         </a>
       </div>
     </div>
   </div>
 
-  <div style="padding: 0px 35px;">
+  <div style="padding: 0px 35px">
     <app-pdf-actions (copyEvent)="copyEvent.emit()"></app-pdf-actions>
   </div>
 
   <div>
-    <div class="submit_button"
-      *ngIf="validateMember(this.api.dataControlSE?.myInitiativesList) != 6  && !this.api.rolesSE.readOnly">
-      <app-pr-button [ngClass]="{'globalDisabled': !this.greenChecksSE.submit}"
-        (click)="this.submissionModalSE.showModal = true;" text="Submit"
-        *ngIf="this.dataControlSE?.currentResult?.status == 0"></app-pr-button>
-      <app-pr-button text="Unsubmit" *ngIf="this.dataControlSE?.currentResult?.status == 1"
-        (click)="this.unsubmitModalSE.showModal = true;"></app-pr-button>
-      <div class="button_access_information" *ngIf="this.dataControlSE?.currentResult?.status == 0">
-        This button will be available once all sections are available.
-      </div>
+    <div class="submit_button" *ngIf="validateMember(this.api.dataControlSE?.myInitiativesList) != 6 && !this.api.rolesSE.readOnly">
+      <app-pr-button [ngClass]="{ globalDisabled: !this.greenChecksSE.submit }" (click)="this.submissionModalSE.showModal = true" text="Submit" *ngIf="this.dataControlSE?.currentResult?.status == 0"></app-pr-button>
+      <app-pr-button text="Unsubmit" *ngIf="this.dataControlSE?.currentResult?.status == 1" (click)="this.unsubmitModalSE.showModal = true"></app-pr-button>
+      <div class="button_access_information" *ngIf="this.dataControlSE?.currentResult?.status == 0">This button will be available once all sections are available.</div>
     </div>
   </div>
-
 </div>
