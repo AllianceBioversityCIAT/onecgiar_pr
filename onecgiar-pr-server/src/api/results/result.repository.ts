@@ -909,13 +909,11 @@ WHERE
 
   async getLastResultCode(version: number = 1): Promise<number> {
     const queryData = `
-    SELECT max(r.result_code) as last_code from \`result\` r WHERE version_id = ?;
+    SELECT max(r.result_code) as last_code from \`result\` r;
     `;
 
     try {
-      const results: Array<{ last_code }> = await this.query(queryData, [
-        version,
-      ]);
+      const results: Array<{ last_code }> = await this.query(queryData);
       return results.length ? parseInt(results[0].last_code) : null;
     } catch (error) {
       throw {
