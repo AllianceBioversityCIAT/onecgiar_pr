@@ -17,21 +17,13 @@ export class RdTheoryOfChangeComponent {
   primaryText = ' - <strong>Primary</strong> ';
   getConsumed = false;
   psub = '';
-  allInitiatives = [];
-  myInitiatives = [];
   constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public centersSE: CentersService, public institutionsSE: InstitutionsService, public greenChecksSE: GreenChecksService) {}
   ngOnInit(): void {
     this.requestEvent();
     this.getSectionInformation();
     this.GET_AllWithoutResults();
-    this.GET_AllInitiatives();
   }
-  GET_initiativesByUser() {
-    this.api.authSE.GET_initiativesByUser().subscribe(resp => {
-      console.log(resp.response);
-      this.myInitiatives = resp.response;
-    });
-  }
+
   GET_AllWithoutResults() {
     this.api.resultsSE.GET_AllWithoutResults().subscribe(({ response }) => {
       this.contributingInitiativesList = response;
@@ -50,41 +42,28 @@ export class RdTheoryOfChangeComponent {
 
         // this.theoryOfChangeBody.result_toc_result;
       },
-      err => {
+      (err) => {
         this.getConsumed = true;
         console.error(err);
       }
     );
   }
 
-  GET_AllInitiatives() {
-    //(this.api.rolesSE.isAdmin);
-    console.log(this.api.rolesSE.isAdmin);
-    if (!this.api.rolesSE.isAdmin) {
-      this.GET_initiativesByUser();
-    } else {
-      this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
-        console.log(response);
-        this.allInitiatives = response;
-      });
-    }
-  }
-
   get validateGranTitle() {
     //(this.theoryOfChangeBody.contributing_np_projects);
     for (const iterator of this.theoryOfChangeBody.contributing_np_projects) {
-      const evidencesFinded = this.theoryOfChangeBody.contributing_np_projects.filter(evidence => evidence.grant_title == iterator.grant_title);
+      const evidencesFinded = this.theoryOfChangeBody.contributing_np_projects.filter((evidence) => evidence.grant_title == iterator.grant_title);
       if (evidencesFinded.length >= 2) {
         return evidencesFinded.length >= 2;
       }
     }
 
-    return !!this.theoryOfChangeBody.contributing_np_projects.find(evidence => !evidence.grant_title);
+    return !!this.theoryOfChangeBody.contributing_np_projects.find((evidence) => !evidence.grant_title);
   }
 
   onSaveSection() {
     console.log(this.theoryOfChangeBody);
-    this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
+    this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe((resp) => {
       //(resp);
       this.getConsumed = false;
       // this.theoryOfChangeBody.result_toc_result.initiative_id = null;
@@ -128,16 +107,16 @@ export class RdTheoryOfChangeComponent {
     //(this.theoryOfChangeBody.contributing_np_projects);
   }
   requestEvent() {
-    this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
+    this.api.dataControlSE.findClassTenSeconds('alert-event').then((resp) => {
       try {
-        document.querySelector('.alert-event').addEventListener('click', e => {
+        document.querySelector('.alert-event').addEventListener('click', (e) => {
           this.api.dataControlSE.showPartnersRequest = true;
         });
       } catch (error) {}
     });
   }
   addPrimary(center) {
-    this.theoryOfChangeBody.contributing_center.map(center => (center.primary = false));
+    this.theoryOfChangeBody.contributing_center.map((center) => (center.primary = false));
     center.primary = true;
   }
 
