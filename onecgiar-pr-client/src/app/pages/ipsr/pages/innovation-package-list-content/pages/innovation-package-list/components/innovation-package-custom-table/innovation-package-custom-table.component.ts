@@ -18,7 +18,8 @@ export class InnovationPackageCustomTableComponent {
     { title: 'Title', attr: 'title', class: 'notCenter' },
     { title: 'Submitter', attr: 'official_code' },
     { title: 'Status', attr: 'status' },
-    { title: 'Year', attr: 'reported_year_id' }
+    { title: 'Year', attr: 'reported_year_id' },
+    { title: 'Created by', attr: 'created_by' }
   ];
   constructor(public api: ApiService, private retrieveModalSE: RetrieveModalService) {}
   items: MenuItem[] = [
