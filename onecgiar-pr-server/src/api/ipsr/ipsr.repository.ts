@@ -301,7 +301,20 @@ export class IpsrRepository extends Repository<Ipsr>{
                 WHERE
                     ci.id = rbi.inititiative_id
             ) AS official_code,
-            rt.name AS result_type , r.result_level_id 
+            rt.name AS result_type, 
+            r.result_level_id,
+            (
+                SELECT
+                    CONCAT(
+                        u.first_name,
+                        ' ',
+                        u.last_name
+                    )
+                FROM
+                    users u
+                WHERE
+                    u.id = r.created_by
+            ) AS created_by
         FROM
             result r
             LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
