@@ -1,1 +1,17 @@
-<p>footer works!</p>
+<div class="blank_space" [ngClass]="{'floating': this.isFloating}">
+    <div class="footer" *ngIf="showIfRouteIsInList()">
+        <div class="content">
+            <div class="logo">
+                <img class="cgiar_logo" src="/assets/cgiar_logo.png" alt="" srcset="" />
+            </div>
+            <div class="texts">
+                <div class="buttons">
+                    <div class="f-button">Contact Us</div>
+                    <div class="point"></div>
+                    <div class="f-button">Policies and Terms</div>
+                </div>
+                <div class="rights">© 2023 CGIAR System Organization. All rights reserved.</div>
+            </div>
+        </div>
+    </div>
+</div>
