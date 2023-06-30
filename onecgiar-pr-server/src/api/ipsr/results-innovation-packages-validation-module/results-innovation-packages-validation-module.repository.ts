@@ -659,7 +659,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                                     AND rira.men_youth IS NOT NULL
                                     AND rira.evidence_link IS NOT NULL
                                     AND rira.evidence_link != ''
-                                    AND (
+                                    OR (
                                         rira.actor_type_id = 5
                                         AND (
                                             rira.other_actor_type IS NOT NULL
@@ -667,7 +667,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                                         )
                                     )
                                 )
-                            )
+                        )
                             OR (
                                 rira.sex_and_age_disaggregation = 1
                                 AND (
@@ -675,7 +675,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                                     AND rira.evidence_link IS NOT NULL
                                     AND rira.evidence_link != ''
                                     AND rira.how_many IS NOT NULL
-                                    AND (
+                                    OR (
                                         rira.actor_type_id = 5
                                         AND (
                                             rira.other_actor_type IS NOT NULL
@@ -695,14 +695,17 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                         ririt.result_ip_results_id = rbip.result_by_innovation_package_id
                         AND ririt.is_active = TRUE
                         AND (
-                            institution_types_id IS NOT NULL
-                            AND institution_roles_id IS NOT NULL
-                            AND ririt.how_many IS NOT NULL
-                            AND ririt.evidence_link IS NOT NULL
-                            AND ririt.evidence_link != ''
-                            AND ririt.institution_types_id IS NOT NULL
-                            AND ririt.institution_types_id IS NOT NULL
+                            ririt.institution_types_id != 78
                             AND (
+                                ririt.institution_types_id IS NOT NULL
+                                AND ririt.institution_roles_id IS NOT NULL
+                                AND ririt.how_many IS NOT NULL
+                                AND (
+                                    ririt.evidence_link IS NOT NULL
+                                    OR ririt.evidence_link != ''
+                                )
+                            )
+                            OR (
                                 ririt.institution_types_id = 78
                                 AND (
                                     ririt.other_institution IS NOT NULL
