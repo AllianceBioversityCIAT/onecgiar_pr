@@ -23,6 +23,7 @@ import { ShareResultRequestRepository } from '../../results/share-result-request
 import { NonPooledProject } from '../../results/non-pooled-projects/entities/non-pooled-project.entity';
 import { ResultIpEoiOutcomeRepository } from '../innovation-pathway/repository/result-ip-eoi-outcomes.repository';
 import { ResultInnovationPackageRepository } from '../result-innovation-package/repositories/result-innovation-package.repository';
+import { InstitutionRoleEnum } from '../../results/results_by_institutions/entities/institution_role.enum';
 
 @Injectable()
 export class ResultsPackageTocResultService {
@@ -254,7 +255,6 @@ export class ResultsPackageTocResultService {
         await this._resultByIntitutionsRepository.updateIstitutions(
           rip.id,
           inst,
-          false,
           user.id,
         );
         for (const ins of inst) {
@@ -296,7 +296,6 @@ export class ResultsPackageTocResultService {
         await this._resultByIntitutionsRepository.updateIstitutions(
           rip.id,
           [],
-          false,
           user.id,
         );
       }

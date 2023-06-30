@@ -59,6 +59,7 @@ import { ResultsImpactAreaIndicatorRepository } from './results-impact-area-indi
 import { ResultsImpactAreaTargetRepository } from './results-impact-area-target/results-impact-area-target.repository';
 import { LogRepository } from '../../connection/dynamodb-logs/dynamodb-logs.repository';
 import { Actions } from 'src/connection/dynamodb-logs/dto/enumAction.const';
+import { InstitutionRoleEnum } from './results_by_institutions/entities/institution_role.enum';
 
 @Injectable()
 export class ResultsService {
@@ -96,7 +97,7 @@ export class ResultsService {
     private readonly _resultsKnowledgeProductMetadataRepository: ResultsKnowledgeProductMetadataRepository,
     //private readonly _resultsImpactAreaIndicatorRepository: ResultsImpactAreaIndicatorRepository,
     //private readonly _resultsImpactAreaTargetRepository: ResultsImpactAreaTargetRepository,
-    private readonly _logRepository: LogRepository
+    private readonly _logRepository: LogRepository,
   ) {}
 
   /**
@@ -459,8 +460,9 @@ export class ResultsService {
         await this._resultByIntitutionsRepository.updateIstitutions(
           resultGeneralInformation.result_id,
           resultGeneralInformation.institutions,
-          true,
           user.id,
+          false,
+          [InstitutionRoleEnum.ACTOR],
         );
       let saveInstitutions: ResultsByInstitution[] = [];
       for (
@@ -472,7 +474,7 @@ export class ResultsService {
           await this._resultByIntitutionsRepository.getResultByInstitutionExists(
             resultGeneralInformation.result_id,
             resultGeneralInformation.institutions[index].institutions_id,
-            true,
+            InstitutionRoleEnum.ACTOR,
           );
         if (!isInstitutions) {
           const institutionsNew: ResultsByInstitution =
@@ -554,14 +556,14 @@ export class ResultsService {
 
   /**
    * !dIMPORTANTE REVISAR
-   * @param resultId 
-   * @returns 
+   * @param resultId
+   * @returns
    */
 
   async deleteResult(resultId: number, user: TokenDto) {
     try {
       const result: Result = await this._resultRepository.findOne({
-        where: { id: resultId }
+        where: { id: resultId },
       });
       if (!result) {
         throw {
@@ -575,10 +577,9 @@ export class ResultsService {
       await this._resultRepository.save(result);
 
       if (result?.legacy_id) {
-        await this._resultLegacyRepository.update(
-          result.legacy_id,
-          { is_migrated: false },
-        );
+        await this._resultLegacyRepository.update(result.legacy_id, {
+          is_migrated: false,
+        });
       }
 
       await this._resultByInitiativesRepository.logicalElimination(resultId);
@@ -593,13 +594,31 @@ export class ResultsService {
         true,
       );
 
-      if(result.result_type_id == 6){
-        const {result_knowledge_product_id: kpId} = await this._resultKnowledgeProductRepository.findOne({where: { results_id: result.id }});
-        await this._resultsKnowledgeProductAltmetricRepository.statusElement(kpId, false);
-        await this._resultsKnowledgeProductAuthorRepository.statusElement(kpId, false);
-        await this._resultsKnowledgeProductInstitutionRepository.statusElement(kpId, false);
-        await this._resultsKnowledgeProductKeywordRepository.statusElement(kpId, false);
-        await this._resultsKnowledgeProductMetadataRepository.statusElement(kpId, false);
+      if (result.isKnowledgeProduct) {
+        const { result_knowledge_product_id: kpId } =
+          await this._resultKnowledgeProductRepository.findOne({
+            where: { results_id: result.id },
+          });
+        await this._resultsKnowledgeProductAltmetricRepository.statusElement(
+          kpId,
+          false,
+        );
+        await this._resultsKnowledgeProductAuthorRepository.statusElement(
+          kpId,
+          false,
+        );
+        await this._resultsKnowledgeProductInstitutionRepository.statusElement(
+          kpId,
+          false,
+        );
+        await this._resultsKnowledgeProductKeywordRepository.statusElement(
+          kpId,
+          false,
+        );
+        await this._resultsKnowledgeProductMetadataRepository.statusElement(
+          kpId,
+          false,
+        );
         await this._resultKnowledgeProductRepository.statusElement(kpId, false);
       }
 
@@ -622,7 +641,12 @@ export class ResultsService {
           const bulk = await this._elasticService.sendBulkOperationToElastic(
             elasticJson,
           );
-          await this._logRepository.createLog(result.result_code, user, Actions.DELETE, {class: ResultsService.name, method: `deleteResult`});
+          await this._logRepository.createLog(
+            result.result_code,
+            user,
+            Actions.DELETE,
+            { class: ResultsService.name, method: `deleteResult` },
+          );
         } catch (error) {
           this._logger.warn(
             `the elastic removal failed for the result #${result.id}`,
@@ -918,7 +942,7 @@ export class ResultsService {
           await this._resultByIntitutionsRepository.getResultByInstitutionExists(
             newResultHeader.id,
             partner[index].clarisa_id,
-            true,
+            InstitutionRoleEnum.ACTOR,
           );
         if (!isInstitutions) {
           const institutionsNew: ResultsByInstitution =
@@ -1191,16 +1215,14 @@ export class ResultsService {
     return `This action removes a #${id} result`;
   }
 
-
-  async versioningResultsById(resultId: number, user: TokenDto){
-    const {id: result_id, result_code} = await this._resultRepository.findOne({where: {id: resultId}});
-    this._logger.verbose(`The versioning process of the result with id ${result_id} and code ${result_code} was started by ${user.id}: ${user.first_name} ${user.last_name}.`);
-
-
+  async versioningResultsById(resultId: number, user: TokenDto) {
+    const { id: result_id, result_code } = await this._resultRepository.findOne(
+      { where: { id: resultId } },
+    );
+    this._logger.verbose(
+      `The versioning process of the result with id ${result_id} and code ${result_code} was started by ${user.id}: ${user.first_name} ${user.last_name}.`,
+    );
   }
 
-  bulkVersinoningResult(){
-
-  }
-
+  bulkVersinoningResult() {}
 }
