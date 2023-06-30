@@ -472,27 +472,47 @@ export class resultValidationRepository extends Repository<Validation>{
 	SELECT
 		'cap-dev-info' as section_name,
 		CASE
-			when (rcd.female_using is not null
-			and rcd.female_using >= 0)
-			AND 
-			(rcd.male_using is not null
-			and rcd.male_using >= 0)
-			AND 
-			(rcd.capdev_term_id is not null
-			and rcd.capdev_term_id <> '') 
-			AND 
-			(rcd.capdev_delivery_method_id  is not null
-			and rcd.capdev_delivery_method_id <> '') then true
-			else false
-		END as validation
-	from
-		\`result\` r
-	left join results_capacity_developments rcd on
-		rcd.result_id = r.id
-		and rcd.is_active > 0
+			WHEN (
+				rcd.female_using IS NULL
+				OR rcd.female_using = 0
+			)
+			OR (
+				rcd.male_using IS NULL
+				OR rcd.male_using = 0
+			)
+			OR (
+				rcd.capdev_term_id IS NULL
+				OR rcd.capdev_term_id = ''
+			)
+			OR (
+				rcd.capdev_delivery_method_id IS NULL
+				OR rcd.capdev_delivery_method_id = ''
+			)
+			OR (
+				rcd.is_attending_for_organization IS NULL
+			) THEN FALSE
+			WHEN (
+				rcd.is_attending_for_organization = 1
+				AND (
+					SELECT
+						count(rbi.id)
+					FROM
+						results_by_institution rbi
+					WHERE
+						rbi.result_id = r.id
+						AND rbi.institution_roles_id = 3
+						AND rbi.is_active > 0
+				) = 0
+			) THEN FALSE
+			ELSE TRUE
+		END AS validation
+	FROM
+		result r
+		LEFT JOIN results_capacity_developments rcd ON rcd.result_id = r.id
+		AND rcd.is_active > 0
 	WHERE
 		r.id = ?
-		and r.is_active > 0;
+		AND r.is_active > 0;
     `;
     try {
       const shareResultRequest: GetValidationSectionDto[] = await this.dataSource.query(queryData, [resultId]); 
