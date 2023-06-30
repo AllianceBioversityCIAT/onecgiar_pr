@@ -33,7 +33,7 @@ export class RdPartnersService {
   getSectionInformation(no_applicable_partner?) {
     this.api.resultsSE.GET_partnersSection().subscribe(
       ({ response }) => {
-        console.log(response);
+        //(response);
         this.partnersBody = response;
         if (no_applicable_partner === true || no_applicable_partner === false) this.partnersBody.no_applicable_partner = no_applicable_partner;
       },
