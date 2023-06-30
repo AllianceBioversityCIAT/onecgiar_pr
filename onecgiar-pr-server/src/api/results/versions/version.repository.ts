@@ -15,7 +15,7 @@ export class VersionRepository extends Repository<Version> {
   async getBaseVersion() {
     const queryData = `
     select min(v.id) as id,
-    		v.phase_name as version_name,
+    		v.version_name,
     		null as start_date,
     		null as end_date
     from \`version\` v 
@@ -24,9 +24,7 @@ export class VersionRepository extends Repository<Version> {
     		and
     		(v.end_date  = ''
     		or v.end_date is null)
-        and v.status > 0
-        and v.is_active > 0
-    group by v.id, v.phase_name;
+    group by v.id, v.version_name;
     `;
     try {
       const version: Version[] = await this.query(queryData);
