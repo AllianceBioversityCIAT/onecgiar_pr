@@ -1056,6 +1056,8 @@ export class ResultsService {
           krs_url: result.krs_url ?? null,
           is_krs: result.is_krs ? true : false,
           lead_contact_person: result.lead_contact_person ?? null,
+          phase_name: result['phase_name'],
+          phase_year: result['phase_year'],
         },
         message: 'Successful response',
         status: HttpStatus.OK,

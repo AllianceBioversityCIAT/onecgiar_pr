@@ -182,12 +182,6 @@ export class Result {
   })
   reported_year_id: number;
 
-  @ManyToOne(() => Year, (y) => y.year, { nullable: true })
-  @JoinColumn({
-    name: 'reported_year_id',
-  })
-  obj_reported_year: Year;
-
   @Column({
     name: 'legacy_id',
     type: 'varchar',

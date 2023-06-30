@@ -44,7 +44,7 @@ export class ResultRepository
           r2.status,
           ? as created_by,
           ? as last_updated_by,
-          r2.reported_year_id,
+          (select v.phase_year  from \`version\` v where v.id = ?) as reported_year_id,
           now() as created_date,
           r2.result_level_id,
           r2.title,
@@ -64,6 +64,7 @@ export class ResultRepository
             config.phase,
             config.user.id,
             config.user.id,
+            config.phase,
             config.old_result_id,
           ])
         ));
@@ -107,7 +108,7 @@ export class ResultRepository
           r2.status,
           ? as created_by,
           ? as last_updated_by,
-          r2.reported_year_id,
+          (select v.phase_year  from \`version\` v where v.id = ?) as reported_year_id,
           now() as created_date,
           r2.result_level_id,
           r2.title,
@@ -127,6 +128,7 @@ export class ResultRepository
             config.phase,
             config.user.id,
             config.user.id,
+            config.phase,
             config.old_result_id,
           ])
         ));
@@ -483,7 +485,9 @@ WHERE
     r.created_by,
     u.first_name as create_first_name,
     u.last_name as create_last_name,
-    r.version_id
+    r.version_id,
+    v.phase_name,
+    v.phase_year
 FROM
     \`result\` r
     INNER JOIN result_type rt ON rt.id = r.result_type_id
@@ -495,6 +499,7 @@ FROM
     left join \`role\` r2 on r2.id  = rbu.\`role\` 
     left join \`year\` y ON y.active > 0
     left join users u on u.id = r.created_by
+    inner join \`version\` v on v.id = r.version_id
 WHERE
     r.is_active > 0
     AND rbi.is_active > 0
@@ -865,7 +870,6 @@ WHERE
     r.is_active,
     r.last_updated_date,
     r.gender_tag_level_id,
-    r.version_id,
     r.result_type_id,
     rt.name as result_type_name,
     r.status,
@@ -883,13 +887,17 @@ WHERE
     r.no_applicable_partner,
     r.geographic_scope_id,
     r.lead_contact_person,
-    if(r.geographic_scope_id in (3, 4), 3, r.geographic_scope_id ) as geographic_scope_id
+    if(r.geographic_scope_id in (3, 4), 3, r.geographic_scope_id ) as geographic_scope_id,
+    v.id as version_id,
+    v.phase_name,
+    v.phase_year
 FROM
     result r
     inner join results_by_inititiative rbi ON rbi.result_id = r.id 
     									and rbi.is_active > 0
     inner join result_level rl on rl.id = r.result_level_id 
     inner join result_type rt on rt.id = r.result_type_id 
+    inner join \`version\` v on v.id = r.version_id
 WHERE
     r.is_active > 0
     and r.id = ?;

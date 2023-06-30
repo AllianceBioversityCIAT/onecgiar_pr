@@ -18,8 +18,8 @@ export class ResultsListComponent implements OnInit {
   columnOrder = [
     { title: 'Result code', attr: 'result_code' },
     { title: 'Title', attr: 'title', class: 'notCenter' },
-    { title: 'Version ID TEST', attr: 'version_id' },
-    { title: 'Reporting year', attr: 'reported_year' },
+    { title: 'Phase', attr: 'phase_name' },
+    { title: 'Reporting year', attr: 'phase_year' },
     { title: 'Result type', attr: 'result_type' },
     { title: 'Submitter', attr: 'submitter' },
     { title: 'Status', attr: 'status_name' },
@@ -51,6 +51,13 @@ export class ResultsListComponent implements OnInit {
         this.api.dataControlSE.showShareRequest = true;
         //(this.api.resultsSE.currentResultId);
         // event
+      }
+    },
+    {
+      label: 'Reporting in another phase',
+      icon: 'pi pi-fw pi-arrow-right-arrow-left',
+      command: () => {
+        this.api.dataControlSE.chagePhaseModal = true;
       }
     },
     // { label: 'Edit', icon: 'pi pi-fw pi-pencil' },

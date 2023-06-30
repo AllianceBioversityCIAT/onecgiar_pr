@@ -1,264 +1,256 @@
 /* You can add global styles to this file, and also import other style files */
-
+@import 'primeicons/primeicons.css';
 .globalDisabled {
-    opacity: .5;
-    pointer-events: none;
+  opacity: 0.5;
+  pointer-events: none;
 }
 
 /* width */
 .custom_scroll::-webkit-scrollbar {
-    width: 7px;
-    height: 5px;
+  width: 7px;
+  height: 5px;
 }
 
 /* Track */
 .custom_scroll::-webkit-scrollbar-track {
-    background: #cdd4fc;
+  background: #cdd4fc;
 }
 
 /* Handle */
 .custom_scroll::-webkit-scrollbar-thumb {
-    background: var(--pr-color-primary);
-    border-radius: 10px;
-
+  background: var(--pr-color-primary);
+  border-radius: 10px;
 }
 
 /* Handle on hover */
 .custom_scroll::-webkit-scrollbar-thumb:hover {
-    background: #7486ee;
-    border-radius: 10px;
-
+  background: #7486ee;
+  border-radius: 10px;
 }
 
 .position_sticky {
-    position: sticky;
-    right: 0;
-    bottom: 0;
-    z-index: 5;
+  position: sticky;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
 }
 
 a {
-    text-decoration: none;
+  text-decoration: none;
 }
 
 .search_input {
-    display: flex;
-    align-items: center;
-    border: 1px solid rgb(139, 139, 139);
-    border-radius: 100px;
-    width: 50vw;
-    padding: 3px 5px;
-    margin-bottom: 10px;
-    height: min-content;
+  display: flex;
+  align-items: center;
+  border: 1px solid rgb(139, 139, 139);
+  border-radius: 100px;
+  width: 50vw;
+  padding: 3px 5px;
+  margin-bottom: 10px;
+  height: min-content;
 
-    i {
-        color: rgb(139, 139, 139);
-    }
+  i {
+    color: rgb(139, 139, 139);
+  }
 
-    input {
-        outline: none;
-        border: none;
-        width: 100%;
-        color: rgb(139, 139, 139);
-    }
+  input {
+    outline: none;
+    border: none;
+    width: 100%;
+    color: rgb(139, 139, 139);
+  }
 }
 
-
 .w50vw {
-    width: 50vw !important;
+  width: 50vw !important;
 }
 
 .w20vw {
-    width: 20vw !important;
+  width: 20vw !important;
 }
 
 .divider-50 {
-    @extend .dividerStyles;
-    margin-top: 40px;
-    margin-bottom: 50px;
+  @extend .dividerStyles;
+  margin-top: 40px;
+  margin-bottom: 50px;
 }
 
 .divider-20 {
-    @extend .dividerStyles;
-    margin-top: 20px;
-    margin-bottom: 20px;
+  @extend .dividerStyles;
+  margin-top: 20px;
+  margin-bottom: 20px;
 }
 
 .dividerStyles {
-    border: .5px solid rgb(224, 224, 224);
-    border-radius: 100px;
+  border: 0.5px solid rgb(224, 224, 224);
+  border-radius: 100px;
 }
-
-
-
 
 //? Links selector
 .evidence_item {
+  display: grid;
+  grid-template-columns: 50px 1fr;
+  gap: 10px;
+  padding: 0px 40px 10px 40px;
+  position: relative;
+  overflow: hidden;
+
+  .index {
+    background-color: rgb(240, 240, 240);
+    color: rgb(109, 109, 109);
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    margin-top: 47px;
+  }
+
+  .link {
     display: grid;
-    grid-template-columns: 50px 1fr;
+    grid-template-columns: 1fr auto;
     gap: 10px;
-    padding: 0px 40px 10px 40px;
-    position: relative;
-    overflow: hidden;
 
-    .index {
-        background-color: rgb(240, 240, 240);
-        color: rgb(109, 109, 109);
-        width: 50px;
-        height: 50px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 10px;
-        margin-top: 47px;
+    .checkboxes {
+      margin-top: 50px;
     }
-
-    .link {
-        display: grid;
-        grid-template-columns: 1fr auto;
-        gap: 10px;
-
-        .checkboxes {
-            margin-top: 50px;
-
-        }
-    }
+  }
 }
 
 .completeness-state {
-    color: white;
-    display: inline;
-    padding: 0px 10px;
-    border-radius: 3px;
-    font-size: .8em;
-    font-style: italic;
-    font-weight: 500;
+  color: white;
+  display: inline;
+  padding: 0px 10px;
+  border-radius: 3px;
+  font-size: 0.8em;
+  font-style: italic;
+  font-weight: 500;
 }
 
 .completeness-submitted {
-    background-color: var(--pr-color-primary);
+  background-color: var(--pr-color-primary);
 }
 
 .completeness-editing {
-    background-color: #eba21b;
+  background-color: #eba21b;
 }
 
 .completeness-all {
-    background-color: #6e6e6e;
+  background-color: #6e6e6e;
 }
 
 .support_information .p-dialog .p-dialog-content {
-    overflow-y: scroll !important;
+  overflow-y: scroll !important;
 }
 
 .toc_button {
-    background-color: var(--pr-color-primary);
-    color: white;
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 10px;
-    padding: 3px 3px 3px 15px;
-    align-items: center;
-    font-size: 12px;
-    border-radius: 100px;
-    cursor: pointer;
-    text-decoration: none;
+  background-color: var(--pr-color-primary);
+  color: white;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+  padding: 3px 3px 3px 15px;
+  align-items: center;
+  font-size: 12px;
+  border-radius: 100px;
+  cursor: pointer;
+  text-decoration: none;
 
-    // width: 200px;
-    span {
-        white-space: nowrap;
-    }
+  // width: 200px;
+  span {
+    white-space: nowrap;
+  }
 
-    img {
-        width: 15px;
-        height: 15px;
-        background-color: white;
-        border-radius: 10px;
-        padding: 2px;
-    }
+  img {
+    width: 15px;
+    height: 15px;
+    background-color: white;
+    border-radius: 10px;
+    padding: 2px;
+  }
 }
 
 .under-construction-t1r {
-    margin-top: 5px;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-style: italic;
-    color: rgb(255, 255, 255);
-    font-weight: 700;
-    background-color: #7486ee;
-    border-radius: 5px 100px 100px 5px;
-    width: max-content;
-    padding: 2px 5px;
-    cursor: default;
-    font-size: .8em;
+  margin-top: 5px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-style: italic;
+  color: rgb(255, 255, 255);
+  font-weight: 700;
+  background-color: #7486ee;
+  border-radius: 5px 100px 100px 5px;
+  width: max-content;
+  padding: 2px 5px;
+  cursor: default;
+  font-size: 0.8em;
 
-    img {
-        width: 17px;
-        background-color: white;
-        border-radius: 100px;
-        padding: 1px;
-    }
+  img {
+    width: 17px;
+    background-color: white;
+    border-radius: 100px;
+    padding: 1px;
+  }
 }
 
 .p-progressbar.p-component.p-progressbar-indeterminate {
-    height: 10px;
+  height: 10px;
 }
 
 .section_final_space {
-    margin-bottom: 100px;
+  margin-bottom: 100px;
 }
 
 .spinner {
-    top: 0;
-    left: 0;
-    position: absolute;
-    height: 100%;
-    width: 100%;
-    background-color: #2a2e4556;
+  top: 0;
+  left: 0;
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  background-color: #2a2e4556;
+  display: flex;
+  // align-items: center;
+  justify-content: center;
+  z-index: 10000;
+
+  .info {
+    margin-top: 35vh;
     display: flex;
-    // align-items: center;
-    justify-content: center;
-    z-index: 10000;
+    align-items: center;
+    flex-direction: column;
+    gap: 10px;
+    background-color: rgba(0, 0, 0, 0.24);
+    height: min-content;
+    padding: 30px;
+    border-radius: 10px;
 
-    .info {
-        margin-top: 35vh;
-        display: flex;
-        align-items: center;
-        flex-direction: column;
-        gap: 10px;
-        background-color: rgba(0, 0, 0, 0.24);
-        height: min-content;
-        padding: 30px;
-        border-radius: 10px;
-
-        .icon {
-            color: white;
-            font-size: 4em;
-            transform: scaleX(-1);
-
-        }
-
-        .text {
-            color: white;
-            font-size: 1.2em;
-        }
+    .icon {
+      color: white;
+      font-size: 4em;
+      transform: scaleX(-1);
     }
+
+    .text {
+      color: white;
+      font-size: 1.2em;
+    }
+  }
 }
 
 .donors {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
 
-    .donor {
-        background-color: #e8ebff;
-        padding: 10px 50px 40px 50px;
-        position: relative;
-        border-radius: 10px;
-    }
+  .donor {
+    background-color: #e8ebff;
+    padding: 10px 50px 40px 50px;
+    position: relative;
+    border-radius: 10px;
+  }
 }
 
 .hideElement {
-    display: none !important;
+  display: none !important;
 }
