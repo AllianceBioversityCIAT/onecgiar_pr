@@ -21,6 +21,11 @@ export enum ModuleTypeEnum {
   IPSR = 'ipsr',
 }
 
+export enum AppModuleIdEnum {
+  REPORTING = 1,
+  IPSR = 2,
+}
+
 export enum StatusPhaseEnum {
   CLOSE = 'close',
   OPEN = 'open',

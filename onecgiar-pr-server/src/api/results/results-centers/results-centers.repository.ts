@@ -37,15 +37,13 @@ export class ResultsCenterRepository
         ? as result_id,
         ? as created_by,
         null as last_updated_by,
-        rc.center_id,
-        ? as version_id
+        rc.center_id
         from results_center rc WHERE rc.result_id = ? and rc.is_active > 0
         `;
         const response = await (<Promise<ResultsCenter[]>>(
           this.query(queryData, [
             config.new_result_id,
             config.user.id,
-            config.phase,
             config.old_result_id,
           ])
         ));
@@ -63,8 +61,7 @@ export class ResultsCenterRepository
         result_id,
         created_by,
         last_updated_by,
-        center_id,
-        version_id
+        center_id
         )
         select 
         rc.is_primary,
@@ -74,13 +71,11 @@ export class ResultsCenterRepository
         ? as result_id,
         ? as created_by,
         null as last_updated_by,
-        rc.center_id,
-        ? as version_id
+        rc.center_id
         from results_center rc WHERE rc.result_id = ? and rc.is_active > 0`;
         await this.query(queryData, [
           config.new_result_id,
           config.user.id,
-          config.phase,
           config.old_result_id,
         ]);
 
@@ -94,8 +89,7 @@ export class ResultsCenterRepository
         rc.result_id,
         rc.created_by,
         rc.last_updated_by,
-        rc.center_id,
-        rc.version_id
+        rc.center_id
         from results_center rc WHERE rc.result_id = ?`;
         final_data = await this.query(queryFind, [config.new_result_id]);
       }

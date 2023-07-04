@@ -68,12 +68,6 @@ export class InnovationPackagingExpert extends BaseEntity {
   })
   obj_expertises: Expertises;
 
-  @ManyToOne(() => Version, (v) => v.id)
-  @JoinColumn({
-    name: 'version_id',
-  })
-  obj_version: Version;
-
   @ManyToOne(() => ClarisaInstitution, (ci) => ci.id)
   @JoinColumn({
     name: 'organization_id',

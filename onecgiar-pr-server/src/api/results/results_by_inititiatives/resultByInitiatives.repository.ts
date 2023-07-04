@@ -36,7 +36,6 @@ export class ResultByInitiativesRepository
           ? as result_id,
           rbi.inititiative_id,
           rbi.initiative_role_id,
-          ? as version_id,
           ? as created_by,
           null as last_updated_by,
           now() as created_date
@@ -45,7 +44,6 @@ export class ResultByInitiativesRepository
         const response = await (<Promise<ResultsByInititiative[]>>(
           this.query(queryData, [
             config.new_result_id,
-            config.phase,
             config.user.id,
             config.old_result_id,
           ])
@@ -62,7 +60,6 @@ export class ResultByInitiativesRepository
           result_id,
           inititiative_id,
           initiative_role_id,
-          version_id,
           created_by,
           last_updated_by,
           created_date
@@ -73,14 +70,12 @@ export class ResultByInitiativesRepository
           ? as result_id,
           rbi.inititiative_id,
           rbi.initiative_role_id,
-          ? as version_id,
           ? as created_by,
           null as last_updated_by,
           now() as created_date
           from results_by_inititiative rbi where rbi.result_id = ? and rbi.is_active > 0`;
         await this.query(queryData, [
           config.new_result_id,
-          config.phase,
           config.user.id,
           config.old_result_id,
         ]);
@@ -93,7 +88,6 @@ export class ResultByInitiativesRepository
           rbi.result_id,
           rbi.inititiative_id,
           rbi.initiative_role_id,
-          rbi.version_id,
           rbi.created_by,
           rbi.last_updated_by,
           rbi.created_date
@@ -137,7 +131,6 @@ export class ResultByInitiativesRepository
       ci.name as initiative_name,
       rbi.initiative_role_id,
       rbi.inititiative_id,
-      rbi.version_id,
       rbi.is_active 
     from results_by_inititiative rbi 
     	inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
@@ -168,7 +161,6 @@ export class ResultByInitiativesRepository
       ci.name as initiative_name,
       ci.short_name,
       rbi.initiative_role_id,
-      rbi.version_id,
       rbi.is_active
     from results_by_inititiative rbi 
     	inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
@@ -200,7 +192,6 @@ export class ResultByInitiativesRepository
     	ci.name as initiative_name,
     	ci.short_name,
     	null as initiative_role_id,
-    	null as version_id,  
 	    srr.request_status_id,
       srr.share_result_request_id,
     	srr.is_active
@@ -239,7 +230,6 @@ export class ResultByInitiativesRepository
       ci.name as initiative_name,
       ci.short_name,
       rbi.initiative_role_id,
-      rbi.version_id,
       rbi.is_active
     from results_by_inititiative rbi 
     	inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
@@ -274,7 +264,6 @@ export class ResultByInitiativesRepository
       ci.name as initiative_name,
       ci.short_name,
       rbi.initiative_role_id,
-      rbi.version_id,
       rbi.is_active
     from results_by_inititiative rbi 
     	inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
@@ -307,7 +296,6 @@ export class ResultByInitiativesRepository
     	rbi.inititiative_id,
     	rbi.initiative_role_id,
     	rbi.is_active,
-    	rbi.version_id,
     	rbi.created_by,
     	rbi.created_date,
     	rbi.last_updated_by,
@@ -339,7 +327,6 @@ export class ResultByInitiativesRepository
     	rbi.inititiative_id,
     	rbi.initiative_role_id,
     	rbi.is_active,
-    	rbi.version_id,
     	rbi.created_by,
     	rbi.created_date,
     	rbi.last_updated_by,
@@ -377,7 +364,6 @@ export class ResultByInitiativesRepository
       rbi.result_id,
       rbi.inititiative_id,
       rbi.initiative_role_id,
-      rbi.version_id,
       rbi.created_by,
       rbi.last_updated_by,
       rbi.created_date
@@ -487,19 +473,22 @@ export class ResultByInitiativesRepository
       });
     }
   }
-  updateIniciativeSubmitter(resultId: number,  initiative_id: number){
+  updateIniciativeSubmitter(resultId: number, initiative_id: number) {
     try {
-      let updateIniciative ;
-      if(resultId != null){
-        updateIniciative = this.update({result_id: resultId }, {
-          initiative_id:initiative_id
-        });
+      let updateIniciative;
+      if (resultId != null) {
+        updateIniciative = this.update(
+          { result_id: resultId },
+          {
+            initiative_id: initiative_id,
+          },
+        );
       }
 
       return {
-        initiative_id:initiative_id,
-        response:updateIniciative
-      }
+        initiative_id: initiative_id,
+        response: updateIniciative,
+      };
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByInitiativesRepository.name,

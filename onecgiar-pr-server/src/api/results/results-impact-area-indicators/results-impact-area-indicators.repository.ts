@@ -39,7 +39,6 @@ export class ResultsImpactAreaIndicatorRepository
           null as last_updated_date,
           riai.impact_area_indicator_id,
           ? as result_id,
-          ? as version_id,
           ? as created_by,
           null as last_updated_by
           from results_impact_area_indicators riai where riai.result_id = ? and riai.is_active > 0
@@ -47,7 +46,6 @@ export class ResultsImpactAreaIndicatorRepository
         const response = await (<Promise<ResultsImpactAreaIndicator[]>>(
           this.query(queryData, [
             config.new_result_id,
-            config.phase,
             config.user.id,
             config.old_result_id,
           ])
@@ -65,7 +63,6 @@ export class ResultsImpactAreaIndicatorRepository
           last_updated_date,
           impact_area_indicator_id,
           result_id,
-          version_id,
           created_by,
           last_updated_by
           )
@@ -75,13 +72,11 @@ export class ResultsImpactAreaIndicatorRepository
           null as last_updated_date,
           riai.impact_area_indicator_id,
           ? as result_id,
-          ? as version_id,
           ? as created_by,
           null as last_updated_by
           from results_impact_area_indicators riai where riai.result_id = ? and riai.is_active > 0`;
         await this.query(queryData, [
           config.new_result_id,
-          config.phase,
           config.user.id,
           config.old_result_id,
         ]);
@@ -94,7 +89,6 @@ export class ResultsImpactAreaIndicatorRepository
         riai.last_updated_date,
         riai.impact_area_indicator_id,
         riai.result_id,
-        riai.version_id,
         riai.created_by,
         riai.last_updated_by
         from results_impact_area_indicators riai where riai.result_id = ?`;
@@ -126,7 +120,6 @@ export class ResultsImpactAreaIndicatorRepository
     	riai.last_updated_date,
     	riai.impact_area_indicator_id,
     	riai.result_id,
-    	riai.version_id,
     	riai.created_by,
     	riai.last_updated_by
     FROM
@@ -159,7 +152,6 @@ export class ResultsImpactAreaIndicatorRepository
     	riai.last_updated_date,
     	riai.impact_area_indicator_id as id,
     	riai.result_id,
-    	riai.version_id,
     	riai.created_by,
     	riai.last_updated_by,
     	ciai.impact_area_id,

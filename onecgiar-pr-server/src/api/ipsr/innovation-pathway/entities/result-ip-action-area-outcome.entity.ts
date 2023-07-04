@@ -39,10 +39,4 @@ export class ResultIpAAOutcome extends BaseEntity {
     name: 'action_area_outcome_id',
   })
   obj_action_area_outcome_innovation_package: ClarisaActionAreaOutcome;
-
-  @ManyToOne(() => Version, (v) => v.obj_version_result_ip_aa_outcome)
-  @JoinColumn({
-    name: 'version_id',
-  })
-  obj_version_result_ip_aa_outcome: Version;
 }

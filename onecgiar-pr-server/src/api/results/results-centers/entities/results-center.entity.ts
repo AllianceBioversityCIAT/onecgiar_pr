@@ -70,17 +70,4 @@ export class ResultsCenter {
     nullable: true,
   })
   last_updated_date!: Date;
-
-  @Column({
-    name: 'version_id',
-    type: 'bigint',
-    nullable: true,
-  })
-  version_id: number;
-
-  @ManyToOne(() => Version, (v) => v.results_center)
-  @JoinColumn({
-    name: 'version_id',
-  })
-  obj_version: Version;
 }

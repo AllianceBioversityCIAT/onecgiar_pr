@@ -78,19 +78,6 @@ export class Evidence {
   knowledge_product_related!: number;
 
   @Column({
-    name: 'version_id',
-    type: 'bigint',
-    nullable: false,
-  })
-  version_id: number;
-
-  @ManyToOne(() => Version, (v) => v.id, { nullable: false })
-  @JoinColumn({
-    name: 'version_id',
-  })
-  obj_version: Version;
-
-  @Column({
     name: 'is_active',
     type: 'tinyint',
     nullable: false,

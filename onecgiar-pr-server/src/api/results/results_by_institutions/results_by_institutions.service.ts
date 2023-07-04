@@ -159,7 +159,6 @@ export class ResultsByInstitutionsService {
     resultByInstitution['institutions_name'] = null;
     resultByInstitution['institutions_acronym'] = null;
     resultByInstitution['institution_roles_id'] = null;
-    resultByInstitution['version_id'] = null;
     resultByInstitution['institutions_type_id'] = null;
     resultByInstitution['institutions_type_name'] = null;
     resultByInstitution['deliveries'] = [];
@@ -241,7 +240,6 @@ export class ResultsByInstitutionsService {
               data.institutions[index].institutions_id;
             institutionsNew.last_updated_by = user.id;
             institutionsNew.result_id = data.result_id;
-            institutionsNew.version_id = vrs.id;
             institutionsNew.is_active = true;
             const responseInstitution =
               await this._resultByIntitutionsRepository.save(institutionsNew);

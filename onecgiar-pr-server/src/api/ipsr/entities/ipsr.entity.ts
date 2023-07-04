@@ -122,12 +122,6 @@ export class Ipsr extends BaseEntity {
   })
   obj_ipsr_role: IpsrRole;
 
-  @ManyToOne(() => Version, (v) => v.innovation_by_result)
-  @JoinColumn({
-    name: 'version_id',
-  })
-  obj_version: Version;
-
   @ManyToOne(
     () => ResultInnovationPackage,
     (r) => r.result_innovation_package_id,

@@ -199,7 +199,6 @@ export class ResultsKnowledgeProductsService {
           initiative_id: initiative.id,
           initiative_role_id: 1,
           result_id: newResultHeader.id,
-          version_id: currentVersion.id,
         },
       );
 
@@ -263,7 +262,6 @@ export class ResultsKnowledgeProductsService {
           newMetadata,
           user.id,
           resultKnowledgeProduct.results_id,
-          resultKnowledgeProduct.version_id,
         );
 
       updatedKnowledgeProduct.result_knowledge_product_id =
@@ -561,7 +559,6 @@ export class ResultsKnowledgeProductsService {
         resultsKnowledgeProductDto,
         user.id,
         newResult.id,
-        currentVersion.id,
       );
 
       newKnowledgeProduct.is_melia = false;
@@ -664,7 +661,6 @@ export class ResultsKnowledgeProductsService {
         link: `https://cgspace.cgiar.org/handle/${resultsKnowledgeProductDto.handle}`,
         result_id: newResult.id,
         created_by: user.id,
-        version_id: currentVersion.id,
         is_supplementary: false,
         evidence_type_id: 1,
       });

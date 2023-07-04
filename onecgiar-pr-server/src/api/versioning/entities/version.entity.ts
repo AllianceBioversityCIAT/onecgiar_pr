@@ -95,31 +95,4 @@ export class Version extends VersionBaseEntity {
   @ManyToOne(() => Version, (v) => v.id)
   @JoinColumn({ name: 'previous_phase' })
   obj_previous_phase: Version;
-
-  @OneToMany(() => Ipsr, (i) => i.obj_version)
-  innovation_by_result: Ipsr[];
-
-  @OneToMany(() => NonPooledProject, (i) => i.obj_version)
-  non_pooled_project: NonPooledProject[];
-
-  @OneToMany(() => ResultsCenter, (rc) => rc.obj_version)
-  results_center: ResultsCenter[];
-
-  @OneToMany(() => ResultActor, (rc) => rc.obj_version)
-  result_actor: ResultActor[];
-
-  @OneToMany(() => ResultsIpActor, (rc) => rc.obj_version)
-  result_ip_actor: ResultActor[];
-
-  @OneToMany(
-    () => ResultIpEoiOutcome,
-    (rio) => rio.obj_version_result_ip_eoi_outcome,
-  )
-  obj_version_result_ip_eoi_outcome: ResultIpEoiOutcome[];
-
-  @OneToMany(
-    () => ResultIpAAOutcome,
-    (ria) => ria.obj_version_result_ip_aa_outcome,
-  )
-  obj_version_result_ip_aa_outcome: ResultIpAAOutcome[];
 }

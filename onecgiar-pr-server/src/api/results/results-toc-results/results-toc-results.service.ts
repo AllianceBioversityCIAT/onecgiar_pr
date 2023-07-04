@@ -69,7 +69,11 @@ export class ResultsTocResultsService {
       }
       const vrs: Version = <Version>version.response;
       const titleArray = contributing_np_projects.map((el) => el.grant_title);
-      const iniciativeSubmitter = this._resultByInitiativesRepository.updateIniciativeSubmitter(result_id, result_toc_result.initiative_id)
+      const iniciativeSubmitter =
+        this._resultByInitiativesRepository.updateIniciativeSubmitter(
+          result_id,
+          result_toc_result.initiative_id,
+        );
       if (contributing_center.filter((el) => el.primary == true).length > 1) {
         contributing_center.map((el) => {
           el.primary = false;
@@ -238,7 +242,6 @@ export class ResultsTocResultsService {
                 newIndicator.last_updated_by = user.id;
                 newIndicator.result_id = result.id;
                 newIndicator.impact_area_indicator_id = indicatorId;
-                newIndicator.version_id = vrs.id;
                 IndicatorArray.push(newIndicator);
               }
             }
@@ -275,7 +278,6 @@ export class ResultsTocResultsService {
                 newTarget.last_updated_by = user.id;
                 newTarget.result_id = result.id;
                 newTarget.impact_area_target_id = targetId;
-                newTarget.version_id = vrs.id;
                 TargetArray.push(newTarget);
               }
             }
@@ -319,7 +321,6 @@ export class ResultsTocResultsService {
           await this._resultsTocResultRepository.save(RtR);
         } else if (result_toc_result) {
           const newRtR = new ResultsTocResult();
-          newRtR.version_id = vrs.id;
           newRtR.initiative_id = result_toc_result?.initiative_id;
           newRtR.created_by = user.id;
           newRtR.last_updated_by = user.id;
@@ -367,7 +368,6 @@ export class ResultsTocResultsService {
               RtRArray.push(RtR);
             } else {
               const newRtR = new ResultsTocResult();
-              newRtR.version_id = vrs.id;
               newRtR.created_by = user.id;
               newRtR.last_updated_by = user.id;
               newRtR.planned_result =

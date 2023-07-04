@@ -31,10 +31,6 @@ export class PlatformReport {
   @Column({ nullable: false })
   template_id: number;
 
-  //versioning field
-  @Column()
-  version_id: number;
-
   //audit fields
   @Column({
     name: 'is_active',
@@ -65,12 +61,6 @@ export class PlatformReport {
   last_updated_by: number;
 
   //object relations
-
-  @ManyToOne(() => Version, (v) => v.id, { nullable: false })
-  @JoinColumn({
-    name: 'version_id',
-  })
-  version_object: number;
 
   @ManyToOne(() => User, (u) => u.id, { nullable: false })
   @JoinColumn({

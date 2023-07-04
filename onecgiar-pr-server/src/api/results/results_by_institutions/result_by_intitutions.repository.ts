@@ -35,7 +35,6 @@ export class ResultByIntitutionsRepository
           rbi.is_active,
           now() as created_date,
           null as last_updated_date,
-          ? as version_id,
           ? as created_by,
           ? as last_updated_by,
           ? as result_id
@@ -43,7 +42,6 @@ export class ResultByIntitutionsRepository
         `;
         const response = await (<Promise<ResultsByInstitution[]>>(
           this.query(queryData, [
-            config.phase,
             config.user.id,
             config.user.id,
             config.new_result_id,
@@ -62,7 +60,6 @@ export class ResultByIntitutionsRepository
           is_active,
           created_date,
           last_updated_date,
-          version_id,
           created_by,
           last_updated_by,
           result_id
@@ -72,13 +69,11 @@ export class ResultByIntitutionsRepository
           rbi.is_active,
           now() as created_date,
           null as last_updated_date,
-          ? as version_id,
           ? as created_by,
           ? as last_updated_by,
           ? as result_id
           from results_by_institution rbi WHERE rbi.result_id = ? and rbi.is_active > 0`;
         await this.query(queryData, [
-          config.phase,
           config.user.id,
           config.user.id,
           config.new_result_id,
@@ -92,7 +87,6 @@ export class ResultByIntitutionsRepository
           rbi.is_active,
           rbi.created_date,
           rbi.last_updated_date,
-          rbi.version_id,
           rbi.created_by,
           rbi.last_updated_by,
           rbi.result_id
@@ -119,8 +113,7 @@ export class ResultByIntitutionsRepository
     select 
     	rbi.id,
     	rbi.institutions_id,
-    	rbi.institution_roles_id,
-    	rbi.version_id
+    	rbi.institution_roles_id
     from results_by_institution rbi 
     where rbi.result_id = ?
       and rbi.id = ?
@@ -146,8 +139,7 @@ export class ResultByIntitutionsRepository
     select 
     	rbi.id,
     	rbi.institutions_id,
-    	rbi.institution_roles_id,
-    	rbi.version_id
+    	rbi.institution_roles_id
     from results_by_institution rbi 
     where rbi.result_id = ?
     	and rbi.is_active > 0;
@@ -174,7 +166,6 @@ export class ResultByIntitutionsRepository
     	ci.name institutions_name,
     	ci.acronym as institutions_acronym,
     	rbi.institution_roles_id,
-    	rbi.version_id,
     	cit.code as institutions_type_id, 
     	cit.name as institutions_type_name
     from results_by_institution rbi 
@@ -207,7 +198,6 @@ export class ResultByIntitutionsRepository
     	ci.name institutions_name,
     	ci.acronym as institutions_acronym,
     	rbi.institution_roles_id,
-    	rbi.version_id,
     	cit.code as institutions_type_id, 
     	cit.name as institutions_type_name
     from results_by_institution rbi 
@@ -263,7 +253,6 @@ export class ResultByIntitutionsRepository
     	rbi.institution_roles_id,
     	rbi.is_active,
     	rbi.created_date,
-    	rbi.version_id,
     	rbi.created_by,
     	rbi.last_updated_date,
     	rbi.last_updated_by 
@@ -301,7 +290,6 @@ export class ResultByIntitutionsRepository
     	rbi.institution_roles_id,
     	rbi.is_active,
     	rbi.created_date,
-    	rbi.version_id,
     	rbi.created_by,
     	rbi.last_updated_date,
     	rbi.last_updated_by 
@@ -338,7 +326,6 @@ export class ResultByIntitutionsRepository
     	rbi.institution_roles_id,
     	rbi.is_active,
     	rbi.created_date,
-    	rbi.version_id,
     	rbi.created_by,
     	rbi.last_updated_date,
     	rbi.last_updated_by,

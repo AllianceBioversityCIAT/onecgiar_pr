@@ -44,13 +44,6 @@ export class ResultsKnowledgeProductInstitution {
   @Column({ nullable: true })
   results_by_institutions_id: number;
 
-  //versioning field
-  @ManyToOne(() => Version, (v) => v.id, { nullable: false })
-  @JoinColumn({
-    name: 'version_id',
-  })
-  version_id: number;
-
   //audit fields
   @Column({
     name: 'is_active',

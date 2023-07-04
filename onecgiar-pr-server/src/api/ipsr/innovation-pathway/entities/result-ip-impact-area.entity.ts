@@ -39,10 +39,4 @@ export class ResultIpImpactArea extends BaseEntity {
     name: 'impact_area_indicator_id',
   })
   obj_impact_area_indicator: ClarisaGlobalTarget;
-
-  @ManyToOne(() => Version, (v) => v.id)
-  @JoinColumn({
-    name: 'version_id',
-  })
-  obj_version_result_ip_eoi_outcome: Version;
 }

@@ -42,7 +42,6 @@ export class NonPooledProjectRepository
           ? as created_by,
           ? as last_updated_by,
           npp.lead_center_id,
-          ? as version_id,
           npp.non_pooled_project_type_id
           from non_pooled_project npp where npp.results_id = ? and is_active > 0
         `;
@@ -51,7 +50,6 @@ export class NonPooledProjectRepository
             config.new_result_id,
             config.user.id,
             config.user.id,
-            config.phase,
             config.old_result_id,
           ])
         ));
@@ -72,7 +70,6 @@ export class NonPooledProjectRepository
           created_by,
           last_updated_by,
           lead_center_id,
-          version_id,
           non_pooled_project_type_id
           ) select 
           npp.grant_title,
@@ -85,14 +82,12 @@ export class NonPooledProjectRepository
           ? as created_by,
           ? as last_updated_by,
           npp.lead_center_id,
-          ? as version_id,
           npp.non_pooled_project_type_id
           from non_pooled_project npp where npp.results_id = ? and is_active > 0`;
         await this.query(queryData, [
           config.new_result_id,
           config.user.id,
           config.user.id,
-          config.phase,
           config.old_result_id,
         ]);
 
@@ -109,7 +104,6 @@ export class NonPooledProjectRepository
           npp.created_by,
           npp.last_updated_by,
           npp.lead_center_id,
-          npp.version_id,
           npp.non_pooled_project_type_id
           from non_pooled_project npp where npp.results_id = ?
         `;

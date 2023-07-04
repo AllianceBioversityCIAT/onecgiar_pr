@@ -59,12 +59,6 @@ export class ResultsComplementaryInnovation extends BaseEntity {
   })
   obj_result: Result;
 
-  @ManyToOne(() => Version, (v) => v.id)
-  @JoinColumn({
-    name: 'version_id',
-  })
-  obj_version: Version;
-
   @OneToMany(
     () => ResultsComplementaryInnovationsFunction,
     (cif) => cif.obj_result_complementary_innovation,

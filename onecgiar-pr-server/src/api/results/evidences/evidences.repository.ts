@@ -36,7 +36,6 @@ export class EvidencesRepository
           e.is_active,
           now() as creation_date,
           e.last_updated_date,
-          ? as version_id,
           ? as created_by,
           ? as last_updated_by,
           e.gender_related,
@@ -53,7 +52,6 @@ export class EvidencesRepository
         `;
         const response = await (<Promise<Evidence[]>>(
           this.query(queryData, [
-            config.phase,
             config.user.id,
             config.user.id,
             config.new_result_id,
@@ -70,7 +68,6 @@ export class EvidencesRepository
           is_active,
           creation_date,
           last_updated_date,
-          version_id,
           created_by,
           last_updated_by,
           gender_related,
@@ -85,7 +82,6 @@ export class EvidencesRepository
           e.is_active,
           now() as creation_date,
           e.last_updated_date,
-          ? as version_id,
           ? as created_by,
           ? as last_updated_by,
           e.gender_related,
@@ -100,7 +96,6 @@ export class EvidencesRepository
           e.evidence_type_id
           from evidence e where e.result_id = ? and is_active > 0`;
         await this.query(queryData, [
-          config.phase,
           config.user.id,
           config.user.id,
           config.new_result_id,
@@ -113,7 +108,6 @@ export class EvidencesRepository
           e.is_active,
           e.creation_date,
           e.last_updated_date,
-          e.version_id,
           e.created_by,
           e.last_updated_by,
           e.gender_related,
@@ -222,7 +216,6 @@ export class EvidencesRepository
     	e.is_active,
     	e.creation_date,
     	e.last_updated_date,
-    	e.version_id,
     	e.created_by,
     	e.last_updated_by,
     	e.gender_related,
@@ -352,7 +345,6 @@ export class EvidencesRepository
     e.is_active,
     e.creation_date,
     e.last_updated_date,
-    e.version_id,
     e.created_by,
     e.last_updated_by,
     e.gender_related,

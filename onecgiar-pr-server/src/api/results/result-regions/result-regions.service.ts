@@ -77,7 +77,6 @@ export class ResultRegionsService {
                 const newRegions = new ResultRegion();
                 newRegions.region_id = regions[index].id;
                 newRegions.result_id = result.id;
-                newRegions.version_id = version.id;
                 resultRegionArray.push(newRegions);
               }
               await this._resultRegionRepository.save(resultRegionArray);

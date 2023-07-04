@@ -34,7 +34,6 @@ export class LinkedResultRepository
           delete el.id;
           delete el.created_date;
           delete el.last_updated_date;
-          el.version_id = config.phase;
           el.origin_result_id = config.new_result_id;
         });
         const response_edit = <LinkedResult[]>config.f.custonFunction(response);
@@ -49,8 +48,7 @@ export class LinkedResultRepository
           origin_result_id,
           created_by,
           last_updated_by,
-          legacy_link,
-          version_id
+          legacy_link
           )
           select
           lr.is_active,
@@ -63,8 +61,7 @@ export class LinkedResultRepository
           ? as origin_result_id,
           lr.created_by,
           lr.last_updated_by,
-          lr.legacy_link,
-          ? as version_id
+          lr.legacy_link
           from linked_result lr WHERE lr.origin_result_id = ? and is_active > 0`;
         await this.query(queryData, [
           config.new_result_id,
@@ -74,7 +71,6 @@ export class LinkedResultRepository
         final_data = await this.find({
           where: {
             origin_result_id: config.new_result_id,
-            version_id: config.phase,
           },
         });
       }
@@ -180,7 +176,6 @@ export class LinkedResultRepository
     r.is_active,
     r.last_updated_date,
     r.gender_tag_level_id,
-    r.version_id,
     r.result_type_id,
     r.status,
     r.created_by,

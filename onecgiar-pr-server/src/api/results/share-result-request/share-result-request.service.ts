@@ -173,11 +173,8 @@ export class ShareResultRequestService {
           newResultByInitiative.result_id = result_id;
           newResultByInitiative.last_updated_by = user.id;
           newResultByInitiative.created_by = user.id;
-          newResultByInitiative.version_id = vrs.id;
-          newResultByInitiative.version_id = vrs.id;
           const result = await this._resultRepository.getResultById(result_id);
           const newRtR = new ResultsTocResult();
-          newRtR.version_id = vrs.id;
           newRtR.planned_result = planned_result;
           newRtR.created_by = user.id;
           newRtR.last_updated_by = user.id;
@@ -195,7 +192,6 @@ export class ShareResultRequestService {
 
           await this._resultInitiativeBudgetRepository.save({
             result_initiative_id: newReIni.id,
-            version_id: vrs.id,
             created_by: user.id,
             last_updated_by: user.id,
           });
@@ -234,7 +230,6 @@ export class ShareResultRequestService {
           if (!initBudget) {
             await this._resultInitiativeBudgetRepository.save({
               result_initiative_id: exists.id,
-              version_id: vrs.id,
               created_by: user.id,
               last_updated_by: user.id,
             });
@@ -252,7 +247,6 @@ export class ShareResultRequestService {
             );
           if (!resultTocResult) {
             const newRtR = new ResultsTocResult();
-            newRtR.version_id = vrs.id;
             newRtR.planned_result = planned_result;
             newRtR.created_by = user.id;
             newRtR.last_updated_by = user.id;

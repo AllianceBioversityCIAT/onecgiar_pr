@@ -23,23 +23,26 @@ import { ShareResultRequestRepository } from '../../results/share-result-request
 import { NonPooledProject } from '../../results/non-pooled-projects/entities/non-pooled-project.entity';
 import { ResultIpEoiOutcomeRepository } from '../innovation-pathway/repository/result-ip-eoi-outcomes.repository';
 import { ResultInnovationPackageRepository } from '../result-innovation-package/repositories/result-innovation-package.repository';
+import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
+import { VersioningService } from '../../versioning/versioning.service';
 
 @Injectable()
 export class ResultsPackageTocResultService {
   constructor(
-    protected readonly _nonPooledProjectRepository: NonPooledProjectRepository,
-    protected readonly _resultsCenterRepository: ResultsCenterRepository,
-    protected readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
-    protected readonly _resultsTocResultRepository: ResultsTocResultRepository,
-    protected readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
-    protected readonly _resultByInstitutionsByDeliveriesTypeRepository: ResultByInstitutionsByDeliveriesTypeRepository,
-    protected readonly _resultIpEoiOutcomesRepository: ResultIpEoiOutcomeRepository,
-    protected readonly _shareResultRequestService: ShareResultRequestService,
-    protected readonly _shareResultRequestRepository: ShareResultRequestRepository,
-    protected readonly _resultRepository: ResultRepository,
-    protected readonly _versionsService: VersionsService,
-    protected readonly _ipsrRepository: IpsrRepository,
-    protected readonly _handlersError: HandlersError,
+    private readonly _nonPooledProjectRepository: NonPooledProjectRepository,
+    private readonly _resultsCenterRepository: ResultsCenterRepository,
+    private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
+    private readonly _resultsTocResultRepository: ResultsTocResultRepository,
+    private readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
+    private readonly _resultByInstitutionsByDeliveriesTypeRepository: ResultByInstitutionsByDeliveriesTypeRepository,
+    private readonly _resultIpEoiOutcomesRepository: ResultIpEoiOutcomeRepository,
+    private readonly _shareResultRequestService: ShareResultRequestService,
+    private readonly _shareResultRequestRepository: ShareResultRequestRepository,
+    private readonly _resultRepository: ResultRepository,
+    private readonly _versionsService: VersionsService,
+    private readonly _ipsrRepository: IpsrRepository,
+    private readonly _handlersError: HandlersError,
+    private readonly _versioningService: VersioningService,
   ) {}
 
   async create(crtr: CreateResultsPackageTocResultDto, user: TokenDto) {
@@ -75,11 +78,15 @@ export class ResultsPackageTocResultService {
         };
       }
 
-      const vTemp = await this._versionsService.findBaseVersion();
-      if (vTemp.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: vTemp });
+      const version = await this._versioningService.$_findActivePhase(
+        AppModuleIdEnum.IPSR,
+      );
+      if (!version) {
+        throw this._handlersError.returnErrorRes({
+          error: version,
+          debug: true,
+        });
       }
-      const version: Version = <Version>vTemp.response;
 
       if (crtr?.contributing_initiatives.length) {
         const { contributing_initiatives: cinit } = crtr;
@@ -162,7 +169,6 @@ export class ResultsPackageTocResultService {
                 grant_title: cpnp.grant_title,
                 funder_institution_id: cpnp.funder,
                 lead_center_id: cpnp.lead_center,
-                version_id: version.id,
                 created_by: user.id,
                 last_updated_by: user.id,
                 non_pooled_project_type_id: 1,
@@ -206,7 +212,6 @@ export class ResultsPackageTocResultService {
               created_by: user.id,
               last_updated_by: user.id,
               is_primary: cenCC.primary,
-              version_id: version.id,
             });
           }
         }
@@ -270,7 +275,6 @@ export class ResultsPackageTocResultService {
               institution_roles_id: 2,
               institutions_id: ins.institutions_id,
               result_id: rip.id,
-              version_id: version.id,
               created_by: user.id,
               last_updated_by: user.id,
             });
@@ -367,7 +371,6 @@ export class ResultsPackageTocResultService {
       });
     } else {
       await this._resultsTocResultRepository.save({
-        version_id: version.id,
         results_id: rip.id,
         initiative_id: owner ? rip.initiative_id : initiative_id,
         toc_result_id: toc_result_id,
@@ -476,7 +479,6 @@ export class ResultsPackageTocResultService {
             resultByInnoPckg?.result_by_innovation_package_id,
           created_by: user.id,
           last_updated_by: user.id,
-          version_id: version.id,
           contributing_toc: true,
         });
 

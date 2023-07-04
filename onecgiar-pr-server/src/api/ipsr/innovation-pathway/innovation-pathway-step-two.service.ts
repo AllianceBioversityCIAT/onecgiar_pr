@@ -36,6 +36,8 @@ import { ResultsByInititiative } from 'src/api/results/results_by_inititiatives/
 import { ResultsComplementaryInnovation } from '../results-complementary-innovations/entities/results-complementary-innovation.entity';
 import { ComplementaryInnovationFunctionsRepository } from '../results-complementary-innovations-functions/repositories/complementary-innovation-functions.repository';
 import { UpdateComplementaryInnovationDto } from './dto/update-innovation-pathway.dto';
+import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
+import { VersioningService } from '../../versioning/versioning.service';
 
 @Injectable()
 export class InnovationPathwayStepTwoService {
@@ -64,6 +66,7 @@ export class InnovationPathwayStepTwoService {
     protected readonly _yearRepository: YearRepository,
     protected readonly _resultByInitiativeRepository: ResultByInitiativesRepository,
     protected readonly _complementarynnovationFucntions: ComplementaryInnovationFunctionsRepository,
+    private readonly _versioningService: VersioningService,
   ) {}
 
   async findInnovationsAndComplementary() {
@@ -129,11 +132,15 @@ export class InnovationPathwayStepTwoService {
         };
       }
 
-      const vTemp = await this._versionsService.findBaseVersion();
-      if (vTemp.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: vTemp });
+      const version = await this._versioningService.$_findActivePhase(
+        AppModuleIdEnum.IPSR,
+      );
+      if (!version) {
+        throw this._handlersError.returnErrorRes({
+          error: version,
+          debug: true,
+        });
       }
-      const version: Version = <Version>vTemp.response;
 
       const complementaryInnovation = saveData;
 
@@ -150,7 +157,6 @@ export class InnovationPathwayStepTwoService {
         .filter((ci) => !existingIds.includes(ci.result_id))
         .map((ci) => {
           const newCi = new Ipsr();
-          newCi.version_id = version.id;
           newCi.last_updated_by = user.id;
           newCi.created_by = user.id;
           newCi.result_id = ci.result_id;
@@ -262,11 +268,15 @@ export class InnovationPathwayStepTwoService {
         };
       }
 
-      const vTemp = await this._versionsService.findBaseVersion();
-      if (vTemp.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: vTemp });
+      const version = await this._versioningService.$_findActivePhase(
+        AppModuleIdEnum.IPSR,
+      );
+      if (!version) {
+        throw this._handlersError.returnErrorRes({
+          error: version,
+          debug: true,
+        });
       }
-      const version: Version = <Version>vTemp.response;
 
       const last_code = await this._resultRepository.getLastResultCode();
 
@@ -292,7 +302,6 @@ export class InnovationPathwayStepTwoService {
           result_id: newResult,
           initiative_id: CreateComplementaryInnovationDto.initiative_id,
           initiative_role_id: 1,
-          version_id: version.id,
           created_by: User.id,
           last_updated_by: User.id,
         });
@@ -304,7 +313,6 @@ export class InnovationPathwayStepTwoService {
           ipsr_role_id: 2,
           created_by: User.id,
           last_updated_by: User.id,
-          version_id: version.id,
         });
 
       const newResultComplemetaryInnovation: ResultsComplementaryInnovation =
@@ -321,7 +329,6 @@ export class InnovationPathwayStepTwoService {
               ? CreateComplementaryInnovationDto.specify_projects_organizations
               : null,
           last_updated_by: User.id,
-          version_id: version.id,
         });
 
       const resultComplementaryInnovationId =
@@ -342,7 +349,6 @@ export class InnovationPathwayStepTwoService {
           newCF.last_updated_by = User.id;
           newCF.created_date = new Date();
           newCF.last_updated_date = new Date();
-          newCF.version_id = version.id;
           saveCF.push(this._resultComplementaryInnovationFunctions.save(newCF));
         }
       }
@@ -372,7 +378,6 @@ export class InnovationPathwayStepTwoService {
           newMaterial.last_updated_by = User.id;
           newMaterial.creation_date = new Date();
           newMaterial.last_updated_date = new Date();
-          newMaterial.version_id = version.id;
           saveEvidence.push(this._evidence.save(newMaterial));
         }
       }
@@ -469,11 +474,15 @@ export class InnovationPathwayStepTwoService {
         specify_projects_organizations,
       } = updateComplementaryInnovationDto;
 
-      const vTemp = await this._versionsService.findBaseVersion();
-      if (vTemp.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: vTemp });
+      const version = await this._versioningService.$_findActivePhase(
+        AppModuleIdEnum.IPSR,
+      );
+      if (!version) {
+        throw this._handlersError.returnErrorRes({
+          error: version,
+          debug: true,
+        });
       }
-      const version: Version = <Version>vTemp.response;
 
       const findResult: Result = await this._resultRepository.findOneBy({
         id: complementaryInnovationId,
@@ -565,7 +574,6 @@ export class InnovationPathwayStepTwoService {
               cf.complementary_innovation_functions_id;
             newCF.created_by = User.id;
             newCF.last_updated_by = User.id;
-            newCF.version_id = version.id;
             saveCF.push(
               await this._resultComplementaryInnovationFunctions.save(newCF),
             );
@@ -623,7 +631,6 @@ export class InnovationPathwayStepTwoService {
             newMaterial.last_updated_by = User.id;
             newMaterial.creation_date = new Date();
             newMaterial.last_updated_date = new Date();
-            newMaterial.version_id = version.id;
             saveEvidence.push(await this._evidence.save(newMaterial));
           }
         }

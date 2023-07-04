@@ -69,7 +69,6 @@ export class EvidencesService {
             newEvidence.link = evidence.link;
             newEvidence.result_id = result.id;
             newEvidence.evidence_type_id = 1;
-            newEvidence.version_id = vr.id;
 
             const hasQuery = (evidence.link ?? '').indexOf('?');
             const linkSplit = (evidence.link ?? '')
@@ -152,7 +151,6 @@ export class EvidencesService {
             newEvidnece.is_supplementary = true;
             newEvidnece.link = supplementary.link;
             newEvidnece.result_id = result.id;
-            newEvidnece.version_id = vr.id;
             newEvidnece.evidence_type_id = 1;
             newsEvidencesArray.push(newEvidnece);
           } else {

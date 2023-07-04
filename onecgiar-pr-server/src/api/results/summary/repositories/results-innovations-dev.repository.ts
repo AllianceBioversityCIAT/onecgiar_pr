@@ -43,7 +43,6 @@ export class ResultsInnovationsDevRepository
         now() as created_date,
         null as last_updated_date,
         ? as results_id,
-        ? as version_id,
         ? as created_by,
         null as last_updated_by,
         rid.innovation_characterization_id,
@@ -56,7 +55,6 @@ export class ResultsInnovationsDevRepository
         const response = await (<Promise<ResultsInnovationsDev[]>>(
           this.query(queryData, [
             config.new_result_id,
-            config.phase,
             config.user.id,
             config.old_result_id,
           ])
@@ -80,7 +78,6 @@ export class ResultsInnovationsDevRepository
         created_date,
         last_updated_date,
         results_id,
-        version_id,
         created_by,
         last_updated_by,
         innovation_characterization_id,
@@ -101,7 +98,6 @@ export class ResultsInnovationsDevRepository
         now() as created_date,
         null as last_updated_date,
         ? as results_id,
-        ? as version_id,
         ? as created_by,
         null as last_updated_by,
         rid.innovation_characterization_id,
@@ -112,7 +108,6 @@ export class ResultsInnovationsDevRepository
         from results_innovations_dev rid where rid.results_id = ? and rid.is_active > 0`;
         await this.query(queryData, [
           config.new_result_id,
-          config.phase,
           config.user.id,
           config.old_result_id,
         ]);
@@ -131,7 +126,6 @@ export class ResultsInnovationsDevRepository
         rid.created_date,
         rid.last_updated_date,
         rid.results_id,
-        rid.version_id,
         rid.created_by,
         rid.last_updated_by,
         rid.innovation_characterization_id,
@@ -171,7 +165,6 @@ export class ResultsInnovationsDevRepository
     	rid.created_date,
     	rid.last_updated_date,
     	rid.results_id,
-    	rid.version_id,
     	rid.created_by,
     	rid.last_updated_by,
     	rid.innovation_characterization_id,

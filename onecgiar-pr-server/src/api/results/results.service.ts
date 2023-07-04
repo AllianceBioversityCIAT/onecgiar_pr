@@ -61,6 +61,7 @@ import { ResultsImpactAreaTargetRepository } from './results-impact-area-target/
 import { LogRepository } from '../../connection/dynamodb-logs/dynamodb-logs.repository';
 import { Actions } from 'src/connection/dynamodb-logs/dto/enumAction.const';
 import { VersioningService } from '../versioning/versioning.service';
+import { AppModuleIdEnum } from 'src/shared/constants/role-type.enum';
 
 @Injectable()
 export class ResultsService {
@@ -172,14 +173,15 @@ export class ResultsService {
       const rl: ResultLevel = <ResultLevel>resultLevel;
       const rt: ResultType = <ResultType>resultType.response;
 
-      const version = await this._versionsService.findBaseVersion();
-      if (version.status >= 300) {
+      const version = await this._versioningService.$_findActivePhase(
+        AppModuleIdEnum.REPORTING,
+      );
+      if (!version) {
         throw this._handlersError.returnErrorRes({
           error: version,
           debug: true,
         });
       }
-      const vrs: Version = <Version>version.response;
 
       const year: Year = await this._yearRepository.findOne({
         where: { active: true },
@@ -197,7 +199,7 @@ export class ResultsService {
         created_by: user.id,
         last_updated_by: user.id,
         result_type_id: rt.id,
-        version_id: vrs.id,
+        version_id: version.id,
         title: createResultDto.result_name,
         reported_year_id: year.year,
         result_level_id: rl.id,
@@ -210,7 +212,6 @@ export class ResultsService {
           initiative_id: initiative.id,
           initiative_role_id: 1,
           result_id: newResultHeader.id,
-          version_id: vrs.id,
         },
       );
 
@@ -403,14 +404,15 @@ export class ResultsService {
         resultGeneralInformation.krs_url = null;
       }
 
-      const version = await this._versionsService.findBaseVersion();
-      if (version.status >= 300) {
+      const version = await this._versioningService.$_findActivePhase(
+        AppModuleIdEnum.REPORTING,
+      );
+      if (!version) {
         throw this._handlersError.returnErrorRes({
           error: version,
           debug: true,
         });
       }
-      const vrs: Version = <Version>version.response;
 
       const updateResult = await this._resultRepository.save({
         id: result.id,
@@ -487,7 +489,6 @@ export class ResultsService {
             resultGeneralInformation.institutions[index].institutions_id;
           institutionsNew.last_updated_by = user.id;
           institutionsNew.result_id = resultGeneralInformation.result_id;
-          institutionsNew.version_id = vrs.id;
           institutionsNew.is_active = true;
           saveInstitutions.push(institutionsNew);
         }
@@ -527,7 +528,6 @@ export class ResultsService {
             ].institutions_type_id;
           institutionsTypeNew.last_updated_by = user.id;
           institutionsTypeNew.results_id = resultGeneralInformation.result_id;
-          institutionsTypeNew.version_id = vrs.id;
           institutionsTypeNew.is_active = true;
           saveInstitutionsType.push(institutionsTypeNew);
         }
@@ -879,8 +879,10 @@ export class ResultsService {
         };
       }
 
-      const version = await this._versionsService.findBaseVersion();
-      if (version.status >= 300) {
+      const version = await this._versioningService.$_findActivePhase(
+        AppModuleIdEnum.REPORTING,
+      );
+      if (!version) {
         throw this._handlersError.returnErrorRes({
           error: version,
           debug: true,
@@ -900,7 +902,6 @@ export class ResultsService {
 
       const rl: ResultLevel = <ResultLevel>resultLevel;
       const rt: ResultType = <ResultType>resultType.response;
-      const vrs: Version = <Version>version.response;
 
       const legacyResult = await this._resultLegacyRepository.findOne({
         where: { legacy_id: mapLegacy.legacy_id },
@@ -916,7 +917,7 @@ export class ResultsService {
         created_by: user.id,
         last_updated_by: user.id,
         result_type_id: rt.id,
-        version_id: vrs.id,
+        version_id: version.id,
         title: legacyResult.title,
         description: legacyResult.description,
         reported_year_id: year.year,
@@ -932,7 +933,6 @@ export class ResultsService {
           initiative_id: initiative.id,
           initiative_role_id: 1,
           result_id: newResultHeader.id,
-          version_id: vrs.id,
         },
       );
 
@@ -954,7 +954,6 @@ export class ResultsService {
           institutionsNew.institutions_id = partner[index].clarisa_id;
           institutionsNew.last_updated_by = user.id;
           institutionsNew.result_id = newResultHeader.id;
-          institutionsNew.version_id = vrs.id;
           institutionsNew.is_active = true;
           saveInstitutions.push(institutionsNew);
         }

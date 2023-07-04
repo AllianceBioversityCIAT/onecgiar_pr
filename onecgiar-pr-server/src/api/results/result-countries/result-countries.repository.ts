@@ -32,15 +32,10 @@ export class ResultCountryRepository
         ? as result_id,
         rc.country_id,
         now() as created_date,
-        now() as last_updated_date,
-        ? as version_id
+        now() as last_updated_date
         from result_country rc WHERE rc.result_id = ? and is_active > 0`;
         const response = await (<Promise<ResultCountry[]>>(
-          this.query(queryData, [
-            config.new_result_id,
-            config.phase,
-            config.old_result_id,
-          ])
+          this.query(queryData, [config.new_result_id, config.old_result_id])
         ));
         const response_edit = <ResultCountry[]>(
           config.f.custonFunction(response)
@@ -53,20 +48,17 @@ export class ResultCountryRepository
           result_id,
           country_id,
           created_date,
-          last_updated_date,
-          version_id
+          last_updated_date
           )
           select
           rc.is_active,
           ? as result_id,
           rc.country_id,
           now() as created_date,
-          now() as last_updated_date,
-          ? as version_id
+          now() as last_updated_date
           from result_country rc WHERE rc.result_id = ? and is_active > 0;`;
         await this.query(queryData, [
           config.new_result_id,
-          config.phase,
           config.old_result_id,
         ]);
         const queryFind = `
@@ -76,8 +68,7 @@ export class ResultCountryRepository
         rc.result_id,
         rc.country_id,
         rc.created_date,
-        rc.last_updated_date,
-        rc.version_id
+        rc.last_updated_date
         from result_country rc WHERE rc.result_id = ?`;
         final_data = await this.query(queryFind, [config.new_result_id]);
       }
@@ -105,12 +96,11 @@ export class ResultCountryRepository
     rc.created_date,
     rc.last_updated_date 
     from result_country rc 
-    where rc.is_active > 0
-      and rc.version_id = ?;
+    where rc.is_active > 0;
     `;
 
     try {
-      const result: ResultCountry[] = await this.query(query, [version]);
+      const result: ResultCountry[] = await this.query(query, []);
       return result;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

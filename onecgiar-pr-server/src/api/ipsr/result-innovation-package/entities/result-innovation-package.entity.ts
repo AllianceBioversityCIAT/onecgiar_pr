@@ -213,12 +213,6 @@ export class ResultInnovationPackage extends BaseEntity {
   })
   obj_active_backstopping!: ActiveBackstopping;
 
-  @ManyToOne(() => Version, (v) => v.id)
-  @JoinColumn({
-    name: 'version_id',
-  })
-  obj_version: Version;
-
   @OneToOne(() => Result, (r) => r.id)
   @JoinColumn({
     name: 'result_innovation_package_id',

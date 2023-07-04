@@ -39,10 +39,6 @@ export class Template {
   @Column({ nullable: true })
   parent_id: number;
 
-  //versioning field
-  @Column()
-  version_id: number;
-
   //audit fields
   @Column({
     name: 'is_active',
@@ -82,12 +78,6 @@ export class Template {
 
   @OneToMany(() => Template, (t) => t.parent_object)
   children_array: PlatformReport[];
-
-  @ManyToOne(() => Version, (v) => v.id, { nullable: false })
-  @JoinColumn({
-    name: 'version_id',
-  })
-  version_object: number;
 
   @ManyToOne(() => User, (u) => u.id, { nullable: false })
   @JoinColumn({

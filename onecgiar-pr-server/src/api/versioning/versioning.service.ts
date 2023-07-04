@@ -37,6 +37,7 @@ import { ResultsKnowledgeProductKeywordRepository } from '../results/results-kno
 import { ResultsKnowledgeProductMetadataRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-metadata.repository';
 import { ResultsKnowledgeProductInstitutionRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-institution.repository';
 import {
+  AppModuleIdEnum,
   ModuleTypeEnum,
   StatusPhaseEnum,
 } from '../../shared/constants/role-type.enum';
@@ -87,12 +88,13 @@ export class VersioningService {
    *  @throws {Error} If an error occurs while retrieving the active version
    *  and return null.
    */
-  async $_findActivePhase(): Promise<Version> {
+  async $_findActivePhase(module_id: AppModuleIdEnum): Promise<Version> {
     try {
       const version = await this._versionRepository.findOne({
         where: {
           status: true,
           is_active: true,
+          app_module_id: module_id,
         },
       });
 

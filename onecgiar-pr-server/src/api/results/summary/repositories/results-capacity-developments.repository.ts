@@ -36,7 +36,6 @@ export class ResultsCapacityDevelopmentsRepository
         now() as created_date,
         null as last_updated_date,
         ? as result_id,
-        ? as version_id,
         ? as created_by,
         null as last_updated_by,
         rcd.male_using,
@@ -48,7 +47,6 @@ export class ResultsCapacityDevelopmentsRepository
         const response = await (<Promise<ResultsCapacityDevelopments[]>>(
           this.query(queryData, [
             config.new_result_id,
-            config.phase,
             config.user.id,
             config.old_result_id,
           ])
@@ -64,7 +62,6 @@ export class ResultsCapacityDevelopmentsRepository
           created_date,
           last_updated_date,
           result_id,
-          version_id,
           created_by,
           last_updated_by,
           male_using,
@@ -77,7 +74,6 @@ export class ResultsCapacityDevelopmentsRepository
           now() as created_date,
           null as last_updated_date,
           ? as result_id,
-          ? as version_id,
           ? as created_by,
           null as last_updated_by,
           rcd.male_using,
@@ -87,7 +83,6 @@ export class ResultsCapacityDevelopmentsRepository
           from results_capacity_developments rcd where rcd.result_id = ? and rcd.is_active > 0`;
         await this.query(queryData, [
           config.new_result_id,
-          config.phase,
           config.user.id,
           config.old_result_id,
         ]);
@@ -99,7 +94,6 @@ export class ResultsCapacityDevelopmentsRepository
         rcd.created_date,
         rcd.last_updated_date,
         rcd.result_id,
-        rcd.version_id,
         rcd.created_by,
         rcd.last_updated_by,
         rcd.male_using,
@@ -131,7 +125,6 @@ export class ResultsCapacityDevelopmentsRepository
     	rcd.created_date,
     	rcd.last_updated_date,
     	rcd.result_id,
-    	rcd.version_id,
     	rcd.created_by,
     	rcd.last_updated_by,
     	rcd.male_using,
