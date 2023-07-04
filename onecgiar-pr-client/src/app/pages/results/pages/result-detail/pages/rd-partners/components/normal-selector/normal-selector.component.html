@@ -1,18 +1,24 @@
-<app-alert-status
+<app-alert-status *ngIf="!dataControlSE.isKnowledgeProduct"
     description="Partner organization that you collaborated with or are currently collaborating with to generate this result">
 </app-alert-status>
+<app-alert-status *ngIf="dataControlSE.isKnowledgeProduct"
+    description="Guideline pending (this is only a placeholder to help seeing the separation between the two partner sections)">
+</app-alert-status>
+<div class="column_title" *ngIf="dataControlSE.isKnowledgeProduct">
+    Additional Partners
+</div>
 <div [ngSwitch]="this.rolesSE.readOnly || !!this.dataControlSE?.currentResult?.status">
     <div *ngSwitchCase="true">{{this.rdPartnersSE.partnersBody.no_applicable_partner?'Marked as not applicable':''}}
     </div>
     <div *ngSwitchCase="false">
         <app-pr-checkbox label="Mark this option if this section is not applicable"
-            [(ngModel)]="this.rdPartnersSE.partnersBody.no_applicable_partner"
-            (ngModelChange)="this.rdPartnersSE.cleanBody()">
+            [(ngModel)]="this.rdPartnersSE.partnersBody.no_applicable_partner">
+            <!--(ngModelChange)="this.rdPartnersSE.cleanBody()"-->
         </app-pr-checkbox>
     </div>
 </div>
 
-<app-alert-status [hidden]="this.rdPartnersSE.partnersBody.no_applicable_partner" *ngIf="!this.rolesSE.readOnly"
+<app-alert-status [hidden]="this.rdPartnersSE.partnersBody.no_applicable_partner" *ngIf="!this.rolesSE.readOnly && !dataControlSE.isKnowledgeProduct"
     description="If you don't find the partner you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list">
 </app-alert-status>
 

@@ -62,6 +62,7 @@ import { LogRepository } from '../../connection/dynamodb-logs/dynamodb-logs.repo
 import { Actions } from 'src/connection/dynamodb-logs/dto/enumAction.const';
 import { VersioningService } from '../versioning/versioning.service';
 import { AppModuleIdEnum } from 'src/shared/constants/role-type.enum';
+import { InstitutionRoleEnum } from './results_by_institutions/entities/institution_role.enum';
 
 @Injectable()
 export class ResultsService {
@@ -465,8 +466,9 @@ export class ResultsService {
         await this._resultByIntitutionsRepository.updateIstitutions(
           resultGeneralInformation.result_id,
           resultGeneralInformation.institutions,
-          true,
           user.id,
+          false,
+          [InstitutionRoleEnum.ACTOR],
         );
       let saveInstitutions: ResultsByInstitution[] = [];
       for (
@@ -478,7 +480,7 @@ export class ResultsService {
           await this._resultByIntitutionsRepository.getResultByInstitutionExists(
             resultGeneralInformation.result_id,
             resultGeneralInformation.institutions[index].institutions_id,
-            true,
+            InstitutionRoleEnum.ACTOR,
           );
         if (!isInstitutions) {
           const institutionsNew: ResultsByInstitution =
@@ -944,7 +946,7 @@ export class ResultsService {
           await this._resultByIntitutionsRepository.getResultByInstitutionExists(
             newResultHeader.id,
             partner[index].clarisa_id,
-            true,
+            InstitutionRoleEnum.ACTOR,
           );
         if (!isInstitutions) {
           const institutionsNew: ResultsByInstitution =

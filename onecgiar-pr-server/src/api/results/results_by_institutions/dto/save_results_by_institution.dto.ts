@@ -7,8 +7,9 @@ export class SaveResultsByInstitutionDto {
   public mqap_institutions: MQAPInstitutionDto[];
 }
 
-interface institutionsInterface {
+export interface institutionsInterface {
   institution_mqap_id?: number;
   institutions_id: number;
   deliveries?: number[];
+  institution_roles_id?: number;
 }

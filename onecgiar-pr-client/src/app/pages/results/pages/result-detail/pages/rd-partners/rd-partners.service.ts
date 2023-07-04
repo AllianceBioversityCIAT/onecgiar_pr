@@ -25,10 +25,10 @@ export class RdPartnersService {
     this.partnersBody.institutions.splice(index, 1);
     this.toggle++;
   }
-  cleanBody() {
+  /*cleanBody() {
     if (this.partnersBody.no_applicable_partner === true) this.partnersBody = new PartnersBody(true);
     if (this.partnersBody.no_applicable_partner === false) this.getSectionInformation(false);
-  }
+  }*/
 
   getSectionInformation(no_applicable_partner?) {
     this.api.resultsSE.GET_partnersSection().subscribe(

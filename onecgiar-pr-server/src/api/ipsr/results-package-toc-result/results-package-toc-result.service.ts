@@ -25,6 +25,7 @@ import { ResultIpEoiOutcomeRepository } from '../innovation-pathway/repository/r
 import { ResultInnovationPackageRepository } from '../result-innovation-package/repositories/result-innovation-package.repository';
 import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
 import { VersioningService } from '../../versioning/versioning.service';
+import { InstitutionRoleEnum } from '../../results/results_by_institutions/entities/institution_role.enum';
 
 @Injectable()
 export class ResultsPackageTocResultService {
@@ -259,7 +260,6 @@ export class ResultsPackageTocResultService {
         await this._resultByIntitutionsRepository.updateIstitutions(
           rip.id,
           inst,
-          false,
           user.id,
         );
         for (const ins of inst) {
@@ -300,7 +300,6 @@ export class ResultsPackageTocResultService {
         await this._resultByIntitutionsRepository.updateIstitutions(
           rip.id,
           [],
-          false,
           user.id,
         );
       }
