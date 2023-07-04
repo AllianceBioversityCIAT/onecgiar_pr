@@ -261,10 +261,6 @@ export class Result {
   // helpers??
   initiative_id!: number;
 
-  get isKnowledgeProduct(): boolean {
-    return this.result_type_id == 6;
-  }
-
   @OneToMany(() => ResultsKnowledgeProduct, (rkp) => rkp.result_object)
   result_knowledge_product_array: ResultsKnowledgeProduct[];
 
