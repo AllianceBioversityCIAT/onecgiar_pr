@@ -594,7 +594,7 @@ export class ResultsService {
         true,
       );
 
-      if (result.isKnowledgeProduct) {
+      if (result.result_type_id == 6) {
         const { result_knowledge_product_id: kpId } =
           await this._resultKnowledgeProductRepository.findOne({
             where: { results_id: result.id },
