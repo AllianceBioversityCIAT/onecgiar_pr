@@ -15,12 +15,14 @@ import { ResultsPolicyChangesRepository } from '../summary/repositories/results-
 import { ResultsInnovationsUseRepository } from '../summary/repositories/results-innovations-use.repository';
 import { ResultsCapacityDevelopmentsRepository } from '../summary/repositories/results-capacity-developments.repository';
 import { ResultsInnovationsDevRepository } from '../summary/repositories/results-innovations-dev.repository';
+import { VersioningModule } from '../../versioning/versioning.module';
 
 @Module({
   imports: [
     ResultsKnowledgeProductsModule,
     forwardRef(() => ResultsModule),
     SummaryModule,
+    VersioningModule,
   ],
   controllers: [AdminPanelController],
   providers: [

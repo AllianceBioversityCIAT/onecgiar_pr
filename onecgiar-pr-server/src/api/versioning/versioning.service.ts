@@ -296,7 +296,7 @@ export class VersioningService {
             statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
           });
         }
-
+        
         return this._returnResponse.format({
           message: `The result ${legacy_result.result_code} is in the ${phase.phase_name} phase with id ${res.id}`,
           response: res,

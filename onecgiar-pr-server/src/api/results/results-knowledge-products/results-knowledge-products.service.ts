@@ -50,6 +50,8 @@ import { ResultRegion } from '../result-regions/entities/result-region.entity';
 import { CGSpaceCountryMappingsRepository } from './repositories/cgspace-country-mappings.repository';
 import { ResultCountry } from '../result-countries/entities/result-country.entity';
 import { ResultCountryRepository } from '../result-countries/result-countries.repository';
+import { VersioningService } from '../../versioning/versioning.service';
+import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
 
 @Injectable()
 export class ResultsKnowledgeProductsService {
@@ -99,6 +101,7 @@ export class ResultsKnowledgeProductsService {
     private readonly _clarisaRegionsRepository: ClarisaRegionsRepository,
     private readonly _cgSpaceCountryMappingsRepository: CGSpaceCountryMappingsRepository,
     private readonly _resultCountryRepository: ResultCountryRepository,
+    private readonly _versioningService: VersioningService,
   ) {}
 
   private async createOwnerResult(
@@ -160,7 +163,9 @@ export class ResultsKnowledgeProductsService {
       const rl: ResultLevel = <ResultLevel>resultLevel;
 
       const currentVersion: Version =
-        await this._versionRepository.getBaseVersion();
+        await this._versioningService.$_findActivePhase(
+          AppModuleIdEnum.REPORTING,
+        );
 
       if (!currentVersion) {
         throw {

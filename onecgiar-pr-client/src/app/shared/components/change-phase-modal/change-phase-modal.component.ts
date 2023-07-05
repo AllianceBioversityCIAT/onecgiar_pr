@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../services/api/api.service';
 import { ResultsApiService } from '../../services/api/results-api.service';
 import { ModuleTypeEnum, StatusPhaseEnum } from '../../enum/api.enum';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-change-phase-modal',
@@ -9,7 +10,7 @@ import { ModuleTypeEnum, StatusPhaseEnum } from '../../enum/api.enum';
   styleUrls: ['./change-phase-modal.component.scss']
 })
 export class ChangePhaseModalComponent implements OnInit {
-  constructor(public api: ApiService, private _resultsApiService: ResultsApiService) {}
+  constructor(public api: ApiService, private _resultsApiService: ResultsApiService, private router: Router) {}
   public version: any = null;
   public requesting: boolean = false;
   public globalDisabled = 'globalDisabled';
@@ -32,6 +33,8 @@ export class ChangePhaseModalComponent implements OnInit {
         this.requesting = false;
         this.api.updateResultsList();
         this.api.dataControlSE.chagePhaseModal = false;
+        console.log(response);
+        this.router.navigate([`/result/result-detail/${response?.result_code}/general-information`], { queryParams: { phase: response?.version_id } });
       },
       error: error => {
         this.api.alertsFe.show({ id: 'noti', title: `Error`, description: `${error.error.message}`, status: 'error' });
