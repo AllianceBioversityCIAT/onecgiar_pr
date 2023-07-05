@@ -7,3 +7,19 @@
 <app-test-environment-label *ngIf="!isProduction"></app-test-environment-label>
 <app-share-request-modal></app-share-request-modal>
 <app-footer></app-footer>
+<p-dialog class="support_information" header="Title" [(visible)]="this.footerSE.displayContactUs" [draggable]="false"
+    [modal]="true" [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true" [style]="{padding: '0px'}">
+    <div class="modal_container">
+        <div class="line"></div>
+        <div class="line"></div>
+        <i class="material-icons-round close_icon" (click)="this.footerSE.displayContactUs = false">close</i>
+
+        <div class="title">Please do not hesitate to contact us:</div>
+        <div class="email">For technical questions related with this tool, please contact <a
+                href="mailto: PRMSTechSupport@cgiar.org">PRMSTechSupport@cgiar.org</a>
+        </div>
+        <div class="email">For content questions related on how to fill different sections, please contact <a
+                href="mailto: projectcoordinationunit@cgiar.org">projectcoordinationunit@cgiar.org</a>
+        </div>
+    </div>
+</p-dialog>

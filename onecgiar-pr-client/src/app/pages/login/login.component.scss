@@ -100,54 +100,6 @@
 }
 
 
-.modal_container {
-    position: relative;
-    padding: 80px 80px;
-
-    .close_icon {
-        position: absolute;
-        color: var(--pr-color-primary);
-        right: 0;
-        top: 8px;
-        margin-right: 20px;
-        cursor: pointer;
-    }
-
-    .email {
-        margin-bottom: 8px;
-
-        a {
-            color: var(--pr-color-primary);
-            text-decoration: none;
-            font-weight: 500;
-        }
-    }
-
-    .title {
-        font-size: 1.8em;
-        font-weight: 600;
-        margin-bottom: 20px;
-    }
-
-    .line:nth-child(1) {
-        width: 15px;
-        height: 100%;
-        background-color: var(--pr-color-primary);
-        position: absolute;
-        top: 0;
-        left: 0;
-    }
-
-    .line:nth-child(2) {
-        width: 15px;
-        height: 100%;
-        background-color: var(--pr-color-primary);
-        position: absolute;
-        top: 0;
-        right: 0;
-
-    }
-}
 
 
 
