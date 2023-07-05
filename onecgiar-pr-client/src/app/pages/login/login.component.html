@@ -22,7 +22,7 @@ of Simple CSS Waves-->
         <div class="center_flex_100" id="login" style="margin-top: 20px;" (click)="onLogin()">
           <app-pr-button padding="medium" text="Login" icon="arrow_forward_ios"></app-pr-button>
         </div>
-        <div class="question_container" (click)="this.display = true" id="question">
+        <div class="question_container" (click)="this.footerSE.displayContactUs = true" id="question">
           <a class="question">Have a question?</a>
         </div>
 
@@ -48,19 +48,3 @@ of Simple CSS Waves-->
   <!--Waves end-->
 </div>
 <!--Header ends-->
-<p-dialog class="support_information" header="Title" [(visible)]="display" [draggable]="false" [modal]="true"
-  [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true" [style]="{padding: '0px'}">
-  <div class="modal_container">
-    <div class="line"></div>
-    <div class="line"></div>
-    <i class="material-icons-round close_icon" (click)="this.display = false">close</i>
-
-    <div class="title">Please do not hesitate to contact us:</div>
-    <div class="email">For technical questions related with this tool, please contact <a
-        href="mailto: PRMSTechSupport@cgiar.org">PRMSTechSupport@cgiar.org</a>
-    </div>
-    <div class="email">For content questions related on how to fill different sections, please contact <a
-        href="mailto: projectcoordinationunit@cgiar.org">projectcoordinationunit@cgiar.org</a>
-    </div>
-  </div>
-</p-dialog>
