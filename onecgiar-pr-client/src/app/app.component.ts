@@ -3,6 +3,7 @@ import { AuthService } from './shared/services/api/auth.service';
 import { environment } from '../environments/environment';
 import { RolesService } from './shared/services/global/roles.service';
 import { ApiService } from './shared/services/api/api.service';
+import { FooterService } from './shared/components/footer/footer.service';
 
 @Component({
   selector: 'app-root',
@@ -12,7 +13,7 @@ import { ApiService } from './shared/services/api/api.service';
 export class AppComponent implements OnInit {
   title = 'onecgiar-pr-client';
   isProduction = environment.production;
-  constructor(public AuthService: AuthService, public rolesSE: RolesService, private api: ApiService) {}
+  constructor(public AuthService: AuthService, public rolesSE: RolesService, private api: ApiService, public footerSE: FooterService) {}
   ngOnInit(): void {
     // this.AuthService.inLogin = false;
     setTimeout(() => {
