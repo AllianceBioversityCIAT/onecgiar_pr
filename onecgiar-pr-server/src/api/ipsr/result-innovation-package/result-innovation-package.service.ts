@@ -807,14 +807,14 @@ export class ResultInnovationPackageService {
       if (req?.nutrition_tag_level_id) {
         if (nutritionEvidenceExist) {
           await this._evidenceRepository.update(nutritionEvidenceExist.id, {
-            link: req?.nutrition_related,
+            link: req?.evidence_nutrition_tag,
             last_updated_by: user.id,
             nutrition_related: true,
           });
         } else {
           await this._evidenceRepository.save({
             result_id: resultId,
-            link: req?.nutrition_related,
+            link: req?.evidence_nutrition_tag,
             created_by: user.id,
             last_updated_by: user.id,
             nutrition_related: true,
@@ -833,14 +833,14 @@ export class ResultInnovationPackageService {
       if (req?.environmental_biodiversity_tag_level_id) {
         if (enviromentEvidenceExist) {
           await this._evidenceRepository.update(enviromentEvidenceExist.id, {
-            link: req?.environmental_biodiversity_related,
+            link: req?.evidence_environment_tag,
             last_updated_by: user.id,
             environmental_biodiversity_related: true,
           });
         } else {
           await this._evidenceRepository.save({
             result_id: resultId,
-            link: req?.environmental_biodiversity_related,
+            link: req?.evidence_environment_tag,
             created_by: user.id,
             last_updated_by: user.id,
             environmental_biodiversity_related: true,
@@ -859,14 +859,14 @@ export class ResultInnovationPackageService {
       if (req?.poverty_tag_level_id) {
         if (povertyEvidenceExist) {
           await this._evidenceRepository.update(povertyEvidenceExist.id, {
-            link: req?.poverty_related,
+            link: req?.evidence_poverty_tag,
             last_updated_by: user.id,
             poverty_related: true,
           });
         } else {
           await this._evidenceRepository.save({
             result_id: resultId,
-            link: req?.poverty_related,
+            link: req?.evidence_poverty_tag,
             created_by: user.id,
             last_updated_by: user.id,
             poverty_related: true,
