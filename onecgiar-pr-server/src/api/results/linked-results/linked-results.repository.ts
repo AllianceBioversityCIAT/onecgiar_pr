@@ -178,6 +178,8 @@ export class LinkedResultRepository
     r.gender_tag_level_id,
     r.result_type_id,
     r.status,
+    r.status_id,
+    rs.status_name,
     r.created_by,
     r.last_updated_by,
     r.reported_year_id,
@@ -195,7 +197,8 @@ export class LinkedResultRepository
   from linked_result lr 
   	left join \`result\` r on r.id  = lr.linked_results_id 
     left join result_level rl on rl.id = r.result_level_id 
-    left join result_type rt on rt.id = r.result_type_id  
+    left join result_type rt on rt.id = r.result_type_id 
+    INNER JOIN result_status rs ON rs.result_status_id = r.status_id  
     where lr.origin_result_id = ?
           and lr.is_active > 0;
     `;

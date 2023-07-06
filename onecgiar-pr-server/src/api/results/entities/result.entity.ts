@@ -24,6 +24,7 @@ import { Ipsr } from '../../ipsr/entities/ipsr.entity';
 import { ResultActor } from '../result-actors/entities/result-actor.entity';
 import { ResultsByInititiative } from '../results_by_inititiatives/entities/results_by_inititiative.entity';
 import { ResultIpExpertWorkshopOrganized } from '../../ipsr/innovation-pathway/entities/result-ip-expert-workshop-organized.entity';
+import { ResultStatus } from '../result-status/entities/result-status.entity';
 
 @Entity()
 @Index(['result_code', 'version_id'], { unique: true })
@@ -174,6 +175,20 @@ export class Result {
     default: 0,
   })
   status!: number;
+
+  @Column({
+    name: 'status_id',
+    type: 'bigint',
+    nullable: true,
+    default: 1,
+  })
+  status_id!: number;
+
+  @ManyToOne(() => ResultStatus, (rs) => rs.result_status_list)
+  @JoinColumn({
+    name: 'status_id',
+  })
+  obj_status!: ResultStatus;
 
   @Column({
     name: 'reported_year_id',

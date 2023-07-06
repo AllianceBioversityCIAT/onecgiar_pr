@@ -70,6 +70,7 @@ import { VersioningService } from '../versioning/versioning.service';
 import { ApplicationModulesRepository } from '../versioning/repositories/application-modules.repository';
 import { VersioningModule } from '../versioning/versioning.module';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
+import { ResultStatusModule } from './result-status/result-status.module';
 
 @Module({
   controllers: [ResultsController],
@@ -119,6 +120,7 @@ import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.inter
     ResultBudgetModule,
     ResultCountriesSubNationalModule,
     VersioningModule,
+    ResultStatusModule,
   ],
   providers: [
     ResultsService,

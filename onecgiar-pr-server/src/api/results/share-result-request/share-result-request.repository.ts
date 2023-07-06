@@ -108,6 +108,8 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     	r.description,
     	r.title,
 		r.status,
+		r.status_id,
+		rs.status_name,
 		r.result_level_id,
 		r.result_type_id,
     	rt.name as result_type_name,
@@ -123,6 +125,7 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     	left join users u2 on u2.id = srr.approved_by 
 		left join clarisa_initiatives ci on ci.id = srr.approving_inititiative_id 
     	left join clarisa_initiatives ci2 on ci2.id = srr.requester_initiative_id 
+		INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
     WHERE 
     	srr.approving_inititiative_id in (
     	SELECT
