@@ -200,6 +200,66 @@ export class IpsrRepository extends Repository<Ipsr>{
                     AND e2.is_active = 1
                     LIMIT 1
             ) AS evidence_climate_tag,
+            r.nutrition_tag_level_id,
+            (
+                SELECT
+                    gtl3.title
+                FROM
+                    gender_tag_level gtl3
+                WHERE
+                    gtl3.id = r.nutrition_tag_level_id
+            ) AS nutrition_tag_level,
+            (
+                SELECT
+                    e3.link
+                FROM
+                    evidence e3
+                WHERE
+                    e3.result_id = r.id
+                    AND e3.nutrition_related = TRUE
+                    AND e3.is_active = 1
+                    LIMIT 1
+            ) AS evidence_nutrition_tag,
+            r.environmental_biodiversity_tag_level_id,
+            (
+                SELECT
+                    gtl4.title
+                FROM
+                    gender_tag_level gtl4
+                WHERE
+                    gtl4.id = r.environmental_biodiversity_tag_level_id
+            ) AS environmental_biodiversity_tag_level,
+            (
+                SELECT
+                    e4.link
+                FROM
+                    evidence e4
+                WHERE
+                    e4.result_id = r.id
+                    AND e4.environmental_biodiversity_related = TRUE
+                    AND e4.is_active = 1
+                    LIMIT 1
+            ) AS evidence_enviroment_tag,
+            r.poverty_tag_level_id,
+            (
+                SELECT
+                    gtl5.title
+                FROM
+                    gender_tag_level gtl5
+                WHERE
+                    gtl5.id = r.poverty_tag_level_id
+            ) AS poverty_tag_level,
+            (
+                SELECT
+                    e5.link
+                FROM
+                    evidence e5
+                WHERE
+                    e5.result_id = r.id
+                    AND e5.poverty_related = TRUE
+                    AND e5.is_active = 1
+                    LIMIT 1
+            ) AS evidence_poverty_tag,
             IF((r.is_krs = 1), true, false ) AS is_krs,
             r.krs_url,
             r.lead_contact_person,
