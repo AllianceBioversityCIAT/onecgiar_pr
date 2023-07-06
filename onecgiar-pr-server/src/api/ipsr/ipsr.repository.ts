@@ -239,7 +239,7 @@ export class IpsrRepository extends Repository<Ipsr>{
                     AND e4.environmental_biodiversity_related = TRUE
                     AND e4.is_active = 1
                     LIMIT 1
-            ) AS evidence_enviroment_tag,
+            ) AS evidence_environment_tag,
             r.poverty_tag_level_id,
             (
                 SELECT

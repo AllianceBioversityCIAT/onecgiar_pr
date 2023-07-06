@@ -695,6 +695,7 @@ export class ResultInnovationPackageService {
     updateGeneralInformationDto: UpdateGeneralInformationDto,
     user: TokenDto,
   ) {
+    console.log("🚀 ~ file: result-innovation-package.service.ts:698 ~ ResultInnovationPackageService ~ updateGeneralInformationDto:", updateGeneralInformationDto)
     try {
       const resultExist = await this._resultRepository.findOneBy({
         id: resultId,
