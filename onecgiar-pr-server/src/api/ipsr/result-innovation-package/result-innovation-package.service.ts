@@ -735,6 +735,9 @@ export class ResultInnovationPackageService {
         lead_contact_person: req?.lead_contact_person,
         gender_tag_level_id: req?.gender_tag_level_id,
         climate_change_tag_level_id: req?.climate_change_tag_level_id,
+        nutrition_tag_level_id: req?.nutrition_tag_level_id,
+        environmental_biodiversity_tag_level_id: req?.environmental_biodiversity_tag_level_id,
+        poverty_tag_level_id: req?.poverty_tag_level_id,
         is_krs: req?.is_krs,
         krs_url: req?.krs_url,
         geographic_scope_id: resultExist.geographic_scope_id,
@@ -789,6 +792,84 @@ export class ResultInnovationPackageService {
             created_by: user.id,
             last_updated_by: user.id,
             youth_related: true,
+          });
+        }
+      }
+
+      const nutritionEvidenceExist = await this._evidenceRepository.findOne({
+        where: {
+          result_id: resultId,
+          is_active: 1,
+          nutrition_related: true,
+        },
+      });
+
+      if (req?.nutrition_tag_level_id) {
+        if (nutritionEvidenceExist) {
+          await this._evidenceRepository.update(nutritionEvidenceExist.id, {
+            link: req?.nutrition_related,
+            last_updated_by: user.id,
+            nutrition_related: true,
+          });
+        } else {
+          await this._evidenceRepository.save({
+            result_id: resultId,
+            link: req?.nutrition_related,
+            created_by: user.id,
+            last_updated_by: user.id,
+            nutrition_related: true,
+          });
+        }
+      }
+
+      const enviromentEvidenceExist = await this._evidenceRepository.findOne({
+        where: {
+          result_id: resultId,
+          is_active: 1,
+          environmental_biodiversity_related: true,
+        },
+      });
+
+      if (req?.environmental_biodiversity_tag_level_id) {
+        if (enviromentEvidenceExist) {
+          await this._evidenceRepository.update(enviromentEvidenceExist.id, {
+            link: req?.environmental_biodiversity_related,
+            last_updated_by: user.id,
+            environmental_biodiversity_related: true,
+          });
+        } else {
+          await this._evidenceRepository.save({
+            result_id: resultId,
+            link: req?.environmental_biodiversity_related,
+            created_by: user.id,
+            last_updated_by: user.id,
+            environmental_biodiversity_related: true,
+          });
+        }
+      }
+
+      const povertyEvidenceExist = await this._evidenceRepository.findOne({
+        where: {
+          result_id: resultId,
+          is_active: 1,
+          environmental_biodiversity_related: true,
+        },
+      });
+
+      if (req?.poverty_tag_level_id) {
+        if (povertyEvidenceExist) {
+          await this._evidenceRepository.update(povertyEvidenceExist.id, {
+            link: req?.poverty_related,
+            last_updated_by: user.id,
+            poverty_related: true,
+          });
+        } else {
+          await this._evidenceRepository.save({
+            result_id: resultId,
+            link: req?.poverty_related,
+            created_by: user.id,
+            last_updated_by: user.id,
+            poverty_related: true,
           });
         }
       }
