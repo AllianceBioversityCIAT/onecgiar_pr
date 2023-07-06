@@ -7,7 +7,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { BaseEntity } from '../../../shared/entities/base-entity';
-import { Version } from '../../results/versions/entities/version.entity';
+import { Version } from '../../versioning/entities/version.entity';
 import { Result } from '../../results/entities/result.entity';
 import { IpsrRole } from './ipsr-role.entity';
 import { ResultInnovationPackage } from '../result-innovation-package/entities/result-innovation-package.entity';
@@ -121,12 +121,6 @@ export class Ipsr extends BaseEntity {
     name: 'ipsr_role_id',
   })
   obj_ipsr_role: IpsrRole;
-
-  @ManyToOne(() => Version, (v) => v.innovation_by_result)
-  @JoinColumn({
-    name: 'version_id',
-  })
-  obj_version: Version;
 
   @ManyToOne(
     () => ResultInnovationPackage,

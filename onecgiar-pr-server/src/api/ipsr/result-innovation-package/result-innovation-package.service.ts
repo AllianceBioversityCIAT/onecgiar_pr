@@ -7,7 +7,7 @@ import {
   CreateResultInnovationPackageDto,
   UpdateGeneralInformationDto,
 } from './dto/create-result-innovation-package.dto';
-import { Version } from '../../results/versions/entities/version.entity';
+import { Version } from '../../versioning/entities/version.entity';
 import { VersionsService } from '../../../api/results/versions/versions.service';
 import { ResultRegion } from '../../../api/results/result-regions/entities/result-region.entity';
 import { ResultRegionRepository } from '../../../api/results/result-regions/result-regions.repository';
@@ -48,6 +48,8 @@ import { LinkedResultRepository } from '../../results/linked-results/linked-resu
 import { EvidencesRepository } from '../../results/evidences/evidences.repository';
 import { IpsrService } from '../ipsr.service';
 import { ResultIpSdgTargets } from '../innovation-pathway/entities/result-ip-sdg-targets.entity';
+import { VersioningService } from '../../versioning/versioning.service';
+import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
 
 @Injectable()
 export class ResultInnovationPackageService {
@@ -78,10 +80,11 @@ export class ResultInnovationPackageService {
     private readonly _unitTimeRepository: UnitTimeRepository,
     private readonly _tocResult: TocResultsRepository,
     private readonly _resultCountriesSubNationalRepository: ResultCountriesSubNationalRepository,
-    protected readonly _yearRepository: YearRepository,
-    protected readonly _linkedResultRepository: LinkedResultRepository,
-    protected readonly _evidenceRepository: EvidencesRepository,
-    protected readonly _ipsrService: IpsrService,
+    private readonly _yearRepository: YearRepository,
+    private readonly _linkedResultRepository: LinkedResultRepository,
+    private readonly _evidenceRepository: EvidencesRepository,
+    private readonly _ipsrService: IpsrService,
+    private readonly _versioningService: VersioningService,
   ) {}
 
   async findUnitTime() {
@@ -236,10 +239,13 @@ export class ResultInnovationPackageService {
         };
       }
 
-      const version = await this._versionsService.findBaseVersion();
-      if (version.status >= 300) {
+      const version = await this._versioningService.$_findActivePhase(
+        AppModuleIdEnum.IPSR,
+      );
+      console.log('esto esta bien?', version);
+      if (!version) {
         throw this._handlersError.returnErrorRes({
-          error: version,
+          error: `No phase is open for the IPSR module`,
           debug: true,
         });
       }
@@ -253,11 +259,11 @@ export class ResultInnovationPackageService {
           status: HttpStatus.BAD_REQUEST,
         };
       }
-      const vrs: Version = <Version>version.response;
 
       const last_code = await this._resultRepository.getLastResultCode();
       const regions = CreateResultInnovationPackageDto.regions;
       const countries = CreateResultInnovationPackageDto.countries;
+      console.log('aun esta bien!');
 
       if ([1, 2, 5].includes(CreateResultInnovationPackageDto.geo_scope_id)) {
         innovationGeoScope = CreateResultInnovationPackageDto.geo_scope_id;
@@ -347,7 +353,7 @@ export class ResultInnovationPackageService {
         has_countries: countries ? true : false,
         geographic_scope_id: innovationGeoScope,
         initiative_id: CreateResultInnovationPackageDto.initiative_id,
-        version_id: vrs.id,
+        version_id: version.id,
         created_by: user.id,
         last_updated_by: user.id,
       });
@@ -358,7 +364,6 @@ export class ResultInnovationPackageService {
           result_id: newResult,
           initiative_id: CreateResultInnovationPackageDto.initiative_id,
           initiative_role_id: 1,
-          version_id: vrs.id,
           created_by: user.id,
           last_updated_by: user.id,
         });
@@ -367,7 +372,6 @@ export class ResultInnovationPackageService {
       const newresultInitiativeBudget =
         await this._resultInitiativesBudgetRepository.save({
           result_initiative_id: resultByInitiativesId,
-          version_id: vrs.id,
           created_by: user.id,
           last_updated_by: user.id,
         });
@@ -375,7 +379,6 @@ export class ResultInnovationPackageService {
       const newResultInnovationPackage =
         await this._resultInnovationPackageRepository.save({
           result_innovation_package_id: newResult,
-          version_id: vrs.id,
           created_by: user.id,
           last_updated_by: user.id,
         });
@@ -385,7 +388,6 @@ export class ResultInnovationPackageService {
           result_innovation_package_id: newResult,
           result_id: result.id,
           ipsr_role_id: 1,
-          version_id: vrs.id,
           created_by: user.id,
           last_updated_by: user.id,
         });
@@ -395,7 +397,6 @@ export class ResultInnovationPackageService {
       const linkedResult = await this._linkedResultRepository.save({
         linked_results_id: result.id,
         origin_result_id: newResult,
-        version_id: vrs.id,
         created_by: user.id,
         last_updated_by: user.id,
       });
@@ -410,7 +411,6 @@ export class ResultInnovationPackageService {
             newRegions.result_id = newResult;
             newRegions.region_id = regions[i].id;
             newRegions.is_active = true;
-            newRegions.version_id = vrs.id;
             resultRegions.push(newRegions);
           }
         }
@@ -424,7 +424,6 @@ export class ResultInnovationPackageService {
             const newRc = await this._resultCountryRepository.save({
               result_id: newResult,
               country_id: ct.id,
-              version_id: vrs.id,
             });
             newInnovationCountries.push(newRc);
             if (
@@ -435,7 +434,7 @@ export class ResultInnovationPackageService {
                 newRc.result_country_id,
                 ct.result_countries_sub_national,
                 user,
-                vrs,
+                version,
               );
             }
           }
@@ -450,7 +449,7 @@ export class ResultInnovationPackageService {
         coreInnovationInitiative.initiative_id,
         user.id,
         resultByInnivationPackage,
-        vrs.id,
+        version.id,
       );
 
       const retrievedImpactArea = await this.retrievedImpactArea(
@@ -458,7 +457,7 @@ export class ResultInnovationPackageService {
         coreInnovationInitiative.initiative_id,
         user.id,
         resultByInnivationPackage,
-        vrs.id,
+        version.id,
       );
 
       const retrieveSdgs = await this.retrievedSdgs(
@@ -466,7 +465,7 @@ export class ResultInnovationPackageService {
         coreInnovationInitiative.initiative_id,
         user.id,
         resultByInnivationPackage,
-        vrs.id,
+        version.id,
       );
 
       return {
@@ -487,6 +486,7 @@ export class ResultInnovationPackageService {
         status: HttpStatus.OK,
       };
     } catch (error) {
+      console.log(error);
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
@@ -552,7 +552,6 @@ export class ResultInnovationPackageService {
             sub_level_one_name: el?.sub_level_one_name,
             sub_level_two_name: el?.sub_level_two_name,
             result_countries_id: reCoId,
-            version_id: v.id,
           });
         }
       });
@@ -584,7 +583,10 @@ export class ResultInnovationPackageService {
     try {
       let saveAAOutcome: any;
       const searchTocData =
-        await this._resultIpAAOutcomeRepository.mapActionAreaOutcome(coreId, initId);
+        await this._resultIpAAOutcomeRepository.mapActionAreaOutcome(
+          coreId,
+          initId,
+        );
       const smoAAOutcomeToc = searchTocData.map((stc) => stc.outcome_smo_code);
       const mapAAOutcome = await this._clarisaAAOutcome.find({
         where: { outcomeSMOcode: In(smoAAOutcomeToc) },
@@ -596,7 +598,6 @@ export class ResultInnovationPackageService {
         newAAOutcome.result_by_innovation_package_id = resultByIpId;
         newAAOutcome.created_by = user;
         newAAOutcome.last_updated_by = user;
-        newAAOutcome.version_id = version;
         newAAOutcome.created_date = new Date();
         newAAOutcome.last_updated_date = new Date();
         saveAAOutcome = await this._resultIpAAOutcomeRepository.save(
@@ -636,7 +637,6 @@ export class ResultInnovationPackageService {
         newImpactArea.result_by_innovation_package_id = resultByIpId;
         newImpactArea.created_by = user;
         newImpactArea.last_updated_by = user;
-        newImpactArea.version_id = version;
         newImpactArea.created_date = new Date();
         newImpactArea.last_updated_date = new Date();
         saveImpactArea = await this._resultIpImpactAreaRespository.save(
@@ -675,7 +675,6 @@ export class ResultInnovationPackageService {
         newSdg.result_by_innovation_package_id = resultByIpId;
         newSdg.created_by = user;
         newSdg.last_updated_by = user;
-        newSdg.version_id = version;
         newSdg.created_date = new Date();
         newSdg.last_updated_date = new Date();
         saveSdgs = await this._resultIpSdgRespository.save(newSdg);
@@ -702,15 +701,15 @@ export class ResultInnovationPackageService {
       });
       const req = updateGeneralInformationDto;
 
-      const version = await this._versionsService.findBaseVersion();
-      if (version.status >= 300) {
+      const version = await this._versioningService.$_findActivePhase(
+        AppModuleIdEnum.IPSR,
+      );
+      if (!version) {
         throw this._handlersError.returnErrorRes({
           error: version,
           debug: true,
         });
       }
-
-      const vrs: Version = <Version>version.response;
 
       const titleValidate = await this._resultRepository
         .createQueryBuilder('result')
@@ -764,7 +763,6 @@ export class ResultInnovationPackageService {
             created_by: user.id,
             last_updated_by: user.id,
             gender_related: true,
-            version_id: vrs.id,
           });
         }
       }
@@ -791,7 +789,6 @@ export class ResultInnovationPackageService {
             created_by: user.id,
             last_updated_by: user.id,
             youth_related: true,
-            version_id: vrs.id,
           });
         }
       }

@@ -6,7 +6,7 @@ import {
   Entity,
 } from 'typeorm';
 import { ClarisaInstitutionsType } from '../../../../clarisa/clarisa-institutions-type/entities/clarisa-institutions-type.entity';
-import { Version } from '../../../results/versions/entities/version.entity';
+import { Version } from '../../../versioning/entities/version.entity';
 import { InstitutionRole } from '../../../results/institution_roles/entities/institution_role.entity';
 import { Ipsr } from '../../entities/ipsr.entity';
 import { BaseEntity } from '../../../../shared/entities/base-entity';
@@ -66,12 +66,6 @@ export class ResultsIpInstitutionType extends BaseEntity {
     nullable: true,
   })
   graduate_students!: number;
-
-  @ManyToOne(() => Version, (v) => v.id)
-  @JoinColumn({
-    name: 'version_id',
-  })
-  obj_version: Version;
 
   @ManyToOne(() => Ipsr, (iprs) => iprs.obj_result_ip_result_institutions_type)
   @JoinColumn({

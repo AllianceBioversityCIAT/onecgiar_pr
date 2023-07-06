@@ -12,7 +12,7 @@ import { User } from '../../../../auth/modules/user/entities/user.entity';
 import { ClarisaMeliaStudyType } from '../../../../clarisa/clarisa-melia-study-type/entities/clarisa-melia-study-type.entity';
 import { Result } from '../../entities/result.entity';
 import { KnowledgeProductFairBaseline } from '../../knowledge_product_fair_baseline/entities/knowledge_product_fair_baseline.entity';
-import { Version } from '../../versions/entities/version.entity';
+import { Version } from '../../../versioning/entities/version.entity';
 import { ResultsKnowledgeProductAltmetric } from './results-knowledge-product-altmetrics.entity';
 import { ResultsKnowledgeProductAuthor } from './results-knowledge-product-authors.entity';
 import { ResultsKnowledgeProductInstitution } from './results-knowledge-product-institution.entity';
@@ -120,7 +120,7 @@ export class ResultsKnowledgeProduct {
   @Column({
     name: 'is_melia',
     type: 'boolean',
-    default: false
+    default: false,
   })
   is_melia: boolean;
 
@@ -147,10 +147,6 @@ export class ResultsKnowledgeProduct {
     nullable: true,
   })
   cgspace_countries: string;
-
-  //versioning field
-  @Column()
-  version_id: number;
 
   //audit fields
   @Column({
@@ -223,12 +219,6 @@ export class ResultsKnowledgeProduct {
     name: 'results_id',
   })
   result_object: Result;
-
-  @ManyToOne(() => Version, (v) => v.id, { nullable: false })
-  @JoinColumn({
-    name: 'version_id',
-  })
-  version_object: number;
 
   @ManyToOne(() => User, (u) => u.id, { nullable: false })
   @JoinColumn({

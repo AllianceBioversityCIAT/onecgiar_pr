@@ -14,7 +14,7 @@ import { ExpertisesRepository } from '../innovation-packaging-experts/repositori
 import { InnovationPackagingExpertRepository } from '../innovation-packaging-experts/repositories/innovation-packaging-expert.repository';
 import { InnovationPackagingExpert } from '../innovation-packaging-experts/entities/innovation-packaging-expert.entity';
 import { Result } from '../../results/entities/result.entity';
-import { Version } from '../../results/versions/entities/version.entity';
+import { Version } from '../../versioning/entities/version.entity';
 import { ResultInnovationPackageRepository } from '../result-innovation-package/repositories/result-innovation-package.repository';
 import { VersionsService } from '../../results/versions/versions.service';
 import { IpsrRepository } from '../ipsr.repository';
@@ -47,6 +47,8 @@ import { ResultIpExpertises } from '../innovation-packaging-experts/entities/res
 import e from 'express';
 import { ResultCountriesSubNationalRepository } from '../../results/result-countries-sub-national/result-countries-sub-national.repository';
 import { ResultCountriesSubNational } from '../../results/result-countries-sub-national/entities/result-countries-sub-national.entity';
+import { VersioningService } from '../../versioning/versioning.service';
+import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
 
 @Injectable()
 export class InnovationPathwayStepOneService {
@@ -74,6 +76,7 @@ export class InnovationPathwayStepOneService {
     protected readonly _clarisaInstitutionsRepository: ClarisaInstitutionsRepository,
     protected readonly _resultIpExpertisesRepository: ResultIpExpertisesRepository,
     protected readonly _resultCountriesSubNationalRepository: ResultCountriesSubNationalRepository,
+    private readonly _versioningService: VersioningService,
   ) {}
 
   async getStepOne(resultId: number) {
@@ -453,11 +456,15 @@ export class InnovationPathwayStepOneService {
         };
       }
 
-      const vTemp = await this._versionsService.findBaseVersion();
-      if (vTemp.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: vTemp });
+      const version = await this._versioningService.$_findActivePhase(
+        AppModuleIdEnum.IPSR,
+      );
+      if (!version) {
+        throw this._handlersError.returnErrorRes({
+          error: version,
+          debug: true,
+        });
       }
-      const version: Version = <Version>vTemp.response;
 
       const specifyAspiredOutcomesAndImpact =
         await this.saveSpecifyAspiredOutcomesAndImpact(
@@ -558,7 +565,6 @@ export class InnovationPathwayStepOneService {
           newEoi.toc_result_id = eoi.toc_result_id;
           newEoi.result_by_innovation_package_id =
             result_by_innovation_package_id;
-          newEoi.version_id = version.id;
           newEoi.created_by = user.id;
           newEoi.last_updated_by = user.id;
           newEoi.created_date = new Date();
@@ -656,7 +662,6 @@ export class InnovationPathwayStepOneService {
           newEoi.action_area_outcome_id = entity.action_area_outcome_id;
           newEoi.result_by_innovation_package_id =
             result_by_innovation_package_id;
-          newEoi.version_id = version.id;
           newEoi.created_by = user.id;
           newEoi.last_updated_by = user.id;
           newEoi.created_date = new Date();
@@ -740,7 +745,6 @@ export class InnovationPathwayStepOneService {
           newEoi.impact_area_indicator_id = entity.targetId;
           newEoi.result_by_innovation_package_id =
             result_by_innovation_package_id;
-          newEoi.version_id = version.id;
           newEoi.created_by = user.id;
           newEoi.last_updated_by = user.id;
           newEoi.created_date = new Date();
@@ -815,7 +819,6 @@ export class InnovationPathwayStepOneService {
             newSdgs.result_by_innovation_package_id =
               resultByInnovationPackageId.result_by_innovation_package_id;
             newSdgs.created_by = user.id;
-            newSdgs.version_id = version.id;
             newSdgs.last_updated_by = user.id;
             newSdgs.created_date = new Date();
             newSdgs.last_updated_date = new Date();
@@ -902,7 +905,6 @@ export class InnovationPathwayStepOneService {
             {
               first_name: ex?.first_name,
               last_name: ex?.last_name,
-              version_id: v.id,
               is_active: ex.is_active == undefined ? true : ex.is_active,
               email: ex?.email,
               last_updated_by: user.id,
@@ -914,7 +916,6 @@ export class InnovationPathwayStepOneService {
           innExp = await this._innovationPackagingExpertRepository.save({
             first_name: ex?.first_name,
             last_name: ex?.last_name,
-            version_id: v.id,
             is_active: ex?.is_active,
             email: ex?.email,
             last_updated_by: user.id,
@@ -973,7 +974,6 @@ export class InnovationPathwayStepOneService {
           last_updated_by: user.id,
           expertises_id: el.expertises_id,
           result_ip_expert_id: result_ip_expert_id,
-          version_id: v.id,
         });
       }
     });
@@ -1014,7 +1014,6 @@ export class InnovationPathwayStepOneService {
           regional_integrated_id: rip.regional_integrated_id,
           relevant_country_id: rip.relevant_country_id,
           regional_leadership_id: rip.regional_leadership_id,
-          version_id: version.id,
           created_by: user.id,
           last_updated_by: user.id,
         });
@@ -1057,7 +1056,6 @@ export class InnovationPathwayStepOneService {
             institution_roles_id: 5,
             institutions_id: ins.institutions_id,
             result_id: result.id,
-            version_id: version.id,
             created_by: user.id,
             last_updated_by: user.id,
           });
@@ -1208,7 +1206,6 @@ export class InnovationPathwayStepOneService {
             last_updated_by: user.id,
             created_by: user.id,
             result_id: result.id,
-            version_id: version.id,
             sex_and_age_disaggregation:
               el?.sex_and_age_disaggregation === true ? true : false,
             how_many: el?.how_many,
@@ -1274,7 +1271,6 @@ export class InnovationPathwayStepOneService {
             graduate_students: el?.graduate_students,
             institution_roles_id: 5,
             how_many: el.how_many,
-            version_id: version.id,
           });
         }
       });
@@ -1337,7 +1333,6 @@ export class InnovationPathwayStepOneService {
             quantity: el.quantity,
             created_by: user.id,
             last_updated_by: user.id,
-            version_id: version.id,
           });
         }
       });

@@ -11,7 +11,7 @@ import {
 import { Result } from '../../entities/result.entity';
 import { Evidence } from '../../evidences/entities/evidence.entity';
 import { EvidenceType } from '../../evidence_types/entities/evidence_type.entity';
-import { Version } from '../../versions/entities/version.entity';
+import { Version } from '../../../versioning/entities/version.entity';
 
 @Entity('results_by_evidence')
 export class ResultsByEvidence {
@@ -45,12 +45,6 @@ export class ResultsByEvidence {
     nullable: false,
   })
   is_active: boolean;
-
-  @ManyToOne(() => Version, (v) => v.id, { nullable: false })
-  @JoinColumn({
-    name: 'version_id',
-  })
-  version_id: number;
 
   @ManyToOne(() => User, (u) => u.id, { nullable: false })
   @JoinColumn({

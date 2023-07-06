@@ -18,6 +18,7 @@ import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-c
 import { getInnovationComInterface } from '../../../../../../onecgiar-pr-server/src/api/ipsr/ipsr.repository';
 import { Observable } from 'rxjs';
 import { IpsrCompletenessStatusService } from '../../../pages/ipsr/services/ipsr-completeness-status.service';
+import { ModuleTypeEnum, StatusPhaseEnum } from '../../enum/api.enum';
 
 @Injectable({
   providedIn: 'root'
@@ -27,6 +28,7 @@ export class ResultsApiService {
   apiBaseUrl = environment.apiBaseUrl + 'api/results/';
   currentResultId: number | string = null;
   currentResultCode: number | string = null;
+  currentResultPhase: number | string = null;
   private readonly elasicCredentials = `Basic ${btoa(`${environment.elastic.username}:${environment.elastic.password}`)}`;
   GET_AllResultLevel() {
     return this.http.get<any>(`${this.apiBaseUrl}levels/all`);
@@ -448,8 +450,8 @@ export class ResultsApiService {
     );
   }
 
-  GET_resultIdToCode(resultCode) {
-    return this.http.get<any>(`${this.apiBaseUrl}get/transform/${resultCode}`);
+  GET_resultIdToCode(resultCode, phase: any = null) {
+    return this.http.get<any>(`${this.apiBaseUrl}get/transform/${resultCode}?phase=${phase}`);
   }
 
   POST_excelFullReport(resultCodes: any[]) {
@@ -548,7 +550,7 @@ export class ResultsApiService {
 
   GETInnovationPathwayStepTwoInnovationSelect() {
     console.log(this.ipsrDataControlSE.resultInnovationId);
-    
+
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/step-two/${this.ipsrDataControlSE.resultInnovationId}`);
   }
 
@@ -672,10 +674,9 @@ export class ResultsApiService {
     return this.http.post<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-packages-enabler-type/createInnovationEnablers`, body).pipe(this.saveButtonSE.isSavingPipeNextStep(descrip));
   }
 
-  getStepTwoComentariesInnovationId(){
+  getStepTwoComentariesInnovationId() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-packages-enabler-type/${this.ipsrDataControlSE.resultInnovationId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
-
 
   getAssessedDuringExpertWorkshop() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/assessed-during-expert-workshop`);
@@ -687,5 +688,13 @@ export class ResultsApiService {
 
   DELETEcomplementaryinnovation(idResult) {
     return this.http.delete<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/delete/complementary-innovation/${idResult}`);
+  }
+
+  GET_versioning(status, modules) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/versioning?status=${status}&module=${modules}`);
+  }
+
+  PATCH_versioningProcess(id) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/versioning/phase-change/process/result/${id}`, null);
   }
 }

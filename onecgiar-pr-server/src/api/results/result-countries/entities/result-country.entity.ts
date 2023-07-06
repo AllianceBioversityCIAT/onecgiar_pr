@@ -9,7 +9,7 @@ import {
 } from 'typeorm';
 import { Result } from '../../entities/result.entity';
 import { ClarisaCountry } from '../../../../clarisa/clarisa-countries/entities/clarisa-country.entity';
-import { Version } from '../../versions/entities/version.entity';
+import { Version } from '../../../versioning/entities/version.entity';
 import { OneToMany } from 'typeorm';
 import { ResultCountriesSubNational } from '../../result-countries-sub-national/entities/result-countries-sub-national.entity';
 
@@ -32,12 +32,6 @@ export class ResultCountry {
     default: true,
   })
   is_active: boolean;
-
-  @ManyToOne(() => Version, (v) => v.id, { nullable: true })
-  @JoinColumn({
-    name: 'version_id',
-  })
-  version_id: number;
 
   @CreateDateColumn({
     name: 'created_date',
@@ -64,6 +58,9 @@ export class ResultCountry {
   })
   country_object: ClarisaCountry;
 
-  @OneToMany(() => ResultCountriesSubNational, rcsn => rcsn.obj_result_countries)
+  @OneToMany(
+    () => ResultCountriesSubNational,
+    (rcsn) => rcsn.obj_result_countries,
+  )
   result_countries_sub_national: ResultCountriesSubNational[];
 }

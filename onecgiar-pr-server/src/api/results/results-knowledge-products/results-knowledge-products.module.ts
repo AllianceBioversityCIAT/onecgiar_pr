@@ -4,9 +4,12 @@ import { ResultsKnowledgeProductsController } from './results-knowledge-products
 import { ResultsKnowledgeProductsRepository } from './repositories/results-knowledge-products.repository';
 import { ResultRepository } from '../result.repository';
 import { MQAPService } from '../../m-qap/m-qap.service';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import {
+  HandlersError,
+  ReturnResponse,
+} from '../../../shared/handlers/error.utils';
 import { HttpModule } from '@nestjs/axios';
-import { VersionRepository } from '../versions/version.repository';
+import { VersionRepository } from '../../versioning/versioning.repository';
 import { ResultsKnowledgeProductMapper } from './results-knowledge-products.mapper';
 import { ResultsKnowledgeProductAltmetricRepository } from './repositories/results-knowledge-product-altmetrics.repository';
 import { ResultsKnowledgeProductAuthorRepository } from './repositories/results-knowledge-product-authors.repository';
@@ -29,9 +32,10 @@ import { ResultRegionRepository } from '../result-regions/result-regions.reposit
 import { ClarisaRegionsRepository } from '../../../clarisa/clarisa-regions/ClariasaRegions.repository';
 import { CGSpaceCountryMappingsRepository } from './repositories/cgspace-country-mappings.repository';
 import { ResultCountryRepository } from '../result-countries/result-countries.repository';
+import { VersioningModule } from '../../versioning/versioning.module';
 
 @Module({
-  imports: [HttpModule],
+  imports: [HttpModule, VersioningModule],
   controllers: [ResultsKnowledgeProductsController],
   providers: [
     ResultsKnowledgeProductsService,
@@ -59,6 +63,7 @@ import { ResultCountryRepository } from '../result-countries/result-countries.re
     ClarisaRegionsRepository,
     CGSpaceCountryMappingsRepository,
     ResultCountryRepository,
+    ReturnResponse,
   ],
   exports: [
     ResultsKnowledgeProductsRepository,

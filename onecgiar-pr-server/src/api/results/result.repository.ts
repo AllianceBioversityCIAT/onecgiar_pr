@@ -1,4 +1,4 @@
-import { Injectable, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpStatus, Logger } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { Result } from './entities/result.entity';
 import { HandlersError } from '../../shared/handlers/error.utils';
@@ -10,14 +10,173 @@ import { ResultDataToMapDto } from './dto/result-data-to-map.dto';
 import { LegacyIndicatorsPartner } from './legacy_indicators_partners/entities/legacy_indicators_partner.entity';
 import { env } from 'process';
 import { ResultTypeDto } from './dto/result-types.dto';
+import {
+  ReplicableConfigInterface,
+  ReplicableInterface,
+} from '../../shared/globalInterfaces/replicable.interface';
+import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 
 @Injectable()
-export class ResultRepository extends Repository<Result> {
+export class ResultRepository
+  extends Repository<Result>
+  implements ReplicableInterface<Result>
+{
+  private readonly _logger: Logger = new Logger(ResultRepository.name);
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
   ) {
     super(Result, dataSource.createEntityManager());
+  }
+  async replicable(config: ReplicableConfigInterface<Result>): Promise<Result> {
+    let final_data: Result = null;
+    try {
+      if (config.f?.custonFunction) {
+        const queryData = `
+        select
+          null as id,
+          r2.description,
+          r2.is_active,
+          null as last_updated_date,
+          r2.gender_tag_level_id,
+          ? as version_id,
+          r2.result_type_id,
+          r2.status,
+          ? as created_by,
+          ? as last_updated_by,
+          (select v.phase_year  from \`version\` v where v.id = ?) as reported_year_id,
+          now() as created_date,
+          r2.result_level_id,
+          r2.title,
+          r2.legacy_id,
+          r2.krs_url,
+          r2.is_krs,
+          r2.climate_change_tag_level_id,
+          r2.no_applicable_partner,
+          r2.has_regions,
+          r2.has_countries,
+          r2.geographic_scope_id,
+          r2.lead_contact_person,
+          r2.result_code
+          from \`result\` r2 WHERE r2.id = ? and r2.is_active > 0`;
+        const response = await (<Promise<Result[]>>(
+          this.query(queryData, [
+            config.phase,
+            config.user.id,
+            config.user.id,
+            config.phase,
+            config.old_result_id,
+          ])
+        ));
+        const response_edit = <Result>(
+          config.f.custonFunction(response?.length ? response[0] : null)
+        );
+        final_data = await this.save(response_edit);
+      } else {
+        const queryData: string = `
+        insert into \`result\` (
+          description
+          ,is_active
+          ,last_updated_date
+          ,gender_tag_level_id
+          ,version_id
+          ,result_type_id
+          ,status
+          ,created_by
+          ,last_updated_by
+          ,reported_year_id
+          ,created_date
+          ,result_level_id
+          ,title
+          ,legacy_id
+          ,krs_url
+          ,is_krs
+          ,climate_change_tag_level_id
+          ,no_applicable_partner
+          ,has_regions
+          ,has_countries
+          ,geographic_scope_id
+          ,lead_contact_person
+          ,result_code
+          ) select
+          r2.description,
+          r2.is_active,
+          null as last_updated_date,
+          r2.gender_tag_level_id,
+          ? as version_id,
+          r2.result_type_id,
+          r2.status,
+          ? as created_by,
+          ? as last_updated_by,
+          (select v.phase_year  from \`version\` v where v.id = ?) as reported_year_id,
+          now() as created_date,
+          r2.result_level_id,
+          r2.title,
+          r2.legacy_id,
+          r2.krs_url,
+          r2.is_krs,
+          r2.climate_change_tag_level_id,
+          r2.no_applicable_partner,
+          r2.has_regions,
+          r2.has_countries,
+          r2.geographic_scope_id,
+          r2.lead_contact_person,
+          r2.result_code
+          from \`result\` r2 WHERE r2.id = ? and r2.is_active > 0`;
+        const response = await (<Promise<{ insertId }>>(
+          this.query(queryData, [
+            config.phase,
+            config.user.id,
+            config.user.id,
+            config.phase,
+            config.old_result_id,
+          ])
+        ));
+
+        const queryFind = `
+        select
+          r2.id,
+          r2.description,
+          r2.is_active,
+          r2.last_updated_date,
+          r2.gender_tag_level_id,
+          r2.version_id,
+          r2.result_type_id,
+          r2.status,
+          r2.created_by,
+          r2.last_updated_by,
+          r2.reported_year_id,
+          r2.created_date,
+          r2.result_level_id,
+          r2.title,
+          r2.legacy_id,
+          r2.krs_url,
+          r2.is_krs,
+          r2.climate_change_tag_level_id,
+          r2.no_applicable_partner,
+          r2.has_regions,
+          r2.has_countries,
+          r2.geographic_scope_id,
+          r2.lead_contact_person,
+          r2.result_code
+          from \`result\` r2 WHERE r2.id = ?
+        `;
+        const temp = await (<Promise<Result[]>>(
+          this.query(queryFind, [response?.insertId])
+        ));
+        final_data = temp?.length ? temp[0] : null;
+      }
+    } catch (error) {
+      config.f?.errorFunction
+        ? config.f.errorFunction(error)
+        : this._logger.error(error);
+      final_data = null;
+    }
+
+    config.f?.completeFunction
+      ? config.f.completeFunction({ ...final_data })
+      : null;
+    return final_data;
   }
 
   async getResultByName(
@@ -44,8 +203,7 @@ export class ResultRepository extends Repository<Result> {
     	inner join result_level rl on rl.id = rt.result_level_id 
     where r.is_active > 0
     	and r.title like '%\?%'
-    	and rt.id = ?
-      and r.version_id = 1;
+    	and rt.id = ?;
     `;
     try {
       const completeUser: any[] = await this.query(queryData, [
@@ -110,9 +268,7 @@ export class ResultRepository extends Repository<Result> {
         and rc.is_active > 0
       left join clarisa_countries cc on
         cc.id = rc.country_id
-      where
-        r.version_id = 1
-        ${!allowDeleted ? 'and r.is_active > 0' : ''}
+        ${!allowDeleted ? 'where r.is_active > 0' : ''}
       group by
         r.id,
         r.title,
@@ -195,8 +351,7 @@ export class ResultRepository extends Repository<Result> {
       inner join clarisa_initiatives ci on
         rbi.inititiative_id = ci.id
       where
-        r.id = ?
-        and r.version_id = 1;
+        r.id = ?;
     `;
     try {
       const result = await this.query(query, [resultId]);
@@ -305,11 +460,7 @@ WHERE
     }
   }*/
 
-  async AllResultsByRoleUsers(
-    userid: number,
-    version: number = 1,
-    excludeType = [10, 11],
-  ) {
+  async AllResultsByRoleUsers(userid: number, excludeType = [10, 11]) {
     const queryData = `
     SELECT
     r.id,
@@ -333,7 +484,10 @@ WHERE
     r.legacy_id,
     r.created_by,
     u.first_name as create_first_name,
-    u.last_name as create_last_name
+    u.last_name as create_last_name,
+    r.version_id,
+    v.phase_name,
+    v.phase_year
 FROM
     \`result\` r
     INNER JOIN result_type rt ON rt.id = r.result_type_id
@@ -345,17 +499,17 @@ FROM
     left join \`role\` r2 on r2.id  = rbu.\`role\` 
     left join \`year\` y ON y.active > 0
     left join users u on u.id = r.created_by
+    inner join \`version\` v on v.id = r.version_id
 WHERE
     r.is_active > 0
     AND rbi.is_active > 0
     AND rbi.initiative_role_id = 1
     AND ci.active > 0
-    AND r.version_id = ?
     AND rt.id not in (${excludeType.toString()});
     `;
 
     try {
-      const results = await this.query(queryData, [userid, version]);
+      const results = await this.query(queryData, [userid]);
       return results;
     } catch (error) {
       throw {
@@ -429,7 +583,6 @@ WHERE
     WHERE
     	r.created_date >= ?
     	and r.created_date <= ?
-      and r.version_id = 1
     GROUP by
     	r.id,
     	r.reported_year_id,
@@ -717,7 +870,6 @@ WHERE
     r.is_active,
     r.last_updated_date,
     r.gender_tag_level_id,
-    r.version_id,
     r.result_type_id,
     rt.name as result_type_name,
     r.status,
@@ -735,13 +887,17 @@ WHERE
     r.no_applicable_partner,
     r.geographic_scope_id,
     r.lead_contact_person,
-    if(r.geographic_scope_id in (3, 4), 3, r.geographic_scope_id ) as geographic_scope_id
+    if(r.geographic_scope_id in (3, 4), 3, r.geographic_scope_id ) as geographic_scope_id,
+    v.id as version_id,
+    v.phase_name,
+    v.phase_year
 FROM
     result r
     inner join results_by_inititiative rbi ON rbi.result_id = r.id 
     									and rbi.is_active > 0
     inner join result_level rl on rl.id = r.result_level_id 
     inner join result_type rt on rt.id = r.result_type_id 
+    inner join \`version\` v on v.id = r.version_id
 WHERE
     r.is_active > 0
     and r.id = ?;
@@ -761,13 +917,11 @@ WHERE
 
   async getLastResultCode(version: number = 1): Promise<number> {
     const queryData = `
-    SELECT max(r.result_code) as last_code from \`result\` r WHERE version_id = ?;
+    SELECT max(r.result_code) as last_code from \`result\` r;
     `;
 
     try {
-      const results: Array<{ last_code }> = await this.query(queryData, [
-        version,
-      ]);
+      const results: Array<{ last_code }> = await this.query(queryData);
       return results.length ? parseInt(results[0].last_code) : null;
     } catch (error) {
       throw {
@@ -784,8 +938,7 @@ WHERE
     r.id
     FROM 
     \`result\` r 
-    WHERE r.is_active > 0
-      and r.version_id = 1;
+    WHERE r.is_active > 0;
     `;
     try {
       const results: Array<{ id }> = await this.query(queryData);
@@ -801,7 +954,7 @@ WHERE
 
   async transformResultCode(
     resultCode: number,
-    version: number = 1,
+    version: number = null,
   ): Promise<number> {
     const queryData = `
     SELECT 
@@ -809,14 +962,16 @@ WHERE
     FROM 
     \`result\` r 
     WHERE r.is_active > 0
-      and r.version_id = ?
-      and r.result_code = ?;
+    and r.result_code = ?
+    ${
+      version
+        ? `and r.version_id = ${version};`
+        : `ORDER by r.id desc
+    limit 1;`
+    }
     `;
     try {
-      const results: Array<{ id }> = await this.query(queryData, [
-        version,
-        resultCode,
-      ]);
+      const results: Array<{ id }> = await this.query(queryData, [resultCode]);
       return results?.length ? results[0].id : null;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

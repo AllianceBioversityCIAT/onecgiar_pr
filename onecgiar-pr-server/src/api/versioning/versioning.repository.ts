@@ -1,13 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { Version } from './entities/version.entity';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import {
+  HandlersError,
+  ReturnResponse,
+} from '../../shared/handlers/error.utils';
+import { env } from 'process';
 
 @Injectable()
 export class VersionRepository extends Repository<Version> {
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
+    private readonly _returnResponse: ReturnResponse,
   ) {
     super(Version, dataSource.createEntityManager());
   }
@@ -15,7 +20,7 @@ export class VersionRepository extends Repository<Version> {
   async getBaseVersion() {
     const queryData = `
     select min(v.id) as id,
-    		v.version_name,
+    		v.phase_name as version_name,
     		null as start_date,
     		null as end_date
     from \`version\` v 
@@ -24,7 +29,9 @@ export class VersionRepository extends Repository<Version> {
     		and
     		(v.end_date  = ''
     		or v.end_date is null)
-    group by v.id, v.version_name;
+        and v.status > 0
+        and v.is_active > 0
+    group by v.id, v.phase_name;
     `;
     try {
       const version: Version[] = await this.query(queryData);
@@ -35,6 +42,20 @@ export class VersionRepository extends Repository<Version> {
         error: error,
         debug: true,
       });
+    }
+  }
+
+  async $_closeAllPhases(): Promise<boolean> {
+    try {
+      const queryData = `
+      update \`version\` 
+      set status = false
+      where is_active > 0 and status = true
+      `;
+      await this.query(queryData);
+      return true;
+    } catch (error) {
+      return false;
     }
   }
 }

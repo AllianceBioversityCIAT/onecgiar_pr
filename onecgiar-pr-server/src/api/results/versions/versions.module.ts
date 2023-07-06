@@ -6,14 +6,22 @@ import {
 } from '@nestjs/common';
 import { VersionsService } from './versions.service';
 import { VersionsController } from './versions.controller';
-import { VersionRepository } from './version.repository';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import { VersionRepository } from '../../versioning/versioning.repository';
+import {
+  HandlersError,
+  ReturnResponse,
+} from '../../../shared/handlers/error.utils';
 import { AuthModule } from '../../../auth/auth.module';
 import { JwtMiddleware } from '../../../auth/Middlewares/jwt.middleware';
 
 @Module({
   controllers: [VersionsController],
-  providers: [VersionsService, VersionRepository, HandlersError],
+  providers: [
+    VersionsService,
+    VersionRepository,
+    HandlersError,
+    ReturnResponse,
+  ],
   exports: [VersionsService, VersionRepository],
   imports: [AuthModule],
 })

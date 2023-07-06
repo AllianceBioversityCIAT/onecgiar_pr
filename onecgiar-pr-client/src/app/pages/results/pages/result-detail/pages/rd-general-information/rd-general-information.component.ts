@@ -28,7 +28,7 @@ export class RdGeneralInformationComponent {
   getSectionInformation() {
     this.api.resultsSE.GET_generalInformationByResultId().subscribe(({ response }) => {
       this.generalInfoBody = response;
-      this.generalInfoBody.reporting_year = '2022';
+      this.generalInfoBody.reporting_year = response['phase_year'];
       this.generalInfoBody.institutions_type = [...this.generalInfoBody.institutions_type, ...this.generalInfoBody.institutions] as any;
       //(this.generalInfoBody);
     });

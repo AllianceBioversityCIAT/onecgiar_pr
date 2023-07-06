@@ -1,15 +1,23 @@
-import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { Result } from '../../entities/result.entity';
 import { User } from '../../../../auth/modules/user/entities/user.entity';
 import { ClarisaInstitution } from '../../../../clarisa/clarisa-institutions/entities/clarisa-institution.entity';
 import { ClarisaCenter } from '../../../../clarisa/clarisa-centers/entities/clarisa-center.entity';
-import { Version } from '../../versions/entities/version.entity';
+import { Version } from '../../../versioning/entities/version.entity';
 import { NonPooledProjectBudget } from '../../result_budget/entities/non_pooled_proyect_budget.entity';
-import { NonPooledProjectType } from "./non-pooled-project-type.entity";
+import { NonPooledProjectType } from './non-pooled-project-type.entity';
 
 @Entity('non_pooled_project')
 export class NonPooledProject {
-
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -17,27 +25,27 @@ export class NonPooledProject {
     name: 'grant_title',
     type: 'text',
     nullable: true,
-    default: null
+    default: null,
   })
   grant_title: string;
 
   @Column({
     name: 'center_grant_id',
     type: 'text',
-    nullable: true
+    nullable: true,
   })
   center_grant_id!: string;
 
   @Column({
     name: 'results_id',
     type: 'bigint',
-    nullable: true
+    nullable: true,
   })
   results_id!: number;
 
-  @ManyToOne(() => Result, r => r.id)
+  @ManyToOne(() => Result, (r) => r.id)
   @JoinColumn({
-    name: 'results_id'
+    name: 'results_id',
   })
   obj_results: number;
 
@@ -45,26 +53,26 @@ export class NonPooledProject {
     name: 'lead_center_id',
     type: 'varchar',
     length: 15,
-    nullable: true
+    nullable: true,
   })
   lead_center_id!: string;
 
-  @ManyToOne(() => ClarisaCenter, ci => ci.code, { nullable: true })
+  @ManyToOne(() => ClarisaCenter, (ci) => ci.code, { nullable: true })
   @JoinColumn({
-    name: 'lead_center_id'
+    name: 'lead_center_id',
   })
   obj_lead_center!: ClarisaCenter;
 
   @Column({
     name: 'funder_institution_id',
     type: 'int',
-    nullable: true
+    nullable: true,
   })
   funder_institution_id: number;
 
-  @ManyToOne(() => ClarisaInstitution, ci => ci.id, { nullable: true })
+  @ManyToOne(() => ClarisaInstitution, (ci) => ci.id, { nullable: true })
   @JoinColumn({
-    name: 'funder_institution_id'
+    name: 'funder_institution_id',
   })
   obj_funder_institution_id!: ClarisaInstitution;
 
@@ -72,15 +80,22 @@ export class NonPooledProject {
     name: 'is_active',
     type: 'boolean',
     nullable: false,
-    default: true
+    default: true,
   })
   is_active: boolean;
+
+  @Column({
+    name: 'created_by',
+    type: 'int',
+    nullable: false,
+  })
+  created_by: number;
 
   @ManyToOne(() => User, (u) => u.id, { nullable: false })
   @JoinColumn({
     name: 'created_by',
   })
-  created_by: number;
+  obj_created_by: User;
 
   @CreateDateColumn({
     name: 'created_date',
@@ -89,11 +104,18 @@ export class NonPooledProject {
   })
   created_date: Date;
 
+  @Column({
+    name: 'last_updated_by',
+    type: 'int',
+    nullable: true,
+  })
+  last_updated_by: number;
+
   @ManyToOne(() => User, (u) => u.id, { nullable: true })
   @JoinColumn({
     name: 'last_updated_by',
   })
-  last_updated_by!: number;
+  obj_last_updated_by!: User;
 
   @UpdateDateColumn({
     name: 'last_updated_date',
@@ -103,32 +125,24 @@ export class NonPooledProject {
   last_updated_date!: Date;
 
   @Column({
-    name: 'version_id',
-    type: 'bigint',
-    nullable: true
-  })
-  version_id: number;
-
-  @ManyToOne(() => Version, v => v.non_pooled_project)
-  @JoinColumn({
-    name: 'version_id'
-  })
-  obj_version: Version;
-
-  @Column({
     name: 'non_pooled_project_type_id',
     type: 'bigint',
-    nullable: true
+    nullable: true,
   })
   non_pooled_project_type_id: number;
 
-  @ManyToOne(() => NonPooledProjectType, nppt => nppt.non_pooled_project_type_id)
+  @ManyToOne(
+    () => NonPooledProjectType,
+    (nppt) => nppt.non_pooled_project_type_id,
+  )
   @JoinColumn({
-    name: 'non_pooled_project_type_id'
+    name: 'non_pooled_project_type_id',
   })
   non_pooled_project_type: NonPooledProjectType;
 
-  @OneToMany(() => NonPooledProjectBudget, nppb => nppb.obj_non_pooled_projetct)
+  @OneToMany(
+    () => NonPooledProjectBudget,
+    (nppb) => nppb.obj_non_pooled_projetct,
+  )
   obj_non_pooled_projetct_budget: NonPooledProjectBudget[];
-
 }

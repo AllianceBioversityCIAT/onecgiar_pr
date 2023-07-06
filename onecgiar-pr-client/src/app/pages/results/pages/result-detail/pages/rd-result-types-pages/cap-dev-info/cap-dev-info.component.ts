@@ -17,6 +17,10 @@ export class CapDevInfoComponent implements OnInit {
   deliveryMethodOptions = [];
   capdev_term_id_1 = null;
   capdev_term_id_2 = null;
+  radioOptions = [
+    { id: true, name: 'Yes' },
+    { id: false, name: 'No' }
+  ];
   constructor(public api: ApiService, public institutionsSE: InstitutionsService) {}
 
   ngOnInit(): void {
@@ -75,6 +79,10 @@ export class CapDevInfoComponent implements OnInit {
     return null;
   }
 
+  cleanOrganizationsList() {
+    this.capDevInfoRoutingBody.institutions = [];
+  }
+
   validate_capdev_term_id() {
     //(this.capdev_term_id_1);
     //(this.capdev_term_id_2);
@@ -84,7 +92,9 @@ export class CapDevInfoComponent implements OnInit {
   onSaveSection() {
     //(this.capDevInfoRoutingBody);
     this.validate_capdev_term_id();
-    this.api.resultsSE.PATCH_capacityDevelopent(this.capDevInfoRoutingBody).subscribe(resp => {
+
+    if (!this.capDevInfoRoutingBody.is_attending_for_organization) this.cleanOrganizationsList();
+    this.api.resultsSE.PATCH_capacityDevelopent(this.capDevInfoRoutingBody).subscribe((resp: any) => {
       this.getSectionInformation();
     });
   }
@@ -94,12 +104,14 @@ export class CapDevInfoComponent implements OnInit {
   }
 
   requestEvent() {
-    this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
+    this.api.dataControlSE.findClassTenSeconds('alert-event').then((resp: any) => {
       try {
-        document.querySelector('.alert-event').addEventListener('click', e => {
+        document.querySelector('.alert-event').addEventListener('click', (e: any) => {
           this.api.dataControlSE.showPartnersRequest = true;
         });
-      } catch (error) {}
+      } catch (error) {
+        console.error(error);
+      }
     });
   }
 }

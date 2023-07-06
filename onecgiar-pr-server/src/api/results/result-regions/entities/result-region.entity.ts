@@ -9,7 +9,7 @@ import {
 } from 'typeorm';
 import { ClarisaRegion } from '../../../../clarisa/clarisa-regions/entities/clarisa-region.entity';
 import { Result } from '../../entities/result.entity';
-import { Version } from '../../versions/entities/version.entity';
+import { Version } from '../../../versioning/entities/version.entity';
 
 @Entity('result_region')
 export class ResultRegion {
@@ -18,7 +18,7 @@ export class ResultRegion {
   })
   result_region_id: number;
 
-  @Column({type: 'int' , nullable: true})
+  @Column({ type: 'int', nullable: true })
   region_id: number;
 
   @Column({ type: 'bigint', nullable: true })
@@ -30,12 +30,6 @@ export class ResultRegion {
     default: true,
   })
   is_active: boolean;
-
-  @ManyToOne(() => Version, (v) => v.id, { nullable: true })
-  @JoinColumn({
-    name: 'version_id',
-  })
-  version_id: number;
 
   @CreateDateColumn({
     type: 'timestamp',

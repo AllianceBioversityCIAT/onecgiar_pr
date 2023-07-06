@@ -22,7 +22,10 @@ import { EvidenceTypesModule } from './evidence_types/evidence_types.module';
 import { InitiativeRolesModule } from './initiative_roles/initiative_roles.module';
 import { AuthModule } from '../../auth/auth.module';
 import { JwtMiddleware } from 'src/auth/Middlewares/jwt.middleware';
-import { HandlersError } from '../../shared/handlers/error.utils';
+import {
+  HandlersError,
+  ReturnResponse,
+} from '../../shared/handlers/error.utils';
 import { ResultRepository } from './result.repository';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { YearsModule } from './years/years.module';
@@ -63,6 +66,10 @@ import { LogRepository } from '../../connection/dynamodb-logs/dynamodb-logs.repo
 import { ResultActorsModule } from './result-actors/result-actors.module';
 import { ResultBudgetModule } from './result_budget/result_budget.module';
 import { ResultCountriesSubNationalModule } from './result-countries-sub-national/result-countries-sub-national.module';
+import { VersioningService } from '../versioning/versioning.service';
+import { ApplicationModulesRepository } from '../versioning/repositories/application-modules.repository';
+import { VersioningModule } from '../versioning/versioning.module';
+import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 
 @Module({
   controllers: [ResultsController],
@@ -111,6 +118,7 @@ import { ResultCountriesSubNationalModule } from './result-countries-sub-nationa
     ResultActorsModule,
     ResultBudgetModule,
     ResultCountriesSubNationalModule,
+    VersioningModule,
   ],
   providers: [
     ResultsService,
@@ -123,7 +131,9 @@ import { ResultCountriesSubNationalModule } from './result-countries-sub-nationa
     ClarisaInstitutionsTypeRepository,
     ResultLegacyRepository,
     ElasticService,
-    LogRepository
+    LogRepository,
+    ReturnResponse,
+    ResponseInterceptor,
   ],
   exports: [ResultRepository, JwtMiddleware],
 })
