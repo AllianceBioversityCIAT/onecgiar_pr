@@ -9,4 +9,10 @@ export class IpsrGeneralInformationBody {
   reported_year_id = null;
   evidence_gender_tag = null;
   evidence_climate_tag = null;
+  nutrition_tag_level_id: number;
+  evidence_nutrition_tag: string;
+  environmental_biodiversity_tag_level_id: number;
+  evidence_environment_tag: string;
+  poverty_tag_level_id: number;
+  evidence_poverty_tag: string;
 }
