@@ -32,7 +32,7 @@ export class UpdateGeneralInformationDto {
   public environmental_biodiversity_tag_level_id?: number;
   public evidence_environment_tag?: string;
   public poverty_tag_level_id?: number;
-  public evidence_poverty_tag: string;
+  public evidence_poverty_tag?: string;
   public is_krs?: boolean;
   public krs_url?: string;
 }
