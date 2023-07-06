@@ -107,6 +107,45 @@ export class Result {
   obj_climate_change_tag_level!: GenderTagLevel;
 
   @Column({
+    name: 'nutrition_tag_level_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  nutrition_tag_level_id!: number;
+
+  @ManyToOne(() => GenderTagLevel, (gtl) => gtl.id, { nullable: true })
+  @JoinColumn({
+    name: 'nutrition_tag_level_id',
+  })
+  obj_nutrition_tag_level!: GenderTagLevel;
+
+  @Column({
+    name: 'environmental_biodiversity_tag_level_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  environmental_biodiversity_tag_level_id!: number;
+
+  @ManyToOne(() => GenderTagLevel, (gtl) => gtl.id, { nullable: true })
+  @JoinColumn({
+    name: 'environmental_biodiversity_tag_level_id',
+  })
+  obj_environmental_biodiversity_tag_level!: GenderTagLevel;
+
+  @Column({
+    name: 'poverty_tag_level_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  poverty_tag_level_id!: number;
+
+  @ManyToOne(() => GenderTagLevel, (gtl) => gtl.id, { nullable: true })
+  @JoinColumn({
+    name: 'poverty_tag_level_id',
+  })
+  obj_poverty_tag_level_id!: GenderTagLevel;
+
+  @Column({
     name: 'is_active',
     type: 'boolean',
     nullable: false,
