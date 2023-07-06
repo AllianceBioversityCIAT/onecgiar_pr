@@ -21,6 +21,7 @@ export class EvidencesService {
     private readonly _resultsKnowledgeProductsRepository: ResultsKnowledgeProductsRepository,
   ) {}
   async create(createEvidenceDto: CreateEvidenceDto, user: TokenDto) {
+    console.log("🚀 ~ file: evidences.service.ts:24 ~ EvidencesService ~ create ~ createEvidenceDto:", createEvidenceDto)
     try {
       const result = await this._resultRepository.getResultById(
         createEvidenceDto.result_id,
@@ -65,6 +66,9 @@ export class EvidencesService {
             newEvidence.description = evidence?.description ?? null;
             newEvidence.gender_related = evidence.gender_related;
             newEvidence.youth_related = evidence.youth_related;
+            newEvidence.nutrition_related = evidence.nutrition_related;
+            newEvidence.environmental_biodiversity_related = evidence.environmental_biodiversity_related;
+            newEvidence.poverty_related = evidence.poverty_related;
             newEvidence.is_supplementary = false;
             newEvidence.link = evidence.link;
             newEvidence.result_id = result.id;
@@ -92,6 +96,9 @@ export class EvidencesService {
             eExists.description = evidence?.description ?? null;
             eExists.gender_related = evidence.gender_related;
             eExists.youth_related = evidence.youth_related;
+            eExists.nutrition_related = evidence.nutrition_related;
+            eExists.environmental_biodiversity_related = evidence.environmental_biodiversity_related;
+            eExists.poverty_related = evidence.poverty_related;
 
             if (!eExists.knowledge_product_related) {
               const knowledgeProduct =
@@ -198,11 +205,17 @@ export class EvidencesService {
       evidences.map((e) => {
         e.gender_related = !!e.gender_related;
         e.youth_related = !!e.youth_related;
+        e.nutrition_related = !!e.nutrition_related;
+        e.environmental_biodiversity_related = !!e.environmental_biodiversity_related;
+        e.poverty_related = !!e.poverty_related;
       });
 
       supplementary.map((e) => {
         e.gender_related = !!e.gender_related;
         e.youth_related = !!e.youth_related;
+        e.nutrition_related = !!e.nutrition_related;
+        e.environmental_biodiversity_related = !!e.environmental_biodiversity_related;
+        e.poverty_related = !!e.poverty_related;
       });
 
       return {
@@ -210,6 +223,9 @@ export class EvidencesService {
           result_id: result.id,
           gender_tag_level: result.gender_tag_level_id,
           climate_change_tag_level: result.climate_change_tag_level_id,
+          nutrition_tag_level: result.nutrition_tag_level_id,
+          environmental_biodiversity_tag_level: result.environmental_biodiversity_tag_level_id,
+          poverty_tag_level: result.poverty_tag_level_id,
           evidences,
           supplementary,
         },
