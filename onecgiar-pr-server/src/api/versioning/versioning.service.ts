@@ -36,6 +36,10 @@ import { ResultsKnowledgeProductAuthorRepository } from '../results/results-know
 import { ResultsKnowledgeProductKeywordRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-keywords.repository';
 import { ResultsKnowledgeProductMetadataRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-metadata.repository';
 import { ResultsKnowledgeProductInstitutionRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-institution.repository';
+import {
+  ModuleTypeEnum,
+  StatusPhaseEnum,
+} from '../../shared/constants/role-type.enum';
 
 @Injectable()
 export class VersioningService {
@@ -88,6 +92,21 @@ export class VersioningService {
       const version = await this._versionRepository.findOne({
         where: {
           status: true,
+          is_active: true,
+        },
+      });
+
+      return version;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  async $_findPhase(phase_id: number): Promise<Version> {
+    try {
+      const version = await this._versionRepository.findOne({
+        where: {
+          id: phase_id,
           is_active: true,
         },
       });
@@ -380,6 +399,42 @@ export class VersioningService {
       return this._returnResponse.format({
         message: `Phase ${res.phase_name} updated successfully`,
         response: { ...res, ...updateVersioningDto },
+        statusCode: HttpStatus.OK,
+      });
+    } catch (error) {
+      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+    }
+  }
+
+  async find(module_type: ModuleTypeEnum, status: StatusPhaseEnum) {
+    try {
+      let where: any = { is_active: true };
+
+      switch (module_type) {
+        case ModuleTypeEnum.REPORTING:
+          where = { ...where, app_module_id: 1 };
+          break;
+        case ModuleTypeEnum.IPSR:
+          where = { ...where, app_module_id: 2 };
+          break;
+      }
+
+      switch (status) {
+        case StatusPhaseEnum.OPEN:
+          where = { ...where, status: true };
+          break;
+        case StatusPhaseEnum.CLOSE:
+          where = { ...where, status: false };
+          break;
+      }
+
+      const res = await this._versionRepository.find({
+        where: where,
+      });
+
+      return this._returnResponse.format({
+        message: `Phase Retrieved Successfully`,
+        response: res,
         statusCode: HttpStatus.OK,
       });
     } catch (error) {

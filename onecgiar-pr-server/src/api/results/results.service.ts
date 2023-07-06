@@ -8,6 +8,7 @@ import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import {
   HandlersError,
+  ReturnResponse,
   returnErrorDto,
 } from '../../shared/handlers/error.utils';
 import { ResultTypesService } from './result_types/result_types.service';
@@ -48,7 +49,7 @@ import { ResultRegion } from './result-regions/entities/result-region.entity';
 import { ResultSimpleDto } from './dto/result-simple.dto';
 import { ElasticService } from '../../elastic/elastic.service';
 import { ElasticOperationDto } from '../../elastic/dto/elastic-operation.dto';
-import process from 'process';
+import process, { env } from 'process';
 import { resultValidationRepository } from './results-validation-module/results-validation-module.repository';
 import { ResultsKnowledgeProductAuthorRepository } from './results-knowledge-products/repositories/results-knowledge-product-authors.repository';
 import { ResultsKnowledgeProductInstitutionRepository } from './results-knowledge-products/repositories/results-knowledge-product-institution.repository';
@@ -59,6 +60,7 @@ import { ResultsImpactAreaIndicatorRepository } from './results-impact-area-indi
 import { ResultsImpactAreaTargetRepository } from './results-impact-area-target/results-impact-area-target.repository';
 import { LogRepository } from '../../connection/dynamodb-logs/dynamodb-logs.repository';
 import { Actions } from 'src/connection/dynamodb-logs/dto/enumAction.const';
+import { VersioningService } from '../versioning/versioning.service';
 
 @Injectable()
 export class ResultsService {
@@ -97,6 +99,8 @@ export class ResultsService {
     //private readonly _resultsImpactAreaIndicatorRepository: ResultsImpactAreaIndicatorRepository,
     //private readonly _resultsImpactAreaTargetRepository: ResultsImpactAreaTargetRepository,
     private readonly _logRepository: LogRepository,
+    private readonly _versioningService: VersioningService,
+    private readonly _returnResponse: ReturnResponse,
   ) {}
 
   /**
@@ -1181,27 +1185,29 @@ export class ResultsService {
     }
   }
 
-  async transformResultCode(resultCode: number) {
+  async transformResultCode(resultCode: number, phase_id: number = null) {
     try {
+      const phase = await this._versioningService.$_findPhase(phase_id);
       const result = await this._resultRepository.transformResultCode(
         resultCode,
+        phase ? phase.id : null,
       );
 
       if (!result) {
-        throw {
-          response: {},
-          message: 'Results Not Found',
-          status: HttpStatus.NOT_FOUND,
-        };
+        throw this._returnResponse.format({
+          message: 'Result Not Found',
+          statusCode: HttpStatus.NOT_FOUND,
+          response: resultCode,
+        });
       }
 
-      return {
-        response: result,
+      return this._returnResponse.format({
         message: 'Successful response',
-        status: HttpStatus.OK,
-      };
+        statusCode: HttpStatus.OK,
+        response: result,
+      });
     } catch (error) {
-      return this._handlersError.returnErrorRes({ error, debug: true });
+      return this._returnResponse.format(error, !env.IS_PRODUCTION);
     }
   }
 

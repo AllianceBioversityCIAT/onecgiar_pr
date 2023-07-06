@@ -201,8 +201,7 @@ export class ResultRepository
     	inner join result_level rl on rl.id = rt.result_level_id 
     where r.is_active > 0
     	and r.title like '%\?%'
-    	and rt.id = ?
-      and r.version_id = 1;
+    	and rt.id = ?;
     `;
     try {
       const completeUser: any[] = await this.query(queryData, [
@@ -267,9 +266,7 @@ export class ResultRepository
         and rc.is_active > 0
       left join clarisa_countries cc on
         cc.id = rc.country_id
-      where
-        r.version_id = 1
-        ${!allowDeleted ? 'and r.is_active > 0' : ''}
+        ${!allowDeleted ? 'where r.is_active > 0' : ''}
       group by
         r.id,
         r.title,
@@ -352,8 +349,7 @@ export class ResultRepository
       inner join clarisa_initiatives ci on
         rbi.inititiative_id = ci.id
       where
-        r.id = ?
-        and r.version_id = 1;
+        r.id = ?;
     `;
     try {
       const result = await this.query(query, [resultId]);
@@ -462,11 +458,7 @@ WHERE
     }
   }*/
 
-  async AllResultsByRoleUsers(
-    userid: number,
-    version: number = 1,
-    excludeType = [10, 11],
-  ) {
+  async AllResultsByRoleUsers(userid: number, excludeType = [10, 11]) {
     const queryData = `
     SELECT
     r.id,
@@ -490,7 +482,8 @@ WHERE
     r.legacy_id,
     r.created_by,
     u.first_name as create_first_name,
-    u.last_name as create_last_name
+    u.last_name as create_last_name,
+    r.version_id
 FROM
     \`result\` r
     INNER JOIN result_type rt ON rt.id = r.result_type_id
@@ -507,12 +500,11 @@ WHERE
     AND rbi.is_active > 0
     AND rbi.initiative_role_id = 1
     AND ci.active > 0
-    AND r.version_id = ?
     AND rt.id not in (${excludeType.toString()});
     `;
 
     try {
-      const results = await this.query(queryData, [userid, version]);
+      const results = await this.query(queryData, [userid]);
       return results;
     } catch (error) {
       throw {
@@ -586,7 +578,6 @@ WHERE
     WHERE
     	r.created_date >= ?
     	and r.created_date <= ?
-      and r.version_id = 1
     GROUP by
     	r.id,
     	r.reported_year_id,
@@ -918,13 +909,11 @@ WHERE
 
   async getLastResultCode(version: number = 1): Promise<number> {
     const queryData = `
-    SELECT max(r.result_code) as last_code from \`result\` r WHERE version_id = ?;
+    SELECT max(r.result_code) as last_code from \`result\` r;
     `;
 
     try {
-      const results: Array<{ last_code }> = await this.query(queryData, [
-        version,
-      ]);
+      const results: Array<{ last_code }> = await this.query(queryData);
       return results.length ? parseInt(results[0].last_code) : null;
     } catch (error) {
       throw {
@@ -941,8 +930,7 @@ WHERE
     r.id
     FROM 
     \`result\` r 
-    WHERE r.is_active > 0
-      and r.version_id = 1;
+    WHERE r.is_active > 0;
     `;
     try {
       const results: Array<{ id }> = await this.query(queryData);
@@ -958,7 +946,7 @@ WHERE
 
   async transformResultCode(
     resultCode: number,
-    version: number = 1,
+    version: number = null,
   ): Promise<number> {
     const queryData = `
     SELECT 
@@ -966,14 +954,16 @@ WHERE
     FROM 
     \`result\` r 
     WHERE r.is_active > 0
-      and r.version_id = ?
-      and r.result_code = ?;
+    and r.result_code = ?
+    ${
+      version
+        ? `and r.version_id = ${version};`
+        : `ORDER by r.id desc
+    limit 1;`
+    }
     `;
     try {
-      const results: Array<{ id }> = await this.query(queryData, [
-        version,
-        resultCode,
-      ]);
+      const results: Array<{ id }> = await this.query(queryData, [resultCode]);
       return results?.length ? results[0].id : null;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
