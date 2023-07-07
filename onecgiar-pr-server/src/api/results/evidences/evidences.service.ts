@@ -21,7 +21,6 @@ export class EvidencesService {
     private readonly _resultsKnowledgeProductsRepository: ResultsKnowledgeProductsRepository,
   ) {}
   async create(createEvidenceDto: CreateEvidenceDto, user: TokenDto) {
-    console.log("🚀 ~ file: evidences.service.ts:24 ~ EvidencesService ~ create ~ createEvidenceDto:", createEvidenceDto)
     try {
       const result = await this._resultRepository.getResultById(
         createEvidenceDto.result_id,
