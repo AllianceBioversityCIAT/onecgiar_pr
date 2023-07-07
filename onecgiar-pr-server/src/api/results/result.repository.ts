@@ -1283,6 +1283,9 @@ left join clarisa_countries cc3
     r.lead_contact_person as "Lead Contact Person",
     gtl.title as "Gender Tag Level",
     gtl2.title as "Climate Tag Level",
+    gtl3.title as "Nutrition Tag Level",
+    gtl4.title as "Environment and/or biodiversity Tag Level",
+    gtl5.title as "Poverty Tag Level",
     if(r.is_krs is null,'Not provided',if(r.is_krs,'Yes','No')) as "Is Key Result Story?",
     -- section 2
     ci.official_code as "Primary Submitter",
@@ -1346,14 +1349,32 @@ left join clarisa_countries cc3
     and lr2.legacy_link is not NULL) as "Results from previous portfolio",
     -- section 6
    /* GROUP_CONCAT(DISTINCT CONCAT('• Link: ', e.link, '; Gender related? ', IF(COALESCE(e.gender_related, 0) = 1, 'Yes', 'No'), '; Youth related? ', IF(COALESCE(e.youth_related, 0) = 1, 'Yes', 'No'), '; Details: ', COALESCE(e.description, 'Not Provided')) SEPARATOR '\n') as "Evidences" */
-    (SELECT GROUP_CONCAT(DISTINCT CONCAT('• Link: ', e.link, '; Gender related? ', IF(COALESCE(e.gender_related, 0) = 1, 'Yes', 'No'), '; Youth related? ', IF(COALESCE(e.youth_related, 0) = 1, 'Yes', 'No'), '; Details: ', COALESCE(e.description, 'Not Provided')) SEPARATOR '\n') 
-  FROM evidence e
- WHERE e.result_id = r.id
-   AND e.is_active > 0) as "Evidences"
+   (SELECT GROUP_CONCAT(DISTINCT CONCAT(
+        '• Link: ', 
+        COALESCE(e.link, 'Not Provided'), 
+        '; Gender related? ', 
+        IF(COALESCE(e.gender_related, 0) = 1, 'Yes', 'No'), 
+        '; Youth related? ', 
+        IF(COALESCE(e.youth_related, 0) = 1, 'Yes', 'No'), 
+        '; Nutrition related? ', 
+        IF(COALESCE(e.nutrition_related, 0) = 1, 'Yes', 'No'), 
+        '; Environmental biodiversity related? ', 
+        IF(COALESCE(e.environmental_biodiversity_related, 0) = 1, 'Yes', 'No'), 
+        '; Poverty related? ', 
+        IF(COALESCE(e.poverty_related, 0) = 1, 'Yes', 'No'), 
+        '; Details: ', 
+        COALESCE(e.description, 'Not Provided')
+    ) SEPARATOR '\n')
+    FROM evidence e
+    WHERE e.result_id = r.id
+      AND e.is_active > 0) AS "Evidences"
     FROM 
     result r
     left join gender_tag_level gtl on gtl.id = r.gender_tag_level_id 
     left join gender_tag_level gtl2 on gtl2.id = r.climate_change_tag_level_id 
+    left join gender_tag_level gtl2 on gtl3.id = r.nutrition_tag_level_id 
+    left join gender_tag_level gtl2 on gtl4.id = r.environmental_biodiversity_tag_level_id 
+    left join gender_tag_level gtl2 on gtl5.id = r.poverty_tag_level_id 
     left join results_by_inititiative rbi on rbi.result_id = r.id 
     and rbi.initiative_role_id = 1
     and rbi.is_active > 0
@@ -1425,6 +1446,9 @@ left join clarisa_countries cc3
     r.description,
     gtl.title,
     gtl2.title,
+    gtl2.title,
+    gtl4.title,
+    gtl5.title,
     rl.name,
     rt.name,
     r.is_krs,
