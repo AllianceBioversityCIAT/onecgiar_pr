@@ -1144,10 +1144,25 @@ left join clarisa_countries cc3
     and lr2.legacy_link is not NULL) as "Results from previous portfolio",
     -- section 6
    /* GROUP_CONCAT(DISTINCT CONCAT('• Link: ', e.link, '; Gender related? ', IF(COALESCE(e.gender_related, 0) = 1, 'Yes', 'No'), '; Youth related? ', IF(COALESCE(e.youth_related, 0) = 1, 'Yes', 'No'), '; Details: ', COALESCE(e.description, 'Not Provided')) SEPARATOR '\n') as "Evidences" */
-    (SELECT GROUP_CONCAT(DISTINCT CONCAT('• Link: ', e.link, '; Gender related? ', IF(COALESCE(e.gender_related, 0) = 1, 'Yes', 'No'), '; Youth related? ', IF(COALESCE(e.youth_related, 0) = 1, 'Yes', 'No'), '; Details: ', COALESCE(e.description, 'Not Provided')) SEPARATOR '\n') 
-  FROM evidence e
- WHERE e.result_id = r.id
-   AND e.is_active > 0) as "Evidences"
+   (SELECT GROUP_CONCAT(DISTINCT CONCAT(
+        '• Link: ', 
+        COALESCE(e.link, 'Not Provided'), 
+        '; Gender related? ', 
+        IF(COALESCE(e.gender_related, 0) = 1, 'Yes', 'No'), 
+        '; Youth related? ', 
+        IF(COALESCE(e.youth_related, 0) = 1, 'Yes', 'No'), 
+        '; Nutrition related? ', 
+        IF(COALESCE(e.nutrition_related, 0) = 1, 'Yes', 'No'), 
+        '; Environment and/or biodiversity related? ', 
+        IF(COALESCE(e.environmental_biodiversity_related, 0) = 1, 'Yes', 'No'), 
+        '; Poverty related? ', 
+        IF(COALESCE(e.poverty_related, 0) = 1, 'Yes', 'No'), 
+        '; Details: ', 
+        COALESCE(e.description, 'Not Provided')
+    ) SEPARATOR '\n')
+    FROM evidence e
+    WHERE e.result_id = r.id
+      AND e.is_active > 0) AS "Evidences"
     FROM 
     result r
     left join gender_tag_level gtl on gtl.id = r.gender_tag_level_id 
