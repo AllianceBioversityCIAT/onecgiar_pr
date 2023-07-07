@@ -242,7 +242,6 @@ export class ResultInnovationPackageService {
       const version = await this._versioningService.$_findActivePhase(
         AppModuleIdEnum.IPSR,
       );
-      console.log('esto esta bien?', version);
       if (!version) {
         throw this._handlersError.returnErrorRes({
           error: `No phase is open for the IPSR module`,
@@ -263,7 +262,6 @@ export class ResultInnovationPackageService {
       const last_code = await this._resultRepository.getLastResultCode();
       const regions = CreateResultInnovationPackageDto.regions;
       const countries = CreateResultInnovationPackageDto.countries;
-      console.log('aun esta bien!');
 
       if ([1, 2, 5].includes(CreateResultInnovationPackageDto.geo_scope_id)) {
         innovationGeoScope = CreateResultInnovationPackageDto.geo_scope_id;
@@ -486,7 +484,6 @@ export class ResultInnovationPackageService {
         status: HttpStatus.OK,
       };
     } catch (error) {
-      console.log(error);
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
@@ -695,7 +692,7 @@ export class ResultInnovationPackageService {
     updateGeneralInformationDto: UpdateGeneralInformationDto,
     user: TokenDto,
   ) {
-    console.log("🚀 ~ file: result-innovation-package.service.ts:698 ~ ResultInnovationPackageService ~ updateGeneralInformationDto:", updateGeneralInformationDto)
+    console.log("🚀 ~ file: result-innovation-package.service.ts:695 ~ ResultInnovationPackageService ~ updateGeneralInformationDto:", updateGeneralInformationDto)
     try {
       const resultExist = await this._resultRepository.findOneBy({
         id: resultId,
@@ -805,7 +802,7 @@ export class ResultInnovationPackageService {
         },
       });
 
-      if (req?.nutrition_tag_level_id) {
+      if (req?.evidence_nutrition_tag) {
         if (nutritionEvidenceExist) {
           await this._evidenceRepository.update(nutritionEvidenceExist.id, {
             link: req?.evidence_nutrition_tag,
@@ -831,7 +828,7 @@ export class ResultInnovationPackageService {
         },
       });
 
-      if (req?.environmental_biodiversity_tag_level_id) {
+      if (req?.evidence_environment_tag) {
         if (enviromentEvidenceExist) {
           await this._evidenceRepository.update(enviromentEvidenceExist.id, {
             link: req?.evidence_environment_tag,
@@ -853,11 +850,11 @@ export class ResultInnovationPackageService {
         where: {
           result_id: resultId,
           is_active: 1,
-          environmental_biodiversity_related: true,
+          poverty_related: true,
         },
       });
 
-      if (req?.poverty_tag_level_id) {
+      if (req?.evidence_poverty_tag) {
         if (povertyEvidenceExist) {
           await this._evidenceRepository.update(povertyEvidenceExist.id, {
             link: req?.evidence_poverty_tag,
