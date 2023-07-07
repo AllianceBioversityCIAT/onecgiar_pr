@@ -22,10 +22,10 @@
         display: grid;
         grid-template-columns: 1fr auto;
         gap: 10px;
+    }
 
-        .checkboxes {
-            margin-top: 50px;
-
-        }
+    .checkboxes {
+        display: flex;
+        gap: 12px;
     }
 }
