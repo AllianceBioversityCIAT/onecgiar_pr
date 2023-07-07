@@ -7,6 +7,7 @@ export class TheoryOfChangeBody {
   contributors_result_toc_result: resultToResultInterfaceToc[] = [];
   impacts: ResultTocImpactsInterface[];
   pending_contributing_initiatives: any;
+  contributing_and_primary_initiative: any;
 }
 interface ResultTocImpactsInterface {
   id: number;

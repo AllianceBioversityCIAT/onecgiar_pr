@@ -253,6 +253,36 @@ export class ResultByInitiativesRepository
     }
   }
 
+  async getContributorInitiativeAndPrimaryByResult(resultId: number) {
+    const queryData = `
+    select 
+    	ci.id,
+      ci.official_code,
+      ci.name as initiative_name,
+      ci.short_name,
+      rbi.initiative_role_id,
+      rbi.is_active
+    from results_by_inititiative rbi 
+    	inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
+        									and ci.active > 0
+    where rbi.result_id = ?
+      and rbi.is_active > 0;
+    `;
+    try {
+      const getInitiative: InitiativeByResultDTO[] = await this.query(
+        queryData,
+        [resultId],
+      );
+      return getInitiative;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultByInitiativesRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async getContributorInitiativeByResultAndInit(
     resultId: number,
     initiativeId: number,
@@ -473,14 +503,21 @@ export class ResultByInitiativesRepository
       });
     }
   }
-  updateIniciativeSubmitter(resultId: number, initiative_id: number) {
+  async updateIniciativeSubmitter(resultId: number, initiative_id: number) {
     try {
       let updateIniciative;
       if (resultId != null) {
-        updateIniciative = this.update(
-          { result_id: resultId },
+        const updateIniciatives = await this.update(
+          { result_id: resultId},
           {
-            initiative_id: initiative_id,
+            initiative_role_id: 2,
+          },
+        );
+        
+        updateIniciative = await this.update(
+          { result_id: resultId, initiative_id:initiative_id},
+          {
+            initiative_role_id: 1,
           },
         );
       }

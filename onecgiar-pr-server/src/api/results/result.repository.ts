@@ -381,6 +381,8 @@ export class ResultRepository
     r.version_id,
     r.result_type_id,
     r.status,
+    r.status_id,
+    rs.status_name,
     r.created_by,
     r.last_updated_by,
     r.reported_year_id,
@@ -406,6 +408,7 @@ FROM
     inner join result_level rl on rl.id = r.result_level_id 
     inner join result_type rt on rt.id = r.result_type_id 
     inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
+    INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
 WHERE
     r.is_active > 0
     and r.version_id = ?;
@@ -474,7 +477,8 @@ WHERE
     ci.official_code AS submitter,
     ci.id AS submitter_id,
     r.status,
-    IF(r.status = 0, 'Editing', 'Submitted') AS status_name,
+    r.status_id,
+    rs.status_name AS status_name,
     r2.id as role_id,
     r2.description as role_name,
     if(y.\`year\` = r.reported_year_id, 'New', '') as is_new,
@@ -500,6 +504,7 @@ FROM
     left join \`year\` y ON y.active > 0
     left join users u on u.id = r.created_by
     inner join \`version\` v on v.id = r.version_id
+    INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
 WHERE
     r.is_active > 0
     AND rbi.is_active > 0
@@ -530,9 +535,7 @@ WHERE
       (Select gtl2.description from gender_tag_level gtl2 where id = r.gender_tag_level_id) as \`Gender tag\`, 
       (Select gtl2.description from gender_tag_level gtl2 where id = r.climate_change_tag_level_id) as \`Climate tag\`,
     	ci.official_code as \`Submitter\` ,
-    	if(r.status = 0,
-    	'Editing',
-    	'Submitted') as \`Status\`,
+    	rs.status_name as \`Status\`,
     	DATE_FORMAT(r.created_date, "%Y-%m-%d") as \`Creation date\`,
     	tr.work_package_id as \`Work package id\`,
     	wp.name as \`Work package title\`,
@@ -580,6 +583,7 @@ WHERE
     left join ${env.DB_OST}.work_packages wp on
     	wp.id = tr.work_package_id
     	and wp.active > 0
+    INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
     WHERE
     	r.created_date >= ?
     	and r.created_date <= ?
@@ -590,7 +594,7 @@ WHERE
     	rl.name,
     	rt.name,
     	ci.official_code,
-    	r.status,
+    	rs.status_name,
     	r.created_date,
     	tr.work_package_id,
     	wp.name,
@@ -748,6 +752,8 @@ WHERE
     r.version_id,
     r.result_type_id,
     r.status,
+    r.status_id,
+    rs.status_name,
     r.created_by,
     r.last_updated_by,
     r.reported_year_id,
@@ -774,6 +780,7 @@ FROM
     inner join result_level rl on rl.id = r.result_level_id 
     inner join result_type rt on rt.id = r.result_type_id 
     inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
+    INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
 WHERE
     r.is_active > 0
     and r.id = ?
@@ -804,6 +811,8 @@ WHERE
         r.version_id,
         r.result_type_id,
         r.status,
+        r.status_id,
+        rs.status_name,
         r.created_by,
         r.last_updated_by,
         r.reported_year_id,
@@ -834,17 +843,18 @@ WHERE
         INNER JOIN result_level rl on rl.id = r.result_level_id
         INNER JOIN result_type rt on rt.id = r.result_type_id
         INNER JOIN clarisa_initiatives ci on ci.id = rbi.inititiative_id
+        INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
     WHERE
         r.is_active > 0
         AND (
             (
                 r.result_type_id = 7
-                AND r.status = 1
+                AND r.status_id = 3
             )
             OR (
                 r.result_type_id = 11
-                AND r.status = 0
-                OR r.status = 1
+                AND r.status_id = 1
+                OR r.status_id = 3
             )
         )
         AND result_type_id IN (?)
@@ -876,6 +886,8 @@ WHERE
     r.result_type_id,
     rt.name as result_type_name,
     r.status,
+    r.status_id,
+    rs.status_name,
     r.created_by,
     r.last_updated_by,
     r.reported_year_id,
@@ -904,6 +916,7 @@ FROM
     inner join result_level rl on rl.id = r.result_level_id 
     inner join result_type rt on rt.id = r.result_type_id 
     inner join \`version\` v on v.id = r.version_id
+    INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
 WHERE
     r.is_active > 0
     and r.id = ?;
@@ -1032,7 +1045,7 @@ WHERE
     join result_type rt on r.result_type_id = rt.id
 left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     where rbi3.inititiative_id = ?
-      and r.status = 1
+      and r.status_id = 3
       and r.is_active = 1
       and r.version_id = ?
     ;
@@ -1059,11 +1072,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     }', r.result_code,?, 'phase=1') as \`PDF Link\`,
     rl.name as "Result Level",
     rt.name as "Result Type",
-    (case 
-      when r.status = 0 then "Editing"
-      when r.status = 1 then "Submitted"
-      else "Not defined"
-    end) as "Status",
+    rs.status_name as "Status",
     r.title as "Result Title",
     r.description as "Result Description",
     r.lead_contact_person as "Lead Contact Person",
@@ -1205,6 +1214,7 @@ left join clarisa_countries cc3
     and lr2.is_active > 0
     and lr2.legacy_link is not NULL */
     left join results_knowledge_product rkp on rkp.results_id = r.id and rkp.is_active > 0
+    INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
   /*  left join evidence e on e.result_id = r.id and e.is_active > 0 */
     WHERE r.result_code ${resultCodes.length ? `in (${resultCodes})` : '= 0'}
     GROUP by 
@@ -1227,7 +1237,8 @@ left join clarisa_countries cc3
     ci.short_name,
     r.no_applicable_partner,
     rkp.cgspace_countries,
-    rt.id
+    rt.id,
+    ci.name
     `;
 
     try {
@@ -1251,11 +1262,7 @@ left join clarisa_countries cc3
     concat('${env.FRONT_END_PDF_ENDPOINT}', r.result_code,?, 'phase=1') as \`PDF Link\`,
     rl.name as "Result Level",
     rt.name as "Result Type",
-    (case 
-      when r.status = 0 then "Editing"
-      when r.status = 1 then "Submitted"
-      else "Not defined"
-    end) as "Status",
+    rs.status_name as "Status",
     r.title as "Result Title",
     r.description as "Result Description",
     r.lead_contact_person as "Lead Contact Person",
@@ -1392,9 +1399,10 @@ left join clarisa_countries cc3
     and lr2.legacy_link is not NULL */
     left join results_knowledge_product rkp on rkp.results_id = r.id and rkp.is_active > 0
   /*  left join evidence e on e.result_id = r.id and e.is_active > 0 */
+    INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
     left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     WHERE rbi3.inititiative_id = ${inititiative_id}
-      AND r.status = 1
+      AND r.status_id = 3
     GROUP by 
     r.result_code,
     r.id,
@@ -1636,7 +1644,7 @@ left join clarisa_countries cc3
       ) as "SDG(s)"
     from result r
     left join results_by_inititiative rbi on rbi.result_id = r.id
-    WHERE rbi.inititiative_id = ${inititiative_id} AND r.status = 1
+    WHERE rbi.inititiative_id = ${inititiative_id} AND r.status_id = 3
     ;
     `;
 
@@ -1689,7 +1697,7 @@ left join clarisa_countries cc3
         LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
         LEFT JOIN clarisa_geographic_scope cgs ON cgs.id = r.geographic_scope_id
     WHERE
-        r.status = 1
+        r.status_id = 3
         AND r.is_active = 1
         AND rbi.initiative_role_id = 1
         AND (

@@ -394,7 +394,14 @@ export class VersioningService {
       }
 
       if (updateVersioningDto?.status) {
-        await this._versionRepository.$_closeAllPhases();
+        if(!res?.app_module_id){
+          throw this._returnResponse.format({
+            message: `The phase ${res.phase_name} does not have a module associated to it. Contact with support`,
+            response: res,
+            statusCode: HttpStatus.CONFLICT,
+          });
+        }
+        await this._versionRepository.$_closeAllPhases(res.app_module_id);
       }
       await this._versionRepository.update(id, updateVersioningDto);
 

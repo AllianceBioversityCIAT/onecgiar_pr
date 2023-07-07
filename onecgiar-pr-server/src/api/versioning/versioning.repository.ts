@@ -45,14 +45,14 @@ export class VersionRepository extends Repository<Version> {
     }
   }
 
-  async $_closeAllPhases(): Promise<boolean> {
+  async $_closeAllPhases(appModuleId: number): Promise<boolean> {
     try {
       const queryData = `
       update \`version\` 
       set status = false
-      where is_active > 0 and status = true
+      where is_active > 0 and status = true and app_module_id = ?;
       `;
-      await this.query(queryData);
+      await this.query(queryData, [appModuleId]);
       return true;
     } catch (error) {
       return false;

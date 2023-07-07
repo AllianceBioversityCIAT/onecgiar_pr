@@ -39,10 +39,11 @@ export class RdTheoryOfChangeComponent {
           this.getConsumed = true;
         }, 100);
         if (this.theoryOfChangeBody?.result_toc_result) this.psub = `${this.theoryOfChangeBody?.result_toc_result.official_code} ${this.theoryOfChangeBody?.result_toc_result.short_name}`;
+        this.theoryOfChangeBody?.contributing_and_primary_initiative.forEach(init => (init.full_name = `${init?.official_code} - <strong>${init?.short_name}</strong> - ${init?.initiative_name}`));
 
         // this.theoryOfChangeBody.result_toc_result;
       },
-      (err) => {
+      err => {
         this.getConsumed = true;
         console.error(err);
       }
@@ -52,18 +53,18 @@ export class RdTheoryOfChangeComponent {
   get validateGranTitle() {
     //(this.theoryOfChangeBody.contributing_np_projects);
     for (const iterator of this.theoryOfChangeBody.contributing_np_projects) {
-      const evidencesFinded = this.theoryOfChangeBody.contributing_np_projects.filter((evidence) => evidence.grant_title == iterator.grant_title);
+      const evidencesFinded = this.theoryOfChangeBody.contributing_np_projects.filter(evidence => evidence.grant_title == iterator.grant_title);
       if (evidencesFinded.length >= 2) {
         return evidencesFinded.length >= 2;
       }
     }
 
-    return !!this.theoryOfChangeBody.contributing_np_projects.find((evidence) => !evidence.grant_title);
+    return !!this.theoryOfChangeBody.contributing_np_projects.find(evidence => !evidence.grant_title);
   }
 
   onSaveSection() {
     console.log(this.theoryOfChangeBody);
-    this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe((resp) => {
+    this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
       //(resp);
       this.getConsumed = false;
       // this.theoryOfChangeBody.result_toc_result.initiative_id = null;
@@ -107,16 +108,16 @@ export class RdTheoryOfChangeComponent {
     //(this.theoryOfChangeBody.contributing_np_projects);
   }
   requestEvent() {
-    this.api.dataControlSE.findClassTenSeconds('alert-event').then((resp) => {
+    this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
       try {
-        document.querySelector('.alert-event').addEventListener('click', (e) => {
+        document.querySelector('.alert-event').addEventListener('click', e => {
           this.api.dataControlSE.showPartnersRequest = true;
         });
       } catch (error) {}
     });
   }
   addPrimary(center) {
-    this.theoryOfChangeBody.contributing_center.map((center) => (center.primary = false));
+    this.theoryOfChangeBody.contributing_center.map(center => (center.primary = false));
     center.primary = true;
   }
 

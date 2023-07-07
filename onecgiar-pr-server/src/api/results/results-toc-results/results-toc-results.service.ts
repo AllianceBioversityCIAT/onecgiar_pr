@@ -425,6 +425,10 @@ export class ResultsTocResultsService {
         await this._resultByInitiativesRepository.getContributorInitiativeByResult(
           resultId,
         );
+        const conAndPriInit =
+        await this._resultByInitiativesRepository.getContributorInitiativeAndPrimaryByResult(
+          resultId,
+        );
       const conPending =
         await this._resultByInitiativesRepository.getPendingInit(resultId);
       const npProject =
@@ -536,6 +540,7 @@ export class ResultsTocResultsService {
       return {
         response: {
           contributing_initiatives: conInit,
+          contributing_and_primary_initiative: conAndPriInit,
           pending_contributing_initiatives: conPending,
           contributing_np_projects: npProject,
           contributing_center: resCenters,
