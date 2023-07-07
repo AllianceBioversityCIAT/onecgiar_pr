@@ -310,10 +310,6 @@ export class ResultsService {
     resultGeneralInformation: CreateGeneralInformationResultDto,
     user: TokenDto,
   ) {
-    console.log(
-      '🚀 ~ file: results.service.ts:313 ~ ResultsService ~ resultGeneralInformation:',
-      resultGeneralInformation,
-    );
     try {
       const result = await this._resultRepository.getResultById(
         resultGeneralInformation.result_id,
@@ -589,10 +585,6 @@ export class ResultsService {
         await this._resultByIntitutionsTypeRepository.save(
           saveInstitutionsType,
         );
-      console.log(
-        '🚀 ~ file: results.service.ts:548 ~ ResultsService ~ updateResult:',
-        updateResult,
-      );
       return {
         response: {
           updateResult,

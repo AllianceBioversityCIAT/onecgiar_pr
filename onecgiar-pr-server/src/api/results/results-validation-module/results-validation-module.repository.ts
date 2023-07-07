@@ -14,43 +14,55 @@ export class resultValidationRepository extends Repository<Validation>{
 
   async generalInformationValidation(resultId: number, resultLevel: number, resultType: number) {
     const queryData = `
-    SELECT
+	SELECT
 		'general-information' as section_name,
 		CASE
-			when (r.title is not null
-			and r.title <> '')
-			${resultType != 6?`and 
-		 	(r.description is not null
-			and r.description <> '')`:``}
-			and 
-		 	(r.gender_tag_level_id is not null
-			and r.gender_tag_level_id <> '')
-			and 
-		 	(r.climate_change_tag_level_id is not null
-			and r.climate_change_tag_level_id <> '')
-			and 
-		 	(r.is_krs in (0, 1))
-			${resultLevel != 4 && resultLevel != 1?`and 
-		 	(((
-			select
-				COUNT(rbi.id)
-			from
-				results_by_institution rbi
-			WHERE
-				rbi.institution_roles_id = 1
-				and rbi.result_id = r.id
-				and rbi.is_active > 0) > 0)
-			or
-			((
-			   select
-			   COUNT(rbit.id)
-			   from
-			   results_by_institution_type rbit
-			   WHERE
-				   rbit.institution_roles_id = 1
-			   and rbit.results_id = r.id
-			   and rbit.is_active > 0) > 0))`:``}
-		 then true
+			when (
+				r.title is not null
+				and r.title <> ''
+			) ${resultType != 6 ? `and 
+				(r.description is not null
+				and r.description <> '')` :`` }
+			and (
+				r.gender_tag_level_id is not null
+				and r.gender_tag_level_id <> ''
+			)
+			and (
+				r.climate_change_tag_level_id is not null
+				and r.climate_change_tag_level_id <> ''
+			)
+			and (
+				r.nutrition_tag_level_id is not null
+				and r.nutrition_tag_level_id <> ''
+			)
+			and (
+				r.environmental_biodiversity_tag_level_id is not null
+				and r.environmental_biodiversity_tag_level_id <> ''
+			)
+			and (
+				r.poverty_tag_level_id is not null
+				and r.poverty_tag_level_id <> ''
+			)
+			and (r.is_krs in (0, 1)) ${resultLevel != 4 && resultLevel != 1 ? `and 
+				(((
+				select
+					COUNT(rbi.id)
+				from
+					results_by_institution rbi
+				WHERE
+					rbi.institution_roles_id = 1
+					and rbi.result_id = r.id
+					and rbi.is_active > 0) > 0)
+				or
+				((
+				select
+				COUNT(rbit.id)
+				from
+				results_by_institution_type rbit
+				WHERE
+					rbit.institution_roles_id = 1
+				and rbit.results_id = r.id
+				and rbit.is_active > 0) > 0))` :`` } then true
 			else false
 		END as validation
 	FROM
@@ -284,62 +296,209 @@ export class resultValidationRepository extends Repository<Validation>{
   async evidenceValidation(resultId: number) {
     const queryData = `
 	SELECT
-			'evidences' as section_name,
-			CASE
-				when if(rid.innovation_readiness_level_id = 11 and r.result_type_id = 7, true,((
-			SELECT
-					if((sum(if(e.link is not null and e.link <> '', 1, 0)) - count(e.id)) is null,
-					0,
-					(sum(if(e.link is not null and e.link <> '', 1, 0)) - count(e.id)))
-			from
-					evidence e
-			where
-					e.result_id = r.id
-				and e.is_supplementary = 0
-				and e.is_active > 0) = 0)
-			and
-			((
-			SELECT
-				sum(if(r.gender_tag_level_id = 3 and e.gender_related = 1, 1, if(r.gender_tag_level_id in (1, 2), 1, if(r.gender_tag_level_id  is null,1,0))))
-			from
-				evidence e
-			where
-				e.result_id = r.id
-				and e.is_supplementary = 0
-				and e.is_active > 0) > 0)
-			and
-			((
-			SELECT
-				sum(if(r.climate_change_tag_level_id = 3 and e.youth_related = 1, 1, if(r.climate_change_tag_level_id in (1, 2), 1, if(r.climate_change_tag_level_id is null,1,0))))
-			from
-				evidence e
-			where
-				e.result_id = r.id
-				and e.is_supplementary = 0
-				and e.is_active > 0) > 0)
-			and
-			((
-			SELECT
-					if((sum(if(e.link is not null and e.link <> '', 1, 0)) - count(e.id)) is null,
-					0,
-					(sum(if(e.link is not null and e.link <> '', 1, 0)) - count(e.id)))
-			from
-					evidence e
-			where
-					e.result_id = r.id
-				and e.is_supplementary = 1
-				and e.is_active > 0) = 0))
-			then TRUE
-			else false
-		END as validation
-	from
-			\`result\` r
-		left join results_innovations_dev rid on
-		rid.results_id = r.id
-		and rid.is_active > 0
+		'evidences' AS section_name,
+		CASE
+			WHEN IF(
+				rid.innovation_readiness_level_id = 11
+				AND r.result_type_id = 7,
+				TRUE,
+				(
+					(
+						SELECT
+							IF(
+								(
+									SUM(
+										IF(
+											e.link IS NOT NULL
+											AND e.link <> '',
+											1,
+											0
+										)
+									) - COUNT(e.id)
+								) IS NULL,
+								0,
+								(
+									SUM(
+										IF(
+											e.link IS NOT NULL
+											AND e.link <> '',
+											1,
+											0
+										)
+									) - COUNT(e.id)
+								)
+							)
+						FROM
+							evidence e
+						WHERE
+							e.result_id = r.id
+							AND e.is_supplementary = 0
+							AND e.is_active > 0
+					) = 0
+				)
+				AND (
+					(
+						SELECT
+							SUM(
+								IF(
+									r.gender_tag_level_id = 3
+									AND e.gender_related = 1,
+									1,
+									IF(
+										r.gender_tag_level_id IN (1, 2),
+										1,
+										IF(r.gender_tag_level_id IS NULL, 1, 0)
+									)
+								)
+							)
+						FROM
+							evidence e
+						WHERE
+							e.result_id = r.id
+							AND e.is_supplementary = 0
+							AND e.is_active > 0
+					) > 0
+				)
+				AND (
+					(
+						SELECT
+							SUM(
+								IF(
+									r.climate_change_tag_level_id = 3
+									AND e.youth_related = 1,
+									1,
+									IF(
+										r.climate_change_tag_level_id IN (1, 2),
+										1,
+										IF(r.climate_change_tag_level_id IS NULL, 1, 0)
+									)
+								)
+							)
+						FROM
+							evidence e
+						WHERE
+							e.result_id = r.id
+							AND e.is_supplementary = 0
+							AND e.is_active > 0
+					) > 0
+				)
+				AND (
+					(
+						SELECT
+							SUM(
+								IF(
+									r.nutrition_tag_level_id = 3
+									AND e.nutrition_related = 1,
+									1,
+									IF(
+										r.nutrition_tag_level_id IN (1, 2),
+										1,
+										IF(r.nutrition_tag_level_id IS NULL, 1, 0)
+									)
+								)
+							)
+						FROM
+							evidence e
+						WHERE
+							e.result_id = r.id
+							AND e.is_supplementary = 0
+							AND e.is_active > 0
+					) > 0
+				)
+				AND (
+					(
+						SELECT
+							SUM(
+								IF(
+									r.environmental_biodiversity_tag_level_id = 3
+									AND e.environmental_biodiversity_related = 1,
+									1,
+									IF(
+										r.environmental_biodiversity_tag_level_id IN (1, 2),
+										1,
+										IF(
+											r.environmental_biodiversity_tag_level_id IS NULL,
+											1,
+											0
+										)
+									)
+								)
+							)
+						FROM
+							evidence e
+						WHERE
+							e.result_id = r.id
+							AND e.is_supplementary = 0
+							AND e.is_active > 0
+					) > 0
+				)
+				AND (
+					(
+						SELECT
+							SUM(
+								IF(
+									r.poverty_tag_level_id = 3
+									AND e.poverty_related = 1,
+									1,
+									IF(
+										r.poverty_tag_level_id IN (1, 2),
+										1,
+										IF(r.poverty_tag_level_id IS NULL, 1, 0)
+									)
+								)
+							)
+						FROM
+							evidence e
+						WHERE
+							e.result_id = r.id
+							AND e.is_supplementary = 0
+							AND e.is_active > 0
+					) > 0
+				)
+				AND (
+					(
+						SELECT
+							IF(
+								(
+									SUM(
+										IF(
+											e.link IS NOT NULL
+											AND e.link <> '',
+											1,
+											0
+										)
+									) - COUNT(e.id)
+								) IS NULL,
+								0,
+								(
+									SUM(
+										IF(
+											e.link IS NOT NULL
+											AND e.link <> '',
+											1,
+											0
+										)
+									) - COUNT(e.id)
+								)
+							)
+						FROM
+							evidence e
+						WHERE
+							e.result_id = r.id
+							AND e.is_supplementary = 1
+							AND e.is_active > 0
+					) = 0
+				)
+			) THEN TRUE
+			ELSE FALSE
+		END AS validation
+	FROM
+		result r
+		LEFT JOIN results_innovations_dev rid ON rid.results_id = r.id
+		AND rid.is_active > 0
 	WHERE
-			r.id = ?
-		and r.is_active > 0;
+		r.id = ?
+		AND r.is_active > 0;
     `;
     try {
       const shareResultRequest: GetValidationSectionDto[] = await this.dataSource.query(queryData, [resultId]); 
