@@ -1069,6 +1069,9 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     r.lead_contact_person as "Lead Contact Person",
     gtl.title as "Gender Tag Level",
     gtl2.title as "Climate Tag Level",
+    gtl3.title as "Nutrition Tag Level",
+    gtl4.title as "Environment and/or biodiversity Tag Level",
+    gtl5.title as "Poverty Tag Level",
     if(r.is_krs is null,'Not provided',if(r.is_krs,'Yes','No')) as "Is Key Result Story?",
     -- section 2
     concat(ci.official_code, ' - ', ci.name) as "Primary Submitter",
@@ -1140,6 +1143,9 @@ left join clarisa_countries cc3
     result r
     left join gender_tag_level gtl on gtl.id = r.gender_tag_level_id 
     left join gender_tag_level gtl2 on gtl2.id = r.climate_change_tag_level_id 
+    left join gender_tag_level gtl3 on gtl3.id = r.nutrition_tag_level_id 
+    left join gender_tag_level gtl4 on gtl4.id = r.environmental_biodiversity_tag_level_id
+    left join gender_tag_level gtl5 on gtl5.id = r.poverty_tag_level_id
     left join results_by_inititiative rbi on rbi.result_id = r.id 
     and rbi.initiative_role_id = 1
     and rbi.is_active > 0
@@ -1208,6 +1214,9 @@ left join clarisa_countries cc3
     r.description,
     gtl.title,
     gtl2.title,
+    gtl3.title,
+    gtl4.title,
+    gtl5.title,
     rl.name,
     rt.name,
     r.is_krs,
