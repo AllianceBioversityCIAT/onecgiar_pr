@@ -733,7 +733,8 @@ export class ResultInnovationPackageService {
         gender_tag_level_id: req?.gender_tag_level_id,
         climate_change_tag_level_id: req?.climate_change_tag_level_id,
         nutrition_tag_level_id: req?.nutrition_tag_level_id,
-        environmental_biodiversity_tag_level_id: req?.environmental_biodiversity_tag_level_id,
+        environmental_biodiversity_tag_level_id:
+          req?.environmental_biodiversity_tag_level_id,
         poverty_tag_level_id: req?.poverty_tag_level_id,
         is_krs: req?.is_krs,
         krs_url: req?.krs_url,
@@ -765,6 +766,17 @@ export class ResultInnovationPackageService {
             gender_related: true,
           });
         }
+      } else if (
+        req?.evidence_gender_tag === '' ||
+        req?.evidence_gender_tag === undefined ||
+        req?.evidence_gender_tag === null
+      ) {
+        if (genderEvidenceExist) {
+          await this._evidenceRepository.update(genderEvidenceExist.id, {
+            is_active: 0,
+            last_updated_by: user.id,
+          });
+        }
       }
 
       const climateEvidenceExist = await this._evidenceRepository.findOne({
@@ -789,6 +801,17 @@ export class ResultInnovationPackageService {
             created_by: user.id,
             last_updated_by: user.id,
             youth_related: true,
+          });
+        }
+      } else if (
+        req?.evidence_climate_tag === '' ||
+        req?.evidence_climate_tag === undefined ||
+        req?.evidence_climate_tag === null
+      ) {
+        if (climateEvidenceExist) {
+          await this._evidenceRepository.update(climateEvidenceExist.id, {
+            is_active: 0,
+            last_updated_by: user.id,
           });
         }
       }
@@ -817,6 +840,17 @@ export class ResultInnovationPackageService {
             nutrition_related: true,
           });
         }
+      } else if (
+        req?.evidence_nutrition_tag === '' ||
+        req?.evidence_nutrition_tag === undefined ||
+        req?.evidence_nutrition_tag === null
+      ) {
+        if (nutritionEvidenceExist) {
+          await this._evidenceRepository.update(nutritionEvidenceExist.id, {
+            is_active: 0,
+            last_updated_by: user.id,
+          });
+        }
       }
 
       const enviromentEvidenceExist = await this._evidenceRepository.findOne({
@@ -843,6 +877,17 @@ export class ResultInnovationPackageService {
             environmental_biodiversity_related: true,
           });
         }
+      } else if (
+        req?.evidence_environment_tag === '' ||
+        req?.evidence_environment_tag === undefined ||
+        req?.evidence_environment_tag === null
+      ) {
+        if (enviromentEvidenceExist) {
+          await this._evidenceRepository.update(enviromentEvidenceExist.id, {
+            is_active: 0,
+            last_updated_by: user.id,
+          });
+        }
       }
 
       const povertyEvidenceExist = await this._evidenceRepository.findOne({
@@ -867,6 +912,17 @@ export class ResultInnovationPackageService {
             created_by: user.id,
             last_updated_by: user.id,
             poverty_related: true,
+          });
+        }
+      } else if (
+        req?.evidence_poverty_tag === '' ||
+        req?.evidence_poverty_tag === undefined ||
+        req?.evidence_poverty_tag === null
+      ) {
+        if (povertyEvidenceExist) {
+          await this._evidenceRepository.update(povertyEvidenceExist.id, {
+            is_active: 0,
+            last_updated_by: user.id,
           });
         }
       }
