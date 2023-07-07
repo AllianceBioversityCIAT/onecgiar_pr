@@ -28,8 +28,8 @@
         </div>
     </div>
     <div *ngIf="this.ipsrGeneralInformationBody.gender_tag_level_id != null">
-        <app-pr-input label="Evidence of the gender tag" [required]="this.ipsrGeneralInformationBody.gender_tag_level_id == 3" placeholder="Link"
-            [(ngModel)]="this.ipsrGeneralInformationBody.evidence_gender_tag">
+        <app-pr-input label="Evidence" [required]="this.ipsrGeneralInformationBody.gender_tag_level_id == 3"
+            placeholder="Link" [(ngModel)]="this.ipsrGeneralInformationBody.evidence_gender_tag">
         </app-pr-input>
     </div>
 </div>
@@ -53,8 +53,83 @@
 
     </div>
     <div *ngIf="this.ipsrGeneralInformationBody.climate_change_tag_level_id != null">
-        <app-pr-input label="Evidence of the climate change tag" [required]="this.ipsrGeneralInformationBody.climate_change_tag_level_id == 3" placeholder="Link"
-            [(ngModel)]="this.ipsrGeneralInformationBody.evidence_climate_tag">
+        <app-pr-input label="Evidence" [required]="this.ipsrGeneralInformationBody.climate_change_tag_level_id == 3"
+            placeholder="Link" [(ngModel)]="this.ipsrGeneralInformationBody.evidence_climate_tag">
+        </app-pr-input>
+    </div>
+</div>
+<!--TODO New fields -->
+<!--TODO #1 Nutrition tag -->
+<div class="block_container">
+    <!-- <app-alert-status [description]="climateInformation()">
+    </app-alert-status> -->
+
+    <div class="radio_grid">
+        <app-pr-radio-button [(ngModel)]="this.ipsrGeneralInformationBody.nutrition_tag_level_id"
+            [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id" label="Nutrition tag">
+        </app-pr-radio-button>
+        <!-- [hidden]="this.generalInfoBody.gender_tag_id != 3" -->
+        <div *ngIf="this.ipsrGeneralInformationBody.nutrition_tag_level_id == 3">
+            <app-alert-status
+                description="As a score of 2 has been selected, you are required to provide evidence of the nutrition tag.">
+            </app-alert-status>
+
+        </div>
+
+    </div>
+    <div *ngIf="this.ipsrGeneralInformationBody.nutrition_tag_level_id != null">
+        <app-pr-input label="Evidence" [required]="this.ipsrGeneralInformationBody.nutrition_tag_level_id == 3"
+            placeholder="Link" [(ngModel)]="this.ipsrGeneralInformationBody.evidence_nutrition_tag">
+        </app-pr-input>
+    </div>
+</div>
+<!--TODO #2 Environment and/or biodiversity tag -->
+<div class="block_container">
+    <!-- <app-alert-status [description]="climateInformation()">
+    </app-alert-status> -->
+
+    <div class="radio_grid">
+        <app-pr-radio-button [(ngModel)]="this.ipsrGeneralInformationBody.environmental_biodiversity_tag_level_id"
+            [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
+            label="Environment and/or biodiversity tag">
+        </app-pr-radio-button>
+        <!-- [hidden]="this.generalInfoBody.gender_tag_id != 3" -->
+        <div *ngIf="this.ipsrGeneralInformationBody.environmental_biodiversity_tag_level_id == 3">
+            <app-alert-status
+                description="As a score of 2 has been selected, you are required to provide evidence of the environment and/or biodiversity tag.">
+            </app-alert-status>
+
+        </div>
+
+    </div>
+    <div *ngIf="this.ipsrGeneralInformationBody.environmental_biodiversity_tag_level_id != null">
+        <app-pr-input label="Evidence"
+            [required]="this.ipsrGeneralInformationBody.environmental_biodiversity_tag_level_id == 3" placeholder="Link"
+            [(ngModel)]="this.ipsrGeneralInformationBody.evidence_environment_tag">
+        </app-pr-input>
+    </div>
+</div>
+<!--TODO #3 Poverty tag-->
+<div class="block_container">
+    <!-- <app-alert-status [description]="climateInformation()">
+    </app-alert-status> -->
+
+    <div class="radio_grid">
+        <app-pr-radio-button [(ngModel)]="this.ipsrGeneralInformationBody.poverty_tag_level_id"
+            [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id" label="Poverty tag">
+        </app-pr-radio-button>
+        <!-- [hidden]="this.generalInfoBody.gender_tag_id != 3" -->
+        <div *ngIf="this.ipsrGeneralInformationBody.poverty_tag_level_id == 3">
+            <app-alert-status
+                description="As a score of 2 has been selected, you are required to provide evidence of the poverty tag.">
+            </app-alert-status>
+
+        </div>
+
+    </div>
+    <div *ngIf="this.ipsrGeneralInformationBody.poverty_tag_level_id != null">
+        <app-pr-input label="Evidence" [required]="this.ipsrGeneralInformationBody.poverty_tag_level_id == 3"
+            placeholder="Link" [(ngModel)]="this.ipsrGeneralInformationBody.evidence_poverty_tag">
         </app-pr-input>
     </div>
 </div>
