@@ -28,4 +28,11 @@ export class FooterComponent {
     }
     return false;
   }
+  onMouseEnter() {
+    this.isHover = true;
+  }
+
+  onMouseLeave() {
+    this.isHover = false;
+  }
 }
