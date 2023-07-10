@@ -770,21 +770,21 @@ WHERE
     ci.official_code as initiative_official_code,
     r.lead_contact_person
 FROM
-    result r
-    inner join results_by_inititiative rbi ON rbi.result_id = r.id 
-    									and rbi.is_active > 0
-                      and rbi.initiative_role_id = 1
+    \`result\` r
     inner join result_level rl on rl.id = r.result_level_id 
     inner join result_type rt on rt.id = r.result_type_id 
-    inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
+    inner join results_by_inititiative rbi on rbi.result_id = r.id
+        and rbi.is_active > 0 
+        and rbi.initiative_role_id = 1
+    inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id
     INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
 WHERE
-    r.is_active > 0
-    and r.id = ?
+    r.id = ${id}
+    and r.is_active > 0;
     `;
 
     try {
-      const results: Result[] = await this.query(queryData, [id]);
+      const results: Result[] = await this.query(queryData);
       return results.length ? results[0] : undefined;
     } catch (error) {
       throw {
@@ -793,6 +793,18 @@ WHERE
         status: HttpStatus.INTERNAL_SERVER_ERROR,
       };
     }
+    /*return this.query(queryData, [id])
+      .then((res) => {
+        setTimeout(() => {}, 500);
+        return res.length ? res[0] : undefined;
+      })
+      .catch((error) => {
+        throw {
+          message: `[${ResultRepository.name}] => completeAllData error: ${error}`,
+          response: {},
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+        };
+      });*/
   }
 
   async getResultByTypes(typesId: number[]): Promise<Result[]> {

@@ -40,9 +40,10 @@ export class ShareResultRequestService {
     user: TokenDto,
   ) {
     try {
-      const result: getResultIdFullData = await (<any>(
-        this._resultRepository.getResultById(resultId)
-      ));
+      const result: any = await this._resultRepository.getResultById(
+        parseInt(`${resultId}`),
+      );
+
       let saveData = [];
       if (createTocShareResult?.initiativeShareId?.length) {
         const { initiativeShareId } = createTocShareResult;
