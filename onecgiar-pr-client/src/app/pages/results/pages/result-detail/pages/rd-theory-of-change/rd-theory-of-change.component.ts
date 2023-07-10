@@ -30,9 +30,10 @@ export class RdTheoryOfChangeComponent {
     });
   }
 
-  async getSectionInformation() {
+  async getSectionInformation(callback?) {
     await this.api.resultsSE.GET_toc().subscribe(
       ({ response }) => {
+        console.log('changed');
         this.theoryOfChangeBody = response;
         console.log(this.theoryOfChangeBody);
         setTimeout(() => {
@@ -40,7 +41,7 @@ export class RdTheoryOfChangeComponent {
         }, 100);
         if (this.theoryOfChangeBody?.result_toc_result) this.psub = `${this.theoryOfChangeBody?.result_toc_result.official_code} ${this.theoryOfChangeBody?.result_toc_result.short_name}`;
         this.theoryOfChangeBody?.contributing_and_primary_initiative.forEach(init => (init.full_name = `${init?.official_code} - <strong>${init?.short_name}</strong> - ${init?.initiative_name}`));
-
+        callback();
         // this.theoryOfChangeBody.result_toc_result;
       },
       err => {
@@ -63,12 +64,17 @@ export class RdTheoryOfChangeComponent {
   }
 
   onSaveSection() {
-    console.log(this.theoryOfChangeBody);
+    const previousResult = this.theoryOfChangeBody?.result_toc_result?.official_code;
     this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
       //(resp);
       this.getConsumed = false;
       // this.theoryOfChangeBody.result_toc_result.initiative_id = null;
-      this.getSectionInformation();
+      this.getSectionInformation(() => {
+        const currentResult = this.theoryOfChangeBody?.result_toc_result?.official_code;
+        setTimeout(() => {
+          if (currentResult != previousResult) this.api.alertsFe.show({ id: 'primary-submitter', title: 'Change in primary submitter', description: `The <strong>${previousResult}</strong> will now be the primary submitter of this result and will have exclusive editing rights for all sections and submission. <strong>${currentResult}</strong> will continue to be a contributing initiative for this result. <br> <br> Please ensure that the new primary submitter of this result is aware of this change.`, status: 'success' });
+        }, 2000);
+      });
     });
   }
 
