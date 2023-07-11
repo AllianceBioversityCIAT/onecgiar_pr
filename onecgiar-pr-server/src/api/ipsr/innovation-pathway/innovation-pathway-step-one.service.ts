@@ -1,7 +1,10 @@
 import { HttpStatus, Injectable, Type } from '@nestjs/common';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResultRepository } from '../../results/result.repository';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import {
+  HandlersError,
+  ReturnResponse,
+} from '../../../shared/handlers/error.utils';
 import {
   innovatonUseInterface,
   UpdateInnovationPathwayDto,
@@ -1346,5 +1349,89 @@ export class InnovationPathwayStepOneService {
 
   isNullData(data: any) {
     return data == undefined ? null : data;
+  }
+
+  async retrieveAaOutcomes(resultId: number, user: TokenDto) {
+    try {
+      const resultExist = await this._resultRepository.findOne({
+        where: { id: resultId, is_active: true },
+      });
+
+      if (!resultExist) {
+        return {
+          response: { valid: false },
+          message: 'The result does not exist',
+          statusCode: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const resultIp = await this._resultInnovationPackageRepository.findOne({
+        where: {
+          result_innovation_package_id: resultId,
+          is_active: true,
+        },
+      });
+
+      const resultByIp = await this._innovationByResultRepository.findOne({
+        where: {
+          result_innovation_package_id: resultIp.result_innovation_package_id,
+          is_active: true,
+          ipsr_role_id: 1,
+        },
+      });
+
+      if (!resultIp || !resultByIp) {
+        return {
+          response: { valid: false },
+          message: 'The result innovation package does not exist',
+          statusCode: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const searchAaOutcomes = await this._resultIpAAOutcomes.find({
+        where: {
+          result_by_innovation_package_id:
+            resultByIp.result_by_innovation_package_id,
+          is_active: true,
+        },
+      });
+
+      if (searchAaOutcomes.length) {
+        for (const aa of searchAaOutcomes) {
+          await this._resultIpAAOutcomes.update(
+            aa.result_ip_action_area_outcome_id,
+            {
+              last_updated_by: user.id,
+              is_active: false,
+            },
+          );
+        }
+      }
+
+      // SEARCH CORE INITIATIVE
+      const coreResultInitiative =
+        await this._resultByInitiativesRepository.findOne({
+          where: {
+            result_id: resultByIp.result_id,
+            is_active: true,
+            initiative_role_id: 1,
+          },
+        });
+
+      const retrieve = await this._resultIpAAOutcomes.retrieveAaOutcomes(
+        coreResultInitiative.result_id,
+        coreResultInitiative.initiative_id,
+        resultByIp.result_by_innovation_package_id,
+        user.id,
+      );
+
+      return {
+        response: retrieve,
+        message: 'The retrieve of Action Areas has been successfully completed',
+        statusCode: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
   }
 }
