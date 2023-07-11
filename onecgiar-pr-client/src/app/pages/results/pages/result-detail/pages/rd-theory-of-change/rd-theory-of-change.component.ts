@@ -77,7 +77,7 @@ export class RdTheoryOfChangeComponent {
     const newInit = this.theoryOfChangeBody.contributing_and_primary_initiative.find(init => init.id == this.theoryOfChangeBody.result_toc_result.initiative_id);
     const newInitOfficialCode = newInit?.official_code;
     if (this.currentInitOfficialCode != newInitOfficialCode)
-      return this.api.alertsFe.show({ id: 'primary-submitter', title: 'Change in primary submitter', description: `The <strong>${this.currentInitOfficialCode}</strong> will now be the primary submitter of this result and will have exclusive editing rights for all sections and submission. <strong>${newInitOfficialCode}</strong> will continue to be a contributing initiative for this result. <br> <br> Please ensure that the new primary submitter of this result is aware of this change.`, status: 'success', confirmText: 'Continue & save' }, () => {
+      return this.api.alertsFe.show({ id: 'primary-submitter', title: 'Change in primary submitter', description: `The <strong>${newInitOfficialCode}</strong> will now be the primary submitter of this result and will have exclusive editing rights for all sections and submission. <strong>${this.currentInitOfficialCode}</strong> will continue to be a contributing initiative for this result. <br> <br> Please ensure that the new primary submitter of this result is aware of this change.`, status: 'success', confirmText: 'Continue & save' }, () => {
         saveSection();
       });
 
