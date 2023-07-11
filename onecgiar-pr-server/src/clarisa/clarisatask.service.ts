@@ -86,6 +86,7 @@ export class ClarisaTaskService {
     //count = await this.cloneClarisaImpactArea(count, true);
     //count = await this.cloneClarisaOutcomeIndicators(count, true);
     //count = await this.cloneClarisaRegionsType(count, true);
+
     count = await this.cloneClarisaRegions(count);
     count = await this.cloneClarisaCountries(count);
     count = await this.cloneClarisaMeliaStudyTypes(count);
@@ -731,11 +732,23 @@ export class ClarisaTaskService {
           `${this.clarisaHost}action-area-outcomes`,
           this.configAuth,
         );
-        data.map((el) => {
-          el['id'] = el.outcomeId;
-        });
-        const newData = this.removeDuplicates(data, 'id');
-        await this._clarisaActionAreaOutcomeRepository.save(newData);
+
+        const uniqueData = [];
+        const smoCodeTracker = {};
+
+        for (const record of data) {
+          const { outcomeSMOcode, actionAreaId } = record;
+          const key = `${outcomeSMOcode}-${actionAreaId}`;
+
+          if (!smoCodeTracker[key]) {
+            smoCodeTracker[key] = true;
+            uniqueData.push(record);
+          }
+        }
+
+        await this._clarisaActionAreaOutcomeRepository.upsert(uniqueData, [
+          'id',
+        ]);
         this._logger.verbose(
           `[${position}]: All CLARISA Action Area Outcome control list data has been created`,
         );
