@@ -448,6 +448,16 @@ export class VersioningService {
         },
       });
 
+      for (const key in res) {
+        const data = await this._resultRepository.findOne({
+          where: {
+            version_id: res[key].id,
+            is_active: true,
+          },
+        });
+        res[key]['can_be_deleted'] = !data;
+      }
+
       return this._returnResponse.format({
         message: `Phase Retrieved Successfully`,
         response: res,

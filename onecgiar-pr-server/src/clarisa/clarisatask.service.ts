@@ -809,7 +809,7 @@ export class ClarisaTaskService {
         await this._tocResultsRepository.inactiveTocResult();
         const data = await this._tocResultsRepository.getAllTocResultsFromOst();
         await this._tocResultsRepository.save(data);
-        await this._tocResultsRepository.updateDeprecateDataToc();
+        //await this._tocResultsRepository.updateDeprecateDataToc();
         this._logger.verbose(
           `[${position}]: All ToC Results control list data has been created`,
         );
