@@ -47,7 +47,8 @@ export class Version extends VersionBaseEntity {
 
   @Column({
     name: 'toc_pahse_id',
-    type: 'bigint',
+    type: 'varchar',
+    length: 50,
     nullable: true,
   })
   toc_pahse_id: number;

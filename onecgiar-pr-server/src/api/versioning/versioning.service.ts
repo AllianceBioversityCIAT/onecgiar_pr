@@ -351,7 +351,7 @@ export class VersioningService {
           statusCode: HttpStatus.CONFLICT,
         });
       }
-
+      console.log(createVersioningDto);
       const newPhase = await this._versionRepository.save({
         phase_name: createVersioningDto?.phase_name,
         start_date: createVersioningDto?.start_date,
