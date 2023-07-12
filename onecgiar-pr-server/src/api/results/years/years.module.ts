@@ -9,12 +9,23 @@ import { YearsController } from './years.controller';
 import { JwtMiddleware } from '../../../auth/Middlewares/jwt.middleware';
 import { AuthModule } from '../../../auth/auth.module';
 import { YearRepository } from './year.repository';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import {
+  HandlersError,
+  ReturnResponse,
+} from '../../../shared/handlers/error.utils';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 
 @Module({
   controllers: [YearsController],
-  providers: [YearsService, YearRepository, HandlersError, RoleByUserRepository],
+  providers: [
+    YearsService,
+    ResponseInterceptor,
+    YearRepository,
+    HandlersError,
+    RoleByUserRepository,
+    ReturnResponse,
+  ],
   imports: [AuthModule],
   exports: [YearRepository],
 })
