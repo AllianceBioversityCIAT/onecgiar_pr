@@ -1361,7 +1361,7 @@ export class InnovationPathwayStepOneService {
         return {
           response: { valid: false },
           message: 'The result does not exist',
-          statusCode: HttpStatus.NOT_FOUND,
+          status: HttpStatus.NOT_FOUND,
         };
       }
 
@@ -1428,7 +1428,7 @@ export class InnovationPathwayStepOneService {
       return {
         response: retrieve,
         message: 'The retrieve of Action Areas has been successfully completed',
-        statusCode: HttpStatus.OK,
+        status: HttpStatus.OK,
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
