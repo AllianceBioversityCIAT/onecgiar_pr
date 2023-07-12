@@ -296,7 +296,7 @@ export class VersioningService {
             statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
           });
         }
-        
+
         return this._returnResponse.format({
           message: `The result ${legacy_result.result_code} is in the ${phase.phase_name} phase with id ${res.id}`,
           response: res,
@@ -394,7 +394,7 @@ export class VersioningService {
       }
 
       if (updateVersioningDto?.status) {
-        if(!res?.app_module_id){
+        if (!res?.app_module_id) {
           throw this._returnResponse.format({
             message: `The phase ${res.phase_name} does not have a module associated to it. Contact with support`,
             response: res,
@@ -403,7 +403,11 @@ export class VersioningService {
         }
         await this._versionRepository.$_closeAllPhases(res.app_module_id);
       }
-      await this._versionRepository.update(id, updateVersioningDto);
+      await this._versionRepository.update(id, {
+        status: updateVersioningDto.status,
+        previous_phase: updateVersioningDto.previous_phase,
+        phase_name: updateVersioningDto.phase_name,
+      });
 
       return this._returnResponse.format({
         message: `Phase ${res.phase_name} updated successfully`,
@@ -439,6 +443,9 @@ export class VersioningService {
 
       const res = await this._versionRepository.find({
         where: where,
+        relations: {
+          obj_previous_phase: true,
+        },
       });
 
       return this._returnResponse.format({
@@ -464,6 +471,20 @@ export class VersioningService {
           message: `Phase ID: ${id} not found`,
           response: id,
           statusCode: HttpStatus.NOT_FOUND,
+        });
+      }
+
+      const results = await this._resultRepository.find({
+        where: {
+          version_id: id,
+          is_active: true,
+        },
+      });
+      if (results?.length) {
+        throw this._returnResponse.format({
+          message: `The phase has active results therefore cannot be eliminated`,
+          response: results.length,
+          statusCode: HttpStatus.CONFLICT,
         });
       }
 

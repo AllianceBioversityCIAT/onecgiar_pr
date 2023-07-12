@@ -41,7 +41,8 @@ export class ResultRepository
           r2.gender_tag_level_id,
           ? as version_id,
           r2.result_type_id,
-          r2.status,
+          0 as status,
+          1 as status_id,
           ? as created_by,
           ? as last_updated_by,
           (select v.phase_year  from \`version\` v where v.id = ?) as reported_year_id,
@@ -82,6 +83,7 @@ export class ResultRepository
           ,version_id
           ,result_type_id
           ,status
+          ,status_id
           ,created_by
           ,last_updated_by
           ,reported_year_id
@@ -105,7 +107,8 @@ export class ResultRepository
           r2.gender_tag_level_id,
           ? as version_id,
           r2.result_type_id,
-          r2.status,
+          0 as status,
+          1 as status_id,
           ? as created_by,
           ? as last_updated_by,
           (select v.phase_year  from \`version\` v where v.id = ?) as reported_year_id,
@@ -143,6 +146,7 @@ export class ResultRepository
           r2.version_id,
           r2.result_type_id,
           r2.status,
+          r2.status_id,
           r2.created_by,
           r2.last_updated_by,
           r2.reported_year_id,
