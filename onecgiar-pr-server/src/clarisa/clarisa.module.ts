@@ -72,8 +72,7 @@ import { ClarisaTocPhasesModule } from './clarisa-toc-phases/clarisa-toc-phases.
     ClarisaSecondOrderAdministrativeDivisionModule,
     ClarisaFirstOrderAdministrativeDivisionModule,
     ClarisaInnovationUseLevelsModule,
-    ClarisaTocPhasesModule
-    
+    ClarisaTocPhasesModule,
   ],
   controllers: [],
   providers: [ClarisaCronsService, ClarisaTaskService, TocResultsRepository],
@@ -100,7 +99,7 @@ import { ClarisaTocPhasesModule } from './clarisa-toc-phases/clarisa-toc-phases.
     ClarisaCronsService,
     ClarisaTaskService,
     ClarisaSdgsModule,
-    ClarisaSdgsTargetsModule
+    ClarisaSdgsTargetsModule,
   ],
 })
 export class ClarisaModule {}

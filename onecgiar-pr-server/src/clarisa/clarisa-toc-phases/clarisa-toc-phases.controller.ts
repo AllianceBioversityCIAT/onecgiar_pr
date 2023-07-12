@@ -20,31 +20,8 @@ export class ClarisaTocPhasesController {
     private readonly clarisaTocPhasesService: ClarisaTocPhasesService,
   ) {}
 
-  @Post()
-  create(@Body() createClarisaTocPhaseDto: CreateClarisaTocPhaseDto) {
-    return this.clarisaTocPhasesService.create(createClarisaTocPhaseDto);
-  }
-
   @Get()
   findAll() {
     return this.clarisaTocPhasesService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.clarisaTocPhasesService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateClarisaTocPhaseDto: UpdateClarisaTocPhaseDto,
-  ) {
-    return this.clarisaTocPhasesService.update(+id, updateClarisaTocPhaseDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.clarisaTocPhasesService.remove(+id);
   }
 }

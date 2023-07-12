@@ -7,4 +7,20 @@ export class ClarisaTocPhaseRepository extends Repository<ClarisaTocPhase> {
   constructor(private dataSource: DataSource) {
     super(ClarisaTocPhase, dataSource.createEntityManager());
   }
+
+  async deleteAllData() {
+    const queryData = `
+      DELETE FROM clarisa_toc_phase 
+        `;
+    try {
+      const deleteData = await this.query(queryData);
+      return deleteData;
+    } catch (error) {
+      throw {
+        message: `[${ClarisaTocPhaseRepository.name}] => deleteAllData error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
 }

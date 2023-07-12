@@ -13,5 +13,6 @@ import { ReturnResponse } from '../../shared/handlers/error.utils';
     ResponseInterceptor,
     ReturnResponse,
   ],
+  exports: [ClarisaTocPhaseRepository],
 })
 export class ClarisaTocPhasesModule {}

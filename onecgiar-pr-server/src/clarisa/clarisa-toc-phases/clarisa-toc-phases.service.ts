@@ -12,10 +12,6 @@ export class ClarisaTocPhasesService {
     private readonly _returnResponse: ReturnResponse,
   ) {}
 
-  create(createClarisaTocPhaseDto: CreateClarisaTocPhaseDto) {
-    return 'This action adds a new clarisaTocPhase';
-  }
-
   async findAll() {
     try {
       const res = await this._clarisaTocPhaseRepository.find({
@@ -31,17 +27,5 @@ export class ClarisaTocPhasesService {
     } catch (error) {
       return this._returnResponse.format(error, !env.IS_PRODUCTION);
     }
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} clarisaTocPhase`;
-  }
-
-  update(id: number, updateClarisaTocPhaseDto: UpdateClarisaTocPhaseDto) {
-    return `This action updates a #${id} clarisaTocPhase`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} clarisaTocPhase`;
   }
 }
