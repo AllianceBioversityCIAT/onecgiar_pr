@@ -113,6 +113,28 @@ export class RdGeneralInformationComponent {
       querySelector: '#climate_change_tag_alert',
       position: 'beforeend'
     });
+    // Todo - new fields
+    this.api.alertsFs.show({
+      status: 'success',
+      title: 'sd',
+      description: `As a score of 2 has been selected, you are required to provide evidence of the nutrition tag in the <a class="open_route" href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultCode}/evidences" target='_blank'>Evidence</a> section`,
+      querySelector: '#nutrition_tag_alert',
+      position: 'beforeend'
+    });
+    this.api.alertsFs.show({
+      status: 'success',
+      title: 'sd',
+      description: `As a score of 2 has been selected, you are required to provide evidence of the environment and/or biodiversity tag in the <a class="open_route" href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultCode}/evidences" target='_blank'>Evidence</a> section`,
+      querySelector: '#environment_tag_alert',
+      position: 'beforeend'
+    });
+    this.api.alertsFs.show({
+      status: 'success',
+      title: 'sd',
+      description: `As a score of 2 has been selected, you are required to provide evidence of the poverty tag in the <a class="open_route" href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultCode}/evidences" target='_blank'>Evidence</a> section`,
+      querySelector: '#poverty_tag_alert',
+      position: 'beforeend'
+    });
     this.requestEvent();
     try {
       document.getElementById('partnerRequest').addEventListener('click', e => {

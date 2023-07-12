@@ -365,6 +365,43 @@ export class ResultsService {
           status: HttpStatus.NOT_FOUND,
         };
       }
+
+      const nutritionTag = await this._genderTagRepository.findOne({
+        where: { id: resultGeneralInformation.nutrition_tag_level_id },
+      });
+      if (!climateTag) {
+        throw {
+          response: {},
+          message: 'The Nutrition tag does not exist',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const environmentalBiodiversityTag =
+        await this._genderTagRepository.findOne({
+          where: {
+            id: resultGeneralInformation.environmental_biodiversity_tag_level_id,
+          },
+        });
+      if (!climateTag) {
+        throw {
+          response: {},
+          message: 'The Environmental or/and biodiversity tag does not exist',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const povertyTag = await this._genderTagRepository.findOne({
+        where: { id: resultGeneralInformation.poverty_tag_level_id },
+      });
+      if (!climateTag) {
+        throw {
+          response: {},
+          message: 'The Poverty tag does not exist',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
       if (resultGeneralInformation.institutions.length) {
         const validInstitutions =
           await this._clarisaInstitutionsRepository.getValidInstitution(
@@ -426,6 +463,16 @@ export class ResultsService {
           : null,
         climate_change_tag_level_id:
           resultGeneralInformation.climate_change_tag_id ? climateTag.id : null,
+        nutrition_tag_level_id: resultGeneralInformation.nutrition_tag_level_id
+          ? nutritionTag.id
+          : null,
+        environmental_biodiversity_tag_level_id:
+          resultGeneralInformation.environmental_biodiversity_tag_level_id
+            ? environmentalBiodiversityTag.id
+            : null,
+        poverty_tag_level_id: resultGeneralInformation.poverty_tag_level_id
+          ? povertyTag.id
+          : null,
         krs_url: resultGeneralInformation.krs_url,
         is_krs: resultGeneralInformation.is_krs,
         last_updated_by: user.id,
@@ -1052,6 +1099,9 @@ export class ResultsService {
           result_description: result.description ?? null,
           gender_tag_id: result.gender_tag_level_id || null,
           climate_change_tag_id: result.climate_change_tag_level_id || null,
+          nutrition_tag_level_id: result.nutrition_tag_level_id || null,
+          environmental_biodiversity_tag_level_id: result.environmental_biodiversity_tag_level_id || null,
+          poverty_tag_level_id: result.poverty_tag_level_id || null,
           institutions: institutions,
           institutions_type: institutionsType,
           krs_url: result.krs_url ?? null,

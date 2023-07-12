@@ -242,7 +242,6 @@ export class ResultInnovationPackageService {
       const version = await this._versioningService.$_findActivePhase(
         AppModuleIdEnum.IPSR,
       );
-      console.log('esto esta bien?', version);
       if (!version) {
         throw this._handlersError.returnErrorRes({
           error: `No phase is open for the IPSR module`,
@@ -263,7 +262,6 @@ export class ResultInnovationPackageService {
       const last_code = await this._resultRepository.getLastResultCode();
       const regions = CreateResultInnovationPackageDto.regions;
       const countries = CreateResultInnovationPackageDto.countries;
-      console.log('aun esta bien!');
 
       if ([1, 2, 5].includes(CreateResultInnovationPackageDto.geo_scope_id)) {
         innovationGeoScope = CreateResultInnovationPackageDto.geo_scope_id;
@@ -486,7 +484,6 @@ export class ResultInnovationPackageService {
         status: HttpStatus.OK,
       };
     } catch (error) {
-      console.log(error);
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
@@ -735,6 +732,10 @@ export class ResultInnovationPackageService {
         lead_contact_person: req?.lead_contact_person,
         gender_tag_level_id: req?.gender_tag_level_id,
         climate_change_tag_level_id: req?.climate_change_tag_level_id,
+        nutrition_tag_level_id: req?.nutrition_tag_level_id,
+        environmental_biodiversity_tag_level_id:
+          req?.environmental_biodiversity_tag_level_id,
+        poverty_tag_level_id: req?.poverty_tag_level_id,
         is_krs: req?.is_krs,
         krs_url: req?.krs_url,
         geographic_scope_id: resultExist.geographic_scope_id,
@@ -765,6 +766,17 @@ export class ResultInnovationPackageService {
             gender_related: true,
           });
         }
+      } else if (
+        req?.evidence_gender_tag === '' ||
+        req?.evidence_gender_tag === undefined ||
+        req?.evidence_gender_tag === null
+      ) {
+        if (genderEvidenceExist) {
+          await this._evidenceRepository.update(genderEvidenceExist.id, {
+            is_active: 0,
+            last_updated_by: user.id,
+          });
+        }
       }
 
       const climateEvidenceExist = await this._evidenceRepository.findOne({
@@ -789,6 +801,128 @@ export class ResultInnovationPackageService {
             created_by: user.id,
             last_updated_by: user.id,
             youth_related: true,
+          });
+        }
+      } else if (
+        req?.evidence_climate_tag === '' ||
+        req?.evidence_climate_tag === undefined ||
+        req?.evidence_climate_tag === null
+      ) {
+        if (climateEvidenceExist) {
+          await this._evidenceRepository.update(climateEvidenceExist.id, {
+            is_active: 0,
+            last_updated_by: user.id,
+          });
+        }
+      }
+
+      const nutritionEvidenceExist = await this._evidenceRepository.findOne({
+        where: {
+          result_id: resultId,
+          is_active: 1,
+          nutrition_related: true,
+        },
+      });
+
+      if (req?.evidence_nutrition_tag) {
+        if (nutritionEvidenceExist) {
+          await this._evidenceRepository.update(nutritionEvidenceExist.id, {
+            link: req?.evidence_nutrition_tag,
+            last_updated_by: user.id,
+            nutrition_related: true,
+          });
+        } else {
+          await this._evidenceRepository.save({
+            result_id: resultId,
+            link: req?.evidence_nutrition_tag,
+            created_by: user.id,
+            last_updated_by: user.id,
+            nutrition_related: true,
+          });
+        }
+      } else if (
+        req?.evidence_nutrition_tag === '' ||
+        req?.evidence_nutrition_tag === undefined ||
+        req?.evidence_nutrition_tag === null
+      ) {
+        if (nutritionEvidenceExist) {
+          await this._evidenceRepository.update(nutritionEvidenceExist.id, {
+            is_active: 0,
+            last_updated_by: user.id,
+          });
+        }
+      }
+
+      const enviromentEvidenceExist = await this._evidenceRepository.findOne({
+        where: {
+          result_id: resultId,
+          is_active: 1,
+          environmental_biodiversity_related: true,
+        },
+      });
+
+      if (req?.evidence_environment_tag) {
+        if (enviromentEvidenceExist) {
+          await this._evidenceRepository.update(enviromentEvidenceExist.id, {
+            link: req?.evidence_environment_tag,
+            last_updated_by: user.id,
+            environmental_biodiversity_related: true,
+          });
+        } else {
+          await this._evidenceRepository.save({
+            result_id: resultId,
+            link: req?.evidence_environment_tag,
+            created_by: user.id,
+            last_updated_by: user.id,
+            environmental_biodiversity_related: true,
+          });
+        }
+      } else if (
+        req?.evidence_environment_tag === '' ||
+        req?.evidence_environment_tag === undefined ||
+        req?.evidence_environment_tag === null
+      ) {
+        if (enviromentEvidenceExist) {
+          await this._evidenceRepository.update(enviromentEvidenceExist.id, {
+            is_active: 0,
+            last_updated_by: user.id,
+          });
+        }
+      }
+
+      const povertyEvidenceExist = await this._evidenceRepository.findOne({
+        where: {
+          result_id: resultId,
+          is_active: 1,
+          poverty_related: true,
+        },
+      });
+
+      if (req?.evidence_poverty_tag) {
+        if (povertyEvidenceExist) {
+          await this._evidenceRepository.update(povertyEvidenceExist.id, {
+            link: req?.evidence_poverty_tag,
+            last_updated_by: user.id,
+            poverty_related: true,
+          });
+        } else {
+          await this._evidenceRepository.save({
+            result_id: resultId,
+            link: req?.evidence_poverty_tag,
+            created_by: user.id,
+            last_updated_by: user.id,
+            poverty_related: true,
+          });
+        }
+      } else if (
+        req?.evidence_poverty_tag === '' ||
+        req?.evidence_poverty_tag === undefined ||
+        req?.evidence_poverty_tag === null
+      ) {
+        if (povertyEvidenceExist) {
+          await this._evidenceRepository.update(povertyEvidenceExist.id, {
+            is_active: 0,
+            last_updated_by: user.id,
           });
         }
       }

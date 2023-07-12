@@ -7,6 +7,9 @@ export class CreateGeneralInformationResultDto {
   public result_description: string;
   public gender_tag_id: number;
   public climate_change_tag_id: number;
+  public nutrition_tag_level_id: number;
+  public environmental_biodiversity_tag_level_id: number;
+  public poverty_tag_level_id: number;
   public institutions: institutionsInterface[];
   public institutions_type: institutionsTypeInterface[];
   public krs_url!: string
