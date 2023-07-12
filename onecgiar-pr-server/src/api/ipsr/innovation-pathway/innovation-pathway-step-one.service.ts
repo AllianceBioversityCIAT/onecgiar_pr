@@ -1378,11 +1378,11 @@ export class InnovationPathwayStepOneService {
       });
 
       if (!resultIp || !resultByIp) {
-        throw this._returnResponse.format({
+        return {
           response: { valid: false },
           message: 'The result innovation package does not exist',
           statusCode: HttpStatus.NOT_FOUND,
-        });
+        };
       }
 
       const searchAaOutcomes = await this._resultIpAAOutcomes.find({
@@ -1422,13 +1422,13 @@ export class InnovationPathwayStepOneService {
         user.id,
       );
 
-      return this._returnResponse.format({
+      return {
         response: retrieve,
         message: 'The retrieve of Action Areas has been successfully completed',
-        statusCode: HttpStatus.OK,
-      });
+        status: HttpStatus.OK,
+      };
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 }

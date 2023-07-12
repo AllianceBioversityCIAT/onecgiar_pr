@@ -65,15 +65,16 @@ export class InnovationPathwayController {
   }
 
   @Patch('retrieve/aa-outcomes/:resultId')
-  @UseInterceptors(ResponseInterceptor)
   async updateStepOneInstitutions(
     @Param('resultId') resultId: string,
     @UserToken() user: TokenDto,
   ) {
-    return this._innovationPathwayStepOneServiceService.retrieveAaOutcomes(
-      +resultId,
-      user,
-    );
+    const { message, response, status } =
+      await this._innovationPathwayStepOneServiceService.retrieveAaOutcomes(
+        +resultId,
+        user,
+      );
+    throw new HttpException({ message, response }, status);
   }
 
   // STEP TWO
