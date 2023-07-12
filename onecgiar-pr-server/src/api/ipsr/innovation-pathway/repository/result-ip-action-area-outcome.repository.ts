@@ -96,13 +96,15 @@ export class ResultIpAAOutcomeRepository extends Repository<ResultIpAAOutcome> {
               action_area_outcome_id,
               created_by,
               last_updated_by,
-              result_by_innovation_package_id
+              result_by_innovation_package_id,
+              version_id
           )
       SELECT
           DISTINCT caao.id AS action_area_outcome_id,
           ${user} AS created_by,
           ${user} AS last_updated_by,
-          ${resultByInnovationPackageId} AS result_by_innovation_package_id
+          ${resultByInnovationPackageId} AS result_by_innovation_package_id,
+          1 AS version_id
       FROM
           ${env.DB_OST}.clarisa_action_areas_outcomes_indicators caaoi
           LEFT JOIN ${env.DB_OST}.toc_action_area_results taar ON taar.outcome_id = caaoi.outcome_id
