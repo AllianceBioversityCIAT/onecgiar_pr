@@ -82,4 +82,63 @@ export class ResultIpAAOutcomeRepository extends Repository<ResultIpAAOutcome> {
       });
     }
   }
+
+  async retrieveAaOutcomes(
+    coreResultId: number,
+    coreInitId: number,
+    resultByInnovationPackageId: number,
+    user: number,
+  ) {
+    try {
+      const aa_query = `
+      INSERT INTO
+          result_ip_action_area_outcome (
+              action_area_outcome_id,
+              created_by,
+              last_updated_by,
+              result_by_innovation_package_id
+          )
+      SELECT
+          DISTINCT caao.id AS action_area_outcome_id,
+          ${user} AS created_by,
+          ${user} AS last_updated_by,
+          ${resultByInnovationPackageId} AS result_by_innovation_package_id
+      FROM
+          ${env.DB_OST}.clarisa_action_areas_outcomes_indicators caaoi
+          LEFT JOIN ${env.DB_OST}.toc_action_area_results taar ON taar.outcome_id = caaoi.outcome_id
+          LEFT JOIN ${env.DB_OST}.toc_results_action_area_results traar ON traar.action_area_toc_result_id = taar.toc_result_id
+          INNER JOIN prdb.clarisa_action_area_outcome caao ON caao.outcomeSMOcode = caaoi.outcome_smo_code
+      WHERE
+          taar.is_active = 1
+          AND traar.toc_result_id IN (
+              SELECT
+                  tr2.toc_internal_id
+              FROM
+                  prdb.toc_result tr2
+                  LEFT JOIN prdb.results_toc_result rtr ON rtr.toc_result_id = tr2.toc_result_id
+                  AND rtr.is_active = 1
+              WHERE
+                  rtr.results_id = ${coreResultId}
+                  AND rtr.initiative_id = ${coreInitId}
+                  AND tr2.inititiative_id = ${coreInitId}
+                  AND tr2.is_active = 1
+          );
+      `;
+
+      const aaOutcome: any[] = await this.query(aa_query, [
+        coreResultId,
+        coreInitId,
+        resultByInnovationPackageId,
+        user,
+      ]);
+
+      return aaOutcome;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultIpAAOutcomeRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
 }
