@@ -709,4 +709,12 @@ export class ResultsApiService {
   POST_createPhase(phase) {
     return this.http.post<any>(`${environment.apiBaseUrl}api/versioning`, phase);
   }
+
+  GET_tocPhases() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/toc-phases`);
+  }
+
+  GET_resultYears() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/years`);
+  }
 }

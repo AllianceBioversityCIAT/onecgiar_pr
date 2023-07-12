@@ -1,5 +1,100 @@
-<div class="table_container" [ngClass]="{ 'expand_table': show_full_screen }">
-  <p-table sortField="id" [sortOrder]="-1" [value]="this.phaseList" dataKey="id" [scrollable]="true" editMode="row" [paginator]="true" [rowsPerPageOptions]="[10, 50, 100]" [rows]="10" scrollHeight="calc(100vh - 303px)" style="min-width: 200px" #dt>
+<div class="local_container phase_table">
+  <p-table sortField="result_code" [sortOrder]="-1" [value]="this.phaseList" scrollHeight="calc(100vh - 303px)"
+    responsiveLayout="scroll" [paginator]="!!(this.phaseList)?.length" [rows]="10"
+    styleClass="p-datatable-gridlines p-datatable-sm" selectionMode="single" [rowsPerPageOptions]="[10,50,100]">
+    <ng-template pTemplate="header">
+      <tr>
+        <th pSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder">
+          <p-sortIcon field="{{column.attr}}"></p-sortIcon>{{column.title}}
+        </th>
+        <th>Actions</th>
+      </tr>
+    </ng-template>
+    <ng-template pTemplate="body" let-phase>
+      <tr>
+        <td>
+          {{phase?.id}}
+        </td>
+        <td>
+          <!--Todo Name  -->
+          <div class="text" *ngIf="!phase.editing">{{phase?.phase_name}}</div>
+          <app-pr-input *ngIf="phase.editing" placeholder="Provide input here..." type="text"
+            [(ngModel)]="phase.phase_name_ts">
+          </app-pr-input>
+        </td>
+        <td>
+          <!--Todo Reporting year  -->
+          <div class="text" *ngIf="!phase.isNew">{{phase?.phase_year}}</div>
+          <app-pr-select *ngIf="phase.isNew" class="segment_title_margin" [options]="this.resultYearsList"
+            optionLabel="year" optionValue="year" placeholder="Select status" [(ngModel)]="phase.phase_year_ts">
+          </app-pr-select>
+        </td>
+        <td>
+          <!--Todo Toc phase-->
+
+          <div class="text" *ngIf="!phase.isNew">{{this.getTocPhaseName(phase?.toc_pahse_id)}}</div>
+          <app-pr-select *ngIf="phase.isNew" class="segment_title_margin" [options]="this.tocPhaseList"
+            optionLabel="name" optionValue="phase_id" placeholder="Select status" [(ngModel)]="phase.toc_pahse_id">
+          </app-pr-select>
+        </td>
+        <td>
+          <!--Todo  start date -->
+
+          <div class="text" *ngIf="!phase.isNew"> {{phase?.start_date | date: 'dd-MM-yyyy'}}</div>
+          <p-calendar *ngIf="phase.isNew" [(ngModel)]="phase.start_date" dateFormat="dd-mm-yy"></p-calendar>
+        </td>
+        <td>
+          <!--Todo end date  -->
+
+          <div class="text" *ngIf="!phase.isNew">{{phase?.end_date| date: 'dd-MM-yyyy' }}</div>
+          <p-calendar *ngIf="phase.isNew" [(ngModel)]="phase.end_date" dateFormat="dd-mm-yy"></p-calendar>
+        </td>
+        <td>
+          <!--Todo  status -->
+          <div class="text" *ngIf="!phase.editing">{{phase?.status}}</div>
+          <app-pr-select *ngIf="phase.editing  && !phase.isNew" class="segment_title_margin" [options]="this.status"
+            optionLabel="name" optionValue="status" placeholder="Select status" [(ngModel)]="phase.status_ts">
+          </app-pr-select>
+        </td>
+        <td>
+          <!--Todo obj_previous_phase  -->
+          <div class="text" *ngIf="!phase.editing">{{phase?.obj_previous_phase?.phase_name}}</div>
+          <app-pr-select *ngIf="phase.editing" class="segment_title_margin" [options]="this.phaseList"
+            [disableOptions]="onlyPreviousPhase(phase)" optionLabel="phase_name" optionValue="id"
+            placeholder="Select previous phase" [(ngModel)]="phase.previous_phase_ts">
+          </app-pr-select>
+        </td>
+
+        <td>
+          <div class="actions" *ngIf="!phase.editing">
+            <div class="action_button edit" (click)="phase.editing = true"><i class="material-icons-round">edit</i>
+            </div>
+            <div class="action_button delete" [ngClass]="{'disabled': !phase?.can_be_deleted}"
+              (click)="phase?.can_be_deleted ?this.deletePhase(phase):null"
+              [pTooltip]="!phase?.can_be_deleted?'The phase has active results therefore cannot be eliminated':''"
+              tooltipPosition="top"><i class="material-icons-round">delete</i>
+            </div>
+          </div>
+          <div class="actions" *ngIf="phase.editing">
+            <div class="action_button save">
+              <div class="text" (click)="phase?.isNew ? createPhase(phase) :savePhase(phase)">{{phase?.isNew ? 'Create'
+                : 'Save'}}</div> <i class="material-icons-round">{{phase?.isNew ? 'add_circle' : 'save'}}</i>
+            </div>
+            <div class="action_button cancel" (click)="cancelAction(phase); this.updateVariablesToSave(phase)">
+              <div class="text">Cancel</div><i class="material-icons-round">close</i>
+            </div>
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+
+</div>
+<app-add-button name="Add new phase" (clickEvent)="addNewPhase()"></app-add-button>
+<!-- <div class="table_container" [ngClass]="{ 'expand_table': show_full_screen }" *ngIf="false">
+  <p-table sortField="id" [sortOrder]="-1" [value]="this.phaseList" dataKey="id" [scrollable]="true" editMode="row"
+    [paginator]="true" [rowsPerPageOptions]="[10, 50, 100]" [rows]="10" scrollHeight="calc(100vh - 303px)"
+    style="min-width: 200px" #dt>
     <ng-template pTemplate="header">
       <tr>
         <th pSortableColumn="id">#<p-sortIcon field="id"></p-sortIcon></th>
@@ -9,65 +104,67 @@
         <th pSortableColumn="start_date">Start date <p-sortIcon field="start_date"></p-sortIcon></th>
         <th pSortableColumn="end_date">End date <p-sortIcon field="end_date"></p-sortIcon></th>
         <th pSortableColumn="status" style="min-width:150px">Status <p-sortIcon field="status"></p-sortIcon></th>
-        <th pSortableColumn="obj_previous_phase.phase_name">Previus phase <p-sortIcon field="obj_previous_phase.phase_name"></p-sortIcon></th>
+        <th pSortableColumn="obj_previous_phase.phase_name">Previus phase <p-sortIcon
+            field="obj_previous_phase.phase_name"></p-sortIcon></th>
         <th style="min-width: 180px">Actions</th>
       </tr>
     </ng-template>
     <ng-template pTemplate="body" let-phase let-editing="editing" let-ri="rowIndex">
       <tr [pEditableRow]="phase">
-        
+
         <td>{{phase.id}}</td>
         <td>
-            <p-cellEditor>
-                <ng-template pTemplate="input">
-                    <input pInputText type="text" [(ngModel)]="phase.phase_name">
-                </ng-template>
-                <ng-template pTemplate="output">
-                    {{phase.phase_name}}
-                </ng-template>
-            </p-cellEditor>
+          <p-cellEditor>
+            <ng-template pTemplate="input">
+              <input pInputText type="text" [(ngModel)]="phase.phase_name">
+            </ng-template>
+            <ng-template pTemplate="output">
+              {{phase.phase_name}}
+            </ng-template>
+          </p-cellEditor>
         </td>
         <td>{{phase.phase_year}}</td>
         <td>{{phase.toc_pahse_id}}</td>
         <td>{{phase.start_date}}</td>
         <td>{{phase.end_date}}</td>
         <td>
-            <p-cellEditor>
-                <ng-template pTemplate="input">
-                    <app-pr-select class="segment_title_margin"
-                        [options]="this.status"
-                        optionLabel="name" optionValue="status" placeholder="Select status"
-                        [(ngModel)]="phase.status">
-                    </app-pr-select>
-                </ng-template>
-                <ng-template pTemplate="output">
-                  <div [ngClass]="{'tag_status':true,'open':phase?.status == true,'closed':phase?.status == false}" >{{phase?.status?'Open':'Closed'}}</div>
-                </ng-template>
-            </p-cellEditor>
+          <p-cellEditor>
+            <ng-template pTemplate="input">
+              <app-pr-select class="segment_title_margin" [options]="this.status" optionLabel="name"
+                optionValue="status" placeholder="Select status" [(ngModel)]="phase.status">
+              </app-pr-select>
+            </ng-template>
+            <ng-template pTemplate="output">
+              <div [ngClass]="{'tag_status':true,'open':phase?.status == true,'closed':phase?.status == false}">
+                {{phase?.status?'Open':'Closed'}}</div>
+            </ng-template>
+          </p-cellEditor>
         </td>
         <td>
-            <p-cellEditor>
-                <ng-template pTemplate="input">
-                  <app-pr-select class="segment_title_margin"
-                        [options]="this.phaseList"
-                        [disableOptions]="onlyPreviousPhase(phase)"
-                        optionLabel="phase_name" optionValue="id" placeholder="Select previous phase"
-                        [(ngModel)]="phase.previous_phase">
-                    </app-pr-select>
-                </ng-template>
-                <ng-template pTemplate="output">
-                    {{phase.obj_previous_phase?.phase_name}}
-                </ng-template>
-            </p-cellEditor>
+          <p-cellEditor>
+            <ng-template pTemplate="input">
+              <app-pr-select class="segment_title_margin" [options]="this.phaseList"
+                [disableOptions]="onlyPreviousPhase(phase)" optionLabel="phase_name" optionValue="id"
+                placeholder="Select previous phase" [(ngModel)]="phase.previous_phase">
+              </app-pr-select>
+            </ng-template>
+            <ng-template pTemplate="output">
+              {{phase.obj_previous_phase?.phase_name}}
+            </ng-template>
+          </p-cellEditor>
         </td>
         <td>
           {{!!phase?.is_new}}
           <div class="flex align-items-center justify-content-center gap-2">
-              <button *ngIf="!editing" pButton pRipple type="button" pInitEditableRow icon="pi pi-pencil" (click)="onRowEditInit(phase)" class="p-button-rounded p-button-text"></button>
-              <button *ngIf="editing" pButton pRipple type="button" pSaveEditableRow icon="pi pi-check" (click)="onRowEditSave(phase)" class="p-button-rounded p-button-text p-button-success mr-2"></button>
-              <button *ngIf="editing" pButton pRipple type="button" pCancelEditableRow [icon]="!!phase?.is_new?'pi pi-trash':'pi pi-times'" (click)="onRowEditCancel(phase, ri)" class="p-button-rounded p-button-text p-button-danger"></button>
+            <button *ngIf="!editing" pButton pRipple type="button" pInitEditableRow icon="pi pi-pencil"
+              (click)="onRowEditInit(phase)" class="p-button-rounded p-button-text"></button>
+            <button *ngIf="editing" pButton pRipple type="button" pSaveEditableRow icon="pi pi-check"
+              (click)="onRowEditSave(phase)" class="p-button-rounded p-button-text p-button-success mr-2"></button>
+            <button *ngIf="editing" pButton pRipple type="button" pCancelEditableRow
+              [icon]="!!phase?.is_new?'pi pi-trash':'pi pi-times'" (click)="onRowEditCancel(phase, ri)"
+              class="p-button-rounded p-button-text p-button-danger"></button>
           </div>
-      </td>
+        </td>
       </tr>
     </ng-template>
   </p-table>
@@ -75,5 +172,4 @@
     <div class="name">Phases:</div>
     {{ (this.phaseList | filterByText : this.textToFind).length }}/{{ this.phaseList?.length }}
   </div>
-  <app-add-button name="Add new phase" (clickEvent)="addNewPhase()"></app-add-button>
-</div>
+</div> -->

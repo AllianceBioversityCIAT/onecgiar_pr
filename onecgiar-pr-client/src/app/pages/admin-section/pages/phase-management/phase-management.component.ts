@@ -3,6 +3,7 @@ import { ResultsApiService } from '../../../../shared/services/api/results-api.s
 import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../shared/enum/api.enum';
 import { Phase } from '../../../../shared/interfaces/phase.interface';
 import { Table } from 'primeng/table';
+import { CustomizedAlertsFeService } from '../../../../shared/services/customized-alerts-fe.service';
 
 @Component({
   selector: 'app-phase-management',
@@ -10,11 +11,24 @@ import { Table } from 'primeng/table';
   styleUrls: ['./phase-management.component.scss']
 })
 export class PhaseManagementComponent implements OnInit {
-  show_full_screen = false;
+  columnOrder = [
+    { title: '#', attr: 'id' },
+    { title: 'Name', attr: 'phase_name' },
+    { title: 'Reporting year', attr: 'phase_year' },
+    { title: 'Toc phase', attr: 'toc_pahse_id' },
+    { title: 'Start date', attr: 'start_date' },
+    { title: 'End date', attr: 'end_date' },
+    { title: 'Status', attr: 'status' },
+    { title: 'Previus phase', attr: 'obj_previous_phase' }
+  ];
+
+  // show_full_screen = false;
   phaseList: any[] = [];
-  clonedphaseList: { [s: string]: any } = {};
+  tocPhaseList = [];
+  resultYearsList = [];
+  // clonedphaseList: { [s: string]: any } = {};
   textToFind = '';
-  newPhase: any[] = [];
+  // newPhase: any[] = [];
   @ViewChild('dt') table: Table;
   status = [
     {
@@ -26,59 +40,154 @@ export class PhaseManagementComponent implements OnInit {
       name: 'Closed'
     }
   ];
-  constructor(public resultsSE: ResultsApiService) {}
+  constructor(public resultsSE: ResultsApiService, private customizedAlertsFeSE: CustomizedAlertsFeService) {}
 
   ngOnInit(): void {
     this.getAllPhases();
+    this.getTocPhases();
+    this.get_resultYears();
+  }
+
+  // onRowEditInit(phase: any) {
+  //   this.clonedphaseList[phase.id as string] = { ...phase };
+  // }
+
+  // onRowEditSave(phase: any) {
+  //   console.log(phase);
+  //   this.resultsSE.PATCH_updatePhase(phase.id, phase).subscribe({
+  //     next: ({ response }) => {
+  //       this.getAllPhases();
+  //     }
+  //   });
+  //   delete this.clonedphaseList[phase.id as string];
+  // }
+
+  // onRowEditCancel(phase: any, index: number) {
+  //   if (!!phase?.is_new) {
+  //     const temp = this.phaseList.filter((el, ind) => ind != index);
+  //     this.phaseList = temp;
+  //   }
+  //   this.phaseList[index].status = this.clonedphaseList[phase.id as string].status;
+  //   this.phaseList[index].phase_name = this.clonedphaseList[phase.id as string].phase_name;
+  //   delete this.clonedphaseList[phase.id as string];
+  // }
+
+  // activeRow(data) {
+  //   data = false;
+  // }
+
+  //TODO new
+
+  updateVariablesToSave(phaseItem) {
+    phaseItem.phase_name_ts = phaseItem.phase_name;
+    phaseItem.status_ts = phaseItem.status;
+    phaseItem.previous_phase_ts = phaseItem.previous_phase;
+    phaseItem.phase_year_ts = phaseItem.phase_year;
+  }
+
+  updateMainVariables(phaseItem) {
+    phaseItem.phase_name = phaseItem.phase_name_ts;
+    phaseItem.status = phaseItem.status_ts;
+    phaseItem.previous_phase = phaseItem.previous_phase_ts;
+    phaseItem.phase_year = phaseItem.phase_year_ts;
+  }
+
+  get_resultYears() {
+    this.resultsSE.GET_resultYears().subscribe(({ response }) => {
+      this.resultYearsList = response;
+      console.log(response);
+    });
+  }
+
+  getTocPhases() {
+    this.resultsSE.GET_tocPhases().subscribe(({ response }) => {
+      this.tocPhaseList = response;
+      console.log(response);
+    });
   }
 
   getAllPhases() {
-    this.resultsSE.GET_versioning(StatusPhaseEnum.ALL, ModuleTypeEnum.REPORTING).subscribe({
-      next: ({ response }) => {
-        console.log(response);
-        this.phaseList = response;
-      }
+    this.resultsSE.GET_versioning(StatusPhaseEnum.ALL, ModuleTypeEnum.REPORTING).subscribe(({ response }) => {
+      this.phaseList = response;
+      this.phaseList.map((phaseItem: Phase) => this.updateVariablesToSave(phaseItem));
     });
   }
 
-  onRowEditInit(phase: any) {
-    this.clonedphaseList[phase.id as string] = { ...phase };
-  }
-
-  onRowEditSave(phase: any) {
+  savePhase(phase) {
+    console.log('savePhase');
     console.log(phase);
-    this.resultsSE.PATCH_updatePhase(phase.id, phase).subscribe({
-      next: ({ response }) => {
+    this.updateMainVariables(phase);
+    console.log(phase);
+    this.resultsSE.PATCH_updatePhase(phase.id, phase).subscribe(
+      () => {
         this.getAllPhases();
+        this.customizedAlertsFeSE.show({ id: 'manage-phase-save', title: 'Phase saved', status: 'success', closeIn: 500 });
+      },
+      err => {
+        console.error(err);
       }
+    );
+    phase.editing = false;
+  }
+
+  createPhase(phase) {
+    console.log('createPhase');
+    phase.app_module_id = 1;
+    console.log(phase);
+    this.updateMainVariables(phase);
+    console.log(phase);
+
+    this.resultsSE.POST_createPhase(phase).subscribe(
+      () => {
+        this.getAllPhases();
+        this.customizedAlertsFeSE.show({ id: 'manage-phase-save', title: 'Phase created', status: 'success', closeIn: 500 });
+        phase.isNew = false;
+      },
+      err => {
+        console.error(err);
+        this.customizedAlertsFeSE.show({ id: 'manage-error', title: 'Create phase', description: err?.error?.message, status: 'error', closeIn: 500 });
+      }
+    );
+  }
+
+  deletePhase({ id }) {
+    this.customizedAlertsFeSE.show({ id: 'manage-phase', title: 'Delete phase', description: 'Are you sure you want to delete the current phase?', status: 'warning', confirmText: 'Yes, delete' }, () => {
+      console.log('DELETE_updatePhase');
+      console.log(id);
+      this.resultsSE.DELETE_updatePhase(id).subscribe(
+        () => this.getAllPhases(),
+        err => {
+          console.error(err);
+          this.customizedAlertsFeSE.show({ id: 'manage-error', title: 'Delete phase', description: err?.error?.message, status: 'error', closeIn: 500 });
+        }
+      );
     });
-    delete this.clonedphaseList[phase.id as string];
   }
 
-  onlyPreviousPhase(currentPhase: any) {
-    return this.phaseList.filter(el => el.phase_year >= currentPhase.phase_year);
-  }
-
-  onRowEditCancel(phase: any, index: number) {
-    if (!!phase?.is_new) {
-      const temp = this.phaseList.filter((el, ind) => ind != index);
-      this.phaseList = temp;
-    }
-    this.phaseList[index].status = this.clonedphaseList[phase.id as string].status;
-    this.phaseList[index].phase_name = this.clonedphaseList[phase.id as string].phase_name;
-    delete this.clonedphaseList[phase.id as string];
+  getTocPhaseName(toc_pahse_id) {
+    const tocPhaseElement = this.tocPhaseList.find(phaseItem => phaseItem?.phase_id == toc_pahse_id);
+    return tocPhaseElement?.name;
   }
 
   addNewPhase() {
     const tempNewPhase: any = new Phase();
-    tempNewPhase.is_new = true;
+    tempNewPhase.isNew = true;
+    tempNewPhase.editing = true;
+    // tempNewPhase.is_new = true;
     this.phaseList = [...this.phaseList, tempNewPhase];
-    this.newPhase.forEach((el, index) => {
-      this.table.initRowEdit(this.phaseList[this.phaseList.length - (this.newPhase.length - index)]);
-    });
+    // this.newPhase.forEach((el, index) => {
+    //   this.table.initRowEdit(this.phaseList[this.phaseList.length - (this.newPhase.length - index)]);
+    // });
   }
 
-  activeRow(data) {
-    data = false;
+  onlyPreviousPhase(currentPhase: any) {
+    return this.phaseList.filter(el => el.phase_year_ts >= currentPhase.phase_year_ts);
+  }
+  cancelAction(phase) {
+    phase.editing = false;
+    if (!phase.isNew) return;
+    const index = this.phaseList.findIndex(phaseItem => phaseItem.id == phase.id);
+    this.phaseList.splice(index, 1);
+    console.log(this.phaseList);
   }
 }

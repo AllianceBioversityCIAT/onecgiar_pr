@@ -1,5 +1,6 @@
 /* You can add global styles to this file, and also import other style files */
 @import 'primeicons/primeicons.css';
+
 .globalDisabled {
   opacity: 0.5;
   pointer-events: none;
@@ -253,4 +254,10 @@ a {
 
 .hideElement {
   display: none !important;
+}
+
+.phase_table {
+  .p-datatable-wrapper {
+    padding-bottom: 250px !important;
+  }
 }
