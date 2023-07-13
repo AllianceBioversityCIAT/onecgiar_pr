@@ -36,6 +36,7 @@ import { ResultsKnowledgeProductAuthorRepository } from '../results/results-know
 import { ResultsKnowledgeProductKeywordRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-keywords.repository';
 import { ResultsKnowledgeProductMetadataRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-metadata.repository';
 import { ResultsKnowledgeProductInstitutionRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-institution.repository';
+import { validationAttr } from '../../shared/utils/validation.utils';
 import {
   AppModuleIdEnum,
   ModuleTypeEnum,
@@ -450,13 +451,20 @@ export class VersioningService {
       });
 
       for (const key in res) {
-        const data = await this._resultRepository.findOne({
+        const otherPhase = await this._resultRepository.findOne({
           where: {
             version_id: res[key].id,
             is_active: true,
           },
         });
-        res[key]['can_be_deleted'] = !data;
+
+        const otherPreviousPhase = await this._versionRepository.findOne({
+          where: {
+            previous_phase: res[key].id,
+            is_active: true,
+          },
+        });
+        res[key]['can_be_deleted'] = !otherPreviousPhase && !otherPhase;
       }
 
       return this._returnResponse.format({

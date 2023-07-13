@@ -63,8 +63,8 @@
         </td>
         <td>
           <!--Todo obj_previous_phase  -->
-          <div class="text" *ngIf="!phase.editing">{{phase?.obj_previous_phase?.phase_name}}</div>
-          <app-pr-select *ngIf="phase.editing" class="segment_title_margin" [options]="this.phaseList"
+          <div class="text" *ngIf="!phase.editing">{{phase?.obj_previous_phase? phase?.obj_previous_phase?.phase_name: 'N/A'}}</div>
+          <app-pr-select *ngIf="phase.editing" class="segment_title_margin" [options]="this.previousPhaseList"
             [disableOptions]="onlyPreviousPhase(phase)" optionLabel="phase_name" optionValue="id"
             placeholder="Select previous phase" [(ngModel)]="phase.previous_phase_ts">
           </app-pr-select>

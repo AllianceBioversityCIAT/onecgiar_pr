@@ -24,6 +24,7 @@ export class PhaseManagementComponent implements OnInit {
 
   // show_full_screen = false;
   phaseList: any[] = [];
+  previousPhaseList: any[] = [];
   tocPhaseList = [];
   resultYearsList = [];
   // clonedphaseList: { [s: string]: any } = {};
@@ -119,13 +120,17 @@ export class PhaseManagementComponent implements OnInit {
   getTocPhases() {
     this.resultsSE.GET_tocPhases().subscribe(({ response }) => {
       this.tocPhaseList = response;
-      console.log(response);
     });
   }
 
   getAllPhases() {
     this.resultsSE.GET_versioning(StatusPhaseEnum.ALL, ModuleTypeEnum.REPORTING).subscribe(({ response }) => {
       this.phaseList = response;
+      this.previousPhaseList = [...response];
+      this.previousPhaseList.push({
+        phase_name: 'N/A',
+        id: null
+      });
       this.phaseList.map((phaseItem: Phase) => this.updateVariablesToSave(phaseItem));
     });
   }
