@@ -1,6 +1,7 @@
-<div class="blank_space" [ngClass]="{'floating': this.isFloating, 'floatingFix':this.isFloatingFix}"
-    (mouseenter)="onMouseEnter()" (mouseleave)="onMouseLeave()">
-    <div class="footer" *ngIf="showIfRouteIsInList()">
+<div class="blank_space" *ngIf="showIfRouteIsInList()"
+    [ngClass]="{'floating': this.isFloating, 'floatingFix':this.isFloatingFix}" (mouseenter)="onMouseEnter()"
+    (mouseleave)="onMouseLeave()">
+    <div class="footer">
         <div class="content">
             <div class="logo">
                 <img class="cgiar_logo" src="/assets/cgiar_logo.png" alt="" srcset="" />
