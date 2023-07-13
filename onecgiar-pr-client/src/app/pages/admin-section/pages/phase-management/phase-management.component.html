@@ -26,7 +26,7 @@
           <!--Todo Reporting year  -->
           <div class="text" *ngIf="!phase.isNew">{{phase?.phase_year}}</div>
           <app-pr-select *ngIf="phase.isNew" class="segment_title_margin" [options]="this.resultYearsList"
-            optionLabel="year" optionValue="year" placeholder="Select status" [(ngModel)]="phase.phase_year_ts">
+            optionLabel="year" optionValue="year" placeholder="Select year" [(ngModel)]="phase.phase_year_ts">
           </app-pr-select>
         </td>
         <td>
@@ -34,24 +34,29 @@
 
           <div class="text" *ngIf="!phase.isNew">{{this.getTocPhaseName(phase?.toc_pahse_id)}}</div>
           <app-pr-select *ngIf="phase.isNew" class="segment_title_margin" [options]="this.tocPhaseList"
-            optionLabel="name" optionValue="phase_id" placeholder="Select status" [(ngModel)]="phase.toc_pahse_id">
+            optionLabel="name" optionValue="phase_id" placeholder="Select phase" [(ngModel)]="phase.toc_pahse_id_ts">
           </app-pr-select>
         </td>
-        <td>
+        <td [style.width.px]="120">
           <!--Todo  start date -->
 
           <div class="text" *ngIf="!phase.isNew"> {{phase?.start_date | date: 'dd-MM-yyyy'}}</div>
-          <p-calendar *ngIf="phase.isNew" [(ngModel)]="phase.start_date" dateFormat="dd-mm-yy"></p-calendar>
+          <p-calendar placeholder="Start date" *ngIf="phase.isNew" [(ngModel)]="phase.start_date_ts"
+            dateFormat="dd-mm-yy"></p-calendar>
         </td>
-        <td>
+        <td [style.width.px]="120">
           <!--Todo end date  -->
 
           <div class="text" *ngIf="!phase.isNew">{{phase?.end_date| date: 'dd-MM-yyyy' }}</div>
-          <p-calendar *ngIf="phase.isNew" [(ngModel)]="phase.end_date" dateFormat="dd-mm-yy"></p-calendar>
+          <p-calendar placeholder="End date" *ngIf="phase.isNew" [(ngModel)]="phase.end_date_ts"
+            dateFormat="dd-mm-yy"></p-calendar>
         </td>
-        <td>
+        <td [style.width.px]="90">
           <!--Todo  status -->
-          <div class="text" *ngIf="!phase.editing">{{phase?.status}}</div>
+          <div class="text" *ngIf="!phase.editing">
+            <div class="tag_container" [ngClass]="phase?.status ? 'open':'closed'">{{phase?.status ? 'Open':'Closed'}}
+            </div>
+          </div>
           <app-pr-select *ngIf="phase.editing  && !phase.isNew" class="segment_title_margin" [options]="this.status"
             optionLabel="name" optionValue="status" placeholder="Select status" [(ngModel)]="phase.status_ts">
           </app-pr-select>
@@ -65,19 +70,25 @@
           </app-pr-select>
         </td>
 
-        <td>
+        <td [style.width.px]="90">
           <div class="actions" *ngIf="!phase.editing">
-            <div class="action_button edit" (click)="phase.editing = true"><i class="material-icons-round">edit</i>
+            <div class="action_button edit" (click)="getFeedback() ? null:phase.editing = true"
+              [ngClass]="{'disabled': getFeedback()}"><i class="material-icons-round"
+                [pTooltip]="getFeedback()?this.disabledActionsText:null" tooltipPosition="top">edit</i>
             </div>
-            <div class="action_button delete" [ngClass]="{'disabled': !phase?.can_be_deleted}"
-              (click)="phase?.can_be_deleted ?this.deletePhase(phase):null"
-              [pTooltip]="!phase?.can_be_deleted?'The phase has active results therefore cannot be eliminated':''"
+            <div class="action_button delete" [ngClass]="{'disabled': getFeedback() ||!phase?.can_be_deleted}"
+              (click)="getFeedback()?null:(phase?.can_be_deleted ?this.deletePhase(phase):null)"
+              [pTooltip]="getFeedback()?this.disabledActionsText:(!phase?.can_be_deleted?'The phase has active results therefore cannot be eliminated':'')"
               tooltipPosition="top"><i class="material-icons-round">delete</i>
             </div>
           </div>
           <div class="actions" *ngIf="phase.editing">
-            <div class="action_button save">
-              <div class="text" (click)="phase?.isNew ? createPhase(phase) :savePhase(phase)">{{phase?.isNew ? 'Create'
+            <div class="action_button save" tooltipPosition="top"
+              [ngClass]="{'disabled': phase?.isNew  &&  getMandatoryIncompleteFields(phase)}"
+              [pTooltip]="phase?.isNew ? getMandatoryIncompleteFields(phase):null" [escape]="false">
+              <div class="text"
+                (click)="phase?.isNew  &&  getMandatoryIncompleteFields(phase) ?null:(phase?.isNew ? createPhase(phase) :savePhase(phase))">
+                {{phase?.isNew ? 'Create'
                 : 'Save'}}</div> <i class="material-icons-round">{{phase?.isNew ? 'add_circle' : 'save'}}</i>
             </div>
             <div class="action_button cancel" (click)="cancelAction(phase); this.updateVariablesToSave(phase)">
@@ -88,9 +99,17 @@
       </tr>
     </ng-template>
   </p-table>
-
 </div>
-<app-add-button name="Add new phase" (clickEvent)="addNewPhase()"></app-add-button>
+
+<!-- <app-add-button name="Add new phase" (clickEvent)="addNewPhase()"></app-add-button> -->
+
+<div class="center_flex_100">
+  <div class="add_new_phase_button" [ngClass]="{'disabled': getFeedback()}">
+    <div class="feedback" *ngIf="getFeedback()">{{getFeedback()}}</div>
+    <div class="button" (click)="getFeedback()?'':addNewPhase()">Add new phase</div>
+  </div>
+</div>
+
 <!-- <div class="table_container" [ngClass]="{ 'expand_table': show_full_screen }" *ngIf="false">
   <p-table sortField="id" [sortOrder]="-1" [value]="this.phaseList" dataKey="id" [scrollable]="true" editMode="row"
     [paginator]="true" [rowsPerPageOptions]="[10, 50, 100]" [rows]="10" scrollHeight="calc(100vh - 303px)"

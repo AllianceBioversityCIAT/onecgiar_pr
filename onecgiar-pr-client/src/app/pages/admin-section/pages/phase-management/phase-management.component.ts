@@ -28,6 +28,7 @@ export class PhaseManagementComponent implements OnInit {
   resultYearsList = [];
   // clonedphaseList: { [s: string]: any } = {};
   textToFind = '';
+  disabledActionsText = 'Finish editing the phase to be able to edit or delete this phase.';
   // newPhase: any[] = [];
   @ViewChild('dt') table: Table;
   status = [
@@ -80,16 +81,32 @@ export class PhaseManagementComponent implements OnInit {
 
   updateVariablesToSave(phaseItem) {
     phaseItem.phase_name_ts = phaseItem.phase_name;
+    phaseItem.phase_year_ts = phaseItem.phase_year;
+    phaseItem.toc_pahse_id_ts = phaseItem.toc_pahse_id;
+    phaseItem.start_date_ts = phaseItem.start_date;
+    phaseItem.end_date_ts = phaseItem.end_date;
     phaseItem.status_ts = phaseItem.status;
     phaseItem.previous_phase_ts = phaseItem.previous_phase;
-    phaseItem.phase_year_ts = phaseItem.phase_year;
   }
 
   updateMainVariables(phaseItem) {
     phaseItem.phase_name = phaseItem.phase_name_ts;
+    phaseItem.phase_year = phaseItem.phase_year_ts;
+    phaseItem.toc_pahse_id = phaseItem.toc_pahse_id_ts;
+    phaseItem.start_date = phaseItem.start_date_ts;
+    phaseItem.end_date = phaseItem.end_date_ts;
     phaseItem.status = phaseItem.status_ts;
     phaseItem.previous_phase = phaseItem.previous_phase_ts;
-    phaseItem.phase_year = phaseItem.phase_year_ts;
+  }
+
+  getMandatoryIncompleteFields(phaseItem): string {
+    let text = '';
+    if (!phaseItem.phase_name_ts) text += '<strong> Name </strong> is required to create <br>';
+    if (!phaseItem.phase_year_ts) text += '<strong> Reporting year </strong> is required to create <br>';
+    if (!phaseItem.toc_pahse_id_ts) text += '<strong> Toc phase </strong> is required to create <br>';
+    if (!phaseItem.start_date_ts) text += '<strong> Start date </strong> is required to create <br>';
+    if (!phaseItem.end_date_ts) text += '<strong> End date </strong>is required to create <br>';
+    return text;
   }
 
   get_resultYears() {
@@ -169,6 +186,12 @@ export class PhaseManagementComponent implements OnInit {
     return tocPhaseElement?.name;
   }
 
+  getFeedback() {
+    if (this.phaseList.some(phaseItem => phaseItem.isNew)) return 'Create or cancel to add a new phase';
+    if (this.phaseList.some(phaseItem => phaseItem.editing)) return 'Save or cancel to add a new phase';
+    return '';
+  }
+
   addNewPhase() {
     const tempNewPhase: any = new Phase();
     tempNewPhase.isNew = true;
@@ -187,7 +210,9 @@ export class PhaseManagementComponent implements OnInit {
     phase.editing = false;
     if (!phase.isNew) return;
     const index = this.phaseList.findIndex(phaseItem => phaseItem.id == phase.id);
-    this.phaseList.splice(index, 1);
-    console.log(this.phaseList);
+    let phaseListCopy: any[] = [...this.phaseList];
+    this.phaseList = [];
+    phaseListCopy.splice(index, 1);
+    this.phaseList = phaseListCopy;
   }
 }
