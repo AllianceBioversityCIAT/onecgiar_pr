@@ -169,6 +169,11 @@ export class ResultsCapacityDevelopmentsRepository
       rcd.male_using 'Number of males (CapDev)',
       if(ct.capdev_term_id in (3,4), ct.name, concat(ct.term, ' - ', ct.name)) as 'Lenght of training',
       cdm.name 'Delivery method',
+      (case
+        when rcd.is_attending_for_organization = 0 then "No"
+        when rcd.is_attending_for_organization = 1 then "Yes"
+        else "Not defined"
+      end) as 'Were the trainees attending on behalf of an organization?',
       group_concat(distinct concat(if(coalesce(ci.acronym, '') = '', '', concat(ci.acronym, ' - ')), ci.name) separator '; ') as 'Implementing organizations (CapDev)'
     from results_capacity_developments rcd 
     left join result r on rcd.result_id = r.id and r.is_active = 1
