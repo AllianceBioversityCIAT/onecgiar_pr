@@ -3,12 +3,12 @@
 <div class="pr-field" [ngClass]="{'mandatory': this.required,'complete': value !== null && value !== undefined}">
     <!-- <div class="read-only" *ngSwitchCase="true" [innerHtml]="valueName"></div> -->
     <div class="radioButtonList"
-        [ngClass]="{'verticalAlignment': this.verticalAlignment,'block-field':(readOnly || this.rolesSE.readOnly || !!this.dataControlSE?.currentResult?.status) && (!isStatic)}"
+        [ngClass]="{'verticalAlignment': this.verticalAlignment,'block-field':(readOnly || this.rolesSE.readOnly) && (!isStatic)}"
         [hidden]="hideOptions">
         <div class="radioButton" *ngFor="let option of this.options; let i=index">
             <p-radioButton (click)="onSelect()" name="groupname" inputId="groupname{{i}}{{this.joinName()}}"
                 [value]="option[optionValue]" [(ngModel)]="value"
-                [disabled]="(readOnly || this.rolesSE.readOnly || !!this.dataControlSE?.currentResult?.status) && (!isStatic)">
+                [disabled]="(readOnly || this.rolesSE.readOnly) && (!isStatic)">
             </p-radioButton>
             <label for="groupname{{i}}{{this.joinName()}}" class="name">{{option[this.optionLabel]}}</label>
         </div>
