@@ -7,6 +7,12 @@ export class ClarisaInnovationReadinessLevel {
     id: number;
 
     @Column({
+        name: 'level',
+        type: 'bigint'
+    })
+    level: number;
+
+    @Column({
         name: 'name',
         type: 'text'
     })
