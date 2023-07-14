@@ -114,12 +114,16 @@ export class IpsrRepository extends Repository<Ipsr> {
                     result_type rt
                 WHERE
                     rt.id = r.result_type_id
-            ) AS result_type
+            ) AS result_type,
+            v.status as is_phase_open,
+            v.phase_name,
+            v.phase_year 
         FROM
             result r
             LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
             LEFT JOIN clarisa_initiatives ci ON ci.id = rbi.inititiative_id
             INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
+            inner join \`version\` v on v.id = r.version_id 
         WHERE
             r.is_active = 1
             AND r.id = ?;

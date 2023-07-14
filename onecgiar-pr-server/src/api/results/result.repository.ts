@@ -775,7 +775,10 @@ WHERE
     ci.name as initiative_name,
     ci.short_name as initiative_short_name,
     ci.official_code as initiative_official_code,
-    r.lead_contact_person
+    r.lead_contact_person,
+    v.status as is_phase_open,
+    v.phase_name,
+    v.phase_year 
 FROM
     \`result\` r
     inner join result_level rl on rl.id = r.result_level_id 
@@ -785,6 +788,7 @@ FROM
         and rbi.initiative_role_id = 1
     inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id
     INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
+    inner join \`version\` v on v.id = r.version_id 
 WHERE
     r.id = ${id}
     and r.is_active > 0;
