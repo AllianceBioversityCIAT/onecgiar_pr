@@ -19,7 +19,7 @@ export class ResultsListComponent implements OnInit {
     { title: 'Result code', attr: 'result_code' },
     { title: 'Title', attr: 'title', class: 'notCenter' },
     { title: 'Phase', attr: 'phase_name' },
-    { title: 'Reporting year', attr: 'phase_year' },
+    // { title: 'Reporting year', attr: 'phase_year' },
     { title: 'Result type', attr: 'result_type' },
     { title: 'Submitter', attr: 'submitter' },
     { title: 'Status', attr: 'status_name' },
@@ -54,7 +54,7 @@ export class ResultsListComponent implements OnInit {
       }
     },
     {
-      label: 'Reporting in another phase',
+      label: 'Report in another phase',
       icon: 'pi pi-fw pi-clone',
       command: () => {
         this.api.dataControlSE.chagePhaseModal = true;
