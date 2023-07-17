@@ -9,55 +9,58 @@ import { ResultCountriesSubNational } from '../../../results/result-countries-su
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateComplementaryInnovationDto } from './create-complementary-innovation.dto';
 export class UpdateInnovationPathwayDto {
-    public result_id: number;
-    public geo_scope_id: number;
-    public result_by_innovation_package_id: number;
-    public title: string;
-    public experts: CreateInnovationPackagingExpertDto[];
-    public result_ip: ResultInnovationPackage & CreateResultIPDto;
-    public innovatonUse: innovatonUseInterface;
-    public regions: regionsInterface[];
-    public countries: countriesInterface[];
-    public institutions: institutionsInterface[];
-    public sdgTargets: sdgTargetsInterface[];
-    public eoiOutcomes: eoiOutcomesInterface[];
-    public actionAreaOutcomes: actionAreaOutcomesInterface[];
-    public impactAreas: impactAreasInterface[];
-    public experts_is_diverse!: boolean;
-    public is_not_diverse_justification!: string;
+  public result_id: number;
+  public geo_scope_id: number;
+  public result_by_innovation_package_id: number;
+  public title: string;
+  public experts: CreateInnovationPackagingExpertDto[];
+  public result_ip: ResultInnovationPackage & CreateResultIPDto;
+  public innovatonUse: innovatonUseInterface;
+  public regions: regionsInterface[];
+  public countries: countriesInterface[];
+  public institutions: institutionsInterface[];
+  public sdgTargets: sdgTargetsInterface[];
+  public eoiOutcomes: eoiOutcomesInterface[];
+  public actionAreaOutcomes: actionAreaOutcomesInterface[];
+  public impactAreas: impactAreasInterface[];
+  public experts_is_diverse!: boolean;
+  public is_not_diverse_justification!: string;
+  public scalig_ambition!: {};
 }
 export interface regionsInterface {
-    id: number;
-    name: string;
+  id: number;
+  name: string;
 }
 export interface countriesInterface {
-    id: number;
-    name: string;
-    result_countries_sub_national?: ResultCountriesSubNational[];
+  id: number;
+  name: string;
+  result_countries_sub_national?: ResultCountriesSubNational[];
 }
 export interface eoiOutcomesInterface {
-    toc_result_id: number;
+  toc_result_id: number;
 }
 export interface actionAreaOutcomesInterface {
-    action_area_outcome_id: number;
+  action_area_outcome_id: number;
 }
 export interface impactAreasInterface {
-    targetId: number;
+  targetId: number;
 }
 export interface sdgTargetsInterface {
-    usnd_code: number;
-    id: number;
+  usnd_code: number;
+  id: number;
 }
 
 export interface innovatonUseInterface {
-    actors: ResultActor[],
-    organization: ResultsByInstitutionType[],
-    measures: ResultIpMeasure[];
+  actors: ResultActor[];
+  organization: ResultsByInstitutionType[];
+  measures: ResultIpMeasure[];
 }
 
 interface institutionsInterface {
-    institutions_id: number;
-    deliveries?: number[];
+  institutions_id: number;
+  deliveries?: number[];
 }
 
-export class UpdateComplementaryInnovationDto extends PartialType(CreateComplementaryInnovationDto) {}
+export class UpdateComplementaryInnovationDto extends PartialType(
+  CreateComplementaryInnovationDto,
+) {}
