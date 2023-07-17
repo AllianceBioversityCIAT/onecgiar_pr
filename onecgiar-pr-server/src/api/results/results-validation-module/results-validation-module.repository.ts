@@ -190,30 +190,56 @@ export class resultValidationRepository extends Repository<Validation>{
 
   async partnersValidation(resultId: number) {
     const queryData = `
-    select
-		'partners' as section_name,
+	SELECT
+		'partners' AS section_name,
 		CASE
-			when r.no_applicable_partner = 1 then true
-			else (case
-				when 
-				((
+			WHEN r.no_applicable_partner = 1 THEN TRUE
+			WHEN (
+				(
+					SELECT
+						COUNT(rbi.id)
+					FROM
+						results_by_institution rbi
+					WHERE
+						rbi.result_id = r.id
+						AND rbi.institution_roles_id = 2
+						AND rbi.is_active > 0
+				) <= 0
+			) THEN FALSE
+			WHEN (
 				SELECT
-					COUNT(rbi.id)
+					COUNT(*)
 				FROM
-					results_by_institution rbi
+					results_by_institution rbi2
 				WHERE
-					rbi.result_id = r.id
-					and rbi.institution_roles_id = 2
-					and rbi.is_active > 0) > 0) THEN true
-				else false
-			end)
-		END as validation
-	from
-		\`result\` r
+					rbi2.result_id = r.id
+					AND rbi2.institution_roles_id = 2
+					AND rbi2.is_active = TRUE
+			) != (
+				SELECT
+					COUNT(DISTINCT rbibdt.result_by_institution_id)
+				FROM
+					result_by_institutions_by_deliveries_type rbibdt
+				WHERE
+					rbibdt.is_active = TRUE
+					AND rbibdt.result_by_institution_id IN (
+						SELECT
+							rbi4.id
+						FROM
+							results_by_institution rbi4
+						WHERE
+							rbi4.result_id = r.id
+							AND rbi4.institution_roles_id = 2
+							AND rbi4.is_active = TRUE
+					)
+			) THEN FALSE
+			ELSE TRUE
+		END AS validation
+	FROM
+		result r
 	WHERE
 		r.id = ?
-		and r.is_active > 0;
-
+		AND r.is_active > 0;
     `;
     try {
       const shareResultRequest: GetValidationSectionDto[] = await this.dataSource.query(queryData, [resultId]); 
