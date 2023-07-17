@@ -12,7 +12,7 @@ export class ResultsListFilterService {
         attr: 'submitter',
         options: []
       },
-      {
+      /*{
         filter_title: 'Reporting year',
         attr: 'reported_year',
         options: [
@@ -20,6 +20,11 @@ export class ResultsListFilterService {
           { attr: '2023', name: '2023' },
           { attr: '2024', name: '2024' }
         ]
+      },*/
+      {
+        filter_title: 'Phases',
+        attr: 'phase_name',
+        options: []
       }
     ],
     resultLevel: []

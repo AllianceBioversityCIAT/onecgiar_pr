@@ -7,6 +7,7 @@ import { ResultLevelService } from '../../../result-creator/services/result-leve
 import { ExportTablesService } from '../../../../../../shared/services/export-tables.service';
 import { ShareRequestModalService } from '../../../result-detail/components/share-request-modal/share-request-modal.service';
 import { RetrieveModalService } from '../../../result-detail/components/retrieve-modal/retrieve-modal.service';
+import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 
 @Component({
   selector: 'app-results-list',
@@ -71,7 +72,7 @@ export class ResultsListComponent implements OnInit {
     // { label: 'Submit', icon: 'pi pi-fw pi-reply' }
   ];
 
-  constructor(public api: ApiService, public resultsListService: ResultsListService, private ResultLevelSE: ResultLevelService, private exportTablesSE: ExportTablesService, private shareRequestModalSE: ShareRequestModalService, private retrieveModalSE: RetrieveModalService) {}
+  constructor(public api: ApiService, public resultsListService: ResultsListService, private ResultLevelSE: ResultLevelService, private exportTablesSE: ExportTablesService, private shareRequestModalSE: ShareRequestModalService, private retrieveModalSE: RetrieveModalService, public phasesService: PhasesService) {}
 
   ngOnInit(): void {
     // this.api.rolesSE.validateReadOnly();
