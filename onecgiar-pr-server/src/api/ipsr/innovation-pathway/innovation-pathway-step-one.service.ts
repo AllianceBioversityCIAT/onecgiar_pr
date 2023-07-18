@@ -264,6 +264,17 @@ export class InnovationPathwayStepOneService {
           eoiOutcomes?.map((el) => el['title']),
         )}.`,
       };
+
+      const scalingText = scalig_ambition['body'];
+
+      const scalingAmbitionBlurb =
+        await this._resultInnovationPackageRepository.update(
+          { result_innovation_package_id: result.id },
+          {
+            scaling_ambition_blurb: scalingText,
+          },
+        );
+
       return {
         response: await {
           result_id: result.id,
@@ -465,7 +476,7 @@ export class InnovationPathwayStepOneService {
       const specifyAspiredOutcomesAndImpact =
         await this.saveSpecifyAspiredOutcomesAndImpact(
           result,
-          version,
+          version.id,
           UpdateInnovationPathwayDto,
           user,
         );
@@ -533,7 +544,7 @@ export class InnovationPathwayStepOneService {
 
   async saveSpecifyAspiredOutcomesAndImpact(
     result: any,
-    version: Version,
+    version: number,
     UpdateInnovationPathwayDto: UpdateInnovationPathwayDto,
     user: TokenDto,
   ) {
@@ -561,7 +572,7 @@ export class InnovationPathwayStepOneService {
           newEoi.toc_result_id = eoi.toc_result_id;
           newEoi.result_by_innovation_package_id =
             result_by_innovation_package_id;
-          newEoi.version_id = version.id;
+          newEoi.version_id = version;
           newEoi.created_by = user.id;
           newEoi.last_updated_by = user.id;
           newEoi.created_date = new Date();
