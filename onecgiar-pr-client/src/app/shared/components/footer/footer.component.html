@@ -1,22 +1,20 @@
-<div class="blank_space" *ngIf="showIfRouteIsInList()"
-    [ngClass]="{'floating': this.isFloating, 'floatingFix':this.isFloatingFix}" (mouseenter)="onMouseEnter()"
-    (mouseleave)="onMouseLeave()">
-    <div class="footer">
-        <div class="content">
-            <div class="logo">
-                <img class="cgiar_logo" src="/assets/cgiar_logo.png" alt="" srcset="" />
-            </div>
-            <div class="texts">
-                <div class="buttons">
-                    <div class="f-button" (click)="this.footerSE.displayContactUs = true">Contact Us</div>
-                    <div class="point"></div>
-                    <a target="_blank" [href]="this.termsAndCondition" class="f-button">Terms and Conditions</a>
-                    <div class="point"></div>
-                    <a target="_blank" [href]="this.license" class="f-button">License</a>
-                </div>
-                <div class="rights">© 2023 CGIAR System Organization. All rights reserved.</div>
-            </div>
+<div class="blank_space" *ngIf="showIfRouteIsInList()" [ngClass]="{ floating: this.isFloating, floatingFix: this.isFloatingFix }" (mouseenter)="onMouseEnter()" (mouseleave)="onMouseLeave()">
+  <div class="footer">
+    <div class="content">
+      <div class="logo">
+        <img class="cgiar_logo" src="/assets/cgiar_logo.png" alt="" srcset="" />
+      </div>
+      <div class="texts">
+        <div class="buttons">
+          <div class="f-button" (click)="this.footerSE.displayContactUs = true">Contact Us</div>
+          <div class="point"></div>
+          <a target="_blank" [href]="this.termsAndCondition" class="f-button">Terms and Conditions</a>
+          <div class="point"></div>
+          <a target="_blank" [href]="this.license" class="f-button">License</a>
         </div>
+        <div class="rights">© 2023 CGIAR System Organization. All rights reserved.</div>
+      </div>
     </div>
+  </div>
 </div>
-<div class="footer-blocker" [ngClass]="{'footer-blocker-max': this.isHover}" *ngIf="this.isFloating"></div>
+<div class="footer-blocker" [ngClass]="{ 'footer-blocker-max': this.isHover }" *ngIf="this.isFloating"></div>

@@ -1366,11 +1366,11 @@ export class InnovationPathwayStepOneService {
       });
 
       if (!resultExist) {
-        throw this._returnResponse.format({
+        return {
           response: { valid: false },
           message: 'The result does not exist',
-          statusCode: HttpStatus.NOT_FOUND,
-        });
+          status: HttpStatus.NOT_FOUND,
+        };
       }
 
       const resultIp = await this._resultInnovationPackageRepository.findOne({

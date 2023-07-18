@@ -9,7 +9,7 @@ import { FooterService } from './footer.service';
   styleUrls: ['./footer.component.scss']
 })
 export class FooterComponent {
-  routes = [{ path: '/result/results-outlet/results-list' }, { path: '/result/result-detail/', floating: true }, { path: '/type-one-report', floating: true }, { path: '/ipsr/list/innovation-list' }, { path: '/ipsr/detail' }, { path: '/quality-assurance' }, { path: '/init-admin-module', floating: true },  { path: '/login', floatingFix: true }];
+  routes = [{ path: '/result/results-outlet/results-list' }, { path: '/result/result-detail/', floating: true }, { path: '/type-one-report', floating: true }, { path: '/ipsr/list/innovation-list' }, { path: '/ipsr/detail' }, { path: '/quality-assurance' }, { path: '/init-admin-module', floating: true }, { path: '/login', floatingFix: true }];
   // { path: '/admin-module', floating: true },
   isFloating = false;
   isFloatingFix = false;
