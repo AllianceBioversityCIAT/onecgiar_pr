@@ -67,6 +67,8 @@ export class ResultDetailComponent {
   }
 
   ngDoCheck(): void {
-    this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.section_container');
+    setTimeout(() => {
+      this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.section_container');
+    }, 10);
   }
 }

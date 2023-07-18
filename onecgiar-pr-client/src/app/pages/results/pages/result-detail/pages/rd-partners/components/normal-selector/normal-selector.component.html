@@ -23,6 +23,8 @@
     description="If you don't find the partner you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list">
 </app-alert-status>
 
+
+
 <div class="auto_fit_container fadeIn" *ngIf="this.rdPartnersSE.partnersBody.no_applicable_partner !== true">
     <div>
         <app-pr-multi-select [options]="this.institutionsSE.institutionsList" [required]="false" label="Partners"
@@ -39,6 +41,8 @@
         <div class="chips_container  custom_scroll partners_selected">
             <div class="pr_chip_selected"
                 *ngFor="let option of this.rdPartnersSE.partnersBody.institutions; let i=index">
+                <div appFeedbackValidation labelText="Partner role" [isComplete]="!!option?.deliveries?.length">
+                </div>
                 <div class="name">{{option?.institutions_name}}</div>
                 <div class="type"> <strong>Institution type:</strong> {{option?.institutions_type_name}}</div>
                 <div style="margin-top: -10px;margin-bottom: -20px;">
