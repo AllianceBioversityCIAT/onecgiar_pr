@@ -1,16 +1,129 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { env } from 'process';
 import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultsTocResult } from './entities/results-toc-result.entity';
+import {
+  ReplicableConfigInterface,
+  ReplicableInterface,
+} from '../../../shared/globalInterfaces/replicable.interface';
 
 @Injectable()
-export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
+export class ResultsTocResultRepository
+  extends Repository<ResultsTocResult>
+  implements ReplicableInterface<ResultsTocResult>
+{
+  private readonly _logger: Logger = new Logger(
+    ResultsTocResultRepository.name,
+  );
+
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
   ) {
     super(ResultsTocResult, dataSource.createEntityManager());
+  }
+
+  async replicable(
+    config: ReplicableConfigInterface<ResultsTocResult>,
+  ): Promise<ResultsTocResult[]> {
+    let final_data: ResultsTocResult[] = null;
+    try {
+      if (config.f?.custonFunction) {
+        const queryData = `
+        select 
+          null as result_toc_result_id,
+          null as planned_result,
+          rtr.is_active,
+          now() as created_date,
+          null as last_updated_date,
+          null as toc_result_id,
+          ? as results_id,
+          null as action_area_outcome_id,
+          ? as created_by,
+          null as last_updated_by,
+          rtr.initiative_id,
+          null as action_area_id
+          from results_toc_result rtr 
+          WHERE rtr.results_id = ? and rtr.is_active > 0
+        `;
+        const response = await (<Promise<ResultsTocResult[]>>(
+          this.query(queryData, [
+            config.new_result_id,
+            config.user.id,
+            config.old_result_id,
+          ])
+        ));
+        const response_edit = <ResultsTocResult[]>(
+          config.f.custonFunction(response)
+        );
+        final_data = await this.save(response_edit);
+      } else {
+        const queryData: string = `
+        insert into results_toc_result 
+        (
+        planned_result,
+        is_active,
+        created_date,
+        last_updated_date,
+        toc_result_id,
+        results_id,
+        action_area_outcome_id,
+        created_by,
+        last_updated_by,
+        initiative_id,
+        action_area_id
+        )
+        SELECT 
+        null as planned_result,
+        rtr.is_active,
+        now() as created_date,
+        null as last_updated_date,
+        null as toc_result_id,
+        ? as results_id,
+        null as action_area_outcome_id,
+        ? as created_by,
+        null as last_updated_by,
+        rtr.initiative_id,
+        null as action_area_id
+        from results_toc_result rtr 
+        WHERE rtr.results_id = ? and rtr.is_active > 0`;
+        await this.query(queryData, [
+          config.new_result_id,
+          config.user.id,
+          config.old_result_id,
+        ]);
+
+        const queryFind = `
+        select 
+          rtr.result_toc_result_id,
+          rtr.planned_result,
+          rtr.is_active,
+          rtr.created_date,
+          rtr.last_updated_date,
+          rtr.toc_result_id,
+          rtr.results_id,
+          rtr.action_area_outcome_id,
+          rtr.created_by,
+          rtr.last_updated_by,
+          rtr.initiative_id,
+          rtr.action_area_id
+          from results_toc_result rtr 
+          WHERE rtr.results_id = ?`;
+        final_data = await this.query(queryFind, [config.new_result_id]);
+      }
+    } catch (error) {
+      config.f?.errorFunction
+        ? config.f.errorFunction(error)
+        : this._logger.error(error);
+      final_data = null;
+    }
+
+    config.f?.completeFunction
+      ? config.f.completeFunction({ ...final_data })
+      : null;
+
+    return final_data;
   }
 
   async getResultTocResultById(id: string) {
@@ -24,7 +137,6 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       rtr.toc_result_id ,
       rtr.results_id ,
       rtr.action_area_outcome_id ,
-      rtr.version_id ,
       rtr.created_by ,
       rtr.last_updated_by
     FROM
@@ -32,7 +144,9 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
     WHERE rtr.result_toc_result_id = ?;
     `;
     try {
-      const resultTocResult: ResultsTocResult[] = await this.query(queryData, [id]);
+      const resultTocResult: ResultsTocResult[] = await this.query(queryData, [
+        id,
+      ]);
       return resultTocResult.length ? resultTocResult[0] : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -54,7 +168,6 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       rtr.toc_result_id ,
       rtr.results_id ,
       rtr.action_area_outcome_id ,
-      rtr.version_id ,
       rtr.created_by ,
       rtr.last_updated_by
     FROM
@@ -73,7 +186,6 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
   }
 
   async getRTRById(RtRId: number, resultId: number, initiativeId: number) {
-
     const queryData = `
     SELECT
       rtr.result_toc_result_id,
@@ -84,7 +196,6 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       rtr.toc_result_id ,
       rtr.results_id ,
       rtr.action_area_outcome_id ,
-      rtr.version_id ,
       rtr.created_by ,
       rtr.last_updated_by,
       ci.id as inititiative_id,
@@ -101,7 +212,7 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
     `;
     try {
       const resultTocResult: ResultsTocResult[] = await this.query(queryData);
-      return resultTocResult?.length?resultTocResult[0]:undefined;
+      return resultTocResult?.length ? resultTocResult[0] : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
@@ -112,7 +223,6 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
   }
 
   async getNewRTRById(RtRId: number, resultId: number, initiativeId: number) {
-
     const queryData = `
     SELECT
       rtr.result_toc_result_id,
@@ -123,7 +233,6 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       rtr.toc_result_id ,
       rtr.results_id ,
       rtr.action_area_outcome_id ,
-      rtr.version_id ,
       rtr.created_by ,
       rtr.last_updated_by,
       ci.id as inititiative_id,
@@ -135,12 +244,15 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       results_toc_result rtr
       left join clarisa_initiatives ci on ci.id = rtr.initiative_id 
       left JOIN toc_result tr on tr.toc_result_id = rtr.toc_result_id
-    where ${RtRId?`rtr.result_toc_result_id = ${RtRId}`:
-          `rtr.initiative_id = ${initiativeId} and rtr.results_id = ${resultId}`};
+    where ${
+      RtRId
+        ? `rtr.result_toc_result_id = ${RtRId}`
+        : `rtr.initiative_id = ${initiativeId} and rtr.results_id = ${resultId}`
+    };
     `;
     try {
       const resultTocResult: ResultsTocResult[] = await this.query(queryData);
-      return resultTocResult?.length?resultTocResult[0]:undefined;
+      return resultTocResult?.length ? resultTocResult[0] : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
@@ -150,8 +262,12 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
     }
   }
 
-  async getRTRPrimary(resultId: number, initiativeId: number[], isPrimary: boolean, initiativeArray?: number[]) {
-
+  async getRTRPrimary(
+    resultId: number,
+    initiativeId: number[],
+    isPrimary: boolean,
+    initiativeArray?: number[],
+  ) {
     const queryData = `
     SELECT
       rtr.result_toc_result_id,
@@ -162,7 +278,6 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       rtr.toc_result_id ,
       rtr.results_id ,
       rtr.action_area_outcome_id ,
-      rtr.version_id ,
       rtr.created_by ,
       rtr.last_updated_by,
       ci.id as initiative_id,
@@ -176,12 +291,22 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       and tr.inititiative_id = rtr.initiative_id  
       left join clarisa_initiatives ci on ci.id = rtr.initiative_id  
     where rtr.results_id = ?
-      and rtr.initiative_id ${isPrimary?'':'not'} in (${initiativeId?initiativeId.toString():null})
-      ${isPrimary?'':`and rtr.initiative_id in (${initiativeArray.length?initiativeArray.toString():null})`}
+      and rtr.initiative_id ${isPrimary ? '' : 'not'} in (${
+      initiativeId ? initiativeId.toString() : null
+    })
+      ${
+        isPrimary
+          ? ''
+          : `and rtr.initiative_id in (${
+              initiativeArray.length ? initiativeArray.toString() : null
+            })`
+      }
       and rtr.is_active > 0;
     `;
     try {
-      const resultTocResult: ResultsTocResult[] = await this.query(queryData, [resultId]);
+      const resultTocResult: ResultsTocResult[] = await this.query(queryData, [
+        resultId,
+      ]);
       return resultTocResult;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -193,7 +318,6 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
   }
 
   async existsResultTocResult(resultId: number, initiativeId: number) {
-
     const queryData = `
     SELECT
       rtr.result_toc_result_id,
@@ -204,7 +328,6 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       rtr.toc_result_id ,
       rtr.results_id ,
       rtr.action_area_outcome_id ,
-      rtr.version_id ,
       rtr.created_by ,
       rtr.last_updated_by,
       rtr.initiative_id 
@@ -214,8 +337,11 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
     and rtr.initiative_id = ?;
     `;
     try {
-      const resultTocResult: ResultsTocResult[] = await this.query(queryData, [resultId, initiativeId]);
-      return resultTocResult?.length? resultTocResult[0]: undefined;
+      const resultTocResult: ResultsTocResult[] = await this.query(queryData, [
+        resultId,
+        initiativeId,
+      ]);
+      return resultTocResult?.length ? resultTocResult[0] : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
@@ -225,8 +351,12 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
     }
   }
 
-  async getRTRPrimaryActionArea(resultId: number, initiativeId: number[], isPrimary: boolean, initiativeArray?: number[]) {
-
+  async getRTRPrimaryActionArea(
+    resultId: number,
+    initiativeId: number[],
+    isPrimary: boolean,
+    initiativeArray?: number[],
+  ) {
     const queryData = `
     SELECT
       rtr.result_toc_result_id,
@@ -237,7 +367,6 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       rtr.toc_result_id ,
       rtr.results_id ,
       rtr.action_area_outcome_id ,
-      rtr.version_id ,
       rtr.created_by ,
       rtr.last_updated_by,
       ci.id as initiative_id,
@@ -249,13 +378,22 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       results_toc_result rtr	
       inner join clarisa_initiatives ci on ci.id = rtr.initiative_id 
     where rtr.results_id = ?
-      and rtr.initiative_id ${isPrimary?'':'not'} in (${initiativeId.length?initiativeId.toString():null})
-      ${isPrimary?'':`and rtr.initiative_id in (${initiativeArray.length?initiativeArray.toString():null})`}
+      and rtr.initiative_id ${isPrimary ? '' : 'not'} in (${
+      initiativeId.length ? initiativeId.toString() : null
+    })
+      ${
+        isPrimary
+          ? ''
+          : `and rtr.initiative_id in (${
+              initiativeArray.length ? initiativeArray.toString() : null
+            })`
+      }
       and rtr.is_active > 0;
     `;
     try {
-
-      const resultTocResult: ResultsTocResult[] = await this.query(queryData, [resultId]);
+      const resultTocResult: ResultsTocResult[] = await this.query(queryData, [
+        resultId,
+      ]);
       return resultTocResult;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -267,8 +405,7 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
   }
 
   async getRTRByIdNotInit(RtRId: number, resultId: number) {
-
-    if(!RtRId){
+    if (!RtRId) {
       return undefined;
     }
 
@@ -282,7 +419,6 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
     	rtr.toc_result_id ,
     	rtr.results_id ,
     	rtr.action_area_outcome_id ,
-    	rtr.version_id ,
     	rtr.created_by ,
     	rtr.last_updated_by,
     	tr.inititiative_id,
@@ -310,7 +446,7 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
     `;
     try {
       const resultTocResult: ResultsTocResult[] = await this.query(queryData);
-      return resultTocResult?.length?resultTocResult[0]:undefined;
+      return resultTocResult?.length ? resultTocResult[0] : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
@@ -320,9 +456,13 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
     }
   }
 
-  
-
-  async getAllResultTocResultByResultIdNoCurrentInit(resultId: number, initiativeId: number, resultLevel: number, toc_result_id: number, action_area_outcome_id: number) {
+  async getAllResultTocResultByResultIdNoCurrentInit(
+    resultId: number,
+    initiativeId: number,
+    resultLevel: number,
+    toc_result_id: number,
+    action_area_outcome_id: number,
+  ) {
     const queryData = `
     SELECT
       rtr.result_toc_result_id,
@@ -333,7 +473,6 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       rtr.toc_result_id ,
       rtr.results_id ,
       rtr.action_area_outcome_id ,
-      rtr.version_id ,
       rtr.created_by ,
       rtr.last_updated_by,
       rbi.inititiative_id,
@@ -352,7 +491,7 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       and rtr.toc_result_id = ${toc_result_id}
       and rtr.is_active > 0;
     `,
-    actonArea = `
+      actonArea = `
     select
     	rtr.result_toc_result_id,
     	rtr.planned_result,
@@ -362,7 +501,6 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
     	rtr.toc_result_id,
     	rtr.results_id,
     	rtr.action_area_outcome_id,
-    	rtr.version_id,
     	rtr.created_by,
     	rtr.last_updated_by,
     	ci.id as initiative_id,
@@ -404,8 +542,11 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       ;
     `;
     try {
-      const resultTocResult: ResultsTocResult[] = await this.query(resultLevel == 2? actonArea :queryData, [initiativeId, resultId, initiativeId]);
-      return resultTocResult?.length?resultTocResult[0]:undefined;
+      const resultTocResult: ResultsTocResult[] = await this.query(
+        resultLevel == 2 ? actonArea : queryData,
+        [initiativeId, resultId, initiativeId],
+      );
+      return resultTocResult?.length ? resultTocResult[0] : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
@@ -415,7 +556,12 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
     }
   }
 
-  async getAllResultTocResultContributorsByResultIdAndInitId(resultId: number, initiativeArray: number[], ownerinitiativeId: number, resultLevel: number) {
+  async getAllResultTocResultContributorsByResultIdAndInitId(
+    resultId: number,
+    initiativeArray: number[],
+    ownerinitiativeId: number,
+    resultLevel: number,
+  ) {
     const init: number[] = initiativeArray || [];
     const queryData = `
     select 
@@ -427,7 +573,6 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       rtr.toc_result_id,
       rtr.results_id,
       rtr.action_area_outcome_id,
-      rtr.version_id,
       rtr.created_by,
       rtr.last_updated_by,
       ci.id as initiative_id,
@@ -438,11 +583,11 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
       left JOIN toc_result tr on tr.toc_result_id = rtr.toc_result_id 
       inner join clarisa_initiatives ci on ci.id = tr.inititiative_id  
       WHERE rtr.results_id = ${resultId}
-      and tr.inititiative_id in (${init?.length? init.toString(): null})
+      and tr.inititiative_id in (${init?.length ? init.toString() : null})
       and tr.inititiative_id <> ${ownerinitiativeId}
       and rtr.is_active > 0;
     `,
-    actionArea = `
+      actionArea = `
     select 
         rtr.result_toc_result_id,
         rtr.planned_result,
@@ -452,7 +597,6 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
         rtr.toc_result_id,
         rtr.results_id,
         rtr.action_area_outcome_id,
-        rtr.version_id,
         rtr.created_by,
         rtr.last_updated_by,
         ci.id as initiative_id,
@@ -477,19 +621,22 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
             caao.id = iaaoi.outcome_id
           WHERE
             iaaoi.outcome_id is not null
-            and ibs.initiativeId in (${init?.length? init.toString(): null})
+            and ibs.initiativeId in (${init?.length ? init.toString() : null})
             and ibs.initiativeId <> ?
           GROUP by
             ibs.initiativeId,
             iaaoi.outcome_id) rtt on rtt.action_area_outcome_id = rtr.action_area_outcome_id
       inner join clarisa_initiatives ci on ci.id = rtt.inititiative_id
         WHERE rtr.results_id = ?
-        and rtt.inititiative_id in (${init?.length? init.toString(): null})
+        and rtt.inititiative_id in (${init?.length ? init.toString() : null})
         and rtt.inititiative_id <> ?
         and rtr.is_active > 0;
     `;
     try {
-      const resultTocResult: ResultsTocResult[] = await this.query(resultLevel == 2? actionArea : queryData, [ownerinitiativeId, resultId, ownerinitiativeId]);
+      const resultTocResult: ResultsTocResult[] = await this.query(
+        resultLevel == 2 ? actionArea : queryData,
+        [ownerinitiativeId, resultId, ownerinitiativeId],
+      );
       return resultTocResult;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -500,8 +647,12 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
     }
   }
 
-  async updateResultByInitiative(resultId: number, initiativeArray: number[], userId: number) {
-    const initiative = initiativeArray??[];
+  async updateResultByInitiative(
+    resultId: number,
+    initiativeArray: number[],
+    userId: number,
+  ) {
+    const initiative = initiativeArray ?? [];
     const upDateInactive = `
       update results_toc_result  
       set is_active = 0,
@@ -535,12 +686,11 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
 
     try {
       if (initiative?.length) {
-
         const upDateInactiveResult = await this.query(upDateInactive, [
           userId,
           resultId,
         ]);
-  
+
         return await this.query(upDateActive, [userId, resultId]);
       } else {
         return await this.query(upDateAllInactive, [userId, resultId]);
@@ -554,4 +704,3 @@ export class ResultsTocResultRepository extends Repository<ResultsTocResult> {
     }
   }
 }
-

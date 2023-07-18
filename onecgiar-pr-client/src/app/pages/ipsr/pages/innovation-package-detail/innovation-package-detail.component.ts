@@ -29,9 +29,9 @@ export class InnovationPackageDetailComponent {
       response.official_code = response?.initiative_official_code;
       this.api.rolesSE.validateReadOnly(response);
       //(response);
-      response.status == 1 ? (this.api.rolesSE.readOnly = true) : null;
       this.dataControlSE.currentResult = response;
-
+      if (this.dataControlSE.currentResult.status == 1 && !this.api.rolesSE.isAdmin) this.api.rolesSE.readOnly = true;
+      console.log(this.dataControlSE.currentResult.status);
       this.ipsrDataControlSE.initiative_id = response?.inititiative_id;
 
       this.ipsrDataControlSE.detailData = response;

@@ -9,7 +9,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { InstitutionRole } from '../../institution_roles/entities/institution_role.entity';
-import { Version } from '../../versions/entities/version.entity';
+import { Version } from '../../../versioning/entities/version.entity';
 import { Result } from '../../entities/result.entity';
 import { ClarisaInstitutionsType } from '../../../../clarisa/clarisa-institutions-type/entities/clarisa-institutions-type.entity';
 
@@ -89,12 +89,6 @@ export class ResultsByInstitutionType {
     nullable: true,
   })
   graduate_students!: number;
-
-  @ManyToOne(() => Version, (v) => v.id, { nullable: false })
-  @JoinColumn({
-    name: 'version_id',
-  })
-  version_id: number;
 
   @ManyToOne(() => User, (u) => u.id, { nullable: false })
   @JoinColumn({

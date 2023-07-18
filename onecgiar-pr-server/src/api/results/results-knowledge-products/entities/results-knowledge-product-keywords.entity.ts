@@ -8,7 +8,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../../../../auth/modules/user/entities/user.entity';
-import { Version } from '../../versions/entities/version.entity';
+import { Version } from '../../../versioning/entities/version.entity';
 import { ResultsKnowledgeProduct } from './results-knowledge-product.entity';
 
 @Entity('results_kp_keywords')
@@ -35,13 +35,6 @@ export class ResultsKnowledgeProductKeyword {
     nullable: true,
   })
   is_agrovoc: boolean;
-
-  //versioning field
-  @ManyToOne(() => Version, (v) => v.id, { nullable: false })
-  @JoinColumn({
-    name: 'version_id',
-  })
-  version_id: number;
 
   //audit fields
   @Column({

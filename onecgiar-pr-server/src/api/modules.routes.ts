@@ -8,6 +8,7 @@ import { typeOneReportRoutes } from './type-one-report/type-one-report.routes';
 import { IpsrModule } from './ipsr/ipsr.module';
 import { IpsrRoutes } from './ipsr/ipsr.routes';
 import { PlatformReportModule } from './platform-report/platform-report.module';
+import { VersioningModule } from './versioning/versioning.module';
 
 export const ModulesRoutes: Routes = [
   {
@@ -36,5 +37,9 @@ export const ModulesRoutes: Routes = [
   {
     path: 'platform-report',
     module: PlatformReportModule,
+  },
+  {
+    path: 'versioning',
+    module: VersioningModule,
   },
 ];

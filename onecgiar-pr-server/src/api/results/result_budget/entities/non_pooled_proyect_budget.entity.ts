@@ -7,7 +7,7 @@ import {
 } from 'typeorm';
 import { BaseEntity } from '../../../../shared/entities/base-entity';
 import { NonPooledProject } from '../../non-pooled-projects/entities/non-pooled-project.entity';
-import { Version } from '../../versions/entities/version.entity';
+import { Version } from '../../../versioning/entities/version.entity';
 
 @Entity('non_pooled_projetct_budget')
 export class NonPooledProjectBudget extends BaseEntity {
@@ -57,10 +57,4 @@ export class NonPooledProjectBudget extends BaseEntity {
     name: 'non_pooled_projetct_id',
   })
   obj_non_pooled_projetct: NonPooledProject;
-
-  @ManyToOne(() => Version, (v) => v.id)
-  @JoinColumn({
-    name: 'version_id',
-  })
-  obj_version: Version;
 }

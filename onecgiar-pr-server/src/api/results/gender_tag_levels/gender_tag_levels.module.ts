@@ -7,13 +7,21 @@ import {
 import { GenderTagLevelsService } from './gender_tag_levels.service';
 import { GenderTagLevelsController } from './gender_tag_levels.controller';
 import { GenderTagRepository } from './genderTag.repository';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import {
+  HandlersError,
+  ReturnResponse,
+} from '../../../shared/handlers/error.utils';
 import { JwtMiddleware } from '../../../auth/Middlewares/jwt.middleware';
 import { AuthModule } from '../../../auth/auth.module';
 
 @Module({
   controllers: [GenderTagLevelsController],
-  providers: [GenderTagLevelsService, GenderTagRepository, HandlersError],
+  providers: [
+    GenderTagLevelsService,
+    GenderTagRepository,
+    HandlersError,
+    ReturnResponse,
+  ],
   exports: [GenderTagRepository],
   imports: [AuthModule],
 })

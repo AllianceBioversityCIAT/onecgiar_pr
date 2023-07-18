@@ -7,6 +7,7 @@ import { ResultLevelService } from '../../../result-creator/services/result-leve
 import { ExportTablesService } from '../../../../../../shared/services/export-tables.service';
 import { ShareRequestModalService } from '../../../result-detail/components/share-request-modal/share-request-modal.service';
 import { RetrieveModalService } from '../../../result-detail/components/retrieve-modal/retrieve-modal.service';
+import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 
 @Component({
   selector: 'app-results-list',
@@ -18,7 +19,8 @@ export class ResultsListComponent implements OnInit {
   columnOrder = [
     { title: 'Result code', attr: 'result_code' },
     { title: 'Title', attr: 'title', class: 'notCenter' },
-    { title: 'Reporting year', attr: 'reported_year' },
+    { title: 'Phase', attr: 'phase_name' },
+    // { title: 'Reporting year', attr: 'phase_year' },
     { title: 'Result type', attr: 'result_type' },
     { title: 'Submitter', attr: 'submitter' },
     { title: 'Status', attr: 'status_name' },
@@ -52,6 +54,13 @@ export class ResultsListComponent implements OnInit {
         // event
       }
     },
+    {
+      label: 'Report in another phase',
+      icon: 'pi pi-fw pi-clone',
+      command: () => {
+        this.api.dataControlSE.chagePhaseModal = true;
+      }
+    },
     // { label: 'Edit', icon: 'pi pi-fw pi-pencil' },
     {
       label: 'Delete',
@@ -63,7 +72,7 @@ export class ResultsListComponent implements OnInit {
     // { label: 'Submit', icon: 'pi pi-fw pi-reply' }
   ];
 
-  constructor(public api: ApiService, public resultsListService: ResultsListService, private ResultLevelSE: ResultLevelService, private exportTablesSE: ExportTablesService, private shareRequestModalSE: ShareRequestModalService, private retrieveModalSE: RetrieveModalService) {}
+  constructor(public api: ApiService, public resultsListService: ResultsListService, private ResultLevelSE: ResultLevelService, private exportTablesSE: ExportTablesService, private shareRequestModalSE: ShareRequestModalService, private retrieveModalSE: RetrieveModalService, public phasesService: PhasesService) {}
 
   ngOnInit(): void {
     // this.api.rolesSE.validateReadOnly();

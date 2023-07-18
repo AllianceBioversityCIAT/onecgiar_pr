@@ -1,10 +1,13 @@
 import { Module } from '@nestjs/common';
 import { ResultsPackageTocResultService } from './results-package-toc-result.service';
 import { ResultsPackageTocResultController } from './results-package-toc-result.controller';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import {
+  HandlersError,
+  ReturnResponse,
+} from '../../../shared/handlers/error.utils';
 import { ResultRepository } from '../../results/result.repository';
 import { VersionsService } from '../../results/versions/versions.service';
-import { VersionRepository } from '../../results/versions/version.repository';
+import { VersionRepository } from '../../versioning/versioning.repository';
 import { IpsrRepository } from '../repository/ipsr.repository';
 import { ResultsCenterRepository } from '../../results/results-centers/results-centers.repository';
 import { ResultByInitiativesRepository } from '../../results/results_by_inititiatives/resultByInitiatives.repository';
@@ -16,12 +19,14 @@ import { ResultByIntitutionsRepository } from '../../results/results_by_institut
 import { ResultByInstitutionsByDeliveriesTypeRepository } from '../../results/result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';
 import { ResultInitiativeBudgetRepository } from '../../results/result_budget/repositories/result_initiative_budget.repository';
 import { ResultIpEoiOutcomeRepository } from '../innovation-pathway/repository/result-ip-eoi-outcomes.repository';
+import { VersioningModule } from '../../versioning/versioning.module';
 
 @Module({
   controllers: [ResultsPackageTocResultController],
+  imports: [VersioningModule],
   providers: [
-    ResultsPackageTocResultService, 
-    ResultRepository, 
+    ResultsPackageTocResultService,
+    ResultRepository,
     VersionsService,
     VersionRepository,
     IpsrRepository,
@@ -36,7 +41,8 @@ import { ResultIpEoiOutcomeRepository } from '../innovation-pathway/repository/r
     HandlersError,
     ResultInitiativeBudgetRepository,
     ResultIpEoiOutcomeRepository,
+    ReturnResponse,
   ],
-  exports: []
+  exports: [],
 })
 export class ResultsPackageTocResultModule {}

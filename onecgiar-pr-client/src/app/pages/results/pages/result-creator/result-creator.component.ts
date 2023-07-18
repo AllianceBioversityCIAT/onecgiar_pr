@@ -85,7 +85,7 @@ export class ResultCreatorComponent implements OnInit {
       //(this.resultLevelSE.resultBody);
       this.api.resultsSE.POST_resultCreateHeader(this.resultLevelSE.resultBody).subscribe(
         (resp: any) => {
-          this.router.navigate([`/result/result-detail/${resp?.response?.result_code}/general-information`]);
+          this.router.navigate([`/result/result-detail/${resp?.response?.result_code}/general-information`], { queryParams: { phase: resp?.response?.version_id } });
           //(resp);
           this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
         },

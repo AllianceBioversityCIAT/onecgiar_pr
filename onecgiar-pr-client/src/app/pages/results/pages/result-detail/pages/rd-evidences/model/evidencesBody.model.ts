@@ -4,6 +4,9 @@ export class EvidencesBody {
   public supplementary: EvidencesCreateInterface[] = [];
   public gender_tag_level: string;
   public climate_change_tag_level: string;
+  public nutrition_tag_level: string;
+  public environmental_biodiversity_tag_level: string;
+  public poverty_tag_level: string;
 }
 
 export interface EvidencesCreateInterface {
@@ -12,4 +15,7 @@ export interface EvidencesCreateInterface {
   description?: string;
   gender_related?: boolean;
   youth_related?: boolean;
+  nutrition_related?: boolean;
+  environmental_biodiversity_related?: boolean;
+  poverty_related?: boolean;
 }

@@ -1,17 +1,113 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { ResultsByInstitution } from './entities/results_by_institution.entity';
 import { HandlersError } from '../../../shared/handlers/error.utils';
+import {
+  ReplicableConfigInterface,
+  ReplicableInterface,
+} from '../../../shared/globalInterfaces/replicable.interface';
 import { institutionsInterface } from './dto/save_results_by_institution.dto';
 import { InstitutionRoleEnum } from './entities/institution_role.enum';
 
 @Injectable()
-export class ResultByIntitutionsRepository extends Repository<ResultsByInstitution> {
+export class ResultByIntitutionsRepository
+  extends Repository<ResultsByInstitution>
+  implements ReplicableInterface<ResultsByInstitution>
+{
+  private readonly _logger: Logger = new Logger(
+    ResultByIntitutionsRepository.name,
+  );
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
   ) {
     super(ResultsByInstitution, dataSource.createEntityManager());
+  }
+  async replicable(
+    config: ReplicableConfigInterface<ResultsByInstitution>,
+  ): Promise<ResultsByInstitution[]> {
+    let final_data: ResultsByInstitution[] = null;
+    try {
+      if (config.f?.custonFunction) {
+        const queryData = `
+        SELECT 
+          null as id,
+          rbi.institutions_id,
+          rbi.institution_roles_id,
+          rbi.is_active,
+          now() as created_date,
+          null as last_updated_date,
+          ? as created_by,
+          ? as last_updated_by,
+          ? as result_id
+          from results_by_institution rbi WHERE rbi.result_id = ? and rbi.is_active > 0
+        `;
+        const response = await (<Promise<ResultsByInstitution[]>>(
+          this.query(queryData, [
+            config.user.id,
+            config.user.id,
+            config.new_result_id,
+            config.old_result_id,
+          ])
+        ));
+        const response_edit = <ResultsByInstitution[]>(
+          config.f.custonFunction(response)
+        );
+        final_data = await this.save(response_edit);
+      } else {
+        const queryData: string = `
+        insert into results_by_institution (
+          institutions_id,
+          institution_roles_id,
+          is_active,
+          created_date,
+          last_updated_date,
+          created_by,
+          last_updated_by,
+          result_id
+          )SELECT 
+          rbi.institutions_id,
+          rbi.institution_roles_id,
+          rbi.is_active,
+          now() as created_date,
+          null as last_updated_date,
+          ? as created_by,
+          ? as last_updated_by,
+          ? as result_id
+          from results_by_institution rbi WHERE rbi.result_id = ? and rbi.is_active > 0`;
+        await this.query(queryData, [
+          config.user.id,
+          config.user.id,
+          config.new_result_id,
+          config.old_result_id,
+        ]);
+        const queryFind = `
+        SELECT 
+          rbi.id,
+          rbi.institutions_id,
+          rbi.institution_roles_id,
+          rbi.is_active,
+          rbi.created_date,
+          rbi.last_updated_date,
+          rbi.created_by,
+          rbi.last_updated_by,
+          rbi.result_id
+          from results_by_institution rbi WHERE rbi.result_id = ?
+        `;
+        final_data = await this.query(queryFind, [config.new_result_id]);
+      }
+    } catch (error) {
+      config.f?.errorFunction
+        ? config.f.errorFunction(error)
+        : this._logger.error(error);
+      final_data = null;
+    }
+
+    config.f?.completeFunction
+      ? config.f.completeFunction({ ...final_data })
+      : null;
+
+    return final_data;
   }
 
   async getResultByInstitutionById(resultId: number, rbiId: number) {
@@ -19,8 +115,7 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     select 
     	rbi.id,
     	rbi.institutions_id,
-    	rbi.institution_roles_id,
-    	rbi.version_id
+    	rbi.institution_roles_id
     from results_by_institution rbi 
     where rbi.result_id = ?
       and rbi.id = ?
@@ -46,8 +141,7 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     select 
     	rbi.id,
     	rbi.institutions_id,
-    	rbi.institution_roles_id,
-    	rbi.version_id
+    	rbi.institution_roles_id
     from results_by_institution rbi 
     where rbi.result_id = ?
     	and rbi.is_active > 0;
@@ -74,7 +168,6 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     	ci.name institutions_name,
     	ci.acronym as institutions_acronym,
     	rbi.institution_roles_id,
-    	rbi.version_id,
     	cit.code as institutions_type_id, 
     	cit.name as institutions_type_name
     from results_by_institution rbi 
@@ -110,7 +203,6 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     	ci.name institutions_name,
     	ci.acronym as institutions_acronym,
     	rbi.institution_roles_id,
-    	rbi.version_id,
     	cit.code as institutions_type_id, 
     	cit.name as institutions_type_name
     from results_by_institution rbi 
@@ -166,7 +258,6 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     	rbi.institution_roles_id,
     	rbi.is_active,
     	rbi.created_date,
-    	rbi.version_id,
     	rbi.created_by,
     	rbi.last_updated_date,
     	rbi.last_updated_by 
@@ -204,7 +295,6 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     	rbi.institution_roles_id,
     	rbi.is_active,
     	rbi.created_date,
-    	rbi.version_id,
     	rbi.created_by,
     	rbi.last_updated_date,
     	rbi.last_updated_by 
@@ -241,7 +331,6 @@ export class ResultByIntitutionsRepository extends Repository<ResultsByInstituti
     	rbi.institution_roles_id,
     	rbi.is_active,
     	rbi.created_date,
-    	rbi.version_id,
     	rbi.created_by,
     	rbi.last_updated_date,
     	rbi.last_updated_by,

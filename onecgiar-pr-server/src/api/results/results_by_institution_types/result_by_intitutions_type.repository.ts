@@ -1,10 +1,21 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultsByInstitutionType } from './entities/results_by_institution_type.entity';
+import {
+  ReplicableConfigInterface,
+  ReplicableInterface,
+} from '../../../shared/globalInterfaces/replicable.interface';
 
 @Injectable()
-export class ResultByIntitutionsTypeRepository extends Repository<ResultsByInstitutionType> {
+export class ResultByIntitutionsTypeRepository
+  extends Repository<ResultsByInstitutionType>
+  implements ReplicableInterface<ResultsByInstitutionType>
+{
+  private readonly _logger: Logger = new Logger(
+    ResultByIntitutionsTypeRepository.name,
+  );
+
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
@@ -12,13 +23,111 @@ export class ResultByIntitutionsTypeRepository extends Repository<ResultsByInsti
     super(ResultsByInstitutionType, dataSource.createEntityManager());
   }
 
+  async replicable(
+    config: ReplicableConfigInterface<ResultsByInstitutionType>,
+  ): Promise<ResultsByInstitutionType[]> {
+    let final_data: ResultsByInstitutionType[] = null;
+    try {
+      if (config.f?.custonFunction) {
+        const queryData = `
+        select 
+          null as id,
+          rbit.is_active,
+          now() as creation_date,
+          null as last_updated_date,
+          ? as results_id,
+          rbit.institution_roles_id,
+          ? as created_by,
+          null as last_updated_by,
+          rbit.institution_types_id,
+          rbit.how_many,
+          rbit.other_institution,
+          rbit.graduate_students
+          from results_by_institution_type rbit WHERE  rbit.results_id = ? and rbit.is_active > 0
+        `;
+        const response = await (<Promise<ResultsByInstitutionType[]>>(
+          this.query(queryData, [
+            config.new_result_id,
+            config.user.id,
+            config.old_result_id,
+          ])
+        ));
+        const response_edit = <ResultsByInstitutionType[]>(
+          config.f.custonFunction(response)
+        );
+        final_data = await this.save(response_edit);
+      } else {
+        const queryData: string = `
+        insert into results_by_institution_type 
+          (
+          is_active,
+          creation_date,
+          last_updated_date,
+          results_id,
+          institution_roles_id,
+          created_by,
+          last_updated_by,
+          institution_types_id,
+          how_many,
+          other_institution,
+          graduate_students
+          )
+          select
+          rbit.is_active,
+          now() as creation_date,
+          null as last_updated_date,
+          ? as results_id,
+          rbit.institution_roles_id,
+          ? as created_by,
+          null as last_updated_by,
+          rbit.institution_types_id,
+          rbit.how_many,
+          rbit.other_institution,
+          rbit.graduate_students
+          from results_by_institution_type rbit WHERE  rbit.results_id = ? and rbit.is_active > 0`;
+        await this.query(queryData, [
+          config.new_result_id,
+          config.user.id,
+          config.old_result_id,
+        ]);
+
+        const queryFind = `
+        select 
+          rbit.id,
+          rbit.is_active,
+          rbit.creation_date,
+          rbit.last_updated_date,
+          rbit.results_id,
+          rbit.institution_roles_id,
+          rbit.created_by,
+          rbit.last_updated_by,
+          rbit.institution_types_id,
+          rbit.how_many,
+          rbit.other_institution,
+          rbit.graduate_students
+          from results_by_institution_type rbit WHERE  rbit.results_id = ?`;
+        final_data = await this.query(queryFind, [config.new_result_id]);
+      }
+    } catch (error) {
+      config.f?.errorFunction
+        ? config.f.errorFunction(error)
+        : this._logger.error(error);
+      final_data = null;
+    }
+
+    config.f?.completeFunction
+      ? config.f.completeFunction({ ...final_data })
+      : null;
+
+    return final_data;
+  }
+
   async getResultByInstitutionTypeFull(resultId: number) {
     const queryData = `
     select 
     	rbit.id,
     	rbit .institution_types_id,
-    	rbit.institution_roles_id,
-    	rbit.version_id
+    	rbit.institution_roles_id
     from results_by_institution_type rbit
     where rbit.results_id  = ?
     	and rbit.is_active > 0;
@@ -44,7 +153,6 @@ export class ResultByIntitutionsTypeRepository extends Repository<ResultsByInsti
     	rbit.id,
     	rbit.institution_types_id as institutions_type_id,
     	rbit.institution_roles_id as institutions_roles_id,
-    	rbit.version_id,
     	cit.name as institutions_type_name
     from results_by_institution_type rbit
     inner join clarisa_institution_types cit ON cit.code = rbit.institution_types_id 
@@ -72,8 +180,7 @@ export class ResultByIntitutionsTypeRepository extends Repository<ResultsByInsti
     select 
     	rbit.id,
     	rbit .institution_types_id,
-    	rbit.institution_roles_id,
-    	rbit.version_id
+    	rbit.institution_roles_id
     from results_by_institution_type rbit
     where rbit.results_id  = ?
       and rbit.institution_roles_id = 2
@@ -95,9 +202,10 @@ export class ResultByIntitutionsTypeRepository extends Repository<ResultsByInsti
   }
 
   async getResultByInstitutionTypeExists(
-    resultId: number, 
-    institutionsTypeId: number, 
-    isActor: boolean) {
+    resultId: number,
+    institutionsTypeId: number,
+    isActor: boolean,
+  ) {
     const queryData = `
     select 
     	rbit.id,
@@ -107,7 +215,6 @@ export class ResultByIntitutionsTypeRepository extends Repository<ResultsByInsti
     	rbit.last_updated_date,
     	rbit.results_id,
     	rbit.institution_roles_id,
-    	rbit.version_id,
     	rbit.created_by,
     	rbit.last_updated_by,
       rbit.how_many 
@@ -119,9 +226,9 @@ export class ResultByIntitutionsTypeRepository extends Repository<ResultsByInsti
     try {
       const completeUser: ResultsByInstitutionType[] = await this.query(
         queryData,
-        [resultId, isActor?1:2, institutionsTypeId],
+        [resultId, isActor ? 1 : 2, institutionsTypeId],
       );
-      return completeUser?.length?completeUser[0]:undefined;
+      return completeUser?.length ? completeUser[0] : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByIntitutionsTypeRepository.name,
@@ -132,9 +239,10 @@ export class ResultByIntitutionsTypeRepository extends Repository<ResultsByInsti
   }
 
   async getNewResultByInstitutionTypeExists(
-    resultId: number, 
-    institutionsTypeId: number, 
-    type: number) {
+    resultId: number,
+    institutionsTypeId: number,
+    type: number,
+  ) {
     const queryData = `
     select 
     	rbit.id,
@@ -144,7 +252,6 @@ export class ResultByIntitutionsTypeRepository extends Repository<ResultsByInsti
     	rbit.last_updated_date,
     	rbit.results_id,
     	rbit.institution_roles_id,
-    	rbit.version_id,
     	rbit.created_by,
     	rbit.last_updated_by,
       rbit.how_many,
@@ -159,7 +266,7 @@ export class ResultByIntitutionsTypeRepository extends Repository<ResultsByInsti
         queryData,
         [resultId, type, institutionsTypeId],
       );
-      return completeUser?.length?completeUser[0]:null;
+      return completeUser?.length ? completeUser[0] : null;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByIntitutionsTypeRepository.name,
@@ -169,10 +276,7 @@ export class ResultByIntitutionsTypeRepository extends Repository<ResultsByInsti
     }
   }
 
-  async getNewResultByIdExists(
-    resultId: number, 
-    id: number, 
-    type: number) {
+  async getNewResultByIdExists(resultId: number, id: number, type: number) {
     const queryData = `
     select 
     	rbit.id,
@@ -182,7 +286,6 @@ export class ResultByIntitutionsTypeRepository extends Repository<ResultsByInsti
     	rbit.last_updated_date,
     	rbit.results_id,
     	rbit.institution_roles_id,
-    	rbit.version_id,
     	rbit.created_by,
     	rbit.last_updated_by,
       rbit.how_many,
@@ -197,7 +300,7 @@ export class ResultByIntitutionsTypeRepository extends Repository<ResultsByInsti
         queryData,
         [resultId, type, id],
       );
-      return completeUser?.length?completeUser[0]:null;
+      return completeUser?.length ? completeUser[0] : null;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByIntitutionsTypeRepository.name,
@@ -226,11 +329,12 @@ export class ResultByIntitutionsTypeRepository extends Repository<ResultsByInsti
   }
 
   async updateIstitutionsType(
-    resultId: number, 
-    institutionsArray: institutionsTypeInterface[], 
-    isActor: boolean, 
-    userId: number) {
-    const institutions = institutionsArray.map(el => el.institutions_type_id);
+    resultId: number,
+    institutionsArray: institutionsTypeInterface[],
+    isActor: boolean,
+    userId: number,
+  ) {
+    const institutions = institutionsArray.map((el) => el.institutions_type_id);
     const upDateInactive = `
     update results_by_institution_type  
     set is_active = 0, 
@@ -262,20 +366,25 @@ export class ResultByIntitutionsTypeRepository extends Repository<ResultsByInsti
       and institution_roles_id = ?;
     `;
     try {
-      if(institutions.length){
+      if (institutions.length) {
         const upDateInactiveResult = await this.query(upDateInactive, [
-          userId, resultId, isActor?1:2
+          userId,
+          resultId,
+          isActor ? 1 : 2,
         ]);
-  
+
         return await this.query(upDateActive, [
-          userId, resultId, isActor?1:2
+          userId,
+          resultId,
+          isActor ? 1 : 2,
         ]);
-      }else{
+      } else {
         return await this.query(upDateAllInactive, [
-          userId, resultId, isActor?1:2
+          userId,
+          resultId,
+          isActor ? 1 : 2,
         ]);
       }
-      
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByIntitutionsTypeRepository.name,
@@ -286,6 +395,6 @@ export class ResultByIntitutionsTypeRepository extends Repository<ResultsByInsti
   }
 }
 
-interface institutionsTypeInterface{
+interface institutionsTypeInterface {
   institutions_type_id: number;
 }

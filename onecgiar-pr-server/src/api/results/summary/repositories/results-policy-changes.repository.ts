@@ -1,15 +1,124 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
 import { ResultsPolicyChanges } from '../entities/results-policy-changes.entity';
+import {
+  ReplicableConfigInterface,
+  ReplicableInterface,
+} from '../../../../shared/globalInterfaces/replicable.interface';
 
 @Injectable()
-export class ResultsPolicyChangesRepository extends Repository<ResultsPolicyChanges> {
+export class ResultsPolicyChangesRepository
+  extends Repository<ResultsPolicyChanges>
+  implements ReplicableInterface<ResultsPolicyChanges>
+{
+  private readonly _logger: Logger = new Logger(
+    ResultsPolicyChangesRepository.name,
+  );
+
   constructor(
     private dataSource: DataSource,
     private _handlersError: HandlersError,
   ) {
     super(ResultsPolicyChanges, dataSource.createEntityManager());
+  }
+
+  async replicable(
+    config: ReplicableConfigInterface<ResultsPolicyChanges>,
+  ): Promise<ResultsPolicyChanges> {
+    let final_data: ResultsPolicyChanges = null;
+    try {
+      if (config.f?.custonFunction) {
+        const queryData = `
+        select 
+        null as result_policy_change_id,
+        rpc.amount,
+        rpc.is_active,
+        now() as created_date,
+        null as last_updated_date,
+        ? as result_id,
+        ? as created_by,
+        null as last_updated_by,
+        rpc.policy_stage_id,
+        rpc.policy_type_id,
+        rpc.status_amount
+        from results_policy_changes rpc 
+        WHERE rpc.result_id = ? and rpc.is_active > 0
+        `;
+        const response = await (<Promise<ResultsPolicyChanges[]>>(
+          this.query(queryData, [
+            config.new_result_id,
+            config.user.id,
+            config.old_result_id,
+          ])
+        ));
+        const response_edit = <ResultsPolicyChanges>(
+          config.f.custonFunction(response?.length ? response[0] : null)
+        );
+        final_data = await this.save(response_edit);
+      } else {
+        const queryData: string = `
+        insert into results_policy_changes 
+        (
+        amount,
+        is_active,
+        created_date,
+        last_updated_date,
+        result_id,
+        created_by,
+        last_updated_by,
+        policy_stage_id,
+        policy_type_id,
+        status_amount
+        )
+        select 
+        rpc.amount,
+        rpc.is_active,
+        now() as created_date,
+        null as last_updated_date,
+        ? as result_id,
+        ? as created_by,
+        null as last_updated_by,
+        rpc.policy_stage_id,
+        rpc.policy_type_id,
+        rpc.status_amount
+        from results_policy_changes rpc 
+        WHERE rpc.result_id = ? and rpc.is_active > 0`;
+        await this.query(queryData, [
+          config.new_result_id,
+          config.user.id,
+          config.old_result_id,
+        ]);
+
+        const queryFind = `
+        select 
+        rpc.result_policy_change_id,
+        rpc.amount,
+        rpc.is_active,
+        rpc.created_date,
+        rpc.last_updated_date,
+        rpc.result_id,
+        rpc.created_by,
+        rpc.last_updated_by,
+        rpc.policy_stage_id,
+        rpc.policy_type_id,
+        rpc.status_amount
+        from results_policy_changes rpc 
+        WHERE rpc.result_id = ?`;
+        final_data = await this.query(queryFind, [config.new_result_id]);
+      }
+    } catch (error) {
+      config.f?.errorFunction
+        ? config.f.errorFunction(error)
+        : this._logger.error(error);
+      final_data = null;
+    }
+
+    config.f?.completeFunction
+      ? config.f.completeFunction({ ...final_data })
+      : null;
+
+    return final_data;
   }
 
   async ResultsPolicyChangesExists(resultId: number) {
@@ -21,7 +130,6 @@ export class ResultsPolicyChangesRepository extends Repository<ResultsPolicyChan
     	rpc.created_date,
     	rpc.last_updated_date,
     	rpc.result_id,
-    	rpc.version_id,
     	rpc.created_by,
     	rpc.last_updated_by,
     	rpc.policy_stage_id,

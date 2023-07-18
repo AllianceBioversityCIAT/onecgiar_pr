@@ -7,7 +7,7 @@ import { ResultsByInstitution } from './entities/results_by_institution.entity';
 import { SaveResultsByInstitutionDto } from './dto/save_results_by_institution.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResultRepository } from '../result.repository';
-import { Version } from '../versions/entities/version.entity';
+import { Version } from '../../versioning/entities/version.entity';
 import { VersionsService } from '../versions/versions.service';
 import { ResultByInstitutionsByDeliveriesTypeRepository } from '../result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';
 import { ResultByInstitutionsByDeliveriesType } from '../result-by-institutions-by-deliveries-type/entities/result-by-institutions-by-deliveries-type.entity';
@@ -171,7 +171,6 @@ export class ResultsByInstitutionsService {
     resultByInstitution['institutions_name'] = null;
     resultByInstitution['institutions_acronym'] = null;
     resultByInstitution['institution_roles_id'] = null;
-    resultByInstitution['version_id'] = null;
     resultByInstitution['institutions_type_id'] = null;
     resultByInstitution['institutions_type_name'] = null;
     resultByInstitution['deliveries'] = [];
@@ -284,7 +283,6 @@ export class ResultsByInstitutionsService {
               incomingInstitution.institutions_id;
             institutionsNew.last_updated_by = user.id;
             institutionsNew.result_id = data.result_id;
-            institutionsNew.version_id = vrs.id;
             institutionsNew.is_active = true;
             const responseInstitution =
               await this._resultByIntitutionsRepository.save(institutionsNew);

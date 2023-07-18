@@ -9,8 +9,8 @@ import { MQAPResultDto } from '../../m-qap/dtos/m-qap.dto';
 import { MQAPService } from '../../m-qap/m-qap.service';
 import { Result } from '../entities/result.entity';
 import { ResultRepository } from '../result.repository';
-import { Version } from '../versions/entities/version.entity';
-import { VersionRepository } from '../versions/version.repository';
+import { Version } from '../../versioning/entities/version.entity';
+import { VersionRepository } from '../../versioning/versioning.repository';
 import { CreateResultsKnowledgeProductFromHandleDto } from './dto/create-results-knowledge-product-from-handle.dto';
 import { UpdateResultsKnowledgeProductDto } from './dto/update-results-knowledge-product.dto';
 import { ResultsKnowledgeProduct } from './entities/results-knowledge-product.entity';
@@ -50,6 +50,8 @@ import { ResultRegion } from '../result-regions/entities/result-region.entity';
 import { CGSpaceCountryMappingsRepository } from './repositories/cgspace-country-mappings.repository';
 import { ResultCountry } from '../result-countries/entities/result-country.entity';
 import { ResultCountryRepository } from '../result-countries/result-countries.repository';
+import { VersioningService } from '../../versioning/versioning.service';
+import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
 
 @Injectable()
 export class ResultsKnowledgeProductsService {
@@ -99,6 +101,7 @@ export class ResultsKnowledgeProductsService {
     private readonly _clarisaRegionsRepository: ClarisaRegionsRepository,
     private readonly _cgSpaceCountryMappingsRepository: CGSpaceCountryMappingsRepository,
     private readonly _resultCountryRepository: ResultCountryRepository,
+    private readonly _versioningService: VersioningService,
   ) {}
 
   private async createOwnerResult(
@@ -160,7 +163,9 @@ export class ResultsKnowledgeProductsService {
       const rl: ResultLevel = <ResultLevel>resultLevel;
 
       const currentVersion: Version =
-        await this._versionRepository.getBaseVersion();
+        await this._versioningService.$_findActivePhase(
+          AppModuleIdEnum.REPORTING,
+        );
 
       if (!currentVersion) {
         throw {
@@ -199,7 +204,6 @@ export class ResultsKnowledgeProductsService {
           initiative_id: initiative.id,
           initiative_role_id: 1,
           result_id: newResultHeader.id,
-          version_id: currentVersion.id,
         },
       );
 
@@ -263,7 +267,6 @@ export class ResultsKnowledgeProductsService {
           newMetadata,
           user.id,
           resultKnowledgeProduct.results_id,
-          resultKnowledgeProduct.version_id,
         );
 
       updatedKnowledgeProduct.result_knowledge_product_id =
@@ -561,7 +564,6 @@ export class ResultsKnowledgeProductsService {
         resultsKnowledgeProductDto,
         user.id,
         newResult.id,
-        currentVersion.id,
       );
 
       newKnowledgeProduct.is_melia = false;
@@ -664,7 +666,6 @@ export class ResultsKnowledgeProductsService {
         link: `https://cgspace.cgiar.org/handle/${resultsKnowledgeProductDto.handle}`,
         result_id: newResult.id,
         created_by: user.id,
-        version_id: currentVersion.id,
         is_supplementary: false,
         evidence_type_id: 1,
       });

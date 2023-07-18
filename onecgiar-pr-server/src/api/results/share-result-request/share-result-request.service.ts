@@ -11,7 +11,7 @@ import { getResultIdFullData } from '../dto/get-result-id-full.dto';
 import { ResultsByInititiative } from '../results_by_inititiatives/entities/results_by_inititiative.entity';
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
 import { VersionsService } from '../versions/versions.service';
-import { Version } from '../versions/entities/version.entity';
+import { Version } from '../../versioning/entities/version.entity';
 import { ResultsTocResult } from '../results-toc-results/entities/results-toc-result.entity';
 import { ResultsTocResultRepository } from '../results-toc-results/results-toc-results.repository';
 import { Result } from '../entities/result.entity';
@@ -40,9 +40,10 @@ export class ShareResultRequestService {
     user: TokenDto,
   ) {
     try {
-      const result: getResultIdFullData = await (<any>(
-        this._resultRepository.getResultById(resultId)
-      ));
+      const result: any = await this._resultRepository.getResultById(
+        parseInt(`${resultId}`),
+      );
+
       let saveData = [];
       if (createTocShareResult?.initiativeShareId?.length) {
         const { initiativeShareId } = createTocShareResult;
@@ -173,11 +174,8 @@ export class ShareResultRequestService {
           newResultByInitiative.result_id = result_id;
           newResultByInitiative.last_updated_by = user.id;
           newResultByInitiative.created_by = user.id;
-          newResultByInitiative.version_id = vrs.id;
-          newResultByInitiative.version_id = vrs.id;
           const result = await this._resultRepository.getResultById(result_id);
           const newRtR = new ResultsTocResult();
-          newRtR.version_id = vrs.id;
           newRtR.planned_result = planned_result;
           newRtR.created_by = user.id;
           newRtR.last_updated_by = user.id;
@@ -195,7 +193,6 @@ export class ShareResultRequestService {
 
           await this._resultInitiativeBudgetRepository.save({
             result_initiative_id: newReIni.id,
-            version_id: vrs.id,
             created_by: user.id,
             last_updated_by: user.id,
           });
@@ -234,7 +231,6 @@ export class ShareResultRequestService {
           if (!initBudget) {
             await this._resultInitiativeBudgetRepository.save({
               result_initiative_id: exists.id,
-              version_id: vrs.id,
               created_by: user.id,
               last_updated_by: user.id,
             });
@@ -252,7 +248,6 @@ export class ShareResultRequestService {
             );
           if (!resultTocResult) {
             const newRtR = new ResultsTocResult();
-            newRtR.version_id = vrs.id;
             newRtR.planned_result = planned_result;
             newRtR.created_by = user.id;
             newRtR.last_updated_by = user.id;

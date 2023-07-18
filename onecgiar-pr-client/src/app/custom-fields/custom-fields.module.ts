@@ -32,8 +32,9 @@ import { LabelNamePipe } from './pr-select/label-name.pipe';
 import { SyncButtonComponent } from './sync-button/sync-button.component';
 import { YesOrNotByBooleanPipe } from './pipes/yes-or-not-by-boolean.pipe';
 import { InputNumberModule } from 'primeng/inputnumber';
+import { CustomValidationTooltipComponent } from './custom-validation-tooltip/custom-validation-tooltip.component';
 
-const fieldComponents = [PrInputComponent, PrSelectComponent, PrRadioButtonComponent, DetailSectionTitleComponent, PrMultiSelectComponent, PrFieldHeaderComponent, PrYesOrNotComponent, PrTextareaComponent, PrCheckboxComponent, SaveButtonComponent, PrButtonComponent, AlertStatusComponent, EditOrDeleteItemButtonComponent, NoDataTextComponent, AddButtonComponent, PrRangeLevelComponent, SyncButtonComponent];
+const fieldComponents = [PrInputComponent, PrSelectComponent, PrRadioButtonComponent, DetailSectionTitleComponent, PrMultiSelectComponent, PrFieldHeaderComponent, PrYesOrNotComponent, CustomValidationTooltipComponent, PrTextareaComponent, PrCheckboxComponent, SaveButtonComponent, PrButtonComponent, AlertStatusComponent, EditOrDeleteItemButtonComponent, NoDataTextComponent, AddButtonComponent, PrRangeLevelComponent, SyncButtonComponent];
 
 @NgModule({
   declarations: [...fieldComponents, PrFieldValidationsComponent, PrWordCounterComponent, ListFilterByTextAndAttrPipe, UnderConstructionPointComponent, LabelNamePipe, YesOrNotByBooleanPipe],

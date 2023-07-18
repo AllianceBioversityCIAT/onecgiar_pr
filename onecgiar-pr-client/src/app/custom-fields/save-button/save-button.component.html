@@ -1,4 +1,4 @@
-<div class="fixed_button" *ngIf="!this.rolesSE.readOnly && !this.dataControlSE?.currentResult?.status || editable">
+<div class="fixed_button" *ngIf="!this.rolesSE.readOnly || editable">
     <div class="fields-feedback-list" [ngClass]="{'show-fields-feedback-list-opacity': disabled,'expand':expand}"
         *ngIf="this.dataControlSE.fieldFeedbackList?.length">
         <div class="back_icon" (click)="expand = !expand;">
@@ -6,7 +6,7 @@
                 arrow_back_ios
             </i>
         </div>
-        <div class="items" *ngIf="expand">
+        <div class="items custom_scroll" *ngIf="expand">
             <div class="item" *ngFor="let item of this.dataControlSE.fieldFeedbackList">
                 <!-- <div class="status"></div> -->
                 <i class="material-icons-round">

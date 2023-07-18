@@ -1,0 +1,96 @@
+.blank_space {
+  background-color: transparent;
+  width: 100%;
+  padding-top: 20px;
+
+  .footer {
+    width: 100%;
+    height: 65px;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--pr-color-secondary);
+
+    .content {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+
+      .logo {
+        .cgiar_logo {
+          width: 35px;
+          object-fit: cover;
+          filter: contrast(0) brightness(5);
+        }
+      }
+
+      .texts {
+        .buttons {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 15px;
+          font-weight: 700;
+
+          .f-button {
+            cursor: pointer;
+            font-size: 1.1rem;
+            color: white;
+          }
+
+          .point {
+            width: 8px;
+            height: 8px;
+            background-color: white;
+            border-radius: 10px;
+          }
+        }
+
+        .rights {
+          font-weight: 200;
+          color: rgb(219, 219, 219);
+          margin-top: 2px;
+          text-align: center;
+        }
+      }
+    }
+  }
+}
+
+.floating {
+  padding-top: 50px;
+  position: fixed;
+  bottom: -100px;
+  left: 0;
+  transition: all ease-in-out 0.3s;
+  z-index: 10;
+
+  &:hover {
+    bottom: 0px;
+  }
+}
+
+.floatingFix {
+  position: fixed;
+  bottom: 0px;
+  left: 0;
+  transition: all ease-in-out 0.3s;
+  z-index: 10;
+}
+
+.footer-blocker {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  width: 400px;
+  height: 20px;
+  background-color: transparent;
+  z-index: 11;
+  transition: all ease-in-out 0.4s;
+}
+
+.footer-blocker-max {
+  height: 130px !important;
+}

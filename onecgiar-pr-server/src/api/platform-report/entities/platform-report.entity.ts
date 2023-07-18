@@ -7,7 +7,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Version } from '../../results/versions/entities/version.entity';
+import { Version } from '../../versioning/entities/version.entity';
 import { User } from '../../../auth/modules/user/entities/user.entity';
 import { Template } from './template.entity';
 
@@ -30,10 +30,6 @@ export class PlatformReport {
 
   @Column({ nullable: false })
   template_id: number;
-
-  //versioning field
-  @Column()
-  version_id: number;
 
   //audit fields
   @Column({
@@ -65,12 +61,6 @@ export class PlatformReport {
   last_updated_by: number;
 
   //object relations
-
-  @ManyToOne(() => Version, (v) => v.id, { nullable: false })
-  @JoinColumn({
-    name: 'version_id',
-  })
-  version_object: number;
 
   @ManyToOne(() => User, (u) => u.id, { nullable: false })
   @JoinColumn({

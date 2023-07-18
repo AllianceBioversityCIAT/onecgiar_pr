@@ -2,10 +2,13 @@ import { Module } from '@nestjs/common';
 import { ResultsByInstitutionsService } from './results_by_institutions.service';
 import { ResultsByInstitutionsController } from './results_by_institutions.controller';
 import { ResultByIntitutionsRepository } from './result_by_intitutions.repository';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import {
+  HandlersError,
+  ReturnResponse,
+} from '../../../shared/handlers/error.utils';
 import { ResultRepository } from '../result.repository';
 import { VersionsService } from '../versions/versions.service';
-import { VersionRepository } from '../versions/version.repository';
+import { VersionRepository } from '../../versioning/versioning.repository';
 import { ResultByInstitutionsByDeliveriesTypeRepository } from '../result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 import { ResultsKnowledgeProductsRepository } from '../results-knowledge-products/repositories/results-knowledge-products.repository';
@@ -24,6 +27,7 @@ import { ResultsKnowledgeProductInstitutionRepository } from '../results-knowled
     UserRepository,
     ResultsKnowledgeProductsRepository,
     ResultsKnowledgeProductInstitutionRepository,
+    ReturnResponse,
   ],
   imports: [],
   exports: [ResultByIntitutionsRepository],

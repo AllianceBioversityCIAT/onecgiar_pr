@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { ResultRegionsService } from './result-regions.service';
 import { CreateResultRegionDto } from './dto/create-result-region.dto';
 import { UpdateResultRegionDto } from './dto/update-result-region.dto';
@@ -23,7 +31,10 @@ export class ResultRegionsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateResultRegionDto: UpdateResultRegionDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateResultRegionDto: UpdateResultRegionDto,
+  ) {
     return this.resultRegionsService.update(+id, updateResultRegionDto);
   }
 

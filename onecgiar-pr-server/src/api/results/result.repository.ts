@@ -1,4 +1,4 @@
-import { Injectable, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpStatus, Logger } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { Result } from './entities/result.entity';
 import { HandlersError } from '../../shared/handlers/error.utils';
@@ -10,14 +10,177 @@ import { ResultDataToMapDto } from './dto/result-data-to-map.dto';
 import { LegacyIndicatorsPartner } from './legacy_indicators_partners/entities/legacy_indicators_partner.entity';
 import { env } from 'process';
 import { ResultTypeDto } from './dto/result-types.dto';
+import {
+  ReplicableConfigInterface,
+  ReplicableInterface,
+} from '../../shared/globalInterfaces/replicable.interface';
+import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 
 @Injectable()
-export class ResultRepository extends Repository<Result> {
+export class ResultRepository
+  extends Repository<Result>
+  implements ReplicableInterface<Result>
+{
+  private readonly _logger: Logger = new Logger(ResultRepository.name);
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
   ) {
     super(Result, dataSource.createEntityManager());
+  }
+  async replicable(config: ReplicableConfigInterface<Result>): Promise<Result> {
+    let final_data: Result = null;
+    try {
+      if (config.f?.custonFunction) {
+        const queryData = `
+        select
+          null as id,
+          r2.description,
+          r2.is_active,
+          null as last_updated_date,
+          r2.gender_tag_level_id,
+          ? as version_id,
+          r2.result_type_id,
+          0 as status,
+          1 as status_id,
+          ? as created_by,
+          ? as last_updated_by,
+          (select v.phase_year  from \`version\` v where v.id = ?) as reported_year_id,
+          now() as created_date,
+          r2.result_level_id,
+          r2.title,
+          r2.legacy_id,
+          r2.krs_url,
+          r2.is_krs,
+          r2.climate_change_tag_level_id,
+          r2.no_applicable_partner,
+          r2.has_regions,
+          r2.has_countries,
+          r2.geographic_scope_id,
+          r2.lead_contact_person,
+          r2.result_code
+          from \`result\` r2 WHERE r2.id = ? and r2.is_active > 0`;
+        const response = await (<Promise<Result[]>>(
+          this.query(queryData, [
+            config.phase,
+            config.user.id,
+            config.user.id,
+            config.phase,
+            config.old_result_id,
+          ])
+        ));
+        const response_edit = <Result>(
+          config.f.custonFunction(response?.length ? response[0] : null)
+        );
+        final_data = await this.save(response_edit);
+      } else {
+        const queryData: string = `
+        insert into \`result\` (
+          description
+          ,is_active
+          ,last_updated_date
+          ,gender_tag_level_id
+          ,version_id
+          ,result_type_id
+          ,status
+          ,status_id
+          ,created_by
+          ,last_updated_by
+          ,reported_year_id
+          ,created_date
+          ,result_level_id
+          ,title
+          ,legacy_id
+          ,krs_url
+          ,is_krs
+          ,climate_change_tag_level_id
+          ,no_applicable_partner
+          ,has_regions
+          ,has_countries
+          ,geographic_scope_id
+          ,lead_contact_person
+          ,result_code
+          ) select
+          r2.description,
+          r2.is_active,
+          null as last_updated_date,
+          r2.gender_tag_level_id,
+          ? as version_id,
+          r2.result_type_id,
+          0 as status,
+          1 as status_id,
+          ? as created_by,
+          ? as last_updated_by,
+          (select v.phase_year  from \`version\` v where v.id = ?) as reported_year_id,
+          now() as created_date,
+          r2.result_level_id,
+          r2.title,
+          r2.legacy_id,
+          r2.krs_url,
+          r2.is_krs,
+          r2.climate_change_tag_level_id,
+          r2.no_applicable_partner,
+          r2.has_regions,
+          r2.has_countries,
+          r2.geographic_scope_id,
+          r2.lead_contact_person,
+          r2.result_code
+          from \`result\` r2 WHERE r2.id = ? and r2.is_active > 0`;
+        const response = await (<Promise<{ insertId }>>(
+          this.query(queryData, [
+            config.phase,
+            config.user.id,
+            config.user.id,
+            config.phase,
+            config.old_result_id,
+          ])
+        ));
+
+        const queryFind = `
+        select
+          r2.id,
+          r2.description,
+          r2.is_active,
+          r2.last_updated_date,
+          r2.gender_tag_level_id,
+          r2.version_id,
+          r2.result_type_id,
+          r2.status,
+          r2.status_id,
+          r2.created_by,
+          r2.last_updated_by,
+          r2.reported_year_id,
+          r2.created_date,
+          r2.result_level_id,
+          r2.title,
+          r2.legacy_id,
+          r2.krs_url,
+          r2.is_krs,
+          r2.climate_change_tag_level_id,
+          r2.no_applicable_partner,
+          r2.has_regions,
+          r2.has_countries,
+          r2.geographic_scope_id,
+          r2.lead_contact_person,
+          r2.result_code
+          from \`result\` r2 WHERE r2.id = ?
+        `;
+        const temp = await (<Promise<Result[]>>(
+          this.query(queryFind, [response?.insertId])
+        ));
+        final_data = temp?.length ? temp[0] : null;
+      }
+    } catch (error) {
+      config.f?.errorFunction
+        ? config.f.errorFunction(error)
+        : this._logger.error(error);
+      final_data = null;
+    }
+
+    config.f?.completeFunction
+      ? config.f.completeFunction({ ...final_data })
+      : null;
+    return final_data;
   }
 
   async getResultByName(
@@ -44,8 +207,7 @@ export class ResultRepository extends Repository<Result> {
     	inner join result_level rl on rl.id = rt.result_level_id 
     where r.is_active > 0
     	and r.title like '%\?%'
-    	and rt.id = ?
-      and r.version_id = 1;
+    	and rt.id = ?;
     `;
     try {
       const completeUser: any[] = await this.query(queryData, [
@@ -110,9 +272,7 @@ export class ResultRepository extends Repository<Result> {
         and rc.is_active > 0
       left join clarisa_countries cc on
         cc.id = rc.country_id
-      where
-        r.version_id = 1
-        ${!allowDeleted ? 'and r.is_active > 0' : ''}
+        ${!allowDeleted ? 'where r.is_active > 0' : ''}
       group by
         r.id,
         r.title,
@@ -195,8 +355,7 @@ export class ResultRepository extends Repository<Result> {
       inner join clarisa_initiatives ci on
         rbi.inititiative_id = ci.id
       where
-        r.id = ?
-        and r.version_id = 1;
+        r.id = ?;
     `;
     try {
       const result = await this.query(query, [resultId]);
@@ -226,6 +385,8 @@ export class ResultRepository extends Repository<Result> {
     r.version_id,
     r.result_type_id,
     r.status,
+    r.status_id,
+    rs.status_name,
     r.created_by,
     r.last_updated_by,
     r.reported_year_id,
@@ -251,6 +412,7 @@ FROM
     inner join result_level rl on rl.id = r.result_level_id 
     inner join result_type rt on rt.id = r.result_type_id 
     inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
+    INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
 WHERE
     r.is_active > 0
     and r.version_id = ?;
@@ -305,11 +467,7 @@ WHERE
     }
   }*/
 
-  async AllResultsByRoleUsers(
-    userid: number,
-    version: number = 1,
-    excludeType = [10, 11],
-  ) {
+  async AllResultsByRoleUsers(userid: number, excludeType = [10, 11]) {
     const queryData = `
     SELECT
     r.id,
@@ -323,7 +481,8 @@ WHERE
     ci.official_code AS submitter,
     ci.id AS submitter_id,
     r.status,
-    IF(r.status = 0, 'Editing', 'Submitted') AS status_name,
+    r.status_id,
+    rs.status_name AS status_name,
     r2.id as role_id,
     r2.description as role_name,
     if(y.\`year\` = r.reported_year_id, 'New', '') as is_new,
@@ -333,7 +492,10 @@ WHERE
     r.legacy_id,
     r.created_by,
     u.first_name as create_first_name,
-    u.last_name as create_last_name
+    u.last_name as create_last_name,
+    r.version_id,
+    v.phase_name,
+    v.phase_year
 FROM
     \`result\` r
     INNER JOIN result_type rt ON rt.id = r.result_type_id
@@ -345,17 +507,18 @@ FROM
     left join \`role\` r2 on r2.id  = rbu.\`role\` 
     left join \`year\` y ON y.active > 0
     left join users u on u.id = r.created_by
+    inner join \`version\` v on v.id = r.version_id
+    INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
 WHERE
     r.is_active > 0
     AND rbi.is_active > 0
     AND rbi.initiative_role_id = 1
     AND ci.active > 0
-    AND r.version_id = ?
     AND rt.id not in (${excludeType.toString()});
     `;
 
     try {
-      const results = await this.query(queryData, [userid, version]);
+      const results = await this.query(queryData, [userid]);
       return results;
     } catch (error) {
       throw {
@@ -376,9 +539,7 @@ WHERE
       (Select gtl2.description from gender_tag_level gtl2 where id = r.gender_tag_level_id) as \`Gender tag\`, 
       (Select gtl2.description from gender_tag_level gtl2 where id = r.climate_change_tag_level_id) as \`Climate tag\`,
     	ci.official_code as \`Submitter\` ,
-    	if(r.status = 0,
-    	'Editing',
-    	'Submitted') as \`Status\`,
+    	rs.status_name as \`Status\`,
     	DATE_FORMAT(r.created_date, "%Y-%m-%d") as \`Creation date\`,
     	tr.work_package_id as \`Work package id\`,
     	wp.name as \`Work package title\`,
@@ -426,10 +587,10 @@ WHERE
     left join ${env.DB_OST}.work_packages wp on
     	wp.id = tr.work_package_id
     	and wp.active > 0
+    INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
     WHERE
     	r.created_date >= ?
     	and r.created_date <= ?
-      and r.version_id = 1
     GROUP by
     	r.id,
     	r.reported_year_id,
@@ -437,7 +598,7 @@ WHERE
     	rl.name,
     	rt.name,
     	ci.official_code,
-    	r.status,
+    	rs.status_name,
     	r.created_date,
     	tr.work_package_id,
     	wp.name,
@@ -589,9 +750,14 @@ WHERE
     r.last_updated_date,
     r.gender_tag_level_id,
     r.climate_change_tag_level_id,
+    r.nutrition_tag_level_id,
+    r.environmental_biodiversity_tag_level_id,
+    r.poverty_tag_level_id,
     r.version_id,
     r.result_type_id,
     r.status,
+    r.status_id,
+    rs.status_name,
     r.created_by,
     r.last_updated_by,
     r.reported_year_id,
@@ -609,22 +775,27 @@ WHERE
     ci.name as initiative_name,
     ci.short_name as initiative_short_name,
     ci.official_code as initiative_official_code,
-    r.lead_contact_person
+    r.lead_contact_person,
+    v.status as is_phase_open,
+    v.phase_name,
+    v.phase_year 
 FROM
-    result r
-    inner join results_by_inititiative rbi ON rbi.result_id = r.id 
-    									and rbi.is_active > 0
-                      and rbi.initiative_role_id = 1
+    \`result\` r
     inner join result_level rl on rl.id = r.result_level_id 
     inner join result_type rt on rt.id = r.result_type_id 
-    inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
+    inner join results_by_inititiative rbi on rbi.result_id = r.id
+        and rbi.is_active > 0 
+        and rbi.initiative_role_id = 1
+    inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id
+    INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
+    inner join \`version\` v on v.id = r.version_id 
 WHERE
-    r.is_active > 0
-    and r.id = ?
+    r.id = ${id}
+    and r.is_active > 0;
     `;
 
     try {
-      const results: Result[] = await this.query(queryData, [id]);
+      const results: Result[] = await this.query(queryData);
       return results.length ? results[0] : undefined;
     } catch (error) {
       throw {
@@ -633,6 +804,18 @@ WHERE
         status: HttpStatus.INTERNAL_SERVER_ERROR,
       };
     }
+    /*return this.query(queryData, [id])
+      .then((res) => {
+        setTimeout(() => {}, 500);
+        return res.length ? res[0] : undefined;
+      })
+      .catch((error) => {
+        throw {
+          message: `[${ResultRepository.name}] => completeAllData error: ${error}`,
+          response: {},
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+        };
+      });*/
   }
 
   async getResultByTypes(typesId: number[]): Promise<Result[]> {
@@ -648,6 +831,8 @@ WHERE
         r.version_id,
         r.result_type_id,
         r.status,
+        r.status_id,
+        rs.status_name,
         r.created_by,
         r.last_updated_by,
         r.reported_year_id,
@@ -678,17 +863,18 @@ WHERE
         INNER JOIN result_level rl on rl.id = r.result_level_id
         INNER JOIN result_type rt on rt.id = r.result_type_id
         INNER JOIN clarisa_initiatives ci on ci.id = rbi.inititiative_id
+        INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
     WHERE
         r.is_active > 0
         AND (
             (
                 r.result_type_id = 7
-                AND r.status = 1
+                AND r.status_id = 3
             )
             OR (
                 r.result_type_id = 11
-                AND r.status = 0
-                OR r.status = 1
+                AND r.status_id = 1
+                OR r.status_id = 3
             )
         )
         AND result_type_id IN (?)
@@ -717,10 +903,11 @@ WHERE
     r.is_active,
     r.last_updated_date,
     r.gender_tag_level_id,
-    r.version_id,
     r.result_type_id,
     rt.name as result_type_name,
     r.status,
+    r.status_id,
+    rs.status_name,
     r.created_by,
     r.last_updated_by,
     r.reported_year_id,
@@ -730,18 +917,26 @@ WHERE
     r.title,
     r.legacy_id,
     r.climate_change_tag_level_id,
+    r.nutrition_tag_level_id,
+    r.environmental_biodiversity_tag_level_id,
+    r.poverty_tag_level_id,
     r.is_krs,
     r.krs_url,
     r.no_applicable_partner,
     r.geographic_scope_id,
     r.lead_contact_person,
-    if(r.geographic_scope_id in (3, 4), 3, r.geographic_scope_id ) as geographic_scope_id
+    if(r.geographic_scope_id in (3, 4), 3, r.geographic_scope_id ) as geographic_scope_id,
+    v.id as version_id,
+    v.phase_name,
+    v.phase_year
 FROM
     result r
     inner join results_by_inititiative rbi ON rbi.result_id = r.id 
     									and rbi.is_active > 0
     inner join result_level rl on rl.id = r.result_level_id 
     inner join result_type rt on rt.id = r.result_type_id 
+    inner join \`version\` v on v.id = r.version_id
+    INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
 WHERE
     r.is_active > 0
     and r.id = ?;
@@ -761,13 +956,11 @@ WHERE
 
   async getLastResultCode(version: number = 1): Promise<number> {
     const queryData = `
-    SELECT max(r.result_code) as last_code from \`result\` r WHERE version_id = ?;
+    SELECT max(r.result_code) as last_code from \`result\` r;
     `;
 
     try {
-      const results: Array<{ last_code }> = await this.query(queryData, [
-        version,
-      ]);
+      const results: Array<{ last_code }> = await this.query(queryData);
       return results.length ? parseInt(results[0].last_code) : null;
     } catch (error) {
       throw {
@@ -784,8 +977,7 @@ WHERE
     r.id
     FROM 
     \`result\` r 
-    WHERE r.is_active > 0
-      and r.version_id = 1;
+    WHERE r.is_active > 0;
     `;
     try {
       const results: Array<{ id }> = await this.query(queryData);
@@ -801,7 +993,7 @@ WHERE
 
   async transformResultCode(
     resultCode: number,
-    version: number = 1,
+    version: number = null,
   ): Promise<number> {
     const queryData = `
     SELECT 
@@ -809,14 +1001,16 @@ WHERE
     FROM 
     \`result\` r 
     WHERE r.is_active > 0
-      and r.version_id = ?
-      and r.result_code = ?;
+    and r.result_code = ?
+    ${
+      version
+        ? `and r.version_id = ${version};`
+        : `ORDER by r.id desc
+    limit 1;`
+    }
     `;
     try {
-      const results: Array<{ id }> = await this.query(queryData, [
-        version,
-        resultCode,
-      ]);
+      const results: Array<{ id }> = await this.query(queryData, [resultCode]);
       return results?.length ? results[0].id : null;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -871,7 +1065,7 @@ WHERE
     join result_type rt on r.result_type_id = rt.id
 left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     where rbi3.inititiative_id = ?
-      and r.status = 1
+      and r.status_id = 3
       and r.is_active = 1
       and r.version_id = ?
     ;
@@ -898,16 +1092,15 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     }', r.result_code,?, 'phase=1') as \`PDF Link\`,
     rl.name as "Result Level",
     rt.name as "Result Type",
-    (case 
-      when r.status = 0 then "Editing"
-      when r.status = 1 then "Submitted"
-      else "Not defined"
-    end) as "Status",
+    rs.status_name as "Status",
     r.title as "Result Title",
     r.description as "Result Description",
     r.lead_contact_person as "Lead Contact Person",
     gtl.title as "Gender Tag Level",
     gtl2.title as "Climate Tag Level",
+    gtl3.title as "Nutrition Tag Level",
+    gtl4.title as "Environment and/or biodiversity Tag Level",
+    gtl5.title as "Poverty Tag Level",
     if(r.is_krs is null,'Not provided',if(r.is_krs,'Yes','No')) as "Is Key Result Story?",
     -- section 2
     concat(ci.official_code, ' - ', ci.name) as "Primary Submitter",
@@ -971,14 +1164,32 @@ left join clarisa_countries cc3
     and lr2.legacy_link is not NULL) as "Results from previous portfolio",
     -- section 6
    /* GROUP_CONCAT(DISTINCT CONCAT('• Link: ', e.link, '; Gender related? ', IF(COALESCE(e.gender_related, 0) = 1, 'Yes', 'No'), '; Youth related? ', IF(COALESCE(e.youth_related, 0) = 1, 'Yes', 'No'), '; Details: ', COALESCE(e.description, 'Not Provided')) SEPARATOR '\n') as "Evidences" */
-    (SELECT GROUP_CONCAT(DISTINCT CONCAT('• Link: ', e.link, '; Gender related? ', IF(COALESCE(e.gender_related, 0) = 1, 'Yes', 'No'), '; Youth related? ', IF(COALESCE(e.youth_related, 0) = 1, 'Yes', 'No'), '; Details: ', COALESCE(e.description, 'Not Provided')) SEPARATOR '\n') 
-  FROM evidence e
- WHERE e.result_id = r.id
-   AND e.is_active > 0) as "Evidences"
+   (SELECT GROUP_CONCAT(DISTINCT CONCAT(
+        '• Link: ', 
+        COALESCE(e.link, 'Not Provided'), 
+        '; Gender related? ', 
+        IF(COALESCE(e.gender_related, 0) = 1, 'Yes', 'No'), 
+        '; Youth related? ', 
+        IF(COALESCE(e.youth_related, 0) = 1, 'Yes', 'No'), 
+        '; Nutrition related? ', 
+        IF(COALESCE(e.nutrition_related, 0) = 1, 'Yes', 'No'), 
+        '; Environment and/or biodiversity related? ', 
+        IF(COALESCE(e.environmental_biodiversity_related, 0) = 1, 'Yes', 'No'), 
+        '; Poverty related? ', 
+        IF(COALESCE(e.poverty_related, 0) = 1, 'Yes', 'No'), 
+        '; Details: ', 
+        COALESCE(e.description, 'Not Provided')
+    ) SEPARATOR '\n')
+    FROM evidence e
+    WHERE e.result_id = r.id
+      AND e.is_active > 0) AS "Evidences"
     FROM 
     result r
     left join gender_tag_level gtl on gtl.id = r.gender_tag_level_id 
     left join gender_tag_level gtl2 on gtl2.id = r.climate_change_tag_level_id 
+    left join gender_tag_level gtl3 on gtl3.id = r.nutrition_tag_level_id 
+    left join gender_tag_level gtl4 on gtl4.id = r.environmental_biodiversity_tag_level_id
+    left join gender_tag_level gtl5 on gtl5.id = r.poverty_tag_level_id
     left join results_by_inititiative rbi on rbi.result_id = r.id 
     and rbi.initiative_role_id = 1
     and rbi.is_active > 0
@@ -1038,6 +1249,7 @@ left join clarisa_countries cc3
     and lr2.is_active > 0
     and lr2.legacy_link is not NULL */
     left join results_knowledge_product rkp on rkp.results_id = r.id and rkp.is_active > 0
+    INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
   /*  left join evidence e on e.result_id = r.id and e.is_active > 0 */
     WHERE r.result_code ${resultCodes.length ? `in (${resultCodes})` : '= 0'}
     GROUP by 
@@ -1047,6 +1259,9 @@ left join clarisa_countries cc3
     r.description,
     gtl.title,
     gtl2.title,
+    gtl3.title,
+    gtl4.title,
+    gtl5.title,
     rl.name,
     rt.name,
     r.is_krs,
@@ -1057,7 +1272,8 @@ left join clarisa_countries cc3
     ci.short_name,
     r.no_applicable_partner,
     rkp.cgspace_countries,
-    rt.id
+    rt.id,
+    ci.name
     `;
 
     try {
@@ -1081,16 +1297,15 @@ left join clarisa_countries cc3
     concat('${env.FRONT_END_PDF_ENDPOINT}', r.result_code,?, 'phase=1') as \`PDF Link\`,
     rl.name as "Result Level",
     rt.name as "Result Type",
-    (case 
-      when r.status = 0 then "Editing"
-      when r.status = 1 then "Submitted"
-      else "Not defined"
-    end) as "Status",
+    rs.status_name as "Status",
     r.title as "Result Title",
     r.description as "Result Description",
     r.lead_contact_person as "Lead Contact Person",
     gtl.title as "Gender Tag Level",
     gtl2.title as "Climate Tag Level",
+    gtl3.title as "Nutrition Tag Level",
+    gtl4.title as "Environment and/or biodiversity Tag Level",
+    gtl5.title as "Poverty Tag Level",
     if(r.is_krs is null,'Not provided',if(r.is_krs,'Yes','No')) as "Is Key Result Story?",
     -- section 2
     ci.official_code as "Primary Submitter",
@@ -1154,14 +1369,32 @@ left join clarisa_countries cc3
     and lr2.legacy_link is not NULL) as "Results from previous portfolio",
     -- section 6
    /* GROUP_CONCAT(DISTINCT CONCAT('• Link: ', e.link, '; Gender related? ', IF(COALESCE(e.gender_related, 0) = 1, 'Yes', 'No'), '; Youth related? ', IF(COALESCE(e.youth_related, 0) = 1, 'Yes', 'No'), '; Details: ', COALESCE(e.description, 'Not Provided')) SEPARATOR '\n') as "Evidences" */
-    (SELECT GROUP_CONCAT(DISTINCT CONCAT('• Link: ', e.link, '; Gender related? ', IF(COALESCE(e.gender_related, 0) = 1, 'Yes', 'No'), '; Youth related? ', IF(COALESCE(e.youth_related, 0) = 1, 'Yes', 'No'), '; Details: ', COALESCE(e.description, 'Not Provided')) SEPARATOR '\n') 
-  FROM evidence e
- WHERE e.result_id = r.id
-   AND e.is_active > 0) as "Evidences"
+   (SELECT GROUP_CONCAT(DISTINCT CONCAT(
+        '• Link: ', 
+        COALESCE(e.link, 'Not Provided'), 
+        '; Gender related? ', 
+        IF(COALESCE(e.gender_related, 0) = 1, 'Yes', 'No'), 
+        '; Youth related? ', 
+        IF(COALESCE(e.youth_related, 0) = 1, 'Yes', 'No'), 
+        '; Nutrition related? ', 
+        IF(COALESCE(e.nutrition_related, 0) = 1, 'Yes', 'No'), 
+        '; Environmental biodiversity related? ', 
+        IF(COALESCE(e.environmental_biodiversity_related, 0) = 1, 'Yes', 'No'), 
+        '; Poverty related? ', 
+        IF(COALESCE(e.poverty_related, 0) = 1, 'Yes', 'No'), 
+        '; Details: ', 
+        COALESCE(e.description, 'Not Provided')
+    ) SEPARATOR '\n')
+    FROM evidence e
+    WHERE e.result_id = r.id
+      AND e.is_active > 0) AS "Evidences"
     FROM 
     result r
     left join gender_tag_level gtl on gtl.id = r.gender_tag_level_id 
     left join gender_tag_level gtl2 on gtl2.id = r.climate_change_tag_level_id 
+    left join gender_tag_level gtl2 on gtl3.id = r.nutrition_tag_level_id 
+    left join gender_tag_level gtl2 on gtl4.id = r.environmental_biodiversity_tag_level_id 
+    left join gender_tag_level gtl2 on gtl5.id = r.poverty_tag_level_id 
     left join results_by_inititiative rbi on rbi.result_id = r.id 
     and rbi.initiative_role_id = 1
     and rbi.is_active > 0
@@ -1222,9 +1455,10 @@ left join clarisa_countries cc3
     and lr2.legacy_link is not NULL */
     left join results_knowledge_product rkp on rkp.results_id = r.id and rkp.is_active > 0
   /*  left join evidence e on e.result_id = r.id and e.is_active > 0 */
+    INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
     left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     WHERE rbi3.inititiative_id = ${inititiative_id}
-      AND r.status = 1
+      AND r.status_id = 3
     GROUP by 
     r.result_code,
     r.id,
@@ -1232,6 +1466,9 @@ left join clarisa_countries cc3
     r.description,
     gtl.title,
     gtl2.title,
+    gtl2.title,
+    gtl4.title,
+    gtl5.title,
     rl.name,
     rt.name,
     r.is_krs,
@@ -1466,7 +1703,7 @@ left join clarisa_countries cc3
       ) as "SDG(s)"
     from result r
     left join results_by_inititiative rbi on rbi.result_id = r.id
-    WHERE rbi.inititiative_id = ${inititiative_id} AND r.status = 1
+    WHERE rbi.inititiative_id = ${inititiative_id} AND r.status_id = 3
     ;
     `;
 
@@ -1519,7 +1756,7 @@ left join clarisa_countries cc3
         LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
         LEFT JOIN clarisa_geographic_scope cgs ON cgs.id = r.geographic_scope_id
     WHERE
-        r.status = 1
+        r.status_id = 3
         AND r.is_active = 1
         AND rbi.initiative_role_id = 1
         AND (

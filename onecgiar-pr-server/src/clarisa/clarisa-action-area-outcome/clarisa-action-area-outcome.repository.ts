@@ -18,7 +18,7 @@ export class ClarisaActionAreaOutcomeRepository extends Repository<ClarisaAction
       FROM
         clarisa_action_area_outcome
       WHERE actionAreaId = 1
-      ORDER BY id ASC;
+      ORDER BY outcomeId ASC;
     `;
     const resilientAgrifoodSystemsQuery = `
       SELECT
@@ -29,7 +29,7 @@ export class ClarisaActionAreaOutcomeRepository extends Repository<ClarisaAction
       FROM
         clarisa_action_area_outcome
       WHERE actionAreaId = 2
-      ORDER BY id ASC;
+      ORDER BY outcomeId ASC;
     `;
     const geneticInnovationQuery = `
       SELECT
@@ -40,7 +40,7 @@ export class ClarisaActionAreaOutcomeRepository extends Repository<ClarisaAction
       FROM
         clarisa_action_area_outcome
       WHERE actionAreaId = 3
-      ORDER BY id ASC;
+      ORDER BY outcomeId ASC;
     `;
 
     try {

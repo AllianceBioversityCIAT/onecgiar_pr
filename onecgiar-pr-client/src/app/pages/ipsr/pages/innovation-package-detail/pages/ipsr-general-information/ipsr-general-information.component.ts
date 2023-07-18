@@ -21,6 +21,7 @@ export class IpsrGeneralInformationComponent {
     this.api.resultsSE.GETInnovationByResultId(this.ipsrDataControlSE.resultInnovationId).subscribe(({ response }) => {
       this.ipsrGeneralInformationBody = response;
       this.ipsrGeneralInformationBody.is_krs = Boolean(Number(this.ipsrGeneralInformationBody.is_krs));
+      console.log(response);
     });
   }
 
@@ -35,6 +36,7 @@ export class IpsrGeneralInformationComponent {
         this.api.alertsFe.show({ id: 'save-button', title: 'Section saved correctly', description: '', status: 'success', closeIn: 500 });
       },
       err => {
+        console.error(err);
         this.api.alertsFe.show({ id: 'save-button', title: 'There was an error saving the section', description: '', status: 'error', closeIn: 500 });
       }
     );
