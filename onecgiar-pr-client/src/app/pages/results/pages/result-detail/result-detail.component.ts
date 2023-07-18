@@ -40,7 +40,7 @@ export class ResultDetailComponent {
     });
     this.api.resultsSE.currentResultId = this.activatedRoute.snapshot.paramMap.get('id');
     this.api.resultsSE.currentResultCode = this.activatedRoute.snapshot.paramMap.get('id');
-    console.log(this.activatedRoute.snapshot.queryParamMap.get('phase'));
+    // console.log(this.activatedRoute.snapshot.queryParamMap.get('phase'));
     this.api.resultsSE.currentResultPhase = this.activatedRoute.snapshot.queryParamMap.get('phase');
     await this.GET_resultIdToCode();
     await this.currentResultSE.GET_resultById();
