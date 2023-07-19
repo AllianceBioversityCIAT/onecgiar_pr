@@ -71,6 +71,7 @@ export class SubmissionsService {
       const newSubmissions = new Submission();
       newSubmissions.user_id = user.id;
       newSubmissions.status = true;
+      newSubmissions.status_id = 3;
       newSubmissions.comment = createSubmissionDto.comment;
       newSubmissions.results_id = result.id;
       await this._submissionRepository.save(newSubmissions);
@@ -132,6 +133,7 @@ export class SubmissionsService {
       const newSubmissions = new Submission();
       newSubmissions.user_id = user.id;
       newSubmissions.status = true;
+      newSubmissions.status_id = 3;
       newSubmissions.comment = createSubmissionDto.comment;
       newSubmissions.results_id = result.id;
       await this._submissionRepository.save(newSubmissions);
@@ -192,10 +194,12 @@ export class SubmissionsService {
 
       const data = await this._resultRepository.update(result.id, {
         status: 0,
+        status_id: 1,
       });
       const newSubmissions = new Submission();
       newSubmissions.user_id = user.id;
       newSubmissions.status = false;
+      newSubmissions.status_id = 1;
       newSubmissions.comment = createSubmissionDto.comment;
       newSubmissions.results_id = result.id;
       await this._submissionRepository.save(newSubmissions);
@@ -246,10 +250,12 @@ export class SubmissionsService {
 
       const data = await this._resultRepository.update(result.id, {
         status: 0,
+        status_id: 1,
       });
       const newSubmissions = new Submission();
       newSubmissions.user_id = user.id;
       newSubmissions.status = false;
+      newSubmissions.status_id = 1;
       newSubmissions.comment = createSubmissionDto.comment;
       newSubmissions.results_id = result.id;
       await this._submissionRepository.save(newSubmissions);
