@@ -26,7 +26,8 @@
           <!--Todo Reporting year  -->
           <div class="text" *ngIf="!phase.isNew">{{phase?.phase_year}}</div>
           <app-pr-select *ngIf="phase.isNew" class="segment_title_margin" [options]="this.resultYearsList"
-            optionLabel="year" optionValue="year" placeholder="Select year" [(ngModel)]="phase.phase_year_ts">
+            [disableOptions]="disablePreviousYear()" optionLabel="year" optionValue="year" placeholder="Select year"
+            [(ngModel)]="phase.phase_year_ts">
           </app-pr-select>
         </td>
         <td>
