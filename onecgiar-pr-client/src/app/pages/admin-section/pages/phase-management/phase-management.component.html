@@ -40,16 +40,16 @@
         <td [style.width.px]="120">
           <!--Todo  start date -->
 
-          <div class="text" *ngIf="!phase.isNew"> {{phase?.start_date | date: 'dd-MM-yyyy'}}</div>
+          <div class="text" *ngIf="!phase.isNew"> {{phase?.start_date | date: 'YYYY-MM-dd'}}</div>
           <p-calendar placeholder="Start date" *ngIf="phase.isNew" [(ngModel)]="phase.start_date_ts"
-            dateFormat="dd-mm-yy"></p-calendar>
+            dateFormat="yy-mm-dd"></p-calendar>
         </td>
         <td [style.width.px]="120">
           <!--Todo end date  -->
 
-          <div class="text" *ngIf="!phase.isNew">{{phase?.end_date| date: 'dd-MM-yyyy' }}</div>
+          <div class="text" *ngIf="!phase.isNew">{{phase?.end_date| date: 'YYYY-MM-dd' }}</div>
           <p-calendar placeholder="End date" *ngIf="phase.isNew" [(ngModel)]="phase.end_date_ts"
-            dateFormat="dd-mm-yy"></p-calendar>
+            dateFormat="yy-mm-dd"></p-calendar>
         </td>
         <td [style.width.px]="90">
           <!--Todo  status -->
@@ -63,7 +63,8 @@
         </td>
         <td>
           <!--Todo obj_previous_phase  -->
-          <div class="text" *ngIf="!phase.editing">{{phase?.obj_previous_phase? phase?.obj_previous_phase?.phase_name: 'N/A'}}</div>
+          <div class="text" *ngIf="!phase.editing">{{phase?.obj_previous_phase? phase?.obj_previous_phase?.phase_name:
+            'N/A'}}</div>
           <app-pr-select *ngIf="phase.editing" class="segment_title_margin" [options]="this.previousPhaseList"
             [disableOptions]="onlyPreviousPhase(phase)" optionLabel="phase_name" optionValue="id"
             placeholder="Select previous phase" [(ngModel)]="phase.previous_phase_ts">
