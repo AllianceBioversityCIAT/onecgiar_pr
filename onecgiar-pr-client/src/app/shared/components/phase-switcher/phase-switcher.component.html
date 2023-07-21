@@ -1,6 +1,16 @@
 <div class="title_component">Phase:</div>
 <div class="local_container">
     <div class="phase_switcher">
+        <div class="select_phase_button {{phase.status?'close':'open'}}"
+            [ngClass]="{'selected': this.activatedRoute.snapshot.queryParams['phaseId'] === phase?.id}"
+            (click)="goToresultUrl(phase?.id)" *ngFor="let phase of this.resultPhaseList">{{phase.phase_name}} <div
+                class="tag">
+                <div class="text">{{phase.status?'Closed':'Open'}}</div>
+
+            </div>
+        </div>
+    </div>
+    <div class="phase_switcher" *ngIf="false">
         <div class="select_phase_button close selected">Reporting 2021 <div class="tag">
                 <div class="text">Closed</div>
                 <!-- <i class="material-icons-round">lock</i> -->
