@@ -71,7 +71,8 @@ export class InitGeneralResultsReportComponent {
 
     const list = [];
     resultsRelected?.forEach(element => {
-      list.push(element?.result_code);
+      // console.log(element?.id);
+      list.push(element?.id);
     });
     for (const key in list) {
       await this.POST_excelFullReportPromise(list[key], key);
@@ -80,16 +81,16 @@ export class InitGeneralResultsReportComponent {
     this.requesting = false;
   }
 
-  validateLength(obj) {
-    Object.keys(obj[0]).forEach(item => console.log(item + ': ' + obj[0][item]?.length));
-  }
+  // validateLength(obj) {
+  //   Object.keys(obj[0]).forEach(item => console.log(item + ': ' + obj[0][item]?.length));
+  // }
 
   POST_excelFullReportPromise(result, key) {
     return new Promise((resolve, reject) => {
       this.api.resultsSE.POST_excelFullReport([result]).subscribe(
         ({ response }) => {
           // (response);
-          this.validateLength(response);
+          // this.validateLength(response);
           //(response);
           this.requestCounter++;
           this.dataToExport.push(...response);
