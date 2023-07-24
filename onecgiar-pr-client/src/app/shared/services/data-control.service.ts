@@ -23,6 +23,7 @@ export class DataControlService {
   green_checks = null;
   show_qa_full_screen = false;
   showResultHistoryOfChangesModal = false;
+  resultPhaseList = [];
 
   constructor(private titleService: Title) {}
   validateBody(body: any) {
