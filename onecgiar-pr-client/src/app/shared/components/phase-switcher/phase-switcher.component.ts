@@ -9,17 +9,10 @@ import { ActivatedRoute, Router } from '@angular/router';
 })
 export class PhaseSwitcherComponent implements OnInit {
   route = '';
-  resultPhaseList = [];
-  constructor(private api: ApiService, private router: Router, public activatedRoute: ActivatedRoute) {}
+  constructor(public api: ApiService, private router: Router, public activatedRoute: ActivatedRoute) {}
 
   ngOnInit(): void {
     this.route = this.router.url.split('?')[0];
-    console.log(this.router.url.split('?')[0]);
-    console.log(this.activatedRoute.snapshot.queryParams);
-    this.api.resultsSE.GET_versioningResult().subscribe(({ response }) => {
-      console.log(response);
-      this.resultPhaseList = response;
-    });
   }
 
   getRouteWithQueryParams(phaseId) {
