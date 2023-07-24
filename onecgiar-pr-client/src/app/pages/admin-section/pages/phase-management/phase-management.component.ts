@@ -50,6 +50,10 @@ export class PhaseManagementComponent implements OnInit {
     this.get_resultYears();
   }
 
+  disablePreviousYear() {
+    return this.phaseList.map((phase: any) => ({ year: phase.phase_year }));
+  }
+
   // onRowEditInit(phase: any) {
   //   this.clonedphaseList[phase.id as string] = { ...phase };
   // }
@@ -215,7 +219,7 @@ export class PhaseManagementComponent implements OnInit {
     phase.editing = false;
     if (!phase.isNew) return;
     const index = this.phaseList.findIndex(phaseItem => phaseItem.id == phase.id);
-    let phaseListCopy: any[] = [...this.phaseList];
+    const phaseListCopy: any[] = [...this.phaseList];
     this.phaseList = [];
     phaseListCopy.splice(index, 1);
     this.phaseList = phaseListCopy;
