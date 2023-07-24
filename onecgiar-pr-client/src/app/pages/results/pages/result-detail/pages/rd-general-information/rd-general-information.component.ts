@@ -69,10 +69,10 @@ export class RdGeneralInformationComponent {
 
   nutritionInformation() {
     return `<strong>Nutrition tag guidance</strong>
-    <br> Nutrition, health and food security scores should be determined based on the following: 
-    <li><strong>0 : Not targeted</strong>The activity has been screened against the marker but has not been found to target any aspects of nutrition, health and food security.</li>
-    <li><strong>1 : Significant</strong>The activity has significant contribution to the above-described aspects of nutrition, health and food security, but not the principal reason for undertaking the activity.</li>
-    <li><strong>2 : Principal</strong>The activity is principally meeting any aspects of nutrition, health and food security, and this is fundamental in its design and expected results. The activity would not have been undertaken, without this objective.</li>
+    Nutrition, health and food security scores should be determined based on the following: 
+    <li><strong>0 : Not targeted</strong> The activity has been screened against the marker but has not been found to target any aspects of nutrition, health and food security.</li>
+    <li><strong>1 : Significant</strong> The activity has significant contribution to the above-described aspects of nutrition, health and food security, but not the principal reason for undertaking the activity.</li>
+    <li><strong>2 : Principal</strong> The activity is principally meeting any aspects of nutrition, health and food security, and this is fundamental in its design and expected results. The activity would not have been undertaken, without this objective.</li>
     </ul>`;
   }
 
