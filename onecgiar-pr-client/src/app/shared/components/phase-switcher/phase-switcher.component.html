@@ -1,35 +1,12 @@
 <div class="title_component">Phase:</div>
 <div class="local_container">
     <div class="phase_switcher">
-        <div class="select_phase_button {{phase.status?'close':'open'}}"
-            [ngClass]="{'selected': this.activatedRoute.snapshot.queryParams['phaseId'] === phase?.id}"
+        <a [href]="getRouteWithQueryParams(phase?.id)" class="select_phase_button {{phase.status?'close':'open'}}"
+            [ngClass]="{'selected': this.activatedRoute.snapshot.queryParams['phase'] === phase?.id}"
             (click)="goToresultUrl(phase?.id)" *ngFor="let phase of this.resultPhaseList">{{phase.phase_name}} <div
                 class="tag">
                 <div class="text">{{phase.status?'Closed':'Open'}}</div>
-
             </div>
-        </div>
-    </div>
-    <div class="phase_switcher" *ngIf="false">
-        <div class="select_phase_button close selected">Reporting 2021 <div class="tag">
-                <div class="text">Closed</div>
-                <!-- <i class="material-icons-round">lock</i> -->
-            </div>
-        </div>
-        <div class="select_phase_button close">Reporting 2022 <div class="tag">
-                <div class="text">Closed</div>
-                <!-- <i class="material-icons-round">lock</i> -->
-            </div>
-        </div>
-        <div class="select_phase_button open selected">Reporting 2023 <div class="tag">
-                <div class="text">Open</div>
-                <!-- <i class="material-icons-round">edit</i> -->
-            </div>
-        </div>
-        <div class="select_phase_button open ">Reporting 2023 <div class="tag">
-                <div class="text">Open</div>
-                <!-- <i class="material-icons-round">edit</i> -->
-            </div>
-        </div>
+        </a>
     </div>
 </div>
