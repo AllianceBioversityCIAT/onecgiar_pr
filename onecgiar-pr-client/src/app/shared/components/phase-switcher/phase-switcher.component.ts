@@ -8,10 +8,13 @@ import { ActivatedRoute, Router } from '@angular/router';
   styleUrls: ['./phase-switcher.component.scss']
 })
 export class PhaseSwitcherComponent implements OnInit {
+  route = '';
   resultPhaseList = [];
   constructor(private api: ApiService, private router: Router, public activatedRoute: ActivatedRoute) {}
 
   ngOnInit(): void {
+    this.route = this.router.url.split('?')[0];
+    console.log(this.router.url.split('?')[0]);
     console.log(this.activatedRoute.snapshot.queryParams);
     this.api.resultsSE.GET_versioningResult().subscribe(({ response }) => {
       console.log(response);
@@ -19,8 +22,12 @@ export class PhaseSwitcherComponent implements OnInit {
     });
   }
 
+  getRouteWithQueryParams(phaseId) {
+    return `${this.route}?phase=${phaseId}`;
+  }
+
   goToresultUrl(phaseId) {
-    this.router.navigate(['/result/result-detail/554/general-information'], { queryParams: { phaseId } }).then(() => {
+    this.router.navigate([this.route], { queryParams: { phase: phaseId } }).then(() => {
       window.location.reload();
     });
   }
