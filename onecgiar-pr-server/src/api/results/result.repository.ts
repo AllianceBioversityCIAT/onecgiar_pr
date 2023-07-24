@@ -1095,9 +1095,15 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       WHERE
         r.version_id = v.id
     ) AS "Phase",
-    concat('${
-      env.FRONT_END_PDF_ENDPOINT
-    }', r.result_code,?, 'phase=1') as \`PDF Link\`,
+    CONCAT(
+      '${env.FRONT_END_PDF_ENDPOINT}',
+      r.result_code,
+      ?,
+      COALESCE(
+        CONCAT('?phase=', r.version_id),
+        ''
+      )
+    ) AS "PDF Link",
     rl.name as "Result Level",
     rt.name as "Result Type",
     rs.status_name as "Status",
@@ -1310,7 +1316,15 @@ left join clarisa_countries cc3
       WHERE
         r.version_id = v.id
     ) AS "Phase",
-    concat('${env.FRONT_END_PDF_ENDPOINT}', r.result_code,?, 'phase=1') as \`PDF Link\`,
+    CONCAT(
+      '${env.FRONT_END_PDF_ENDPOINT}',
+      r.result_code,
+      ?,
+      COALESCE(
+        CONCAT('?phase=', r.version_id),
+        ''
+      )
+    ) AS "PDF Link",
     rl.name as "Result Level",
     rt.name as "Result Type",
     rs.status_name as "Status",
