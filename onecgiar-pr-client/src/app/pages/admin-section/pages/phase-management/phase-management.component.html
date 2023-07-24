@@ -38,14 +38,14 @@
             optionLabel="name" optionValue="phase_id" placeholder="Select phase" [(ngModel)]="phase.toc_pahse_id_ts">
           </app-pr-select>
         </td>
-        <td>
+        <td [style.width.px]="120">
           <!--Todo  start date -->
 
           <div class="text" *ngIf="!phase.isNew"> {{phase?.start_date | date: 'YYYY-MM-dd'}}</div>
           <p-calendar placeholder="Start date" *ngIf="phase.isNew" [(ngModel)]="phase.start_date_ts"
             dateFormat="yy-mm-dd"></p-calendar>
         </td>
-        <td>
+        <td [style.width.px]="120">
           <!--Todo end date  -->
 
           <div class="text" *ngIf="!phase.isNew">{{phase?.end_date| date: 'YYYY-MM-dd' }}</div>
