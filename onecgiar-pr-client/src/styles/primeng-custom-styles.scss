@@ -1,8 +1,13 @@
-.p-datatable-thead{
-    tr{
-        th{
+.p-datatable-thead {
+    tr {
+        th {
             background-color: var(--pr-color-secondary) !important;
             color: white !important;
         }
     }
+}
+
+.p-datepicker {
+    // width: 300px !important;
+    min-width: 400px !important;
 }
