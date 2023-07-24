@@ -1087,6 +1087,14 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     const query = `
     select 
     r.result_code as "Result Code",
+    (
+      SELECT
+        v.phase_name
+      FROM
+        version v
+      WHERE
+        r.version_id = v.id
+    ) AS "Phase",
     concat('${
       env.FRONT_END_PDF_ENDPOINT
     }', r.result_code,?, 'phase=1') as \`PDF Link\`,
@@ -1294,6 +1302,14 @@ left join clarisa_countries cc3
     const query = `
     select 
     r.result_code as "Result Code",
+    (
+      SELECT
+        v.phase_name
+      FROM
+        version v
+      WHERE
+        r.version_id = v.id
+    ) AS "Phase",
     concat('${env.FRONT_END_PDF_ENDPOINT}', r.result_code,?, 'phase=1') as \`PDF Link\`,
     rl.name as "Result Level",
     rt.name as "Result Type",
