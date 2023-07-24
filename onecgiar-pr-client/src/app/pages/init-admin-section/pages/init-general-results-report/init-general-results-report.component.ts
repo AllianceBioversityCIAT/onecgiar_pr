@@ -70,9 +70,11 @@ export class InitGeneralResultsReportComponent {
     this.requestCounter = 0;
 
     const list = [];
-    resultsRelected?.forEach(element => {
-      // console.log(element?.id);
-      list.push(element?.id);
+    const uniqueResultCodesSet = new Set(resultsRelected.map((item: any) => item.result_code));
+    const uniqueResultCodes = [...uniqueResultCodesSet];
+
+    uniqueResultCodes?.forEach(element => {
+      list.push(element);
     });
     for (const key in list) {
       await this.POST_excelFullReportPromise(list[key], key);
