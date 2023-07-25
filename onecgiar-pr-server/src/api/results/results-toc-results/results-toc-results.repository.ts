@@ -703,4 +703,32 @@ export class ResultsTocResultRepository
       });
     }
   }
+
+
+  async getResultTocResultByResultId(resultId: number) {
+
+    try {
+      const queryTocIndicators = `
+      select * 
+        from ${env.DB_INTEGRATION_INFORMATION}.toc_results_indicators tri 
+          join ${env.DB_INTEGRATION_INFORMATION}.toc_results tr on tr.id = tri.toc_results_id  and tr.phase = "f202223e-95b2-4332-b315-3102486bb199"
+              where tr.toc_result_id in (
+                  select tr1.toc_internal_id  
+                    from toc_result tr1
+                      where tr1.toc_result_id  = ?)`
+
+      return  await this.query(queryTocIndicators, [resultId]);;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsTocResultRepository.name,
+        error: `updateResultByInitiative ${error}`,
+        debug: true,
+      });
+    }
+
+   
+    
+    
+  }
+
 }

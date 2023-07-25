@@ -16,7 +16,9 @@ export class TocInitiativeOutComponent {
   outputList = [];
   eoiList = [];
   fullInitiativeToc = null;
-
+  indicators:any = [];
+  indicatorView = false;
+  disabledInput = false;
   constructor(public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public api: ApiService) {}
 
   ngOnInit(): void {
@@ -27,6 +29,9 @@ export class TocInitiativeOutComponent {
     this.GET_outputList();
     this.GET_EOIList();
     this.valdiateEOI(this.initiative);
+    if(this.initiative.toc_result_id != null){
+      this.getIndicator();
+    }
   }
 
   getDescription(official_code, short_name) {
@@ -102,5 +107,28 @@ export class TocInitiativeOutComponent {
     setTimeout(() => {
       this.showOutcomeLevel = true;
     }, 100);
+
+    if(!initiative.planned_result){
+      this.indicatorView = false;
+      this.indicators = [];
+    }
+    
+  }
+
+
+  async getIndicator(){
+    this.indicators = [];
+    this.indicatorView = false;
+    this.disabledInput = false;
+    await this.api.resultsSE.Get_indicator(this.initiative.toc_result_id).subscribe(({response})=>{
+      console.log(response);
+      this.indicators = response?.informationIndicator;
+      if(this.indicators.length == 1){
+        this.disabledInput = true;
+      }
+      setTimeout(() => {
+        this.indicatorView = true;
+      }, 100);
+    })
   }
 }

@@ -64,8 +64,10 @@ export class RdTheoryOfChangeComponent {
   }
 
   onSaveSection() {
+    console.log(this.theoryOfChangeBody);
+    
     const saveSection = () => {
-      //console.log(this.theoryOfChangeBody);
+      
       this.theoryOfChangeBody.contributing_initiatives = this.theoryOfChangeBody.contributing_and_primary_initiative;
       this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
         //(resp);
@@ -82,6 +84,7 @@ export class RdTheoryOfChangeComponent {
       });
 
     return saveSection();
+    
   }
 
   someEditable() {

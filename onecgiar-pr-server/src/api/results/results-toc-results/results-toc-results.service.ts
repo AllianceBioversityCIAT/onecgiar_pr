@@ -566,6 +566,24 @@ export class ResultsTocResultsService {
   remove(id: number) {
     return `This action removes a #${id} resultsTocResult`;
   }
+
+  async getTocResultIndicatorByResultTocId(resultIdToc: number) {
+    try {
+      const informationIndicator = await this._resultsTocResultRepository.getResultTocResultByResultId(resultIdToc);
+
+      return {
+        response: {
+          informationIndicator
+        },
+        message: 'The toc data indicator is successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+    
+  }
+
 }
 
 interface resultToResultInterfaceToc {

@@ -36,6 +36,13 @@ export class ResultsTocResultsController {
     throw new HttpException({ message, response }, status);
   }
 
+  @Get('get/indicator/:id')
+  async findIndicatorByToc(@Param('id') id: number) {
+    const {message, response, status} = 
+      await this.resultsTocResultsService.getTocResultIndicatorByResultTocId(id);
+    throw new HttpException({ message, response }, status);
+  }
+
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateResultsTocResultDto: UpdateResultsTocResultDto) {
     return this.resultsTocResultsService.update(+id, updateResultsTocResultDto);
