@@ -25,7 +25,18 @@ export class TocInitiativeOutputSectionComponent {
   }
 
   GET_outputList() {
-    this.api.tocApiSE.GET_tocLevelsByresultId(this.result_toc_result.initiative_id, 1).subscribe(
+    this.api.tocApiSE.GET_tocLevelsByconfig(this.result_toc_result.results_id, this.result_toc_result.initiative_id, 1).subscribe({
+      next: ({ response }) => {
+        this.outputList = [];
+        this.outputList = response;
+      },
+      error: err => {
+        this.outputList = [];
+        console.error(err);
+      }
+    });
+
+    /*this.api.tocApiSE.GET_tocLevelsByresultId(this.result_toc_result.initiative_id, 1).subscribe(
       ({ response }) => {
         this.outputList = [];
         this.outputList = response;
@@ -35,11 +46,22 @@ export class TocInitiativeOutputSectionComponent {
         this.outputList = [];
         console.error(err);
       }
-    );
+    );*/
   }
 
   GET_outcomeList() {
-    this.api.tocApiSE.GET_tocLevelsByresultId(this.result_toc_result.initiative_id, 2).subscribe(
+    this.api.tocApiSE.GET_tocLevelsByconfig(this.result_toc_result.results_id, this.result_toc_result.initiative_id, 2).subscribe({
+      next: ({ response }) => {
+        this.outcomeList = [];
+        this.outcomeList = response;
+      },
+      error: err => {
+        this.outcomeList = [];
+        this.outputList = [];
+        console.error(err);
+      }
+    });
+    /*this.api.tocApiSE.GET_tocLevelsByresultId(this.result_toc_result.initiative_id, 2).subscribe(
       ({ response }) => {
         this.outcomeList = [];
         this.outcomeList = response;
@@ -50,7 +72,7 @@ export class TocInitiativeOutputSectionComponent {
         this.outputList = [];
         console.error(err);
       }
-    );
+    );*/
   }
 
   GET_fullInitiativeTocByinitId() {

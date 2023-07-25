@@ -67,7 +67,7 @@ export class TocResultsRepository extends Repository<TocResult> {
     tr.work_packages_id as work_package_id,
     wp.acronym as wp_short_name
     FROM ${env.DB_TOC}.toc_results tr 
-    LEFT JOIN ${env.DB_TOC}.work_packages wp ON wp.wp_official_code = tr.work_packages_id
+    LEFT JOIN ${env.DB_TOC}.work_packages wp ON wp.id = tr.work_packages_id
     											AND wp.active > 0
     LEFT JOIN clarisa_initiatives ci ON ci.toc_id = tr.id_toc_initiative
     WHERE tr.is_active > 0

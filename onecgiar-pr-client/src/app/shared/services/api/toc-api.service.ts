@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment.prod';
 import { map } from 'rxjs';
+import { ApiService } from './api.service';
 
 @Injectable({
   providedIn: 'root'
@@ -15,6 +16,15 @@ export class TocApiService {
 
   GET_tocLevelsByresultId(initiativeId, levelId) {
     return this.http.get<any>(`${this.apiBaseUrl}result/get/all/initiative/${initiativeId}/level/${levelId}`).pipe(
+      map(resp => {
+        resp?.response.map(innovation => (innovation.extraInformation = `<strong>${innovation.wp_short_name}</strong> <br> <div class="select_item_description">${innovation.title}</div>`));
+        return resp;
+      })
+    );
+  }
+
+  GET_tocLevelsByconfig(result_id, initiativeId, levelId) {
+    return this.http.get<any>(`${this.apiBaseUrl}result/${result_id}/initiative/${initiativeId}/level/${levelId}`).pipe(
       map(resp => {
         resp?.response.map(innovation => (innovation.extraInformation = `<strong>${innovation.wp_short_name}</strong> <br> <div class="select_item_description">${innovation.title}</div>`));
         return resp;

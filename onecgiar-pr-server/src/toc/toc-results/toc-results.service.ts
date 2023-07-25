@@ -26,11 +26,16 @@ export class TocResultsService {
     toc_level: number,
   ) {
     try {
-      const res = await this._tocResultsRepository.$_getResultTocByConfig(
+      let res = await this._tocResultsRepository.$_getResultTocByConfig(
         result_id,
         init_id,
         toc_level,
       );
+      if (!res.length && toc_level == 4) {
+        res = await this._tocResultsRepository.getAllOutcomeByInitiative(
+          toc_level,
+        );
+      }
       return this._returnResponse.format({
         message: 'Successful response',
         response: res,
