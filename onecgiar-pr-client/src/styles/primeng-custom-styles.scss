@@ -7,7 +7,9 @@
     }
 }
 
-.p-datepicker {
-    // width: 300px !important;
-    min-width: 400px !important;
+.p-datepicker-touch-ui,
+.p-calendar .p-datepicker-touch-ui {
+
+    min-width: 27vw !important;
+
 }

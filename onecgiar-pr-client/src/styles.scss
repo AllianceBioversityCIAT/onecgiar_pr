@@ -258,6 +258,13 @@ a {
 
 .phase_table {
   .p-datatable-wrapper {
-    padding-bottom: 400px !important;
+    padding-bottom: 250px !important;
+  }
+}
+
+.p-calendar {
+  input {
+    cursor: pointer !important;
+
   }
 }
