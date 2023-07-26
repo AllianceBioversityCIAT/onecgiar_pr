@@ -81,7 +81,8 @@ export class resultValidationRepository extends Repository<Validation> {
 		\`result\` r
 	WHERE
 		r.id = ?
-		and r.is_active > 0;
+		and r.is_active > 0
+		and r.version_id = 2;
     `;
     try {
       const shareResultRequest: GetValidationSectionDto[] =
@@ -195,7 +196,8 @@ export class resultValidationRepository extends Repository<Validation> {
 		and rbi.initiative_role_id = 1
 	WHERE
 		r.id = ?
-		and r.is_active > 0;
+		and r.is_active > 0
+		and r.version_id = 2;
     `;
     try {
       const shareResultRequest: GetValidationSectionDto[] =
@@ -270,7 +272,8 @@ export class resultValidationRepository extends Repository<Validation> {
 		result r
 	WHERE
 		r.id = ?
-		AND r.is_active > 0;
+		AND r.is_active > 0
+		AND r.version_id = 2;
     `;
     try {
       const shareResultRequest: GetValidationSectionDto[] =
@@ -332,7 +335,8 @@ export class resultValidationRepository extends Repository<Validation> {
 		result r
 	WHERE
 		r.id = ?
-		and r.is_active > 0;
+		and r.is_active > 0
+		and r.version_id = 2;
     `;
     try {
       const shareResultRequest: GetValidationSectionDto[] =
@@ -569,7 +573,8 @@ export class resultValidationRepository extends Repository<Validation> {
 		AND rid.is_active > 0
 	WHERE
 		r.id = ?
-		AND r.is_active > 0;
+		AND r.is_active > 0
+		AND r.version_id = 2;
     `;
     try {
       const shareResultRequest: GetValidationSectionDto[] =
@@ -604,7 +609,8 @@ export class resultValidationRepository extends Repository<Validation> {
 		and riu.is_active > 0
 	WHERE
 		r.id = ?
-		and r.is_active > 0;
+		and r.is_active > 0
+		and r.version_id = 2;
     `;
     try {
       const shareResultRequest: GetValidationSectionDto[] =
@@ -649,7 +655,8 @@ export class resultValidationRepository extends Repository<Validation> {
 		and rid.is_active > 0
 	WHERE
 		r.id = ?
-		and r.is_active > 0;
+		and r.is_active > 0
+		and r.version_id = 2;
     `;
     try {
       const shareResultRequest: GetValidationSectionDto[] =
@@ -749,7 +756,8 @@ export class resultValidationRepository extends Repository<Validation> {
 		AND rcd.is_active > 0
 	WHERE
 		r.id = ?
-		AND r.is_active > 0;
+		AND r.is_active > 0
+		AND r.version_id = 2;
     `;
     try {
       const shareResultRequest: GetValidationSectionDto[] =
@@ -794,7 +802,8 @@ export class resultValidationRepository extends Repository<Validation> {
 		and rpc.is_active > 0
 	WHERE
 		r.id = ?
-		and r.is_active > 0;
+		and r.is_active > 0
+		and r.version_id = 2;
     `;
     try {
       const shareResultRequest: GetValidationSectionDto[] =
