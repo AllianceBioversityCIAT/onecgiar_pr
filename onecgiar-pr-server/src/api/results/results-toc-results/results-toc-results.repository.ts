@@ -7,6 +7,8 @@ import {
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
+import { ResultsTocResultIndicatorsRepository } from './results-toc-results-indicators.repository';
+import { isNumber } from 'class-validator';
 
 @Injectable()
 export class ResultsTocResultRepository
@@ -20,6 +22,7 @@ export class ResultsTocResultRepository
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
+    private readonly _resultsTocResultIndicator: ResultsTocResultIndicatorsRepository
   ) {
     super(ResultsTocResult, dataSource.createEntityManager());
   }
@@ -725,10 +728,44 @@ export class ResultsTocResultRepository
         debug: true,
       });
     }
-
-   
-    
-    
   }
+
+  async saveInditicatorsContributing(id_result_toc_result:number,targetsIndicator:any[]){
+try {
+  await this._resultsTocResultIndicator.update({results_toc_results_id:id_result_toc_result},
+                                                  {is_active : false});
+  targetsIndicator.forEach(async (element) => {
+    let targetIndicators = await this._resultsTocResultIndicator.findOne({
+      where: {
+        results_toc_results_id: element.result_toc_result_id,
+        toc_results_indicator_id: element.toc_result_indicators_id,
+      }
+    }
+    )
+
+    if(targetIndicators != null){
+      if(isNumber(targetIndicators.indicator_contributing)){
+        targetIndicators.indicator_contributing = targetIndicators.indicator_contributing + element.indicator_contributing;
+        
+      }else{
+          targetIndicators.indicator_contributing = element.indicator_contributing;
+      }
+      targetIndicators.is_active = true;
+      await this._resultsTocResultIndicator.update(targetIndicators.result_toc_result_indicator_id, targetIndicators);
+    
+    }else{
+      await this._resultsTocResultIndicator.save(element);
+    }
+  });
+} catch (error) {
+  throw this._handlersError.returnErrorRepository({
+    className: ResultsTocResultRepository.name,
+    error: `updateResultByInitiative ${error}`,
+    debug: true,
+  });
+}
+
+  }
+
 
 }
