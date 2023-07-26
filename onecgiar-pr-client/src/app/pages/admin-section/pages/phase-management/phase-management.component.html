@@ -1,6 +1,7 @@
 <div class="local_container phase_table">
-  <p-table sortField="result_code" [scrollable]="true" scrollDirection="both" [value]="this.phaseList"
-    scrollHeight="calc(100vh - 303px)" styleClass="p-datatable-gridlines p-datatable-sm">
+  <p-table sortField="result_code" [sortOrder]="-1" [value]="this.phaseList" scrollHeight="calc(100vh - 303px)"
+    responsiveLayout="scroll" [paginator]="!!(this.phaseList)?.length" [rows]="10"
+    styleClass="p-datatable-gridlines p-datatable-sm" selectionMode="single" [rowsPerPageOptions]="[10,50,100]">
     <ng-template pTemplate="header">
       <tr>
         <th pSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder">
@@ -24,12 +25,10 @@
         <td>
           <!--Todo Reporting year  -->
           <div class="text" *ngIf="!phase.isNew">{{phase?.phase_year}}</div>
-
           <app-pr-select *ngIf="phase.isNew" class="segment_title_margin" [options]="this.resultYearsList"
             [disableOptions]="disablePreviousYear()" optionLabel="year" optionValue="year" placeholder="Select year"
             [(ngModel)]="phase.phase_year_ts">
           </app-pr-select>
-
         </td>
         <td>
           <!--Todo Toc phase-->
@@ -41,22 +40,17 @@
         </td>
         <td [style.width.px]="120">
           <!--Todo  start date -->
+
           <div class="text" *ngIf="!phase.isNew"> {{phase?.start_date | date: 'YYYY-MM-dd'}}</div>
-          <!-- <input class="Flatpickr_styles" *ngIf="phase.isNew" pInputText type="text" mwlFlatpickr
-            [(ngModel)]="phase.start_date_ts" [altInput]="true" [convertModelValue]="true" placeholder="yyyy-mm-dd"
-            dateFormat="Y-m-d" altFormat="Y-m-d" /> -->
-          <ngx-datepicker *ngIf="phase.isNew" [(ngModel)]="phase.start_date_ts"></ngx-datepicker>
+          <p-calendar placeholder="Start date" *ngIf="phase.isNew" [(ngModel)]="phase.start_date_ts"
+            dateFormat="yy-mm-dd"></p-calendar>
         </td>
         <td [style.width.px]="120">
           <!--Todo end date  -->
 
           <div class="text" *ngIf="!phase.isNew">{{phase?.end_date| date: 'YYYY-MM-dd' }}</div>
-          <!-- <p-calendar placeholder="End date" *ngIf="phase.isNew" [(ngModel)]="phase.end_date_ts"
-            dateFormat="yy-mm-dd"></p-calendar> -->
-          <!-- <input class="Flatpickr_styles" *ngIf="phase.isNew" pInputText type="text" mwlFlatpickr
-            [(ngModel)]="phase.end_date_ts" [altInput]="true" [convertModelValue]="true" placeholder="yyyy-mm-dd"
-            dateFormat="Y-m-d" altFormat="Y-m-d" /> -->
-          <ngx-datepicker *ngIf="phase.isNew" [(ngModel)]="phase.end_date_ts"></ngx-datepicker>
+          <p-calendar placeholder="End date" *ngIf="phase.isNew" [(ngModel)]="phase.end_date_ts"
+            dateFormat="yy-mm-dd"></p-calendar>
         </td>
         <td [style.width.px]="90">
           <!--Todo  status -->
