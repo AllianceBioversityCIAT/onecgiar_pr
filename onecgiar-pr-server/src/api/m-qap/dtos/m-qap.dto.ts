@@ -96,6 +96,7 @@ export class MQAPResultDto {
   DOI: string;
   'Publication Date': string;
   Countries: string | string[];
+  'Country ISO code': string | string[];
   'Action Area': string;
   Affiliation: Affiliation[];
   'Impact Area': string;

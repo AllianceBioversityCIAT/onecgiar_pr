@@ -1,5 +1,6 @@
 import { BasicInfoDto } from '../../../../shared/globalInterfaces/basic-info.dto';
 import { CreateResultDto } from '../../dto/create-result.dto';
+import { FullFairData } from './fair-data.dto';
 import { ResultsKnowledgeProductAltmetricDto } from './results-knowledge-product-altmetric.dto';
 import { ResultsKnowledgeProductAuthorDto } from './results-knowledge-product-author.dto';
 import { ResultsKnowledgeProductInstitutionDto } from './results-knowledge-product-institution.dto';
@@ -32,10 +33,11 @@ export class ResultsKnowledgeProductDto {
   altmetric_image_url: string;
   altmetric_full_data: ResultsKnowledgeProductAltmetricDto;
   references_other_knowledge_products: any;
-  findable: number;
+  /*findable: number;
   accessible: number;
   interoperable: number;
-  reusable: number;
+  reusable: number;*/
+  fair_data: FullFairData;
   is_melia?: boolean;
   melia_previous_submitted?: boolean;
   melia_type_id?: number;
