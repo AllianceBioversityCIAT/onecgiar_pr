@@ -65,6 +65,11 @@ export class VersioningController {
     return this.versioningService.find(module_type, status);
   }
 
+  @Get('result/:resultId')
+  findVersionOfAResult(@Param('resultId') result_id: string) {
+    return this.versioningService.getVersionOfAResult(+result_id);
+  }
+
   @Delete(':id')
   @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
   @UseGuards(ValidRoleGuard)

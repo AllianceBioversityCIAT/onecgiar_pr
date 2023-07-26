@@ -42,6 +42,7 @@ import {
   ModuleTypeEnum,
   StatusPhaseEnum,
 } from '../../shared/constants/role-type.enum';
+import { In } from 'typeorm';
 
 @Injectable()
 export class VersioningService {
@@ -510,6 +511,27 @@ export class VersioningService {
       return this._returnResponse.format({
         message: `Phase ${res.phase_name} deleted successfully`,
         response: { ...res, is_active: false },
+        statusCode: HttpStatus.OK,
+      });
+    } catch (error) {
+      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+    }
+  }
+
+  async getVersionOfAResult(resul_id: number) {
+    try {
+      const versions_id = await this._versionRepository.$_getVersionOfAResult(
+        resul_id,
+      );
+      const res = await this._versionRepository.find({
+        where: {
+          id: In(versions_id),
+        },
+      });
+
+      return this._returnResponse.format({
+        message: `Phase Retrieved Successfully`,
+        response: res,
         statusCode: HttpStatus.OK,
       });
     } catch (error) {

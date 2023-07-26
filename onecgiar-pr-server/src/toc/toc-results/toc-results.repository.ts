@@ -39,7 +39,7 @@ export class TocResultsRepository extends Repository<TocResult> {
     from toc_result tr;
     `;
     try {
-      const tocResult:TocResult[] = await this.query(queryData);
+      const tocResult: TocResult[] = await this.query(queryData);
       return tocResult;
     } catch (error) {
       throw {
@@ -48,6 +48,75 @@ export class TocResultsRepository extends Repository<TocResult> {
         status: HttpStatus.INTERNAL_SERVER_ERROR,
       };
     }
+  }
+
+  async $_getResultTocByConfig(
+    result_id: number,
+    init_id: number,
+    toc_level: number,
+  ) {
+    const queryData = `
+    SELECT 
+    tr.id as toc_result_id,
+    tr.toc_result_id as toc_internal_id,
+    tr.result_title as title,
+    tr.result_description as description,
+    tr.result_type as toc_type_id,
+    tr.result_type as toc_level_id,
+    ci.id  as inititiative_id,
+    tr.work_packages_id as work_package_id,
+    wp.acronym as wp_short_name
+    FROM ${env.DB_TOC}.toc_results tr 
+    LEFT JOIN ${env.DB_TOC}.work_packages wp ON wp.id = tr.work_packages_id
+    											AND wp.active > 0
+    LEFT JOIN clarisa_initiatives ci ON ci.toc_id = tr.id_toc_initiative
+    WHERE tr.is_active > 0
+    		AND ci.id = ?
+    		AND tr.phase = (SELECT v.toc_pahse_id  FROM \`result\` r 
+    						INNER JOIN \`version\` v ON v.id = r.version_id
+    						WHERE r.id = ?
+    							AND r.is_active > 0
+    						LIMIT 1)
+    		AND tr.result_type = ?
+    ORDER by tr.result_title asc;
+    `;
+
+    const queryOst = `
+    select
+    	null as toc_result_id,
+    	ibs.initiativeId as inititiative_id ,
+    	iaaoi.outcome_id as action_area_outcome_id,
+    	caao.id,
+    	caao.outcomeSMOcode as title,
+    	caao.outcomeStatement as description,
+    	4 as toc_level_id,
+    	null as work_package_id,
+    	gi.action_area_id,
+      gi.action_area_description as action_area_name
+    from
+    	${env.DB_OST}.init_action_areas_out_indicators iaaoi
+    inner join ${env.DB_OST}.initiatives_by_stages ibs on
+    	ibs.id = iaaoi.initvStgId
+    inner join ${env.DB_OST}.general_information gi on gi.initvStgId = ibs.id 
+    inner join ${env.DB_NAME}.clarisa_action_area_outcome caao on
+    	caao.id = iaaoi.outcome_id
+    WHERE
+    	iaaoi.outcome_id is not null
+    	and ibs.initiativeId = ?
+    GROUP by
+    	ibs.initiativeId,
+    	iaaoi.outcome_id,
+    	gi.action_area_id,
+    	gi.action_area_description
+    order by caao.outcomeSMOcode ASC;
+    `;
+    const res = this.query(toc_level == 4 ? queryOst : queryData, [
+      init_id,
+      result_id,
+      toc_level,
+    ]);
+
+    return res.then((data) => data).catch((error) => []);
   }
 
   async getAllTocResultsByInitiative(initiativeId: number, tocLevel: number) {
@@ -64,16 +133,18 @@ export class TocResultsRepository extends Repository<TocResult> {
       wp.acronym as wp_short_name,
       null as action_area_outcome_id
     from toc_result tr
-    left join ${env.DB_OST}.work_packages wp on wp.wp_official_code = tr.work_package_id
+    left join ${
+      env.DB_OST
+    }.work_packages wp on wp.wp_official_code = tr.work_package_id
                                             and wp.active > 0
     left join ${env.DB_OST}.initiatives_by_stages ibs on ibs.id = wp.initvStgId
 	  where tr.inititiative_id = ?
     	and tr.toc_level_id = ?
-      ${tocLevel != 3?`and ibs.stageId = 4`:``}
+      ${tocLevel != 3 ? `and ibs.stageId = 4` : ``}
       and tr.is_active > 0
     order by wp.acronym, tr.title ASC;
     `,
-    queryOst = `
+      queryOst = `
     select
     	null as toc_result_id,
     	ibs.initiativeId as inititiative_id ,
@@ -104,7 +175,10 @@ export class TocResultsRepository extends Repository<TocResult> {
     `;
 
     try {
-      const tocResult:TocResult[] = await this.query(tocLevel == 4? queryOst:queryData, [initiativeId, tocLevel]);
+      const tocResult: TocResult[] = await this.query(
+        tocLevel == 4 ? queryOst : queryData,
+        [initiativeId, tocLevel],
+      );
       return tocResult;
     } catch (error) {
       throw {
@@ -137,7 +211,7 @@ export class TocResultsRepository extends Repository<TocResult> {
 	      and ibs.active > 0;
     `;
     try {
-      const tocResult:TocResult[] = await this.query(queryData);
+      const tocResult: TocResult[] = await this.query(queryData);
       return tocResult;
     } catch (error) {
       throw {
@@ -148,13 +222,13 @@ export class TocResultsRepository extends Repository<TocResult> {
     }
   }
 
-  async inactiveTocResult(){
+  async inactiveTocResult() {
     const queryData = `
       UPDATE toc_result 
         set is_active = 0;
     `;
     try {
-      const tocResult:TocResult[] = await this.query(queryData);
+      const tocResult: TocResult[] = await this.query(queryData);
       return tocResult;
     } catch (error) {
       throw {
@@ -165,7 +239,7 @@ export class TocResultsRepository extends Repository<TocResult> {
     }
   }
 
-  async updateDeprecateDataToc(){
+  async updateDeprecateDataToc() {
     const queryData = `
     update
         results_toc_result rtr
@@ -181,7 +255,7 @@ export class TocResultsRepository extends Repository<TocResult> {
         tr.is_active = 0;
     `;
     try {
-      const tocResult:TocResult[] = await this.query(queryData);
+      const tocResult: TocResult[] = await this.query(queryData);
       return tocResult;
     } catch (error) {
       throw {
@@ -212,7 +286,9 @@ export class TocResultsRepository extends Repository<TocResult> {
       where ibs.initiativeId = ?;
     `;
     try {
-      const tocResult:TocResult[] = await this.query(queryData, [initiativeId]);
+      const tocResult: TocResult[] = await this.query(queryData, [
+        initiativeId,
+      ]);
       return tocResult;
     } catch (error) {
       throw {
@@ -265,7 +341,6 @@ export class TocResultsRepository extends Repository<TocResult> {
     }
   }
 
-
   async isTocResoultByInitiative(resultId: number, tResult: number) {
     const queryData = `
     select 
@@ -284,8 +359,8 @@ export class TocResultsRepository extends Repository<TocResult> {
       and tr.toc_result_id = ${tResult};
     `;
     try {
-      const tocResult:TocResult[] = await this.query(queryData);
-      return tocResult.length? tocResult[0]: undefined;
+      const tocResult: TocResult[] = await this.query(queryData);
+      return tocResult.length ? tocResult[0] : undefined;
     } catch (error) {
       throw {
         message: `[${TocResultsRepository.name}] => getAllTocResults error: ${error}`,
@@ -294,7 +369,6 @@ export class TocResultsRepository extends Repository<TocResult> {
       };
     }
   }
-
 
   async getEoiIp(initId: number) {
     const query = `
@@ -318,4 +392,3 @@ export class TocResultsRepository extends Repository<TocResult> {
     }
   }
 }
-
