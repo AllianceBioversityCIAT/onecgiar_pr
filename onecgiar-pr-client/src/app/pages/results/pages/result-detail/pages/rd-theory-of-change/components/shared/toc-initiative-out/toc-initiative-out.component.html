@@ -18,7 +18,7 @@
         <app-pr-select *ngIf="this.initiative?.planned_result && resultLevelId == 1" [options]="this.outputList"
             label="Output" optionLabel="extraInformation" optionValue="toc_result_id" [disabled]="!this.editable"
             [editable]="editable" placeholder="Select output" [(ngModel)]="initiative.toc_result_id"
-            [extraInformation]="true">
+            [extraInformation]="true" (selectOptionEvent)="getIndicator()">
         </app-pr-select>
         <app-pr-select
             *ngIf="this.showOutcomeLevel && (resultLevelId == 1 ? this.initiative?.planned_result == false : true)"
@@ -47,4 +47,7 @@
 
     </div>
     <hr class="divider-20">
+</div>
+<div *ngIf="indicatorView">
+    <app-target-indicator  [initiative]="indicator" [disabledInputs]="disabledInput" *ngFor="let indicator of indicators"></app-target-indicator>
 </div>

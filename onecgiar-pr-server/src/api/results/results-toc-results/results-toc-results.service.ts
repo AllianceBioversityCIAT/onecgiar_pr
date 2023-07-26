@@ -58,6 +58,7 @@ export class ResultsTocResultsService {
         contributors_result_toc_result,
         impacts,
         pending_contributing_initiatives,
+        targets_indicators
       } = createResultsTocResultDto;
       const version = await this._versionsService.findBaseVersion();
       const result = await this._resultRepository.getResultById(result_id);
@@ -566,6 +567,24 @@ export class ResultsTocResultsService {
   remove(id: number) {
     return `This action removes a #${id} resultsTocResult`;
   }
+
+  async getTocResultIndicatorByResultTocId(resultIdToc: number, toc_result_id: number) {
+    try {
+      const informationIndicator = await this._resultsTocResultRepository.getResultTocResultByResultId(resultIdToc,toc_result_id);
+
+      return {
+        response: {
+          informationIndicator
+        },
+        message: 'The toc data indicator is successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+    
+  }
+
 }
 
 interface resultToResultInterfaceToc {

@@ -7,6 +7,8 @@ import {
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
+import { ResultsTocResultIndicatorsRepository } from './results-toc-results-indicators.repository';
+import { isNumber } from 'class-validator';
 
 @Injectable()
 export class ResultsTocResultRepository
@@ -20,6 +22,7 @@ export class ResultsTocResultRepository
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
+    private readonly _resultsTocResultIndicator: ResultsTocResultIndicatorsRepository
   ) {
     super(ResultsTocResult, dataSource.createEntityManager());
   }
@@ -703,4 +706,83 @@ export class ResultsTocResultRepository
       });
     }
   }
+
+
+  async getResultTocResultByResultId(resultId: number, toc_result_id: number) {
+
+    try {
+      const queryTocIndicators = `
+      select tri.indicator_description, target_date, target_value, unit_messurament, tr.phase,
+			rtri.results_toc_results_id, rtri.toc_results_indicator_id, rtri.status, rtri.indicator_contributing 
+	        from Integration_information.toc_results_indicators tri 
+	          join Integration_information.toc_results tr on tr.id = tri.toc_results_id  
+	          left join results_toc_result rtr on rtr.results_id = ?
+	          left join results_toc_result_indicators rtri on rtr.result_toc_result_id = rtri.results_toc_results_id 
+	              where tr.id  = ? and tr.phase = (select v.toc_pahse_id  
+	              										from result r 	
+	              										join version v on r.version_id = v.id  
+	              											where r.id  = ?)`
+      
+
+      
+      let innovatonUseInterface = await this.query(queryTocIndicators, [resultId,toc_result_id, resultId]);
+      
+      innovatonUseInterface.forEach(async (element) => {
+        console.log(Number(element?.target_value));
+        
+        if(Number(element?.target_value)){
+          element.is_calculable = true;
+        }else{
+          element.is_calculable = false;
+        }
+      });
+      
+      return innovatonUseInterface;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsTocResultRepository.name,
+        error: `updateResultByInitiative ${error}`,
+        debug: true,
+      });
+    }
+  }
+
+  async saveInditicatorsContributing(id_result_toc_result:number,targetsIndicator:any[]){
+try {
+  await this._resultsTocResultIndicator.update({results_toc_results_id:id_result_toc_result},
+                                                  {is_active : false});
+  targetsIndicator.forEach(async (element) => {
+    let targetIndicators = await this._resultsTocResultIndicator.findOne({
+      where: {
+        results_toc_results_id: element.result_toc_result_id,
+        toc_results_indicator_id: element.toc_result_indicators_id,
+      }
+    }
+    )
+
+    if(targetIndicators != null){
+      if(Number(targetIndicators.indicator_contributing)){
+        targetIndicators.indicator_contributing = ( Number(targetIndicators.indicator_contributing) + Number(element.indicator_contributing)).toString();
+        
+      }else{
+          targetIndicators.indicator_contributing = element.indicator_contributing;
+      }
+      targetIndicators.is_active = true;
+      await this._resultsTocResultIndicator.update(targetIndicators.result_toc_result_indicator_id, targetIndicators);
+    
+    }else{
+      await this._resultsTocResultIndicator.save(element);
+    }
+  });
+} catch (error) {
+  throw this._handlersError.returnErrorRepository({
+    className: ResultsTocResultRepository.name,
+    error: `updateResultByInitiative ${error}`,
+    debug: true,
+  });
+}
+
+  }
+
+
 }

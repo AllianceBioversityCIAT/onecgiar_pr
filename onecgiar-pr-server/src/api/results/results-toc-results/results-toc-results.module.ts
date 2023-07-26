@@ -20,6 +20,7 @@ import { ClarisaImpactAreaRepository } from '../../../clarisa/clarisa-impact-are
 import { ShareResultRequestService } from '../share-result-request/share-result-request.service';
 import { ShareResultRequestRepository } from '../share-result-request/share-result-request.repository';
 import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/result_initiative_budget.repository';
+import { ResultsTocResultIndicatorsRepository } from './results-toc-results-indicators.repository';
 
 @Module({
   controllers: [ResultsTocResultsController],
@@ -42,6 +43,7 @@ import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/
     ShareResultRequestRepository,
     ResultInitiativeBudgetRepository,
     ReturnResponse,
+    ResultsTocResultIndicatorsRepository
   ],
   exports: [ResultsTocResultRepository],
 })
