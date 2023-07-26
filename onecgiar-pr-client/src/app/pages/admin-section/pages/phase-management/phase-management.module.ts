@@ -14,11 +14,11 @@ import { TagModule } from 'primeng/tag';
 import { DropdownModule } from 'primeng/dropdown';
 import { TooltipModule } from 'primeng/tooltip';
 import { CalendarModule } from 'primeng/calendar';
-import { FlatpickrModule } from 'angularx-flatpickr';
+import { DatepickerModule } from 'ng2-datepicker';
 
 @NgModule({
   declarations: [PhaseManagementComponent],
   exports: [PhaseManagementComponent],
-  imports: [CommonModule, ButtonModule, DropdownModule, TagModule, InputTextModule, FlatpickrModule, PhaseManagementRoutingModule, TableModule, FormsModule, CustomFieldsModule, ResultHistoryOfChangesModalModule, FilterByTextModule, TooltipModule, CalendarModule]
+  imports: [CommonModule, ButtonModule, DropdownModule, TagModule, DatepickerModule, InputTextModule, PhaseManagementRoutingModule, TableModule, FormsModule, CustomFieldsModule, ResultHistoryOfChangesModalModule, FilterByTextModule, TooltipModule, CalendarModule]
 })
 export class PhaseManagementModule {}

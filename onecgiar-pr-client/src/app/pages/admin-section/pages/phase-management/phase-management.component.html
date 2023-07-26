@@ -42,9 +42,10 @@
         <td [style.width.px]="120">
           <!--Todo  start date -->
           <div class="text" *ngIf="!phase.isNew"> {{phase?.start_date | date: 'YYYY-MM-dd'}}</div>
-          <input class="Flatpickr_styles" *ngIf="phase.isNew" pInputText type="text" mwlFlatpickr
+          <!-- <input class="Flatpickr_styles" *ngIf="phase.isNew" pInputText type="text" mwlFlatpickr
             [(ngModel)]="phase.start_date_ts" [altInput]="true" [convertModelValue]="true" placeholder="yyyy-mm-dd"
-            dateFormat="Y-m-d" altFormat="Y-m-d" />
+            dateFormat="Y-m-d" altFormat="Y-m-d" /> -->
+          <ngx-datepicker *ngIf="phase.isNew" [(ngModel)]="phase.start_date_ts"></ngx-datepicker>
         </td>
         <td [style.width.px]="120">
           <!--Todo end date  -->
@@ -52,9 +53,10 @@
           <div class="text" *ngIf="!phase.isNew">{{phase?.end_date| date: 'YYYY-MM-dd' }}</div>
           <!-- <p-calendar placeholder="End date" *ngIf="phase.isNew" [(ngModel)]="phase.end_date_ts"
             dateFormat="yy-mm-dd"></p-calendar> -->
-          <input class="Flatpickr_styles" *ngIf="phase.isNew" pInputText type="text" mwlFlatpickr
+          <!-- <input class="Flatpickr_styles" *ngIf="phase.isNew" pInputText type="text" mwlFlatpickr
             [(ngModel)]="phase.end_date_ts" [altInput]="true" [convertModelValue]="true" placeholder="yyyy-mm-dd"
-            dateFormat="Y-m-d" altFormat="Y-m-d" />
+            dateFormat="Y-m-d" altFormat="Y-m-d" /> -->
+          <ngx-datepicker *ngIf="phase.isNew" [(ngModel)]="phase.end_date_ts"></ngx-datepicker>
         </td>
         <td [style.width.px]="90">
           <!--Todo  status -->
