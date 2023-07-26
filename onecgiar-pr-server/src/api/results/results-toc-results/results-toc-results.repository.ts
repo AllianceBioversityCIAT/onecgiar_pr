@@ -708,19 +708,36 @@ export class ResultsTocResultRepository
   }
 
 
-  async getResultTocResultByResultId(resultId: number) {
+  async getResultTocResultByResultId(resultId: number, toc_result_id: number) {
 
     try {
       const queryTocIndicators = `
-      select * 
-        from ${env.DB_INTEGRATION_INFORMATION}.toc_results_indicators tri 
-          join ${env.DB_INTEGRATION_INFORMATION}.toc_results tr on tr.id = tri.toc_results_id  and tr.phase = "f202223e-95b2-4332-b315-3102486bb199"
-              where tr.toc_result_id in (
-                  select tr1.toc_internal_id  
-                    from toc_result tr1
-                      where tr1.toc_result_id  = ?)`
+      select tri.indicator_description, target_date, target_value, unit_messurament, tr.phase,
+			rtri.results_toc_results_id, rtri.toc_results_indicator_id, rtri.status, rtri.indicator_contributing 
+	        from Integration_information.toc_results_indicators tri 
+	          join Integration_information.toc_results tr on tr.id = tri.toc_results_id  
+	          left join results_toc_result rtr on rtr.results_id = ?
+	          left join results_toc_result_indicators rtri on rtr.result_toc_result_id = rtri.results_toc_results_id 
+	              where tr.id  = ? and tr.phase = (select v.toc_pahse_id  
+	              										from result r 	
+	              										join version v on r.version_id = v.id  
+	              											where r.id  = ?)`
+      
 
-      return  await this.query(queryTocIndicators, [resultId]);;
+      
+      let innovatonUseInterface = await this.query(queryTocIndicators, [resultId,toc_result_id, resultId]);
+      
+      innovatonUseInterface.forEach(async (element) => {
+        console.log(Number(element?.target_value));
+        
+        if(Number(element?.target_value)){
+          element.is_calculable = true;
+        }else{
+          element.is_calculable = false;
+        }
+      });
+      
+      return innovatonUseInterface;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
@@ -744,8 +761,8 @@ try {
     )
 
     if(targetIndicators != null){
-      if(isNumber(targetIndicators.indicator_contributing)){
-        targetIndicators.indicator_contributing = targetIndicators.indicator_contributing + element.indicator_contributing;
+      if(Number(targetIndicators.indicator_contributing)){
+        targetIndicators.indicator_contributing = ( Number(targetIndicators.indicator_contributing) + Number(element.indicator_contributing)).toString();
         
       }else{
           targetIndicators.indicator_contributing = element.indicator_contributing;

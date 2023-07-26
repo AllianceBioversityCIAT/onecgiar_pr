@@ -253,7 +253,7 @@ export class ResultsApiService {
   }
 
   Get_indicator(id_toc){
-    return this.http.get<any>(`${this.apiBaseUrl}toc/get/indicator/${id_toc}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+    return this.http.get<any>(`${this.apiBaseUrl}toc/get/indicator/${id_toc}/result/${this.currentResultId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   PATCH_innovationUse(body) {

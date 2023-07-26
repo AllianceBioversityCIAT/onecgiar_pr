@@ -58,6 +58,7 @@ export class ResultsTocResultsService {
         contributors_result_toc_result,
         impacts,
         pending_contributing_initiatives,
+        targets_indicators
       } = createResultsTocResultDto;
       const version = await this._versionsService.findBaseVersion();
       const result = await this._resultRepository.getResultById(result_id);
@@ -567,9 +568,9 @@ export class ResultsTocResultsService {
     return `This action removes a #${id} resultsTocResult`;
   }
 
-  async getTocResultIndicatorByResultTocId(resultIdToc: number) {
+  async getTocResultIndicatorByResultTocId(resultIdToc: number, toc_result_id: number) {
     try {
-      const informationIndicator = await this._resultsTocResultRepository.getResultTocResultByResultId(resultIdToc);
+      const informationIndicator = await this._resultsTocResultRepository.getResultTocResultByResultId(resultIdToc,toc_result_id);
 
       return {
         response: {

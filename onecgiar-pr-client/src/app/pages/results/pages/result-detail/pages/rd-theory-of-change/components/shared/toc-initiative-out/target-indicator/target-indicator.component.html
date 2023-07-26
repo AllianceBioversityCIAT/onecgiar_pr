@@ -14,12 +14,12 @@
             </div> 
         </div>
         <div style="display: flex; flex-direction: row;">
-            <span><h4>Status: Incalculable</h4></span>
-            <div style="width: 12px; height: 12px; border-radius: 100%; background-color: #B9B9B9;margin-top: 20px; margin-left: 7px;"></div>
+            <span><h4>Status: {{statusIndicator(initiative.status)}}</h4></span>
+            <div [style]="iscalculated"></div>
         </div>
         
     </div>
-    <div class="header-content" *ngIf="iscalculated">
+    <div class="header-content" *ngIf="initiative.is_calculable">
         <div class="measurent">
             <h4>Measurement</h4>
             <div class="content-measurent">
@@ -34,18 +34,18 @@
         <div class="progress">
             <h4>Progress</h4>
             <div class="content-progress">
-                <div><h4>Target contribution from this result:</h4></div><div style=" margin-top: -10px;"><input type="text" class="in-progress" [disabled]="disabledInput"></div>
+                <div><h4>Target contribution from this result:</h4></div><div style=" margin-top: -10px;"><input type="text" class="in-progress" [disabled]="disabledInput" [(ngModel)]="initiative.indicator_contributing"></div>
             </div>
         </div>
         <div class="total">
-            <h4></h4>
+            <h4 style="visibility: hidden;">total</h4>
             <div class="content-total">
-                <div><h4>Progress based on reported results: </h4></div><div style="margin-top: 17px;">3/5</div>
+                <div><h4>Progress based on reported results: </h4></div><div style="margin-top: 17px;"><span *ngIf="initiative.indicator_contributing == null">0</span><span *ngIf="initiative.indicator_contributing != null">{{initiative.indicator_contributing}}</span>/{{initiative.target_value}}</div>
             </div>
         </div>
     </div>
 
-    <div class="header-content-no-calculated" *ngIf="!iscalculated">
+    <div class="header-content-no-calculated" *ngIf="!initiative.is_calculable">
         <div class="measurent">
             <h4>Measurement</h4>
             <div class="content-measurent">
