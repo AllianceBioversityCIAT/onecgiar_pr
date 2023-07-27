@@ -30,23 +30,29 @@ import { ResultsTocResult } from './results-toc-result.entity';
     })
     toc_results_indicator_id: string;
 
-
-    @ManyToOne(() => ResultsTocResult, (tr) => tr.result_toc_result_id, { nullable: true })
     @Column({
       name: 'results_toc_results_id',
       type: 'bigint',
     })
     results_toc_results_id!: number;
 
+    @ManyToOne(() => ResultsTocResult, (tr) => tr.result_toc_result_id, { nullable: true })
+    @JoinColumn({
+      name: 'results_toc_results_id',
+    })
+    results_toc_results!: ResultsTocResult;
+
     @Column({
       name: 'status',
       type: 'bigint',
+      nullable: true,
     })
     status: number;
 
     @Column({
       name: 'indicator_contributing',
       type: 'text',
+      nullable: true,
     })
     indicator_contributing: string;
 
@@ -57,10 +63,19 @@ import { ResultsTocResult } from './results-toc-result.entity';
       default: true,
     })
     is_active: boolean;
+
+    @Column({
+      name: 'is_not_aplicable',
+      type: 'boolean',
+      nullable: false,
+      default: false,
+    })
+    is_not_aplicable: boolean;
   
-    @ManyToOne(() => User, (u) => u.id, { nullable: false })
+    @ManyToOne(() => User, (u) => u.id, { nullable: true })
     @JoinColumn({
       name: 'created_by',
+      
     })
     created_by: number;
   

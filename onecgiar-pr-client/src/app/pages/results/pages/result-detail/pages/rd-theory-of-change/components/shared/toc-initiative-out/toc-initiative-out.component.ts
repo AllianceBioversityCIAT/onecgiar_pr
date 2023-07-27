@@ -1,6 +1,7 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { TocInitiativeOutcomeListsService } from '../../toc-initiative-outcome-section/services/toc-initiative-outcome-lists.service';
 import { ApiService } from '../../../../../../../../../shared/services/api/api.service';
+import { RdTheoryOfChangesServicesService } from '../../../rd-theory-of-changes-services.service';
 
 @Component({
   selector: 'app-toc-initiative-out',
@@ -21,7 +22,7 @@ export class TocInitiativeOutComponent {
   disabledInput = false;
   testingYesOrNo;
   SDGtestingYesorNo;
-  constructor(public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public api: ApiService) {}
+  constructor(public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public api: ApiService, public theoryOfChangesServices :RdTheoryOfChangesServicesService) {}
 
   ngOnInit(): void {
     //(this.initiative);
@@ -152,7 +153,9 @@ export class TocInitiativeOutComponent {
     this.disabledInput = false;
     await this.api.resultsSE.Get_indicator(this.initiative.toc_result_id).subscribe(({response})=>{
       console.log(response);
-      this.indicators = response?.informationIndicator;
+      this.theoryOfChangesServices.targetsIndicators = response?.informationIndicator;
+      this.indicators = response;
+      this.indicators.impactAreas.map(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
       if(this.indicators.length == 1){
         this.disabledInput = true;
       }

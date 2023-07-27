@@ -23,6 +23,7 @@ export class ResultsTocResultRepository
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
     private readonly _resultsTocResultIndicator: ResultsTocResultIndicatorsRepository
+   
   ) {
     super(ResultsTocResult, dataSource.createEntityManager());
   }
@@ -713,7 +714,7 @@ export class ResultsTocResultRepository
     try {
       const queryTocIndicators = `
       select tri.indicator_description, target_date, target_value, unit_messurament, tr.phase,
-			rtri.results_toc_results_id, rtri.toc_results_indicator_id, rtri.status, rtri.indicator_contributing 
+			rtri.results_toc_results_id, rtri.toc_results_indicator_id, rtri.status, rtri.indicator_contributing, rtri.is_not_aplicable
 	        from Integration_information.toc_results_indicators tri 
 	          join Integration_information.toc_results tr on tr.id = tri.toc_results_id  
 	          left join results_toc_result rtr on rtr.results_id = ?
@@ -728,10 +729,9 @@ export class ResultsTocResultRepository
       let innovatonUseInterface = await this.query(queryTocIndicators, [resultId,toc_result_id, resultId]);
       
       innovatonUseInterface.forEach(async (element) => {
-        console.log(Number(element?.target_value));
-        
         if(Number(element?.target_value)){
           element.is_calculable = true;
+          element.indicator_new = 0;
         }else{
           element.is_calculable = false;
         }
@@ -749,31 +749,33 @@ export class ResultsTocResultRepository
 
   async saveInditicatorsContributing(id_result_toc_result:number,targetsIndicator:any[]){
 try {
-  await this._resultsTocResultIndicator.update({results_toc_results_id:id_result_toc_result},
-                                                  {is_active : false});
-  targetsIndicator.forEach(async (element) => {
-    let targetIndicators = await this._resultsTocResultIndicator.findOne({
-      where: {
-        results_toc_results_id: element.result_toc_result_id,
-        toc_results_indicator_id: element.toc_result_indicators_id,
-      }
-    }
-    )
+  
+  
+  //await this._resultsTocResultIndicator.update({results_toc_results_id:id_result_toc_result},
+  //                                                {is_active : false});
+  
+  //targetsIndicator.(async (element) => {
+    let targetIndicators = await this._resultsTocResultIndicator.find()
 
+    //console.log(element);
+    
+    /*
     if(targetIndicators != null){
       if(Number(targetIndicators.indicator_contributing)){
-        targetIndicators.indicator_contributing = ( Number(targetIndicators.indicator_contributing) + Number(element.indicator_contributing)).toString();
-        
+        if(Number(element.indicator_new)){
+          targetIndicators.indicator_contributing = ( Number(targetIndicators.indicator_contributing) + Number(element.indicator_new)).toString();
+        }    
       }else{
           targetIndicators.indicator_contributing = element.indicator_contributing;
       }
       targetIndicators.is_active = true;
+      targetIndicators.is_not_aplicable = element.is_not_aplicable;
       await this._resultsTocResultIndicator.update(targetIndicators.result_toc_result_indicator_id, targetIndicators);
     
     }else{
       await this._resultsTocResultIndicator.save(element);
-    }
-  });
+    }*/
+  //});
 } catch (error) {
   throw this._handlersError.returnErrorRepository({
     className: ResultsTocResultRepository.name,
@@ -784,5 +786,33 @@ try {
 
   }
 
+  async getImpactAreaTargetsToc(resultId, toc_result_id){
+    try {
+      const queryTocIndicators = `
+      select * 
+	from clarisa_global_targets cgt 
+		join clarisa_impact_areas cia on cgt.impactAreaId = cia.id 
+	where targetId in (
+				SELECT tiargt.global_targets_id  from  Integration_information.toc_results tr 
+				join Integration_information.toc_results_impact_area_results triar on triar.toc_results_id  = tr.id
+				join Integration_information.toc_impact_area_results tiar on tiar.id = triar.toc_impact_area_results_id 
+				join Integration_information.toc_impact_area_results_global_targets tiargt on tiargt.toc_impact_area_results_id = tiar.id 
+				where tr.id  = ? and tr.phase = (select v.toc_pahse_id  
+	              										from result r 	
+	              										join version v on r.version_id = v.id  
+	              											where r.id  = ?)
+	) `
+      
 
+      
+      let innovatonUseInterface = await this.query(queryTocIndicators, [toc_result_id, resultId]);      
+      return innovatonUseInterface;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsTocResultRepository.name,
+        error: `updateResultByInitiative ${error}`,
+        debug: true,
+      });
+    }
+  }
 }

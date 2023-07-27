@@ -24,6 +24,8 @@ import { ClarisaImpactAreaRepository } from '../../../clarisa/clarisa-impact-are
 import { ShareResultRequestService } from '../share-result-request/share-result-request.service';
 import { CreateTocShareResult } from '../share-result-request/dto/create-toc-share-result.dto';
 import { ShareResultRequestRepository } from '../share-result-request/share-result-request.repository';
+import { log } from 'handlebars';
+import { ResultsTocResultIndicatorsRepository } from './results-toc-results-indicators.repository';
 
 @Injectable()
 export class ResultsTocResultsService {
@@ -42,6 +44,7 @@ export class ResultsTocResultsService {
     private readonly _clarisaImpactAreaRepository: ClarisaImpactAreaRepository,
     private readonly _shareResultRequestService: ShareResultRequestService,
     private readonly _shareResultRequestRepository: ShareResultRequestRepository,
+    private readonly _resultsTocResultIndicator: ResultsTocResultIndicatorsRepository
   ) {}
 
   async create(
@@ -65,11 +68,15 @@ export class ResultsTocResultsService {
       let initiativeArray: number[] = [];
       let initiativeArrayRtr: number[] = [];
       let initiativeArrayPnd: number[] = [];
+      
       if (version.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: version });
       }
       const vrs: Version = <Version>version.response;
       const titleArray = contributing_np_projects.map((el) => el.grant_title);
+
+      
+
       const iniciativeSubmitter =
         this._resultByInitiativesRepository.updateIniciativeSubmitter(
           result_id,
@@ -391,8 +398,12 @@ export class ResultsTocResultsService {
               RtRArray.push(newRtR);
             }
           }
-          await this._resultsTocResultRepository.save(RtRArray);
+           await this._resultsTocResultRepository.save(RtRArray);
+          
         }
+
+        this._resultsTocResultRepository.saveInditicatorsContributing(1,targets_indicators)
+    
       }
 
       return {
@@ -571,10 +582,11 @@ export class ResultsTocResultsService {
   async getTocResultIndicatorByResultTocId(resultIdToc: number, toc_result_id: number) {
     try {
       const informationIndicator = await this._resultsTocResultRepository.getResultTocResultByResultId(resultIdToc,toc_result_id);
-
+      const impactAreas = await this._resultsTocResultRepository.getImpactAreaTargetsToc(resultIdToc,toc_result_id);
       return {
         response: {
-          informationIndicator
+          informationIndicator,
+          impactAreas
         },
         message: 'The toc data indicator is successfully',
         status: HttpStatus.OK,
