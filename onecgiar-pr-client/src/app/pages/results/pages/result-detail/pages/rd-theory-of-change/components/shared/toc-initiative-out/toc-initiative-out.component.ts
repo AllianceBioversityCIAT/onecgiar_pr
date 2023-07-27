@@ -19,6 +19,8 @@ export class TocInitiativeOutComponent {
   indicators:any = [];
   indicatorView = false;
   disabledInput = false;
+  testingYesOrNo;
+  SDGtestingYesorNo;
   constructor(public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public api: ApiService) {}
 
   ngOnInit(): void {
@@ -159,4 +161,6 @@ export class TocInitiativeOutComponent {
       }, 100);
     })
   }
+
+
 }
