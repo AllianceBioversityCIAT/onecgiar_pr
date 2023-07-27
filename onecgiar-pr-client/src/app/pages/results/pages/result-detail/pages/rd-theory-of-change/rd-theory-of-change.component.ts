@@ -5,6 +5,7 @@ import { ResultLevelService } from '../../../result-creator/services/result-leve
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { GreenChecksService } from '../../../../../../shared/services/global/green-checks.service';
+import { RdTheoryOfChangesServicesService } from './rd-theory-of-changes-services.service';
 
 @Component({
   selector: 'app-rd-theory-of-change',
@@ -18,7 +19,9 @@ export class RdTheoryOfChangeComponent {
   getConsumed = false;
   psub = '';
   currentInitOfficialCode = null;
-  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public centersSE: CentersService, public institutionsSE: InstitutionsService, public greenChecksSE: GreenChecksService) {}
+  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public centersSE: CentersService, 
+    public institutionsSE: InstitutionsService, public greenChecksSE: GreenChecksService,
+    public theoryOfChangesServices :RdTheoryOfChangesServicesService ) {}
   ngOnInit(): void {
     this.requestEvent();
     this.getSectionInformation();
@@ -64,8 +67,13 @@ export class RdTheoryOfChangeComponent {
   }
 
   onSaveSection() {
+    
+    this.theoryOfChangeBody.targets_indicators = this.theoryOfChangesServices.targetsIndicators;
+    console.log(this.theoryOfChangeBody);
+    
+    
     const saveSection = () => {
-      //console.log(this.theoryOfChangeBody);
+      
       this.theoryOfChangeBody.contributing_initiatives = this.theoryOfChangeBody.contributing_and_primary_initiative;
       this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
         //(resp);
@@ -82,6 +90,7 @@ export class RdTheoryOfChangeComponent {
       });
 
     return saveSection();
+    
   }
 
   someEditable() {

@@ -252,6 +252,10 @@ export class ResultsApiService {
     );
   }
 
+  Get_indicator(id_toc){
+    return this.http.get<any>(`${this.apiBaseUrl}toc/get/indicator/${id_toc}/result/${this.currentResultId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+  }
+
   PATCH_innovationUse(body) {
     return this.http.patch<any>(`${this.apiBaseUrl}summary/innovation-use/create/result/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
