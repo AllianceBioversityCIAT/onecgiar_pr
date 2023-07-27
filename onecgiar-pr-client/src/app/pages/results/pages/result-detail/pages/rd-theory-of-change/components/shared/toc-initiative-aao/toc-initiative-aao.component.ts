@@ -19,7 +19,15 @@ export class TocInitiativeAaoComponent {
   }
 
   GET_tocLevelsByresultId() {
-    this.api.tocApiSE.GET_tocLevelsByresultId(this.initiative.initiative_id, 4).subscribe(
+    this.api.tocApiSE.GET_tocLevelsByconfig(this.initiative.results_id, this.initiative.initiative_id, 4).subscribe({
+      next: ({ response }) => {
+        this.actionAreasOutcomesList = response;
+      },
+      error: err => {
+        console.error(err);
+      }
+    });
+    /*this.api.tocApiSE.GET_tocLevelsByresultId(this.initiative.initiative_id, 4).subscribe(
       ({ response }) => {
         this.actionAreasOutcomesList = response;
         //(response);
@@ -27,6 +35,6 @@ export class TocInitiativeAaoComponent {
       err => {
         console.error(err);
       }
-    );
+    );*/
   }
 }

@@ -43,7 +43,17 @@ export class TocInitiativeOutComponent {
   }
 
   GET_outputList() {
-    this.api.tocApiSE.GET_tocLevelsByresultId(this.initiative.initiative_id, 1).subscribe(
+    this.api.tocApiSE.GET_tocLevelsByconfig(this.initiative.results_id, this.initiative.initiative_id, 1).subscribe({
+      next: ({ response }) => {
+        this.outputList = [];
+        this.outputList = response;
+      },
+      error: err => {
+        this.outputList = [];
+        console.error(err);
+      }
+    });
+    /*this.api.tocApiSE.GET_tocLevelsByresultId(this.initiative.initiative_id, 1).subscribe(
       ({ response }) => {
         this.outputList = [];
         this.outputList = response;
@@ -53,11 +63,20 @@ export class TocInitiativeOutComponent {
         this.outputList = [];
         console.error(err);
       }
-    );
+    );*/
   }
 
   GET_outcomeList() {
-    this.api.tocApiSE.GET_tocLevelsByresultId(this.initiative.initiative_id, 2).subscribe(
+    this.api.tocApiSE.GET_tocLevelsByconfig(this.initiative.results_id, this.initiative.initiative_id, 2).subscribe({
+      next: ({ response }) => {
+        this.outcomeList = response;
+      },
+      error: err => {
+        this.outcomeList = [];
+        console.error(err);
+      }
+    });
+    /*this.api.tocApiSE.GET_tocLevelsByresultId(this.initiative.initiative_id, 2).subscribe(
       ({ response }) => {
         this.outcomeList = response;
         //(this.outcomeList);
@@ -66,11 +85,20 @@ export class TocInitiativeOutComponent {
         this.outcomeList = [];
         console.error(err);
       }
-    );
+    );*/
   }
 
   GET_EOIList() {
-    this.api.tocApiSE.GET_tocLevelsByresultId(this.initiative.initiative_id, 3).subscribe(
+    this.api.tocApiSE.GET_tocLevelsByconfig(this.initiative.results_id, this.initiative.initiative_id, 3).subscribe({
+      next: ({ response }) => {
+        this.eoiList = response;
+      },
+      error: err => {
+        this.eoiList = [];
+        console.error(err);
+      }
+    });
+    /*this.api.tocApiSE.GET_tocLevelsByresultId(this.initiative.initiative_id, 3).subscribe(
       ({ response }) => {
         this.eoiList = response;
         //(this.eoiList);
@@ -79,7 +107,7 @@ export class TocInitiativeOutComponent {
         this.eoiList = [];
         console.error(err);
       }
-    );
+    );*/
   }
 
   GET_fullInitiativeTocByinitId() {

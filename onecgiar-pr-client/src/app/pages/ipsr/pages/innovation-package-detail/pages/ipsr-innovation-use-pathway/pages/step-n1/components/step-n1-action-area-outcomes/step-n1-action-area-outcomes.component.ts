@@ -32,7 +32,15 @@ export class StepN1ActionAreaOutcomesComponent {
     );
   }
   GET_tocLevelsByresultId() {
-    this.api.tocApiSE.GET_tocLevelsByresultId(this.ipsrDataControlSE?.detailData?.inititiative_id, 4).subscribe(
+    this.api.tocApiSE.GET_tocLevelsByconfig(this.ipsrDataControlSE?.detailData?.result_id, this.ipsrDataControlSE?.detailData?.inititiative_id, 4).subscribe({
+      next: ({ response }) => {
+        this.actionAreasOutcomesList = response;
+      },
+      error: err => {
+        console.error(err);
+      }
+    });
+    /*this.api.tocApiSE.GET_tocLevelsByresultId(this.ipsrDataControlSE?.detailData?.inititiative_id, 4).subscribe(
       ({ response }) => {
         this.actionAreasOutcomesList = response;
         //(response);
@@ -40,7 +48,7 @@ export class StepN1ActionAreaOutcomesComponent {
       err => {
         console.error(err);
       }
-    );
+    );*/
   }
   removeOption(option) {
     const index = this.body.actionAreaOutcomes.findIndex(valueItem => valueItem.action_area_outcome_id == option.action_area_outcome_id);
