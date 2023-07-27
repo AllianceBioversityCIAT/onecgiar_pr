@@ -54,6 +54,8 @@ export class TocResultsRepository extends Repository<TocResult> {
     result_id: number,
     init_id: number,
     toc_level: number,
+    is_result_id: boolean = true,
+    phase_id: string = null,
   ) {
     const queryData = `
     SELECT 
