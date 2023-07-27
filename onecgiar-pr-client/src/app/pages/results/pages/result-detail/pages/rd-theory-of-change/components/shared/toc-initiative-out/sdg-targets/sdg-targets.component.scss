@@ -28,6 +28,11 @@
 
 
 }
+@media only screen and (max-width: 1500px) {
+    .sdg_targets {
+        padding: 20px 10px !important;
+    }
+}
 
 .chips_container {
     display: flex;

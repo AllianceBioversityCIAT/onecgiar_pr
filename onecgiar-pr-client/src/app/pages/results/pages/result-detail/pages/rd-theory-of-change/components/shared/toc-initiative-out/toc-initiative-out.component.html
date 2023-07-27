@@ -49,7 +49,7 @@
     <hr class="divider-20">
 </div>
 <div *ngIf="indicatorView">
-    <app-target-indicator  [initiative]="indicator" [disabledInputs]="disabledInput" *ngFor="let indicator of indicators"></app-target-indicator>
+    <app-target-indicator  [initiative]="indicator" [disabledInputs]="disabledInput" *ngFor="let indicator of this.theoryOfChangesServices.targetsIndicators"></app-target-indicator>
     <app-pr-yes-or-not [label]="'Are you able to match your reported result to Impact Area targets?'"
             [(ngModel)]="testingYesOrNo">
         </app-pr-yes-or-not>

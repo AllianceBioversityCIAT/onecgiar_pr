@@ -47,6 +47,7 @@ import { ResultsTocResult } from './results-toc-result.entity';
     @Column({
       name: 'indicator_contributing',
       type: 'text',
+      nullable: true,
     })
     indicator_contributing: string;
 
@@ -57,6 +58,14 @@ import { ResultsTocResult } from './results-toc-result.entity';
       default: true,
     })
     is_active: boolean;
+
+    @Column({
+      name: 'is_not_aplicable',
+      type: 'boolean',
+      nullable: false,
+      default: false,
+    })
+    is_not_aplicable: boolean;
   
     @ManyToOne(() => User, (u) => u.id, { nullable: false })
     @JoinColumn({
