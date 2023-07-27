@@ -31,6 +31,7 @@ import { ResultsKnowledgeProductAuthorRepository } from '../../api/results/resul
 import { ResultsKnowledgeProductKeywordRepository } from '../../api/results/results-knowledge-products/repositories/results-knowledge-product-keywords.repository';
 import { ResultsKnowledgeProductMetadataRepository } from '../../api/results/results-knowledge-products/repositories/results-knowledge-product-metadata.repository';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
+import { ResultsTocResultIndicatorsRepository } from '../../api/results/results-toc-results/results-toc-results-indicators.repository';
 import {
   HandlersError,
   ReturnResponse,
@@ -72,6 +73,7 @@ import {
     ResultsKnowledgeProductMetadataRepository,
     ResultsKnowledgeProductInstitutionRepository,
     RoleByUserRepository,
+    ResultsTocResultIndicatorsRepository,
   ],
   exports: [TocResultsRepository],
 })
