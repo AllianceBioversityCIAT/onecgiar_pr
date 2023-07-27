@@ -28,17 +28,10 @@ export class TocResultsService {
     toc_level: number,
   ) {
     try {
-      const is_result_id = !!result_id;
-      let phase: string = '';
-
-      if (is_result_id) {
-      }
-
       let res = await this._tocResultsRepository.$_getResultTocByConfig(
         result_id,
         init_id,
         toc_level,
-        is_result_id,
       );
       if (!res.length && toc_level == 4) {
         res = await this._tocResultsRepository.getAllOutcomeByInitiative(
