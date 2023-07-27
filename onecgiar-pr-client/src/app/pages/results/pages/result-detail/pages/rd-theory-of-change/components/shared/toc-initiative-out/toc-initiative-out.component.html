@@ -53,7 +53,7 @@
     <app-pr-yes-or-not [label]="'Are you able to match your reported result to Impact Area targets?'"
             [(ngModel)]="testingYesOrNo">
         </app-pr-yes-or-not>
-    <app-impact-area-targets *ngIf="testingYesOrNo"></app-impact-area-targets>
+    <app-impact-area-targets *ngIf="testingYesOrNo" [body]="indicators"></app-impact-area-targets>
     <app-pr-yes-or-not [label]="'Are you able to match your reported result to SDG targets?'"
             [(ngModel)]="SDGtestingYesorNo">
         </app-pr-yes-or-not>

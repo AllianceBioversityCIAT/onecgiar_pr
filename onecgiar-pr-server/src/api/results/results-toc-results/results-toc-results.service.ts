@@ -582,10 +582,11 @@ export class ResultsTocResultsService {
   async getTocResultIndicatorByResultTocId(resultIdToc: number, toc_result_id: number) {
     try {
       const informationIndicator = await this._resultsTocResultRepository.getResultTocResultByResultId(resultIdToc,toc_result_id);
-
+      const impactAreas = await this._resultsTocResultRepository.getImpactAreaTargetsToc(resultIdToc,toc_result_id);
       return {
         response: {
-          informationIndicator
+          informationIndicator,
+          impactAreas
         },
         message: 'The toc data indicator is successfully',
         status: HttpStatus.OK,

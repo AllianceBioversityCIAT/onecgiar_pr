@@ -154,6 +154,8 @@ export class TocInitiativeOutComponent {
     await this.api.resultsSE.Get_indicator(this.initiative.toc_result_id).subscribe(({response})=>{
       console.log(response);
       this.theoryOfChangesServices.targetsIndicators = response?.informationIndicator;
+      this.indicators = response;
+      this.indicators.impactAreas.map(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
       if(this.indicators.length == 1){
         this.disabledInput = true;
       }

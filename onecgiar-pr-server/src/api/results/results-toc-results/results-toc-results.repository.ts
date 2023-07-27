@@ -786,5 +786,33 @@ try {
 
   }
 
+  async getImpactAreaTargetsToc(resultId, toc_result_id){
+    try {
+      const queryTocIndicators = `
+      select * 
+	from clarisa_global_targets cgt 
+		join clarisa_impact_areas cia on cgt.impactAreaId = cia.id 
+	where targetId in (
+				SELECT tiargt.global_targets_id  from  Integration_information.toc_results tr 
+				join Integration_information.toc_results_impact_area_results triar on triar.toc_results_id  = tr.id
+				join Integration_information.toc_impact_area_results tiar on tiar.id = triar.toc_impact_area_results_id 
+				join Integration_information.toc_impact_area_results_global_targets tiargt on tiargt.toc_impact_area_results_id = tiar.id 
+				where tr.id  = ? and tr.phase = (select v.toc_pahse_id  
+	              										from result r 	
+	              										join version v on r.version_id = v.id  
+	              											where r.id  = ?)
+	) `
+      
 
+      
+      let innovatonUseInterface = await this.query(queryTocIndicators, [toc_result_id, resultId]);      
+      return innovatonUseInterface;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsTocResultRepository.name,
+        error: `updateResultByInitiative ${error}`,
+        debug: true,
+      });
+    }
+  }
 }
