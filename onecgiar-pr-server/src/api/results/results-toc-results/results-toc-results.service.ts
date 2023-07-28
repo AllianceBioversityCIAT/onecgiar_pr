@@ -590,8 +590,14 @@ export class ResultsTocResultsService {
 
   async getTocResultIndicatorByResultTocId(resultIdToc: number, toc_result_id: number, init:number) {
     try {
+      let isSdg = null
+      let isImpactArea = null
       const result = await this._resultsTocResultRepository.query(`select rtr.mapping_sdg as isSdg,  rtr.mapping_impact as isImpactArea 
                                                                           from results_toc_result rtr where rtr.results_id = ${resultIdToc} and rtr.initiative_id = ${init}`);
+      if(result.length != 0) {
+        isSdg= result[0].isSdg,
+        isImpactArea= result[0].isImpactArea
+      }
       const informationIndicator = await this._resultsTocResultRepository.getResultTocResultByResultId(resultIdToc,toc_result_id,init);
       const impactAreas = await this._resultsTocResultRepository.getImpactAreaTargetsToc(resultIdToc,toc_result_id,init);
       const  sdgTargets = await this._resultsTocResultRepository.getSdgTargetsToc(resultIdToc,toc_result_id, init);
@@ -600,8 +606,8 @@ export class ResultsTocResultsService {
           informationIndicator,
          impactAreas,
           sdgTargets, 
-          isSdg: result[0].isSdg,
-          isImpactArea: result[0].isImpactArea
+          isSdg: isSdg,
+          isImpactArea: isImpactArea
         },
         message: 'The toc data indicator is successfully',
         status: HttpStatus.OK,
