@@ -406,11 +406,11 @@ export class ResultsTocResultsService {
 
         if(result != null && result.result_level_id > 2){
           let targets_indicatorsd = await this._resultsTocResultRepository.query(`select * from results_toc_result where results_id = ${result_id} and is_active = true and initiative_id = ${result.initiative_id};`)
-
+          await this._resultsTocResultRepository.update({result_toc_result_id: targets_indicatorsd[0]?.result_toc_result_id}, {mapping_impact:createResultsTocResultDto.isImpactArea, mapping_sdg:createResultsTocResultDto.isSdg})
           if(targets_indicatorsd.length > 0){
               console.log("targets_indicatorsd", targets_indicatorsd);
               await this._resultsTocResultRepository.saveInditicatorsContributing(targets_indicatorsd[0]?.result_toc_result_id, targets_indicators);
-              await this._resultsTocResultRepository.saveImpactAndSdgTargets(targets_indicatorsd[0]?.result_toc_result_id, impactAreasTargets,sdgTargest);
+              await this._resultsTocResultRepository.saveImpact(targets_indicatorsd[0]?.result_toc_result_id, impactAreasTargets);
           }
         }
       }
@@ -590,6 +590,8 @@ export class ResultsTocResultsService {
 
   async getTocResultIndicatorByResultTocId(resultIdToc: number, toc_result_id: number, init:number) {
     try {
+      const result = await this._resultsTocResultRepository.query(`select rtr.mapping_sdg as isSdg,  rtr.mapping_impact as isImpactArea 
+                                                                          from results_toc_result rtr where rtr.results_id = ${resultIdToc} and rtr.initiative_id = ${init}`);
       const informationIndicator = await this._resultsTocResultRepository.getResultTocResultByResultId(resultIdToc,toc_result_id,init);
       const impactAreas = await this._resultsTocResultRepository.getImpactAreaTargetsToc(resultIdToc,toc_result_id,init);
       const  sdgTargets = await this._resultsTocResultRepository.getSdgTargetsToc(resultIdToc,toc_result_id, init);
@@ -597,7 +599,9 @@ export class ResultsTocResultsService {
         response: {
           informationIndicator,
          impactAreas,
-          sdgTargets
+          sdgTargets, 
+          isSdg: result[0].isSdg,
+          isImpactArea: result[0].isImpactArea
         },
         message: 'The toc data indicator is successfully',
         status: HttpStatus.OK,

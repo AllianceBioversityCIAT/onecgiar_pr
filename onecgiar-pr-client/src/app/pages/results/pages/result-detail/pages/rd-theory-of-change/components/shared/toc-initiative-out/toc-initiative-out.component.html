@@ -51,11 +51,11 @@
 <div *ngIf="indicatorView">
     <app-target-indicator  [initiative]="indicator" [disabledInputs]="disabledInput" *ngFor="let indicator of this.theoryOfChangesServices.targetsIndicators"></app-target-indicator>
     <app-pr-yes-or-not [label]="'Are you able to match your reported result to Impact Area targets?'"
-            [(ngModel)]="testingYesOrNo">
+            [(ngModel)]="this.theoryOfChangesServices.isImpactArea">
         </app-pr-yes-or-not>
-    <app-impact-area-targets *ngIf="testingYesOrNo" [body]="this.theoryOfChangesServices.impactAreasTargets"></app-impact-area-targets>
+    <app-impact-area-targets *ngIf="this.theoryOfChangesServices.isImpactArea" [body]="this.theoryOfChangesServices.impactAreasTargets"></app-impact-area-targets>
     <app-pr-yes-or-not [label]="'Are you able to match your reported result to SDG targets?'"
-            [(ngModel)]="SDGtestingYesorNo">
+            [(ngModel)]="this.theoryOfChangesServices.isSdg">
         </app-pr-yes-or-not>
-    <app-sdg-targets *ngIf="SDGtestingYesorNo" [body]="this.theoryOfChangesServices.sdgTargest"></app-sdg-targets>
+    <app-sdg-targets *ngIf="this.theoryOfChangesServices.isSdg" [body]="this.theoryOfChangesServices.sdgTargest"></app-sdg-targets>
 </div>

@@ -10,6 +10,8 @@ export class CreateResultsTocResultDto {
     targets_indicators: any[];
     impactAreasTargets: any[];
     sdgTargest: any[];
+    isImpactArea: boolean;
+    isSdg: boolean;
 }
 
 interface ResultTocImpactsInterface{

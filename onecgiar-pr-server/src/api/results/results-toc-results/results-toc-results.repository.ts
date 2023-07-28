@@ -958,14 +958,11 @@ try {
     }
   }
 
-  async saveImpactAndSdgTargets(id_result_toc_result, impactAreaTargets, sdgTargets){
+  async saveImpact(id_result_toc_result, impactAreaTargets){
 
     try {
       await this._resultsTocImpactAreaTargetRepository.update({result_toc_result_id:id_result_toc_result},
         {is_active : false});
-        await this._resultsTocSdgTargetRepository.update({result_toc_result_id:id_result_toc_result},
-          {is_active : false});
-
       if(impactAreaTargets.length != 0){
         for(let impact of impactAreaTargets){
           let targetIndicators = await this._resultsTocImpactAreaTargetRepository.findOne({
@@ -986,26 +983,7 @@ try {
         }
     }      
     }
-    if(sdgTargets.length != 0){
-      for(let sdg of sdgTargets){
-        let targetIndicators = await this._resultsTocSdgTargetRepository.findOne({
-          where: {
-            result_toc_result_id: id_result_toc_result,
-            clarisa_sdg_target_id: sdg.clarisa_sdg_target_id,
-          }
-      });
-
-      if(targetIndicators != null){
-        sdg.is_active = true;
-      }else{
-        await this._resultsTocSdgTargetRepository.save({
-          result_toc_result_id: id_result_toc_result,
-          clarisa_sdg_target_id: sdg.id,
-          clarisa_sdg_usnd_code: sdg.usnd_code,
-        });
-      }
-    }
-  }
+    
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,

@@ -7,5 +7,7 @@ export class RdTheoryOfChangesServicesService {
   targetsIndicators: any = [];
   impactAreasTargets: any = [];
   sdgTargest: any = [];
+  isSdg: boolean;
+  isImpactArea: boolean;
   constructor() { }
 }

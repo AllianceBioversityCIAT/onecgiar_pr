@@ -71,6 +71,8 @@ export class RdTheoryOfChangeComponent {
     this.theoryOfChangeBody.targets_indicators = this.theoryOfChangesServices.targetsIndicators;
     this.theoryOfChangeBody.sdgTargest = this.theoryOfChangesServices.sdgTargest;
     this.theoryOfChangeBody.impactAreasTargets = this.theoryOfChangesServices.impactAreasTargets;
+    this.theoryOfChangeBody.isSdg = this.theoryOfChangesServices.isSdg;
+    this.theoryOfChangeBody.isImpactArea = this.theoryOfChangesServices.isImpactArea;
     console.log(this.theoryOfChangeBody);
     
     
