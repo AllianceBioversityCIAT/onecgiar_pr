@@ -51,8 +51,8 @@ export class TocInitiativeOutComponent {
 
   GET_outputList() {
     console.log(this.api.dataControlSE.currentNotification);
-    
-    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.api.dataControlSE.currentNotification?.results_id || this.initiative?.results_id, this.initiative.initiative_id, 1).subscribe({
+
+    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.api.dataControlSE.currentNotification?.results_id || this.initiative?.results_id || this.api.dataControlSE?.currentResult?.id, this.initiative.initiative_id, 1).subscribe({
       next: ({ response }) => {
         this.outputList = [];
         this.outputList = response;
@@ -76,7 +76,7 @@ export class TocInitiativeOutComponent {
   }
 
   GET_outcomeList() {
-    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id ||this.api.dataControlSE.currentNotification?.result_id || this.initiative?.results_id, this.initiative.initiative_id, 2).subscribe({
+    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.api.dataControlSE.currentNotification?.result_id || this.initiative?.results_id || this.api.dataControlSE?.currentResult?.id, this.initiative.initiative_id, 2).subscribe({
       next: ({ response }) => {
         this.outcomeList = response;
       },
@@ -98,7 +98,7 @@ export class TocInitiativeOutComponent {
   }
 
   GET_EOIList() {
-    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id ||this.api.dataControlSE.currentNotification?.result_id || this.initiative?.results_id, this.initiative.initiative_id, 3).subscribe({
+    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.api.dataControlSE.currentNotification?.result_id || this.initiative?.results_id || this.api.dataControlSE?.currentResult?.id, this.initiative.initiative_id, 3).subscribe({
       next: ({ response }) => {
         this.eoiList = response;
       },
