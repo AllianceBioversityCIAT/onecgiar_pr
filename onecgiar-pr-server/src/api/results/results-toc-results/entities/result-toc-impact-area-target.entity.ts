@@ -12,13 +12,13 @@ import {
 import { ResultsTocResult } from './results-toc-result.entity';
   
   @Entity('result_toc_impact_area_target')
-  export class ResultIpImpactArea extends BaseEntity {
+  export class ResultTocImpactArea extends BaseEntity {
     @PrimaryGeneratedColumn()
     result_toc_impact_area_id: number;
   
     @Column({
         type: 'bigint',
-        name: 'result_by_innovation_package_id',
+        name: 'result_toc_result_id',
     })
     result_toc_result_id: number;
   
@@ -30,7 +30,7 @@ import { ResultsTocResult } from './results-toc-result.entity';
   
     @ManyToOne(() => ResultsTocResult, (tr) => tr.result_toc_result_id, { nullable: true })
     @JoinColumn({
-      name: 'results_toc_results_id',
+      name: 'result_toc_result_id',
     })
     results_toc_results!: ResultsTocResult;
     
@@ -40,4 +40,3 @@ import { ResultsTocResult } from './results-toc-result.entity';
     })
     obj_impact_area_indicator: ClarisaGlobalTarget;
   }
-  

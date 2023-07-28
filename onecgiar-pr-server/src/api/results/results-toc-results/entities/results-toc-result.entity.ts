@@ -71,6 +71,20 @@ export class ResultsTocResult {
   initiative_id!: number;
 
   @Column({
+    name: 'mapping_sdg',
+    type: 'boolean',
+    nullable: true,
+  })
+  mapping_sdg: boolean;
+
+  @Column({
+    name: 'mapping_impact',
+    type: 'boolean',
+    nullable: true,
+  })
+  mapping_impact: boolean;
+
+  @Column({
     name: 'is_active',
     type: 'boolean',
     nullable: false,

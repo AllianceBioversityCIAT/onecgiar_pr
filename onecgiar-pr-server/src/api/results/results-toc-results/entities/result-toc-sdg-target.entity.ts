@@ -6,13 +6,13 @@ import { ResultsTocResult } from "./results-toc-result.entity";
 
 
 @Entity('result_toc_sdg_targets')
-export class ResultIpSdgTargets extends BaseEntity {
+export class ResultTocSdgTargets extends BaseEntity {
     @PrimaryGeneratedColumn()
     result_toc_sdg_target_id: number;
 
     @Column({
         type: 'bigint',
-        name: 'result_by_innovation_package_id',
+        name: 'result_toc_result_id',
     })
     result_toc_result_id: number;
 
@@ -30,7 +30,7 @@ export class ResultIpSdgTargets extends BaseEntity {
 
     @ManyToOne(() => ResultsTocResult, (tr) => tr.result_toc_result_id, { nullable: true })
     @JoinColumn({
-      name: 'results_toc_results_id',
+      name: 'result_toc_result_id',
     })
     results_toc_results!: ResultsTocResult;
 
@@ -46,3 +46,4 @@ export class ResultIpSdgTargets extends BaseEntity {
     })
     obj_clarisa_sdg_target: ClarisaSdgsTarget;
 }
+

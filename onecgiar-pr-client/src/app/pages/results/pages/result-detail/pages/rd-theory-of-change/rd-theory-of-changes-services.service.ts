@@ -5,5 +5,7 @@ import { Injectable } from '@angular/core';
 })
 export class RdTheoryOfChangesServicesService {
   targetsIndicators: any = [];
+  impactAreasTargets: any = [];
+  sdgTargest: any = [];
   constructor() { }
 }
