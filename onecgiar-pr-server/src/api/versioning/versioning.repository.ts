@@ -58,4 +58,28 @@ export class VersionRepository extends Repository<Version> {
       return false;
     }
   }
+
+  $_getVersionOfAResult(result_id: number): Promise<number[]> {
+    const queryData = `
+    select
+    r2.version_id
+  from
+    \`result\` r2
+  where
+    r2.result_code = (
+    select
+      r.result_code
+    from
+      \`result\` r
+    where
+      r.id = ?)
+      `;
+    return this.query(queryData, [result_id])
+      .then((res: { version_id: number }[]) => {
+        return res.map((item) => item.version_id);
+      })
+      .catch((err) => {
+        return [];
+      });
+  }
 }

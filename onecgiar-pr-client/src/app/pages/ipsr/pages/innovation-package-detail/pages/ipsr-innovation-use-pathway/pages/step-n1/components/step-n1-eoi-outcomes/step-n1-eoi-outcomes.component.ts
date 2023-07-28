@@ -18,7 +18,15 @@ export class StepN1EoiOutcomesComponent {
 
   GET_EOIList() {
     //(this.ipsrDataControlSE?.detailData?.inititiative_id);
-    this.tocApiSE.GET_tocLevelsByresultId(this.ipsrDataControlSE?.detailData?.inititiative_id, 3).subscribe(
+    this.tocApiSE.GET_tocLevelsByconfig(this.ipsrDataControlSE?.detailData?.result_id, this.ipsrDataControlSE?.detailData?.inititiative_id, 3).subscribe({
+      next: ({ response }) => {
+        this.eoiList = response;
+      },
+      error: err => {
+        console.error(err);
+      }
+    });
+    /*this.tocApiSE.GET_tocLevelsByresultId(this.ipsrDataControlSE?.detailData?.inititiative_id, 3).subscribe(
       ({ response }) => {
         //(response);
         this.eoiList = response;
@@ -26,6 +34,6 @@ export class StepN1EoiOutcomesComponent {
       err => {
         console.error(err);
       }
-    );
+    );*/
   }
 }
