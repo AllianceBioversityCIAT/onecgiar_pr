@@ -1,7 +1,10 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { CreateShareResultRequestDto } from './dto/create-share-result-request.dto';
 import { UpdateShareResultRequestDto } from './dto/update-share-result-request.dto';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import {
+  HandlersError,
+  ReturnResponse,
+} from '../../../shared/handlers/error.utils';
 import { ShareResultRequestRepository } from './share-result-request.repository';
 import { CreateTocShareResult } from './dto/create-toc-share-result.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
@@ -135,6 +138,24 @@ export class ShareResultRequestService {
 
   async updateResultRequestByUser(data: ShareResultRequest, user: TokenDto) {
     try {
+      const res = await this._resultRepository.findOne({
+        where: {
+          id: data.result_id,
+          is_active: true,
+        },
+        relations: {
+          obj_version: true,
+        },
+      });
+
+      if (!res.obj_version.status) {
+        throw {
+          response: res.obj_version,
+          message: 'The version is closed',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
       const version = await this._versionsService.findBaseVersion();
       if (version.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: version });

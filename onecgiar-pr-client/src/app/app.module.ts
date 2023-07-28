@@ -19,6 +19,7 @@ import { YmzListStructureItemModule } from './shared/directives/ymz-list-structu
 import { ChangePhaseModalModule } from './shared/components/change-phase-modal/change-phase-modal.module';
 import { FooterModule } from './shared/components/footer/footer.module';
 import { DialogModule } from 'primeng/dialog';
+
 @NgModule({
   declarations: [AppComponent, NavigationBarComponent, HeaderPanelComponent, ExternalToolsComponent, TestEnvironmentLabelComponent, TawkComponent, GoogleAnalyticsComponent],
   imports: [BrowserModule, AppRoutingModule, BrowserAnimationsModule, HttpClientModule, CustomFieldsModule, ShareRequestModalModule, YmzListStructureItemModule, ChangePhaseModalModule, FooterModule, DialogModule],

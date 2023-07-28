@@ -1,8 +1,15 @@
-.p-datatable-thead{
-    tr{
-        th{
+.p-datatable-thead {
+    tr {
+        th {
             background-color: var(--pr-color-secondary) !important;
             color: white !important;
         }
     }
+}
+
+.p-datepicker-touch-ui,
+.p-calendar .p-datepicker-touch-ui {
+
+    min-width: 27vw !important;
+
 }

@@ -721,4 +721,8 @@ export class ResultsApiService {
   GET_resultYears() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results/years`);
   }
+
+  GET_versioningResult() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/versioning/result/${this.ipsrDataControlSE.inIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId}`);
+  }
 }
