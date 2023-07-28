@@ -11,6 +11,8 @@ export class TheoryOfChangeBody {
   targets_indicators:any[];
   impactAreasTargets: any[];
   sdgTargest: any[];
+  isSdg: boolean;
+  isImpactArea: boolean;
 }
 interface ResultTocImpactsInterface {
   id: number;
