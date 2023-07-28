@@ -61,7 +61,9 @@ export class ResultsTocResultsService {
         contributors_result_toc_result,
         impacts,
         pending_contributing_initiatives,
-        targets_indicators
+        targets_indicators,
+        impactAreasTargets,
+        sdgTargest
       } = createResultsTocResultDto;
       const version = await this._versionsService.findBaseVersion();
       const result = await this._resultRepository.getResultById(result_id);
@@ -402,8 +404,15 @@ export class ResultsTocResultsService {
           
         }
 
-        this._resultsTocResultRepository.saveInditicatorsContributing(1,targets_indicators)
-    
+        if(result != null && result.result_level_id > 2){
+          let targets_indicatorsd = await this._resultsTocResultRepository.query(`select * from results_toc_result where results_id = ${result_id} and is_active = true and initiative_id = ${result.initiative_id};`)
+
+          if(targets_indicatorsd.length > 0){
+              console.log("targets_indicatorsd", targets_indicatorsd);
+              await this._resultsTocResultRepository.saveInditicatorsContributing(targets_indicatorsd[0]?.result_toc_result_id, targets_indicators);
+              await this._resultsTocResultRepository.saveImpactAndSdgTargets(targets_indicatorsd[0]?.result_toc_result_id, impactAreasTargets,sdgTargest);
+          }
+        }
       }
 
       return {
@@ -579,14 +588,16 @@ export class ResultsTocResultsService {
     return `This action removes a #${id} resultsTocResult`;
   }
 
-  async getTocResultIndicatorByResultTocId(resultIdToc: number, toc_result_id: number) {
+  async getTocResultIndicatorByResultTocId(resultIdToc: number, toc_result_id: number, init:number) {
     try {
-      const informationIndicator = await this._resultsTocResultRepository.getResultTocResultByResultId(resultIdToc,toc_result_id);
-      const impactAreas = await this._resultsTocResultRepository.getImpactAreaTargetsToc(resultIdToc,toc_result_id);
+      const informationIndicator = await this._resultsTocResultRepository.getResultTocResultByResultId(resultIdToc,toc_result_id,init);
+      const impactAreas = await this._resultsTocResultRepository.getImpactAreaTargetsToc(resultIdToc,toc_result_id,init);
+      const  sdgTargets = await this._resultsTocResultRepository.getSdgTargetsToc(resultIdToc,toc_result_id, init);
       return {
         response: {
           informationIndicator,
-          impactAreas
+         impactAreas,
+          sdgTargets
         },
         message: 'The toc data indicator is successfully',
         status: HttpStatus.OK,

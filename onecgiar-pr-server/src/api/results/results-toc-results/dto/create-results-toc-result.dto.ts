@@ -8,6 +8,8 @@ export class CreateResultsTocResultDto {
     impacts: ResultTocImpactsInterface[];
     pending_contributing_initiatives: shareResultRequestInterface[];
     targets_indicators: any[];
+    impactAreasTargets: any[];
+    sdgTargest: any[];
 }
 
 interface ResultTocImpactsInterface{

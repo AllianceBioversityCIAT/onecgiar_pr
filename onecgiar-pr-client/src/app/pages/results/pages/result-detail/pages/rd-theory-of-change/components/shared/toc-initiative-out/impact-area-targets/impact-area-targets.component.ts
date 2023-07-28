@@ -9,7 +9,7 @@ import { ApiService } from 'src/app/shared/services/api/api.service';
 })
 export class ImpactAreaTargetsComponent implements OnInit {
 
-  @Input() body = new IpsrStep1Body();
+  @Input() body = [];
   allImpactAreaIndicators = [];
   currentImpactAreaID = null;
   impactAreasData = [
@@ -37,8 +37,8 @@ export class ImpactAreaTargetsComponent implements OnInit {
   }
 
   removeOption(option) {
-    const index = this.body.impactAreas.findIndex((valueItem: any) => valueItem.targetId == option.targetId);
-    this.body.impactAreas.splice(index, 1);
+    const index = this.body.findIndex((valueItem: any) => valueItem.targetId == option.targetId);
+    this.body.splice(index, 1);
   }
 
   selectImpactArea(impactAreaItem) {

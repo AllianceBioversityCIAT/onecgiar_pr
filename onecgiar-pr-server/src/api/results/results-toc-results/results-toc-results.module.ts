@@ -21,6 +21,8 @@ import { ShareResultRequestService } from '../share-result-request/share-result-
 import { ShareResultRequestRepository } from '../share-result-request/share-result-request.repository';
 import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/result_initiative_budget.repository';
 import { ResultsTocResultIndicatorsRepository } from './results-toc-results-indicators.repository';
+import { ResultsTocSdgTargetRepository } from './result-toc-sdg-target-repository';
+import { ResultsTocImpactAreaTargetRepository } from './result-toc-impact-area-repository';
 
 @Module({
   controllers: [ResultsTocResultsController],
@@ -43,7 +45,9 @@ import { ResultsTocResultIndicatorsRepository } from './results-toc-results-indi
     ShareResultRequestRepository,
     ResultInitiativeBudgetRepository,
     ReturnResponse,
-    ResultsTocResultIndicatorsRepository
+    ResultsTocResultIndicatorsRepository,
+    ResultsTocSdgTargetRepository,
+    ResultsTocImpactAreaTargetRepository
   ],
   exports: [ResultsTocResultRepository],
 })

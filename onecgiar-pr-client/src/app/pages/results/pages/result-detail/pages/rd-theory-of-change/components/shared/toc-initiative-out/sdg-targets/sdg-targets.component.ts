@@ -10,7 +10,7 @@ import { ApiService } from 'src/app/shared/services/api/api.service';
 export class SdgTargetsComponent implements OnInit {
 
   currentsdgID = null;
-  @Input() body = new IpsrStep1Body();
+  @Input() body = [];
   sdgTargetLis = [];
   constructor(public api: ApiService) {}
   ngOnInit(): void {
@@ -36,8 +36,8 @@ export class SdgTargetsComponent implements OnInit {
     );
   }
   removeOption(option) {
-    const index = this.body.sdgTargets.findIndex((valueItem: any) => valueItem.id == option.id);
-    this.body.sdgTargets.splice(index, 1);
+    const index = this.body.findIndex((valueItem: any) => valueItem.id == option.id);
+    this.body.splice(index, 1);
   }
   // mapSdgTargetListDropdowns(objectList) {
   //   (objectList);
