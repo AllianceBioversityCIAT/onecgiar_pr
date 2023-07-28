@@ -269,6 +269,17 @@ export class InnovationPathwayStepOneService {
           eoiOutcomes?.map((el) => el['title']),
         )}.`,
       };
+
+      const scalingText = scalig_ambition['body'];
+
+      const scalingAmbitionBlurb =
+        await this._resultInnovationPackageRepository.update(
+          { result_innovation_package_id: result.id },
+          {
+            scaling_ambition_blurb: scalingText,
+          },
+        );
+
       return {
         response: await {
           result_id: result.id,
@@ -471,20 +482,9 @@ export class InnovationPathwayStepOneService {
         });
       }
 
-      const scalingText = UpdateInnovationPathwayDto.scalig_ambition['body'];
-
-      const scalingAmbitionBlurb =
-        await this._resultInnovationPackageRepository.update(
-          { result_innovation_package_id: result.id },
-          {
-            scaling_ambition_blurb: scalingText,
-          },
-        );
-
       const specifyAspiredOutcomesAndImpact =
         await this.saveSpecifyAspiredOutcomesAndImpact(
           result,
-          version,
           UpdateInnovationPathwayDto,
           user,
         );
@@ -533,7 +533,6 @@ export class InnovationPathwayStepOneService {
 
       return {
         response: [
-          scalingAmbitionBlurb,
           specifyAspiredOutcomesAndImpact,
           actionAreaOutcomes,
           impactAreas,
@@ -553,7 +552,6 @@ export class InnovationPathwayStepOneService {
 
   async saveSpecifyAspiredOutcomesAndImpact(
     result: any,
-    version: Version,
     UpdateInnovationPathwayDto: UpdateInnovationPathwayDto,
     user: TokenDto,
   ) {
