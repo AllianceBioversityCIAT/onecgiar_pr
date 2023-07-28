@@ -17,12 +17,12 @@ export class TocInitiativeOutComponent {
   outputList = [];
   eoiList = [];
   fullInitiativeToc = null;
-  indicators:any = [];
+  indicators: any = [];
   indicatorView = false;
   disabledInput = false;
   testingYesOrNo;
   SDGtestingYesorNo;
-  constructor(public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public api: ApiService, public theoryOfChangesServices :RdTheoryOfChangesServicesService) {}
+  constructor(public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {}
 
   ngOnInit(): void {
     //(this.initiative);
@@ -31,7 +31,7 @@ export class TocInitiativeOutComponent {
     this.GET_outputList();
     this.GET_EOIList();
     this.valdiateEOI(this.initiative);
-    if(this.initiative.toc_result_id != null){
+    if (this.initiative.toc_result_id != null) {
       this.getIndicator();
     }
   }
@@ -50,7 +50,7 @@ export class TocInitiativeOutComponent {
   }
 
   GET_outputList() {
-    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification.results_id, this.initiative.initiative_id, 1).subscribe({
+    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.results_id || this.initiative?.results_id, this.initiative.initiative_id, 1).subscribe({
       next: ({ response }) => {
         this.outputList = [];
         this.outputList = response;
@@ -74,7 +74,7 @@ export class TocInitiativeOutComponent {
   }
 
   GET_outcomeList() {
-    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification.result_id, this.initiative.initiative_id, 2).subscribe({
+    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.initiative?.results_id, this.initiative.initiative_id, 2).subscribe({
       next: ({ response }) => {
         this.outcomeList = response;
       },
@@ -96,7 +96,7 @@ export class TocInitiativeOutComponent {
   }
 
   GET_EOIList() {
-    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification.result_id, this.initiative.initiative_id, 3).subscribe({
+    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.initiative?.results_id, this.initiative.initiative_id, 3).subscribe({
       next: ({ response }) => {
         this.eoiList = response;
       },
@@ -138,15 +138,13 @@ export class TocInitiativeOutComponent {
       this.showOutcomeLevel = true;
     }, 100);
 
-    if(!initiative.planned_result){
+    if (!initiative.planned_result) {
       this.indicatorView = false;
       this.indicators = [];
     }
-    
   }
 
-
-  async getIndicator(){
+  async getIndicator() {
     this.indicators = [];
     this.indicatorView = false;
     this.disabledInput = false;
@@ -166,8 +164,6 @@ export class TocInitiativeOutComponent {
       setTimeout(() => {
         this.indicatorView = true;
       }, 100);
-    })
+    });
   }
-
-
 }
