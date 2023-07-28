@@ -44,4 +44,5 @@ export class ResultsKnowledgeProductDto {
   ost_melia_study_id?: number;
   result_data: CreateResultDto;
   warnings?: string[];
+  cgspace_phase_year: number;
 }

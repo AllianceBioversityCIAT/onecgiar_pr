@@ -10,9 +10,6 @@ import { MQAPService } from '../../m-qap/m-qap.service';
 import { Result } from '../entities/result.entity';
 import { ResultRepository } from '../result.repository';
 import { Version } from '../../versioning/entities/version.entity';
-import { VersionRepository } from '../../versioning/versioning.repository';
-import { CreateResultsKnowledgeProductFromHandleDto } from './dto/create-results-knowledge-product-from-handle.dto';
-import { UpdateResultsKnowledgeProductDto } from './dto/update-results-knowledge-product.dto';
 import { ResultsKnowledgeProduct } from './entities/results-knowledge-product.entity';
 import { ResultsKnowledgeProductMapper } from './results-knowledge-products.mapper';
 import { ResultsKnowledgeProductsRepository } from './repositories/results-knowledge-products.repository';
@@ -22,7 +19,6 @@ import { ResultsKnowledgeProductInstitutionRepository } from './repositories/res
 import { ResultsKnowledgeProductKeywordRepository } from './repositories/results-knowledge-product-keywords.repository';
 import { ResultsKnowledgeProductMetadataRepository } from './repositories/results-knowledge-product-metadata.repository';
 import { ResultsKnowledgeProductDto } from './dto/results-knowledge-product.dto';
-import { ResultsService } from '../results.service';
 import { returnFormatResult } from '../dto/return-format-result.dto';
 import { ModuleRef } from '@nestjs/core';
 import { CreateResultDto } from '../dto/create-result.dto';
@@ -32,7 +28,6 @@ import { ResultLevelRepository } from '../result_levels/resultLevel.repository';
 import { ResultTypesService } from '../result_types/result_types.service';
 import { ResultLevel } from '../result_levels/entities/result_level.entity';
 import { ResultType } from '../result_types/entities/result_type.entity';
-import { VersionsService } from '../versions/versions.service';
 import { Year } from '../years/entities/year.entity';
 import { YearRepository } from '../years/year.repository';
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
@@ -104,7 +99,6 @@ export class ResultsKnowledgeProductsService {
     private readonly _resultByLevelRepository: ResultByLevelRepository,
     private readonly _resultLevelRepository: ResultLevelRepository,
     private readonly _resultTypeRepository: ResultTypeRepository,
-    private readonly _versionRepository: VersionRepository,
     private readonly _roleByUseRepository: RoleByUserRepository,
     private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
     private readonly _resultRegionRepository: ResultRegionRepository,
@@ -251,6 +245,7 @@ export class ResultsKnowledgeProductsService {
 
       const cgspaceResponse = await this.findOnCGSpace(
         resultKnowledgeProduct.handle,
+        resultKnowledgeProduct.result_object?.obj_version?.cgspace_year,
         false,
       );
 
@@ -556,7 +551,11 @@ export class ResultsKnowledgeProductsService {
     newKnowledgeProduct.result_object.result_country_array = countries;
   }
 
-  async findOnCGSpace(handle: string, validateExisting: boolean = true) {
+  async findOnCGSpace(
+    handle: string,
+    versionCgspaceYear: number,
+    validateExisting: boolean = true,
+  ) {
     try {
       if (!handle) {
         throw {
@@ -564,6 +563,14 @@ export class ResultsKnowledgeProductsService {
           message: 'Missing data: handle',
           status: HttpStatus.BAD_REQUEST,
         };
+      }
+
+      if (validateExisting) {
+        const currentVersion: Version =
+          await this._versioningService.$_findActivePhase(
+            AppModuleIdEnum.REPORTING,
+          );
+        versionCgspaceYear = currentVersion?.phase_year;
       }
 
       const hasQuery = (handle ?? '').indexOf('?');
@@ -611,31 +618,38 @@ export class ResultsKnowledgeProductsService {
       const cgYear =
         this._resultsKnowledgeProductMapper.getPublicationYearFromMQAPResponse(
           mqapResponse,
-        ) ?? 0;
+        );
 
-      if (cgYear < 2022) {
+      if ((cgYear.year ?? 0) != versionCgspaceYear) {
         throw {
           response: { title: mqapResponse?.Title },
           message:
-            "You can't report knowledge products older than 2022 for the current reporting " +
-            'cycle. In case you need support to correct the publication year of ' +
-            'this knowledge product, please contact the librarian of your Center.',
+            `You can't report knowledge products from years different than ${versionCgspaceYear} ` +
+            'for the current reporting cycle. In case you need support to correct the publication ' +
+            'year of this knowledge product, please contact the librarian of your Center.',
           status: HttpStatus.UNPROCESSABLE_ENTITY,
         };
       } else if (
-        cgYear > 2022 &&
-        (mqapResponse?.Type ?? '') != 'Journal Article'
+        (cgYear.field_name != 'online_publication_date' &&
+          (mqapResponse?.Type ?? '') == 'Journal Article') ||
+        (cgYear.field_name == 'online_publication_date' &&
+          (mqapResponse?.Type ?? '') == 'Journal Article' &&
+          (cgYear.year ?? 0) != versionCgspaceYear)
       ) {
+        const dateFieldName = (cgYear?.field_name ?? '')
+          .split('_')
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' ');
         throw {
           response: { title: mqapResponse?.Title },
           message:
-            'Only Journal Articles from 2022 and 2023 will be allowed for this ' +
-            "reporting cycle. The knowledge product's type you are trying to create is " +
+            `Only Journal Articles <b>published online<b> in 2023 will be allowed for this reporting cycle. ` +
+            "The knowledge product's date type you are trying to create is " +
             `"${
-              mqapResponse?.Type ?? 'Not Defined'
-            }" and the issue year is "${cgYear}". ` +
-            'In case you need support to correct the issue year of ' +
-            'this knowledge product, please contact the librarian of your Center.',
+              dateFieldName || 'Not Defined'
+            }" and the year is "${cgYear}". ` +
+            'If you believe there has been a mistake, please get in touch with the library staff ' +
+            'of your Center to review this information in the repository.',
           status: HttpStatus.UNPROCESSABLE_ENTITY,
         };
       }
@@ -671,7 +685,9 @@ export class ResultsKnowledgeProductsService {
       }
 
       const currentVersion: Version =
-        await this._versionRepository.getBaseVersion();
+        await this._versioningService.$_findActivePhase(
+          AppModuleIdEnum.REPORTING,
+        );
 
       if (!currentVersion) {
         throw {
@@ -943,7 +959,7 @@ export class ResultsKnowledgeProductsService {
     }
 
     //updating general result tables
-    this._resultRepository.update(
+    await this._resultRepository.update(
       { id: newResult.id },
       {
         geographic_scope_id: newResult.geographic_scope_id,
@@ -1055,6 +1071,7 @@ export class ResultsKnowledgeProductsService {
             results_id: result.id,
             //...this._resultsKnowledgeProductWhere,
           },
+          relations: { result_object: { obj_version: true } },
         });
 
       if (!knowledgeProduct) {

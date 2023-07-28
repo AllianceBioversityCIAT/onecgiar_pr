@@ -83,7 +83,7 @@ export class KnowledgeProductInfoComponent implements OnInit {
         this.getMetadataFromCGSpace(mapped, response);
       }
     } else {
-      if (response.metadataCG?.issue_year == 2022) {
+      if (response.metadataCG?.issue_year == response.cgspace_phase_year) {
         this.getMetadataFromCGSpace(mapped, response);
       }
     }
@@ -100,15 +100,23 @@ export class KnowledgeProductInfoComponent implements OnInit {
   }
 
   private getMetadataFromCGSpace(mapped: KnowledgeProductBodyMapped, response: KnowledgeProductBody) {
-    mapped.is_peer_reviewed_CG = response.metadataCG?.is_peer_reviewed;
-    mapped.is_isi_CG = response.metadataCG?.is_isi;
+    mapped.is_peer_reviewed_CG = this.transformBoolean(response.metadataCG?.is_peer_reviewed);
+    mapped.is_isi_CG = this.transformBoolean(response.metadataCG?.is_isi);
     mapped.accessibility_CG = response.metadataCG?.accessibility == true ? 'Open Access' : 'Limited Access';
     mapped.yearCG = response.metadataCG?.issue_year;
   }
 
+  private transformBoolean(value: boolean): string {
+    if (value == null) {
+      return 'Not available';
+    }
+
+    return value ? 'Yes' : 'No';
+  }
+
   private getMetadataFromWoS(mapped: KnowledgeProductBodyMapped, response: KnowledgeProductBody) {
-    mapped.is_peer_reviewed_WOS = response.metadataWOS?.is_peer_reviewed;
-    mapped.is_isi_WOS = response.metadataWOS?.is_isi;
+    mapped.is_peer_reviewed_WOS = this.transformBoolean(response.metadataWOS?.is_peer_reviewed);
+    mapped.is_isi_WOS = this.transformBoolean(response.metadataWOS?.is_isi);
     mapped.accessibility_WOS = response.metadataWOS?.accessibility == true ? 'Open Access' : 'Limited Access';
     mapped.year_WOS = response.metadataWOS?.issue_year;
   }

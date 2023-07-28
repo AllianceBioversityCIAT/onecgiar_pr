@@ -108,7 +108,8 @@ export class ResultsKnowledgeProductMapper {
     metadataCGSpace.doi = dto?.DOI;
     metadataCGSpace.is_isi = dto?.ISI === 'ISI Journal';
     metadataCGSpace.is_peer_reviewed = dto?.['Peer-reviewed'] === 'Peer Review';
-    metadataCGSpace.issue_year = this.getPublicationYearFromMQAPResponse(dto);
+    metadataCGSpace.issue_year =
+      this.getPublicationYearFromMQAPResponse(dto)?.year;
 
     metadataHolder.push(metadataCGSpace);
     knowledgeProductDto.metadataCG = metadataCGSpace;
@@ -285,8 +286,23 @@ export class ResultsKnowledgeProductMapper {
     return altmetric;
   }
 
-  public getPublicationYearFromMQAPResponse(dto: MQAPResultDto): number {
-    const publicationDate = dto?.['Publication Date'] ?? '';
+  public getPublicationYearFromMQAPResponse(dto: MQAPResultDto): {
+    field_name: string;
+    year: number;
+  } {
+    let publicationDate = dto?.['Online publication date'];
+    let fieldName = 'online_publication_date';
+
+    if (!publicationDate) {
+      publicationDate = dto?.['Issued date'];
+      fieldName = 'issued_date';
+    }
+
+    if (!publicationDate) {
+      publicationDate = dto?.['Publication Date'];
+      fieldName = 'publication_date';
+    }
+
     const isComposed: boolean = publicationDate.indexOf('-') > 0;
     let year: number = 0;
 
@@ -296,7 +312,10 @@ export class ResultsKnowledgeProductMapper {
       year = Number(publicationDate);
     }
 
-    return Number.isNaN(year) ? undefined : year;
+    return {
+      field_name: fieldName,
+      year: Number.isNaN(year) ? undefined : year,
+    };
   }
 
   getAuthorsFromMQAPResponse(dto: MQAPResultDto): MQAPAuthor[] {
@@ -348,6 +367,8 @@ export class ResultsKnowledgeProductMapper {
       entity.melia_previous_submitted;
     knowledgeProductDto.melia_type_id = entity.melia_type_id;
     knowledgeProductDto.ost_melia_study_id = entity.ost_melia_study_id;
+    knowledgeProductDto.cgspace_phase_year =
+      entity?.result_object?.obj_version?.cgspace_year;
     //TODO remove when this mapping is done
     //knowledgeProductDto.cgspace_countries = entity.cgspace_countries;
     //knowledgeProductDto.cgspace_regions = entity.cgspace_regions;
