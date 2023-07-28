@@ -6,6 +6,7 @@
             (click)="goToresultUrl(phase?.id)"
             *ngFor="let phase of this.api.dataControlSE.resultPhaseList">{{phase.phase_name}} <div class="tag">
                 <div class="text">{{phase.status?'Open':'Closed'}}</div>
+                <i class="material-icons-round">{{phase.status?'edit':'lock'}}</i>
             </div>
         </a>
     </div>
