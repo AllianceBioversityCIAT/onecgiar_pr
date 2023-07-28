@@ -7,11 +7,7 @@ export class CreateResultsTocResultDto {
     contributors_result_toc_result: resultToResultInterfaceToc[];
     impacts: ResultTocImpactsInterface[];
     pending_contributing_initiatives: shareResultRequestInterface[];
-    targets_indicators: any[];
-    impactAreasTargets: any[];
-    sdgTargest: any[];
-    isImpactArea: boolean;
-    isSdg: boolean;
+    bodyNewTheoryOfChanges: any[];
 }
 
 interface ResultTocImpactsInterface{
