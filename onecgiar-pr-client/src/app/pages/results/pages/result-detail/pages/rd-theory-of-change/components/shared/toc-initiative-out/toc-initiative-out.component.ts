@@ -13,6 +13,7 @@ export class TocInitiativeOutComponent {
   @Input() initiative: any;
   @Input() resultLevelId: number | string;
   @Input() isIpsr: boolean = false;
+  @Input() indexYesorNo: number;
   outcomeList = [];
   outputList = [];
   eoiList = [];
@@ -152,14 +153,22 @@ export class TocInitiativeOutComponent {
     this.disabledInput = false;
     await this.api.resultsSE.Get_indicator(this.initiative.toc_result_id, this.initiative.initiative_id).subscribe(({ response }) => {
       console.log(response);
+      
       this.theoryOfChangesServices.targetsIndicators = response?.informationIndicator;
       this.theoryOfChangesServices.impactAreasTargets = response?.impactAreas;
       this.theoryOfChangesServices.sdgTargest = response?.sdgTargets;
-      this.theoryOfChangesServices.isImpactArea = response?.isImpactArea;
-      this.theoryOfChangesServices.isSdg = response?.isSdg;
       this.theoryOfChangesServices.impactAreasTargets.map(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
       this.theoryOfChangesServices.sdgTargest.map(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
       this.theoryOfChangesServices.targetsIndicators.map(item => (item.is_not_aplicable = item.is_not_aplicable == 1 ? true : false));
+      this.theoryOfChangesServices.body.push({
+        impactAreasTargets: this.theoryOfChangesServices.impactAreasTargets,
+        sdgTargest: this.theoryOfChangesServices.sdgTargest,
+        targetsIndicators: this.theoryOfChangesServices.targetsIndicators,
+        isSdg:response?.isSdg,
+        isImpactArea:response?.isImpactArea,
+        resultId:response?.resultId,
+        initiative:response?.initiative,
+      });
       if (this.indicators.length == 1) {
         this.disabledInput = true;
       }

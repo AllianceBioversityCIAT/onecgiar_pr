@@ -8,11 +8,7 @@ export class TheoryOfChangeBody {
   impacts: ResultTocImpactsInterface[];
   pending_contributing_initiatives: any;
   contributing_and_primary_initiative: any;
-  targets_indicators:any[];
-  impactAreasTargets: any[];
-  sdgTargest: any[];
-  isSdg: boolean;
-  isImpactArea: boolean;
+  bodyNewTheoryOfChanges:any[];
 }
 interface ResultTocImpactsInterface {
   id: number;

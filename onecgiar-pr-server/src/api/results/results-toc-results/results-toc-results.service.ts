@@ -61,9 +61,7 @@ export class ResultsTocResultsService {
         contributors_result_toc_result,
         impacts,
         pending_contributing_initiatives,
-        targets_indicators,
-        impactAreasTargets,
-        sdgTargest
+        bodyNewTheoryOfChanges
       } = createResultsTocResultDto;
       const version = await this._versionsService.findBaseVersion();
       const result = await this._resultRepository.getResultById(result_id);
@@ -404,14 +402,8 @@ export class ResultsTocResultsService {
           
         }
 
-        if(result != null && result.result_level_id > 2){
-          let targets_indicatorsd = await this._resultsTocResultRepository.query(`select * from results_toc_result where results_id = ${result_id} and is_active = true and initiative_id = ${result.initiative_id};`)
-          await this._resultsTocResultRepository.update({result_toc_result_id: targets_indicatorsd[0]?.result_toc_result_id}, {mapping_impact:createResultsTocResultDto.isImpactArea, mapping_sdg:createResultsTocResultDto.isSdg})
-          if(targets_indicatorsd.length > 0){
-              console.log("targets_indicatorsd", targets_indicatorsd);
-              await this._resultsTocResultRepository.saveInditicatorsContributing(targets_indicatorsd[0]?.result_toc_result_id, targets_indicators);
-              await this._resultsTocResultRepository.saveImpact(targets_indicatorsd[0]?.result_toc_result_id, impactAreasTargets);
-          }
+        if(result.result_level_id > 2){
+          await this._resultsTocResultRepository.saveSectionNewTheoryOfChange(bodyNewTheoryOfChanges);
         }
       }
 
@@ -603,8 +595,10 @@ export class ResultsTocResultsService {
       const  sdgTargets = await this._resultsTocResultRepository.getSdgTargetsToc(resultIdToc,toc_result_id, init);
       return {
         response: {
+          initiative:init,
+          resultId: resultIdToc,
           informationIndicator,
-         impactAreas,
+          impactAreas,
           sdgTargets, 
           isSdg: isSdg,
           isImpactArea: isImpactArea

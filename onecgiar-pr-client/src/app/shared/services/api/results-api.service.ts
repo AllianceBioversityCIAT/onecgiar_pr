@@ -222,6 +222,8 @@ export class ResultsApiService {
   }
 
   POST_toc(body: TheoryOfChangeBody) {
+    console.log(body);
+    
     return this.http.post<any>(`${this.apiBaseUrl}toc/create/toc/result/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 

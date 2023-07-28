@@ -750,6 +750,15 @@ export class ResultsTocResultRepository
               element.is_not_aplicable = elementSave.is_not_aplicable;
             }
         });
+      }else{
+        saveIndicators.forEach(async (elementSave) => {
+          
+            element.is_not_aplicable = elementSave.is_not_aplicable;
+            element.indicator_contributing = elementSave.indicator_contributing;
+            element.status = elementSave.status;
+            element.is_not_aplicable = elementSave.is_not_aplicable;
+          
+      });
       }
         if(Number(element?.target_value)){
           element.is_calculable = true;
@@ -791,6 +800,8 @@ try {
     
     
     if(targetIndicators != null){
+     
+      
       if(element.is_calculable){
         const missing = Number(element.target_value) - Number(targetIndicators.indicator_contributing);
         if(missing != 0 && element.indicator_new <= missing){
@@ -870,7 +881,8 @@ try {
   let returnInfo = []
   if(impactAreaTarget != null && impactAreaTarget[0]?.result_toc_result_id != null){
     auxImpactAreaTargets = await this._resultsTocImpactAreaTargetRepository.find({where:{
-      result_toc_result_id:impactAreaTarget[0]?.result_toc_result_id
+      result_toc_result_id:impactAreaTarget[0]?.result_toc_result_id, 
+      is_active: true
     }});
     const queryImpactAreaTargets = `
     select * 
@@ -971,9 +983,11 @@ try {
               impact_area_indicator_id: impact.targetId,
             }
         });
-
+        console.log(targetIndicators);
+        
         if(targetIndicators != null){
           targetIndicators.is_active = true;
+          await this._resultsTocImpactAreaTargetRepository.update({result_toc_impact_area_id:targetIndicators.result_toc_impact_area_id}, targetIndicators);
         }else{
           await this._resultsTocImpactAreaTargetRepository.save({
             result_toc_result_id: id_result_toc_result,
@@ -984,6 +998,81 @@ try {
     }      
     }
     
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsTocResultRepository.name,
+        error: `updateResultByInitiative ${error}`,
+        debug: true,
+      });
+    }
+
+  }
+
+  async saveSdg(id_result_toc_result, sdgTargets){
+    try {
+      await this._resultsTocSdgTargetRepository.update({result_toc_result_id:id_result_toc_result},
+        {is_active : false});
+      if(sdgTargets.length != 0){
+        for(let impact of sdgTargets){
+          let targetIndicators = await this._resultsTocSdgTargetRepository.findOne({
+            where: {
+              result_toc_result_id: id_result_toc_result,
+              clarisa_sdg_target_id: impact.id,
+              clarisa_sdg_usnd_code: impact.usnd_code
+            }
+        });
+        
+        if(targetIndicators != null){
+          targetIndicators.is_active = true;
+          await this._resultsTocSdgTargetRepository.update({result_toc_sdg_target_id:targetIndicators.result_toc_sdg_target_id}, targetIndicators);
+        }else{
+          await this._resultsTocSdgTargetRepository.save({
+            result_toc_result_id: id_result_toc_result,
+            clarisa_sdg_target_id: impact.id,
+            clarisa_sdg_usnd_code: impact.usnd_code
+
+          });
+        }
+    }      
+    }
+    
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsTocResultRepository.name,
+        error: `updateResultByInitiative ${error}`,
+        debug: true,
+      });
+    }
+  }
+
+  async saveSectionNewTheoryOfChange(bodyTheoryOfChange){
+    try {
+      
+      
+      for(let toc of bodyTheoryOfChange){
+       
+        
+        const result = await this.query(`select * 
+                                          from results_toc_result rtr where rtr.results_id = ${toc.resultId} and rtr.initiative_id = ${toc.initiative}`);
+       
+        
+        if(result != null && result.length != 0){
+          console.log('entre a actualizar');
+          
+          await this.update({result_toc_result_id: result[0]?.result_toc_result_id}, {mapping_impact:toc.isImpactArea, mapping_sdg:toc.isSdg})
+          if(toc.targetsIndicators != null && toc.targetsIndicators.length != 0){
+            await this.saveInditicatorsContributing(result[0].result_toc_result_id, toc.targetsIndicators);
+          }
+          if(toc.impactAreasTargets != null && toc.impactAreasTargets.length != 0){
+            await this.saveImpact(result[0].result_toc_result_id, toc.impactAreasTargets);
+          }
+          if(toc.sdgTargest != null && toc.sdgTargest.length != 0){
+            await this.saveSdg(result[0].result_toc_result_id, toc.sdgTargest);
+          }
+          
+        }
+      }
+      
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,

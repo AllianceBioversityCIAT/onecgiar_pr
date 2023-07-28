@@ -67,22 +67,20 @@ export class RdTheoryOfChangeComponent {
   }
 
   onSaveSection() {
-    
-    this.theoryOfChangeBody.targets_indicators = this.theoryOfChangesServices.targetsIndicators;
-    this.theoryOfChangeBody.sdgTargest = this.theoryOfChangesServices.sdgTargest;
-    this.theoryOfChangeBody.impactAreasTargets = this.theoryOfChangesServices.impactAreasTargets;
-    this.theoryOfChangeBody.isSdg = this.theoryOfChangesServices.isSdg;
-    this.theoryOfChangeBody.isImpactArea = this.theoryOfChangesServices.isImpactArea;
+    this.theoryOfChangeBody.bodyNewTheoryOfChanges = this.theoryOfChangesServices.body;
     console.log(this.theoryOfChangeBody);
+    
     
     
     const saveSection = () => {
       
       this.theoryOfChangeBody.contributing_initiatives = this.theoryOfChangeBody.contributing_and_primary_initiative;
+      
       this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
         //(resp);
         this.getConsumed = false;
         // this.theoryOfChangeBody.result_toc_result.initiative_id = null;
+        this.theoryOfChangesServices.body = [];
         this.currentInitOfficialCode != newInitOfficialCode ? location.reload() : this.getSectionInformation();
       });
     };
