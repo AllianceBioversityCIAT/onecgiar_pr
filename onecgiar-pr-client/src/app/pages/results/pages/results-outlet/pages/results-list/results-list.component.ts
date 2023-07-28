@@ -17,7 +17,7 @@ import { PhasesService } from '../../../../../../shared/services/global/phases.s
 export class ResultsListComponent implements OnInit {
   gettingReport = false;
   columnOrder = [
-    { title: 'Result code', attr: 'result_code' },
+    // { title: 'Result code', attr: 'result_code' },
     { title: 'Title', attr: 'title', class: 'notCenter' },
     { title: 'Phase', attr: 'phase_name' },
     // { title: 'Reporting year', attr: 'phase_year' },

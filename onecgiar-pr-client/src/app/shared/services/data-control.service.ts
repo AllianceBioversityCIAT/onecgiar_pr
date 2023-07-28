@@ -12,6 +12,7 @@ export class DataControlService {
   myInitiativesList = [];
   myInitiativesLoaded = false;
   resultsList: ResultItem[];
+  combinedResultsList: ResultItem[];
   currentResult: any;
   showSectionSpinner = false;
   currentSectionName = '';
