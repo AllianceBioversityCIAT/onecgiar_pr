@@ -63,6 +63,7 @@ import { Actions } from 'src/connection/dynamodb-logs/dto/enumAction.const';
 import { VersioningService } from '../versioning/versioning.service';
 import { AppModuleIdEnum } from 'src/shared/constants/role-type.enum';
 import { InstitutionRoleEnum } from './results_by_institutions/entities/institution_role.enum';
+import { ResultsKnowledgeProductFairScoreRepository } from './results-knowledge-products/repositories/results-knowledge-product-fair-scores.repository';
 
 @Injectable()
 export class ResultsService {
@@ -98,6 +99,7 @@ export class ResultsService {
     private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
     private readonly _resultsKnowledgeProductKeywordRepository: ResultsKnowledgeProductKeywordRepository,
     private readonly _resultsKnowledgeProductMetadataRepository: ResultsKnowledgeProductMetadataRepository,
+    private readonly _resultsKnowledgeProductFairScoreRepository: ResultsKnowledgeProductFairScoreRepository,
     //private readonly _resultsImpactAreaIndicatorRepository: ResultsImpactAreaIndicatorRepository,
     //private readonly _resultsImpactAreaTargetRepository: ResultsImpactAreaTargetRepository,
     private readonly _logRepository: LogRepository,
@@ -670,6 +672,10 @@ export class ResultsService {
           kpId,
           false,
         );
+        await this._resultsKnowledgeProductFairScoreRepository.statusElement(
+          kpId,
+          false,
+        );
         await this._resultKnowledgeProductRepository.statusElement(kpId, false);
       }
 
@@ -1100,7 +1106,8 @@ export class ResultsService {
           gender_tag_id: result.gender_tag_level_id || null,
           climate_change_tag_id: result.climate_change_tag_level_id || null,
           nutrition_tag_level_id: result.nutrition_tag_level_id || null,
-          environmental_biodiversity_tag_level_id: result.environmental_biodiversity_tag_level_id || null,
+          environmental_biodiversity_tag_level_id:
+            result.environmental_biodiversity_tag_level_id || null,
           poverty_tag_level_id: result.poverty_tag_level_id || null,
           institutions: institutions,
           institutions_type: institutionsType,

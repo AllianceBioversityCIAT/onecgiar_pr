@@ -28,6 +28,7 @@ export class KnowledgeProductBody {
   melia_type_id: number;
   ost_melia_study_id: number;
   warnings: string[];
+  cgspace_phase_year: number;
 }
 
 interface Institution {

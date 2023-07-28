@@ -15,12 +15,12 @@ export class KnowledgeProductBodyMapped {
   interoperable: number;
   reusable: number;
   yearCG: number;
-  is_peer_reviewed_CG: boolean;
-  is_isi_CG: boolean;
+  is_peer_reviewed_CG: string;
+  is_isi_CG: string;
   accessibility_CG: string;
   year_WOS: number;
-  is_peer_reviewed_WOS: boolean;
-  is_isi_WOS: boolean;
+  is_peer_reviewed_WOS: string;
+  is_isi_WOS: string;
   accessibility_WOS: string;
   licence: string;
   warnings?: string[];
