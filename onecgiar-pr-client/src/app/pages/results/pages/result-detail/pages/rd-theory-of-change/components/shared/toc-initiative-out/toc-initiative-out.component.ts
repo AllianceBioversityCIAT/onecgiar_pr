@@ -51,8 +51,8 @@ export class TocInitiativeOutComponent {
 
   GET_outputList() {
     console.log(this.api.dataControlSE.currentNotification);
-    
-    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.api.dataControlSE.currentNotification?.results_id || this.initiative?.results_id, this.initiative.initiative_id, 1).subscribe({
+
+    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.api.dataControlSE.currentNotification?.results_id || this.initiative?.results_id || this.api.dataControlSE?.currentResult?.id, this.initiative.initiative_id, 1).subscribe({
       next: ({ response }) => {
         this.outputList = [];
         this.outputList = response;
@@ -76,7 +76,7 @@ export class TocInitiativeOutComponent {
   }
 
   GET_outcomeList() {
-    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id ||this.api.dataControlSE.currentNotification?.result_id || this.initiative?.results_id, this.initiative.initiative_id, 2).subscribe({
+    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.api.dataControlSE.currentNotification?.result_id || this.initiative?.results_id || this.api.dataControlSE?.currentResult?.id, this.initiative.initiative_id, 2).subscribe({
       next: ({ response }) => {
         this.outcomeList = response;
       },
@@ -98,7 +98,7 @@ export class TocInitiativeOutComponent {
   }
 
   GET_EOIList() {
-    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id ||this.api.dataControlSE.currentNotification?.result_id || this.initiative?.results_id, this.initiative.initiative_id, 3).subscribe({
+    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.api.dataControlSE.currentNotification?.result_id || this.initiative?.results_id || this.api.dataControlSE?.currentResult?.id, this.initiative.initiative_id, 3).subscribe({
       next: ({ response }) => {
         this.eoiList = response;
       },
@@ -150,17 +150,17 @@ export class TocInitiativeOutComponent {
     this.indicators = [];
     this.indicatorView = false;
     this.disabledInput = false;
-    await this.api.resultsSE.Get_indicator(this.initiative.toc_result_id, this.initiative.initiative_id).subscribe(({response})=>{
+    await this.api.resultsSE.Get_indicator(this.initiative.toc_result_id, this.initiative.initiative_id).subscribe(({ response }) => {
       console.log(response);
       this.theoryOfChangesServices.targetsIndicators = response?.informationIndicator;
       this.theoryOfChangesServices.impactAreasTargets = response?.impactAreas;
       this.theoryOfChangesServices.sdgTargest = response?.sdgTargets;
-      this.theoryOfChangesServices.isImpactArea= response?.isImpactArea;
-      this.theoryOfChangesServices.isSdg= response?.isSdg
+      this.theoryOfChangesServices.isImpactArea = response?.isImpactArea;
+      this.theoryOfChangesServices.isSdg = response?.isSdg;
       this.theoryOfChangesServices.impactAreasTargets.map(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
       this.theoryOfChangesServices.sdgTargest.map(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
       this.theoryOfChangesServices.targetsIndicators.map(item => (item.is_not_aplicable = item.is_not_aplicable == 1 ? true : false));
-      if(this.indicators.length == 1){
+      if (this.indicators.length == 1) {
         this.disabledInput = true;
       }
       setTimeout(() => {
