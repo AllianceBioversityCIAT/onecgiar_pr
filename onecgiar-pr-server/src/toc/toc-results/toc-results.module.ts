@@ -36,6 +36,8 @@ import {
   HandlersError,
   ReturnResponse,
 } from '../../shared/handlers/error.utils';
+import { ResultsTocImpactAreaTargetRepository } from 'src/api/results/results-toc-results/result-toc-impact-area-repository';
+import { ResultsTocSdgTargetRepository } from 'src/api/results/results-toc-results/result-toc-sdg-target-repository';
 
 @Module({
   controllers: [TocResultsController],
@@ -74,6 +76,8 @@ import {
     ResultsKnowledgeProductInstitutionRepository,
     RoleByUserRepository,
     ResultsTocResultIndicatorsRepository,
+    ResultsTocSdgTargetRepository,
+    ResultsTocImpactAreaTargetRepository
   ],
   exports: [TocResultsRepository],
 })
