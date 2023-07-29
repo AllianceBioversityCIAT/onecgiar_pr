@@ -26,8 +26,7 @@ export class ResultsTocResultRepository
     private readonly _handlersError: HandlersError,
     private readonly _resultsTocResultIndicator: ResultsTocResultIndicatorsRepository,
     private readonly _resultsTocImpactAreaTargetRepository: ResultsTocImpactAreaTargetRepository,
-    private readonly _resultsTocSdgTargetRepository:ResultsTocSdgTargetRepository
-   
+    private readonly _resultsTocSdgTargetRepository: ResultsTocSdgTargetRepository,
   ) {
     super(ResultsTocResult, dataSource.createEntityManager());
   }
@@ -292,11 +291,10 @@ export class ResultsTocResultRepository
       ci.official_code,
       ci.name,
       ci.short_name,
-      tr.toc_level_id
+      tr.result_type as toc_level_id
     FROM
       results_toc_result rtr	
-      left JOIN toc_result tr on tr.toc_result_id = rtr.toc_result_id
-      and tr.inititiative_id = rtr.initiative_id  
+      left JOIN ${env.DB_TOC}.toc_results tr on tr.id = rtr.toc_result_id
       left join clarisa_initiatives ci on ci.id = rtr.initiative_id  
     where rtr.results_id = ?
       and rtr.initiative_id ${isPrimary ? '' : 'not'} in (${
@@ -712,9 +710,11 @@ export class ResultsTocResultRepository
     }
   }
 
-
-  async getResultTocResultByResultId(resultId: number, toc_result_id: number, init:number) {
-
+  async getResultTocResultByResultId(
+    resultId: number,
+    toc_result_id: number,
+    init: number,
+  ) {
     try {
       const queryTocIndicators = `
       SELECT tri.toc_result_indicator_id as toc_results_indicator_id,tri.indicator_description, 
@@ -725,49 +725,58 @@ export class ResultsTocResultRepository
 		WHEre tr.id  = ? and tr.phase = (select v.toc_pahse_id  
 	              										from result r 	
 	              										join version v on r.version_id = v.id  
-	              											where r.id  = ?) and rtr.initiative_id = ?`
+	              											where r.id  = ?) and rtr.initiative_id = ?`;
 
       const infoIndicatorSave = `
         select * from results_toc_result_indicators rtri 
           WHERE rtri.results_toc_results_id = ?`;
-      
 
-          let saveIndicators:any[] = [];
-      let innovatonUseInterface = await this.query(queryTocIndicators, [resultId,toc_result_id, resultId,init]);
+      let saveIndicators: any[] = [];
+      let innovatonUseInterface = await this.query(queryTocIndicators, [
+        resultId,
+        toc_result_id,
+        resultId,
+        init,
+      ]);
       console.log(innovatonUseInterface);
-      if(innovatonUseInterface != null && innovatonUseInterface.length > 0){
-      if(innovatonUseInterface[0].results_toc_results_id != null){
-        saveIndicators = await this.query(infoIndicatorSave, [innovatonUseInterface[0].results_toc_results_id]);
-      }}
-      
+      if (innovatonUseInterface != null && innovatonUseInterface.length > 0) {
+        if (innovatonUseInterface[0].results_toc_results_id != null) {
+          saveIndicators = await this.query(infoIndicatorSave, [
+            innovatonUseInterface[0].results_toc_results_id,
+          ]);
+        }
+      }
+
       innovatonUseInterface.forEach(async (element) => {
-        if(saveIndicators.length){
+        if (saveIndicators.length) {
           saveIndicators.forEach(async (elementSave) => {
-            if(element.toc_results_indicator_id == elementSave.toc_results_indicator_id){
+            if (
+              element.toc_results_indicator_id ==
+              elementSave.toc_results_indicator_id
+            ) {
               element.is_not_aplicable = elementSave.is_not_aplicable;
-              element.indicator_contributing = elementSave.indicator_contributing;
+              element.indicator_contributing =
+                elementSave.indicator_contributing;
               element.status = elementSave.status;
               element.is_not_aplicable = elementSave.is_not_aplicable;
             }
-        });
-      }else{
-        saveIndicators.forEach(async (elementSave) => {
-          
+          });
+        } else {
+          saveIndicators.forEach(async (elementSave) => {
             element.is_not_aplicable = elementSave.is_not_aplicable;
             element.indicator_contributing = elementSave.indicator_contributing;
             element.status = elementSave.status;
             element.is_not_aplicable = elementSave.is_not_aplicable;
-          
-      });
-      }
-        if(Number(element?.target_value)){
+          });
+        }
+        if (Number(element?.target_value)) {
           element.is_calculable = true;
           element.indicator_new = 0;
-        }else{
+        } else {
           element.is_calculable = false;
         }
       });
-      
+
       return innovatonUseInterface;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -778,87 +787,98 @@ export class ResultsTocResultRepository
     }
   }
 
-  async saveInditicatorsContributing(id_result_toc_result:number,targetsIndicator:any[]){
-try {
-  
-  
-  await this._resultsTocResultIndicator.update({results_toc_results_id:id_result_toc_result},
-                                                 {is_active : false});
+  async saveInditicatorsContributing(
+    id_result_toc_result: number,
+    targetsIndicator: any[],
+  ) {
+    try {
+      await this._resultsTocResultIndicator.update(
+        { results_toc_results_id: id_result_toc_result },
+        { is_active: false },
+      );
 
-  for(let element of targetsIndicator){
-    let targetIndicators = await this._resultsTocResultIndicator.findOne({
-      where: {
-        results_toc_results_id: id_result_toc_result,
-        toc_results_indicator_id: element.toc_results_indicator_id
-      }
+      for (let element of targetsIndicator) {
+        let targetIndicators = await this._resultsTocResultIndicator.findOne({
+          where: {
+            results_toc_results_id: id_result_toc_result,
+            toc_results_indicator_id: element.toc_results_indicator_id,
+          },
+        });
 
-    })
-    
-    if(element.is_not_aplicable == null){
-      element.is_not_aplicable = false;
-    }
-    
-    
-    if(targetIndicators != null){
-     
-      
-      if(element.is_calculable){
-        const missing = Number(element.target_value) - Number(targetIndicators.indicator_contributing);
-        if(missing != 0 && element.indicator_new <= missing){
-          targetIndicators.indicator_contributing = (Number(element.indicator_new)+Number(targetIndicators.indicator_contributing)).toString();
-          if(Number(targetIndicators.indicator_contributing) - Number(element.target_value) == 0){
-            targetIndicators.status = 2;
+        if (element.is_not_aplicable == null) {
+          element.is_not_aplicable = false;
+        }
+
+        if (targetIndicators != null) {
+          if (element.is_calculable) {
+            const missing =
+              Number(element.target_value) -
+              Number(targetIndicators.indicator_contributing);
+            if (missing != 0 && element.indicator_new <= missing) {
+              targetIndicators.indicator_contributing = (
+                Number(element.indicator_new) +
+                Number(targetIndicators.indicator_contributing)
+              ).toString();
+              if (
+                Number(targetIndicators.indicator_contributing) -
+                  Number(element.target_value) ==
+                0
+              ) {
+                targetIndicators.status = 2;
+              }
+            }
+            if (
+              element.indicator_new != 0 &&
+              Number(targetIndicators.indicator_contributing) !=
+                Number(element.target_value)
+            ) {
+              targetIndicators.status = 1;
+            }
+            if (missing == 0) {
+              targetIndicators.status = 2;
+            }
+            targetIndicators.is_active = true;
+            targetIndicators.is_not_aplicable = element.is_not_aplicable;
+          } else {
+            targetIndicators.indicator_contributing =
+              element.indicator_contributing;
+            targetIndicators.is_active = true;
+            targetIndicators.is_not_aplicable = element.is_not_aplicable;
           }
+          await this._resultsTocResultIndicator.update(
+            {
+              result_toc_result_indicator_id:
+                targetIndicators.result_toc_result_indicator_id,
+            },
+            targetIndicators,
+          );
+        } else {
+          if (element.is_calculable) {
+            element.indicator_contributing = element.indicator_new;
+            if (Number(element.indicator_contributing) != 0) {
+              element.status = 1;
+            } else if (element.indicator_contributing == element.target_value) {
+              element.status = 2;
+            } else {
+              element.status = 0;
+            }
+          } else {
+            element.indicator_contributing = element.indicator_contributing;
+            element.status = 3;
+          }
+          await this._resultsTocResultIndicator.save(element);
         }
-        if(element.indicator_new != 0 && Number(targetIndicators.indicator_contributing) != Number(element.target_value)){
-          targetIndicators.status = 1;
-        }
-        if(missing == 0){
-          targetIndicators.status = 2;
-        }
-        targetIndicators.is_active = true;
-        targetIndicators.is_not_aplicable = element.is_not_aplicable;
-        
-      }else{
-        targetIndicators.indicator_contributing = element.indicator_contributing;
-        targetIndicators.is_active = true;
-        targetIndicators.is_not_aplicable = element.is_not_aplicable;
       }
-      await this._resultsTocResultIndicator.update({result_toc_result_indicator_id:targetIndicators.result_toc_result_indicator_id},
-        targetIndicators);
-    
-    }else{
-      if(element.is_calculable){
-        element.indicator_contributing = element.indicator_new;
-        if(Number(element.indicator_contributing) != 0){
-          element.status = 1;
-        }else if(element.indicator_contributing == element.target_value){
-          element.status = 2;
-        }
-        else{
-          element.status = 0;
-        }
-        
-      }else{
-        element.indicator_contributing = element.indicator_contributing;
-        element.status = 3;
-      }
-      await this._resultsTocResultIndicator.save(element);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsTocResultRepository.name,
+        error: `updateResultByInitiative ${error}`,
+        debug: true,
+      });
     }
-  }                                               
-  
- 
-} catch (error) {
-  throw this._handlersError.returnErrorRepository({
-    className: ResultsTocResultRepository.name,
-    error: `updateResultByInitiative ${error}`,
-    debug: true,
-  });
-}
-
   }
 
-  async getImpactAreaTargetsToc(resultId, toc_result_id,init){
+  async getImpactAreaTargetsToc(resultId, toc_result_id, init) {
     try {
       const queryTocIndicators = `
       select * 
@@ -873,37 +893,44 @@ try {
 	              										from result r 	
 	              										join version v on r.version_id = v.id  
 	              											where r.id  = ?)
-	) `
-  console.log(resultId);
-  
-  const impactAreaTarget =  await this.query( `select * from results_toc_result where results_id = ${resultId} and is_active = true and initiative_id = ${init};`)
-  let auxImpactAreaTargets = []
-  let returnInfo = []
-  if(impactAreaTarget != null && impactAreaTarget[0]?.result_toc_result_id != null){
-    auxImpactAreaTargets = await this._resultsTocImpactAreaTargetRepository.find({where:{
-      result_toc_result_id:impactAreaTarget[0]?.result_toc_result_id, 
-      is_active: true
-    }});
-    const queryImpactAreaTargets = `
+	) `;
+      console.log(resultId);
+
+      const impactAreaTarget = await this.query(
+        `select * from results_toc_result where results_id = ${resultId} and is_active = true and initiative_id = ${init};`,
+      );
+      let auxImpactAreaTargets = [];
+      let returnInfo = [];
+      if (
+        impactAreaTarget != null &&
+        impactAreaTarget[0]?.result_toc_result_id != null
+      ) {
+        auxImpactAreaTargets =
+          await this._resultsTocImpactAreaTargetRepository.find({
+            where: {
+              result_toc_result_id: impactAreaTarget[0]?.result_toc_result_id,
+            },
+          });
+        const queryImpactAreaTargets = `
     select * 
 	  from clarisa_global_targets cgt 
 		join clarisa_impact_areas cia on cgt.impactAreaId = cia.id 
 	  where targetId in (select impact_area_indicator_id from result_toc_impact_area_target where result_toc_result_id = ? and is_active >0 )
     `;
-    returnInfo = await this.query(queryImpactAreaTargets, [impactAreaTarget[0]?.result_toc_result_id]);  
+        returnInfo = await this.query(queryImpactAreaTargets, [
+          impactAreaTarget[0]?.result_toc_result_id,
+        ]);
+      }
 
-  }
-
-  
-      if(returnInfo.length != 0){
-      
-      return returnInfo;
-    }else{
-      let innovatonUseInterface = await this.query(queryTocIndicators, [toc_result_id, resultId]);      
-      return innovatonUseInterface;
-    }
-      
-      
+      if (returnInfo.length != 0) {
+        return returnInfo;
+      } else {
+        let innovatonUseInterface = await this.query(queryTocIndicators, [
+          toc_result_id,
+          resultId,
+        ]);
+        return innovatonUseInterface;
+      }
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
@@ -913,9 +940,7 @@ try {
     }
   }
 
-
-  async getSdgTargetsToc(resultId, toc_result_id, init){
-    
+  async getSdgTargetsToc(resultId, toc_result_id, init) {
     try {
       const queryTocIndicators = `
       select * 
@@ -931,36 +956,42 @@ try {
                                       join version v on r.version_id = v.id  
                                         where r.id  = ?)
     )
- `
-      
+ `;
 
-      
- const impactAreaTarget =  await this.query( `select * from results_toc_result where results_id = ${resultId} and is_active = true and initiative_id = ${init};`)
- let auxImpactAreaTargets = []
- let returnInfo = []
- if(impactAreaTarget != null && impactAreaTarget[0]?.result_toc_result_id != null){
-   auxImpactAreaTargets = await this._resultsTocSdgTargetRepository.find({where:{
-     result_toc_result_id:impactAreaTarget[0]?.result_toc_result_id
-   }});
-   const queryImpactAreaTargets = `
+      const impactAreaTarget = await this.query(
+        `select * from results_toc_result where results_id = ${resultId} and is_active = true and initiative_id = ${init};`,
+      );
+      let auxImpactAreaTargets = [];
+      let returnInfo = [];
+      if (
+        impactAreaTarget != null &&
+        impactAreaTarget[0]?.result_toc_result_id != null
+      ) {
+        auxImpactAreaTargets = await this._resultsTocSdgTargetRepository.find({
+          where: {
+            result_toc_result_id: impactAreaTarget[0]?.result_toc_result_id,
+          },
+        });
+        const queryImpactAreaTargets = `
    select * 
     from clarisa_sdgs_targets  cgt 
       join clarisa_sdgs cs on cs.usnd_code = cgt.usnd_code 
     where cgt.id  in (select clarisa_sdg_target_id from result_toc_sdg_targets where result_toc_result_id = ? and is_active >0 )
    `;
-   returnInfo = await this.query(queryImpactAreaTargets, [impactAreaTarget[0]?.result_toc_result_id]);  
+        returnInfo = await this.query(queryImpactAreaTargets, [
+          impactAreaTarget[0]?.result_toc_result_id,
+        ]);
+      }
 
- }
-
- 
-     if(returnInfo.length != 0){
-     
-     return returnInfo;
-   }else{
-     let innovatonUseInterface = await this.query(queryTocIndicators, [toc_result_id, resultId]);      
-     return innovatonUseInterface;
-   }   
-      
+      if (returnInfo.length != 0) {
+        return returnInfo;
+      } else {
+        let innovatonUseInterface = await this.query(queryTocIndicators, [
+          toc_result_id,
+          resultId,
+        ]);
+        return innovatonUseInterface;
+      }
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
@@ -970,109 +1001,49 @@ try {
     }
   }
 
-  async saveImpact(id_result_toc_result, impactAreaTargets){
-
+  async saveImpact(id_result_toc_result, impactAreaTargets) {
     try {
-      await this._resultsTocImpactAreaTargetRepository.update({result_toc_result_id:id_result_toc_result},
-        {is_active : false});
-      if(impactAreaTargets.length != 0){
-        for(let impact of impactAreaTargets){
-          let targetIndicators = await this._resultsTocImpactAreaTargetRepository.findOne({
-            where: {
+      await this._resultsTocImpactAreaTargetRepository.update(
+        { result_toc_result_id: id_result_toc_result },
+        { is_active: false },
+      );
+      if (impactAreaTargets.length != 0) {
+        for (let impact of impactAreaTargets) {
+          let targetIndicators =
+            await this._resultsTocImpactAreaTargetRepository.findOne({
+              where: {
+                result_toc_result_id: id_result_toc_result,
+                impact_area_indicator_id: impact.targetId,
+              },
+            });
+
+          if (targetIndicators != null) {
+            targetIndicators.is_active = true;
+          } else {
+            await this._resultsTocImpactAreaTargetRepository.save({
               result_toc_result_id: id_result_toc_result,
               impact_area_indicator_id: impact.targetId,
-            }
-        });
-        console.log(targetIndicators);
-        
-        if(targetIndicators != null){
-          targetIndicators.is_active = true;
-          await this._resultsTocImpactAreaTargetRepository.update({result_toc_impact_area_id:targetIndicators.result_toc_impact_area_id}, targetIndicators);
-        }else{
-          await this._resultsTocImpactAreaTargetRepository.save({
-            result_toc_result_id: id_result_toc_result,
-            impact_area_indicator_id: impact.targetId,
+            });
+          }
+          console.log(targetIndicators);
 
-          });
-        }
-    }      
-    }
-    
-    } catch (error) {
-      throw this._handlersError.returnErrorRepository({
-        className: ResultsTocResultRepository.name,
-        error: `updateResultByInitiative ${error}`,
-        debug: true,
-      });
-    }
-
-  }
-
-  async saveSdg(id_result_toc_result, sdgTargets){
-    try {
-      await this._resultsTocSdgTargetRepository.update({result_toc_result_id:id_result_toc_result},
-        {is_active : false});
-      if(sdgTargets.length != 0){
-        for(let impact of sdgTargets){
-          let targetIndicators = await this._resultsTocSdgTargetRepository.findOne({
-            where: {
+          if (targetIndicators != null) {
+            targetIndicators.is_active = true;
+            await this._resultsTocImpactAreaTargetRepository.update(
+              {
+                result_toc_impact_area_id:
+                  targetIndicators.result_toc_impact_area_id,
+              },
+              targetIndicators,
+            );
+          } else {
+            await this._resultsTocImpactAreaTargetRepository.save({
               result_toc_result_id: id_result_toc_result,
-              clarisa_sdg_target_id: impact.id,
-              clarisa_sdg_usnd_code: impact.usnd_code
-            }
-        });
-        
-        if(targetIndicators != null){
-          targetIndicators.is_active = true;
-          await this._resultsTocSdgTargetRepository.update({result_toc_sdg_target_id:targetIndicators.result_toc_sdg_target_id}, targetIndicators);
-        }else{
-          await this._resultsTocSdgTargetRepository.save({
-            result_toc_result_id: id_result_toc_result,
-            clarisa_sdg_target_id: impact.id,
-            clarisa_sdg_usnd_code: impact.usnd_code
-
-          });
-        }
-    }      
-    }
-    
-    } catch (error) {
-      throw this._handlersError.returnErrorRepository({
-        className: ResultsTocResultRepository.name,
-        error: `updateResultByInitiative ${error}`,
-        debug: true,
-      });
-    }
-  }
-
-  async saveSectionNewTheoryOfChange(bodyTheoryOfChange){
-    try {
-      
-      
-      for(let toc of bodyTheoryOfChange){
-       
-        
-        const result = await this.query(`select * 
-                                          from results_toc_result rtr where rtr.results_id = ${toc.resultId} and rtr.initiative_id = ${toc.initiative}`);
-       
-        
-        if(result != null && result.length != 0){
-          console.log('entre a actualizar');
-          
-          await this.update({result_toc_result_id: result[0]?.result_toc_result_id}, {mapping_impact:toc.isImpactArea, mapping_sdg:toc.isSdg})
-          if(toc.targetsIndicators != null && toc.targetsIndicators.length != 0){
-            await this.saveInditicatorsContributing(result[0].result_toc_result_id, toc.targetsIndicators);
+              impact_area_indicator_id: impact.targetId,
+            });
           }
-          if(toc.impactAreasTargets != null && toc.impactAreasTargets.length != 0){
-            await this.saveImpact(result[0].result_toc_result_id, toc.impactAreasTargets);
-          }
-          if(toc.sdgTargest != null && toc.sdgTargest.length != 0){
-            await this.saveSdg(result[0].result_toc_result_id, toc.sdgTargest);
-          }
-          
         }
       }
-      
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
@@ -1080,7 +1051,94 @@ try {
         debug: true,
       });
     }
-
   }
 
+  async saveSdg(id_result_toc_result, sdgTargets) {
+    try {
+      await this._resultsTocSdgTargetRepository.update(
+        { result_toc_result_id: id_result_toc_result },
+        { is_active: false },
+      );
+      if (sdgTargets.length != 0) {
+        for (let impact of sdgTargets) {
+          let targetIndicators =
+            await this._resultsTocSdgTargetRepository.findOne({
+              where: {
+                result_toc_result_id: id_result_toc_result,
+                clarisa_sdg_target_id: impact.id,
+                clarisa_sdg_usnd_code: impact.usnd_code,
+              },
+            });
+
+          if (targetIndicators != null) {
+            targetIndicators.is_active = true;
+            await this._resultsTocSdgTargetRepository.update(
+              {
+                result_toc_sdg_target_id:
+                  targetIndicators.result_toc_sdg_target_id,
+              },
+              targetIndicators,
+            );
+          } else {
+            await this._resultsTocSdgTargetRepository.save({
+              result_toc_result_id: id_result_toc_result,
+              clarisa_sdg_target_id: impact.id,
+              clarisa_sdg_usnd_code: impact.usnd_code,
+            });
+          }
+        }
+      }
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsTocResultRepository.name,
+        error: `updateResultByInitiative ${error}`,
+        debug: true,
+      });
+    }
+  }
+
+  async saveSectionNewTheoryOfChange(bodyTheoryOfChange) {
+    try {
+      for (let toc of bodyTheoryOfChange) {
+        const result = await this.query(`select * 
+                                          from results_toc_result rtr where rtr.results_id = ${toc.resultId} and rtr.initiative_id = ${toc.initiative}`);
+
+        if (result != null && result.length != 0) {
+          console.log('entre a actualizar');
+
+          await this.update(
+            { result_toc_result_id: result[0]?.result_toc_result_id },
+            { mapping_impact: toc.isImpactArea, mapping_sdg: toc.isSdg },
+          );
+          if (
+            toc.targetsIndicators != null &&
+            toc.targetsIndicators.length != 0
+          ) {
+            await this.saveInditicatorsContributing(
+              result[0].result_toc_result_id,
+              toc.targetsIndicators,
+            );
+          }
+          if (
+            toc.impactAreasTargets != null &&
+            toc.impactAreasTargets.length != 0
+          ) {
+            await this.saveImpact(
+              result[0].result_toc_result_id,
+              toc.impactAreasTargets,
+            );
+          }
+          if (toc.sdgTargest != null && toc.sdgTargest.length != 0) {
+            await this.saveSdg(result[0].result_toc_result_id, toc.sdgTargest);
+          }
+        }
+      }
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsTocResultRepository.name,
+        error: `updateResultByInitiative ${error}`,
+        debug: true,
+      });
+    }
+  }
 }

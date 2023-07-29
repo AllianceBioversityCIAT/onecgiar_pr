@@ -326,7 +326,15 @@ export class ResultsTocResultsService {
           RtR.is_active = true;
           RtR.last_updated_by = user.id;
           RtR.planned_result = result_toc_result.planned_result;
-          await this._resultsTocResultRepository.save(RtR);
+          await this._resultsTocResultRepository.update(
+            RtR.result_toc_result_id,
+            {
+              toc_result_id: RtR.toc_result_id,
+              action_area_outcome_id: RtR.action_area_outcome_id,
+              last_updated_by: user.id,
+              planned_result: RtR.planned_result,
+            },
+          );
         } else if (result_toc_result) {
           const newRtR = new ResultsTocResult();
           newRtR.initiative_id = result_toc_result?.initiative_id;
@@ -406,9 +414,15 @@ export class ResultsTocResultsService {
             });
 
             if (res) {
+              delete i.result_toc_result_id;
               await this._resultsTocResultRepository.update(
                 res.result_toc_result_id,
-                { ...i },
+                {
+                  toc_result_id: i.toc_result_id,
+                  action_area_outcome_id: i.action_area_outcome_id,
+                  planned_result: i.planned_result,
+                  last_updated_by: user.id,
+                },
               );
             } else {
               await this._resultsTocResultRepository.save(res);

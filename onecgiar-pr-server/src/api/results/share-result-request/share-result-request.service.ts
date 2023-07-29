@@ -43,9 +43,14 @@ export class ShareResultRequestService {
     user: TokenDto,
   ) {
     try {
-      const result: any = await this._resultRepository.getResultById(
+      /*const result: any = await this._resultRepository.getResultById(
         parseInt(`${resultId}`),
+      );*/
+      let result: { initiative_id: number } = { initiative_id: null };
+      const res = await this._resultByInitiativesRepository.InitiativeByResult(
+        resultId,
       );
+      result['initiative_id'] = res.length ? res[0].id : null;
 
       let saveData = [];
       if (createTocShareResult?.initiativeShareId?.length) {
@@ -289,7 +294,13 @@ export class ShareResultRequestService {
             } else {
               resultTocResult.toc_result_id = toc_result_id || null;
             }
-            await this._resultsTocResultRepository.save(resultTocResult);
+            const rtr_id = resultTocResult.result_toc_result_id;
+            delete resultTocResult.result_toc_result_id;
+            await this._resultsTocResultRepository.update(rtr_id, {
+              toc_result_id: resultTocResult.toc_result_id,
+              action_area_outcome_id: resultTocResult.action_area_outcome_id,
+              last_updated_by: user.id,
+            });
           }
         }
       }
