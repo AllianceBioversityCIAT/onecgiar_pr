@@ -299,6 +299,7 @@ export class ShareResultRequestService {
             await this._resultsTocResultRepository.update(rtr_id, {
               toc_result_id: resultTocResult.toc_result_id,
               action_area_outcome_id: resultTocResult.action_area_outcome_id,
+              planned_result: resultTocResult.planned_result,
               last_updated_by: user.id,
             });
           }
