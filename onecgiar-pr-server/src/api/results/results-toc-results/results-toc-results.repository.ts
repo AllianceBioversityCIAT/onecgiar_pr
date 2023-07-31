@@ -767,12 +767,24 @@ export class ResultsTocResultRepository
             element.indicator_contributing = elementSave.indicator_contributing;
             element.status = elementSave.status;
             element.is_not_aplicable = elementSave.is_not_aplicable;
-          });
-        }
-        if (Number(element?.target_value)) {
+          
+      });
+      }
+        if(Number(element?.target_value)){
+          let calulate = await this._resultsTocResultIndicator.find({
+            where: {
+              toc_results_indicator_id: element.toc_results_indicator_id,
+            }
+          })
           element.is_calculable = true;
-          element.indicator_new = 0;
-        } else {
+          let sumIndicator = 0;
+          
+          for(let i of calulate) {
+            sumIndicator = Number(i.indicator_contributing) + Number(sumIndicator)
+          };
+          element.indicator_new = sumIndicator;
+          console.log(element.indicator_new);
+        }else{
           element.is_calculable = false;
         }
       });
@@ -805,70 +817,41 @@ export class ResultsTocResultRepository
           },
         });
 
-        if (element.is_not_aplicable == null) {
+        if(element.is_not_aplicable == null){
           element.is_not_aplicable = false;
         }
-
-        if (targetIndicators != null) {
-          if (element.is_calculable) {
-            const missing =
-              Number(element.target_value) -
-              Number(targetIndicators.indicator_contributing);
-            if (missing != 0 && element.indicator_new <= missing) {
-              targetIndicators.indicator_contributing = (
-                Number(element.indicator_new) +
-                Number(targetIndicators.indicator_contributing)
-              ).toString();
-              if (
-                Number(targetIndicators.indicator_contributing) -
-                  Number(element.target_value) ==
-                0
-              ) {
-                targetIndicators.status = 2;
-              }
+    
+    
+      if(targetIndicators != null){
+      
+        
+        if(element.is_calculable){
+          targetIndicators.indicator_contributing = element.indicator_contributing;
+          targetIndicators.is_active = true;
+          targetIndicators.is_not_aplicable = element.is_not_aplicable;
+          let calulate = await this._resultsTocResultIndicator.find({
+            where: {
+              toc_results_indicator_id: element.toc_results_indicator_id,
             }
-            if (
-              element.indicator_new != 0 &&
-              Number(targetIndicators.indicator_contributing) !=
-                Number(element.target_value)
-            ) {
-              targetIndicators.status = 1;
-            }
-            if (missing == 0) {
-              targetIndicators.status = 2;
-            }
-            targetIndicators.is_active = true;
-            targetIndicators.is_not_aplicable = element.is_not_aplicable;
-          } else {
-            targetIndicators.indicator_contributing =
-              element.indicator_contributing;
-            targetIndicators.is_active = true;
-            targetIndicators.is_not_aplicable = element.is_not_aplicable;
+          })
+          let indicator_new = 0;
+          for(let i of calulate) indicator_new+=Number(i.indicator_contributing);
+          indicator_new = element.indicator_contributing + indicator_new;
+          if(indicator_new >= Number(element.target_value)){
+            targetIndicators.status = 2;
           }
-          await this._resultsTocResultIndicator.update(
-            {
-              result_toc_result_indicator_id:
-                targetIndicators.result_toc_result_indicator_id,
-            },
-            targetIndicators,
-          );
-        } else {
-          if (element.is_calculable) {
-            element.indicator_contributing = element.indicator_new;
-            if (Number(element.indicator_contributing) != 0) {
-              element.status = 1;
-            } else if (element.indicator_contributing == element.target_value) {
-              element.status = 2;
-            } else {
-              element.status = 0;
-            }
-          } else {
-            element.indicator_contributing = element.indicator_contributing;
-            element.status = 3;
+          else if(indicator_new != 0 ){
+            targetIndicators.status = 1;
           }
-          await this._resultsTocResultIndicator.save(element);
+          
         }
       }
+      else{
+        targetIndicators.indicator_contributing = element.indicator_contributing;
+        targetIndicators.is_active = true;
+        targetIndicators.is_not_aplicable = element.is_not_aplicable;
+      }
+    }
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
