@@ -99,105 +99,165 @@ export class resultValidationRepository extends Repository<Validation> {
 
   async tocValidation(resultId: number, resultLevel: number) {
     const queryData = `
-    SELECT 
-		'theory-of-change' as section_name,
-		CASE 
-			when 
-			((
-			select
-				COUNT(rc.id)
-			from
-				results_center rc
-			WHERE
-				rc.is_active > 0
-				and rc.result_id = r.id) > 0)
+	SELECT
+		'theory-of-change' AS section_name,
+		CASE
+			WHEN (
+				(
+					SELECT COUNT(rc.id)
+					FROM results_center rc
+					WHERE rc.is_active > 0
+					AND rc.result_id = r.id
+				) > 0
+			)
 			${
-        resultLevel != 2 && resultLevel != 1
-          ? `AND 
-			((
-			SELECT
-				rtr.planned_result
-			FROM
-				results_toc_result rtr
-			WHERE
-				rtr.initiative_id in (rbi.inititiative_id)
-					and rtr.results_id = r.id
-					and rtr.is_active > 0) is not null)`
-          : ``
-      }
+			resultLevel != 2 && resultLevel != 1
+				? `AND (
+					(
+						SELECT rtr.planned_result
+						FROM results_toc_result rtr
+						WHERE rtr.initiative_id IN (rbi.inititiative_id)
+						AND rtr.results_id = r.id
+						AND rtr.is_active > 0
+					) IS NOT NULL
+				)`
+				: ``
+			}
 			${
-        resultLevel != 1
-          ? `AND 
-			((
-			select
-				if(rtr.toc_result_id is not null
-					or rtr.action_area_outcome_id is not null,
-					1,
-					0)
-			from
-				results_toc_result rtr
-			WHERE
-				rtr.initiative_id in (rbi.inititiative_id)
-					and rtr.results_id = r.id
-					and rtr.is_active > 0) = 1)
-			AND 
-			(((
-			IFNULL((select
-				sum(if(rtr.toc_result_id is not null or rtr.action_area_outcome_id is not null, 1, 0))
-			from
-				results_toc_result rtr
-			WHERE
-				rtr.initiative_id not in (rbi.inititiative_id)
-					and rtr.results_id = r.id
-					and rtr.is_active > 0), 0)) -
-			(
-			select
-				COUNT(rbi.id)
-			from
-				results_by_inititiative rbi
-			WHERE
-				rbi.result_id = r.id
-				and rbi.initiative_role_id = 2
-				and rbi.is_active > 0)) = 0)`
-          : `AND
-				((SELECT count(DISTINCT cgt.impactAreaId)
-				from results_impact_area_target riat 
-				inner join clarisa_global_targets cgt on cgt.targetId = riat.impact_area_target_id 
-				where riat.result_id = r.id
-					and riat.impact_area_target_id is not null
-					and riat.is_active > 0) = 5)
-				AND
-				((SELECT count(DISTINCT ciai.impact_area_id)
-				from results_impact_area_indicators riai 
-				inner join clarisa_impact_area_indicator ciai on ciai.id = riai.impact_area_indicator_id 
-				where riai.result_id = r.id
-					and riai.impact_area_indicator_id is not null
-					and riai.is_active > 0) = 5)
+			resultLevel != 1
+				? `AND (
+					(
+						SELECT IF(rtr.toc_result_id IS NOT NULL OR rtr.action_area_outcome_id IS NOT NULL, 1, 0)
+						FROM results_toc_result rtr
+						WHERE rtr.initiative_id IN (rbi.inititiative_id)
+						AND rtr.results_id = r.id
+						AND rtr.is_active > 0
+					) = 1
+				)
+				AND (
+					(
+						IFNULL(
+							(
+								SELECT SUM(IF(rtr.toc_result_id IS NOT NULL OR rtr.action_area_outcome_id IS NOT NULL, 1, 0))
+								FROM results_toc_result rtr
+								WHERE rtr.initiative_id NOT IN (rbi.inititiative_id)
+								AND rtr.results_id = r.id
+								AND rtr.is_active > 0
+							),
+							0
+						)
+					) - (
+						SELECT COUNT(rbi.id)
+						FROM results_by_inititiative rbi
+						WHERE rbi.result_id = r.id
+						AND rbi.initiative_role_id = 2
+						AND rbi.is_active > 0
+					)
+				) = 0`
+				: `
+					AND (
+						(SELECT COUNT(DISTINCT cgt.impactAreaId)
+						FROM results_impact_area_target riat 
+						INNER JOIN clarisa_global_targets cgt ON cgt.targetId = riat.impact_area_target_id 
+						WHERE riat.result_id = r.id
+						AND riat.impact_area_target_id IS NOT NULL
+						AND riat.is_active > 0) = 5
+					)
+					AND (
+						(SELECT COUNT(DISTINCT ciai.impact_area_id)
+						FROM results_impact_area_indicators riai 
+						INNER JOIN clarisa_impact_area_indicator ciai ON ciai.id = riai.impact_area_indicator_id 
+						WHERE riai.result_id = r.id
+						AND riai.impact_area_indicator_id IS NOT NULL
+						AND riai.is_active > 0) = 5
+					)
 				`
-      }
-			AND 
-			((
-			select
-			IFNULL(sum(if(npp.funder_institution_id is not null and npp.funder_institution_id <> '' AND 
-							npp.grant_title is not null and npp.grant_title <> '' AND
-							npp.lead_center_id is not null and npp.lead_center_id <> '', 1, 0)), 0) - IFNULL(COUNT(npp.id), 0)
-			from
-				non_pooled_project npp
-			WHERE
-				npp.results_id = r.id
-				and npp.is_active > 0) = 0)
-			then true
-			else false
-		END as validation
-	from
-		\`result\` r
-	inner join results_by_inititiative rbi on
-		rbi.result_id = r.id
-		and rbi.initiative_role_id = 1
+			}
+			AND (
+				(
+					SELECT
+						IFNULL(
+							SUM(IF(npp.funder_institution_id IS NOT NULL AND npp.funder_institution_id <> '' AND 
+								npp.grant_title IS NOT NULL AND npp.grant_title <> '' AND
+								npp.lead_center_id IS NOT NULL AND npp.lead_center_id <> '', 1, 0)),
+							0
+						) - IFNULL(COUNT(npp.id), 0)
+					FROM non_pooled_project npp
+					WHERE npp.results_id = r.id
+					AND npp.is_active > 0
+				) = 0
+			)
+			THEN TRUE
+			${
+			resultLevel == 3 || resultLevel == 4
+				? `
+				WHEN (
+					rtr1.planned_result = 1
+					AND (
+						SELECT
+							COUNT(*)
+						FROM
+							results_toc_result_indicators rtri
+							LEFT JOIN results_toc_result rtr ON rtr.result_toc_result_id = rtri.results_toc_results_id
+						WHERE
+							rtr.results_id = r.id
+							AND rtri.is_active = 1
+							AND rtri.is_not_aplicable = 0
+							AND rtri.indicator_contributing IS NOT NULL
+					) = (
+						SELECT
+							COUNT(*)
+						FROM
+							results_toc_result_indicators rtri2
+							LEFT JOIN results_toc_result rtr2 ON rtr2.result_toc_result_id = rtri2.results_toc_results_id
+						WHERE
+							rtr2.results_id = r.id
+							AND rtri2.is_active = 1
+							AND rtri2.is_not_aplicable = 0
+					)
+				) THEN TRUE
+				WHEN (
+					rtr1.planned_result = 1
+					AND rtr1.mapping_impact = 1
+					AND (
+						SELECT
+							COUNT(*)
+						FROM
+							result_toc_impact_area_target rtia
+							LEFT JOIN results_toc_result rtr2 ON rtr2.result_toc_result_id = rtia.result_toc_result_id
+						WHERE
+							rtr2.results_id = r.id
+							AND rtia.is_active = 1
+					) > 0
+				) THEN TRUE
+				WHEN (
+					rtr1.planned_result = 1
+					AND rtr1.mapping_sdg = 1
+					AND (
+						SELECT
+							COUNT(*)
+						FROM
+							result_toc_sdg_targets rtsdgt
+							LEFT JOIN results_toc_result rtr2 ON rtr2.result_toc_result_id = rtsdgt.result_toc_result_id
+						WHERE
+							rtr2.results_id = r.id
+							AND rtsdgt.is_active = 1
+					) > 0
+				) THEN TRUE`
+				: ``
+			}
+			ELSE FALSE
+		END AS validation
+	FROM
+		result r
+	INNER JOIN results_by_inititiative rbi ON rbi.result_id = r.id AND rbi.initiative_role_id = 1
+	LEFT JOIN results_toc_result rtr1 ON rtr1.results_id = r.id
 	WHERE
 		r.id = ?
-		and r.is_active > 0
-		and r.version_id = 2;
+	AND
+		r.is_active > 0
+	AND
+		r.version_id = 2;
     `;
     try {
       const shareResultRequest: GetValidationSectionDto[] =
