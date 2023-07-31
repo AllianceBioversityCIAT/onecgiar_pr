@@ -804,54 +804,76 @@ export class ResultsTocResultRepository
     targetsIndicator: any[],
   ) {
     try {
-      await this._resultsTocResultIndicator.update(
-        { results_toc_results_id: id_result_toc_result },
-        { is_active: false },
-      );
-
-      for (let element of targetsIndicator) {
+  
+  
+      await this._resultsTocResultIndicator.update({results_toc_results_id:id_result_toc_result},
+                                                     {is_active : false});
+    
+      for(let element of targetsIndicator){
         let targetIndicators = await this._resultsTocResultIndicator.findOne({
           where: {
             results_toc_results_id: id_result_toc_result,
-            toc_results_indicator_id: element.toc_results_indicator_id,
-          },
-        });
-
+            toc_results_indicator_id: element.toc_results_indicator_id
+          }
+    
+        })
+        
         if(element.is_not_aplicable == null){
           element.is_not_aplicable = false;
         }
-    
-    
-      if(targetIndicators != null){
-      
         
-        if(element.is_calculable){
-          targetIndicators.indicator_contributing = element.indicator_contributing;
-          targetIndicators.is_active = true;
-          targetIndicators.is_not_aplicable = element.is_not_aplicable;
-          let calulate = await this._resultsTocResultIndicator.find({
-            where: {
-              toc_results_indicator_id: element.toc_results_indicator_id,
-            }
-          })
-          let indicator_new = 0;
-          for(let i of calulate) indicator_new+=Number(i.indicator_contributing);
-          indicator_new = element.indicator_contributing + indicator_new;
-          if(indicator_new >= Number(element.target_value)){
-            targetIndicators.status = 2;
-          }
-          else if(indicator_new != 0 ){
-            targetIndicators.status = 1;
-          }
+        
+        if(targetIndicators != null){
+         
           
+          if(element.is_calculable){
+            targetIndicators.indicator_contributing = element.indicator_contributing;
+            targetIndicators.is_active = true;
+            targetIndicators.is_not_aplicable = element.is_not_aplicable;
+            let calulate = await this._resultsTocResultIndicator.find({
+              where: {
+                toc_results_indicator_id: element.toc_results_indicator_id,
+              }
+            })
+            let indicator_new = 0;
+            for(let i of calulate) indicator_new+=Number(i.indicator_contributing);
+            indicator_new = element.indicator_contributing + indicator_new;
+            if(indicator_new >= Number(element.target_value)){
+              targetIndicators.status = 2;
+            }
+            else if(indicator_new != 0 ){
+              targetIndicators.status = 1;
+            }
+            
+          }else{
+            targetIndicators.indicator_contributing = element.indicator_contributing;
+            targetIndicators.is_active = true;
+            targetIndicators.is_not_aplicable = element.is_not_aplicable;
+          }
+          await this._resultsTocResultIndicator.update({result_toc_result_indicator_id:targetIndicators.result_toc_result_indicator_id},
+            targetIndicators);
+        
+        }else{
+          if(element.is_calculable){
+            element.indicator_contributing = element.indicator_new;
+            if(Number(element.indicator_contributing) != 0){
+              element.status = 1;
+            }else if(element.indicator_contributing == element.target_value){
+              element.status = 2;
+            }
+            else{
+              element.status = 0;
+            }
+            
+          }else{
+            element.indicator_contributing = element.indicator_contributing;
+            element.status = 3;
+          }
+          await this._resultsTocResultIndicator.save(element);
         }
-      }
-      else{
-        targetIndicators.indicator_contributing = element.indicator_contributing;
-        targetIndicators.is_active = true;
-        targetIndicators.is_not_aplicable = element.is_not_aplicable;
-      }
-    }
+      }                                               
+      
+     
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
