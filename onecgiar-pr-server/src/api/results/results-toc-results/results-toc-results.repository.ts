@@ -716,6 +716,7 @@ export class ResultsTocResultRepository
   async getResultTocResultByResultId(resultId: number, toc_result_id: number, init:number) {
 
     try {
+      const IndicatorTarget =  await this.query( `select * from results_toc_result where results_id = ${resultId} and is_active = true and initiative_id = ${init};`)
       const queryTocIndicators = `
       SELECT tri.toc_result_indicator_id as toc_results_indicator_id,tri.indicator_description, 
 		tri.target_date, tri.target_value, tri.unit_messurament, tr.phase,rtr.result_toc_result_id as results_toc_results_id
@@ -727,15 +728,30 @@ export class ResultsTocResultRepository
 	              										join version v on r.version_id = v.id  
 	              											where r.id  = ?) and rtr.initiative_id = ?`
 
+    const queryTocIndicatorsNotSave = `
+    SELECT tri.toc_result_indicator_id as toc_results_indicator_id,tri.indicator_description, 
+		tri.target_date, tri.target_value, tri.unit_messurament, tr.phase
+		from Integration_information.toc_results_indicators tri 
+			join Integration_information.toc_results tr on tr.id = tri.toc_results_id 
+		WHEre tr.id  = ? and tr.phase = (select v.toc_pahse_id  
+	              										from result r 	
+	              										join version v on r.version_id = v.id  
+	              											where r.id  = ?)`
+      let innovatonUseInterface ;
+      if(IndicatorTarget.length){
+        innovatonUseInterface = await this.query(queryTocIndicators, [resultId,toc_result_id, resultId,init]);
+      }else{
+        innovatonUseInterface = await this.query(queryTocIndicatorsNotSave, [toc_result_id, resultId,init]);
+      }
       const infoIndicatorSave = `
         select * from results_toc_result_indicators rtri 
           WHERE rtri.results_toc_results_id = ?`;
       
 
-          let saveIndicators:any[] = [];
-      let innovatonUseInterface = await this.query(queryTocIndicators, [resultId,toc_result_id, resultId,init]);
+      let saveIndicators:any[] = [];
+      
       console.log(innovatonUseInterface);
-      if(innovatonUseInterface != null && innovatonUseInterface.length > 0){
+      if(innovatonUseInterface != null && innovatonUseInterface.length > 0 && IndicatorTarget.length > 0){
       if(innovatonUseInterface[0].results_toc_results_id != null){
         saveIndicators = await this.query(infoIndicatorSave, [innovatonUseInterface[0].results_toc_results_id]);
       }}
@@ -751,14 +767,10 @@ export class ResultsTocResultRepository
             }
         });
       }else{
-        saveIndicators.forEach(async (elementSave) => {
-          
-            element.is_not_aplicable = elementSave.is_not_aplicable;
-            element.indicator_contributing = elementSave.indicator_contributing;
-            element.status = elementSave.status;
-            element.is_not_aplicable = elementSave.is_not_aplicable;
-          
-      });
+            element.is_not_aplicable = null;
+            element.indicator_contributing = null;
+            element.status = 3;
+            element.is_not_aplicable = null;
       }
         if(Number(element?.target_value)){
           let calulate = await this._resultsTocResultIndicator.find({
@@ -773,7 +785,14 @@ export class ResultsTocResultRepository
             sumIndicator = Number(i.indicator_contributing) + Number(sumIndicator)
           };
           element.indicator_new = sumIndicator;
-          console.log(element.indicator_new);
+          if(sumIndicator == 0){
+            element.status = 0;
+          }else if(sumIndicator < Number(element.target_value)){
+            element.status = 1;
+
+          }else{
+            element.status = 2;
+          }
         }else{
           element.is_calculable = false;
         }
@@ -842,20 +861,29 @@ try {
     
     }else{
       if(element.is_calculable){
-        element.indicator_contributing = element.indicator_new;
-        if(Number(element.indicator_contributing) != 0){
-          element.status = 1;
-        }else if(element.indicator_contributing == element.target_value){
+        element.indicator_contributing = element.indicator_contributing;
+        let calulate = await this._resultsTocResultIndicator.find({
+          where: {
+            toc_results_indicator_id: element.toc_results_indicator_id,
+          }
+        })
+
+        let indicator_new = 0;
+        for(let i of calulate) indicator_new+=Number(i.indicator_contributing);
+        indicator_new = element.indicator_contributing + indicator_new;
+        if(indicator_new >= Number(element.target_value)){
           element.status = 2;
         }
-        else{
+        else if(indicator_new != 0 ){
+          element.status = 1;
+        }else{
           element.status = 0;
         }
-        
       }else{
         element.indicator_contributing = element.indicator_contributing;
         element.status = 3;
       }
+      element.results_toc_results_id = id_result_toc_result;
       await this._resultsTocResultIndicator.save(element);
     }
   }                                               
@@ -887,6 +915,7 @@ try {
 	              										join version v on r.version_id = v.id  
 	              											where r.id  = ?)
 	) `
+  
   console.log(resultId);
   
   const impactAreaTarget =  await this.query( `select * from results_toc_result where results_id = ${resultId} and is_active = true and initiative_id = ${init};`)
@@ -901,7 +930,7 @@ try {
     select * 
 	  from clarisa_global_targets cgt 
 		join clarisa_impact_areas cia on cgt.impactAreaId = cia.id 
-	  where targetId in (select impact_area_indicator_id from result_toc_impact_area_target where result_toc_result_id = ? and is_active >0 )
+	  where targetId in (select impact_area_indicator_id from result_toc_impact_area_target where result_toc_result_id = ?)
     `;
     returnInfo = await this.query(queryImpactAreaTargets, [impactAreaTarget[0]?.result_toc_result_id]);  
 
@@ -909,8 +938,14 @@ try {
 
   
       if(returnInfo.length != 0){
-      
-      return returnInfo;
+        const queryImpactAreaTargets = `
+        select * 
+        from clarisa_global_targets cgt 
+        join clarisa_impact_areas cia on cgt.impactAreaId = cia.id 
+        where targetId in (select impact_area_indicator_id from result_toc_impact_area_target where result_toc_result_id = ? and is_active >0 )
+        `;
+        const info = await this.query(queryImpactAreaTargets, [impactAreaTarget[0]?.result_toc_result_id]);  
+      return info;
     }else{
       let innovatonUseInterface = await this.query(queryTocIndicators, [toc_result_id, resultId]);      
       return innovatonUseInterface;
@@ -959,7 +994,7 @@ try {
    select * 
     from clarisa_sdgs_targets  cgt 
       join clarisa_sdgs cs on cs.usnd_code = cgt.usnd_code 
-    where cgt.id  in (select clarisa_sdg_target_id from result_toc_sdg_targets where result_toc_result_id = ? and is_active >0 )
+    where cgt.id  in (select clarisa_sdg_target_id from result_toc_sdg_targets where result_toc_result_id = ? )
    `;
    returnInfo = await this.query(queryImpactAreaTargets, [impactAreaTarget[0]?.result_toc_result_id]);  
 
@@ -967,8 +1002,17 @@ try {
 
  
      if(returnInfo.length != 0){
+
+      const queryImpactAreaTargetsActive = `
+   select * 
+    from clarisa_sdgs_targets  cgt 
+      join clarisa_sdgs cs on cs.usnd_code = cgt.usnd_code 
+    where cgt.id  in (select clarisa_sdg_target_id from result_toc_sdg_targets where result_toc_result_id = ? and is_active > 0)
+   `;
+   const infoSdg = await this.query(queryImpactAreaTargetsActive, [impactAreaTarget[0]?.result_toc_result_id]);  
+
      
-     return returnInfo;
+     return infoSdg;
    }else{
      let innovatonUseInterface = await this.query(queryTocIndicators, [toc_result_id, resultId]);      
      return innovatonUseInterface;
@@ -983,7 +1027,7 @@ try {
     }
   }
 
-  async saveImpact(id_result_toc_result, impactAreaTargets){
+  async saveImpact(id_result_toc_result, impactAreaTargets, result_id, init){
 
     try {
       await this._resultsTocImpactAreaTargetRepository.update({result_toc_result_id:id_result_toc_result},
@@ -1005,10 +1049,56 @@ try {
           await this._resultsTocImpactAreaTargetRepository.save({
             result_toc_result_id: id_result_toc_result,
             impact_area_indicator_id: impact.targetId,
-
+            is_active: false,
           });
         }
     }      
+    }else{
+      const queryImpactAreaTargets = `
+      select * 
+	  from clarisa_global_targets cgt 
+		join clarisa_impact_areas cia on cgt.impactAreaId = cia.id 
+	  where targetId in (select impact_area_indicator_id from result_toc_impact_area_target where result_toc_result_id = ? )
+      `;
+      const returnInfo = await this.query(queryImpactAreaTargets, [id_result_toc_result]);  
+   
+      if(returnInfo.length == 0){
+       const queryTocIndicators = `select * from results_toc_result where results_id = ${result_id} and is_active = true and initiative_id = ${init};`
+       const innovatonUseInterface = await this.query(queryTocIndicators);
+   
+       if(innovatonUseInterface != null && innovatonUseInterface.length != 0){
+   
+         const queryImpactAreaTargetsActive = `
+         select * 
+         from clarisa_global_targets cgt 
+           join clarisa_impact_areas cia on cgt.impactAreaId = cia.id 
+         where targetId in (
+               SELECT tiargt.global_targets_id  from  Integration_information.toc_results tr 
+               join Integration_information.toc_results_impact_area_results triar on triar.toc_results_id  = tr.id
+               join Integration_information.toc_impact_area_results tiar on tiar.id = triar.toc_impact_area_results_id 
+               join Integration_information.toc_impact_area_results_global_targets tiargt on tiargt.toc_impact_area_results_id = tiar.id 
+               where tr.id  = ? and tr.phase = (select v.toc_pahse_id  
+                                           from result r 	
+                                           join version v on r.version_id = v.id  
+                                             where r.id  = ?)
+         )
+         `
+   
+       const sdgToc = await this.query(queryImpactAreaTargetsActive, [innovatonUseInterface[0]?.toc_result_id, result_id]);
+   
+       if(sdgToc != null && sdgToc.length != 0){
+   
+         for(let info of sdgToc){
+          await this._resultsTocImpactAreaTargetRepository.save({
+            result_toc_result_id: id_result_toc_result,
+            impact_area_indicator_id: info.targetId,
+            is_ative: true
+          });
+         }
+       }
+       }
+   
+      }
     }
     
     } catch (error) {
@@ -1021,8 +1111,10 @@ try {
 
   }
 
-  async saveSdg(id_result_toc_result, sdgTargets){
+  async saveSdg(id_result_toc_result, sdgTargets, result_id, init){
     try {
+      
+      
       await this._resultsTocSdgTargetRepository.update({result_toc_result_id:id_result_toc_result},
         {is_active : false});
       if(sdgTargets.length != 0){
@@ -1047,6 +1139,54 @@ try {
           });
         }
     }      
+    }else{
+      const queryImpactAreaTargets = `
+   select * 
+    from clarisa_sdgs_targets  cgt 
+      join clarisa_sdgs cs on cs.usnd_code = cgt.usnd_code 
+    where cgt.id  in (select clarisa_sdg_target_id from result_toc_sdg_targets where result_toc_result_id = ? )
+   `;
+   const returnInfo = await this.query(queryImpactAreaTargets, [id_result_toc_result]);  
+
+   if(returnInfo.length == 0){
+    
+    const queryTocIndicators = `select * from results_toc_result where result_toc_result_id = ${id_result_toc_result};`
+    const innovatonUseInterface = await this.query(queryTocIndicators);
+
+    if(innovatonUseInterface != null && innovatonUseInterface.length != 0){
+      
+      const queryImpactAreaTargetsActive = `
+select * 
+    from clarisa_sdgs_targets  cgt 
+      join clarisa_sdgs cs on cs.usnd_code = cgt.usnd_code 
+    where cgt.id  in (
+          SELECT tsrst.sdg_target_id  from  Integration_information.toc_results tr 
+          join Integration_information.toc_results_sdg_results trsr  on trsr.toc_results_id  = tr.id
+          join Integration_information.toc_sdg_results tsr  on tsr.id = trsr.toc_sdg_results_id 
+          join Integration_information.toc_sdg_results_sdg_targets tsrst  on tsrst.toc_sdg_results_id  = tsr.id 
+          where tr.id  = ? and tr.phase = (select v.toc_pahse_id  
+                                      from result r 	
+                                      join version v on r.version_id = v.id  
+                                        where r.id  = ?)
+    )
+      `
+
+    const sdgToc = await this.query(queryImpactAreaTargetsActive, [innovatonUseInterface[0]?.toc_result_id, result_id]);
+
+    if(sdgToc != null && sdgToc.length != 0){
+      console.log(id_result_toc_result);
+      for(let info of sdgToc){
+        await this._resultsTocSdgTargetRepository.save({
+          result_toc_result_id: id_result_toc_result,
+          clarisa_sdg_target_id: info.id,
+          clarisa_sdg_usnd_code: info.usnd_code,
+          is_active: false
+        });
+      }
+    }
+    }
+
+   }
     }
     
     } catch (error) {
@@ -1076,13 +1216,8 @@ try {
           if(toc.targetsIndicators != null && toc.targetsIndicators.length != 0){
             await this.saveInditicatorsContributing(result[0].result_toc_result_id, toc.targetsIndicators);
           }
-          if(toc.impactAreasTargets != null && toc.impactAreasTargets.length != 0){
-            await this.saveImpact(result[0].result_toc_result_id, toc.impactAreasTargets);
-          }
-          if(toc.sdgTargest != null && toc.sdgTargest.length != 0){
-            await this.saveSdg(result[0].result_toc_result_id, toc.sdgTargest);
-          }
-          
+            await this.saveImpact(result[0].result_toc_result_id, toc.impactAreasTargets,  toc.resultId, toc.initiative);
+            await this.saveSdg(result[0].result_toc_result_id, toc.sdgTargest, toc.resultId, toc.initiative);
         }
       }
       
