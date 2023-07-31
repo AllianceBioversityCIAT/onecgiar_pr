@@ -149,7 +149,7 @@ export class TocInitiativeOutComponent {
 
   async getIndicator() {
     this.indicators = [];
-    //this.theoryOfChangesServices.body = []
+    this.theoryOfChangesServices.body = []
     this.indicatorView = false;
     this.disabledInput = false;
     await this.api.resultsSE.Get_indicator(this.initiative.toc_result_id, this.initiative.initiative_id).subscribe(({ response }) => {
