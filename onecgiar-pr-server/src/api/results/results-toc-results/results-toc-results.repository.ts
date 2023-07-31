@@ -761,8 +761,19 @@ export class ResultsTocResultRepository
       });
       }
         if(Number(element?.target_value)){
+          let calulate = await this._resultsTocResultIndicator.find({
+            where: {
+              toc_results_indicator_id: element.toc_results_indicator_id,
+            }
+          })
           element.is_calculable = true;
-          element.indicator_new = 0;
+          let sumIndicator = 0;
+          
+          for(let i of calulate) {
+            sumIndicator = Number(i.indicator_contributing) + Number(sumIndicator)
+          };
+          element.indicator_new = sumIndicator;
+          console.log(element.indicator_new);
         }else{
           element.is_calculable = false;
         }
@@ -803,21 +814,23 @@ try {
      
       
       if(element.is_calculable){
-        const missing = Number(element.target_value) - Number(targetIndicators.indicator_contributing);
-        if(missing != 0 && element.indicator_new <= missing){
-          targetIndicators.indicator_contributing = (Number(element.indicator_new)+Number(targetIndicators.indicator_contributing)).toString();
-          if(Number(targetIndicators.indicator_contributing) - Number(element.target_value) == 0){
-            targetIndicators.status = 2;
-          }
-        }
-        if(element.indicator_new != 0 && Number(targetIndicators.indicator_contributing) != Number(element.target_value)){
-          targetIndicators.status = 1;
-        }
-        if(missing == 0){
-          targetIndicators.status = 2;
-        }
+        targetIndicators.indicator_contributing = element.indicator_contributing;
         targetIndicators.is_active = true;
         targetIndicators.is_not_aplicable = element.is_not_aplicable;
+        let calulate = await this._resultsTocResultIndicator.find({
+          where: {
+            toc_results_indicator_id: element.toc_results_indicator_id,
+          }
+        })
+        let indicator_new = 0;
+        for(let i of calulate) indicator_new+=Number(i.indicator_contributing);
+        indicator_new = element.indicator_contributing + indicator_new;
+        if(indicator_new >= Number(element.target_value)){
+          targetIndicators.status = 2;
+        }
+        else if(indicator_new != 0 ){
+          targetIndicators.status = 1;
+        }
         
       }else{
         targetIndicators.indicator_contributing = element.indicator_contributing;

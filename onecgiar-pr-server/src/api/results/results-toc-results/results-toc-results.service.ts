@@ -591,6 +591,8 @@ export class ResultsTocResultsService {
         isImpactArea= result[0].isImpactArea
       }
       const informationIndicator = await this._resultsTocResultRepository.getResultTocResultByResultId(resultIdToc,toc_result_id,init);
+      console.log(informationIndicator);
+      
       const impactAreas = await this._resultsTocResultRepository.getImpactAreaTargetsToc(resultIdToc,toc_result_id,init);
       const  sdgTargets = await this._resultsTocResultRepository.getSdgTargetsToc(resultIdToc,toc_result_id, init);
       return {
