@@ -50,34 +50,10 @@ export class ApiService {
     this.dataControlSE.myInitiativesList = [];
   }
 
-  combineRepeatedResults(results) {
-    const resultMap: Record<number, any> = {};
-
-    results.forEach(result => {
-      if (!resultMap[result.result_code]) {
-        resultMap[result.result_code] = {
-          result_code: result.result_code,
-          submitter: result.submitter,
-          results: []
-        };
-      }
-      resultMap[result.result_code].results.push({
-        ...result
-      });
-    });
-
-    const transformedData = Object.values(resultMap);
-    this.dataControlSE.combinedResultsList = transformedData;
-    console.log(transformedData);
-
-    // teniendo los resultados anteriores necesito combinar los resultados iguales segun el result_code dejar un objeto con title y result_code pero dentro un array con la demas informacion de los resultados repetidos
-  }
-
   updateResultsList() {
     this.resultsSE.GET_AllResultsWithUseRole(this.authSE.localStorageUser.id).subscribe(resp => {
       this.dataControlSE.resultsList = resp.response;
       console.log(this.dataControlSE.resultsList);
-      this.combineRepeatedResults(this.dataControlSE.resultsList);
     });
   }
 
