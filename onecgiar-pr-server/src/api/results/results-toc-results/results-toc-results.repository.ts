@@ -1092,7 +1092,7 @@ try {
           await this._resultsTocImpactAreaTargetRepository.save({
             result_toc_result_id: id_result_toc_result,
             impact_area_indicator_id: info.targetId,
-            is_ative: true
+            is_ative: false
           });
          }
        }
