@@ -44,4 +44,8 @@ export class TargetIndicatorComponent implements OnInit {
     return statusIndicator;
     }
 
+    validarNumero(e) {
+      if (e.key === "-")
+      e.preventDefault();
+   }
 }

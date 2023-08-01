@@ -832,9 +832,9 @@ try {
     
     
     if(targetIndicators != null){
-     
+        
       
-      if(element.is_calculable){
+      if(element.is_calculable && !element.is_not_aplicable){
         targetIndicators.indicator_contributing = element.indicator_contributing;
         targetIndicators.is_active = true;
         targetIndicators.is_not_aplicable = element.is_not_aplicable;
@@ -857,6 +857,9 @@ try {
         targetIndicators.indicator_contributing = element.indicator_contributing;
         targetIndicators.is_active = true;
         targetIndicators.is_not_aplicable = element.is_not_aplicable;
+        if(element.is_not_aplicable){
+          targetIndicators.indicator_contributing = null;
+        }
       }
       await this._resultsTocResultIndicator.update({result_toc_result_indicator_id:targetIndicators.result_toc_result_indicator_id},
         targetIndicators);
@@ -881,9 +884,16 @@ try {
         }else{
           element.status = 0;
         }
+
+        if(element.is_not_aplicable){
+          element.indicator_contributing = null;
+        }
       }else{
         element.indicator_contributing = element.indicator_contributing;
         element.status = 3;
+        if(element.is_not_aplicable){
+          element.indicator_contributing = null;
+        }
       }
       element.results_toc_results_id = id_result_toc_result;
       await this._resultsTocResultIndicator.save(element);
