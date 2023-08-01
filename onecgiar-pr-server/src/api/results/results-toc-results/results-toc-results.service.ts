@@ -61,7 +61,8 @@ export class ResultsTocResultsService {
         contributors_result_toc_result,
         impacts,
         pending_contributing_initiatives,
-        bodyNewTheoryOfChanges
+        bodyNewTheoryOfChanges,
+        impactsTarge
       } = createResultsTocResultDto;
       const version = await this._versionsService.findBaseVersion();
       const result = await this._resultRepository.getResultById(result_id);
@@ -230,6 +231,8 @@ export class ResultsTocResultsService {
       }
 
       if (result.result_level_id == 1) {
+        /*
+        Code deprecated because of the new structure of the result level
         impacts.forEach(async ({ id, indicators, target }) => {
           if (indicators?.length) {
             await this._resultsImpactAreaIndicatorRepository.updateResultImpactAreaIndicators(
@@ -301,6 +304,9 @@ export class ResultsTocResultsService {
             );
           }
         });
+        */
+      await this._resultsImpactAreaTargetRepository.saveImpactAreaTarget(result_id, impactsTarge, user.id);
+        
       } else {
         initiativeArrayRtr = contributing_initiatives.map(
           (initiative) => initiative.id,
@@ -459,6 +465,7 @@ export class ResultsTocResultsService {
         await this._clarisaImpactAreaRepository.getAllImpactArea();
       let resTocRes: any[] = [];
       let conResTocRes: any[] = [];
+      let consImpactTarget: any[] = [];
       if (result.result_level_id != 2 && result.result_level_id != 1) {
         resTocRes = await this._resultsTocResultRepository.getRTRPrimary(
           resultId,
@@ -550,6 +557,8 @@ export class ResultsTocResultsService {
             official_code: resultInit.official_code,
           },
         ];
+
+        consImpactTarget = await this._resultsImpactAreaTargetRepository.getResultImpactAreaTargetByResultId(resultId);
       }
 
       return {
@@ -563,6 +572,7 @@ export class ResultsTocResultsService {
           contributors_result_toc_result:
             result.result_level_id == 1 ? null : conResTocRes,
           impacts: result.result_level_id == 1 ? impactAreaArray : null,
+          impactsTarge:result.result_level_id == 1 ? consImpactTarget : null,
         },
         message: 'The toc data is successfully created',
         status: HttpStatus.OK,

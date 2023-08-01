@@ -8,6 +8,7 @@ export class CreateResultsTocResultDto {
     impacts: ResultTocImpactsInterface[];
     pending_contributing_initiatives: shareResultRequestInterface[];
     bodyNewTheoryOfChanges: any[];
+    impactsTarge:any[];
 }
 
 interface ResultTocImpactsInterface{

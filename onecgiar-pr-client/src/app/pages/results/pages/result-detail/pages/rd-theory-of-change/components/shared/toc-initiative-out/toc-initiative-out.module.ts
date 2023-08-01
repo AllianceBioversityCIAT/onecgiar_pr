@@ -9,7 +9,7 @@ import { SdgTargetsComponent } from './sdg-targets/sdg-targets.component';
 
 @NgModule({
   declarations: [TocInitiativeOutComponent, OutcomeLevelFilterPipe, TargetIndicatorComponent, ImpactAreaTargetsComponent, SdgTargetsComponent],
-  exports: [TocInitiativeOutComponent],
+  exports: [TocInitiativeOutComponent, ImpactAreaTargetsComponent, SdgTargetsComponent],
   imports: [CommonModule, CustomFieldsModule]
 })
 export class TocInitiativeOutModule {}

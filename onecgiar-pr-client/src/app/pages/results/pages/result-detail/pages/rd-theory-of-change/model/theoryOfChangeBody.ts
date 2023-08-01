@@ -9,6 +9,7 @@ export class TheoryOfChangeBody {
   pending_contributing_initiatives: any;
   contributing_and_primary_initiative: any;
   bodyNewTheoryOfChanges:any[];
+  impactsTarge:any[];
 }
 interface ResultTocImpactsInterface {
   id: number;

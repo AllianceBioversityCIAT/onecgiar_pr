@@ -1,5 +1,5 @@
 <app-pr-field-header
-    label="Select an Impact Area to filter the list of targets" [required]="false"></app-pr-field-header>
+    label="Select an Impact Area to filter the list of targets" [required]="impactAreaRequid"></app-pr-field-header>
 <div class="impact_areas_circles">
     <div class="iaitem" *ngFor="let impactAreaItem of this.impactAreasData">
         <div class="impact_area_circle_item" [style.background]="impactAreaItem?.color"
