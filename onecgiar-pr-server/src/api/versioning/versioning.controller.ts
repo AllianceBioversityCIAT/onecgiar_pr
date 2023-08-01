@@ -57,6 +57,11 @@ export class VersioningController {
     return this.versioningService.update(+id, updateVersioningDto);
   }
 
+  @Get('all')
+  findAll() {
+    return this.versioningService.getAllPhases();
+  }
+
   @Get()
   find(
     @Query('module') module_type: ModuleTypeEnum = ModuleTypeEnum.ALL,

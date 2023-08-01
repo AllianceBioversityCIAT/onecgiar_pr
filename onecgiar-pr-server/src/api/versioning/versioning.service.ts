@@ -518,6 +518,24 @@ export class VersioningService {
     }
   }
 
+  async getAllPhases() {
+    try {
+      const res = await this._versionRepository.find({
+        relations: {
+          obj_app_module: true,
+        },
+      });
+
+      return this._returnResponse.format({
+        message: `Phase Retrieved Successfully`,
+        response: res,
+        statusCode: HttpStatus.OK,
+      });
+    } catch (error) {
+      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+    }
+  }
+
   async getVersionOfAResult(resul_id: number) {
     try {
       const versions_id = await this._versionRepository.$_getVersionOfAResult(
