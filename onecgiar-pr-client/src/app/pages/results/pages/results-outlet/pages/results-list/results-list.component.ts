@@ -16,6 +16,7 @@ import { PhasesService } from '../../../../../../shared/services/global/phases.s
 })
 export class ResultsListComponent implements OnInit {
   gettingReport = false;
+  combine = true;
   columnOrder = [
     // { title: 'Result code', attr: 'result_code' },
     { title: 'Title', attr: 'title', class: 'notCenter' },
@@ -74,6 +75,12 @@ export class ResultsListComponent implements OnInit {
 
   constructor(public api: ApiService, public resultsListService: ResultsListService, private ResultLevelSE: ResultLevelService, private exportTablesSE: ExportTablesService, private shareRequestModalSE: ShareRequestModalService, private retrieveModalSE: RetrieveModalService, public phasesService: PhasesService) {}
 
+  validateOrder() {
+    setTimeout(() => {
+      this.combine = !document.getElementById('resultListTable').querySelectorAll('th[aria-sort="descending"]').length;
+      // console.log(document.getElementById('resultListTable').querySelectorAll('th[aria-sort="descending"]').length);
+    }, 100);
+  }
   ngOnInit(): void {
     // this.api.rolesSE.validateReadOnly();
     this.api.updateResultsList();
