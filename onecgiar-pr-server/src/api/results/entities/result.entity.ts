@@ -306,6 +306,13 @@ export class Result {
   })
   has_countries: boolean;
 
+  @Column({
+    name: 'is_discontinued',
+    nullable: true,
+    type: 'boolean',
+  })
+  is_discontinued: boolean;
+
   // helpers??
   initiative_id!: number;
 
