@@ -1,3 +1,5 @@
+import { ResultsInvestmentDiscontinuedOption } from '../results-investment-discontinued-options/entities/results-investment-discontinued-option.entity';
+
 export class CreateGeneralInformationResultDto {
   public result_id: number;
   public initiative_id: number;
@@ -12,16 +14,17 @@ export class CreateGeneralInformationResultDto {
   public poverty_tag_level_id: number;
   public institutions: institutionsInterface[];
   public institutions_type: institutionsTypeInterface[];
-  public krs_url!: string
+  public krs_url!: string;
   public is_krs!: boolean;
   public lead_contact_person!: string;
-
+  public is_discontinued!: boolean;
+  public discontinued_options!: ResultsInvestmentDiscontinuedOption[];
 }
 
-interface institutionsInterface{
+interface institutionsInterface {
   institutions_id: number;
 }
 
-interface institutionsTypeInterface{
+interface institutionsTypeInterface {
   institutions_type_id: number;
 }

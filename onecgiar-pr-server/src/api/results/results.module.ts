@@ -71,6 +71,9 @@ import { ApplicationModulesRepository } from '../versioning/repositories/applica
 import { VersioningModule } from '../versioning/versioning.module';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 import { ResultStatusModule } from './result-status/result-status.module';
+import { InvestmentDiscontinuedOptionsModule } from './investment-discontinued-options/investment-discontinued-options.module';
+import { ResultsInvestmentDiscontinuedOptionsModule } from './results-investment-discontinued-options/results-investment-discontinued-options.module';
+import { ResultsInvestmentDiscontinuedOptionRepository } from './results-investment-discontinued-options/results-investment-discontinued-options.repository';
 
 @Module({
   controllers: [ResultsController],
@@ -121,6 +124,8 @@ import { ResultStatusModule } from './result-status/result-status.module';
     ResultCountriesSubNationalModule,
     VersioningModule,
     ResultStatusModule,
+    InvestmentDiscontinuedOptionsModule,
+    ResultsInvestmentDiscontinuedOptionsModule,
   ],
   providers: [
     ResultsService,
@@ -136,6 +141,7 @@ import { ResultStatusModule } from './result-status/result-status.module';
     LogRepository,
     ReturnResponse,
     ResponseInterceptor,
+    ResultsInvestmentDiscontinuedOptionRepository,
   ],
   exports: [ResultRepository, JwtMiddleware],
 })
