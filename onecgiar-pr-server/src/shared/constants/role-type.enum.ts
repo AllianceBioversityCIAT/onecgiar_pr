@@ -31,3 +31,9 @@ export enum StatusPhaseEnum {
   OPEN = 'open',
   ALL = 'all',
 }
+
+export enum ActiveEnum {
+  ACTIVE = 'active',
+  INACTIVE = 'inactive',
+  ALL = 'all',
+}

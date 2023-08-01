@@ -17,6 +17,7 @@ import { UserToken } from '../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { Roles } from '../../shared/decorators/roles.decorator';
 import {
+  ActiveEnum,
   ModuleTypeEnum,
   RoleEnum,
   RoleTypeEnum,
@@ -66,8 +67,9 @@ export class VersioningController {
   find(
     @Query('module') module_type: ModuleTypeEnum = ModuleTypeEnum.ALL,
     @Query('status') status: StatusPhaseEnum = StatusPhaseEnum.OPEN,
+    @Query('active') active: ActiveEnum = ActiveEnum.ACTIVE,
   ) {
-    return this.versioningService.find(module_type, status);
+    return this.versioningService.find(module_type, status, active);
   }
 
   @Get('result/:resultId')
