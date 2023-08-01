@@ -62,7 +62,8 @@ export class ResultsTocResultsService {
         impacts,
         pending_contributing_initiatives,
         bodyNewTheoryOfChanges,
-        impactsTarge
+        impactsTarge,
+        sdgTargets
       } = createResultsTocResultDto;
       const version = await this._versionsService.findBaseVersion();
       const result = await this._resultRepository.getResultById(result_id);
@@ -306,7 +307,7 @@ export class ResultsTocResultsService {
         });
         */
       await this._resultsImpactAreaTargetRepository.saveImpactAreaTarget(result_id, impactsTarge, user.id);
-        
+      await this._resultsTocResultRepository.saveSdgTargets(result_id, sdgTargets);
       } else {
         initiativeArrayRtr = contributing_initiatives.map(
           (initiative) => initiative.id,
@@ -466,6 +467,7 @@ export class ResultsTocResultsService {
       let resTocRes: any[] = [];
       let conResTocRes: any[] = [];
       let consImpactTarget: any[] = [];
+      let consSdgTargets: any[] = [];
       if (result.result_level_id != 2 && result.result_level_id != 1) {
         resTocRes = await this._resultsTocResultRepository.getRTRPrimary(
           resultId,
@@ -559,6 +561,7 @@ export class ResultsTocResultsService {
         ];
 
         consImpactTarget = await this._resultsImpactAreaTargetRepository.getResultImpactAreaTargetByResultId(resultId);
+        consSdgTargets = await this._resultsTocResultRepository.getSdgTargetsByResultId(resultId);
       }
 
       return {
@@ -573,6 +576,7 @@ export class ResultsTocResultsService {
             result.result_level_id == 1 ? null : conResTocRes,
           impacts: result.result_level_id == 1 ? impactAreaArray : null,
           impactsTarge:result.result_level_id == 1 ? consImpactTarget : null,
+          sdgTargets: result.result_level_id == 1 ? consSdgTargets : null,
         },
         message: 'The toc data is successfully created',
         status: HttpStatus.OK,

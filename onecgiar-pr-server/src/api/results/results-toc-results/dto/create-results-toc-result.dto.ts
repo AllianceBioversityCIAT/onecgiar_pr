@@ -9,6 +9,7 @@ export class CreateResultsTocResultDto {
     pending_contributing_initiatives: shareResultRequestInterface[];
     bodyNewTheoryOfChanges: any[];
     impactsTarge:any[];
+    sdgTargets:any[];
 }
 
 interface ResultTocImpactsInterface{

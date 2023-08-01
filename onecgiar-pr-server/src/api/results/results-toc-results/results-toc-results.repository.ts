@@ -11,6 +11,7 @@ import { ResultsTocResultIndicatorsRepository } from './results-toc-results-indi
 import { isNumber } from 'class-validator';
 import { ResultsTocImpactAreaTargetRepository } from './result-toc-impact-area-repository';
 import { ResultsTocSdgTargetRepository } from './result-toc-sdg-target-repository';
+import { ResultsSdgTargetRepository } from './results-sdg-targets.respository';
 
 @Injectable()
 export class ResultsTocResultRepository
@@ -26,7 +27,8 @@ export class ResultsTocResultRepository
     private readonly _handlersError: HandlersError,
     private readonly _resultsTocResultIndicator: ResultsTocResultIndicatorsRepository,
     private readonly _resultsTocImpactAreaTargetRepository: ResultsTocImpactAreaTargetRepository,
-    private readonly _resultsTocSdgTargetRepository:ResultsTocSdgTargetRepository
+    private readonly _resultsTocSdgTargetRepository:ResultsTocSdgTargetRepository,
+    private readonly _resultsSdgTargetRepository:ResultsSdgTargetRepository
    
   ) {
     super(ResultsTocResult, dataSource.createEntityManager());
@@ -1229,6 +1231,70 @@ select *
       });
     }
 
+  }
+
+  async getSdgTargetsByResultId(resultId){
+    const querySDGTargetActive = `
+      select * 
+    from clarisa_sdgs_targets  cgt 
+      join clarisa_sdgs cs on cs.usnd_code = cgt.usnd_code
+      join result_sdg_targets rst on rst.clarisa_sdg_target_id = cgt.id
+    where rst.result_id = ? and is_active = true;
+    `
+    try {
+      const resultTocResult: any[] = await this.query(
+        querySDGTargetActive,
+        [resultId],
+      );
+      return resultTocResult;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsTocResultRepository.name,
+        error: `updateResultByInitiative ${error}`,
+        debug: true,
+      });
+    }
+  }
+
+  async saveSdgTargets(resultId:number, sdgTargets:any[]){
+    try {
+      this._resultsSdgTargetRepository.update({result_id:resultId}, {is_active:false});
+
+      if(sdgTargets.length > 0){
+        
+        for(let sdg of sdgTargets){
+          let sdgTarget = await this._resultsSdgTargetRepository.findOne({
+            where: {
+              result_id: resultId,
+              clarisa_sdg_target_id: sdg.id,
+              clarisa_sdg_usnd_code: sdg.usnd_code
+            }
+        });
+          console.log(sdgTarget);
+          
+        
+        if(sdgTarget != null){
+          await this._resultsSdgTargetRepository.update({result_sdg_target_id:sdgTarget.result_sdg_target_id}, {
+            is_active:true,
+          });
+        }else{
+          await this._resultsSdgTargetRepository.save({
+            result_id:resultId,
+            clarisa_sdg_target_id:sdg.id,
+            clarisa_sdg_usnd_code:sdg.usnd_code,
+            is_active:true
+          });
+        }
+        }
+      }
+      
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsTocResultRepository.name,
+        error: `updateResultByInitiative ${error}`,
+        debug: true,
+      });
+    }
   }
 
 }
