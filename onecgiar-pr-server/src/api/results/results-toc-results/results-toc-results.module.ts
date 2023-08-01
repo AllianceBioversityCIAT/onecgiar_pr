@@ -23,6 +23,7 @@ import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/
 import { ResultsTocResultIndicatorsRepository } from './results-toc-results-indicators.repository';
 import { ResultsTocSdgTargetRepository } from './result-toc-sdg-target-repository';
 import { ResultsTocImpactAreaTargetRepository } from './result-toc-impact-area-repository';
+import { ResultsSdgTargetRepository } from './results-sdg-targets.respository';
 
 @Module({
   controllers: [ResultsTocResultsController],
@@ -47,7 +48,8 @@ import { ResultsTocImpactAreaTargetRepository } from './result-toc-impact-area-r
     ReturnResponse,
     ResultsTocResultIndicatorsRepository,
     ResultsTocSdgTargetRepository,
-    ResultsTocImpactAreaTargetRepository
+    ResultsTocImpactAreaTargetRepository,
+    ResultsSdgTargetRepository
   ],
   exports: [ResultsTocResultRepository],
 })

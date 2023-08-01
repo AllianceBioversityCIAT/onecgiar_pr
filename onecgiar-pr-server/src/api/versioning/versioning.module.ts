@@ -36,6 +36,7 @@ import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser
 import { ResultsTocResultIndicatorsRepository } from '../results/results-toc-results/results-toc-results-indicators.repository';
 import { ResultsTocImpactAreaTargetRepository } from '../results/results-toc-results/result-toc-impact-area-repository';
 import { ResultsTocSdgTargetRepository } from '../results/results-toc-results/result-toc-sdg-target-repository';
+import { ResultsSdgTargetRepository } from '../results/results-toc-results/results-sdg-targets.respository';
 
 @Module({
   controllers: [VersioningController],
@@ -73,7 +74,8 @@ import { ResultsTocSdgTargetRepository } from '../results/results-toc-results/re
     RoleByUserRepository,
     ResultsTocResultIndicatorsRepository,
     ResultsTocSdgTargetRepository,
-    ResultsTocImpactAreaTargetRepository
+    ResultsTocImpactAreaTargetRepository,
+    ResultsSdgTargetRepository,
   ],
   exports: [
     VersioningService,
@@ -107,6 +109,7 @@ import { ResultsTocSdgTargetRepository } from '../results/results-toc-results/re
     ResultsKnowledgeProductMetadataRepository,
     ResultsKnowledgeProductInstitutionRepository,
     RoleByUserRepository,
+    
   ],
 })
 export class VersioningModule {}

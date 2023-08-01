@@ -38,6 +38,7 @@ import {
 } from '../../shared/handlers/error.utils';
 import { ResultsTocImpactAreaTargetRepository } from 'src/api/results/results-toc-results/result-toc-impact-area-repository';
 import { ResultsTocSdgTargetRepository } from 'src/api/results/results-toc-results/result-toc-sdg-target-repository';
+import { ResultsSdgTargetRepository } from 'src/api/results/results-toc-results/results-sdg-targets.respository';
 
 @Module({
   controllers: [TocResultsController],
@@ -77,7 +78,8 @@ import { ResultsTocSdgTargetRepository } from 'src/api/results/results-toc-resul
     RoleByUserRepository,
     ResultsTocResultIndicatorsRepository,
     ResultsTocSdgTargetRepository,
-    ResultsTocImpactAreaTargetRepository
+    ResultsTocImpactAreaTargetRepository,
+    ResultsSdgTargetRepository,
   ],
   exports: [TocResultsRepository],
 })

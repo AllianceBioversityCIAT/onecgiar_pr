@@ -46,6 +46,8 @@ export class RdTheoryOfChangeComponent {
         this.theoryOfChangeBody?.contributing_and_primary_initiative.forEach(init => (init.full_name = `${init?.official_code} - <strong>${init?.short_name}</strong> - ${init?.initiative_name}`));
         this.currentInitOfficialCode = this.theoryOfChangeBody.result_toc_result.official_code;
         // this.theoryOfChangeBody.result_toc_result;
+        this.theoryOfChangeBody.impactsTarge.map(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
+        this.theoryOfChangeBody.sdgTargets.map(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
       },
       err => {
         this.getConsumed = true;
