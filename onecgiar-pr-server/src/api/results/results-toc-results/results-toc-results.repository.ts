@@ -854,19 +854,21 @@ try {
         }
         
       }else{
-        targetIndicators.indicator_contributing = element.indicator_contributing;
         targetIndicators.is_active = true;
         targetIndicators.is_not_aplicable = element.is_not_aplicable;
         if(element.is_not_aplicable){
           targetIndicators.indicator_contributing = null;
+        }else{
+          targetIndicators.indicator_contributing = element.indicator_contributing;
         }
+
       }
       await this._resultsTocResultIndicator.update({result_toc_result_indicator_id:targetIndicators.result_toc_result_indicator_id},
         targetIndicators);
     
     }else{
       if(element.is_calculable){
-        element.indicator_contributing = element.indicator_contributing;
+        
         let calulate = await this._resultsTocResultIndicator.find({
           where: {
             toc_results_indicator_id: element.toc_results_indicator_id,
@@ -887,12 +889,15 @@ try {
 
         if(element.is_not_aplicable){
           element.indicator_contributing = null;
+        }else{
+          element.indicator_contributing = element.indicator_contributing;
         }
       }else{
-        element.indicator_contributing = element.indicator_contributing;
         element.status = 3;
         if(element.is_not_aplicable){
           element.indicator_contributing = null;
+        }else{
+          element.indicator_contributing = element.indicator_contributing;
         }
       }
       element.results_toc_results_id = id_result_toc_result;
