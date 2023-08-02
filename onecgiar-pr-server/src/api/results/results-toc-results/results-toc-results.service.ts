@@ -537,6 +537,7 @@ export class ResultsTocResultsService {
           resTocRes[0]['planned_result'] == 0
             ? 3
             : resTocRes[0]['toc_level_id'];
+        console.log(resTocRes);
         conResTocRes = await this._resultsTocResultRepository.getRTRPrimary(
           resultId,
           [resultInit.id],

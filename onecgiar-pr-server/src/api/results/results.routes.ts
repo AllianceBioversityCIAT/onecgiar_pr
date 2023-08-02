@@ -30,6 +30,7 @@ import { ResultActorsModule } from './result-actors/result-actors.module';
 import { YearsModule } from './years/years.module';
 import { InvestmentDiscontinuedOption } from './investment-discontinued-options/entities/investment-discontinued-option.entity';
 import { ResultsInvestmentDiscontinuedOptionsModule } from './results-investment-discontinued-options/results-investment-discontinued-options.module';
+import { InvestmentDiscontinuedOptionsModule } from './investment-discontinued-options/investment-discontinued-options.module';
 
 export const ResultsRoutes: Routes = [
   {
@@ -150,7 +151,7 @@ export const ResultsRoutes: Routes = [
   },
   {
     path: 'investment-discontinued-options',
-    module: InvestmentDiscontinuedOption,
+    module: InvestmentDiscontinuedOptionsModule,
   },
   {
     path: 'results-investment-discontinued-options',
