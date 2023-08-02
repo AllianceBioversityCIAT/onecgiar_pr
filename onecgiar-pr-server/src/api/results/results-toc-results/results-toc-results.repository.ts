@@ -901,6 +901,7 @@ try {
         }
       }
       element.results_toc_results_id = id_result_toc_result;
+      element.is_active = true;
       await this._resultsTocResultIndicator.save(element);
     }
   }                                               
