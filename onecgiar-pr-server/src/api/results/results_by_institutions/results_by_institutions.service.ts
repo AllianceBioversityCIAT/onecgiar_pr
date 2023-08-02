@@ -215,14 +215,15 @@ export class ResultsByInstitutionsService {
 
       if (knowledgeProduct && data.mqap_institutions?.length) {
         //here we filter out from the additional contributors the mqap manual mappings
-        data.institutions = data.institutions.filter((i) =>
-          data.mqap_institutions
-            .filter((mqap) => mqap.user_matched_institution?.institutions_id)
-            .find(
-              (mqap) =>
-                mqap.user_matched_institution.institutions_id ==
-                i.institutions_id,
-            ),
+        data.institutions = data.institutions.filter(
+          (i) =>
+            !data.mqap_institutions
+              .filter((mqap) => mqap.user_matched_institution?.institutions_id)
+              .find(
+                (mqap) =>
+                  mqap.user_matched_institution.institutions_id ==
+                  i.institutions_id,
+              ),
         );
 
         /*
