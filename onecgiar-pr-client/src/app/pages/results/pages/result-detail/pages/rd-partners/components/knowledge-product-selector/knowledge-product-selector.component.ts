@@ -13,15 +13,10 @@ export class KnowledgeProductSelectorComponent {
   authorAffiliationsList: any[] = [{ part: { code: 5 } }];
   constructor(public api: ApiService, public institutionsSE: InstitutionsService, public rdPartnersSE: RdPartnersService, public rolesSE: RolesService) {}
 
-  institutions_name(institution_id) {
-    const insts = JSON.parse(JSON.stringify(this.institutionsSE.institutionsList));
-    const institutionFinded = insts.find(institution => institution.institutions_id == institution_id);
-    return institutionFinded?.institutions_name;
-  }
-
-  institutions_institutions_type_name(institution_id) {
-    const insts = JSON.parse(JSON.stringify(this.institutionsSE.institutionsList));
-    const institutionFinded = insts.find(institution => institution.institutions_id == institution_id);
-    return institutionFinded?.institutions_type_name;
+  institutions_institutions_type_name(partner) {
+    console.log('institutions_institutions_type_name');
+    const insts = this.institutionsSE.institutionsList;
+    const institutionFinded = insts.find(institution => institution.institutions_id == partner.user_matched_institution.institutions_id);
+    partner.user_matched_institution.institutions_type_name = institutionFinded?.institutions_type_name;
   }
 }
