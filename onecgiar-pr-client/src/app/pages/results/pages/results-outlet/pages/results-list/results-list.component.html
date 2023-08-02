@@ -9,7 +9,7 @@
 </div>
 <div class="table">
   <!-- | resultsListFilter : this.resultsListService.text_to_search : this.api.resultsListFilterSE.filterJoin -->
-  <p-table id="resultListTable" sortField="result_code" [sortOrder]="-1"
+  <p-table id="resultListTable" #table sortField="result_code" [sortOrder]="-1"
     [value]="this.api.dataControlSE.resultsList | resultsListFilter : this.resultsListService.text_to_search : this.combine:this.api.resultsListFilterSE.filterJoin"
     responsiveLayout="scroll"
     [paginator]="(this.api.dataControlSE.resultsList | resultsListFilter : this.resultsListService.text_to_search :  this.combine:this.api.resultsListFilterSE.filterJoin)?.length"
@@ -17,9 +17,11 @@
     [rowsPerPageOptions]="[10, 50, 100]">
     <ng-template pTemplate="header">
       <tr>
-        <th>Result code</th>
-        <th (click)="validateOrder()" pSortableColumn="{{ column.attr }}" *ngFor="let column of columnOrder"><p-sortIcon
-            field="{{ column.attr }}"></p-sortIcon>{{ column.title }}</th>
+        <th (click)="validateOrder('result_code')" pSortableColumn="result_code"> <p-sortIcon
+            field="result_code"></p-sortIcon>Result code</th>
+        <th (click)="validateOrder(column.attr)" pSortableColumn="{{ column.attr }}" *ngFor="let column of columnOrder">
+          <p-sortIcon field="{{ column.attr }}"></p-sortIcon>{{ column.title }}
+        </th>
         <th>PDF</th>
         <th *ngIf="!this.api.rolesSE.platformIsClosed">Action</th>
       </tr>
