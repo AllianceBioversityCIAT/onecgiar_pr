@@ -1276,7 +1276,8 @@ select *
   async saveSectionNewTheoryOfChange(bodyTheoryOfChange) {
     try {
       for (let toc of bodyTheoryOfChange) {
-        const result = await this.query(`select * 
+        if(toc.resultId != null && toc.resultId != 0){
+          const result = await this.query(`select * 
                                           from results_toc_result rtr where rtr.results_id = ${toc.resultId} and rtr.initiative_id = ${toc.initiative}`);
 
         if (result != null && result.length != 0) {
@@ -1308,6 +1309,9 @@ select *
             toc.initiative,
           );
         }
+
+        }
+        
       }
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

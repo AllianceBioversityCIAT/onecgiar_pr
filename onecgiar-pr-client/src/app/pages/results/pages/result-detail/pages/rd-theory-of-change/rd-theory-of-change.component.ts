@@ -6,6 +6,7 @@ import { CentersService } from '../../../../../../shared/services/global/centers
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { GreenChecksService } from '../../../../../../shared/services/global/green-checks.service';
 import { RdTheoryOfChangesServicesService } from './rd-theory-of-changes-services.service';
+import { map } from 'rxjs';
 
 @Component({
   selector: 'app-rd-theory-of-change',
@@ -36,6 +37,7 @@ export class RdTheoryOfChangeComponent {
   }
 
   async getSectionInformation() {
+    this.theoryOfChangesServices.body = [];
     await this.api.resultsSE.GET_toc().subscribe(
       ({ response }) => {
         this.theoryOfChangeBody = response;
@@ -72,10 +74,11 @@ export class RdTheoryOfChangeComponent {
   onSaveSection() {
     this.theoryOfChangeBody.bodyNewTheoryOfChanges = this.theoryOfChangesServices.body;
 
-    
+    let initiativesAux = this.theoryOfChangeBody.contributing_and_primary_initiative.concat(this.contributingInitiativeNew);
+      this.theoryOfChangeBody.contributing_initiatives = initiativesAux.filter(init => init.id != this.theoryOfChangeBody.result_toc_result.initiative_id);
+      console.log(this.theoryOfChangeBody);
     const saveSection = () => {
-      this.theoryOfChangeBody.contributing_initiatives = this.theoryOfChangeBody.contributing_initiatives.concat(this.contributingInitiativeNew)
-      //this.theoryOfChangeBody.contributing_initiatives = this.theoryOfChangeBody.contributing_and_primary_initiative;
+      
       
       this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
         //(resp);
@@ -83,6 +86,7 @@ export class RdTheoryOfChangeComponent {
         // this.theoryOfChangeBody.result_toc_result.initiative_id = null;
         this.theoryOfChangesServices.body = [];
         this.currentInitOfficialCode != newInitOfficialCode ? location.reload() : this.getSectionInformation();
+        this.contributingInitiativeNew = []
       });
     };
     const newInit = this.theoryOfChangeBody.contributing_and_primary_initiative.find(init => init.id == this.theoryOfChangeBody.result_toc_result.initiative_id);
@@ -90,8 +94,9 @@ export class RdTheoryOfChangeComponent {
     if (this.currentInitOfficialCode != newInitOfficialCode)
       return this.api.alertsFe.show({ id: 'primary-submitter', title: 'Change in primary submitter', description: `The <strong>${newInitOfficialCode}</strong> will now be the primary submitter of this result and will have exclusive editing rights for all sections and submission. <strong>${this.currentInitOfficialCode}</strong> will lose editing and submission rights but will remain as a contributing initiative in this result. <br> <br> Please ensure that the new primary submitter of this result is aware of this change.`, status: 'success', confirmText: 'Proceed' }, () => {
         saveSection();
+        
       });
-
+      
     return saveSection();
     
   }
