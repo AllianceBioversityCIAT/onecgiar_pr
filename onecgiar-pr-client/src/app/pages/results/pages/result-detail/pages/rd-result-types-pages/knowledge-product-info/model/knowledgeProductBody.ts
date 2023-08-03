@@ -1,15 +1,15 @@
 export class KnowledgeProductBody {
   id: string;
-  accessible: number;
+  //accessible: number;
   commodity?: any;
   description: string;
-  findable: number;
+  //findable: number;
   handle: string;
-  interoperable: number;
+  //interoperable: number;
   licence: string;
   title: string;
   references_other_knowledge_products?: any;
-  reusable: number;
+  //reusable: number;
   sponsor?: any;
   type: string;
   authors: Author[];
@@ -29,6 +29,7 @@ export class KnowledgeProductBody {
   ost_melia_study_id: number;
   warnings: string[];
   cgspace_phase_year: number;
+  fair_data: FullFairData;
 }
 
 interface Institution {
@@ -49,4 +50,19 @@ interface Metadatum {
 interface Author {
   name: string;
   orcid?: any;
+}
+
+export class FullFairData {
+  total_score: number;
+  F: FairSpecificData;
+  A: FairSpecificData;
+  I: FairSpecificData;
+  R: FairSpecificData;
+}
+
+export class FairSpecificData {
+  name?: string;
+  description?: string;
+  score: number;
+  indicators?: FairSpecificData[];
 }
