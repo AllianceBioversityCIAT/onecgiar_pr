@@ -71,7 +71,6 @@ export class KnowledgeProductInfoComponent implements OnInit {
     //mapped.interoperable = response.interoperable;
     //mapped.reusable = response.reusable;
     this.fair_data = this.filterOutObject(response.fair_data);
-    console.log(this.fair_data);
 
     const journalArticle: boolean = (response.type ?? '').toLocaleLowerCase().includes('journal article');
     if (journalArticle) {
