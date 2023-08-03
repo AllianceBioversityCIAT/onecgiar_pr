@@ -1836,4 +1836,56 @@ left join clarisa_countries cc3
       });
     }
   }
+
+  async getResultAgainstToc(resultCodesArray: number[]) {
+    const resultCodes = (resultCodesArray ?? []).join(',');
+    const query = `
+    SELECT
+        DISTINCT r.result_code AS 'Result Code',
+        r.title AS 'Title',
+        ci.official_code 'Primary / Contributing initiative official code',
+        ci.name AS 'Primary / Contributing initiative name',
+        (
+            SELECT
+                CONCAT(wp.acronym, ' - ', tr.result_title)
+            FROM
+                Integration_information.toc_results tr
+                LEFT JOIN results_toc_result rtr ON rtr.toc_result_id = tr.id COLLATE utf8mb3_general_ci
+                LEFT JOIN Integration_information.work_packages wp ON wp.id = tr.work_packages_id
+            WHERE
+                rtr.results_id = r.id
+                AND rtr.is_active = 1
+                AND rtr.initiative_id = rbi.inititiative_id
+        ) AS 'ToC element',
+        tri.indicator_description AS 'TOC indicator - Description',
+        DATE(tri.target_date) AS 'TOC indicator - Target date',
+        tri.unit_messurament AS 'TOC indicator - Unit of measure',
+        tri.target_value AS 'TOC indicator - Target value',
+        rtri.indicator_contributing AS 'Target contribution from the result'
+    FROM
+        result r
+        LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
+        LEFT JOIN clarisa_initiatives ci ON ci.id = rbi.inititiative_id
+        LEFT JOIN results_toc_result rtr ON rtr.results_id = r.id
+        LEFT JOIN results_toc_result_indicators rtri ON rtri.results_toc_results_id = rtr.result_toc_result_id
+        LEFT JOIN Integration_information.toc_results_indicators tri ON tri.toc_result_indicator_id = rtri.toc_results_indicator_id COLLATE utf8mb3_general_ci
+    WHERE
+        r.result_code ${resultCodes.length ? `in (${resultCodes})`: '= 0' }
+        AND rbi.is_active = 1
+        AND rtr.is_active = 1
+        AND rtri.is_active = 1
+        AND rtr.initiative_id = rbi.inititiative_id;
+    `;
+
+    try {
+      const results = await this.query(query);
+      return results;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
 }
