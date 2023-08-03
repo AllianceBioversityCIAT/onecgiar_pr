@@ -209,11 +209,11 @@ export class ResultsTocResultRepository
       ci.official_code,
       ci.name,
       ci.short_name,
-      tr.toc_level_id
+      tr.result_type as toc_level_id
     FROM
       results_toc_result rtr
       left join clarisa_initiatives ci on ci.id = rtr.initiative_id 
-      left JOIN toc_result tr on tr.toc_result_id = rtr.toc_result_id
+      left JOIN ${env.DB_TOC}.toc_results tr on tr.id = rtr.toc_result_id
     where rtr.result_toc_result_id = ${RtRId || null}
       or (rtr.initiative_id = ${initiativeId} and rtr.results_id = ${resultId});
     `;
@@ -246,11 +246,11 @@ export class ResultsTocResultRepository
       ci.official_code,
       ci.name,
       ci.short_name,
-      tr.toc_level_id
+      tr.result_type as toc_level_id
     FROM
       results_toc_result rtr
       left join clarisa_initiatives ci on ci.id = rtr.initiative_id 
-      left JOIN toc_result tr on tr.toc_result_id = rtr.toc_result_id
+      left JOIN ${env.DB_TOC}.toc_results tr on tr.id = rtr.toc_result_id
     where ${
       RtRId
         ? `rtr.result_toc_result_id = ${RtRId}`
