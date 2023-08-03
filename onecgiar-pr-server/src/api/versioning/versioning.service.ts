@@ -319,11 +319,20 @@ export class VersioningService {
 
   async getNumberRresultsReplicated(status: number, result_type_id: number) {
     try {
+      const phase = await this._versionRepository.findOne({
+        where: {
+          is_active: true,
+          status: true,
+          app_module_id: AppModuleIdEnum.REPORTING,
+        },
+      });
+
       const countResults = await this._resultRepository.count({
         where: {
           is_active: true,
           status_id: status,
           result_type_id: result_type_id,
+          version_id: phase.previous_phase,
         },
       });
 
@@ -348,20 +357,27 @@ export class VersioningService {
 
   async annualReplicationProcessInnovationDev(user: TokenDto) {
     try {
+      const phase = await this._versionRepository.findOne({
+        where: {
+          is_active: true,
+          status: true,
+          app_module_id: AppModuleIdEnum.REPORTING,
+        },
+      });
+
+      if (!phase) {
+        throw this._returnResponse;
+      }
+
       const results = await this._resultRepository.find({
         where: {
           status_id: 2,
           result_type_id: 7,
           is_active: true,
+          version_id: phase.previous_phase,
         },
       });
 
-      const phase = await this._versionRepository.findOne({
-        where: {
-          is_active: true,
-          status: true,
-        },
-      });
       for (const r of results) {
         if (this.$_genericValidation(r.result_code, phase.id)) {
           await this.$_phaseChangeReporting(r, phase, user);
