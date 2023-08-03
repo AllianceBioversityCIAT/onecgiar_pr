@@ -18,6 +18,7 @@ export class RdTheoryOfChangeComponent {
   primaryText = ' - <strong>Primary</strong> ';
   getConsumed = false;
   psub = '';
+  contributingInitiativeNew = [];
   currentInitOfficialCode = null;
   constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public centersSE: CentersService, 
     public institutionsSE: InstitutionsService, public greenChecksSE: GreenChecksService,
@@ -70,13 +71,11 @@ export class RdTheoryOfChangeComponent {
 
   onSaveSection() {
     this.theoryOfChangeBody.bodyNewTheoryOfChanges = this.theoryOfChangesServices.body;
-    console.log(this.theoryOfChangeBody);
-    
-    
+
     
     const saveSection = () => {
-      
-      this.theoryOfChangeBody.contributing_initiatives = this.theoryOfChangeBody.contributing_and_primary_initiative;
+      this.theoryOfChangeBody.contributing_initiatives = this.theoryOfChangeBody.contributing_initiatives.concat(this.contributingInitiativeNew)
+      //this.theoryOfChangeBody.contributing_initiatives = this.theoryOfChangeBody.contributing_and_primary_initiative;
       
       this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
         //(resp);
@@ -103,6 +102,8 @@ export class RdTheoryOfChangeComponent {
   onSelectContributingInitiative() {
     //();
     //('onSelectContributingInitiative');
+    console.log(this.contributingInitiativeNew);
+    
     this.theoryOfChangeBody.contributing_initiatives?.map((resp: any) => {
       //(resp);
       //(this.theoryOfChangeBody.contributors_result_toc_result);
@@ -127,6 +128,10 @@ export class RdTheoryOfChangeComponent {
     const contributorFinded = this.theoryOfChangeBody.contributors_result_toc_result?.findIndex((result: any) => result?.initiative_id == e.remove.id);
     this.theoryOfChangeBody.contributors_result_toc_result.splice(contributorFinded, 1);
     //(contributorFinded);
+  }
+
+  onRemoveContribuiting(index){
+    this.contributingInitiativeNew.splice(index, 1);
   }
   addBilateralContribution() {
     this.theoryOfChangeBody.contributing_np_projects.push(new donorInterfaceToc());
