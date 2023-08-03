@@ -85,53 +85,17 @@
         [required]="false"></app-pr-field-header>
 
     <div class="circle-progress-group">
-
-        <div class="item">
-            <circle-progress [percent]="knowledgeProductBody.findable * 100" subtitle="F" subtitleFontSize="30"
+        <div class="item" *ngFor="let indicator of fair_data">
+            <circle-progress [percent]="indicator.value.score * 100" [subtitle]="indicator.key" subtitleFontSize="30"
                 [radius]="50" [outerStrokeWidth]="7" [innerStrokeWidth]="7"
-                [outerStrokeColor]="calculateBorderColor(knowledgeProductBody.findable)" innerStrokeColor="#F0F0F0"
+                [outerStrokeColor]="calculateBorderColor(indicator.value.score)" innerStrokeColor="#F0F0F0"
                 [space]="$any(-7)" [animation]="true" [animationDuration]="300">
             </circle-progress>
             <div class="texts">
-                F1 - The knowledge product is retrievable through its handle<br>
-                F2 - The knowledge product is described by rich metadata<br>
-                F3 - At least one author is linked through their ORCID
-            </div>
-        </div>
-
-        <div class="item">
-            <circle-progress [percent]="knowledgeProductBody.accessible * 100" subtitle="A" subtitleFontSize="30"
-                [radius]="50" [outerStrokeWidth]="7" [innerStrokeWidth]="7"
-                [outerStrokeColor]="calculateBorderColor(knowledgeProductBody.accessible)" innerStrokeColor="#F0F0F0"
-                [space]="$any(-7)" [animation]="true" [animationDuration]="300">
-            </circle-progress>
-            <div class="texts">
-                A1 - Metadata are retrievable through the handle
-            </div>
-        </div>
-
-
-        <div class="item">
-            <circle-progress [percent]="knowledgeProductBody.interoperable * 100" subtitle="I" subtitleFontSize="30"
-                [radius]="50" [outerStrokeWidth]="7" [innerStrokeWidth]="7"
-                [outerStrokeColor]="calculateBorderColor(knowledgeProductBody.interoperable)" innerStrokeColor="#F0F0F0"
-                [space]="$any(-7)" [animation]="true" [animationDuration]="300">
-            </circle-progress>
-            <div class="texts">
-                I1 - Metadata contain AGROVOC keywords<br>
-                I2 - Metadata include qualified references to other (meta)data
-            </div>
-        </div>
-
-
-        <div class="item">
-            <circle-progress [percent]="knowledgeProductBody.reusable * 100" subtitle="R" subtitleFontSize="30"
-                [radius]="50" [outerStrokeWidth]="7" [innerStrokeWidth]="7"
-                [outerStrokeColor]="calculateBorderColor(knowledgeProductBody.reusable)" innerStrokeColor="#F0F0F0"
-                [space]="$any(-7)" [animation]="true" [animationDuration]="300">
-            </circle-progress>
-            <div class="texts">
-                R1 - The knowledge product is Open Access (OA) and has a clear and accessible usage license
+                <div *ngFor="let subIndicator of (indicator.value.indicators??[])" class="indicators">
+                    <i class="material-icons-round" ngClass="{{subIndicator.score ? 'check':'incomplete'}}" >{{subIndicator.score ? 'check':'cancel'}}</i> 
+                    <span>{{subIndicator.name}} - {{subIndicator.description}}</span>
+                </div>
             </div>
         </div>
     </div>

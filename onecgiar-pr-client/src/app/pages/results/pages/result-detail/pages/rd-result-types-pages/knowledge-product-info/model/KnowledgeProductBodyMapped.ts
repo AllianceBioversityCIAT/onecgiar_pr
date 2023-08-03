@@ -1,3 +1,5 @@
+import { FullFairData } from './knowledgeProductBody';
+
 export class KnowledgeProductBodyMapped {
   handle: string;
   authors: string[];
@@ -10,10 +12,10 @@ export class KnowledgeProductBodyMapped {
   altmetric_img_url: string;
   altmetric_details_url: string;
   references: string;
-  findable: number;
-  accessible: number;
-  interoperable: number;
-  reusable: number;
+  //findable: number;
+  //accessible: number;
+  //interoperable: number;
+  //reusable: number;
   yearCG: number;
   is_peer_reviewed_CG: string;
   is_isi_CG: string;
@@ -24,4 +26,5 @@ export class KnowledgeProductBodyMapped {
   accessibility_WOS: string;
   licence: string;
   warnings?: string[];
+  fair_data: FullFairData;
 }
