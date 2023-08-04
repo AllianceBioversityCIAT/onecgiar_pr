@@ -106,7 +106,7 @@ export class ClarisaTaskService {
     count = await this.cloneClarisaInnovationCharacteristicRepository(count);
     count = await this.cloneClarisaActionAreaOutcomeRepository(count);
     count = await this.cloneClarisaGeographicScope(count);
-    count = await this.cloneResultTocRepository(count);
+    //count = await this.cloneResultTocRepository(count);
     count = await this.cloneClarisaCenterRepository(count);
     count = await this.cloneClarisaPolicyTypeRepository(count);
     count = await this.cloneClarisaSdgs(count);
@@ -968,7 +968,15 @@ export class ClarisaTaskService {
             })
             .pipe(map((resp) => resp.data)),
         );
-        await this._clarisaTocPhaseRepository.save(data);
+        await this._clarisaTocPhaseRepository.save(
+          data.map((el) => ({
+            phase_id: el.phaseId,
+            name: el.name,
+            active: el.active,
+            year: el.year,
+            status: el.status,
+          })),
+        );
         this._logger.verbose(
           `[${position}]: All CLARISA Toc phases control list data has been created. Updated/created ${
             data.length ?? 0
