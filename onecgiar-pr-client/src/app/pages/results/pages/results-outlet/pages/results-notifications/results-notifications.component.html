@@ -1,6 +1,6 @@
 <div class="notifications_filters">
     <app-pr-select label="Phases" [options]="this.phaseList" [isStatic]="true" [required]="false"
-        optionLabel="phase_name" optionValue="id" placeholder="Select previous phase" [(ngModel)]="phaseFilter">
+        optionLabel="phase_name_status" optionValue="id" placeholder="Select phase" [(ngModel)]="phaseFilter">
     </app-pr-select>
 
     <div>
@@ -19,7 +19,7 @@
 
 <div class="all_notifications">
     <div
-        *ngFor="let notification of this.resultsNotificationsSE.interactiveNotisList | filterNotificationByInitiative:initiativeIdFilter|filterNotificationByPhase:phaseFilter">
+        *ngFor="let notification of this.resultsNotificationsSE.interactiveNotisList | filterNotificationByInitiative:initiativeIdFilter | filterNotificationByPhase:phaseFilter">
         <app-notification-item [comes]="true" [readOnly]="notification.readOnly"
             (requestEvent)="this.resultsNotificationsSE.get_section_information()" [notification]="notification">
         </app-notification-item>
@@ -28,7 +28,7 @@
 <br>
 <div class="all_notifications">
     <div
-        *ngFor="let notification of this.resultsNotificationsSE.staticNotisList | filterNotificationByInitiative:initiativeIdFilter|filterNotificationByPhase:phaseFilter">
+        *ngFor="let notification of this.resultsNotificationsSE.staticNotisList | filterNotificationByInitiative:initiativeIdFilter | filterNotificationByPhase:phaseFilter">
         <app-notification-item [comes]="false" [notification]="notification">
         </app-notification-item>
     </div>
