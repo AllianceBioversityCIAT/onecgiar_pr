@@ -234,7 +234,8 @@ export class ShareResultRequestService {
             );
           if (!resultTocResult) {
             await this._resultsTocResultRepository.save({
-              initiative_id: newRtR.initiative_id,
+              initiative_ids: newRtR.initiative_id,
+              toc_result_id: newRtR.toc_result_id,
               created_by: newRtR.created_by,
               last_updated_by: newRtR.last_updated_by,
               result_id: newRtR.results_id,
@@ -297,7 +298,8 @@ export class ShareResultRequestService {
               newRtR.toc_result_id = toc_result_id || null;
             }
             await this._resultsTocResultRepository.save({
-              initiative_id: newRtR.initiative_id,
+              initiative_ids: newRtR.initiative_id,
+              toc_result_id: newRtR.toc_result_id,
               created_by: newRtR.created_by,
               last_updated_by: newRtR.last_updated_by,
               result_id: newRtR.results_id,
