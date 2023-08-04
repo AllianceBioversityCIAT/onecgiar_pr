@@ -5,6 +5,7 @@ import { ResultLevelService } from '../../../result-creator/services/result-leve
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { GreenChecksService } from '../../../../../../shared/services/global/green-checks.service';
+import { RdTheoryOfChangesServicesService } from './rd-theory-of-changes-services.service';
 
 @Component({
   selector: 'app-rd-theory-of-change',
@@ -18,7 +19,9 @@ export class RdTheoryOfChangeComponent {
   getConsumed = false;
   psub = '';
   currentInitOfficialCode = null;
-  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public centersSE: CentersService, public institutionsSE: InstitutionsService, public greenChecksSE: GreenChecksService) {}
+  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public centersSE: CentersService, 
+    public institutionsSE: InstitutionsService, public greenChecksSE: GreenChecksService,
+    public theoryOfChangesServices :RdTheoryOfChangesServicesService ) {}
   ngOnInit(): void {
     this.requestEvent();
     this.getSectionInformation();
@@ -64,24 +67,34 @@ export class RdTheoryOfChangeComponent {
   }
 
   onSaveSection() {
+    
+    this.theoryOfChangeBody.targets_indicators = this.theoryOfChangesServices.targetsIndicators;
+    this.theoryOfChangeBody.sdgTargest = this.theoryOfChangesServices.sdgTargest;
+    this.theoryOfChangeBody.impactAreasTargets = this.theoryOfChangesServices.impactAreasTargets;
+    this.theoryOfChangeBody.isSdg = this.theoryOfChangesServices.isSdg;
+    this.theoryOfChangeBody.isImpactArea = this.theoryOfChangesServices.isImpactArea;
+    console.log(this.theoryOfChangeBody);
+    
+    
     const saveSection = () => {
-      //console.log(this.theoryOfChangeBody);
+      
       this.theoryOfChangeBody.contributing_initiatives = this.theoryOfChangeBody.contributing_and_primary_initiative;
       this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
         //(resp);
         this.getConsumed = false;
         // this.theoryOfChangeBody.result_toc_result.initiative_id = null;
-        this.getSectionInformation();
+        this.currentInitOfficialCode != newInitOfficialCode ? location.reload() : this.getSectionInformation();
       });
     };
     const newInit = this.theoryOfChangeBody.contributing_and_primary_initiative.find(init => init.id == this.theoryOfChangeBody.result_toc_result.initiative_id);
     const newInitOfficialCode = newInit?.official_code;
     if (this.currentInitOfficialCode != newInitOfficialCode)
-      return this.api.alertsFe.show({ id: 'primary-submitter', title: 'Change in primary submitter', description: `The <strong>${newInitOfficialCode}</strong> will now be the primary submitter of this result and will have exclusive editing rights for all sections and submission. <strong>${this.currentInitOfficialCode}</strong> will continue to be a contributing initiative for this result. <br> <br> Please ensure that the new primary submitter of this result is aware of this change.`, status: 'success', confirmText: 'Continue & save' }, () => {
+      return this.api.alertsFe.show({ id: 'primary-submitter', title: 'Change in primary submitter', description: `The <strong>${newInitOfficialCode}</strong> will now be the primary submitter of this result and will have exclusive editing rights for all sections and submission. <strong>${this.currentInitOfficialCode}</strong> will lose editing and submission rights but will remain as a contributing initiative in this result. <br> <br> Please ensure that the new primary submitter of this result is aware of this change.`, status: 'success', confirmText: 'Proceed' }, () => {
         saveSection();
       });
 
     return saveSection();
+    
   }
 
   someEditable() {

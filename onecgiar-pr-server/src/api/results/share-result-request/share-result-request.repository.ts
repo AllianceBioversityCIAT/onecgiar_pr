@@ -114,7 +114,10 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
 		r.result_type_id,
     	rt.name as result_type_name,
     	rl.name as result_level_name,
-		false as is_requester
+		false as is_requester,
+		v.status as version_status,
+		v.id as version_id,
+		v.phase_year
     FROM
     	share_result_request srr
     	inner join \`result\` r on r.id = srr.result_id 
@@ -126,6 +129,7 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
 		left join clarisa_initiatives ci on ci.id = srr.approving_inititiative_id 
     	left join clarisa_initiatives ci2 on ci2.id = srr.requester_initiative_id 
 		INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
+		inner join \`version\` v on v.id = r.version_id
     WHERE 
     	srr.approving_inititiative_id in (
     	SELECT
@@ -143,7 +147,7 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     try {
       const shareResultRequest: ShareResultRequest[] = await this.query(
         queryData,
-        [version, userId],
+        [userId],
       );
       return shareResultRequest;
     } catch (error) {
@@ -186,7 +190,9 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
 		r.result_type_id,
     	rt.name as result_type_name,
     	rl.name as result_level_name,
-		true as is_requester
+		true as is_requester,
+		v.status as version_status,
+		v.id as version_id
     FROM
     	share_result_request srr
     	inner join \`result\` r on r.id = srr.result_id 
@@ -197,6 +203,7 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     	left join users u2 on u2.id = srr.approved_by  
 		left join clarisa_initiatives ci on ci.id = srr.approving_inititiative_id 
     	left join clarisa_initiatives ci2 on ci2.id = srr.requester_initiative_id 
+		inner join \`version\` v on v.id = r.version_id 
     WHERE 
     	srr.requester_initiative_id in (
     	SELECT
@@ -213,7 +220,7 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     try {
       const shareResultRequest: ShareResultRequest[] = await this.query(
         queryData,
-        [version, userId],
+        [userId],
       );
       return shareResultRequest;
     } catch (error) {

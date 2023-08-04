@@ -1,6 +1,7 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { TocInitiativeOutcomeListsService } from '../../toc-initiative-outcome-section/services/toc-initiative-outcome-lists.service';
 import { ApiService } from '../../../../../../../../../shared/services/api/api.service';
+import { RdTheoryOfChangesServicesService } from '../../../rd-theory-of-changes-services.service';
 
 @Component({
   selector: 'app-toc-initiative-out',
@@ -16,17 +17,23 @@ export class TocInitiativeOutComponent {
   outputList = [];
   eoiList = [];
   fullInitiativeToc = null;
-
-  constructor(public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public api: ApiService) {}
+  indicators: any = [];
+  indicatorView = false;
+  disabledInput = false;
+  testingYesOrNo;
+  SDGtestingYesorNo;
+  constructor(public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {}
 
   ngOnInit(): void {
     //(this.initiative);
-
     this.GET_outcomeList();
     this.GET_fullInitiativeTocByinitId();
     this.GET_outputList();
     this.GET_EOIList();
     this.valdiateEOI(this.initiative);
+    if (this.initiative.toc_result_id != null) {
+      this.getIndicator();
+    }
   }
 
   getDescription(official_code, short_name) {
@@ -43,7 +50,9 @@ export class TocInitiativeOutComponent {
   }
 
   GET_outputList() {
-    this.api.tocApiSE.GET_tocLevelsByconfig(this.initiative.results_id, this.initiative.initiative_id, 1).subscribe({
+    console.log(this.api.dataControlSE.currentNotification);
+
+    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.api.dataControlSE.currentNotification?.results_id || this.initiative?.results_id || this.api.dataControlSE?.currentResult?.id, this.initiative.initiative_id, 1).subscribe({
       next: ({ response }) => {
         this.outputList = [];
         this.outputList = response;
@@ -67,7 +76,7 @@ export class TocInitiativeOutComponent {
   }
 
   GET_outcomeList() {
-    this.api.tocApiSE.GET_tocLevelsByconfig(this.initiative.results_id, this.initiative.initiative_id, 2).subscribe({
+    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.api.dataControlSE.currentNotification?.result_id || this.initiative?.results_id || this.api.dataControlSE?.currentResult?.id, this.initiative.initiative_id, 2).subscribe({
       next: ({ response }) => {
         this.outcomeList = response;
       },
@@ -89,7 +98,7 @@ export class TocInitiativeOutComponent {
   }
 
   GET_EOIList() {
-    this.api.tocApiSE.GET_tocLevelsByconfig(this.initiative.results_id, this.initiative.initiative_id, 3).subscribe({
+    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.api.dataControlSE.currentNotification?.result_id || this.initiative?.results_id || this.api.dataControlSE?.currentResult?.id, this.initiative.initiative_id, 3).subscribe({
       next: ({ response }) => {
         this.eoiList = response;
       },
@@ -130,5 +139,33 @@ export class TocInitiativeOutComponent {
     setTimeout(() => {
       this.showOutcomeLevel = true;
     }, 100);
+
+    if (!initiative.planned_result) {
+      this.indicatorView = false;
+      this.indicators = [];
+    }
+  }
+
+  async getIndicator() {
+    this.indicators = [];
+    this.indicatorView = false;
+    this.disabledInput = false;
+    await this.api.resultsSE.Get_indicator(this.initiative.toc_result_id, this.initiative.initiative_id).subscribe(({ response }) => {
+      console.log(response);
+      this.theoryOfChangesServices.targetsIndicators = response?.informationIndicator;
+      this.theoryOfChangesServices.impactAreasTargets = response?.impactAreas;
+      this.theoryOfChangesServices.sdgTargest = response?.sdgTargets;
+      this.theoryOfChangesServices.isImpactArea = response?.isImpactArea;
+      this.theoryOfChangesServices.isSdg = response?.isSdg;
+      this.theoryOfChangesServices.impactAreasTargets.map(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
+      this.theoryOfChangesServices.sdgTargest.map(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
+      this.theoryOfChangesServices.targetsIndicators.map(item => (item.is_not_aplicable = item.is_not_aplicable == 1 ? true : false));
+      if (this.indicators.length == 1) {
+        this.disabledInput = true;
+      }
+      setTimeout(() => {
+        this.indicatorView = true;
+      }, 100);
+    });
   }
 }

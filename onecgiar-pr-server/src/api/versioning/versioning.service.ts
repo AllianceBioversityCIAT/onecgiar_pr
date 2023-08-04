@@ -317,6 +317,77 @@ export class VersioningService {
     }
   }
 
+  async getNumberRresultsReplicated(status: number, result_type_id: number) {
+    try {
+      const phase = await this._versionRepository.findOne({
+        where: {
+          is_active: true,
+          status: true,
+          app_module_id: AppModuleIdEnum.REPORTING,
+        },
+      });
+
+      const countResults = await this._resultRepository.count({
+        where: {
+          is_active: true,
+          status_id: status,
+          result_type_id: result_type_id,
+          version_id: phase.previous_phase,
+        },
+      });
+
+      const names = await this._versionRepository.getDataStatusAndTypeResult(
+        status,
+        result_type_id,
+      );
+
+      return this._returnResponse.format({
+        message: `The number of results replicated is ${countResults}`,
+        response: {
+          count: countResults,
+          status_name: names.status,
+          result_type_name: names.type,
+        },
+        statusCode: HttpStatus.OK,
+      });
+    } catch (error) {
+      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+    }
+  }
+
+  async annualReplicationProcessInnovationDev(user: TokenDto) {
+    try {
+      const phase = await this._versionRepository.findOne({
+        where: {
+          is_active: true,
+          status: true,
+          app_module_id: AppModuleIdEnum.REPORTING,
+        },
+      });
+
+      if (!phase) {
+        throw this._returnResponse;
+      }
+
+      const results = await this._resultRepository.find({
+        where: {
+          status_id: 2,
+          result_type_id: 7,
+          is_active: true,
+          version_id: phase.previous_phase,
+        },
+      });
+
+      for (const r of results) {
+        if (this.$_genericValidation(r.result_code, phase.id)) {
+          await this.$_phaseChangeReporting(r, phase, user);
+        }
+      }
+    } catch (error) {
+      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+    }
+  }
+
   async findAppModules(): Promise<ReturnResponseDto<ApplicationModules>> {
     try {
       const res = await this._applicationModulesRepository.find({

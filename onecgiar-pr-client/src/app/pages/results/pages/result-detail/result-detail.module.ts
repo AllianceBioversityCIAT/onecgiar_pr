@@ -17,8 +17,9 @@ import { UnsubmitModalModule } from './components/unsubmit-modal/unsubmit-modal.
 import { PdfActionsComponent } from './components/pdf-actions/pdf-actions.component';
 import { PdfActionsModule } from './components/pdf-actions/pdf-actions.module';
 import { ToastModule } from 'primeng/toast';
+import { PhaseSwitcherModule } from '../../../../shared/components/phase-switcher/phase-switcher.module';
 @NgModule({
   declarations: [ResultDetailComponent, PanelMenuComponent, PanelMenuPipe, NoEditContainerComponent, ResultTitleComponent],
-  imports: [CommonModule, ResultDetailRoutingModule, PartnersRequestModule, CustomFieldsModule, BreadcrumbModule, ButtonModule, SubmissionModalModule, UnsubmitModalModule, PdfActionsModule, ToastModule]
+  imports: [CommonModule, ResultDetailRoutingModule, PartnersRequestModule, CustomFieldsModule, BreadcrumbModule, ButtonModule, SubmissionModalModule, UnsubmitModalModule, PdfActionsModule, ToastModule, PhaseSwitcherModule]
 })
 export class ResultDetailModule {}

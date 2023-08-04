@@ -252,6 +252,10 @@ export class ResultsApiService {
     );
   }
 
+  Get_indicator(id_toc, init){
+    return this.http.get<any>(`${this.apiBaseUrl}toc/get/indicator/${id_toc}/result/${this.currentResultId}/initiative/${init}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+  }
+
   PATCH_innovationUse(body) {
     return this.http.patch<any>(`${this.apiBaseUrl}summary/innovation-use/create/result/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
@@ -716,5 +720,9 @@ export class ResultsApiService {
 
   GET_resultYears() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results/years`);
+  }
+
+  GET_versioningResult() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/versioning/result/${this.ipsrDataControlSE.inIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId}`);
   }
 }

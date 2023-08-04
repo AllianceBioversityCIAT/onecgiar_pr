@@ -183,6 +183,34 @@ export class ResultRepository
     return final_data;
   }
 
+  async countResultByTypeAndStatus(status_id, result_type_id) {
+    try {
+      const queryData = `select count(1) as \`count\` from \`result\` r where r.status_id = ? and r.result_type_id = ?;`;
+      const res = await this.query(queryData, [status_id, result_type_id]);
+      return res.length ? res[0].count : null;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async findIdOfResultByTypeAndStatus(status_id, result_type_id) {
+    try {
+      const queryData = `select r.id from \`result\` r where r.status_id = ? and r.result_type_id = ?;`;
+      const res = await this.query(queryData, [status_id, result_type_id]);
+      return res.map((item) => item.id);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async getResultByName(
     name: string,
     result_type: number,
@@ -928,7 +956,8 @@ WHERE
     if(r.geographic_scope_id in (3, 4), 3, r.geographic_scope_id ) as geographic_scope_id,
     v.id as version_id,
     v.phase_name,
-    v.phase_year
+    v.phase_year,
+    r.is_discontinued
 FROM
     result r
     inner join results_by_inititiative rbi ON rbi.result_id = r.id 
@@ -1087,9 +1116,23 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     const query = `
     select 
     r.result_code as "Result Code",
-    concat('${
-      env.FRONT_END_PDF_ENDPOINT
-    }', r.result_code,?, 'phase=1') as \`PDF Link\`,
+    (
+      SELECT
+        v.phase_name
+      FROM
+        version v
+      WHERE
+        r.version_id = v.id
+    ) AS "Phase",
+    CONCAT(
+      '${env.FRONT_END_PDF_ENDPOINT}',
+      r.result_code,
+      ?,
+      COALESCE(
+        CONCAT('?phase=', r.version_id),
+        ''
+      )
+    ) AS "PDF Link",
     rl.name as "Result Level",
     rt.name as "Result Type",
     rs.status_name as "Status",
@@ -1294,7 +1337,23 @@ left join clarisa_countries cc3
     const query = `
     select 
     r.result_code as "Result Code",
-    concat('${env.FRONT_END_PDF_ENDPOINT}', r.result_code,?, 'phase=1') as \`PDF Link\`,
+    (
+      SELECT
+        v.phase_name
+      FROM
+        version v
+      WHERE
+        r.version_id = v.id
+    ) AS "Phase",
+    CONCAT(
+      '${env.FRONT_END_PDF_ENDPOINT}',
+      r.result_code,
+      ?,
+      COALESCE(
+        CONCAT('?phase=', r.version_id),
+        ''
+      )
+    ) AS "PDF Link",
     rl.name as "Result Level",
     rt.name as "Result Type",
     rs.status_name as "Status",

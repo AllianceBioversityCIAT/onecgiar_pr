@@ -82,4 +82,22 @@ export class VersionRepository extends Repository<Version> {
         return [];
       });
   }
+
+  async getDataStatusAndTypeResult(status_id: number, type_id: number) {
+    const queryDataSr = `select rs.status_name from result_status rs where rs.result_status_id = ? limit 1;`;
+    const queryDataTP = `select rt.name from result_type rt where rt.id = ? limit 1;`;
+    try {
+      const sr = await this.query(queryDataSr, [status_id]);
+      const rt = await this.query(queryDataTP, [type_id]);
+      return {
+        status: sr.length ? sr[0].status_name : null,
+        type: rt.length ? rt[0].name : null,
+      };
+    } catch (error) {
+      return {
+        status: null,
+        type: null,
+      };
+    }
+  }
 }

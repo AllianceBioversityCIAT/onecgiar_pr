@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -29,6 +30,13 @@ export class ResultsTocResult {
     nullable: true,
   })
   toc_result_id!: number;
+
+  @Column({
+    name: 'results_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  result_id: number;
 
   @ManyToOne(() => Result, (r) => r.id)
   @JoinColumn({
@@ -64,11 +72,32 @@ export class ResultsTocResult {
   })
   action_areas: ClarisaActionArea;
 
+  @Column({
+    name: 'initiative_id',
+    type: 'int',
+    nullable: true,
+  })
+  initiative_ids: number;
+
   @ManyToOne(() => ClarisaInitiative, (ci) => ci.id, { nullable: true })
   @JoinColumn({
     name: 'initiative_id',
   })
   initiative_id!: number;
+
+  @Column({
+    name: 'mapping_sdg',
+    type: 'boolean',
+    nullable: true,
+  })
+  mapping_sdg: boolean;
+
+  @Column({
+    name: 'mapping_impact',
+    type: 'boolean',
+    nullable: true,
+  })
+  mapping_impact: boolean;
 
   @Column({
     name: 'is_active',
