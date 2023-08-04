@@ -441,6 +441,23 @@ export class ResultsKnowledgeProductsService {
           knowledgeProduct.last_updated_by;
       }
 
+      switch (field) {
+        case FairFieldEnum.FINDABLE:
+          knowledgeProduct.findable = value;
+          break;
+        case FairFieldEnum.ACCESIBLE:
+          knowledgeProduct.accesible = value;
+          break;
+        case FairFieldEnum.INTEROPERABLE:
+          knowledgeProduct.interoperable = value;
+          break;
+        case FairFieldEnum.REUSABLE:
+          knowledgeProduct.reusable = value;
+          break;
+        default:
+          break;
+      }
+
       updatedFields.push(currentFairFieldObject);
     }
 
@@ -462,37 +479,6 @@ export class ResultsKnowledgeProductsService {
     }
 
     knowledgeProduct.result_knowledge_product_fair_score_array = updatedFields;
-
-    /*let currentFairFieldIndex: number =
-      knowledgeProduct.result_knowledge_product_fair_score_array.findIndex(
-        (fs) =>
-          fs.fair_field_object.short_name == FairFieldEnum.TOTAL &&
-          fs.is_baseline == false,
-      );
-
-    let currentFairFieldObject: ResultsKnowledgeProductFairScore =
-      currentFairFieldIndex < 0
-        ? new ResultsKnowledgeProductFairScore()
-        : knowledgeProduct.result_knowledge_product_fair_score_array[
-            currentFairFieldIndex
-          ];
-
-    if (!currentFairFieldObject.fair_field_id) {
-      currentFairFieldObject.fair_field_id = allFairFields.find(
-        (ff) => ff.short_name == FairFieldEnum.TOTAL,
-      )?.fair_field_id;
-    }
-
-    currentFairFieldObject.fair_value =
-      resultsKnowledgeProductDto.fair_data?.total_score;
-    currentFairFieldObject.is_baseline = false;
-    if (!currentFairFieldObject.created_by) {
-      currentFairFieldObject.created_by = upsert
-        ? knowledgeProduct.last_updated_by
-        : knowledgeProduct.created_by;
-    } else {
-      currentFairFieldObject.last_updated_by = knowledgeProduct.last_updated_by;
-    }*/
   }
 
   async updateCountries(
@@ -788,6 +774,18 @@ export class ResultsKnowledgeProductsService {
       );
       await this._resultsKnowledgeProductFairScoreRepository.save(
         newKnowledgeProduct.result_knowledge_product_fair_score_array ?? [],
+      );
+      await this._resultsKnowledgeProductRepository.update(
+        {
+          result_knowledge_product_id:
+            newKnowledgeProduct.result_knowledge_product_id,
+        },
+        {
+          findable: newKnowledgeProduct.findable,
+          accesible: newKnowledgeProduct.accesible,
+          interoperable: newKnowledgeProduct.interoperable,
+          reusable: newKnowledgeProduct.reusable,
+        },
       );
 
       //updating general result tables
