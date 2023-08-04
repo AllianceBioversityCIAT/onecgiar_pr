@@ -31,6 +31,13 @@ export class ResultsTocResult {
   })
   toc_result_id!: number;
 
+  @Column({
+    name: 'results_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  result_id: number;
+
   @ManyToOne(() => Result, (r) => r.id)
   @JoinColumn({
     name: 'results_id',

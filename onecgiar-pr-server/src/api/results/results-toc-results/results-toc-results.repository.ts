@@ -783,8 +783,7 @@ export class ResultsTocResultRepository
               elementSave.toc_results_indicator_id
             ) {
               element.is_not_aplicable = elementSave.is_not_aplicable;
-              element.indicator_contributing =
-                elementSave.indicator_contributing;
+              element.indicator_contributing = elementSave.indicator_contributing;
               element.status = elementSave.status;
               element.is_not_aplicable = elementSave.is_not_aplicable;
             }
