@@ -365,11 +365,15 @@ export class ResultsTocResultsService {
             index < contributors_result_toc_result.length;
             index++
           ) {
+            
+            
             let RtR = await this._resultsTocResultRepository.getRTRById(
               contributors_result_toc_result[index].result_toc_result_id,
               result_id,
               contributors_result_toc_result[index].initiative_id,
             );
+            
+            
             if (RtR) {
               if (result.result_level_id == 2) {
                 RtR.action_area_outcome_id =
@@ -379,6 +383,7 @@ export class ResultsTocResultsService {
                 RtR.toc_result_id =
                   contributors_result_toc_result[index]?.toc_result_id || null;
               }
+              
               RtR.is_active = true;
               RtR.planned_result =
                 contributors_result_toc_result[index]?.planned_result;
@@ -406,23 +411,27 @@ export class ResultsTocResultsService {
               RtRArray.push(newRtR);
             }
           }
-
+         
           for (const i of RtRArray) {
+            
+            const temp:any = i;
             const res = await this._resultsTocResultRepository.findOne({
               where: {
-                results_id: i.results_id,
-                initiative_id: i.initiative_id,
+                
+                result_id: temp.results_id,
+                initiative_id: temp.inititiative_id,
               },
             });
-
+            
+            
             if (res) {
-              delete i.result_toc_result_id;
+              delete temp.result_toc_result_id;
               await this._resultsTocResultRepository.update(
                 res.result_toc_result_id,
                 {
-                  toc_result_id: i.toc_result_id,
-                  action_area_outcome_id: i.action_area_outcome_id,
-                  planned_result: i.planned_result,
+                  toc_result_id: temp.toc_result_id,
+                  action_area_outcome_id: temp.action_area_outcome_id,
+                  planned_result: temp.planned_result,
                   last_updated_by: user.id,
                 },
               );
