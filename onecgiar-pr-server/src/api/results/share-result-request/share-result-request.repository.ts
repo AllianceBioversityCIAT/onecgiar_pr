@@ -116,7 +116,8 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     	rl.name as result_level_name,
 		false as is_requester,
 		v.status as version_status,
-		v.id as version_id
+		v.id as version_id,
+		v.phase_year
     FROM
     	share_result_request srr
     	inner join \`result\` r on r.id = srr.result_id 

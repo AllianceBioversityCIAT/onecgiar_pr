@@ -229,7 +229,14 @@ export class ShareResultRequestService {
               shared_inititiative_id,
             );
           if (!resultTocResult) {
-            await this._resultsTocResultRepository.save(newRtR);
+            await this._resultsTocResultRepository.save({
+              initiative_id: newRtR.initiative_id,
+              created_by: newRtR.created_by,
+              last_updated_by: newRtR.last_updated_by,
+              result_id: newRtR.results_id,
+              planned_result: newRtR.planned_result,
+              action_area_outcome_id: newRtR.action_area_outcome_id,
+            });
           } else {
             await this._resultsTocResultRepository.update(
               resultTocResult.result_toc_result_id,
@@ -237,6 +244,7 @@ export class ShareResultRequestService {
                 planned_result: planned_result,
                 toc_result_id: toc_result_id,
                 action_area_outcome_id: action_area_outcome_id,
+                is_active: true,
               },
             );
           }
@@ -284,7 +292,14 @@ export class ShareResultRequestService {
             } else {
               newRtR.toc_result_id = toc_result_id || null;
             }
-            await this._resultsTocResultRepository.save(newRtR);
+            await this._resultsTocResultRepository.save({
+              initiative_id: newRtR.initiative_id,
+              created_by: newRtR.created_by,
+              last_updated_by: newRtR.last_updated_by,
+              result_id: newRtR.results_id,
+              planned_result: newRtR.planned_result,
+              action_area_outcome_id: newRtR.action_area_outcome_id,
+            });
           } else {
             resultTocResult.is_active = true;
             resultTocResult.planned_result = planned_result;
@@ -301,6 +316,7 @@ export class ShareResultRequestService {
               action_area_outcome_id: resultTocResult.action_area_outcome_id,
               planned_result: resultTocResult.planned_result,
               last_updated_by: user.id,
+              is_active: true,
             });
           }
         }

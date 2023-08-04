@@ -318,6 +318,7 @@ export class ResultsTocResultsService {
           result_id,
           result_toc_result?.initiative_id,
         );
+
         if (RtR) {
           if (result.result_level_id == 2) {
             RtR.action_area_outcome_id =
@@ -331,10 +332,10 @@ export class ResultsTocResultsService {
           await this._resultsTocResultRepository.update(
             RtR.result_toc_result_id,
             {
-              toc_result_id: RtR.toc_result_id,
-              action_area_outcome_id: RtR.action_area_outcome_id,
+              toc_result_id: result_toc_result.toc_result_id,
+              action_area_outcome_id: result_toc_result.action_area_outcome_id,
               last_updated_by: user.id,
-              planned_result: RtR.planned_result,
+              planned_result: result_toc_result.planned_result,
             },
           );
         } else if (result_toc_result) {
@@ -346,14 +347,20 @@ export class ResultsTocResultsService {
           newRtR.planned_result = result_toc_result.planned_result;
           if (result.result_level_id == 2) {
             newRtR.action_area_outcome_id =
-              result_toc_result?.action_area_outcome_id ?? null;
+              result_toc_result?.action_area_outcome_id || null;
           } else {
-            newRtR.toc_result_id = result_toc_result?.toc_result_id ?? null;
+            newRtR.toc_result_id = result_toc_result?.toc_result_id || null;
           }
-          newRtR.planned_result = result_toc_result?.planned_result ?? null;
-          await this._resultsTocResultRepository.save(newRtR);
+          newRtR.planned_result = result_toc_result?.planned_result || null;
+          await this._resultsTocResultRepository.save({
+            initiative_id: newRtR.initiative_id,
+            created_by: newRtR.created_by,
+            last_updated_by: newRtR.last_updated_by,
+            result_id: newRtR.results_id,
+            planned_result: newRtR.planned_result,
+            action_area_outcome_id: newRtR.action_area_outcome_id,
+          });
         }
-
         if (contributors_result_toc_result?.length) {
           contributors_result_toc_result =
             contributors_result_toc_result.filter((el) =>
@@ -408,7 +415,6 @@ export class ResultsTocResultsService {
               RtRArray.push(newRtR);
             }
           }
-
           for (const i of RtRArray) {
             const temp: any = i;
             const res = await this._resultsTocResultRepository.findOne({
@@ -417,7 +423,6 @@ export class ResultsTocResultsService {
                 initiative_ids: temp.inititiative_id,
               },
             });
-
             if (res) {
               delete temp.result_toc_result_id;
               await this._resultsTocResultRepository.update(
@@ -430,7 +435,14 @@ export class ResultsTocResultsService {
                 },
               );
             } else {
-              await this._resultsTocResultRepository.save(res);
+              await this._resultsTocResultRepository.save({
+                initiative_id: res.initiative_id,
+                created_by: res.created_by,
+                last_updated_by: res.last_updated_by,
+                result_id: res.results_id,
+                planned_result: res.planned_result,
+                action_area_outcome_id: res.action_area_outcome_id,
+              });
             }
           }
         }
