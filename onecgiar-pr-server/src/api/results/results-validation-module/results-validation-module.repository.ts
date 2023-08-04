@@ -203,7 +203,10 @@ export class resultValidationRepository extends Repository<Validation> {
 							rtr.results_id = r.id
 							AND rtri.is_active = 1
 							AND rtri.is_not_aplicable = 0
-							AND rtri.indicator_contributing IS NOT NULL
+							AND (
+								rtri.indicator_contributing IS NOT NULL
+								AND rtri.indicator_contributing <> ''
+							)
 					) = (
 						SELECT
 							COUNT(*)
