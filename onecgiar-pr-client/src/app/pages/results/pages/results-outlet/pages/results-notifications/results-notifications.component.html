@@ -1,39 +1,41 @@
-<div class="notifications_filters">
-    <app-pr-select label="Phases" [options]="this.phaseList" [isStatic]="true" [required]="false"
-        optionLabel="phase_name_status" optionValue="id" placeholder="Select phase" [(ngModel)]="phaseFilter">
-    </app-pr-select>
-
-    <div>
-        <app-pr-select [options]="this.api.dataControlSE.myInitiativesList" *ngIf="!this.api.rolesSE.isAdmin"
-            label="Initiative" [isStatic]="true" [required]="false" optionLabel="full_name" optionValue="initiative_id"
-            placeholder="Select initiative" [(ngModel)]="initiativeIdFilter">
+<div class="local_container">
+    <div class="notifications_filters">
+        <app-pr-select label="Phases" [options]="this.phaseList" [isStatic]="true" [required]="false"
+            optionLabel="phase_name_status" optionValue="id" placeholder="Select phase" [(ngModel)]="phaseFilter">
         </app-pr-select>
 
-        <app-pr-select [options]="this.allInitiatives" label="Initiative" [required]="false" [isStatic]="true"
-            *ngIf="this.api.rolesSE.isAdmin" optionLabel="full_name" optionValue="initiative_id"
-            placeholder="Select initiative" [(ngModel)]="initiativeIdFilter">
-        </app-pr-select>
+        <div>
+            <app-pr-select [options]="this.api.dataControlSE.myInitiativesList" *ngIf="!this.api.rolesSE.isAdmin"
+                label="Initiative" [isStatic]="true" [required]="false" optionLabel="full_name"
+                optionValue="initiative_id" placeholder="Select initiative" [(ngModel)]="initiativeIdFilter">
+            </app-pr-select>
+
+            <app-pr-select [options]="this.allInitiatives" label="Initiative" [required]="false" [isStatic]="true"
+                *ngIf="this.api.rolesSE.isAdmin" optionLabel="full_name" optionValue="initiative_id"
+                placeholder="Select initiative" [(ngModel)]="initiativeIdFilter">
+            </app-pr-select>
+        </div>
+
     </div>
 
-</div>
-
-<div class="all_notifications">
-    <div
-        *ngFor="let notification of this.resultsNotificationsSE.interactiveNotisList | filterNotificationByInitiative:initiativeIdFilter | filterNotificationByPhase:phaseFilter">
-        <app-notification-item [comes]="true" [readOnly]="notification.readOnly"
-            (requestEvent)="this.resultsNotificationsSE.get_section_information()" [notification]="notification">
-        </app-notification-item>
+    <div class="all_notifications">
+        <div
+            *ngFor="let notification of this.resultsNotificationsSE.interactiveNotisList | filterNotificationByInitiative:initiativeIdFilter | filterNotificationByPhase:phaseFilter">
+            <app-notification-item [comes]="true" [readOnly]="notification.readOnly"
+                (requestEvent)="this.resultsNotificationsSE.get_section_information()" [notification]="notification">
+            </app-notification-item>
+        </div>
     </div>
-</div>
-<br>
-<div class="all_notifications">
-    <div
-        *ngFor="let notification of this.resultsNotificationsSE.staticNotisList | filterNotificationByInitiative:initiativeIdFilter | filterNotificationByPhase:phaseFilter">
-        <app-notification-item [comes]="false" [notification]="notification">
-        </app-notification-item>
+    <br>
+    <div class="all_notifications">
+        <div
+            *ngFor="let notification of this.resultsNotificationsSE.staticNotisList | filterNotificationByInitiative:initiativeIdFilter | filterNotificationByPhase:phaseFilter">
+            <app-notification-item [comes]="false" [notification]="notification">
+            </app-notification-item>
+        </div>
     </div>
-</div>
 
-<app-no-data-text title="No notifications"
-    *ngIf="!this.resultsNotificationsSE.interactiveNotisList?.length && !this.resultsNotificationsSE.staticNotisList?.length">
-</app-no-data-text>
+    <app-no-data-text title="No notifications"
+        *ngIf="!(this.resultsNotificationsSE.interactiveNotisList | filterNotificationByInitiative:initiativeIdFilter | filterNotificationByPhase:phaseFilter).length && !(this.resultsNotificationsSE.staticNotisList | filterNotificationByInitiative:initiativeIdFilter | filterNotificationByPhase:phaseFilter).length">
+    </app-no-data-text>
+</div>
