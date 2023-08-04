@@ -63,7 +63,7 @@
     </div>
     <div class="header-footer">
         <div style="margin-left:30px ;">
-            <app-pr-checkbox label="This indicator is not applicable in this result." [(ngModel)]="initiative.is_not_aplicable" [readOnly]="disabledInputs"></app-pr-checkbox>
+            <app-pr-checkbox label="This indicator is not applicable in this result." [(ngModel)]="initiative.is_not_aplicable" [readOnly]="disabledInputs" (selectOptionEvent)="changesValue()"></app-pr-checkbox>
         </div>
         
     </div>

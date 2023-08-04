@@ -48,4 +48,8 @@ export class TargetIndicatorComponent implements OnInit {
       if (e.key === "-")
       e.preventDefault();
    }
+
+   changesValue(){
+    this.initiative.indicator_contributing = null;
+   }
 }
