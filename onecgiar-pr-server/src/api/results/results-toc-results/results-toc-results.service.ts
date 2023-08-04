@@ -318,13 +318,12 @@ export class ResultsTocResultsService {
           result_id,
           result_toc_result?.initiative_id,
         );
-
         if (RtR) {
           if (result.result_level_id == 2) {
             RtR.action_area_outcome_id =
-              result_toc_result?.action_area_outcome_id ?? null;
+              result_toc_result?.action_area_outcome_id || null;
           } else {
-            RtR.toc_result_id = result_toc_result?.toc_result_id ?? null;
+            RtR.toc_result_id = result_toc_result?.toc_result_id || null;
           }
           RtR.is_active = true;
           RtR.last_updated_by = user.id;
@@ -336,6 +335,7 @@ export class ResultsTocResultsService {
               action_area_outcome_id: result_toc_result.action_area_outcome_id,
               last_updated_by: user.id,
               planned_result: result_toc_result.planned_result,
+              is_active: true,
             },
           );
         } else if (result_toc_result) {
@@ -353,7 +353,8 @@ export class ResultsTocResultsService {
           }
           newRtR.planned_result = result_toc_result?.planned_result || null;
           await this._resultsTocResultRepository.save({
-            initiative_id: newRtR.initiative_id,
+            initiative_ids: newRtR.initiative_id,
+            toc_result_id: newRtR.toc_result_id,
             created_by: newRtR.created_by,
             last_updated_by: newRtR.last_updated_by,
             result_id: newRtR.results_id,
