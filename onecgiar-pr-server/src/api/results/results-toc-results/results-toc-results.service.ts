@@ -365,15 +365,12 @@ export class ResultsTocResultsService {
             index < contributors_result_toc_result.length;
             index++
           ) {
-            
-            
             let RtR = await this._resultsTocResultRepository.getRTRById(
               contributors_result_toc_result[index].result_toc_result_id,
               result_id,
               contributors_result_toc_result[index].initiative_id,
             );
-            
-            
+
             if (RtR) {
               if (result.result_level_id == 2) {
                 RtR.action_area_outcome_id =
@@ -383,7 +380,7 @@ export class ResultsTocResultsService {
                 RtR.toc_result_id =
                   contributors_result_toc_result[index]?.toc_result_id || null;
               }
-              
+
               RtR.is_active = true;
               RtR.planned_result =
                 contributors_result_toc_result[index]?.planned_result;
@@ -411,19 +408,16 @@ export class ResultsTocResultsService {
               RtRArray.push(newRtR);
             }
           }
-         
+
           for (const i of RtRArray) {
-            
-            const temp:any = i;
+            const temp: any = i;
             const res = await this._resultsTocResultRepository.findOne({
               where: {
-                
                 result_id: temp.results_id,
-                initiative_id: temp.inititiative_id,
+                initiative_ids: temp.inititiative_id,
               },
             });
-            
-            
+
             if (res) {
               delete temp.result_toc_result_id;
               await this._resultsTocResultRepository.update(

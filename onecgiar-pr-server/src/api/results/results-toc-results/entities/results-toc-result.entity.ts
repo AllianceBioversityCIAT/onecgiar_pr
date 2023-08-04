@@ -72,6 +72,13 @@ export class ResultsTocResult {
   })
   action_areas: ClarisaActionArea;
 
+  @Column({
+    name: 'initiative_id',
+    type: 'int',
+    nullable: true,
+  })
+  initiative_ids: number;
+
   @ManyToOne(() => ClarisaInitiative, (ci) => ci.id, { nullable: true })
   @JoinColumn({
     name: 'initiative_id',
