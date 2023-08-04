@@ -190,4 +190,22 @@ export class TocInitiativeOutComponent {
       }, 100);
     });
   }
+
+  narrativeTypeResult(){
+    let narrative = ''
+    if(this.resultLevelId == 1){
+      narrative= 'output'
+    }
+    if(this.showOutcomeLevel && (this.resultLevelId == 1 ? this.initiative?.planned_result == false : true)){
+      narrative= 'outcome'
+    }
+    if((this.resultLevelId == 1 ? this.initiative?.planned_result == false : true) && this.initiative.toc_level_id != 3){
+      narrative= 'outcome'
+    }
+    if((this.resultLevelId == 1 ? this.initiative?.planned_result == false : true) && this.initiative.toc_level_id == 3){
+      narrative= 'outcome'
+    }
+
+    return 'Indicator(s) of the '+narrative+' selected'
+  }
 }

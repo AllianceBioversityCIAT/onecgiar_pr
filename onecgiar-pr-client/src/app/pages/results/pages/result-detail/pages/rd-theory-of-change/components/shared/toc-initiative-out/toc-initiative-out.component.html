@@ -51,7 +51,7 @@
 <div *ngIf="indicatorView">
     <app-alert-status description="The selected ToC element does not have any indicators associated with it." *ngIf="!this.theoryOfChangesServices.body[indexYesorNo].targetsIndicators.length"></app-alert-status>
     <app-pr-field-header
-    label="Indicator(s) of the output selected"
+    label="{{narrativeTypeResult()}}"
     [required]="false"
     *ngIf="this.theoryOfChangesServices.body[indexYesorNo].targetsIndicators.length">
 </app-pr-field-header>
