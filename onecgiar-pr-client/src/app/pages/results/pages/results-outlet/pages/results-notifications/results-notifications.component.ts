@@ -27,6 +27,8 @@ export class ResultsNotificationsComponent {
     this.api.resultsSE.GET_versioning(StatusPhaseEnum.ALL, ModuleTypeEnum.REPORTING).subscribe(({ response }) => {
       this.phaseList = response;
       console.log(this.phaseList);
+      // find phase wen status true
+      this.phaseFilter = (this.phaseList.find(phase => phase.status) as any)?.id;
     });
   }
   ngOnInit(): void {

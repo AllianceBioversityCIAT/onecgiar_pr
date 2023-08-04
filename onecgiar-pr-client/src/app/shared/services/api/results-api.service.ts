@@ -697,7 +697,14 @@ export class ResultsApiService {
   }
 
   GET_versioning(status, modules) {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/versioning?status=${status}&module=${modules}`);
+    return this.http.get<any>(`${environment.apiBaseUrl}api/versioning?status=${status}&module=${modules}`).pipe(
+      map(resp => {
+        //(resp);
+        console.log(resp);
+        resp?.response.map(phase => (phase.phase_name_status = `${phase.phase_name} - (${phase.status ? 'Open' : 'Closed'})`));
+        return resp;
+      })
+    );
   }
 
   PATCH_versioningProcess(id) {
