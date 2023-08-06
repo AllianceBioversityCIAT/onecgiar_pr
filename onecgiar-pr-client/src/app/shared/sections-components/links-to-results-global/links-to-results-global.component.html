@@ -15,6 +15,7 @@
         [rowsPerPageOptions]="[5,50,100]">
         <ng-template pTemplate="header">
             <tr>
+                <th pSortableColumn="result_code"> <p-sortIcon field="result_code"></p-sortIcon>Result code</th>
                 <th pSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder">
                     <p-sortIcon field="{{column.attr}}"></p-sortIcon>{{column.title}}
                 </th>
@@ -23,34 +24,50 @@
         </ng-template>
         <ng-template pTemplate="body" let-result>
             <tr>
+                <td>
+                    {{result?.result_code}}
+                </td>
                 <td *ngFor="let column of columnOrder; let i=index" class="{{column.attr}}">
-                    <a class="{{column.class}}">
-                        <div class="point"
-                            [style.background]="'var(--pr-color-result-level-'+result?.result_level_id+')'"
-                            *ngIf="column.attr === 'result_type'"></div>
+                    <div class="subResults">
+                        <ng-container *ngFor="let subResult of result['results']">
+                            <a class="{{subResult.class}}">
+                                <div class="point"
+                                    [style.background]="'var(--pr-color-result-level-'+subResult?.result_level_id+')'"
+                                    *ngIf="column.attr === 'result_type'"></div>
 
-                        <div class="new_tag" *ngIf="i==1 && result.is_new">New</div> {{column.attr !== 'created_date' ?
-                        result[column.attr] : (result[column.attr] | date: 'YYYY-MM-dd')}}
-                    </a>
-                    <div class="transparent_text {{column.class}}">
-                        <div class="point"
-                            [style.background]="'var(--pr-color-result-level-'+result?.result_level_id+')'"
-                            *ngIf="column.attr === 'result_type'"></div>
+                                <div class="new_tag" *ngIf="i==1 && subResult.is_new">New</div> {{column.attr !==
+                                'created_date' ?
+                                subResult[column.attr] : (subResult[column.attr] | date: 'YYYY-MM-dd')}}
+                            </a>
+                            <!-- <div class="transparent_text {{column.class}}">
+                                <div class="point"
+                                    [style.background]="'var(--pr-color-result-level-'+subResult?.result_level_id+')'"
+                                    *ngIf="column.attr === 'result_type'"></div>
 
-                        <div class="new_tag" *ngIf="i==1 && result.is_new">New</div> {{column.attr !== 'created_date' ?
-                        result[column.attr] : (result[column.attr] | date: 'YYYY-MM-dd')}}
+                                <div class="new_tag" *ngIf="i==1 && result.is_new">New</div> {{column.attr !==
+                                'created_date' ?
+                                subResult[column.attr] : (subResult[column.attr] | date: 'YYYY-MM-dd')}}
+                            </div> -->
+                        </ng-container>
                     </div>
                 </td>
                 <td>
                     <div class="actions">
-                        <div class="link_button view"
-                            (click)="openInNewPage('/result/result-detail/' + result?.result_code)">View
+                        <div class="links_openList">
+                            <div class="link_button view" *ngFor="let subResult of result['results']"
+                                (click)="openInNewPage('/result/result-detail/' + subResult?.result_code+'/general-information?phase='+subResult?.version_id)">
+                                View
+                            </div>
                         </div>
-                        <div class="link_button"
-                            *ngIf="!this.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"
-                            [ngClass]="{'globalDisabled': result.selected}"
-                            (click)="!result.selected ? onLinkResult(result) : null">{{result.selected ? 'Selected' :
-                            'Link'}}</div>
+
+                        <div class="center_flex">
+                            <div class="link_button"
+                                *ngIf="!this.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"
+                                [ngClass]="{'globalDisabled': result.selected}"
+                                (click)="!result.selected ? onLinkResult(result) : null">{{result.selected ? 'Selected'
+                                :
+                                'Link'}}</div>
+                        </div>
                     </div>
                 </td>
             </tr>

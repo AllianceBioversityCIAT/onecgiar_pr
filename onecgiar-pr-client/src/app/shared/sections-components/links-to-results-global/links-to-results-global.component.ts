@@ -17,7 +17,7 @@ export class LinksToResultsGlobalComponent implements OnInit {
   text_to_search: string = '';
   counterPipe = 0;
   columnOrder = [
-    { title: 'Result code', attr: 'result_code' },
+    // { title: 'Result code', attr: 'result_code' },
     { title: 'Title', attr: 'title', class: 'notCenter' },
     // { title: 'Reporting year', attr: 'reported_year' },
     { title: 'Result type', attr: 'result_type' },
@@ -30,9 +30,18 @@ export class LinksToResultsGlobalComponent implements OnInit {
     this.api.updateResultsList();
     this.getSectionInformation();
   }
+
+  getFirstByDate(results) {
+    // ordernar los resultados por fecha de creacion "created_date" para obetener el primero, es decir el mas reciente
+    const re = results.sort((a, b) => {
+      return new Date(b.created_date).getTime() - new Date(a.created_date).getTime();
+    });
+    console.log(re);
+    return re[0];
+  }
+
   onLinkResult(result) {
-    //(result);
-    this.linksToResultsBody.links.push(result);
+    this.linksToResultsBody.links.push(this.getFirstByDate(result.results));
     this.counterPipe++;
   }
   onRemove(index) {
@@ -61,6 +70,8 @@ export class LinksToResultsGlobalComponent implements OnInit {
     });
   }
   openInNewPage(link) {
+    console.log('openInNewPage');
+    console.log(link);
     window.open(link, '_blank');
   }
 
