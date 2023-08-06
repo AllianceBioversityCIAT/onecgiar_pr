@@ -1,24 +1,28 @@
-<div class="local_container">
+<div class="local_container" *ngIf="this.api.dataControlSE.currentResult?.result_type_id == 7">
     <div class="annual_updating">
-        <app-pr-radio-button [verticalAlignment]="true" [options]="this.options" optionLabel="name" optionValue="value">
-        </app-pr-radio-button>
-        <!-- [(ngModel)]="this.ipsrGeneralInformationBody.is_discontinued" -->
 
-        <div class="discontinued_options">
-            <!-- [(ngModel)]="this.ipsrGeneralInformationBody.discontinued_options[0]" -->
-            <app-pr-checkbox label="No or limited progress in improving the readiness of the innovation. ">
-            </app-pr-checkbox>
-            <app-pr-checkbox label="The innovation lead and/or team took up new responsibilities. ">
-            </app-pr-checkbox>
-            <app-pr-checkbox
-                label="Limited Initiative resource availability required deprioritization of the innovation. ">
-            </app-pr-checkbox>
-            <app-pr-checkbox label="Limited bilateral co-investment required deprioritization of the innovation. ">
-            </app-pr-checkbox>
-            <app-pr-checkbox label="Absence of strong demand and scaling partners for the innovation. ">
-            </app-pr-checkbox>
-            <app-pr-checkbox label="Other:">
-            </app-pr-checkbox>
+        <div class="title"> <strong>Annual updating</strong> - <div class="header"><app-pr-field-header
+                    label="Please indicate if the investment for this innovation was continued or discontinued"></app-pr-field-header>
+            </div>
         </div>
+
+        <app-pr-radio-button [(ngModel)]="this.generalInfoBody.is_discontinued" [verticalAlignment]="true"
+            [options]="this.options" optionLabel="name" optionValue="value">
+        </app-pr-radio-button>
+
+        <div class="discontinued_options" *ngIf="this.generalInfoBody.is_discontinued">
+            <div class="discontinued_option"
+                *ngFor="let discontinuedOption of this.generalInfoBody.discontinued_options">
+                <app-pr-checkbox [label]="discontinuedOption?.option" [(ngModel)]="discontinuedOption.value">
+                </app-pr-checkbox>
+                <app-pr-input *ngIf="discontinuedOption?.investment_discontinued_option_id == 6"
+                    placeholder="Write some..." type="text" [(ngModel)]="this.discontinuedOption.description">
+                </app-pr-input>
+            </div>
+        </div>
+
     </div>
 </div>
+
+
+<!-- [(ngModel)]="this.generalInfoBody.discontinued_options[0]" -->

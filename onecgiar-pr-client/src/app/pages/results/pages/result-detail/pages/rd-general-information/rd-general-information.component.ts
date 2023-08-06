@@ -30,12 +30,56 @@ export class RdGeneralInformationComponent {
       this.generalInfoBody = response;
       this.generalInfoBody.reporting_year = response['phase_year'];
       this.generalInfoBody.institutions_type = [...this.generalInfoBody.institutions_type, ...this.generalInfoBody.institutions] as any;
-      //(this.generalInfoBody);
+      console.log(this.generalInfoBody);
+      this.generalInfoBody.discontinued_options = [
+        {
+          investment_discontinued_option_id: '1',
+          option: 'No or limited progress in improving the readiness of the innovation.',
+          value: true
+        },
+        {
+          investment_discontinued_option_id: '6',
+          option: 'Other',
+          value: true,
+          description: 'some'
+        }
+      ];
+      this.GET_investmentDiscontinuedOptions();
     });
   }
+  GET_investmentDiscontinuedOptions() {
+    this.api.resultsSE.GET_investmentDiscontinuedOptions().subscribe(({ response }) => {
+      console.log(response);
+      console.log(this.generalInfoBody.discontinued_options);
+      // this.generalInfoBody.discontinued_options = response;
+      // this.parseData
+      this.convertChecklistToDiscontinuedOptions(response);
+    });
+  }
+
+  //TODO -
+
+  convertChecklistToDiscontinuedOptions(response) {
+    const options = [...response];
+    options.map(option => {
+      const found = this.generalInfoBody.discontinued_options.find(discontinuedOption => discontinuedOption.investment_discontinued_option_id == option.investment_discontinued_option_id);
+      if (found) option.value = true;
+    });
+    this.generalInfoBody.discontinued_options = options;
+  }
+
+  discontinuedOptionsToIds() {
+    this.generalInfoBody.discontinued_options = this.generalInfoBody.discontinued_options.filter(option => option.value === true);
+    console.log(this.generalInfoBody.discontinued_options);
+  }
+
   onSaveSection() {
+    this.discontinuedOptionsToIds();
     this.generalInfoBody.institutions_type = this.generalInfoBody.institutions_type.filter(inst => !inst.hasOwnProperty('institutions_id'));
     //(this.generalInfoBody);
+
+    if (!this.generalInfoBody.is_discontinued) this.generalInfoBody.discontinued_options = [];
+
     this.api.resultsSE.PATCH_generalInformation(this.generalInfoBody).subscribe(
       resp => {
         this.getSectionInformation();

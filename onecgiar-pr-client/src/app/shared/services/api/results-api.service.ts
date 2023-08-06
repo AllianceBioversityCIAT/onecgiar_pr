@@ -252,7 +252,7 @@ export class ResultsApiService {
     );
   }
 
-  Get_indicator(id_toc, init){
+  Get_indicator(id_toc, init) {
     return this.http.get<any>(`${this.apiBaseUrl}toc/get/indicator/${id_toc}/result/${this.currentResultId}/initiative/${init}`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
@@ -720,6 +720,10 @@ export class ResultsApiService {
 
   GET_resultYears() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results/years`);
+  }
+
+  GET_investmentDiscontinuedOptions() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/investment-discontinued-options`);
   }
 
   GET_versioningResult() {

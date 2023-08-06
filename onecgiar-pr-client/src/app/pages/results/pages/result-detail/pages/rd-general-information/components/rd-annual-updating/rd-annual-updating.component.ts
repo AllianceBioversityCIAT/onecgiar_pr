@@ -1,5 +1,6 @@
 import { Component, OnInit, Input } from '@angular/core';
-import { IpsrGeneralInformationBody } from 'src/app/pages/ipsr/pages/innovation-package-detail/pages/ipsr-general-information/model/ipsr-general-information.model';
+import { GeneralInfoBody } from '../../models/generalInfoBody';
+import { ApiService } from 'src/app/shared/services/api/api.service';
 
 @Component({
   selector: 'app-rd-annual-updating',
@@ -7,18 +8,19 @@ import { IpsrGeneralInformationBody } from 'src/app/pages/ipsr/pages/innovation-
   styleUrls: ['./rd-annual-updating.component.scss']
 })
 export class RdAnnualUpdatingComponent implements OnInit {
-  @Input() ipsrGeneralInformationBody: IpsrGeneralInformationBody;
+  @Input() generalInfoBody: GeneralInfoBody = new GeneralInfoBody();
+  discontinuedOptions = [];
   options = [
     {
       name: 'Investment was continued',
-      value: true
+      value: false
     },
     {
       name: 'Investment was discontinued, because',
       value: true
     }
   ];
-  constructor() {}
+  constructor(public api: ApiService) {}
 
   ngOnInit(): void {}
 }

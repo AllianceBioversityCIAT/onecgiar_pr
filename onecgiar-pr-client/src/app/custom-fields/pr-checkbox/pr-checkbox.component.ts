@@ -19,7 +19,6 @@ export class PrCheckboxComponent {
   constructor(public greenChecksSE: GreenChecksService, public rolesSE: RolesService) {}
   @Input() optionLabel: string;
   @Input() optionValue: string;
-  @Input() options: any;
   @Input() placeholder: string;
   @Input() label: string;
   @Input() description: string;
