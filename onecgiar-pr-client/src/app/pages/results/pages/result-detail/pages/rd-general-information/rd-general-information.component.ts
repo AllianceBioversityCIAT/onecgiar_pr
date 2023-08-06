@@ -31,19 +31,19 @@ export class RdGeneralInformationComponent {
       this.generalInfoBody.reporting_year = response['phase_year'];
       this.generalInfoBody.institutions_type = [...this.generalInfoBody.institutions_type, ...this.generalInfoBody.institutions] as any;
       console.log(this.generalInfoBody);
-      this.generalInfoBody.discontinued_options = [
-        {
-          investment_discontinued_option_id: '1',
-          option: 'No or limited progress in improving the readiness of the innovation.',
-          value: true
-        },
-        {
-          investment_discontinued_option_id: '6',
-          option: 'Other',
-          value: true,
-          description: 'some'
-        }
-      ];
+      // this.generalInfoBody.discontinued_options = [
+      //   {
+      //     investment_discontinued_option_id: '1',
+      //     option: 'No or limited progress in improving the readiness of the innovation.',
+      //     value: true
+      //   },
+      //   {
+      //     investment_discontinued_option_id: '6',
+      //     option: 'Other',
+      //     value: true,
+      //     description: 'some'
+      //   }
+      // ];
       this.GET_investmentDiscontinuedOptions();
     });
   }
@@ -63,13 +63,16 @@ export class RdGeneralInformationComponent {
     const options = [...response];
     options.map(option => {
       const found = this.generalInfoBody.discontinued_options.find(discontinuedOption => discontinuedOption.investment_discontinued_option_id == option.investment_discontinued_option_id);
-      if (found) option.value = true;
+      if (found) {
+        (option.value = true), (option.description = found?.description);
+      }
     });
     this.generalInfoBody.discontinued_options = options;
   }
 
   discontinuedOptionsToIds() {
     this.generalInfoBody.discontinued_options = this.generalInfoBody.discontinued_options.filter(option => option.value === true);
+    this.generalInfoBody.discontinued_options.map(option => (option.is_active = true));
     console.log(this.generalInfoBody.discontinued_options);
   }
 
@@ -79,7 +82,7 @@ export class RdGeneralInformationComponent {
     //(this.generalInfoBody);
 
     if (!this.generalInfoBody.is_discontinued) this.generalInfoBody.discontinued_options = [];
-
+    console.log(this.generalInfoBody);
     this.api.resultsSE.PATCH_generalInformation(this.generalInfoBody).subscribe(
       resp => {
         this.getSectionInformation();

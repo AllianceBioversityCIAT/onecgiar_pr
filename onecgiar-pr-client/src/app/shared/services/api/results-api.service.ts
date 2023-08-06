@@ -729,4 +729,12 @@ export class ResultsApiService {
   GET_versioningResult() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/versioning/result/${this.ipsrDataControlSE.inIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId}`);
   }
+
+  PATCH_versioningAnnually() {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/versioning/annually`, {});
+  }
+
+  GET_numberOfResultsByResultType(statusId, resultTypeId) {
+    return this.http.get<any>(`${environment.apiBaseUrl}/api/versioning/number/results/status/${statusId}/result-type/${resultTypeId}`);
+  }
 }

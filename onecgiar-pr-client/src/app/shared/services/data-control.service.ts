@@ -24,6 +24,7 @@ export class DataControlService {
   show_qa_full_screen = false;
   showResultHistoryOfChangesModal = false;
   resultPhaseList = [];
+  showMassivePhaseShiftModal = false;
 
   constructor(private titleService: Title) {}
   validateBody(body: any) {
