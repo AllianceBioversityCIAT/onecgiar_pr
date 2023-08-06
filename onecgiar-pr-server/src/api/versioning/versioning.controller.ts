@@ -70,7 +70,7 @@ export class VersioningController {
     return this.versioningService.annualReplicationProcessInnovationDev(user);
   }
 
-  @Get('number/results/status/:statusId/result-type/resultTypeId')
+  @Get('number/results/status/:statusId/result-type/:resultTypeId')
   getNumberResults(
     @Param('statusId') status_id: string,
     @Param('resultTypeId') result_type_id: string,

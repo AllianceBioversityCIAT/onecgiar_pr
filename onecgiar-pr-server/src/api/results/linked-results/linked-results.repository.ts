@@ -161,6 +161,35 @@ export class LinkedResultRepository
     }
   }
 
+  async getMostUpDateResult(result_code: number) {
+    const query = `
+    select * from (SELECT 
+      r2.id,
+      if(r2.version_id  = (select max(r3.version_id) 
+            from \`result\` r3 
+            where r3.result_code = r2.result_code),1,0) +
+      if(r2.status_id = 3,1,0) as max_data
+    FROM \`result\` r2 
+    WHERE r2.result_code = ?) f;
+    `;
+    try {
+      const result: { id: number; max_data: number }[] = await this.query(
+        query,
+        [result_code],
+      );
+      const largestObject = result.reduce((acc, obj) => {
+        if (obj.max_data > acc.max_data) {
+          return obj;
+        } else {
+          return acc;
+        }
+      });
+      return largestObject?.id ? largestObject.id : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
   async getLinkResultByIdResult(resultId: number) {
     const query = `
     select 
@@ -193,12 +222,16 @@ export class LinkedResultRepository
     rt.name as result_type,
     r.has_regions,
     r.has_countries,
-    lr.legacy_link 
+    lr.legacy_link,
+    v.id as phase_id,
+    v.phase_name,
+    rs.status_name
   from linked_result lr 
   	left join \`result\` r on r.id  = lr.linked_results_id 
     left join result_level rl on rl.id = r.result_level_id 
     left join result_type rt on rt.id = r.result_type_id 
     INNER JOIN result_status rs ON rs.result_status_id = r.status_id  
+    inner join \`version\` v on v.id = r.version_id 
     where lr.origin_result_id = ?
           and lr.is_active > 0;
     `;
