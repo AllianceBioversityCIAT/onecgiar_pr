@@ -4,15 +4,19 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 import { Validation } from './entities/validation.entity';
 
 @Injectable()
-export class resultValidationRepository extends Repository<Validation>{
+export class resultValidationRepository extends Repository<Validation> {
   constructor(
     private dataSource: DataSource,
-    private _handlersError: HandlersError
+    private _handlersError: HandlersError,
   ) {
-	super(Validation, dataSource.createEntityManager());
+    super(Validation, dataSource.createEntityManager());
   }
 
-  async generalInformationValidation(resultId: number, resultLevel: number, resultType: number) {
+  async generalInformationValidation(
+    resultId: number,
+    resultLevel: number,
+    resultType: number,
+  ) {
     const queryData = `
 	SELECT
 		'general-information' as section_name,
@@ -20,9 +24,13 @@ export class resultValidationRepository extends Repository<Validation>{
 			when (
 				r.title is not null
 				and r.title <> ''
-			) ${resultType != 6 ? `and 
+			) ${
+        resultType != 6
+          ? `and 
 				(r.description is not null
-				and r.description <> '')` :`` }
+				and r.description <> '')`
+          : ``
+      }
 			and (
 				r.gender_tag_level_id is not null
 				and r.gender_tag_level_id <> ''
@@ -43,7 +51,9 @@ export class resultValidationRepository extends Repository<Validation>{
 				r.poverty_tag_level_id is not null
 				and r.poverty_tag_level_id <> ''
 			)
-			and (r.is_krs in (0, 1)) ${resultLevel != 4 && resultLevel != 1 ? `and 
+			and (r.is_krs in (0, 1)) ${
+        resultLevel != 4 && resultLevel != 1
+          ? `and 
 				(((
 				select
 					COUNT(rbi.id)
@@ -62,20 +72,24 @@ export class resultValidationRepository extends Repository<Validation>{
 				WHERE
 					rbit.institution_roles_id = 1
 				and rbit.results_id = r.id
-				and rbit.is_active > 0) > 0))` :`` } then true
+				and rbit.is_active > 0) > 0))`
+          : ``
+      } then true
 			else false
 		END as validation
 	FROM
 		\`result\` r
 	WHERE
 		r.id = ?
-		and r.is_active > 0;
+		and r.is_active > 0
+		and r.version_id = 2;
     `;
     try {
-      const shareResultRequest: GetValidationSectionDto[] = await this.dataSource.query(queryData, [resultId]); 
-	  return shareResultRequest.length ? shareResultRequest[0] : undefined;
+      const shareResultRequest: GetValidationSectionDto[] =
+        await this.dataSource.query(queryData, [resultId]);
+      return shareResultRequest.length ? shareResultRequest[0] : undefined;
     } catch (error) {
-		throw this._handlersError.returnErrorRepository({
+      throw this._handlersError.returnErrorRepository({
         className: resultValidationRepository.name,
         error: error,
         debug: true,
@@ -97,7 +111,9 @@ export class resultValidationRepository extends Repository<Validation>{
 			WHERE
 				rc.is_active > 0
 				and rc.result_id = r.id) > 0)
-			${resultLevel != 2 && resultLevel != 1? `AND 
+			${
+        resultLevel != 2 && resultLevel != 1
+          ? `AND 
 			((
 			SELECT
 				rtr.planned_result
@@ -106,8 +122,12 @@ export class resultValidationRepository extends Repository<Validation>{
 			WHERE
 				rtr.initiative_id in (rbi.inititiative_id)
 					and rtr.results_id = r.id
-					and rtr.is_active > 0) is not null)`:``}
-			${resultLevel != 1?`AND 
+					and rtr.is_active > 0) is not null)`
+          : ``
+      }
+			${
+        resultLevel != 1
+          ? `AND 
 			((
 			select
 				if(rtr.toc_result_id is not null
@@ -138,7 +158,8 @@ export class resultValidationRepository extends Repository<Validation>{
 			WHERE
 				rbi.result_id = r.id
 				and rbi.initiative_role_id = 2
-				and rbi.is_active > 0)) = 0)`:`AND
+				and rbi.is_active > 0)) = 0)`
+          : `AND
 				((SELECT count(DISTINCT cgt.impactAreaId)
 				from results_impact_area_target riat 
 				inner join clarisa_global_targets cgt on cgt.targetId = riat.impact_area_target_id 
@@ -152,7 +173,8 @@ export class resultValidationRepository extends Repository<Validation>{
 				where riai.result_id = r.id
 					and riai.impact_area_indicator_id is not null
 					and riai.is_active > 0) = 5)
-				`}
+				`
+      }
 			AND 
 			((
 			select
@@ -174,13 +196,15 @@ export class resultValidationRepository extends Repository<Validation>{
 		and rbi.initiative_role_id = 1
 	WHERE
 		r.id = ?
-		and r.is_active > 0;
+		and r.is_active > 0
+		and r.version_id = 2;
     `;
     try {
-      const shareResultRequest: GetValidationSectionDto[] = await this.dataSource.query(queryData, [resultId]); 
-	  return shareResultRequest.length ? shareResultRequest[0] : undefined;
+      const shareResultRequest: GetValidationSectionDto[] =
+        await this.dataSource.query(queryData, [resultId]);
+      return shareResultRequest.length ? shareResultRequest[0] : undefined;
     } catch (error) {
-		throw this._handlersError.returnErrorRepository({
+      throw this._handlersError.returnErrorRepository({
         className: resultValidationRepository.name,
         error: error,
         debug: true,
@@ -202,7 +226,10 @@ export class resultValidationRepository extends Repository<Validation>{
 						results_by_institution rbi
 					WHERE
 						rbi.result_id = r.id
-						AND rbi.institution_roles_id = 2
+						AND (
+							rbi.institution_roles_id = 2
+							OR rbi.institution_roles_id = 8
+						)
 						AND rbi.is_active > 0
 				) <= 0
 			) THEN FALSE
@@ -213,7 +240,10 @@ export class resultValidationRepository extends Repository<Validation>{
 					results_by_institution rbi2
 				WHERE
 					rbi2.result_id = r.id
-					AND rbi2.institution_roles_id = 2
+					AND (
+						rbi2.institution_roles_id = 2
+						OR rbi2.institution_roles_id = 8
+					)
 					AND rbi2.is_active = TRUE
 			) != (
 				SELECT
@@ -229,7 +259,10 @@ export class resultValidationRepository extends Repository<Validation>{
 							results_by_institution rbi4
 						WHERE
 							rbi4.result_id = r.id
-							AND rbi4.institution_roles_id = 2
+							AND (
+								rbi4.institution_roles_id = 2
+								OR rbi4.institution_roles_id = 8
+							)
 							AND rbi4.is_active = TRUE
 					)
 			) THEN FALSE
@@ -239,13 +272,15 @@ export class resultValidationRepository extends Repository<Validation>{
 		result r
 	WHERE
 		r.id = ?
-		AND r.is_active > 0;
+		AND r.is_active > 0
+		AND r.version_id = 2;
     `;
     try {
-      const shareResultRequest: GetValidationSectionDto[] = await this.dataSource.query(queryData, [resultId]); 
-	  return shareResultRequest.length ? shareResultRequest[0] : undefined;
+      const shareResultRequest: GetValidationSectionDto[] =
+        await this.dataSource.query(queryData, [resultId]);
+      return shareResultRequest.length ? shareResultRequest[0] : undefined;
     } catch (error) {
-		throw this._handlersError.returnErrorRepository({
+      throw this._handlersError.returnErrorRepository({
         className: resultValidationRepository.name,
         error: error,
         debug: true,
@@ -256,46 +291,59 @@ export class resultValidationRepository extends Repository<Validation>{
   async geoLocationValidation(resultId: number) {
     const queryData = `
 	select
-			'geographic-location' as section_name,
-			CASE
-				when ((if(r.has_regions = 1 ,
-				((
-			select
-							count(rr.result_region_id)
-			from
-							result_region rr
-			WHERE
-							rr.result_id = r.id
-				and rr.is_active > 0) > 0),
-				if(r.has_regions is null,
-			false,
-			true)))
-			AND 
-						(if(r.has_countries = 1 ,
-				((
-			select
-							count(rc.result_country_id)
-			from
-							result_country rc
-			WHERE
-							rc.result_id = r.id
-				and rc.is_active > 0) > 0),
-				if(r.has_countries is null,
-			false,
-			true)))) then true
+		'geographic-location' as section_name,
+		CASE
+			when (
+				(
+					if(
+						r.has_regions = 1,
+						(
+							(
+								select
+									count(rr.result_region_id)
+								from
+									result_region rr
+								WHERE
+									rr.result_id = r.id
+									and rr.is_active > 0
+							) > 0
+						),
+						if(r.has_regions is null, false, true)
+					)
+				)
+				AND (
+					if(
+						r.has_countries = 1,
+						(
+							(
+								select
+									count(rc.result_country_id)
+								from
+									result_country rc
+								WHERE
+									rc.result_id = r.id
+									and rc.is_active > 0
+							) > 0
+						),
+						if(r.has_countries is null, false, true)
+					)
+				)
+			) then true
 			else false
 		END as validation
 	from
-			\`result\` r
+		result r
 	WHERE
-			r.id = ?
-		and r.is_active > 0;
+		r.id = ?
+		and r.is_active > 0
+		and r.version_id = 2;
     `;
     try {
-      const shareResultRequest: GetValidationSectionDto[] = await this.dataSource.query(queryData, [resultId]); 
-	  return shareResultRequest.length ? shareResultRequest[0] : undefined;
+      const shareResultRequest: GetValidationSectionDto[] =
+        await this.dataSource.query(queryData, [resultId]);
+      return shareResultRequest.length ? shareResultRequest[0] : undefined;
     } catch (error) {
-		throw this._handlersError.returnErrorRepository({
+      throw this._handlersError.returnErrorRepository({
         className: resultValidationRepository.name,
         error: error,
         debug: true,
@@ -308,10 +356,11 @@ export class resultValidationRepository extends Repository<Validation>{
 	
     `;
     try {
-      const shareResultRequest: GetValidationSectionDto[] = await this.dataSource.query(queryData, [resultId]); 
-	  return shareResultRequest.length ? shareResultRequest[0] : undefined;
+      const shareResultRequest: GetValidationSectionDto[] =
+        await this.dataSource.query(queryData, [resultId]);
+      return shareResultRequest.length ? shareResultRequest[0] : undefined;
     } catch (error) {
-		throw this._handlersError.returnErrorRepository({
+      throw this._handlersError.returnErrorRepository({
         className: resultValidationRepository.name,
         error: error,
         debug: true,
@@ -524,13 +573,15 @@ export class resultValidationRepository extends Repository<Validation>{
 		AND rid.is_active > 0
 	WHERE
 		r.id = ?
-		AND r.is_active > 0;
+		AND r.is_active > 0
+		AND r.version_id = 2;
     `;
     try {
-      const shareResultRequest: GetValidationSectionDto[] = await this.dataSource.query(queryData, [resultId]); 
-	  return shareResultRequest.length ? shareResultRequest[0] : undefined;
+      const shareResultRequest: GetValidationSectionDto[] =
+        await this.dataSource.query(queryData, [resultId]);
+      return shareResultRequest.length ? shareResultRequest[0] : undefined;
     } catch (error) {
-		throw this._handlersError.returnErrorRepository({
+      throw this._handlersError.returnErrorRepository({
         className: resultValidationRepository.name,
         error: error,
         debug: true,
@@ -558,13 +609,15 @@ export class resultValidationRepository extends Repository<Validation>{
 		and riu.is_active > 0
 	WHERE
 		r.id = ?
-		and r.is_active > 0;
+		and r.is_active > 0
+		and r.version_id = 2;
     `;
     try {
-      const shareResultRequest: GetValidationSectionDto[] = await this.dataSource.query(queryData, [resultId]); 
-	  return shareResultRequest.length ? shareResultRequest[0] : undefined;
+      const shareResultRequest: GetValidationSectionDto[] =
+        await this.dataSource.query(queryData, [resultId]);
+      return shareResultRequest.length ? shareResultRequest[0] : undefined;
     } catch (error) {
-		throw this._handlersError.returnErrorRepository({
+      throw this._handlersError.returnErrorRepository({
         className: resultValidationRepository.name,
         error: error,
         debug: true,
@@ -602,13 +655,15 @@ export class resultValidationRepository extends Repository<Validation>{
 		and rid.is_active > 0
 	WHERE
 		r.id = ?
-		and r.is_active > 0;
+		and r.is_active > 0
+		and r.version_id = 2;
     `;
     try {
-      const shareResultRequest: GetValidationSectionDto[] = await this.dataSource.query(queryData, [resultId]); 
-	  return shareResultRequest.length ? shareResultRequest[0] : undefined;
+      const shareResultRequest: GetValidationSectionDto[] =
+        await this.dataSource.query(queryData, [resultId]);
+      return shareResultRequest.length ? shareResultRequest[0] : undefined;
     } catch (error) {
-		throw this._handlersError.returnErrorRepository({
+      throw this._handlersError.returnErrorRepository({
         className: resultValidationRepository.name,
         error: error,
         debug: true,
@@ -619,32 +674,36 @@ export class resultValidationRepository extends Repository<Validation>{
   async knowledgeProductValidation(resultId: number) {
     const queryData = `
 	select
-			'knowledge-product-info' as section_name,
-			CASE
-				when (if(rkp.is_melia = 1,
-			if(rkp.melia_previous_submitted = 1,
-			rkp.ost_melia_study_id is not null
-			and rkp.ost_melia_study_id <> '',
-			rkp.melia_type_id is not null
-			and rkp.melia_type_id <> '') ,
-			if(rkp.is_melia is not null,
-			true,
-			false))) then true
+		'knowledge-product-info' as section_name,
+		CASE
+			when (
+				if(
+					rkp.is_melia = 1,
+					if(
+						rkp.melia_previous_submitted = 1,
+						rkp.ost_melia_study_id is not null
+						and rkp.ost_melia_study_id <> '',
+						rkp.melia_type_id is not null
+						and rkp.melia_type_id <> ''
+					),
+					if(rkp.is_melia is not null, true, false)
+				)
+			) then true
 			else false
 		END as validation
 	from
-			\`result\` r
-	left join results_knowledge_product rkp on
-		rkp.results_id = r.id
+		result r
+		left join results_knowledge_product rkp on rkp.results_id = r.id
 	WHERE
-			r.id = ?
+		r.id = ?
 		and r.is_active > 0;
     `;
     try {
-      const shareResultRequest: GetValidationSectionDto[] = await this.dataSource.query(queryData, [resultId]); 
-	  return shareResultRequest.length ? shareResultRequest[0] : undefined;
+      const shareResultRequest: GetValidationSectionDto[] =
+        await this.dataSource.query(queryData, [resultId]);
+      return shareResultRequest.length ? shareResultRequest[0] : undefined;
     } catch (error) {
-		throw this._handlersError.returnErrorRepository({
+      throw this._handlersError.returnErrorRepository({
         className: resultValidationRepository.name,
         error: error,
         debug: true,
@@ -697,13 +756,15 @@ export class resultValidationRepository extends Repository<Validation>{
 		AND rcd.is_active > 0
 	WHERE
 		r.id = ?
-		AND r.is_active > 0;
+		AND r.is_active > 0
+		AND r.version_id = 2;
     `;
     try {
-      const shareResultRequest: GetValidationSectionDto[] = await this.dataSource.query(queryData, [resultId]); 
-	  return shareResultRequest.length ? shareResultRequest[0] : undefined;
+      const shareResultRequest: GetValidationSectionDto[] =
+        await this.dataSource.query(queryData, [resultId]);
+      return shareResultRequest.length ? shareResultRequest[0] : undefined;
     } catch (error) {
-		throw this._handlersError.returnErrorRepository({
+      throw this._handlersError.returnErrorRepository({
         className: resultValidationRepository.name,
         error: error,
         debug: true,
@@ -741,13 +802,15 @@ export class resultValidationRepository extends Repository<Validation>{
 		and rpc.is_active > 0
 	WHERE
 		r.id = ?
-		and r.is_active > 0;
+		and r.is_active > 0
+		and r.version_id = 2;
     `;
     try {
-      const shareResultRequest: GetValidationSectionDto[] = await this.dataSource.query(queryData, [resultId]); 
-	  return shareResultRequest.length ? shareResultRequest[0] : undefined;
+      const shareResultRequest: GetValidationSectionDto[] =
+        await this.dataSource.query(queryData, [resultId]);
+      return shareResultRequest.length ? shareResultRequest[0] : undefined;
     } catch (error) {
-		throw this._handlersError.returnErrorRepository({
+      throw this._handlersError.returnErrorRepository({
         className: resultValidationRepository.name,
         error: error,
         debug: true,
@@ -775,10 +838,13 @@ export class resultValidationRepository extends Repository<Validation>{
 	order by v.id desc;
     `;
     try {
-      const shareResultRequest: Validation[] = await this.dataSource.query(queryData, [resultId]); 
-	  return shareResultRequest.length ? shareResultRequest[0] : null;
+      const shareResultRequest: Validation[] = await this.dataSource.query(
+        queryData,
+        [resultId],
+      );
+      return shareResultRequest.length ? shareResultRequest[0] : null;
     } catch (error) {
-		throw this._handlersError.returnErrorRepository({
+      throw this._handlersError.returnErrorRepository({
         className: resultValidationRepository.name,
         error: error,
         debug: true,
@@ -801,10 +867,13 @@ export class resultValidationRepository extends Repository<Validation>{
 		  and v.is_active > 0;
     `;
     try {
-      const shareResultRequest: Array<{validation:string}> = await this.dataSource.query(queryData, [resultId]); 
-	  return shareResultRequest.length ? parseInt(shareResultRequest[0].validation) : 0;
+      const shareResultRequest: Array<{ validation: string }> =
+        await this.dataSource.query(queryData, [resultId]);
+      return shareResultRequest.length
+        ? parseInt(shareResultRequest[0].validation)
+        : 0;
     } catch (error) {
-		throw this._handlersError.returnErrorRepository({
+      throw this._handlersError.returnErrorRepository({
         className: resultValidationRepository.name,
         error: error,
         debug: true,
@@ -819,10 +888,12 @@ export class resultValidationRepository extends Repository<Validation>{
 		WHERE results_id = ?;
     `;
     try {
-      const shareResultRequest = await this.dataSource.query(queryData, [resultId]); 
-	  return shareResultRequest;
+      const shareResultRequest = await this.dataSource.query(queryData, [
+        resultId,
+      ]);
+      return shareResultRequest;
     } catch (error) {
-		throw this._handlersError.returnErrorRepository({
+      throw this._handlersError.returnErrorRepository({
         className: resultValidationRepository.name,
         error: error,
         debug: true,
@@ -836,16 +907,14 @@ export class resultValidationRepository extends Repository<Validation>{
 			set is_active = 0;
     `;
     try {
-      const shareResultRequest = await this.dataSource.query(queryData); 
-	  return shareResultRequest;
+      const shareResultRequest = await this.dataSource.query(queryData);
+      return shareResultRequest;
     } catch (error) {
-		throw this._handlersError.returnErrorRepository({
+      throw this._handlersError.returnErrorRepository({
         className: resultValidationRepository.name,
         error: error,
         debug: true,
       });
     }
   }
-
 }
-

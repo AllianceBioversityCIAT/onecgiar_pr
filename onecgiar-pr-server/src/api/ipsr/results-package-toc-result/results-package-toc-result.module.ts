@@ -20,6 +20,7 @@ import { ResultByInstitutionsByDeliveriesTypeRepository } from '../../results/re
 import { ResultInitiativeBudgetRepository } from '../../results/result_budget/repositories/result_initiative_budget.repository';
 import { ResultIpEoiOutcomeRepository } from '../innovation-pathway/repository/result-ip-eoi-outcomes.repository';
 import { VersioningModule } from '../../versioning/versioning.module';
+import { ResultsTocResultIndicatorsRepository } from 'src/api/results/results-toc-results/results-toc-results-indicators.repository';
 
 @Module({
   controllers: [ResultsPackageTocResultController],
@@ -42,6 +43,7 @@ import { VersioningModule } from '../../versioning/versioning.module';
     ResultInitiativeBudgetRepository,
     ResultIpEoiOutcomeRepository,
     ReturnResponse,
+    ResultsTocResultIndicatorsRepository
   ],
   exports: [],
 })

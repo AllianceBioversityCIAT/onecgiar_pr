@@ -30,8 +30,18 @@ export class InnovationPackageDetailComponent {
       this.api.rolesSE.validateReadOnly(response);
       //(response);
       this.dataControlSE.currentResult = response;
-      if (this.dataControlSE.currentResult.status == 1 && !this.api.rolesSE.isAdmin) this.api.rolesSE.readOnly = true;
-      console.log(this.dataControlSE.currentResult.status);
+      const is_phase_open = response.is_phase_open;
+      switch (is_phase_open) {
+        case 0:
+          this.api.rolesSE.readOnly = this.api.rolesSE.isAdmin;
+          break;
+
+        case 1:
+          if (this.dataControlSE.currentResult.status == 1 && !this.api.rolesSE.isAdmin) this.api.rolesSE.readOnly = true;
+          break;
+      }
+
+      console.log(response.is_phase_open);
       this.ipsrDataControlSE.initiative_id = response?.inititiative_id;
 
       this.ipsrDataControlSE.detailData = response;
