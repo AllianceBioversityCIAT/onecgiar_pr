@@ -735,6 +735,6 @@ export class ResultsApiService {
   }
 
   GET_numberOfResultsByResultType(statusId, resultTypeId) {
-    return this.http.get<any>(`${environment.apiBaseUrl}/api/versioning/number/results/status/${statusId}/result-type/${resultTypeId}`);
+    return this.http.get<any>(`${environment.apiBaseUrl}api/versioning/number/results/status/${statusId}/result-type/${resultTypeId}`);
   }
 }
