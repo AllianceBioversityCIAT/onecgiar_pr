@@ -112,11 +112,13 @@
   <app-pr-yes-or-not label="Is this result featured in a Key Result Story for the Reporting year?"
     [(ngModel)]="this.generalInfoBody.is_krs" (ngModelChange)="onChangeKrs()"></app-pr-yes-or-not>
 
+
   <app-pr-input *ngIf="this.generalInfoBody.is_krs" placeholder="e.g. https://www.cgiar.org/example"
     description="Link to Key Result Story - Please note this is not intended to be reported in december" type="text"
     [required]="false" [(ngModel)]="this.generalInfoBody.krs_url"> </app-pr-input>
 
   <app-save-button class="position_sticky" (clickSave)="onSaveSection()"
+    [editable]="this.api.dataControlSE.currentResult?.result_type_id == 7 ?this.api.rolesSE.access.canDdit && !this.dataControlSE?.currentResult?.status :false"
     [disabled]="!this.generalInfoBody.result_name"></app-save-button>
   <app-sync-button (clickSave)="onSyncSection()"></app-sync-button>
 </div>

@@ -8,6 +8,7 @@ import { RolesService } from '../../../../../../shared/services/global/roles.ser
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
 import { CustomizedAlertsFeService } from '../../../../../../shared/services/customized-alerts-fe.service';
 import { PusherService } from '../../../../../../shared/services/pusher.service';
+import { CurrentResultService } from '../../../../../../shared/services/current-result.service';
 
 @Component({
   selector: 'app-rd-general-information',
@@ -17,7 +18,7 @@ import { PusherService } from '../../../../../../shared/services/pusher.service'
 export class RdGeneralInformationComponent {
   generalInfoBody = new GeneralInfoBody();
   toggle = 0;
-  constructor(public api: ApiService, public scoreSE: ScoreService, public institutionsSE: InstitutionsService, public rolesSE: RolesService, public dataControlSE: DataControlService, private customizedAlertsFeSE: CustomizedAlertsFeService, public pusherSE: PusherService) {}
+  constructor(public api: ApiService, private currentResultSE: CurrentResultService, public scoreSE: ScoreService, public institutionsSE: InstitutionsService, public rolesSE: RolesService, public dataControlSE: DataControlService, private customizedAlertsFeSE: CustomizedAlertsFeService, public pusherSE: PusherService) {}
   ngOnInit(): void {
     this.showAlerts();
     this.getSectionInformation();
@@ -31,6 +32,8 @@ export class RdGeneralInformationComponent {
       this.generalInfoBody.reporting_year = response['phase_year'];
       this.generalInfoBody.institutions_type = [...this.generalInfoBody.institutions_type, ...this.generalInfoBody.institutions] as any;
       console.log(this.generalInfoBody);
+      // this.api.dataControlSE.currentResult.is_discontinued = this.generalInfoBody.is_discontinued;
+
       // this.generalInfoBody.discontinued_options = [
       //   {
       //     investment_discontinued_option_id: '1',
@@ -85,6 +88,8 @@ export class RdGeneralInformationComponent {
     console.log(this.generalInfoBody);
     this.api.resultsSE.PATCH_generalInformation(this.generalInfoBody).subscribe(
       resp => {
+        this.currentResultSE.GET_resultById();
+
         this.getSectionInformation();
       },
       err => {

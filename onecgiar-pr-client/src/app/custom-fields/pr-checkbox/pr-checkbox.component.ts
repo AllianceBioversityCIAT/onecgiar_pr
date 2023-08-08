@@ -24,6 +24,7 @@ export class PrCheckboxComponent {
   @Input() description: string;
   @Input() readOnly: boolean;
   @Input() required: boolean = true;
+  @Input() isStatic: boolean = false;
   @Output() selectOptionEvent = new EventEmitter();
   private _value: string;
 
