@@ -740,7 +740,7 @@ export class ResultsApiService {
   }
 
   PATCH_versioningAnnually() {
-    return this.http.patch<any>(`${environment.apiBaseUrl}api/versioning/annually`, {});
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/versioning/execute/annual/replicate`, {});
   }
 
   GET_numberOfResultsByResultType(statusId, resultTypeId) {
