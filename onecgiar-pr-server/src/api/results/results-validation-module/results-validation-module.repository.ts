@@ -108,39 +108,39 @@ export class resultValidationRepository extends Repository<Validation> {
 					FROM results_center rc
 					WHERE rc.is_active > 0
 					AND rc.result_id = r.id
-				) > 0
+				) = 0
 			)
 			${
 			resultLevel != 2 && resultLevel != 1
-				? `AND (
+				? `OR (
 					(
 						SELECT rtr.planned_result
 						FROM results_toc_result rtr
 						WHERE rtr.initiative_id IN (rbi.inititiative_id)
 						AND rtr.results_id = r.id
 						AND rtr.is_active > 0
-					) IS NOT NULL
+					) IS NULL
 				)`
 				: ``
 			}
 			${
 			resultLevel != 1
-				? `AND (
+				? `OR (
 					(
-						SELECT IF(rtr.toc_result_id IS NOT NULL OR rtr.action_area_outcome_id IS NOT NULL, 1, 0)
+						SELECT IF(rtr.toc_result_id IS NULL OR rtr.action_area_outcome_id IS NULL, 1, 0)
 						FROM results_toc_result rtr
 						WHERE rtr.initiative_id IN (rbi.inititiative_id)
 						AND rtr.results_id = r.id
 						AND rtr.is_active > 0
-					) = 1
+					) = 0
 				)
-				AND (
+				OR (
 					(
 						IFNULL(
 							(
-								SELECT SUM(IF(rtr.toc_result_id IS NOT NULL OR rtr.action_area_outcome_id IS NOT NULL, 1, 0))
+								SELECT SUM(IF(rtr.toc_result_id IS NULL OR rtr.action_area_outcome_id IS NULL, 1, 0))
 								FROM results_toc_result rtr
-								WHERE rtr.initiative_id NOT IN (rbi.inititiative_id)
+								WHERE rtr.initiative_id IN (rbi.inititiative_id)
 								AND rtr.results_id = r.id
 								AND rtr.is_active > 0
 							),
@@ -153,27 +153,27 @@ export class resultValidationRepository extends Repository<Validation> {
 						AND rbi.initiative_role_id = 2
 						AND rbi.is_active > 0
 					)
-				) = 0`
+				) <> 0`
 				: `
-					AND (
+					OR (
 						(SELECT COUNT(DISTINCT cgt.impactAreaId)
 						FROM results_impact_area_target riat 
 						INNER JOIN clarisa_global_targets cgt ON cgt.targetId = riat.impact_area_target_id 
 						WHERE riat.result_id = r.id
-						AND riat.impact_area_target_id IS NOT NULL
-						AND riat.is_active > 0) = 5
+						AND riat.impact_area_target_id IS NULL
+						AND riat.is_active > 0) < 5
 					)
-					AND (
+					OR (
 						(SELECT COUNT(DISTINCT ciai.impact_area_id)
 						FROM results_impact_area_indicators riai 
 						INNER JOIN clarisa_impact_area_indicator ciai ON ciai.id = riai.impact_area_indicator_id 
 						WHERE riai.result_id = r.id
-						AND riai.impact_area_indicator_id IS NOT NULL
-						AND riai.is_active > 0) = 5
+						AND riai.impact_area_indicator_id IS NULL
+						AND riai.is_active > 0) < 5
 					)
 				`
 			}
-			AND (
+			OR (
 				(
 					SELECT
 						IFNULL(
@@ -185,9 +185,9 @@ export class resultValidationRepository extends Repository<Validation> {
 					FROM non_pooled_project npp
 					WHERE npp.results_id = r.id
 					AND npp.is_active > 0
-				) = 0
+				) <> 0
 			)
-			THEN TRUE
+			THEN FALSE
 			${
 			resultLevel == 3 || resultLevel == 4
 				? `
@@ -207,7 +207,7 @@ export class resultValidationRepository extends Repository<Validation> {
 								rtri.indicator_contributing IS NOT NULL
 								AND rtri.indicator_contributing <> ''
 							)
-					) = (
+					) != (
 						SELECT
 							COUNT(*)
 						FROM
@@ -218,7 +218,7 @@ export class resultValidationRepository extends Repository<Validation> {
 							AND rtri2.is_active = 1
 							AND rtri2.is_not_aplicable = 0
 					)
-				) THEN TRUE
+				) THEN FALSE
 				WHEN (
 					rtr1.planned_result = 1
 					AND rtr1.mapping_impact = 1
@@ -231,8 +231,8 @@ export class resultValidationRepository extends Repository<Validation> {
 						WHERE
 							rtr2.results_id = r.id
 							AND rtia.is_active = 1
-					) > 0
-				) THEN TRUE
+					) = 0
+				) THEN FALSE
 				WHEN (
 					rtr1.planned_result = 1
 					AND rtr1.mapping_sdg = 1
@@ -245,11 +245,11 @@ export class resultValidationRepository extends Repository<Validation> {
 						WHERE
 							rtr2.results_id = r.id
 							AND rtsdgt.is_active = 1
-					) > 0
-				) THEN TRUE`
+					) = 0
+				) THEN FALSE`
 				: ``
 			}
-			ELSE FALSE
+			ELSE TRUE
 		END AS validation
 	FROM
 		result r
