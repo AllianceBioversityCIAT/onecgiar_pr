@@ -20,6 +20,7 @@ export class LinksToResultsGlobalComponent implements OnInit {
     // { title: 'Result code', attr: 'result_code' },
     { title: 'Title', attr: 'title', class: 'notCenter' },
     // { title: 'Reporting year', attr: 'reported_year' },
+    { title: 'Phase', attr: 'phase_name' },
     { title: 'Result type', attr: 'result_type' },
     { title: 'Submitter', attr: 'submitter' },
     { title: 'Status', attr: 'status_name' },
@@ -52,6 +53,7 @@ export class LinksToResultsGlobalComponent implements OnInit {
   getSectionInformation() {
     this.api.resultsSE.GET_resultsLinked(this.isIpsr).subscribe(({ response }) => {
       //(response);
+      console.log(response);
       this.linksToResultsBody = response;
     });
   }
