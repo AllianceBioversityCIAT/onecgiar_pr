@@ -63,7 +63,7 @@ export class VersioningController {
     return this.versioningService.getAllPhases();
   }
 
-  @Patch('annually')
+  @Patch('execute/annual/replicate')
   @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
   @UseGuards(ValidRoleGuard)
   updateAnnually(@UserToken() user: TokenDto) {

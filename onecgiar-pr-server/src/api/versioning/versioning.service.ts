@@ -363,26 +363,33 @@ export class VersioningService {
           status: true,
           app_module_id: AppModuleIdEnum.REPORTING,
         },
+        relations: {
+          obj_previous_phase: true,
+        },
       });
 
       if (!phase) {
-        throw this._returnResponse;
+        throw this._returnResponse.format({
+          message: `There is no active phase`,
+          response: null,
+          statusCode: HttpStatus.NOT_FOUND,
+        });
       }
 
-      const results = await this._resultRepository.find({
-        where: {
-          status_id: 2,
-          result_type_id: 7,
-          is_active: true,
-          version_id: phase.previous_phase,
-        },
-      });
+      const results =
+        await this._versionRepository.$_getAllInovationDevToReplicate(phase);
 
       for (const r of results) {
         if (this.$_genericValidation(r.result_code, phase.id)) {
           await this.$_phaseChangeReporting(r, phase, user);
         }
       }
+
+      return this._returnResponse.format({
+        message: `The results were replicated successfully`,
+        response: results?.length,
+        statusCode: HttpStatus.OK,
+      });
     } catch (error) {
       return this._returnResponse.format(error, !env.IS_PRODUCTION);
     }
