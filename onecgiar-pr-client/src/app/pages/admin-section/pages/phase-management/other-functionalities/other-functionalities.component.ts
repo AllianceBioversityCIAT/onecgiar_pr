@@ -8,7 +8,7 @@ import { ApiService } from 'src/app/shared/services/api/api.service';
 })
 export class OtherFunctionalitiesComponent implements OnInit {
   constructor(private api: ApiService) {}
-
+  running = false;
   ngOnInit(): void {}
 
   execute() {

@@ -30,6 +30,7 @@ export class MassivePhaseShiftComponent implements OnInit {
       },
       err => {
         console.log(err);
+        this.api.alertsFe.show({ id: 'PATCH_versioningAnnually', title: 'There was an error', description: err?.error?.meesage, status: 'error', closeIn: 500 });
       }
     );
   }

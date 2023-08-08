@@ -1,7 +1,11 @@
 <div class="local_container">
     <div class="option">
         <div class="text">Replicate all QAed result innovations from previous phase to the current active phase</div>
-        <div class="button"> <app-pr-button text="Execute" icon="chevron_right" (click)="execute()"></app-pr-button>
+        <div class="button">
+            <app-pr-button padding="medium"
+                [text]="this.running?'Running (this process may take time, please wait)':'Execute'"
+                [rotating]="this.running" [icon]="this.running?'loop':'chevron_right'"
+                [ngClass]="{'globalDisabled': this.running}" (click)="execute()"></app-pr-button>
         </div>
     </div>
 </div>
