@@ -806,7 +806,8 @@ WHERE
     r.lead_contact_person,
     v.status as is_phase_open,
     v.phase_name,
-    v.phase_year 
+    v.phase_year,
+    r.is_discontinued
 FROM
     \`result\` r
     inner join result_level rl on rl.id = r.result_level_id 

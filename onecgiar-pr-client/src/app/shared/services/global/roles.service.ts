@@ -14,6 +14,9 @@ export class RolesService {
   roles: any;
   isAdmin = false;
   firstValidationOfReadOnly = false;
+  access = {
+    canDdit: false
+  };
   restrictions = [
     {
       id: 1,
@@ -58,13 +61,14 @@ export class RolesService {
       if (!this.roles) return (this.readOnly = true);
       const { application, initiative } = this.roles;
       const { isAdmin } = this.validateApplication(application);
-      if (isAdmin) return null;
+      if (isAdmin) return (this.access.canDdit = true);
       if (!result) return null;
       const { initiative_id } = result;
       //(initiative_id);
       //(initiative);
 
       const initiativeFinded = initiative.find(init => init.initiative_id == initiative_id);
+      this.access.canDdit = Boolean(initiativeFinded);
       this.readOnly = Boolean(!initiativeFinded);
       // this.readOnly ? //('%cIs ReadOnly => ' + this.readOnly, 'background: #222; color: #d84242') : //('%cNot ReadOnly => ' + this.readOnly, 'background: #222; color: #aaeaf5');
       //('%c******END OF validateReadOnly*******', 'background: #222; color: #52cd47');

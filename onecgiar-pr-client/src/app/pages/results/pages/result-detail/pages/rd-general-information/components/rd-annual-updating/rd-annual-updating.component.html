@@ -1,3 +1,5 @@
+<h1>{{this.api.rolesSE.access.canDdit}} {{!this.api.dataControlSE?.currentResult?.status}}
+    {{ this.api.rolesSE.readOnly}}</h1>
 <div class="local_container" *ngIf="this.api.dataControlSE.currentResult?.result_type_id == 7">
     <div class="annual_updating">
 
@@ -7,16 +9,19 @@
         </div>
 
         <app-pr-radio-button [(ngModel)]="this.generalInfoBody.is_discontinued" [verticalAlignment]="true"
-            [options]="this.options" optionLabel="name" optionValue="value">
+            [options]="this.options" optionLabel="name" optionValue="value"
+            [isStatic]="!this.api.dataControlSE?.currentResult?.status && this.api.rolesSE.access.canDdit">
         </app-pr-radio-button>
 
         <div class="discontinued_options" *ngIf="this.generalInfoBody.is_discontinued">
             <div class="discontinued_option"
                 *ngFor="let discontinuedOption of this.generalInfoBody.discontinued_options">
-                <app-pr-checkbox [label]="discontinuedOption?.option" [(ngModel)]="discontinuedOption.value">
+                <app-pr-checkbox [label]="discontinuedOption?.option" [(ngModel)]="discontinuedOption.value"
+                    [isStatic]="this.api.rolesSE.access.canDdit">
                 </app-pr-checkbox>
                 <app-pr-input *ngIf="discontinuedOption?.investment_discontinued_option_id == 6"
-                    placeholder="Write some..." type="text" [(ngModel)]="this.discontinuedOption.description">
+                    placeholder="Write some..." type="text" [required]="false"
+                    [(ngModel)]="!this.api.dataControlSE?.currentResult?.status&&this.discontinuedOption.description">
                 </app-pr-input>
             </div>
         </div>

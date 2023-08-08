@@ -24,6 +24,7 @@ export class CurrentResultService {
         //(response);
         this.dataControlSE.currentResult = response;
 
+        console.log({ is_discontinued: response.is_discontinued });
         const is_phase_open = response.is_phase_open;
         switch (is_phase_open) {
           case 0:
@@ -32,6 +33,8 @@ export class CurrentResultService {
 
           case 1:
             if (this.dataControlSE.currentResult.status == 1 && !this.api.rolesSE.isAdmin) this.api.rolesSE.readOnly = true;
+            if (response.is_discontinued) this.api.rolesSE.readOnly = response.is_discontinued;
+
             break;
         }
       },
