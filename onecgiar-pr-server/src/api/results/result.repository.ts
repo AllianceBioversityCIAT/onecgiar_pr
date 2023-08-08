@@ -1878,6 +1878,7 @@ left join clarisa_countries cc3
         r.result_code ${resultCodes.length ? `in (${resultCodes})`: '= 0' }
         AND rbi.is_active = 1
         AND rtr.is_active = 1
+        AND rtr.planned_result = 1
         AND rtri.is_active > 0
         AND rbi.inititiative_id = rtr.initiative_id
         AND tr.phase = (
