@@ -7,7 +7,7 @@
         <i class="material-icons-round">search</i>
         <input type="text" placeholder="Find result..." [(ngModel)]="this.text_to_search">
     </div>
-    <p-table sortField="id" [sortOrder]="-1"
+    <p-table sortField="result_code" [sortOrder]="-1"
         [value]="(this.api.dataControlSE.resultsList | filterResultNotLinked:this.linksToResultsBody.links: counterPipe:this.text_to_search)"
         responsiveLayout="scroll"
         [paginator]="(this.api.dataControlSE.resultsList| filterResultNotLinked:this.linksToResultsBody.links: counterPipe:this.text_to_search)?.length"
