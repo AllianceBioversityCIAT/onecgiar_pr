@@ -200,12 +200,23 @@ td {
     .result_linked {
         background-color: var(--pr-color-primary-2);
         color: var(--pr-color-secondary);
-        padding: 5px 10px;
-        border-radius: 3px;
+        padding: 8px 10px;
+        border-radius: 5px;
         display: flex;
         justify-content: space-between;
         align-items: center;
         gap: 10px;
+
+        .data {
+            display: flex;
+            flex-direction: column;
+
+            .metadata {}
+
+            .title {
+                color: var(--pr-color-primary);
+            }
+        }
 
         i {
             cursor: pointer;
