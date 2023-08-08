@@ -7,8 +7,7 @@ import { ApiService } from 'src/app/shared/services/api/api.service';
   styleUrls: ['./other-functionalities.component.scss']
 })
 export class OtherFunctionalitiesComponent implements OnInit {
-  constructor(private api: ApiService) {}
-  running = false;
+  constructor(public api: ApiService) {}
   ngOnInit(): void {}
 
   execute() {

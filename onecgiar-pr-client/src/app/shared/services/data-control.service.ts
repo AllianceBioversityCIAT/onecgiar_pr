@@ -25,6 +25,7 @@ export class DataControlService {
   showResultHistoryOfChangesModal = false;
   resultPhaseList = [];
   showMassivePhaseShiftModal = false;
+  massivePhaseShiftIsRunning = false;
 
   constructor(private titleService: Title) {}
   validateBody(body: any) {

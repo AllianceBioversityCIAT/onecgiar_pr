@@ -3,9 +3,11 @@
         <div class="text">Replicate all QAed result innovations from previous phase to the current active phase</div>
         <div class="button">
             <app-pr-button padding="medium"
-                [text]="this.running?'Running (this process may take time, please wait)':'Execute'"
-                [rotating]="this.running" [icon]="this.running?'loop':'chevron_right'"
-                [ngClass]="{'globalDisabled': this.running}" (click)="execute()"></app-pr-button>
+                [text]="this.api.dataControlSE.massivePhaseShiftIsRunning?'Running (this process may take time, please wait)':'Execute'"
+                [rotating]="this.api.dataControlSE.massivePhaseShiftIsRunning"
+                [icon]="this.api.dataControlSE.massivePhaseShiftIsRunning?'loop':'chevron_right'"
+                [ngClass]="{'globalDisabled': this.api.dataControlSE.massivePhaseShiftIsRunning}"
+                (click)="execute()"></app-pr-button>
         </div>
     </div>
 </div>

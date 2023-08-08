@@ -24,13 +24,18 @@ export class MassivePhaseShiftComponent implements OnInit {
   }
 
   accept() {
+    this.api.dataControlSE.showMassivePhaseShiftModal = false;
+    this.api.dataControlSE.massivePhaseShiftIsRunning = true;
     this.api.resultsSE.PATCH_versioningAnnually().subscribe(
       (resp: any) => {
         console.log(resp);
+        this.api.dataControlSE.massivePhaseShiftIsRunning = false;
+        this.api.alertsFe.show({ id: 'accept', closeIn: 10000, title: 'Process executed successfully', description: this.numberOfResults + ' results of type Innovation Development have been replicated from the previous phase to the current phase.', status: 'success' });
       },
       err => {
         console.log(err);
-        this.api.alertsFe.show({ id: 'PATCH_versioningAnnually', title: 'There was an error', description: err?.error?.meesage, status: 'error', closeIn: 500 });
+        this.api.alertsFe.show({ id: 'PATCH_versioningAnnually', title: 'Process execution failed', description: err?.error?.meesage, status: 'error', closeIn: 500 });
+        this.api.dataControlSE.massivePhaseShiftIsRunning = false;
       }
     );
   }
