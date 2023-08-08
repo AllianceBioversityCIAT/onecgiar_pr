@@ -78,7 +78,7 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     }
   }
 
-  async getRequestByUser(userId: number, version: number = 1) {
+  async getRequestByUser(userId: number, roleId: number) {
     const queryData = `
     SELECT
     	srr.share_result_request_id,
@@ -131,17 +131,21 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
 		INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
 		inner join \`version\` v on v.id = r.version_id
     WHERE 
-    	srr.approving_inititiative_id in (
-    	SELECT
-    		rbu.initiative_id
-    	from
-    		role_by_user rbu
-    	WHERE
-    		rbu.\`user\` = ?
-    		and rbu.initiative_id is not null
-    		and rbu.action_area_id is null
-    	)
-		and srr.is_active > 0
+		srr.is_active > 0
+		${
+      roleId == 1
+        ? ''
+        : `and srr.approving_inititiative_id in (
+			SELECT
+				rbu.initiative_id
+			from
+				role_by_user rbu
+			WHERE
+				rbu.\`user\` = ?
+				and rbu.initiative_id is not null
+				and rbu.action_area_id is null
+			)`
+    }
 	order by srr.request_status_id ASC;
     `;
     try {
@@ -159,7 +163,7 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     }
   }
 
-  async getPendingByUser(userId: number, version: number = 1) {
+  async getPendingByUser(userId: number, roleId: number) {
     const queryData = `
     SELECT
     	srr.share_result_request_id,
@@ -205,17 +209,22 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     	left join clarisa_initiatives ci2 on ci2.id = srr.requester_initiative_id 
 		inner join \`version\` v on v.id = r.version_id 
     WHERE 
-    	srr.requester_initiative_id in (
-    	SELECT
-    		rbu.initiative_id
-    	from
-    		role_by_user rbu
-    	WHERE
-    		rbu.\`user\` = ?
-    		and rbu.initiative_id is not null
-    		and rbu.action_area_id is null
-    	)
-		and srr.is_active > 0;
+	srr.is_active > 0
+	${
+    roleId == 1
+      ? ''
+      : `and srr.requester_initiative_id in (
+				SELECT
+					rbu.initiative_id
+				from
+					role_by_user rbu
+				WHERE
+					rbu.\`user\` = ?
+					and rbu.initiative_id is not null
+					and rbu.action_area_id is null
+				)`
+  }
+		order by srr.request_status_id ASC;
     `;
     try {
       const shareResultRequest: ShareResultRequest[] = await this.query(

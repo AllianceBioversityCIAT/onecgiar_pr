@@ -20,6 +20,7 @@ import { ResultsTocResultRepository } from '../results-toc-results/results-toc-r
 import { Result } from '../entities/result.entity';
 import { getRepository } from 'typeorm';
 import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/result_initiative_budget.repository';
+import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 
 @Injectable()
 export class ShareResultRequestService {
@@ -31,6 +32,7 @@ export class ShareResultRequestService {
     private readonly _versionsService: VersionsService,
     private readonly _resultsTocResultRepository: ResultsTocResultRepository,
     private readonly _resultInitiativeBudgetRepository: ResultInitiativeBudgetRepository,
+    private readonly _roleByUserRepository: RoleByUserRepository,
   ) {}
 
   create(createShareResultRequestDto: CreateShareResultRequestDto) {
@@ -110,10 +112,18 @@ export class ShareResultRequestService {
 
   async getResultRequestByUser(user: TokenDto) {
     try {
+      const role = await this._roleByUserRepository.$_getMaxRoleByUser(user.id);
+
       const requestData =
-        await this._shareResultRequestRepository.getRequestByUser(user.id);
+        await this._shareResultRequestRepository.getRequestByUser(
+          user.id,
+          role,
+        );
       const requestPendingData =
-        await this._shareResultRequestRepository.getPendingByUser(user.id);
+        await this._shareResultRequestRepository.getPendingByUser(
+          user.id,
+          role,
+        );
       return {
         response: {
           requestData,
