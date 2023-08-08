@@ -88,8 +88,13 @@
     </app-pr-field-header>
     <div class="results_linked">
         <div class="result_linked" *ngFor="let result of this.linksToResultsBody.links; let i=index">
-            <div><strong>{{result.result_type}}</strong> -
-                {{result.title}}</div>
+            <div class="data">
+                <div class="metadata"> <strong>Result {{result.result_code}} ({{result.result_type}}) &nbsp;-&nbsp;
+                        Status:
+                    </strong>
+                    {{result.status_name}} <strong>&nbsp;Phase: </strong>{{result.phase_name}}</div>
+                <strong class="title">{{result.title}}</strong>
+            </div>
             <i class=" material-icons-round icon" *ngIf="!this.api.rolesSE.readOnly"
                 (click)="this.onRemove(i)">clear</i>
         </div>
