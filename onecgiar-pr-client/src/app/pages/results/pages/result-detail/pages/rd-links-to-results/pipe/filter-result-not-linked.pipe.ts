@@ -38,6 +38,7 @@ export class FilterResultNotLinkedPipe implements PipeTransform {
           selected: result.selected,
           result_code: result.result_code,
           submitter: result.submitter,
+          version_id: result.version_id,
           results: []
         };
       }

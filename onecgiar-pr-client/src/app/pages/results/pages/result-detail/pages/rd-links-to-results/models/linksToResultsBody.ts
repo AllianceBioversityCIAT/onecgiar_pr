@@ -11,4 +11,5 @@ interface interfaceLinkResults {
   result_code?: string;
   status_name?: string;
   phase_name?: string;
+  version_id?: string;
 }

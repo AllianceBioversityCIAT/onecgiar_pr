@@ -93,7 +93,11 @@
                         Status:
                     </strong>
                     {{result.status_name}} <strong>&nbsp;Phase: </strong>{{result.phase_name}}</div>
-                <strong class="title">{{result.title}}</strong>
+                <strong class="linked_title"><a
+                        [href]="'/result/result-detail/'+result.result_code+'/general-information?phase='+result?.version_id"
+                        target="_blank">{{result.title}}</a></strong>
+
+
             </div>
             <i class=" material-icons-round icon" *ngIf="!this.api.rolesSE.readOnly"
                 (click)="this.onRemove(i)">clear</i>
