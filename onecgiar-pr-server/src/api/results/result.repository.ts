@@ -1181,7 +1181,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     WHERE rkmi.is_active > 0 and rkp.results_id = r.id
     GROUP by rkp.results_id, rbi.institutions_id, rkmi.intitution_name, rkmi.results_by_institutions_id) as q1), 'Not Applicable') as "Partners (with delivery type) for KP results",
     if(rt.id = 6, if(r.no_applicable_partner=1, "No", "Yes"), 'Not Applicable') as "Are additional partners for KP results applicable?",
-    if(rt.id <> 6,(select GROUP_CONCAT(DISTINCT concat('• ', q1.partner) SEPARATOR '\n')
+    if(rt.id = 6,(select GROUP_CONCAT(DISTINCT concat('• ', q1.partner) SEPARATOR '\n')
     from (select concat(concat(if(coalesce(ci7.acronym, '') = '', '', concat(ci7.acronym, ' - ')), ci7.name), '; Delivery type(s): ', group_concat(distinct pdt.name separator ', ')) as partner
     FROM results_by_institution rbi
     left join result_by_institutions_by_deliveries_type rbibdt 
@@ -1417,7 +1417,7 @@ left join clarisa_countries cc3
     WHERE rkmi.is_active > 0 and rkp.results_id = r.id
     GROUP by rkp.results_id, rbi.institutions_id, rkmi.intitution_name, rkmi.results_by_institutions_id) as q1), 'Not Applicable') as "Partners (with delivery type) for KP results",
     if(rt.id = 6, if(r.no_applicable_partner=1, "No", "Yes"), 'Not Applicable') as "Are additional partners for KP results applicable?",
-    if(rt.id <> 6,(select GROUP_CONCAT(DISTINCT concat('• ', q1.partner) SEPARATOR '\n')
+    if(rt.id = 6,(select GROUP_CONCAT(DISTINCT concat('• ', q1.partner) SEPARATOR '\n')
     from (select concat(concat(if(coalesce(ci7.acronym, '') = '', '', concat(ci7.acronym, ' - ')), ci7.name), '; Delivery type(s): ', group_concat(distinct pdt.name separator ', ')) as partner
     FROM results_by_institution rbi
     left join result_by_institutions_by_deliveries_type rbibdt 
