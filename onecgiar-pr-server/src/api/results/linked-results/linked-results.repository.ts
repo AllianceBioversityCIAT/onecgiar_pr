@@ -225,7 +225,8 @@ export class LinkedResultRepository
     lr.legacy_link,
     v.id as version_id,
     v.phase_name,
-    rs.status_name
+    rs.status_name,
+    r.result_code
   from linked_result lr 
   	left join \`result\` r on r.id  = lr.linked_results_id 
     left join result_level rl on rl.id = r.result_level_id 
