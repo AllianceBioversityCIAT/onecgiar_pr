@@ -84,16 +84,19 @@ export class VersionRepository extends Repository<Version> {
       });
   }
 
-  $_getAllInovationDevToReplicate(phase: Version): Promise<Result[]> {
+  $_getAllInovationDevToReplicate(
+    phase: Version,
+    result_type: number = 7,
+  ): Promise<Result[]> {
     const queryData = `
     select *
     from \`result\` r 
     left join (select r2.result_code 
     			from \`result\` r2 
-    			where r2.result_type_id = 7 
+    			where r2.result_type_id = ${result_type} 
     				and r2.is_active > 0 
     				and r2.version_id = ?) rv on rv.result_code = r.result_code 
-    where r.result_type_id = 7
+    where r.result_type_id = ${result_type}
     and r.version_id = ?
     and r.status_id = 2
     and r.is_active > 0
