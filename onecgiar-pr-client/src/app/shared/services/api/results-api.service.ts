@@ -54,14 +54,67 @@ export class ResultsApiService {
   PATCH_DeleteResult(resultIdToDelete: string | number) {
     return this.http.patch<any>(`${this.apiBaseUrl}delete/${resultIdToDelete}`, null);
   }
-  GET_FindResultsElastic(search?: string) {
-    const elasticSearchString = (search ?? '')
-      .split(' ')
-      .map(s => `${s}*`)
-      .join(' ');
-    const searchQuery = `?q=${elasticSearchString?.length > 0 ? elasticSearchString : '*'}`;
+
+  GET_FindResultsElastic(search?: string, type?: string) {
+    const body = {
+      size: 20,
+      query: {
+        bool: {
+          must: [
+            {
+              match_bool_prefix: {
+                title: {
+                  query: search ?? '',
+                  operator: 'and'
+                }
+              }
+            },
+            {
+              bool: {
+                should: [
+                  {
+                    bool: {
+                      must: [
+                        {
+                          match: {
+                            type: type ?? ''
+                          }
+                        },
+                        {
+                          match: {
+                            is_legacy: true
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    bool: {
+                      must: [
+                        {
+                          match: {
+                            is_legacy: false
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      sort: [
+        {
+          'id.keyword': {
+            order: 'asc'
+          }
+        }
+      ]
+    };
     const options = { headers: new HttpHeaders({ Authorization: this.elasicCredentials }) };
-    return this.http.get<ElasticResult>(`${environment.elastic.baseUrl}${searchQuery}`, options).pipe(
+    return this.http.post<ElasticResult>(`${environment.elastic.baseUrl}`, body, options).pipe(
       map(resp =>
         (resp?.hits?.hits ?? []).map(h => {
           return { probability: h._score, ...h._source } as Source & { probability: number };

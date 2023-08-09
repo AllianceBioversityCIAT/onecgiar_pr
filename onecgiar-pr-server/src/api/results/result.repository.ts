@@ -1155,7 +1155,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     CONCAT('(',ci.official_code,' - ',ci.short_name,'): ', 'Toc Level: ' ,IFNULL(tl.name , 'Not provider'), ', ToC result title:' ,IFNULL(tr.title, 'Not provider')) as "ToC Mapping (Primary submitter)",
     GROUP_CONCAT(distinct CONCAT('(',ci6.official_code,' - ',ci6.short_name,'): ', 'Toc Level: ' ,IFNULL(tl2.name , 'Not provider'), ', ToC result title:' ,IFNULL(tr2.title, 'Not provider')) SEPARATOR ', ') as "ToC Mapping (Contributting initiatives)",
     -- section 3
-    if(r.no_applicable_partner=1, "No", "Yes") as "Are partners applicable?",
+    if(rt.id <> 6, if(r.no_applicable_partner=1, "No", "Yes"), "Yes") as "Are partners applicable?",
     if(rt.id <> 6,(select GROUP_CONCAT(DISTINCT concat('• ', q1.partner) SEPARATOR '\n')
     from (select concat(concat(if(coalesce(ci7.acronym, '') = '', '', concat(ci7.acronym, ' - ')), ci7.name), '; Delivery type(s): ', group_concat(distinct pdt.name separator ', ')) as partner
     FROM results_by_institution rbi
@@ -1180,6 +1180,21 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     left JOIN partner_delivery_type pdt on pdt.id = rbibdt.partner_delivery_type_id
     WHERE rkmi.is_active > 0 and rkp.results_id = r.id
     GROUP by rkp.results_id, rbi.institutions_id, rkmi.intitution_name, rkmi.results_by_institutions_id) as q1), 'Not Applicable') as "Partners (with delivery type) for KP results",
+    if(rt.id = 6, if(r.no_applicable_partner=1, "No", "Yes"), 'Not Applicable') as "Are additional partners for KP results applicable?",
+    if(rt.id <> 6,(select GROUP_CONCAT(DISTINCT concat('• ', q1.partner) SEPARATOR '\n')
+    from (select concat(concat(if(coalesce(ci7.acronym, '') = '', '', concat(ci7.acronym, ' - ')), ci7.name), '; Delivery type(s): ', group_concat(distinct pdt.name separator ', ')) as partner
+    FROM results_by_institution rbi
+    left join result_by_institutions_by_deliveries_type rbibdt 
+          on rbibdt.result_by_institution_id = rbi.id 
+        and rbibdt.is_active > 0
+    left join clarisa_institutions ci7 
+          on ci7.id = rbi.institutions_id
+    left JOIN partner_delivery_type pdt 
+          on pdt.id = rbibdt.partner_delivery_type_id
+      WHERE rbi.result_id = r.id
+        and rbi.institution_roles_id = 8
+        and rbi.is_active > 0
+    GROUP by rbi.result_id, ci7.id) as q1), 'Not Applicable') as "Additional partners (with delivery type) for KP results",
     -- section 4
     (SELECT if(cgs.name is null, 'Not Provided', (if(cgs.id = 3, 'National', cgs.name))) 
   FROM clarisa_geographic_scope cgs
@@ -1376,7 +1391,7 @@ left join clarisa_countries cc3
     CONCAT('(',ci.official_code,' - ',ci.short_name,'): ', 'Toc Level: ' ,IFNULL(tl.name , 'Not provider'), ', ToC result title:' ,IFNULL(tr.title, 'Not provider')) as "ToC Mapping (Primary submitter)",
     GROUP_CONCAT(distinct CONCAT('(',ci6.official_code,' - ',ci6.short_name,'): ', 'Toc Level: ' ,IFNULL(tl2.name , 'Not provider'), ', ToC result title:' ,IFNULL(tr2.title, 'Not provider')) SEPARATOR ', ') as "ToC Mapping (Contributting initiatives)",
     -- section 3
-    if(r.no_applicable_partner=1, "No", "Yes") as "Are partners applicable?",
+    if(rt.id <> 6, if(r.no_applicable_partner=1, "No", "Yes"), "Yes") as "Are partners applicable?",
     if(rt.id <> 6,(select GROUP_CONCAT(DISTINCT concat('• ', q1.partner) SEPARATOR '\n')
     from (select concat(concat(if(coalesce(ci7.acronym, '') = '', '', concat(ci7.acronym, ' - ')), ci7.name), '; Delivery type(s): ', group_concat(distinct pdt.name separator ', ')) as partner
     FROM results_by_institution rbi
@@ -1401,6 +1416,21 @@ left join clarisa_countries cc3
     left JOIN partner_delivery_type pdt on pdt.id = rbibdt.partner_delivery_type_id
     WHERE rkmi.is_active > 0 and rkp.results_id = r.id
     GROUP by rkp.results_id, rbi.institutions_id, rkmi.intitution_name, rkmi.results_by_institutions_id) as q1), 'Not Applicable') as "Partners (with delivery type) for KP results",
+    if(rt.id = 6, if(r.no_applicable_partner=1, "No", "Yes"), 'Not Applicable') as "Are additional partners for KP results applicable?",
+    if(rt.id <> 6,(select GROUP_CONCAT(DISTINCT concat('• ', q1.partner) SEPARATOR '\n')
+    from (select concat(concat(if(coalesce(ci7.acronym, '') = '', '', concat(ci7.acronym, ' - ')), ci7.name), '; Delivery type(s): ', group_concat(distinct pdt.name separator ', ')) as partner
+    FROM results_by_institution rbi
+    left join result_by_institutions_by_deliveries_type rbibdt 
+          on rbibdt.result_by_institution_id = rbi.id 
+        and rbibdt.is_active > 0
+    left join clarisa_institutions ci7 
+          on ci7.id = rbi.institutions_id
+    left JOIN partner_delivery_type pdt 
+          on pdt.id = rbibdt.partner_delivery_type_id
+      WHERE rbi.result_id = r.id
+        and rbi.institution_roles_id = 8
+        and rbi.is_active > 0
+    GROUP by rbi.result_id, ci7.id) as q1), 'Not Applicable') as "Additional partners (with delivery type) for KP results",
     -- section 4
     (SELECT if(cgs.name is null, 'Not Provided', (if(cgs.id = 3, 'National', cgs.name))) 
   FROM clarisa_geographic_scope cgs
