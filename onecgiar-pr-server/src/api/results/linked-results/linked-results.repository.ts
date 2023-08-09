@@ -223,7 +223,7 @@ export class LinkedResultRepository
     r.has_regions,
     r.has_countries,
     lr.legacy_link,
-    v.id as phase_id,
+    v.id as version_id,
     v.phase_name,
     rs.status_name
   from linked_result lr 
