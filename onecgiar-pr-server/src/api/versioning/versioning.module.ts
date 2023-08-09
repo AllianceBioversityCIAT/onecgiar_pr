@@ -34,6 +34,9 @@ import { ResultsKnowledgeProductMetadataRepository } from '../results/results-kn
 import { ResultsKnowledgeProductInstitutionRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-institution.repository';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 import { ResultsTocResultIndicatorsRepository } from '../results/results-toc-results/results-toc-results-indicators.repository';
+import { ResultsTocImpactAreaTargetRepository } from '../results/results-toc-results/result-toc-impact-area-repository';
+import { ResultsTocSdgTargetRepository } from '../results/results-toc-results/result-toc-sdg-target-repository';
+import { ResultStatusRepository } from '../results/result-status/result-status.repository';
 
 @Module({
   controllers: [VersioningController],
@@ -69,7 +72,10 @@ import { ResultsTocResultIndicatorsRepository } from '../results/results-toc-res
     ResultsKnowledgeProductMetadataRepository,
     ResultsKnowledgeProductInstitutionRepository,
     RoleByUserRepository,
-    ResultsTocResultIndicatorsRepository
+    ResultsTocResultIndicatorsRepository,
+    ResultsTocSdgTargetRepository,
+    ResultsTocImpactAreaTargetRepository,
+    ResultStatusRepository,
   ],
   exports: [
     VersioningService,

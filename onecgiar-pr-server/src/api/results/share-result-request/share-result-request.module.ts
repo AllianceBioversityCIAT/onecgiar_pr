@@ -13,6 +13,9 @@ import { VersionRepository } from '../../versioning/versioning.repository';
 import { ResultsTocResultRepository } from '../results-toc-results/results-toc-results.repository';
 import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/result_initiative_budget.repository';
 import { ResultsTocResultIndicatorsRepository } from '../results-toc-results/results-toc-results-indicators.repository';
+import { ResultsTocSdgTargetRepository } from '../results-toc-results/result-toc-sdg-target-repository';
+import { ResultsTocImpactAreaTargetRepository } from '../results-toc-results/result-toc-impact-area-repository';
+import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 
 @Module({
   controllers: [ShareResultRequestController],
@@ -27,7 +30,10 @@ import { ResultsTocResultIndicatorsRepository } from '../results-toc-results/res
     ResultsTocResultRepository,
     ResultInitiativeBudgetRepository,
     ReturnResponse,
-    ResultsTocResultIndicatorsRepository
+    ResultsTocResultIndicatorsRepository,
+    ResultsTocSdgTargetRepository,
+    ResultsTocImpactAreaTargetRepository,
+    RoleByUserRepository,
   ],
   exports: [ShareResultRequestRepository],
 })

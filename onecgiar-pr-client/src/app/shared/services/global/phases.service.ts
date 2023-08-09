@@ -21,7 +21,7 @@ export class PhasesService {
         this.filterService.filters.general[1].options = this.phases.reporting.map(item => ({
           attr: item.phase_name,
           selected: item.status,
-          name: item.phase_name
+          name: `${item.phase_name} - ${item.status ? 'Open' : 'Closed'}`
         }));
       }
     });

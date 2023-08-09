@@ -38,6 +38,25 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
     }
   }
 
+  $_getMaxRoleByUser(userId: number) {
+    const queryData = `
+	select min(rbu.role) max_role
+		from role_by_user rbu 
+		where rbu.\`user\` = 2 
+		and rbu.active > 0 
+		and rbu.initiative_id is null 
+		and rbu.action_area_id is null 
+		LIMIT  1;
+	`;
+    const res = this.query(queryData, [userId]);
+
+    return res
+      .then((data) => {
+        return data?.length ? data[0].max_role : null;
+      })
+      .catch((error) => null);
+  }
+
   async deleteAllData() {
     const queryData = `
     DELETE FROM role_by_user;

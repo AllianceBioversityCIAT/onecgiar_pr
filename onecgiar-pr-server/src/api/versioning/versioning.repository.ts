@@ -6,6 +6,7 @@ import {
   ReturnResponse,
 } from '../../shared/handlers/error.utils';
 import { env } from 'process';
+import { Result } from '../results/entities/result.entity';
 
 @Injectable()
 export class VersionRepository extends Repository<Version> {
@@ -81,5 +82,47 @@ export class VersionRepository extends Repository<Version> {
       .catch((err) => {
         return [];
       });
+  }
+
+  $_getAllInovationDevToReplicate(phase: Version): Promise<Result[]> {
+    const queryData = `
+    select *
+    from \`result\` r 
+    left join (select r2.result_code 
+    			from \`result\` r2 
+    			where r2.result_type_id = 7 
+    				and r2.is_active > 0 
+    				and r2.version_id = ?) rv on rv.result_code = r.result_code 
+    where r.result_type_id = 7
+    and r.version_id = ?
+    and r.status_id = 2
+    and r.is_active > 0
+    and rv.result_code is null;
+      `;
+    return this.query(queryData, [phase.id, phase.obj_previous_phase.id])
+      .then((res) => {
+        return res;
+      })
+      .catch((err) => {
+        return [];
+      });
+  }
+
+  async getDataStatusAndTypeResult(status_id: number, type_id: number) {
+    const queryDataSr = `select rs.status_name from result_status rs where rs.result_status_id = ? limit 1;`;
+    const queryDataTP = `select rt.name from result_type rt where rt.id = ? limit 1;`;
+    try {
+      const sr = await this.query(queryDataSr, [status_id]);
+      const rt = await this.query(queryDataTP, [type_id]);
+      return {
+        status: sr.length ? sr[0].status_name : null,
+        type: rt.length ? rt[0].name : null,
+      };
+    } catch (error) {
+      return {
+        status: null,
+        type: null,
+      };
+    }
   }
 }

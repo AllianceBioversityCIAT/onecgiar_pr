@@ -26,7 +26,7 @@
             [editable]="editable"
             [disabled]="(resultLevelId == 1 ? true : this.initiative?.planned_result == false) || !this.editable"
             optionLabel="name" optionValue="toc_level_id" placeholder="Select outcome level"
-            [(ngModel)]="initiative.toc_level_id">
+            [(ngModel)]="initiative.toc_level_id" (selectOptionEvent)="indicatorView = false">
         </app-pr-select>
 
         <app-pr-select
@@ -34,20 +34,28 @@
             [options]="this.outcomeList" label="Outcome" [editable]="editable"
             [disabled]="(resultLevelId == 1 ? false : false) || !this.editable" optionLabel="extraInformation"
             [extraInformation]="true" optionValue="toc_result_id" placeholder="Select outcome"
-            [(ngModel)]="initiative.toc_result_id">
+            [(ngModel)]="initiative.toc_result_id" (selectOptionEvent)="getIndicator()">
         </app-pr-select>
 
         <app-pr-select
             *ngIf="(resultLevelId == 1 ? this.initiative?.planned_result == false : true) && initiative.toc_level_id == 3"
             [options]="this.eoiList" label="Outcome" [editable]="editable"
             [disabled]="(resultLevelId == 1 ? false : false) || !this.editable" optionLabel="title"
-            optionValue="toc_result_id" placeholder="Select outcome" [(ngModel)]="initiative.toc_result_id">
-        </app-pr-select>
+            optionValue="toc_result_id" placeholder="Select outcome" [(ngModel)]="initiative.toc_result_id" (selectOptionEvent)="getIndicator()">
+        </app-pr-select >
 
 
     </div>
     <hr class="divider-20">
 </div>
 <div *ngIf="indicatorView">
-    <app-target-indicator  [initiative]="indicator" [disabledInputs]="disabledInput" *ngFor="let indicator of indicators"></app-target-indicator>
+    <app-target-indicator  [initiative]="indicator" [disabledInputs]="disabledInput" *ngFor="let indicator of this.theoryOfChangesServices.targetsIndicators"></app-target-indicator>
+    <app-pr-yes-or-not [label]="'Are you able to match your reported result to Impact Area targets?'"
+            [(ngModel)]="this.theoryOfChangesServices.isImpactArea">
+        </app-pr-yes-or-not>
+    <app-impact-area-targets *ngIf="this.theoryOfChangesServices.isImpactArea" [body]="this.theoryOfChangesServices.impactAreasTargets"></app-impact-area-targets>
+    <app-pr-yes-or-not [label]="'Are you able to match your reported result to SDG targets?'"
+            [(ngModel)]="this.theoryOfChangesServices.isSdg">
+        </app-pr-yes-or-not>
+    <app-sdg-targets *ngIf="this.theoryOfChangesServices.isSdg" [body]="this.theoryOfChangesServices.sdgTargest"></app-sdg-targets>
 </div>

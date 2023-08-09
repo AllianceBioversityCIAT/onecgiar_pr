@@ -21,6 +21,8 @@ import { ResultInitiativeBudgetRepository } from '../../results/result_budget/re
 import { ResultIpEoiOutcomeRepository } from '../innovation-pathway/repository/result-ip-eoi-outcomes.repository';
 import { VersioningModule } from '../../versioning/versioning.module';
 import { ResultsTocResultIndicatorsRepository } from 'src/api/results/results-toc-results/results-toc-results-indicators.repository';
+import { ResultsTocSdgTargetRepository } from 'src/api/results/results-toc-results/result-toc-sdg-target-repository';
+import { ResultsTocImpactAreaTargetRepository } from 'src/api/results/results-toc-results/result-toc-impact-area-repository';
 
 @Module({
   controllers: [ResultsPackageTocResultController],
@@ -43,7 +45,9 @@ import { ResultsTocResultIndicatorsRepository } from 'src/api/results/results-to
     ResultInitiativeBudgetRepository,
     ResultIpEoiOutcomeRepository,
     ReturnResponse,
-    ResultsTocResultIndicatorsRepository
+    ResultsTocResultIndicatorsRepository,
+    ResultsTocSdgTargetRepository,
+    ResultsTocImpactAreaTargetRepository
   ],
   exports: [],
 })

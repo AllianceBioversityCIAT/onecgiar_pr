@@ -63,6 +63,24 @@ export class VersioningController {
     return this.versioningService.getAllPhases();
   }
 
+  @Patch('execute/annual/replicate')
+  @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
+  @UseGuards(ValidRoleGuard)
+  updateAnnually(@UserToken() user: TokenDto) {
+    return this.versioningService.annualReplicationProcessInnovationDev(user);
+  }
+
+  @Get('number/results/status/:statusId/result-type/:resultTypeId')
+  getNumberResults(
+    @Param('statusId') status_id: string,
+    @Param('resultTypeId') result_type_id: string,
+  ) {
+    return this.versioningService.getNumberRresultsReplicated(
+      +status_id,
+      +result_type_id,
+    );
+  }
+
   @Get()
   find(
     @Query('module') module_type: ModuleTypeEnum = ModuleTypeEnum.ALL,

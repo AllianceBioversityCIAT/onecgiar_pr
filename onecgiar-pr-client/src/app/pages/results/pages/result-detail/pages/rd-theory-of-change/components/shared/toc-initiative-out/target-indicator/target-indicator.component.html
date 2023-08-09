@@ -34,7 +34,7 @@
         <div class="progress">
             <h4>Progress</h4>
             <div class="content-progress">
-                <div><h4>Target contribution from this result:</h4></div><div style=" margin-top: -10px;"><input type="text" class="in-progress" [disabled]="disabledInput" [(ngModel)]="initiative.indicator_contributing"></div>
+                <div><h4>Target contribution from this result:</h4></div><div style=" margin-top: -10px;"><input type="number" class="in-progress" [disabled]="initiative.is_not_aplicable" [(ngModel)]="initiative.indicator_new"></div>
             </div>
         </div>
         <div class="total">
@@ -60,13 +60,13 @@
         <div class="progress">
             <h4>Progress</h4>
             <div class="content-progress">
-                <div><h4>Target contribution from this result:</h4></div><div style="margin-top: 8px;"><input type="text" class="in-progress" [disabled]="disabledInput"></div>
+                <div><h4>Target contribution from this result:</h4></div><div style="margin-top: 8px;"><input type="text" class="in-progress" [disabled]="initiative.is_not_aplicable" [(ngModel)]="initiative.indicator_contributing"></div>
             </div>
         </div>
     </div>
     <div class="header-footer">
         <div style="margin-left:30px ;">
-            <app-pr-checkbox label="This indicator is not applicable in this result." [(ngModel)]="disabledInput" [readOnly]="disabledInputs"></app-pr-checkbox>
+            <app-pr-checkbox label="This indicator is not applicable in this result." [(ngModel)]="initiative.is_not_aplicable" [readOnly]="disabledInputs"></app-pr-checkbox>
         </div>
         
     </div>
