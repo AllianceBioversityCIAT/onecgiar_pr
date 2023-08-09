@@ -213,8 +213,11 @@ td {
 
             .metadata {}
 
-            .title {
-                color: var(--pr-color-primary);
+            .linked_title {
+                a {
+                    color: var(--pr-color-primary) !important;
+                    text-decoration: none;
+                }
             }
         }
 
