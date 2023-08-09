@@ -325,16 +325,16 @@ export class VersioningService {
           status: true,
           app_module_id: AppModuleIdEnum.REPORTING,
         },
-      });
-
-      const countResults = await this._resultRepository.count({
-        where: {
-          is_active: true,
-          status_id: status,
-          result_type_id: result_type_id,
-          version_id: phase.previous_phase,
+        relations: {
+          obj_previous_phase: true,
         },
       });
+
+      const countResults =
+        await this._versionRepository.$_getAllInovationDevToReplicate(
+          phase,
+          result_type_id,
+        );
 
       const names = await this._versionRepository.getDataStatusAndTypeResult(
         status,
@@ -342,9 +342,9 @@ export class VersioningService {
       );
 
       return this._returnResponse.format({
-        message: `The number of results replicated is ${countResults}`,
+        message: `The number of results replicated is ${countResults?.length}`,
         response: {
-          count: countResults,
+          count: countResults.length,
           status_name: names.status,
           result_type_name: names.type,
         },
