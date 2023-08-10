@@ -45,4 +45,6 @@ export class ResultsKnowledgeProductDto {
   result_data: CreateResultDto;
   warnings?: string[];
   cgspace_phase_year: number;
+  result_code?: number;
+  version_id?: number;
 }
