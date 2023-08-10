@@ -54,9 +54,8 @@ export class LinkedResultRepository
           lr.is_active,
           now() as created_date,
           null as last_updated_date,
-          ${VERSIONING.QUERY.Get_result_phases(
+          ${VERSIONING.QUERY.Get_link_result_qa(
             `lr.linked_results_id`,
-            config.phase,
           )} as linked_results_id,
           ? as origin_result_id,
           lr.created_by,
