@@ -24,6 +24,6 @@
 </div>
 
 <app-no-data-text
- *ngIf="this.api.rolesSE.readOnly && contributors_result_toc_result?.length === 0"
+ *ngIf="this.api.rolesSE.readOnly && !result_toc_result?.action_area_outcome_id"
  title = "Not selected any action area"
 ></app-no-data-text>
