@@ -693,6 +693,8 @@ export class ResultsKnowledgeProductsService {
       }
 
       const newResult = newResultResponse.response as Result;
+      resultsKnowledgeProductDto.version_id = newResult.version_id;
+      resultsKnowledgeProductDto.result_code = newResult.result_code;
 
       let newKnowledgeProduct: ResultsKnowledgeProduct =
         new ResultsKnowledgeProduct();
