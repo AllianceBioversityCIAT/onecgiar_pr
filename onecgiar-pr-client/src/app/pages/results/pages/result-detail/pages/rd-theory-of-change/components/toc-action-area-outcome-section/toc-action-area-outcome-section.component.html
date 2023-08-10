@@ -24,6 +24,6 @@
 </div>
 
 <app-no-data-text
- *ngIf="this.api.rolesSE.readOnly && !result_toc_result?.action_area_outcome_id && this.api.rolesSE.validateInitiative(result_toc_result?.initiative_id)"
+ *ngIf="this.api.rolesSE.readOnly && !result_toc_result?.action_area_outcome_id && !this.api.rolesSE.validateInitiative(result_toc_result?.initiative_id)"
  title = "No Action Area outcomes selected."
 ></app-no-data-text>
