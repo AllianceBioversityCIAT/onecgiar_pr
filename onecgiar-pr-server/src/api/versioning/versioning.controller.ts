@@ -24,6 +24,7 @@ import {
   StatusPhaseEnum,
 } from '../../shared/constants/role-type.enum';
 import { ValidRoleGuard } from '../../shared/guards/valid-role.guard';
+import { UpdateQaResults } from './dto/update-qa.dto';
 
 @Controller()
 @UseInterceptors(ResponseInterceptor)
@@ -68,6 +69,16 @@ export class VersioningController {
   @UseGuards(ValidRoleGuard)
   updateAnnually(@UserToken() user: TokenDto) {
     return this.versioningService.annualReplicationProcessInnovationDev(user);
+  }
+
+  @Patch('change/status/qa')
+  updateStatusQa(@Body() QaResults: UpdateQaResults) {
+    return this.versioningService.setQaStatus(QaResults);
+  }
+
+  @Patch('update/links-result/qa')
+  updateLinksQa() {
+    return this.versioningService.updateLinkResultQa();
   }
 
   @Get('number/results/status/:statusId/result-type/:resultTypeId')

@@ -44,6 +44,7 @@ import {
   StatusPhaseEnum,
 } from '../../shared/constants/role-type.enum';
 import { In } from 'typeorm';
+import { UpdateQaResults } from './dto/update-qa.dto';
 
 @Injectable()
 export class VersioningService {
@@ -104,6 +105,44 @@ export class VersioningService {
       return version;
     } catch (error) {
       return null;
+    }
+  }
+
+  async setQaStatus(data: UpdateQaResults) {
+    try {
+      if (!data?.results_id || !data?.results_id?.length) {
+        throw this._returnResponse.format({
+          message: `The results_id field is required`,
+          response: null,
+          statusCode: HttpStatus.BAD_REQUEST,
+        });
+      }
+      const res = this._versionRepository.$_setQaStatusToResult(
+        data.results_id,
+      );
+
+      return this._returnResponse.format({
+        message: `The results were updated successfully`,
+        response: res,
+        statusCode: HttpStatus.OK,
+      });
+    } catch (error) {
+      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+    }
+  }
+
+  async updateLinkResultQa() {
+    try {
+      const version = await this.$_findActivePhase(AppModuleIdEnum.REPORTING);
+      const res = this._versionRepository.$_updateLinkResultByPhase(version.id);
+
+      return this._returnResponse.format({
+        message: `The results were updated successfully`,
+        response: res,
+        statusCode: HttpStatus.OK,
+      });
+    } catch (error) {
+      return this._returnResponse.format(error, !env.IS_PRODUCTION);
     }
   }
 
