@@ -23,6 +23,7 @@ export class CurrentResultService {
         this.resultLevelSE.currentResultTypeId = response.result_type_id;
         //(response);
         this.dataControlSE.currentResult = response;
+        console.log(this.dataControlSE.currentResult);
 
         const is_phase_open = response.is_phase_open;
         switch (is_phase_open) {
@@ -31,7 +32,7 @@ export class CurrentResultService {
             break;
 
           case 1:
-            if (this.dataControlSE.currentResult.status == 1 && !this.api.rolesSE.isAdmin) this.api.rolesSE.readOnly = true;
+            if (this.dataControlSE.currentResult.status_id != 1 && !this.api.rolesSE.isAdmin) this.api.rolesSE.readOnly = true;
             break;
         }
       },
