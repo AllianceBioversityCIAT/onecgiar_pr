@@ -6,7 +6,7 @@ import { ApiService } from '../../../../../../../shared/services/api/api.service
 })
 export class FilterResultNotLinkedPipe implements PipeTransform {
   constructor(private api: ApiService) {}
-  transform(list: any[], linkedList: any[], counter: number, text_to_search: string): any {
+  transform(list: any[], linkedList: any[], combine: boolean, counter: number, text_to_search: string): any {
     if (!list?.length) return [];
     list = list.filter(result => result.id != this.api.resultsSE.currentResultId);
     list.map(result => {
@@ -16,8 +16,9 @@ export class FilterResultNotLinkedPipe implements PipeTransform {
       const resultFinded = list.find(linked => linked.id == result.id);
       if (resultFinded) resultFinded.selected = true;
     });
-    return this.combineRepeatedResults(this.filterByText(list, text_to_search));
+    return this.convertList(this.filterByText(list, text_to_search), combine);
   }
+
   filterByText(resultList: any[], word: string) {
     if (!resultList?.length) return [];
     resultList.map(item => {
@@ -28,6 +29,19 @@ export class FilterResultNotLinkedPipe implements PipeTransform {
     });
     return resultList.filter(item => item.joinAll.toUpperCase().indexOf(word?.toUpperCase()) > -1);
   }
+
+  convertList(results, combine) {
+    return combine ? this.combineRepeatedResults(results) : this.separateResultInList(results);
+  }
+
+  separateResultInList(results) {
+    results.map(result => {
+      result.results = [result];
+    });
+    // console.log(results);
+    return results;
+  }
+
   combineRepeatedResults(results) {
     // console.log('combineRepeatedResults');
     const resultMap: Record<number, any> = {};
