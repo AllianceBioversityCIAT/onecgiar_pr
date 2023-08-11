@@ -111,6 +111,34 @@ export class VersionRepository extends Repository<Version> {
       });
   }
 
+  $_setQaStatusToResult(results_id: number[]) {
+    if (!results_id?.length) return null;
+    const queryData = `
+    update \`result\` r 
+    set r.status_id = 2
+    where r.id in (${results_id.join(',')})}) 
+    	and r.is_active > 0;
+    `;
+    return this.query(queryData)
+      .then((res) => res)
+      .catch((err) => null);
+  }
+
+  $_updateLinkResultByPhase(phase_id: number) {
+    const queryData = `
+    update linked_result lr 
+    	inner join \`result\` r on r.id = lr.linked_results_id 
+    	left join \`result\` r2 ON r2.result_code = r.result_code 
+    							and r2.version_id = ?
+    							and r2.status_id = 2
+    set lr.linked_results_id = IFNULL(r2.id, r.id) 
+    where lr.is_active > 0
+    	and r.version_id = ?;`;
+    return this.query(queryData, [phase_id, phase_id])
+      .then((res) => res)
+      .catch((err) => null);
+  }
+
   async getDataStatusAndTypeResult(status_id: number, type_id: number) {
     const queryDataSr = `select rs.status_name from result_status rs where rs.result_status_id = ? limit 1;`;
     const queryDataTP = `select rt.name from result_type rt where rt.id = ? limit 1;`;
