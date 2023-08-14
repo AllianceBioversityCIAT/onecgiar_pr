@@ -7,7 +7,7 @@ import { Component, Input, OnInit } from '@angular/core';
 })
 export class GesiInnovationAssessmentComponent implements OnInit {
   @Input() body: any;
-  example11 = null;
+  example1 = null;
   list = [
     {
       description: 'radio desc 1',

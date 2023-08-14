@@ -1,1 +1,6 @@
-<p>scale-impact-analysis works!</p>
+<app-pr-field-header [label]="'2. Example 2'" [description]="'Desc'"></app-pr-field-header>
+
+<app-pr-radio-button [verticalAlignment]="true" [options]="this.list" optionLabel="description" optionValue="id"
+    subLabel="subLabel" [checkboxConfig]="{ listAttr: 'subOptions', optionLbabel: 'description', optionValue: 'value' }"
+    [(ngModel)]="example2">
+</app-pr-radio-button>

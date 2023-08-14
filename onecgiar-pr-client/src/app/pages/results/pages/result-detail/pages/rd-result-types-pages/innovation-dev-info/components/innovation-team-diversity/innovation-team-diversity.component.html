@@ -1,1 +1,7 @@
-<p>innovation-team-diversity works!</p>
+<app-pr-field-header [label]="'Innovation team diversity'" 
+[description]="'Innovation team diversity description'"></app-pr-field-header>
+
+<app-pr-radio-button [verticalAlignment]="true" [options]="this.list" optionLabel="description" optionValue="id"
+    subLabel="subLabel" [checkboxConfig]="{ listAttr: 'subOptions', optionLbabel: 'description', optionValue: 'value' }"
+    [(ngModel)]="example11">
+</app-pr-radio-button>
