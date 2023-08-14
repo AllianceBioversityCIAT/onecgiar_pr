@@ -8,6 +8,7 @@ export class InstitutionsService {
   institutionsList = [];
   institutionsTypesList = [];
   institutionsTypesPartnerRequestList = [];
+  institutionsChildlessTypes = [];
   constructor(private api: ApiService) {
     this.api.resultsSE.GET_allInstitutions().subscribe(({ response }) => {
       this.institutionsList = response;
@@ -17,6 +18,11 @@ export class InstitutionsService {
       this.institutionsTypesList = response;
       this.institutionsTypesPartnerRequestList = this.institutionsTypesList.filter(it => !it.is_legacy);
       //(this.institutionsTypesList);
+    });
+
+    this.api.resultsSE.GET_allChildlessInstitutionTypes().subscribe(({ response }) => {
+      this.institutionsChildlessTypes = response;
+      console.log(response);
     });
   }
 }
