@@ -21,6 +21,7 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
   @Input() optionValue: string;
   @Input() label: string;
   @Input() description: string;
+  @Input() subLabel: string;
   @Input() required: boolean = true;
   @Input() hideOptions: boolean;
   @Input() readOnly: boolean;

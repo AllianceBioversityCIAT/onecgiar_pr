@@ -31,6 +31,8 @@ export class PrInputComponent implements ControlValueAccessor {
   @Input() editable: boolean = false;
   @Input() noDataText: string = '';
 
+  @Input() variant?: 'xs' | 'sm';
+
   private _value: any;
   private beforeValue: string;
   public wordCount: number = 0;

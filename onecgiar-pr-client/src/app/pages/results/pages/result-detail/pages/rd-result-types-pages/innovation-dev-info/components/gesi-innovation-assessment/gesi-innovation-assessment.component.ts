@@ -11,6 +11,7 @@ export class GesiInnovationAssessmentComponent implements OnInit {
   list = [
     {
       description: 'radio desc 1',
+      subLabel: 'sublabel 1',
       id: 1,
       subOptions: [
         {
@@ -26,6 +27,21 @@ export class GesiInnovationAssessmentComponent implements OnInit {
         {
           description: 'check desc 2',
           id: 2,
+          value: null
+        },
+        {
+          description: 'check desc 3',
+          id: 3,
+          value: null
+        },
+        {
+          description: 'check desc 4',
+          id: 4,
+          value: null
+        },
+        {
+          description: 'Other:',
+          id: 5,
           value: null,
           question_type: 'text'
         }
@@ -34,6 +50,14 @@ export class GesiInnovationAssessmentComponent implements OnInit {
     {
       description: 'radio desc 2',
       id: 2
+    },
+    {
+      description: 'radio desc 3',
+      id: 3
+    },
+    {
+      description: 'radio desc 4',
+      id: 4
     }
   ];
   constructor() {}
