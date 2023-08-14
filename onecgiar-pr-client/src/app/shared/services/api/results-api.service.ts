@@ -148,6 +148,10 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}get/institutions-type/all`);
   }
 
+  GET_allChildlessInstitutionTypes() {
+    return this.http.get<any>(`${this.apiBaseUrl}get/institutions-type/childless`);
+  }
+
   GET_allInstitutions() {
     return this.http.get<any>(`${this.apiBaseUrl}get/institutions/all`).pipe(
       map(resp => {
