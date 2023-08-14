@@ -81,6 +81,34 @@ export class ResultActor extends BaseEntity {
   })
   how_many: number;
 
+  @Column({
+    name: 'has_women',
+    type: 'boolean',
+    nullable: true,
+  })
+  has_women: boolean;
+
+  @Column({
+    name: 'has_women_youth',
+    type: 'boolean',
+    nullable: true,
+  })
+  has_women_youth: boolean;
+
+  @Column({
+    name: 'has_men',
+    type: 'boolean',
+    nullable: true,
+  })
+  has_men: boolean;
+
+  @Column({
+    name: 'has_men_youth',
+    type: 'boolean',
+    nullable: true,
+  })
+  has_men_youth: boolean;
+
   @ManyToOne(() => Result, (r) => r.obj_result_actor)
   @JoinColumn({
     name: 'result_id',
@@ -92,4 +120,5 @@ export class ResultActor extends BaseEntity {
     name: 'actor_type_id',
   })
   obj_actor_type: ActorType;
+  
 }
