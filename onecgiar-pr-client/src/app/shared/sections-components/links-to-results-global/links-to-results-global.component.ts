@@ -16,6 +16,7 @@ export class LinksToResultsGlobalComponent implements OnInit {
   linksToResultsBody = new LinksToResultsBody();
   text_to_search: string = '';
   counterPipe = 0;
+  combine = true;
   columnOrder = [
     // { title: 'Result code', attr: 'result_code' },
     { title: 'Title', attr: 'title', class: 'notCenter' },
@@ -30,6 +31,18 @@ export class LinksToResultsGlobalComponent implements OnInit {
   ngOnInit(): void {
     this.api.updateResultsList();
     this.getSectionInformation();
+  }
+
+  validateOrder(columnAttr) {
+    setTimeout(() => {
+      if (columnAttr == 'result_code') return (this.combine = true);
+      const resultListTableHTML = document.getElementById('resultListTable');
+      // if (document.getElementById('resultListTable').querySelectorAll('th[aria-sort="ascending"]').length) this.resetSort();
+      this.combine = !resultListTableHTML.querySelectorAll('th[aria-sort="descending"]').length && !resultListTableHTML.querySelectorAll('th[aria-sort="ascending"]').length;
+      // console.log(document.getElementById('resultListTable').querySelectorAll('th[aria-sort="descending"]').length); ascending
+      // this.resetSort();
+      return null;
+    }, 100);
   }
 
   getFirstByDate(results) {
