@@ -7,9 +7,10 @@ import {
 } from 'typeorm';
 import { ResultQuestion } from './result-question.entity';
 import { Result } from '../../entities/result.entity';
+import { BaseEntity } from '../../../../shared/entities/base-entity';
 
 @Entity('result_answers')
-export class ResultAnswer {
+export class ResultAnswer extends BaseEntity {
   @PrimaryGeneratedColumn({
     name: 'result_answer_id',
     type: 'bigint',
