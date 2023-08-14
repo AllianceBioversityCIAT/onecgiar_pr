@@ -5,12 +5,20 @@
     <div class="radioButtonList"
         [ngClass]="{'verticalAlignment': this.verticalAlignment,'block-field':(readOnly || this.rolesSE.readOnly) && (!isStatic)}"
         [hidden]="hideOptions">
-        <div class="radioButton" *ngFor="let option of this.options; let i=index">
-            <p-radioButton (click)="onSelect()" name="groupname" inputId="groupname{{i}}{{this.joinName()}}"
-                [value]="option[optionValue]" [(ngModel)]="value"
-                [disabled]="(readOnly || this.rolesSE.readOnly) && (!isStatic)">
-            </p-radioButton>
-            <label for="groupname{{i}}{{this.joinName()}}" class="name">{{option[this.optionLabel]}}</label>
+        <div *ngFor="let option of this.options; let i=index">
+            <div class="radioButton">
+                <p-radioButton (click)="onSelect()" name="groupname" inputId="groupname{{i}}{{this.joinName()}}"
+                    [value]="option[optionValue]" [(ngModel)]="value"
+                    [disabled]="(readOnly || this.rolesSE.readOnly) && (!isStatic)">
+                </p-radioButton>
+                <label for="groupname{{i}}{{this.joinName()}}" class="name">{{option[this.optionLabel]}}</label>
+            </div>
+            <div *ngFor="let checkbox of option[this.checkboxConfig?.listAttr]">
+                <app-pr-checkbox [label]="this.checkbox[this.checkboxConfig.optionLbabel]"
+                    [(ngModel)]="this.checkbox[this.checkboxConfig.optionValue]">
+                </app-pr-checkbox>
+                <app-pr-input placeholder="Example" *ngIf="checkbox?.question_type == 'text'"></app-pr-input>
+            </div>
         </div>
     </div>
 </div>
