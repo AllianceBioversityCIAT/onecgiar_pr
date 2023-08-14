@@ -8,9 +8,12 @@ import { GesiInnovationAssessmentComponent } from './components/gesi-innovation-
 import { ScaleImpactAnalysisComponent } from './components/scale-impact-analysis/scale-impact-analysis.component';
 import { IntellectualPropertyRightsComponent } from './components/intellectual-property-rights/intellectual-property-rights.component';
 import { InnovationTeamDiversityComponent } from './components/innovation-team-diversity/innovation-team-diversity.component';
+import { AnticipatedInnovationUserComponent } from './components/anticipated-innovation-user/anticipated-innovation-user.component';
+import { EstimatesComponent } from './components/estimates/estimates.component';
+import { InnovationLinksComponent } from './components/innovation-links/innovation-links.component';
 
 @NgModule({
-  declarations: [InnovationDevInfoComponent, GesiInnovationAssessmentComponent, ScaleImpactAnalysisComponent, IntellectualPropertyRightsComponent, InnovationTeamDiversityComponent],
+  declarations: [InnovationDevInfoComponent, GesiInnovationAssessmentComponent, ScaleImpactAnalysisComponent, IntellectualPropertyRightsComponent, InnovationTeamDiversityComponent, AnticipatedInnovationUserComponent, EstimatesComponent, InnovationLinksComponent],
   imports: [CommonModule, InnovationDevInfoRoutingModule, CustomFieldsModule]
 })
 export class InnovationDevInfoModule {}

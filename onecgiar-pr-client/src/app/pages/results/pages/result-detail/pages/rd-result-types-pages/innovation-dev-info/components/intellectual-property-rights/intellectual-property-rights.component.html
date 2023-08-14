@@ -1,1 +1,14 @@
-<p>intellectual-property-rights works!</p>
+<app-pr-field-header label="Intellectual property rights"></app-pr-field-header>
+
+<div class="local_container">
+    <app-pr-radio-button [label]="questions.q1.question" [options]="questions.q1.answers" optionLabel="answer"
+        [verticalAlignment]="true" optionValue="id" [(ngModel)]="questions.q1.value"></app-pr-radio-button>
+
+    <app-pr-radio-button [label]="questions.q2.question" [options]="questions.q2.answers" optionLabel="answer"
+        *ngIf="questions.q1.value !== null &&questions.q1.value !=3" [verticalAlignment]="true" optionValue="id"
+        [(ngModel)]="questions.q2.value"></app-pr-radio-button>
+
+    <app-pr-radio-button [label]="questions.q3.question" [description]="questions.q3.description" [options]="
+        questions.q3.answers" optionLabel="answer" *ngIf="questions.q2.value !== null &&questions.q2.value !=3"
+        [verticalAlignment]="true" optionValue="id" [(ngModel)]="questions.q3.value"></app-pr-radio-button>
+</div>
