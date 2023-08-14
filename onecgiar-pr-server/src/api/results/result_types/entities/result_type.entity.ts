@@ -3,8 +3,10 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { ResultQuestion } from '../../result-questions/entities/result-question.entity';
 
 @Entity()
 export class ResultType {
@@ -24,4 +26,7 @@ export class ResultType {
     nullable: true,
   })
   description!: string;
+
+  @OneToMany(() => ResultQuestion, (rq) => rq.obj_result_type)
+  obj_result_type: ResultQuestion[];
 }

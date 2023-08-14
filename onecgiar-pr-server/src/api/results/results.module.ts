@@ -71,6 +71,9 @@ import { ApplicationModulesRepository } from '../versioning/repositories/applica
 import { VersioningModule } from '../versioning/versioning.module';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 import { ResultStatusModule } from './result-status/result-status.module';
+import { ResultQuestionsService } from './result-questions/result-questions.service';
+import { ResultQuestionsResolver } from './result-questions/result-questions.resolver';
+import { ResultQuestionsModule } from './result-questions/result-questions.module';
 
 @Module({
   controllers: [ResultsController],
@@ -121,6 +124,7 @@ import { ResultStatusModule } from './result-status/result-status.module';
     ResultCountriesSubNationalModule,
     VersioningModule,
     ResultStatusModule,
+    ResultQuestionsModule,
   ],
   providers: [
     ResultsService,
@@ -136,6 +140,8 @@ import { ResultStatusModule } from './result-status/result-status.module';
     LogRepository,
     ReturnResponse,
     ResponseInterceptor,
+    ResultQuestionsService,
+    ResultQuestionsResolver,
   ],
   exports: [ResultRepository, JwtMiddleware],
 })
