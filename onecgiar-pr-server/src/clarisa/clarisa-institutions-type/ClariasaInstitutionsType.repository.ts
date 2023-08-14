@@ -45,6 +45,22 @@ export class ClarisaInstitutionsTypeRepository extends Repository<ClarisaInstitu
     }
   }
 
+  async getChildlessInstitutionTypes() {
+    const institutionsType = await this.find({
+      where: { is_legacy: false },
+      relations: { children: true },
+      select: {
+        code: true,
+        name: true,
+        is_legacy: true,
+      },
+    });
+
+    return institutionsType
+      .filter((el) => !el.children.length)
+      .map((el) => this.institutionTypeToDto(el));
+  }
+
   async getValidInstitutionType(institutionsType: institutionsTypeInterface[]) {
     const id = institutionsType.map((el) => el.institutions_type_id);
     let values = '';
@@ -76,6 +92,15 @@ export class ClarisaInstitutionsTypeRepository extends Repository<ClarisaInstitu
         status: HttpStatus.INTERNAL_SERVER_ERROR,
       };
     }
+  }
+
+  institutionTypeToDto(institutionType: ClarisaInstitutionsType) {
+    return {
+      institutions_type_id: institutionType.code,
+      institutions_type_name: institutionType.name,
+      is_legacy: institutionType.is_legacy,
+      id_parent: institutionType.id_parent,
+    };
   }
 }
 

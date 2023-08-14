@@ -286,6 +286,20 @@ export class ResultsService {
     }
   }
 
+  async getChildlessInstitutionTypes() {
+    try {
+      const institutionTypes =
+        await this._clarisaInstitutionsTypeRepository.getChildlessInstitutionTypes();
+      return {
+        response: institutionTypes,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
   async getAllInstitutionsType(legacy?: boolean) {
     try {
       const entities =
