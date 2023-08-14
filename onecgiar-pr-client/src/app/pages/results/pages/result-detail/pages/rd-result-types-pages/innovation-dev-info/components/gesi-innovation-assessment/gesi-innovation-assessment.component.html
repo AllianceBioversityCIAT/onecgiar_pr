@@ -4,3 +4,10 @@
     subLabel="subLabel" [checkboxConfig]="{ listAttr: 'subOptions', optionLbabel: 'description', optionValue: 'value' }"
     [(ngModel)]="example11">
 </app-pr-radio-button>
+
+<app-pr-field-header [label]="'2. Example 2'" [description]="'Desc'"></app-pr-field-header>
+
+<app-pr-radio-button [verticalAlignment]="true" [options]="this.list" optionLabel="description" optionValue="id"
+    subLabel="subLabel" [checkboxConfig]="{ listAttr: 'subOptions', optionLbabel: 'description', optionValue: 'value' }"
+    [(ngModel)]="example11">
+</app-pr-radio-button>
