@@ -311,7 +311,7 @@ export class ResultsApiService {
     );
   }
 
-  Get_indicator(id_toc, init){
+  Get_indicator(id_toc, init) {
     return this.http.get<any>(`${this.apiBaseUrl}toc/get/indicator/${id_toc}/result/${this.currentResultId}/initiative/${init}`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
@@ -788,7 +788,19 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results/years`);
   }
 
+  GET_investmentDiscontinuedOptions() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/investment-discontinued-options`);
+  }
+
   GET_versioningResult() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/versioning/result/${this.ipsrDataControlSE.inIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId}`);
+  }
+
+  PATCH_versioningAnnually() {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/versioning/execute/annual/replicate`, {});
+  }
+
+  GET_numberOfResultsByResultType(statusId, resultTypeId) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/versioning/number/results/status/${statusId}/result-type/${resultTypeId}`);
   }
 }
