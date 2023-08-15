@@ -32,9 +32,10 @@ import { ResultRegionRepository } from '../result-regions/result-regions.reposit
 import { ClarisaRegionsRepository } from '../../../clarisa/clarisa-regions/ClariasaRegions.repository';
 import { CGSpaceCountryMappingsRepository } from './repositories/cgspace-country-mappings.repository';
 import { ResultCountryRepository } from '../result-countries/result-countries.repository';
+import { VersioningModule } from '../../versioning/versioning.module';
 
 @Module({
-  imports: [HttpModule],
+  imports: [HttpModule, VersioningModule],
   controllers: [ResultsKnowledgeProductsController],
   providers: [
     ResultsKnowledgeProductsService,

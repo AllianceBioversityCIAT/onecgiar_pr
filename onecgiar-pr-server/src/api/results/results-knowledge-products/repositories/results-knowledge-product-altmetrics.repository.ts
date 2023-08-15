@@ -64,7 +64,6 @@ export class ResultsKnowledgeProductAltmetricRepository
         ${VERSIONING.QUERY.Get_kp_phases(
           config.new_result_id,
         )} as result_knowledge_product_id,
-        ? as version_id,
         ? as created_by,
         null as last_updated_by
         from results_kp_altmetrics rkpa WHERE rkpa.result_knowledge_product_id = ${VERSIONING.QUERY.Get_kp_phases(
@@ -72,7 +71,7 @@ export class ResultsKnowledgeProductAltmetricRepository
         )}
         `;
         const response = await (<Promise<ResultsKnowledgeProductAltmetric[]>>(
-          this.query(queryData, [config.phase, config.user.id])
+          this.query(queryData, [config.user.id])
         ));
         const response_edit = <ResultsKnowledgeProductAltmetric>(
           config.f.custonFunction(response?.length ? response[0] : null)
@@ -111,7 +110,6 @@ export class ResultsKnowledgeProductAltmetricRepository
         created_date,
         last_updated_date,
         result_knowledge_product_id,
-        version_id,
         created_by,
         last_updated_by
         )
@@ -147,13 +145,12 @@ export class ResultsKnowledgeProductAltmetricRepository
         ${VERSIONING.QUERY.Get_kp_phases(
           config.new_result_id,
         )} as result_knowledge_product_id,
-        ? as version_id,
         ? as created_by,
         null as last_updated_by
         from results_kp_altmetrics rkpa WHERE rkpa.result_knowledge_product_id = ${VERSIONING.QUERY.Get_kp_phases(
           config.old_result_id,
         )}`;
-        await this.query(queryData, [config.phase, config.user.id]);
+        await this.query(queryData, [config.user.id]);
 
         const queryFind = `
         select 
@@ -187,7 +184,6 @@ export class ResultsKnowledgeProductAltmetricRepository
         rkpa.created_date,
         rkpa.last_updated_date,
         rkpa.result_knowledge_product_id,
-        rkpa.version_id,
         rkpa.created_by,
         rkpa.last_updated_by
         from results_kp_altmetrics rkpa WHERE  rkpa.result_knowledge_product_id = ${VERSIONING.QUERY.Get_kp_phases(

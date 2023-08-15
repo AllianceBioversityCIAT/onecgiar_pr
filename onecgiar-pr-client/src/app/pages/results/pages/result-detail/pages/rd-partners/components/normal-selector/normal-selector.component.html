@@ -1,20 +1,29 @@
-<app-alert-status
+<app-alert-status *ngIf="!dataControlSE.isKnowledgeProduct"
     description="Partner organization that you collaborated with or are currently collaborating with to generate this result">
 </app-alert-status>
-<div [ngSwitch]="this.rolesSE.readOnly || !!this.dataControlSE?.currentResult?.status">
+<app-alert-status *ngIf="dataControlSE.isKnowledgeProduct"
+    description="Guideline pending (this is only a placeholder to help seeing the separation between the two partner sections)">
+</app-alert-status>
+<div class="column_title" *ngIf="dataControlSE.isKnowledgeProduct">
+    Additional Partners
+</div>
+<div [ngSwitch]="this.rolesSE.readOnly">
     <div *ngSwitchCase="true">{{this.rdPartnersSE.partnersBody.no_applicable_partner?'Marked as not applicable':''}}
     </div>
     <div *ngSwitchCase="false">
         <app-pr-checkbox label="Mark this option if this section is not applicable"
-            [(ngModel)]="this.rdPartnersSE.partnersBody.no_applicable_partner"
-            (ngModelChange)="this.rdPartnersSE.cleanBody()">
+            [(ngModel)]="this.rdPartnersSE.partnersBody.no_applicable_partner">
+            <!--(ngModelChange)="this.rdPartnersSE.cleanBody()"-->
         </app-pr-checkbox>
     </div>
 </div>
 
-<app-alert-status [hidden]="this.rdPartnersSE.partnersBody.no_applicable_partner" *ngIf="!this.rolesSE.readOnly"
+<app-alert-status [hidden]="this.rdPartnersSE.partnersBody.no_applicable_partner"
+    *ngIf="!this.rolesSE.readOnly && !dataControlSE.isKnowledgeProduct"
     description="If you don't find the partner you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list">
 </app-alert-status>
+
+
 
 <div class="auto_fit_container fadeIn" *ngIf="this.rdPartnersSE.partnersBody.no_applicable_partner !== true">
     <div>
@@ -32,8 +41,14 @@
         <div class="chips_container  custom_scroll partners_selected">
             <div class="pr_chip_selected"
                 *ngFor="let option of this.rdPartnersSE.partnersBody.institutions; let i=index">
+                <div appFeedbackValidation labelText="Partner role" [isComplete]="!!option?.deliveries?.length">
+                </div>
                 <div class="name">{{option?.institutions_name}}</div>
                 <div class="type"> <strong>Institution type:</strong> {{option?.institutions_type_name}}</div>
+                <div style="margin-top: -10px;margin-bottom: -20px;">
+                    <app-pr-field-header label="Partner role">
+                    </app-pr-field-header>
+                </div>
                 <div class="deliveries" [ngClass]="{'readOnly_deliveries': this.rolesSE.readOnly}">
                     <div class="delivery"
                         *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelection(option?.deliveries,1) : true"
@@ -47,6 +62,10 @@
                         *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelection(option?.deliveries,3) : true"
                         [ngClass]="{'active': this.rdPartnersSE.validateDeliverySelection(option?.deliveries,3)}"
                         (click)="this.rdPartnersSE.onSelectDelivery(option,3)">Innovation</div>
+                    <div class="delivery"
+                        *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelection(option?.deliveries,4) : true"
+                        [ngClass]="{'active': this.rdPartnersSE.validateDeliverySelection(option?.deliveries,4)}"
+                        (click)="this.rdPartnersSE.onSelectDelivery(option,4)">Other</div>
                 </div>
                 <i class="material-icons-round" *ngIf="!this.rolesSE.readOnly"
                     (click)="this.rdPartnersSE.removePartner(i)">remove_circle

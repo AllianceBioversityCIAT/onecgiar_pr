@@ -87,12 +87,6 @@ export class ResultActor extends BaseEntity {
   })
   obj_result: Result;
 
-  @ManyToOne(() => Version, (v) => v.result_actor)
-  @JoinColumn({
-    name: 'version_id',
-  })
-  obj_version: Version;
-
   @ManyToOne(() => ActorType, (at) => at.result_actor)
   @JoinColumn({
     name: 'actor_type_id',

@@ -380,7 +380,6 @@ export class ResultsKnowledgeProductMapper {
     dto: ResultsKnowledgeProductDto,
     userId: number,
     resultId: number,
-    versionId: number,
   ): ResultsKnowledgeProduct {
     knowledgeProduct.accesible = dto.accessible;
     knowledgeProduct.comodity = dto.commodity;
@@ -406,7 +405,6 @@ export class ResultsKnowledgeProductMapper {
     }
 
     knowledgeProduct.results_id = resultId;
-    knowledgeProduct.version_id = versionId;
 
     //TODO remove when mapping of countries is done
     //knowledgeProduct.cgspace_countries = dto.cgspace_countries;
@@ -462,7 +460,6 @@ export class ResultsKnowledgeProductMapper {
         }
       }
 
-      institution.version_id = knowledgeProduct.version_id;
       institution.result_knowledge_product_id =
         knowledgeProduct.result_knowledge_product_id;
 
@@ -551,7 +548,6 @@ export class ResultsKnowledgeProductMapper {
       }
     }
 
-    altmetric.version_id = knowledgeProduct.version_id;
     altmetric.result_knowledge_product_id =
       knowledgeProduct.result_knowledge_product_id;
 
@@ -597,7 +593,6 @@ export class ResultsKnowledgeProductMapper {
         }
       }
 
-      metadata.version_id = knowledgeProduct.version_id;
       metadata.result_knowledge_product_id =
         knowledgeProduct.result_knowledge_product_id;
 
@@ -658,7 +653,6 @@ export class ResultsKnowledgeProductMapper {
         }
       }
 
-      keyword.version_id = knowledgeProduct.version_id;
       keyword.result_knowledge_product_id =
         knowledgeProduct.result_knowledge_product_id;
 
@@ -709,7 +703,6 @@ export class ResultsKnowledgeProductMapper {
         }
       }
 
-      author.version_id = knowledgeProduct.version_id;
       author.result_knowledge_product_id =
         knowledgeProduct.result_knowledge_product_id;
 

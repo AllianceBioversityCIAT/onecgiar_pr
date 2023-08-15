@@ -10,4 +10,7 @@ interface evidencesCreateInterface{
     description?: string;
     gender_related?: boolean;
     youth_related?: boolean;
+    nutrition_related?: boolean;
+    environmental_biodiversity_related?: boolean;
+    poverty_related?: boolean;
 }

@@ -37,7 +37,6 @@ export class ResultByIntitutionsTypeRepository
           null as last_updated_date,
           ? as results_id,
           rbit.institution_roles_id,
-          ? as version_id,
           ? as created_by,
           null as last_updated_by,
           rbit.institution_types_id,
@@ -49,7 +48,6 @@ export class ResultByIntitutionsTypeRepository
         const response = await (<Promise<ResultsByInstitutionType[]>>(
           this.query(queryData, [
             config.new_result_id,
-            config.phase,
             config.user.id,
             config.old_result_id,
           ])
@@ -67,7 +65,6 @@ export class ResultByIntitutionsTypeRepository
           last_updated_date,
           results_id,
           institution_roles_id,
-          version_id,
           created_by,
           last_updated_by,
           institution_types_id,
@@ -81,7 +78,6 @@ export class ResultByIntitutionsTypeRepository
           null as last_updated_date,
           ? as results_id,
           rbit.institution_roles_id,
-          ? as version_id,
           ? as created_by,
           null as last_updated_by,
           rbit.institution_types_id,
@@ -91,7 +87,6 @@ export class ResultByIntitutionsTypeRepository
           from results_by_institution_type rbit WHERE  rbit.results_id = ? and rbit.is_active > 0`;
         await this.query(queryData, [
           config.new_result_id,
-          config.phase,
           config.user.id,
           config.old_result_id,
         ]);
@@ -104,7 +99,6 @@ export class ResultByIntitutionsTypeRepository
           rbit.last_updated_date,
           rbit.results_id,
           rbit.institution_roles_id,
-          rbit.version_id,
           rbit.created_by,
           rbit.last_updated_by,
           rbit.institution_types_id,
@@ -133,8 +127,7 @@ export class ResultByIntitutionsTypeRepository
     select 
     	rbit.id,
     	rbit .institution_types_id,
-    	rbit.institution_roles_id,
-    	rbit.version_id
+    	rbit.institution_roles_id
     from results_by_institution_type rbit
     where rbit.results_id  = ?
     	and rbit.is_active > 0;
@@ -160,7 +153,6 @@ export class ResultByIntitutionsTypeRepository
     	rbit.id,
     	rbit.institution_types_id as institutions_type_id,
     	rbit.institution_roles_id as institutions_roles_id,
-    	rbit.version_id,
     	cit.name as institutions_type_name
     from results_by_institution_type rbit
     inner join clarisa_institution_types cit ON cit.code = rbit.institution_types_id 
@@ -188,8 +180,7 @@ export class ResultByIntitutionsTypeRepository
     select 
     	rbit.id,
     	rbit .institution_types_id,
-    	rbit.institution_roles_id,
-    	rbit.version_id
+    	rbit.institution_roles_id
     from results_by_institution_type rbit
     where rbit.results_id  = ?
       and rbit.institution_roles_id = 2
@@ -224,7 +215,6 @@ export class ResultByIntitutionsTypeRepository
     	rbit.last_updated_date,
     	rbit.results_id,
     	rbit.institution_roles_id,
-    	rbit.version_id,
     	rbit.created_by,
     	rbit.last_updated_by,
       rbit.how_many 
@@ -262,7 +252,6 @@ export class ResultByIntitutionsTypeRepository
     	rbit.last_updated_date,
     	rbit.results_id,
     	rbit.institution_roles_id,
-    	rbit.version_id,
     	rbit.created_by,
     	rbit.last_updated_by,
       rbit.how_many,
@@ -297,7 +286,6 @@ export class ResultByIntitutionsTypeRepository
     	rbit.last_updated_date,
     	rbit.results_id,
     	rbit.institution_roles_id,
-    	rbit.version_id,
     	rbit.created_by,
     	rbit.last_updated_by,
       rbit.how_many,

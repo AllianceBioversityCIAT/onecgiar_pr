@@ -47,7 +47,6 @@ export class ResultsKnowledgeProductMetadataRepository
         ${VERSIONING.QUERY.Get_kp_phases(
           config.new_result_id,
         )} as result_knowledge_product_id,
-        ? as version_id,
         ? as created_by,
         null as last_updated_by
         from results_kp_metadata rkm WHERE rkm.result_knowledge_product_id = ${VERSIONING.QUERY.Get_kp_phases(
@@ -55,7 +54,7 @@ export class ResultsKnowledgeProductMetadataRepository
         )}
         and rkm.is_active > 0`;
         const response = await (<Promise<ResultsKnowledgeProductMetadata[]>>(
-          this.query(queryData, [config.phase, config.user.id])
+          this.query(queryData, [config.user.id])
         ));
         const response_edit = <ResultsKnowledgeProductMetadata>(
           config.f.custonFunction(response?.length ? response[0] : null)
@@ -75,7 +74,6 @@ export class ResultsKnowledgeProductMetadataRepository
         created_date,
         last_updated_date,
         result_knowledge_product_id,
-        version_id,
         created_by,
         last_updated_by
         )
@@ -92,14 +90,13 @@ export class ResultsKnowledgeProductMetadataRepository
         ${VERSIONING.QUERY.Get_kp_phases(
           config.new_result_id,
         )} as result_knowledge_product_id,
-        ? as version_id,
         ? as created_by,
         null as last_updated_by
         from results_kp_metadata rkm WHERE rkm.result_knowledge_product_id = ${VERSIONING.QUERY.Get_kp_phases(
           config.old_result_id,
         )}
         and rkm.is_active > 0`;
-        await this.query(queryData, [config.phase, config.user.id]);
+        await this.query(queryData, [config.user.id]);
 
         const queryFind = `
         SELECT 
@@ -114,7 +111,6 @@ export class ResultsKnowledgeProductMetadataRepository
         rkm.created_date,
         rkm.last_updated_date,
         rkm.result_knowledge_product_id,
-        rkm.version_id,
         rkm.created_by,
         rkm.last_updated_by
         from results_kp_metadata rkm WHERE rkm.result_knowledge_product_id = ${VERSIONING.QUERY.Get_kp_phases(

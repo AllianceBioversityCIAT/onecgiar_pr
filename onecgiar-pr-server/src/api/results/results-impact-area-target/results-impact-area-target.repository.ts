@@ -38,7 +38,6 @@ export class ResultsImpactAreaTargetRepository
         null as last_updated_date,
         ? as result_id,
         riat.impact_area_target_id,
-        ? as version_id,
         ? as created_by,
         null as last_updated_by
         from results_impact_area_target riat where riat.result_id = ? and rbi.is_active > 0
@@ -46,7 +45,6 @@ export class ResultsImpactAreaTargetRepository
         const response = await (<Promise<ResultsImpactAreaTarget[]>>(
           this.query(queryData, [
             config.new_result_id,
-            config.phase,
             config.user.id,
             config.old_result_id,
           ])
@@ -64,7 +62,6 @@ export class ResultsImpactAreaTargetRepository
         last_updated_date,
         result_id,
         impact_area_target_id,
-        version_id,
         created_by,
         last_updated_by
         )
@@ -74,13 +71,11 @@ export class ResultsImpactAreaTargetRepository
         null as last_updated_date,
         ? as result_id,
         riat.impact_area_target_id,
-        ? as version_id,
         ? as created_by,
         null as last_updated_by
         from results_impact_area_target riat where riat.result_id = ? and rbi.is_active > 0`;
         await this.query(queryData, [
           config.new_result_id,
-          config.phase,
           config.user.id,
           config.old_result_id,
         ]);
@@ -93,7 +88,6 @@ export class ResultsImpactAreaTargetRepository
         riat.last_updated_date,
         riat.result_id,
         riat.impact_area_target_id,
-        riat.version_id,
         riat.created_by,
         riat.last_updated_by
         from results_impact_area_target riat where riat.result_id = ?`;
@@ -122,7 +116,6 @@ export class ResultsImpactAreaTargetRepository
       riat.last_updated_date,
       riat.result_id,
       riat.impact_area_target_id,
-      riat.version_id,
       riat.created_by,
       riat.last_updated_by
     FROM
@@ -155,7 +148,6 @@ export class ResultsImpactAreaTargetRepository
       riat.last_updated_date,
       riat.result_id,
       riat.impact_area_target_id as targetId,
-      riat.version_id,
       riat.created_by,
       riat.last_updated_by,
       cgt.impactAreaId as impact_area_id,

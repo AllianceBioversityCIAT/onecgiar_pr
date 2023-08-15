@@ -37,7 +37,6 @@ export class ResultsPolicyChangesRepository
         now() as created_date,
         null as last_updated_date,
         ? as result_id,
-        ? as version_id,
         ? as created_by,
         null as last_updated_by,
         rpc.policy_stage_id,
@@ -49,7 +48,6 @@ export class ResultsPolicyChangesRepository
         const response = await (<Promise<ResultsPolicyChanges[]>>(
           this.query(queryData, [
             config.new_result_id,
-            config.phase,
             config.user.id,
             config.old_result_id,
           ])
@@ -67,7 +65,6 @@ export class ResultsPolicyChangesRepository
         created_date,
         last_updated_date,
         result_id,
-        version_id,
         created_by,
         last_updated_by,
         policy_stage_id,
@@ -80,7 +77,6 @@ export class ResultsPolicyChangesRepository
         now() as created_date,
         null as last_updated_date,
         ? as result_id,
-        ? as version_id,
         ? as created_by,
         null as last_updated_by,
         rpc.policy_stage_id,
@@ -90,7 +86,6 @@ export class ResultsPolicyChangesRepository
         WHERE rpc.result_id = ? and rpc.is_active > 0`;
         await this.query(queryData, [
           config.new_result_id,
-          config.phase,
           config.user.id,
           config.old_result_id,
         ]);
@@ -103,7 +98,6 @@ export class ResultsPolicyChangesRepository
         rpc.created_date,
         rpc.last_updated_date,
         rpc.result_id,
-        rpc.version_id,
         rpc.created_by,
         rpc.last_updated_by,
         rpc.policy_stage_id,
@@ -136,7 +130,6 @@ export class ResultsPolicyChangesRepository
     	rpc.created_date,
     	rpc.last_updated_date,
     	rpc.result_id,
-    	rpc.version_id,
     	rpc.created_by,
     	rpc.last_updated_by,
     	rpc.policy_stage_id,

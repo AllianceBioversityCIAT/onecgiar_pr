@@ -24,6 +24,7 @@ import { Ipsr } from '../../ipsr/entities/ipsr.entity';
 import { ResultActor } from '../result-actors/entities/result-actor.entity';
 import { ResultsByInititiative } from '../results_by_inititiatives/entities/results_by_inititiative.entity';
 import { ResultIpExpertWorkshopOrganized } from '../../ipsr/innovation-pathway/entities/result-ip-expert-workshop-organized.entity';
+import { ResultStatus } from '../result-status/entities/result-status.entity';
 
 @Entity()
 @Index(['result_code', 'version_id'], { unique: true })
@@ -107,6 +108,45 @@ export class Result {
   obj_climate_change_tag_level!: GenderTagLevel;
 
   @Column({
+    name: 'nutrition_tag_level_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  nutrition_tag_level_id!: number;
+
+  @ManyToOne(() => GenderTagLevel, (gtl) => gtl.id, { nullable: true })
+  @JoinColumn({
+    name: 'nutrition_tag_level_id',
+  })
+  obj_nutrition_tag_level!: GenderTagLevel;
+
+  @Column({
+    name: 'environmental_biodiversity_tag_level_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  environmental_biodiversity_tag_level_id!: number;
+
+  @ManyToOne(() => GenderTagLevel, (gtl) => gtl.id, { nullable: true })
+  @JoinColumn({
+    name: 'environmental_biodiversity_tag_level_id',
+  })
+  obj_environmental_biodiversity_tag_level!: GenderTagLevel;
+
+  @Column({
+    name: 'poverty_tag_level_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  poverty_tag_level_id!: number;
+
+  @ManyToOne(() => GenderTagLevel, (gtl) => gtl.id, { nullable: true })
+  @JoinColumn({
+    name: 'poverty_tag_level_id',
+  })
+  obj_poverty_tag_level_id!: GenderTagLevel;
+
+  @Column({
     name: 'is_active',
     type: 'boolean',
     nullable: false,
@@ -176,17 +216,25 @@ export class Result {
   status!: number;
 
   @Column({
+    name: 'status_id',
+    type: 'bigint',
+    nullable: true,
+    default: 1,
+  })
+  status_id!: number;
+
+  @ManyToOne(() => ResultStatus, (rs) => rs.result_status_list)
+  @JoinColumn({
+    name: 'status_id',
+  })
+  obj_status!: ResultStatus;
+
+  @Column({
     name: 'reported_year_id',
     type: 'year',
     nullable: true,
   })
   reported_year_id: number;
-
-  @ManyToOne(() => Year, (y) => y.year, { nullable: true })
-  @JoinColumn({
-    name: 'reported_year_id',
-  })
-  obj_reported_year: Year;
 
   @Column({
     name: 'legacy_id',

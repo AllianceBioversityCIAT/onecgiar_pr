@@ -44,9 +44,11 @@ import { ResultInstitutionsBudgetRepository } from '../../results/result_budget/
 import { ResultIpExpertisesRepository } from '../innovation-packaging-experts/repositories/result-ip-expertises.repository';
 import { ResultCountriesSubNationalRepository } from '../../results/result-countries-sub-national/result-countries-sub-national.repository';
 import { ResultIpExpertWorkshopOrganizedRepostory } from './repository/result-ip-expert-workshop-organized.repository';
+import { VersioningModule } from '../../versioning/versioning.module';
 
 @Module({
   controllers: [InnovationPathwayController],
+  imports: [VersioningModule],
   providers: [
     InnovationPathwayStepOneService,
     InnovationPathwayStepTwoService,

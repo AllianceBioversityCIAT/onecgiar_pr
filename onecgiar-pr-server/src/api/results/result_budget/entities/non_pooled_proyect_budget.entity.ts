@@ -57,10 +57,4 @@ export class NonPooledProjectBudget extends BaseEntity {
     name: 'non_pooled_projetct_id',
   })
   obj_non_pooled_projetct: NonPooledProject;
-
-  @ManyToOne(() => Version, (v) => v.id)
-  @JoinColumn({
-    name: 'version_id',
-  })
-  obj_version: Version;
 }

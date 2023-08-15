@@ -40,7 +40,6 @@ export class ResultsTocResultRepository
           null as toc_result_id,
           ? as results_id,
           null as action_area_outcome_id,
-          ? as version_id,
           ? as created_by,
           null as last_updated_by,
           rtr.initiative_id,
@@ -51,7 +50,6 @@ export class ResultsTocResultRepository
         const response = await (<Promise<ResultsTocResult[]>>(
           this.query(queryData, [
             config.new_result_id,
-            config.phase,
             config.user.id,
             config.old_result_id,
           ])
@@ -71,7 +69,6 @@ export class ResultsTocResultRepository
         toc_result_id,
         results_id,
         action_area_outcome_id,
-        version_id,
         created_by,
         last_updated_by,
         initiative_id,
@@ -85,7 +82,6 @@ export class ResultsTocResultRepository
         null as toc_result_id,
         ? as results_id,
         null as action_area_outcome_id,
-        ? as version_id,
         ? as created_by,
         null as last_updated_by,
         rtr.initiative_id,
@@ -94,7 +90,6 @@ export class ResultsTocResultRepository
         WHERE rtr.results_id = ? and rtr.is_active > 0`;
         await this.query(queryData, [
           config.new_result_id,
-          config.phase,
           config.user.id,
           config.old_result_id,
         ]);
@@ -109,7 +104,6 @@ export class ResultsTocResultRepository
           rtr.toc_result_id,
           rtr.results_id,
           rtr.action_area_outcome_id,
-          rtr.version_id,
           rtr.created_by,
           rtr.last_updated_by,
           rtr.initiative_id,
@@ -143,7 +137,6 @@ export class ResultsTocResultRepository
       rtr.toc_result_id ,
       rtr.results_id ,
       rtr.action_area_outcome_id ,
-      rtr.version_id ,
       rtr.created_by ,
       rtr.last_updated_by
     FROM
@@ -175,7 +168,6 @@ export class ResultsTocResultRepository
       rtr.toc_result_id ,
       rtr.results_id ,
       rtr.action_area_outcome_id ,
-      rtr.version_id ,
       rtr.created_by ,
       rtr.last_updated_by
     FROM
@@ -204,7 +196,6 @@ export class ResultsTocResultRepository
       rtr.toc_result_id ,
       rtr.results_id ,
       rtr.action_area_outcome_id ,
-      rtr.version_id ,
       rtr.created_by ,
       rtr.last_updated_by,
       ci.id as inititiative_id,
@@ -242,7 +233,6 @@ export class ResultsTocResultRepository
       rtr.toc_result_id ,
       rtr.results_id ,
       rtr.action_area_outcome_id ,
-      rtr.version_id ,
       rtr.created_by ,
       rtr.last_updated_by,
       ci.id as inititiative_id,
@@ -288,7 +278,6 @@ export class ResultsTocResultRepository
       rtr.toc_result_id ,
       rtr.results_id ,
       rtr.action_area_outcome_id ,
-      rtr.version_id ,
       rtr.created_by ,
       rtr.last_updated_by,
       ci.id as initiative_id,
@@ -339,7 +328,6 @@ export class ResultsTocResultRepository
       rtr.toc_result_id ,
       rtr.results_id ,
       rtr.action_area_outcome_id ,
-      rtr.version_id ,
       rtr.created_by ,
       rtr.last_updated_by,
       rtr.initiative_id 
@@ -379,7 +367,6 @@ export class ResultsTocResultRepository
       rtr.toc_result_id ,
       rtr.results_id ,
       rtr.action_area_outcome_id ,
-      rtr.version_id ,
       rtr.created_by ,
       rtr.last_updated_by,
       ci.id as initiative_id,
@@ -432,7 +419,6 @@ export class ResultsTocResultRepository
     	rtr.toc_result_id ,
     	rtr.results_id ,
     	rtr.action_area_outcome_id ,
-    	rtr.version_id ,
     	rtr.created_by ,
     	rtr.last_updated_by,
     	tr.inititiative_id,
@@ -487,7 +473,6 @@ export class ResultsTocResultRepository
       rtr.toc_result_id ,
       rtr.results_id ,
       rtr.action_area_outcome_id ,
-      rtr.version_id ,
       rtr.created_by ,
       rtr.last_updated_by,
       rbi.inititiative_id,
@@ -516,7 +501,6 @@ export class ResultsTocResultRepository
     	rtr.toc_result_id,
     	rtr.results_id,
     	rtr.action_area_outcome_id,
-    	rtr.version_id,
     	rtr.created_by,
     	rtr.last_updated_by,
     	ci.id as initiative_id,
@@ -589,7 +573,6 @@ export class ResultsTocResultRepository
       rtr.toc_result_id,
       rtr.results_id,
       rtr.action_area_outcome_id,
-      rtr.version_id,
       rtr.created_by,
       rtr.last_updated_by,
       ci.id as initiative_id,
@@ -614,7 +597,6 @@ export class ResultsTocResultRepository
         rtr.toc_result_id,
         rtr.results_id,
         rtr.action_area_outcome_id,
-        rtr.version_id,
         rtr.created_by,
         rtr.last_updated_by,
         ci.id as initiative_id,

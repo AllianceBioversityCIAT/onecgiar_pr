@@ -95,12 +95,6 @@ export class ResultsIpActor extends BaseEntity {
   })
   obj_result_ip_result_id: Ipsr;
 
-  @ManyToOne(() => Version, (v) => v.result_ip_actor)
-  @JoinColumn({
-    name: 'version_id',
-  })
-  obj_version: Version;
-
   @ManyToOne(() => ActorType, (at) => at.result_ip_actor)
   @JoinColumn({
     name: 'actor_type_id',

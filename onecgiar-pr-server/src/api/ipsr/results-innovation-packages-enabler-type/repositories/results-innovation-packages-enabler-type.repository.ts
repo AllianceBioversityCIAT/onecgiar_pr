@@ -31,7 +31,6 @@ export class ResultsInnovationPackagesEnablerTypeRepository extends Repository<R
                             result_by_innovation_package_id: createIn.result_by_innovation_package_id,
                             complementary_innovation_enable_type_id: innovation,
                             is_active: true,
-                            version_id: 1
                         }
                         await this.save(createInnovations)
                 })
@@ -44,7 +43,6 @@ export class ResultsInnovationPackagesEnablerTypeRepository extends Repository<R
                         result_by_innovation_package_id: createIn.result_by_innovation_package_id,
                         complementary_innovation_enable_type_id: innovation,
                         is_active: true,
-                        version_id: 1
                     }
                     await this.save(createInnovations)
                 })

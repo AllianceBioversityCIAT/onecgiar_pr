@@ -1,5 +1,6 @@
 import { Route } from '@angular/router';
 import { CheckLoginGuard } from '../guards/check-login.guard';
+import { PhaseManagementModule } from '../../pages/admin-section/pages/phase-management/phase-management.module';
 
 export const routingApp: PrRoute[] = [
   // { prName: 'Home', canActivate: [CheckLoginGuard], path: 'home', loadChildren: () => import('../../pages/home/home.module').then(m => m.HomeModule) },
@@ -27,6 +28,7 @@ export const resultRouting: PrRoute[] = [
 export const adminModuleRouting: PrRoute[] = [
   { prName: 'Completeness status', path: 'completeness-status', loadChildren: () => import('../../pages/admin-section/pages/completeness-status/completeness-status.module').then(m => m.CompletenessStatusModule) },
   { prName: 'User report', path: 'user-report', loadChildren: () => import('../../pages/admin-section/pages/user-report/user-report.module').then(m => m.UserReportModule) },
+  { prName: 'Phase management', path: 'phase-management', loadChildren: () => import('../../pages/admin-section/pages/phase-management/phase-management.module').then(m => m.PhaseManagementModule) },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'completeness-status' }
 ];
 

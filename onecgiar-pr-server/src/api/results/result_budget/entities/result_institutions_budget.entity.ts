@@ -57,10 +57,4 @@ export class ResultInstitutionsBudget extends BaseEntity {
     name: 'result_institution_id',
   })
   obj_result_institution: ResultsByInstitution;
-
-  @ManyToOne(() => Version, (v) => v.id)
-  @JoinColumn({
-    name: 'version_id',
-  })
-  obj_version: Version;
 }

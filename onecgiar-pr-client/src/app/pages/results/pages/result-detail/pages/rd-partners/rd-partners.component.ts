@@ -32,6 +32,7 @@ export class RdPartnersComponent {
 
   onSaveSection() {
     //(this.rdPartnersSE.partnersBody);
+    if (this.rdPartnersSE.partnersBody.no_applicable_partner) this.rdPartnersSE.partnersBody.institutions = [];
     this.api.resultsSE.PATCH_partnersSection(this.rdPartnersSE.partnersBody).subscribe(resp => {
       //(resp);
       this.rdPartnersSE.getSectionInformation();

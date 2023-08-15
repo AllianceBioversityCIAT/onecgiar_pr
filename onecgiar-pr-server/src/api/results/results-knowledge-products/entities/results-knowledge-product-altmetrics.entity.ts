@@ -203,13 +203,6 @@ export class ResultsKnowledgeProductAltmetric {
   })
   image_large: string;
 
-  //versioning field
-  @ManyToOne(() => Version, (v) => v.id, { nullable: false })
-  @JoinColumn({
-    name: 'version_id',
-  })
-  version_id: number;
-
   //audit fields
   @Column({
     name: 'is_active',

@@ -22,7 +22,6 @@ export class ResultByEvidencesRepository extends Repository<ResultsByEvidence> {
     	rbe.results_id,
     	rbe.evidences_id,
     	rbe.evidence_types_id,
-    	rbe.version_id,
     	rbe.created_by,
     	rbe.last_updated_by 
     from results_by_evidence rbe 

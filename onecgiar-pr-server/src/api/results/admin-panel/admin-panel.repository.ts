@@ -92,7 +92,7 @@ export class AdminPanelRepository {
       (
         IFNULL(v.section_seven, 1) * v.general_information * v.theory_of_change * v.partners * v.geographic_location * v.links_to_results * v.evidence
       ) AS validation,
-      r.status AS is_submitted,
+      if(r.status_id = 3,1,0) AS is_submitted,
       ROUND(
         (
           (
@@ -199,7 +199,9 @@ export class AdminPanelRepository {
       u.id,
       u.first_name,
       u.last_name,
-      u.email
+      u.email,
+      r2.description,
+      r3.description
     HAVING min(r3.id)
     ORDER BY
     	s.created_date DESC;
@@ -230,7 +232,7 @@ export class AdminPanelRepository {
     	ci.official_code,
     	ci.name as initiative_name,
     	r.description as initiative_role_name,
-    	r2.description as app_role_name
+    	min(r2.description) as app_role_name
     FROM
     	users u
     left join role_by_user rbu ON
@@ -248,7 +250,16 @@ export class AdminPanelRepository {
     LEFT join \`role\` r on r.id = rbu.\`role\` 
     LEFT join \`role\` r2 on r2.id = rbu2.\`role\` 
     where
-    	u.active > 0;
+    	u.active > 0
+    GROUP by 
+    	u.id,
+    	u.first_name,
+    	u.last_name,
+    	u.email,
+    	rbu.initiative_id,
+    	ci.official_code,
+    	ci.name,
+    	r.description;
     `;
     try {
       const users = await this.dataSource.query(queryData);

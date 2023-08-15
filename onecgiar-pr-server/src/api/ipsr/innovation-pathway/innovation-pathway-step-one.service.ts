@@ -1,7 +1,10 @@
 import { HttpStatus, Injectable, Type } from '@nestjs/common';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResultRepository } from '../../results/result.repository';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import {
+  HandlersError,
+  ReturnResponse,
+} from '../../../shared/handlers/error.utils';
 import {
   innovatonUseInterface,
   UpdateInnovationPathwayDto,
@@ -47,6 +50,9 @@ import { ResultIpExpertises } from '../innovation-packaging-experts/entities/res
 import e from 'express';
 import { ResultCountriesSubNationalRepository } from '../../results/result-countries-sub-national/result-countries-sub-national.repository';
 import { ResultCountriesSubNational } from '../../results/result-countries-sub-national/entities/result-countries-sub-national.entity';
+import { VersioningService } from '../../versioning/versioning.service';
+import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
+import { env } from 'process';
 
 @Injectable()
 export class InnovationPathwayStepOneService {
@@ -74,6 +80,8 @@ export class InnovationPathwayStepOneService {
     protected readonly _clarisaInstitutionsRepository: ClarisaInstitutionsRepository,
     protected readonly _resultIpExpertisesRepository: ResultIpExpertisesRepository,
     protected readonly _resultCountriesSubNationalRepository: ResultCountriesSubNationalRepository,
+    private readonly _versioningService: VersioningService,
+    private readonly _returnResponse: ReturnResponse,
   ) {}
 
   async getStepOne(resultId: number) {
@@ -261,6 +269,17 @@ export class InnovationPathwayStepOneService {
           eoiOutcomes?.map((el) => el['title']),
         )}.`,
       };
+
+      const scalingText = scalig_ambition['body'];
+
+      const scalingAmbitionBlurb =
+        await this._resultInnovationPackageRepository.update(
+          { result_innovation_package_id: result.id },
+          {
+            scaling_ambition_blurb: scalingText,
+          },
+        );
+
       return {
         response: await {
           result_id: result.id,
@@ -453,16 +472,19 @@ export class InnovationPathwayStepOneService {
         };
       }
 
-      const vTemp = await this._versionsService.findBaseVersion();
-      if (vTemp.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: vTemp });
+      const version = await this._versioningService.$_findActivePhase(
+        AppModuleIdEnum.IPSR,
+      );
+      if (!version) {
+        throw this._handlersError.returnErrorRes({
+          error: version,
+          debug: true,
+        });
       }
-      const version: Version = <Version>vTemp.response;
 
       const specifyAspiredOutcomesAndImpact =
         await this.saveSpecifyAspiredOutcomesAndImpact(
           result,
-          version,
           UpdateInnovationPathwayDto,
           user,
         );
@@ -530,7 +552,6 @@ export class InnovationPathwayStepOneService {
 
   async saveSpecifyAspiredOutcomesAndImpact(
     result: any,
-    version: Version,
     UpdateInnovationPathwayDto: UpdateInnovationPathwayDto,
     user: TokenDto,
   ) {
@@ -558,7 +579,6 @@ export class InnovationPathwayStepOneService {
           newEoi.toc_result_id = eoi.toc_result_id;
           newEoi.result_by_innovation_package_id =
             result_by_innovation_package_id;
-          newEoi.version_id = version.id;
           newEoi.created_by = user.id;
           newEoi.last_updated_by = user.id;
           newEoi.created_date = new Date();
@@ -656,7 +676,6 @@ export class InnovationPathwayStepOneService {
           newEoi.action_area_outcome_id = entity.action_area_outcome_id;
           newEoi.result_by_innovation_package_id =
             result_by_innovation_package_id;
-          newEoi.version_id = version.id;
           newEoi.created_by = user.id;
           newEoi.last_updated_by = user.id;
           newEoi.created_date = new Date();
@@ -740,7 +759,6 @@ export class InnovationPathwayStepOneService {
           newEoi.impact_area_indicator_id = entity.targetId;
           newEoi.result_by_innovation_package_id =
             result_by_innovation_package_id;
-          newEoi.version_id = version.id;
           newEoi.created_by = user.id;
           newEoi.last_updated_by = user.id;
           newEoi.created_date = new Date();
@@ -815,7 +833,6 @@ export class InnovationPathwayStepOneService {
             newSdgs.result_by_innovation_package_id =
               resultByInnovationPackageId.result_by_innovation_package_id;
             newSdgs.created_by = user.id;
-            newSdgs.version_id = version.id;
             newSdgs.last_updated_by = user.id;
             newSdgs.created_date = new Date();
             newSdgs.last_updated_date = new Date();
@@ -902,7 +919,6 @@ export class InnovationPathwayStepOneService {
             {
               first_name: ex?.first_name,
               last_name: ex?.last_name,
-              version_id: v.id,
               is_active: ex.is_active == undefined ? true : ex.is_active,
               email: ex?.email,
               last_updated_by: user.id,
@@ -914,7 +930,6 @@ export class InnovationPathwayStepOneService {
           innExp = await this._innovationPackagingExpertRepository.save({
             first_name: ex?.first_name,
             last_name: ex?.last_name,
-            version_id: v.id,
             is_active: ex?.is_active,
             email: ex?.email,
             last_updated_by: user.id,
@@ -973,7 +988,6 @@ export class InnovationPathwayStepOneService {
           last_updated_by: user.id,
           expertises_id: el.expertises_id,
           result_ip_expert_id: result_ip_expert_id,
-          version_id: v.id,
         });
       }
     });
@@ -1014,7 +1028,6 @@ export class InnovationPathwayStepOneService {
           regional_integrated_id: rip.regional_integrated_id,
           relevant_country_id: rip.relevant_country_id,
           regional_leadership_id: rip.regional_leadership_id,
-          version_id: version.id,
           created_by: user.id,
           last_updated_by: user.id,
         });
@@ -1057,7 +1070,6 @@ export class InnovationPathwayStepOneService {
             institution_roles_id: 5,
             institutions_id: ins.institutions_id,
             result_id: result.id,
-            version_id: version.id,
             created_by: user.id,
             last_updated_by: user.id,
           });
@@ -1208,7 +1220,6 @@ export class InnovationPathwayStepOneService {
             last_updated_by: user.id,
             created_by: user.id,
             result_id: result.id,
-            version_id: version.id,
             sex_and_age_disaggregation:
               el?.sex_and_age_disaggregation === true ? true : false,
             how_many: el?.how_many,
@@ -1274,7 +1285,6 @@ export class InnovationPathwayStepOneService {
             graduate_students: el?.graduate_students,
             institution_roles_id: 5,
             how_many: el.how_many,
-            version_id: version.id,
           });
         }
       });
@@ -1337,7 +1347,6 @@ export class InnovationPathwayStepOneService {
             quantity: el.quantity,
             created_by: user.id,
             last_updated_by: user.id,
-            version_id: version.id,
           });
         }
       });
@@ -1346,5 +1355,89 @@ export class InnovationPathwayStepOneService {
 
   isNullData(data: any) {
     return data == undefined ? null : data;
+  }
+
+  async retrieveAaOutcomes(resultId: number, user: TokenDto) {
+    try {
+      const resultExist = await this._resultRepository.findOne({
+        where: { id: resultId, is_active: true },
+      });
+
+      if (!resultExist) {
+        return {
+          response: { valid: false },
+          message: 'The result does not exist',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const resultIp = await this._resultInnovationPackageRepository.findOne({
+        where: {
+          result_innovation_package_id: resultId,
+          is_active: true,
+        },
+      });
+
+      const resultByIp = await this._innovationByResultRepository.findOne({
+        where: {
+          result_innovation_package_id: resultIp.result_innovation_package_id,
+          is_active: true,
+          ipsr_role_id: 1,
+        },
+      });
+
+      if (!resultIp || !resultByIp) {
+        return {
+          response: { valid: false },
+          message: 'The result innovation package does not exist',
+          statusCode: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const searchAaOutcomes = await this._resultIpAAOutcomes.find({
+        where: {
+          result_by_innovation_package_id:
+            resultByIp.result_by_innovation_package_id,
+          is_active: true,
+        },
+      });
+
+      if (searchAaOutcomes.length) {
+        for (const aa of searchAaOutcomes) {
+          await this._resultIpAAOutcomes.update(
+            aa.result_ip_action_area_outcome_id,
+            {
+              last_updated_by: user.id,
+              is_active: false,
+            },
+          );
+        }
+      }
+
+      // SEARCH CORE INITIATIVE
+      const coreResultInitiative =
+        await this._resultByInitiativesRepository.findOne({
+          where: {
+            result_id: resultByIp.result_id,
+            is_active: true,
+            initiative_role_id: 1,
+          },
+        });
+
+      const retrieve = await this._resultIpAAOutcomes.retrieveAaOutcomes(
+        coreResultInitiative.result_id,
+        coreResultInitiative.initiative_id,
+        resultByIp.result_by_innovation_package_id,
+        user.id,
+      );
+
+      return {
+        response: retrieve,
+        message: 'The retrieve of Action Areas has been successfully completed',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
   }
 }

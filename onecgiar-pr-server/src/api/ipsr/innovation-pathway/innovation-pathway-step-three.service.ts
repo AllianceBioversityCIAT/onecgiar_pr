@@ -26,6 +26,8 @@ import { Evidence } from '../../results/evidences/entities/evidence.entity';
 import { Ipsr } from '../entities/ipsr.entity';
 import { ResultIpExpertWorkshopOrganizedRepostory } from './repository/result-ip-expert-workshop-organized.repository';
 import { ResultIpExpertWorkshopOrganized } from './entities/result-ip-expert-workshop-organized.entity';
+import { VersioningService } from '../../versioning/versioning.service';
+import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
 
 @Injectable()
 export class InnovationPathwayStepThreeService {
@@ -44,6 +46,7 @@ export class InnovationPathwayStepThreeService {
     protected readonly _evidenceRepository: EvidencesRepository,
     protected readonly _resultIpExpertWorkshopRepository: ResultIpExpertWorkshopOrganizedRepostory,
     protected readonly _returnResponse: ReturnResponse,
+    private readonly _versioningService: VersioningService,
   ) {}
 
   async saveComplementaryinnovation(
@@ -67,11 +70,15 @@ export class InnovationPathwayStepThreeService {
         };
       }
 
-      const vTemp = await this._versionsService.findBaseVersion();
-      if (vTemp.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: vTemp });
+      const version = await this._versioningService.$_findActivePhase(
+        AppModuleIdEnum.IPSR,
+      );
+      if (!version) {
+        throw this._handlersError.returnErrorRes({
+          error: version,
+          debug: true,
+        });
       }
-      const version: Version = <Version>vTemp.response;
 
       const {
         result_innovation_package: result_ip,
@@ -228,7 +235,6 @@ export class InnovationPathwayStepThreeService {
           result_id: resultId,
           link: lwl,
           evidence_type_id: 5,
-          version_id: version.id,
           created_by: user.id,
           last_updated_by: user.id,
         });
@@ -266,7 +272,6 @@ export class InnovationPathwayStepThreeService {
               last_name: entity.last_name,
               email: entity.email,
               workshop_role: entity.workshop_role,
-              version_id: version.id,
               created_by: user.id,
               last_updated_by: user.id,
             });
@@ -549,7 +554,6 @@ export class InnovationPathwayStepThreeService {
             evidence_link: el.evidence_link,
             result_ip_result_id: riprc.result_by_innovation_package_id,
             other_actor_type: el.other_actor_type,
-            version_id: version.id,
             sex_and_age_disaggregation:
               el?.sex_and_age_disaggregation === true ? true : false,
             how_many: el?.how_many,
@@ -616,7 +620,6 @@ export class InnovationPathwayStepThreeService {
             graduate_students: el?.graduate_students,
             institution_roles_id: 6,
             how_many: el?.how_many,
-            version_id: version.id,
             evidence_link: el?.evidence_link,
           });
         }
@@ -678,7 +681,6 @@ export class InnovationPathwayStepThreeService {
             created_by: user.id,
             last_updated_by: user.id,
             evidence_link: el.evidence_link,
-            version_id: version.id,
           });
         }
       });

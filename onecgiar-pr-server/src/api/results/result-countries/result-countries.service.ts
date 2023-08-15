@@ -72,7 +72,6 @@ export class ResultCountriesService {
                 const newRegions = new ResultCountry();
                 newRegions.country_id = countries[index].id;
                 newRegions.result_id = result.id;
-                newRegions.version_id = version.id;
                 resultRegionArray.push(newRegions);
               }
 

@@ -75,6 +75,8 @@
 
     .items {
         padding: 15px 20px;
+        max-height: calc(100vh - 500px);
+        overflow-y: auto;
 
         .item {
             display: flex;

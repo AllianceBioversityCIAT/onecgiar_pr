@@ -64,6 +64,30 @@ export class Evidence {
   youth_related!: boolean;
 
   @Column({
+    name: 'nutrition_related',
+    type: 'boolean',
+    nullable: true,
+    default: null,
+  })
+  nutrition_related!: boolean;
+
+  @Column({
+    name: 'environmental_biodiversity_related',
+    type: 'boolean',
+    nullable: true,
+    default: null,
+  })
+  environmental_biodiversity_related!: boolean;
+
+  @Column({
+    name: 'poverty_related',
+    type: 'boolean',
+    nullable: true,
+    default: null,
+  })
+  poverty_related!: boolean;
+
+  @Column({
     name: 'is_supplementary',
     type: 'boolean',
     nullable: true,
@@ -76,19 +100,6 @@ export class Evidence {
     name: 'knowledge_product_related',
   })
   knowledge_product_related!: number;
-
-  @Column({
-    name: 'version_id',
-    type: 'bigint',
-    nullable: false,
-  })
-  version_id: number;
-
-  @ManyToOne(() => Version, (v) => v.id, { nullable: false })
-  @JoinColumn({
-    name: 'version_id',
-  })
-  obj_version: Version;
 
   @Column({
     name: 'is_active',

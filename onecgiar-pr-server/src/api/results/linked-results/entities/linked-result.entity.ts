@@ -44,12 +44,6 @@ export class LinkedResult {
   })
   is_active: boolean;
 
-  @ManyToOne(() => Version, (v) => v.id, { nullable: true })
-  @JoinColumn({
-    name: 'version_id',
-  })
-  version_id: number;
-
   @ManyToOne(() => User, (u) => u.id, { nullable: false })
   @JoinColumn({
     name: 'created_by',

@@ -68,19 +68,6 @@ export class ResultsByInititiative {
   is_active: boolean;
 
   @Column({
-    name: 'version_id',
-    type: 'bigint',
-    nullable: false,
-  })
-  version_id: number;
-
-  @ManyToOne(() => Version, (v) => v.id, { nullable: false })
-  @JoinColumn({
-    name: 'version_id',
-  })
-  obj_version: Version;
-
-  @Column({
     name: 'created_by',
     type: 'int',
     nullable: false,

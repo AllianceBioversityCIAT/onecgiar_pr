@@ -21,6 +21,7 @@ export class IpsrGeneralInformationComponent {
     this.api.resultsSE.GETInnovationByResultId(this.ipsrDataControlSE.resultInnovationId).subscribe(({ response }) => {
       this.ipsrGeneralInformationBody = response;
       this.ipsrGeneralInformationBody.is_krs = Boolean(Number(this.ipsrGeneralInformationBody.is_krs));
+      console.log(response);
     });
   }
 
@@ -35,6 +36,7 @@ export class IpsrGeneralInformationComponent {
         this.api.alertsFe.show({ id: 'save-button', title: 'Section saved correctly', description: '', status: 'success', closeIn: 500 });
       },
       err => {
+        console.error(err);
         this.api.alertsFe.show({ id: 'save-button', title: 'There was an error saving the section', description: '', status: 'error', closeIn: 500 });
       }
     );
@@ -51,6 +53,15 @@ export class IpsrGeneralInformationComponent {
     <li><strong>0 : Not targeted</strong> The activity does not target the climate mitigation, adaptation and climate policy objectives of CGIAR as put forward in its strategy.</li>
     <li><strong>1 : Significant</strong> The activity contributes in a significant way to any of the three CGIAR climate-related strategy objectives – namely, climate mitigation, climate adaptation and climate policy, even though it is not the principal focus of the activity.</li>
     <li><strong>2 : Principal</strong> The activity is principally about meeting any of the three CGIAR climate-related strategy objectives – namely, climate mitigation, climate adaptation and climate policy, and would not have been undertaken without this objective.</li>
+    </ul>`;
+  }
+
+  nutritionInformation() {
+    return `<strong>Nutrition tag guidance</strong> <br>
+    Nutrition, health and food security scores should be determined based on the following: 
+    <li><strong>0 : Not targeted</strong> The activity has been screened against the marker but has not been found to target any aspects of nutrition, health and food security.</li>
+    <li><strong>1 : Significant</strong> The activity has significant contribution to the above-described aspects of nutrition, health and food security, but not the principal reason for undertaking the activity.</li>
+    <li><strong>2 : Principal</strong> The activity is principally meeting any aspects of nutrition, health and food security, and this is fundamental in its design and expected results. The activity would not have been undertaken, without this objective.</li>
     </ul>`;
   }
 

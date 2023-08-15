@@ -95,7 +95,6 @@ export class SummaryService {
         newInne.last_updated_by = user.id;
         newInne.female_using = female_using;
         newInne.male_using = male_using;
-        newInne.version_id = vrs.id;
         newInne.results_id = resultId;
         InnovationUse = await this._resultsInnovationsUseRepository.save(
           newInne,
@@ -136,7 +135,6 @@ export class SummaryService {
             newInnMes.unit_of_measure = unit_of_measure;
             newInnMes.result_innovation_use_id =
               InnovationUse.result_innovation_use_id;
-            newInnMes.version_id = vrs.id;
             tesultsInnovationsUseMeasuresList.push(newInnMes);
           }
         }
@@ -234,7 +232,8 @@ export class SummaryService {
         capDevExists.last_updated_by = user.id;
         capDevExists.capdev_delivery_method_id = capdev_delivery_method_id;
         capDevExists.capdev_term_id = capdev_term_id;
-        capDevExists.is_attending_for_organization = is_attending_for_organization
+        capDevExists.is_attending_for_organization =
+          is_attending_for_organization;
         CapDevData = await this._resultsCapacityDevelopmentsRepository.save(
           capDevExists,
         );
@@ -244,7 +243,6 @@ export class SummaryService {
         newCapDev.last_updated_by = user.id;
         newCapDev.female_using = female_using || null;
         newCapDev.male_using = male_using || null;
-        newCapDev.version_id = vrs.id;
         newCapDev.result_id = resultId;
         newCapDev.capdev_delivery_method_id = capdev_delivery_method_id;
         newCapDev.capdev_term_id = capdev_term_id;
@@ -274,7 +272,6 @@ export class SummaryService {
             newInstitution.institution_roles_id = 3;
             newInstitution.created_by = user.id;
             newInstitution.last_updated_by = user.id;
-            newInstitution.version_id = vrs.id;
             newInstitution.institutions_id = institutions_id;
             newInstitution.result_id = resultId;
             institutionsList.push(newInstitution);
@@ -399,7 +396,6 @@ export class SummaryService {
         );
       } else {
         const newInnDev = new ResultsInnovationsDev();
-        newInnDev.version_id = vrs.id;
         newInnDev.created_by = user.id;
         newInnDev.results_id = resultId;
         newInnDev.last_updated_by = user.id;
@@ -501,7 +497,6 @@ export class SummaryService {
         newResultsPolicyChanges.amount = amount || null;
         newResultsPolicyChanges.policy_stage_id = policy_stage_id;
         newResultsPolicyChanges.policy_type_id = policy_type_id;
-        newResultsPolicyChanges.version_id = vrs.id;
         newResultsPolicyChanges.result_id = resultId;
         newResultsPolicyChanges.created_by = user.id;
         newResultsPolicyChanges.last_updated_by = user.id;
@@ -532,7 +527,6 @@ export class SummaryService {
             newInstitution.institution_roles_id = 4;
             newInstitution.created_by = user.id;
             newInstitution.last_updated_by = user.id;
-            newInstitution.version_id = vrs.id;
             newInstitution.institutions_id = institutions_id;
             newInstitution.result_id = resultId;
             institutionsList.push(newInstitution);

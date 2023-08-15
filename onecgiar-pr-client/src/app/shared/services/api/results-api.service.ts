@@ -18,6 +18,7 @@ import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-c
 import { getInnovationComInterface } from '../../../../../../onecgiar-pr-server/src/api/ipsr/ipsr.repository';
 import { Observable } from 'rxjs';
 import { IpsrCompletenessStatusService } from '../../../pages/ipsr/services/ipsr-completeness-status.service';
+import { ModuleTypeEnum, StatusPhaseEnum } from '../../enum/api.enum';
 
 @Injectable({
   providedIn: 'root'
@@ -687,5 +688,33 @@ export class ResultsApiService {
 
   DELETEcomplementaryinnovation(idResult) {
     return this.http.delete<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/delete/complementary-innovation/${idResult}`);
+  }
+
+  GET_versioning(status, modules) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/versioning?status=${status}&module=${modules}`);
+  }
+
+  PATCH_versioningProcess(id) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/versioning/phase-change/process/result/${id}`, null);
+  }
+
+  PATCH_updatePhase(id, phase) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/versioning/${id}`, phase);
+  }
+
+  DELETE_updatePhase(id) {
+    return this.http.delete<any>(`${environment.apiBaseUrl}api/versioning/${id}`);
+  }
+
+  POST_createPhase(phase) {
+    return this.http.post<any>(`${environment.apiBaseUrl}api/versioning`, phase);
+  }
+
+  GET_tocPhases() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/toc-phases`);
+  }
+
+  GET_resultYears() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/years`);
   }
 }

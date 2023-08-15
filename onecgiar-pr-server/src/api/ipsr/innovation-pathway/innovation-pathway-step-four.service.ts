@@ -31,6 +31,8 @@ import { NonPooledProject } from '../../results/non-pooled-projects/entities/non
 import { ResultByInstitutionsByDeliveriesType } from '../../results/result-by-institutions-by-deliveries-type/entities/result-by-institutions-by-deliveries-type.entity';
 import { ResultInstitutionsBudget } from '../../results/result_budget/entities/result_institutions_budget.entity';
 import { log } from 'console';
+import { VersioningService } from '../../versioning/versioning.service';
+import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
 
 @Injectable()
 export class InnovationPathwayStepFourService {
@@ -48,6 +50,7 @@ export class InnovationPathwayStepFourService {
     protected readonly _resultByInstitutionsRepository: ResultByIntitutionsRepository,
     protected readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
     protected readonly _resultByInstitutionsByDeliveriesTypeRepository: ResultByInstitutionsByDeliveriesTypeRepository,
+    private readonly _versioningService: VersioningService,
   ) {}
 
   async getStepFour(resultId: number) {
@@ -190,11 +193,15 @@ export class InnovationPathwayStepFourService {
         };
       }
 
-      const vTemp = await this._versionsService.findBaseVersion();
-      if (vTemp.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: vTemp });
+      const version = await this._versioningService.$_findActivePhase(
+        AppModuleIdEnum.IPSR,
+      );
+      if (!version) {
+        throw this._handlersError.returnErrorRes({
+          error: version,
+          debug: true,
+        });
       }
-      const version: Version = <Version>vTemp.response;
 
       const pictures = await this.savePictures(
         result.id,
@@ -319,7 +326,6 @@ export class InnovationPathwayStepFourService {
           newPictures.result_id = resultId;
           newPictures.link = entity.link;
           newPictures.evidence_type_id = 3;
-          newPictures.version_id = version.id;
           newPictures.created_by = user.id;
           newPictures.creation_date = new Date();
           newPictures.last_updated_by = user.id;
@@ -391,7 +397,6 @@ export class InnovationPathwayStepFourService {
           newMaterials.result_id = resultId;
           newMaterials.link = entity.link;
           newMaterials.evidence_type_id = 4;
-          newMaterials.version_id = version.id;
           newMaterials.created_by = user.id;
           newMaterials.creation_date = new Date();
           newMaterials.last_updated_by = user.id;
@@ -448,7 +453,6 @@ export class InnovationPathwayStepFourService {
                 current_year: initiative.current_year,
                 next_year: initiative.next_year,
                 is_determined: initiative.is_determined,
-                version_id: version.id,
                 created_by: user.id,
                 last_updated_by: user.id,
               });
@@ -530,7 +534,6 @@ export class InnovationPathwayStepFourService {
                   in_kind: i.in_kind,
                   in_cash: i.in_cash,
                   is_determined: i.is_determined,
-                  version_id: version.id,
                   created_by: user.id,
                   last_updated_by: user.id,
                 });
@@ -609,7 +612,6 @@ export class InnovationPathwayStepFourService {
                   is_determined: i?.is_determined,
                   in_kind: i?.in_kind,
                   in_cash: i?.in_cash,
-                  version_id: version.id,
                   created_by: user.id,
                 });
               }
@@ -629,11 +631,16 @@ export class InnovationPathwayStepFourService {
   ) {
     try {
       let institutions_expected_investment: any;
-      const vTemp = await this._versionsService.findBaseVersion();
-      if (vTemp.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: vTemp });
+      const version = await this._versioningService.$_findActivePhase(
+        AppModuleIdEnum.IPSR,
+      );
+      if (!version) {
+        throw this._handlersError.returnErrorRes({
+          error: version,
+          debug: true,
+        });
       }
-      const version: Version = <Version>vTemp.response;
+
       if (crtr) {
         const instExist = await this._resultByInstitutionsRepository.findOne({
           where: {
@@ -656,14 +663,12 @@ export class InnovationPathwayStepFourService {
             institution_roles_id: 7,
             institutions_id: crtr.institutions_id,
             result_id: resultId,
-            version_id: version.id,
             created_by: user.id,
             last_updated_by: user.id,
           });
 
           const newIbe = await this._resultInstitutionsBudgetRepository.save({
             result_institution_id: rbi.id,
-            version_id: version.id,
             created_by: user.id,
             last_updated_by: user.id,
           });
@@ -728,11 +733,15 @@ export class InnovationPathwayStepFourService {
       let bilateral_expected_investment: any;
       let newBie: any;
       let newNpp: any;
-      const vTemp = await this._versionsService.findBaseVersion();
-      if (vTemp.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: vTemp });
+      const version = await this._versioningService.$_findActivePhase(
+        AppModuleIdEnum.IPSR,
+      );
+      if (!version) {
+        throw this._handlersError.returnErrorRes({
+          error: version,
+          debug: true,
+        });
       }
-      const version: Version = <Version>vTemp.response;
       if (bltl) {
         const nppEx = await this._nonPooledProjectRepository.findOne({
           where: {
@@ -758,7 +767,6 @@ export class InnovationPathwayStepFourService {
             grant_title: bltl.grant_title,
             funder_institution_id: bltl.funder,
             lead_center_id: bltl.lead_center,
-            version_id: version.id,
             created_by: user.id,
             last_updated_by: user.id,
             non_pooled_project_type_id: 2,
@@ -766,7 +774,6 @@ export class InnovationPathwayStepFourService {
 
           const newBie = await this._resultBilateralBudgetRepository.save({
             non_pooled_projetct_id: newNpp?.id,
-            version_id: version.id,
             created_by: user.id,
             last_updated_by: user.id,
           });

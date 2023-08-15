@@ -42,10 +42,4 @@ export class ResultIpExpertises extends BaseEntity {
     name: 'expertises_id',
   })
   obj_expertises: Expertises;
-
-  @ManyToOne(() => Version, (v) => v.id)
-  @JoinColumn({
-    name: 'version_id',
-  })
-  obj_version: Version;
 }

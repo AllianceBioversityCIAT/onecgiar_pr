@@ -41,7 +41,6 @@ export class ResultsKnowledgeProductKeywordRepository
         ${VERSIONING.QUERY.Get_kp_phases(
           config.new_result_id,
         )} as result_knowledge_product_id,
-        ? as version_id,
         ? as created_by,
         null as last_updated_by
         from results_kp_keywords rkpk where rkpk.result_knowledge_product_id = ${VERSIONING.QUERY.Get_kp_phases(
@@ -50,10 +49,7 @@ export class ResultsKnowledgeProductKeywordRepository
         `;
         const response = await (<Promise<ResultsKnowledgeProductKeyword[]>>(
           this.query(queryData, [
-            config.new_result_id,
-            config.phase,
             config.user.id,
-            config.old_result_id,
           ])
         ));
         const response_edit = <ResultsKnowledgeProductKeyword>(
@@ -70,7 +66,6 @@ export class ResultsKnowledgeProductKeywordRepository
         created_date,
         last_updated_date,
         result_knowledge_product_id,
-        version_id,
         created_by,
         last_updated_by
         )
@@ -83,13 +78,12 @@ export class ResultsKnowledgeProductKeywordRepository
         ${VERSIONING.QUERY.Get_kp_phases(
           config.new_result_id,
         )} as result_knowledge_product_id,
-        ? as version_id,
         ? as created_by,
         null as last_updated_by
         from results_kp_keywords rkpk where rkpk.result_knowledge_product_id = ${VERSIONING.QUERY.Get_kp_phases(
           config.old_result_id,
         )} and rkpk.is_active > 0`;
-        await this.query(queryData, [config.phase, config.user.id]);
+        await this.query(queryData, [ config.user.id]);
 
         const queryFind = `
         SELECT 
@@ -100,7 +94,6 @@ export class ResultsKnowledgeProductKeywordRepository
         rkpk.created_date,
         rkpk.last_updated_date,
         rkpk.result_knowledge_product_id,
-        rkpk.version_id,
         rkpk.created_by,
         rkpk.last_updated_by
         from results_kp_keywords rkpk where rkpk.result_knowledge_product_id = ${VERSIONING.QUERY.Get_kp_phases(

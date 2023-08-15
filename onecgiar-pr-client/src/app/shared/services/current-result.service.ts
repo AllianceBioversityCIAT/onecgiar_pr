@@ -23,6 +23,9 @@ export class CurrentResultService {
         this.resultLevelSE.currentResultTypeId = response.result_type_id;
         //(response);
         this.dataControlSE.currentResult = response;
+        console.log(this.dataControlSE.currentResult.status == 1);
+        console.log(this.api.rolesSE.isAdmin);
+        if (this.dataControlSE.currentResult.status == 1 && !this.api.rolesSE.isAdmin) this.api.rolesSE.readOnly = true;
       },
       err => {
         //(err.error);

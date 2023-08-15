@@ -16,19 +16,24 @@ export class RdPartnersService {
     return index < 0 ? false : true;
   }
   onSelectDelivery(option, deliveryId) {
-    //('onSelectDelivery');
+    if (this.api.rolesSE.readOnly) return;
+    if (option?.deliveries?.find((deliveryId: any) => deliveryId == 4) && deliveryId != 4) {
+      const index = option?.deliveries?.indexOf(4) == undefined ? -1 : option?.deliveries?.indexOf(4);
+      option?.deliveries.splice(index, 1);
+    }
+    const index = option?.deliveries?.indexOf(deliveryId) == undefined ? -1 : option?.deliveries?.indexOf(deliveryId);
+    if (deliveryId == 4 && index < 0) option.deliveries = [];
     if (!(typeof option?.deliveries == 'object')) option.deliveries = [];
-    const index = option?.deliveries.indexOf(deliveryId);
     index < 0 ? option?.deliveries.push(deliveryId) : option?.deliveries.splice(index, 1);
   }
   removePartner(index) {
     this.partnersBody.institutions.splice(index, 1);
     this.toggle++;
   }
-  cleanBody() {
+  /*cleanBody() {
     if (this.partnersBody.no_applicable_partner === true) this.partnersBody = new PartnersBody(true);
     if (this.partnersBody.no_applicable_partner === false) this.getSectionInformation(false);
-  }
+  }*/
 
   getSectionInformation(no_applicable_partner?) {
     this.api.resultsSE.GET_partnersSection().subscribe(

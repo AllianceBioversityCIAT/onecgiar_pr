@@ -42,7 +42,6 @@ export class ResultsKnowledgeProductInstitutionRepository
         )} as result_knowledge_product_id,
         rkmqi.predicted_institution_id,
         rkmqi.results_by_institutions_id,
-        ? as version_id,
         ? as created_by,
         null as last_updated_by
         from results_kp_mqap_institutions rkmqi where rkmqi.result_knowledge_product_id = ${VERSIONING.QUERY.Get_kp_phases(
@@ -50,7 +49,7 @@ export class ResultsKnowledgeProductInstitutionRepository
         )}
         and rkmqi.is_active > 0`;
         const response = await (<Promise<ResultsKnowledgeProductInstitution[]>>(
-          this.query(queryData, [config.phase, config.user.id])
+          this.query(queryData, [config.user.id])
         ));
         const response_edit = <ResultsKnowledgeProductInstitution>(
           config.f.custonFunction(response?.length ? response[0] : null)
@@ -68,7 +67,6 @@ export class ResultsKnowledgeProductInstitutionRepository
         result_knowledge_product_id,
         predicted_institution_id,
         results_by_institutions_id,
-        version_id,
         created_by,
         last_updated_by
         )
@@ -83,14 +81,13 @@ export class ResultsKnowledgeProductInstitutionRepository
         )} as result_knowledge_product_id,
         rkmqi.predicted_institution_id,
         rkmqi.results_by_institutions_id,
-        ? as version_id,
         ? as created_by,
         null as last_updated_by
         from results_kp_mqap_institutions rkmqi where rkmqi.result_knowledge_product_id = ${VERSIONING.QUERY.Get_kp_phases(
           config.old_result_id,
         )}
         and rkmqi.is_active > 0`;
-        await this.query(queryData, [config.phase, config.user.id]);
+        await this.query(queryData, [config.user.id]);
 
         const queryFind = `
         SELECT 
@@ -103,7 +100,6 @@ export class ResultsKnowledgeProductInstitutionRepository
         rkmqi.result_knowledge_product_id,
         rkmqi.predicted_institution_id,
         rkmqi.results_by_institutions_id,
-        rkmqi.version_id,
         rkmqi.created_by,
         rkmqi.last_updated_by
         from results_kp_mqap_institutions rkmqi where rkmqi.result_knowledge_product_id = ${VERSIONING.QUERY.Get_kp_phases(

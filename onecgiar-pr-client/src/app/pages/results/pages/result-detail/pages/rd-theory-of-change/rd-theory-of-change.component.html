@@ -7,12 +7,16 @@
     </app-pr-input> -->
 
     <div *ngIf="getConsumed">
-        <app-pr-select class="segment_title_margin" [options]="this.theoryOfChangeBody.contributing_initiatives"
-            label="Primary submitter" optionLabel="full_name" optionValue="id" placeholder="Select initiative"
-            description="Select an initiative" [(ngModel)]="this.theoryOfChangeBody.result_toc_result.initiative_id"
-            [fieldDisabled]="!this.theoryOfChangeBody.contributing_initiatives?.length">
+        <app-pr-select class="segment_title_margin"
+            [options]="this.theoryOfChangeBody.contributing_and_primary_initiative" label="Primary submitter"
+            optionLabel="full_name" optionValue="id" placeholder="Select initiative" description="Select an initiative"
+            [(ngModel)]="this.theoryOfChangeBody.result_toc_result.initiative_id"
+            [fieldDisabled]="!!(this.theoryOfChangeBody.contributing_and_primary_initiative?.length == 1 && this.theoryOfChangeBody.result_toc_result.initiative_id)">
         </app-pr-select>
-        <div class="no-primary-list" *ngIf="!this.theoryOfChangeBody.contributing_initiatives?.length">Since this result
+        <div class="no-primary-list"
+            *ngIf="this.theoryOfChangeBody.contributing_and_primary_initiative?.length == 1 && this.theoryOfChangeBody.result_toc_result.initiative_id">
+            Since
+            this result
             has not been shared and
             accepted by other initiatives, it is not possible to change the primary submitter.</div>
 
