@@ -51,7 +51,6 @@ export class ResultsKnowledgeProductsRepository
           null as last_updated_date,
           ? as results_id,
           rkp.melia_type_id,
-          ? as version_id,
           ? as created_by,
           null as last_updated_by,
           rkp.doi,
@@ -63,7 +62,6 @@ export class ResultsKnowledgeProductsRepository
         const response = await (<Promise<ResultsKnowledgeProduct[]>>(
           this.query(queryData, [
             config.new_result_id,
-            config.phase,
             config.user.id,
             config.old_result_id,
           ])
@@ -93,7 +91,6 @@ export class ResultsKnowledgeProductsRepository
           last_updated_date,
           results_id,
           melia_type_id,
-          version_id,
           created_by,
           last_updated_by,
           doi,
@@ -120,7 +117,6 @@ export class ResultsKnowledgeProductsRepository
           null as last_updated_date,
           ? as results_id,
           rkp.melia_type_id,
-          ? as version_id,
           ? as created_by,
           null as last_updated_by,
           rkp.doi,
@@ -130,7 +126,6 @@ export class ResultsKnowledgeProductsRepository
           from results_knowledge_product rkp WHERE rkp.results_id = ? and rkp.is_active > 0`;
         await this.query(queryData, [
           config.new_result_id,
-          config.phase,
           config.user.id,
           config.old_result_id,
         ]);
@@ -156,7 +151,6 @@ export class ResultsKnowledgeProductsRepository
         rkp.last_updated_date,
         rkp.results_id,
         rkp.melia_type_id,
-        rkp.version_id,
         rkp.created_by,
         rkp.last_updated_by,
         rkp.doi,

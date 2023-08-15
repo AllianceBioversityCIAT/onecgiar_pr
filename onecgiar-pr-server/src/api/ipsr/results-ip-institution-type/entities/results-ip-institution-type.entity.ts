@@ -67,12 +67,6 @@ export class ResultsIpInstitutionType extends BaseEntity {
   })
   graduate_students!: number;
 
-  @ManyToOne(() => Version, (v) => v.id)
-  @JoinColumn({
-    name: 'version_id',
-  })
-  obj_version: Version;
-
   @ManyToOne(() => Ipsr, (iprs) => iprs.obj_result_ip_result_institutions_type)
   @JoinColumn({
     name: 'result_ip_results_id',

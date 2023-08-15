@@ -33,16 +33,11 @@ export class ResultRegionRepository
         now() as created_date,
         null as last_updated_date,
         rr.region_id,
-        ? as result_id,
-        ? as version_id
+        ? as result_id
         from result_region rr WHERE  rr.result_id = ? and rr.is_active > 0
         `;
         const response = await (<Promise<ResultRegion[]>>(
-          this.query(queryData, [
-            config.new_result_id,
-            config.phase,
-            config.old_result_id,
-          ])
+          this.query(queryData, [config.new_result_id, config.old_result_id])
         ));
         const response_edit = <ResultRegion[]>config.f.custonFunction(response);
         final_data = await this.save(response_edit);
@@ -53,21 +48,18 @@ export class ResultRegionRepository
           created_date,
           last_updated_date,
           region_id,
-          result_id,
-          version_id
+          result_id
           )
           select
           rr.is_active,
           now() as created_date,
           null as last_updated_date,
           rr.region_id,
-          ? as result_id,
-          ? as version_id
+          ? as result_id
           from result_region rr WHERE  rr.result_id = ? and rr.is_active > 0
         `;
         await this.query(queryData, [
           config.new_result_id,
-          config.phase,
           config.old_result_id,
         ]);
 
@@ -78,8 +70,7 @@ export class ResultRegionRepository
         rr.created_date,
         rr.last_updated_date,
         rr.region_id,
-        rr.result_id,
-        rr.version_id
+        rr.result_id
         from result_region rr WHERE  rr.result_id = ?`;
         final_data = await this.query(queryFind, [config.new_result_id]);
       }
@@ -107,12 +98,11 @@ export class ResultRegionRepository
     rr.created_date,
     rr.last_updated_date 
     from result_region rr 
-    where rr.is_active > 0
-      and rr.version_id = ?;
+    where rr.is_active > 0;
     `;
 
     try {
-      const result: ResultRegion[] = await this.query(query, [version]);
+      const result: ResultRegion[] = await this.query(query, []);
       return result;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

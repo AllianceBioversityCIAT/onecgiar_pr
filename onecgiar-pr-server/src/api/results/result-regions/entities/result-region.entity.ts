@@ -31,12 +31,6 @@ export class ResultRegion {
   })
   is_active: boolean;
 
-  @ManyToOne(() => Version, (v) => v.id, { nullable: true })
-  @JoinColumn({
-    name: 'version_id',
-  })
-  version_id: number;
-
   @CreateDateColumn({
     type: 'timestamp',
     name: 'created_date',

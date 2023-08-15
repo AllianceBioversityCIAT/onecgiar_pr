@@ -51,10 +51,4 @@ export class ResultsByIpInnovationUseMeasure extends BaseEntity {
     name: 'result_ip_result_id',
   })
   obj_result_ip_result: Ipsr;
-
-  @ManyToOne(() => Version, (v) => v.id)
-  @JoinColumn({
-    name: 'version_id',
-  })
-  obj_version: Version;
 }

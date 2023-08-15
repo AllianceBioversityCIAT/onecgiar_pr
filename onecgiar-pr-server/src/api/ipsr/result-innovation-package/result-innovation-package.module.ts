@@ -37,6 +37,7 @@ import { YearRepository } from '../../results/years/year.repository';
 import { LinkedResultRepository } from '../../results/linked-results/linked-results.repository';
 import { EvidencesRepository } from '../../results/evidences/evidences.repository';
 import { IpsrService } from '../ipsr.service';
+import { VersioningModule } from '../../versioning/versioning.module';
 
 @Module({
   controllers: [ResultInnovationPackageController],
@@ -76,7 +77,7 @@ import { IpsrService } from '../ipsr.service';
     IpsrService,
     ReturnResponse,
   ],
-  imports: [VersionsModule],
+  imports: [VersionsModule, VersioningModule],
   exports: [ResultInnovationPackageRepository],
 })
 export class ResultInnovationPackageModule {}

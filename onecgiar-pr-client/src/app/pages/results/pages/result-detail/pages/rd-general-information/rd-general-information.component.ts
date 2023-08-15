@@ -28,7 +28,7 @@ export class RdGeneralInformationComponent {
   getSectionInformation() {
     this.api.resultsSE.GET_generalInformationByResultId().subscribe(({ response }) => {
       this.generalInfoBody = response;
-      this.generalInfoBody.reporting_year = '2022';
+      this.generalInfoBody.reporting_year = response['phase_year'];
       this.generalInfoBody.institutions_type = [...this.generalInfoBody.institutions_type, ...this.generalInfoBody.institutions] as any;
       //(this.generalInfoBody);
     });
@@ -64,6 +64,15 @@ export class RdGeneralInformationComponent {
     <li><strong>0 : Not targeted</strong> The activity has been screened against the marker but has not been found to target gender equality.</li>
     <li><strong>1 : Significant</strong> Significant Gender equality is an important and deliberate objective, but not the principal reason for undertaking the activity.</li>
     <li><strong>2 : Principal</strong> Gender equality is the main objective of the activity and is fundamental in its design and expected results. The activity would not have been undertaken without this gender equality objective.</li>
+    </ul>`;
+  }
+
+  nutritionInformation() {
+    return `<strong>Nutrition tag guidance</strong>
+    Nutrition, health and food security scores should be determined based on the following: 
+    <li><strong>0 : Not targeted</strong> The activity has been screened against the marker but has not been found to target any aspects of nutrition, health and food security.</li>
+    <li><strong>1 : Significant</strong> The activity has significant contribution to the above-described aspects of nutrition, health and food security, but not the principal reason for undertaking the activity.</li>
+    <li><strong>2 : Principal</strong> The activity is principally meeting any aspects of nutrition, health and food security, and this is fundamental in its design and expected results. The activity would not have been undertaken, without this objective.</li>
     </ul>`;
   }
 
@@ -111,6 +120,28 @@ export class RdGeneralInformationComponent {
       title: 'sd',
       description: `As a score of 2 has been selected, you are required to provide evidence of the climate change tag in the <a class="open_route" href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultCode}/evidences" target='_blank'>Evidence</a> section`,
       querySelector: '#climate_change_tag_alert',
+      position: 'beforeend'
+    });
+    // Todo - new fields
+    this.api.alertsFs.show({
+      status: 'success',
+      title: 'sd',
+      description: `As a score of 2 has been selected, you are required to provide evidence of the nutrition tag in the <a class="open_route" href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultCode}/evidences" target='_blank'>Evidence</a> section`,
+      querySelector: '#nutrition_tag_alert',
+      position: 'beforeend'
+    });
+    this.api.alertsFs.show({
+      status: 'success',
+      title: 'sd',
+      description: `As a score of 2 has been selected, you are required to provide evidence of the environment and/or biodiversity tag in the <a class="open_route" href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultCode}/evidences" target='_blank'>Evidence</a> section`,
+      querySelector: '#environment_tag_alert',
+      position: 'beforeend'
+    });
+    this.api.alertsFs.show({
+      status: 'success',
+      title: 'sd',
+      description: `As a score of 2 has been selected, you are required to provide evidence of the poverty tag in the <a class="open_route" href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultCode}/evidences" target='_blank'>Evidence</a> section`,
+      querySelector: '#poverty_tag_alert',
       position: 'beforeend'
     });
     this.requestEvent();

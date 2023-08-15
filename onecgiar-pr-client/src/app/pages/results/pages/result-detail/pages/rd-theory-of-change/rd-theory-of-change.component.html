@@ -7,18 +7,23 @@
     </app-pr-input> -->
 
     <div *ngIf="getConsumed">
-        <app-pr-select *ngIf="!this.api.rolesSE.isAdmin" class="segment_title_margin" [options]="this.myInitiatives"
-            label="Primary submitter" optionLabel="full_name" optionValue="initiative_id"
-            placeholder="Select initiative" description="Select an initiative"
-            [(ngModel)]="this.theoryOfChangeBody.result_toc_result.initiative_id">
+        <app-pr-select class="segment_title_margin"
+            [options]="this.theoryOfChangeBody.contributing_and_primary_initiative" label="Primary submitter"
+            optionLabel="full_name" optionValue="id" placeholder="Select initiative" description="Select an initiative"
+            [(ngModel)]="this.theoryOfChangeBody.result_toc_result.initiative_id"
+            [fieldDisabled]="!!(this.theoryOfChangeBody.contributing_and_primary_initiative?.length == 1 && this.theoryOfChangeBody.result_toc_result.initiative_id)">
         </app-pr-select>
+        <div class="no-primary-list"
+            *ngIf="this.theoryOfChangeBody.contributing_and_primary_initiative?.length == 1 && this.theoryOfChangeBody.result_toc_result.initiative_id">
+            Since
+            this result
+            has not been shared and
+            accepted by other initiatives, it is not possible to change the primary submitter.</div>
 
-        <app-pr-select *ngIf="this.api.rolesSE.isAdmin" class="segment_title_margin" [options]="this.allInitiatives"
-            label="Primary submitter" optionLabel="full_name" optionValue="initiative_id"
-            placeholder="Select initiative" description="Select an initiative"
-            [(ngModel)]="this.theoryOfChangeBody.result_toc_result.initiative_id">
-        </app-pr-select>
     </div>
+
+
+
 
 
 

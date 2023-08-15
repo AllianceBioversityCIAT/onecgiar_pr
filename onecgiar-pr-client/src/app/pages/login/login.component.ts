@@ -5,6 +5,7 @@ import { internationalizationData } from '../../shared/data/internationalization
 import { AuthService } from '../../shared/services/api/auth.service';
 import { CustomizedAlertsFeService } from '../../shared/services/customized-alerts-fe.service';
 import { RolesService } from 'src/app/shared/services/global/roles.service';
+import { FooterService } from '../../shared/components/footer/footer.service';
 
 @Component({
   selector: 'app-login',
@@ -15,7 +16,7 @@ export class LoginComponent implements OnDestroy, OnInit {
   internationalizationData = internationalizationData;
   userLoginData = new UserAuth();
   successLogin = false;
-  constructor(private authService: AuthService, private customAlertService: CustomizedAlertsFeService, private router: Router, private rolesSE: RolesService) {
+  constructor(private authService: AuthService, private customAlertService: CustomizedAlertsFeService, private router: Router, private rolesSE: RolesService, public footerSE: FooterService) {
     this.authService.inLogin = true;
     if (!!this.authService.localStorageUser) this.router.navigate(['/']);
   }
@@ -61,5 +62,4 @@ export class LoginComponent implements OnDestroy, OnInit {
   ngOnDestroy(): void {
     this.authService.inLogin = false;
   }
-  display: boolean = false;
 }

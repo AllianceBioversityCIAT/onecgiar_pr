@@ -8,10 +8,8 @@ export class TypeOneReportRepository {
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
-  ) { }
-  async getFactSheetByInit(
-    initId: number
-  ) {
+  ) {}
+  async getFactSheetByInit(initId: number) {
     const date = new Date();
 
     const initiativeGeneralInformationQuery = `
@@ -121,7 +119,7 @@ export class TypeOneReportRepository {
         rbi.inititiative_id = ?
         AND rc2.is_active = 1
         AND r.is_active = 1
-        AND r.status = 1
+        AND r.status_id = 3
         AND rbi.initiative_role_id = 1
     ORDER BY
         cc3.name ASC;
@@ -136,7 +134,7 @@ export class TypeOneReportRepository {
       LEFT JOIN clarisa_regions cr ON cr.um49Code = rr.region_id
       LEFT JOIN clarisa_regions_cgiar crc ON crc.un_code = cr.um49Code
     WHERE rbi.inititiative_id = ?
-      AND r.status = 1
+      AND r.status_id = 3
       AND r.is_active = 1 
       AND cr.parent_regions_code IS NOT NULL
       AND rr.is_active = 1
@@ -237,9 +235,11 @@ export class TypeOneReportRepository {
     `;
 
     try {
-      const ginfo: any[] = await this.dataSource.query(initiativeGeneralInformationQuery, [initId]);
+      const ginfo: any[] = await this.dataSource.query(
+        initiativeGeneralInformationQuery,
+        [initId],
+      );
       const istage = ginfo[0].initiative_stage_id;
-
 
       const generalInformation = [];
 
@@ -249,7 +249,9 @@ export class TypeOneReportRepository {
       const initiative_name = ginfo[0].initiative_name;
       const short_name = ginfo[0].short_name;
       const action_area = ginfo[0].action_area;
-      const start_date = new Date(ginfo[0].start_date).toLocaleDateString('en-GB');
+      const start_date = new Date(ginfo[0].start_date).toLocaleDateString(
+        'en-GB',
+      );
       const end_date = new Date(ginfo[0].end_date).toLocaleDateString('en-GB');
       const web_page = ginfo[0].web_page;
       const iniative_lead = ginfo[0].iniative_lead;
@@ -267,16 +269,39 @@ export class TypeOneReportRepository {
         web_page,
         iniative_lead,
         initiative_deputy,
-      })
+      });
 
-      const countriesProposal: any[] = await this.dataSource.query(countriesProposalQuery, [istage])
-      const regionsProposal: any[] = await this.dataSource.query(regionsProposalQuery, [istage])
-      const countrieReported: any[] = await this.dataSource.query(countrieReportedQuery, [initId]);
-      const regionsReported: any[] = await this.dataSource.query(regionsReportedQuery, [initId]);
-      const eoiOutcome: any[] = await this.dataSource.query(eoiOutcomeQuery, [istage]);
-      const budgetProposal: any[] = await this.dataSource.query(budgetProposalQuery, [initId]);
-      const budgetAnaPlan: any[] = await this.dataSource.query(budgetAnaPlanQuery, [initId]);
-      const climateGenderScore: any[] = await this.dataSource.query(climateGenderScoreQuery, [initId]);
+      const countriesProposal: any[] = await this.dataSource.query(
+        countriesProposalQuery,
+        [istage],
+      );
+      const regionsProposal: any[] = await this.dataSource.query(
+        regionsProposalQuery,
+        [istage],
+      );
+      const countrieReported: any[] = await this.dataSource.query(
+        countrieReportedQuery,
+        [initId],
+      );
+      const regionsReported: any[] = await this.dataSource.query(
+        regionsReportedQuery,
+        [initId],
+      );
+      const eoiOutcome: any[] = await this.dataSource.query(eoiOutcomeQuery, [
+        istage,
+      ]);
+      const budgetProposal: any[] = await this.dataSource.query(
+        budgetProposalQuery,
+        [initId],
+      );
+      const budgetAnaPlan: any[] = await this.dataSource.query(
+        budgetAnaPlanQuery,
+        [initId],
+      );
+      const climateGenderScore: any[] = await this.dataSource.query(
+        climateGenderScoreQuery,
+        [initId],
+      );
       generalInformation.map((gi) => {
         gi['countriesProposal'] = countriesProposal.filter((cp) => {
           return cp.initvStgId === gi.initiative_stage_id;
@@ -490,12 +515,15 @@ export class TypeOneReportRepository {
     WHERE
         r.is_krs = 1
         and r.is_active = 1
-        and r.status = 1
+        and r.status_id = 3
         and rbi.initiative_role_id = 1 
         and ci.id = ?;
     `;
     try {
-      const generalInformation: any[] = await this.dataSource.query(queryKeyResultStory, [initId]);
+      const generalInformation: any[] = await this.dataSource.query(
+        queryKeyResultStory,
+        [initId],
+      );
       return generalInformation;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

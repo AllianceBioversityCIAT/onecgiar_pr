@@ -33,6 +33,8 @@ input::placeholder,
 .p-inputtextarea::placeholder,
 .select_placeholder {
     color: rgb(194, 194, 194);
+    font-weight: 400;
+    font-size: 1rem;
 }
 
 .input_container {

@@ -23,6 +23,7 @@ import { ClarisaActionAreaOutcomeModule } from './clarisa-action-area-outcome/cl
 import { ClarisaSecondOrderAdministrativeDivisionModule } from './clarisa-second-order-administrative-division/clarisa-second-order-administrative-division.module';
 import { ClarisaFirstOrderAdministrativeDivisionModule } from './clarisa-first-order-administrative-division/clarisa-first-order-administrative-division.module';
 import { ClarisaInnovationUseLevelsModule } from './clarisa-innovation-use-levels/clarisa-innovation-use-levels.module';
+import { ClarisaTocPhasesModule } from './clarisa-toc-phases/clarisa-toc-phases.module';
 
 export const ClarisaRoutes: Routes = [
   {
@@ -31,7 +32,7 @@ export const ClarisaRoutes: Routes = [
   },
   {
     path: 'action-areas-outcomes',
-    module: ClarisaActionAreaOutcomeModule
+    module: ClarisaActionAreaOutcomeModule,
   },
   {
     path: 'action-areas-outcomes-indicators',
@@ -67,39 +68,39 @@ export const ClarisaRoutes: Routes = [
   },
   {
     path: 'regions',
-    module: ClarisaRegionsModule
+    module: ClarisaRegionsModule,
   },
   {
     path: 'geographic-scope',
-    module: ClarisaGeographicScopesModule
+    module: ClarisaGeographicScopesModule,
   },
   {
     path: 'centers',
-    module: ClarisaCentersModule
+    module: ClarisaCentersModule,
   },
   {
     path: 'initiatives',
-    module: ClarisaInitiativesModule
+    module: ClarisaInitiativesModule,
   },
   {
     path: 'innovation-type',
-    module: ClarisaInnovationTypeModule
+    module: ClarisaInnovationTypeModule,
   },
   {
     path: 'innovation-readiness-levels',
-    module: ClarisaInnovationReadinessLevelsModule
+    module: ClarisaInnovationReadinessLevelsModule,
   },
   {
     path: 'innovation-characteristics',
-    module: ClarisaInnovationCharacteristicsModule
+    module: ClarisaInnovationCharacteristicsModule,
   },
   {
     path: 'policy-stages',
-    module: ClarisaPolicyStagesModule
+    module: ClarisaPolicyStagesModule,
   },
   {
     path: 'policy-types',
-    module: ClarisaPolicyTypesModule
+    module: ClarisaPolicyTypesModule,
   },
   {
     path: 'sdgs',
@@ -111,14 +112,18 @@ export const ClarisaRoutes: Routes = [
   },
   {
     path: 'second-order-administrative-division',
-    module: ClarisaSecondOrderAdministrativeDivisionModule
+    module: ClarisaSecondOrderAdministrativeDivisionModule,
   },
   {
     path: 'first-order-administrative-division',
-    module: ClarisaFirstOrderAdministrativeDivisionModule
+    module: ClarisaFirstOrderAdministrativeDivisionModule,
   },
   {
     path: 'innovation-use-levels',
-    module: ClarisaInnovationUseLevelsModule
-  }
+    module: ClarisaInnovationUseLevelsModule,
+  },
+  {
+    path: 'toc-phases',
+    module: ClarisaTocPhasesModule,
+  },
 ];

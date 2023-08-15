@@ -65,12 +65,6 @@ export class ResultsCapacityDevelopments {
   })
   is_active: boolean;
 
-  @ManyToOne(() => Version, (v) => v.id)
-  @JoinColumn({
-    name: 'version_id',
-  })
-  version_id: number;
-
   @ManyToOne(() => User, (u) => u.id, { nullable: false })
   @JoinColumn({
     name: 'created_by',
@@ -96,4 +90,11 @@ export class ResultsCapacityDevelopments {
     nullable: true,
   })
   last_updated_date!: Date;
+
+  @Column({
+    name: 'is_attending_for_organization',
+    type: 'boolean',
+    nullable: true,
+  })
+  is_attending_for_organization!: boolean;
 }

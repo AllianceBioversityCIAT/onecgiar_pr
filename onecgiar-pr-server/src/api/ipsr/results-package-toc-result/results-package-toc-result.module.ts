@@ -19,9 +19,11 @@ import { ResultByIntitutionsRepository } from '../../results/results_by_institut
 import { ResultByInstitutionsByDeliveriesTypeRepository } from '../../results/result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';
 import { ResultInitiativeBudgetRepository } from '../../results/result_budget/repositories/result_initiative_budget.repository';
 import { ResultIpEoiOutcomeRepository } from '../innovation-pathway/repository/result-ip-eoi-outcomes.repository';
+import { VersioningModule } from '../../versioning/versioning.module';
 
 @Module({
   controllers: [ResultsPackageTocResultController],
+  imports: [VersioningModule],
   providers: [
     ResultsPackageTocResultService,
     ResultRepository,

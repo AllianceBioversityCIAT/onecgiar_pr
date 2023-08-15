@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { VersioningService } from './versioning.service';
 import { CreateVersioningDto } from './dto/create-versioning.dto';
@@ -15,7 +16,13 @@ import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.inter
 import { UserToken } from '../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { Roles } from '../../shared/decorators/roles.decorator';
-import { RoleEnum, RoleTypeEnum } from '../../shared/constants/role-type.enum';
+import {
+  ActiveEnum,
+  ModuleTypeEnum,
+  RoleEnum,
+  RoleTypeEnum,
+  StatusPhaseEnum,
+} from '../../shared/constants/role-type.enum';
 import { ValidRoleGuard } from '../../shared/guards/valid-role.guard';
 
 @Controller()
@@ -49,6 +56,25 @@ export class VersioningController {
     @Body() updateVersioningDto: UpdateVersioningDto,
   ) {
     return this.versioningService.update(+id, updateVersioningDto);
+  }
+
+  @Get('all')
+  findAll() {
+    return this.versioningService.getAllPhases();
+  }
+
+  @Get()
+  find(
+    @Query('module') module_type: ModuleTypeEnum = ModuleTypeEnum.ALL,
+    @Query('status') status: StatusPhaseEnum = StatusPhaseEnum.OPEN,
+    @Query('active') active: ActiveEnum = ActiveEnum.ACTIVE,
+  ) {
+    return this.versioningService.find(module_type, status, active);
+  }
+
+  @Get('result/:resultId')
+  findVersionOfAResult(@Param('resultId') result_id: string) {
+    return this.versioningService.getVersionOfAResult(+result_id);
   }
 
   @Delete(':id')

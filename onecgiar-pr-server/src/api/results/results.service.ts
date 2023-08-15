@@ -8,6 +8,7 @@ import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import {
   HandlersError,
+  ReturnResponse,
   returnErrorDto,
 } from '../../shared/handlers/error.utils';
 import { ResultTypesService } from './result_types/result_types.service';
@@ -48,7 +49,7 @@ import { ResultRegion } from './result-regions/entities/result-region.entity';
 import { ResultSimpleDto } from './dto/result-simple.dto';
 import { ElasticService } from '../../elastic/elastic.service';
 import { ElasticOperationDto } from '../../elastic/dto/elastic-operation.dto';
-import process from 'process';
+import process, { env } from 'process';
 import { resultValidationRepository } from './results-validation-module/results-validation-module.repository';
 import { ResultsKnowledgeProductAuthorRepository } from './results-knowledge-products/repositories/results-knowledge-product-authors.repository';
 import { ResultsKnowledgeProductInstitutionRepository } from './results-knowledge-products/repositories/results-knowledge-product-institution.repository';
@@ -59,6 +60,9 @@ import { ResultsImpactAreaIndicatorRepository } from './results-impact-area-indi
 import { ResultsImpactAreaTargetRepository } from './results-impact-area-target/results-impact-area-target.repository';
 import { LogRepository } from '../../connection/dynamodb-logs/dynamodb-logs.repository';
 import { Actions } from 'src/connection/dynamodb-logs/dto/enumAction.const';
+import { VersioningService } from '../versioning/versioning.service';
+import { AppModuleIdEnum } from 'src/shared/constants/role-type.enum';
+import { InstitutionRoleEnum } from './results_by_institutions/entities/institution_role.enum';
 
 @Injectable()
 export class ResultsService {
@@ -97,6 +101,8 @@ export class ResultsService {
     //private readonly _resultsImpactAreaIndicatorRepository: ResultsImpactAreaIndicatorRepository,
     //private readonly _resultsImpactAreaTargetRepository: ResultsImpactAreaTargetRepository,
     private readonly _logRepository: LogRepository,
+    private readonly _versioningService: VersioningService,
+    private readonly _returnResponse: ReturnResponse,
   ) {}
 
   /**
@@ -168,14 +174,15 @@ export class ResultsService {
       const rl: ResultLevel = <ResultLevel>resultLevel;
       const rt: ResultType = <ResultType>resultType.response;
 
-      const version = await this._versionsService.findBaseVersion();
-      if (version.status >= 300) {
+      const version = await this._versioningService.$_findActivePhase(
+        AppModuleIdEnum.REPORTING,
+      );
+      if (!version) {
         throw this._handlersError.returnErrorRes({
           error: version,
           debug: true,
         });
       }
-      const vrs: Version = <Version>version.response;
 
       const year: Year = await this._yearRepository.findOne({
         where: { active: true },
@@ -193,7 +200,7 @@ export class ResultsService {
         created_by: user.id,
         last_updated_by: user.id,
         result_type_id: rt.id,
-        version_id: vrs.id,
+        version_id: version.id,
         title: createResultDto.result_name,
         reported_year_id: year.year,
         result_level_id: rl.id,
@@ -206,7 +213,6 @@ export class ResultsService {
           initiative_id: initiative.id,
           initiative_role_id: 1,
           result_id: newResultHeader.id,
-          version_id: vrs.id,
         },
       );
 
@@ -359,6 +365,43 @@ export class ResultsService {
           status: HttpStatus.NOT_FOUND,
         };
       }
+
+      const nutritionTag = await this._genderTagRepository.findOne({
+        where: { id: resultGeneralInformation.nutrition_tag_level_id },
+      });
+      if (!climateTag) {
+        throw {
+          response: {},
+          message: 'The Nutrition tag does not exist',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const environmentalBiodiversityTag =
+        await this._genderTagRepository.findOne({
+          where: {
+            id: resultGeneralInformation.environmental_biodiversity_tag_level_id,
+          },
+        });
+      if (!climateTag) {
+        throw {
+          response: {},
+          message: 'The Environmental or/and biodiversity tag does not exist',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const povertyTag = await this._genderTagRepository.findOne({
+        where: { id: resultGeneralInformation.poverty_tag_level_id },
+      });
+      if (!climateTag) {
+        throw {
+          response: {},
+          message: 'The Poverty tag does not exist',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
       if (resultGeneralInformation.institutions.length) {
         const validInstitutions =
           await this._clarisaInstitutionsRepository.getValidInstitution(
@@ -399,14 +442,15 @@ export class ResultsService {
         resultGeneralInformation.krs_url = null;
       }
 
-      const version = await this._versionsService.findBaseVersion();
-      if (version.status >= 300) {
+      const version = await this._versioningService.$_findActivePhase(
+        AppModuleIdEnum.REPORTING,
+      );
+      if (!version) {
         throw this._handlersError.returnErrorRes({
           error: version,
           debug: true,
         });
       }
-      const vrs: Version = <Version>version.response;
 
       const updateResult = await this._resultRepository.save({
         id: result.id,
@@ -419,6 +463,16 @@ export class ResultsService {
           : null,
         climate_change_tag_level_id:
           resultGeneralInformation.climate_change_tag_id ? climateTag.id : null,
+        nutrition_tag_level_id: resultGeneralInformation.nutrition_tag_level_id
+          ? nutritionTag.id
+          : null,
+        environmental_biodiversity_tag_level_id:
+          resultGeneralInformation.environmental_biodiversity_tag_level_id
+            ? environmentalBiodiversityTag.id
+            : null,
+        poverty_tag_level_id: resultGeneralInformation.poverty_tag_level_id
+          ? povertyTag.id
+          : null,
         krs_url: resultGeneralInformation.krs_url,
         is_krs: resultGeneralInformation.is_krs,
         last_updated_by: user.id,
@@ -459,8 +513,9 @@ export class ResultsService {
         await this._resultByIntitutionsRepository.updateIstitutions(
           resultGeneralInformation.result_id,
           resultGeneralInformation.institutions,
-          true,
           user.id,
+          false,
+          [InstitutionRoleEnum.ACTOR],
         );
       let saveInstitutions: ResultsByInstitution[] = [];
       for (
@@ -472,7 +527,7 @@ export class ResultsService {
           await this._resultByIntitutionsRepository.getResultByInstitutionExists(
             resultGeneralInformation.result_id,
             resultGeneralInformation.institutions[index].institutions_id,
-            true,
+            InstitutionRoleEnum.ACTOR,
           );
         if (!isInstitutions) {
           const institutionsNew: ResultsByInstitution =
@@ -483,7 +538,6 @@ export class ResultsService {
             resultGeneralInformation.institutions[index].institutions_id;
           institutionsNew.last_updated_by = user.id;
           institutionsNew.result_id = resultGeneralInformation.result_id;
-          institutionsNew.version_id = vrs.id;
           institutionsNew.is_active = true;
           saveInstitutions.push(institutionsNew);
         }
@@ -523,7 +577,6 @@ export class ResultsService {
             ].institutions_type_id;
           institutionsTypeNew.last_updated_by = user.id;
           institutionsTypeNew.results_id = resultGeneralInformation.result_id;
-          institutionsTypeNew.version_id = vrs.id;
           institutionsTypeNew.is_active = true;
           saveInstitutionsType.push(institutionsTypeNew);
         }
@@ -875,8 +928,10 @@ export class ResultsService {
         };
       }
 
-      const version = await this._versionsService.findBaseVersion();
-      if (version.status >= 300) {
+      const version = await this._versioningService.$_findActivePhase(
+        AppModuleIdEnum.REPORTING,
+      );
+      if (!version) {
         throw this._handlersError.returnErrorRes({
           error: version,
           debug: true,
@@ -896,7 +951,6 @@ export class ResultsService {
 
       const rl: ResultLevel = <ResultLevel>resultLevel;
       const rt: ResultType = <ResultType>resultType.response;
-      const vrs: Version = <Version>version.response;
 
       const legacyResult = await this._resultLegacyRepository.findOne({
         where: { legacy_id: mapLegacy.legacy_id },
@@ -912,7 +966,7 @@ export class ResultsService {
         created_by: user.id,
         last_updated_by: user.id,
         result_type_id: rt.id,
-        version_id: vrs.id,
+        version_id: version.id,
         title: legacyResult.title,
         description: legacyResult.description,
         reported_year_id: year.year,
@@ -928,7 +982,6 @@ export class ResultsService {
           initiative_id: initiative.id,
           initiative_role_id: 1,
           result_id: newResultHeader.id,
-          version_id: vrs.id,
         },
       );
 
@@ -940,7 +993,7 @@ export class ResultsService {
           await this._resultByIntitutionsRepository.getResultByInstitutionExists(
             newResultHeader.id,
             partner[index].clarisa_id,
-            true,
+            InstitutionRoleEnum.ACTOR,
           );
         if (!isInstitutions) {
           const institutionsNew: ResultsByInstitution =
@@ -950,7 +1003,6 @@ export class ResultsService {
           institutionsNew.institutions_id = partner[index].clarisa_id;
           institutionsNew.last_updated_by = user.id;
           institutionsNew.result_id = newResultHeader.id;
-          institutionsNew.version_id = vrs.id;
           institutionsNew.is_active = true;
           saveInstitutions.push(institutionsNew);
         }
@@ -1047,11 +1099,16 @@ export class ResultsService {
           result_description: result.description ?? null,
           gender_tag_id: result.gender_tag_level_id || null,
           climate_change_tag_id: result.climate_change_tag_level_id || null,
+          nutrition_tag_level_id: result.nutrition_tag_level_id || null,
+          environmental_biodiversity_tag_level_id: result.environmental_biodiversity_tag_level_id || null,
+          poverty_tag_level_id: result.poverty_tag_level_id || null,
           institutions: institutions,
           institutions_type: institutionsType,
           krs_url: result.krs_url ?? null,
           is_krs: result.is_krs ? true : false,
           lead_contact_person: result.lead_contact_person ?? null,
+          phase_name: result['phase_name'],
+          phase_year: result['phase_year'],
         },
         message: 'Successful response',
         status: HttpStatus.OK,
@@ -1181,27 +1238,29 @@ export class ResultsService {
     }
   }
 
-  async transformResultCode(resultCode: number) {
+  async transformResultCode(resultCode: number, phase_id: number = null) {
     try {
+      const phase = await this._versioningService.$_findPhase(phase_id);
       const result = await this._resultRepository.transformResultCode(
         resultCode,
+        phase ? phase.id : null,
       );
 
       if (!result) {
-        throw {
-          response: {},
-          message: 'Results Not Found',
-          status: HttpStatus.NOT_FOUND,
-        };
+        throw this._returnResponse.format({
+          message: 'Result Not Found',
+          statusCode: HttpStatus.NOT_FOUND,
+          response: resultCode,
+        });
       }
 
-      return {
-        response: result,
+      return this._returnResponse.format({
         message: 'Successful response',
-        status: HttpStatus.OK,
-      };
+        statusCode: HttpStatus.OK,
+        response: result,
+      });
     } catch (error) {
-      return this._handlersError.returnErrorRes({ error, debug: true });
+      return this._returnResponse.format(error, !env.IS_PRODUCTION);
     }
   }
 

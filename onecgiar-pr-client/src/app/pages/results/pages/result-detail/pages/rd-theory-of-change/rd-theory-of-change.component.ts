@@ -17,21 +17,14 @@ export class RdTheoryOfChangeComponent {
   primaryText = ' - <strong>Primary</strong> ';
   getConsumed = false;
   psub = '';
-  allInitiatives = [];
-  myInitiatives = [];
+  currentInitOfficialCode = null;
   constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public centersSE: CentersService, public institutionsSE: InstitutionsService, public greenChecksSE: GreenChecksService) {}
   ngOnInit(): void {
     this.requestEvent();
     this.getSectionInformation();
     this.GET_AllWithoutResults();
-    this.GET_AllInitiatives();
   }
-  GET_initiativesByUser() {
-    this.api.authSE.GET_initiativesByUser().subscribe(resp => {
-      console.log(resp.response);
-      this.myInitiatives = resp.response;
-    });
-  }
+
   GET_AllWithoutResults() {
     this.api.resultsSE.GET_AllWithoutResults().subscribe(({ response }) => {
       this.contributingInitiativesList = response;
@@ -47,7 +40,8 @@ export class RdTheoryOfChangeComponent {
           this.getConsumed = true;
         }, 100);
         if (this.theoryOfChangeBody?.result_toc_result) this.psub = `${this.theoryOfChangeBody?.result_toc_result.official_code} ${this.theoryOfChangeBody?.result_toc_result.short_name}`;
-
+        this.theoryOfChangeBody?.contributing_and_primary_initiative.forEach(init => (init.full_name = `${init?.official_code} - <strong>${init?.short_name}</strong> - ${init?.initiative_name}`));
+        this.currentInitOfficialCode = this.theoryOfChangeBody.result_toc_result.official_code;
         // this.theoryOfChangeBody.result_toc_result;
       },
       err => {
@@ -55,19 +49,6 @@ export class RdTheoryOfChangeComponent {
         console.error(err);
       }
     );
-  }
-
-  GET_AllInitiatives() {
-    //(this.api.rolesSE.isAdmin);
-    console.log(this.api.rolesSE.isAdmin);
-    if (!this.api.rolesSE.isAdmin) {
-      this.GET_initiativesByUser();
-    } else {
-      this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
-        console.log(response);
-        this.allInitiatives = response;
-      });
-    }
   }
 
   get validateGranTitle() {
@@ -83,13 +64,24 @@ export class RdTheoryOfChangeComponent {
   }
 
   onSaveSection() {
-    console.log(this.theoryOfChangeBody);
-    this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
-      //(resp);
-      this.getConsumed = false;
-      this.theoryOfChangeBody.result_toc_result.initiative_id = null;
-      this.getSectionInformation();
-    });
+    const saveSection = () => {
+      //console.log(this.theoryOfChangeBody);
+      this.theoryOfChangeBody.contributing_initiatives = this.theoryOfChangeBody.contributing_and_primary_initiative;
+      this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
+        //(resp);
+        this.getConsumed = false;
+        // this.theoryOfChangeBody.result_toc_result.initiative_id = null;
+        this.getSectionInformation();
+      });
+    };
+    const newInit = this.theoryOfChangeBody.contributing_and_primary_initiative.find(init => init.id == this.theoryOfChangeBody.result_toc_result.initiative_id);
+    const newInitOfficialCode = newInit?.official_code;
+    if (this.currentInitOfficialCode != newInitOfficialCode)
+      return this.api.alertsFe.show({ id: 'primary-submitter', title: 'Change in primary submitter', description: `The <strong>${newInitOfficialCode}</strong> will now be the primary submitter of this result and will have exclusive editing rights for all sections and submission. <strong>${this.currentInitOfficialCode}</strong> will continue to be a contributing initiative for this result. <br> <br> Please ensure that the new primary submitter of this result is aware of this change.`, status: 'success', confirmText: 'Continue & save' }, () => {
+        saveSection();
+      });
+
+    return saveSection();
   }
 
   someEditable() {

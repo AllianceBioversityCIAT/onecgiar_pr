@@ -165,6 +165,13 @@ export class ResultInnovationPackage extends BaseEntity {
   })
   assessed_during_expert_workshop_id!: number;
 
+  @Column({
+    name: 'scaling_ambition_blurb',
+    type: 'text',
+    nullable: true,
+  })
+  scaling_ambition_blurb!: string;
+
   @ManyToOne(() => AssessedDuringExpertWorkshop, (adewp) => adewp.id)
   @JoinColumn({
     name: 'assessed_during_expert_workshop_id',
@@ -212,12 +219,6 @@ export class ResultInnovationPackage extends BaseEntity {
     name: 'active_backstopping_id',
   })
   obj_active_backstopping!: ActiveBackstopping;
-
-  @ManyToOne(() => Version, (v) => v.id)
-  @JoinColumn({
-    name: 'version_id',
-  })
-  obj_version: Version;
 
   @OneToOne(() => Result, (r) => r.id)
   @JoinColumn({

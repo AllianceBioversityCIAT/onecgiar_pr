@@ -39,7 +39,6 @@ export class ResultsInnovationsUseMeasuresRepository
         null as last_updated_date,
         riu2.result_innovation_use_id as result_innovation_use_id,
         rium.unit_of_measure_id,
-        ? as version_id,
         ? as created_by,
         null as last_updated_by
         from results_innovations_use_measures rium 
@@ -50,7 +49,6 @@ export class ResultsInnovationsUseMeasuresRepository
         `;
         const response = await (<Promise<ResultsInnovationsUseMeasures[]>>(
           this.query(queryData, [
-            config.phase,
             config.user.id,
             config.old_result_id,
             config.new_result_id,
@@ -71,7 +69,6 @@ export class ResultsInnovationsUseMeasuresRepository
           last_updated_date,
           result_innovation_use_id,
           unit_of_measure_id,
-          version_id,
           created_by,
           last_updated_by
           )
@@ -83,7 +80,6 @@ export class ResultsInnovationsUseMeasuresRepository
           null as last_updated_date,
           riu2.result_innovation_use_id as result_innovation_use_id,
           rium.unit_of_measure_id,
-          ? as version_id,
           ? as created_by,
           null as last_updated_by
           from results_innovations_use_measures rium 
@@ -92,7 +88,6 @@ export class ResultsInnovationsUseMeasuresRepository
           	inner join results_innovations_use riu2 on riu2.results_id = ?
           where rium.is_active > 0;`;
         await this.query(queryData, [
-          config.phase,
           config.user.id,
           config.old_result_id,
           config.new_result_id,
@@ -108,7 +103,6 @@ export class ResultsInnovationsUseMeasuresRepository
         rium.last_updated_date,
         rium.result_innovation_use_id,
         rium.unit_of_measure_id,
-        rium.version_id,
         rium.created_by,
         rium.last_updated_by
         from results_innovations_use_measures rium 
@@ -142,7 +136,6 @@ export class ResultsInnovationsUseMeasuresRepository
     	rium.last_updated_date,
     	rium.result_innovation_use_id,
     	rium.unit_of_measure_id,
-    	rium.version_id,
     	rium.created_by,
     	rium.last_updated_by
     from
@@ -177,7 +170,6 @@ export class ResultsInnovationsUseMeasuresRepository
     	rium.last_updated_date,
     	rium.result_innovation_use_id,
     	rium.unit_of_measure_id,
-    	rium.version_id,
     	rium.created_by,
     	rium.last_updated_by
     from

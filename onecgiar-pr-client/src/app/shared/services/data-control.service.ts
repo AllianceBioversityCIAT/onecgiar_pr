@@ -17,6 +17,7 @@ export class DataControlService {
   currentSectionName = '';
   fieldFeedbackList = [];
   showShareRequest = false;
+  chagePhaseModal = false;
   inNotifications = false;
   currentNotification = null;
   green_checks = null;

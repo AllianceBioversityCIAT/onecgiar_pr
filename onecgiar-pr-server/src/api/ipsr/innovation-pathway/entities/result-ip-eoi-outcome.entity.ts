@@ -45,10 +45,4 @@ export class ResultIpEoiOutcome extends BaseEntity {
     name: 'toc_result_id',
   })
   obj_toc_result: TocResult;
-
-  @ManyToOne(() => Version, (v) => v.obj_version_result_ip_eoi_outcome)
-  @JoinColumn({
-    name: 'version_id',
-  })
-  obj_version_result_ip_eoi_outcome: Version;
 }

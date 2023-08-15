@@ -56,10 +56,4 @@ export class ResultCountriesSubNational extends BaseEntity {
     name: 'result_countries_id',
   })
   obj_result_countries: number;
-
-  @ManyToOne(() => Version, (v) => v.id)
-  @JoinColumn({
-    name: 'version_id',
-  })
-  obj_version: Version;
 }

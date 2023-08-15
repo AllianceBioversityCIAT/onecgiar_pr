@@ -38,7 +38,6 @@ export class ResultsInnovationsUseRepository
           now() as created_date,
           null as last_updated_date,
           ? as results_id,
-          ? as version_id,
           ? as created_by,
           null as last_updated_by
           from results_innovations_use riu where riu.results_id = ? and riu.is_active > 0
@@ -46,7 +45,6 @@ export class ResultsInnovationsUseRepository
         const response = await (<Promise<ResultsInnovationsUse[]>>(
           this.query(queryData, [
             config.new_result_id,
-            config.phase,
             config.user.id,
             config.old_result_id,
           ])
@@ -65,7 +63,6 @@ export class ResultsInnovationsUseRepository
         created_date,
         last_updated_date,
         results_id,
-        version_id,
         created_by,
         last_updated_by
         )
@@ -76,13 +73,11 @@ export class ResultsInnovationsUseRepository
           now() as created_date,
           null as last_updated_date,
           ? as results_id,
-          ? as version_id,
           ? as created_by,
           null as last_updated_by
           from results_innovations_use riu where riu.results_id = ? and riu.is_active > 0`;
         await this.query(queryData, [
           config.new_result_id,
-          config.phase,
           config.user.id,
           config.old_result_id,
         ]);
@@ -96,7 +91,6 @@ export class ResultsInnovationsUseRepository
         riu.created_date,
         riu.last_updated_date,
         riu.results_id,
-        riu.version_id,
         riu.created_by,
         riu.last_updated_by
         from results_innovations_use riu where riu.results_id = ?`;
@@ -129,7 +123,6 @@ export class ResultsInnovationsUseRepository
     	riu.created_date,
     	riu.last_updated_date,
     	riu.results_id,
-    	riu.version_id,
     	riu.created_by,
     	riu.last_updated_by
     from

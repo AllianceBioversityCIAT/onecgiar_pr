@@ -74,7 +74,6 @@ export class LinkedResultsService {
             newLink.last_updated_by = user.id;
             newLink.origin_result_id = result.id;
             newLink.linked_results_id = links[index].id;
-            newLink.version_id = version.id;
             isExistsNew.push(links[index].id);
             newLinks.push(newLink);
           }
@@ -113,7 +112,6 @@ export class LinkedResultsService {
             newLink.created_by = user.id;
             newLink.last_updated_by = user.id;
             newLink.origin_result_id = result.id;
-            newLink.version_id = version.id;
             newLink.legacy_link = legacyLinks[index].legacy_link;
             isExistsNewLegacy.push(legacyLinks[index].legacy_link);
             newLinks.push(newLink);

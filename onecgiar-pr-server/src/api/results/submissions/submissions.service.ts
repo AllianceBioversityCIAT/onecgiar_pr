@@ -22,7 +22,7 @@ export class SubmissionsService {
     private readonly _roleByUserRepository: RoleByUserRepository,
     private readonly _generalInformationIpsrService: IpsrService,
     private readonly _resultInnovationPackageValidationService: ResultsInnovationPackagesValidationModuleService,
-  ) { }
+  ) {}
 
   async submitFunction(
     resultId: number,
@@ -31,7 +31,11 @@ export class SubmissionsService {
   ) {
     try {
       const result = await this._resultRepository.getResultById(resultId);
-      const role = await this._roleByUserRepository.validationRolePermissions(user.id, result.id, [3, 4, 5]);
+      const role = await this._roleByUserRepository.validationRolePermissions(
+        user.id,
+        result.id,
+        [3, 4, 5],
+      );
       if (!role) {
         throw {
           response: {},
@@ -48,7 +52,9 @@ export class SubmissionsService {
         };
       }
 
-      const isValid = await this._resultValidationRepository.resultIsValid(result.id);
+      const isValid = await this._resultValidationRepository.resultIsValid(
+        result.id,
+      );
       if (!isValid) {
         throw {
           response: {},
@@ -60,10 +66,12 @@ export class SubmissionsService {
 
       const data = await this._resultRepository.update(result.id, {
         status: 1,
+        status_id: 3,
       });
       const newSubmissions = new Submission();
       newSubmissions.user_id = user.id;
       newSubmissions.status = true;
+      newSubmissions.status_id = 3;
       newSubmissions.comment = createSubmissionDto.comment;
       newSubmissions.results_id = result.id;
       await this._submissionRepository.save(newSubmissions);
@@ -84,7 +92,11 @@ export class SubmissionsService {
   ) {
     try {
       const result = await this._resultRepository.getResultById(resultId);
-      const role = await this._roleByUserRepository.validationRolePermissions(user.id, result.id, [3, 4, 5]);
+      const role = await this._roleByUserRepository.validationRolePermissions(
+        user.id,
+        result.id,
+        [3, 4, 5],
+      );
       if (!role) {
         throw {
           response: {},
@@ -101,7 +113,10 @@ export class SubmissionsService {
         };
       }
 
-      const isValid = await this._resultInnovationPackageValidationService.getGreenchecksByinnovationPackage(result.id);
+      const isValid =
+        await this._resultInnovationPackageValidationService.getGreenchecksByinnovationPackage(
+          result.id,
+        );
       if (!isValid.response.validResult) {
         throw {
           response: {},
@@ -113,21 +128,26 @@ export class SubmissionsService {
 
       const data = await this._resultRepository.update(result.id, {
         status: 1,
+        status_id: 3,
       });
       const newSubmissions = new Submission();
       newSubmissions.user_id = user.id;
       newSubmissions.status = true;
+      newSubmissions.status_id = 3;
       newSubmissions.comment = createSubmissionDto.comment;
       newSubmissions.results_id = result.id;
       await this._submissionRepository.save(newSubmissions);
 
-      const ipsr = await this._generalInformationIpsrService.findInnovationDetail(result.id);
+      const ipsr =
+        await this._generalInformationIpsrService.findInnovationDetail(
+          result.id,
+        );
 
       return {
         response: {
           innoPckg: ipsr.response,
           newSubmissions,
-          data
+          data,
         },
         message: 'the result has been submitted successfully',
         status: HttpStatus.OK,
@@ -144,7 +164,11 @@ export class SubmissionsService {
   ) {
     try {
       const result = await this._resultRepository.getResultById(resultId);
-      const role = await this._roleByUserRepository.validationRolePermissions(user.id, result.id, [3, 4, 5]);
+      const role = await this._roleByUserRepository.validationRolePermissions(
+        user.id,
+        result.id,
+        [3, 4, 5],
+      );
       if (!role) {
         throw {
           response: {},
@@ -170,10 +194,12 @@ export class SubmissionsService {
 
       const data = await this._resultRepository.update(result.id, {
         status: 0,
+        status_id: 1,
       });
       const newSubmissions = new Submission();
       newSubmissions.user_id = user.id;
       newSubmissions.status = false;
+      newSubmissions.status_id = 1;
       newSubmissions.comment = createSubmissionDto.comment;
       newSubmissions.results_id = result.id;
       await this._submissionRepository.save(newSubmissions);
@@ -194,7 +220,11 @@ export class SubmissionsService {
   ) {
     try {
       const result = await this._resultRepository.getResultById(resultId);
-      const role = await this._roleByUserRepository.validationRolePermissions(user.id, result.id, [3, 4, 5]);
+      const role = await this._roleByUserRepository.validationRolePermissions(
+        user.id,
+        result.id,
+        [3, 4, 5],
+      );
       if (!role) {
         throw {
           response: {},
@@ -220,20 +250,25 @@ export class SubmissionsService {
 
       const data = await this._resultRepository.update(result.id, {
         status: 0,
+        status_id: 1,
       });
       const newSubmissions = new Submission();
       newSubmissions.user_id = user.id;
       newSubmissions.status = false;
+      newSubmissions.status_id = 1;
       newSubmissions.comment = createSubmissionDto.comment;
       newSubmissions.results_id = result.id;
       await this._submissionRepository.save(newSubmissions);
 
-      const ipsr = await this._generalInformationIpsrService.findInnovationDetail(result.id);
+      const ipsr =
+        await this._generalInformationIpsrService.findInnovationDetail(
+          result.id,
+        );
 
       return {
         response: {
           innoPckg: ipsr.response,
-          data
+          data,
         },
         message: 'the result has been unsubmitted successfully',
         status: HttpStatus.OK,

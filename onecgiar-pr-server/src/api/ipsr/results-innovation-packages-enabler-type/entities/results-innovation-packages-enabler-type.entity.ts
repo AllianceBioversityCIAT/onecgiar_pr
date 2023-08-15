@@ -48,10 +48,4 @@ export class ResultsInnovationPackagesEnablerType extends BaseEntity {
     name: 'result_by_innovation_package_id',
   })
   obj_result_by_innovation_package: Ipsr;
-
-  @ManyToOne(() => Version, (v) => v.id)
-  @JoinColumn({
-    name: 'version_id',
-  })
-  obj_version: Version;
 }

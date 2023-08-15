@@ -66,6 +66,11 @@ import { LogRepository } from '../../connection/dynamodb-logs/dynamodb-logs.repo
 import { ResultActorsModule } from './result-actors/result-actors.module';
 import { ResultBudgetModule } from './result_budget/result_budget.module';
 import { ResultCountriesSubNationalModule } from './result-countries-sub-national/result-countries-sub-national.module';
+import { VersioningService } from '../versioning/versioning.service';
+import { ApplicationModulesRepository } from '../versioning/repositories/application-modules.repository';
+import { VersioningModule } from '../versioning/versioning.module';
+import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
+import { ResultStatusModule } from './result-status/result-status.module';
 
 @Module({
   controllers: [ResultsController],
@@ -114,6 +119,8 @@ import { ResultCountriesSubNationalModule } from './result-countries-sub-nationa
     ResultActorsModule,
     ResultBudgetModule,
     ResultCountriesSubNationalModule,
+    VersioningModule,
+    ResultStatusModule,
   ],
   providers: [
     ResultsService,
@@ -128,6 +135,7 @@ import { ResultCountriesSubNationalModule } from './result-countries-sub-nationa
     ElasticService,
     LogRepository,
     ReturnResponse,
+    ResponseInterceptor,
   ],
   exports: [ResultRepository, JwtMiddleware],
 })

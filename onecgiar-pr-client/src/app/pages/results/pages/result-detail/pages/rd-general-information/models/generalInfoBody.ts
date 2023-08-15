@@ -15,6 +15,9 @@ export class GeneralInfoBody {
   public is_krs: boolean = null;
   public reporting_year: string = null;
   public lead_contact_person: string = null;
+  public nutrition_tag_level_id = null;
+  public environmental_biodiversity_tag_level_id = null;
+  public poverty_tag_level_id = null;
 }
 
 interface institutionsInterface {

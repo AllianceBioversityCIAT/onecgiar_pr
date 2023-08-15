@@ -104,7 +104,8 @@
             <div style="margin-top: 13px;"></div>
             <app-pr-input *ngIf="organizationItem.institution_types_id == 78"
                 description="Specify the other organization type in the text box below" placeholder="Specify other.."
-                type="text" [required]="!!organizationItem?.id" [(ngModel)]="this.organizationItem.other_institution">
+                label="Other organization" type="text" [required]="!!organizationItem?.id"
+                [(ngModel)]="this.organizationItem.other_institution">
             </app-pr-input>
         </div>
         <div>

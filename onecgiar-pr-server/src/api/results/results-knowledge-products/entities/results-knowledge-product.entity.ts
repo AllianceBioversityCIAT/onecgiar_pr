@@ -148,10 +148,6 @@ export class ResultsKnowledgeProduct {
   })
   cgspace_countries: string;
 
-  //versioning field
-  @Column()
-  version_id: number;
-
   //audit fields
   @Column({
     name: 'is_active',
@@ -223,12 +219,6 @@ export class ResultsKnowledgeProduct {
     name: 'results_id',
   })
   result_object: Result;
-
-  @ManyToOne(() => Version, (v) => v.id, { nullable: false })
-  @JoinColumn({
-    name: 'version_id',
-  })
-  version_object: number;
 
   @ManyToOne(() => User, (u) => u.id, { nullable: false })
   @JoinColumn({

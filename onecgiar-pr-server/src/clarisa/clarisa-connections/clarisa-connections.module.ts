@@ -28,10 +28,14 @@ import { ClarisaCentersRepository } from '../clarisa-centers/clarisa-centers.rep
 import { ClarisaPolicyTypeRepository } from '../clarisa-policy-types/clarisa-policy-types.repository';
 import { ClarisaSdgsRepository } from '../clarisa-sdgs/clarisa-sdgs.repository';
 import { ClarisaSdgsTargetsRepository } from '../clarisa-sdgs-targets/clarisa-sdgs-targets.repository';
+import { ClarisaTocPhaseRepository } from '../clarisa-toc-phases/clarisa-toc-phases.repository';
 
 @Module({
   controllers: [ClarisaConnectionsController],
-  providers: [ClarisaConnectionsService, HandlersError, ClarisaTaskService,
+  providers: [
+    ClarisaConnectionsService,
+    HandlersError,
+    ClarisaTaskService,
     ClarisaMeliaStudyTypeRepository,
     ClariasaActionAreaRepository,
     ClarisaInitiativesRepository,
@@ -55,10 +59,9 @@ import { ClarisaSdgsTargetsRepository } from '../clarisa-sdgs-targets/clarisa-sd
     ClarisaCentersRepository,
     ClarisaPolicyTypeRepository,
     ClarisaSdgsRepository,
-    ClarisaSdgsTargetsRepository
+    ClarisaSdgsTargetsRepository,
+    ClarisaTocPhaseRepository,
   ],
-  imports:[
-    HttpModule
-  ]
+  imports: [HttpModule],
 })
 export class ClarisaConnectionsModule {}

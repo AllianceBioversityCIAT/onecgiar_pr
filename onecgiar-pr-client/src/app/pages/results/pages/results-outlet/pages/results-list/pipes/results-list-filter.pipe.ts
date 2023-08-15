@@ -9,7 +9,7 @@ export class ResultsListFilterPipe implements PipeTransform {
   word: string;
   constructor(private resultsListFilterSE: ResultsListFilterService) {}
   transform(resultList: any[], word: string, filterJoin: number): any {
-    return this.filterByResultLevelOptions(this.filterByInitsAndYear(this.filterByText(resultList, word)));
+    return this.filterByPhase(this.filterByResultLevelOptions(this.filterByInitsAndYear(this.filterByText(resultList, word))));
   }
 
   filterByText(resultList: any[], word: string) {
@@ -25,7 +25,7 @@ export class ResultsListFilterPipe implements PipeTransform {
   }
 
   filterByInitsAndYear(resultList: any[]) {
-    const [submitter, reported_year] = this.resultsListFilterSE.filters.general;
+    const [submitter] = this.resultsListFilterSE.filters.general;
     const resultsFilters = [];
 
     for (const option of submitter?.options) if (option?.selected === true && option?.cleanAll !== true) resultsFilters.push(option);
@@ -33,6 +33,21 @@ export class ResultsListFilterPipe implements PipeTransform {
     resultList = resultList.filter(result => {
       //(result);
       for (const filter of resultsFilters) if (filter?.id == result?.submitter_id || (filter?.attr == 'is_legacy' && result.legacy_id)) return true;
+      return false;
+    });
+
+    return resultList;
+  }
+
+  filterByPhase(resultList: any[]) {
+    const [submitter, phase] = this.resultsListFilterSE.filters.general;
+    const resultsFilters = [];
+
+    for (const option of phase?.options) if (option?.selected === true && option?.cleanAll !== true) resultsFilters.push(option);
+    if (!resultsFilters.length) return resultList;
+    resultList = resultList.filter(result => {
+      //(result);
+      for (const filter of resultsFilters) if (filter?.attr == result?.phase_name) return true;
       return false;
     });
 

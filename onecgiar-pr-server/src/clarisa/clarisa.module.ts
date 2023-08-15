@@ -37,6 +37,7 @@ import { ClarisaSdgsTargetsModule } from './clarisa-sdgs-targets/clarisa-sdgs-ta
 import { ClarisaSecondOrderAdministrativeDivisionModule } from './clarisa-second-order-administrative-division/clarisa-second-order-administrative-division.module';
 import { ClarisaFirstOrderAdministrativeDivisionModule } from './clarisa-first-order-administrative-division/clarisa-first-order-administrative-division.module';
 import { ClarisaInnovationUseLevelsModule } from './clarisa-innovation-use-levels/clarisa-innovation-use-levels.module';
+import { ClarisaTocPhasesModule } from './clarisa-toc-phases/clarisa-toc-phases.module';
 
 @Module({
   imports: [
@@ -70,8 +71,8 @@ import { ClarisaInnovationUseLevelsModule } from './clarisa-innovation-use-level
     ClarisaSdgsTargetsModule,
     ClarisaSecondOrderAdministrativeDivisionModule,
     ClarisaFirstOrderAdministrativeDivisionModule,
-    ClarisaInnovationUseLevelsModule
-    
+    ClarisaInnovationUseLevelsModule,
+    ClarisaTocPhasesModule,
   ],
   controllers: [],
   providers: [ClarisaCronsService, ClarisaTaskService, TocResultsRepository],
@@ -98,7 +99,7 @@ import { ClarisaInnovationUseLevelsModule } from './clarisa-innovation-use-level
     ClarisaCronsService,
     ClarisaTaskService,
     ClarisaSdgsModule,
-    ClarisaSdgsTargetsModule
+    ClarisaSdgsTargetsModule,
   ],
 })
 export class ClarisaModule {}

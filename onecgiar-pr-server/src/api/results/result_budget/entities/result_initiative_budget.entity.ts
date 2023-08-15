@@ -58,10 +58,4 @@ export class ResultInitiativeBudget extends BaseEntity {
     name: 'result_initiative_id',
   })
   obj_result_initiative: ResultsByInititiative;
-
-  @ManyToOne(() => Version, (v) => v.id)
-  @JoinColumn({
-    name: 'version_id',
-  })
-  obj_version: Version;
 }

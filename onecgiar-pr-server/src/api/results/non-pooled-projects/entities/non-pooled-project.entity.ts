@@ -125,19 +125,6 @@ export class NonPooledProject {
   last_updated_date!: Date;
 
   @Column({
-    name: 'version_id',
-    type: 'bigint',
-    nullable: true,
-  })
-  version_id: number;
-
-  @ManyToOne(() => Version, (v) => v.non_pooled_project)
-  @JoinColumn({
-    name: 'version_id',
-  })
-  obj_version: Version;
-
-  @Column({
     name: 'non_pooled_project_type_id',
     type: 'bigint',
     nullable: true,
