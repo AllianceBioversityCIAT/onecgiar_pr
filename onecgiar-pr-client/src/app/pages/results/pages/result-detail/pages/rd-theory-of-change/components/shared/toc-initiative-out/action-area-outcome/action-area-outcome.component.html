@@ -1,0 +1,54 @@
+<app-pr-field-header
+    label="Mapping to Action Area outcomes" ></app-pr-field-header>
+
+    <div>Select an Action Area to filter the list of targets:</div>
+
+    <div class="impact_areas_circles">
+        <div class="iaitem" *ngFor="let impactAreaItem of this.impactAreasData">
+            <div class="impact_area_circle_item" [style.background]="impactAreaItem?.color"
+                [ngClass]="{'no_selected': !impactAreaItem?.selected}" (click)="selectImpactArea(impactAreaItem)">
+                <img class="impact_area_image" [src]="'assets/action_areas/'+impactAreaItem?.imageRoute+'.png'" alt=""
+                    srcset="">
+            </div>
+            <div class="name" [ngClass]="{'name_no_selected': !impactAreaItem?.selected}">{{impactAreaItem?.name}}</div>
+        </div>
+    </div>
+<br><br>
+<div *ngIf="this.actionAreasOutcomesList != null">
+    <div class="dropdown-50p" *ngIf="this.currentImpactAreaID == 1">
+        <app-pr-multi-select [options]="actionAreasOutcomesList?.systemTrasnformation" optionLabel="full_name"
+        optionValue="action_area_outcome_id" selectedOptionLabel="outcomeStatement"
+            [placeholder]="'Select Systems Transformation outcomes '"
+            [(ngModel)]="this.body">
+        </app-pr-multi-select>
+    </div>
+    <div class="dropdown-50p" *ngIf="this.currentImpactAreaID == 2">
+        <app-pr-multi-select [options]="actionAreasOutcomesList?.resilientAgrifoodSystems" optionLabel="full_name"
+        optionValue="action_area_outcome_id" selectedOptionLabel="outcomeStatement"
+            [placeholder]="'Select Resilient Agrifood Systems outcomes '"
+            [(ngModel)]="this.body">
+        </app-pr-multi-select>
+    </div>
+    <div class="dropdown-50p" *ngIf="this.currentImpactAreaID == 3">
+        <app-pr-multi-select [options]="actionAreasOutcomesList?.geneticInnovation" optionLabel="full_name"
+        optionValue="action_area_outcome_id" selectedOptionLabel="outcomeStatement"
+            [placeholder]="'Select Genetic Innovation outcomes'"
+            [(ngModel)]="this.body">
+        </app-pr-multi-select>
+    </div>
+</div>
+<div class="selected_container custom_scroll dropdown-50p">
+    <br>
+    <app-pr-field-header [description]="'All Action Area outcome(s)  selected('+this.body.length+'):'">
+    </app-pr-field-header>
+    <div class="chips_container">
+        <div class="pr_chip_selected" *ngFor="let option of this.body; let i=index"
+            [ngClass]="{'is_active_false': false}">
+            <div class="name" [innerHtml]="option.full_name"></div><i *ngIf="!this.api.rolesSE.readOnly"
+                class="material-icons-round" (click)="removeOption(option)">remove_circle
+            </i>
+        </div>
+    </div>
+</div>
+
+<div class="step_divider"></div>
