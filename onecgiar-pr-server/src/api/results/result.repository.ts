@@ -1866,4 +1866,68 @@ left join clarisa_countries cc3
       });
     }
   }
+
+  async getResultAgainstToc(resultCodesArray: number[]) {
+    const resultCodes = (resultCodesArray ?? []).join(',');
+    const query = `
+    SELECT
+        r.result_code AS 'Result Code',
+        r.title AS 'Title',
+        (
+            SELECT
+                ci.official_code
+            FROM
+                clarisa_initiatives ci
+            WHERE
+                ci.id = rbi.inititiative_id
+        ) AS 'Primary / Contributing initiative official code',
+        (
+            SELECT
+                ci.name
+            FROM
+                clarisa_initiatives ci
+            WHERE
+                ci.id = rbi.inititiative_id
+        ) AS 'Primary / Contributing initiative name',
+        CONCAT(wp.acronym, ' - ', tr.result_title) AS 'ToC element',
+        tri.indicator_description AS 'Description',
+        DATE(tri.target_date) AS 'Target date',
+        tri.unit_messurament AS 'Unit of measure',
+        tri.target_value AS 'Target value',
+        IFNULL(rtri.indicator_contributing, 'Not provided') AS 'Target contribution from the result'
+    FROM
+        result r
+        LEFT JOIN results_toc_result rtr ON rtr.results_id = r.id
+        LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
+        LEFT JOIN results_toc_result_indicators rtri ON rtri.results_toc_results_id = rtr.result_toc_result_id
+        LEFT JOIN Integration_information.toc_results tr ON tr.id = rtr.toc_result_id
+        LEFT JOIN Integration_information.work_packages wp ON wp.id = tr.work_packages_id
+        LEFT JOIN Integration_information.toc_results_indicators tri ON tr.id = tri.toc_results_id AND tri.toc_result_indicator_id = rtri.toc_results_indicator_id COLLATE utf8mb3_general_ci
+    WHERE
+        r.result_code ${resultCodes.length ? `in (${resultCodes})`: '= 0' }
+        AND rbi.is_active = 1
+        AND rtr.is_active = 1
+        AND rtri.is_active > 0
+        AND rbi.inititiative_id = rtr.initiative_id
+        AND tr.phase = (
+              select
+                  v.toc_pahse_id
+              from
+                  version v
+              where
+                  r.version_id = v.id
+          );
+    `;
+
+    try {
+      const results = await this.query(query);
+      return results;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
 }

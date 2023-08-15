@@ -58,7 +58,7 @@
 
   <!-- TODO #2  Environment and/or biodiversity tag -->
   <div class="block_container">
-    <!-- <app-alert-status [description]="genderInformation()"> </app-alert-status> -->
+    <app-alert-status [description]="environmentInformation()"> </app-alert-status>
     <div class="radio_grid">
       <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
         label="Environment and/or biodiversity tag"
@@ -70,7 +70,7 @@
 
   <!-- TODO #3  Poverty tag -->
   <div class="block_container">
-    <!-- <app-alert-status [description]="genderInformation()"> </app-alert-status> -->
+    <app-alert-status [description]="povertyInformation()"> </app-alert-status>
     <div class="radio_grid">
       <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
         label="Poverty tag" [(ngModel)]="this.generalInfoBody.poverty_tag_level_id"> </app-pr-radio-button>

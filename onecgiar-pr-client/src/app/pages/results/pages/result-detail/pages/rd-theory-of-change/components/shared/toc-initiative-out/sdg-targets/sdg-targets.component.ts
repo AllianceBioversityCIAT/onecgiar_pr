@@ -11,6 +11,7 @@ export class SdgTargetsComponent implements OnInit {
 
   currentsdgID = null;
   @Input() body = [];
+  @Input() sdgRequid = false;
   sdgTargetLis = [];
   constructor(public api: ApiService) {}
   ngOnInit(): void {

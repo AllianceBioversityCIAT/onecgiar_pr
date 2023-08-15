@@ -44,4 +44,12 @@ export class TargetIndicatorComponent implements OnInit {
     return statusIndicator;
     }
 
+    validarNumero(e) {
+      if (e.key === "-")
+      e.preventDefault();
+   }
+
+   changesValue(){
+    this.initiative.indicator_contributing = null;
+   }
 }

@@ -36,6 +36,7 @@ import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser
 import { ResultsTocResultIndicatorsRepository } from '../results/results-toc-results/results-toc-results-indicators.repository';
 import { ResultsTocImpactAreaTargetRepository } from '../results/results-toc-results/result-toc-impact-area-repository';
 import { ResultsTocSdgTargetRepository } from '../results/results-toc-results/result-toc-sdg-target-repository';
+import { ResultsSdgTargetRepository } from '../results/results-toc-results/results-sdg-targets.respository';
 import { ResultStatusRepository } from '../results/result-status/result-status.repository';
 
 @Module({
@@ -75,6 +76,7 @@ import { ResultStatusRepository } from '../results/result-status/result-status.r
     ResultsTocResultIndicatorsRepository,
     ResultsTocSdgTargetRepository,
     ResultsTocImpactAreaTargetRepository,
+    ResultsSdgTargetRepository,
     ResultStatusRepository,
   ],
   exports: [

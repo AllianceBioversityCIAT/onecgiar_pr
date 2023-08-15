@@ -10,6 +10,7 @@ import { ApiService } from 'src/app/shared/services/api/api.service';
 export class ImpactAreaTargetsComponent implements OnInit {
 
   @Input() body = [];
+  @Input() impactAreaRequid = false;
   allImpactAreaIndicators = [];
   currentImpactAreaID = null;
   impactAreasData = [

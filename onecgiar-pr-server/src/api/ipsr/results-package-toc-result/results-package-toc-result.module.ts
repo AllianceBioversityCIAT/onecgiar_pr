@@ -23,6 +23,7 @@ import { VersioningModule } from '../../versioning/versioning.module';
 import { ResultsTocResultIndicatorsRepository } from 'src/api/results/results-toc-results/results-toc-results-indicators.repository';
 import { ResultsTocSdgTargetRepository } from 'src/api/results/results-toc-results/result-toc-sdg-target-repository';
 import { ResultsTocImpactAreaTargetRepository } from 'src/api/results/results-toc-results/result-toc-impact-area-repository';
+import { ResultsSdgTargetRepository } from 'src/api/results/results-toc-results/results-sdg-targets.respository';
 
 @Module({
   controllers: [ResultsPackageTocResultController],
@@ -47,7 +48,8 @@ import { ResultsTocImpactAreaTargetRepository } from 'src/api/results/results-to
     ReturnResponse,
     ResultsTocResultIndicatorsRepository,
     ResultsTocSdgTargetRepository,
-    ResultsTocImpactAreaTargetRepository
+    ResultsTocImpactAreaTargetRepository,
+    ResultsSdgTargetRepository,
   ],
   exports: [],
 })
