@@ -6,10 +6,11 @@ import { OutcomeLevelFilterPipe } from '../../../outcome-level-filter.pipe';
 import { TargetIndicatorComponent } from './target-indicator/target-indicator.component';
 import { ImpactAreaTargetsComponent } from './impact-area-targets/impact-area-targets.component';
 import { SdgTargetsComponent } from './sdg-targets/sdg-targets.component';
+import { FeedbackValidationDirectiveModule } from 'src/app/shared/directives/feedback-validation-directive.module';
 
 @NgModule({
   declarations: [TocInitiativeOutComponent, OutcomeLevelFilterPipe, TargetIndicatorComponent, ImpactAreaTargetsComponent, SdgTargetsComponent],
   exports: [TocInitiativeOutComponent, ImpactAreaTargetsComponent, SdgTargetsComponent],
-  imports: [CommonModule, CustomFieldsModule]
+  imports: [CommonModule, CustomFieldsModule, FeedbackValidationDirectiveModule]
 })
 export class TocInitiativeOutModule {}

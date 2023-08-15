@@ -31,7 +31,8 @@
         <div class="progress">
             <h4>Progress</h4>
             <div class="content-progress">
-                <div><h4>Target contribution from this result:</h4></div><div style=" margin-top: -10px;"><input type="number" class="in-progress" [disabled]="initiative.is_not_aplicable" [(ngModel)]="initiative.indicator_contributing" min="0" onkeypress="return event.charCode >= 48"></div>
+                <div appFeedbackValidation labelText="Target contribution" [isComplete]="initiative.is_not_aplicable || initiative.indicator_contributing != null"></div>
+                <div><h4>Target contribution from this result:<span style="color: red;">*</span></h4></div><div style=" margin-top: -10px;"><input type="number" class="in-progress" [disabled]="initiative.is_not_aplicable" [(ngModel)]="initiative.indicator_contributing" min="0" onkeypress="return event.charCode >= 48"></div>
             </div>
         </div>
         <div class="total">
@@ -57,7 +58,8 @@
         <div class="progress">
             <h4>Progress</h4>
             <div class="content-progress">
-                <div><h4>Target contribution from this result:</h4></div><div style="margin-top: 8px;"><input type="text" class="in-progress" [disabled]="initiative.is_not_aplicable" [(ngModel)]="initiative.indicator_contributing"></div>
+                <div appFeedbackValidation labelText="Target contribution" [isComplete]="initiative.is_not_aplicable || initiative.indicator_contributing != null"></div>
+                <div><h4>Target contribution from this result:<span style="color: red;">*</span></h4></div><div style="margin-top: 8px;"><input type="text" class="in-progress" [disabled]="initiative.is_not_aplicable" [(ngModel)]="initiative.indicator_contributing"></div>
             </div>
         </div>
     </div>
