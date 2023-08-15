@@ -47,7 +47,8 @@
   <!-- TODO DAC Fields  -->
   <!-- TODO #1  Nutrition tag -->
   <div class="block_container">
-    <!-- <app-alert-status [description]="genderInformation()"> </app-alert-status> -->
+    <app-alert-status [description]="nutritionInformation()">
+    </app-alert-status>
     <div class="radio_grid">
       <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
         label="Nutrition tag" [(ngModel)]="this.generalInfoBody.nutrition_tag_level_id"> </app-pr-radio-button>
