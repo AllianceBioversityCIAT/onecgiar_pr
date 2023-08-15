@@ -38,6 +38,7 @@ import { ResultsKnowledgeProductMetadataRepository } from '../results/results-kn
 import { ResultsKnowledgeProductInstitutionRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-institution.repository';
 import { validationAttr } from '../../shared/utils/validation.utils';
 import {
+  ActiveEnum,
   AppModuleIdEnum,
   ModuleTypeEnum,
   StatusPhaseEnum,
@@ -422,9 +423,13 @@ export class VersioningService {
     }
   }
 
-  async find(module_type: ModuleTypeEnum, status: StatusPhaseEnum) {
+  async find(
+    module_type: ModuleTypeEnum,
+    status: StatusPhaseEnum,
+    active: ActiveEnum = ActiveEnum.ACTIVE,
+  ) {
     try {
-      let where: any = { is_active: true };
+      let where: any = {};
 
       switch (module_type) {
         case ModuleTypeEnum.REPORTING:
@@ -432,6 +437,15 @@ export class VersioningService {
           break;
         case ModuleTypeEnum.IPSR:
           where = { ...where, app_module_id: 2 };
+          break;
+      }
+
+      switch (active) {
+        case ActiveEnum.ACTIVE:
+          where = { ...where, is_active: true };
+          break;
+        case ActiveEnum.INACTIVE:
+          where = { ...where, is_active: false };
           break;
       }
 
@@ -511,6 +525,24 @@ export class VersioningService {
       return this._returnResponse.format({
         message: `Phase ${res.phase_name} deleted successfully`,
         response: { ...res, is_active: false },
+        statusCode: HttpStatus.OK,
+      });
+    } catch (error) {
+      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+    }
+  }
+
+  async getAllPhases() {
+    try {
+      const res = await this._versionRepository.find({
+        relations: {
+          obj_app_module: true,
+        },
+      });
+
+      return this._returnResponse.format({
+        message: `Phase Retrieved Successfully`,
+        response: res,
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
