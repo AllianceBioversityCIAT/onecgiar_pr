@@ -1080,6 +1080,36 @@ export class ResultsTocResultRepository
     }
   }
 
+
+  async getActionAreaOutcome(resultId, toc_result_id, init){
+    try {
+      const queryTocIndicators = `
+      select * 
+    from Integration_information.clarisa_action_areas_outcomes_indicators caao  
+      join clarisa_action_area caa on caa.id = caao.action_area_id  
+    where caao.id  in (
+          SELECT taaroi.action_areas_outcomes_indicators_id  from  Integration_information.toc_results tr 
+          join Integration_information.toc_results_action_area_results traar   on traar.toc_results_id  = tr.id
+          join Integration_information.toc_action_area_results taar   on taar.id = traar.toc_action_area_results_id  
+          join Integration_information.toc_action_area_results_outcomes_indicators taaroi    on taaroi.toc_action_area_results_id  = taar.id 
+          where tr.id  = ? and tr.phase = (select v.toc_pahse_id  
+                                      from result r 	
+                                      join version v on r.version_id = v.id  
+                                        where r.id  = ?)
+    )
+ `;
+ const impactAreaTarget = await this.query(
+  `select * from results_toc_result where results_id = ${resultId} and is_active = true and initiative_id = ${init};`,
+);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsTocResultRepository.name,
+        error: `updateResultByInitiative ${error}`,
+        debug: true,
+      });
+    }
+  }
+
   async saveImpact(id_result_toc_result, impactAreaTargets, result_id, init) {
     try {
       await this._resultsTocImpactAreaTargetRepository.update(
