@@ -33,8 +33,13 @@
     <!-- Todo New field -->
 
     <app-anticipated-innovation-user></app-anticipated-innovation-user>
-    <app-gesi-innovation-assessment></app-gesi-innovation-assessment>
-    <app-scale-impact-analysis></app-scale-impact-analysis>
+    <app-pr-field-header label="Responsible innovation and scaling" [required]="false"></app-pr-field-header>
+
+    <div class="paddingLeft20">
+        <app-gesi-innovation-assessment></app-gesi-innovation-assessment>
+        <app-scale-impact-analysis></app-scale-impact-analysis>
+    </div>
+
     <app-intellectual-property-rights></app-intellectual-property-rights>
     <app-innovation-team-diversity></app-innovation-team-diversity>
     <app-estimates></app-estimates>

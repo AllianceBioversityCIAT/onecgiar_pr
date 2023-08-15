@@ -1,1 +1,44 @@
-<p>innovation-links works!</p>
+<app-pr-field-header
+    label="Innovation visuals - Provide 3-5 URLs to key images, photos or pictures that best represent or describe the innovation"></app-pr-field-header>
+
+<div class="linkItem" *ngFor="let result of this.linkList1; let i=index">
+    <div class="index">{{i+1}}</div>
+    <div>
+        <div class="link">
+            <app-pr-input [required]="false" placeholder="Add link"></app-pr-input>
+        </div>
+    </div>
+    <div class="icon">
+        <i class="material-icons-round" (click)="deleteLink(i)">delete</i>
+    </div>
+</div>
+
+<app-no-data-text
+    *ngIf="!this.linkList1.length && !this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"
+    title="No link to picture added"></app-no-data-text>
+<br>
+<app-add-button name="Add another link to picture" (clickEvent)="addLink()"
+    *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status">
+</app-add-button>
+
+<br><br><br>
+
+<div class="linkItem" *ngFor="let result of this.linkList2; let i=index">
+    <div class="index">{{i+1}}</div>
+    <div>
+        <div class="link">
+            <app-pr-input [required]="false" placeholder="Add link"></app-pr-input>
+        </div>
+    </div>
+    <div class="icon">
+        <i class="material-icons-round" (click)="deleteLink(i)">delete</i>
+    </div>
+</div>
+
+<app-no-data-text
+    *ngIf="!this.linkList2.length && !this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"
+    title="No link to reference material added"></app-no-data-text>
+<br>
+<app-add-button name="Add another link to reference material" (clickEvent)="addLink()"
+    *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status">
+</app-add-button>
