@@ -1,6 +1,7 @@
 <app-pr-field-header
-    label="Select an SDG to filter SDG Targets" [required]="sdgRequid"></app-pr-field-header>
+    label="Mapping to SDG targets" [required]="sdgRequid"></app-pr-field-header>
 
+    <div>Select an SDG to filter SDG Targets:</div>
 <div class="sdg_targets">
     <div class="sdg_item" *ngFor="let sdgItem of this.sdgTargetLis" (click)="onSelectSDG(sdgItem)">
         <img [src]="'assets/sdg/'+sdgItem?.sdgId+'.png'" alt="" srcset=""
