@@ -28,6 +28,7 @@ import { SubmissionsModule } from './submissions/submissions.module';
 import { AdminPanelModule } from './admin-panel/admin-panel.module';
 import { ResultActorsModule } from './result-actors/result-actors.module';
 import { YearsModule } from './years/years.module';
+import { ResultQuestionsModule } from './result-questions/result-questions.module';
 
 export const ResultsRoutes: Routes = [
   {
@@ -145,5 +146,9 @@ export const ResultsRoutes: Routes = [
   {
     path: 'years',
     module: YearsModule,
+  },
+  {
+    path: 'questions',
+    module: ResultQuestionsModule
   }
 ];

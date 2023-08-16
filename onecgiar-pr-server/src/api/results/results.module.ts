@@ -73,6 +73,7 @@ import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.inter
 import { ResultStatusModule } from './result-status/result-status.module';
 import { ResultQuestionsService } from './result-questions/result-questions.service';
 import { ResultQuestionsModule } from './result-questions/result-questions.module';
+import { ResultQuestionsRepository } from './result-questions/repository/result-questions.repository';
 
 @Module({
   controllers: [ResultsController],
@@ -140,6 +141,7 @@ import { ResultQuestionsModule } from './result-questions/result-questions.modul
     ReturnResponse,
     ResponseInterceptor,
     ResultQuestionsService,
+    ResultQuestionsRepository
   ],
   exports: [ResultRepository, JwtMiddleware],
 })
