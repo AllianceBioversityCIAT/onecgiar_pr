@@ -1,12 +1,23 @@
-import { Body, Controller, HttpException, Post, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpException,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { ElasticService } from './elastic.service';
 import rawbody from 'raw-body';
+import { ValidRoleGuard } from '../shared/guards/valid-role.guard';
+import { RoleEnum, RoleTypeEnum } from '../shared/constants/role-type.enum';
+import { Roles } from '../shared/decorators/roles.decorator';
 
 @Controller('elastic')
 export class ElasticController {
   constructor(private readonly _elasticService: ElasticService) {}
 
   @Post('send')
+  @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
   async sendBulkOperationToElastic(@Body() json: string, @Req() request) {
     let bodyString = '';
     if (request.readable) {
@@ -24,6 +35,8 @@ export class ElasticController {
   }
 
   @Post('reset')
+  @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
+  @UseGuards(ValidRoleGuard)
   async resetElasticData() {
     const { message, response, status } =
       await this._elasticService.resetElasticData();
