@@ -15,6 +15,6 @@ export class ResultQuestionType {
   })
   type_description: string;
 
-  @OneToMany(() => ResultQuestion, (rq) => rq.obj_result_question_type)
+  @OneToMany(() => ResultQuestion, (rq) => rq.obj_result_type)
   obj_result_question_type: ResultQuestion[];
 }

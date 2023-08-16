@@ -7,9 +7,9 @@ import {
   OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { ResultQuestionType } from './result-question-types.entity';
 import { ResultType } from '../../result_types/entities/result_type.entity';
 import { ResultAnswer } from './result-answers.entity';
+import { ResultQuestionType } from './result-question-types.entity';
 
 @Entity('result_questions')
 export class ResultQuestion {
@@ -42,6 +42,7 @@ export class ResultQuestion {
   @Column({
     name: 'parent_question_id',
     type: 'bigint',
+    nullable: true,
   })
   parent_question_id: number;
 
@@ -65,15 +66,9 @@ export class ResultQuestion {
   obj_result_type: ResultQuestionType;
 
   // Relation with the same entity primary key
-  @OneToOne(() => ResultQuestion, { onDelete: 'CASCADE' })
+  @ManyToOne(() => ResultQuestion, (ciet) => ciet.result_question_id)
   @JoinColumn({ name: 'parent_question_id' })
-  obj_parent_question_id: ResultQuestion;
-
-  @ManyToOne(() => ResultQuestionType, (rqt) => rqt.obj_result_question_type)
-  @JoinColumn({
-    name: 'question_type_id',
-  })
-  obj_result_question_type: ResultQuestionType;
+  obj_parent_question_id: ResultQuestion[];
 
   @OneToMany(() => ResultAnswer, (rq) => rq.obj_result_question)
   obj_result_question: ResultAnswer[];
