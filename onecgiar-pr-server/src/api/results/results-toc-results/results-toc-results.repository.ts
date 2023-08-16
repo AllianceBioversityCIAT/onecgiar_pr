@@ -1551,4 +1551,80 @@ if (sdgToc != null && sdgToc.length != 0) {
       });
     }
   }
+
+  async getActionAreaByResultid(result_id, init){
+    try {
+      const actionArea = await this.query(
+        `select * from results_toc_result where results_id = ${result_id} and is_active = true and initiative_id = ${init};`,
+      );
+    
+     if(actionArea != null && actionArea[0]?.result_toc_result_id != null){
+      const querySDGTargetActive = `
+      select caa.id as 'actionAreaId', caao.id as 'action_area_outcome_id', caao.outcome_smo_code as 'outcomeSMOcode', caao.outcome_statement  as 'outcomeStatement' 
+        from Integration_information.clarisa_action_areas_outcomes_indicators caao  
+          join clarisa_action_area caa on caa.id = caao.action_area_id  
+        where caao.id in (select action_area_outcome from result_toc_action_area where result_toc_result_id = ? and is_active > 0)
+      `;
+          const resultTocResult: any[] = await this.query(querySDGTargetActive, [actionArea[0]?.result_toc_result_id]);
+    
+          return resultTocResult;
+     }else{
+        return [];
+     }
+
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsTocResultRepository.name,
+        error: `updateResultByInitiative ${error}`,
+        debug: true,
+      });
+    }
+  }
+
+  async saveActionAreaOutcomeResult(resultId: any, actionArea: any[],init:any) {
+    try {
+      const actionAreas = await this.query(
+        `select * from results_toc_result where results_id = ${resultId} and is_active = true and initiative_id = ${init};`,
+      );
+      if(actionAreas != null && actionAreas[0]?.result_toc_result_id != null){
+        await this._resultActionAreaRepository.update(
+          { result_toc_result_id: actionAreas[0]?.result_toc_result_id },
+          { is_active: false })
+    
+        if (actionArea.length != 0) {
+          for (let impact of actionArea) {
+            let targetIndicators =
+              await this._resultActionAreaRepository.findOne({
+                where: {
+                  result_toc_result_id: actionAreas[0]?.result_toc_result_id,
+                  action_area_outcome: impact.action_area_outcome_id
+                },
+              });
+    
+            if (targetIndicators != null) {
+              targetIndicators.is_active = true;
+              await this._resultActionAreaRepository.update(
+                {
+                  result_toc_action_area:
+                    targetIndicators.result_toc_action_area,
+                },
+                targetIndicators,
+              );
+            } else {
+              await this._resultActionAreaRepository.save({
+                result_toc_result_id: actionAreas[0]?.result_toc_result_id,
+                action_area_outcome: impact.action_area_outcome_id,
+              });
+            }
+          }
+        }
+      }
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsTocResultRepository.name,
+        error: `updateResultByInitiative ${error}`,
+        debug: true,
+      });
+    }
+  }
 }

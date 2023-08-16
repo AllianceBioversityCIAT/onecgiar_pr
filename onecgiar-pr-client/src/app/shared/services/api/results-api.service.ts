@@ -315,6 +315,10 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}toc/get/indicator/${id_toc}/result/${this.currentResultId}/initiative/${init}`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
+  GET_resultActionArea(resultId, initiative) {
+    return this.http.get<any>(`${this.apiBaseUrl}toc/get/result/${resultId}/initiative/${initiative}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+  }
+
   PATCH_innovationUse(body) {
     return this.http.patch<any>(`${this.apiBaseUrl}summary/innovation-use/create/result/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }

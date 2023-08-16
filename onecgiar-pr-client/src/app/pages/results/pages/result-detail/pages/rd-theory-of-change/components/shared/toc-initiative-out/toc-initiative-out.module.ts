@@ -11,7 +11,7 @@ import { ActionAreaOutcomeComponent } from './action-area-outcome/action-area-ou
 
 @NgModule({
   declarations: [TocInitiativeOutComponent, OutcomeLevelFilterPipe, TargetIndicatorComponent, ImpactAreaTargetsComponent, SdgTargetsComponent, ActionAreaOutcomeComponent],
-  exports: [TocInitiativeOutComponent, ImpactAreaTargetsComponent, SdgTargetsComponent],
+  exports: [TocInitiativeOutComponent, ImpactAreaTargetsComponent, SdgTargetsComponent, ActionAreaOutcomeComponent],
   imports: [CommonModule, CustomFieldsModule, FeedbackValidationDirectiveModule]
 })
 export class TocInitiativeOutModule {}

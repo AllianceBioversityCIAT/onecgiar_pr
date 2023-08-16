@@ -10,7 +10,8 @@ export class TheoryOfChangeBody {
   contributing_and_primary_initiative: any;
   bodyNewTheoryOfChanges:any[];
   impactsTarge:any[];
-  sdgTargets:any[]
+  sdgTargets:any[];
+  bodyActionArea:any[];
 }
 interface ResultTocImpactsInterface {
   id: number;

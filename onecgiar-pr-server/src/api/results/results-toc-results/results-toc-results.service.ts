@@ -64,6 +64,7 @@ export class ResultsTocResultsService {
         bodyNewTheoryOfChanges,
         impactsTarge,
         sdgTargets,
+        bodyActionArea,
       } = createResultsTocResultDto;
       const version = await this._versionsService.findBaseVersion();
       const result = await this._resultRepository.getResultById(result_id);
@@ -465,6 +466,27 @@ export class ResultsTocResultsService {
             bodyNewTheoryOfChanges,
           );
         }
+
+        if (result.result_level_id == 2) {
+          for(let resultAction of bodyActionArea){
+            await this._resultsImpactAreaTargetRepository.saveImpactAreaTarget(
+              result_id,
+              resultAction?.consImpactTarget,
+              user.id,
+            );
+            await this._resultsTocResultRepository.saveSdgTargets(
+              result_id,
+              resultAction?.consSdgTargets,
+            );
+
+            await this._resultsTocResultRepository.saveActionAreaOutcomeResult(
+              result_id, 
+              resultAction?.action,
+              resultAction?.init,
+            )
+          }
+          
+        }
       }
 
       return {
@@ -706,6 +728,32 @@ export class ResultsTocResultsService {
         message: 'The toc data indicator is successfully',
         status: HttpStatus.OK,
       };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async getActionAreaOutcomeByResultTocId(resultId, init){
+    try {
+      const consImpactTarget =
+      await this._resultsImpactAreaTargetRepository.getResultImpactAreaTargetByResultId(
+        resultId,
+      );
+      const consSdgTargets =
+      await this._resultsTocResultRepository.getSdgTargetsByResultId(
+        resultId,
+      );
+
+      const action = await this._resultsTocResultRepository.getActionAreaByResultid(resultId, init);
+
+      return {
+        response: {
+          action,
+          consImpactTarget,
+          consSdgTargets
+        }, message: 'The toc data indicator is successfully',
+        status: HttpStatus.OK,
+      }
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }

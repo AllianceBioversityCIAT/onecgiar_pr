@@ -11,6 +11,7 @@ export class RdTheoryOfChangesServicesService {
   isSdg: boolean;
   isImpactArea: boolean;
   body:intefacesTheoryOfChanges[]= [];
+  resultActionArea: any = [];
   constructor() { }
 }
 
