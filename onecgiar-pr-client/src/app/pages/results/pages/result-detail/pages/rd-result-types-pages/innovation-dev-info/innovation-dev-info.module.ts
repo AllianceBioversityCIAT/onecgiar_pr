@@ -11,9 +11,10 @@ import { InnovationTeamDiversityComponent } from './components/innovation-team-d
 import { AnticipatedInnovationUserComponent } from './components/anticipated-innovation-user/anticipated-innovation-user.component';
 import { EstimatesComponent } from './components/estimates/estimates.component';
 import { InnovationLinksComponent } from './components/innovation-links/innovation-links.component';
+import { YmzListStructureItemModule } from '../../../../../../../shared/directives/ymz-list-structure-item/ymz-list-structure-item.module';
 
 @NgModule({
   declarations: [InnovationDevInfoComponent, GesiInnovationAssessmentComponent, ScaleImpactAnalysisComponent, IntellectualPropertyRightsComponent, InnovationTeamDiversityComponent, AnticipatedInnovationUserComponent, EstimatesComponent, InnovationLinksComponent],
-  imports: [CommonModule, InnovationDevInfoRoutingModule, CustomFieldsModule]
+  imports: [CommonModule, InnovationDevInfoRoutingModule, CustomFieldsModule, YmzListStructureItemModule]
 })
 export class InnovationDevInfoModule {}
