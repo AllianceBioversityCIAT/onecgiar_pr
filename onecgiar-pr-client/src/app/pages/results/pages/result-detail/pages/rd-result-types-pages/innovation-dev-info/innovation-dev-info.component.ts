@@ -11,19 +11,24 @@ import { ApiService } from '../../../../../../../shared/services/api/api.service
 export class InnovationDevInfoComponent implements OnInit {
   innovationDevInfoBody = new InnovationDevInfoBody();
   range = 5;
+  sectionLoaded = false;
   constructor(private api: ApiService, public innovationControlListSE: InnovationControlListService) {}
 
   ngOnInit(): void {
     this.getSectionInformation();
   }
   getSectionInformation() {
+    this.sectionLoaded = false;
     this.api.resultsSE.GET_innovationDev().subscribe(
       ({ response }) => {
         //(response);
         this.innovationDevInfoBody = response;
+        console.log(response);
+        this.sectionLoaded = true;
       },
       err => {
         console.error(err);
+        this.sectionLoaded = true;
       }
     );
   }

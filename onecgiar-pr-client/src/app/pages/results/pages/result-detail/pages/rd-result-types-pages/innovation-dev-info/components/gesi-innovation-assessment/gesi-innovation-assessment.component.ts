@@ -1,4 +1,5 @@
 import { Component, Input, OnInit } from '@angular/core';
+import { InnovationDevInfoBody } from '../../model/innovationDevInfoBody';
 
 @Component({
   selector: 'app-gesi-innovation-assessment',
@@ -6,7 +7,7 @@ import { Component, Input, OnInit } from '@angular/core';
   styleUrls: ['./gesi-innovation-assessment.component.scss']
 })
 export class GesiInnovationAssessmentComponent implements OnInit {
-  @Input() body: any;
+  @Input() body = new InnovationDevInfoBody();
   example1 = null;
   list = [
     {

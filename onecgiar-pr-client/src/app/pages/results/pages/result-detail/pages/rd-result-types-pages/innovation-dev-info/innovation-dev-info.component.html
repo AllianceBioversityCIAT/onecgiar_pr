@@ -32,18 +32,21 @@
     </div>
     <!-- Todo New field -->
 
-    <app-anticipated-innovation-user></app-anticipated-innovation-user>
-    <app-pr-field-header label="Responsible innovation and scaling" [required]="false"></app-pr-field-header>
+    <div *ngIf="sectionLoaded">
+        <app-anticipated-innovation-user [body]="innovationDevInfoBody"></app-anticipated-innovation-user>
+        <app-pr-field-header label="Responsible innovation and scaling" [required]="false"></app-pr-field-header>
 
-    <div class="paddingLeft20">
-        <app-gesi-innovation-assessment></app-gesi-innovation-assessment>
-        <app-scale-impact-analysis></app-scale-impact-analysis>
+        <div class="paddingLeft20">
+            <app-gesi-innovation-assessment [body]="innovationDevInfoBody"></app-gesi-innovation-assessment>
+            <app-scale-impact-analysis [body]="innovationDevInfoBody"></app-scale-impact-analysis>
+        </div>
+
+        <app-intellectual-property-rights [body]="innovationDevInfoBody"></app-intellectual-property-rights>
+        <app-innovation-team-diversity [body]="innovationDevInfoBody"></app-innovation-team-diversity>
+        <app-estimates [body]="innovationDevInfoBody"></app-estimates>
+        <app-innovation-links [body]="innovationDevInfoBody"></app-innovation-links>
     </div>
 
-    <app-intellectual-property-rights></app-intellectual-property-rights>
-    <app-innovation-team-diversity></app-innovation-team-diversity>
-    <app-estimates></app-estimates>
-    <app-innovation-links></app-innovation-links>
 
     <app-pr-textarea placeholder="Contact persons info goes here..." [required]="false" label="Innovation Developer"
         description="Provide the full name(s), email address and organizational affiliation(s) of the innovation developer/ contact person

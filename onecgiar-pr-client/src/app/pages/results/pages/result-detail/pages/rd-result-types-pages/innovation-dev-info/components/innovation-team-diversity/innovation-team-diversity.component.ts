@@ -1,4 +1,5 @@
 import { Component, Input, OnInit } from '@angular/core';
+import { InnovationDevInfoBody } from '../../model/innovationDevInfoBody';
 
 @Component({
   selector: 'app-innovation-team-diversity',
@@ -6,7 +7,7 @@ import { Component, Input, OnInit } from '@angular/core';
   styleUrls: ['./innovation-team-diversity.component.scss']
 })
 export class InnovationTeamDiversityComponent implements OnInit {
-  @Input() body: any;
+  @Input() body = new InnovationDevInfoBody();
   example11 = null;
   list = [
     {

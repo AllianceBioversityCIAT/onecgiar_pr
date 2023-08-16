@@ -1,4 +1,5 @@
 import { Component, Input, OnInit } from '@angular/core';
+import { InnovationDevInfoBody } from '../../model/innovationDevInfoBody';
 
 @Component({
   selector: 'app-scale-impact-analysis',
@@ -6,7 +7,7 @@ import { Component, Input, OnInit } from '@angular/core';
   styleUrls: ['./scale-impact-analysis.component.scss']
 })
 export class ScaleImpactAnalysisComponent implements OnInit {
-  @Input() body: any;
+  @Input() body = new InnovationDevInfoBody();
   example2 = null;
   list = [
     {

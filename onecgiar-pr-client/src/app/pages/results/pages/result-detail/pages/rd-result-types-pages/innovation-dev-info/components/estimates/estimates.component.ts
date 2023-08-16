@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
+import { InnovationDevInfoBody } from '../../model/innovationDevInfoBody';
 
 @Component({
   selector: 'app-estimates',
@@ -6,6 +7,7 @@ import { Component, OnInit } from '@angular/core';
   styleUrls: ['./estimates.component.scss']
 })
 export class EstimatesComponent implements OnInit {
+  @Input() body = new InnovationDevInfoBody();
   constructor() {}
 
   ngOnInit(): void {}

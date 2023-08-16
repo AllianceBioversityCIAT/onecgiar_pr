@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
+import { InnovationDevInfoBody } from '../../model/innovationDevInfoBody';
 
 @Component({
   selector: 'app-intellectual-property-rights',
@@ -6,24 +7,7 @@ import { Component, OnInit } from '@angular/core';
   styleUrls: ['./intellectual-property-rights.component.scss']
 })
 export class IntellectualPropertyRightsComponent implements OnInit {
-  /*
-Q1 - Do you expect private sector engagement in innovation development and/or scaling?
-  Yes (go to Q2)
-  Not sure (go to Q2)
-  No (go to Next Section INNOVATION DEVELOPER)
-
-Q2 - Do you consider applying for formal Intellectual Property Rights?
-  Yes (go to Q3)
-  Not sure (go to Q3)
-  No (go to Next Section INNOVATION DEVELOPER)
-*This question will be displayed depending on the answer for Q1*
-
-Q3 - Would you like to receive support from a "Private Partnership for Impact" expert?
-  Support can include expertise in Intellectual Property management, and/or the development of value propositions and business models, and/or support in negotiations with private partners
-  Yes, please contact me.
-  No, not now.
-*This question will be displayed depending on the answer for Q2*
-  */
+  @Input() body = new InnovationDevInfoBody();
 
   questions = {
     q1: {

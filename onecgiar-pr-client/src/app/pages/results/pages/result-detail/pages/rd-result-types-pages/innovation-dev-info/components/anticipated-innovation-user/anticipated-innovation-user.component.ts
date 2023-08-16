@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
+import { InnovationDevInfoBody } from '../../model/innovationDevInfoBody';
 
 @Component({
   selector: 'app-anticipated-innovation-user',
@@ -6,10 +7,10 @@ import { Component, OnInit } from '@angular/core';
   styleUrls: ['./anticipated-innovation-user.component.scss']
 })
 export class AnticipatedInnovationUserComponent implements OnInit {
-
-  constructor() { }
+  @Input() body = new InnovationDevInfoBody();
+  constructor() {}
 
   ngOnInit(): void {
+    console.log(this.body);
   }
-
 }

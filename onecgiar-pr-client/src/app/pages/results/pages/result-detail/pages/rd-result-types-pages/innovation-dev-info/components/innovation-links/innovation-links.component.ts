@@ -1,6 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { RolesService } from '../../../../../../../../../shared/services/global/roles.service';
 import { ApiService } from 'src/app/shared/services/api/api.service';
+import { InnovationDevInfoBody } from '../../model/innovationDevInfoBody';
 
 @Component({
   selector: 'app-innovation-links',
@@ -8,6 +9,7 @@ import { ApiService } from 'src/app/shared/services/api/api.service';
   styleUrls: ['./innovation-links.component.scss']
 })
 export class InnovationLinksComponent implements OnInit {
+  @Input() body = new InnovationDevInfoBody();
   linkList1 = [{}];
   linkList2 = [{}];
   constructor(public api: ApiService) {}
