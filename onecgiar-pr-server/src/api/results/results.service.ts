@@ -758,35 +758,7 @@ export class ResultsService {
   }
 
   async findForElasticSearch(documentName: string, id?: string) {
-    try {
-      const queryResult =
-        await this._customResultRepository.resultsForElasticSearch(id);
-
-      if (!queryResult.length) {
-        throw {
-          response: {},
-          message: 'Results Not Found',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
-
-      const operations: ElasticOperationDto<ResultSimpleDto>[] =
-        queryResult.map((r) => new ElasticOperationDto('PATCH', r));
-
-      const elasticJson: string =
-        this._elasticService.getBulkElasticOperationResults(
-          documentName,
-          operations,
-        );
-
-      return {
-        response: elasticJson,
-        message: 'Successful response',
-        status: HttpStatus.OK,
-      };
-    } catch (error) {
-      return this._handlersError.returnErrorRes({ error, debug: true });
-    }
+    return this._elasticService.findForElasticSearch(documentName, id);
   }
 
   async findAllSimplified(id?: string, allowDeleted: boolean = false) {

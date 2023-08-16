@@ -22,4 +22,11 @@ export class ElasticController {
       await this._elasticService.sendBulkOperationToElastic(bodyString);
     throw new HttpException({ message, response }, status);
   }
+
+  @Post('reset')
+  async resetElasticData() {
+    const { message, response, status } =
+      await this._elasticService.resetElasticData();
+    throw new HttpException({ message, response }, status);
+  }
 }
