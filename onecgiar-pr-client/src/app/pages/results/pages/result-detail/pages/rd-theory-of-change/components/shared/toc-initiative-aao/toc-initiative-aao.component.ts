@@ -1,5 +1,6 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../../../shared/services/api/api.service';
+import { RdTheoryOfChangesServicesService } from '../../../rd-theory-of-changes-services.service';
 
 @Component({
   selector: 'app-toc-initiative-aao',
@@ -10,14 +11,17 @@ export class TocInitiativeAaoComponent {
   @Input() readOnly: boolean;
   @Input() initiative: any;
   @Input() editable: boolean;
+  @Input() indexList: any;
   value = true;
   actionAreasOutcomesList = [];
-  constructor(public api: ApiService) {}
+  informationGet = false;
+  constructor(public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {}
 
   ngOnInit(): void {
-    this.GET_tocLevelsByresultId();
+    //this.GET_tocLevelsByresultId();
+    this.getInformatioActionAreaResult();
   }
-
+  /*
   GET_tocLevelsByresultId() {
     this.api.tocApiSE.GET_tocLevelsByconfig(this.initiative.results_id, this.initiative.initiative_id, 4).subscribe({
       next: ({ response }) => {
@@ -27,7 +31,7 @@ export class TocInitiativeAaoComponent {
         console.error(err);
       }
     });
-    /*this.api.tocApiSE.GET_tocLevelsByresultId(this.initiative.initiative_id, 4).subscribe(
+    this.api.tocApiSE.GET_tocLevelsByresultId(this.initiative.initiative_id, 4).subscribe(
       ({ response }) => {
         this.actionAreasOutcomesList = response;
         //(response);
@@ -35,6 +39,20 @@ export class TocInitiativeAaoComponent {
       err => {
         console.error(err);
       }
-    );*/
+    );
+  }*/
+
+  async getInformatioActionAreaResult(){
+    await this.api.resultsSE.GET_resultActionArea(this.initiative?.results_id, this.initiative?.initiative_id).subscribe(({ response }) =>{
+      this.theoryOfChangesServices.resultActionArea.push(response);
+      this.theoryOfChangesServices.resultActionArea[this.indexList].init = this.initiative?.initiative_id;
+      this.theoryOfChangesServices.resultActionArea[this.indexList].consImpactTarget.map(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
+      this.theoryOfChangesServices.resultActionArea[this.indexList].consSdgTargets.map(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
+      this.theoryOfChangesServices.resultActionArea[this.indexList].action.map(item => (item.full_name = `<strong>${item.outcomeSMOcode}</strong> - ${item.outcomeStatement}`));
+      
+      console.log(this.theoryOfChangesServices.resultActionArea);
+      this.informationGet = true;
+    })
   }
+
 }

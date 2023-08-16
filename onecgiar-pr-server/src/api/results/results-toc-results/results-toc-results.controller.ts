@@ -43,6 +43,13 @@ export class ResultsTocResultsController {
     throw new HttpException({ message, response }, status);
   }
 
+  @Get('get/result/:resultId/initiative/:initiativeId')
+  async findActionResutl(@Param('resultId') resultId: number, @Param('initiativeId') initiativeId: number) {
+    const {message, response, status} = 
+      await this.resultsTocResultsService.getActionAreaOutcomeByResultTocId(resultId,initiativeId);
+    throw new HttpException({ message, response }, status);
+  }
+
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateResultsTocResultDto: UpdateResultsTocResultDto) {
     return this.resultsTocResultsService.update(+id, updateResultsTocResultDto);
