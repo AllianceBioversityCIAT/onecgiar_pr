@@ -56,7 +56,7 @@
     *ngIf="this.theoryOfChangesServices.body[indexYesorNo].targetsIndicators.length">
 </app-pr-field-header>
     <app-target-indicator  [initiative]="indicator" [disabledInputs]="disabledInput" *ngFor="let indicator of this.theoryOfChangesServices.body[indexYesorNo].targetsIndicators"></app-target-indicator>
-    <app-action-area-outcome></app-action-area-outcome>
+    <app-action-area-outcome [body]="this.theoryOfChangesServices.body[indexYesorNo].actionAreaOutcome"></app-action-area-outcome>
     <app-impact-area-targets  [body]="this.theoryOfChangesServices.body[indexYesorNo].impactAreasTargets" [impactAreaRequid]="true"></app-impact-area-targets>
     <app-sdg-targets  [body]="this.theoryOfChangesServices.body[indexYesorNo].sdgTargest" [sdgRequid]="true"></app-sdg-targets>
 </div>

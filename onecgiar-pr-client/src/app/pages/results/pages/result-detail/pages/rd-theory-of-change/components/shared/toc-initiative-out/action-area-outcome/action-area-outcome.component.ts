@@ -8,14 +8,14 @@ import { ApiService } from 'src/app/shared/services/api/api.service';
 })
 export class ActionAreaOutcomeComponent implements OnInit {
   @Input() body = [];
-  @Input() impactAreaRequid = false;
+  @Input() actionRequid = false;
   allImpactAreaIndicators = [];
   currentImpactAreaID = null;
   actionAreasOutcomesList: any = []
   impactAreasData = [
-    { id: 1, imageRoute: '1', selected: false, color: '', name: 'Systems Transformation outcomes' },
-    { id: 2, imageRoute: '2', selected: false, color: '', name: 'Resilient Agrifood Systems outcomes' },
-    { id: 3, imageRoute: '3', selected: false, color: '', name: 'Genetic Innovation outcomes' },
+    { id: 1, imageRoute: '1', selected: false, color: '#bb3a26', name: 'Systems Transformation outcomes' },
+    { id: 2, imageRoute: '2', selected: false, color: '#b96a28', name: 'Resilient Agrifood Systems outcomes' },
+    { id: 3, imageRoute: '3', selected: false, color: '#d19f2a', name: 'Genetic Innovation outcomes' },
   ];
   constructor(public api: ApiService) {}
   ngOnInit(): void {

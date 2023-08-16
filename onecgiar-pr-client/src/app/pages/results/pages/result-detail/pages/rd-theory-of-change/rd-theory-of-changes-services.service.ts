@@ -7,6 +7,7 @@ export class RdTheoryOfChangesServicesService {
   targetsIndicators: any = [];
   impactAreasTargets: any = [];
   sdgTargest: any = [];
+  actionAreaOutcome:any = [];
   isSdg: boolean;
   isImpactArea: boolean;
   body:intefacesTheoryOfChanges[]= [];
@@ -17,6 +18,7 @@ export class intefacesTheoryOfChanges{
   targetsIndicators: any[];
   impactAreasTargets: any[];
   sdgTargest: any[];
+  actionAreaOutcome:any[];
   isSdg: boolean;
   isImpactArea: boolean;
   initiative:number;

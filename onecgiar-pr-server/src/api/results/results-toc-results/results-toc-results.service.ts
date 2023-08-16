@@ -686,6 +686,11 @@ export class ResultsTocResultsService {
           toc_result_id,
           init,
         );
+      const actionAreaOutcome = await this._resultsTocResultRepository.getActionAreaOutcome(
+            resultIdToc,
+            toc_result_id,
+            init
+            );
       return {
         response: {
           initiative: init,
@@ -693,8 +698,10 @@ export class ResultsTocResultsService {
           informationIndicator,
           impactAreas,
           sdgTargets,
+          actionAreaOutcome,
           isSdg: isSdg,
           isImpactArea: isImpactArea,
+          
         },
         message: 'The toc data indicator is successfully',
         status: HttpStatus.OK,
