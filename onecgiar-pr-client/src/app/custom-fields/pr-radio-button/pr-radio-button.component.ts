@@ -66,6 +66,17 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
     setTimeout(() => {
       this.selectOptionEvent.emit();
       if (this.currentVal == this.value) this.value = null;
+
+      if (this.checkboxConfig.listAttr) {
+        this.options.forEach((option: any) => {
+          if (option.subOptions) {
+            option.subOptions.forEach((subOption: any) => {
+              subOption.value = null;
+            });
+          }
+        });
+      }
+
       this.currentVal = this.value;
     }, 5);
   }
