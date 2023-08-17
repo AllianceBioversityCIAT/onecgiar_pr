@@ -29,14 +29,17 @@
   <!-- && !this.api.dataControlSE.currentResult?.is_discontinued -->
   <div>
     <div class="submit_button"
-      *ngIf="validateMember(this.api.dataControlSE?.myInitiativesList) != 6 && this.api.rolesSE.access.canDdit && !this.api.dataControlSE.currentResult?.is_discontinued">
+      *ngIf="validateMember(this.api.dataControlSE?.myInitiativesList) != 6 && !this.api.rolesSE.readOnly && !this.api.dataControlSE.currentResult?.is_discontinued">
       <app-pr-button [ngClass]="{ globalDisabled: !this.greenChecksSE.submit }"
         (click)="this.submissionModalSE.showModal = true" text="Submit"
-        *ngIf="this.dataControlSE?.currentResult?.status == 0"></app-pr-button>
-      <app-pr-button text="Unsubmit" *ngIf="this.dataControlSE?.currentResult?.status == 1"
+        *ngIf="this.dataControlSE?.currentResult?.status_id == 1"></app-pr-button>
+      <app-pr-button text="Unsubmit" *ngIf="this.dataControlSE?.currentResult?.status_id == 3"
         (click)="this.unsubmitModalSE.showModal = true"></app-pr-button>
-      <div class="button_access_information" *ngIf="this.dataControlSE?.currentResult?.status == 0">This button will be
+      <div class="button_access_information" *ngIf="this.dataControlSE?.currentResult?.status_id == 1">This button will
+        be
         available once all sections are available.</div>
+      <div class="button_access_information" *ngIf="this.dataControlSE?.currentResult?.status_id == 2">Quality Assessed
+        results cannot be un-submited.</div>
     </div>
   </div>
 </div>
