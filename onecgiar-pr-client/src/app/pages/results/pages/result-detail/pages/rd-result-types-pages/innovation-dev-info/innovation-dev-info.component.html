@@ -33,9 +33,10 @@
     <!-- Todo New field -->
 
     <div *ngIf="sectionLoaded">
-        <app-anticipated-innovation-user [body]="innovationDevInfoBody"></app-anticipated-innovation-user>
-        <app-pr-field-header label="Responsible innovation and scaling" [required]="false"></app-pr-field-header>
 
+        <app-anticipated-innovation-user [body]="innovationDevInfoBody"></app-anticipated-innovation-user>
+        
+        <app-pr-field-header label="Responsible innovation and scaling" [required]="false"></app-pr-field-header>
         <div class="paddingLeft20">
             <app-gesi-innovation-assessment [body]="innovationDevInfoBody"></app-gesi-innovation-assessment>
             <app-scale-impact-analysis [body]="innovationDevInfoBody"></app-scale-impact-analysis>

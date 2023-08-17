@@ -12,5 +12,48 @@ export class InnovationDevInfoBody {
   public evidences_justification: string; //todo
   public innovation_acknowledgement: string;
   public result = { title: '' };
+  public innovatonUse: InnovatonUse = new InnovatonUse();
   public innovation_pdf: boolean;
+}
+
+class InnovatonUse {
+  actors: Actor[] = [];
+  organization: Organization[] = [];
+  measures: Measure[] = [];
+}
+
+export class Measure {
+  unit_of_measure: string = null;
+  quantity: number = null;
+  is_active: boolean = null;
+  result_ip_measure_id: any;
+}
+
+export class Organization {
+  institution_types_id: number;
+  institution_sub_type_id: number;
+  how_many: number;
+  other_institution: string;
+  graduate_students: string;
+  // Aux
+  hide: boolean;
+  is_active: boolean;
+  id: any;
+}
+
+export class Actor {
+  actor_type_id: number;
+  women: number;
+  women_youth: number;
+  men: number;
+  men_youth: number;
+  is_active: boolean;
+  women_non_youth: any;
+  men_non_youth: any;
+  previousWomen: any;
+  previousWomen_youth: any;
+  other_actor_type: any;
+  sex_and_age_disaggregation: boolean;
+  how_many: any;
+  result_actors_id: number;
 }
