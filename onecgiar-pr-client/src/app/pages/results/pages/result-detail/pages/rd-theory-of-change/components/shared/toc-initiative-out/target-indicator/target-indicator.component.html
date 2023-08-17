@@ -4,7 +4,7 @@
     <div class="header-target">
         <div class="subheader">
             <div>
-                <h4>Indicator statement: <span style=" font-weight: normal;">{{initiative.indicator_description}}</span></h4> 
+                <h4>Indicator statement: <span style=" font-weight: normal;">{{initiative.statement}}</span></h4> 
             </div>
         </div>
         <div style="display: flex; flex-direction: row;">
@@ -14,14 +14,20 @@
         
     </div>
     <div class="header-content" *ngIf="initiative.is_calculable">
+        <h4>Indicator info</h4>
         <div class="description">
             <div class="content-measurent-unit">
+                <div><h4>Source:</h4></div><div style="margin-top: 16px; margin-left: 5px;"><span *ngIf="initiative.type_value != 'custom'">PRMF Framework</span><span *ngIf="initiative.type_value == 'custom'">Custom</span></div>
+                <div style="margin-left: 30px;"><h4>Type:</h4></div><div style="margin-top: 16px; margin-left: 5px;"></div>
+            </div>
+            <div class="content-measurent-unit" style="margin-top: -20px;">
                 <div><h4>Description:</h4></div><div style="margin-top: 16px; margin-left: 5px;">{{initiative.indicator_description}}</div>
             </div>
         </div>
+        
         <div class="information">
             <div class="location"><span >Location</span>
-                <div style=" margin-top: 10px; "><span style="font-weight: bold;">Regional:</span> Southern Asia, Eastern Asia</div>
+                <div style=" margin-top: 10px; "><span style="font-weight: bold;">{{initiative.location}}</span> <span *ngIf="initiative.full_geo != ':null'">{{initiative.full_geo}}</span></div>
             </div>
             <div class="measurent"><span >Measurement</span>
                 <div class="content-measurent">
@@ -37,6 +43,10 @@
                 </div>
             </div>
         </div>
+        <div style="margin-left: -20px;margin-top: -20px;">
+            <app-alert-status [description]="descriptionAlert()"></app-alert-status>
+        </div>
+        <div class="line"></div>
         <div class="progress">
             <div style="margin-top: -10px;">
                 Progress

@@ -13,6 +13,7 @@ export class TargetIndicatorComponent implements OnInit {
 
   @Input() initiative: any;
   @Input() disabledInputs:any;
+  text = `<span style="color: #6777D8; font-weight: bold;">4. Geographic location</span>`
   constructor() { }
 
   ngOnInit(): void {
@@ -51,5 +52,8 @@ export class TargetIndicatorComponent implements OnInit {
 
    changesValue(){
     this.initiative.indicator_contributing = null;
+   }
+   descriptionAlert(){
+      return `Please ensure the planned location is reflected in section <strong>4. Geographic location</strong>. If you decide to change remember to update your TOC result framework. DD is working to automate the geolocation and in the near future you will not need to fill section 4 again.`
    }
 }
