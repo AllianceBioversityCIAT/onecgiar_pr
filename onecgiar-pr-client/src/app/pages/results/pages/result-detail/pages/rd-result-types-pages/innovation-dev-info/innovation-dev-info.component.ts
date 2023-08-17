@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { InnovationDevInfoBody } from './model/innovationDevInfoBody';
 import { InnovationControlListService } from '../../../../../../../shared/services/global/innovation-control-list.service';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
+import { InnovationDevelopmentQuestions } from './model/InnovationDevelopmentQuestions.model';
 
 @Component({
   selector: 'app-innovation-dev-info',
@@ -12,11 +13,21 @@ export class InnovationDevInfoComponent implements OnInit {
   innovationDevInfoBody = new InnovationDevInfoBody();
   range = 5;
   sectionLoaded = false;
+  innovationDevelopmentQuestions: InnovationDevelopmentQuestions;
   constructor(private api: ApiService, public innovationControlListSE: InnovationControlListService) {}
 
   ngOnInit(): void {
     this.getSectionInformation();
+    this.GET_questionsInnovationDevelopment();
   }
+
+  GET_questionsInnovationDevelopment() {
+    this.api.resultsSE.GET_questionsInnovationDevelopment().subscribe(({ response }) => {
+      console.log(response);
+      this.innovationDevelopmentQuestions = response;
+    });
+  }
+
   getSectionInformation() {
     this.sectionLoaded = false;
     this.api.resultsSE.GET_innovationDev().subscribe(
@@ -33,21 +44,19 @@ export class InnovationDevInfoComponent implements OnInit {
     );
   }
   onSaveSection() {
-    //(this.innovationDevInfoBody);
-    if (this.innovationDevInfoBody.innovation_nature_id != 12) {
-      //('clean');
-      this.innovationDevInfoBody.number_of_varieties = null;
-      this.innovationDevInfoBody.is_new_variety = null;
-    }
-    this.api.resultsSE.PATCH_innovationDev(this.innovationDevInfoBody).subscribe(
-      ({ response }) => {
-        //(response);
-        this.getSectionInformation();
-      },
-      err => {
-        console.error(err);
-      }
-    );
+    console.log(this.innovationDevelopmentQuestions);
+    // if (this.innovationDevInfoBody.innovation_nature_id != 12) {
+    //   this.innovationDevInfoBody.number_of_varieties = null;
+    //   this.innovationDevInfoBody.is_new_variety = null;
+    // }
+    // this.api.resultsSE.PATCH_innovationDev(this.innovationDevInfoBody).subscribe(
+    //   ({ response }) => {
+    //     this.getSectionInformation();
+    //   },
+    //   err => {
+    //     console.error(err);
+    //   }
+    // );
   }
   pdfOptions = [
     { name: 'Yes', value: true },

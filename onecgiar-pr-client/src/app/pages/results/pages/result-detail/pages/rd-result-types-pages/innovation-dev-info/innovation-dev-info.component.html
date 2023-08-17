@@ -35,7 +35,7 @@
     <div *ngIf="sectionLoaded">
 
         <app-anticipated-innovation-user [body]="innovationDevInfoBody"></app-anticipated-innovation-user>
-        
+
         <app-pr-field-header label="Responsible innovation and scaling" [required]="false"></app-pr-field-header>
         <div class="paddingLeft20">
             <app-gesi-innovation-assessment [body]="innovationDevInfoBody"></app-gesi-innovation-assessment>
@@ -43,7 +43,8 @@
         </div>
 
         <app-intellectual-property-rights [body]="innovationDevInfoBody"></app-intellectual-property-rights>
-        <app-innovation-team-diversity [body]="innovationDevInfoBody"></app-innovation-team-diversity>
+        <app-innovation-team-diversity [body]="innovationDevInfoBody"
+            [options]="innovationDevelopmentQuestions"></app-innovation-team-diversity>
         <app-estimates [body]="innovationDevInfoBody"></app-estimates>
         <app-innovation-links [body]="innovationDevInfoBody"></app-innovation-links>
     </div>

@@ -717,4 +717,8 @@ export class ResultsApiService {
   GET_resultYears() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results/years`);
   }
+
+  GET_questionsInnovationDevelopment() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/questions/innovation-development/${this.currentResultId}`);
+  }
 }
