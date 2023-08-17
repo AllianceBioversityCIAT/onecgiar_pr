@@ -83,6 +83,7 @@
                     [(ngModel)]="organizationItem.institution_types_id" placeholder="Select organization"
                     (selectOptionEvent)="reloadSelect(organizationItem)"
                     (ngModelChange)="this.organizationItem.other_institution = null"
+                    [disableOptions]="removeOtherInOrg(disableOrganizations)"
                     >
                 </app-pr-select>
                 <div style="margin-top: 13px;"></div>
@@ -97,7 +98,7 @@
                     *ngIf="organizationItem.institution_types_id && !organizationItem.hide && getInstitutionsTypeTreeChildrens(organizationItem.institution_types_id)?.length"
                     [options]="getInstitutionsTypeTreeChildrens(organizationItem.institution_types_id)" label="Sub-type"
                     optionLabel="name" optionValue="code" [(ngModel)]="organizationItem.institution_sub_type_id"
-                    placeholder="Select Sub-type" [required]="!!organizationItem?.id">
+                    [disableOptions]="getAllSubTypes" placeholder="Select Sub-type" [required]="!!organizationItem?.id">
                 </app-pr-select>
             </div>
         </div>
@@ -122,9 +123,6 @@
             <div class="right_content">
                 <app-pr-input placeholder="e.g. # of projects" label="Unit of measure" type="text"
                     [required]="!!measuresItem?.result_ip_measure_id" [(ngModel)]="this.measuresItem.unit_of_measure">
-                </app-pr-input>
-                <app-pr-input placeholder="Write some..." label="Quantity" type="number"
-                    [required]="!!measuresItem?.result_ip_measure_id" [(ngModel)]="this.measuresItem.quantity">
                 </app-pr-input>
             </div>
 

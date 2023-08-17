@@ -48,7 +48,6 @@ export class AnticipatedInnovationUserComponent implements OnInit {
   exampleMesureList = [
     {
       unit_of_measure: null,
-      quantity: null,
       is_active: null,
       result_ip_measure_id: null
     }
@@ -104,23 +103,23 @@ export class AnticipatedInnovationUserComponent implements OnInit {
     this.exampleOrganizationsList.push(new Organization());
   }
 
-  // get disableOrganizations() {
-  //   //(this.institutionsTypeTreeList);
-  //   const list = [];
-  //   this.body.innovatonUse.organization.forEach(resp => {
-  //     //(resp);
-  //     if (!resp.institution_sub_type_id) list.push({ code: resp.institution_types_id });
-  //   });
-  //   return list;
-  // }
+  get disableOrganizations() {
+    //(this.institutionsTypeTreeList);
+    const list = [];
+    this.exampleOrganizationsList.forEach(resp => {
+      //(resp);
+      if (!resp.institution_sub_type_id) list.push({ code: resp.institution_types_id });
+    });
+    return list;
+  }
 
-  // get getAllSubTypes() {
-  //   const list = [];
-  //   this.body.innovatonUse.organization.forEach(resp => {
-  //     list.push({ code: resp.institution_sub_type_id });
-  //   });
-  //   return list;
-  // }
+  get getAllSubTypes() {
+    const list = [];
+    this.exampleOrganizationsList.forEach(resp => {
+      list.push({ code: resp.institution_sub_type_id });
+    });
+    return list;
+  }
 
   hasElementsWithId(list, attr) {
     const finalList = this.api.rolesSE.readOnly ? list.filter(item => item[attr]) : list.filter(item => item.is_active != false);
