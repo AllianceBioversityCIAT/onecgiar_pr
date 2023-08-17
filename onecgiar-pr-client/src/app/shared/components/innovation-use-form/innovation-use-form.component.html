@@ -1,5 +1,3 @@
-<div class="ipsr-sub-title-2">Targeted innovation use</div>
-
 <app-pr-field-header
     label="Specify targeted innovation user and also specify how many users are expected to benefit from scaling the core innovation by end of 2024?"></app-pr-field-header>
 
@@ -135,9 +133,12 @@
 <app-add-button name="Add organization" *ngIf="!this.api.rolesSE.readOnly"
     (clickEvent)="addOrganization()"></app-add-button>
 <div class="fragment_section_divider"></div>
-<div class="fields_list" *ngIf="this.body.innovatonUse.measures?.length">
+<div class="title_list">
     <app-pr-field-header label="Other quantitative measures of innovation use (e.g. # of hectares)"
         [required]="false"></app-pr-field-header>
+</div>
+<div class="fields_list" *ngIf="this.body.innovatonUse.measures?.length">
+
     <div class="fields" appYmzListStructureItem (deleteEvent)="measuresItem.is_active = false"
         *ngFor="let measuresItem of this.body.innovatonUse.measures"
         [ngClass]="{'hideElement': measuresItem.is_active == false|| (!this.measuresItem?.result_ip_measure_id && this.api.rolesSE.readOnly)}">
