@@ -482,6 +482,16 @@ export class InnovationPathwayStepOneService {
         });
       }
 
+      const scalingText = UpdateInnovationPathwayDto.scalig_ambition['body'];
+
+      const scalingAmbitionBlurb =
+        await this._resultInnovationPackageRepository.update(
+          { result_innovation_package_id: result.id },
+          {
+            scaling_ambition_blurb: scalingText,
+          },
+        );
+
       const specifyAspiredOutcomesAndImpact =
         await this.saveSpecifyAspiredOutcomesAndImpact(
           result,
@@ -533,6 +543,7 @@ export class InnovationPathwayStepOneService {
 
       return {
         response: [
+          scalingAmbitionBlurb,
           specifyAspiredOutcomesAndImpact,
           actionAreaOutcomes,
           impactAreas,
@@ -897,17 +908,12 @@ export class InnovationPathwayStepOneService {
               result_id: result.id,
             },
           });
-        } else if (!innExp && ex?.email) {
-          innExp = await this._innovationPackagingExpertRepository.findOne({
-            where: {
-              email: ex.email,
-              result_id: result.id,
-            },
-          });
-        } else if (!innExp) {
+        } else if (!innExp && ex?.first_name && ex?.last_name) {
           innExp = await this._innovationPackagingExpertRepository.findOne({
             where: {
               email: IsNull(),
+              first_name: ex.first_name,
+              last_name: ex.last_name,
               result_id: result.id,
             },
           });

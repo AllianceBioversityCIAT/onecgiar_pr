@@ -25,6 +25,7 @@ export class UpdateInnovationPathwayDto {
   public impactAreas: impactAreasInterface[];
   public experts_is_diverse!: boolean;
   public is_not_diverse_justification!: string;
+  public scalig_ambition!: {};
 }
 export interface regionsInterface {
   id: number;
