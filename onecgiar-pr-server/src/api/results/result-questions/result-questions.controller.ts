@@ -18,10 +18,10 @@ export class ResultQuestionsController {
     private readonly resultQuestionsService: ResultQuestionsService,
   ) {}
 
-  @Get('innovation-development')
-  async findQuestionInnovationDevelopment() {
+  @Get('innovation-development/:resultId')
+  async findQuestionInnovationDevelopment(@Param('resultId') resultId: number) {
     const { response, message, status } =
-      await this.resultQuestionsService.findQuestionInnovationDevelopment();
+      await this.resultQuestionsService.findQuestionInnovationDevelopment(resultId);
 
     throw new HttpException({ response, message }, status);
   }

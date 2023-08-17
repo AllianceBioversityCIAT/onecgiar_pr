@@ -74,6 +74,7 @@ import { ResultStatusModule } from './result-status/result-status.module';
 import { ResultQuestionsService } from './result-questions/result-questions.service';
 import { ResultQuestionsModule } from './result-questions/result-questions.module';
 import { ResultQuestionsRepository } from './result-questions/repository/result-questions.repository';
+import { ResultAnswerRepository } from './result-questions/repository/result-answers.repository';
 
 @Module({
   controllers: [ResultsController],
@@ -141,7 +142,8 @@ import { ResultQuestionsRepository } from './result-questions/repository/result-
     ReturnResponse,
     ResponseInterceptor,
     ResultQuestionsService,
-    ResultQuestionsRepository
+    ResultQuestionsRepository,
+    ResultAnswerRepository
   ],
   exports: [ResultRepository, JwtMiddleware],
 })

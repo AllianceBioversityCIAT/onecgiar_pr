@@ -11,7 +11,8 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
   providers: [
     HandlersError,
     ResultQuestionsService,
-    ResultQuestionsRepository
+    ResultQuestionsRepository,
+    ResultAnswerRepository
   ],
 })
 export class ResultQuestionsModule {}
