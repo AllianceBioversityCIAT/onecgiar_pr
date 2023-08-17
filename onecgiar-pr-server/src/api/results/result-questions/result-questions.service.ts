@@ -322,6 +322,9 @@ export class ResultQuestionsService {
 
           const questionsWithOptions = await Promise.all(
             childQuestions.map(async (childQuestion) => {
+              const answers = await getAnswersForQuestion(
+                childQuestion.result_question_id,
+              );
               const questionOptions = await this._resultQuestionRepository.find(
                 {
                   where: {
@@ -335,6 +338,10 @@ export class ResultQuestionsService {
 
               return {
                 ...childQuestion,
+                answer_boolean:
+                  answers[0] === undefined ? null : answers[0].answer_boolean,
+                answer_text:
+                  answers[0] === undefined ? null : answers[0].answer_text,
                 subOptions: optionsWithAnswers,
               };
             }),
@@ -342,7 +349,7 @@ export class ResultQuestionsService {
 
           return {
             ...topLevelQuestion,
-            options: questionsWithOptions
+            options: questionsWithOptions,
           };
         }),
       );
