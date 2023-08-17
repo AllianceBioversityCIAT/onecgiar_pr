@@ -21,7 +21,7 @@ export class ResultQuestionsService {
 
       return {
         response: {
-          responsible_innovation_and_scaling: scaling,
+          responsible_innovation_and_scaling: scaling[0],
           intellectual_property_rights: intellectual[0],
           innovation_team_diversity: innovation[0],
         },
