@@ -725,7 +725,7 @@ export class ResultsTocResultRepository
       );
       const queryTocIndicators = `
       SELECT tri.toc_result_indicator_id as toc_results_indicator_id,tri.indicator_description, 
-		tri.target_date, tri.target_value, tri.unit_messurament, tr.phase,rtr.result_toc_result_id as results_toc_results_id
+      tri.target_date, tri.target_value, tri.unit_messurament, tr.phase,rtr.result_toc_result_id as results_toc_results_id, tri.location, tri.type_value, tri.type_name as 'statement'
 		from Integration_information.toc_results_indicators tri 
 			join Integration_information.toc_results tr on tr.id = tri.toc_results_id 
 			inner join results_toc_result rtr on rtr.results_id = ? 
@@ -736,7 +736,7 @@ export class ResultsTocResultRepository
 
       const queryTocIndicatorsNotSave = `
     SELECT tri.toc_result_indicator_id as toc_results_indicator_id,tri.indicator_description, 
-		tri.target_date, tri.target_value, tri.unit_messurament, tr.phase
+		tri.target_date, tri.target_value, tri.unit_messurament, tr.phase, tri.location, tri.type_value, tri.type_name as 'statement'
 		from Integration_information.toc_results_indicators tri 
 			join Integration_information.toc_results tr on tr.id = tri.toc_results_id 
 		WHEre tr.id  = ? and tr.phase = (select v.toc_pahse_id  
@@ -819,6 +819,36 @@ export class ResultsTocResultRepository
           }
         } else {
           element.is_calculable = false;
+        }
+
+        if(element.location == 'regional'){
+         const regions =  `select * 
+	                            from clarisa_regions cr WHERE 
+		                                cr.um49Code in (select trir.clarisa_regions_id  from Integration_information.toc_result_indicator_region trir where trir.toc_result_id = ?)`
+          let region = await this.query(regions, [
+            innovatonUseInterface[0].toc_results_indicator_id,
+          ]);
+          let full_region = null;
+          region.map(item => (full_region += `${item.name}`));
+          
+            element.location = `Regional`;
+          
+          element.full_geo = ':'+full_region;
+          
+        }
+        if(element.location == 'country'){
+          const regions =  `select * 
+          from clarisa_countries cc WHERE 
+            cc.id  in (select trir.clarisa_countries_id  from Integration_information.toc_result_indicator_country trir where trir.toc_result_id =?)`
+          let region = await this.query(regions, [
+            innovatonUseInterface[0].toc_results_indicator_id,
+          ]);
+          let full_region = null;
+          region.map(item => (full_region += `${item.name}`));
+          
+            element.location = `Country`;
+            element.full_geo = ':'+full_region;
+          
         }
       });
 
