@@ -98,14 +98,14 @@ export class ResultsListComponent implements OnInit {
     // this.api.rolesSE.validateReadOnly();
     this.api.updateResultsList();
     this.items;
-    this.api.alertsFs.show({
-      id: 'indoasd',
-      status: 'success',
-      title: '',
-      description: internationalizationData?.resultsList?.alerts?.info,
-      querySelector: '.alert',
-      position: 'beforebegin'
-    });
+    // this.api.alertsFs.show({
+    //   id: 'indoasd',
+    //   status: 'success',
+    //   title: '',
+    //   description: internationalizationData?.resultsList?.alerts?.info,
+    //   querySelector: '.alert',
+    //   position: 'beforebegin'
+    // });
     this.shareRequestModalSE.inNotifications = false;
   }
   onPressAction(result) {
