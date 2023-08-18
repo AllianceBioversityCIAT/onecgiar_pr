@@ -43,7 +43,20 @@ export class InnovationDevInfoComponent implements OnInit {
       }
     );
   }
+
+  PATCH_InnovationDevSummary() {
+    this.api.resultsSE.PATCH_InnovationDevSummary(this.innovationDevelopmentQuestions).subscribe(
+      ({ response }) => {
+        console.log(response);
+      },
+      err => {
+        console.error(err);
+      }
+    );
+  }
+
   onSaveSection() {
+    this.PATCH_InnovationDevSummary();
     console.log(this.innovationDevelopmentQuestions);
     // if (this.innovationDevInfoBody.innovation_nature_id != 12) {
     //   this.innovationDevInfoBody.number_of_varieties = null;
