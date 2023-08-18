@@ -481,22 +481,22 @@ export class SummaryService {
       };
 
       await saveOptionsAndSubOptions(
-        createInnovationDevDto.responsible_innovation_and_scaling.q1.options,
+        createInnovationDevDto?.responsible_innovation_and_scaling.q1.options,
       );
       await saveOptionsAndSubOptions(
-        createInnovationDevDto.responsible_innovation_and_scaling.q2.options,
+        createInnovationDevDto?.responsible_innovation_and_scaling.q2.options,
       );
       await saveOptionsAndSubOptions(
-        createInnovationDevDto.intellectual_property_rights.q1.options,
+        createInnovationDevDto?.intellectual_property_rights.q1.options,
       );
       await saveOptionsAndSubOptions(
-        createInnovationDevDto.intellectual_property_rights.q2.options,
+        createInnovationDevDto?.intellectual_property_rights.q2.options,
       );
       await saveOptionsAndSubOptions(
-        createInnovationDevDto.intellectual_property_rights.q3.options,
+        createInnovationDevDto?.intellectual_property_rights.q3.options,
       );
       await saveOptionsAndSubOptions(
-        createInnovationDevDto.innovation_team_diversity.options,
+        createInnovationDevDto?.innovation_team_diversity.options,
       );
 
       const saveEvidence = async (
@@ -556,7 +556,7 @@ export class SummaryService {
       await saveEvidence(createInnovationDevDto.reference_materials, 4);
 
       return {
-        response: innDevExists,
+        response: InnDevRes,
         message: 'Results Innovations Dev has been created successfully',
         status: HttpStatus.CREATED,
       };

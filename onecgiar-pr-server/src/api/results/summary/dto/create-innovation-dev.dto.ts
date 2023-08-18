@@ -14,11 +14,11 @@ export class CreateInnovationDevDto {
   public evidences_justification: string;
   public innovation_acknowledgement: string;
   public innovation_pdf!: boolean;
-  public responsible_innovation_and_scaling: TopLevelQuestions;
-  public intellectual_property_rights: TopLevelQuestions;
-  public innovation_team_diversity: TopLevelQuestions;
-  public reference_materials: Evidence[]
-  public pictures: Evidence[]
+  public responsible_innovation_and_scaling!: TopLevelQuestions;
+  public intellectual_property_rights!: TopLevelQuestions;
+  public innovation_team_diversity!: TopLevelQuestions;
+  public reference_materials!: Evidence[]
+  public pictures!: Evidence[]
 }
 export interface SubOption {
   result_question_id: number;
