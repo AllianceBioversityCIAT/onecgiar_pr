@@ -762,32 +762,35 @@ export class ResultsTocResultsService {
     }
   }
 
-  async getVersionId(result_id, init, result_toc_id){
+  async getVersionId(result_id, init){
     try {
-      console.log(result_toc_id === null);
-      const result = await this._resultsTocResultRepository.query(`select rtr.version_dashboard_id
-                                                                          from results_toc_result rtr where rtr.results_id = ${result_id} and rtr.initiative_id = ${init}`);
+      const resultinit = await this._resultsTocResultRepository.query(
+        `SELECT toc_id FROM clarisa_initiatives WHERE id = ?`,
+        [init]
+      );
       let version_id = null;
-      if(result.length != 0 && result[0].version_dashboard_id != null){
-        version_id = result[0].version_dashboard_id;
-      }
-      else{
-        const results = await this._resultsTocResultRepository.query(`select rtr.version_id
-                                                                          from Integration_information.toc_results rtr where id = ${result_toc_id}`);
-        if(results.length != 0 ){
-          version_id = results[0].version_id;
-          
-        }else{
-          const resultinit = await this._resultsTocResultRepository.query(`select toc_id from clarisa_initiatives where id = ${init}`);
-        if(resultinit.length != 0 ){
+      if (resultinit.length != 0 && resultinit[0].toc_id != null) {
+        const vesion_id = await this._resultsTocResultRepository.query(
+          `SELECT DISTINCT tr.version_id FROM Integration_information.toc_results tr 
+           WHERE tr.id_toc_initiative = ? AND tr.phase = (
+             SELECT v.toc_pahse_id FROM result r 
+             JOIN version v ON r.version_id = v.id 
+             WHERE r.id = ?
+           )`,
+          [resultinit[0].toc_id, result_id]
+        );
+        console.log(vesion_id);
+        if (vesion_id.length != 0 && vesion_id[0].version_id != null) {
+          version_id = vesion_id[0].version_id;
+        } else {
           version_id = resultinit[0].toc_id;
-        }
         }
       }
       return {
         response: {
           version_id
-        }, message: 'The toc data indicator is successfully',
+        },
+        message: 'The toc data indicator is successfully',
         status: HttpStatus.OK,
       }
     } catch (error) {
