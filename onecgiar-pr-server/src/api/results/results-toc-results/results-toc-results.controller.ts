@@ -50,6 +50,13 @@ export class ResultsTocResultsController {
     throw new HttpException({ message, response }, status);
   }
 
+  @Get('get/version/:resultId/initiative/:initiativeId/resultToc/:resultTocId')
+  async findVersionDashBoard(@Param('resultId') resultId: number, @Param('initiativeId') initiativeId: number, @Param('resultTocId') resultTocId: number) {
+    const {message, response, status} = 
+      await this.resultsTocResultsService.getVersionId(resultId,initiativeId,resultTocId);
+    throw new HttpException({ message, response }, status);
+  }
+
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateResultsTocResultDto: UpdateResultsTocResultDto) {
     return this.resultsTocResultsService.update(+id, updateResultsTocResultDto);

@@ -850,6 +850,37 @@ export class ResultsTocResultRepository
             element.full_geo = ':'+full_region;
           
         }
+
+        if(element.type_value == 'Change in the capacity of key (a) Individuals, (b) Organizations (government, civil society and private sector), and (c) Networks (e.g. multi-stakeholder platforms).'){
+          element.type = 'Capacity change';
+        }
+        else if(element.type_value == 'Number of innovations'){
+          element.type = 'Innovation Development';
+        }
+        else if(element.type_value == 'Number of people trained, long-term (including Masters and PhDs) and short-term, disaggregated by gender'){
+          element.type = 'Capacity Sharing for Development';
+        }
+        else if(element.type_value == 'Number of peer reviewed journal papers'){
+          element.type = 'Knowledge Product';
+        }
+        else if(element.type_value == 'Number of other information products/data assets (including: reports, briefs, extension, training and e-learning content and other materials, books and book chapters, data and databases, data collection and analysis tools (e.g. models and survey tools), video, audio and images, graphics, maps, and other GIS outputs, computer software, models and code, digital and mobile applications, and web-based services (e.g. websites, data portals, online platforms)'){
+          element.type = 'Knowledge Product';
+        }
+        else if(element.type_value == 'Number of policies/ strategies/ laws/ regulations/ budgets/ investments/ curricula modified in design or implementation, informed by CGIAR research.'){
+          element.type = 'Policy change';
+        }
+        else if(element.type_value == 'Number of beneficiaries using the CGIAR innovation, disaggregated by gender.'){
+          element.type = 'Innovation use';
+        }
+        else if(element.type_value == 'Other quantitative measure of CGIAR innovation use (e.g. area)'){
+          element.type = 'Innovation use';
+        }
+        else if( element.type_value == 'Altmetric score'){
+          element.type = 'Other outcome';
+        }
+        else{
+          element.type = 'N/A';
+        }
       });
 
       return innovatonUseInterface;
@@ -1470,10 +1501,10 @@ if (sdgToc != null && sdgToc.length != 0) {
 
         if (result != null && result.length != 0) {
           
-
+         
           await this.update(
             { result_toc_result_id: result[0]?.result_toc_result_id },
-            { mapping_impact: toc.isImpactArea, mapping_sdg: toc.isSdg },
+            { mapping_impact: toc.isImpactArea, mapping_sdg: toc.isSdg,  is_sdg_action_impact: toc.is_sdg_action_impact},
           );
           if (
             toc.targetsIndicators != null &&

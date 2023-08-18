@@ -460,7 +460,7 @@ export class ResultsTocResultsService {
             }
           }
         }
-
+        
         if (result.result_level_id > 2) {
           await this._resultsTocResultRepository.saveSectionNewTheoryOfChange(
             bodyNewTheoryOfChanges,
@@ -684,11 +684,14 @@ export class ResultsTocResultsService {
     try {
       let isSdg = null;
       let isImpactArea = null;
+      let is_sdg_action_impact = null;
       const result = await this._resultsTocResultRepository
-        .query(`select rtr.mapping_sdg as isSdg,  rtr.mapping_impact as isImpactArea 
+        .query(`select rtr.mapping_sdg as isSdg,  rtr.mapping_impact as isImpactArea,rtr.is_sdg_action_impact
                                                                           from results_toc_result rtr where rtr.results_id = ${resultIdToc} and rtr.initiative_id = ${init}`);
       if (result.length != 0) {
-        (isSdg = result[0].isSdg), (isImpactArea = result[0].isImpactArea);
+        (isSdg = result[0].isSdg), (isImpactArea = result[0].isImpactArea), (is_sdg_action_impact = result[0].is_sdg_action_impact);
+      }else{
+        is_sdg_action_impact = false;
       }
       const informationIndicator =
         await this._resultsTocResultRepository.getResultTocResultByResultId(
@@ -723,7 +726,7 @@ export class ResultsTocResultsService {
           actionAreaOutcome,
           isSdg: isSdg,
           isImpactArea: isImpactArea,
-          
+          is_sdg_action_impact :is_sdg_action_impact
         },
         message: 'The toc data indicator is successfully',
         status: HttpStatus.OK,
@@ -751,6 +754,31 @@ export class ResultsTocResultsService {
           action,
           consImpactTarget,
           consSdgTargets
+        }, message: 'The toc data indicator is successfully',
+        status: HttpStatus.OK,
+      }
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async getVersionId(result_id, init, result_toc_id){
+    try {
+      const result = await this._resultsTocResultRepository.query(`select rtr.version_dashboard_id
+                                                                          from results_toc_result rtr where rtr.results_id = ${result_id} and rtr.initiative_id = ${init}`);
+      let version_id = null;
+      if(result.length != 0 && result[0].version_dashboard_id != null){
+        version_id = result[0].version_dashboard_id;
+      }else{
+        const results = await this._resultsTocResultRepository.query(`select rtr.version_id
+                                                                          from Integration_information.toc_results rtr where id = ${result_toc_id}`);
+        if(result.length != 0 ){
+          version_id = results[0].version_id;
+        }
+      }
+      return {
+        response: {
+          version_id
         }, message: 'The toc data indicator is successfully',
         status: HttpStatus.OK,
       }

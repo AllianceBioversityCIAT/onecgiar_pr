@@ -24,5 +24,5 @@ export class intefacesTheoryOfChanges{
   isImpactArea: boolean;
   initiative:number;
   resultId:number;
-
+  is_sdg_action_impact:string;
 }

@@ -314,6 +314,9 @@ export class ResultsApiService {
   Get_indicator(id_toc, init) {
     return this.http.get<any>(`${this.apiBaseUrl}toc/get/indicator/${id_toc}/result/${this.currentResultId}/initiative/${init}`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
+  get_vesrsionDashboard(id_toc, init) {
+    return this.http.get<any>(`${this.apiBaseUrl}toc/get/version/${this.currentResultId}/initiative/${init}/resultToc/${id_toc}`);
+  }
 
   GET_resultActionArea(resultId, initiative) {
     return this.http.get<any>(`${this.apiBaseUrl}toc/get/result/${resultId}/initiative/${initiative}`).pipe(this.saveButtonSE.isGettingSectionPipe());

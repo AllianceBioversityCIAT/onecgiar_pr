@@ -18,7 +18,7 @@
         <div class="description">
             <div class="content-measurent-unit">
                 <div><h4>Source:</h4></div><div style="margin-top: 16px; margin-left: 5px;"><span *ngIf="initiative.type_value != 'custom'">PRMF Framework</span><span *ngIf="initiative.type_value == 'custom'">Custom</span></div>
-                <div style="margin-left: 30px;"><h4>Type:</h4></div><div style="margin-top: 16px; margin-left: 5px;"></div>
+                <div style="margin-left: 30px;"><h4>Type:</h4></div><div style="margin-top: 16px; margin-left: 5px;">{{initiative.type}}</div>
             </div>
             <div class="content-measurent-unit" style="margin-top: -20px;">
                 <div><h4>Description:</h4></div><div style="margin-top: 16px; margin-left: 5px;">{{initiative.indicator_description}}</div>
