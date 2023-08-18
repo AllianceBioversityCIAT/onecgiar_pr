@@ -1,5 +1,5 @@
 export class InnovationDevelopmentQuestions {
-  responsible_innovation_and_scaling: Responsibleinnovationandscaling[] = [];
+  responsible_innovation_and_scaling: Responsibleinnovationandscaling = new Responsibleinnovationandscaling();
   intellectual_property_rights: Intellectualpropertyrights = new Intellectualpropertyrights();
   innovation_team_diversity: Innovationteamdiversity = new Innovationteamdiversity();
 }
