@@ -764,16 +764,24 @@ export class ResultsTocResultsService {
 
   async getVersionId(result_id, init, result_toc_id){
     try {
+      console.log(result_toc_id === null);
       const result = await this._resultsTocResultRepository.query(`select rtr.version_dashboard_id
                                                                           from results_toc_result rtr where rtr.results_id = ${result_id} and rtr.initiative_id = ${init}`);
       let version_id = null;
       if(result.length != 0 && result[0].version_dashboard_id != null){
         version_id = result[0].version_dashboard_id;
-      }else{
+      }
+      else{
         const results = await this._resultsTocResultRepository.query(`select rtr.version_id
                                                                           from Integration_information.toc_results rtr where id = ${result_toc_id}`);
-        if(result.length != 0 ){
+        if(results.length != 0 ){
           version_id = results[0].version_id;
+          
+        }else{
+          const resultinit = await this._resultsTocResultRepository.query(`select toc_id from clarisa_initiatives where id = ${init}`);
+        if(resultinit.length != 0 ){
+          version_id = resultinit[0].toc_id;
+        }
         }
       }
       return {
