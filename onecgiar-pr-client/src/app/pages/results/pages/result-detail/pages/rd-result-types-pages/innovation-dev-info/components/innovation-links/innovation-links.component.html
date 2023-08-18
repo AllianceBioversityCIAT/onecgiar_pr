@@ -2,8 +2,7 @@
 <div *ngIf="this.body.innovation_pdf">
     <app-pr-field-header
     label="Innovation visuals - Provide 3-5 URLs to key images, photos or pictures that best represent or describe the innovation"
-    description="Provide only high-resolution images, photos or pictures that clearly visualize the innovation (e.g., how it provides a specific solution to a problem, its use in practice, etc.)
-    This image(s) will be used in the final report of the survey, therefore consent to use the image(s) is needed"
+    [description]="temporalLinkDescription()"
     [useColon]="false"></app-pr-field-header>
     
     <div class="linkItem" *ngFor="let result of this.linkList1; let i=index">
@@ -30,7 +29,7 @@ title="No link to picture added"></app-no-data-text>
 
 <app-pr-field-header
 label="· Innovations reference materials – Provide 3-5 URLs to reference material(s) that describe the innovation"
-description="Reference materials may include (science) publications, websites, newsletters, reports, newspaper articles, videos, etc."
+[description]="temporalReferenceDescription()"
 [useColon]="false"></app-pr-field-header>
 
 <div class="linkItem" *ngFor="let result of this.linkList2; let i=index">
