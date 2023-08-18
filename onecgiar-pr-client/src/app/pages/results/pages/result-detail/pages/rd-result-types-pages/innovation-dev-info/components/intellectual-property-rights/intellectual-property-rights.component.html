@@ -1,14 +1,21 @@
 <app-pr-field-header label="Intellectual property rights"></app-pr-field-header>
 
+<div>{{options.intellectual_property_rights.q1.options | json}}</div>
 <div class="paddingLeft20">
-    <app-pr-radio-button [label]="questions.q1.question" [options]="questions.q1.answers" optionLabel="answer"
-        [verticalAlignment]="true" optionValue="id" [(ngModel)]="questions.q1.value"></app-pr-radio-button>
+    <app-pr-radio-button [label]="options.intellectual_property_rights.q1.question_text"
+        [options]="options.intellectual_property_rights.q1.options" optionLabel="answer" [verticalAlignment]="true"
+        optionValue="id" [(ngModel)]="options.intellectual_property_rights.q1['value']"></app-pr-radio-button>
 
-    <app-pr-radio-button [label]="questions.q2.question" [options]="questions.q2.answers" optionLabel="answer"
-        *ngIf="questions.q1.value !== null &&questions.q1.value !=3" [verticalAlignment]="true" optionValue="id"
-        [(ngModel)]="questions.q2.value"></app-pr-radio-button>
+    <app-pr-radio-button [label]="options.intellectual_property_rights.q2.question_text"
+        [options]="options.intellectual_property_rights.q2.options" optionLabel="answer"
+        *ngIf="options.intellectual_property_rights.q1['value'] !== null &&options.intellectual_property_rights.q1['value'] !=3"
+        [verticalAlignment]="true" optionValue="id"
+        [(ngModel)]="options.intellectual_property_rights.q2['value']"></app-pr-radio-button>
 
-    <app-pr-radio-button [label]="questions.q3.question" [description]="questions.q3.description" [options]="
-        questions.q3.answers" optionLabel="answer" *ngIf="questions.q2.value !== null &&questions.q2.value !=3"
-        [verticalAlignment]="true" optionValue="id" [(ngModel)]="questions.q3.value"></app-pr-radio-button>
+    <app-pr-radio-button [label]="options.intellectual_property_rights.q3.question_text"
+        [description]="options.intellectual_property_rights.q3.question_description" [options]="
+        options.intellectual_property_rights.q3.options" optionLabel="answer"
+        *ngIf="options.intellectual_property_rights.q2['value'] !== null &&options.intellectual_property_rights.q2['value'] !=3"
+        [verticalAlignment]="true" optionValue="id"
+        [(ngModel)]="options.intellectual_property_rights.q3['value']"></app-pr-radio-button>
 </div>
