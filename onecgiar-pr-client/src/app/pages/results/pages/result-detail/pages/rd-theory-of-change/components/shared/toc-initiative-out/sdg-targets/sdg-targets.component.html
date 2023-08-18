@@ -1,5 +1,5 @@
 <app-pr-field-header
-    label="Select an SDG to filter SDG Targets" [required]="false"></app-pr-field-header>
+    label="Select an SDG to filter SDG Targets" [required]="sdgRequid"></app-pr-field-header>
 
 <div class="sdg_targets">
     <div class="sdg_item" *ngFor="let sdgItem of this.sdgTargetLis" (click)="onSelectSDG(sdgItem)">

@@ -1,7 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { BasicInfoDto } from '../../../shared/globalInterfaces/basic-info.dto';
 import { MQAPResultDto } from '../../m-qap/dtos/m-qap.dto';
-import { Result } from '../entities/result.entity';
 import { ResultRegion } from '../result-regions/entities/result-region.entity';
 import { MQAPAuthor } from './dto/mqap-author.dto';
 import { ResultsKnowledgeProductAltmetricDto } from './dto/results-knowledge-product-altmetric.dto';
@@ -15,6 +13,7 @@ import { ResultsKnowledgeProductInstitution } from './entities/results-knowledge
 import { ResultsKnowledgeProductKeyword } from './entities/results-knowledge-product-keywords.entity';
 import { ResultsKnowledgeProductMetadata } from './entities/results-knowledge-product-metadata.entity';
 import { ResultsKnowledgeProduct } from './entities/results-knowledge-product.entity';
+import { FairSpecificData, FullFairData } from './dto/fair-data.dto';
 
 @Injectable()
 export class ResultsKnowledgeProductMapper {
@@ -23,22 +22,22 @@ export class ResultsKnowledgeProductMapper {
   ): ResultsKnowledgeProductDto {
     let knowledgeProductDto = new ResultsKnowledgeProductDto();
 
-    knowledgeProductDto.accessible = mqapResponseDto?.FAIR?.score?.A;
+    //knowledgeProductDto.accessible = mqapResponseDto?.FAIR?.score?.A;
     knowledgeProductDto.commodity = (mqapResponseDto?.Commodities ?? []).join(
       '; ',
     );
     knowledgeProductDto.description = mqapResponseDto?.Description;
     knowledgeProductDto.doi = mqapResponseDto?.DOI;
-    knowledgeProductDto.findable = mqapResponseDto?.FAIR?.score?.F;
+    //knowledgeProductDto.findable = mqapResponseDto?.FAIR?.score?.F;
     knowledgeProductDto.handle = mqapResponseDto?.handle;
-    knowledgeProductDto.interoperable = mqapResponseDto?.FAIR?.score?.I;
+    //knowledgeProductDto.interoperable = mqapResponseDto?.FAIR?.score?.I;
     knowledgeProductDto.is_melia = null; //null, as this field is mapped by the user
     knowledgeProductDto.licence = mqapResponseDto?.Rights;
     knowledgeProductDto.melia_previous_submitted = null; //null, as this info is mapped by the user
     knowledgeProductDto.melia_type_id = null; //null, as this info is mapped by the user
     knowledgeProductDto.ost_melia_study_id = null; //null, as this info is mapped by the user
     knowledgeProductDto.title = mqapResponseDto?.Title;
-    knowledgeProductDto.reusable = mqapResponseDto?.FAIR?.score?.R;
+    //knowledgeProductDto.reusable = mqapResponseDto?.FAIR?.score?.R;
     knowledgeProductDto.sponsor = (mqapResponseDto?.['Funding source'] ?? [])
       .map((f) => f.name)
       .join('; ');
@@ -46,7 +45,7 @@ export class ResultsKnowledgeProductMapper {
 
     //TODO remove when this mapping is done
     knowledgeProductDto.cgspace_countries = this.getAsArray(
-      mqapResponseDto?.Countries,
+      mqapResponseDto?.['Country ISO code'],
     );
     /*if (typeof mqapResponseDto?.['Region of the research'] === 'string') {
       knowledgeProductDto.cgspace_regions =
@@ -109,7 +108,8 @@ export class ResultsKnowledgeProductMapper {
     metadataCGSpace.doi = dto?.DOI;
     metadataCGSpace.is_isi = dto?.ISI === 'ISI Journal';
     metadataCGSpace.is_peer_reviewed = dto?.['Peer-reviewed'] === 'Peer Review';
-    metadataCGSpace.issue_year = this.getPublicationYearFromMQAPResponse(dto);
+    metadataCGSpace.issue_year =
+      this.getPublicationYearFromMQAPResponse(dto)?.year;
 
     metadataHolder.push(metadataCGSpace);
     knowledgeProductDto.metadataCG = metadataCGSpace;
@@ -174,6 +174,60 @@ export class ResultsKnowledgeProductMapper {
         knowledgeProductDto.clarisa_regions.filter((r) => r === 1);
     }
 
+    //start fair mapping
+    const fair = new FullFairData();
+    fair.total_score = dto?.FAIR?.score?.total;
+
+    fair.F = new FairSpecificData();
+    fair.F.score = dto?.FAIR?.score?.F;
+    fair.F.indicators = this.getAsArray(dto?.FAIR?.F).map((i) => {
+      const indicator = new FairSpecificData();
+
+      indicator.description = i?.description;
+      indicator.name = i?.name;
+      indicator.score = i?.valid ? 1 : 0;
+
+      return indicator;
+    });
+
+    fair.A = new FairSpecificData();
+    fair.A.score = dto?.FAIR?.score?.A;
+    fair.A.indicators = this.getAsArray(dto?.FAIR?.A).map((i) => {
+      const indicator = new FairSpecificData();
+
+      indicator.description = i?.description;
+      indicator.name = i?.name;
+      indicator.score = i?.valid ? 1 : 0;
+
+      return indicator;
+    });
+
+    fair.I = new FairSpecificData();
+    fair.I.score = dto?.FAIR?.score?.I;
+    fair.I.indicators = this.getAsArray(dto?.FAIR?.I).map((i) => {
+      const indicator = new FairSpecificData();
+
+      indicator.description = i?.description;
+      indicator.name = i?.name;
+      indicator.score = i?.valid ? 1 : 0;
+
+      return indicator;
+    });
+
+    fair.R = new FairSpecificData();
+    fair.R.score = dto?.FAIR?.score?.R;
+    fair.R.indicators = this.getAsArray(dto?.FAIR?.R).map((i) => {
+      const indicator = new FairSpecificData();
+
+      indicator.description = i?.description;
+      indicator.name = i?.name;
+      indicator.score = i?.valid ? 1 : 0;
+
+      return indicator;
+    });
+
+    knowledgeProductDto.fair_data = fair;
+
     return knowledgeProductDto;
   }
 
@@ -232,8 +286,23 @@ export class ResultsKnowledgeProductMapper {
     return altmetric;
   }
 
-  public getPublicationYearFromMQAPResponse(dto: MQAPResultDto): number {
-    const publicationDate = dto?.['Publication Date'] ?? '';
+  public getPublicationYearFromMQAPResponse(dto: MQAPResultDto): {
+    field_name: string;
+    year: number;
+  } {
+    let publicationDate = dto?.['Online publication date'];
+    let fieldName = 'online_publication_date';
+
+    if (!publicationDate) {
+      publicationDate = dto?.['Issued date'];
+      fieldName = 'issued_date';
+    }
+
+    if (!publicationDate) {
+      publicationDate = dto?.['Publication Date'];
+      fieldName = 'publication_date';
+    }
+
     const isComposed: boolean = publicationDate.indexOf('-') > 0;
     let year: number = 0;
 
@@ -243,7 +312,10 @@ export class ResultsKnowledgeProductMapper {
       year = Number(publicationDate);
     }
 
-    return Number.isNaN(year) ? undefined : year;
+    return {
+      field_name: fieldName,
+      year: Number.isNaN(year) ? undefined : year,
+    };
   }
 
   getAuthorsFromMQAPResponse(dto: MQAPResultDto): MQAPAuthor[] {
@@ -278,16 +350,16 @@ export class ResultsKnowledgeProductMapper {
 
     knowledgeProductDto.id = entity.result_knowledge_product_id;
 
-    knowledgeProductDto.accessible = entity.accesible;
+    //knowledgeProductDto.accessible = entity.accesible;
     knowledgeProductDto.commodity = entity.comodity;
     knowledgeProductDto.description = entity.description;
-    knowledgeProductDto.findable = entity.findable;
+    //knowledgeProductDto.findable = entity.findable;
     knowledgeProductDto.handle = entity.handle;
-    knowledgeProductDto.interoperable = entity.interoperable;
+    //knowledgeProductDto.interoperable = entity.interoperable;
     knowledgeProductDto.licence = entity.licence;
     knowledgeProductDto.title = entity.name;
     knowledgeProductDto.references_other_knowledge_products = null; //TODO TBD
-    knowledgeProductDto.reusable = entity.reusable;
+    //knowledgeProductDto.reusable = entity.reusable;
     knowledgeProductDto.sponsor = entity.sponsors;
     knowledgeProductDto.type = entity.knowledge_product_type;
     knowledgeProductDto.is_melia = entity.is_melia;
@@ -295,6 +367,8 @@ export class ResultsKnowledgeProductMapper {
       entity.melia_previous_submitted;
     knowledgeProductDto.melia_type_id = entity.melia_type_id;
     knowledgeProductDto.ost_melia_study_id = entity.ost_melia_study_id;
+    knowledgeProductDto.cgspace_phase_year =
+      entity?.result_object?.obj_version?.cgspace_year;
     //TODO remove when this mapping is done
     //knowledgeProductDto.cgspace_countries = entity.cgspace_countries;
     //knowledgeProductDto.cgspace_regions = entity.cgspace_regions;
@@ -372,6 +446,96 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProductDto.is_global_geoscope =
       entity.result_object?.geographic_scope_id === 1;
 
+    //start fair mapping
+    let currentFairValue =
+      entity.result_knowledge_product_fair_score_array.find(
+        (rkpfs) => rkpfs.fair_field_object.short_name == 'total',
+      );
+    const fair = new FullFairData();
+    fair.total_score = currentFairValue?.fair_value;
+
+    currentFairValue = entity.result_knowledge_product_fair_score_array.find(
+      (rkpfs) => rkpfs.fair_field_object.short_name == 'F',
+    );
+    let currentFairIndicators =
+      entity.result_knowledge_product_fair_score_array.filter(
+        (rkpfs) =>
+          rkpfs.fair_field_object.parent_id == currentFairValue.fair_field_id,
+      );
+    fair.F = new FairSpecificData();
+    fair.F.score = currentFairValue?.fair_value;
+    fair.F.indicators = currentFairIndicators.map((i) => {
+      const indicator = new FairSpecificData();
+
+      indicator.description = i?.fair_field_object?.description;
+      indicator.name = i?.fair_field_object?.short_name;
+      indicator.score = i?.fair_value;
+
+      return indicator;
+    });
+
+    currentFairValue = entity.result_knowledge_product_fair_score_array.find(
+      (rkpfs) => rkpfs.fair_field_object.short_name == 'A',
+    );
+    currentFairIndicators =
+      entity.result_knowledge_product_fair_score_array.filter(
+        (rkpfs) =>
+          rkpfs.fair_field_object.parent_id == currentFairValue.fair_field_id,
+      );
+    fair.A = new FairSpecificData();
+    fair.A.score = currentFairValue?.fair_value;
+    fair.A.indicators = currentFairIndicators.map((i) => {
+      const indicator = new FairSpecificData();
+
+      indicator.description = i?.fair_field_object?.description;
+      indicator.name = i?.fair_field_object?.short_name;
+      indicator.score = i?.fair_value;
+
+      return indicator;
+    });
+
+    currentFairValue = entity.result_knowledge_product_fair_score_array.find(
+      (rkpfs) => rkpfs.fair_field_object.short_name == 'I',
+    );
+    currentFairIndicators =
+      entity.result_knowledge_product_fair_score_array.filter(
+        (rkpfs) =>
+          rkpfs.fair_field_object.parent_id == currentFairValue.fair_field_id,
+      );
+    fair.I = new FairSpecificData();
+    fair.I.score = currentFairValue?.fair_value;
+    fair.I.indicators = currentFairIndicators.map((i) => {
+      const indicator = new FairSpecificData();
+
+      indicator.description = i?.fair_field_object?.description;
+      indicator.name = i?.fair_field_object?.short_name;
+      indicator.score = i?.fair_value;
+
+      return indicator;
+    });
+
+    currentFairValue = entity.result_knowledge_product_fair_score_array.find(
+      (rkpfs) => rkpfs.fair_field_object.short_name == 'R',
+    );
+    currentFairIndicators =
+      entity.result_knowledge_product_fair_score_array.filter(
+        (rkpfs) =>
+          rkpfs.fair_field_object.parent_id == currentFairValue.fair_field_id,
+      );
+    fair.R = new FairSpecificData();
+    fair.R.score = currentFairValue?.fair_value;
+    fair.R.indicators = currentFairIndicators.map((i) => {
+      const indicator = new FairSpecificData();
+
+      indicator.description = i?.fair_field_object?.description;
+      indicator.name = i?.fair_field_object?.short_name;
+      indicator.score = i?.fair_value;
+
+      return indicator;
+    });
+
+    knowledgeProductDto.fair_data = fair;
+
     return knowledgeProductDto;
   }
 
@@ -381,13 +545,13 @@ export class ResultsKnowledgeProductMapper {
     userId: number,
     resultId: number,
   ): ResultsKnowledgeProduct {
-    knowledgeProduct.accesible = dto.accessible;
+    //knowledgeProduct.accesible = dto.accessible;
     knowledgeProduct.comodity = dto.commodity;
     knowledgeProduct.description = dto.description;
     knowledgeProduct.doi = dto.doi;
-    knowledgeProduct.findable = dto.findable;
+    //knowledgeProduct.findable = dto.findable;
     knowledgeProduct.handle = dto.handle;
-    knowledgeProduct.interoperable = dto.interoperable;
+    //knowledgeProduct.interoperable = dto.interoperable;
     //knowledgeProduct.is_melia = null;
     knowledgeProduct.knowledge_product_type = dto.type;
     knowledgeProduct.licence = dto.licence;
@@ -395,7 +559,7 @@ export class ResultsKnowledgeProductMapper {
     //knowledgeProduct.melia_type_id = null;
     //knowledgeProduct.ost_melia_study_id = null;
     knowledgeProduct.name = dto.title;
-    knowledgeProduct.reusable = dto.reusable;
+    //knowledgeProduct.reusable = dto.reusable;
     knowledgeProduct.sponsors = dto.sponsor;
 
     if (!knowledgeProduct.result_knowledge_product_id) {

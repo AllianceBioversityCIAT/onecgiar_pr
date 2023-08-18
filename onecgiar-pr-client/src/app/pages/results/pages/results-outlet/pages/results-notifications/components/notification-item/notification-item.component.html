@@ -26,17 +26,17 @@
         <div class="buttons">
             <app-pr-button text="Map and accept" colorType="success" (click)="mapAndAccept(notification)"
                 [rotating]="this.requesting" [icon]="this.requesting?'loop':''"
-                [ngClass]="{'globalDisabled': this.requesting || this.api.rolesSE.platformIsClosed|| this.isSubmitted}"
+                [ngClass]="{'globalDisabled': this.requesting || this.api.rolesSE.platformIsClosed|| this.isSubmitted || !this.notification?.version_status}"
                 *ngIf="!notification?.action_area_outcome_id && !notification?.toc_result_id"></app-pr-button>
 
             <app-pr-button text="Accept" colorType="success" (click)="acceptOrReject(true)" [rotating]="this.requesting"
                 [icon]="this.requesting?'loop':''"
-                [ngClass]="{'globalDisabled': this.requesting || this.api.rolesSE.platformIsClosed|| this.isSubmitted}"
+                [ngClass]="{'globalDisabled': this.requesting || this.api.rolesSE.platformIsClosed|| this.isSubmitted || !this.notification?.version_status}"
                 *ngIf="notification?.action_area_outcome_id || notification?.toc_result_id"></app-pr-button>
 
             <app-pr-button text="Reject" colorType="danger" (click)="acceptOrReject(false)" [rotating]="this.requesting"
                 [icon]="this.requesting?'loop':''"
-                [ngClass]="{'globalDisabled': this.requesting || this.api.rolesSE.platformIsClosed}"></app-pr-button>
+                [ngClass]="{'globalDisabled': this.requesting || this.api.rolesSE.platformIsClosed || !this.notification?.version_status}"></app-pr-button>
 
             <!-- <button pButton type="button" label="Accept" class="p-button-success"
                 *ngIf="!notification?.action_area_outcome_id && !notification?.toc_result_id"

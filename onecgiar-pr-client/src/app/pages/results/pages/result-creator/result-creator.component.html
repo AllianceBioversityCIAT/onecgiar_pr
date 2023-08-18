@@ -48,7 +48,7 @@
           </div>
         </div>
         <app-pr-input [disabled]="isKnowledgeProduct" [readOnly]="isKnowledgeProduct" [isStatic]="true"
-          *ngIf="this.resultLevelSE.resultBody.result_type_id" [placeholder]="resultTypeName+ ''" label="Title"
+          *ngIf="this.resultLevelSE.resultBody.result_type_id" [placeholder]="resultTypeNamePlaceholder+ ''" label="Title"
           type="text" [maxWords]="30" [required]="resultLevelSE.resultBody.result_type_id != 6"
           [description]="isKnowledgeProduct ? 'Title retrieved from CGSpace' :'To search for results that have already been reported, enter key words into the title box below. If your result has not already been reported, you can add it here.'"
           [(ngModel)]="this.resultLevelSE.resultBody.result_name"

@@ -45,7 +45,7 @@ export class ResultsKnowledgeProductsController {
   @Get('mqap')
   async getFromMQAPByHandle(@Query('handle') handle: string) {
     const { message, response, status } =
-      await this._resultsKnowledgeProductsService.findOnCGSpace(handle);
+      await this._resultsKnowledgeProductsService.findOnCGSpace(handle, null);
 
     throw new HttpException({ message, response }, status);
   }
@@ -94,11 +94,12 @@ export class ResultsKnowledgeProductsController {
       JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
     );
 
-    const {message, response, status} = await this._resultsKnowledgeProductsService.upsert(
-      id,
-      token,
-      sectionSevenData,
-    );
+    const { message, response, status } =
+      await this._resultsKnowledgeProductsService.upsert(
+        id,
+        token,
+        sectionSevenData,
+      );
     throw new HttpException({ message, response }, status);
   }
 }

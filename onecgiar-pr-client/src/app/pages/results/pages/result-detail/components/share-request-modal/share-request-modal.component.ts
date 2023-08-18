@@ -7,6 +7,7 @@ import { Router } from '@angular/router';
 import { RetrieveModalService } from '../retrieve-modal/retrieve-modal.service';
 import { environment } from 'src/environments/environment';
 import { ResultsNotificationsService } from '../../../results-outlet/pages/results-notifications/results-notifications.service';
+import { RdTheoryOfChangesServicesService } from '../../pages/rd-theory-of-change/rd-theory-of-changes-services.service';
 
 @Component({
   selector: 'app-share-request-modal',
@@ -23,7 +24,7 @@ export class ShareRequestModalComponent {
       initiative_id: 10
     }
   ];
-  constructor(public retrieveModalSE: RetrieveModalService, public api: ApiService, public rolesSE: RolesService, public shareRequestModalSE: ShareRequestModalService, private router: Router, public resultsNotificationsSE: ResultsNotificationsService) {}
+  constructor(public retrieveModalSE: RetrieveModalService, public api: ApiService, public rolesSE: RolesService, public shareRequestModalSE: ShareRequestModalService, private router: Router, public resultsNotificationsSE: ResultsNotificationsService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {}
   ngOnInit(): void {
     this.shareRequestModalSE.shareRequestBody = new ShareRequestBody();
     //Called after the constructor, initializing input properties, and the first call to ngOnChanges.
@@ -84,9 +85,12 @@ export class ShareRequestModalComponent {
   }
 
   acceptOrReject() {
-    const body = { ...this.api.dataControlSE.currentNotification, ...this.shareRequestModalSE.shareRequestBody, request_status_id: 2 };
+    const body = { ...this.api.dataControlSE.currentNotification, ...this.shareRequestModalSE.shareRequestBody, request_status_id: 2, bodyNewTheoryOfChanges: this.theoryOfChangesServices.body };
     //(this.api.resultsSE.ipsrDataControlSE.inIpsr);
     this.requesting = true;
+    console.log(body);
+    
+    
     this.api.resultsSE.PATCH_updateRequest(body).subscribe(
       resp => {
         //(resp);

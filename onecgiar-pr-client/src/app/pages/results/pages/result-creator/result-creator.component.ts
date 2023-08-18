@@ -55,9 +55,18 @@ export class ResultCreatorComponent implements OnInit {
     return this.resultLevelSE.resultBody.result_type_id == 6;
   }
 
+  get resultTypeNamePlaceholder(): string {
+    const typeName = this.resultTypeName;
+    return typeName ? typeName + ' title...' : 'Title...';
+  }
+
   get resultTypeName(): string {
-    if (!this.resultLevelSE.currentResultTypeList || !this.resultLevelSE.resultBody.result_type_id) return 'Title...';
-    return this.resultLevelSE.currentResultTypeList.find(resultType => resultType.id == this.resultLevelSE.resultBody.result_type_id)?.name + ' title...';
+    if (!this.resultLevelSE.currentResultTypeList || !this.resultLevelSE.resultBody.result_type_id) return '';
+    return this.resultLevelSE.currentResultTypeList.find(resultType => resultType.id == this.resultLevelSE.resultBody.result_type_id)?.name;
+  }
+
+  get resultLevelName(): string {
+    return this.resultLevelSE.resultBody['result_level_name'] ?? '';
   }
 
   cleanTitle() {
@@ -66,7 +75,9 @@ export class ResultCreatorComponent implements OnInit {
 
   depthSearch(title: string) {
     const cleanSpaces = text => text?.replaceAll(' ', '')?.toLowerCase();
-    this.api.resultsSE.GET_FindResultsElastic(title).subscribe(
+    const legacyType = this.getLegacyType(this.resultTypeName, this.resultLevelName);
+    console.log({ type: this.resultTypeName, level: this.resultLevelName, legacyType });
+    this.api.resultsSE.GET_FindResultsElastic(title, legacyType).subscribe(
       response => {
         //(response);
         this.depthSearchList = response;
@@ -77,6 +88,22 @@ export class ResultCreatorComponent implements OnInit {
         this.exactTitleFound = false;
       }
     );
+  }
+
+  getLegacyType(type: string, level: string): string {
+    let legacyType = '';
+
+    if (type == 'Innovation development') {
+      legacyType = 'Innovation';
+    } else if (type == 'Policy change') {
+      legacyType = 'Policy';
+    } else if (type == 'Capacity change' || type == 'Other outcome') {
+      legacyType = 'OICR';
+    } else if (level == 'Impact') {
+      legacyType = 'OICR';
+    }
+
+    return legacyType;
   }
 
   onSaveSection() {
@@ -98,7 +125,7 @@ export class ResultCreatorComponent implements OnInit {
       this.api.resultsSE.POST_createWithHandle({ ...this.mqapJson, result_data: this.resultLevelSE.resultBody }).subscribe(
         (resp: any) => {
           //(resp);
-          this.router.navigate([`/result/result-detail/${resp?.response?.result_code}/general-information`]);
+          this.router.navigate([`/result/result-detail/${resp?.response?.result_code}/general-information`], { queryParams: { phase: resp?.response?.version_id } });
           this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
         },
         err => {

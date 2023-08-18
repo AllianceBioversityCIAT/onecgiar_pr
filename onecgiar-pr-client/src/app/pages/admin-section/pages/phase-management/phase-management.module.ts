@@ -14,10 +14,13 @@ import { TagModule } from 'primeng/tag';
 import { DropdownModule } from 'primeng/dropdown';
 import { TooltipModule } from 'primeng/tooltip';
 import { CalendarModule } from 'primeng/calendar';
+import { OtherFunctionalitiesComponent } from './other-functionalities/other-functionalities.component';
+import { MassivePhaseShiftComponent } from './other-functionalities/components/massive-phase-shift/massive-phase-shift.component';
+import { DialogModule } from 'primeng/dialog';
 
 @NgModule({
-  declarations: [PhaseManagementComponent],
+  declarations: [PhaseManagementComponent, OtherFunctionalitiesComponent, MassivePhaseShiftComponent],
   exports: [PhaseManagementComponent],
-  imports: [CommonModule, ButtonModule, DropdownModule, TagModule, InputTextModule, PhaseManagementRoutingModule, TableModule, FormsModule, CustomFieldsModule, ResultHistoryOfChangesModalModule, FilterByTextModule, TooltipModule, CalendarModule]
+  imports: [CommonModule, DialogModule, ButtonModule, DropdownModule, TagModule, InputTextModule, PhaseManagementRoutingModule, TableModule, FormsModule, CustomFieldsModule, ResultHistoryOfChangesModalModule, FilterByTextModule, TooltipModule, CalendarModule]
 })
 export class PhaseManagementModule {}

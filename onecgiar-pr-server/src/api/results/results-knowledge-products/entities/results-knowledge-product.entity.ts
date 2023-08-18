@@ -18,6 +18,7 @@ import { ResultsKnowledgeProductAuthor } from './results-knowledge-product-autho
 import { ResultsKnowledgeProductInstitution } from './results-knowledge-product-institution.entity';
 import { ResultsKnowledgeProductKeyword } from './results-knowledge-product-keywords.entity';
 import { ResultsKnowledgeProductMetadata } from './results-knowledge-product-metadata.entity';
+import { ResultsKnowledgeProductFairScore } from './results-knowledge-product-fair-scores.entity';
 
 @Entity()
 export class ResultsKnowledgeProduct {
@@ -213,6 +214,12 @@ export class ResultsKnowledgeProduct {
     (kpfi) => kpfi.result_knowledge_product_object,
   )
   knowledge_product_fair_baseline_array: KnowledgeProductFairBaseline[];
+
+  @OneToMany(
+    () => ResultsKnowledgeProductFairScore,
+    (rkpfs) => rkpfs.result_knowledge_product_object,
+  )
+  result_knowledge_product_fair_score_array: ResultsKnowledgeProductFairScore[];
 
   @ManyToOne(() => Result, (r) => r.id)
   @JoinColumn({

@@ -63,6 +63,7 @@ import { Actions } from 'src/connection/dynamodb-logs/dto/enumAction.const';
 import { VersioningService } from '../versioning/versioning.service';
 import { AppModuleIdEnum } from 'src/shared/constants/role-type.enum';
 import { InstitutionRoleEnum } from './results_by_institutions/entities/institution_role.enum';
+import { ResultsKnowledgeProductFairScoreRepository } from './results-knowledge-products/repositories/results-knowledge-product-fair-scores.repository';
 import { ResultsInvestmentDiscontinuedOptionRepository } from './results-investment-discontinued-options/results-investment-discontinued-options.repository';
 
 @Injectable()
@@ -99,6 +100,7 @@ export class ResultsService {
     private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
     private readonly _resultsKnowledgeProductKeywordRepository: ResultsKnowledgeProductKeywordRepository,
     private readonly _resultsKnowledgeProductMetadataRepository: ResultsKnowledgeProductMetadataRepository,
+    private readonly _resultsKnowledgeProductFairScoreRepository: ResultsKnowledgeProductFairScoreRepository,
     //private readonly _resultsImpactAreaIndicatorRepository: ResultsImpactAreaIndicatorRepository,
     //private readonly _resultsImpactAreaTargetRepository: ResultsImpactAreaTargetRepository,
     private readonly _logRepository: LogRepository,
@@ -276,6 +278,20 @@ export class ResultsService {
 
       return {
         response: entities,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async getChildlessInstitutionTypes() {
+    try {
+      const institutionTypes =
+        await this._clarisaInstitutionsTypeRepository.getChildlessInstitutionTypes();
+      return {
+        response: institutionTypes,
         message: 'Successful response',
         status: HttpStatus.OK,
       };
@@ -729,6 +745,10 @@ export class ResultsService {
           kpId,
           false,
         );
+        await this._resultsKnowledgeProductFairScoreRepository.statusElement(
+          kpId,
+          false,
+        );
         await this._resultKnowledgeProductRepository.statusElement(kpId, false);
       }
 
@@ -797,35 +817,7 @@ export class ResultsService {
   }
 
   async findForElasticSearch(documentName: string, id?: string) {
-    try {
-      const queryResult =
-        await this._customResultRepository.resultsForElasticSearch(id);
-
-      if (!queryResult.length) {
-        throw {
-          response: {},
-          message: 'Results Not Found',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
-
-      const operations: ElasticOperationDto<ResultSimpleDto>[] =
-        queryResult.map((r) => new ElasticOperationDto('PATCH', r));
-
-      const elasticJson: string =
-        this._elasticService.getBulkElasticOperationResults(
-          documentName,
-          operations,
-        );
-
-      return {
-        response: elasticJson,
-        message: 'Successful response',
-        status: HttpStatus.OK,
-      };
-    } catch (error) {
-      return this._handlersError.returnErrorRes({ error, debug: true });
-    }
+    return this._elasticService.findForElasticSearch(documentName, id);
   }
 
   async findAllSimplified(id?: string, allowDeleted: boolean = false) {

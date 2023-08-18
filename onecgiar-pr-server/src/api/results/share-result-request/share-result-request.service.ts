@@ -45,6 +45,8 @@ export class ShareResultRequestService {
     user: TokenDto,
   ) {
     try {
+      
+      
       /*const result: any = await this._resultRepository.getResultById(
         parseInt(`${resultId}`),
       );*/
@@ -153,6 +155,8 @@ export class ShareResultRequestService {
 
   async updateResultRequestByUser(data: ShareResultRequest, user: TokenDto) {
     try {
+      
+      
       const res = await this._resultRepository.findOne({
         where: {
           id: data.result_id,
@@ -332,6 +336,8 @@ export class ShareResultRequestService {
             });
           }
         }
+        let auxBody:any = data;
+        await this._resultsTocResultRepository.saveSectionNewTheoryOfChange(auxBody?.bodyNewTheoryOfChanges)
       }
 
       return {
