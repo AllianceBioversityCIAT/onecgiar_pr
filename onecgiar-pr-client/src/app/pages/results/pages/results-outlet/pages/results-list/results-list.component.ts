@@ -57,7 +57,7 @@ export class ResultsListComponent implements OnInit {
       }
     },
     {
-      label: 'Report in another phase',
+      label: 'Update result',
       icon: 'pi pi-fw pi-clone',
       command: () => {
         this.api.dataControlSE.chagePhaseModal = true;
