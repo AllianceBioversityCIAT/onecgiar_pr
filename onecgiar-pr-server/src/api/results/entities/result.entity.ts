@@ -25,6 +25,7 @@ import { ResultActor } from '../result-actors/entities/result-actor.entity';
 import { ResultsByInititiative } from '../results_by_inititiatives/entities/results_by_inititiative.entity';
 import { ResultIpExpertWorkshopOrganized } from '../../ipsr/innovation-pathway/entities/result-ip-expert-workshop-organized.entity';
 import { ResultStatus } from '../result-status/entities/result-status.entity';
+import { ResultsCenter } from '../results-centers/entities/results-center.entity';
 
 @Entity()
 @Index(['result_code', 'version_id'], { unique: true })
@@ -333,6 +334,9 @@ export class Result {
 
   @OneToMany(() => ResultsByInititiative, (rbi) => rbi.obj_result)
   obj_result_by_initiatives: ResultsByInititiative[];
+
+  @OneToMany(() => ResultsCenter, (rc) => rc.result_object)
+  result_center_array: ResultsCenter[];
 
   @OneToMany(
     () => ResultIpExpertWorkshopOrganized,
