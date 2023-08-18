@@ -15,10 +15,13 @@ export class TocInitiativeAaoComponent {
   value = true;
   actionAreasOutcomesList = [];
   informationGet = false;
+  fullInitiativeToc = '';
+  vesiondashboard = false;
   constructor(public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {}
 
   ngOnInit(): void {
     //this.GET_tocLevelsByresultId();
+    this.GET_fullInitiativeTocByinitId();
     this.getInformatioActionAreaResult();
   }
   /*
@@ -53,6 +56,20 @@ export class TocInitiativeAaoComponent {
       console.log(this.theoryOfChangesServices.resultActionArea);
       this.informationGet = true;
     })
+  }
+
+  GET_fullInitiativeTocByinitId() {
+    this.api.tocApiSE.GET_fullInitiativeTocByinitId(this.initiative.initiative_id).subscribe(
+      ({ response }) => {
+        
+        
+        this.fullInitiativeToc = response[0]?.toc_id;
+        this.vesiondashboard = true;
+      },
+      err => {
+        console.error(err);
+      }
+    );
   }
 
 }

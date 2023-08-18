@@ -2,7 +2,7 @@
 
 <div class="editable_field" [ngClass]="{'global-editable': this.editable}">
     <app-pr-field-header label="{{initiative?.official_code}} {{initiative?.short_name}}" [required]="true"></app-pr-field-header>
-    <a [href]="'https://toc.mel.cgiar.org/toc/'" target="_blank" class="toc_button"><span>See
+    <a [href]="'https://toc.loc.codeobia.com/toc/'+this.fullInitiativeToc" target="_blank" class="toc_button" *ngIf="vesiondashboard == true"><span>See
             ToC</span>
         <img src="assets/icons/toc_icon.png" alt="">
     </a>
