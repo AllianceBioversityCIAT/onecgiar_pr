@@ -19,7 +19,16 @@ export class InnovationLinksComponent implements OnInit {
   addLink() {
     this.linkList1.push({});
   }
+
   deleteLink(index) {
     this.linkList1.splice(index, 1);
+  }
+
+  addLink2() {
+    this.linkList2.push({});
+  }
+
+  deleteLink2(index) {
+    this.linkList2.splice(index, 1);
   }
 }
