@@ -27,7 +27,13 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
   @Input() readOnly: boolean;
   @Input() isStatic: boolean = false;
   @Input() verticalAlignment: boolean = false;
-  @Input() checkboxConfig: any = { listAttr: '', optionLbabel: '', optionValue: '', showInputIfAttr: '' };
+  @Input() checkboxConfig: {
+    listAttr: string;
+    optionLabel: string;
+    optionValue: string;
+    optionTextValue: string;
+    showInputIfAttr?: string;
+  } = { listAttr: '', optionLabel: '', optionValue: '', optionTextValue: '', showInputIfAttr: '' };
   @Output() selectOptionEvent = new EventEmitter<any>();
   private _value: string;
   constructor(public rolesSE: RolesService, public dataControlSE: DataControlService) {}
@@ -71,7 +77,8 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
         this.options.forEach((option: any) => {
           if (option.subOptions) {
             option.subOptions.forEach((subOption: any) => {
-              subOption.value = null;
+              subOption.answer_boolean = false;
+              subOption.answer_text = null;
             });
           }
         });
