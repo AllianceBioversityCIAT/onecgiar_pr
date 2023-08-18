@@ -482,7 +482,7 @@ export class ResultByInitiativesRepository
         return await this.query(upDateInactive, [
           userId,
           resultId,
-          isOwner ? 1 : 2,
+          2,
         ]);
 
         /*return await this.query(upDateActive, [
@@ -492,7 +492,7 @@ export class ResultByInitiativesRepository
         return await this.query(upDateAllInactive, [
           userId,
           resultId,
-          isOwner ? 1 : 2,
+          2,
         ]);
       }
     } catch (error) {
@@ -511,6 +511,7 @@ export class ResultByInitiativesRepository
           { result_id: resultId},
           {
             initiative_role_id: 2,
+            is_active: true
           },
         );
         
@@ -518,9 +519,13 @@ export class ResultByInitiativesRepository
           { result_id: resultId, initiative_id:initiative_id},
           {
             initiative_role_id: 1,
+            is_active: true
           },
         );
       }
+
+      console.log('Log',await this.findOneBy({ result_id: resultId, initiative_id:initiative_id}));
+      
 
       return {
         initiative_id: initiative_id,

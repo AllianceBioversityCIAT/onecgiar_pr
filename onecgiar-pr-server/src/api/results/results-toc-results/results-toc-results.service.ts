@@ -79,7 +79,7 @@ export class ResultsTocResultsService {
       const titleArray = contributing_np_projects.map((el) => el.grant_title);
 
       const iniciativeSubmitter =
-        this._resultByInitiativesRepository.updateIniciativeSubmitter(
+        await this._resultByInitiativesRepository.updateIniciativeSubmitter(
           result_id,
           result_toc_result.initiative_id,
         );
