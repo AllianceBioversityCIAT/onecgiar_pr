@@ -242,4 +242,70 @@ export class ResultsImpactAreaTargetRepository
       });
     }
   }
+
+  async getResultImpactAreaTargetByResultId(resultId: number) {
+    const queryData = `
+    select * 
+	from clarisa_global_targets cgt 
+    join clarisa_impact_areas cia on cgt.impactAreaId = cia.id 
+		join results_impact_area_target riat on riat.impact_area_target_id = cgt.targetId
+	where riat.result_id = ? and riat.is_active > 0;
+    `;
+    try {
+      const resultTocResult: any[] = await this.query(
+        queryData,
+        [resultId],
+      );
+      return resultTocResult;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsImpactAreaTargetRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async saveImpactAreaTarget(resultId:number, impactsTarget:any[], userId: number,){
+    const queryData = `
+    select * 
+	from clarisa_global_targets cgt 
+    join clarisa_impact_areas cia on cgt.impactAreaId = cia.id 
+		join results_impact_area_target riat on riat.impact_area_target_id = cgt.targetId
+	where riat.result_id = ? and cgt.targetId = ?;
+    `;
+    try {
+      
+      await this.update({result_id:resultId}, {is_active:false});
+
+      if(impactsTarget.length){
+        for(let impact of impactsTarget){
+          
+          let targetIndicators = await this.query(queryData, [resultId, impact.targetId]);
+          console.log(targetIndicators);
+          
+        
+        if(targetIndicators != null && targetIndicators.length > 0){
+          await this.update({result_impact_area_target_id:targetIndicators[0].result_impact_area_target_id}, {
+            is_active:true,
+          });
+        }else{
+          await this.save({
+            result_id:resultId,
+            impact_area_target_id:impact.targetId,
+            created_by:userId,
+            last_updated_by:userId,
+          })
+        }
+        }
+      }
+
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsImpactAreaTargetRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
 }

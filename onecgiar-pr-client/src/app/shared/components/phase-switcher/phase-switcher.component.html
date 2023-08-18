@@ -1,0 +1,13 @@
+<div class="title_component">Phases:</div>
+<div class="local_container">
+    <div class="phase_switcher">
+        <a [href]="getRouteWithQueryParams(phase?.id)" class="select_phase_button {{phase.status?'open':'close'}}"
+            [ngClass]="{'selected': this.activatedRoute.snapshot.queryParams['phase'] === phase?.id}"
+            (click)="goToresultUrl(phase?.id)"
+            *ngFor="let phase of this.api.dataControlSE.resultPhaseList">{{phase.phase_name}} <div class="tag">
+                <div class="text">{{phase.status?'Open':'Closed'}}</div>
+                <i class="material-icons-round">{{phase.status?'edit':'lock'}}</i>
+            </div>
+        </a>
+    </div>
+</div>

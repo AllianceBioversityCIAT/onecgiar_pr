@@ -26,3 +26,18 @@
         padding: 5px 15px;
     }
 }
+
+.texts{
+    .indicators{
+        display: flex;
+        align-items: center;
+        .check{
+            color: var(--pr-color-success);
+            margin-right: 5px;
+        }
+        .incomplete{
+            color: var(--pr-color-danger);
+            margin-right: 5px;
+        }
+    }
+}

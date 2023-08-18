@@ -26,10 +26,18 @@
 
 
 
-
     <app-pr-multi-select [options]="this.contributingInitiativesList" label="Contributing Initiatives"
+    [disableOptions]="this.theoryOfChangeBody?.pending_contributing_initiatives"
+     optionLabel="full_name" optionValue="id"
+    (selectOptionEvent)="onSelectContributingInitiative()" [required]="false" selectedOptionLabel="full_name"
+    [(ngModel)]="contributingInitiativeNew" [confirmDeletion]="true" placeholder="Select initiative(s)
+    ">
+    </app-pr-multi-select>
+
+    <app-pr-multi-select [options]="this.contributingInitiativesList" 
         [disableOptions]="this.theoryOfChangeBody?.pending_contributing_initiatives"
         selectedLabel="Contributing Initiatives" optionLabel="full_name" optionValue="id"
+        [readOnly]="true"
         (selectOptionEvent)="onSelectContributingInitiative()" [required]="false"
         (removeOptionEvent)="onRemoveContributingInitiative($event)" selectedOptionLabel="full_name"
         [(ngModel)]="this.theoryOfChangeBody.contributing_initiatives" [confirmDeletion]="true" placeholder="Select initiative(s)
@@ -39,9 +47,18 @@
 
     <div class="selected_container custom_scroll">
         <app-pr-field-header
-            [description]="'Initiatives to be added as contributor('+this.theoryOfChangeBody?.pending_contributing_initiatives?.length+')'">
+            [description]="'Initiatives to be added as contributor('+(this.theoryOfChangeBody?.pending_contributing_initiatives?.length+ contributingInitiativeNew.length)+')'">
         </app-pr-field-header>
         <div class="chips_container">
+            <div class="pr_chip_selected pending" *ngFor="let item of contributingInitiativeNew
+             let i=index">
+                <div class="name" [ngClass]="{'text_inactive': !item.is_active}"
+                    [innerHtml]="'<strong>'+item.official_code+'</strong> '+item.name">
+                </div>
+                <i *ngIf="!this.api.rolesSE.readOnly" class="material-icons-round"
+                    [style.color]="item.is_active?'#fd6d6d':'#5569dd'"
+                    (click)="onRemoveContribuiting(i)">{{item.is_active?'backspace':'undo'}}</i>
+            </div>
             <div class="pr_chip_selected pending" *ngFor="let item of this.theoryOfChangeBody?.pending_contributing_initiatives
              let i=index">
                 <div class="name" [ngClass]="{'text_inactive': !item.is_active}"
@@ -91,6 +108,9 @@
     <app-add-button name="Add non-pooled project"
         *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"
         (clickEvent)="addBilateralContribution()"></app-add-button>
+    <div appFeedbackValidation labelText="Contributing Centers"
+        [isComplete]="!!this.theoryOfChangeBody.contributing_center?.length">
+    </div>
     <app-pr-multi-select [options]="this.centersSE.centersList" label="Contributing Centers"
         (selectOptionEvent)="validatePrimarySelection()" selectedLabel="Center(s) selected" optionLabel="full_name"
         optionValue="code" [(ngModel)]="this.theoryOfChangeBody.contributing_center" placeholder="Select center(s)
@@ -117,7 +137,7 @@
         *ngIf="getConsumed && this.theoryOfChangeBody?.result_toc_result?.initiative_id || getConsumed && this.theoryOfChangeBody?.impacts">
         <div *ngSwitchCase="1">
             <app-toc-impact-section [contributing_initiatives]="this.theoryOfChangeBody.contributing_initiatives"
-                [impacts]="this.theoryOfChangeBody.impacts"></app-toc-impact-section>
+                [impacts]="this.theoryOfChangeBody.impactsTarge" [sdg]="this.theoryOfChangeBody.sdgTargets"></app-toc-impact-section>
         </div>
         <div *ngSwitchCase="2">
             <app-toc-action-area-outcome-section [result_toc_result]="this.theoryOfChangeBody.result_toc_result"
