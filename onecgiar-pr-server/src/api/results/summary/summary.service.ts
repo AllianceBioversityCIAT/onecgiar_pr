@@ -15,13 +15,19 @@ import { ResultsCapacityDevelopmentsRepository } from './repositories/results-ca
 import { ResultsCapacityDevelopments } from './entities/results-capacity-developments.entity';
 import { ResultByIntitutionsRepository } from '../results_by_institutions/result_by_intitutions.repository';
 import { ResultsByInstitution } from '../results_by_institutions/entities/results_by_institution.entity';
-import { CreateInnovationDevDto } from './dto/create-innovation-dev.dto';
+import {
+  CreateInnovationDevDto,
+  Option,
+  SubOption,
+} from './dto/create-innovation-dev.dto';
 import { ResultsInnovationsDevRepository } from './repositories/results-innovations-dev.repository';
 import { ResultsInnovationsDev } from './entities/results-innovations-dev.entity';
 import { ResultRepository } from '../result.repository';
 import { PolicyChangesDto } from './dto/create-policy-changes.dto';
 import { ResultsPolicyChanges } from './entities/results-policy-changes.entity';
 import { ResultsPolicyChangesRepository } from './repositories/results-policy-changes.repository';
+import { ResultAnswerRepository } from '../result-questions/repository/result-answers.repository';
+import { ResultAnswer } from '../result-questions/entities/result-answers.entity';
 
 @Injectable()
 export class SummaryService {
@@ -35,6 +41,7 @@ export class SummaryService {
     private readonly _resultRepository: ResultRepository,
     private readonly _versionsService: VersionsService,
     private readonly _handlersError: HandlersError,
+    private readonly _resultAnswerRepository: ResultAnswerRepository,
   ) {}
 
   create(createSummaryDto: CreateSummaryDto) {
@@ -415,6 +422,79 @@ export class SummaryService {
         newInnDev.innovation_pdf = innovation_pdf;
         InnDevRes = await this._resultsInnovationsDevRepository.save(newInnDev);
       }
+
+      const saveOptionsAndSubOptions = async (options: Option[]) => {
+        for (const optionData of options) {
+          const optionExist = await this._resultAnswerRepository.findOne({
+            where: {
+              result_id: resultId,
+              result_question_id: optionData.result_question_id,
+            },
+          });
+
+          if (optionExist) {
+            optionExist.answer_boolean = optionData.answer_boolean;
+            optionExist.answer_text = optionData.answer_text;
+            optionExist.last_updated_by = user.id;
+            await this._resultAnswerRepository.save(optionExist);
+          } else {
+            const optionAnswer = new ResultAnswer();
+            optionAnswer.result_question_id = optionData.result_question_id;
+            optionAnswer.answer_boolean = optionData.answer_boolean;
+            optionAnswer.answer_text = optionData.answer_text;
+            optionAnswer.result_id = resultId;
+            optionAnswer.created_by = user.id;
+            optionAnswer.last_updated_by = user.id;
+
+            await this._resultAnswerRepository.save(optionAnswer);
+          }
+
+          for (const subOptionData of optionData.subOptions) {
+            const subOptionExist = await this._resultAnswerRepository.findOne({
+              where: {
+                result_id: resultId,
+                result_question_id: subOptionData.result_question_id,
+              },
+            });
+            if (subOptionExist) {
+              subOptionExist.answer_boolean = subOptionData.answer_boolean;
+              subOptionExist.answer_text = subOptionData.answer_text;
+              subOptionExist.last_updated_by = user.id;
+              await this._resultAnswerRepository.save(subOptionExist);
+            } else {
+              const subOptionAnswer = new ResultAnswer();
+              subOptionAnswer.result_question_id =
+                subOptionData.result_question_id;
+              subOptionAnswer.answer_boolean = subOptionData.answer_boolean;
+              subOptionAnswer.answer_text = subOptionData.answer_text;
+              subOptionAnswer.result_id = resultId;
+              subOptionAnswer.created_by = user.id;
+              subOptionAnswer.last_updated_by = user.id;
+
+              await this._resultAnswerRepository.save(subOptionAnswer);
+            }
+          }
+        }
+      };
+
+      await saveOptionsAndSubOptions(
+        createInnovationDevDto.responsible_innovation_and_scaling.q1.options,
+      );
+      await saveOptionsAndSubOptions(
+        createInnovationDevDto.responsible_innovation_and_scaling.q2.options,
+      );
+      await saveOptionsAndSubOptions(
+        createInnovationDevDto.intellectual_property_rights.q1.options,
+      );
+      await saveOptionsAndSubOptions(
+        createInnovationDevDto.intellectual_property_rights.q2.options,
+      );
+      await saveOptionsAndSubOptions(
+        createInnovationDevDto.intellectual_property_rights.q3.options,
+      );
+      await saveOptionsAndSubOptions(
+        createInnovationDevDto.innovation_team_diversity.options,
+      );
 
       return {
         response: InnDevRes,
