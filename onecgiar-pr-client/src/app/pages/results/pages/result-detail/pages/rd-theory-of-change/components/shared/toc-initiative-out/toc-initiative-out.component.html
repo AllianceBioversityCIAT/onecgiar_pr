@@ -1,7 +1,7 @@
 <div>
     <div class="editable_field" [ngClass]="{'global-editable': this.editable}">
         <app-pr-yes-or-not [label]="getDescription(initiative?.official_code,initiative?.short_name)"
-            (selectOptionEvent)="valdiateEOI(initiative);initiative.toc_result_id = null"
+            (selectOptionEvent)="valdiateEOI(initiative);initiative.toc_result_id = null;"
             [(ngModel)]="initiative.planned_result"
             [description]="this.headerDescription(initiative.planned_result == false)" [readOnly]="!editable"
             [editable]="editable">
@@ -18,7 +18,7 @@
         <app-pr-select *ngIf="this.initiative?.planned_result && resultLevelId == 1" [options]="this.outputList"
             label="Output" optionLabel="extraInformation" optionValue="toc_result_id" [disabled]="!this.editable"
             [editable]="editable" placeholder="Select output" [(ngModel)]="initiative.toc_result_id"
-            [extraInformation]="true" (selectOptionEvent)="getIndicator()">
+            [extraInformation]="true" (selectOptionEvent)="getIndicator();this.get_versionDashboard()">
         </app-pr-select>
         <app-pr-select
             *ngIf="this.showOutcomeLevel && (resultLevelId == 1 ? this.initiative?.planned_result == false : true)"
@@ -34,14 +34,14 @@
             [options]="this.outcomeList" label="Outcome" [editable]="editable"
             [disabled]="(resultLevelId == 1 ? false : false) || !this.editable" optionLabel="extraInformation"
             [extraInformation]="true" optionValue="toc_result_id" placeholder="Select outcome"
-            [(ngModel)]="initiative.toc_result_id" (selectOptionEvent)="getIndicator()">
+            [(ngModel)]="initiative.toc_result_id" (selectOptionEvent)="getIndicator(); this.get_versionDashboard()">
         </app-pr-select>
 
         <app-pr-select
             *ngIf="(resultLevelId == 1 ? this.initiative?.planned_result == false : true) && initiative.toc_level_id == 3"
             [options]="this.eoiList" label="Outcome" [editable]="editable"
             [disabled]="(resultLevelId == 1 ? false : false) || !this.editable" optionLabel="title"
-            optionValue="toc_result_id" placeholder="Select outcome" [(ngModel)]="initiative.toc_result_id" (selectOptionEvent)="getIndicator()">
+            optionValue="toc_result_id" placeholder="Select outcome" [(ngModel)]="initiative.toc_result_id" (selectOptionEvent)="getIndicator(); this.get_versionDashboard()">
         </app-pr-select >
 
 
