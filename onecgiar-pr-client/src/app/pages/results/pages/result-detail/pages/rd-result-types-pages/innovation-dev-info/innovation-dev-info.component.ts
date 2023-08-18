@@ -13,7 +13,7 @@ export class InnovationDevInfoComponent implements OnInit {
   innovationDevInfoBody = new InnovationDevInfoBody();
   range = 5;
   sectionLoaded = false;
-  innovationDevelopmentQuestions: InnovationDevelopmentQuestions;
+  innovationDevelopmentQuestions: InnovationDevelopmentQuestions = new InnovationDevelopmentQuestions();
   constructor(private api: ApiService, public innovationControlListSE: InnovationControlListService) {}
 
   ngOnInit(): void {

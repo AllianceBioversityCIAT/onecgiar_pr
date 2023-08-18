@@ -38,11 +38,14 @@
 
         <app-pr-field-header label="Responsible innovation and scaling" [required]="false"></app-pr-field-header>
         <div class="paddingLeft20">
-            <app-gesi-innovation-assessment [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-gesi-innovation-assessment>
-            <app-scale-impact-analysis [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-scale-impact-analysis>
+            <app-gesi-innovation-assessment [body]="innovationDevInfoBody"
+                [options]="innovationDevelopmentQuestions"></app-gesi-innovation-assessment>
+            <app-scale-impact-analysis [body]="innovationDevInfoBody"
+                [options]="innovationDevelopmentQuestions"></app-scale-impact-analysis>
         </div>
 
-        <app-intellectual-property-rights [body]="innovationDevInfoBody"></app-intellectual-property-rights>
+        <app-intellectual-property-rights [body]="innovationDevInfoBody"
+            [options]="innovationDevelopmentQuestions"></app-intellectual-property-rights>
         <app-innovation-team-diversity [body]="innovationDevInfoBody"
             [options]="innovationDevelopmentQuestions"></app-innovation-team-diversity>
         <app-estimates [body]="innovationDevInfoBody"></app-estimates>
