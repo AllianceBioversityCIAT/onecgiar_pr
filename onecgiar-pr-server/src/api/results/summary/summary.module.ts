@@ -15,6 +15,7 @@ import { ResultsInnovationsDevRepository } from './repositories/results-innovati
 import { ResultRepository } from '../result.repository';
 import { ResultsPolicyChangesRepository } from './repositories/results-policy-changes.repository';
 import { ResultAnswerRepository } from '../result-questions/repository/result-answers.repository';
+import { EvidencesRepository } from '../evidences/evidences.repository';
 
 @Module({
   controllers: [SummaryController],
@@ -29,6 +30,7 @@ import { ResultAnswerRepository } from '../result-questions/repository/result-an
     ResultsInnovationsDevRepository,
     ResultsPolicyChangesRepository,
     ResultAnswerRepository,
+    EvidencesRepository,
     ResultRepository,
     VersionsService,
     VersionRepository,

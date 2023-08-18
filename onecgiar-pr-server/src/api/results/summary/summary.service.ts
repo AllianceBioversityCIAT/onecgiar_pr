@@ -28,6 +28,8 @@ import { ResultsPolicyChanges } from './entities/results-policy-changes.entity';
 import { ResultsPolicyChangesRepository } from './repositories/results-policy-changes.repository';
 import { ResultAnswerRepository } from '../result-questions/repository/result-answers.repository';
 import { ResultAnswer } from '../result-questions/entities/result-answers.entity';
+import { EvidencesRepository } from '../evidences/evidences.repository';
+import { Evidence } from '../evidences/entities/evidence.entity';
 
 @Injectable()
 export class SummaryService {
@@ -42,6 +44,7 @@ export class SummaryService {
     private readonly _versionsService: VersionsService,
     private readonly _handlersError: HandlersError,
     private readonly _resultAnswerRepository: ResultAnswerRepository,
+    private readonly _evidenceRepository: EvidencesRepository,
   ) {}
 
   create(createSummaryDto: CreateSummaryDto) {
@@ -496,8 +499,64 @@ export class SummaryService {
         createInnovationDevDto.innovation_team_diversity.options,
       );
 
+      const saveEvidence = async (
+        evidences: Evidence[],
+        evidence_type_id: number,
+      ) => {
+        const existingEvidences = await this._evidenceRepository.find({
+          where: {
+            result_id: resultId,
+            evidence_type_id: evidence_type_id,
+          },
+        });
+
+        for (const existingEvidence of existingEvidences) {
+          const matchingEvidence = evidences.find(
+            (evidence) => evidence.link === existingEvidence.link,
+          );
+
+          if (matchingEvidence) {
+            existingEvidence.link = matchingEvidence.link;
+            existingEvidence.last_updated_by = user.id;
+            await this._evidenceRepository.save(existingEvidence);
+          } else {
+            existingEvidence.is_active = 0;
+            existingEvidence.last_updated_by = user.id;
+            await this._evidenceRepository.save(existingEvidence);
+          }
+        }
+
+        for (const evidence of evidences) {
+          const evidenceExist = await this._evidenceRepository.findOne({
+            where: {
+              result_id: resultId,
+              evidence_type_id: evidence_type_id,
+              link: evidence.link,
+            },
+          });
+
+          if (evidenceExist) {
+            evidenceExist.link = evidence.link;
+            evidenceExist.last_updated_by = user.id;
+            await this._evidenceRepository.save(evidenceExist);
+          } else {
+            const newEvidence = new Evidence();
+            newEvidence.result_id = resultId;
+            newEvidence.evidence_type_id = evidence_type_id;
+            newEvidence.link = evidence.link;
+            newEvidence.created_by = user.id;
+            newEvidence.last_updated_by = user.id;
+
+            await this._evidenceRepository.save(newEvidence);
+          }
+        }
+      };
+
+      await saveEvidence(createInnovationDevDto.pictures, 3);
+      await saveEvidence(createInnovationDevDto.reference_materials, 4);
+
       return {
-        response: InnDevRes,
+        response: innDevExists,
         message: 'Results Innovations Dev has been created successfully',
         status: HttpStatus.CREATED,
       };
@@ -518,10 +577,18 @@ export class SummaryService {
           resultId,
         );
 
+      const pictures = await this._evidenceRepository.find({
+        where: { result_id: resultId, evidence_type_id: 3, is_active: 1 },
+      });
+      const reference_materials = await this._evidenceRepository.find({
+        where: { result_id: resultId, evidence_type_id: 4, is_active: 1 },
+      });
       const result = await this._resultRepository.getResultById(resultId);
       return {
         response: {
           ...innDevExists,
+          pictures,
+          reference_materials,
           result: result,
         },
         message: 'Successful response',
