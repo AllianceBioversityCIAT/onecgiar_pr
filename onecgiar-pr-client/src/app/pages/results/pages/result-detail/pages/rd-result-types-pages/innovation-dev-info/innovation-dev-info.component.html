@@ -49,7 +49,6 @@
         <app-innovation-team-diversity [body]="innovationDevInfoBody"
             [options]="innovationDevelopmentQuestions"></app-innovation-team-diversity>
         <app-estimates [body]="innovationDevInfoBody"></app-estimates>
-        <app-innovation-links [body]="innovationDevInfoBody"></app-innovation-links>
     </div>
 
 
@@ -97,6 +96,7 @@
         [(ngModel)]="this.innovationDevInfoBody.innovation_pdf">
     </app-pr-radio-button>
 
+    <app-innovation-links [body]="innovationDevInfoBody"></app-innovation-links>
 </div>
 
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>
