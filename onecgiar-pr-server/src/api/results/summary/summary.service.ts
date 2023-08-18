@@ -428,6 +428,9 @@ export class SummaryService {
 
       const saveOptionsAndSubOptions = async (options: Option[]) => {
         for (const optionData of options) {
+          if (optionData.answer_boolean == null && optionData.answer_text == null) {
+            continue;
+          }
           const optionExist = await this._resultAnswerRepository.findOne({
             where: {
               result_id: resultId,
@@ -453,6 +456,9 @@ export class SummaryService {
           }
 
           for (const subOptionData of optionData.subOptions) {
+            if (subOptionData.answer_boolean === null && subOptionData.answer_text === null) {
+              continue;
+            }
             const subOptionExist = await this._resultAnswerRepository.findOne({
               where: {
                 result_id: resultId,
