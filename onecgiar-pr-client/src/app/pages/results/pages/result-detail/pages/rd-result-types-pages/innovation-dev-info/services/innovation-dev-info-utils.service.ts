@@ -4,6 +4,13 @@ import { Injectable } from '@angular/core';
   providedIn: 'root'
 })
 export class InnovationDevInfoUtilsService {
+  constructor() {}
 
-  constructor() { }
+  mapBoolean(body) {
+    const { options, radioButtonValue } = body;
+    options.forEach(option => {
+      option.answer_boolean = option.result_question_id === radioButtonValue;
+    });
+    console.log(body.options);
+  }
 }

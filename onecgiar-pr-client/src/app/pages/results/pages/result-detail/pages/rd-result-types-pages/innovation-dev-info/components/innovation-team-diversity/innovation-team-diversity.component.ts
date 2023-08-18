@@ -1,6 +1,7 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { InnovationDevInfoBody } from '../../model/innovationDevInfoBody';
 import { InnovationDevelopmentQuestions } from '../../model/InnovationDevelopmentQuestions.model';
+import { InnovationDevInfoUtilsService } from '../../services/innovation-dev-info-utils.service';
 
 @Component({
   selector: 'app-innovation-team-diversity',
@@ -12,11 +13,7 @@ export class InnovationTeamDiversityComponent implements OnInit {
   @Input() options: InnovationDevelopmentQuestions;
   example11 = null;
 
-  constructor() {}
+  constructor(public innovationDevInfoUtilsSE: InnovationDevInfoUtilsService) {}
 
   ngOnInit(): void {}
-  mapBoolean(list) {
-    console.log(this.example11);
-    console.log(list);
-  }
 }

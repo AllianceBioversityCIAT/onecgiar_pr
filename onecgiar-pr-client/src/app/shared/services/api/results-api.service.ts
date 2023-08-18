@@ -721,6 +721,7 @@ export class ResultsApiService {
   GET_questionsInnovationDevelopment() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results/questions/innovation-development/${this.currentResultId}`);
   }
+
   PATCH_InnovationDevSummary(body) {
     return this.http.patch<any>(`${environment.apiBaseUrl}api/results/summary/innovation-dev/create/result/${this.currentResultId}`, body);
   }

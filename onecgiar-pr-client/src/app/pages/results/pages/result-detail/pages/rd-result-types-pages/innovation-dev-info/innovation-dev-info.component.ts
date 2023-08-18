@@ -56,8 +56,9 @@ export class InnovationDevInfoComponent implements OnInit {
   }
 
   onSaveSection() {
-    this.PATCH_InnovationDevSummary();
     console.log(this.innovationDevelopmentQuestions);
+
+    this.PATCH_InnovationDevSummary();
     // if (this.innovationDevInfoBody.innovation_nature_id != 12) {
     //   this.innovationDevInfoBody.number_of_varieties = null;
     //   this.innovationDevInfoBody.is_new_variety = null;
