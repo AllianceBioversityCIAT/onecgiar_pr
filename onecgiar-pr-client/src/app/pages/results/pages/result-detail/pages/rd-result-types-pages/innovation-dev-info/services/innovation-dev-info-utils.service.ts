@@ -11,6 +11,5 @@ export class InnovationDevInfoUtilsService {
     options.forEach(option => {
       option.answer_boolean = option.result_question_id === radioButtonValue;
     });
-    console.log(body.options);
   }
 }

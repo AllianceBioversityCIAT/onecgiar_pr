@@ -44,33 +44,22 @@ export class InnovationDevInfoComponent implements OnInit {
     );
   }
 
-  PATCH_InnovationDevSummary() {
-    this.api.resultsSE.PATCH_InnovationDevSummary(this.innovationDevelopmentQuestions).subscribe(
+  onSaveSection() {
+    console.log({ ...this.innovationDevInfoBody, ...this.innovationDevelopmentQuestions });
+
+    // this.PATCH_InnovationDevSummary();
+    if (this.innovationDevInfoBody.innovation_nature_id != 12) {
+      this.innovationDevInfoBody.number_of_varieties = null;
+      this.innovationDevInfoBody.is_new_variety = null;
+    }
+    this.api.resultsSE.PATCH_innovationDev({ ...this.innovationDevInfoBody, ...this.innovationDevelopmentQuestions }).subscribe(
       ({ response }) => {
-        console.log(response);
+        this.getSectionInformation();
       },
       err => {
         console.error(err);
       }
     );
-  }
-
-  onSaveSection() {
-    console.log(this.innovationDevelopmentQuestions);
-
-    this.PATCH_InnovationDevSummary();
-    // if (this.innovationDevInfoBody.innovation_nature_id != 12) {
-    //   this.innovationDevInfoBody.number_of_varieties = null;
-    //   this.innovationDevInfoBody.is_new_variety = null;
-    // }
-    // this.api.resultsSE.PATCH_innovationDev(this.innovationDevInfoBody).subscribe(
-    //   ({ response }) => {
-    //     this.getSectionInformation();
-    //   },
-    //   err => {
-    //     console.error(err);
-    //   }
-    // );
   }
   pdfOptions = [
     { name: 'Yes', value: true },
