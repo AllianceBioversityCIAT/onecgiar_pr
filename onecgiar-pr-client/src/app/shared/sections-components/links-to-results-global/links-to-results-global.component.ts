@@ -45,6 +45,13 @@ export class LinksToResultsGlobalComponent implements OnInit {
     }, 100);
   }
 
+  contributeDescription() {
+    return `
+    <ul>
+      <li>To search for results that have already been reported, enter keywords into the title box below and click on the link button of the result found if it contributes to this result you are reporting.</li>
+      <li>Users will be able to select other results from previous phase</li>
+    </ul>`;
+  }
   getFirstByDate(results) {
     // ordernar los resultados por fecha de creacion "created_date" para obetener el primero, es decir el mas reciente
     const re = results.sort((a, b) => {
