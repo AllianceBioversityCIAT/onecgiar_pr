@@ -13,14 +13,15 @@
                 </p-radioButton>
                 <label for="groupname{{i}}{{this.joinName()}}" class="name">{{option[this.optionLabel]}}</label>
             </div>
-            <p class="radioButton__subLabel">{{option[this.subLabel]}}</p>
+            <p class="radioButton__subLabel" *ngIf="option?.subOptions?.length">{{this.subLabel}}</p>
             <div *ngFor="let checkbox of option[this.checkboxConfig?.listAttr]" class="checkboxList">
-                <app-pr-checkbox [label]="this.checkbox[this.checkboxConfig.optionLbabel]"
+                <app-pr-checkbox [label]="this.checkbox[this.checkboxConfig.optionLabel]"
                     [(ngModel)]="this.checkbox[this.checkboxConfig.optionValue]"
                     [readOnly]="this.value !== option[this.optionValue] || (readOnly || this.rolesSE.readOnly) && (!isStatic)">
                 </app-pr-checkbox>
                 <app-pr-input placeholder="Example" *ngIf="checkbox?.question_text == 'Other'" variant="xs"
-                    [disabled]="this.value !== option[this.optionValue] || (readOnly || this.rolesSE.readOnly) && (!isStatic)"></app-pr-input>
+                    [(ngModel)]="this.checkbox[this.checkboxConfig.optionTextValue]"
+                    [disabled]="!this.checkbox[this.checkboxConfig.optionValue] || (readOnly || this.rolesSE.readOnly) && (!isStatic)"></app-pr-input>
             </div>
         </div>
     </div>

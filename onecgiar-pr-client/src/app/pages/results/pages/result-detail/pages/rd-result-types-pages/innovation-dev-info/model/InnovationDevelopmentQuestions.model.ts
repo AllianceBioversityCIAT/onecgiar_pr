@@ -1,5 +1,5 @@
 export interface InnovationDevelopmentQuestions {
-  responsible_innovation_and_scaling: Responsibleinnovationandscaling[];
+  responsible_innovation_and_scaling: Responsibleinnovationandscaling;
   intellectual_property_rights: Intellectualpropertyrights;
   innovation_team_diversity: Innovationteamdiversity;
 }

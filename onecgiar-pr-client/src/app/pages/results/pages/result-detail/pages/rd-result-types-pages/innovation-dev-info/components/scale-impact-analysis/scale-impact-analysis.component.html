@@ -1,6 +1,11 @@
-<app-pr-field-header [label]="'2. Example 2'" [description]="'Desc'"></app-pr-field-header>
+<app-pr-field-header [label]="options?.responsible_innovation_and_scaling?.q2?.question_text" 
+    [description]="options?.responsible_innovation_and_scaling?.q2?.question_description"></app-pr-field-header>
 
-<app-pr-radio-button [verticalAlignment]="true" [options]="this.list" optionLabel="description" optionValue="id"
-    subLabel="subLabel" [checkboxConfig]="{ listAttr: 'subOptions', optionLbabel: 'description', optionValue: 'value' }"
-    [(ngModel)]="example2">
+<app-pr-radio-button [verticalAlignment]="true" [options]="this.options?.responsible_innovation_and_scaling?.q2?.options" 
+    optionLabel="question_text" 
+    optionValue="result_question_id"
+    subLabel="Multiple answers can be selected." 
+    [checkboxConfig]="{ listAttr: 'subOptions', optionLabel: 'question_text', optionValue: 'answer_boolean', optionTextValue: 'answer_text'}"
+    >
 </app-pr-radio-button>
+
