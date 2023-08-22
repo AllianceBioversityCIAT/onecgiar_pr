@@ -13,6 +13,7 @@ export class ResultsNotificationsService {
     //('get_section_information');
     this.api.resultsSE.GET_allRequest().subscribe(({ response }) => {
       //(response);
+      console.log(response);
       this.interactiveNotisList = null;
       this.staticNotisList = null;
       if (response) {

@@ -95,7 +95,10 @@ export class MQAPResultDto {
   'Open Access': string;
   DOI: string;
   'Publication Date': string;
+  'Online publication date': string;
+  'Issued date': string;
   Countries: string | string[];
+  'Country ISO code': string | string[];
   'Action Area': string;
   Affiliation: Affiliation[];
   'Impact Area': string;

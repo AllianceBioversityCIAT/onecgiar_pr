@@ -63,6 +63,8 @@ import { Actions } from 'src/connection/dynamodb-logs/dto/enumAction.const';
 import { VersioningService } from '../versioning/versioning.service';
 import { AppModuleIdEnum } from 'src/shared/constants/role-type.enum';
 import { InstitutionRoleEnum } from './results_by_institutions/entities/institution_role.enum';
+import { ResultsKnowledgeProductFairScoreRepository } from './results-knowledge-products/repositories/results-knowledge-product-fair-scores.repository';
+import { ResultsInvestmentDiscontinuedOptionRepository } from './results-investment-discontinued-options/results-investment-discontinued-options.repository';
 
 @Injectable()
 export class ResultsService {
@@ -98,11 +100,13 @@ export class ResultsService {
     private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
     private readonly _resultsKnowledgeProductKeywordRepository: ResultsKnowledgeProductKeywordRepository,
     private readonly _resultsKnowledgeProductMetadataRepository: ResultsKnowledgeProductMetadataRepository,
+    private readonly _resultsKnowledgeProductFairScoreRepository: ResultsKnowledgeProductFairScoreRepository,
     //private readonly _resultsImpactAreaIndicatorRepository: ResultsImpactAreaIndicatorRepository,
     //private readonly _resultsImpactAreaTargetRepository: ResultsImpactAreaTargetRepository,
     private readonly _logRepository: LogRepository,
     private readonly _versioningService: VersioningService,
     private readonly _returnResponse: ReturnResponse,
+    private readonly _resultsInvestmentDiscontinuedOptionRepository: ResultsInvestmentDiscontinuedOptionRepository,
   ) {}
 
   /**
@@ -282,6 +286,20 @@ export class ResultsService {
     }
   }
 
+  async getChildlessInstitutionTypes() {
+    try {
+      const institutionTypes =
+        await this._clarisaInstitutionsTypeRepository.getChildlessInstitutionTypes();
+      return {
+        response: institutionTypes,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
   async getAllInstitutionsType(legacy?: boolean) {
     try {
       const entities =
@@ -451,9 +469,58 @@ export class ResultsService {
           debug: true,
         });
       }
+      if (
+        resultGeneralInformation?.is_discontinued &&
+        result.result_type_id == 7
+      ) {
+        await this._resultsInvestmentDiscontinuedOptionRepository.inactiveData(
+          resultGeneralInformation.discontinued_options.map(
+            (el) => el.investment_discontinued_option_id,
+          ),
+          result.id,
+          user.id,
+        );
+        for (const i of resultGeneralInformation.discontinued_options) {
+          const res =
+            await this._resultsInvestmentDiscontinuedOptionRepository.findOne({
+              where: {
+                result_id: resultGeneralInformation.result_id,
+                investment_discontinued_option_id:
+                  i.investment_discontinued_option_id,
+              },
+            });
+
+          if (res) {
+            await this._resultsInvestmentDiscontinuedOptionRepository.update(
+              res.results_investment_discontinued_option_id,
+              {
+                is_active: i.is_active,
+                description: i?.description,
+                last_updated_by: user.id,
+              },
+            );
+          } else {
+            await this._resultsInvestmentDiscontinuedOptionRepository.save({
+              result_id: result.id,
+              investment_discontinued_option_id:
+                i.investment_discontinued_option_id,
+              description: i?.description,
+              created_by: user.id,
+              last_updated_by: user.id,
+            });
+          }
+        }
+      } else if (result.result_type_id == 7) {
+        await this._resultsInvestmentDiscontinuedOptionRepository.inactiveData(
+          [],
+          result.id,
+          user.id,
+        );
+      }
 
       const updateResult = await this._resultRepository.save({
         id: result.id,
+        is_discontinued: resultGeneralInformation?.is_discontinued,
         title: resultGeneralInformation.result_name,
         result_type_id: resultByLevel.result_type_id,
         result_level_id: resultByLevel.result_level_id,
@@ -477,6 +544,14 @@ export class ResultsService {
         is_krs: resultGeneralInformation.is_krs,
         last_updated_by: user.id,
         lead_contact_person: resultGeneralInformation.lead_contact_person,
+        status_id:
+          result.result_type_id == 7
+            ? resultGeneralInformation?.is_discontinued
+              ? 4
+              : result.status_id == 4
+              ? 1
+              : result.status_id
+            : result.status_id,
       });
 
       const toAddFromElastic = await this.findAllSimplified(
@@ -670,6 +745,10 @@ export class ResultsService {
           kpId,
           false,
         );
+        await this._resultsKnowledgeProductFairScoreRepository.statusElement(
+          kpId,
+          false,
+        );
         await this._resultKnowledgeProductRepository.statusElement(kpId, false);
       }
 
@@ -738,35 +817,7 @@ export class ResultsService {
   }
 
   async findForElasticSearch(documentName: string, id?: string) {
-    try {
-      const queryResult =
-        await this._customResultRepository.resultsForElasticSearch(id);
-
-      if (!queryResult.length) {
-        throw {
-          response: {},
-          message: 'Results Not Found',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
-
-      const operations: ElasticOperationDto<ResultSimpleDto>[] =
-        queryResult.map((r) => new ElasticOperationDto('PATCH', r));
-
-      const elasticJson: string =
-        this._elasticService.getBulkElasticOperationResults(
-          documentName,
-          operations,
-        );
-
-      return {
-        response: elasticJson,
-        message: 'Successful response',
-        status: HttpStatus.OK,
-      };
-    } catch (error) {
-      return this._handlersError.returnErrorRes({ error, debug: true });
-    }
+    return this._elasticService.findForElasticSearch(documentName, id);
   }
 
   async findAllSimplified(id?: string, allowDeleted: boolean = false) {
@@ -1087,6 +1138,13 @@ export class ResultsService {
         await this._resultByIntitutionsTypeRepository.getResultByInstitutionTypeActorFull(
           result.id,
         );
+      const discontinued_options =
+        await this._resultsInvestmentDiscontinuedOptionRepository.find({
+          where: {
+            result_id: result.id,
+            is_active: true,
+          },
+        });
       return {
         response: {
           result_id: result.id,
@@ -1100,7 +1158,8 @@ export class ResultsService {
           gender_tag_id: result.gender_tag_level_id || null,
           climate_change_tag_id: result.climate_change_tag_level_id || null,
           nutrition_tag_level_id: result.nutrition_tag_level_id || null,
-          environmental_biodiversity_tag_level_id: result.environmental_biodiversity_tag_level_id || null,
+          environmental_biodiversity_tag_level_id:
+            result.environmental_biodiversity_tag_level_id || null,
           poverty_tag_level_id: result.poverty_tag_level_id || null,
           institutions: institutions,
           institutions_type: institutionsType,
@@ -1109,6 +1168,8 @@ export class ResultsService {
           lead_contact_person: result.lead_contact_person ?? null,
           phase_name: result['phase_name'],
           phase_year: result['phase_year'],
+          is_discontinued: result['is_discontinued'],
+          discontinued_options: discontinued_options,
         },
         message: 'Successful response',
         status: HttpStatus.OK,

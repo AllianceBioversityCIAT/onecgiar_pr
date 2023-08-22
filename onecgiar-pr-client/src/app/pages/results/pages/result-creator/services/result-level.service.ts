@@ -22,6 +22,7 @@ export class ResultLevelService {
 
   onSelectResultLevel(resultLevel: ResultLevel) {
     this.resultBody.result_level_id = resultLevel.id;
+    this.resultBody['result_level_name'] = resultLevel.name;
     this.resultBody.result_type_id = null;
     this.currentResultTypeList = resultLevel.result_type;
     this.resultLevelList.map(reLevel => (reLevel.selected = false));

@@ -46,7 +46,7 @@ export class EvidencesService {
           1,
         );
         const long: number =
-          evidencesArray.length > 3 ? 3 : evidencesArray.length;
+          evidencesArray.length > 6 ? 6 : evidencesArray.length;
         let newsEvidencesArray: Evidence[] = [];
         for (let index = 0; index < long; index++) {
           let evidence = evidencesArray[index];
@@ -66,7 +66,8 @@ export class EvidencesService {
             newEvidence.gender_related = evidence.gender_related;
             newEvidence.youth_related = evidence.youth_related;
             newEvidence.nutrition_related = evidence.nutrition_related;
-            newEvidence.environmental_biodiversity_related = evidence.environmental_biodiversity_related;
+            newEvidence.environmental_biodiversity_related =
+              evidence.environmental_biodiversity_related;
             newEvidence.poverty_related = evidence.poverty_related;
             newEvidence.is_supplementary = false;
             newEvidence.link = evidence.link;
@@ -96,7 +97,8 @@ export class EvidencesService {
             eExists.gender_related = evidence.gender_related;
             eExists.youth_related = evidence.youth_related;
             eExists.nutrition_related = evidence.nutrition_related;
-            eExists.environmental_biodiversity_related = evidence.environmental_biodiversity_related;
+            eExists.environmental_biodiversity_related =
+              evidence.environmental_biodiversity_related;
             eExists.poverty_related = evidence.poverty_related;
 
             if (!eExists.knowledge_product_related) {
@@ -205,7 +207,8 @@ export class EvidencesService {
         e.gender_related = !!e.gender_related;
         e.youth_related = !!e.youth_related;
         e.nutrition_related = !!e.nutrition_related;
-        e.environmental_biodiversity_related = !!e.environmental_biodiversity_related;
+        e.environmental_biodiversity_related =
+          !!e.environmental_biodiversity_related;
         e.poverty_related = !!e.poverty_related;
       });
 
@@ -213,7 +216,8 @@ export class EvidencesService {
         e.gender_related = !!e.gender_related;
         e.youth_related = !!e.youth_related;
         e.nutrition_related = !!e.nutrition_related;
-        e.environmental_biodiversity_related = !!e.environmental_biodiversity_related;
+        e.environmental_biodiversity_related =
+          !!e.environmental_biodiversity_related;
         e.poverty_related = !!e.poverty_related;
       });
 
@@ -223,7 +227,8 @@ export class EvidencesService {
           gender_tag_level: result.gender_tag_level_id,
           climate_change_tag_level: result.climate_change_tag_level_id,
           nutrition_tag_level: result.nutrition_tag_level_id,
-          environmental_biodiversity_tag_level: result.environmental_biodiversity_tag_level_id,
+          environmental_biodiversity_tag_level:
+            result.environmental_biodiversity_tag_level_id,
           poverty_tag_level: result.poverty_tag_level_id,
           evidences,
           supplementary,

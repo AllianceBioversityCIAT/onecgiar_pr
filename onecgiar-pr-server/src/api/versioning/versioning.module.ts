@@ -33,6 +33,11 @@ import { ResultsKnowledgeProductKeywordRepository } from '../results/results-kno
 import { ResultsKnowledgeProductMetadataRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-metadata.repository';
 import { ResultsKnowledgeProductInstitutionRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-institution.repository';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
+import { ResultsTocResultIndicatorsRepository } from '../results/results-toc-results/results-toc-results-indicators.repository';
+import { ResultsTocImpactAreaTargetRepository } from '../results/results-toc-results/result-toc-impact-area-repository';
+import { ResultsTocSdgTargetRepository } from '../results/results-toc-results/result-toc-sdg-target-repository';
+import { ResultsSdgTargetRepository } from '../results/results-toc-results/results-sdg-targets.respository';
+import { ResultStatusRepository } from '../results/result-status/result-status.repository';
 
 @Module({
   controllers: [VersioningController],
@@ -68,6 +73,11 @@ import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser
     ResultsKnowledgeProductMetadataRepository,
     ResultsKnowledgeProductInstitutionRepository,
     RoleByUserRepository,
+    ResultsTocResultIndicatorsRepository,
+    ResultsTocSdgTargetRepository,
+    ResultsTocImpactAreaTargetRepository,
+    ResultsSdgTargetRepository,
+    ResultStatusRepository,
   ],
   exports: [
     VersioningService,

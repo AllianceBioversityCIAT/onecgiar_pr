@@ -44,6 +44,7 @@ import {
   StatusPhaseEnum,
 } from '../../shared/constants/role-type.enum';
 import { In } from 'typeorm';
+import { UpdateQaResults } from './dto/update-qa.dto';
 
 @Injectable()
 export class VersioningService {
@@ -104,6 +105,44 @@ export class VersioningService {
       return version;
     } catch (error) {
       return null;
+    }
+  }
+
+  async setQaStatus(data: UpdateQaResults) {
+    try {
+      if (!data?.results_id || !data?.results_id?.length) {
+        throw this._returnResponse.format({
+          message: `The results_id field is required`,
+          response: null,
+          statusCode: HttpStatus.BAD_REQUEST,
+        });
+      }
+      const res = this._versionRepository.$_setQaStatusToResult(
+        data.results_id,
+      );
+
+      return this._returnResponse.format({
+        message: `The results were updated successfully`,
+        response: res,
+        statusCode: HttpStatus.OK,
+      });
+    } catch (error) {
+      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+    }
+  }
+
+  async updateLinkResultQa() {
+    try {
+      const version = await this.$_findActivePhase(AppModuleIdEnum.REPORTING);
+      const res = this._versionRepository.$_updateLinkResultByPhase(version.id);
+
+      return this._returnResponse.format({
+        message: `The results were updated successfully`,
+        response: res,
+        statusCode: HttpStatus.OK,
+      });
+    } catch (error) {
+      return this._returnResponse.format(error, !env.IS_PRODUCTION);
     }
   }
 
@@ -312,6 +351,84 @@ export class VersioningService {
           statusCode: HttpStatus.CONFLICT,
         });
       }
+    } catch (error) {
+      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+    }
+  }
+
+  async getNumberRresultsReplicated(status: number, result_type_id: number) {
+    try {
+      const phase = await this._versionRepository.findOne({
+        where: {
+          is_active: true,
+          status: true,
+          app_module_id: AppModuleIdEnum.REPORTING,
+        },
+        relations: {
+          obj_previous_phase: true,
+        },
+      });
+
+      const countResults =
+        await this._versionRepository.$_getAllInovationDevToReplicate(
+          phase,
+          result_type_id,
+        );
+
+      const names = await this._versionRepository.getDataStatusAndTypeResult(
+        status,
+        result_type_id,
+      );
+
+      return this._returnResponse.format({
+        message: `The number of results replicated is ${countResults?.length}`,
+        response: {
+          count: countResults.length,
+          status_name: names.status,
+          result_type_name: names.type,
+        },
+        statusCode: HttpStatus.OK,
+      });
+    } catch (error) {
+      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+    }
+  }
+
+  async annualReplicationProcessInnovationDev(user: TokenDto) {
+    try {
+      const phase = await this._versionRepository.findOne({
+        where: {
+          is_active: true,
+          status: true,
+          app_module_id: AppModuleIdEnum.REPORTING,
+        },
+        relations: {
+          obj_previous_phase: true,
+        },
+      });
+
+      if (!phase) {
+        throw this._returnResponse.format({
+          message: `There is no active phase`,
+          response: null,
+          statusCode: HttpStatus.NOT_FOUND,
+        });
+      }
+
+      const results =
+        await this._versionRepository.$_getAllInovationDevToReplicate(phase);
+
+      for (const r of results) {
+        if (this.$_genericValidation(r.result_code, phase.id)) {
+          await this.$_phaseChangeReporting(r, phase, user);
+        }
+      }
+
+      return this._returnResponse.format({
+        message: `The results were replicated successfully`,
+        response: results?.length,
+        statusCode: HttpStatus.OK,
+      });
     } catch (error) {
       return this._returnResponse.format(error, !env.IS_PRODUCTION);
     }

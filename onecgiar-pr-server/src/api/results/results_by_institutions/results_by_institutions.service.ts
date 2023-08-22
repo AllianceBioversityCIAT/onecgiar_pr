@@ -214,6 +214,22 @@ export class ResultsByInstitutionsService {
       }
 
       if (knowledgeProduct && data.mqap_institutions?.length) {
+        //here we filter out from the additional contributors the mqap manual mappings
+        data.institutions = data.institutions.filter(
+          (i) =>
+            !data.mqap_institutions
+              .filter((mqap) => mqap.user_matched_institution?.institutions_id)
+              .find(
+                (mqap) =>
+                  mqap.user_matched_institution.institutions_id ==
+                  i.institutions_id,
+              ),
+        );
+
+        /*
+          in case we have additional contributors, we need to merge them with the 
+          mqap manually mapped institutions
+        */
         data.institutions = [
           ...(data.institutions ?? []).map((i) => {
             i['institution_roles_id'] =

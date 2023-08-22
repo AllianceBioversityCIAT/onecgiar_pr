@@ -8,8 +8,8 @@ export class ResultsListFilterPipe implements PipeTransform {
   list: any[];
   word: string;
   constructor(private resultsListFilterSE: ResultsListFilterService) {}
-  transform(resultList: any[], word: string, filterJoin: number): any {
-    return this.filterByPhase(this.filterByResultLevelOptions(this.filterByInitsAndYear(this.filterByText(resultList, word))));
+  transform(resultList: any[], word: string, combine: boolean, filterJoin: number): any {
+    return this.convertList(this.filterByPhase(this.filterByResultLevelOptions(this.filterByInitsAndYear(this.filterByText(resultList, word)))), combine);
   }
 
   filterByText(resultList: any[], word: string) {
@@ -21,6 +21,8 @@ export class ResultsListFilterPipe implements PipeTransform {
         if (attr != 'created_date' && attr != 'id') item.joinAll += (item[attr] ? item[attr] : '') + ' ';
       });
     });
+    // console.log(resultList);
+    // console.log(resultList.filter(item => item.joinAll.toUpperCase().indexOf(word?.toUpperCase()) > -1));
     return resultList.filter(item => item.joinAll.toUpperCase().indexOf(word?.toUpperCase()) > -1);
   }
 
@@ -67,5 +69,42 @@ export class ResultsListFilterPipe implements PipeTransform {
     });
 
     return resultList;
+  }
+
+  convertList(results, combine) {
+    return combine ? this.combineRepeatedResults(results) : this.separateResultInList(results);
+  }
+
+  separateResultInList(results) {
+    results.map(result => {
+      result.results = [result];
+    });
+    // console.log(results);
+    return results;
+  }
+
+  combineRepeatedResults(results) {
+    // console.log('combineRepeatedResults');
+    const resultMap: Record<number, any> = {};
+
+    results.forEach(result => {
+      if (!resultMap[result.result_code]) {
+        resultMap[result.result_code] = {
+          result_code: result.result_code,
+          submitter: result.submitter,
+          results: []
+        };
+      }
+      resultMap[result.result_code].results.push({
+        ...result
+      });
+    });
+
+    const transformedData = Object.values(resultMap);
+    // console.log(transformedData);
+
+    return transformedData;
+
+    // teniendo los resultados anteriores necesito combinar los resultados iguales segun el result_code dejar un objeto con title y result_code pero dentro un array con la demas informacion de los resultados repetidos
   }
 }

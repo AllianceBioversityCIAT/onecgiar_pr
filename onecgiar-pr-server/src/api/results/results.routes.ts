@@ -29,6 +29,9 @@ import { AdminPanelModule } from './admin-panel/admin-panel.module';
 import { ResultActorsModule } from './result-actors/result-actors.module';
 import { YearsModule } from './years/years.module';
 import { ResultQuestionsModule } from './result-questions/result-questions.module';
+import { InvestmentDiscontinuedOption } from './investment-discontinued-options/entities/investment-discontinued-option.entity';
+import { ResultsInvestmentDiscontinuedOptionsModule } from './results-investment-discontinued-options/results-investment-discontinued-options.module';
+import { InvestmentDiscontinuedOptionsModule } from './investment-discontinued-options/investment-discontinued-options.module';
 
 export const ResultsRoutes: Routes = [
   {
@@ -129,19 +132,19 @@ export const ResultsRoutes: Routes = [
   },
   {
     path: 'results-validation',
-    module: ResultsValidationModuleModule
+    module: ResultsValidationModuleModule,
   },
   {
     path: 'submissions',
-    module: SubmissionsModule
+    module: SubmissionsModule,
   },
   {
     path: 'admin-panel',
-    module: AdminPanelModule
+    module: AdminPanelModule,
   },
   {
     path: 'actors',
-    module: ResultActorsModule
+    module: ResultActorsModule,
   },
   {
     path: 'years',
@@ -149,6 +152,14 @@ export const ResultsRoutes: Routes = [
   },
   {
     path: 'questions',
-    module: ResultQuestionsModule
-  }
+    module: ResultQuestionsModule,
+  },
+  {
+    path: 'investment-discontinued-options',
+    module: InvestmentDiscontinuedOptionsModule,
+  },
+  {
+    path: 'results-investment-discontinued-options',
+    module: ResultsInvestmentDiscontinuedOptionsModule,
+  },
 ];
