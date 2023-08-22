@@ -2,21 +2,27 @@
 
 
 <div class="paddingLeft20">
-    <app-pr-radio-button [label]="options.intellectual_property_rights.q1.question_text"
+    <app-pr-radio-button
+        (selectOptionEvent)="innovationDevInfoUtilsSE.mapBoolean( this.options?.innovation_team_diversity)"
+        [label]="options.intellectual_property_rights.q1.question_text"
         [options]="options.intellectual_property_rights.q1.options" optionLabel="question_text"
         [verticalAlignment]="true" optionValue="result_question_id"
-        [(ngModel)]="options.intellectual_property_rights.q1['value']"></app-pr-radio-button>
+        [(ngModel)]="options.intellectual_property_rights.q1['radioButtonValue']"></app-pr-radio-button>
 
-    <app-pr-radio-button [label]="options.intellectual_property_rights.q2.question_text"
+    <app-pr-radio-button
+        (selectOptionEvent)="innovationDevInfoUtilsSE.mapBoolean( this.options?.innovation_team_diversity)"
+        [label]="options.intellectual_property_rights.q2.question_text"
         [options]="options.intellectual_property_rights.q2.options" optionLabel="question_text"
-        *ngIf="options.intellectual_property_rights.q1['value'] &&options.intellectual_property_rights.q1['value'] !=32"
+        *ngIf="options.intellectual_property_rights.q1['radioButtonValue'] &&options.intellectual_property_rights.q1['radioButtonValue'] !=32"
         [verticalAlignment]="true" optionValue="result_question_id"
-        [(ngModel)]="options.intellectual_property_rights.q2['value']"></app-pr-radio-button>
+        [(ngModel)]="options.intellectual_property_rights.q2['radioButtonValue']"></app-pr-radio-button>
 
-    <app-pr-radio-button [label]="options.intellectual_property_rights.q3.question_text"
+    <app-pr-radio-button
+        (selectOptionEvent)="innovationDevInfoUtilsSE.mapBoolean( this.options?.innovation_team_diversity)"
+        [label]="options.intellectual_property_rights.q3.question_text"
         [description]="options.intellectual_property_rights.q3.question_description" [options]="
         options.intellectual_property_rights.q3.options" optionLabel="question_text"
-        *ngIf="options.intellectual_property_rights.q2['value']  &&options.intellectual_property_rights.q2['value'] !=35"
+        *ngIf="options.intellectual_property_rights.q2['radioButtonValue']  &&options.intellectual_property_rights.q2['radioButtonValue'] !=35"
         [verticalAlignment]="true" optionValue="result_question_id"
-        [(ngModel)]="options.intellectual_property_rights.q3['value']"></app-pr-radio-button>
+        [(ngModel)]="options.intellectual_property_rights.q3['radioButtonValue']"></app-pr-radio-button>
 </div>

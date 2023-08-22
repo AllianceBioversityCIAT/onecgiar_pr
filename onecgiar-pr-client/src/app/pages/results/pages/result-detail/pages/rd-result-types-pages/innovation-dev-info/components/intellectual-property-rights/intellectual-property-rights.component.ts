@@ -1,6 +1,7 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { InnovationDevInfoBody } from '../../model/innovationDevInfoBody';
 import { InnovationDevelopmentQuestions } from '../../model/InnovationDevelopmentQuestions.model';
+import { InnovationDevInfoUtilsService } from '../../services/innovation-dev-info-utils.service';
 
 @Component({
   selector: 'app-intellectual-property-rights',
@@ -11,7 +12,7 @@ export class IntellectualPropertyRightsComponent implements OnInit {
   @Input() body = new InnovationDevInfoBody();
   @Input() options: InnovationDevelopmentQuestions = new InnovationDevelopmentQuestions();
 
-  constructor() {}
+  constructor(public innovationDevInfoUtilsSE: InnovationDevInfoUtilsService) {}
 
   ngOnInit(): void {
     this.options.intellectual_property_rights.q1['value'] = null;
