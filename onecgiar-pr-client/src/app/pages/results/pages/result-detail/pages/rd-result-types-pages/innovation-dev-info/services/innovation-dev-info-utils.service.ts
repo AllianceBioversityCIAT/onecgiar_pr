@@ -9,8 +9,10 @@ export class InnovationDevInfoUtilsService {
   mapBoolean(body) {
     const { options, radioButtonValue } = body;
     options.forEach(option => {
-      option.answer_boolean = option.result_question_id === radioButtonValue;
+      option.answer_boolean = option.result_question_id == radioButtonValue ? true : null;
+      if (option.saved) option.answer_boolean = false;
     });
+    console.log(options);
   }
 
   mapRadioButtonBooleans(body) {
@@ -20,5 +22,7 @@ export class InnovationDevInfoUtilsService {
     const option = options.find(option => option?.answer_boolean);
     if (!option) return;
     body.radioButtonValue = option.result_question_id;
+    option.saved = true;
+    console.log(options);
   }
 }
