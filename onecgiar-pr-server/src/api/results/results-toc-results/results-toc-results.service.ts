@@ -424,7 +424,7 @@ export class ResultsTocResultsService {
                   contributors_result_toc_result[index]?.toc_result_id || null;
               }
               newRtR.planned_result =
-                contributors_result_toc_result[index]?.planned_result || null;
+                contributors_result_toc_result[index]?.planned_result;
               RtRArray.push(newRtR);
             }
           }
