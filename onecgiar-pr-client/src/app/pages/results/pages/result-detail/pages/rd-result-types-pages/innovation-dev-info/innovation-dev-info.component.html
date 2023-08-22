@@ -33,7 +33,7 @@
 
     <!-- Todo New field -->
     <!-- Innovation dev -->
-    <app-anticipated-innovation-user [body]="innovationDevInfoBody"></app-anticipated-innovation-user>
+    <app-anticipated-innovation-user *ngIf="false" [body]="innovationDevInfoBody"></app-anticipated-innovation-user>
 
     <app-pr-field-header label="Responsible innovation and scaling" [required]="false"></app-pr-field-header>
 
@@ -44,7 +44,7 @@
             [options]="innovationDevelopmentQuestions"></app-scale-impact-analysis>
     </div>
 
-    <app-intellectual-property-rights [body]="innovationDevInfoBody"
+    <app-intellectual-property-rights [body]="innovationDevInfoBody" *ngIf="false"
         [options]="innovationDevelopmentQuestions"></app-intellectual-property-rights>
     <!-- Innovation dev -->
 
@@ -87,7 +87,7 @@
     </app-pr-textarea>
 
     <!-- Innovation dev -->
-    <app-estimates [body]="innovationDevInfoBody"></app-estimates>
+    <app-estimates *ngIf="false" [body]="innovationDevInfoBody"></app-estimates>
     <!-- Innovation dev -->
 
     <app-pr-radio-button label="Would you like this innovation to be published as a CGIAR IPSR Innovation Profile PDF?"
