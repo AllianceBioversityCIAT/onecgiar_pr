@@ -1,54 +1,53 @@
-
 <div *ngIf="this.body.innovation_pdf">
     <app-pr-field-header
-    label="Innovation visuals - Provide 3-5 URLs to key images, photos or pictures that best represent or describe the innovation"
-    [description]="temporalLinkDescription()"
-    [useColon]="false"></app-pr-field-header>
-    
-    <div class="linkItem" *ngFor="let result of this.linkList1; let i=index">
+        label="Innovation visuals - Provide 3-5 URLs to key images, photos or pictures that best represent or describe the innovation"
+        [description]="temporalLinkDescription()" [useColon]="false"></app-pr-field-header>
+
+    <div class="linkItem" *ngFor="let result of this.body.pictures; let i=index">
         <div class="index">{{i+1}}</div>
         <div>
             <div class="link">
-                <app-pr-input [required]="false" placeholder="Add link"></app-pr-input>
+                <app-pr-input [required]="false" placeholder="Add link" type="link" [required]="true"
+                    [(ngModel)]="this.body.pictures[i].link"></app-pr-input>
             </div>
         </div>
-        <div class="icon">
-            <i class="material-icons-round" (click)="deleteLink(i)">delete</i>
+        <div class="icon" *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status">
+            <i class="material-icons-round" (click)="deleteLinkPictures(i)">delete</i>
         </div>
     </div>
 
-<app-no-data-text
-*ngIf="!this.linkList1.length && !this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"
-title="No link to picture added"></app-no-data-text>
-<br>
-<app-add-button name="Add another link to picture" (clickEvent)="addLink()"
-*ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status">
-</app-add-button>
+    <app-no-data-text
+        *ngIf="!this.body.pictures.length && !this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"
+        title="No link to picture added"></app-no-data-text>
+    <br>
+    <app-add-button name="Add another link to picture" (clickEvent)="addLinkPictures()"
+        *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status">
+    </app-add-button>
 
-<br>
+    <br>
 
-<app-pr-field-header
-label="· Innovations reference materials – Provide 3-5 URLs to reference material(s) that describe the innovation"
-[description]="temporalReferenceDescription()"
-[useColon]="false"></app-pr-field-header>
+    <app-pr-field-header
+        label="· Innovations reference materials – Provide 3-5 URLs to reference material(s) that describe the innovation"
+        [description]="temporalReferenceDescription()" [useColon]="false"></app-pr-field-header>
 
-<div class="linkItem" *ngFor="let result of this.linkList2; let i=index">
-    <div class="index">{{i+1}}</div>
-    <div>
-        <div class="link">
-            <app-pr-input [required]="false" placeholder="Add link"></app-pr-input>
+    <div class="linkItem" *ngFor="let result of this.body.reference_materials; let i=index">
+        <div class="index">{{i+1}}</div>
+        <div>
+            <div class="link">
+                <app-pr-input [required]="false" placeholder="Add link" type="link" [required]="true"
+                    [(ngModel)]="this.body.reference_materials[i].link"></app-pr-input>
+            </div>
+        </div>
+        <div class="icon" *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status">
+            <i class="material-icons-round" (click)="deleteLinkReferences(i)">delete</i>
         </div>
     </div>
-    <div class="icon">
-        <i class="material-icons-round" (click)="deleteLink2(i)">delete</i>
-    </div>
-</div>
 
-<app-no-data-text
-*ngIf="!this.linkList2.length && !this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"
-title="No link to reference material added"></app-no-data-text>
-<br>
-<app-add-button name="Add another link to reference material" (clickEvent)="addLink2()"
-*ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status">
-</app-add-button>
+    <app-no-data-text
+        *ngIf="!this.body.reference_materials.length && !this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"
+        title="No link to reference material added"></app-no-data-text>
+    <br>
+    <app-add-button name="Add another link to reference material" (clickEvent)="addLinkReferences()"
+        *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status">
+    </app-add-button>
 </div>

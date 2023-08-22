@@ -2,6 +2,7 @@ import { Component, Input, OnInit } from '@angular/core';
 import { RolesService } from '../../../../../../../../../shared/services/global/roles.service';
 import { ApiService } from 'src/app/shared/services/api/api.service';
 import { InnovationDevInfoBody } from '../../model/innovationDevInfoBody';
+import { InnovationDevelopmentLinks, linkType } from '../../model/InnovationDevelopmentLinks.model';
 
 @Component({
   selector: 'app-innovation-links',
@@ -10,8 +11,7 @@ import { InnovationDevInfoBody } from '../../model/innovationDevInfoBody';
 })
 export class InnovationLinksComponent implements OnInit {
   @Input() body = new InnovationDevInfoBody();
-  linkList1 = [{}];
-  linkList2 = [{}];
+  @Input() options: InnovationDevelopmentLinks = new InnovationDevelopmentLinks();
   constructor(public api: ApiService) {}
 
   ngOnInit(): void {}
@@ -28,19 +28,35 @@ export class InnovationLinksComponent implements OnInit {
     `;
   }
 
-  addLink() {
-    this.linkList1.push({});
+  addLinkPictures() {
+    if (this.body.pictures.length > 0) {
+      this.body.pictures.forEach((element, index) => {
+        if (element.link === '') {
+          this.body.pictures.splice(index, 1);
+        }
+      });
+    }
+
+    this.body.pictures.push({ link: '' });
   }
 
-  deleteLink(index) {
-    this.linkList1.splice(index, 1);
+  deleteLinkPictures(index) {
+    this.body.pictures.splice(index, 1);
   }
 
-  addLink2() {
-    this.linkList2.push({});
+  addLinkReferences() {
+    if (this.body.reference_materials.length > 0) {
+      this.body.reference_materials.forEach((element, index) => {
+        if (element.link === '') {
+          this.body.reference_materials.splice(index, 1);
+        }
+      });
+    }
+
+    this.body.reference_materials.push({ link: '' });
   }
 
-  deleteLink2(index) {
-    this.linkList2.splice(index, 1);
+  deleteLinkReferences(index) {
+    this.body.reference_materials.splice(index, 1);
   }
 }

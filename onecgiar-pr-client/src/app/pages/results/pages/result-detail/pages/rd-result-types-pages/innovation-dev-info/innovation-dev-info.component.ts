@@ -4,6 +4,7 @@ import { InnovationControlListService } from '../../../../../../../shared/servic
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { InnovationDevelopmentQuestions } from './model/InnovationDevelopmentQuestions.model';
 import { InnovationDevInfoUtilsService } from './services/innovation-dev-info-utils.service';
+import { InnovationDevelopmentLinks } from './model/InnovationDevelopmentLinks.model';
 
 @Component({
   selector: 'app-innovation-dev-info',
@@ -14,6 +15,7 @@ export class InnovationDevInfoComponent implements OnInit {
   innovationDevInfoBody = new InnovationDevInfoBody();
   range = 5;
   innovationDevelopmentQuestions: InnovationDevelopmentQuestions = new InnovationDevelopmentQuestions();
+  innovationDevelopmentLinks: InnovationDevelopmentLinks = new InnovationDevelopmentLinks();
   constructor(private api: ApiService, public innovationControlListSE: InnovationControlListService, private innovationDevInfoUtilsSE: InnovationDevInfoUtilsService) {}
 
   ngOnInit(): void {
@@ -23,7 +25,6 @@ export class InnovationDevInfoComponent implements OnInit {
 
   GET_questionsInnovationDevelopment() {
     this.api.resultsSE.GET_questionsInnovationDevelopment().subscribe(({ response }) => {
-      console.log(response);
       this.innovationDevelopmentQuestions = response;
       this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.responsible_innovation_and_scaling.q1);
       this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.responsible_innovation_and_scaling.q2);

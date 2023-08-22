@@ -60,8 +60,6 @@ export class PrInputComponent implements ControlValueAccessor {
   }
 
   aTag(link) {
-    console.log('Link');
-    console.log(link);
     return `<a class="open_route" target="_blank" href="${link}">${link}</a>`;
   }
 
