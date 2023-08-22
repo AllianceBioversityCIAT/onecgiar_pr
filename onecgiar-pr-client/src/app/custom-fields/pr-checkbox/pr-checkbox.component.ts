@@ -19,12 +19,12 @@ export class PrCheckboxComponent {
   constructor(public greenChecksSE: GreenChecksService, public rolesSE: RolesService) {}
   @Input() optionLabel: string;
   @Input() optionValue: string;
-  @Input() options: any;
   @Input() placeholder: string;
   @Input() label: string;
   @Input() description: string;
   @Input() readOnly: boolean;
   @Input() required: boolean = true;
+  @Input() isStatic: boolean = false;
   @Output() selectOptionEvent = new EventEmitter();
   private _value: string;
 

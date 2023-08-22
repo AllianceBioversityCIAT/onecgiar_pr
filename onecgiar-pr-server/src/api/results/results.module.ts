@@ -75,6 +75,9 @@ import { ResultQuestionsService } from './result-questions/result-questions.serv
 import { ResultQuestionsModule } from './result-questions/result-questions.module';
 import { ResultQuestionsRepository } from './result-questions/repository/result-questions.repository';
 import { ResultAnswerRepository } from './result-questions/repository/result-answers.repository';
+import { InvestmentDiscontinuedOptionsModule } from './investment-discontinued-options/investment-discontinued-options.module';
+import { ResultsInvestmentDiscontinuedOptionsModule } from './results-investment-discontinued-options/results-investment-discontinued-options.module';
+import { ResultsInvestmentDiscontinuedOptionRepository } from './results-investment-discontinued-options/results-investment-discontinued-options.repository';
 
 @Module({
   controllers: [ResultsController],
@@ -126,6 +129,8 @@ import { ResultAnswerRepository } from './result-questions/repository/result-ans
     VersioningModule,
     ResultStatusModule,
     ResultQuestionsModule,
+    InvestmentDiscontinuedOptionsModule,
+    ResultsInvestmentDiscontinuedOptionsModule,
   ],
   providers: [
     ResultsService,
@@ -143,7 +148,8 @@ import { ResultAnswerRepository } from './result-questions/repository/result-ans
     ResponseInterceptor,
     ResultQuestionsService,
     ResultQuestionsRepository,
-    ResultAnswerRepository
+    ResultAnswerRepository,
+    ResultsInvestmentDiscontinuedOptionRepository,
   ],
   exports: [ResultRepository, JwtMiddleware],
 })

@@ -34,6 +34,7 @@ import { DynamodbLogsModule } from './connection/dynamodb-logs/dynamodb-logs.mod
 import { IpsrModule } from './api/ipsr/ipsr.module';
 import { PlatformReportModule } from './api/platform-report/platform-report.module';
 import { VersioningModule } from './api/versioning/versioning.module';
+import { GlobalNarrativesModule } from './api/global-narratives/global-narratives.module';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { VersioningModule } from './api/versioning/versioning.module';
     IpsrModule,
     PlatformReportModule,
     VersioningModule,
+    GlobalNarrativesModule,
   ],
   controllers: [AppController],
   providers: [

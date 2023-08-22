@@ -16,10 +16,12 @@ export class LinksToResultsGlobalComponent implements OnInit {
   linksToResultsBody = new LinksToResultsBody();
   text_to_search: string = '';
   counterPipe = 0;
+  combine = true;
   columnOrder = [
-    { title: 'Result code', attr: 'result_code' },
+    // { title: 'Result code', attr: 'result_code' },
     { title: 'Title', attr: 'title', class: 'notCenter' },
     // { title: 'Reporting year', attr: 'reported_year' },
+    { title: 'Phase', attr: 'phase_name' },
     { title: 'Result type', attr: 'result_type' },
     { title: 'Submitter', attr: 'submitter' },
     { title: 'Status', attr: 'status_name' },
@@ -30,9 +32,37 @@ export class LinksToResultsGlobalComponent implements OnInit {
     this.api.updateResultsList();
     this.getSectionInformation();
   }
+
+  validateOrder(columnAttr) {
+    setTimeout(() => {
+      if (columnAttr == 'result_code') return (this.combine = true);
+      const resultListTableHTML = document.getElementById('resultListTable');
+      // if (document.getElementById('resultListTable').querySelectorAll('th[aria-sort="ascending"]').length) this.resetSort();
+      this.combine = !resultListTableHTML.querySelectorAll('th[aria-sort="descending"]').length && !resultListTableHTML.querySelectorAll('th[aria-sort="ascending"]').length;
+      // console.log(document.getElementById('resultListTable').querySelectorAll('th[aria-sort="descending"]').length); ascending
+      // this.resetSort();
+      return null;
+    }, 100);
+  }
+
+  contributeDescription() {
+    return `
+    <ul>
+      <li>To search for results that have already been reported, enter keywords into the title box below and click on the link button of the result found if it contributes to this result you are reporting.</li>
+      <li>Users will be able to select other results from previous phase</li>
+    </ul>`;
+  }
+  getFirstByDate(results) {
+    // ordernar los resultados por fecha de creacion "created_date" para obetener el primero, es decir el mas reciente
+    const re = results.sort((a, b) => {
+      return new Date(b.created_date).getTime() - new Date(a.created_date).getTime();
+    });
+    console.log(re);
+    return re[0];
+  }
+
   onLinkResult(result) {
-    //(result);
-    this.linksToResultsBody.links.push(result);
+    this.linksToResultsBody.links.push(this.getFirstByDate(result.results));
     this.counterPipe++;
   }
   onRemove(index) {
@@ -43,6 +73,7 @@ export class LinksToResultsGlobalComponent implements OnInit {
   getSectionInformation() {
     this.api.resultsSE.GET_resultsLinked(this.isIpsr).subscribe(({ response }) => {
       //(response);
+      console.log(response);
       this.linksToResultsBody = response;
     });
   }
@@ -61,6 +92,8 @@ export class LinksToResultsGlobalComponent implements OnInit {
     });
   }
   openInNewPage(link) {
+    console.log('openInNewPage');
+    console.log(link);
     window.open(link, '_blank');
   }
 

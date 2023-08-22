@@ -2,7 +2,7 @@ import chroma from 'chroma-js';
 
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
-import { KnowledgeProductBody } from './model/knowledgeProductBody';
+import { FairSpecificData, FullFairData, KnowledgeProductBody } from './model/knowledgeProductBody';
 import { KnowledgeProductBodyMapped } from './model/KnowledgeProductBodyMapped';
 import { KnowledgeProductSaveDto } from './model/knowledge-product-save.dto';
 import { RolesService } from '../../../../../../../shared/services/global/roles.service';
@@ -18,6 +18,7 @@ export class KnowledgeProductInfoComponent implements OnInit {
   meliaTypes = [];
   ostMeliaStudies = [];
   private readonly kpGradientScale = chroma.scale(['#f44444', '#dcdf38', '#38df7b']).mode('hcl');
+  fair_data: Array<{ key: string; value: FairSpecificData }>;
   constructor(public api: ApiService, public rolesSE: RolesService) {}
 
   ngOnInit(): void {
@@ -65,10 +66,11 @@ export class KnowledgeProductInfoComponent implements OnInit {
     mapped.altmetric_details_url = response.altmetric_detail_url;
     mapped.altmetric_img_url = response.altmetric_image_url;
     mapped.references = response.references_other_knowledge_products;
-    mapped.findable = response.findable;
-    mapped.accessible = response.accessible;
-    mapped.interoperable = response.interoperable;
-    mapped.reusable = response.reusable;
+    //mapped.findable = response.findable;
+    //mapped.accessible = response.accessible;
+    //mapped.interoperable = response.interoperable;
+    //mapped.reusable = response.reusable;
+    this.fair_data = this.filterOutObject(response.fair_data);
 
     const journalArticle: boolean = (response.type ?? '').toLocaleLowerCase().includes('journal article');
     if (journalArticle) {
@@ -83,7 +85,7 @@ export class KnowledgeProductInfoComponent implements OnInit {
         this.getMetadataFromCGSpace(mapped, response);
       }
     } else {
-      if (response.metadataCG?.issue_year == 2022) {
+      if (response.metadataCG?.issue_year == response.cgspace_phase_year) {
         this.getMetadataFromCGSpace(mapped, response);
       }
     }
@@ -100,17 +102,31 @@ export class KnowledgeProductInfoComponent implements OnInit {
   }
 
   private getMetadataFromCGSpace(mapped: KnowledgeProductBodyMapped, response: KnowledgeProductBody) {
-    mapped.is_peer_reviewed_CG = response.metadataCG?.is_peer_reviewed;
-    mapped.is_isi_CG = response.metadataCG?.is_isi;
+    mapped.is_peer_reviewed_CG = this.transformBoolean(response.metadataCG?.is_peer_reviewed);
+    mapped.is_isi_CG = this.transformBoolean(response.metadataCG?.is_isi);
     mapped.accessibility_CG = response.metadataCG?.accessibility == true ? 'Open Access' : 'Limited Access';
     mapped.yearCG = response.metadataCG?.issue_year;
   }
 
+  private transformBoolean(value: boolean): string {
+    if (value == null) {
+      return 'Not available';
+    }
+
+    return value ? 'Yes' : 'No';
+  }
+
   private getMetadataFromWoS(mapped: KnowledgeProductBodyMapped, response: KnowledgeProductBody) {
-    mapped.is_peer_reviewed_WOS = response.metadataWOS?.is_peer_reviewed;
-    mapped.is_isi_WOS = response.metadataWOS?.is_isi;
+    mapped.is_peer_reviewed_WOS = this.transformBoolean(response.metadataWOS?.is_peer_reviewed);
+    mapped.is_isi_WOS = this.transformBoolean(response.metadataWOS?.is_isi);
     mapped.accessibility_WOS = response.metadataWOS?.accessibility == true ? 'Open Access' : 'Limited Access';
     mapped.year_WOS = response.metadataWOS?.issue_year;
+  }
+
+  filterOutObject(fairObject: FullFairData): Array<{ key: string; value: FairSpecificData }> {
+    return Object.keys(fairObject)
+      .filter(key => key != 'total_score')
+      .map(key => ({ key, value: fairObject[key] }));
   }
 
   onSaveSection() {

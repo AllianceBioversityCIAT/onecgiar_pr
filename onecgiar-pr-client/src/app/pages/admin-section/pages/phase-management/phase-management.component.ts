@@ -19,7 +19,7 @@ export class PhaseManagementComponent implements OnInit {
     { title: 'Start date', attr: 'start_date' },
     { title: 'End date', attr: 'end_date' },
     { title: 'Status', attr: 'status' },
-    { title: 'Previus phase', attr: 'obj_previous_phase' }
+    { title: 'Previous phase', attr: 'obj_previous_phase' }
   ];
 
   // show_full_screen = false;
@@ -48,6 +48,10 @@ export class PhaseManagementComponent implements OnInit {
     this.getAllPhases();
     this.getTocPhases();
     this.get_resultYears();
+  }
+
+  disablePreviousYear() {
+    return this.phaseList.map((phase: any) => ({ year: phase.phase_year }));
   }
 
   // onRowEditInit(phase: any) {
@@ -215,7 +219,7 @@ export class PhaseManagementComponent implements OnInit {
     phase.editing = false;
     if (!phase.isNew) return;
     const index = this.phaseList.findIndex(phaseItem => phaseItem.id == phase.id);
-    let phaseListCopy: any[] = [...this.phaseList];
+    const phaseListCopy: any[] = [...this.phaseList];
     this.phaseList = [];
     phaseListCopy.splice(index, 1);
     this.phaseList = phaseListCopy;

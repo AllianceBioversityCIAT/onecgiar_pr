@@ -18,6 +18,8 @@ export class GeneralInfoBody {
   public nutrition_tag_level_id = null;
   public environmental_biodiversity_tag_level_id = null;
   public poverty_tag_level_id = null;
+  public is_discontinued: boolean;
+  public discontinued_options: any[] = [];
 }
 
 interface institutionsInterface {

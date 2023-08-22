@@ -13,9 +13,10 @@ import { TocInitiativeAaoComponent } from './components/shared/toc-initiative-aa
 import { FilterTargetsPipe } from './components/toc-impact-section/pipes/filter-targets.pipe';
 import { FilterIndicatorsPipe } from './components/toc-impact-section/pipes/filter-indicators.pipe';
 import { TocInitiativeOutModule } from './components/shared/toc-initiative-out/toc-initiative-out.module';
+import { FeedbackValidationDirectiveModule } from 'src/app/shared/directives/feedback-validation-directive.module';
 
 @NgModule({
   declarations: [RdTheoryOfChangeComponent, TocImpactSectionComponent, TocActionAreaOutcomeSectionComponent, TocInitiativeOutcomeSectionComponent, TocInitiativeOutputSectionComponent, TocInitiativeAaoComponent, FilterTargetsPipe, FilterIndicatorsPipe],
-  imports: [CommonModule, RdTheoryOfChangeRoutingModule, CustomFieldsModule, RadioButtonModule, TocInitiativeOutModule]
+  imports: [CommonModule, RdTheoryOfChangeRoutingModule, CustomFieldsModule, RadioButtonModule, TocInitiativeOutModule, FeedbackValidationDirectiveModule]
 })
 export class RdTheoryOfChangeModule {}
