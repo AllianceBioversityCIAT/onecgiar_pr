@@ -183,6 +183,34 @@ export class ResultRepository
     return final_data;
   }
 
+  async countResultByTypeAndStatus(status_id, result_type_id) {
+    try {
+      const queryData = `select count(1) as \`count\` from \`result\` r where r.status_id = ? and r.result_type_id = ?;`;
+      const res = await this.query(queryData, [status_id, result_type_id]);
+      return res.length ? res[0].count : null;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async findIdOfResultByTypeAndStatus(status_id, result_type_id) {
+    try {
+      const queryData = `select r.id from \`result\` r where r.status_id = ? and r.result_type_id = ?;`;
+      const res = await this.query(queryData, [status_id, result_type_id]);
+      return res.map((item) => item.id);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async getResultByName(
     name: string,
     result_type: number,
@@ -778,7 +806,8 @@ WHERE
     r.lead_contact_person,
     v.status as is_phase_open,
     v.phase_name,
-    v.phase_year 
+    v.phase_year,
+    r.is_discontinued
 FROM
     \`result\` r
     inner join result_level rl on rl.id = r.result_level_id 
@@ -928,7 +957,8 @@ WHERE
     if(r.geographic_scope_id in (3, 4), 3, r.geographic_scope_id ) as geographic_scope_id,
     v.id as version_id,
     v.phase_name,
-    v.phase_year
+    v.phase_year,
+    r.is_discontinued
 FROM
     result r
     inner join results_by_inititiative rbi ON rbi.result_id = r.id 
@@ -1095,9 +1125,15 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       WHERE
         r.version_id = v.id
     ) AS "Phase",
-    concat('${
-      env.FRONT_END_PDF_ENDPOINT
-    }', r.result_code,?, 'phase=1') as \`PDF Link\`,
+    CONCAT(
+      '${env.FRONT_END_PDF_ENDPOINT}',
+      r.result_code,
+      ?,
+      COALESCE(
+        CONCAT('?phase=', r.version_id),
+        ''
+      )
+    ) AS "PDF Link",
     rl.name as "Result Level",
     rt.name as "Result Type",
     rs.status_name as "Status",
@@ -1119,7 +1155,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     CONCAT('(',ci.official_code,' - ',ci.short_name,'): ', 'Toc Level: ' ,IFNULL(tl.name , 'Not provider'), ', ToC result title:' ,IFNULL(tr.title, 'Not provider')) as "ToC Mapping (Primary submitter)",
     GROUP_CONCAT(distinct CONCAT('(',ci6.official_code,' - ',ci6.short_name,'): ', 'Toc Level: ' ,IFNULL(tl2.name , 'Not provider'), ', ToC result title:' ,IFNULL(tr2.title, 'Not provider')) SEPARATOR ', ') as "ToC Mapping (Contributting initiatives)",
     -- section 3
-    if(r.no_applicable_partner=1, "No", "Yes") as "Are partners applicable?",
+    if(rt.id <> 6, if(r.no_applicable_partner=1, "No", "Yes"), "Yes") as "Are partners applicable?",
     if(rt.id <> 6,(select GROUP_CONCAT(DISTINCT concat('• ', q1.partner) SEPARATOR '\n')
     from (select concat(concat(if(coalesce(ci7.acronym, '') = '', '', concat(ci7.acronym, ' - ')), ci7.name), '; Delivery type(s): ', group_concat(distinct pdt.name separator ', ')) as partner
     FROM results_by_institution rbi
@@ -1144,6 +1180,21 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     left JOIN partner_delivery_type pdt on pdt.id = rbibdt.partner_delivery_type_id
     WHERE rkmi.is_active > 0 and rkp.results_id = r.id
     GROUP by rkp.results_id, rbi.institutions_id, rkmi.intitution_name, rkmi.results_by_institutions_id) as q1), 'Not Applicable') as "Partners (with delivery type) for KP results",
+    if(rt.id = 6, if(r.no_applicable_partner=1, "No", "Yes"), 'Not Applicable') as "Are additional partners for KP results applicable?",
+    if(rt.id = 6,(select GROUP_CONCAT(DISTINCT concat('• ', q1.partner) SEPARATOR '\n')
+    from (select concat(concat(if(coalesce(ci7.acronym, '') = '', '', concat(ci7.acronym, ' - ')), ci7.name), '; Delivery type(s): ', group_concat(distinct pdt.name separator ', ')) as partner
+    FROM results_by_institution rbi
+    left join result_by_institutions_by_deliveries_type rbibdt 
+          on rbibdt.result_by_institution_id = rbi.id 
+        and rbibdt.is_active > 0
+    left join clarisa_institutions ci7 
+          on ci7.id = rbi.institutions_id
+    left JOIN partner_delivery_type pdt 
+          on pdt.id = rbibdt.partner_delivery_type_id
+      WHERE rbi.result_id = r.id
+        and rbi.institution_roles_id = 8
+        and rbi.is_active > 0
+    GROUP by rbi.result_id, ci7.id) as q1), 'Not Applicable') as "Additional partners (with delivery type) for KP results",
     -- section 4
     (SELECT if(cgs.name is null, 'Not Provided', (if(cgs.id = 3, 'National', cgs.name))) 
   FROM clarisa_geographic_scope cgs
@@ -1310,7 +1361,15 @@ left join clarisa_countries cc3
       WHERE
         r.version_id = v.id
     ) AS "Phase",
-    concat('${env.FRONT_END_PDF_ENDPOINT}', r.result_code,?, 'phase=1') as \`PDF Link\`,
+    CONCAT(
+      '${env.FRONT_END_PDF_ENDPOINT}',
+      r.result_code,
+      ?,
+      COALESCE(
+        CONCAT('?phase=', r.version_id),
+        ''
+      )
+    ) AS "PDF Link",
     rl.name as "Result Level",
     rt.name as "Result Type",
     rs.status_name as "Status",
@@ -1332,7 +1391,7 @@ left join clarisa_countries cc3
     CONCAT('(',ci.official_code,' - ',ci.short_name,'): ', 'Toc Level: ' ,IFNULL(tl.name , 'Not provider'), ', ToC result title:' ,IFNULL(tr.title, 'Not provider')) as "ToC Mapping (Primary submitter)",
     GROUP_CONCAT(distinct CONCAT('(',ci6.official_code,' - ',ci6.short_name,'): ', 'Toc Level: ' ,IFNULL(tl2.name , 'Not provider'), ', ToC result title:' ,IFNULL(tr2.title, 'Not provider')) SEPARATOR ', ') as "ToC Mapping (Contributting initiatives)",
     -- section 3
-    if(r.no_applicable_partner=1, "No", "Yes") as "Are partners applicable?",
+    if(rt.id <> 6, if(r.no_applicable_partner=1, "No", "Yes"), "Yes") as "Are partners applicable?",
     if(rt.id <> 6,(select GROUP_CONCAT(DISTINCT concat('• ', q1.partner) SEPARATOR '\n')
     from (select concat(concat(if(coalesce(ci7.acronym, '') = '', '', concat(ci7.acronym, ' - ')), ci7.name), '; Delivery type(s): ', group_concat(distinct pdt.name separator ', ')) as partner
     FROM results_by_institution rbi
@@ -1357,6 +1416,21 @@ left join clarisa_countries cc3
     left JOIN partner_delivery_type pdt on pdt.id = rbibdt.partner_delivery_type_id
     WHERE rkmi.is_active > 0 and rkp.results_id = r.id
     GROUP by rkp.results_id, rbi.institutions_id, rkmi.intitution_name, rkmi.results_by_institutions_id) as q1), 'Not Applicable') as "Partners (with delivery type) for KP results",
+    if(rt.id = 6, if(r.no_applicable_partner=1, "No", "Yes"), 'Not Applicable') as "Are additional partners for KP results applicable?",
+    if(rt.id = 6,(select GROUP_CONCAT(DISTINCT concat('• ', q1.partner) SEPARATOR '\n')
+    from (select concat(concat(if(coalesce(ci7.acronym, '') = '', '', concat(ci7.acronym, ' - ')), ci7.name), '; Delivery type(s): ', group_concat(distinct pdt.name separator ', ')) as partner
+    FROM results_by_institution rbi
+    left join result_by_institutions_by_deliveries_type rbibdt 
+          on rbibdt.result_by_institution_id = rbi.id 
+        and rbibdt.is_active > 0
+    left join clarisa_institutions ci7 
+          on ci7.id = rbi.institutions_id
+    left JOIN partner_delivery_type pdt 
+          on pdt.id = rbibdt.partner_delivery_type_id
+      WHERE rbi.result_id = r.id
+        and rbi.institution_roles_id = 8
+        and rbi.is_active > 0
+    GROUP by rbi.result_id, ci7.id) as q1), 'Not Applicable') as "Additional partners (with delivery type) for KP results",
     -- section 4
     (SELECT if(cgs.name is null, 'Not Provided', (if(cgs.id = 3, 'National', cgs.name))) 
   FROM clarisa_geographic_scope cgs
@@ -1785,6 +1859,70 @@ left join clarisa_countries cc3
     try {
       const result = await this.query(innovationQuery, [resultId]);
       return result;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async getResultAgainstToc(resultCodesArray: number[]) {
+    const resultCodes = (resultCodesArray ?? []).join(',');
+    const query = `
+    SELECT
+        r.result_code AS 'Result Code',
+        r.title AS 'Title',
+        (
+            SELECT
+                ci.official_code
+            FROM
+                clarisa_initiatives ci
+            WHERE
+                ci.id = rbi.inititiative_id
+        ) AS 'Primary / Contributing initiative official code',
+        (
+            SELECT
+                ci.name
+            FROM
+                clarisa_initiatives ci
+            WHERE
+                ci.id = rbi.inititiative_id
+        ) AS 'Primary / Contributing initiative name',
+        CONCAT(wp.acronym, ' - ', tr.result_title) AS 'ToC element',
+        tri.indicator_description AS 'Description',
+        DATE(tri.target_date) AS 'Target date',
+        tri.unit_messurament AS 'Unit of measure',
+        tri.target_value AS 'Target value',
+        IFNULL(rtri.indicator_contributing, 'Not provided') AS 'Target contribution from the result'
+    FROM
+        result r
+        LEFT JOIN results_toc_result rtr ON rtr.results_id = r.id
+        LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
+        LEFT JOIN results_toc_result_indicators rtri ON rtri.results_toc_results_id = rtr.result_toc_result_id
+        LEFT JOIN Integration_information.toc_results tr ON tr.id = rtr.toc_result_id
+        LEFT JOIN Integration_information.work_packages wp ON wp.id = tr.work_packages_id
+        LEFT JOIN Integration_information.toc_results_indicators tri ON tr.id = tri.toc_results_id AND tri.toc_result_indicator_id = rtri.toc_results_indicator_id COLLATE utf8mb3_general_ci
+    WHERE
+        r.result_code ${resultCodes.length ? `in (${resultCodes})`: '= 0' }
+        AND rbi.is_active = 1
+        AND rtr.is_active = 1
+        AND rtri.is_active > 0
+        AND rbi.inititiative_id = rtr.initiative_id
+        AND tr.phase = (
+              select
+                  v.toc_pahse_id
+              from
+                  version v
+              where
+                  r.version_id = v.id
+          );
+    `;
+
+    try {
+      const results = await this.query(query);
+      return results;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultRepository.name,

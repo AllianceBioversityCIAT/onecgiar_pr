@@ -102,6 +102,13 @@ export class ResultsController {
     throw new HttpException({ message, response }, status);
   }
 
+  @Get('get/institutions-type/childless')
+  async getChildlessInstitutionsType() {
+    const { message, response, status } =
+      await this.resultsService.getChildlessInstitutionTypes();
+    throw new HttpException({ message, response }, status);
+  }
+
   @Get('get/institutions-type/legacy')
   async getLegacyInstitutionsType() {
     const { message, response, status } =

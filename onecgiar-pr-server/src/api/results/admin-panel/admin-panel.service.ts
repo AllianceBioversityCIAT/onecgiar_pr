@@ -243,8 +243,21 @@ export class AdminPanelService implements OnModuleInit {
         return fr;
       });
 
+      const resultLevels = await this._resultRepository.find({
+        select: ['result_level_id'],
+        where: resultCodes.map((rc) => ({ result_code: rc })),
+      });
+
+      let resultsAgaintsToc: any[];
+
+      if (resultLevels[0].result_level_id == 3 || resultLevels[0].result_level_id == 4) {
+        resultsAgaintsToc = await this._resultRepository.getResultAgainstToc(
+          resultCodes,
+        );
+      }
+
       return {
-        response: fullReport,
+        response: { fullReport, resultsAgaintsToc },
         message: 'Successful response',
         status: HttpStatus.OK,
       };

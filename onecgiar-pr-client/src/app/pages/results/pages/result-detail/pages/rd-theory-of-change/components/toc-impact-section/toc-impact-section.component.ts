@@ -8,6 +8,7 @@ import { ImpactAreasService } from '../../../../../../../../shared/services/glob
 })
 export class TocImpactSectionComponent {
   @Input() impacts: any;
+  @Input() sdg: any = [];
   @Input() contributing_initiatives: any = [];
   constructor(public impactAreasSE: ImpactAreasService) {}
 }

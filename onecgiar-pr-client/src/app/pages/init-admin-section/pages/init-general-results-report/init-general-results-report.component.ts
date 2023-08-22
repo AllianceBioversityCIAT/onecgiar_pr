@@ -63,23 +63,25 @@ export class InitGeneralResultsReportComponent {
   }
 
   dataToExport = [];
+  tocToExport = [];
 
   async exportExcel(resultsRelected) {
     this.dataToExport = [];
+    this.tocToExport = [];
     this.requesting = true;
     this.requestCounter = 0;
 
     const list = [];
     const uniqueResultCodesSet = new Set(resultsRelected.map((item: any) => item.result_code));
     const uniqueResultCodes = [...uniqueResultCodesSet];
-
     uniqueResultCodes?.forEach(element => {
       list.push(element);
     });
-    for (const key in list) {
-      await this.POST_excelFullReportPromise(list[key], key);
-    }
-    this.exportTablesSE.exportExcel(this.dataToExport, 'results_list');
+
+    // Usar Promise.all para esperar a que todas las promesas se resuelvan
+    await Promise.all(list.map((element, key) => this.POST_excelFullReportPromise(element, key)));
+
+    this.exportTablesSE.exportMultipleSheetsExcel(this.dataToExport, 'results_list', null, this.tocToExport);
     this.requesting = false;
   }
 
@@ -95,7 +97,8 @@ export class InitGeneralResultsReportComponent {
           // this.validateLength(response);
           //(response);
           this.requestCounter++;
-          this.dataToExport.push(...response);
+          this.dataToExport.push(...response.fullReport);
+          this.tocToExport.push(...response.resultsAgaintsToc);
           resolve(null);
         },
         err => {

@@ -1,3 +1,4 @@
+<app-rd-annual-updating [generalInfoBody]="this.generalInfoBody"></app-rd-annual-updating>
 <app-detail-section-title sectionName="General information"></app-detail-section-title>
 <div class="detail_container">
   <app-alert-status *ngIf="this.api.dataControlSE.isKnowledgeProduct"
@@ -47,7 +48,8 @@
   <!-- TODO DAC Fields  -->
   <!-- TODO #1  Nutrition tag -->
   <div class="block_container">
-    <!-- <app-alert-status [description]="genderInformation()"> </app-alert-status> -->
+    <app-alert-status [description]="nutritionInformation()">
+    </app-alert-status>
     <div class="radio_grid">
       <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
         label="Nutrition tag" [(ngModel)]="this.generalInfoBody.nutrition_tag_level_id"> </app-pr-radio-button>
@@ -57,7 +59,7 @@
 
   <!-- TODO #2  Environment and/or biodiversity tag -->
   <div class="block_container">
-    <!-- <app-alert-status [description]="genderInformation()"> </app-alert-status> -->
+    <app-alert-status [description]="environmentInformation()"> </app-alert-status>
     <div class="radio_grid">
       <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
         label="Environment and/or biodiversity tag"
@@ -69,7 +71,7 @@
 
   <!-- TODO #3  Poverty tag -->
   <div class="block_container">
-    <!-- <app-alert-status [description]="genderInformation()"> </app-alert-status> -->
+    <app-alert-status [description]="povertyInformation()"> </app-alert-status>
     <div class="radio_grid">
       <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
         label="Poverty tag" [(ngModel)]="this.generalInfoBody.poverty_tag_level_id"> </app-pr-radio-button>
@@ -110,11 +112,13 @@
   <app-pr-yes-or-not label="Is this result featured in a Key Result Story for the Reporting year?"
     [(ngModel)]="this.generalInfoBody.is_krs" (ngModelChange)="onChangeKrs()"></app-pr-yes-or-not>
 
+
   <app-pr-input *ngIf="this.generalInfoBody.is_krs" placeholder="e.g. https://www.cgiar.org/example"
     description="Link to Key Result Story - Please note this is not intended to be reported in december" type="text"
     [required]="false" [(ngModel)]="this.generalInfoBody.krs_url"> </app-pr-input>
 
   <app-save-button class="position_sticky" (clickSave)="onSaveSection()"
+    [editable]="this.api.dataControlSE.currentResult?.result_type_id == 7 ?this.api.rolesSE.access.canDdit && !this.dataControlSE?.currentResult?.status :false"
     [disabled]="!this.generalInfoBody.result_name"></app-save-button>
   <app-sync-button (clickSave)="onSyncSection()"></app-sync-button>
 </div>

@@ -61,8 +61,8 @@
 <!--TODO New fields -->
 <!--TODO #1 Nutrition tag -->
 <div class="block_container">
-    <!-- <app-alert-status [description]="climateInformation()">
-    </app-alert-status> -->
+    <app-alert-status [description]="nutritionInformation()">
+    </app-alert-status>
 
     <div class="radio_grid">
         <app-pr-radio-button [(ngModel)]="this.ipsrGeneralInformationBody.nutrition_tag_level_id"
@@ -85,9 +85,8 @@
 </div>
 <!--TODO #2 Environment and/or biodiversity tag -->
 <div class="block_container">
-    <!-- <app-alert-status [description]="climateInformation()">
-    </app-alert-status> -->
-
+    <app-alert-status [description]="environmentInformation()">
+    </app-alert-status>
     <div class="radio_grid">
         <app-pr-radio-button [(ngModel)]="this.ipsrGeneralInformationBody.environmental_biodiversity_tag_level_id"
             [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
@@ -111,8 +110,8 @@
 </div>
 <!--TODO #3 Poverty tag-->
 <div class="block_container">
-    <!-- <app-alert-status [description]="climateInformation()">
-    </app-alert-status> -->
+    <app-alert-status [description]="povertyInformation()">
+    </app-alert-status>
 
     <div class="radio_grid">
         <app-pr-radio-button [(ngModel)]="this.ipsrGeneralInformationBody.poverty_tag_level_id"

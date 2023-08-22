@@ -10,9 +10,6 @@ import { MQAPService } from '../../m-qap/m-qap.service';
 import { Result } from '../entities/result.entity';
 import { ResultRepository } from '../result.repository';
 import { Version } from '../../versioning/entities/version.entity';
-import { VersionRepository } from '../../versioning/versioning.repository';
-import { CreateResultsKnowledgeProductFromHandleDto } from './dto/create-results-knowledge-product-from-handle.dto';
-import { UpdateResultsKnowledgeProductDto } from './dto/update-results-knowledge-product.dto';
 import { ResultsKnowledgeProduct } from './entities/results-knowledge-product.entity';
 import { ResultsKnowledgeProductMapper } from './results-knowledge-products.mapper';
 import { ResultsKnowledgeProductsRepository } from './repositories/results-knowledge-products.repository';
@@ -22,7 +19,6 @@ import { ResultsKnowledgeProductInstitutionRepository } from './repositories/res
 import { ResultsKnowledgeProductKeywordRepository } from './repositories/results-knowledge-product-keywords.repository';
 import { ResultsKnowledgeProductMetadataRepository } from './repositories/results-knowledge-product-metadata.repository';
 import { ResultsKnowledgeProductDto } from './dto/results-knowledge-product.dto';
-import { ResultsService } from '../results.service';
 import { returnFormatResult } from '../dto/return-format-result.dto';
 import { ModuleRef } from '@nestjs/core';
 import { CreateResultDto } from '../dto/create-result.dto';
@@ -32,7 +28,6 @@ import { ResultLevelRepository } from '../result_levels/resultLevel.repository';
 import { ResultTypesService } from '../result_types/result_types.service';
 import { ResultLevel } from '../result_levels/entities/result_level.entity';
 import { ResultType } from '../result_types/entities/result_type.entity';
-import { VersionsService } from '../versions/versions.service';
 import { Year } from '../years/entities/year.entity';
 import { YearRepository } from '../years/year.repository';
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
@@ -52,6 +47,13 @@ import { ResultCountry } from '../result-countries/entities/result-country.entit
 import { ResultCountryRepository } from '../result-countries/result-countries.repository';
 import { VersioningService } from '../../versioning/versioning.service';
 import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
+import { ClarisaCountriesRepository } from '../../../clarisa/clarisa-countries/ClarisaCountries.repository';
+import { ResultsKnowledgeProductFairScore } from './entities/results-knowledge-product-fair-scores.entity';
+import { FairField } from './entities/fair-fields.entity';
+import { FairFieldRepository } from './repositories/fair-fields.repository';
+import { FairFieldEnum } from './entities/fair-fields.enum';
+import { FairSpecificData, FullFairData } from './dto/fair-data.dto';
+import { ResultsKnowledgeProductFairScoreRepository } from './repositories/results-knowledge-product-fair-scores.repository';
 
 @Injectable()
 export class ResultsKnowledgeProductsService {
@@ -73,6 +75,12 @@ export class ResultsKnowledgeProductsService {
             cgspace_country_mapping_array: true,
           },
         },
+        obj_version: true,
+      },
+      result_knowledge_product_fair_score_array: {
+        fair_field_object: {
+          parent_object: true,
+        },
       },
     };
 
@@ -92,16 +100,16 @@ export class ResultsKnowledgeProductsService {
     private readonly _resultByLevelRepository: ResultByLevelRepository,
     private readonly _resultLevelRepository: ResultLevelRepository,
     private readonly _resultTypeRepository: ResultTypeRepository,
-    private readonly _versionRepository: VersionRepository,
-    private readonly _yearRepository: YearRepository,
     private readonly _roleByUseRepository: RoleByUserRepository,
     private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
     private readonly _resultRegionRepository: ResultRegionRepository,
     private readonly _knowledgeProductFairBaselineRepository: KnowledgeProductFairBaselineRepository,
     private readonly _clarisaRegionsRepository: ClarisaRegionsRepository,
-    private readonly _cgSpaceCountryMappingsRepository: CGSpaceCountryMappingsRepository,
+    private readonly _clarisaCountriesRepository: ClarisaCountriesRepository,
     private readonly _resultCountryRepository: ResultCountryRepository,
     private readonly _versioningService: VersioningService,
+    private readonly _fairFieldRepository: FairFieldRepository,
+    private readonly _resultsKnowledgeProductFairScoreRepository: ResultsKnowledgeProductFairScoreRepository,
   ) {}
 
   private async createOwnerResult(
@@ -175,17 +183,6 @@ export class ResultsKnowledgeProductsService {
         };
       }
 
-      const year: Year = await this._yearRepository.findOne({
-        where: { active: true },
-      });
-      if (!year) {
-        throw {
-          response: {},
-          message: 'Active year Not Found',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
-
       const last_code = await this._resultRepository.getLastResultCode();
       const newResultHeader: Result = await this._resultRepository.save({
         created_by: user.id,
@@ -193,19 +190,17 @@ export class ResultsKnowledgeProductsService {
         result_type_id: resultType.id,
         version_id: currentVersion.id,
         title: createResultDto.result_name,
-        reported_year_id: year.year,
+        reported_year_id: currentVersion.phase_year,
         result_level_id: rl.id,
         result_code: last_code + 1,
       });
 
-      const resultByInitiative = await this._resultByInitiativesRepository.save(
-        {
-          created_by: newResultHeader.created_by,
-          initiative_id: initiative.id,
-          initiative_role_id: 1,
-          result_id: newResultHeader.id,
-        },
-      );
+      await this._resultByInitiativesRepository.save({
+        created_by: newResultHeader.created_by,
+        initiative_id: initiative.id,
+        initiative_role_id: 1,
+        result_id: newResultHeader.id,
+      });
 
       return {
         response: newResultHeader,
@@ -251,6 +246,7 @@ export class ResultsKnowledgeProductsService {
 
       const cgspaceResponse = await this.findOnCGSpace(
         resultKnowledgeProduct.handle,
+        resultKnowledgeProduct.result_object?.obj_version?.cgspace_year,
         false,
       );
 
@@ -302,6 +298,7 @@ export class ResultsKnowledgeProductsService {
         newMetadata,
         true,
       );
+
       updatedKnowledgeProduct =
         await this._resultsKnowledgeProductRepository.save(
           updatedKnowledgeProduct,
@@ -350,6 +347,12 @@ export class ResultsKnowledgeProductsService {
         updatedKnowledgeProduct.result_object.result_region_array ?? [],
       );
 
+      //fair
+      await this.updateFair(updatedKnowledgeProduct, newMetadata, true);
+      await this._resultsKnowledgeProductFairScoreRepository.save(
+        updatedKnowledgeProduct.result_knowledge_product_fair_score_array ?? [],
+      );
+
       return {
         response: updatedKnowledgeProduct,
         message: 'The Result Knowledge Product has been updated successfully',
@@ -360,27 +363,139 @@ export class ResultsKnowledgeProductsService {
     }
   }
 
+  async updateFair(
+    knowledgeProduct: ResultsKnowledgeProduct,
+    resultsKnowledgeProductDto: ResultsKnowledgeProductDto,
+    upsert: boolean = false,
+  ) {
+    let allFairFields: FairField[] = await this._fairFieldRepository.find({
+      where: { is_active: true },
+      relations: { parent_object: true, children_array: true },
+    });
+    let updatedFields: ResultsKnowledgeProductFairScore[] = [];
+
+    for (const field of Object.values(FairFieldEnum)) {
+      let currentFairFieldIndex: number = (
+        knowledgeProduct.result_knowledge_product_fair_score_array ?? []
+      ).findIndex(
+        (fs) =>
+          fs.fair_field_object.short_name == field && fs.is_baseline == false,
+      );
+
+      let currentFairFieldObject: ResultsKnowledgeProductFairScore =
+        currentFairFieldIndex < 0
+          ? new ResultsKnowledgeProductFairScore()
+          : (knowledgeProduct.result_knowledge_product_fair_score_array ?? [])[
+              currentFairFieldIndex
+            ];
+
+      if (!currentFairFieldObject.fair_field_id) {
+        currentFairFieldObject.fair_field_id = allFairFields.find(
+          (ff) => ff.short_name == field,
+        )?.fair_field_id;
+        currentFairFieldObject.result_knowledge_product_id =
+          knowledgeProduct.result_knowledge_product_id;
+      }
+
+      let valuePath: string;
+      let currentFairField: FairField = allFairFields.find(
+        (ff) => ff.short_name == field,
+      );
+      while (currentFairField?.parent_id) {
+        valuePath = `${valuePath ?? ''}.${currentFairField?.short_name}`;
+        currentFairField = allFairFields.find(
+          (ff) => ff.fair_field_id == currentFairField?.parent_id,
+        );
+      }
+
+      valuePath = `${valuePath ?? ''}.${currentFairField?.short_name}`;
+      valuePath = valuePath.indexOf('.') == 0 ? valuePath.slice(1) : valuePath;
+      let pathArray: string[] = valuePath.split('.').reverse();
+      let value: number;
+      let currentObject: FairSpecificData | FullFairData =
+        resultsKnowledgeProductDto.fair_data;
+      if (field == FairFieldEnum.TOTAL) {
+        value = currentObject?.total_score;
+      } else {
+        let currentPath = pathArray.shift();
+        if (pathArray.length == 0) {
+          value = currentObject[currentPath]?.score;
+        } else {
+          while (pathArray.length > 0) {
+            currentObject = (
+              currentObject[currentPath] as FairSpecificData
+            ).indicators.find((i) => i.name == pathArray[0]);
+            value = currentObject?.score;
+            currentPath = pathArray.shift();
+          }
+        }
+      }
+
+      currentFairFieldObject.fair_value = value;
+      currentFairFieldObject.is_baseline = false;
+      if (!currentFairFieldObject.created_by) {
+        currentFairFieldObject.created_by = upsert
+          ? knowledgeProduct.last_updated_by
+          : knowledgeProduct.created_by;
+      } else {
+        currentFairFieldObject.last_updated_by =
+          knowledgeProduct.last_updated_by;
+      }
+
+      switch (field) {
+        case FairFieldEnum.FINDABLE:
+          knowledgeProduct.findable = value;
+          break;
+        case FairFieldEnum.ACCESIBLE:
+          knowledgeProduct.accesible = value;
+          break;
+        case FairFieldEnum.INTEROPERABLE:
+          knowledgeProduct.interoperable = value;
+          break;
+        case FairFieldEnum.REUSABLE:
+          knowledgeProduct.reusable = value;
+          break;
+        default:
+          break;
+      }
+
+      updatedFields.push(currentFairFieldObject);
+    }
+
+    if (!upsert) {
+      const baselineFields: ResultsKnowledgeProductFairScore[] = [];
+      updatedFields.forEach((fs) => {
+        let baselineField = new ResultsKnowledgeProductFairScore();
+        baselineField.result_knowledge_product_id =
+          fs.result_knowledge_product_id;
+        baselineField.fair_field_id = fs.fair_field_id;
+        baselineField.fair_value = fs.fair_value;
+        baselineField.is_baseline = true;
+        baselineField.created_by = fs.created_by;
+        baselineField.last_updated_by = fs.last_updated_by;
+        baselineFields.push(baselineField);
+      });
+
+      updatedFields = updatedFields.concat(baselineFields);
+    }
+
+    knowledgeProduct.result_knowledge_product_fair_score_array = updatedFields;
+  }
+
   async updateCountries(
     newKnowledgeProduct: ResultsKnowledgeProduct,
     resultsKnowledgeProductDto: ResultsKnowledgeProductDto,
     upsert: boolean = false,
   ) {
-    const allCountryMappings =
-      await this._cgSpaceCountryMappingsRepository.find({
-        where: { is_active: true },
-      });
+    const allClarisaCountries = await this._clarisaCountriesRepository.find();
 
     const countries = (resultsKnowledgeProductDto.cgspace_countries ?? []).map(
-      (c) => {
+      (mqapIso) => {
         let country: ResultCountry;
         if (upsert) {
           country = (
             newKnowledgeProduct.result_object.result_country_array ?? []
-          ).find((orc) =>
-            (orc.country_object?.cgspace_country_mapping_array ?? []).find(
-              (ccm) => ccm.cgspace_country_name == c,
-            ),
-          );
+          ).find((orc) => orc.country_object?.iso_alpha_2 == mqapIso);
           if (country) {
             country['matched'] = true;
           }
@@ -388,13 +503,15 @@ export class ResultsKnowledgeProductsService {
 
         country ??= new ResultCountry();
 
-        let clarisaCountry = allCountryMappings.find(
-          (ccm) => ccm.cgspace_country_name == c,
-        )?.clarisa_country_code;
+        //searching for country by iso-2
+        let clarisaCountry = allClarisaCountries.find(
+          (cc) => cc.iso_alpha_2 == mqapIso,
+        )?.id;
+
         country.country_id = clarisaCountry;
         if (!clarisaCountry) {
           console.warn(
-            `country with name "${c}" does not have a mapping in CLARISA for handle "${resultsKnowledgeProductDto.handle}"`,
+            `country with ISO Code "${mqapIso}" does not have a mapping in CLARISA for handle "${resultsKnowledgeProductDto.handle}"`,
           );
         }
 
@@ -421,7 +538,11 @@ export class ResultsKnowledgeProductsService {
     newKnowledgeProduct.result_object.result_country_array = countries;
   }
 
-  async findOnCGSpace(handle: string, validateExisting: boolean = true) {
+  async findOnCGSpace(
+    handle: string,
+    versionCgspaceYear: number,
+    validateExisting: boolean = true,
+  ) {
     try {
       if (!handle) {
         throw {
@@ -429,6 +550,14 @@ export class ResultsKnowledgeProductsService {
           message: 'Missing data: handle',
           status: HttpStatus.BAD_REQUEST,
         };
+      }
+
+      if (validateExisting) {
+        const currentVersion: Version =
+          await this._versioningService.$_findActivePhase(
+            AppModuleIdEnum.REPORTING,
+          );
+        versionCgspaceYear = currentVersion?.phase_year;
       }
 
       const hasQuery = (handle ?? '').indexOf('?');
@@ -476,31 +605,38 @@ export class ResultsKnowledgeProductsService {
       const cgYear =
         this._resultsKnowledgeProductMapper.getPublicationYearFromMQAPResponse(
           mqapResponse,
-        ) ?? 0;
+        );
 
-      if (cgYear < 2022) {
+      if ((cgYear.year ?? 0) != versionCgspaceYear) {
         throw {
           response: { title: mqapResponse?.Title },
           message:
-            "You can't report knowledge products older than 2022 for the current reporting " +
-            'cycle. In case you need support to correct the publication year of ' +
-            'this knowledge product, please contact the librarian of your Center.',
+            `You can't report knowledge products from years different than ${versionCgspaceYear} ` +
+            'for the current reporting cycle. In case you need support to correct the publication ' +
+            'year of this knowledge product, please contact the librarian of your Center.',
           status: HttpStatus.UNPROCESSABLE_ENTITY,
         };
       } else if (
-        cgYear > 2022 &&
-        (mqapResponse?.Type ?? '') != 'Journal Article'
+        (cgYear.field_name != 'online_publication_date' &&
+          (mqapResponse?.Type ?? '') == 'Journal Article') ||
+        (cgYear.field_name == 'online_publication_date' &&
+          (mqapResponse?.Type ?? '') == 'Journal Article' &&
+          (cgYear.year ?? 0) != versionCgspaceYear)
       ) {
+        const dateFieldName = (cgYear?.field_name ?? '')
+          .split('_')
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' ');
         throw {
           response: { title: mqapResponse?.Title },
           message:
-            'Only Journal Articles from 2022 and 2023 will be allowed for this ' +
-            "reporting cycle. The knowledge product's type you are trying to create is " +
-            `"${
-              mqapResponse?.Type ?? 'Not Defined'
-            }" and the issue year is "${cgYear}". ` +
-            'In case you need support to correct the issue year of ' +
-            'this knowledge product, please contact the librarian of your Center.',
+            `Only Journal Articles <b>published online</b> in ${versionCgspaceYear} will be allowed for this reporting cycle. ` +
+            "The knowledge product's date type you are trying to create is " +
+            `"${dateFieldName || 'Not Defined'}" and the year is "${
+              cgYear.year
+            }". ` +
+            'If you believe there has been a mistake, please get in touch with the library staff ' +
+            'of your Center to review this information in the repository.',
           status: HttpStatus.UNPROCESSABLE_ENTITY,
         };
       }
@@ -536,7 +672,9 @@ export class ResultsKnowledgeProductsService {
       }
 
       const currentVersion: Version =
-        await this._versionRepository.getBaseVersion();
+        await this._versioningService.$_findActivePhase(
+          AppModuleIdEnum.REPORTING,
+        );
 
       if (!currentVersion) {
         throw {
@@ -556,6 +694,8 @@ export class ResultsKnowledgeProductsService {
       }
 
       const newResult = newResultResponse.response as Result;
+      resultsKnowledgeProductDto.version_id = newResult.version_id;
+      resultsKnowledgeProductDto.result_code = newResult.result_code;
 
       let newKnowledgeProduct: ResultsKnowledgeProduct =
         new ResultsKnowledgeProduct();
@@ -619,7 +759,7 @@ export class ResultsKnowledgeProductsService {
         newResult.result_region_array ?? [],
       );
 
-      const fairBaseline = new KnowledgeProductFairBaseline();
+      /*const fairBaseline = new KnowledgeProductFairBaseline();
 
       fairBaseline.findable = newKnowledgeProduct.findable;
       fairBaseline.accesible = newKnowledgeProduct.accesible;
@@ -629,10 +769,30 @@ export class ResultsKnowledgeProductsService {
       fairBaseline.knowledge_product_id =
         newKnowledgeProduct.result_knowledge_product_id;
 
-      await this._knowledgeProductFairBaselineRepository.save(fairBaseline);
+      await this._knowledgeProductFairBaselineRepository.save(fairBaseline);*/
+      await this.updateFair(
+        newKnowledgeProduct,
+        resultsKnowledgeProductDto,
+        false,
+      );
+      await this._resultsKnowledgeProductFairScoreRepository.save(
+        newKnowledgeProduct.result_knowledge_product_fair_score_array ?? [],
+      );
+      await this._resultsKnowledgeProductRepository.update(
+        {
+          result_knowledge_product_id:
+            newKnowledgeProduct.result_knowledge_product_id,
+        },
+        {
+          findable: newKnowledgeProduct.findable,
+          accesible: newKnowledgeProduct.accesible,
+          interoperable: newKnowledgeProduct.interoperable,
+          reusable: newKnowledgeProduct.reusable,
+        },
+      );
 
       //updating general result tables
-      this._resultRepository.update(
+      await this._resultRepository.update(
         { id: newResult.id },
         {
           title: resultsKnowledgeProductDto.title,
@@ -800,7 +960,7 @@ export class ResultsKnowledgeProductsService {
     }
 
     //updating general result tables
-    this._resultRepository.update(
+    await this._resultRepository.update(
       { id: newResult.id },
       {
         geographic_scope_id: newResult.geographic_scope_id,
@@ -912,6 +1072,7 @@ export class ResultsKnowledgeProductsService {
             results_id: result.id,
             //...this._resultsKnowledgeProductWhere,
           },
+          relations: { result_object: { obj_version: true } },
         });
 
       if (!knowledgeProduct) {
@@ -964,6 +1125,21 @@ export class ResultsKnowledgeProductsService {
             result_knowledge_product_id:
               knowledgeProduct.result_knowledge_product_id,
             is_active: true,
+          },
+        });
+
+      knowledgeProduct.result_knowledge_product_fair_score_array =
+        await this._resultsKnowledgeProductFairScoreRepository.find({
+          where: {
+            result_knowledge_product_id:
+              knowledgeProduct.result_knowledge_product_id,
+            is_active: true,
+            is_baseline: false,
+          },
+          relations: {
+            fair_field_object: {
+              parent_object: true,
+            },
           },
         });
 

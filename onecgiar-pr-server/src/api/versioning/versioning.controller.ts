@@ -17,12 +17,14 @@ import { UserToken } from '../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { Roles } from '../../shared/decorators/roles.decorator';
 import {
+  ActiveEnum,
   ModuleTypeEnum,
   RoleEnum,
   RoleTypeEnum,
   StatusPhaseEnum,
 } from '../../shared/constants/role-type.enum';
 import { ValidRoleGuard } from '../../shared/guards/valid-role.guard';
+import { UpdateQaResults } from './dto/update-qa.dto';
 
 @Controller()
 @UseInterceptors(ResponseInterceptor)
@@ -57,12 +59,46 @@ export class VersioningController {
     return this.versioningService.update(+id, updateVersioningDto);
   }
 
+  @Get('all')
+  findAll() {
+    return this.versioningService.getAllPhases();
+  }
+
+  @Patch('execute/annual/replicate')
+  @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
+  @UseGuards(ValidRoleGuard)
+  updateAnnually(@UserToken() user: TokenDto) {
+    return this.versioningService.annualReplicationProcessInnovationDev(user);
+  }
+
+  @Patch('change/status/qa')
+  updateStatusQa(@Body() QaResults: UpdateQaResults) {
+    return this.versioningService.setQaStatus(QaResults);
+  }
+
+  @Patch('update/links-result/qa')
+  updateLinksQa() {
+    return this.versioningService.updateLinkResultQa();
+  }
+
+  @Get('number/results/status/:statusId/result-type/:resultTypeId')
+  getNumberResults(
+    @Param('statusId') status_id: string,
+    @Param('resultTypeId') result_type_id: string,
+  ) {
+    return this.versioningService.getNumberRresultsReplicated(
+      +status_id,
+      +result_type_id,
+    );
+  }
+
   @Get()
   find(
     @Query('module') module_type: ModuleTypeEnum = ModuleTypeEnum.ALL,
     @Query('status') status: StatusPhaseEnum = StatusPhaseEnum.OPEN,
+    @Query('active') active: ActiveEnum = ActiveEnum.ACTIVE,
   ) {
-    return this.versioningService.find(module_type, status);
+    return this.versioningService.find(module_type, status, active);
   }
 
   @Get('result/:resultId')

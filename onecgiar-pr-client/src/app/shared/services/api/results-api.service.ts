@@ -54,14 +54,67 @@ export class ResultsApiService {
   PATCH_DeleteResult(resultIdToDelete: string | number) {
     return this.http.patch<any>(`${this.apiBaseUrl}delete/${resultIdToDelete}`, null);
   }
-  GET_FindResultsElastic(search?: string) {
-    const elasticSearchString = (search ?? '')
-      .split(' ')
-      .map(s => `${s}*`)
-      .join(' ');
-    const searchQuery = `?q=${elasticSearchString?.length > 0 ? elasticSearchString : '*'}`;
+
+  GET_FindResultsElastic(search?: string, type?: string) {
+    const body = {
+      size: 20,
+      query: {
+        bool: {
+          must: [
+            {
+              match_bool_prefix: {
+                title: {
+                  query: search ?? '',
+                  operator: 'and'
+                }
+              }
+            },
+            {
+              bool: {
+                should: [
+                  {
+                    bool: {
+                      must: [
+                        {
+                          match: {
+                            type: type ?? ''
+                          }
+                        },
+                        {
+                          match: {
+                            is_legacy: true
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    bool: {
+                      must: [
+                        {
+                          match: {
+                            is_legacy: false
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      sort: [
+        {
+          'id.keyword': {
+            order: 'asc'
+          }
+        }
+      ]
+    };
     const options = { headers: new HttpHeaders({ Authorization: this.elasicCredentials }) };
-    return this.http.get<ElasticResult>(`${environment.elastic.baseUrl}${searchQuery}`, options).pipe(
+    return this.http.post<ElasticResult>(`${environment.elastic.baseUrl}`, body, options).pipe(
       map(resp =>
         (resp?.hits?.hits ?? []).map(h => {
           return { probability: h._score, ...h._source } as Source & { probability: number };
@@ -93,6 +146,10 @@ export class ResultsApiService {
 
   GET_allInstitutionTypes() {
     return this.http.get<any>(`${this.apiBaseUrl}get/institutions-type/all`);
+  }
+
+  GET_allChildlessInstitutionTypes() {
+    return this.http.get<any>(`${this.apiBaseUrl}get/institutions-type/childless`);
   }
 
   GET_allInstitutions() {
@@ -222,6 +279,8 @@ export class ResultsApiService {
   }
 
   POST_toc(body: TheoryOfChangeBody) {
+    console.log(body);
+    
     return this.http.post<any>(`${this.apiBaseUrl}toc/create/toc/result/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
@@ -250,6 +309,10 @@ export class ResultsApiService {
       }),
       this.saveButtonSE.isGettingSectionPipe()
     );
+  }
+
+  Get_indicator(id_toc, init) {
+    return this.http.get<any>(`${this.apiBaseUrl}toc/get/indicator/${id_toc}/result/${this.currentResultId}/initiative/${init}`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   PATCH_innovationUse(body) {
@@ -691,7 +754,14 @@ export class ResultsApiService {
   }
 
   GET_versioning(status, modules) {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/versioning?status=${status}&module=${modules}`);
+    return this.http.get<any>(`${environment.apiBaseUrl}api/versioning?status=${status}&module=${modules}`).pipe(
+      map(resp => {
+        //(resp);
+        console.log(resp);
+        resp?.response.map(phase => (phase.phase_name_status = `${phase.phase_name} - (${phase.status ? 'Open' : 'Closed'})`));
+        return resp;
+      })
+    );
   }
 
   PATCH_versioningProcess(id) {
@@ -718,7 +788,19 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results/years`);
   }
 
+  GET_investmentDiscontinuedOptions() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/investment-discontinued-options`);
+  }
+
   GET_versioningResult() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/versioning/result/${this.ipsrDataControlSE.inIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId}`);
+  }
+
+  PATCH_versioningAnnually() {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/versioning/execute/annual/replicate`, {});
+  }
+
+  GET_numberOfResultsByResultType(statusId, resultTypeId) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/versioning/number/results/status/${statusId}/result-type/${resultTypeId}`);
   }
 }

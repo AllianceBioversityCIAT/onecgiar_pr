@@ -19,7 +19,7 @@ export class PhaseManagementComponent implements OnInit {
     { title: 'Start date', attr: 'start_date' },
     { title: 'End date', attr: 'end_date' },
     { title: 'Status', attr: 'status' },
-    { title: 'Previus phase', attr: 'obj_previous_phase' }
+    { title: 'Previous phase', attr: 'obj_previous_phase' }
   ];
 
   // show_full_screen = false;
