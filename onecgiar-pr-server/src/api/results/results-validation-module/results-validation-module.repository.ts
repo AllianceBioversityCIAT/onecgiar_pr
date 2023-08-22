@@ -12,11 +12,37 @@ export class resultValidationRepository extends Repository<Validation> {
     super(Validation, dataSource.createEntityManager());
   }
 
+  async version() {
+	const query = `
+	SELECT
+		v.id AS version
+	FROM
+		version v
+	WHERE
+		v.phase_year = 2023
+		AND v.phase_name LIKE '%Reporting%'
+		AND v.is_active > 0
+	LIMIT 1;
+  	`
+	try {
+		const version = await this.dataSource.query(query);
+		return version[0];
+	} catch (error) {
+		throw this._handlersError.returnErrorRepository({
+			className: resultValidationRepository.name,
+			error: error,
+			debug: true,
+		});
+	}
+  }
+
   async generalInformationValidation(
     resultId: number,
     resultLevel: number,
     resultType: number,
   ) {
+	const {	version } = await this.version();
+
     const queryData = `
 	SELECT
 		'general-information' as section_name,
@@ -82,7 +108,7 @@ export class resultValidationRepository extends Repository<Validation> {
 	WHERE
 		r.id = ?
 		and r.is_active > 0
-		and r.version_id = 2;
+		and r.version_id = ${version};
     `;
     try {
       const shareResultRequest: GetValidationSectionDto[] =
@@ -98,6 +124,8 @@ export class resultValidationRepository extends Repository<Validation> {
   }
 
   async tocValidation(resultId: number, resultLevel: number) {
+	const {	version } = await this.version();
+
     const queryData = `
 	SELECT
 		'theory-of-change' AS section_name,
@@ -257,7 +285,7 @@ export class resultValidationRepository extends Repository<Validation> {
 	AND
 		r.is_active > 0
 	AND
-		r.version_id = 2;
+		r.version_id = ${version};
     `;
     try {
       const shareResultRequest: GetValidationSectionDto[] =
@@ -273,6 +301,8 @@ export class resultValidationRepository extends Repository<Validation> {
   }
 
   async partnersValidation(resultId: number) {
+	const {	version } = await this.version();
+
     const queryData = `
 	SELECT
 		'partners' AS section_name,
@@ -333,7 +363,7 @@ export class resultValidationRepository extends Repository<Validation> {
 	WHERE
 		r.id = ?
 		AND r.is_active > 0
-		AND r.version_id = 2;
+		AND r.version_id = ${version};
     `;
     try {
       const shareResultRequest: GetValidationSectionDto[] =
@@ -349,6 +379,8 @@ export class resultValidationRepository extends Repository<Validation> {
   }
 
   async geoLocationValidation(resultId: number) {
+	const {	version } = await this.version();
+
     const queryData = `
 	select
 		'geographic-location' as section_name,
@@ -396,7 +428,7 @@ export class resultValidationRepository extends Repository<Validation> {
 	WHERE
 		r.id = ?
 		and r.is_active > 0
-		and r.version_id = 2;
+		and r.version_id = ${version};
     `;
     try {
       const shareResultRequest: GetValidationSectionDto[] =
@@ -429,6 +461,8 @@ export class resultValidationRepository extends Repository<Validation> {
   }
 
   async evidenceValidation(resultId: number) {
+	const {	version } = await this.version();
+
     const queryData = `
 	SELECT
 		'evidences' AS section_name,
@@ -634,7 +668,7 @@ export class resultValidationRepository extends Repository<Validation> {
 	WHERE
 		r.id = ?
 		AND r.is_active > 0
-		AND r.version_id = 2;
+		AND r.version_id = ${version};
     `;
     try {
       const shareResultRequest: GetValidationSectionDto[] =
@@ -650,6 +684,8 @@ export class resultValidationRepository extends Repository<Validation> {
   }
 
   async innovationUseValidation(resultId: number) {
+	const {	version } = await this.version();
+
     const queryData = `
 	SELECT
 		'innovation-use-info' as section_name,
@@ -670,7 +706,7 @@ export class resultValidationRepository extends Repository<Validation> {
 	WHERE
 		r.id = ?
 		and r.is_active > 0
-		and r.version_id = 2;
+		and r.version_id = ${version};
     `;
     try {
       const shareResultRequest: GetValidationSectionDto[] =
@@ -686,6 +722,8 @@ export class resultValidationRepository extends Repository<Validation> {
   }
 
   async innovationDevValidation(resultId: number) {
+	const {	version } = await this.version();
+
     const queryData = `
 	SELECT
 		'innovation-dev-info' as section_name,
@@ -716,7 +754,7 @@ export class resultValidationRepository extends Repository<Validation> {
 	WHERE
 		r.id = ?
 		and r.is_active > 0
-		and r.version_id = 2;
+		and r.version_id = ${version};
     `;
     try {
       const shareResultRequest: GetValidationSectionDto[] =
@@ -772,6 +810,8 @@ export class resultValidationRepository extends Repository<Validation> {
   }
 
   async capDevValidation(resultId: number) {
+	const {	version } = await this.version();
+
     const queryData = `
 	SELECT
 		'cap-dev-info' as section_name,
@@ -817,7 +857,7 @@ export class resultValidationRepository extends Repository<Validation> {
 	WHERE
 		r.id = ?
 		AND r.is_active > 0
-		AND r.version_id = 2;
+		AND r.version_id = ${version};
     `;
     try {
       const shareResultRequest: GetValidationSectionDto[] =
@@ -833,6 +873,8 @@ export class resultValidationRepository extends Repository<Validation> {
   }
 
   async policyChangeValidation(resultId: number) {
+	const {	version } = await this.version();
+	
     const queryData = `
 	SELECT
 		'policy-change1-info' as section_name,
@@ -863,7 +905,7 @@ export class resultValidationRepository extends Repository<Validation> {
 	WHERE
 		r.id = ?
 		and r.is_active > 0
-		and r.version_id = 2;
+		and r.version_id = ${version};
     `;
     try {
       const shareResultRequest: GetValidationSectionDto[] =
