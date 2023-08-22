@@ -3,6 +3,7 @@ import { InnovationDevInfoBody } from './model/innovationDevInfoBody';
 import { InnovationControlListService } from '../../../../../../../shared/services/global/innovation-control-list.service';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { InnovationDevelopmentQuestions } from './model/InnovationDevelopmentQuestions.model';
+import { InnovationDevInfoUtilsService } from './services/innovation-dev-info-utils.service';
 
 @Component({
   selector: 'app-innovation-dev-info',
@@ -12,9 +13,8 @@ import { InnovationDevelopmentQuestions } from './model/InnovationDevelopmentQue
 export class InnovationDevInfoComponent implements OnInit {
   innovationDevInfoBody = new InnovationDevInfoBody();
   range = 5;
-  sectionLoaded = false;
   innovationDevelopmentQuestions: InnovationDevelopmentQuestions = new InnovationDevelopmentQuestions();
-  constructor(private api: ApiService, public innovationControlListSE: InnovationControlListService) {}
+  constructor(private api: ApiService, public innovationControlListSE: InnovationControlListService, private innovationDevInfoUtilsSE: InnovationDevInfoUtilsService) {}
 
   ngOnInit(): void {
     this.getSectionInformation();
@@ -25,21 +25,21 @@ export class InnovationDevInfoComponent implements OnInit {
     this.api.resultsSE.GET_questionsInnovationDevelopment().subscribe(({ response }) => {
       console.log(response);
       this.innovationDevelopmentQuestions = response;
+      this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.responsible_innovation_and_scaling.q1);
+      this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.responsible_innovation_and_scaling.q2);
+      this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.innovation_team_diversity);
     });
   }
 
   getSectionInformation() {
-    this.sectionLoaded = false;
     this.api.resultsSE.GET_innovationDev().subscribe(
       ({ response }) => {
         //(response);
         this.innovationDevInfoBody = response;
         console.log(response);
-        this.sectionLoaded = true;
       },
       err => {
         console.error(err);
-        this.sectionLoaded = true;
       }
     );
   }
