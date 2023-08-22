@@ -74,6 +74,7 @@ export class VersionRepository extends Repository<Version> {
       \`result\` r
     where
       r.id = ?)
+    and r2.is_active > 0
       `;
     return this.query(queryData, [result_id])
       .then((res: { version_id: number }[]) => {

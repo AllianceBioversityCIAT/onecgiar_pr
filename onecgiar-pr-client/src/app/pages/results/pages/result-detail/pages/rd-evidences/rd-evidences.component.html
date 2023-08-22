@@ -35,6 +35,8 @@
     <app-add-button name="Add link" (clickEvent)="addLink()"
         *ngIf="this.evidencesBody?.supplementary?.length < 2 && !this.api.dataControlSE.isKnowledgeProduct && !this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status">
     </app-add-button>
+    <div appFeedbackValidation labelText="Empty or repeated link" [isComplete]="!this.validateCGSpaceLinks">
+    </div>
 </div>
 
 <app-save-button class="position_sticky" [disabled]="this.validateCGSpaceLinks" (clickSave)="onSaveSection()">
