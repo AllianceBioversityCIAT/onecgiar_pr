@@ -1,5 +1,11 @@
 import { HttpStatus, Injectable, OnModuleInit } from '@nestjs/common';
-import { FindOptionsRelations, FindOptionsWhere, IsNull, Like } from 'typeorm';
+import {
+  FindOptionsRelations,
+  FindOptionsWhere,
+  In,
+  IsNull,
+  Like,
+} from 'typeorm';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import {
   HandlersError,
@@ -54,6 +60,9 @@ import { FairFieldRepository } from './repositories/fair-fields.repository';
 import { FairFieldEnum } from './entities/fair-fields.enum';
 import { FairSpecificData, FullFairData } from './dto/fair-data.dto';
 import { ResultsKnowledgeProductFairScoreRepository } from './repositories/results-knowledge-product-fair-scores.repository';
+import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
+import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
+import { ResultsCenter } from '../results-centers/entities/results-center.entity';
 
 @Injectable()
 export class ResultsKnowledgeProductsService {
@@ -62,6 +71,9 @@ export class ResultsKnowledgeProductsService {
       result_knowledge_product_altmetric_array: true,
       result_knowledge_product_institution_array: {
         results_by_institutions_object: true,
+        predicted_institution_object: {
+          clarisa_center: true,
+        },
       },
       result_knowledge_product_metadata_array: true,
       result_knowledge_product_keyword_array: true,
@@ -110,6 +122,8 @@ export class ResultsKnowledgeProductsService {
     private readonly _versioningService: VersioningService,
     private readonly _fairFieldRepository: FairFieldRepository,
     private readonly _resultsKnowledgeProductFairScoreRepository: ResultsKnowledgeProductFairScoreRepository,
+    private readonly _resultCenterRepository: ResultsCenterRepository,
+    private readonly _clarisaInstitutionRepository: ClarisaInstitutionsRepository,
   ) {}
 
   private async createOwnerResult(
@@ -311,6 +325,11 @@ export class ResultsKnowledgeProductsService {
           title: newMetadata.title,
           description: newMetadata.description,
         },
+      );
+
+      await this.separateCentersFromCgspacePartners(
+        updatedKnowledgeProduct,
+        true,
       );
 
       //updating relations
@@ -721,6 +740,8 @@ export class ResultsKnowledgeProductsService {
           resultsKnowledgeProductDto,
         );
 
+      await this.separateCentersFromCgspacePartners(newKnowledgeProduct, false);
+
       //updating relations
       await this._resultsKnowledgeProductAltmetricRepository.save(
         newKnowledgeProduct.result_knowledge_product_altmetric_array ?? [],
@@ -838,6 +859,113 @@ export class ResultsKnowledgeProductsService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
+  }
+
+  async separateCentersFromCgspacePartners(
+    knowledgeProduct: ResultsKnowledgeProduct,
+    upsert: boolean = false,
+  ) {
+    // we get the centers currently mapped to the result
+    let sectionTwoCenters = await this._resultCenterRepository.find({
+      where: {
+        result_id: knowledgeProduct.result_object.id,
+        is_active: true,
+      },
+      relations: {
+        clarisa_center_object: true,
+      },
+    });
+
+    /*if the kp is new, we need to load the institution corresponding to the 
+    id returned by cgspace in order to execute the next step*/
+    if (!upsert) {
+      const possibleCgInstitutionIds = (
+        knowledgeProduct.result_knowledge_product_institution_array ?? []
+      )
+        .filter((cgi) => cgi.predicted_institution_id)
+        .map((cgi) => cgi.predicted_institution_id);
+      const possibleCgInstitutions =
+        await this._clarisaInstitutionRepository.find({
+          where: {
+            id: In(possibleCgInstitutionIds),
+          },
+          relations: { clarisa_center: true },
+        });
+
+      knowledgeProduct.result_knowledge_product_institution_array = (
+        knowledgeProduct.result_knowledge_product_institution_array ?? []
+      ).map((cgi) => {
+        const possibleCgInstitution = possibleCgInstitutions.find(
+          (pci) => pci.id == cgi.predicted_institution_id,
+        );
+        if (possibleCgInstitution) {
+          cgi.predicted_institution_object = possibleCgInstitution;
+        }
+        return cgi;
+      });
+    }
+
+    let newSectionTwoCenters: ResultsCenter[] = [];
+
+    const updatedCgInstitutions = (
+      knowledgeProduct.result_knowledge_product_institution_array ?? []
+    ).map((cgi) => {
+      //if m-qap is 100% certain of the institution match AND the institution is a center
+      if (
+        cgi.confidant == 100 &&
+        cgi.predicted_institution_object.clarisa_center
+      ) {
+        cgi.is_active = false;
+      }
+
+      //if the center has not been mapped already, we will create a new db record
+      if (
+        !sectionTwoCenters.find(
+          (stc) =>
+            stc.clarisa_center_object.institutionId ==
+            cgi.predicted_institution_id,
+        ) &&
+        cgi.predicted_institution_object.clarisa_center
+      ) {
+        const newSectionTwoCenter: ResultsCenter = new ResultsCenter();
+        newSectionTwoCenter.center_id =
+          cgi.predicted_institution_object.clarisa_center.code;
+        newSectionTwoCenter.is_primary = false;
+        newSectionTwoCenter.result_id = knowledgeProduct.results_id;
+        newSectionTwoCenter.created_by =
+          knowledgeProduct.last_updated_by || knowledgeProduct.created_by;
+        newSectionTwoCenter.from_cgspace = true;
+
+        newSectionTwoCenters.push(newSectionTwoCenter);
+      }
+
+      return cgi;
+    });
+
+    if (upsert) {
+      //if the center already existed and was flagged as coming from cgspace,
+      //but now it is not, we need to update the flag
+      sectionTwoCenters.forEach((stc) => {
+        if (
+          stc.from_cgspace &&
+          !updatedCgInstitutions.find(
+            (cgi) =>
+              cgi.predicted_institution_id ==
+              stc.clarisa_center_object.institutionId,
+          )
+        ) {
+          stc.from_cgspace = false;
+        }
+      });
+    }
+
+    newSectionTwoCenters = await this._resultCenterRepository.save([
+      ...newSectionTwoCenters,
+      ...sectionTwoCenters,
+    ]);
+
+    knowledgeProduct.result_knowledge_product_institution_array =
+      updatedCgInstitutions;
   }
 
   private async updateGeoLocation(

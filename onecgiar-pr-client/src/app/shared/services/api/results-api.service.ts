@@ -311,6 +311,10 @@ export class ResultsApiService {
     );
   }
 
+  GET_centers() {
+    return this.http.get<any>(`${this.apiBaseUrl}get/centers/${this.currentResultId}`);
+  }
+
   Get_indicator(id_toc, init) {
     return this.http.get<any>(`${this.apiBaseUrl}toc/get/indicator/${id_toc}/result/${this.currentResultId}/initiative/${init}`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }

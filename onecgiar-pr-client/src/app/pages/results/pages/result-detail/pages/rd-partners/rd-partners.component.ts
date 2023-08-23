@@ -11,7 +11,8 @@ import { RdPartnersService } from './rd-partners.service';
   styleUrls: ['./rd-partners.component.scss']
 })
 export class RdPartnersComponent {
-  constructor(public api: ApiService, public institutionsSE: InstitutionsService, public rolesSE: RolesService, private rdPartnersSE: RdPartnersService) {}
+  primaryText = ' - <strong>Primary</strong> ';
+  constructor(public api: ApiService, public institutionsSE: InstitutionsService, public rolesSE: RolesService, public rdPartnersSE: RdPartnersService) {}
   ngOnInit(): void {
     this.rdPartnersSE.partnersBody = new PartnersBody();
     this.rdPartnersSE.getSectionInformation();

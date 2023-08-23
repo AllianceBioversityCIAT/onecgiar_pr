@@ -8,10 +8,10 @@ export class TheoryOfChangeBody {
   impacts: ResultTocImpactsInterface[];
   pending_contributing_initiatives: any;
   contributing_and_primary_initiative: any;
-  bodyNewTheoryOfChanges:any[];
-  impactsTarge:any[];
-  sdgTargets:any[];
-  bodyActionArea:any[];
+  bodyNewTheoryOfChanges: any[];
+  impactsTarge: any[];
+  sdgTargets: any[];
+  bodyActionArea: any[];
 }
 interface ResultTocImpactsInterface {
   id: number;
@@ -42,7 +42,7 @@ export class donorInterfaceToc {
   center_grant_id: string;
   lead_center: string;
 }
-interface centerInterfacesToc {
+export interface centerInterfacesToc {
   code: string;
   primary?: boolean;
   name: string;
