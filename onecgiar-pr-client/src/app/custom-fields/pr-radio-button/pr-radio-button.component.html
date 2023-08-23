@@ -5,12 +5,23 @@
     <div class="radioButtonList"
         [ngClass]="{'verticalAlignment': this.verticalAlignment,'block-field':(readOnly || this.rolesSE.readOnly) && (!isStatic)}"
         [hidden]="hideOptions">
-        <div class="radioButton" *ngFor="let option of this.options; let i=index">
-            <p-radioButton (click)="onSelect()" name="groupname"
-                [value]="option[optionValue]" [(ngModel)]="value"
-                [disabled]="(readOnly || this.rolesSE.readOnly) && (!isStatic)">
-            </p-radioButton>
-            <label class="name">{{option[this.optionLabel]}}</label>
+        <div *ngFor="let option of this.options; let i=index">
+            <div class="radioButton">
+                <p-radioButton (click)="onSelect()" name="groupname" [value]="option[optionValue]" [(ngModel)]="value"
+                    [disabled]="(readOnly || this.rolesSE.readOnly) && (!isStatic)">
+                </p-radioButton>
+                <label class="name">{{option[this.optionLabel]}}</label>
+            </div>
+            <p class="radioButton__subLabel" *ngIf="option?.subOptions?.length">{{this.subLabel}}</p>
+            <div *ngFor="let checkbox of option[this.checkboxConfig?.listAttr]" class="checkboxList">
+                <app-pr-checkbox [label]="this.checkbox[this.checkboxConfig.optionLabel]"
+                    [(ngModel)]="this.checkbox[this.checkboxConfig.optionValue]"
+                    [readOnly]="this.value !== option[this.optionValue] || (readOnly || this.rolesSE.readOnly) && (!isStatic)">
+                </app-pr-checkbox>
+                <app-pr-input placeholder="Example" *ngIf="checkbox?.question_text == 'Other'" variant="xs"
+                    [(ngModel)]="this.checkbox[this.checkboxConfig.optionTextValue]"
+                    [disabled]="!this.checkbox[this.checkboxConfig.optionValue] || (readOnly || this.rolesSE.readOnly) && (!isStatic)"></app-pr-input>
+            </div>
         </div>
     </div>
 </div>

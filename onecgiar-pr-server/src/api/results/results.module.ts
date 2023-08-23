@@ -71,6 +71,10 @@ import { ApplicationModulesRepository } from '../versioning/repositories/applica
 import { VersioningModule } from '../versioning/versioning.module';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 import { ResultStatusModule } from './result-status/result-status.module';
+import { ResultQuestionsService } from './result-questions/result-questions.service';
+import { ResultQuestionsModule } from './result-questions/result-questions.module';
+import { ResultQuestionsRepository } from './result-questions/repository/result-questions.repository';
+import { ResultAnswerRepository } from './result-questions/repository/result-answers.repository';
 import { InvestmentDiscontinuedOptionsModule } from './investment-discontinued-options/investment-discontinued-options.module';
 import { ResultsInvestmentDiscontinuedOptionsModule } from './results-investment-discontinued-options/results-investment-discontinued-options.module';
 import { ResultsInvestmentDiscontinuedOptionRepository } from './results-investment-discontinued-options/results-investment-discontinued-options.repository';
@@ -124,6 +128,7 @@ import { ResultsInvestmentDiscontinuedOptionRepository } from './results-investm
     ResultCountriesSubNationalModule,
     VersioningModule,
     ResultStatusModule,
+    ResultQuestionsModule,
     InvestmentDiscontinuedOptionsModule,
     ResultsInvestmentDiscontinuedOptionsModule,
   ],
@@ -141,6 +146,9 @@ import { ResultsInvestmentDiscontinuedOptionRepository } from './results-investm
     LogRepository,
     ReturnResponse,
     ResponseInterceptor,
+    ResultQuestionsService,
+    ResultQuestionsRepository,
+    ResultAnswerRepository,
     ResultsInvestmentDiscontinuedOptionRepository,
   ],
   exports: [ResultRepository, JwtMiddleware],

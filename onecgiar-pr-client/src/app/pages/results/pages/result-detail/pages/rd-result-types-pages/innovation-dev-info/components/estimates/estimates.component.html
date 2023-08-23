@@ -1,0 +1,86 @@
+<div class="segment">
+    <app-pr-field-header
+        label="Estimation of total USD-value of pooled investment by CGIAR initiatives during the reporting period"
+        [description]="headerDescriptions().n1"></app-pr-field-header>
+
+    <table>
+        <tr>
+            <th>Initiative</th>
+            <th>Total USD Value <br> <span>(in-cash + in-kind)</span> </th>
+            <th></th>
+        </tr>
+        <tr *ngFor="let item of [{},{}]">
+            <td>{{'official_code'}} -
+                {{'name'}}</td>
+            <td>
+                <app-pr-input placeholder="Write some..." type="currency"
+                    [noDataText]="'item.is_determined' ? 'Not applicable':'Not provided'" [required]="false">
+                </app-pr-input>
+            </td>
+
+            <td>
+                <app-pr-radio-button optionLabel="name" optionValue="id"
+                    [options]="[{name:'This is yet to be determined',id:true}]">
+                </app-pr-radio-button>
+            </td>
+        </tr>
+    </table>
+</div>
+
+<div class="segment">
+    <app-pr-field-header
+        label="Estimated total USD-value of investment by CGIAR W3 or bilateral projects during the reporting period"
+        [description]="headerDescriptions().n2"></app-pr-field-header>
+
+    <table>
+        <tr>
+            <th>Non-pooled project</th>
+            <th>Total USD Value <br> <span>(in-cash + in-kind)</span> </th>
+            <th></th>
+        </tr>
+        <tr *ngFor="let item of [{},{}]">
+            <td>{{'official_code'}} -
+                {{'name'}}</td>
+            <td>
+                <app-pr-input placeholder="Write some..." type="currency"
+                    [noDataText]="'item.is_determined' ? 'Not applicable':'Not provided'" [required]="false">
+                </app-pr-input>
+            </td>
+
+            <td>
+                <app-pr-radio-button optionLabel="name" optionValue="id"
+                    [options]="[{name:'This is yet to be determined',id:true}]">
+                </app-pr-radio-button>
+            </td>
+        </tr>
+    </table>
+</div>
+
+<div class="segment">
+    <app-pr-field-header label="Estimated total USD-value of (co-)investment by partners during the reporting period"
+        [description]="headerDescriptions().n3"></app-pr-field-header>
+
+    <table>
+        <tr>
+            <th>Partner</th>
+            <th>Total USD Value <br> <span>(in-cash + in-kind)</span> </th>
+            <th></th>
+        </tr>
+        <tr *ngFor="let item of [{},{}]">
+            <td>{{'official_code'}} -
+                {{'name'}}</td>
+            <td>
+                <app-pr-input placeholder="Write some..." type="currency"
+                    [noDataText]="'item.is_determined' ? 'Not applicable':'Not provided'" [required]="false">
+                </app-pr-input>
+            </td>
+
+            <td>
+                <app-pr-radio-button optionLabel="name" optionValue="id"
+                    [options]="[{name:'This is yet to be determined',id:true}]">
+                </app-pr-radio-button>
+            </td>
+        </tr>
+    </table>
+
+</div>

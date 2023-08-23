@@ -1,0 +1,30 @@
+<app-pr-field-header label="Intellectual property rights"></app-pr-field-header>
+
+
+<div class="paddingLeft20">
+    <app-pr-radio-button
+        (selectOptionEvent)="innovationDevInfoUtilsSE.mapBoolean(this.options?.intellectual_property_rights.q1)"
+        [label]="options.intellectual_property_rights.q1.question_text"
+        [options]="options.intellectual_property_rights.q1.options" optionLabel="question_text"
+        [verticalAlignment]="true" optionValue="result_question_id"
+        [(ngModel)]="options.intellectual_property_rights.q1['radioButtonValue']"></app-pr-radio-button>
+
+    <app-pr-radio-button
+        (selectOptionEvent)="innovationDevInfoUtilsSE.mapBoolean(this.options?.intellectual_property_rights.q2)"
+        [label]="options.intellectual_property_rights.q2.question_text"
+        [options]="options.intellectual_property_rights.q2.options" optionLabel="question_text"
+        *ngIf="options.intellectual_property_rights.q1['radioButtonValue'] &&options.intellectual_property_rights.q1['radioButtonValue'] !=32"
+        [verticalAlignment]="true" optionValue="result_question_id"
+        [(ngModel)]="options.intellectual_property_rights.q2['radioButtonValue']"></app-pr-radio-button>
+
+    <app-pr-radio-button
+        (selectOptionEvent)="innovationDevInfoUtilsSE.mapBoolean(this.options?.intellectual_property_rights.q3)"
+        [label]="options.intellectual_property_rights.q3.question_text"
+        [description]="options.intellectual_property_rights.q3.question_description" [options]="
+        options.intellectual_property_rights.q3.options" optionLabel="question_text"
+        *ngIf="options.intellectual_property_rights.q2['radioButtonValue']  
+        && options.intellectual_property_rights.q2['radioButtonValue'] !=35
+        && options.intellectual_property_rights.q1['radioButtonValue'] != 32"
+        [verticalAlignment]="true" optionValue="result_question_id"
+        [(ngModel)]="options.intellectual_property_rights.q3['radioButtonValue']"></app-pr-radio-button>
+</div>

@@ -128,30 +128,31 @@
             </div>
         </div>
     </div>
-    <app-no-data-text *ngIf="!hasElementsWithId(this.body.innovatonUse.organization,'id')"
-        title="No organizations provided">
-    </app-no-data-text>
-    <app-add-button name="Add organization" *ngIf="!this.api.rolesSE.readOnly"
-        (clickEvent)="addOrganization()"></app-add-button>
-    <div class="fragment_section_divider"></div>
-    <div class="fields_list" *ngIf="this.body.innovatonUse.measures?.length">
-        <app-pr-field-header label="Other quantitative measures of innovation use (e.g. # of hectares)"
-            [required]="false"></app-pr-field-header>
-        <div class="fields" appYmzListStructureItem (deleteEvent)="measuresItem.is_active = false"
-            *ngFor="let measuresItem of this.body.innovatonUse.measures"
-            [ngClass]="{'hideElement': measuresItem.is_active == false|| (!this.measuresItem?.result_ip_measure_id && this.api.rolesSE.readOnly)}">
-            <div class="right_content">
-                <app-pr-input placeholder="e.g. # of projects" label="Unit of measure" type="text"
-                    [required]="!!measuresItem?.result_ip_measure_id" [(ngModel)]="this.measuresItem.unit_of_measure">
-                </app-pr-input>
-                <app-pr-input placeholder="Write some..." label="Quantity" type="number"
-                    [required]="!!measuresItem?.result_ip_measure_id" [(ngModel)]="this.measuresItem.quantity">
-                </app-pr-input>
-            </div>
-
+</div>
+<app-no-data-text *ngIf="!hasElementsWithId(this.body.innovatonUse.organization,'id')"
+    title="No organizations provided">
+</app-no-data-text>
+<app-add-button name="Add organization" *ngIf="!this.api.rolesSE.readOnly"
+    (clickEvent)="addOrganization()"></app-add-button>
+<div class="fragment_section_divider"></div>
+<div class="fields_list" *ngIf="this.body.innovatonUse.measures?.length">
+    <app-pr-field-header label="Other quantitative measures of innovation use (e.g. # of hectares)"
+        [required]="false"></app-pr-field-header>
+    <div class="fields" appYmzListStructureItem (deleteEvent)="measuresItem.is_active = false"
+        *ngFor="let measuresItem of this.body.innovatonUse.measures"
+        [ngClass]="{'hideElement': measuresItem.is_active == false|| (!this.measuresItem?.result_ip_measure_id && this.api.rolesSE.readOnly)}">
+        <div class="right_content">
+            <app-pr-input placeholder="e.g. # of projects" label="Unit of measure" type="text"
+                [required]="!!measuresItem?.result_ip_measure_id" [(ngModel)]="this.measuresItem.unit_of_measure">
+            </app-pr-input>
+            <app-pr-input placeholder="Write some..." label="Quantity" type="number"
+                [required]="!!measuresItem?.result_ip_measure_id" [(ngModel)]="this.measuresItem.quantity">
+            </app-pr-input>
         </div>
+
     </div>
-    <app-no-data-text *ngIf="!hasElementsWithId(this.body.innovatonUse.measures,'result_ip_measure_id')"
-        title="Other quantitative measures not added">
-    </app-no-data-text>
-    <app-add-button name="Add other" *ngIf="!this.api.rolesSE.readOnly" (clickEvent)="addOther()"></app-add-button>
+</div>
+<app-no-data-text *ngIf="!hasElementsWithId(this.body.innovatonUse.measures,'result_ip_measure_id')"
+    title="Other quantitative measures not added">
+</app-no-data-text>
+<app-add-button name="Add other" *ngIf="!this.api.rolesSE.readOnly" (clickEvent)="addOther()"></app-add-button>

@@ -13,7 +13,9 @@
         <div class="p-fluid input_container" *ngSwitchCase="false">
             <input *ngIf="this.type != 'currency'" [disabled]="this.disabled" pInputText [type]="this.type"
                 [placeholder]="this.placeholder" [(ngModel)]="value" [attr.prValid]="true"
-                [ngClass]="{'pr-valid': true}" />
+                [ngClass]="{'pr-valid': true}" 
+                [style]="{'max-height': this.variant === 'sm' ? '30px' : this.variant === 'xs' ? '25px' : 'auto'}"
+                />
             <p-inputNumber *ngIf="this.type == 'currency'" [(ngModel)]="value" mode="currency" currency="USD"
                 locale="en-US" [disabled]="this.disabled" [placeholder]="this.placeholder">
             </p-inputNumber>

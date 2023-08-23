@@ -15,13 +15,21 @@ import { ResultsCapacityDevelopmentsRepository } from './repositories/results-ca
 import { ResultsCapacityDevelopments } from './entities/results-capacity-developments.entity';
 import { ResultByIntitutionsRepository } from '../results_by_institutions/result_by_intitutions.repository';
 import { ResultsByInstitution } from '../results_by_institutions/entities/results_by_institution.entity';
-import { CreateInnovationDevDto } from './dto/create-innovation-dev.dto';
+import {
+  CreateInnovationDevDto,
+  Option,
+  SubOption,
+} from './dto/create-innovation-dev.dto';
 import { ResultsInnovationsDevRepository } from './repositories/results-innovations-dev.repository';
 import { ResultsInnovationsDev } from './entities/results-innovations-dev.entity';
 import { ResultRepository } from '../result.repository';
 import { PolicyChangesDto } from './dto/create-policy-changes.dto';
 import { ResultsPolicyChanges } from './entities/results-policy-changes.entity';
 import { ResultsPolicyChangesRepository } from './repositories/results-policy-changes.repository';
+import { ResultAnswerRepository } from '../result-questions/repository/result-answers.repository';
+import { ResultAnswer } from '../result-questions/entities/result-answers.entity';
+import { EvidencesRepository } from '../evidences/evidences.repository';
+import { Evidence } from '../evidences/entities/evidence.entity';
 
 @Injectable()
 export class SummaryService {
@@ -35,6 +43,8 @@ export class SummaryService {
     private readonly _resultRepository: ResultRepository,
     private readonly _versionsService: VersionsService,
     private readonly _handlersError: HandlersError,
+    private readonly _resultAnswerRepository: ResultAnswerRepository,
+    private readonly _evidenceRepository: EvidencesRepository,
   ) {}
 
   create(createSummaryDto: CreateSummaryDto) {
@@ -416,6 +426,141 @@ export class SummaryService {
         InnDevRes = await this._resultsInnovationsDevRepository.save(newInnDev);
       }
 
+      const saveOptionsAndSubOptions = async (options: Option[]) => {
+        for (const optionData of options) {
+          if (optionData.answer_boolean == null && optionData.answer_text == null) {
+            continue;
+          }
+          const optionExist = await this._resultAnswerRepository.findOne({
+            where: {
+              result_id: resultId,
+              result_question_id: optionData.result_question_id,
+            },
+          });
+
+          if (optionExist) {
+            optionExist.answer_boolean = optionData.answer_boolean;
+            optionExist.answer_text = optionData.answer_text;
+            optionExist.last_updated_by = user.id;
+            await this._resultAnswerRepository.save(optionExist);
+          } else {
+            const optionAnswer = new ResultAnswer();
+            optionAnswer.result_question_id = optionData.result_question_id;
+            optionAnswer.answer_boolean = optionData.answer_boolean;
+            optionAnswer.answer_text = optionData.answer_text;
+            optionAnswer.result_id = resultId;
+            optionAnswer.created_by = user.id;
+            optionAnswer.last_updated_by = user.id;
+
+            await this._resultAnswerRepository.save(optionAnswer);
+          }
+
+          for (const subOptionData of optionData.subOptions) {
+            if (subOptionData.answer_boolean === null && subOptionData.answer_text === null) {
+              continue;
+            }
+            const subOptionExist = await this._resultAnswerRepository.findOne({
+              where: {
+                result_id: resultId,
+                result_question_id: subOptionData.result_question_id,
+              },
+            });
+            if (subOptionExist) {
+              subOptionExist.answer_boolean = subOptionData.answer_boolean;
+              subOptionExist.answer_text = subOptionData.answer_text;
+              subOptionExist.last_updated_by = user.id;
+              await this._resultAnswerRepository.save(subOptionExist);
+            } else {
+              const subOptionAnswer = new ResultAnswer();
+              subOptionAnswer.result_question_id =
+                subOptionData.result_question_id;
+              subOptionAnswer.answer_boolean = subOptionData.answer_boolean;
+              subOptionAnswer.answer_text = subOptionData.answer_text;
+              subOptionAnswer.result_id = resultId;
+              subOptionAnswer.created_by = user.id;
+              subOptionAnswer.last_updated_by = user.id;
+
+              await this._resultAnswerRepository.save(subOptionAnswer);
+            }
+          }
+        }
+      };
+
+      await saveOptionsAndSubOptions(
+        createInnovationDevDto?.responsible_innovation_and_scaling.q1.options,
+      );
+      await saveOptionsAndSubOptions(
+        createInnovationDevDto?.responsible_innovation_and_scaling.q2.options,
+      );
+      await saveOptionsAndSubOptions(
+        createInnovationDevDto?.intellectual_property_rights.q1.options,
+      );
+      await saveOptionsAndSubOptions(
+        createInnovationDevDto?.intellectual_property_rights.q2.options,
+      );
+      await saveOptionsAndSubOptions(
+        createInnovationDevDto?.intellectual_property_rights.q3.options,
+      );
+      await saveOptionsAndSubOptions(
+        createInnovationDevDto?.innovation_team_diversity.options,
+      );
+
+      const saveEvidence = async (
+        evidences: Evidence[],
+        evidence_type_id: number,
+      ) => {
+        const existingEvidences = await this._evidenceRepository.find({
+          where: {
+            result_id: resultId,
+            evidence_type_id: evidence_type_id,
+          },
+        });
+
+        for (const existingEvidence of existingEvidences) {
+          const matchingEvidence = evidences.find(
+            (evidence) => evidence.link === existingEvidence.link,
+          );
+
+          if (matchingEvidence) {
+            existingEvidence.link = matchingEvidence.link;
+            existingEvidence.last_updated_by = user.id;
+            await this._evidenceRepository.save(existingEvidence);
+          } else {
+            existingEvidence.is_active = 0;
+            existingEvidence.last_updated_by = user.id;
+            await this._evidenceRepository.save(existingEvidence);
+          }
+        }
+
+        for (const evidence of evidences) {
+          const evidenceExist = await this._evidenceRepository.findOne({
+            where: {
+              result_id: resultId,
+              evidence_type_id: evidence_type_id,
+              link: evidence.link,
+            },
+          });
+
+          if (evidenceExist) {
+            evidenceExist.link = evidence.link;
+            evidenceExist.last_updated_by = user.id;
+            await this._evidenceRepository.save(evidenceExist);
+          } else {
+            const newEvidence = new Evidence();
+            newEvidence.result_id = resultId;
+            newEvidence.evidence_type_id = evidence_type_id;
+            newEvidence.link = evidence.link;
+            newEvidence.created_by = user.id;
+            newEvidence.last_updated_by = user.id;
+
+            await this._evidenceRepository.save(newEvidence);
+          }
+        }
+      };
+
+      await saveEvidence(createInnovationDevDto.pictures, 3);
+      await saveEvidence(createInnovationDevDto.reference_materials, 4);
+
       return {
         response: InnDevRes,
         message: 'Results Innovations Dev has been created successfully',
@@ -438,10 +583,18 @@ export class SummaryService {
           resultId,
         );
 
+      const pictures = await this._evidenceRepository.find({
+        where: { result_id: resultId, evidence_type_id: 3, is_active: 1 },
+      });
+      const reference_materials = await this._evidenceRepository.find({
+        where: { result_id: resultId, evidence_type_id: 4, is_active: 1 },
+      });
       const result = await this._resultRepository.getResultById(resultId);
       return {
         response: {
           ...innDevExists,
+          pictures,
+          reference_materials,
           result: result,
         },
         message: 'Successful response',

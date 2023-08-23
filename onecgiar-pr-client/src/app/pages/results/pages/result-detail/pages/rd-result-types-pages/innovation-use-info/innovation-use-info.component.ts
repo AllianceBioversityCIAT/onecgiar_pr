@@ -12,9 +12,8 @@ export class InnovationUseInfoComponent implements OnInit {
   innovationUseInfoBody = new InnovationUseInfoBody();
   constructor(private api: ApiService) {}
 
-  ngOnInit(): void {
-    this.getSectionInformation();
-  }
+  ngOnInit(): void {}
+
   getSectionInformation() {
     this.api.resultsSE.GET_innovationUse().subscribe(
       ({ response }) => {
@@ -36,16 +35,5 @@ export class InnovationUseInfoComponent implements OnInit {
         console.error(err);
       }
     );
-  }
-  alertInfoText() {
-    return `Please fill in the following fields that are required based on the result type. <br>
-    Please provide evidence of use claims in the <a href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultCode}/general-information" class="open_route" target="_blank">General information</a> section. `;
-  }
-  onAddMore() {
-    //('onAddMore');
-    this.innovationUseInfoBody.other.push({});
-  }
-  onRemoveOne(index) {
-    this.innovationUseInfoBody.other.splice(index, 1);
   }
 }
