@@ -125,7 +125,7 @@ export class ResultCreatorComponent implements OnInit {
       this.api.resultsSE.POST_createWithHandle({ ...this.mqapJson, result_data: this.resultLevelSE.resultBody }).subscribe(
         (resp: any) => {
           //(resp);
-          this.router.navigate([`/result/result-detail/${resp?.response?.result_code}/general-information`]);
+          this.router.navigate([`/result/result-detail/${resp?.response?.result_code}/general-information`], { queryParams: { phase: resp?.response?.version_id } });
           this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
         },
         err => {

@@ -960,15 +960,27 @@ export class ClarisaTaskService {
       } else {
         const data = await lastValueFrom(
           this._httpService
-            .get(`${this.clarisaHost}phases/by-application/toc`, {
-              auth: {
-                username: env.L_CLA_USER,
-                password: env.L_CLA_PASSWORD,
+            .get(
+              `${this.clarisaHost}phases/by-application/toc?show=all&status=all`,
+              {
+                auth: {
+                  username: env.L_CLA_USER,
+                  password: env.L_CLA_PASSWORD,
+                },
               },
-            })
+            )
             .pipe(map((resp) => resp.data)),
         );
-        await this._clarisaTocPhaseRepository.save(data);
+
+        const mapData = data.map((el) => ({
+          phase_id: el.phaseId,
+          name: el.name,
+          year: el.year,
+          status: el.status,
+          active: el.active,
+        }));
+
+        await this._clarisaTocPhaseRepository.save(mapData);
         this._logger.verbose(
           `[${position}]: All CLARISA Toc phases control list data has been created. Updated/created ${
             data.length ?? 0

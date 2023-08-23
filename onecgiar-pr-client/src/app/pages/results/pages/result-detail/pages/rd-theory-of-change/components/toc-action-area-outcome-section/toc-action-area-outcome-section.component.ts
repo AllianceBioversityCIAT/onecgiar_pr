@@ -11,5 +11,7 @@ import { DataControlService } from '../../../../../../../../shared/services/data
 export class TocActionAreaOutcomeSectionComponent {
   @Input() result_toc_result = new resultToResultInterfaceToc();
   @Input() contributors_result_toc_result: any;
-  constructor(public api: ApiService, public dataControlSE: DataControlService) {}
+  constructor(public api: ApiService, public dataControlSE: DataControlService) {
+    console.log(this.api.rolesSE.validateInitiative(19));
+  }
 }

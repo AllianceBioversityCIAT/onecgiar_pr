@@ -87,6 +87,7 @@ export class ResultsKnowledgeProductsService {
             cgspace_country_mapping_array: true,
           },
         },
+        obj_version: true,
       },
       result_knowledge_product_fair_score_array: {
         fair_field_object: {
@@ -648,11 +649,11 @@ export class ResultsKnowledgeProductsService {
         throw {
           response: { title: mqapResponse?.Title },
           message:
-            `Only Journal Articles <b>published online<b> in 2023 will be allowed for this reporting cycle. ` +
+            `Only Journal Articles <b>published online</b> in ${versionCgspaceYear} will be allowed for this reporting cycle. ` +
             "The knowledge product's date type you are trying to create is " +
-            `"${
-              dateFieldName || 'Not Defined'
-            }" and the year is "${cgYear}". ` +
+            `"${dateFieldName || 'Not Defined'}" and the year is "${
+              cgYear.year
+            }". ` +
             'If you believe there has been a mistake, please get in touch with the library staff ' +
             'of your Center to review this information in the repository.',
           status: HttpStatus.UNPROCESSABLE_ENTITY,
