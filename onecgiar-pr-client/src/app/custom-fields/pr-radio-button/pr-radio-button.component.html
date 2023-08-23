@@ -7,11 +7,10 @@
         [hidden]="hideOptions">
         <div *ngFor="let option of this.options; let i=index">
             <div class="radioButton">
-                <p-radioButton (click)="onSelect()" name="groupname" inputId="groupname{{i}}{{this.joinName()}}"
-                    [value]="option[optionValue]" [(ngModel)]="value"
+                <p-radioButton (click)="onSelect()" name="groupname" [value]="option[optionValue]" [(ngModel)]="value"
                     [disabled]="(readOnly || this.rolesSE.readOnly) && (!isStatic)">
                 </p-radioButton>
-                <label for="groupname{{i}}{{this.joinName()}}" class="name">{{option[this.optionLabel]}}</label>
+                <label class="name">{{option[this.optionLabel]}}</label>
             </div>
             <p class="radioButton__subLabel" *ngIf="option?.subOptions?.length">{{this.subLabel}}</p>
             <div *ngFor="let checkbox of option[this.checkboxConfig?.listAttr]" class="checkboxList">
