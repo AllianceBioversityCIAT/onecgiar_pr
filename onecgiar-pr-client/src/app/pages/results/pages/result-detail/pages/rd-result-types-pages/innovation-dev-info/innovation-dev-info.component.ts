@@ -36,6 +36,7 @@ export class InnovationDevInfoComponent implements OnInit {
   }
 
   getSectionInformation() {
+    this.GET_questionsInnovationDevelopment();
     this.api.resultsSE.GET_innovationDev().subscribe(
       ({ response }) => {
         //(response);
