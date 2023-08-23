@@ -65,6 +65,7 @@ import { AppModuleIdEnum } from 'src/shared/constants/role-type.enum';
 import { InstitutionRoleEnum } from './results_by_institutions/entities/institution_role.enum';
 import { ResultsKnowledgeProductFairScoreRepository } from './results-knowledge-products/repositories/results-knowledge-product-fair-scores.repository';
 import { ResultsInvestmentDiscontinuedOptionRepository } from './results-investment-discontinued-options/results-investment-discontinued-options.repository';
+import { ResultsCenterRepository } from './results-centers/results-centers.repository';
 
 @Injectable()
 export class ResultsService {
@@ -107,6 +108,7 @@ export class ResultsService {
     private readonly _versioningService: VersioningService,
     private readonly _returnResponse: ReturnResponse,
     private readonly _resultsInvestmentDiscontinuedOptionRepository: ResultsInvestmentDiscontinuedOptionRepository,
+    private readonly _resultsCenterRepository: ResultsCenterRepository,
   ) {}
 
   /**
@@ -1343,4 +1345,21 @@ export class ResultsService {
   }
 
   bulkVersinoningResult() {}
+
+  async getCenters(resultId: number) {
+    try {
+      const centers =
+        await this._resultsCenterRepository.getAllResultsCenterByResultId(
+          resultId,
+        );
+
+      return this._returnResponse.format({
+        message: 'Successful response',
+        statusCode: HttpStatus.OK,
+        response: centers,
+      });
+    } catch (error) {
+      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+    }
+  }
 }
