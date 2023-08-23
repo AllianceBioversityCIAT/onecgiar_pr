@@ -280,7 +280,7 @@ export class ResultsApiService {
 
   POST_toc(body: TheoryOfChangeBody) {
     console.log(body);
-    
+
     return this.http.post<any>(`${this.apiBaseUrl}toc/create/toc/result/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
@@ -309,6 +309,10 @@ export class ResultsApiService {
       }),
       this.saveButtonSE.isGettingSectionPipe()
     );
+  }
+
+  GET_centers() {
+    return this.http.get<any>(`${this.apiBaseUrl}get/centers/${this.currentResultId}`);
   }
 
   Get_indicator(id_toc, init) {

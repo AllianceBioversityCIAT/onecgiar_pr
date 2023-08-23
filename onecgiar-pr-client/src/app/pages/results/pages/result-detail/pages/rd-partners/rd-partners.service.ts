@@ -1,6 +1,8 @@
 import { Injectable } from '@angular/core';
 import { PartnersBody } from './models/partnersBody';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
+import { centerInterfacesToc } from '../rd-theory-of-change/model/theoryOfChangeBody';
+import { concatMap, filter } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -8,6 +10,7 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 export class RdPartnersService {
   partnersBody = new PartnersBody();
   toggle = 0;
+  centers: centerInterfacesToc[] = [];
   constructor(private api: ApiService) {}
 
   validateDeliverySelection(deliveries, deliveryId) {
@@ -36,15 +39,55 @@ export class RdPartnersService {
   }*/
 
   getSectionInformation(no_applicable_partner?) {
-    this.api.resultsSE.GET_partnersSection().subscribe(
-      ({ response }) => {
+    this.api.resultsSE
+      .GET_partnersSection()
+      /*
+        after the first request, we need to get the centers, so we pipe
+        the response of the first observable to perform two operations
+      */
+      .pipe(
+        /*
+          we condition the execution of the second observable (get centers) 
+          depending if the current result is a knowledge product
+        */
+        filter(() => {
+          return this.api.dataControlSE.isKnowledgeProduct;
+        }),
+        /*
+          we perform the operations of the first observable and return the
+          second observable, depending on the previous filter
+        */
+        concatMap(({ response }) => {
+          this.partnersBody = response;
+          if (no_applicable_partner === true || no_applicable_partner === false) this.partnersBody.no_applicable_partner = no_applicable_partner;
+
+          return this.api.resultsSE.GET_centers();
+        })
+      )
+      .subscribe({
+        //we perform the operations of the second observable
+        next: ({ response }) => {
+          this.centers = response;
+        },
+        // we handle the errors of both observables
+        error: err => {
+          if (no_applicable_partner === true || no_applicable_partner === false) this.partnersBody.no_applicable_partner = no_applicable_partner;
+        }
+      });
+  }
+}
+/*
+this.api.resultsSE.GET_centers().subscribe(({ response }) => {
+      this.rdPartnersSE.centers = response;
+    });
+
+
+    next: ({ response }) => {
         //(response);
         this.partnersBody = response;
         if (no_applicable_partner === true || no_applicable_partner === false) this.partnersBody.no_applicable_partner = no_applicable_partner;
       },
-      err => {
+      error: err => {
         if (no_applicable_partner === true || no_applicable_partner === false) this.partnersBody.no_applicable_partner = no_applicable_partner;
       }
-    );
-  }
-}
+*/
