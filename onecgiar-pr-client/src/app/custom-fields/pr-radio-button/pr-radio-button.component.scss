@@ -1,42 +1,58 @@
 .radioButtonList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 30px;
+
+  .radioButton {
     display: flex;
-    flex-wrap: wrap;
-    gap: 30px;
+    align-items: center;
+    gap: 8px;
 
-    .radioButton {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-
-        .name {
-            cursor: pointer;
-            -webkit-user-select: none;
-            /* Safari */
-            -moz-user-select: none;
-            /* Firefox */
-            -ms-user-select: none;
-            /* IE10+/Edge */
-            user-select: none;
-            /* Estándar */
-        }
+    .name {
+      cursor: pointer;
+      -webkit-user-select: none;
+      /* Safari */
+      -moz-user-select: none;
+      /* Firefox */
+      -ms-user-select: none;
+      /* IE10+/Edge */
+      user-select: none;
+      /* Estándar */
     }
+
+    &__subLabel {
+      margin: 0;
+      margin-left: 25px;
+      font-size: 12px;
+      color: var(--text-color-secondary);
+      // margin-bottom: 6px;
+    }
+  }
+}
+
+.checkboxList {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: 20px;
+  padding: 5px;
 }
 
 .verticalAlignment {
-    flex-direction: column !important;
-    gap: 15px !important;
+  flex-direction: column !important;
+  gap: 15px !important;
 }
 
 .block-field {
-    position: relative;
+  position: relative;
 
-    &::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(255, 255, 255, 0);
-    }
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0);
+  }
 }

@@ -280,7 +280,7 @@ export class ResultsApiService {
 
   POST_toc(body: TheoryOfChangeBody) {
     console.log(body);
-    
+
     return this.http.post<any>(`${this.apiBaseUrl}toc/create/toc/result/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
@@ -795,6 +795,10 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results/years`);
   }
 
+  GET_questionsInnovationDevelopment() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/questions/innovation-development/${this.currentResultId}`);
+  }
+  
   GET_investmentDiscontinuedOptions() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results/investment-discontinued-options`);
   }
