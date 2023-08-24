@@ -1,5 +1,6 @@
 import { Component, Input, OnInit } from '@angular/core';
-
+import { environment } from '../../../../../../../../../../../environments/environment';
+import { ApiService } from 'src/app/shared/services/api/api.service';
 @Component({
   selector: 'app-target-indicator',
   templateUrl: './target-indicator.component.html',
@@ -14,7 +15,7 @@ export class TargetIndicatorComponent implements OnInit {
   @Input() initiative: any;
   @Input() disabledInputs:any;
   text = `<span style="color: #6777D8; font-weight: bold;">4. Geographic location</span>`
-  constructor() { }
+  constructor(public api: ApiService,) { }
 
   ngOnInit(): void {
     console.log(this.disabledInputs);
@@ -54,6 +55,6 @@ export class TargetIndicatorComponent implements OnInit {
     this.initiative.indicator_contributing = null;
    }
    descriptionAlert(){
-      return `Please ensure the planned location is reflected in section <strong>4. Geographic location</strong>. If you decide to change remember to update your TOC result framework. DD is working to automate the geolocation and in the near future you will not need to fill section 4 again.`
+      return `Please ensure the planned location is reflected in section <a class='open_route alert-event' href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultCode}/geographic-location" target='_blank'>4. Geographic location</a>. If you decide to change remember to update your TOC result framework. DD is working to automate the geolocation and in the near future you will not need to fill section 4 again.`
    }
 }

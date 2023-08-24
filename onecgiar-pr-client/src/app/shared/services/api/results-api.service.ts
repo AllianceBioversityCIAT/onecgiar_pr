@@ -316,7 +316,12 @@ export class ResultsApiService {
   }
 
   Get_indicator(id_toc, init) {
-    return this.http.get<any>(`${this.apiBaseUrl}toc/get/indicator/${id_toc}/result/${this.currentResultId}/initiative/${init}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+    if(this.currentResultId == null){
+      return this.http.get<any>(`${this.apiBaseUrl}toc/get/indicator/${id_toc}/result/${this.ipsrDataControlSE.resultInnovationId}/initiative/${init}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+    }else{
+      return this.http.get<any>(`${this.apiBaseUrl}toc/get/indicator/${id_toc}/result/${this.currentResultId}/initiative/${init}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+    }
+    
   }
   get_vesrsionDashboard(id_toc, init) {
     return this.http.get<any>(`${this.apiBaseUrl}toc/get/version/${this.currentResultId}/initiative/${init}/resultToc/${id_toc}`);

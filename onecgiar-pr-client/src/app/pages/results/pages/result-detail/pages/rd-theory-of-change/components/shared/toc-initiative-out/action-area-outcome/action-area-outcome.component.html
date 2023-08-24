@@ -15,21 +15,21 @@
     </div>
 <br><br>
 <div *ngIf="this.actionAreasOutcomesList != null">
-    <div class="dropdown-50p" *ngIf="this.currentImpactAreaID == 1">
+    <div class="dropdown-100p" *ngIf="this.currentImpactAreaID == 1">
         <app-pr-multi-select [options]="actionAreasOutcomesList?.systemTrasnformation" optionLabel="full_name"
         optionValue="action_area_outcome_id" selectedOptionLabel="outcomeStatement"
             [placeholder]="'Select Systems Transformation outcomes '"
             [(ngModel)]="this.body">
         </app-pr-multi-select>
     </div>
-    <div class="dropdown-50p" *ngIf="this.currentImpactAreaID == 2">
+    <div class="dropdown-100p" *ngIf="this.currentImpactAreaID == 2">
         <app-pr-multi-select [options]="actionAreasOutcomesList?.resilientAgrifoodSystems" optionLabel="full_name"
         optionValue="action_area_outcome_id" selectedOptionLabel="outcomeStatement"
             [placeholder]="'Select Resilient Agrifood Systems outcomes '"
             [(ngModel)]="this.body">
         </app-pr-multi-select>
     </div>
-    <div class="dropdown-50p" *ngIf="this.currentImpactAreaID == 3">
+    <div class="dropdown-100p" *ngIf="this.currentImpactAreaID == 3">
         <app-pr-multi-select [options]="actionAreasOutcomesList?.geneticInnovation" optionLabel="full_name"
         optionValue="action_area_outcome_id" selectedOptionLabel="outcomeStatement"
             [placeholder]="'Select Genetic Innovation outcomes'"
@@ -37,7 +37,7 @@
         </app-pr-multi-select>
     </div>
 </div>
-<div class="selected_container custom_scroll dropdown-50p">
+<div class="selected_container custom_scroll dropdown-100p">
     <br>
     <app-pr-field-header [description]="'All Action Area outcome(s)  selected('+this.body.length+'):'">
     </app-pr-field-header>
