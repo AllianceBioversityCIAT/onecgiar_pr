@@ -15,35 +15,35 @@
 <br><br>
 
 <div *ngIf="this.allImpactAreaIndicators?.length">
-    <div class="dropdown-50p" *ngIf="this.currentImpactAreaID == 1">
+    <div class="dropdown-100p" *ngIf="this.currentImpactAreaID == 1">
         <app-pr-multi-select [options]="this.filterImpactAreaIndicatorsByImpactAreaID(1)" optionLabel="full_name"
             optionValue="targetId" selectedOptionLabel="indicator_statement"
             [placeholder]="'Select '+ this.filterImpactAreaIndicatorsByImpactAreaID(1)[0]?.name+' target(s)'"
             [(ngModel)]="this.body">
         </app-pr-multi-select>
     </div>
-    <div class="dropdown-50p" *ngIf="this.currentImpactAreaID == 2">
+    <div class="dropdown-100p" *ngIf="this.currentImpactAreaID == 2">
         <app-pr-multi-select [options]="this.filterImpactAreaIndicatorsByImpactAreaID(2)" optionLabel="full_name"
             optionValue="targetId" selectedOptionLabel="indicator_statement"
             [placeholder]="'Select '+ this.filterImpactAreaIndicatorsByImpactAreaID(2)[0]?.name+' target(s)'"
             [(ngModel)]="this.body">
         </app-pr-multi-select>
     </div>
-    <div class="dropdown-50p" *ngIf="this.currentImpactAreaID == 3">
+    <div class="dropdown-100p" *ngIf="this.currentImpactAreaID == 3">
         <app-pr-multi-select [options]="this.filterImpactAreaIndicatorsByImpactAreaID(3)" optionLabel="full_name"
             optionValue="targetId" selectedOptionLabel="indicator_statement"
             [placeholder]="'Select '+ this.filterImpactAreaIndicatorsByImpactAreaID(3)[0]?.name+' target(s)'"
             [(ngModel)]="this.body">
         </app-pr-multi-select>
     </div>
-    <div class="dropdown-50p" *ngIf="this.currentImpactAreaID == 4">
+    <div class="dropdown-100p" *ngIf="this.currentImpactAreaID == 4">
         <app-pr-multi-select [options]="this.filterImpactAreaIndicatorsByImpactAreaID(4)" optionLabel="full_name"
             optionValue="targetId" selectedOptionLabel="indicator_statement"
             [placeholder]="'Select '+ this.filterImpactAreaIndicatorsByImpactAreaID(4)[0]?.name+' target(s)'"
             [(ngModel)]="this.body">
         </app-pr-multi-select>
     </div>
-    <div class="dropdown-50p" *ngIf="this.currentImpactAreaID == 5">
+    <div class="dropdown-100p" *ngIf="this.currentImpactAreaID == 5">
         <app-pr-multi-select [options]="this.filterImpactAreaIndicatorsByImpactAreaID(5)" optionLabel="full_name"
             optionValue="targetId" selectedOptionLabel="indicator_statement"
             [placeholder]="'Select '+ this.filterImpactAreaIndicatorsByImpactAreaID(5)[0]?.name+' target(s)'"
@@ -52,7 +52,7 @@
     </div>
 </div>
 
-<div class="selected_container custom_scroll dropdown-50p">
+<div class="selected_container custom_scroll dropdown-100p">
     <br>
     <app-pr-field-header [description]="'All Impact Area target(s) selected('+this.body.length+'):'">
     </app-pr-field-header>
