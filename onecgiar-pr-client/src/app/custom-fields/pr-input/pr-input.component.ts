@@ -32,6 +32,7 @@ export class PrInputComponent implements ControlValueAccessor {
   @Input() noDataText: string = '';
 
   @Input() variant?: 'xs' | 'sm';
+  @Input() numberMode?: 'decimal';
 
   private _value: any;
   private beforeValue: string;
