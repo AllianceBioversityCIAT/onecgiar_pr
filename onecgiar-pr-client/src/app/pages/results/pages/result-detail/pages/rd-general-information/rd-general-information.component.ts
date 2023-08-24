@@ -169,7 +169,6 @@ export class RdGeneralInformationComponent {
     <br>- Turn agriculture and forest systems into a net sink for carbon by 2050 (climate mitigation target)
     <br>- Equip 500 million small-scale producers to be more resilient by 2030 (climate adaptation target)
     <br>- Support countries in implementing NAPs and NDCs, and increased ambition in climate actions by 2030 (climate policy target)
-    <br>Climate scores should be determined based on the following:
     <ul>
     <strong>Climate scores should be determined based on the following:</strong>
     <li><strong>0 : Not targeted</strong> The activity does not target the climate mitigation, adaptation and climate policy objectives of CGIAR as put forward in its strategy.</li>
