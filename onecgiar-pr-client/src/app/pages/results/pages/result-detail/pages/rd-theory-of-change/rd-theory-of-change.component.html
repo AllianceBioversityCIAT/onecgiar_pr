@@ -122,7 +122,7 @@
     </div>
     <div class="medal_selector selected_container">
         <div class="centers chips_container">
-            <div class="center pr_chip_selected"
+            <div class="center pr_chip_selected" [pTooltip]="this.disabledText" [tooltipDisabled]="!center.from_cgspace"
                 *ngFor="let center of this.theoryOfChangeBody.contributing_center; let i=index">
                 <i class="material-icons-round medal" [ngClass]="{'primary': center.primary}"
                     (click)="this.api.rolesSE.readOnly && this.api.dataControlSE?.currentResult?.status?null:addPrimary(center)">workspace_premium</i>

@@ -17,6 +17,7 @@ export class RdTheoryOfChangeComponent {
   theoryOfChangeBody = new TheoryOfChangeBody();
   contributingInitiativesList = [];
   primaryText = ' - <strong>Primary</strong> ';
+  disabledText = 'To remove this center, please contact your librarian';
   getConsumed = false;
   psub = '';
   contributingInitiativeNew = [];
