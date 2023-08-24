@@ -265,7 +265,7 @@ export class resultValidationRepository extends Repository<Validation> {
 						SELECT
 							COUNT(*)
 						FROM
-							result_toc_action_area rtia
+							result_toc_action_area rtaa
 							LEFT JOIN results_toc_result rtr2 ON rtr2.result_toc_result_id = rtaa.result_toc_result_id
 						WHERE
 							rtr2.results_id = r.id
