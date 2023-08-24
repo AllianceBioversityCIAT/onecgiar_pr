@@ -94,6 +94,23 @@ export class ResultsByInstitutionsService {
             result_knowledge_product_institution_array: true,
           },
         });
+
+      if (!result?.id) {
+        throw {
+          response: id,
+          message: 'Results Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      if (!knowledgeProduct?.result_knowledge_product_id) {
+        throw {
+          response: { result_id: id },
+          message: 'Knowledge Product Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
       const institutions =
         await this._resultByIntitutionsRepository.getResultByInstitutionPartnersFull(
           id,

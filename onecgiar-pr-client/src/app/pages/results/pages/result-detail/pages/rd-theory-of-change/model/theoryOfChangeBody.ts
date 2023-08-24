@@ -46,6 +46,7 @@ export interface centerInterfacesToc {
   code: string;
   primary?: boolean;
   name: string;
+  from_cgspace: boolean;
 }
 
 export class resultToResultInterfaceToc {

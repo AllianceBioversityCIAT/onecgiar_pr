@@ -943,19 +943,16 @@ export class ResultsKnowledgeProductsService {
     });
 
     if (upsert) {
-      //if the center already existed and was flagged as coming from cgspace,
-      //but now it is not, we need to update the flag
+      //if the center already existed, we will update the flag depending on
+      //the check if now comes from cgspace or not
       sectionTwoCenters.forEach((stc) => {
-        if (
-          stc.from_cgspace &&
-          !updatedCgInstitutions.find(
-            (cgi) =>
-              cgi.predicted_institution_id ==
-              stc.clarisa_center_object.institutionId,
-          )
-        ) {
-          stc.from_cgspace = false;
-        }
+        const updatedCenter = updatedCgInstitutions.find(
+          (cgi) =>
+            cgi.predicted_institution_id ==
+            stc.clarisa_center_object.institutionId,
+        );
+
+        stc.from_cgspace = !!updatedCenter;
       });
     }
 
