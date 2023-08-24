@@ -45,6 +45,7 @@ export class ResultDetailComponent {
     await this.GET_resultIdToCode();
     await this.currentResultSE.GET_resultById();
     await this.greenChecksSE.getGreenChecks();
+    await this.greenChecksSE.updateGreenChecks();
     this.GET_versioningResult();
 
     this.shareRequestModalSE.inNotifications = false;

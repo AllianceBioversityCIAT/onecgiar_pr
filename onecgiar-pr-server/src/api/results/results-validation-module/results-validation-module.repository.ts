@@ -182,24 +182,7 @@ export class resultValidationRepository extends Repository<Validation> {
 						AND rbi.is_active > 0
 					)
 				) <> 0`
-				: `
-					OR (
-						(SELECT COUNT(DISTINCT cgt.impactAreaId)
-						FROM results_impact_area_target riat 
-						INNER JOIN clarisa_global_targets cgt ON cgt.targetId = riat.impact_area_target_id 
-						WHERE riat.result_id = r.id
-						AND riat.impact_area_target_id IS NULL
-						AND riat.is_active > 0) < 5
-					)
-					OR (
-						(SELECT COUNT(DISTINCT ciai.impact_area_id)
-						FROM results_impact_area_indicators riai 
-						INNER JOIN clarisa_impact_area_indicator ciai ON ciai.id = riai.impact_area_indicator_id 
-						WHERE riai.result_id = r.id
-						AND riai.impact_area_indicator_id IS NULL
-						AND riai.is_active > 0) < 5
-					)
-				`
+				: ``
 			}
 			OR (
 				(
@@ -273,8 +256,8 @@ export class resultValidationRepository extends Repository<Validation> {
 						WHERE
 							rtr2.results_id = r.id
 							AND rtaa.is_active = 1
-					) > 0
-				) THEN TRUE
+					) = 0
+				) THEN FALSE
 				WHEN (
 					rtr1.planned_result = 1
 					AND rtr1.is_sdg_action_impact = 1
@@ -303,9 +286,9 @@ export class resultValidationRepository extends Repository<Validation> {
 						WHERE
 							rst.result_id = r.id
 							AND rst.is_active = 1
-					) > 0
+					) = 0
 				) 
-				THEN TRUE
+				THEN FALSE
 				WHEN (
 					(
 						SELECT 
@@ -315,12 +298,31 @@ export class resultValidationRepository extends Repository<Validation> {
 						WHERE
 							rst.result_id = r.id
 							AND rst.is_active = 1
-					) > 0
+					) = 0
 				) 
-				THEN TRUE`
+				THEN FALSE`
 				  : ``
 			  }
-			ELSE FALSE
+			  ${
+				resultLevel == 2
+				  ? `
+				  WHEN (
+					rtr1.planned_result = 1
+					AND rtr1.is_sdg_action_impact = 1
+					AND (
+						SELECT
+							COUNT(*)
+						FROM
+							result_toc_impact_area_target rtia
+							LEFT JOIN results_toc_result rtr2 ON rtr2.result_toc_result_id = rtia.result_toc_result_id
+						WHERE
+							rtr2.results_id = r.id
+							AND rtia.is_active = 1
+					) = 0
+				) THEN FALSE`
+				  : ``
+			  }
+			ELSE TRUE
 		END AS validation
 	FROM
 		result r
