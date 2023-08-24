@@ -218,7 +218,7 @@ export class resultValidationRepository extends Repository<Validation> {
 				) THEN TRUE
 				WHEN (
 					rtr1.planned_result = 1
-					AND rtr1.mapping_impact = 1
+					AND rtr1.is_sdg_action_impact = 1
 					AND (
 						SELECT
 							COUNT(*)
@@ -232,7 +232,21 @@ export class resultValidationRepository extends Repository<Validation> {
 				) THEN TRUE
 				WHEN (
 					rtr1.planned_result = 1
-					AND rtr1.mapping_sdg = 1
+					AND rtr1.is_sdg_action_impact = 1
+					AND (
+						SELECT
+							COUNT(*)
+						FROM
+							result_toc_action_area rtia
+							LEFT JOIN results_toc_result rtr2 ON rtr2.result_toc_result_id = rtaa.result_toc_result_id
+						WHERE
+							rtr2.results_id = r.id
+							AND rtaa.is_active = 1
+					) > 0
+				) THEN TRUE
+				WHEN (
+					rtr1.planned_result = 1
+					AND rtr1.is_sdg_action_impact = 1
 					AND (
 						SELECT
 							COUNT(*)
@@ -246,6 +260,35 @@ export class resultValidationRepository extends Repository<Validation> {
 				) THEN TRUE`
 				: ``
 			}
+			${
+				resultLevel == 1 || resultLevel == 2
+				  ? `
+				  WHEN (
+					(
+						SELECT 
+							COUNT(*)
+						FROM
+							result_sdg_targets rst 
+						WHERE
+							rst.result_id = r.id
+							AND rst.is_active = 1
+					) > 0
+				) 
+				THEN TRUE
+				WHEN (
+					(
+						SELECT 
+							COUNT(*)
+						FROM
+							result_sdg_targets rst 
+						WHERE
+							rst.result_id = r.id
+							AND rst.is_active = 1
+					) > 0
+				) 
+				THEN TRUE`
+				  : ``
+			  }
 			ELSE FALSE
 		END AS validation
 	FROM
