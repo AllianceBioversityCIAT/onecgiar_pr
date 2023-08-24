@@ -93,4 +93,10 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
     if (optionFinded) return optionFinded[this.optionLabel];
     return "<div class='not_provided_color'>Not provided</div>";
   }
+
+  setAnswerTextToNull(option) {
+    if (!option.answer_boolean) {
+      option.answer_text = null;
+    }
+  }
 }
