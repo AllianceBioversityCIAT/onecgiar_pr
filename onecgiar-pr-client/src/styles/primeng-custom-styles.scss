@@ -9,8 +9,11 @@
 
 .p-datepicker-touch-ui,
 .p-calendar .p-datepicker-touch-ui {
-
   min-width: 27vw !important;
+}
+
+.p-radiobutton:not(.p-radiobutton-disabled) .p-radiobutton-box.p-focus {
+  box-shadow: none !important;
 }
 
 .p-radiobutton .p-radiobutton-box:not(.p-disabled):not(.p-highlight) {
