@@ -910,9 +910,9 @@ export class ResultsKnowledgeProductsService {
     const updatedCgInstitutions = (
       knowledgeProduct.result_knowledge_product_institution_array ?? []
     ).map((cgi) => {
-      //if m-qap is 100% certain of the institution match AND the institution is a center
+      //if m-qap >97% certain of the institution match AND the institution is a center
       if (
-        cgi.confidant == 100 &&
+        cgi.confidant > 97 &&
         cgi.predicted_institution_object.clarisa_center
       ) {
         cgi.is_active = false;
