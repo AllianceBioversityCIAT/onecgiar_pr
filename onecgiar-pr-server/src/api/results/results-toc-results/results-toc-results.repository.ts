@@ -832,8 +832,13 @@ export class ResultsTocResultRepository
           region.map(item => (full_region += `${item.name}`));
           
             element.location = `Regional`;
+            if(full_region != null){
+              element.full_geo = ':'+full_region;
+            }else{
+              element.full_geo = ': No region(s) provided';
+            }
           
-          element.full_geo = ':'+full_region;
+          
           
         }
         if(element.location == 'country'){
@@ -846,8 +851,14 @@ export class ResultsTocResultRepository
           let full_region = null;
           region.map(item => (full_region += `${item.name}`));
           
-            element.location = `Country`;
-            element.full_geo = ':'+full_region;
+            element.location = `Country/ies`;
+            if(full_region != null){
+              element.full_geo = ':'+full_region;
+            }else{
+              element.full_geo = ': No country/ies provided';
+            }
+            
+
           
         }
 
