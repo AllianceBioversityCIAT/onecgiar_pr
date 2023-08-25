@@ -32,8 +32,6 @@ export class InnovationDevInfoComponent implements OnInit {
       this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q1);
       this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q2);
       this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q3);
-
-      console.log(this.innovationDevelopmentQuestions);
     });
   }
 
@@ -43,6 +41,7 @@ export class InnovationDevInfoComponent implements OnInit {
       ({ response }) => {
         //(response);
         this.innovationDevInfoBody = response;
+        this.innovationDevInfoBody.innovatonUse.actors = [];
         console.log(response);
       },
       err => {

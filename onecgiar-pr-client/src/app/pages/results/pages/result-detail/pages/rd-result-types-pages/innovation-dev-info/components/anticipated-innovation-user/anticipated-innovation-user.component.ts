@@ -12,46 +12,6 @@ export class AnticipatedInnovationUserComponent implements OnInit {
   isCollapsed: boolean | null = null;
   actorsTypeList = [];
   institutionsTypeTreeList = [];
-  exampleActorsList = [
-    {
-      actor_type_id: null,
-      women: null,
-      women_youth: null,
-      men: null,
-      men_youth: null,
-      is_active: null,
-      women_non_youth: null,
-      men_non_youth: null,
-      previousWomen: null,
-      previousWomen_youth: null,
-      other_actor_type: null,
-      sex_and_age_disaggregation: null,
-      how_many: null,
-      result_actors_id: null
-    }
-  ];
-
-  exampleOrganizationsList = [
-    {
-      institution_types_id: null,
-      institution_sub_type_id: null,
-      how_many: null,
-      other_institution: null,
-      graduate_students: null,
-      // Aux
-      hide: null,
-      is_active: null,
-      id: 0
-    }
-  ];
-
-  exampleMesureList = [
-    {
-      unit_of_measure: null,
-      is_active: null,
-      result_ip_measure_id: null
-    }
-  ];
 
   constructor(public api: ApiService) {
     this.GETAllActorsTypes();
@@ -100,13 +60,13 @@ export class AnticipatedInnovationUserComponent implements OnInit {
   }
 
   addOrganization() {
-    this.exampleOrganizationsList.push(new Organization());
+    this.body.innovatonUse.organization.push(new Organization());
   }
 
   get disableOrganizations() {
     //(this.institutionsTypeTreeList);
     const list = [];
-    this.exampleOrganizationsList.forEach(resp => {
+    this.body.innovatonUse.organization.forEach(resp => {
       //(resp);
       if (!resp.institution_sub_type_id) list.push({ code: resp.institution_types_id });
     });
@@ -115,7 +75,7 @@ export class AnticipatedInnovationUserComponent implements OnInit {
 
   get getAllSubTypes() {
     const list = [];
-    this.exampleOrganizationsList.forEach(resp => {
+    this.body.innovatonUse.organization.forEach(resp => {
       list.push({ code: resp.institution_sub_type_id });
     });
     return list;
@@ -137,11 +97,12 @@ export class AnticipatedInnovationUserComponent implements OnInit {
   }
 
   addActor() {
-    this.exampleActorsList.push(new Actor());
+    console.log('addActor');
+    this.body.innovatonUse.actors.push(new Actor());
   }
 
   addOtherMesure() {
-    this.exampleMesureList.push(new Measure());
+    this.body.innovatonUse.measures.push(new Measure());
   }
 
   cleanActor(actorItem) {

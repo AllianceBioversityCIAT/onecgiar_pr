@@ -22,7 +22,6 @@ export class InstitutionsService {
 
     this.api.resultsSE.GET_allChildlessInstitutionTypes().subscribe(({ response }) => {
       this.institutionsChildlessTypes = response;
-      console.log(response);
     });
   }
 }
