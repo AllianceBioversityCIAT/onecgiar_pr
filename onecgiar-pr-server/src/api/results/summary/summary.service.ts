@@ -804,14 +804,6 @@ export class SummaryService {
       actors.map(async (el: ResultActor) => {
         let actorExists: ResultActor = null;
 
-        if (el.sex_and_age_disaggregation === true && !el.how_many) {
-          return {
-            response: { status: 'Error' },
-            message: 'The field how many is required',
-            status: HttpStatus.BAD_REQUEST,
-          };
-        }
-
         if (el?.actor_type_id) {
           const { actor_type_id } = el;
           const whereOptions: any = {
