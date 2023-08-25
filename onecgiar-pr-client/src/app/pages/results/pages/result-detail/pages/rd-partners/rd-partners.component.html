@@ -2,34 +2,41 @@
 
 <div class="detail_container">
 
-    <app-knowledge-product-selector *ngIf="this.api.dataControlSE.isKnowledgeProduct"></app-knowledge-product-selector>
-    <app-normal-selector></app-normal-selector>
+    <div style="position: relative; z-index: 5;">
 
-    <div *ngIf="this.api.dataControlSE.isKnowledgeProduct">
-        <app-alert-status *ngIf="this.api.dataControlSE.isKnowledgeProduct"
-            description="Guideline pending (this is only a placeholder to help seeing the separation between the two partner sections)">
-        </app-alert-status>
-        <div class="column_title">
-            Contributing Center(s)
-        </div>
-        <ng-container [ngSwitch]="(this.rdPartnersSE.centers ?? []).length > 0">
-            <div *ngSwitchCase="true" class="medal_info">
-                The primary center is marked with a medal icon <i class="material-icons-round">workspace_premium</i>
+        <app-knowledge-product-selector
+            *ngIf="this.api.dataControlSE.isKnowledgeProduct"></app-knowledge-product-selector>
+        <app-normal-selector></app-normal-selector>
+    </div>
+
+    <div style="position: relative; z-index: 1;">
+        <div *ngIf="this.api.dataControlSE.isKnowledgeProduct">
+            <app-alert-status *ngIf="this.api.dataControlSE.isKnowledgeProduct"
+                description="Guideline pending (this is only a placeholder to help seeing the separation between the two partner sections)">
+            </app-alert-status>
+            <div class="column_title">
+                Contributing Center(s)
             </div>
-            <div *ngSwitchCase="true" class="medal_selector selected_container">
-                <div class="centers chips_container">
-                    <div class="center pr_chip_selected" [ngClass]="{'medal-gap': center.primary}"
-                        *ngFor="let center of this.rdPartnersSE.centers">
-                        <i class="material-icons-round medal primary" *ngIf="center.primary">workspace_premium</i>
-                        <div class="name" [innerHtml]="center?.name + (center.primary ? primaryText : '')"></div>
+            <ng-container [ngSwitch]="(this.rdPartnersSE.centers ?? []).length > 0">
+                <div *ngSwitchCase="true" class="medal_info">
+                    The primary center is marked with a medal icon <i class="material-icons-round">workspace_premium</i>
+                </div>
+                <div *ngSwitchCase="true" class="medal_selector selected_container">
+                    <div class="centers chips_container">
+                        <div class="center pr_chip_selected" [ngClass]="{'medal-gap': center.primary}"
+                            *ngFor="let center of this.rdPartnersSE.centers">
+                            <i class="material-icons-round medal primary" *ngIf="center.primary">workspace_premium</i>
+                            <div class="name" [innerHtml]="center?.name + (center.primary ? primaryText : '')"></div>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div *ngSwitchDefault>
-                <div>No centers are linked to this result</div>
-            </div>
-        </ng-container>
+                <div *ngSwitchDefault>
+                    <div>No centers are linked to this result</div>
+                </div>
+            </ng-container>
+        </div>
     </div>
+
 
     <app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>
     <app-sync-button (clickSave)="onSyncSection()"></app-sync-button>
