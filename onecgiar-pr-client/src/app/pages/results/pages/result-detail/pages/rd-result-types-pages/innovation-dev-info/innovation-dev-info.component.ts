@@ -32,8 +32,6 @@ export class InnovationDevInfoComponent implements OnInit {
       this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q1);
       this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q2);
       this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q3);
-
-      console.log(this.innovationDevelopmentQuestions);
     });
   }
 
@@ -42,6 +40,7 @@ export class InnovationDevInfoComponent implements OnInit {
     this.api.resultsSE.GET_innovationDev().subscribe(
       ({ response }) => {
         //(response);
+        this.convertOrganizations(response?.innovatonUse?.organization);
         this.innovationDevInfoBody = response;
         console.log(response);
       },
@@ -51,9 +50,26 @@ export class InnovationDevInfoComponent implements OnInit {
     );
   }
 
+  convertOrganizations(organizations) {
+    organizations.map((item: any) => {
+      if (item.parent_institution_type_id) {
+        item.institution_sub_type_id = item?.institution_types_id;
+        item.institution_types_id = item?.parent_institution_type_id;
+      }
+    });
+  }
+
+  convertOrganizationsTosave() {
+    this.innovationDevInfoBody.innovatonUse.organization.map((item: any) => {
+      if (item.institution_sub_type_id) {
+        item.institution_types_id = item.institution_sub_type_id;
+      }
+    });
+  }
+
   onSaveSection() {
     console.log({ ...this.innovationDevInfoBody, ...this.innovationDevelopmentQuestions });
-
+    this.convertOrganizationsTosave();
     // this.PATCH_InnovationDevSummary();
     if (this.innovationDevInfoBody.innovation_nature_id != 12) {
       this.innovationDevInfoBody.number_of_varieties = null;

@@ -16,6 +16,9 @@ import { ResultRepository } from '../result.repository';
 import { ResultsPolicyChangesRepository } from './repositories/results-policy-changes.repository';
 import { ResultAnswerRepository } from '../result-questions/repository/result-answers.repository';
 import { EvidencesRepository } from '../evidences/evidences.repository';
+import { ResultActorRepository } from '../result-actors/repositories/result-actors.repository';
+import { ResultByIntitutionsTypeRepository } from '../results_by_institution_types/result_by_intitutions_type.repository';
+import { ResultIpMeasureRepository } from '../../ipsr/result-ip-measures/result-ip-measures.repository';
 
 @Module({
   controllers: [SummaryController],
@@ -35,6 +38,9 @@ import { EvidencesRepository } from '../evidences/evidences.repository';
     VersionsService,
     VersionRepository,
     ReturnResponse,
+    ResultActorRepository,
+    ResultByIntitutionsTypeRepository,
+    ResultIpMeasureRepository
   ],
   exports: [ResultsInnovationsUseRepository],
 })

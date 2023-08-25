@@ -58,6 +58,10 @@ export class Actor {
   sex_and_age_disaggregation: boolean;
   how_many: any;
   result_actors_id: number;
+  has_men: any;
+  has_men_youth: any;
+  has_women: any;
+  has_women_youth: any;
 }
 
 export class linkType {

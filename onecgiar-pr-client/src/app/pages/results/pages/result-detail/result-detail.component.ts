@@ -69,7 +69,6 @@ export class ResultDetailComponent {
   }
   GET_versioningResult() {
     this.api.resultsSE.GET_versioningResult().subscribe(({ response }) => {
-      console.log(response);
       this.api.dataControlSE.resultPhaseList = response;
     });
   }
