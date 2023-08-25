@@ -848,6 +848,7 @@ export class SummaryService {
           });
         }
 
+        let saveActor;
         if (actorExists) {
           if (!el?.actor_type_id && el?.is_active !== false) {
             return {
@@ -856,7 +857,7 @@ export class SummaryService {
               status: HttpStatus.BAD_REQUEST,
             };
           }
-          await this._resultActorRepository.update(
+          saveActor = await this._resultActorRepository.update(
             actorExists.result_actors_id,
             {
               actor_type_id: this.isNullData(el?.actor_type_id),
@@ -880,7 +881,7 @@ export class SummaryService {
               status: HttpStatus.BAD_REQUEST,
             };
           }
-          await this._resultActorRepository.save({
+          saveActor = await this._resultActorRepository.save({
             actor_type_id: el.actor_type_id,
             is_active: el.is_active,
             has_men: el.has_men,
@@ -1005,17 +1006,16 @@ export class SummaryService {
             },
           );
         } else {
-          if (!el?.unit_of_measure || !el?.quantity || el?.quantity == null) {
+          if (!el?.unit_of_measure) {
             return {
               response: { valid: false },
-              message: 'The field Unit of Measure and Quantity is required',
+              message: 'The field Unit of Measure',
               status: HttpStatus.BAD_REQUEST,
             };
           }
           await this._resultIpMeasureRepository.save({
             result_id: resultId,
-            unit_of_measure: el.unit_of_measure,
-            quantity: el.quantity,
+            unit_of_measure: el?.unit_of_measure,
             created_by: user,
             last_updated_by: user,
           });
