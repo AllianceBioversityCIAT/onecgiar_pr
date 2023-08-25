@@ -41,7 +41,6 @@ export class InnovationDevInfoComponent implements OnInit {
       ({ response }) => {
         //(response);
         this.innovationDevInfoBody = response;
-        this.innovationDevInfoBody.innovatonUse.actors = [];
         console.log(response);
       },
       err => {
