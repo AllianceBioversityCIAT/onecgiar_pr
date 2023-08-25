@@ -613,10 +613,40 @@ export class SummaryService {
         where: { result_id: resultId, evidence_type_id: 4, is_active: 1 },
       });
       const result = await this._resultRepository.getResultById(resultId);
+
+      let actorsData = await this._resultActorRepository.find({
+        where: { result_id: resultId, is_active: true },
+        relations: { obj_actor_type: true },
+      });
+      const innovatonUse = {
+        actors: actorsData,
+        measures: await this._resultIpMeasureRepository.find({
+          where: { result_id: resultId, is_active: true },
+        }),
+        organization: (
+          await this._resultByIntitutionsTypeRepository.find({
+            where: {
+              results_id: resultId,
+              institution_roles_id: 5,
+              is_active: true,
+            },
+            relations: {
+              obj_institution_types: { obj_parent: { obj_parent: true } },
+            },
+          })
+        ).map((el) => ({
+          ...el,
+          parent_institution_type_id: el.obj_institution_types?.obj_parent
+            ?.obj_parent?.code
+            ? el.obj_institution_types?.obj_parent?.obj_parent?.code
+            : el.obj_institution_types?.obj_parent?.code || null,
+        })),
+      };
       return {
         response: {
           ...innDevExists,
           pictures,
+          innovatonUse,
           reference_materials,
           result: result,
         },
