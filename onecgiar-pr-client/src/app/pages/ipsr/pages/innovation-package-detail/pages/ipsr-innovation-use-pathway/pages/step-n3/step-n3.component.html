@@ -112,7 +112,8 @@
             [options]="this.innovationUseList"
             [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.use_level_evidence_based"></app-pr-range-level>
 
-        <app-pr-input label="Evidence link" placeholder="Link goes here"
+        <app-pr-input label="Evidence link" placeholder="Link goes here" type="link"
+            [required]="this.ipsrStep3Body.result_ip_result_core.use_level_evidence_based != 11"
             [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.use_evidence_link">
         </app-pr-input>
 
