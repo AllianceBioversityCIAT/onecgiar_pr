@@ -197,7 +197,7 @@ export class InnovationPathwayStepOneService {
       const innovatonUse = {
         actors: actorsData,
         measures: await this._resultIpMeasureRepository.find({
-          where: { result_ip_id: result.id, is_active: true },
+          where: { result_id: result.id, is_active: true },
         }),
         organization: (
           await this._resultByIntitutionsTypeRepository.find({
@@ -1310,14 +1310,14 @@ export class InnovationPathwayStepOneService {
           ripm = await this._resultIpMeasureRepository.findOne({
             where: {
               unit_of_measure: el.unit_of_measure,
-              result_ip_id: result.id,
+              result_id: result.id,
             },
           });
         } else if (!ripm) {
           ripm = await this._resultIpMeasureRepository.findOne({
             where: {
               unit_of_measure: IsNull(),
-              result_ip_id: result.id,
+              result_id: result.id,
             },
           });
         }
@@ -1348,7 +1348,7 @@ export class InnovationPathwayStepOneService {
             };
           }
           await this._resultIpMeasureRepository.save({
-            result_ip_id: result.id,
+            result_id: result.id,
             unit_of_measure: el.unit_of_measure,
             quantity: el.quantity,
             created_by: user.id,
