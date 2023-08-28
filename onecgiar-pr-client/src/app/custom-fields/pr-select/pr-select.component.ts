@@ -74,7 +74,8 @@ export class PrSelectComponent implements ControlValueAccessor {
     element.blur();
   }
   get optionsIntance() {
-    if (!this._optionsIntance?.length) this._optionsIntance = JSON.parse(JSON.stringify(this.options));
+    if (!this.options?.length) return [];
+    if (!this._optionsIntance?.length) this._optionsIntance = [...this.options];
 
     this._optionsIntance.map((resp: any) => {
       resp.disabled = false;
