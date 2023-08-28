@@ -19,3 +19,11 @@
 .p-radiobutton .p-radiobutton-box:not(.p-disabled):not(.p-highlight) {
   border-color: #d4d4d8 !important;
 }
+
+.p-checkbox:not(.p-checkbox-disabled) .p-checkbox-box.p-focus {
+  box-shadow: none !important;
+}
+
+.p-checkbox .p-checkbox-box:not(.p-disabled):not(.p-highlight) {
+  border-color: #d4d4d8 !important;
+}
