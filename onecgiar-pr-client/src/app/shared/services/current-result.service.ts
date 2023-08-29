@@ -41,7 +41,7 @@ export class CurrentResultService {
       err => {
         //(err.error);
         if (err.error.statusCode == 404) this.router.navigate([`/`]);
-        this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: 'result not found', status: 'error' });
+        this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: 'Result not found.', status: 'error' });
       }
     );
   }
