@@ -10,6 +10,7 @@
         (deleteEvent)="actorItem.is_active = false; actorItem.actor_type_id = null"
         *ngFor="let actorItem of this.body.innovatonUse.actors; let i=index"
         [ngClass]="{'hideElement': actorItem.is_active == false || (!this.actorItem?.result_actors_id && this.api.rolesSE.readOnly)}">
+
         <div>
             <app-pr-select [options]="this.actorsTypeList" [indexReference]="i" label="Actor type" optionLabel="name"
                 optionValue="actor_type_id" [(ngModel)]="actorItem.actor_type_id"
