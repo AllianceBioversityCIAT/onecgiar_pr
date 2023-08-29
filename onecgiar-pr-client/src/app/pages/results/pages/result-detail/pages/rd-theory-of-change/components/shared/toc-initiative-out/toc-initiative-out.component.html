@@ -14,20 +14,22 @@
     </div>
 
 
-    <div class="auto_fit_container" *ngIf="initiative.planned_result == true || initiative.planned_result == false ">
+    <div class="flex-no-wrap" *ngIf="initiative.planned_result == true || initiative.planned_result == false ">
         <app-pr-select *ngIf="this.initiative?.planned_result && resultLevelId == 1" [options]="this.outputList"
             label="Output" optionLabel="extraInformation" optionValue="toc_result_id" [disabled]="!this.editable"
             [editable]="editable" placeholder="Select output" [(ngModel)]="initiative.toc_result_id"
             [extraInformation]="true" (selectOptionEvent)="getIndicator()">
         </app-pr-select>
-        <app-pr-select
-            *ngIf="this.showOutcomeLevel && (resultLevelId == 1 ? this.initiative?.planned_result == false : true)"
-            [options]="this.tocInitiativeOutcomeListsSE.outcomeLevelList|outcomeLevelFilter:2" label="Outcome level"
-            [editable]="editable"
-            [disabled]="(resultLevelId == 1 ? true : this.initiative?.planned_result == false) || !this.editable"
-            optionLabel="name" optionValue="toc_level_id" placeholder="Select outcome level"
-            [(ngModel)]="initiative.toc_level_id" (selectOptionEvent)="indicatorView = false">
-        </app-pr-select>
+        <div style="max-width: 250px;">
+            <app-pr-select
+                *ngIf="this.showOutcomeLevel && (resultLevelId == 1 ? this.initiative?.planned_result == false : true)"
+                [options]="this.tocInitiativeOutcomeListsSE.outcomeLevelList|outcomeLevelFilter:2" label="Outcome level"
+                [editable]="editable"
+                [disabled]="(resultLevelId == 1 ? true : this.initiative?.planned_result == false) || !this.editable"
+                optionLabel="name" optionValue="toc_level_id" placeholder="Select outcome level"
+                [(ngModel)]="initiative.toc_level_id" (selectOptionEvent)="indicatorView = false">
+            </app-pr-select>
+        </div>
 
         <app-pr-select
             *ngIf="(resultLevelId == 1 ? this.initiative?.planned_result == false : true) && initiative.toc_level_id != 3"
@@ -41,27 +43,30 @@
             *ngIf="(resultLevelId == 1 ? this.initiative?.planned_result == false : true) && initiative.toc_level_id == 3"
             [options]="this.eoiList" label="Outcome" [editable]="editable"
             [disabled]="(resultLevelId == 1 ? false : false) || !this.editable" optionLabel="title"
-            optionValue="toc_result_id" placeholder="Select outcome" [(ngModel)]="initiative.toc_result_id" (selectOptionEvent)="getIndicator()">
-        </app-pr-select >
+            optionValue="toc_result_id" placeholder="Select outcome" [(ngModel)]="initiative.toc_result_id"
+            (selectOptionEvent)="getIndicator()">
+        </app-pr-select>
 
 
     </div>
     <hr class="divider-20">
 </div>
 <div *ngIf="indicatorView">
-    <app-alert-status description="The selected ToC element does not have any indicators associated with it." *ngIf="!this.theoryOfChangesServices.body[indexYesorNo].targetsIndicators.length"></app-alert-status>
-    <app-pr-field-header
-    label="{{narrativeTypeResult()}}"
-    [required]="false"
-    *ngIf="this.theoryOfChangesServices.body[indexYesorNo].targetsIndicators.length">
-</app-pr-field-header>
-    <app-target-indicator  [initiative]="indicator" [disabledInputs]="disabledInput" *ngFor="let indicator of this.theoryOfChangesServices.body[indexYesorNo].targetsIndicators"></app-target-indicator>
+    <app-alert-status description="The selected ToC element does not have any indicators associated with it."
+        *ngIf="!this.theoryOfChangesServices.body[indexYesorNo].targetsIndicators.length"></app-alert-status>
+    <app-pr-field-header label="{{narrativeTypeResult()}}" [required]="false"
+        *ngIf="this.theoryOfChangesServices.body[indexYesorNo].targetsIndicators.length">
+    </app-pr-field-header>
+    <app-target-indicator [initiative]="indicator" [disabledInputs]="disabledInput"
+        *ngFor="let indicator of this.theoryOfChangesServices.body[indexYesorNo].targetsIndicators"></app-target-indicator>
     <app-pr-yes-or-not [label]="'Are you able to match your reported result to Impact Area targets?'"
-            [(ngModel)]="this.theoryOfChangesServices.body[indexYesorNo].isImpactArea" [editable]="true">
-        </app-pr-yes-or-not>
-    <app-impact-area-targets *ngIf="this.theoryOfChangesServices.body[indexYesorNo].isImpactArea" [body]="this.theoryOfChangesServices.body[indexYesorNo].impactAreasTargets"></app-impact-area-targets>
+        [(ngModel)]="this.theoryOfChangesServices.body[indexYesorNo].isImpactArea" [editable]="true">
+    </app-pr-yes-or-not>
+    <app-impact-area-targets *ngIf="this.theoryOfChangesServices.body[indexYesorNo].isImpactArea"
+        [body]="this.theoryOfChangesServices.body[indexYesorNo].impactAreasTargets"></app-impact-area-targets>
     <app-pr-yes-or-not [label]="'Are you able to match your reported result to SDG targets?'"
-            [(ngModel)]="this.theoryOfChangesServices.body[indexYesorNo].isSdg" [editable]="true">
-        </app-pr-yes-or-not>
-    <app-sdg-targets *ngIf="this.theoryOfChangesServices.body[indexYesorNo].isSdg" [body]="this.theoryOfChangesServices.body[indexYesorNo].sdgTargest"></app-sdg-targets>
+        [(ngModel)]="this.theoryOfChangesServices.body[indexYesorNo].isSdg" [editable]="true">
+    </app-pr-yes-or-not>
+    <app-sdg-targets *ngIf="this.theoryOfChangesServices.body[indexYesorNo].isSdg"
+        [body]="this.theoryOfChangesServices.body[indexYesorNo].sdgTargest"></app-sdg-targets>
 </div>

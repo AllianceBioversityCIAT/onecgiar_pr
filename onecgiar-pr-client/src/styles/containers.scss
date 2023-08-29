@@ -23,6 +23,21 @@
     gap: 20px;
 }
 
+.flex-no-wrap {
+    display: flex;
+    flex-wrap: nowrap;
+    width: 100%;
+    gap: 20px;
+
+    &>* {
+        flex: 1;
+        max-width: none;
+    }
+
+}
+
+
+
 .shadow-1 {
     @extend %global-shadow-1;
 }
