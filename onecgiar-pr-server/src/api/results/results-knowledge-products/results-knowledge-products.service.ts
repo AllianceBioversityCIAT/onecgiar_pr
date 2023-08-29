@@ -611,9 +611,9 @@ export class ResultsKnowledgeProductsService {
         throw {
           response: { title: mqapResponse?.Title },
           message:
-            `You can't report knowledge products from years different than ${versionCgspaceYear} ` +
-            'for the current reporting cycle. In case you need support to correct the publication ' +
-            'year of this knowledge product, please contact the librarian of your Center.',
+            `Reporting knowledge products from years outside the current reporting cycle (${versionCgspaceYear}) is not possible. ` +
+            'Should you require assistance in modifying the publication year for this knowledge product, ' +
+            'please contact your Center’s knowledge management team to review this information in CGSpace.',
           status: HttpStatus.UNPROCESSABLE_ENTITY,
         };
       } else if (
@@ -630,13 +630,13 @@ export class ResultsKnowledgeProductsService {
         throw {
           response: { title: mqapResponse?.Title },
           message:
-            `Only Journal Articles <b>published online</b> in ${versionCgspaceYear} will be allowed for this reporting cycle. ` +
-            "The knowledge product's date type you are trying to create is " +
-            `"${dateFieldName || 'Not Defined'}" and the year is "${
-              cgYear.year
-            }". ` +
-            'If you believe there has been a mistake, please get in touch with the library staff ' +
-            'of your Center to review this information in the repository.',
+            `Only journal articles published online in ${versionCgspaceYear} are eligible for this reporting cycle.<br>` +
+            'The knowledge product you are attempting to report either lacks the online publication date in CGSpace ' +
+            `or has an online publication date other than ${versionCgspaceYear}.<br><br>` +
+            'If you believe this is an error, please contact your Center’s knowledge management team to review this information in CGSpace.<br><br>' +
+            '<b>About this error:</b><br>Please be aware that for journal articles, the reporting system automatically verifies ' +
+            `the “Date Online” field in CGSpace, specifically checking for the year ${versionCgspaceYear}. If this field is empty or contains a year ` +
+            `other than ${versionCgspaceYear}, the submission will not be accepted. This prevents double counting of publications across consecutive years.`,
           status: HttpStatus.UNPROCESSABLE_ENTITY,
         };
       }

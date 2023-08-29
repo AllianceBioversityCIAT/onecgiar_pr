@@ -108,6 +108,10 @@
     <app-add-button name="Add non-pooled project"
         *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"
         (clickEvent)="addBilateralContribution()"></app-add-button>
+
+    <app-alert-status *ngIf="this.api.dataControlSE.isKnowledgeProduct"
+        description="In this section you can enter CGIAR Center partners. If you notice any discrepancies, such as partners appearing in CGSpace but not here, please reach out to PRMSTechSupport@cgiar.org for assistance. ">
+    </app-alert-status>
     <div appFeedbackValidation labelText="Contributing Centers"
         [isComplete]="!!this.theoryOfChangeBody.contributing_center?.length">
     </div>
