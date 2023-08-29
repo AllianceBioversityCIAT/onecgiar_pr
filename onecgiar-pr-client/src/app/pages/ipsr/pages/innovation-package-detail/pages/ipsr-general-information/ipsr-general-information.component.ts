@@ -33,7 +33,7 @@ export class IpsrGeneralInformationComponent {
       resp => {
         // (resp);
         this.getSectionInformation();
-        this.api.alertsFe.show({ id: 'save-button', title: 'Section saved correctly', description: '', status: 'success', closeIn: 500 });
+        this.api.alertsFe.show({ id: 'save-button', title: 'Section saved successfully', description: '', status: 'success', closeIn: 500 });
       },
       err => {
         console.error(err);
