@@ -1,7 +1,10 @@
-import { ResultIpMeasure } from "../../../ipsr/result-ip-measures/entities/result-ip-measure.entity";
-import { Evidence } from "../../evidences/entities/evidence.entity";
-import { ResultActor } from "../../result-actors/entities/result-actor.entity";
-import { ResultsByInstitutionType } from "../../results_by_institution_types/entities/results_by_institution_type.entity";
+import { ResultIpMeasure } from '../../../ipsr/result-ip-measures/entities/result-ip-measure.entity';
+import { Evidence } from '../../evidences/entities/evidence.entity';
+import { ResultActor } from '../../result-actors/entities/result-actor.entity';
+import { NonPooledProjectBudget } from '../../result_budget/entities/non_pooled_proyect_budget.entity';
+import { ResultInitiativeBudget } from '../../result_budget/entities/result_initiative_budget.entity';
+import { ResultInstitutionsBudget } from '../../result_budget/entities/result_institutions_budget.entity';
+import { ResultsByInstitutionType } from '../../results_by_institution_types/entities/results_by_institution_type.entity';
 
 export class CreateInnovationDevDto {
   public result_innovation_dev_id: number;
@@ -20,9 +23,10 @@ export class CreateInnovationDevDto {
   public responsible_innovation_and_scaling!: TopLevelQuestions;
   public intellectual_property_rights!: TopLevelQuestions;
   public innovation_team_diversity!: TopLevelQuestions;
-  public reference_materials!: Evidence[]
+  public reference_materials!: Evidence[];
   public pictures!: Evidence[];
   public innovatonUse: innovatonUseInterface;
+  public investment: investementInterface;
 }
 export interface SubOption {
   result_question_id: number;
@@ -47,11 +51,17 @@ export interface TopLevelQuestions {
   q3: {
     options: Option[];
   };
-  options: Option[]
+  options: Option[];
 }
 
 export interface innovatonUseInterface {
   actors: ResultActor[];
   organization: ResultsByInstitutionType[];
   measures: ResultIpMeasure[];
+}
+
+export interface investementInterface {
+  initiative_expected_investment: ResultInitiativeBudget[];
+  bilateral_expected_investment: NonPooledProjectBudget[];
+  institutions_expected_investment: ResultInstitutionsBudget[];
 }

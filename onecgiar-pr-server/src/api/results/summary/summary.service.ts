@@ -32,12 +32,19 @@ import { EvidencesRepository } from '../evidences/evidences.repository';
 import { Evidence } from '../evidences/entities/evidence.entity';
 import { Result } from '../entities/result.entity';
 import { ResultActor } from '../result-actors/entities/result-actor.entity';
-import { IsNull } from 'typeorm';
+import { In, IsNull } from 'typeorm';
 import { ResultActorRepository } from '../result-actors/repositories/result-actors.repository';
 import { ResultsByInstitutionType } from '../results_by_institution_types/entities/results_by_institution_type.entity';
 import { ResultByIntitutionsTypeRepository } from '../results_by_institution_types/result_by_intitutions_type.repository';
 import { ResultIpMeasure } from '../../ipsr/result-ip-measures/entities/result-ip-measure.entity';
 import { ResultIpMeasureRepository } from '../../ipsr/result-ip-measures/result-ip-measures.repository';
+import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
+import { ResultInitiativeBudget } from '../result_budget/entities/result_initiative_budget.entity';
+import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/result_initiative_budget.repository';
+import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/non_pooled_proyect_budget.repository';
+import { NonPooledProjectRepository } from '../non-pooled-projects/non-pooled-projects.repository';
+import { ResultInstitutionsBudget } from '../result_budget/entities/result_institutions_budget.entity';
+import { ResultInstitutionsBudgetRepository } from '../result_budget/repositories/result_institutions_budget.repository';
 
 @Injectable()
 export class SummaryService {
@@ -56,6 +63,11 @@ export class SummaryService {
     private readonly _resultActorRepository: ResultActorRepository,
     private readonly _resultByIntitutionsTypeRepository: ResultByIntitutionsTypeRepository,
     private readonly _resultIpMeasureRepository: ResultIpMeasureRepository,
+    private readonly _resultInitiativesBudgetRepository: ResultInitiativeBudgetRepository,
+    private readonly _resultByInitiativeRepository: ResultByInitiativesRepository,
+    private readonly _resultBilateralBudgetRepository: NonPooledProjectBudgetRepository,
+    private readonly _nonPooledProjectRepository: NonPooledProjectRepository,
+    private readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
   ) {}
 
   create(createSummaryDto: CreateSummaryDto) {
@@ -642,11 +654,76 @@ export class SummaryService {
             : el.obj_institution_types?.obj_parent?.code || null,
         })),
       };
+
+      const initiatives = await this._resultByInitiativeRepository.find({
+        where: {
+          result_id: resultId,
+          is_active: true,
+        },
+      });
+
+      const initiative_expected_investment =
+        await this._resultInitiativesBudgetRepository.find({
+          where: {
+            result_initiative_id: In(initiatives.map((el) => el.id)),
+            is_active: true,
+          },
+          relations: {
+            obj_result_initiative: {
+              obj_initiative: true,
+            },
+          },
+        });
+
+      const npp = await this._nonPooledProjectRepository.find({
+        where: {
+          results_id: resultId,
+          is_active: true,
+          non_pooled_project_type_id: 2,
+        },
+      });
+
+      const bilateral_expected_investment =
+        await this._resultBilateralBudgetRepository.find({
+          where: {
+            non_pooled_projetct_id: In(npp.map((el) => el.id)),
+            is_active: true,
+          },
+          relations: {
+            obj_non_pooled_projetct: true,
+          },
+        });
+
+      const institutions: ResultsByInstitution[] =
+        await this._resultByIntitutionsRepository.getGenericAllResultByInstitutionByRole(
+          resultId,
+          2,
+        );
+      const intitutins_budget =
+        await this._resultInstitutionsBudgetRepository.find({
+          where: {
+            result_institution_id: In(institutions.map((el) => el.id)),
+            is_active: true,
+          },
+        });
+
+      const institutions_expected_investment = institutions.map((el) => {
+        return {
+          institution: el,
+          budget: intitutins_budget.filter(
+            (b) => b.result_institution_id == el.id,
+          ),
+        };
+      });
+
       return {
         response: {
           ...innDevExists,
           pictures,
           innovatonUse,
+          initiative_expected_investment,
+          bilateral_expected_investment,
+          institutions_expected_investment,
           reference_materials,
           result: result,
         },
@@ -1018,5 +1095,171 @@ export class SummaryService {
 
   isNullData(data: any) {
     return data == undefined ? null : data;
+  }
+
+  async saveInitiativeInvestment(
+    resultId: number,
+    user: TokenDto,
+    { investment: inv }: CreateInnovationDevDto,
+  ) {
+    try {
+      if (inv?.initiative_expected_investment?.length) {
+        const initiativeInvestments = inv.initiative_expected_investment;
+
+        for (const initiative of initiativeInvestments) {
+          const ibr = await this._resultByInitiativeRepository.findOne({
+            where: {
+              result_id: resultId,
+              is_active: true,
+              id: initiative.result_initiative_id,
+            },
+          });
+
+          if (ibr) {
+            let rie: ResultInitiativeBudget =
+              await this._resultInitiativesBudgetRepository.findOne({
+                where: {
+                  result_initiative_id: ibr.id,
+                  is_active: true,
+                },
+              });
+
+            if (rie) {
+              rie.current_year = initiative.current_year;
+              rie.next_year = initiative.next_year;
+              rie.is_determined = initiative.is_determined;
+              rie.last_updated_by = user.id;
+
+              await this._resultInitiativesBudgetRepository.save(rie);
+            } else {
+              const newRie = this._resultInitiativesBudgetRepository.create({
+                result_initiative_id: ibr.id,
+                current_year: initiative.current_year,
+                next_year: initiative.next_year,
+                is_determined: initiative.is_determined,
+                created_by: user.id,
+                last_updated_by: user.id,
+              });
+
+              await this._resultInitiativesBudgetRepository.save(newRie);
+            }
+          }
+        }
+
+        return {
+          valid: true,
+        };
+      }
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async saveBillateralInvestment(
+    resultId: number,
+    user: TokenDto,
+    { investment: inv }: CreateInnovationDevDto,
+  ) {
+    try {
+      if (inv?.bilateral_expected_investment?.length) {
+        const { bilateral_expected_investment: bei } = inv;
+
+        bei.forEach(async (i) => {
+          const npp = await this._nonPooledProjectRepository.findOne({
+            where: {
+              results_id: resultId,
+              is_active: true,
+              id: i.non_pooled_projetct_id,
+            },
+          });
+
+          if (npp) {
+            const rbb = await this._resultBilateralBudgetRepository.findOne({
+              where: {
+                non_pooled_projetct_id: npp.id,
+                is_active: true,
+              },
+            });
+
+            if (rbb) {
+              await this._resultBilateralBudgetRepository.update(
+                rbb.non_pooled_projetct_budget_id,
+                {
+                  in_kind: i.in_kind,
+                  in_cash: i.in_cash,
+                  is_determined: i.is_determined,
+                  last_updated_by: user.id,
+                },
+              );
+            } else {
+              await this._resultBilateralBudgetRepository.save({
+                non_pooled_projetct_id: npp.id,
+                in_kind: i.in_kind,
+                in_cash: i.in_cash,
+                is_determined: i.is_determined,
+                created_by: user.id,
+                last_updated_by: user.id,
+              });
+            }
+          }
+        });
+
+        return {
+          valid: true,
+        };
+      }
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async savePartnertInvestment(
+    user: TokenDto,
+    { investment: inv }: CreateInnovationDevDto,
+  ) {
+    try {
+      if (inv?.institutions_expected_investment?.length) {
+        const { institutions_expected_investment: iei } = inv;
+
+        iei.forEach(async (el) => {
+          let existBud: ResultInstitutionsBudget = null;
+          if (el?.result_institutions_budget_id) {
+            existBud = await this._resultInstitutionsBudgetRepository.findOne({
+              where: {
+                result_institutions_budget_id:
+                  el?.result_institutions_budget_id,
+              },
+            });
+          } else if (!existBud) {
+            existBud = await this._resultInstitutionsBudgetRepository.findOne({
+              where: { result_institution_id: el.result_institution_id },
+            });
+          }
+
+          if (existBud) {
+            await this._resultInstitutionsBudgetRepository.update(
+              el?.result_institutions_budget_id,
+              {
+                last_updated_by: user?.id,
+                is_determined: el?.is_determined,
+                in_kind: el?.in_kind,
+                in_cash: el?.in_cash,
+              },
+            );
+          } else {
+            await this._resultInstitutionsBudgetRepository.save({
+              result_institution_id: el?.result_institutions_budget_id,
+              last_updated_by: user?.id,
+              is_determined: el?.is_determined,
+              in_kind: el?.in_kind,
+              in_cash: el?.in_cash,
+              created_by: user.id,
+            });
+          }
+        });
+      }
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
   }
 }
