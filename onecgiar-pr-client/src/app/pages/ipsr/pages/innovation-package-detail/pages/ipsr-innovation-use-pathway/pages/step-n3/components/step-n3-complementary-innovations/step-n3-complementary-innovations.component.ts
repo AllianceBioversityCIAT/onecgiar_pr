@@ -30,7 +30,9 @@ export class StepN3ComplementaryInnovationsComponent {
   }
 
   allFieldsRequired(bodyItem) {
-    const attrListTovalidate = ['readiness_level_evidence_based', 'readinees_evidence_link', 'use_level_evidence_based', 'use_evidence_link'];
+    const attrListTovalidate = ['readiness_level_evidence_based', 'use_level_evidence_based'];
+    if (bodyItem['readiness_level_evidence_based'] != 11) attrListTovalidate.push('readinees_evidence_link');
+    if (bodyItem['use_level_evidence_based'] != 11) attrListTovalidate.push('use_evidence_link');
     let oneEmpty = false;
     attrListTovalidate.forEach((attr: any) => {
       if (bodyItem[attr] === null || bodyItem[attr] === undefined || bodyItem[attr] === '') oneEmpty = true;
