@@ -21,11 +21,10 @@
             [editable]="editable" placeholder="Select output" [(ngModel)]="initiative.toc_result_id"
             [extraInformation]="true" (selectOptionEvent)="getIndicator();this.get_versionDashboard()">
         </app-pr-select>
-        <div style="max-width: 250px;">
-            <app-pr-select
-                *ngIf="this.showOutcomeLevel && (resultLevelId == 1 ? this.initiative?.planned_result == false : true)"
-                [options]="this.tocInitiativeOutcomeListsSE.outcomeLevelList|outcomeLevelFilter:2" label="Outcome level"
-                [editable]="editable"
+        <div style="max-width: 250px;"
+            *ngIf="this.showOutcomeLevel && (resultLevelId == 1 ? this.initiative?.planned_result == false : true)">
+            <app-pr-select [options]="this.tocInitiativeOutcomeListsSE.outcomeLevelList|outcomeLevelFilter:2"
+                label="Outcome level" [editable]="editable"
                 [disabled]="(resultLevelId == 1 ? true : this.initiative?.planned_result == false) || !this.editable"
                 optionLabel="name" optionValue="toc_level_id" placeholder="Select outcome level"
                 [(ngModel)]="initiative.toc_level_id" (selectOptionEvent)="indicatorView = false">
