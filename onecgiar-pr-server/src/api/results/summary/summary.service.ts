@@ -711,7 +711,9 @@ export class SummaryService {
           },
           relations: {
             obj_result_institution: {
-              obj_institutions: true
+              obj_institutions: {
+                obj_institution_type_code: true,
+              }
             }
           }
         });
