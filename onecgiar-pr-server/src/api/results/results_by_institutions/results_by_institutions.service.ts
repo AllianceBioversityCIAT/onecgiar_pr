@@ -18,6 +18,7 @@ import { ResultsKnowledgeProductInstitutionRepository } from '../results-knowled
 import { IsNull } from 'typeorm';
 import { MQAPInstitutionDto } from './dto/mqap-institutions.dto';
 import { InstitutionRoleEnum } from './entities/institution_role.enum';
+import { ResultInstitutionsBudgetRepository } from '../result_budget/repositories/result_institutions_budget.repository';
 
 @Injectable()
 export class ResultsByInstitutionsService {
@@ -30,6 +31,7 @@ export class ResultsByInstitutionsService {
     private readonly _userRepository: UserRepository,
     private readonly _resultKnowledgeProductRepository: ResultsKnowledgeProductsRepository,
     private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
+    private readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
   ) {}
 
   create(createResultsByInstitutionDto: CreateResultsByInstitutionDto) {
@@ -287,6 +289,12 @@ export class ResultsByInstitutionsService {
             institutionsNew.is_active = true;
             const responseInstitution =
               await this._resultByIntitutionsRepository.save(institutionsNew);
+
+            await this._resultInstitutionsBudgetRepository.save({
+              non_pooled_projetct_id: institutionsNew.id,
+              created_by: user.id,
+              last_updated_by: user.id,
+            });
 
             if (knowledgeProduct) {
               const kpInstitution =

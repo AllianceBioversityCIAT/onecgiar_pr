@@ -679,7 +679,7 @@ export class SummaryService {
         where: {
           results_id: resultId,
           is_active: true,
-          non_pooled_project_type_id: 2,
+          non_pooled_project_type_id: 1,
         },
       });
 
