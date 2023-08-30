@@ -291,7 +291,7 @@ export class ResultsByInstitutionsService {
               await this._resultByIntitutionsRepository.save(institutionsNew);
 
             await this._resultInstitutionsBudgetRepository.save({
-              non_pooled_projetct_id: institutionsNew.id,
+              result_institution_id: institutionsNew.id,
               created_by: user.id,
               last_updated_by: user.id,
             });

@@ -26,7 +26,9 @@ export class CreateInnovationDevDto {
   public reference_materials!: Evidence[];
   public pictures!: Evidence[];
   public innovatonUse: innovatonUseInterface;
-  public investment: investementInterface;
+  public initiative_expected_investment: ResultInitiativeBudget[];
+  public bilateral_expected_investment: NonPooledProjectBudget[];
+  public institutions_expected_investment: ResultInstitutionsBudget[];
 }
 export interface SubOption {
   result_question_id: number;
@@ -58,10 +60,4 @@ export interface innovatonUseInterface {
   actors: ResultActor[];
   organization: ResultsByInstitutionType[];
   measures: ResultIpMeasure[];
-}
-
-export interface investementInterface {
-  initiative_expected_investment: ResultInitiativeBudget[];
-  bilateral_expected_investment: NonPooledProjectBudget[];
-  institutions_expected_investment: ResultInstitutionsBudget[];
 }

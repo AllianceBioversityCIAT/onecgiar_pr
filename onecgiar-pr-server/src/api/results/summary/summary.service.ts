@@ -590,6 +590,10 @@ export class SummaryService {
       await saveEvidence(createInnovationDevDto.pictures, 3);
       await saveEvidence(createInnovationDevDto.reference_materials, 4);
 
+      await this.saveInitiativeInvestment(resultId, user.id, createInnovationDevDto);
+      await this.saveBillateralInvestment(resultId, user.id, createInnovationDevDto);
+      await this.savePartnerInvestment(user.id, createInnovationDevDto);
+
       await this.saveAnticepatedInnoUser(
         resultId,
         user.id,
@@ -699,22 +703,27 @@ export class SummaryService {
           resultId,
           2,
         );
-      const intitutins_budget =
+      const institutions_expected_investment =
         await this._resultInstitutionsBudgetRepository.find({
           where: {
             result_institution_id: In(institutions.map((el) => el.id)),
             is_active: true,
           },
+          relations: {
+            obj_result_institution: {
+              obj_institutions: true
+            }
+          }
         });
 
-      const institutions_expected_investment = institutions.map((el) => {
-        return {
-          institution: el,
-          budget: intitutins_budget.filter(
-            (b) => b.result_institution_id == el.id,
-          ),
-        };
-      });
+      // const institutions_expected_investment = institutions.map((el) => {
+      //   return {
+      //     institution: el,
+      //     budget: institutions_investment.filter(
+      //       (b) => b.result_institution_id == el.id,
+      //     ),
+      //   };
+      // });
 
       return {
         response: {
@@ -1099,12 +1108,13 @@ export class SummaryService {
 
   async saveInitiativeInvestment(
     resultId: number,
-    user: TokenDto,
-    { investment: inv }: CreateInnovationDevDto,
+    user: number,
+    { initiative_expected_investment: inv }: CreateInnovationDevDto,
   ) {
     try {
-      if (inv?.initiative_expected_investment?.length) {
-        const initiativeInvestments = inv.initiative_expected_investment;
+      if (inv?.length) {
+        const initiativeInvestments = inv;
+        console.log("🚀 ~ file: summary.service.ts:1108 ~ SummaryService ~ initiativeInvestments:", initiativeInvestments)
 
         for (const initiative of initiativeInvestments) {
           const ibr = await this._resultByInitiativeRepository.findOne({
@@ -1127,7 +1137,7 @@ export class SummaryService {
             if (rie) {
               rie.kind_cash = initiative.kind_cash;
               rie.is_determined = initiative.is_determined;
-              rie.last_updated_by = user.id;
+              rie.last_updated_by = user;
 
               await this._resultInitiativesBudgetRepository.save(rie);
             } else {
@@ -1135,8 +1145,8 @@ export class SummaryService {
                 result_initiative_id: ibr.id,
                 kind_cash: initiative.kind_cash,
                 is_determined: initiative.is_determined,
-                created_by: user.id,
-                last_updated_by: user.id,
+                created_by: user,
+                last_updated_by: user,
               });
 
               await this._resultInitiativesBudgetRepository.save(newRie);
@@ -1155,12 +1165,12 @@ export class SummaryService {
 
   async saveBillateralInvestment(
     resultId: number,
-    user: TokenDto,
-    { investment: inv }: CreateInnovationDevDto,
+    user: number,
+    { bilateral_expected_investment: inv }: CreateInnovationDevDto,
   ) {
     try {
-      if (inv?.bilateral_expected_investment?.length) {
-        const { bilateral_expected_investment: bei } = inv;
+      if (inv?.length) {
+        const bei = inv;
 
         bei.forEach(async (i) => {
           const npp = await this._nonPooledProjectRepository.findOne({
@@ -1185,7 +1195,7 @@ export class SummaryService {
                 {
                   kind_cash: i.kind_cash,
                   is_determined: i.is_determined,
-                  last_updated_by: user.id,
+                  last_updated_by: user,
                 },
               );
             } else {
@@ -1193,8 +1203,8 @@ export class SummaryService {
                 non_pooled_projetct_id: npp.id,
                 kind_cash: i.kind_cash,
                 is_determined: i.is_determined,
-                created_by: user.id,
-                last_updated_by: user.id,
+                created_by: user,
+                last_updated_by: user,
               });
             }
           }
@@ -1210,12 +1220,12 @@ export class SummaryService {
   }
 
   async savePartnerInvestment(
-    user: TokenDto,
-    { investment: inv }: CreateInnovationDevDto,
+    user: number,
+    { institutions_expected_investment: inv }: CreateInnovationDevDto,
   ) {
     try {
-      if (inv?.institutions_expected_investment?.length) {
-        const { institutions_expected_investment: iei } = inv;
+      if (inv?.length) {
+        const iei = inv;
 
         for (const el of iei) {
           let existBud: ResultInstitutionsBudget = null;
@@ -1236,7 +1246,7 @@ export class SummaryService {
             await this._resultInstitutionsBudgetRepository.update(
               el?.result_institutions_budget_id,
               {
-                last_updated_by: user?.id,
+                last_updated_by: user,
                 is_determined: el?.is_determined,
                 kind_cash: el?.kind_cash,
               },
@@ -1244,10 +1254,10 @@ export class SummaryService {
           } else {
             await this._resultInstitutionsBudgetRepository.save({
               result_institution_id: el?.result_institutions_budget_id,
-              last_updated_by: user?.id,
+              last_updated_by: user,
               is_determined: el?.is_determined,
               kind_cash: el?.kind_cash,
-              created_by: user.id,
+              created_by: user,
             });
           }
         }
