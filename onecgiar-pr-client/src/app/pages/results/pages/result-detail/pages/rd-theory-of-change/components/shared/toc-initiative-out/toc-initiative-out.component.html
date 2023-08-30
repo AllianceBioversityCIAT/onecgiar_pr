@@ -51,25 +51,20 @@
     </div>
     <hr class="divider-20">
 </div>
-<div *ngIf="indicatorView">
-    <app-alert-status description="The selected ToC element does not have any indicators associated with it."
-        *ngIf="!this.theoryOfChangesServices.body[indexYesorNo].targetsIndicators.length"></app-alert-status>
-    <app-pr-field-header label="{{narrativeTypeResult()}}" [required]="false"
-        *ngIf="this.theoryOfChangesServices.body[indexYesorNo].targetsIndicators.length">
-    </app-pr-field-header>
-    <app-target-indicator [initiative]="indicator" [disabledInputs]="disabledInput"
-        *ngFor="let indicator of this.theoryOfChangesServices.body[indexYesorNo].targetsIndicators"></app-target-indicator>
-    <div *ngIf="isIpsr == false">
-        <app-pr-yes-or-not
-            label="Do you want to review relations with AA Outcomes, IA, SDG and related Targets defined in your TOC for this result?"
-            [(ngModel)]="this.theoryOfChangesServices.body[indexYesorNo].is_sdg_action_impact"></app-pr-yes-or-not>
-        <div *ngIf="this.theoryOfChangesServices.body[indexYesorNo].is_sdg_action_impact">
-            <app-action-area-outcome
-                [body]="this.theoryOfChangesServices.body[indexYesorNo].actionAreaOutcome"></app-action-area-outcome>
-            <app-impact-area-targets [body]="this.theoryOfChangesServices.body[indexYesorNo].impactAreasTargets"
-                [impactAreaRequid]="true"></app-impact-area-targets>
-            <app-sdg-targets [body]="this.theoryOfChangesServices.body[indexYesorNo].sdgTargest"
-                [sdgRequid]="true"></app-sdg-targets>
-        </div>
+<div *ngIf="indicatorView" class="in-construction">
+    <img src="assets/work-in-progress.png" alt="" class="img-construction">
+    <app-alert-status description="The selected ToC element does not have any indicators associated with it." *ngIf="!this.theoryOfChangesServices.body[indexYesorNo].targetsIndicators.length"></app-alert-status>
+    <app-pr-field-header
+    label="{{narrativeTypeResult()}}"
+    [required]="false"
+    *ngIf="this.theoryOfChangesServices.body[indexYesorNo].targetsIndicators.length">
+</app-pr-field-header>
+<app-target-indicator  [initiative]="indicator" [disabledInputs]="disabledInput" *ngFor="let indicator of this.theoryOfChangesServices.body[indexYesorNo].targetsIndicators"></app-target-indicator>
+   <div *ngIf="isIpsr == false">
+    <app-pr-yes-or-not label="Do you want to review relations with AA Outcomes, IA, SDG and related Targets defined in your TOC for this result?"  [(ngModel)]="this.theoryOfChangesServices.body[indexYesorNo].is_sdg_action_impact"></app-pr-yes-or-not>
+    <div *ngIf="this.theoryOfChangesServices.body[indexYesorNo].is_sdg_action_impact">
+    <app-action-area-outcome [body]="this.theoryOfChangesServices.body[indexYesorNo].actionAreaOutcome"></app-action-area-outcome>
+    <app-impact-area-targets  [body]="this.theoryOfChangesServices.body[indexYesorNo].impactAreasTargets" [impactAreaRequid]="true"></app-impact-area-targets>
+    <app-sdg-targets  [body]="this.theoryOfChangesServices.body[indexYesorNo].sdgTargest" [sdgRequid]="true"></app-sdg-targets>
     </div>
 </div>
