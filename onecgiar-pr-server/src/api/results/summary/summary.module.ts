@@ -19,6 +19,11 @@ import { EvidencesRepository } from '../evidences/evidences.repository';
 import { ResultActorRepository } from '../result-actors/repositories/result-actors.repository';
 import { ResultByIntitutionsTypeRepository } from '../results_by_institution_types/result_by_intitutions_type.repository';
 import { ResultIpMeasureRepository } from '../../ipsr/result-ip-measures/result-ip-measures.repository';
+import { NonPooledProjectRepository } from '../non-pooled-projects/non-pooled-projects.repository';
+import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/non_pooled_proyect_budget.repository';
+import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/result_initiative_budget.repository';
+import { ResultInstitutionsBudgetRepository } from '../result_budget/repositories/result_institutions_budget.repository';
+import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
 
 @Module({
   controllers: [SummaryController],
@@ -40,7 +45,12 @@ import { ResultIpMeasureRepository } from '../../ipsr/result-ip-measures/result-
     ReturnResponse,
     ResultActorRepository,
     ResultByIntitutionsTypeRepository,
-    ResultIpMeasureRepository
+    ResultIpMeasureRepository,
+    ResultInitiativeBudgetRepository,
+    ResultByInitiativesRepository,
+    NonPooledProjectBudgetRepository,
+    NonPooledProjectRepository,
+    ResultInstitutionsBudgetRepository,
   ],
   exports: [ResultsInnovationsUseRepository],
 })

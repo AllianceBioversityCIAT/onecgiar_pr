@@ -16,6 +16,9 @@ export class InnovationDevInfoBody {
   public reference_materials: linkType[] = [{ link: '' }];
   public innovatonUse: InnovatonUse = new InnovatonUse();
   public innovation_pdf: boolean;
+  public initiative_expected_investment: Initiative_expected_investment[] = [];
+  public bilateral_expected_investment: Bilateral_expected_investment[] = [];
+  public institutions_expected_investment: Institutions_expected_investment[] = [];
 }
 
 class InnovatonUse {
@@ -79,4 +82,93 @@ export class linkType {
   creation_date?: string = '';
   last_updated_date?: string = '';
   evidence_type_id?: string = '';
+}
+
+class Bilateral_expected_investment {
+  public is_active: boolean = false;
+  public created_date: string = '';
+  public last_updated_date: string = '';
+  public created_by: string = '';
+  public last_updated_by: string = '';
+  public non_pooled_projetct_budget_id: string = '';
+  public non_pooled_projetct_id: number = 0;
+  public in_kind?: any;
+  public in_cash?: any;
+  public kind_cash?: any;
+  public is_determined?: any;
+  public obj_non_pooled_projetct: ObjNonPooledProjetct = new ObjNonPooledProjetct();
+}
+
+class ObjNonPooledProjetct {
+  public id: number = 0;
+  public grant_title: string = '';
+  public center_grant_id: string = '';
+  public results_id: string = '';
+  public lead_center_id: string = '';
+  public funder_institution_id: number = 0;
+  public is_active: boolean = false;
+  public created_by: number = 0;
+  public created_date: string = '';
+  public last_updated_by: number = 0;
+  public last_updated_date: string = '';
+  public non_pooled_project_type_id: string = '';
+}
+
+class Initiative_expected_investment {
+  public is_active: boolean = false;
+  public created_date: string = '';
+  public last_updated_date: string = '';
+  public created_by: string = '';
+  public last_updated_by: string = '';
+  public result_initiative_budget_id: string = '';
+  public result_initiative_id: number = 0;
+  public current_year?: any;
+  public next_year?: any;
+  public kind_cash?: any;
+  public is_determined?: any;
+  public obj_result_initiative: ObjResultInitiative = new ObjResultInitiative();
+}
+
+class ObjResultInitiative {
+  public id: number = 0;
+  public result_id: string = '';
+  public initiative_id: number = 0;
+  public initiative_role_id: string = '';
+  public is_active: boolean = false;
+  public created_by: number = 0;
+  public created_date: string = '';
+  public last_updated_by: number = 0;
+  public last_updated_date: string = '';
+  public obj_initiative: ObjInitiative = new ObjInitiative();
+}
+
+class ObjInitiative {
+  public id: number = 0;
+  public official_code: string = '';
+  public name: string = '';
+  public short_name: string = '';
+  public active: boolean = false;
+  public toc_id: string = '';
+}
+
+class Institutions_expected_investment {
+  public institution: Institution = new Institution();
+  public budget: any[] = [];
+  public kind_cash?: any;
+  public is_determined?: any;
+}
+
+class Institution {
+  public id: string = '';
+  public result_id: string = '';
+  public institutions_id: number = 0;
+  public institution_roles_id: string = '';
+  public is_active: number = 0;
+  public created_date: string = '';
+  public created_by: number = 0;
+  public last_updated_date: string = '';
+  public last_updated_by: number = 0;
+  public institutions_name: string = '';
+  public institutions_acronym: string = '';
+  public institutions_type_name: string = '';
 }

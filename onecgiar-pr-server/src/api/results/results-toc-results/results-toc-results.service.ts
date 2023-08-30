@@ -26,6 +26,7 @@ import { CreateTocShareResult } from '../share-result-request/dto/create-toc-sha
 import { ShareResultRequestRepository } from '../share-result-request/share-result-request.repository';
 import { log } from 'handlebars';
 import { ResultsTocResultIndicatorsRepository } from './results-toc-results-indicators.repository';
+import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/non_pooled_proyect_budget.repository';
 
 @Injectable()
 export class ResultsTocResultsService {
@@ -45,6 +46,7 @@ export class ResultsTocResultsService {
     private readonly _shareResultRequestService: ShareResultRequestService,
     private readonly _shareResultRequestRepository: ShareResultRequestRepository,
     private readonly _resultsTocResultIndicator: ResultsTocResultIndicatorsRepository,
+    private readonly _resultBilateralBudgetRepository: NonPooledProjectBudgetRepository,
   ) {}
 
   async create(
@@ -182,7 +184,29 @@ export class ResultsTocResultsService {
           }
         }
 
-        await this._nonPooledProjectRepository.save(resultTocResultArray);
+        const npps = await this._nonPooledProjectRepository.save(
+          resultTocResultArray,
+        );
+        for (const npp of npps) {
+          const initBudget =
+            await this._resultBilateralBudgetRepository.findOne({
+              where: {
+                non_pooled_projetct_id: npp.id,
+              },
+            });
+          if (!initBudget) {
+            await this._resultBilateralBudgetRepository.save({
+              non_pooled_projetct_id: npp.id,
+              created_by: user.id,
+              last_updated_by: user.id,
+            });
+          } else {
+            await this._resultBilateralBudgetRepository.update(npp.id, {
+              is_active: true,
+              last_updated_by: user.id,
+            });
+          }
+        }
       } else {
         await this._nonPooledProjectRepository.updateNPProjectById(
           result_id,

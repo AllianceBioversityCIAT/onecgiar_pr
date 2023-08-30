@@ -2,24 +2,23 @@
     <app-pr-field-header
         label="Estimation of total USD-value of pooled investment by CGIAR initiatives during the reporting period"
         [description]="headerDescriptions().n1"></app-pr-field-header>
-
     <table>
         <tr>
             <th>Initiative</th>
             <th>Total USD Value <br> <span>(in-cash + in-kind)</span> </th>
             <th></th>
         </tr>
-        <tr *ngFor="let item of [{},{}]">
-            <td>{{'official_code'}} -
-                {{'name'}}</td>
+        <tr *ngFor="let item of body.initiative_expected_investment">
+            <td> <strong>{{item.obj_result_initiative.obj_initiative.official_code}}</strong> -
+                {{item.obj_result_initiative.obj_initiative.name}}</td>
             <td>
-                <app-pr-input placeholder="Write some..." type="currency"
+                <app-pr-input placeholder="Write some..." type="currency" [(ngModel)]="item.kind_cash"
                     [noDataText]="'item.is_determined' ? 'Not applicable':'Not provided'" [required]="false">
                 </app-pr-input>
             </td>
 
             <td>
-                <app-pr-radio-button optionLabel="name" optionValue="id"
+                <app-pr-radio-button optionLabel="name" optionValue="id" [(ngModel)]="item.is_determined"
                     [options]="[{name:'This is yet to be determined',id:true}]">
                 </app-pr-radio-button>
             </td>
@@ -38,17 +37,16 @@
             <th>Total USD Value <br> <span>(in-cash + in-kind)</span> </th>
             <th></th>
         </tr>
-        <tr *ngFor="let item of [{},{}]">
-            <td>{{'official_code'}} -
-                {{'name'}}</td>
+        <tr *ngFor="let item of body.bilateral_expected_investment">
+            <td>{{item?.obj_non_pooled_projetct?.grant_title}}</td>
             <td>
-                <app-pr-input placeholder="Write some..." type="currency"
+                <app-pr-input placeholder="Write some..." type="currency" [(ngModel)]="item.kind_cash"
                     [noDataText]="'item.is_determined' ? 'Not applicable':'Not provided'" [required]="false">
                 </app-pr-input>
             </td>
 
             <td>
-                <app-pr-radio-button optionLabel="name" optionValue="id"
+                <app-pr-radio-button optionLabel="name" optionValue="id" [(ngModel)]="item.is_determined"
                     [options]="[{name:'This is yet to be determined',id:true}]">
                 </app-pr-radio-button>
             </td>
@@ -66,17 +64,21 @@
             <th>Total USD Value <br> <span>(in-cash + in-kind)</span> </th>
             <th></th>
         </tr>
-        <tr *ngFor="let item of [{},{}]">
-            <td>{{'official_code'}} -
-                {{'name'}}</td>
+        <tr *ngFor="let item of body.institutions_expected_investment">
             <td>
-                <app-pr-input placeholder="Write some..." type="currency"
+                <div class="name">{{item['obj_result_institution']?.obj_institutions.name}}</div>
+                <div class="type"> <strong>Institution type:</strong>
+                    {{item['obj_result_institution']?.obj_institutions?.obj_institution_type_code.name}}
+                </div>
+            </td>
+            <td>
+                <app-pr-input placeholder="Write some..." type="currency" [(ngModel)]="item.kind_cash"
                     [noDataText]="'item.is_determined' ? 'Not applicable':'Not provided'" [required]="false">
                 </app-pr-input>
             </td>
 
             <td>
-                <app-pr-radio-button optionLabel="name" optionValue="id"
+                <app-pr-radio-button optionLabel="name" optionValue="id" [(ngModel)]="item.is_determined"
                     [options]="[{name:'This is yet to be determined',id:true}]">
                 </app-pr-radio-button>
             </td>
