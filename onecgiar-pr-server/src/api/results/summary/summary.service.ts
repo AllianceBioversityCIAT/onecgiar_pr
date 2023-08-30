@@ -1125,8 +1125,7 @@ export class SummaryService {
               });
 
             if (rie) {
-              rie.current_year = initiative.current_year;
-              rie.next_year = initiative.next_year;
+              rie.kind_cash = initiative.kind_cash;
               rie.is_determined = initiative.is_determined;
               rie.last_updated_by = user.id;
 
@@ -1134,8 +1133,7 @@ export class SummaryService {
             } else {
               const newRie = this._resultInitiativesBudgetRepository.create({
                 result_initiative_id: ibr.id,
-                current_year: initiative.current_year,
-                next_year: initiative.next_year,
+                kind_cash: initiative.kind_cash,
                 is_determined: initiative.is_determined,
                 created_by: user.id,
                 last_updated_by: user.id,
@@ -1185,8 +1183,7 @@ export class SummaryService {
               await this._resultBilateralBudgetRepository.update(
                 rbb.non_pooled_projetct_budget_id,
                 {
-                  in_kind: i.in_kind,
-                  in_cash: i.in_cash,
+                  kind_cash: i.kind_cash,
                   is_determined: i.is_determined,
                   last_updated_by: user.id,
                 },
@@ -1194,8 +1191,7 @@ export class SummaryService {
             } else {
               await this._resultBilateralBudgetRepository.save({
                 non_pooled_projetct_id: npp.id,
-                in_kind: i.in_kind,
-                in_cash: i.in_cash,
+                kind_cash: i.kind_cash,
                 is_determined: i.is_determined,
                 created_by: user.id,
                 last_updated_by: user.id,
@@ -1213,7 +1209,7 @@ export class SummaryService {
     }
   }
 
-  async savePartnertInvestment(
+  async savePartnerInvestment(
     user: TokenDto,
     { investment: inv }: CreateInnovationDevDto,
   ) {
@@ -1221,7 +1217,7 @@ export class SummaryService {
       if (inv?.institutions_expected_investment?.length) {
         const { institutions_expected_investment: iei } = inv;
 
-        iei.forEach(async (el) => {
+        for (const el of iei) {
           let existBud: ResultInstitutionsBudget = null;
           if (el?.result_institutions_budget_id) {
             existBud = await this._resultInstitutionsBudgetRepository.findOne({
@@ -1242,8 +1238,7 @@ export class SummaryService {
               {
                 last_updated_by: user?.id,
                 is_determined: el?.is_determined,
-                in_kind: el?.in_kind,
-                in_cash: el?.in_cash,
+                kind_cash: el?.kind_cash,
               },
             );
           } else {
@@ -1251,12 +1246,11 @@ export class SummaryService {
               result_institution_id: el?.result_institutions_budget_id,
               last_updated_by: user?.id,
               is_determined: el?.is_determined,
-              in_kind: el?.in_kind,
-              in_cash: el?.in_cash,
+              kind_cash: el?.kind_cash,
               created_by: user.id,
             });
           }
-        });
+        }
       }
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
