@@ -1,0 +1,13 @@
+<app-pr-field-header [label]="options?.innovation_team_diversity?.question_text"
+    [description]="options?.innovation_team_diversity?.question_description"></app-pr-field-header>
+
+<div class="paddingLeft20">
+    <app-pr-radio-button
+        (selectOptionEvent)="innovationDevInfoUtilsSE.mapBoolean( this.options?.innovation_team_diversity)"
+        [verticalAlignment]="true" [options]="this.options?.innovation_team_diversity
+    ?.options" optionLabel="question_text" optionValue="result_question_id"
+        subLabel="Multiple answers can be selected."
+        [checkboxConfig]="{ listAttr: 'subOptions', optionLabel: 'question_text', optionValue: 'answer_boolean', optionTextValue: 'answer_text'}"
+        [(ngModel)]="this.options?.innovation_team_diversity['radioButtonValue']">
+    </app-pr-radio-button>
+</div>

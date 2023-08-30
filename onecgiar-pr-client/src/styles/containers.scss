@@ -23,6 +23,21 @@
     gap: 20px;
 }
 
+.flex-no-wrap {
+    display: flex;
+    flex-wrap: nowrap;
+    width: 100%;
+    gap: 20px;
+
+    &>* {
+        flex: 1;
+        max-width: none;
+    }
+
+}
+
+
+
 .shadow-1 {
     @extend %global-shadow-1;
 }
@@ -48,6 +63,10 @@
     padding: 20px 20px;
     margin-top: 20px;
     border-radius: 5px;
+}
+
+.paddingLeft20 {
+    padding-left: 20px;
 }
 
 @media only screen and (max-width: 1400px) {

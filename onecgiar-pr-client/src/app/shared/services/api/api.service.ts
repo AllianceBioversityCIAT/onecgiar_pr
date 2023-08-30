@@ -65,6 +65,10 @@ export class ApiService {
 
       // pass attributes to tawk.to on widget load
       window['Tawk_API'].onLoad = () => {
+        console.log({
+          name: this.authSE.localStorageUser.user_name,
+          email: this.authSE.localStorageUser.email
+        });
         window['Tawk_API'].setAttributes(
           {
             name: this.authSE.localStorageUser.user_name,

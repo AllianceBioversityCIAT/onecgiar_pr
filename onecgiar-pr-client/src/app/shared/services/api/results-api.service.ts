@@ -280,7 +280,7 @@ export class ResultsApiService {
 
   POST_toc(body: TheoryOfChangeBody) {
     console.log(body);
-    
+
     return this.http.post<any>(`${this.apiBaseUrl}toc/create/toc/result/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
@@ -756,8 +756,6 @@ export class ResultsApiService {
   GET_versioning(status, modules) {
     return this.http.get<any>(`${environment.apiBaseUrl}api/versioning?status=${status}&module=${modules}`).pipe(
       map(resp => {
-        //(resp);
-        console.log(resp);
         resp?.response.map(phase => (phase.phase_name_status = `${phase.phase_name} - (${phase.status ? 'Open' : 'Closed'})`));
         return resp;
       })
@@ -786,6 +784,10 @@ export class ResultsApiService {
 
   GET_resultYears() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results/years`);
+  }
+
+  GET_questionsInnovationDevelopment() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/questions/innovation-development/${this.currentResultId}`);
   }
 
   GET_investmentDiscontinuedOptions() {
