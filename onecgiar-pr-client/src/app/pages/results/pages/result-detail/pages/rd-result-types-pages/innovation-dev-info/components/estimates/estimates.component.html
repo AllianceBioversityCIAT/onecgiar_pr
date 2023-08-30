@@ -66,8 +66,9 @@
         </tr>
         <tr *ngFor="let item of body.institutions_expected_investment">
             <td>
-                <div class="name">{{item.institution.institutions_name}}</div>
-                <div class="type"> <strong>Institution type:</strong> {{item?.institution?.institutions_type_name}}
+                <div class="name">{{item['obj_result_institution']?.obj_institutions.name}}</div>
+                <div class="type"> <strong>Institution type:</strong>
+                    {{item['obj_result_institution']?.obj_institutions?.obj_institution_type_code.name}}
                 </div>
             </td>
             <td>
