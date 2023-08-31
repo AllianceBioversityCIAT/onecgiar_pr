@@ -1152,7 +1152,8 @@ export class InnovationPathwayStepOneService {
           const whereOptions: any = {
             actor_type_id: el.actor_type_id,
             result_id: result.id,
-            result_actors_id: el.result_actors_id,
+            result_actors_id: el.result_actors_id ?? IsNull(),
+            is_active: true,
           };
 
           if (!el?.result_actors_id) {
@@ -1162,11 +1163,9 @@ export class InnovationPathwayStepOneService {
                   el?.other_actor_type || IsNull();
                 break;
             }
-            delete whereOptions.result_actors_id;
           } else {
             delete whereOptions.actor_type_id;
           }
-
           actorExists = await this._resultActorRepository.findOne({
             where: whereOptions,
           });
