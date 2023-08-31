@@ -44,7 +44,7 @@ export class ResultDetailComponent {
     this.api.resultsSE.currentResultPhase = this.activatedRoute.snapshot.queryParamMap.get('phase');
     await this.GET_resultIdToCode();
     await this.currentResultSE.GET_resultById();
-    await this.greenChecksSE.updateGreenChecks();
+    await this.greenChecksSE.getGreenChecks();
     this.GET_versioningResult();
 
     this.shareRequestModalSE.inNotifications = false;

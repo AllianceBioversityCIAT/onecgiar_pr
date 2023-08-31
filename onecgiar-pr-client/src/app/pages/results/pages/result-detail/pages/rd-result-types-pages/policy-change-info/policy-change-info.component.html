@@ -12,7 +12,7 @@
             [(ngModel)]="innovationUseInfoBody.policy_type_id">
         </app-pr-select>
         <app-pr-input label="USD amount" type="currency" description="USD amount" placeholder="0"
-            *ngIf="innovationUseInfoBody.policy_type_id == 1" [required]="false" [(ngModel)]="cantidad">
+            *ngIf="innovationUseInfoBody.policy_type_id == 1" [required]="false" [(ngModel)]="innovationUseInfoBody.amount">
             <!-- (change)="updateValue($any($event.target).value)" -->
         </app-pr-input>
 

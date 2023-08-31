@@ -280,7 +280,7 @@ export class ResultsApiService {
 
   POST_toc(body: TheoryOfChangeBody) {
     console.log(body);
-    
+
     return this.http.post<any>(`${this.apiBaseUrl}toc/create/toc/result/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
@@ -311,8 +311,24 @@ export class ResultsApiService {
     );
   }
 
+  GET_centers() {
+    return this.http.get<any>(`${this.apiBaseUrl}get/centers/${this.currentResultId}`);
+  }
+
   Get_indicator(id_toc, init) {
-    return this.http.get<any>(`${this.apiBaseUrl}toc/get/indicator/${id_toc}/result/${this.currentResultId}/initiative/${init}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+    if(this.currentResultId == null){
+      return this.http.get<any>(`${this.apiBaseUrl}toc/get/indicator/${id_toc}/result/${this.ipsrDataControlSE.resultInnovationId}/initiative/${init}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+    }else{
+      return this.http.get<any>(`${this.apiBaseUrl}toc/get/indicator/${id_toc}/result/${this.currentResultId}/initiative/${init}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+    }
+    
+  }
+  get_vesrsionDashboard(id_toc, init) {
+    return this.http.get<any>(`${this.apiBaseUrl}toc/get/version/${this.currentResultId}/initiative/${init}/resultToc/${id_toc}`);
+  }
+
+  GET_resultActionArea(resultId, initiative) {
+    return this.http.get<any>(`${this.apiBaseUrl}toc/get/result/${resultId}/initiative/${initiative}`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   PATCH_innovationUse(body) {
@@ -788,6 +804,10 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results/years`);
   }
 
+  GET_questionsInnovationDevelopment() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/questions/innovation-development/${this.currentResultId}`);
+  }
+  
   GET_investmentDiscontinuedOptions() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results/investment-discontinued-options`);
   }
