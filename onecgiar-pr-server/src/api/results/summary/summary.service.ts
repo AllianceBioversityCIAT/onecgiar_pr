@@ -246,6 +246,8 @@ export class SummaryService {
         newCapDev.result_id = resultId;
         newCapDev.capdev_delivery_method_id = capdev_delivery_method_id;
         newCapDev.capdev_term_id = capdev_term_id;
+        newCapDev.is_attending_for_organization =
+          is_attending_for_organization;
         CapDevData = await this._resultsCapacityDevelopmentsRepository.save(
           newCapDev,
         );

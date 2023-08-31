@@ -242,27 +242,27 @@ export class ResultsByInstitutionsService {
                   i.institutions_id,
               ),
         );
-
-        /*
-          in case we have additional contributors, we need to merge them with the 
-          mqap manually mapped institutions
-        */
-        data.institutions = [
-          ...(data.institutions ?? []).map((i) => {
-            i['institution_roles_id'] =
-              InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS;
-            return i;
-          }),
-          ...data.mqap_institutions
-            .filter((ma) => ma.user_matched_institution?.institutions_id)
-            .map((ma) => {
-              const institution = ma.user_matched_institution;
-              institution['institution_mqap_id'] =
-                ma.result_kp_mqap_institution_id;
-              return institution;
-            }),
-        ];
       }
+
+      /*
+        in case we have additional contributors, we need to merge them with the 
+        mqap manually mapped institutions
+      */
+      data.institutions = [
+        ...(data.institutions ?? []).map((i) => {
+          i['institution_roles_id'] =
+            InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS;
+          return i;
+        }),
+        ...data.mqap_institutions
+          .filter((ma) => ma.user_matched_institution?.institutions_id)
+          .map((ma) => {
+            const institution = ma.user_matched_institution;
+            institution['institution_mqap_id'] =
+              ma.result_kp_mqap_institution_id;
+            return institution;
+          }),
+      ];
 
       const result =
         await this._resultByIntitutionsRepository.updateIstitutions(

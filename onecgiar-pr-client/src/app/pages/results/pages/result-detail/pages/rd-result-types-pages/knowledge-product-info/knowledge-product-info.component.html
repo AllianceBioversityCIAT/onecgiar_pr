@@ -6,6 +6,9 @@
     <app-alert-status
         description="In case some of the metadata fields are incorrect, please get in touch with the library staff of your Center to update them in the repository. Before the end of the reporting period, metadata will be automatically refreshed on this page.">
     </app-alert-status>
+    <app-alert-status
+        description="Some information in this section is automatically collected from external sources such as the Web of Science, Scopus, and Unpaywall using the DOI (Digital Object Identifier) linked to this knowledge product in CGSpace. In the case of any discrepancies, the CGIAR Quality Assurance team will manually validate the record. ">
+    </app-alert-status>
 
     <app-pr-input [(ngModel)]="knowledgeProductBody.handle" label="Handle" [required]="false" [disabled]="true">
     </app-pr-input>
@@ -81,7 +84,7 @@
 
 
     <app-pr-field-header label="FAIR score for this knowledge product"
-        description="FAIR (findability, accessibility, interoperability, and reusability) scores are calculated based on the presence or absence of metadata in the CGSpace repository. If you wish to improve these scores, please liaise with your Center librarian."
+        [description]="this.fairGuideline"
         [required]="false"></app-pr-field-header>
 
     <div class="circle-progress-group">

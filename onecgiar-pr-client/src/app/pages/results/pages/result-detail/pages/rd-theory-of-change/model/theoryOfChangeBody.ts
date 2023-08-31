@@ -11,6 +11,7 @@ export class TheoryOfChangeBody {
   bodyNewTheoryOfChanges: any[];
   impactsTarge: any[];
   sdgTargets: any[];
+  bodyActionArea: any[];
 }
 interface ResultTocImpactsInterface {
   id: number;

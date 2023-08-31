@@ -100,6 +100,14 @@ export class ResultsTocResult {
   mapping_impact: boolean;
 
   @Column({
+    name: 'is_sdg_action_impact',
+    type: 'boolean',
+    nullable: false,
+    default: false,
+  })
+  is_sdg_action_impact: boolean;
+
+  @Column({
     name: 'is_active',
     type: 'boolean',
     nullable: false,
@@ -132,4 +140,12 @@ export class ResultsTocResult {
     nullable: true,
   })
   last_updated_date!: Date;
+
+  @Column({
+    name: 'version_dashboard_id',
+    type: 'text',
+    nullable: true,
+    
+  })
+  version_dashboard_id: boolean;
 }

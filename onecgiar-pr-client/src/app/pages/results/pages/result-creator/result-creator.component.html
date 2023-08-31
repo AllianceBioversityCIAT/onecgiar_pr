@@ -31,9 +31,7 @@
       </app-pr-radio-button>
 
       <div *ngIf="this.resultLevelSE.resultBody.result_level_id">
-        <app-alert-status *ngIf="isKnowledgeProduct" description="Dear user, please add the handle generated in CGSpace for the knowledge product you wish to report. All metadata will be automatically retrieved by the system and will not be possible to edit in the PRMS. The handle will be checked for validity, and only knowledge products for 2022 will be accepted.<br><br> 
-          Please be aware that the PRMS will accept only knowledge products reported in CGSpace. If you need further support to modify any of the harvested fields contact the librarian of your Center.
-          ">
+        <app-alert-status *ngIf="isKnowledgeProduct" [description]="this.kpAlertDescription">
         </app-alert-status>
 
         <div [ngClass]="{'mqap_sync_title': isKnowledgeProduct}">
