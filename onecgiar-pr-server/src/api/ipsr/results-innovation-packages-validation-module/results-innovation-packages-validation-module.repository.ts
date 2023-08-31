@@ -696,20 +696,30 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                 )
             ) THEN FALSE
             WHEN (
-                rbip.readiness_level_evidence_based IS NULL
-                OR rbip.readiness_level_evidence_based = ''
+                (
+                    rbip.readiness_level_evidence_based IS NULL
+                    OR rbip.readiness_level_evidence_based = ''
+                )
+                AND (
+                    rbip.use_level_evidence_based IS NULL
+                    OR rbip.use_level_evidence_based = ''
+                )
             )
             OR (
-                rbip.use_level_evidence_based IS NULL
-                OR rbip.use_level_evidence_based = ''
-            )
-            OR (
-                rbip.readinees_evidence_link IS NULL
-                OR rbip.readinees_evidence_link = ''
-            )
-            OR (
-                rbip.use_evidence_link IS NULL
-                OR rbip.use_evidence_link = ''
+                (
+                    rbip.readiness_level_evidence_based != 11
+                    AND (
+                        rbip.readinees_evidence_link IS NULL
+                        OR rbip.readinees_evidence_link = ''
+                    )
+                )
+                OR (
+                    rbip.use_level_evidence_based != 11
+                    AND (
+                        rbip.use_evidence_link IS NULL
+                        OR rbip.use_evidence_link = ''
+                    )
+                )
             ) THEN FALSE
             WHEN (
                 (
@@ -895,14 +905,22 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                     AND rbip2.ipsr_role_id = 2
                     AND rbip2.result_innovation_package_id = r.id
                     AND (
-                        rbip2.readiness_level_evidence_based IS NULL
-                        OR rbip2.readiness_level_evidence_based = ''
-                        OR rbip2.use_level_evidence_based IS NULL
-                        OR rbip2.use_level_evidence_based = ''
-                        OR rbip2.readinees_evidence_link IS NULL
-                        OR rbip2.readinees_evidence_link = ''
-                        OR rbip2.use_evidence_link IS NULL
-                        OR rbip2.use_evidence_link = ''
+                        (
+                            rbip2.readiness_level_evidence_based IS NULL
+                            OR rbip2.readiness_level_evidence_based <> 11
+                            AND (
+                                rbip2.readinees_evidence_link IS NULL
+                                OR rbip2.readinees_evidence_link = ''
+                            )
+                        )
+                        OR (
+                            rbip2.use_level_evidence_based IS NULL
+                            OR rbip2.use_level_evidence_based <> 11
+                            AND(
+                                rbip2.use_evidence_link IS NULL
+                                OR rbip2.use_evidence_link = ''
+                            )
+                        )
                     )
             ) > 0 THEN FALSE
             ELSE TRUE
