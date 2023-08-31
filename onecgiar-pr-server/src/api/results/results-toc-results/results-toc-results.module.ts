@@ -23,9 +23,10 @@ import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/
 import { ResultsTocResultIndicatorsRepository } from './results-toc-results-indicators.repository';
 import { ResultsTocSdgTargetRepository } from './result-toc-sdg-target-repository';
 import { ResultsTocImpactAreaTargetRepository } from './result-toc-impact-area-repository';
-import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { ResultsSdgTargetRepository } from './results-sdg-targets.respository';
 import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/non_pooled_proyect_budget.repository';
+import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
+import { ResultsActionAreaOutcomeRepository } from './result-toc-action-area.repository';
 
 @Module({
   controllers: [ResultsTocResultsController],
@@ -51,9 +52,11 @@ import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/
     ResultsTocResultIndicatorsRepository,
     ResultsTocSdgTargetRepository,
     ResultsTocImpactAreaTargetRepository,
+    ResultsSdgTargetRepository,
     RoleByUserRepository,
     ResultsSdgTargetRepository,
-    NonPooledProjectBudgetRepository
+    NonPooledProjectBudgetRepository,
+    ResultsActionAreaOutcomeRepository
   ],
   exports: [ResultsTocResultRepository],
 })

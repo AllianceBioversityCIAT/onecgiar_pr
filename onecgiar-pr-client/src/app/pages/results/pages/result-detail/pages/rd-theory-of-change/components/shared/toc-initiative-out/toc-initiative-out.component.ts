@@ -30,21 +30,21 @@ export class TocInitiativeOutComponent {
       impactAreasTargets: [],
         sdgTargest: [],
         targetsIndicators: [],
+        actionAreaOutcome:[],
         isSdg:null,
         isImpactArea:null,
         resultId:null,
         initiative:null,
+        is_sdg_action_impact:null
     })
     this.GET_outcomeList();
-    this.GET_fullInitiativeTocByinitId();
+    this.get_versionDashboard()
     this.GET_outputList();
     this.GET_EOIList();
     this.valdiateEOI(this.initiative);
     if (this.initiative.toc_result_id != null) {
       this.getIndicator();
     }
-    console.log(this.theoryOfChangesServices.body);
-    
   }
 
   getDescription(official_code, short_name) {
@@ -133,8 +133,21 @@ export class TocInitiativeOutComponent {
   GET_fullInitiativeTocByinitId() {
     this.api.tocApiSE.GET_fullInitiativeTocByinitId(this.initiative.initiative_id).subscribe(
       ({ response }) => {
-        //(response);
+        
+        
         this.fullInitiativeToc = response[0]?.toc_id;
+      },
+      err => {
+        console.error(err);
+      }
+    );
+  }
+
+  get_versionDashboard(){
+    this.api.resultsSE.get_vesrsionDashboard(this.initiative.toc_result_id,this.initiative.initiative_id).subscribe(
+      ({ response }) => {
+        console.log(response);
+        this.fullInitiativeToc = response?.version_id;
       },
       err => {
         console.error(err);
@@ -168,17 +181,21 @@ export class TocInitiativeOutComponent {
       this.theoryOfChangesServices.targetsIndicators = response?.informationIndicator;
       this.theoryOfChangesServices.impactAreasTargets = response?.impactAreas;
       this.theoryOfChangesServices.sdgTargest = response?.sdgTargets;
+      this.theoryOfChangesServices.actionAreaOutcome = response?.actionAreaOutcome;
       this.theoryOfChangesServices.impactAreasTargets.map(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
       this.theoryOfChangesServices.sdgTargest.map(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
       this.theoryOfChangesServices.targetsIndicators.map(item => (item.is_not_aplicable = item.is_not_aplicable == 1 ? true : false));
+      this.theoryOfChangesServices.actionAreaOutcome.map(item => (item.full_name = `<strong>${item.outcomeSMOcode}</strong> - ${item.outcomeStatement}`));
       this.theoryOfChangesServices.body[this.indexYesorNo] = {
         impactAreasTargets: this.theoryOfChangesServices.impactAreasTargets,
         sdgTargest: this.theoryOfChangesServices.sdgTargest,
         targetsIndicators: this.theoryOfChangesServices.targetsIndicators,
+        actionAreaOutcome: this.theoryOfChangesServices.actionAreaOutcome,
         isSdg:response?.isSdg,
         isImpactArea:response?.isImpactArea,
         resultId:response?.resultId,
         initiative:response?.initiative,
+        is_sdg_action_impact:response?.is_sdg_action_impact,
       };
       if (this.indicators.length == 1) {
         this.disabledInput = true;
