@@ -56,7 +56,7 @@ import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/
     RoleByUserRepository,
     ResultsActionAreaOutcomeRepository,
     ResultsSdgTargetRepository,
-    NonPooledProjectBudgetRepository
+    NonPooledProjectBudgetRepository,
   ],
   exports: [ResultsTocResultRepository],
 })

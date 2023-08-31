@@ -13,7 +13,7 @@ export class resultValidationRepository extends Repository<Validation> {
   }
 
   async version() {
-	const query = `
+    const query = `
 	SELECT
 		v.id AS version
 	FROM
@@ -23,17 +23,17 @@ export class resultValidationRepository extends Repository<Validation> {
 		AND v.phase_name LIKE '%Reporting%'
 		AND v.is_active > 0
 	LIMIT 1;
-  	`
-	try {
-		const version = await this.dataSource.query(query);
-		return version[0];
-	} catch (error) {
-		throw this._handlersError.returnErrorRepository({
-			className: resultValidationRepository.name,
-			error: error,
-			debug: true,
-		});
-	}
+  	`;
+    try {
+      const version = await this.dataSource.query(query);
+      return version[0];
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: resultValidationRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
   }
 
   async generalInformationValidation(
@@ -41,7 +41,7 @@ export class resultValidationRepository extends Repository<Validation> {
     resultLevel: number,
     resultType: number,
   ) {
-	const {	version } = await this.version();
+    const { version } = await this.version();
 
     const queryData = `
 	SELECT
@@ -124,7 +124,7 @@ export class resultValidationRepository extends Repository<Validation> {
   }
 
   async tocValidation(resultId: number, resultLevel: number) {
-	const {	version } = await this.version();
+    const { version } = await this.version();
 
     const queryData = `
 	SELECT
@@ -139,8 +139,8 @@ export class resultValidationRepository extends Repository<Validation> {
 				) = 0
 			)
 			${
-			resultLevel != 2 && resultLevel != 1
-				? `OR (
+        resultLevel != 2 && resultLevel != 1
+          ? `OR (
 					(
 						SELECT rtr.planned_result
 						FROM results_toc_result rtr
@@ -149,11 +149,11 @@ export class resultValidationRepository extends Repository<Validation> {
 						AND rtr.is_active > 0
 					) IS NULL
 				)`
-				: ``
-			}
+          : ``
+      }
 			${
-			resultLevel != 1
-				? `OR (
+        resultLevel != 1
+          ? `OR (
 					(
 						SELECT IF(rtr.toc_result_id IS NULL OR rtr.action_area_outcome_id IS NULL, 1, 0)
 						FROM results_toc_result rtr
@@ -182,8 +182,8 @@ export class resultValidationRepository extends Repository<Validation> {
 						AND rbi.is_active > 0
 					)
 				) <> 0`
-				: ``
-			}
+          : ``
+      }
 			OR (
 				(
 					SELECT
@@ -200,8 +200,8 @@ export class resultValidationRepository extends Repository<Validation> {
 			)
 			THEN FALSE
 			${
-			resultLevel == 3 || resultLevel == 4
-				? `
+        resultLevel == 3 || resultLevel == 4
+          ? `
 				WHEN (
 					rtr1.planned_result = 1
 					AND (
@@ -272,11 +272,11 @@ export class resultValidationRepository extends Repository<Validation> {
 							AND rtsdgt.is_active = 1
 					) = 0
 				) THEN FALSE`
-				: ``
-			}
+          : ``
+      }
 			${
-				resultLevel == 1 || resultLevel == 2
-				  ? `
+        resultLevel == 1 || resultLevel == 2
+          ? `
 				  WHEN (
 					(
 						SELECT 
@@ -301,11 +301,11 @@ export class resultValidationRepository extends Repository<Validation> {
 					) = 0
 				) 
 				THEN FALSE`
-				  : ``
-			  }
+          : ``
+      }
 			  ${
-				resultLevel == 2
-				  ? `
+          resultLevel == 2
+            ? `
 				  WHEN (
 					rtr1.planned_result = 1
 					AND rtr1.is_sdg_action_impact = 1
@@ -320,8 +320,8 @@ export class resultValidationRepository extends Repository<Validation> {
 							AND rtia.is_active = 1
 					) = 0
 				) THEN FALSE`
-				  : ``
-			  }
+            : ``
+        }
 			ELSE TRUE
 		END AS validation
 	FROM
@@ -349,7 +349,7 @@ export class resultValidationRepository extends Repository<Validation> {
   }
 
   async partnersValidation(resultId: number) {
-	const {	version } = await this.version();
+    const { version } = await this.version();
 
     const queryData = `
 	SELECT
@@ -427,7 +427,7 @@ export class resultValidationRepository extends Repository<Validation> {
   }
 
   async geoLocationValidation(resultId: number) {
-	const {	version } = await this.version();
+    const { version } = await this.version();
 
     const queryData = `
 	select
@@ -509,7 +509,7 @@ export class resultValidationRepository extends Repository<Validation> {
   }
 
   async evidenceValidation(resultId: number) {
-	const {	version } = await this.version();
+    const { version } = await this.version();
 
     const queryData = `
 	SELECT
@@ -732,7 +732,7 @@ export class resultValidationRepository extends Repository<Validation> {
   }
 
   async innovationUseValidation(resultId: number) {
-	const {	version } = await this.version();
+    const { version } = await this.version();
 
     const queryData = `
 	SELECT
@@ -770,7 +770,7 @@ export class resultValidationRepository extends Repository<Validation> {
   }
 
   async innovationDevValidation(resultId: number) {
-	const {	version } = await this.version();
+    const { version } = await this.version();
 
     const queryData = `
 	SELECT
@@ -858,7 +858,7 @@ export class resultValidationRepository extends Repository<Validation> {
   }
 
   async capDevValidation(resultId: number) {
-	const {	version } = await this.version();
+    const { version } = await this.version();
 
     const queryData = `
 	SELECT
@@ -921,8 +921,8 @@ export class resultValidationRepository extends Repository<Validation> {
   }
 
   async policyChangeValidation(resultId: number) {
-	const {	version } = await this.version();
-	
+    const { version } = await this.version();
+
     const queryData = `
 	SELECT
 		'policy-change1-info' as section_name,
