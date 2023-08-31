@@ -158,7 +158,7 @@ export class ResultCreatorComponent implements OnInit {
         //(first);
         // TODO validate create
         this.validating = false;
-        this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Metadata found successfully', description: 'Title: ' + this.resultLevelSE.resultBody.result_name, status: 'success' });
+        this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Metadata successfully retrieved', description: 'Title: ' + this.resultLevelSE.resultBody.result_name, status: 'success' });
       },
       err => {
         //(err.error.message);
