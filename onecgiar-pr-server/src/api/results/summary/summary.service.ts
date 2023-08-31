@@ -98,89 +98,100 @@ export class SummaryService {
    * @returns
    */
   async saveInnovationUse(
-    innovation: InnovationUseDto,
+    innovationUseDto: InnovationUseDto,
     resultId: number,
     user: TokenDto,
   ) {
     try {
-      const { result_innovation_use_id, female_using, male_using, other } =
-        innovation;
-      const innExists =
-        await this._resultsInnovationsUseRepository.InnovatonUseExists(
-          resultId,
-        );
-      let InnovationUse: ResultsInnovationsUse = undefined;
-      const version = await this._versionsService.findBaseVersion();
-      if (version.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: version });
-      }
-      const vrs: Version = <Version>version.response;
-      if (innExists) {
-        innExists.female_using = female_using || null;
-        innExists.male_using = male_using || null;
-        innExists.last_updated_by = user.id;
-        InnovationUse = await this._resultsInnovationsUseRepository.save(
-          innExists,
-        );
-      } else {
-        const newInne = new ResultsInnovationsUse();
-        newInne.created_by = user.id;
-        newInne.last_updated_by = user.id;
-        newInne.female_using = female_using;
-        newInne.male_using = male_using;
-        newInne.results_id = resultId;
-        InnovationUse = await this._resultsInnovationsUseRepository.save(
-          newInne,
-        );
-      }
+      // const { result_innovation_use_id, female_using, male_using, other } =
+      //   innovationUseDto;
 
-      if (other?.length) {
-        const measureList = other
-          .filter((el) => !!el.result_innovations_use_measure_id)
-          .map((d) => d.result_innovations_use_measure_id);
-        await this._esultsInnovationsUseMeasuresRepository.updateInnovatonUseMeasures(
-          InnovationUse.result_innovation_use_id,
-          measureList,
-          user.id,
-        );
-        let tesultsInnovationsUseMeasuresList: ResultsInnovationsUseMeasures[] =
-          [];
-        for (let index = 0; index < other.length; index++) {
-          const {
-            quantity,
-            unit_of_measure,
-            result_innovations_use_measure_id,
-          } = other[index];
-          const innMesExists =
-            await this._esultsInnovationsUseMeasuresRepository.innovatonUseMeasuresExists(
-              result_innovations_use_measure_id,
-            );
-          if (innMesExists) {
-            innMesExists.last_updated_by = user.id;
-            innMesExists.quantity = quantity;
-            innMesExists.unit_of_measure = unit_of_measure;
-            tesultsInnovationsUseMeasuresList.push(innMesExists);
-          } else {
-            const newInnMes = new ResultsInnovationsUseMeasures();
-            newInnMes.created_by = user.id;
-            newInnMes.last_updated_by = user.id;
-            newInnMes.quantity = quantity;
-            newInnMes.unit_of_measure = unit_of_measure;
-            newInnMes.result_innovation_use_id =
-              InnovationUse.result_innovation_use_id;
-            tesultsInnovationsUseMeasuresList.push(newInnMes);
-          }
-        }
-        await this._esultsInnovationsUseMeasuresRepository.save(
-          tesultsInnovationsUseMeasuresList,
-        );
-      } else {
-        await this._esultsInnovationsUseMeasuresRepository.updateInnovatonUseMeasures(
-          InnovationUse.result_innovation_use_id,
-          [],
-          user.id,
-        );
-      }
+      // const innExists =
+      //   await this._resultsInnovationsUseRepository.InnovatonUseExists(
+      //     resultId,
+      //   );
+      const resultExist = await this._resultRepository.findOne({
+        where: { id: resultId },
+      });
+
+      const InnovationUse = await this.saveAnticepatedInnoUser(
+        resultExist.id,
+        user.id,
+        innovationUseDto,
+      );
+
+      // let InnovationUse: ResultsInnovationsUse = undefined;
+      // const version = await this._versionsService.findBaseVersion();
+      // if (version.status >= 300) {
+      //   throw this._handlersError.returnErrorRes({ error: version });
+      // }
+      // const vrs: Version = <Version>version.response;
+      // if (innExists) {
+      //   innExists.female_using = female_using || null;
+      //   innExists.male_using = male_using || null;
+      //   innExists.last_updated_by = user.id;
+      //   InnovationUse = await this._resultsInnovationsUseRepository.save(
+      //     innExists,
+      //   );
+      // } else {
+      //   const newInne = new ResultsInnovationsUse();
+      //   newInne.created_by = user.id;
+      //   newInne.last_updated_by = user.id;
+      //   newInne.female_using = female_using;
+      //   newInne.male_using = male_using;
+      //   newInne.results_id = resultId;
+      //   InnovationUse = await this._resultsInnovationsUseRepository.save(
+      //     newInne,
+      //   );
+      // }
+
+      // if (other?.length) {
+      //   const measureList = other
+      //     .filter((el) => !!el.result_innovations_use_measure_id)
+      //     .map((d) => d.result_innovations_use_measure_id);
+      //   await this._esultsInnovationsUseMeasuresRepository.updateInnovatonUseMeasures(
+      //     InnovationUse.result_innovation_use_id,
+      //     measureList,
+      //     user.id,
+      //   );
+      //   let tesultsInnovationsUseMeasuresList: ResultsInnovationsUseMeasures[] =
+      //     [];
+      //   for (let index = 0; index < other.length; index++) {
+      //     const {
+      //       quantity,
+      //       unit_of_measure,
+      //       result_innovations_use_measure_id,
+      //     } = other[index];
+      //     const innMesExists =
+      //       await this._esultsInnovationsUseMeasuresRepository.innovatonUseMeasuresExists(
+      //         result_innovations_use_measure_id,
+      //       );
+      //     if (innMesExists) {
+      //       innMesExists.last_updated_by = user.id;
+      //       innMesExists.quantity = quantity;
+      //       innMesExists.unit_of_measure = unit_of_measure;
+      //       tesultsInnovationsUseMeasuresList.push(innMesExists);
+      //     } else {
+      //       const newInnMes = new ResultsInnovationsUseMeasures();
+      //       newInnMes.created_by = user.id;
+      //       newInnMes.last_updated_by = user.id;
+      //       newInnMes.quantity = quantity;
+      //       newInnMes.unit_of_measure = unit_of_measure;
+      //       newInnMes.result_innovation_use_id =
+      //         InnovationUse.result_innovation_use_id;
+      //       tesultsInnovationsUseMeasuresList.push(newInnMes);
+      //     }
+      //   }
+      //   await this._esultsInnovationsUseMeasuresRepository.save(
+      //     tesultsInnovationsUseMeasuresList,
+      //   );
+      // } else {
+      //   await this._esultsInnovationsUseMeasuresRepository.updateInnovatonUseMeasures(
+      //     InnovationUse.result_innovation_use_id,
+      //     [],
+      //     user.id,
+      //   );
+      // }
 
       return {
         response: InnovationUse,
@@ -199,27 +210,58 @@ export class SummaryService {
    */
   async getInnovationUse(resultId: number) {
     try {
-      const innExists =
-        await this._resultsInnovationsUseRepository.InnovatonUseExists(
-          resultId,
-        );
-      if (!innExists) {
-        throw {
-          response: {},
-          message: 'Results Innovations Use not found',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
+      // const innExists =
+      //   await this._resultsInnovationsUseRepository.InnovatonUseExists(
+      //     resultId,
+      //   );
+      // if (!innExists) {
+      //   throw {
+      //     response: {},
+      //     message: 'Results Innovations Use not found',
+      //     status: HttpStatus.NOT_FOUND,
+      //   };
+      // }
 
-      const allInnUseMes =
-        await this._esultsInnovationsUseMeasuresRepository.getAllResultInnovationsUseMeasureByInnoUseId(
-          innExists.result_innovation_use_id,
-        );
+      // const allInnUseMes =
+      //   await this._esultsInnovationsUseMeasuresRepository.getAllResultInnovationsUseMeasureByInnoUseId(
+      //     innExists.result_innovation_use_id,
+      //   );
+
+      let actorsData = await this._resultActorRepository.find({
+        where: { result_id: resultId, is_active: true },
+        relations: { obj_actor_type: true },
+      });
+      actorsData.map((el) => {
+        el['men_non_youth'] = el.men - el.men_youth;
+        el['women_non_youth'] = el.women - el.women_youth;
+      });
+      const innovatonUse = {
+        actors: actorsData,
+        measures: await this._resultIpMeasureRepository.find({
+          where: { result_id: resultId, is_active: true },
+        }),
+        organization: (
+          await this._resultByIntitutionsTypeRepository.find({
+            where: {
+              results_id: resultId,
+              institution_roles_id: 5,
+              is_active: true,
+            },
+            relations: {
+              obj_institution_types: { obj_parent: { obj_parent: true } },
+            },
+          })
+        ).map((el) => ({
+          ...el,
+          parent_institution_type_id: el.obj_institution_types?.obj_parent
+            ?.obj_parent?.code
+            ? el.obj_institution_types?.obj_parent?.obj_parent?.code
+            : el.obj_institution_types?.obj_parent?.code || null,
+        })),
+      };
+
       return {
-        response: {
-          ...innExists,
-          other: allInnUseMes,
-        },
+        response: innovatonUse,
         message: 'Successful response',
         status: HttpStatus.OK,
       };
@@ -377,6 +419,7 @@ export class SummaryService {
    */
   async saveInnovationDev(
     createInnovationDevDto: CreateInnovationDevDto,
+    innovationUseDto: InnovationUseDto,
     resultId: number,
     user: TokenDto,
   ) {
@@ -590,15 +633,19 @@ export class SummaryService {
       await saveEvidence(createInnovationDevDto.pictures, 3);
       await saveEvidence(createInnovationDevDto.reference_materials, 4);
 
-      await this.saveInitiativeInvestment(resultId, user.id, createInnovationDevDto);
-      await this.saveBillateralInvestment(resultId, user.id, createInnovationDevDto);
-      await this.savePartnerInvestment(user.id, createInnovationDevDto);
-
-      await this.saveAnticepatedInnoUser(
+      await this.saveInitiativeInvestment(
         resultId,
         user.id,
         createInnovationDevDto,
       );
+      await this.saveBillateralInvestment(
+        resultId,
+        user.id,
+        createInnovationDevDto,
+      );
+      await this.savePartnerInvestment(user.id, createInnovationDevDto);
+
+      await this.saveAnticepatedInnoUser(resultId, user.id, innovationUseDto);
 
       return {
         response: InnDevRes,
@@ -713,9 +760,9 @@ export class SummaryService {
             obj_result_institution: {
               obj_institutions: {
                 obj_institution_type_code: true,
-              }
-            }
-          }
+              },
+            },
+          },
         });
 
       // const institutions_expected_investment = institutions.map((el) => {
@@ -885,7 +932,7 @@ export class SummaryService {
   private async saveAnticepatedInnoUser(
     resultId: number,
     user: number,
-    { innovatonUse: crtr }: CreateInnovationDevDto,
+    { innovatonUse: crtr }: InnovationUseDto,
   ) {
     if (crtr?.actors?.length) {
       const { actors } = crtr;
@@ -946,6 +993,10 @@ export class SummaryService {
               has_men_youth: this.isNullData(el?.has_men_youth),
               has_women: this.isNullData(el?.has_women),
               has_women_youth: this.isNullData(el?.has_women_youth),
+              men: this.isNullData(el?.men),
+              men_youth: this.isNullData(el?.men_youth),
+              women: this.isNullData(el?.women),
+              women_youth: this.isNullData(el?.women_youth),
               last_updated_by: user,
               other_actor_type: this.isNullData(el?.other_actor_type),
               sex_and_age_disaggregation:
@@ -968,6 +1019,10 @@ export class SummaryService {
             has_men_youth: el.has_men_youth,
             has_women: el.has_women,
             has_women_youth: el.has_women_youth,
+            men: this.isNullData(el?.men),
+            men_youth: this.isNullData(el?.men_youth),
+            women: this.isNullData(el?.women),
+            women_youth: this.isNullData(el?.women_youth),
             other_actor_type: el.other_actor_type,
             last_updated_by: user,
             created_by: user,
@@ -1116,7 +1171,10 @@ export class SummaryService {
     try {
       if (inv?.length) {
         const initiativeInvestments = inv;
-        console.log("🚀 ~ file: summary.service.ts:1108 ~ SummaryService ~ initiativeInvestments:", initiativeInvestments)
+        console.log(
+          '🚀 ~ file: summary.service.ts:1108 ~ SummaryService ~ initiativeInvestments:',
+          initiativeInvestments,
+        );
 
         for (const initiative of initiativeInvestments) {
           const ibr = await this._resultByInitiativeRepository.findOne({

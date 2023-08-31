@@ -72,13 +72,14 @@ export class SummaryController {
   async saveInnovationDev(
     @Param('resultId') resultId: number,
     @Body() createInnovationDevDto: CreateInnovationDevDto,
+    @Body() innovationUseDto: InnovationUseDto,
     @Headers() auth: HeadersDto
   ) {
     const token: TokenDto = <TokenDto>(
       JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
     );
     const { message, response, status } =
-      await this.summaryService.saveInnovationDev(createInnovationDevDto, resultId, token);
+      await this.summaryService.saveInnovationDev(createInnovationDevDto, innovationUseDto, resultId, token);
     throw new HttpException({ message, response }, status);
   }
 
