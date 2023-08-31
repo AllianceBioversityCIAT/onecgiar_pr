@@ -17,7 +17,7 @@ export class RdEvidencesComponent {
   alertStatus() {
     //(this.api.dataControlSE?.currentResult);
     if (this.api.dataControlSE.isKnowledgeProduct) return 'As this knowledge product is already stored in CGSpace, this section only requires an indication of whether the knowledge product is gender or climate related.';
-    let mainText = '<ul><li>Submit a maximum of 3 pieces of evidence.</li><li>Please list evidence from most to least important.</li><li>Files cannot be uploaded; only links can be entered.</li>';
+    let mainText = '<ul><li>Submit a maximum of 6 pieces of evidence.</li><li>Please list evidence from most to least important.</li><li>Files cannot be uploaded; only links can be entered.</li>';
     if (this.api.dataControlSE?.currentResult?.result_type_id === 5) mainText += '<li>Capacity development do not currently require evidence submission for QA due to the time/resource burden and unresolved potential GDPR issues</li><li>By submitting a cap dev result is it understood that you have evidence available to support the result submission, and that should a sub-sample be required this evidence could be made available</li>';
     mainText += '</ul> ';
     return mainText;

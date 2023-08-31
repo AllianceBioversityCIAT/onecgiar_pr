@@ -15,8 +15,9 @@ import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/
 import { ResultsTocResultIndicatorsRepository } from '../results-toc-results/results-toc-results-indicators.repository';
 import { ResultsTocSdgTargetRepository } from '../results-toc-results/result-toc-sdg-target-repository';
 import { ResultsTocImpactAreaTargetRepository } from '../results-toc-results/result-toc-impact-area-repository';
-import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { ResultsSdgTargetRepository } from '../results-toc-results/results-sdg-targets.respository';
+import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
+import { ResultsActionAreaOutcomeRepository } from '../results-toc-results/result-toc-action-area.repository';
 
 @Module({
   controllers: [ShareResultRequestController],
@@ -34,8 +35,9 @@ import { ResultsSdgTargetRepository } from '../results-toc-results/results-sdg-t
     ResultsTocResultIndicatorsRepository,
     ResultsTocSdgTargetRepository,
     ResultsTocImpactAreaTargetRepository,
+    ResultsSdgTargetRepository,
     RoleByUserRepository,
-    ResultsSdgTargetRepository
+    ResultsActionAreaOutcomeRepository
   ],
   exports: [ShareResultRequestRepository],
 })

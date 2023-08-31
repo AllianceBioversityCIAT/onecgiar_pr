@@ -15,7 +15,7 @@
     <app-no-data-text *ngIf="!this.evidencesBody?.evidences?.length"
         [title]="this.api.dataControlSE.isKnowledgeProduct ? 'No evidence' :'No evidence added'"></app-no-data-text>
     <app-add-button name="Add evidence" (clickEvent)="addEvidence()"
-        *ngIf="this.evidencesBody?.evidences?.length <3 && !this.api.dataControlSE.isKnowledgeProduct && !this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status">
+        *ngIf="this.evidencesBody?.evidences?.length < 6 && !this.api.dataControlSE.isKnowledgeProduct && !this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status">
     </app-add-button>
 
     <br><br>
