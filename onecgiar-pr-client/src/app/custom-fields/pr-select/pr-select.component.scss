@@ -29,6 +29,16 @@
     }
 }
 
+.no-options-text {
+    color: var(--pr-color-primary);
+    text-align: center;
+    padding-top: 80px;
+    font-size: 1.2em;
+    font-weight: 500;
+
+
+}
+
 .selected {
     color: var(--pr-color-primary) !important;
 }

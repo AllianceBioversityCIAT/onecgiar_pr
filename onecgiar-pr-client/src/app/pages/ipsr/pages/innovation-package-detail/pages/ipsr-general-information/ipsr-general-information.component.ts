@@ -47,9 +47,8 @@ export class IpsrGeneralInformationComponent {
     <br>- Turn agriculture and forest systems into a net sink for carbon by 2050 (climate mitigation target)
     <br>- Equip 500 million small-scale producers to be more resilient by 2030 (climate adaptation target)
     <br>- Support countries in implementing NAPs and NDCs, and increased ambition in climate actions by 2030 (climate policy target)
-    <br>Climate scores should be determined based on the following:
-    <ul>
-    <strong>Climate scores should be determined based on the following:</strong>
+    <br><br>Climate scores should be determined based on the following:
+    <ul class="no-margin-top">
     <li><strong>0 : Not targeted</strong> The activity does not target the climate mitigation, adaptation and climate policy objectives of CGIAR as put forward in its strategy.</li>
     <li><strong>1 : Significant</strong> The activity contributes in a significant way to any of the three CGIAR climate-related strategy objectives – namely, climate mitigation, climate adaptation and climate policy, even though it is not the principal focus of the activity.</li>
     <li><strong>2 : Principal</strong> The activity is principally about meeting any of the three CGIAR climate-related strategy objectives – namely, climate mitigation, climate adaptation and climate policy, and would not have been undertaken without this objective.</li>

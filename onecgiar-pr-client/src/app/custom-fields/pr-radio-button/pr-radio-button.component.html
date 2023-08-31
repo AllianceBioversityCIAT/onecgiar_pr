@@ -6,11 +6,11 @@
         [ngClass]="{'verticalAlignment': this.verticalAlignment,'block-field':(readOnly || this.rolesSE.readOnly) && (!isStatic)}"
         [hidden]="hideOptions">
         <div class="radioButton" *ngFor="let option of this.options; let i=index">
-            <p-radioButton (click)="onSelect()" name="groupname" inputId="groupname{{i}}{{this.joinName()}}"
+            <p-radioButton (click)="onSelect()" name="groupname"
                 [value]="option[optionValue]" [(ngModel)]="value"
                 [disabled]="(readOnly || this.rolesSE.readOnly) && (!isStatic)">
             </p-radioButton>
-            <label for="groupname{{i}}{{this.joinName()}}" class="name">{{option[this.optionLabel]}}</label>
+            <label class="name">{{option[this.optionLabel]}}</label>
         </div>
     </div>
 </div>

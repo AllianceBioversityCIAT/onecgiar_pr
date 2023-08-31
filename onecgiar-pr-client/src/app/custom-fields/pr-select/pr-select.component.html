@@ -43,6 +43,8 @@
                             [innerHtml]="(option?.disabled?disableOptionsText:'')+option[this.optionLabel]"></div>
                         <div class="event"></div>
                     </div>
+                    <div class="no-options-text" *ngIf="!optionsIntance?.length">There are no items available for this
+                        list.</div>
                 </cdk-virtual-scroll-viewport>
             </div>
         </a>
