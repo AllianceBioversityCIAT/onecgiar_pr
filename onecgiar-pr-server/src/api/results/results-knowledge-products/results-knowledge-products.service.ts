@@ -585,7 +585,8 @@ export class ResultsKnowledgeProductsService {
           );
           return {
             response: infoToMap,
-            message: 'The Result Knowledge Product has already been created.',
+            message:
+              'This knowledge product has already been reported in the PRMS Reporting Tool.',
             status: HttpStatus.CONFLICT,
           };
         }
@@ -997,7 +998,8 @@ export class ResultsKnowledgeProductsService {
         this._resultsKnowledgeProductMapper.entityToDto(knowledgeProduct);
       return {
         response,
-        message: 'The Result Knowledge Product has already been created.',
+        message:
+          'This knowledge product has already been reported in the PRMS Reporting Tool.',
         status: HttpStatus.OK,
       };
     } catch (error) {
