@@ -582,7 +582,6 @@ export class SummaryService {
         evidences: Evidence[],
         evidence_type_id: number,
       ) => {
-        console.log("🚀 ~ file: summary.service.ts:585 ~ SummaryService ~ evidences:", evidences)
         const existingEvidences = await this._evidenceRepository.find({
           where: {
             result_id: resultId,
@@ -933,7 +932,7 @@ export class SummaryService {
   private async saveAnticepatedInnoUser(
     resultId: number,
     user: number,
-    { innovatonUse: crtr }: InnovationUseDto,
+    { innovationUse: crtr }: InnovationUseDto,
   ) {
     if (crtr?.actors?.length) {
       const { actors } = crtr;
@@ -1023,7 +1022,7 @@ export class SummaryService {
             men_youth: this.isNullData(el?.men_youth),
             women: this.isNullData(el?.women),
             women_youth: this.isNullData(el?.women_youth),
-            other_actor_type: el.other_actor_type,
+            other_actor_type: el?.other_actor_type,
             last_updated_by: user,
             created_by: user,
             result_id: resultId,
