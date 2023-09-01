@@ -180,7 +180,7 @@ export class Ipsr extends BaseEntity {
   @JoinColumn({
     name: 'current_innovation_readiness_level',
   })
-  obj_current_innovation_readiness_level!: number;
+  obj_current_innovation_readiness_level!: ClarisaInnovationReadinessLevel;
 
   @ManyToOne(() => ClarisaInnovationUseLevel, (cirl) => cirl.id)
   @JoinColumn({
