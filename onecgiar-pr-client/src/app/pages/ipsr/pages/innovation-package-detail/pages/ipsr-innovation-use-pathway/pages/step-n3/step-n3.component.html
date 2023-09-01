@@ -94,7 +94,8 @@
             [options]="this.rangesOptions"
             [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.readiness_level_evidence_based"></app-pr-range-level>
 
-        <app-pr-input label="Evidence link" placeholder="Link goes here"
+        <app-pr-input label="Evidence link" placeholder="Link goes here" type="link"
+            [required]="this.updateRangeLevel1(this.ipsrStep3Body.result_ip_result_core)"
             [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.readinees_evidence_link">
         </app-pr-input>
 
@@ -113,7 +114,7 @@
             [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.use_level_evidence_based"></app-pr-range-level>
 
         <app-pr-input label="Evidence link" placeholder="Link goes here" type="link"
-            [required]="this.ipsrStep3Body.result_ip_result_core.use_level_evidence_based != 11"
+            [required]="this.updateRangeLevel2(this.ipsrStep3Body.result_ip_result_core)"
             [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.use_evidence_link">
         </app-pr-input>
 
