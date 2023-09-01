@@ -582,6 +582,7 @@ export class SummaryService {
         evidences: Evidence[],
         evidence_type_id: number,
       ) => {
+        console.log("🚀 ~ file: summary.service.ts:585 ~ SummaryService ~ evidences:", evidences)
         const existingEvidences = await this._evidenceRepository.find({
           where: {
             result_id: resultId,
@@ -944,7 +945,8 @@ export class SummaryService {
           const whereOptions: any = {
             actor_type_id: el.actor_type_id,
             result_id: resultId,
-            result_actors_id: el.result_actors_id,
+            result_actors_id: el.result_actors_id ?? IsNull(),
+            is_active: true,
           };
 
           if (!el?.result_actors_id) {
@@ -954,11 +956,9 @@ export class SummaryService {
                   el?.other_actor_type || IsNull();
                 break;
             }
-            delete whereOptions.result_actors_id;
           } else {
             delete whereOptions.actor_type_id;
           }
-
           actorExists = await this._resultActorRepository.findOne({
             where: whereOptions,
           });
