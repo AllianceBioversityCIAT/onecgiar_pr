@@ -714,7 +714,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                     )
                 )
                 OR (
-                    rbip.use_level_evidence_based != 11
+                    rbip.use_level_evidence_based != 1
                     AND (
                         rbip.use_evidence_link IS NULL
                         OR rbip.use_evidence_link = ''
@@ -915,7 +915,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                         )
                         OR (
                             rbip2.use_level_evidence_based IS NULL
-                            OR rbip2.use_level_evidence_based <> 11
+                            OR rbip2.use_level_evidence_based <> 1
                             AND(
                                 rbip2.use_evidence_link IS NULL
                                 OR rbip2.use_evidence_link = ''
