@@ -17,15 +17,16 @@ export class InnovationLinksComponent implements OnInit {
   ngOnInit(): void {}
 
   temporalLinkDescription() {
-    return `
+    return `<ul> 
     <li>Provide only high-resolution images, photos or pictures that clearly visualize the innovation (e.g., how it provides a specific solution to a problem, its use in practice, etc.) </li>
-    <li>This image(s) will be used in the final report of the survey, therefore consent to use the image(s) is needed </li>`;
+    <li>This image(s) will be used in the final report of the survey, therefore consent to use the image(s) is needed </li>
+    </ul>`;
   }
 
   temporalReferenceDescription() {
-    return `
+    return `<ul> 
     <li>Reference materials may include (science) publications, websites, newsletters, reports, newspaper articles, videos, etc.</li>
-    `;
+    </ul>`;
   }
 
   addLinkPictures() {

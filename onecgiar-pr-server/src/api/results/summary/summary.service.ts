@@ -944,7 +944,8 @@ export class SummaryService {
           const whereOptions: any = {
             actor_type_id: el.actor_type_id,
             result_id: resultId,
-            result_actors_id: el.result_actors_id,
+            result_actors_id: el.result_actors_id ?? IsNull(),
+            is_active: true,
           };
 
           if (!el?.result_actors_id) {
@@ -954,11 +955,9 @@ export class SummaryService {
                   el?.other_actor_type || IsNull();
                 break;
             }
-            delete whereOptions.result_actors_id;
           } else {
             delete whereOptions.actor_type_id;
           }
-
           actorExists = await this._resultActorRepository.findOne({
             where: whereOptions,
           });
@@ -1023,7 +1022,7 @@ export class SummaryService {
             men_youth: this.isNullData(el?.men_youth),
             women: this.isNullData(el?.women),
             women_youth: this.isNullData(el?.women_youth),
-            other_actor_type: el.other_actor_type,
+            other_actor_type: el?.other_actor_type,
             last_updated_by: user,
             created_by: user,
             result_id: resultId,
@@ -1112,6 +1111,7 @@ export class SummaryService {
             where: {
               unit_of_measure: el.unit_of_measure,
               result_id: resultId,
+              quantity: el?.quantity
             },
           });
         } else if (!ripm) {
@@ -1119,6 +1119,7 @@ export class SummaryService {
             where: {
               unit_of_measure: IsNull(),
               result_id: resultId,
+              quantity: el?.quantity
             },
           });
         }
@@ -1150,6 +1151,7 @@ export class SummaryService {
           }
           await this._resultIpMeasureRepository.save({
             result_id: resultId,
+            quantity: el?.quantity,
             unit_of_measure: el?.unit_of_measure,
             created_by: user,
             last_updated_by: user,
