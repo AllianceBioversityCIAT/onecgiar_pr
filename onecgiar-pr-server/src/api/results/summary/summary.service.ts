@@ -1112,6 +1112,7 @@ export class SummaryService {
             where: {
               unit_of_measure: el.unit_of_measure,
               result_id: resultId,
+              quantity: el?.quantity
             },
           });
         } else if (!ripm) {
@@ -1119,6 +1120,7 @@ export class SummaryService {
             where: {
               unit_of_measure: IsNull(),
               result_id: resultId,
+              quantity: el?.quantity
             },
           });
         }
@@ -1150,6 +1152,7 @@ export class SummaryService {
           }
           await this._resultIpMeasureRepository.save({
             result_id: resultId,
+            quantity: el?.quantity,
             unit_of_measure: el?.unit_of_measure,
             created_by: user,
             last_updated_by: user,
