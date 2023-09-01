@@ -359,7 +359,7 @@ export class InnovationPathwayStepThreeService {
           result_innovation_package_id: result_ip.result_innovation_package_id,
           is_active: true,
         },
-        relations: { obj_result: true },
+        relations: ['obj_result', 'obj_readiness_level_evidence_based', 'obj_use_level_evidence_based'],
       });
       const core_innovation = await this._resultRepository.findOne({
         where: { id: result_core.result_id, is_active: true },
@@ -372,7 +372,7 @@ export class InnovationPathwayStepThreeService {
               result_ip.result_innovation_package_id,
             is_active: true,
           },
-          relations: { obj_result: true },
+          relations: ['obj_result', 'obj_readiness_level_evidence_based', 'obj_use_level_evidence_based'],
         });
 
       const link_workshop_list = await this._evidenceRepository.findOne({
