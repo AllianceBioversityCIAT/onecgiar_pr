@@ -20,8 +20,7 @@
                     optionLabel="name" optionValue="id"
                     [(ngModel)]="bodyItem.readiness_level_evidence_based"></app-pr-range-level>
                 <app-pr-input label="Evidence link" placeholder="Link goes here..." type="link"
-                    [required]="bodyItem.readiness_level_evidence_based != 11"
-                    [(ngModel)]="bodyItem.readinees_evidence_link">
+                    [required]="rangeLevel1Required" [(ngModel)]="bodyItem.readinees_evidence_link">
                 </app-pr-input>
 
                 <app-pr-textarea placeholder="Write some..."
@@ -39,7 +38,7 @@
                     [(ngModel)]="bodyItem.use_level_evidence_based"></app-pr-range-level>
 
                 <app-pr-input label="Evidence link" placeholder="Link goes here..." type="link"
-                    [required]="bodyItem.use_level_evidence_based != 11" [(ngModel)]="bodyItem.use_evidence_link">
+                    [required]="rangeLevel2Required" [(ngModel)]="bodyItem.use_evidence_link">
                 </app-pr-input>
 
                 <app-pr-textarea placeholder="Write some..."
