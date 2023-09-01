@@ -78,6 +78,7 @@ import { ResultAnswerRepository } from './result-questions/repository/result-ans
 import { InvestmentDiscontinuedOptionsModule } from './investment-discontinued-options/investment-discontinued-options.module';
 import { ResultsInvestmentDiscontinuedOptionsModule } from './results-investment-discontinued-options/results-investment-discontinued-options.module';
 import { ResultsInvestmentDiscontinuedOptionRepository } from './results-investment-discontinued-options/results-investment-discontinued-options.repository';
+import { ResultInitiativeBudgetRepository } from './result_budget/repositories/result_initiative_budget.repository';
 
 @Module({
   controllers: [ResultsController],
@@ -150,6 +151,7 @@ import { ResultsInvestmentDiscontinuedOptionRepository } from './results-investm
     ResultQuestionsRepository,
     ResultAnswerRepository,
     ResultsInvestmentDiscontinuedOptionRepository,
+    ResultInitiativeBudgetRepository
   ],
   exports: [ResultRepository, JwtMiddleware],
 })

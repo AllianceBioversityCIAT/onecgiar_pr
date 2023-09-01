@@ -66,6 +66,7 @@ import { InstitutionRoleEnum } from './results_by_institutions/entities/institut
 import { ResultsKnowledgeProductFairScoreRepository } from './results-knowledge-products/repositories/results-knowledge-product-fair-scores.repository';
 import { ResultsInvestmentDiscontinuedOptionRepository } from './results-investment-discontinued-options/results-investment-discontinued-options.repository';
 import { ResultsCenterRepository } from './results-centers/results-centers.repository';
+import { ResultInitiativeBudgetRepository } from './result_budget/repositories/result_initiative_budget.repository';
 
 @Injectable()
 export class ResultsService {
@@ -109,6 +110,7 @@ export class ResultsService {
     private readonly _returnResponse: ReturnResponse,
     private readonly _resultsInvestmentDiscontinuedOptionRepository: ResultsInvestmentDiscontinuedOptionRepository,
     private readonly _resultsCenterRepository: ResultsCenterRepository,
+    private readonly _resultInitiativeBudgetRepository: ResultInitiativeBudgetRepository,
   ) {}
 
   /**
@@ -221,6 +223,12 @@ export class ResultsService {
           result_id: newResultHeader.id,
         },
       );
+
+      await this._resultInitiativeBudgetRepository.save({
+        result_initiative_id: resultByInitiative.id,
+        created_by: user.id,
+        last_updated_by: user.id,
+      });
 
       const toAddFromElastic = await this.findAllSimplified(
         newResultHeader.id.toString(),
