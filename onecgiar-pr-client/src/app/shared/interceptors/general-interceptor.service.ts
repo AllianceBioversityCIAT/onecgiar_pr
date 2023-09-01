@@ -37,6 +37,7 @@ export class GeneralInterceptorService implements HttpInterceptor {
             const inIPSRModule = req.url.includes('/api/ipsr/');
             if (!validateGreenCheckRoute && inResultsModule) {
               this.greenChecksSE.updateGreenChecks();
+              this.greenChecksSE.getGreenChecks();
             }
             if (inIPSRModule) {
               this.ipsrCompletenessStatusSE.updateGreenChecks();

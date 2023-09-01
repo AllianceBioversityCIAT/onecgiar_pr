@@ -321,8 +321,7 @@ export class SummaryService {
         newCapDev.result_id = resultId;
         newCapDev.capdev_delivery_method_id = capdev_delivery_method_id;
         newCapDev.capdev_term_id = capdev_term_id;
-        newCapDev.is_attending_for_organization =
-          is_attending_for_organization;
+        newCapDev.is_attending_for_organization = is_attending_for_organization;
         CapDevData = await this._resultsCapacityDevelopmentsRepository.save(
           newCapDev,
         );
@@ -748,10 +747,9 @@ export class SummaryService {
         });
 
       const institutions: ResultsByInstitution[] =
-        await this._resultByIntitutionsRepository.getGenericAllResultByInstitutionByRole(
-          resultId,
-          2,
-        );
+        await this._resultByIntitutionsRepository.find({
+          where: { result_id: resultId, is_active: true },
+        });
       const institutions_expected_investment =
         await this._resultInstitutionsBudgetRepository.find({
           where: {
@@ -1173,10 +1171,6 @@ export class SummaryService {
     try {
       if (inv?.length) {
         const initiativeInvestments = inv;
-        console.log(
-          '🚀 ~ file: summary.service.ts:1108 ~ SummaryService ~ initiativeInvestments:',
-          initiativeInvestments,
-        );
 
         for (const initiative of initiativeInvestments) {
           const ibr = await this._resultByInitiativeRepository.findOne({
