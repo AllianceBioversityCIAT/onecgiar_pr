@@ -1,7 +1,7 @@
 <div class="segment">
     <app-pr-field-header
         label="Estimation of total USD-value of pooled investment by CGIAR initiatives during the reporting period"
-        [description]="headerDescriptions().n1"></app-pr-field-header>
+        [description]="headerDescriptions().n1" [useColon]="false"></app-pr-field-header>
     <table>
         <tr>
             <th>Initiative</th>
@@ -29,9 +29,9 @@
 <div class="segment">
     <app-pr-field-header
         label="Estimated total USD-value of investment by CGIAR W3 or bilateral projects during the reporting period"
-        [description]="headerDescriptions().n2"></app-pr-field-header>
+        [description]="headerDescriptions().n2" [useColon]="false"></app-pr-field-header>
 
-    <table>
+    <table style="margin-bottom: 5px;">
         <tr>
             <th>Non-pooled project</th>
             <th>Total USD Value <br> <span>(in-cash + in-kind)</span> </th>
@@ -52,19 +52,25 @@
             </td>
         </tr>
     </table>
+    <div style="margin-bottom: 45px;">
+        <p>To add additional non-pooled projects, please go to <a class="open_route"
+                [href]="'/result/result-detail/'+ resultCode + '/theory-of-change?phase=' + versionId"
+                target="_blank">section
+                2</a> of this result.</p>
+    </div>
 </div>
 
 <div class="segment">
     <app-pr-field-header label="Estimated total USD-value of (co-)investment by partners during the reporting period"
-        [description]="headerDescriptions().n3"></app-pr-field-header>
+        [description]="headerDescriptions().n3" [useColon]="false"></app-pr-field-header>
 
-    <table>
+    <table style="margin-bottom: 5px;">
         <tr>
             <th>Partner</th>
             <th>Total USD Value <br> <span>(in-cash + in-kind)</span> </th>
             <th></th>
         </tr>
-        <tr *ngFor="let item of body.institutions_expected_investment">
+        <tr *ngFor=" let item of body.institutions_expected_investment">
             <td>
                 <div class="name">{{item['obj_result_institution']?.obj_institutions.name}}</div>
                 <div class="type"> <strong>Institution type:</strong>
@@ -84,5 +90,9 @@
             </td>
         </tr>
     </table>
-
+    <div style="margin-bottom: 45px;">
+        <p>To add additional partners, please go to <a class="open_route"
+                [href]="'/result/result-detail/'+ resultCode + '/partners?phase=' + versionId" target="_blank">section
+                3</a> of this result.</p>
+    </div>
 </div>

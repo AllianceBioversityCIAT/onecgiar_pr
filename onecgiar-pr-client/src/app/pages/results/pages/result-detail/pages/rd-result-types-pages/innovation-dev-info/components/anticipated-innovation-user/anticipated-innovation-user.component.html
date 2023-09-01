@@ -1,5 +1,7 @@
-<app-pr-field-header label="Anticipated innovation user" [useColon]="false" [required]="false"
-    description="Anticipated innovation user description"></app-pr-field-header>
+<app-pr-field-header label="Anticipated innovation user – Who would be the anticipated user(s) of this innovation?"
+    [useColon]="false" [required]="false"
+    description="Depending on the innovation, users may be groups of actors or be organizations. Multiple actors or organizations can be selected."
+    [required]="true"></app-pr-field-header>
 
 <div class="paddingLeft20">
     <app-pr-radio-button optionLabel="name" optionValue="id"
@@ -132,6 +134,7 @@
         <app-no-data-text *ngIf="!hasElementsWithId(this.body.innovatonUse.measures,'result_ip_measure_id')"
             title="Other quantitative measures not added">
         </app-no-data-text>
+        <br>
         <app-add-button name="Add other" *ngIf="!this.api.rolesSE.readOnly"
             (clickEvent)="addOtherMesure()"></app-add-button>
 
