@@ -932,7 +932,7 @@ export class SummaryService {
   private async saveAnticepatedInnoUser(
     resultId: number,
     user: number,
-    { innovationUse: crtr }: InnovationUseDto,
+    { innovatonUse: crtr }: InnovationUseDto,
   ) {
     if (crtr?.actors?.length) {
       const { actors } = crtr;

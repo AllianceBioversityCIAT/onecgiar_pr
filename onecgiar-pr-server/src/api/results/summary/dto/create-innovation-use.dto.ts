@@ -7,7 +7,7 @@ export class InnovationUseDto {
   public male_using: number;
   public female_using: number;
   public other: otherMeasuresInterface[];
-  public innovationUse: innovatonUseInterface;
+  public innovatonUse: innovatonUseInterface;
 }
 
 interface otherMeasuresInterface {
