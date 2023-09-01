@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, forwardRef } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, forwardRef } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from 'src/app/shared/services/global/roles.service';
 
@@ -21,6 +21,7 @@ export class PrRangeLevelComponent {
   @Input() options: any;
   @Input() itemTitle: string = null;
   @Input() itemDescription: string = null;
+  @Output() selectOptionEvent = new EventEmitter<any>();
   hoverData = {
     show: false,
     object: {},
@@ -84,5 +85,6 @@ export class PrRangeLevelComponent {
     });
     htmlElement.classList.add('active');
     this.value = option;
+    this.selectOptionEvent.emit(option);
   }
 }
