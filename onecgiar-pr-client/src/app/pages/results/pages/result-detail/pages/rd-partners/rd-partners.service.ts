@@ -50,19 +50,11 @@ export class RdPartnersService {
       }
     );
   }
-}
-/*
-this.api.resultsSE.GET_centers().subscribe(({ response }) => {
-      this.rdPartnersSE.centers = response;
+
+  getCenterInformation() {
+    this.api.resultsSE.GET_centers().subscribe(({ response }) => {
+      //(response);
+      this.centers = response;
     });
-
-
-    next: ({ response }) => {
-        //(response);
-        this.partnersBody = response;
-        if (no_applicable_partner === true || no_applicable_partner === false) this.partnersBody.no_applicable_partner = no_applicable_partner;
-      },
-      error: err => {
-        if (no_applicable_partner === true || no_applicable_partner === false) this.partnersBody.no_applicable_partner = no_applicable_partner;
-      }
-*/
+  }
+}
