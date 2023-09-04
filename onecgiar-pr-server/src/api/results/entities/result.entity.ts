@@ -28,7 +28,6 @@ import { ResultStatus } from '../result-status/entities/result-status.entity';
 import { ResultsCenter } from '../results-centers/entities/results-center.entity';
 
 @Entity()
-@Index(['result_code', 'version_id'], { unique: true })
 export class Result {
   @PrimaryGeneratedColumn({
     name: 'id',
