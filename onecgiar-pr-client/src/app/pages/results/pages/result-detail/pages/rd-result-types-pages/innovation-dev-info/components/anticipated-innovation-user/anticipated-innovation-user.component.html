@@ -36,11 +36,11 @@
 
                         <div style="display: flex; align-items: center; gap: 30px;">
                             <app-pr-checkbox label="Youth" (selectOptionEvent)="cleanActor(this.actorItem)"
-                                [(ngModel)]="this.actorItem.has_men">
+                                [(ngModel)]="this.actorItem.has_women_youth">
                             </app-pr-checkbox>
 
                             <app-pr-checkbox label="Non-youth" (selectOptionEvent)="cleanActor(this.actorItem)"
-                                [(ngModel)]="this.actorItem.has_men_youth">
+                                [(ngModel)]="this.actorItem.has_women">
                             </app-pr-checkbox>
                         </div>
 
@@ -48,10 +48,10 @@
 
                         <div style="display: flex; align-items: center; gap: 30px;">
                             <app-pr-checkbox label="Youth" (selectOptionEvent)="cleanActor(this.actorItem)"
-                                [(ngModel)]="this.actorItem.has_women"></app-pr-checkbox>
+                                [(ngModel)]="this.actorItem.has_men_youth"></app-pr-checkbox>
 
                             <app-pr-checkbox label="Non-youth" (selectOptionEvent)="cleanActor(this.actorItem)"
-                                [(ngModel)]="this.actorItem.has_women_youth"></app-pr-checkbox>
+                                [(ngModel)]="this.actorItem.has_men"></app-pr-checkbox>
                         </div>
                     </div>
 
