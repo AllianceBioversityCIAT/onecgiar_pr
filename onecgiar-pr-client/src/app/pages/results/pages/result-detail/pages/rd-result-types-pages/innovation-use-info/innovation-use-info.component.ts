@@ -21,6 +21,7 @@ export class InnovationUseInfoComponent implements OnInit {
     this.api.resultsSE.GET_innovationUse().subscribe(
       ({ response }) => {
         this.innovationUseInfoBody.innovatonUse = response;
+        this.convertOrganizations(this.innovationUseInfoBody?.innovatonUse?.organization);
         console.log(response);
         //(response);
         // console.log(this.innovationUseInfoBody);
@@ -32,14 +33,35 @@ export class InnovationUseInfoComponent implements OnInit {
   }
   onSaveSection() {
     //(this.innovationUseInfoBody);
-    console.log({ innovationUse: this.innovationUseInfoBody.innovatonUse });
-    this.api.resultsSE.PATCH_innovationUse({ innovationUse: this.innovationUseInfoBody.innovatonUse }).subscribe(
+    this.convertOrganizationsTosave();
+    console.log({ innovatonUse: this.innovationUseInfoBody.innovatonUse });
+    this.api.resultsSE.PATCH_innovationUse({ innovatonUse: this.innovationUseInfoBody.innovatonUse }).subscribe(
       resp => {
+        console.log(resp);
+        // setTimeout(() => {
         this.getSectionInformation();
+        // }, 3000);
       },
       err => {
         console.error(err);
       }
     );
+  }
+
+  convertOrganizations(organizations) {
+    organizations?.map((item: any) => {
+      if (item.parent_institution_type_id) {
+        item.institution_sub_type_id = item?.institution_types_id;
+        item.institution_types_id = item?.parent_institution_type_id;
+      }
+    });
+  }
+
+  convertOrganizationsTosave() {
+    this.innovationUseInfoBody.innovatonUse.organization.map((item: any) => {
+      if (item.institution_sub_type_id) {
+        item.institution_types_id = item.institution_sub_type_id;
+      }
+    });
   }
 }
