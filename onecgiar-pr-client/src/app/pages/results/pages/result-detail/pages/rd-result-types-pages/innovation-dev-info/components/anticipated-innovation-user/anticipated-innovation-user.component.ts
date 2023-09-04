@@ -107,6 +107,13 @@ export class AnticipatedInnovationUserComponent implements OnInit {
   }
 
   cleanActor(actorItem) {
+    if (actorItem.sex_and_age_disaggregation) {
+      actorItem.has_men = false;
+      actorItem.has_men_youth = false;
+      actorItem.has_women = false;
+      actorItem.has_women_youth = false;
+    }
+
     actorItem.women = null;
     actorItem.women_youth = null;
     actorItem.women_non_youth = null;
