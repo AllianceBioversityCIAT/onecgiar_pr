@@ -29,11 +29,19 @@ export class InnovationUseFormComponent {
       this.institutionsTypeTreeList = response;
     });
   }
+  private institutionsTypeTreeChildrensCache = {};
+
   getInstitutionsTypeTreeChildrens(institution_types_id) {
-    //(institution_types_id);
+    if (this.institutionsTypeTreeChildrensCache[institution_types_id]) {
+      return this.institutionsTypeTreeChildrensCache[institution_types_id];
+    }
+
     const fundedList = this.institutionsTypeTreeList.find(inst => inst.code == institution_types_id);
-    //(fundedList?.childrens);
-    return fundedList?.childrens ?? [];
+    const childrens = fundedList?.childrens ?? [];
+
+    this.institutionsTypeTreeChildrensCache[institution_types_id] = childrens;
+
+    return childrens;
   }
 
   actorTypeDescription() {
