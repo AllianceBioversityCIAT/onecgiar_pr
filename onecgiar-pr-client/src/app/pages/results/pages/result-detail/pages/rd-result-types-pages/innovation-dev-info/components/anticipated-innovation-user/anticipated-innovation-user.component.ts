@@ -9,6 +9,7 @@ import { ApiService } from 'src/app/shared/services/api/api.service';
 })
 export class AnticipatedInnovationUserComponent implements OnInit {
   @Input() body = new InnovationDevInfoBody();
+  @Input() saving: boolean = false;
   isCollapsed: boolean | null = null;
   actorsTypeList = [];
   institutionsTypeTreeList = [];

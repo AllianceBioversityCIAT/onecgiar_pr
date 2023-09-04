@@ -11,6 +11,7 @@ import { IpsrStep1Body } from 'src/app/pages/ipsr/pages/innovation-package-detai
 })
 export class InnovationUseInfoComponent implements OnInit {
   innovationUseInfoBody = new IpsrStep1Body();
+  savingSection = false;
   constructor(private api: ApiService) {}
 
   ngOnInit(): void {
@@ -33,6 +34,7 @@ export class InnovationUseInfoComponent implements OnInit {
   }
   onSaveSection() {
     //(this.innovationUseInfoBody);
+    this.savingSection = true;
     this.convertOrganizationsTosave();
     console.log({ innovatonUse: this.innovationUseInfoBody.innovatonUse });
     this.api.resultsSE.PATCH_innovationUse({ innovatonUse: this.innovationUseInfoBody.innovatonUse }).subscribe(
@@ -41,9 +43,11 @@ export class InnovationUseInfoComponent implements OnInit {
         // setTimeout(() => {
         this.getSectionInformation();
         // }, 3000);
+        this.savingSection = false;
       },
       err => {
         console.error(err);
+        this.savingSection = false;
       }
     );
   }
@@ -53,6 +57,9 @@ export class InnovationUseInfoComponent implements OnInit {
       if (item.parent_institution_type_id) {
         item.institution_sub_type_id = item?.institution_types_id;
         item.institution_types_id = item?.parent_institution_type_id;
+        console.log(item.institution_sub_type_id);
+        console.log(item.institution_types_id);
+        console.log('...');
       }
     });
   }

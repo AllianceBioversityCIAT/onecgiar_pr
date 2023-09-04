@@ -1013,7 +1013,7 @@ export class SummaryService {
           }
           saveActor = await this._resultActorRepository.save({
             actor_type_id: this.isNullData(el?.actor_type_id),
-            is_active: this.isNullData(el?.is_active),
+            is_active: el?.is_active,
             has_men: this.isNullData(el?.has_men),
             has_men_youth: this.isNullData(el?.has_men_youth),
             has_women: this.isNullData(el?.has_women),
@@ -1070,7 +1070,7 @@ export class SummaryService {
               last_updated_by: user,
               other_institution: this.isNullData(el?.other_institution),
               how_many: this.isNullData(el?.how_many),
-              is_active:this.isNullData( el?.is_active),
+              is_active: el?.is_active,
               graduate_students: this.isNullData(el?.graduate_students),
             });
           }

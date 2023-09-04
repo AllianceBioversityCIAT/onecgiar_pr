@@ -14,6 +14,7 @@ import { InnovationDevelopmentLinks } from './model/InnovationDevelopmentLinks.m
 export class InnovationDevInfoComponent implements OnInit {
   innovationDevInfoBody = new InnovationDevInfoBody();
   range = 5;
+  savingSection = false;
   innovationDevelopmentQuestions: InnovationDevelopmentQuestions = new InnovationDevelopmentQuestions();
   innovationDevelopmentLinks: InnovationDevelopmentLinks = new InnovationDevelopmentLinks();
   constructor(private api: ApiService, public innovationControlListSE: InnovationControlListService, private innovationDevInfoUtilsSE: InnovationDevInfoUtilsService) {}
@@ -36,6 +37,7 @@ export class InnovationDevInfoComponent implements OnInit {
   }
 
   getSectionInformation() {
+    this.savingSection = true;
     this.GET_questionsInnovationDevelopment();
     this.api.resultsSE.GET_innovationDev().subscribe(
       ({ response }) => {
@@ -43,9 +45,11 @@ export class InnovationDevInfoComponent implements OnInit {
         this.convertOrganizations(response?.innovatonUse?.organization);
         this.innovationDevInfoBody = response;
         console.log(response);
+        this.savingSection = false;
       },
       err => {
         console.error(err);
+        this.savingSection = false;
       }
     );
   }
