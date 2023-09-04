@@ -18,7 +18,7 @@
                 *ngFor="let actorItem of body?.innovatonUse?.actors; let i=index"
                 [ngClass]="{'hideElement': actorItem.is_active == false || (!this.actorItem?.result_actors_id && this.api.rolesSE.readOnly)}">
                 <div>
-                    <app-pr-select *ngIf="this.saving" [options]="this.actorsTypeList" [indexReference]="i"
+                    <app-pr-select *ngIf="!this.saving" [options]="this.actorsTypeList" [indexReference]="i"
                         label="Actor type" optionLabel="name" optionValue="actor_type_id"
                         [(ngModel)]="actorItem.actor_type_id" (ngModelChange)="this.actorItem.other_actor_type = null"
                         placeholder="Select type of actor" [disableOptions]="removeOther(body?.innovatonUse?.actors)"
