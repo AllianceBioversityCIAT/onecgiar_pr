@@ -936,7 +936,7 @@ export class SummaryService {
   ) {
     if (crtr?.actors?.length) {
       const { actors } = crtr;
-      actors.map(async (el: ResultActor) => {
+      for (const el of actors) {
         let actorExists: ResultActor = null;
 
         if (el?.actor_type_id) {
@@ -1012,12 +1012,12 @@ export class SummaryService {
             };
           }
           saveActor = await this._resultActorRepository.save({
-            actor_type_id: el.actor_type_id,
-            is_active: el.is_active,
-            has_men: el.has_men,
-            has_men_youth: el.has_men_youth,
-            has_women: el.has_women,
-            has_women_youth: el.has_women_youth,
+            actor_type_id: el?.actor_type_id,
+            is_active: el?.is_active,
+            has_men: el?.has_men,
+            has_men_youth: el?.has_men_youth,
+            has_women: el?.has_women,
+            has_women_youth: el?.has_women_youth,
             men: this.isNullData(el?.men),
             men_youth: this.isNullData(el?.men_youth),
             women: this.isNullData(el?.women),
@@ -1031,12 +1031,12 @@ export class SummaryService {
             how_many: el?.how_many,
           });
         }
-      });
+      }
     }
 
     if (crtr?.organization?.length) {
       const { organization } = crtr;
-      organization.map(async (el) => {
+      for (const el of organization) {
         let ite: ResultsByInstitutionType = null;
 
         if (el?.institution_types_id && el?.institution_types_id != 78) {
@@ -1066,7 +1066,7 @@ export class SummaryService {
             };
           } else {
             await this._resultByIntitutionsTypeRepository.update(ite.id, {
-              institution_types_id: el.institution_types_id,
+              institution_types_id: el?.institution_types_id,
               last_updated_by: user,
               other_institution: el?.other_institution,
               how_many: el?.how_many,
@@ -1090,15 +1090,15 @@ export class SummaryService {
             institution_types_id: el.institution_types_id,
             graduate_students: el?.graduate_students,
             institution_roles_id: 5,
-            how_many: el.how_many,
+            how_many: el?.how_many,
           });
         }
-      });
+      }
     }
 
     if (crtr?.measures?.length) {
       const { measures } = crtr;
-      measures.map(async (el) => {
+      for (const el of measures) {
         let ripm: ResultIpMeasure = null;
         if (el?.result_ip_measure_id) {
           ripm = await this._resultIpMeasureRepository.findOne({
@@ -1111,7 +1111,7 @@ export class SummaryService {
             where: {
               unit_of_measure: el.unit_of_measure,
               result_id: resultId,
-              quantity: el?.quantity
+              quantity: el?.quantity,
             },
           });
         } else if (!ripm) {
@@ -1119,7 +1119,7 @@ export class SummaryService {
             where: {
               unit_of_measure: IsNull(),
               result_id: resultId,
-              quantity: el?.quantity
+              quantity: el?.quantity,
             },
           });
         }
@@ -1157,7 +1157,7 @@ export class SummaryService {
             last_updated_by: user,
           });
         }
-      });
+      }
     }
   }
 
