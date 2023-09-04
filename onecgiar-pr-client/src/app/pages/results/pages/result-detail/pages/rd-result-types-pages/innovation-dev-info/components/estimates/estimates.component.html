@@ -2,7 +2,7 @@
     <app-pr-field-header
         label="Estimation of total USD-value of pooled investment by CGIAR initiatives during the reporting period"
         [description]="headerDescriptions().n1" [useColon]="false"></app-pr-field-header>
-    <table>
+    <table [style]="!body.initiative_expected_investment.length ? 'margin-bottom: 5px;' : null">
         <tr>
             <th>Initiative</th>
             <th>Total USD Value <br> <span>(in-cash + in-kind)</span> </th>
@@ -24,6 +24,9 @@
             </td>
         </tr>
     </table>
+    <div style="margin-bottom: 45px;" *ngIf="!body.initiative_expected_investment.length">
+        <app-no-data-text title=" There are no items available for this table."></app-no-data-text>
+    </div>
 </div>
 
 <div class="segment">
@@ -52,6 +55,9 @@
             </td>
         </tr>
     </table>
+    <app-no-data-text *ngIf="!body.bilateral_expected_investment.length"
+        title="There are no items available for this table."></app-no-data-text>
+
     <div style="margin-bottom: 45px;">
         <p>To add additional non-pooled projects, please go to <a class="open_route"
                 [href]="'/result/result-detail/'+ resultCode + '/theory-of-change?phase=' + versionId"
@@ -90,6 +96,10 @@
             </td>
         </tr>
     </table>
+
+    <app-no-data-text *ngIf="!body.institutions_expected_investment.length"
+        title="There are no items available for this table."></app-no-data-text>
+
     <div style="margin-bottom: 45px;">
         <p>To add additional partners, please go to <a class="open_route"
                 [href]="'/result/result-detail/'+ resultCode + '/partners?phase=' + versionId" target="_blank">section

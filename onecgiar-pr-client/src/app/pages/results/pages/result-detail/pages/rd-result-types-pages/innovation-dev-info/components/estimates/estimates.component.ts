@@ -12,8 +12,8 @@ export class EstimatesComponent implements OnInit {
 
   constructor(public api: ApiService) {}
 
-  resultCode = this.api.dataControlSE.currentResult.result_code;
-  versionId = this.api.dataControlSE.currentResult.version_id;
+  resultCode = this.api.dataControlSE?.currentResult?.result_code;
+  versionId = this.api.dataControlSE?.currentResult?.version_id;
 
   ngOnInit(): void {}
 
