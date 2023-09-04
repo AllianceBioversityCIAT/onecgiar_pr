@@ -20,7 +20,7 @@
                 <div>
                     <app-pr-select [options]="this.actorsTypeList" [indexReference]="i" label="Actor type"
                         optionLabel="name" optionValue="actor_type_id" [(ngModel)]="actorItem.actor_type_id"
-                        (ngModelChange)="this.actorItem.other_actor_type = null" placeholder="Select actor type"
+                        (ngModelChange)="this.actorItem.other_actor_type = null" placeholder="Select type of actor"
                         [disableOptions]="removeOther(body?.innovatonUse?.actors)"
                         [required]="!!this.actorItem?.result_actors_id" [(ngModel)]="actorItem.actor_type_id">
                     </app-pr-select>
@@ -75,15 +75,18 @@
         <div class="fragment_section_divider"></div>
 
         <!-- Organizations section -->
+
+        <app-pr-field-header label="Organizations" [useColon]="false" [required]="false"></app-pr-field-header>
+
         <div class="fields_list" *ngIf="this.body.innovatonUse.organization?.length">
             <div class="fields" appYmzListStructureItem (deleteEvent)="removeOrganization(organizationItem)"
                 [ngClass]="{'hideElement': organizationItem.is_active == false|| (!this.organizationItem?.id && this.api.rolesSE.readOnly)}"
                 *ngFor="let organizationItem of this.body.innovatonUse.organization; let i=index">
                 <div>
-                    <app-pr-select [options]="this.institutionsTypeTreeList" [indexReference]="i" label="Organization"
-                        [required]="!!organizationItem?.id" optionLabel="name" optionValue="code"
-                        [(ngModel)]="organizationItem.institution_types_id" placeholder="Select organization"
-                        (selectOptionEvent)="reloadSelect(organizationItem)"
+                    <app-pr-select [options]="this.institutionsTypeTreeList" [indexReference]="i"
+                        label="Organization type" [required]="!!organizationItem?.id" optionLabel="name"
+                        optionValue="code" [(ngModel)]="organizationItem.institution_types_id"
+                        placeholder="Select type of organization" (selectOptionEvent)="reloadSelect(organizationItem)"
                         (ngModelChange)="this.organizationItem.other_institution = null"
                         [disableOptions]="removeOtherInOrg(disableOrganizations)">
                     </app-pr-select>
@@ -116,9 +119,9 @@
         <div class="fragment_section_divider"></div>
 
         <!-- Mesure section -->
+        <app-pr-field-header label="Other quantitative measures of innovation use (e.g. # of hectares)"
+            [required]="false"></app-pr-field-header>
         <div class="fields_list" *ngIf="this.body.innovatonUse.measures?.length">
-            <app-pr-field-header label="Other quantitative measures of innovation use (e.g. # of hectares)"
-                [required]="false"></app-pr-field-header>
             <div class="fields" appYmzListStructureItem (deleteEvent)="measuresItem.is_active = false"
                 *ngFor="let measuresItem of this.body.innovatonUse.measures"
                 [ngClass]="{'hideElement': measuresItem.is_active == false|| (!this.measuresItem?.result_ip_measure_id && this.api.rolesSE.readOnly)}">
