@@ -1012,17 +1012,17 @@ export class SummaryService {
             };
           }
           saveActor = await this._resultActorRepository.save({
-            actor_type_id: el?.actor_type_id,
-            is_active: el?.is_active,
-            has_men: el?.has_men,
-            has_men_youth: el?.has_men_youth,
-            has_women: el?.has_women,
-            has_women_youth: el?.has_women_youth,
+            actor_type_id: this.isNullData(el?.actor_type_id),
+            is_active: this.isNullData(el?.is_active),
+            has_men: this.isNullData(el?.has_men),
+            has_men_youth: this.isNullData(el?.has_men_youth),
+            has_women: this.isNullData(el?.has_women),
+            has_women_youth: this.isNullData(el?.has_women_youth),
             men: this.isNullData(el?.men),
             men_youth: this.isNullData(el?.men_youth),
             women: this.isNullData(el?.women),
             women_youth: this.isNullData(el?.women_youth),
-            other_actor_type: el?.other_actor_type,
+            other_actor_type: this.isNullData(el?.other_actor_type),
             last_updated_by: user,
             created_by: user,
             result_id: resultId,
@@ -1066,12 +1066,12 @@ export class SummaryService {
             };
           } else {
             await this._resultByIntitutionsTypeRepository.update(ite.id, {
-              institution_types_id: el?.institution_types_id,
+              institution_types_id: this.isNullData(el?.institution_types_id),
               last_updated_by: user,
-              other_institution: el?.other_institution,
-              how_many: el?.how_many,
-              is_active: el?.is_active,
-              graduate_students: el?.graduate_students,
+              other_institution: this.isNullData(el?.other_institution),
+              how_many: this.isNullData(el?.how_many),
+              is_active:this.isNullData( el?.is_active),
+              graduate_students: this.isNullData(el?.graduate_students),
             });
           }
         } else {
@@ -1086,9 +1086,9 @@ export class SummaryService {
             results_id: resultId,
             created_by: user,
             last_updated_by: user,
-            other_institution: el?.other_institution,
-            institution_types_id: el.institution_types_id,
-            graduate_students: el?.graduate_students,
+            other_institution: this.isNullData(el?.other_institution),
+            institution_types_id: this.isNullData(el.institution_types_id),
+            graduate_students: this.isNullData(el?.graduate_students),
             institution_roles_id: 5,
             how_many: el?.how_many,
           });
@@ -1151,8 +1151,8 @@ export class SummaryService {
           }
           await this._resultIpMeasureRepository.save({
             result_id: resultId,
-            quantity: el?.quantity,
-            unit_of_measure: el?.unit_of_measure,
+            quantity: this.isNullData(el?.quantity),
+            unit_of_measure: this.isNullData(el?.unit_of_measure),
             created_by: user,
             last_updated_by: user,
           });
