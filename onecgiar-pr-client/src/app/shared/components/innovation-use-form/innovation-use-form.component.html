@@ -92,8 +92,8 @@
         [ngClass]="{'hideElement': organizationItem.is_active == false|| (!this.organizationItem?.id && this.api.rolesSE.readOnly)}"
         *ngFor="let organizationItem of this.body.innovatonUse.organization; let i=index">
         <div>
-            <app-pr-select [options]="this.institutionsTypeTreeList" [indexReference]="i" label="Organization"
-                [required]="!!organizationItem?.id" optionLabel="name" optionValue="code"
+            <app-pr-select *ngIf="!saving" [options]="this.institutionsTypeTreeList" [indexReference]="i"
+                label="Organization" [required]="!!organizationItem?.id" optionLabel="name" optionValue="code"
                 [(ngModel)]="organizationItem.institution_types_id" placeholder="Select organization"
                 (selectOptionEvent)="reloadSelect(organizationItem)"
                 (ngModelChange)="this.organizationItem.other_institution = null"

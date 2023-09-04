@@ -11,6 +11,7 @@ export class InnovationUseFormComponent {
   actorsTypeList = [];
   institutionsTypeTreeList = [];
   @Input() body = new IpsrStep1Body();
+  @Input() saving: boolean = false;
   constructor(public api: ApiService) {
     this.GETAllActorsTypes();
     this.GETInstitutionsTypeTree();
