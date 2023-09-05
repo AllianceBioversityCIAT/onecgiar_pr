@@ -48,11 +48,6 @@ export class StepN3ComplementaryInnovationsComponent {
     const use_level_evidence_based_index = this.innovationUseList.findIndex(item => item.id == bodyItem['use_level_evidence_based']);
     if (readiness_level_evidence_based_index != 0) attrListTovalidate.push('readinees_evidence_link');
     if (use_level_evidence_based_index != 0) attrListTovalidate.push('use_evidence_link');
-    // bodyItem['required_evidence'] ?
-
-    bodyItem.readiness_level_evidence_based;
-    bodyItem.use_level_evidence_based;
-
     let oneEmpty = false;
     attrListTovalidate.forEach((attr: any) => {
       if (bodyItem[attr] === null || bodyItem[attr] === undefined || bodyItem[attr] === '') oneEmpty = true;
