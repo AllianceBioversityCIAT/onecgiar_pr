@@ -86,7 +86,6 @@ export class ResultCreatorComponent implements OnInit {
       response => {
         //(response);
         this.depthSearchList = response;
-        console.log('depthSearchList', this.depthSearchList);
         this.exactTitleFound = !!this.depthSearchList.find(result => cleanSpaces(result.title) === cleanSpaces(title));
       },
       err => {
