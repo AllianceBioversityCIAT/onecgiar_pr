@@ -6,7 +6,8 @@
 <div class="similar_results">
     <div class=" result" *ngFor="let item of options" [hidden]="!options?.length">
         <div class="line" [style.background]="'var(--pr-color-result-level-'+item?.result_level_id+')'"></div>
-        <div class="texts">(Id: {{item?.id}}) {{item?.crp}} - {{(item?.result_type_name ? (item?.result_type_name + '
+        <div class="texts">(Id: {{item?.result_code}}) {{item?.crp}} - {{(item?.result_type_name ?
+            (item?.result_type_name + '
             -'):'')}}
 
             <div class="title">
