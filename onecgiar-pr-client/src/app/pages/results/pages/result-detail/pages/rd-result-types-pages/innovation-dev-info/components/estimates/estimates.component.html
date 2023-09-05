@@ -41,7 +41,12 @@
             <th></th>
         </tr>
         <tr *ngFor="let item of body.bilateral_expected_investment">
-            <td>{{item?.obj_non_pooled_projetct?.grant_title}}</td>
+            <td>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    {{item?.obj_non_pooled_projetct?.grant_title}}
+                    <app-non-pooled-info [body]="item"></app-non-pooled-info>
+                </div>
+            </td>
             <td>
                 <app-pr-input placeholder="Write some..." type="currency" [(ngModel)]="item.kind_cash"
                     [noDataText]="'item.is_determined' ? 'Not applicable':'Not provided'" [required]="false">

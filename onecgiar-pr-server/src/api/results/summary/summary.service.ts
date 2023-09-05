@@ -742,7 +742,9 @@ export class SummaryService {
             is_active: true,
           },
           relations: {
-            obj_non_pooled_projetct: true,
+            obj_non_pooled_projetct: {
+              obj_funder_institution_id: true
+            },
           },
         });
 
