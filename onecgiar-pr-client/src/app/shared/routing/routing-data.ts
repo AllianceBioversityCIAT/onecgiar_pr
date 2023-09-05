@@ -33,6 +33,12 @@ export const adminModuleRouting: PrRoute[] = [
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'completeness-status' }
 ];
 
+export const managementPhasesRuting: PrRoute[] = [
+  { prName: 'Reporting', path: 'reporting', loadChildren: () => import('../../pages/admin-section/pages/phase-management/pages/reporting/reporting.module').then(m => m.ReportingModule) },
+  { prName: 'Innovation Package', path: 'innovation-package', loadChildren: () => import('../../pages/admin-section/pages/phase-management/pages/innovation-package/innovation-package.module').then(m => m.InnovationPackageModule) },
+  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'reporting' }
+];
+
 export const initadminModuleRouting: PrRoute[] = [
   { prName: 'Completeness status', path: 'init-completeness-status', loadChildren: () => import('../../pages/init-admin-section/pages/init-completeness-status/init-completeness-status.module').then(m => m.InitCompletenessStatusModule) },
   { prName: 'General results report', path: 'init-general-results-report', loadChildren: () => import('../../pages/init-admin-section/pages/init-general-results-report/init-general-results-report.module').then(m => m.InitGeneralResultsReportModule) },
