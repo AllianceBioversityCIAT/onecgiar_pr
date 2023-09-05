@@ -75,6 +75,7 @@ export class ShareRequestModalComponent {
   modelChange() {
     //('modelChange');
     this.showTocOut = false;
+
     setTimeout(() => {
       const iniciativeSelected = this.allInitiatives.filter(resp => resp.initiative_id == this.shareRequestModalSE.shareRequestBody.initiative_id);
       this.shareRequestModalSE.shareRequestBody['official_code'] = iniciativeSelected[0].official_code;
@@ -88,9 +89,7 @@ export class ShareRequestModalComponent {
     const body = { ...this.api.dataControlSE.currentNotification, ...this.shareRequestModalSE.shareRequestBody, request_status_id: 2, bodyNewTheoryOfChanges: this.theoryOfChangesServices.body };
     //(this.api.resultsSE.ipsrDataControlSE.inIpsr);
     this.requesting = true;
-    console.log(body);
-    
-    
+
     this.api.resultsSE.PATCH_updateRequest(body).subscribe(
       resp => {
         //(resp);
