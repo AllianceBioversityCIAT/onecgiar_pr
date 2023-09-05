@@ -12,9 +12,11 @@ import { AnticipatedInnovationUserComponent } from './components/anticipated-inn
 import { EstimatesComponent } from './components/estimates/estimates.component';
 import { InnovationLinksComponent } from './components/innovation-links/innovation-links.component';
 import { YmzListStructureItemModule } from '../../../../../../../shared/directives/ymz-list-structure-item/ymz-list-structure-item.module';
+import { NonPooledInfoComponent } from './components/estimates/components/non-pooled-info/non-pooled-info.component';
+import { DialogModule } from 'primeng/dialog';
 
 @NgModule({
-  declarations: [InnovationDevInfoComponent, GesiInnovationAssessmentComponent, ScaleImpactAnalysisComponent, IntellectualPropertyRightsComponent, InnovationTeamDiversityComponent, AnticipatedInnovationUserComponent, EstimatesComponent, InnovationLinksComponent],
-  imports: [CommonModule, InnovationDevInfoRoutingModule, CustomFieldsModule, YmzListStructureItemModule]
+  declarations: [InnovationDevInfoComponent, GesiInnovationAssessmentComponent, ScaleImpactAnalysisComponent, IntellectualPropertyRightsComponent, InnovationTeamDiversityComponent, AnticipatedInnovationUserComponent, EstimatesComponent, InnovationLinksComponent, NonPooledInfoComponent],
+  imports: [CommonModule, InnovationDevInfoRoutingModule, CustomFieldsModule, YmzListStructureItemModule, DialogModule]
 })
 export class InnovationDevInfoModule {}
