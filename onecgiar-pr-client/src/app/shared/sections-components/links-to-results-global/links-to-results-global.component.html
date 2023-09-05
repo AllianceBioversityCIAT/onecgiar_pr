@@ -46,8 +46,7 @@
                         <div class="link_button view"
                             (click)="openInNewPage('/result/result-detail/' + result?.result_code)">View
                         </div>
-                        <div class="link_button"
-                            *ngIf="!this.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"
+                        <div class="link_button" *ngIf="!this.rolesSE.readOnly"
                             [ngClass]="{'globalDisabled': result.selected}"
                             (click)="!result.selected ? onLinkResult(result) : null">{{result.selected ? 'Selected' :
                             'Link'}}</div>
@@ -94,11 +93,10 @@
 
     </div>
 
-    <app-no-data-text
-        *ngIf="!this.linksToResultsBody.legacy_link.length && !this.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"
+    <app-no-data-text *ngIf="!this.linksToResultsBody.legacy_link.length && !this.rolesSE.readOnly"
         title="No results from previous portfolio added"></app-no-data-text>
     <app-add-button name="Add results from previous portfolio" (clickEvent)="addLegacy_link()"
-        *ngIf="!this.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status">
+        *ngIf="!this.rolesSE.readOnly">
     </app-add-button>
 
     <app-save-button [disabled]="validateCGSpaceLinks" class="position_sticky" (clickSave)="onSaveSection()">
