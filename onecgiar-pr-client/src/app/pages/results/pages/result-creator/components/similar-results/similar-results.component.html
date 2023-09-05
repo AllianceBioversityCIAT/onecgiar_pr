@@ -6,12 +6,10 @@
 <div class="similar_results">
     <div class=" result" *ngFor="let item of options" [hidden]="!options?.length">
         <div class="line" [style.background]="'var(--pr-color-result-level-'+item?.result_level_id+')'"></div>
-        <div class="texts">(Id: {{item?.result_code}}) {{item?.crp}} - {{(item?.result_type_name ?
-            (item?.result_type_name + '
-            -'):'')}}
-
-            <div class="title">
-                {{item?.title}}</div>
+        <div class="texts">
+            <p style="margin: 0; max-width: 170px; min-width: 170px;">(Id: {{item?.result_code}}) {{item?.crp}}</p>
+            <p style=" margin: 0; width: fit-content;">{{(item?.type)}}</p>
+            <h1 class="title">{{item?.title}}</h1>
         </div>
         <app-pr-button text="Map to TOC" icon="account_tree" [verticalMargin]="0" *ngIf="!item.is_legacy"
             (click)="onPressAction(item);this.api.dataControlSE.showShareRequest = true">
