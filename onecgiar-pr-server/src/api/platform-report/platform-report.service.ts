@@ -39,10 +39,11 @@ export class PlatformReportService {
         };
         throw error;
       }
+      const enumValue = PlatformReportEnum.FULL_RESULT_REPORT;
 
       const report = await this._platformReportRepository.findOne({
-        where: { id: PlatformReportEnum.FULL_RESULT_REPORT.id },
-        relations: { template_object: true },
+        where: { id: enumValue.id },
+        relations: { template_object: { children_array: true } },
       });
 
       const data =
@@ -61,6 +62,15 @@ export class PlatformReportService {
         };
         throw error;
       }
+
+      /*const header = report.template_object.children_array.find(
+        (c) => c.name === enumValue.children.header_name,
+      )?.template;
+      const footer = report.template_object.children_array.find(
+        (c) => c.name === enumValue.children.footer_name,
+      )?.template;
+      const compiledHeader = Handlebars.compile(header)(data);
+      const compiledFooter = Handlebars.compile(footer)(data);*/
 
       const options = {
         format: 'A3',

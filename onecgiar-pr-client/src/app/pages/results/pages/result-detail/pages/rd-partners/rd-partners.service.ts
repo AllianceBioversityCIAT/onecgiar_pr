@@ -1,6 +1,8 @@
 import { Injectable } from '@angular/core';
 import { PartnersBody } from './models/partnersBody';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
+import { centerInterfacesToc } from '../rd-theory-of-change/model/theoryOfChangeBody';
+import { concatMap, filter } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -8,6 +10,7 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 export class RdPartnersService {
   partnersBody = new PartnersBody();
   toggle = 0;
+  centers: centerInterfacesToc[] = [];
   constructor(private api: ApiService) {}
 
   validateDeliverySelection(deliveries, deliveryId) {
@@ -46,5 +49,12 @@ export class RdPartnersService {
         if (no_applicable_partner === true || no_applicable_partner === false) this.partnersBody.no_applicable_partner = no_applicable_partner;
       }
     );
+  }
+
+  getCenterInformation() {
+    this.api.resultsSE.GET_centers().subscribe(({ response }) => {
+      //(response);
+      this.centers = response;
+    });
   }
 }

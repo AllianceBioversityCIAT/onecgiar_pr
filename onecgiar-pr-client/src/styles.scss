@@ -40,6 +40,10 @@ a {
   text-decoration: none;
 }
 
+.no-margin-top {
+  margin-top: 0px !important;
+}
+
 .search_input {
   display: flex;
   align-items: center;

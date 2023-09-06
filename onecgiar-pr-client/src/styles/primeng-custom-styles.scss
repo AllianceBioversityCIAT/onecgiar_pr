@@ -1,15 +1,29 @@
 .p-datatable-thead {
-    tr {
-        th {
-            background-color: var(--pr-color-secondary) !important;
-            color: white !important;
-        }
+  tr {
+    th {
+      background-color: var(--pr-color-secondary) !important;
+      color: white !important;
     }
+  }
 }
 
 .p-datepicker-touch-ui,
 .p-calendar .p-datepicker-touch-ui {
+  min-width: 27vw !important;
+}
 
-    min-width: 27vw !important;
+.p-radiobutton:not(.p-radiobutton-disabled) .p-radiobutton-box.p-focus {
+  box-shadow: none !important;
+}
 
+.p-radiobutton .p-radiobutton-box:not(.p-disabled):not(.p-highlight) {
+  border-color: #d4d4d8 !important;
+}
+
+.p-checkbox:not(.p-checkbox-disabled) .p-checkbox-box.p-focus {
+  box-shadow: none !important;
+}
+
+.p-checkbox .p-checkbox-box:not(.p-disabled):not(.p-highlight) {
+  border-color: #d4d4d8 !important;
 }

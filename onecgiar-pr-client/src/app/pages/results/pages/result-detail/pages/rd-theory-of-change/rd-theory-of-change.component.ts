@@ -17,13 +17,12 @@ export class RdTheoryOfChangeComponent {
   theoryOfChangeBody = new TheoryOfChangeBody();
   contributingInitiativesList = [];
   primaryText = ' - <strong>Primary</strong> ';
+  disabledText = 'To remove this center, please contact your librarian';
   getConsumed = false;
   psub = '';
   contributingInitiativeNew = [];
   currentInitOfficialCode = null;
-  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public centersSE: CentersService, 
-    public institutionsSE: InstitutionsService, public greenChecksSE: GreenChecksService,
-    public theoryOfChangesServices :RdTheoryOfChangesServicesService ) {}
+  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public centersSE: CentersService, public institutionsSE: InstitutionsService, public greenChecksSE: GreenChecksService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {}
   ngOnInit(): void {
     this.requestEvent();
     this.getSectionInformation();
@@ -38,8 +37,8 @@ export class RdTheoryOfChangeComponent {
 
   async getSectionInformation() {
     this.theoryOfChangesServices.body = [];
-    await this.api.resultsSE.GET_toc().subscribe(
-      ({ response }) => {
+    await this.api.resultsSE.GET_toc().subscribe({
+      next: ({ response }) => {
         this.theoryOfChangeBody = response;
         console.log(this.theoryOfChangeBody);
         setTimeout(() => {
@@ -52,11 +51,15 @@ export class RdTheoryOfChangeComponent {
         this.theoryOfChangeBody.impactsTarge.map(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
         this.theoryOfChangeBody.sdgTargets.map(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
       },
-      err => {
+      error: err => {
         this.getConsumed = true;
         console.error(err);
       }
-    );
+    });
+  }
+
+  get disabledCenters() {
+    return this.theoryOfChangeBody.contributing_center.filter(center => center.from_cgspace);
   }
 
   get validateGranTitle() {
@@ -73,23 +76,19 @@ export class RdTheoryOfChangeComponent {
 
   onSaveSection() {
     this.theoryOfChangeBody.bodyNewTheoryOfChanges = this.theoryOfChangesServices.body;
-    this.theoryOfChangeBody.bodyActionArea =this.theoryOfChangesServices.resultActionArea 
-    
+    this.theoryOfChangeBody.bodyActionArea = this.theoryOfChangesServices.resultActionArea;
 
     let initiativesAux = this.theoryOfChangeBody.contributing_and_primary_initiative.concat(this.contributingInitiativeNew);
-      this.theoryOfChangeBody.contributing_initiatives = initiativesAux.filter(init => init.id != this.theoryOfChangeBody.result_toc_result.initiative_id);
-      console.log(this.theoryOfChangeBody);
-    
+    this.theoryOfChangeBody.contributing_initiatives = initiativesAux.filter(init => init.id != this.theoryOfChangeBody.result_toc_result.initiative_id);
+    console.log(this.theoryOfChangeBody);
     const saveSection = () => {
-      
-      
       this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
         //(resp);
         this.getConsumed = false;
         // this.theoryOfChangeBody.result_toc_result.initiative_id = null;
         this.theoryOfChangesServices.body = [];
         this.currentInitOfficialCode != newInitOfficialCode ? location.reload() : this.getSectionInformation();
-        this.contributingInitiativeNew = []
+        this.contributingInitiativeNew = [];
       });
     };
     const newInit = this.theoryOfChangeBody.contributing_and_primary_initiative.find(init => init.id == this.theoryOfChangeBody.result_toc_result.initiative_id);
@@ -97,11 +96,9 @@ export class RdTheoryOfChangeComponent {
     if (this.currentInitOfficialCode != newInitOfficialCode)
       return this.api.alertsFe.show({ id: 'primary-submitter', title: 'Change in primary submitter', description: `The <strong>${newInitOfficialCode}</strong> will now be the primary submitter of this result and will have exclusive editing rights for all sections and submission. <strong>${this.currentInitOfficialCode}</strong> will lose editing and submission rights but will remain as a contributing initiative in this result. <br> <br> Please ensure that the new primary submitter of this result is aware of this change.`, status: 'success', confirmText: 'Proceed' }, () => {
         saveSection();
-        
       });
-      
+
     return saveSection();
-    
   }
 
   someEditable() {
@@ -111,7 +108,7 @@ export class RdTheoryOfChangeComponent {
     //();
     //('onSelectContributingInitiative');
     console.log(this.contributingInitiativeNew);
-    
+
     this.theoryOfChangeBody.contributing_initiatives?.map((resp: any) => {
       //(resp);
       //(this.theoryOfChangeBody.contributors_result_toc_result);
@@ -138,7 +135,7 @@ export class RdTheoryOfChangeComponent {
     //(contributorFinded);
   }
 
-  onRemoveContribuiting(index){
+  onRemoveContribuiting(index) {
     this.contributingInitiativeNew.splice(index, 1);
   }
   addBilateralContribution() {
