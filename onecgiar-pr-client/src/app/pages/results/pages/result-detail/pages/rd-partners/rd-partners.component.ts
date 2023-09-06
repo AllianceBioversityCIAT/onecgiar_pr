@@ -17,8 +17,10 @@ export class RdPartnersComponent {
     this.rdPartnersSE.getSectionInformation();
     this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
       try {
-        document.querySelector('.alert-event').addEventListener('click', e => {
-          this.api.dataControlSE.showPartnersRequest = true;
+        document.querySelectorAll('.alert-event').forEach(element => {
+          element.addEventListener('click', e => {
+            this.api.dataControlSE.showPartnersRequest = true;
+          });
         });
       } catch (error) {}
     });
