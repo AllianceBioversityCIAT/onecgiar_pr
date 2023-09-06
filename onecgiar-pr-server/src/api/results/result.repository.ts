@@ -523,7 +523,8 @@ WHERE
     u.last_name as create_last_name,
     r.version_id,
     v.phase_name,
-    v.phase_year
+    v.phase_year,
+    v.status as phase_status
 FROM
     \`result\` r
     INNER JOIN result_type rt ON rt.id = r.result_type_id
@@ -1905,7 +1906,7 @@ left join clarisa_countries cc3
         LEFT JOIN Integration_information.work_packages wp ON wp.id = tr.work_packages_id
         LEFT JOIN Integration_information.toc_results_indicators tri ON tr.id = tri.toc_results_id AND tri.toc_result_indicator_id = rtri.toc_results_indicator_id COLLATE utf8mb3_general_ci
     WHERE
-        r.result_code ${resultCodes.length ? `in (${resultCodes})`: '= 0' }
+        r.result_code ${resultCodes.length ? `in (${resultCodes})` : '= 0'}
         AND rbi.is_active = 1
         AND rtr.is_active = 1
         AND rtr.planned_result = 1
