@@ -1,5 +1,8 @@
 <div class="local_container">
-  <app-report-new-result-button> </app-report-new-result-button>
+  <div class="action_buttons">
+    <app-report-new-result-button> </app-report-new-result-button>
+    <app-pr-button text="Update result" icon="moving" [reverse]="true"></app-pr-button>
+  </div>
   <!-- <div class="alert"></div> -->
   <br>
   <app-results-list-filters></app-results-list-filters>
@@ -90,3 +93,5 @@
 <p-menu #menu [popup]="true"
   [model]="this.api.dataControlSE?.currentResult?.role_id || this.api.rolesSE.isAdmin ? itemsWithDelete : items">
 </p-menu>
+
+<app-results-to-update-modal></app-results-to-update-modal>
