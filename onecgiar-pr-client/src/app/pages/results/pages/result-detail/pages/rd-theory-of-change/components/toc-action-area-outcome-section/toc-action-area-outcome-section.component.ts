@@ -13,7 +13,7 @@ export class TocActionAreaOutcomeSectionComponent {
   @Input() result_toc_result = new resultToResultInterfaceToc();
   @Input() contributors_result_toc_result: any;
   constructor(public api: ApiService, public dataControlSE: DataControlService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {
-    console.log(this.api.rolesSE.validateInitiative(19));
-    this.theoryOfChangesServices.resultActionArea = []
+    //(this.api.rolesSE.validateInitiative(19));
+    this.theoryOfChangesServices.resultActionArea = [];
   }
 }

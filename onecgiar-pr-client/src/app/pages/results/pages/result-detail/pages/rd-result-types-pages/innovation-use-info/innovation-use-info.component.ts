@@ -23,9 +23,9 @@ export class InnovationUseInfoComponent implements OnInit {
       ({ response }) => {
         this.innovationUseInfoBody.innovatonUse = response;
         this.convertOrganizations(this.innovationUseInfoBody?.innovatonUse?.organization);
-        console.log(response);
         //(response);
-        // console.log(this.innovationUseInfoBody);
+        //(response);
+        // //(this.innovationUseInfoBody);
       },
       err => {
         console.error(err);
@@ -36,10 +36,10 @@ export class InnovationUseInfoComponent implements OnInit {
     //(this.innovationUseInfoBody);
     this.savingSection = true;
     this.convertOrganizationsTosave();
-    console.log({ innovatonUse: this.innovationUseInfoBody.innovatonUse });
+    //({ innovatonUse: this.innovationUseInfoBody.innovatonUse });
     this.api.resultsSE.PATCH_innovationUse({ innovatonUse: this.innovationUseInfoBody.innovatonUse }).subscribe(
       resp => {
-        console.log(resp);
+        //(resp);
         // setTimeout(() => {
         this.getSectionInformation();
         // }, 3000);
@@ -57,9 +57,9 @@ export class InnovationUseInfoComponent implements OnInit {
       if (item.parent_institution_type_id) {
         item.institution_sub_type_id = item?.institution_types_id;
         item.institution_types_id = item?.parent_institution_type_id;
-        console.log(item.institution_sub_type_id);
-        console.log(item.institution_types_id);
-        console.log('...');
+        //(item.institution_sub_type_id);
+        //(item.institution_types_id);
+        //('...');
       }
     });
   }

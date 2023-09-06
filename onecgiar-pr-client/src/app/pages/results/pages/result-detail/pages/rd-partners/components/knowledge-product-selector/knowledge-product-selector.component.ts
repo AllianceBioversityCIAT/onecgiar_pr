@@ -14,7 +14,7 @@ export class KnowledgeProductSelectorComponent {
   constructor(public api: ApiService, public institutionsSE: InstitutionsService, public rdPartnersSE: RdPartnersService, public rolesSE: RolesService) {}
 
   institutions_institutions_type_name(partner) {
-    console.log('institutions_institutions_type_name');
+    //('institutions_institutions_type_name');
     const insts = this.institutionsSE.institutionsList;
     const institutionFinded = insts.find(institution => institution.institutions_id == partner.user_matched_institution.institutions_id);
     partner.user_matched_institution.institutions_type_name = institutionFinded?.institutions_type_name;

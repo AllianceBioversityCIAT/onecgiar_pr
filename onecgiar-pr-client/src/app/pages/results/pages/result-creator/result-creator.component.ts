@@ -76,7 +76,7 @@ export class ResultCreatorComponent implements OnInit {
   depthSearch(title: string) {
     const cleanSpaces = text => text?.replaceAll(' ', '')?.toLowerCase();
     const legacyType = this.getLegacyType(this.resultTypeName, this.resultLevelName);
-    console.log({ type: this.resultTypeName, level: this.resultLevelName, legacyType });
+    //({ type: this.resultTypeName, level: this.resultLevelName, legacyType });
     this.api.resultsSE.GET_FindResultsElastic(title, legacyType).subscribe(
       response => {
         //(response);

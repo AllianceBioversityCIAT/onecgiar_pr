@@ -45,24 +45,22 @@ export class TocInitiativeAaoComponent {
     );
   }*/
 
-  async getInformatioActionAreaResult(){
-    await this.api.resultsSE.GET_resultActionArea(this.initiative?.results_id, this.initiative?.initiative_id).subscribe(({ response }) =>{
+  async getInformatioActionAreaResult() {
+    await this.api.resultsSE.GET_resultActionArea(this.initiative?.results_id, this.initiative?.initiative_id).subscribe(({ response }) => {
       this.theoryOfChangesServices.resultActionArea.push(response);
       this.theoryOfChangesServices.resultActionArea[this.indexList].init = this.initiative?.initiative_id;
       this.theoryOfChangesServices.resultActionArea[this.indexList].consImpactTarget.map(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
       this.theoryOfChangesServices.resultActionArea[this.indexList].consSdgTargets.map(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
       this.theoryOfChangesServices.resultActionArea[this.indexList].action.map(item => (item.full_name = `<strong>${item.outcomeSMOcode}</strong> - ${item.outcomeStatement}`));
-      
-      console.log(this.theoryOfChangesServices.resultActionArea);
+
+      //(this.theoryOfChangesServices.resultActionArea);
       this.informationGet = true;
-    })
+    });
   }
 
   GET_fullInitiativeTocByinitId() {
     this.api.tocApiSE.GET_fullInitiativeTocByinitId(this.initiative.initiative_id).subscribe(
       ({ response }) => {
-        
-        
         this.fullInitiativeToc = response[0]?.toc_id;
         this.vesiondashboard = true;
       },
@@ -71,5 +69,4 @@ export class TocInitiativeAaoComponent {
       }
     );
   }
-
 }

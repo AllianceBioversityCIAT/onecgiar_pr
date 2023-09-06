@@ -86,7 +86,7 @@ export class InitGeneralResultsReportComponent {
   }
 
   // validateLength(obj) {
-  //   Object.keys(obj[0]).forEach(item => console.log(item + ': ' + obj[0][item]?.length));
+  //   Object.keys(obj[0]).forEach(item => //(item + ': ' + obj[0][item]?.length));
   // }
 
   POST_excelFullReportPromise(result, key) {

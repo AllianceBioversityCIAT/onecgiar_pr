@@ -31,7 +31,7 @@ export class RdGeneralInformationComponent {
       this.generalInfoBody = response;
       this.generalInfoBody.reporting_year = response['phase_year'];
       this.generalInfoBody.institutions_type = [...this.generalInfoBody.institutions_type, ...this.generalInfoBody.institutions] as any;
-      console.log(this.generalInfoBody);
+      //(this.generalInfoBody);
       // this.api.dataControlSE.currentResult.is_discontinued = this.generalInfoBody.is_discontinued;
 
       // this.generalInfoBody.discontinued_options = [
@@ -52,8 +52,8 @@ export class RdGeneralInformationComponent {
   }
   GET_investmentDiscontinuedOptions() {
     this.api.resultsSE.GET_investmentDiscontinuedOptions().subscribe(({ response }) => {
-      console.log(response);
-      console.log(this.generalInfoBody.discontinued_options);
+      //(response);
+      //(this.generalInfoBody.discontinued_options);
       // this.generalInfoBody.discontinued_options = response;
       // this.parseData
       this.convertChecklistToDiscontinuedOptions(response);
@@ -76,7 +76,7 @@ export class RdGeneralInformationComponent {
   discontinuedOptionsToIds() {
     this.generalInfoBody.discontinued_options = this.generalInfoBody.discontinued_options.filter(option => option.value === true);
     this.generalInfoBody.discontinued_options.map(option => (option.is_active = true));
-    console.log(this.generalInfoBody.discontinued_options);
+    //(this.generalInfoBody.discontinued_options);
   }
 
   onSaveSection() {
@@ -85,7 +85,7 @@ export class RdGeneralInformationComponent {
     //(this.generalInfoBody);
 
     if (!this.generalInfoBody.is_discontinued) this.generalInfoBody.discontinued_options = [];
-    console.log(this.generalInfoBody);
+    //(this.generalInfoBody);
     this.api.resultsSE.PATCH_generalInformation(this.generalInfoBody).subscribe(
       resp => {
         this.currentResultSE.GET_resultById();

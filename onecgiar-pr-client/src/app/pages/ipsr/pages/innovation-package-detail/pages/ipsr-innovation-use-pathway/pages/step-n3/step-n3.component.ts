@@ -55,7 +55,7 @@ export class StepN3Component implements OnInit {
   getSectionInformation() {
     this.api.resultsSE.GETInnovationPathwayByRiId().subscribe(({ response }) => {
       //('%cGET', 'font-size: 20px; color: #2BBE28;');
-      console.log(response);
+      //(response);
       //(response);
       this.ipsrStep3Body = this.openClosed(response);
 

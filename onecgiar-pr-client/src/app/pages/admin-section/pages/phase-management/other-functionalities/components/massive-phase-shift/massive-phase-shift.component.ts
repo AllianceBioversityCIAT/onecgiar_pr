@@ -18,11 +18,11 @@ export class MassivePhaseShiftComponent implements OnInit {
   GET_numberOfResultsByResultType() {
     this.api.resultsSE.GET_numberOfResultsByResultType(1, 7).subscribe(
       (resp: any) => {
-        console.log(resp);
+        //(resp);
         this.numberOfResults = resp.response.count;
       },
       err => {
-        console.log(err);
+        //(err);
       }
     );
   }
@@ -32,13 +32,13 @@ export class MassivePhaseShiftComponent implements OnInit {
     this.api.dataControlSE.massivePhaseShiftIsRunning = true;
     this.api.resultsSE.PATCH_versioningAnnually().subscribe(
       (resp: any) => {
-        console.log(resp);
+        //(resp);
         this.api.dataControlSE.massivePhaseShiftIsRunning = false;
         this.api.alertsFe.show({ id: 'accept', closeIn: 10000, title: 'Process executed successfully', description: this.numberOfResults + ' results of type Innovation Development have been replicated from the previous phase to the current phase.', status: 'success' });
         this.GET_numberOfResultsByResultType();
       },
       err => {
-        console.log(err);
+        //(err);
         this.api.alertsFe.show({ id: 'PATCH_versioningAnnually', title: 'Process execution failed', description: err?.error?.meesage, status: 'error', closeIn: 500 });
         this.api.dataControlSE.massivePhaseShiftIsRunning = false;
         this.GET_numberOfResultsByResultType();

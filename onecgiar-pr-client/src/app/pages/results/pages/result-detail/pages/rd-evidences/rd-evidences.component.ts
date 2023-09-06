@@ -32,7 +32,7 @@ export class RdEvidencesComponent {
       this.evidencesBody = response;
       //(this.evidencesBody);
       //(this.evidencesBody?.gender_tag_level);
-      console.log(response);
+      //(response);
     });
   }
   onSaveSection() {

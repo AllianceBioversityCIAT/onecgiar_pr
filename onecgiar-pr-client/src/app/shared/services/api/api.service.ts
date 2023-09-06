@@ -53,7 +53,7 @@ export class ApiService {
   updateResultsList() {
     this.resultsSE.GET_AllResultsWithUseRole(this.authSE.localStorageUser.id).subscribe(resp => {
       this.dataControlSE.resultsList = resp.response;
-      // console.log(this.dataControlSE.resultsList);
+      // //(this.dataControlSE.resultsList);
     });
   }
 
@@ -65,7 +65,7 @@ export class ApiService {
 
       // pass attributes to tawk.to on widget load
       window['Tawk_API'].onLoad = () => {
-        console.log({
+        //({
           name: this.authSE.localStorageUser.user_name,
           email: this.authSE.localStorageUser.email
         });

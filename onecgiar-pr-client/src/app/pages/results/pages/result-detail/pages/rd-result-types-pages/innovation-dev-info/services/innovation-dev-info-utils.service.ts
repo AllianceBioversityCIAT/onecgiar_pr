@@ -12,7 +12,7 @@ export class InnovationDevInfoUtilsService {
       option.answer_boolean = option.result_question_id == radioButtonValue ? true : null;
       if (option.saved) option.answer_boolean = false;
     });
-    console.log(options);
+    //(options);
   }
 
   mapRadioButtonBooleans(body) {
@@ -23,6 +23,6 @@ export class InnovationDevInfoUtilsService {
     if (!option) return;
     body.radioButtonValue = option.result_question_id;
     option.saved = true;
-    console.log(options);
+    //(options);
   }
 }
