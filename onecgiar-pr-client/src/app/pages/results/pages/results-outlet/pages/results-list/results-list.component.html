@@ -1,7 +1,8 @@
 <div class="local_container">
   <div class="action_buttons">
     <app-report-new-result-button> </app-report-new-result-button>
-    <app-pr-button text="Update result" icon="moving" [reverse]="true"></app-pr-button>
+    <app-pr-button text="Update result" icon="moving" [reverse]="true"
+      (click)="this.api.dataControlSE.updateResultModal = true;"></app-pr-button>
   </div>
   <!-- <div class="alert"></div> -->
   <br>

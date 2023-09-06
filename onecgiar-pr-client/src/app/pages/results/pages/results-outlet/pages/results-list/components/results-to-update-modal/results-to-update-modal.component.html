@@ -1,5 +1,6 @@
-<p-dialog class="support_information" header="Title" [(visible)]="showModal" [draggable]="false" [modal]="true"
-    [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true" [style]="{padding: '0px'}">
+<p-dialog class="support_information" header="Title" [(visible)]="this.api.dataControlSE.updateResultModal"
+    [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true"
+    [style]="{padding: '0px'}">
     <div class="modal_title">Update result</div>
     <div class="modal_container">
         <div class="description">
@@ -60,7 +61,7 @@
                         <div class="actions_buttons">
                             <a [href]="'/result/result-detail/' + result?.result_code+'?phase='+ result?.version_id"
                                 target="_blank" class="link_button view">View</a>
-                            <div class="link_button update">Update</div>
+                            <div class="link_button update" (click)="onPressAction(result)">Update</div>
                         </div>
 
                     </td>

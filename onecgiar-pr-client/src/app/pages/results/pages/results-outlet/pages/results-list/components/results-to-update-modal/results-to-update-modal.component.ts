@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
+import { RetrieveModalService } from '../../../../../result-detail/components/retrieve-modal/retrieve-modal.service';
 
 @Component({
   selector: 'app-results-to-update-modal',
@@ -7,7 +8,6 @@ import { ApiService } from '../../../../../../../../shared/services/api/api.serv
   styleUrls: ['./results-to-update-modal.component.scss']
 })
 export class ResultsToUpdateModalComponent implements OnInit {
-  showModal = true;
   text_to_search = null;
   columnOrder = [
     // { title: 'Result code', attr: 'result_code' },
@@ -20,11 +20,19 @@ export class ResultsToUpdateModalComponent implements OnInit {
     { title: 'Creation date	', attr: 'created_date' },
     { title: 'Created by	', attr: 'full_name' }
   ];
-  constructor(public api: ApiService) {}
+  constructor(public api: ApiService, private retrieveModalSE: RetrieveModalService) {}
 
   ngOnInit(): void {
     setTimeout(() => {
       console.log(this.api.dataControlSE.resultsList);
     }, 2000);
+  }
+
+  onPressAction(result) {
+    //(result);
+    this.retrieveModalSE.title = result?.title;
+    this.api.resultsSE.currentResultId = result?.id;
+    this.api.dataControlSE.currentResult = result;
+    this.api.dataControlSE.chagePhaseModal = true;
   }
 }
