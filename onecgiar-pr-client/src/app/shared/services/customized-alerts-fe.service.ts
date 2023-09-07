@@ -4,7 +4,7 @@ interface alertOptions {
   title;
   description?: string;
   closeIn?: number;
-  status: 'error' | 'success' | 'warning';
+  status: 'error' | 'success' | 'warning' | 'information';
   confirmText?: string;
 }
 @Injectable({
@@ -18,14 +18,15 @@ export class CustomizedAlertsFeService {
     this.statusIcons['error'] = 'close';
     this.statusIcons['success'] = 'check';
     this.statusIcons['warning'] = 'priority_high';
+    this.statusIcons['information'] = 'priority_high';
   }
 
   show(alertOptions: alertOptions, callback?) {
-    let { id, title, description = '', closeIn, status, confirmText } = alertOptions;
+    const { id, title, description = '', closeIn, status, confirmText } = alertOptions;
     // this.showed = true;
     let alert = document.getElementById(id);
 
-    let appRoot = document.getElementsByTagName('app-root')[0];
+    const appRoot = document.getElementsByTagName('app-root')[0];
     appRoot.insertAdjacentHTML(
       'beforeend',
       `
@@ -83,9 +84,9 @@ export class CustomizedAlertsFeService {
   }
 
   closeAction(id) {
-    let alertModal: any = document.getElementById(`alert-${id}`);
+    const alertModal: any = document.getElementById(`alert-${id}`);
     if (alertModal) alertModal.classList.add('animate__animated', 'animate__bounceOut');
-    let alert: any = document.getElementById(`${id}`);
+    const alert: any = document.getElementById(`${id}`);
     if (alert) alert.classList.add('delete');
   }
 }
