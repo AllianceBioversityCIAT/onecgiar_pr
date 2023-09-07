@@ -13,6 +13,7 @@ import { ResultsTocImpactAreaTargetRepository } from './result-toc-impact-area-r
 import { ResultsTocSdgTargetRepository } from './result-toc-sdg-target-repository';
 import { ResultsSdgTargetRepository } from './results-sdg-targets.respository';
 import { ResultsActionAreaOutcomeRepository } from './result-toc-action-area.repository';
+import { ResultsTocTargetIndicatorRepository } from './result-toc-result-target-indicator.repository';
 
 @Injectable()
 export class ResultsTocResultRepository
@@ -31,6 +32,7 @@ export class ResultsTocResultRepository
     private readonly _resultsTocSdgTargetRepository: ResultsTocSdgTargetRepository,
     private readonly _resultsSdgTargetRepository: ResultsSdgTargetRepository,
     private readonly _resultActionAreaRepository: ResultsActionAreaOutcomeRepository,
+    private readonly _resultTocIndicatorTargetRepository: ResultsTocTargetIndicatorRepository,
   ) {
     super(ResultsTocResult, dataSource.createEntityManager());
   }
@@ -720,181 +722,44 @@ export class ResultsTocResultRepository
     init: number,
   ) {
     try {
-      const IndicatorTarget = await this.query(
-        `select * from results_toc_result where results_id = ${resultId} and is_active = true and initiative_id = ${init};`,
-      );
-      const queryTocIndicators = `
-      SELECT tri.toc_result_indicator_id as toc_results_indicator_id,tri.indicator_description, 
-      tri.target_date, tri.target_value, tri.unit_messurament, tr.phase,rtr.result_toc_result_id as results_toc_results_id, tri.location, tri.type_value, tri.type_name as 'statement'
-		from Integration_information.toc_results_indicators tri 
-			join Integration_information.toc_results tr on tr.id = tri.toc_results_id 
-			inner join results_toc_result rtr on rtr.results_id = ? 
-		WHEre tr.id  = ? and tr.phase = (select v.toc_pahse_id  
-	              										from result r 	
-	              										join version v on r.version_id = v.id  
-	              											where r.id  = ?) and rtr.initiative_id = ?`;
+      if(resultId != null && toc_result_id != null && init != null){
+        const IndicatorTarget = await this.query(
+          `select * from results_toc_result where results_id = ${resultId} and is_active = true and initiative_id = ${init};`,
+        );
 
-      const queryTocIndicatorsNotSave = `
-    SELECT tri.toc_result_indicator_id as toc_results_indicator_id,tri.indicator_description, 
-		tri.target_date, tri.target_value, tri.unit_messurament, tr.phase, tri.location, tri.type_value, tri.type_name as 'statement'
-		from Integration_information.toc_results_indicators tri 
-			join Integration_information.toc_results tr on tr.id = tri.toc_results_id 
-		WHEre tr.id  = ? and tr.phase = (select v.toc_pahse_id  
-	              										from result r 	
-	              										join version v on r.version_id = v.id  
-	              											where r.id  = ?)`;
-      let innovatonUseInterface;
-      if (IndicatorTarget.length) {
-        innovatonUseInterface = await this.query(queryTocIndicators, [
-          resultId,
-          toc_result_id,
-          resultId,
-          init,
-        ]);
-      } else {
-        innovatonUseInterface = await this.query(queryTocIndicatorsNotSave, [
-          toc_result_id,
-          resultId,
-          init,
-        ]);
-      }
-      const infoIndicatorSave = `
-        select * from results_toc_result_indicators rtri 
-          WHERE rtri.results_toc_results_id = ?`;
-
-      let saveIndicators: any[] = [];
-
-      console.log(innovatonUseInterface);
-      if (
-        innovatonUseInterface != null &&
-        innovatonUseInterface.length > 0 &&
-        IndicatorTarget.length > 0
-      ) {
-        if (innovatonUseInterface[0].results_toc_results_id != null) {
-          saveIndicators = await this.query(infoIndicatorSave, [
-            innovatonUseInterface[0].results_toc_results_id,
+        const queryDataIndicators = `
+        select tr.phase, tri.toc_result_indicator_id as toc_results_indicator_id,
+            tri.indicator_description,tri.unit_messurament,
+            tri.location, tri.type_value, tri.type_name as 'statement'
+        from  ${env.DB_TOC}.toc_results tr 
+            join ${env.DB_TOC}.toc_results_indicators tri on tri.toc_results_id = tr.id
+            where id = ? and tr.phase = (select v.toc_pahse_id 
+                                              from result r 	
+                                              join version v on r.version_id = v.id  
+                                              where r.id  = ?);`;
+                                            
+        if(IndicatorTarget.length){
+          const IndicatorTargetId = IndicatorTarget[0].result_toc_result_id;
+          const IndicatorTargetData = await this.query(queryDataIndicators, [
+            toc_result_id,
+            resultId,
           ]);
+
+          for(let itemIndicator of IndicatorTargetData){
+            this._resultsTocResultIndicator.find({
+              where: {
+                results_toc_results_id: IndicatorTargetId,
+                toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
+              }
+            })
+          }
         }
       }
+      
+      
+      
 
-      innovatonUseInterface.forEach(async (element) => {
-        if (saveIndicators.length) {
-          saveIndicators.forEach(async (elementSave) => {
-            if (
-              element.toc_results_indicator_id ==
-              elementSave.toc_results_indicator_id
-            ) {
-              element.is_not_aplicable = elementSave.is_not_aplicable;
-              element.indicator_contributing = elementSave.indicator_contributing;
-              element.status = elementSave.status;
-              element.is_not_aplicable = elementSave.is_not_aplicable;
-            }
-          });
-        } else {
-          element.is_not_aplicable = null;
-          element.indicator_contributing = null;
-          element.status = 3;
-          element.is_not_aplicable = null;
-        }
-        if (Number(element?.target_value)) {
-          let calulate = await this._resultsTocResultIndicator.find({
-            where: {
-              toc_results_indicator_id: element.toc_results_indicator_id,
-            },
-          });
-          element.is_calculable = true;
-          let sumIndicator = 0;
-
-          for (let i of calulate) {
-            sumIndicator =
-              Number(i.indicator_contributing) + Number(sumIndicator);
-          }
-          element.indicator_new = sumIndicator;
-          if (sumIndicator == 0) {
-            element.status = 0;
-          } else if (sumIndicator < Number(element.target_value)) {
-            element.status = 1;
-          } else {
-            element.status = 2;
-          }
-        } else {
-          element.is_calculable = false;
-        }
-
-        if(element.location == 'regional'){
-         const regions =  `select * 
-	                            from clarisa_regions cr WHERE 
-		                                cr.um49Code in (select trir.clarisa_regions_id  from Integration_information.toc_result_indicator_region trir where trir.toc_result_id = ?)`
-          let region = await this.query(regions, [
-            innovatonUseInterface[0].toc_results_indicator_id,
-          ]);
-          let full_region = null;
-          region.map(item => (full_region += `${item.name}`));
-          
-            element.location = `Regional`;
-            if(full_region != null){
-              element.full_geo = ':'+full_region;
-            }else{
-              element.full_geo = ': No region(s) provided';
-            }
-          
-          
-          
-        }
-        if(element.location == 'country'){
-          const regions =  `select * 
-          from clarisa_countries cc WHERE 
-            cc.id  in (select trir.clarisa_countries_id  from Integration_information.toc_result_indicator_country trir where trir.toc_result_id =?)`
-          let region = await this.query(regions, [
-            innovatonUseInterface[0].toc_results_indicator_id,
-          ]);
-          let full_region = null;
-          region.map(item => (full_region += `${item.name}`));
-          
-            element.location = `Country/ies`;
-            if(full_region != null){
-              element.full_geo = ':'+full_region;
-            }else{
-              element.full_geo = ': No country/ies provided';
-            }
-            
-
-          
-        }
-
-        if(element.type_value == 'Change in the capacity of key (a) Individuals, (b) Organizations (government, civil society and private sector), and (c) Networks (e.g. multi-stakeholder platforms).'){
-          element.type = 'Capacity change';
-        }
-        else if(element.type_value == 'Number of innovations'){
-          element.type = 'Innovation Development';
-        }
-        else if(element.type_value == 'Number of people trained, long-term (including Masters and PhDs) and short-term, disaggregated by gender'){
-          element.type = 'Capacity Sharing for Development';
-        }
-        else if(element.type_value == 'Number of peer reviewed journal papers'){
-          element.type = 'Knowledge Product';
-        }
-        else if(element.type_value == 'Number of other information products/data assets (including: reports, briefs, extension, training and e-learning content and other materials, books and book chapters, data and databases, data collection and analysis tools (e.g. models and survey tools), video, audio and images, graphics, maps, and other GIS outputs, computer software, models and code, digital and mobile applications, and web-based services (e.g. websites, data portals, online platforms)'){
-          element.type = 'Knowledge Product';
-        }
-        else if(element.type_value == 'Number of policies/ strategies/ laws/ regulations/ budgets/ investments/ curricula modified in design or implementation, informed by CGIAR research.'){
-          element.type = 'Policy change';
-        }
-        else if(element.type_value == 'Number of beneficiaries using the CGIAR innovation, disaggregated by gender.'){
-          element.type = 'Innovation use';
-        }
-        else if(element.type_value == 'Other quantitative measure of CGIAR innovation use (e.g. area)'){
-          element.type = 'Innovation use';
-        }
-        else if( element.type_value == 'Altmetric score'){
-          element.type = 'Other outcome';
-        }
-        else{
-          element.type = 'N/A';
-        }
-      });
-
-      return innovatonUseInterface;
+      return 'hola'
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
