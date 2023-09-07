@@ -4,7 +4,7 @@ interface alertOptions {
   title;
   description?: string;
   closeIn?: number;
-  status: 'error' | 'success' | 'warning';
+  status: 'error' | 'success' | 'warning' | 'information';
   confirmText?: string;
 }
 @Injectable({
@@ -18,6 +18,7 @@ export class CustomizedAlertsFeService {
     this.statusIcons['error'] = 'priority_high';
     this.statusIcons['success'] = 'check';
     this.statusIcons['warning'] = 'priority_high';
+    this.statusIcons['information'] = 'priority_high';
   }
 
   show(alertOptions: alertOptions, callback?) {
