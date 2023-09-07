@@ -186,12 +186,11 @@ export class TocInitiativeOutComponent {
       this.theoryOfChangesServices.actionAreaOutcome = response?.actionAreaOutcome;
       this.theoryOfChangesServices.impactAreasTargets.map(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
       this.theoryOfChangesServices.sdgTargest.map(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
-      //this.theoryOfChangesServices.targetsIndicators.map(item => (item.is_not_aplicable = item.is_not_aplicable == 1 ? true : false));
       this.theoryOfChangesServices.actionAreaOutcome.map(item => (item.full_name = `<strong>${item.outcomeSMOcode}</strong> - ${item.outcomeStatement}`));
       this.theoryOfChangesServices.body[this.indexYesorNo] = {
         impactAreasTargets: this.theoryOfChangesServices.impactAreasTargets,
         sdgTargest: this.theoryOfChangesServices.sdgTargest,
-        targetsIndicators: [],
+        targetsIndicators: this.theoryOfChangesServices.targetsIndicators,
         actionAreaOutcome: this.theoryOfChangesServices.actionAreaOutcome,
         isSdg:response?.isSdg,
         isImpactArea:response?.isImpactArea,

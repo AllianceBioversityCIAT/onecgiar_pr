@@ -9,9 +9,10 @@ import { SdgTargetsComponent } from './sdg-targets/sdg-targets.component';
 import { FeedbackValidationDirectiveModule } from 'src/app/shared/directives/feedback-validation-directive.module';
 import { ActionAreaOutcomeComponent } from './action-area-outcome/action-area-outcome.component';
 import { TableModule } from 'primeng/table';
+import { RouterModule } from '@angular/router';
 @NgModule({
   declarations: [TocInitiativeOutComponent, OutcomeLevelFilterPipe, TargetIndicatorComponent, ImpactAreaTargetsComponent, SdgTargetsComponent, ActionAreaOutcomeComponent, ],
   exports: [TocInitiativeOutComponent, ImpactAreaTargetsComponent, SdgTargetsComponent, ActionAreaOutcomeComponent],
-  imports: [CommonModule, CustomFieldsModule, FeedbackValidationDirectiveModule, TableModule]
+  imports: [CommonModule, CustomFieldsModule, FeedbackValidationDirectiveModule, TableModule, RouterModule]
 })
 export class TocInitiativeOutModule {}
