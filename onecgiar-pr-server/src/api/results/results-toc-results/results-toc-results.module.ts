@@ -27,6 +27,7 @@ import { ResultsSdgTargetRepository } from './results-sdg-targets.respository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { ResultsActionAreaOutcomeRepository } from './result-toc-action-area.repository';
 import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/non_pooled_proyect_budget.repository';
+import { ResultsTocTargetIndicatorRepository } from './result-toc-result-target-indicator.repository';
 
 @Module({
   controllers: [ResultsTocResultsController],
@@ -56,6 +57,7 @@ import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/
     RoleByUserRepository,
     ResultsActionAreaOutcomeRepository,
     NonPooledProjectBudgetRepository,
+    ResultsTocTargetIndicatorRepository
   ],
   exports: [ResultsTocResultRepository],
 })
