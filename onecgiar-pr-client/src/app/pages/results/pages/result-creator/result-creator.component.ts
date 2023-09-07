@@ -15,7 +15,7 @@ import { PhasesService } from '../../../../shared/services/global/phases.service
 })
 export class ResultCreatorComponent implements OnInit {
   naratives = internationalizationData.reportNewResult;
-  depthSearchList: (Source & { probability: number })[] = [];
+  depthSearchList: any[] = [];
   exactTitleFound = false;
   mqapJson: {};
   validating = false;
@@ -46,8 +46,21 @@ export class ResultCreatorComponent implements OnInit {
     this.api.rolesSE.validateReadOnly().then(() => {
       this.GET_AllInitiatives();
     });
+    this.getAllPhases();
   }
+
   allInitiatives = [];
+  allPhases = [];
+
+  getAllPhases() {
+    this.phasesService.phases.reporting.forEach(phase => {
+      this.allPhases.push(phase);
+    });
+    this.phasesService.phases.ipsr.forEach(phase => {
+      this.allPhases.push(phase);
+    });
+  }
+
   GET_AllInitiatives() {
     //(this.api.rolesSE.isAdmin);
     if (!this.api.rolesSE.isAdmin) return;
@@ -86,6 +99,12 @@ export class ResultCreatorComponent implements OnInit {
     this.api.resultsSE.GET_FindResultsElastic(title, legacyType).subscribe(
       response => {
         //(response);
+
+        response?.map((result: any) => {
+          const phase = this.allPhases.find(phase => phase.id === result.version_id);
+          result.phase = phase;
+        });
+
         this.depthSearchList = response;
         this.exactTitleFound = !!this.depthSearchList.find(result => cleanSpaces(result.title) === cleanSpaces(title));
       },
