@@ -1,4 +1,6 @@
-<div class="pr_button {{padding}}" [style]="'margin: '+this.verticalMargin+'px 0px'"
+<div [pTooltip]="this.tooltipText" [tooltipPosition]="this.tooltipTextPosition"
+  [ngClass]="{'b-disabled': this.disabled}" (click)="onClick()" class="pr_button {{padding}}"
+  [style]="'margin: '+this.verticalMargin+'px 0px'"
   [ngClass]="{ reverse: this.reverse, show_background: this.showBackground, 'animate__pulse_infinite':this.pulse ||  this.rotating}"
   [ngStyle]="this.showBackground ? { 'background-color': 'var(--pr-color-' + this.colorType + ')' } : {}">
   <div class="text">{{ this.text }}</div>
