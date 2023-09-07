@@ -100,5 +100,22 @@ export class PlatformReportModule {
         return value ? 'Yes' : 'No';
       },
     );
+
+    Handlebars.registerHelper(
+      'conditionalAttribiute',
+      function (
+        originalValue,
+        valueToCompare,
+        attribute,
+        valueToApplyIfTrue,
+        valueToApplyIfFalse,
+      ) {
+        return `${attribute}="${
+          originalValue == valueToCompare
+            ? valueToApplyIfTrue
+            : valueToApplyIfFalse
+        }"`;
+      },
+    );
   }
 }

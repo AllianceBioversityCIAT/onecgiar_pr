@@ -5,9 +5,10 @@ import { RdEvidencesRoutingModule } from './rd-evidences-routing.module';
 import { RdEvidencesComponent } from './rd-evidences.component';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { EvidenceItemComponent } from './evidence-item/evidence-item.component';
+import { FeedbackValidationDirectiveModule } from '../../../../../../shared/directives/feedback-validation-directive.module';
 
 @NgModule({
   declarations: [RdEvidencesComponent, EvidenceItemComponent],
-  imports: [CommonModule, RdEvidencesRoutingModule, CustomFieldsModule]
+  imports: [CommonModule, RdEvidencesRoutingModule, CustomFieldsModule, FeedbackValidationDirectiveModule]
 })
 export class RdEvidencesModule {}

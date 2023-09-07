@@ -39,6 +39,7 @@ import {
 import { ResultsTocImpactAreaTargetRepository } from 'src/api/results/results-toc-results/result-toc-impact-area-repository';
 import { ResultsTocSdgTargetRepository } from 'src/api/results/results-toc-results/result-toc-sdg-target-repository';
 import { ResultsSdgTargetRepository } from 'src/api/results/results-toc-results/results-sdg-targets.respository';
+import { ResultsActionAreaOutcomeRepository } from 'src/api/results/results-toc-results/result-toc-action-area.repository';
 
 @Module({
   controllers: [TocResultsController],
@@ -80,6 +81,7 @@ import { ResultsSdgTargetRepository } from 'src/api/results/results-toc-results/
     ResultsTocSdgTargetRepository,
     ResultsTocImpactAreaTargetRepository,
     ResultsSdgTargetRepository,
+    ResultsActionAreaOutcomeRepository
   ],
   exports: [TocResultsRepository],
 })

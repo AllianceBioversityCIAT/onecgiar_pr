@@ -319,10 +319,20 @@ export class VersioningService {
 
       const phase = await this._versionRepository.findOne({
         where: {
+          app_module_id: module_id,
           is_active: true,
           status: true,
         },
       });
+
+      if (!phase) {
+        throw this._returnResponse.format({
+          message: `No active phases`,
+          response: null,
+          statusCode: HttpStatus.CONFLICT,
+        });
+      }
+
       let res: any = null;
       if (await this.$_genericValidation(legacy_result.result_code, phase.id)) {
         res = await this.$_versionManagement(

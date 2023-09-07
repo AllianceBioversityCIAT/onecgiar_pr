@@ -207,4 +207,11 @@ export class ResultsController {
     await this.resultsService.versioningResultsById(resultId, user);
     return 'ok';
   }
+
+  @Get('get/centers/:resultId')
+  async getCentersByResultId(@Param('resultId') resultId: number) {
+    const { message, response, statusCode } =
+      await this.resultsService.getCenters(resultId);
+    throw new HttpException({ message, response }, statusCode);
+  }
 }

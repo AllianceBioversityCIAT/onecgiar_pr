@@ -138,6 +138,7 @@ export class ResultsCenterRepository
     select
       rc.id,
       rc.is_primary as \`primary\`,
+      rc.from_cgspace,
       rc.is_active,
       rc.created_date,
       rc.last_updated_date,

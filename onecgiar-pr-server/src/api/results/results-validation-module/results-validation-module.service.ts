@@ -449,10 +449,6 @@ export class ResultsValidationModuleService {
               result.id,
             );
           newValidation.partners = vPartners.validation;
-          console.log(
-            '🚀 ~ file: results-validation-module.service.ts:311 ~ ResultsValidationModuleService ~ saveAllGreenCheck ~ newValidation.partners:',
-            newValidation.partners,
-          );
           response.push(vPartners);
         } else {
           const vPartners =

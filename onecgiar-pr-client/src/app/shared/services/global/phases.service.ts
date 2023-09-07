@@ -26,4 +26,8 @@ export class PhasesService {
       }
     });
   }
+
+  get currentlyActivePhaseOnReporting() {
+    return this.phases.reporting.find(item => item.status);
+  }
 }

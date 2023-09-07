@@ -25,16 +25,10 @@ export class ResultsCenter {
   })
   is_primary: boolean;
 
-  @ManyToOne(() => ClarisaCenter, (cc) => cc.code)
-  @JoinColumn({
-    name: 'center_id',
-  })
+  @Column({ type: 'varchar', length: 15, nullable: true })
   center_id: string;
 
-  @ManyToOne(() => Result, (r) => r.id)
-  @JoinColumn({
-    name: 'result_id',
-  })
+  @Column({ type: 'bigint', nullable: true })
   result_id: number;
 
   @Column({
@@ -44,6 +38,14 @@ export class ResultsCenter {
     default: true,
   })
   is_active: boolean;
+
+  @Column({
+    name: 'from_cgspace',
+    type: 'boolean',
+    nullable: false,
+    default: false,
+  })
+  from_cgspace: boolean;
 
   @ManyToOne(() => User, (u) => u.id, { nullable: false })
   @JoinColumn({
@@ -70,4 +72,17 @@ export class ResultsCenter {
     nullable: true,
   })
   last_updated_date!: Date;
+
+  //object relations
+  @ManyToOne(() => ClarisaCenter, (cc) => cc.result_center_array)
+  @JoinColumn({
+    name: 'center_id',
+  })
+  clarisa_center_object: ClarisaCenter;
+
+  @ManyToOne(() => Result, (r) => r.result_center_array)
+  @JoinColumn({
+    name: 'result_id',
+  })
+  result_object: Result;
 }

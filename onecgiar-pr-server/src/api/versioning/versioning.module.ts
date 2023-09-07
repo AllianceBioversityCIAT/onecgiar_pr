@@ -38,6 +38,7 @@ import { ResultsTocImpactAreaTargetRepository } from '../results/results-toc-res
 import { ResultsTocSdgTargetRepository } from '../results/results-toc-results/result-toc-sdg-target-repository';
 import { ResultsSdgTargetRepository } from '../results/results-toc-results/results-sdg-targets.respository';
 import { ResultStatusRepository } from '../results/result-status/result-status.repository';
+import { ResultsActionAreaOutcomeRepository } from '../results/results-toc-results/result-toc-action-area.repository';
 
 @Module({
   controllers: [VersioningController],
@@ -78,6 +79,7 @@ import { ResultStatusRepository } from '../results/result-status/result-status.r
     ResultsTocImpactAreaTargetRepository,
     ResultsSdgTargetRepository,
     ResultStatusRepository,
+    ResultsActionAreaOutcomeRepository
   ],
   exports: [
     VersioningService,
@@ -111,6 +113,7 @@ import { ResultStatusRepository } from '../results/result-status/result-status.r
     ResultsKnowledgeProductMetadataRepository,
     ResultsKnowledgeProductInstitutionRepository,
     RoleByUserRepository,
+    
   ],
 })
 export class VersioningModule {}

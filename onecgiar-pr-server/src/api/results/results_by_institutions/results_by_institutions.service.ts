@@ -94,6 +94,26 @@ export class ResultsByInstitutionsService {
             result_knowledge_product_institution_array: true,
           },
         });
+
+      if (!result?.id) {
+        throw {
+          response: id,
+          message: 'Results Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      if (
+        result.result_type_id == 6 &&
+        !knowledgeProduct?.result_knowledge_product_id
+      ) {
+        throw {
+          response: { result_id: id },
+          message: 'Knowledge Product Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
       const institutions =
         await this._resultByIntitutionsRepository.getResultByInstitutionPartnersFull(
           id,
@@ -213,18 +233,22 @@ export class ResultsByInstitutionsService {
         throw this._handlersError.returnErrorRes({ error: version });
       }
 
-      if (knowledgeProduct && data.mqap_institutions?.length) {
-        //here we filter out from the additional contributors the mqap manual mappings
-        data.institutions = data.institutions.filter(
-          (i) =>
-            !data.mqap_institutions
-              .filter((mqap) => mqap.user_matched_institution?.institutions_id)
-              .find(
-                (mqap) =>
-                  mqap.user_matched_institution.institutions_id ==
-                  i.institutions_id,
-              ),
-        );
+      if (knowledgeProduct) {
+        if (data.mqap_institutions?.length) {
+          //here we filter out from the additional contributors the mqap manual mappings
+          data.institutions = data.institutions.filter(
+            (i) =>
+              !data.mqap_institutions
+                .filter(
+                  (mqap) => mqap.user_matched_institution?.institutions_id,
+                )
+                .find(
+                  (mqap) =>
+                    mqap.user_matched_institution.institutions_id ==
+                    i.institutions_id,
+                ),
+          );
+        }
 
         /*
           in case we have additional contributors, we need to merge them with the 

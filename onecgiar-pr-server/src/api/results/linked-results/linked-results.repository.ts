@@ -230,8 +230,8 @@ export class LinkedResultRepository
   	left join \`result\` r on r.id  = lr.linked_results_id 
     left join result_level rl on rl.id = r.result_level_id 
     left join result_type rt on rt.id = r.result_type_id 
-    INNER JOIN result_status rs ON rs.result_status_id = r.status_id  
-    inner join \`version\` v on v.id = r.version_id 
+    left JOIN result_status rs ON rs.result_status_id = r.status_id  
+    left join \`version\` v on v.id = r.version_id 
     where lr.origin_result_id = ?
           and lr.is_active > 0;
     `;
