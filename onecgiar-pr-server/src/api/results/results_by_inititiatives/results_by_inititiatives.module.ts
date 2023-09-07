@@ -1,9 +1,10 @@
-import {
-  Module,
-} from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ResultsByInititiativesService } from './results_by_inititiatives.service';
 import { ResultsByInititiativesController } from './results_by_inititiatives.controller';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import {
+  HandlersError,
+  ReturnResponse,
+} from '../../../shared/handlers/error.utils';
 import { ResultByInitiativesRepository } from './resultByInitiatives.repository';
 
 @Module({
@@ -12,8 +13,9 @@ import { ResultByInitiativesRepository } from './resultByInitiatives.repository'
     ResultsByInititiativesService,
     ResultByInitiativesRepository,
     HandlersError,
+    ReturnResponse,
   ],
   exports: [ResultsByInititiativesService, ResultByInitiativesRepository],
   imports: [],
 })
-export class ResultsByInititiativesModule{}
+export class ResultsByInititiativesModule {}

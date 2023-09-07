@@ -1,4 +1,9 @@
-import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/common';
+import {
+  MiddlewareConsumer,
+  Module,
+  NestModule,
+  RequestMethod,
+} from '@nestjs/common';
 import { IpsrService } from './ipsr.service';
 import { IpsrController } from './ipsr.controller';
 import { NonPooledPackageProjectsModule } from './non-pooled-package-projects/non-pooled-package-projects.module';
@@ -25,6 +30,7 @@ import { ResultsIpActorsModule } from './results-ip-actors/results-ip-actors.mod
 import { ResultsByIpInnovationUseMeasuresModule } from './results-by-ip-innovation-use-measures/results-by-ip-innovation-use-measures.module';
 import { ResultsInnovationPackagesValidationModuleModule } from './results-innovation-packages-validation-module/results-innovation-packages-validation-module.module';
 import { AssessedDuringExpertWorkshopModule } from './assessed-during-expert-workshop/assessed-during-expert-workshop.module';
+import { ReturnResponse } from '../../shared/handlers/error.utils';
 
 @Module({
   controllers: [IpsrController],
@@ -49,9 +55,6 @@ import { AssessedDuringExpertWorkshopModule } from './assessed-during-expert-wor
     ResultsInnovationPackagesValidationModuleModule,
     AssessedDuringExpertWorkshopModule,
   ],
-  exports: [
-    IpsrRepository,
-    IpsrService,
-  ]
+  exports: [IpsrRepository, IpsrService],
 })
-export class IpsrModule { }
+export class IpsrModule {}

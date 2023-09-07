@@ -8,7 +8,7 @@ import {
 } from 'typeorm';
 import { BaseEntity } from '../../../../shared/entities/base-entity';
 import { Result } from '../../../results/entities/result.entity';
-import { Version } from '../../../results/versions/entities/version.entity';
+import { Version } from '../../../versioning/entities/version.entity';
 import { ResultsComplementaryInnovationsFunction } from '../../results-complementary-innovations-functions/entities/results-complementary-innovations-function.entity';
 
 @Entity('results_complementary_innovation')
@@ -58,12 +58,6 @@ export class ResultsComplementaryInnovation extends BaseEntity {
     name: 'result_id',
   })
   obj_result: Result;
-
-  @ManyToOne(() => Version, (v) => v.id)
-  @JoinColumn({
-    name: 'version_id',
-  })
-  obj_version: Version;
 
   @OneToMany(
     () => ResultsComplementaryInnovationsFunction,

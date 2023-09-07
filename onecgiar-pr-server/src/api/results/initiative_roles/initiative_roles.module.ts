@@ -8,10 +8,11 @@ import { InitiativeRolesService } from './initiative_roles.service';
 import { InitiativeRolesController } from './initiative_roles.controller';
 import { JwtMiddleware } from '../../../auth/Middlewares/jwt.middleware';
 import { AuthModule } from 'src/auth/auth.module';
+import { ReturnResponse } from '../../../shared/handlers/error.utils';
 
 @Module({
   controllers: [InitiativeRolesController],
-  providers: [InitiativeRolesService],
+  providers: [InitiativeRolesService, ReturnResponse],
   imports: [AuthModule],
 })
 export class InitiativeRolesModule implements NestModule {

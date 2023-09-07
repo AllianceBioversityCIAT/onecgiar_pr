@@ -12,7 +12,7 @@ import {
 } from 'typeorm';
 import { GenderTagLevel } from '../gender_tag_levels/entities/gender_tag_level.entity';
 import { ResultType } from '../result_types/entities/result_type.entity';
-import { Version } from '../versions/entities/version.entity';
+import { Version } from '../../versioning/entities/version.entity';
 import { Year } from '../years/entities/year.entity';
 import { ResultLevel } from '../result_levels/entities/result_level.entity';
 import { LegacyResult } from '../legacy-result/entities/legacy-result.entity';
@@ -24,6 +24,8 @@ import { Ipsr } from '../../ipsr/entities/ipsr.entity';
 import { ResultActor } from '../result-actors/entities/result-actor.entity';
 import { ResultsByInititiative } from '../results_by_inititiatives/entities/results_by_inititiative.entity';
 import { ResultIpExpertWorkshopOrganized } from '../../ipsr/innovation-pathway/entities/result-ip-expert-workshop-organized.entity';
+import { ResultStatus } from '../result-status/entities/result-status.entity';
+import { ResultsCenter } from '../results-centers/entities/results-center.entity';
 
 @Entity()
 @Index(['result_code', 'version_id'], { unique: true })
@@ -57,7 +59,7 @@ export class Result {
   @Column({
     name: 'result_type_id',
     type: 'int',
-    nullable: true
+    nullable: true,
   })
   result_type_id: number;
 
@@ -70,7 +72,7 @@ export class Result {
   @Column({
     name: 'result_level_id',
     type: 'int',
-    nullable: true
+    nullable: true,
   })
   result_level_id: number;
 
@@ -83,7 +85,7 @@ export class Result {
   @Column({
     name: 'gender_tag_level_id',
     type: 'bigint',
-    nullable: true
+    nullable: true,
   })
   gender_tag_level_id!: number;
 
@@ -96,7 +98,7 @@ export class Result {
   @Column({
     name: 'climate_change_tag_level_id',
     type: 'bigint',
-    nullable: true
+    nullable: true,
   })
   climate_change_tag_level_id!: number;
 
@@ -105,6 +107,45 @@ export class Result {
     name: 'climate_change_tag_level_id',
   })
   obj_climate_change_tag_level!: GenderTagLevel;
+
+  @Column({
+    name: 'nutrition_tag_level_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  nutrition_tag_level_id!: number;
+
+  @ManyToOne(() => GenderTagLevel, (gtl) => gtl.id, { nullable: true })
+  @JoinColumn({
+    name: 'nutrition_tag_level_id',
+  })
+  obj_nutrition_tag_level!: GenderTagLevel;
+
+  @Column({
+    name: 'environmental_biodiversity_tag_level_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  environmental_biodiversity_tag_level_id!: number;
+
+  @ManyToOne(() => GenderTagLevel, (gtl) => gtl.id, { nullable: true })
+  @JoinColumn({
+    name: 'environmental_biodiversity_tag_level_id',
+  })
+  obj_environmental_biodiversity_tag_level!: GenderTagLevel;
+
+  @Column({
+    name: 'poverty_tag_level_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  poverty_tag_level_id!: number;
+
+  @ManyToOne(() => GenderTagLevel, (gtl) => gtl.id, { nullable: true })
+  @JoinColumn({
+    name: 'poverty_tag_level_id',
+  })
+  obj_poverty_tag_level_id!: GenderTagLevel;
 
   @Column({
     name: 'is_active',
@@ -176,17 +217,25 @@ export class Result {
   status!: number;
 
   @Column({
+    name: 'status_id',
+    type: 'bigint',
+    nullable: true,
+    default: 1,
+  })
+  status_id!: number;
+
+  @ManyToOne(() => ResultStatus, (rs) => rs.result_status_list)
+  @JoinColumn({
+    name: 'status_id',
+  })
+  obj_status!: ResultStatus;
+
+  @Column({
     name: 'reported_year_id',
     type: 'year',
     nullable: true,
   })
   reported_year_id: number;
-
-  @ManyToOne(() => Year, (y) => y.year, { nullable: true })
-  @JoinColumn({
-    name: 'reported_year_id',
-  })
-  obj_reported_year: Year;
 
   @Column({
     name: 'legacy_id',
@@ -227,7 +276,7 @@ export class Result {
   @Column({
     name: 'geographic_scope_id',
     type: 'int',
-    nullable: true
+    nullable: true,
   })
   geographic_scope_id: number;
 
@@ -258,6 +307,13 @@ export class Result {
   })
   has_countries: boolean;
 
+  @Column({
+    name: 'is_discontinued',
+    nullable: true,
+    type: 'boolean',
+  })
+  is_discontinued: boolean;
+
   // helpers??
   initiative_id!: number;
 
@@ -276,9 +332,15 @@ export class Result {
   @OneToMany(() => ResultActor, (rc) => rc.obj_result)
   obj_result_actor: ResultActor[];
 
-  @OneToMany(() => ResultsByInititiative, rbi => rbi.obj_result)
+  @OneToMany(() => ResultsByInititiative, (rbi) => rbi.obj_result)
   obj_result_by_initiatives: ResultsByInititiative[];
 
-  @OneToMany(() => ResultIpExpertWorkshopOrganized, ripewo => ripewo.obj_result_expert_workshop)
+  @OneToMany(() => ResultsCenter, (rc) => rc.result_object)
+  result_center_array: ResultsCenter[];
+
+  @OneToMany(
+    () => ResultIpExpertWorkshopOrganized,
+    (ripewo) => ripewo.obj_result_expert_workshop,
+  )
   obj_result_expert_workshop: ResultIpExpertWorkshopOrganized[];
 }

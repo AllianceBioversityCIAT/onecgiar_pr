@@ -10,7 +10,8 @@ import { DataControlService } from '../../shared/services/data-control.service';
 export class AdminSectionComponent {
   sections = [
     { name: 'Completeness status', icon: 'check_circle', path: '/admin-module/completeness-status' },
-    { name: 'User roles', icon: 'people', path: '/admin-module/user-report' }
+    { name: 'User roles', icon: 'people', path: '/admin-module/user-report' },
+    { name: 'Phase management', icon: 'move_up', path: '/admin-module/phase-management' }
   ];
   constructor(private dataControlSE: DataControlService) {}
   ngOnInit(): void {

@@ -1,15 +1,150 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { Evidence } from './entities/evidence.entity';
+import {
+  ReplicableConfigInterface,
+  ReplicableInterface,
+} from '../../../shared/globalInterfaces/replicable.interface';
+import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
+import { VERSIONING } from '../../../shared/utils/versioning.utils';
 
 @Injectable()
-export class EvidencesRepository extends Repository<Evidence> {
+export class EvidencesRepository
+  extends Repository<Evidence>
+  implements ReplicableInterface<Evidence>
+{
+  private readonly _logger: Logger = new Logger(EvidencesRepository.name);
+
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
   ) {
     super(Evidence, dataSource.createEntityManager());
+  }
+
+  async replicable(
+    config: ReplicableConfigInterface<Evidence>,
+  ): Promise<Evidence[]> {
+    let final_data: Evidence[] = null;
+    try {
+      if (config.f?.custonFunction) {
+        const queryData = `
+        select
+          null as id,
+          e.description,
+          e.is_active,
+          now() as creation_date,
+          e.last_updated_date,
+          ? as created_by,
+          ? as last_updated_by,
+          e.gender_related,
+          e.link,
+          e.youth_related,
+          e.nutrition_related,
+          e.environmental_biodiversity_related,
+          e.poverty_related,
+          e.is_supplementary,
+          ? as result_id,
+          ${VERSIONING.QUERY.Get_result_phases(
+            `e.knowledge_product_related`,
+            config.phase,
+          )} as knowledge_product_related,
+          e.evidence_type_id
+          from evidence e where e.result_id = ? and is_active > 0
+        `;
+        const response = await (<Promise<Evidence[]>>(
+          this.query(queryData, [
+            config.user.id,
+            config.user.id,
+            config.new_result_id,
+            config.old_result_id,
+          ])
+        ));
+
+        const response_edit = <Evidence[]>config.f.custonFunction(response);
+        final_data = await this.save(response_edit);
+      } else {
+        const queryData: string = `
+        insert into evidence (
+          description,
+          is_active,
+          creation_date,
+          last_updated_date,
+          created_by,
+          last_updated_by,
+          gender_related,
+          nutrition_related,
+          environmental_biodiversity_related,
+          poverty_related,
+          link,
+          youth_related,
+          is_supplementary,
+          result_id,
+          knowledge_product_related,
+          evidence_type_id
+          ) select
+          e.description,
+          e.is_active,
+          now() as creation_date,
+          e.last_updated_date,
+          ? as created_by,
+          ? as last_updated_by,
+          e.gender_related,
+          e.nutrition_related,
+          e.environmental_biodiversity_related,
+          e.poverty_related,
+          e.link,
+          e.youth_related,
+          e.is_supplementary,
+          ? as result_id,
+          ${VERSIONING.QUERY.Get_result_phases(
+            `e.knowledge_product_related`,
+            config.phase,
+          )} as knowledge_product_related,
+          e.evidence_type_id
+          from evidence e where e.result_id = ? and is_active > 0`;
+        await this.query(queryData, [
+          config.user.id,
+          config.user.id,
+          config.new_result_id,
+          config.old_result_id,
+        ]);
+        const queryFind = `
+        select
+          e.id,
+          e.description,
+          e.is_active,
+          e.creation_date,
+          e.last_updated_date,
+          e.created_by,
+          e.last_updated_by,
+          e.gender_related,
+          e.link,
+          e.youth_related,
+          e.nutrition_related,
+          e.environmental_biodiversity_related,
+          e.poverty_related,
+          e.is_supplementary,
+          e.result_id,
+          e.knowledge_product_related,
+          e.evidence_type_id
+          from evidence e where e.result_id = ?
+        `;
+        final_data = await this.query(queryFind, [config.new_result_id]);
+      }
+    } catch (error) {
+      config.f?.errorFunction
+        ? config.f.errorFunction(error)
+        : this._logger.error(error);
+      final_data = null;
+    }
+
+    config.f?.completeFunction
+      ? config.f.completeFunction({ ...final_data })
+      : null;
+
+    return final_data;
   }
 
   async getPictures(resultId: number) {
@@ -93,7 +228,6 @@ export class EvidencesRepository extends Repository<Evidence> {
     	e.is_active,
     	e.creation_date,
     	e.last_updated_date,
-    	e.version_id,
     	e.created_by,
     	e.last_updated_by,
     	e.gender_related,
@@ -116,7 +250,12 @@ export class EvidencesRepository extends Repository<Evidence> {
     }
   }
 
-  async getEvidencesByResultIdAndLink(resultId: number, link: string, is_supplementary: boolean, type: number){
+  async getEvidencesByResultIdAndLink(
+    resultId: number,
+    link: string,
+    is_supplementary: boolean,
+    type: number,
+  ) {
     const query = `
     select 
     e.id,
@@ -131,8 +270,13 @@ export class EvidencesRepository extends Repository<Evidence> {
     `;
 
     try {
-      const evidence: Evidence[] = await this.query(query, [resultId, link, is_supplementary, type]);
-      return evidence?.length?evidence[0]:undefined;
+      const evidence: Evidence[] = await this.query(query, [
+        resultId,
+        link,
+        is_supplementary,
+        type,
+      ]);
+      return evidence?.length ? evidence[0] : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: EvidencesRepository.name,
@@ -142,8 +286,14 @@ export class EvidencesRepository extends Repository<Evidence> {
     }
   }
 
-  async updateEvidences(resultId: number, linkArray: string[], userId: number, is_supplementary: boolean, type: number) {
-    const evidences = linkArray??[];
+  async updateEvidences(
+    resultId: number,
+    linkArray: string[],
+    userId: number,
+    is_supplementary: boolean,
+    type: number,
+  ) {
+    const evidences = linkArray ?? [];
     const upDateInactive = `
       update evidence 
       set is_active = 0, 
@@ -151,7 +301,7 @@ export class EvidencesRepository extends Repository<Evidence> {
         last_updated_by  = ${userId}
       where is_active  > 0 
         and result_id = ${resultId}
-        and link not in (${`'${evidences.toString().replace(/,/g,'\',\'')}'`})
+        and link not in (${`'${evidences.toString().replace(/,/g, "','")}'`})
         and is_supplementary = ${is_supplementary}
         and evidence_type_id = ${type};
     `;
@@ -162,7 +312,7 @@ export class EvidencesRepository extends Repository<Evidence> {
         last_updated_date  = NOW(),
         last_updated_by  = ${userId}
       where result_id = ${resultId}
-        and link in (${`'${evidences.toString().replace(/,/g,'\',\'')}'`})
+        and link in (${`'${evidences.toString().replace(/,/g, "','")}'`})
         and is_supplementary = ${is_supplementary}
         and evidence_type_id = ${type};
     `;
@@ -179,11 +329,11 @@ export class EvidencesRepository extends Repository<Evidence> {
     `;
 
     try {
-      if(evidences?.length){
+      if (evidences?.length) {
         const upDateInactiveResult = await this.query(upDateInactive);
-  
+
         return await this.query(upDateActive);
-      }else{
+      } else {
         return await this.query(upDateAllInactive);
       }
     } catch (error) {
@@ -195,7 +345,11 @@ export class EvidencesRepository extends Repository<Evidence> {
     }
   }
 
-  async getEvidencesByResultId(resultId: number, is_supplementary: boolean, type: number){
+  async getEvidencesByResultId(
+    resultId: number,
+    is_supplementary: boolean,
+    type: number,
+  ) {
     const query = `
     select 
     e.id,
@@ -203,12 +357,14 @@ export class EvidencesRepository extends Repository<Evidence> {
     e.is_active,
     e.creation_date,
     e.last_updated_date,
-    e.version_id,
     e.created_by,
     e.last_updated_by,
     e.gender_related,
     e.link,
     e.youth_related,
+    e.nutrition_related,
+    e.environmental_biodiversity_related,
+    e.poverty_related,
     e.is_supplementary,
     e.result_id,
     e.knowledge_product_related 
@@ -220,7 +376,11 @@ export class EvidencesRepository extends Repository<Evidence> {
     `;
 
     try {
-      const evidence: Evidence[] = await this.query(query, [resultId, is_supplementary, type]);
+      const evidence: Evidence[] = await this.query(query, [
+        resultId,
+        is_supplementary,
+        type,
+      ]);
       return evidence;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

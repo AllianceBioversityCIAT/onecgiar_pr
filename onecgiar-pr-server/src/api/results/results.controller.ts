@@ -8,6 +8,7 @@ import {
   Headers,
   HttpException,
   Query,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ResultsService } from './results.service';
 import { CreateResultDto } from './dto/create-result.dto';
@@ -17,6 +18,7 @@ import { MapLegacy } from './dto/map-legacy.dto';
 import { CreateGeneralInformationResultDto } from './dto/create-general-information-result.dto';
 import { CreateResultGeoDto } from './dto/create-result-geo-scope.dto';
 import { UserToken } from 'src/shared/decorators/user-token.decorator';
+import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
 export class ResultsController {
@@ -100,6 +102,13 @@ export class ResultsController {
     throw new HttpException({ message, response }, status);
   }
 
+  @Get('get/institutions-type/childless')
+  async getChildlessInstitutionsType() {
+    const { message, response, status } =
+      await this.resultsService.getChildlessInstitutionTypes();
+    throw new HttpException({ message, response }, status);
+  }
+
   @Get('get/institutions-type/legacy')
   async getLegacyInstitutionsType() {
     const { message, response, status } =
@@ -128,7 +137,7 @@ export class ResultsController {
   async createGeneralInformation(
     @Body()
     CreateGeneralInformationResultDto: CreateGeneralInformationResultDto,
-    @UserToken() user: TokenDto
+    @UserToken() user: TokenDto,
   ) {
     const { message, response, status } =
       await this.resultsService.createResultGeneralInformation(
@@ -146,10 +155,7 @@ export class ResultsController {
   }
 
   @Patch('delete/:id')
-  async update(
-    @Param('id') id: number,
-    @UserToken() user: TokenDto
-    ) {
+  async update(@Param('id') id: number, @UserToken() user: TokenDto) {
     const { message, response, status } =
       await this.resultsService.deleteResult(id, user);
     throw new HttpException({ message, response }, status);
@@ -175,30 +181,37 @@ export class ResultsController {
   }
 
   @Get('get/transform/:resultCode')
-  async transformResultCode(@Param('resultCode') resultCode: number) {
-    const { message, response, status } = await this.resultsService.transformResultCode(
-      resultCode,
-    );
-    throw new HttpException({ message, response }, status);
+  @UseInterceptors(ResponseInterceptor)
+  async transformResultCode(
+    @Param('resultCode') resultCode: number,
+    @Query('phase') phase: string,
+  ) {
+    return await this.resultsService.transformResultCode(resultCode, +phase);
   }
 
   @Get('get/reporting/list/date/:initDate/:lastDate')
   async getReportingList(
     @Param('initDate') initDate: Date,
-    @Param('lastDate') lastDate: Date
-    ) {
-    const { message, response, status } = await this.resultsService.reportingList(
-      initDate, lastDate
-    );
+    @Param('lastDate') lastDate: Date,
+  ) {
+    const { message, response, status } =
+      await this.resultsService.reportingList(initDate, lastDate);
     throw new HttpException({ message, response }, status);
   }
 
   @Post('create/version/:resultId')
   async createVersion(
     @Param('resultId') resultId: number,
-    @UserToken() user: TokenDto
-  ){
+    @UserToken() user: TokenDto,
+  ) {
     await this.resultsService.versioningResultsById(resultId, user);
     return 'ok';
+  }
+
+  @Get('get/centers/:resultId')
+  async getCentersByResultId(@Param('resultId') resultId: number) {
+    const { message, response, statusCode } =
+      await this.resultsService.getCenters(resultId);
+    throw new HttpException({ message, response }, statusCode);
   }
 }

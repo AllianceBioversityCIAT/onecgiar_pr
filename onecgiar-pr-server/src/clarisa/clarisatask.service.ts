@@ -35,6 +35,7 @@ import { ClarisaSdgsRepository } from './clarisa-sdgs/clarisa-sdgs.repository';
 import { ClarisaSdg } from './clarisa-sdgs/entities/clarisa-sdg.entity';
 import { ClarisaSdgsTargetsRepository } from './clarisa-sdgs-targets/clarisa-sdgs-targets.repository';
 import { ClarisaSdgsTarget } from './clarisa-sdgs-targets/entities/clarisa-sdgs-target.entity';
+import { ClarisaTocPhaseRepository } from './clarisa-toc-phases/clarisa-toc-phases.repository';
 
 @Injectable()
 export class ClarisaTaskService {
@@ -70,6 +71,7 @@ export class ClarisaTaskService {
     private readonly _clarisaCentersRepository: ClarisaCentersRepository,
     private readonly _clarisaSdgsRepository: ClarisaSdgsRepository,
     private readonly _clarisaSdgsTargetsRepository: ClarisaSdgsTargetsRepository,
+    private readonly _clarisaTocPhaseRepository: ClarisaTocPhaseRepository,
     private readonly _httpService: HttpService,
   ) {}
 
@@ -109,6 +111,7 @@ export class ClarisaTaskService {
     count = await this.cloneClarisaPolicyTypeRepository(count);
     count = await this.cloneClarisaSdgs(count);
     count = await this.cloneClarisaSdgsTargets(count);
+    count = await this.cloneClarisaTocPhases(count);
   }
 
   public async clarisaBootstrapImportantData() {
@@ -819,7 +822,7 @@ export class ClarisaTaskService {
         await this._tocResultsRepository.inactiveTocResult();
         const data = await this._tocResultsRepository.getAllTocResultsFromOst();
         await this._tocResultsRepository.save(data);
-        await this._tocResultsRepository.updateDeprecateDataToc();
+        //await this._tocResultsRepository.updateDeprecateDataToc();
         this._logger.verbose(
           `[${position}]: All ToC Results control list data has been created`,
         );
@@ -940,6 +943,54 @@ export class ClarisaTaskService {
     } catch (error) {
       this._logger.error(
         `[${position}]: Error in manipulating the data of CLARISA SDGs Targets`,
+      );
+      this._logger.error(error);
+      return ++position;
+    }
+  }
+
+  private async cloneClarisaTocPhases(position: number, deleteItem = false) {
+    try {
+      if (deleteItem) {
+        const deleteData =
+          await this._clarisaTocPhaseRepository.deleteAllData();
+        this._logger.warn(
+          `[${position}]: All CLARISA Toc phases control list data has been deleted`,
+        );
+      } else {
+        const data = await lastValueFrom(
+          this._httpService
+            .get(
+              `${this.clarisaHost}phases/by-application/toc?show=all&status=all`,
+              {
+                auth: {
+                  username: env.L_CLA_USER,
+                  password: env.L_CLA_PASSWORD,
+                },
+              },
+            )
+            .pipe(map((resp) => resp.data)),
+        );
+
+        const mapData = data.map((el) => ({
+          phase_id: el.phaseId,
+          name: el.name,
+          year: el.year,
+          status: el.status,
+          active: el.active,
+        }));
+
+        await this._clarisaTocPhaseRepository.save(mapData);
+        this._logger.verbose(
+          `[${position}]: All CLARISA Toc phases control list data has been created. Updated/created ${
+            data.length ?? 0
+          } Toc phases`,
+        );
+      }
+      return ++position;
+    } catch (error) {
+      this._logger.error(
+        `[${position}]: Error in manipulating the data of CLARISA Toc phases `,
       );
       this._logger.error(error);
       return ++position;

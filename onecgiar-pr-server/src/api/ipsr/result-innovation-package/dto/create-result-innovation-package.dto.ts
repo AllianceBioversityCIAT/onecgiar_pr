@@ -27,6 +27,12 @@ export class UpdateGeneralInformationDto {
   public evidence_gender_tag?: string;
   public climate_change_tag_level_id?: number;
   public evidence_climate_tag?: string;
+  public nutrition_tag_level_id?: number;
+  public evidence_nutrition_tag?: string;
+  public environmental_biodiversity_tag_level_id?: number;
+  public evidence_environment_tag?: string;
+  public poverty_tag_level_id?: number;
+  public evidence_poverty_tag?: string;
   public is_krs?: boolean;
   public krs_url?: string;
 }

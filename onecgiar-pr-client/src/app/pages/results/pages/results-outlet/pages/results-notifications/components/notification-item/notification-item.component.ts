@@ -53,7 +53,9 @@ export class NotificationItemComponent {
 
   acceptOrReject(response) {
     if (this.api.rolesSE.platformIsClosed) return;
-    const body = { ...this.notification, request_status_id: response ? 2 : 3 };
+    const body = { ...this.notification, request_status_id: response ? 2 : 3, bodyNewTheoryOfChanges:[]};
+    console.log(body);
+    
     //(body);
     //(response);
     this.requesting = true;

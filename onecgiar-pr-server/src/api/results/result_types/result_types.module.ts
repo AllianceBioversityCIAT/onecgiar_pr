@@ -7,13 +7,21 @@ import {
 import { ResultTypesService } from './result_types.service';
 import { ResultTypesController } from './result_types.controller';
 import { ResultTypeRepository } from './resultType.repository';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import {
+  HandlersError,
+  ReturnResponse,
+} from '../../../shared/handlers/error.utils';
 import { JwtMiddleware } from '../../../auth/Middlewares/jwt.middleware';
 import { AuthModule } from '../../../auth/auth.module';
 
 @Module({
   controllers: [ResultTypesController],
-  providers: [ResultTypesService, ResultTypeRepository, HandlersError],
+  providers: [
+    ResultTypesService,
+    ResultTypeRepository,
+    HandlersError,
+    ReturnResponse,
+  ],
   exports: [ResultTypesService, ResultTypeRepository],
   imports: [AuthModule],
 })

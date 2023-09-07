@@ -5,9 +5,11 @@ import { RdGeneralInformationRoutingModule } from './rd-general-information-rout
 import { RdGeneralInformationComponent } from './rd-general-information.component';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { InstitutionsPipesModule } from './pipes/institutions-pipes.module';
+import { RdAnnualUpdatingComponent } from './components/rd-annual-updating/rd-annual-updating.component';
+import { FeedbackValidationDirectiveModule } from 'src/app/shared/directives/feedback-validation-directive.module';
 
 @NgModule({
-  declarations: [RdGeneralInformationComponent],
-  imports: [CommonModule, RdGeneralInformationRoutingModule, CustomFieldsModule, InstitutionsPipesModule]
+  declarations: [RdGeneralInformationComponent, RdAnnualUpdatingComponent],
+  imports: [CommonModule, RdGeneralInformationRoutingModule, CustomFieldsModule, InstitutionsPipesModule, FeedbackValidationDirectiveModule]
 })
 export class RdGeneralInformationModule {}

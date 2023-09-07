@@ -8,7 +8,7 @@ import { Result } from '../entities/result.entity';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { LinkedResult } from './entities/linked-result.entity';
 import { VersionsService } from '../versions/versions.service';
-import { Version } from '../versions/entities/version.entity';
+import { Version } from '../../versioning/entities/version.entity';
 
 @Injectable()
 export class LinkedResultsService {
@@ -27,6 +27,7 @@ export class LinkedResultsService {
           status: HttpStatus.BAD_REQUEST,
         };
       }
+      console.log(createLinkedResultDto);
 
       const result: Result = await this._resultRepository.getResultById(
         createLinkedResultDto.result_id,
@@ -73,8 +74,10 @@ export class LinkedResultsService {
             newLink.created_by = user.id;
             newLink.last_updated_by = user.id;
             newLink.origin_result_id = result.id;
-            newLink.linked_results_id = links[index].id;
-            newLink.version_id = version.id;
+            newLink.linked_results_id =
+              (await this._linkedResultRepository.getMostUpDateResult(
+                links[index]['result_code'],
+              )) || links[index]?.id;
             isExistsNew.push(links[index].id);
             newLinks.push(newLink);
           }
@@ -113,7 +116,6 @@ export class LinkedResultsService {
             newLink.created_by = user.id;
             newLink.last_updated_by = user.id;
             newLink.origin_result_id = result.id;
-            newLink.version_id = version.id;
             newLink.legacy_link = legacyLinks[index].legacy_link;
             isExistsNewLegacy.push(legacyLinks[index].legacy_link);
             newLinks.push(newLink);

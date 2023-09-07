@@ -2,17 +2,17 @@
 </app-pr-field-header>
 
 <div>
-    <app-toc-initiative-out [initiative]="result_toc_result"
-        [editable]="!this.api.rolesSE.platformIsClosed && (this.api.rolesSE.validateInitiative(result_toc_result?.initiative_id) || this.api.rolesSE.isAdmin) && !this.dataControlSE?.currentResult?.status"
+    <app-toc-initiative-out [initiative]="result_toc_result" [indexYesorNo]="0"
+        [editable]="!this.api.rolesSE.platformIsClosed && (this.api.rolesSE.validateInitiative(result_toc_result?.initiative_id) || this.api.rolesSE.isAdmin)"
         [resultLevelId]="1">
     </app-toc-initiative-out>
 </div>
 <app-pr-field-header label="Other contributors" [required]="false" [simpleStyle]="true"
     *ngIf="contributors_result_toc_result?.length">
 </app-pr-field-header>
-<div *ngFor="let item of contributors_result_toc_result">
-    <app-toc-initiative-out [initiative]="item"
-        [editable]="!this.api.rolesSE.platformIsClosed && (this.api.rolesSE.validateInitiative(item?.initiative_id) || this.api.rolesSE.isAdmin) && !this.dataControlSE?.currentResult?.status"
+<div *ngFor="let item of contributors_result_toc_result; let i = index;">
+    <app-toc-initiative-out [initiative]="item" [indexYesorNo]="i+1"
+        [editable]="!this.api.rolesSE.platformIsClosed && (this.api.rolesSE.validateInitiative(item?.initiative_id) || this.api.rolesSE.isAdmin)"
         [resultLevelId]="1"></app-toc-initiative-out>
 </div>
 

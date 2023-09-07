@@ -6,6 +6,7 @@ import { Router } from '@angular/router';
 import { ResultBody } from '../../../../shared/interfaces/result.interface';
 import { InitiativesService } from '../../../../shared/services/global/initiatives.service';
 import { Source } from '../../../../shared/interfaces/elastic.interface';
+import { PhasesService } from '../../../../shared/services/global/phases.service';
 
 @Component({
   selector: 'app-result-creator',
@@ -18,7 +19,11 @@ export class ResultCreatorComponent implements OnInit {
   exactTitleFound = false;
   mqapJson: {};
   validating = false;
-  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, private router: Router, private initiativesSE: InitiativesService) {}
+  kpAlertDescription = `Please add the handle generated in CGSpace to report your knowledge product. Only knowledge products entered into CGSpace are accepted in the PRMS Reporting Tool.<br>
+  The PRMS Reporting Tool will automatically retrieve all metadata entered into CGSpace. This metadata cannot be edited in the PRMS.<br><br>
+  The handle will be verified, and only knowledge products from ${this.phasesService.currentlyActivePhaseOnReporting.cgspace_year} will be accepted. For journal articles, the PRMS Reporting Tool will check the online publication date added in CGSpace (“Date Online”). Articles published online in ${this.phasesService.currentlyActivePhaseOnReporting.cgspace_year - 1} but issued in ${this.phasesService.currentlyActivePhaseOnReporting.cgspace_year} (“Date Issued”) will not be accepted to prevent double counting across consecutive years. Handles already reported in the ${this.phasesService.currentlyActivePhaseOnReporting.phase_year} reporting cycle will also not be accepted. <br><br>
+  If you need support to modify any of the harvested metadata from CGSpace, contact your Center’s knowledge manager.`;
+  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, private router: Router, private initiativesSE: InitiativesService, private phasesService: PhasesService) {}
 
   ngOnInit(): void {
     this.resultLevelSE.resultBody = new ResultBody();
@@ -55,18 +60,29 @@ export class ResultCreatorComponent implements OnInit {
     return this.resultLevelSE.resultBody.result_type_id == 6;
   }
 
-  get resultTypeName(): string {
-    if (!this.resultLevelSE.currentResultTypeList || !this.resultLevelSE.resultBody.result_type_id) return 'Title...';
-    return this.resultLevelSE.currentResultTypeList.find(resultType => resultType.id == this.resultLevelSE.resultBody.result_type_id)?.name + ' title...';
+  get resultTypeNamePlaceholder(): string {
+    const typeName = this.resultTypeName;
+    return typeName ? typeName + ' title...' : 'Title...';
   }
 
-  cleanTitle() {
+  get resultTypeName(): string {
+    if (!this.resultLevelSE.currentResultTypeList || !this.resultLevelSE.resultBody.result_type_id) return '';
+    return this.resultLevelSE.currentResultTypeList.find(resultType => resultType.id == this.resultLevelSE.resultBody.result_type_id)?.name;
+  }
+
+  get resultLevelName(): string {
+    return this.resultLevelSE.resultBody['result_level_name'] ?? '';
+  }
+
+  clean() {
     if (this.resultLevelSE.resultBody.result_type_id == 6) this.resultLevelSE.resultBody.result_name = '';
+    else this.depthSearch(this.resultLevelSE.resultBody.result_name);
   }
 
   depthSearch(title: string) {
     const cleanSpaces = text => text?.replaceAll(' ', '')?.toLowerCase();
-    this.api.resultsSE.GET_FindResultsElastic(title).subscribe(
+    const legacyType = this.getLegacyType(this.resultTypeName, this.resultLevelName);
+    this.api.resultsSE.GET_FindResultsElastic(title, legacyType).subscribe(
       response => {
         //(response);
         this.depthSearchList = response;
@@ -79,13 +95,29 @@ export class ResultCreatorComponent implements OnInit {
     );
   }
 
+  getLegacyType(type: string, level: string): string {
+    let legacyType = '';
+
+    if (type == 'Innovation development') {
+      legacyType = 'Innovation';
+    } else if (type == 'Policy change') {
+      legacyType = 'Policy';
+    } else if (type == 'Capacity change' || type == 'Other outcome') {
+      legacyType = 'OICR';
+    } else if (level == 'Impact') {
+      legacyType = 'OICR';
+    }
+
+    return legacyType;
+  }
+
   onSaveSection() {
     if (this.resultLevelSE.resultBody.result_type_id != 6) {
       this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody);
       //(this.resultLevelSE.resultBody);
       this.api.resultsSE.POST_resultCreateHeader(this.resultLevelSE.resultBody).subscribe(
         (resp: any) => {
-          this.router.navigate([`/result/result-detail/${resp?.response?.result_code}/general-information`]);
+          this.router.navigate([`/result/result-detail/${resp?.response?.result_code}/general-information`], { queryParams: { phase: resp?.response?.version_id } });
           //(resp);
           this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
         },
@@ -98,7 +130,7 @@ export class ResultCreatorComponent implements OnInit {
       this.api.resultsSE.POST_createWithHandle({ ...this.mqapJson, result_data: this.resultLevelSE.resultBody }).subscribe(
         (resp: any) => {
           //(resp);
-          this.router.navigate([`/result/result-detail/${resp?.response?.result_code}/general-information`]);
+          this.router.navigate([`/result/result-detail/${resp?.response?.result_code}/general-information`], { queryParams: { phase: resp?.response?.version_id } });
           this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
         },
         err => {
@@ -131,7 +163,7 @@ export class ResultCreatorComponent implements OnInit {
         //(first);
         // TODO validate create
         this.validating = false;
-        this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Metadata found successfully', description: 'Title: ' + this.resultLevelSE.resultBody.result_name, status: 'success' });
+        this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Metadata successfully retrieved', description: 'Title: ' + this.resultLevelSE.resultBody.result_name, status: 'success' });
       },
       err => {
         //(err.error.message);

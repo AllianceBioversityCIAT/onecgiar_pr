@@ -8,16 +8,22 @@
     description="As this result is to be reported at the Action Area level, this result must be mapped to an Action Area Outcome.">
 </app-alert-status>
 
-<app-toc-initiative-aao [initiative]="result_toc_result"
-    [editable]="(this.api.rolesSE.validateInitiative(result_toc_result?.initiative_id) || this.api.rolesSE.isAdmin) && !this.dataControlSE?.currentResult?.status">
+<app-toc-initiative-aao [initiative]="result_toc_result" [indexList]="0"
+    [editable]="(this.api.rolesSE.validateInitiative(result_toc_result?.initiative_id) || this.api.rolesSE.isAdmin)">
 </app-toc-initiative-aao>
+
 
 <app-pr-field-header label="Other contributors" [required]="false" [simpleStyle]="true"
     *ngIf="contributors_result_toc_result?.length">
 </app-pr-field-header>
 
-<div *ngFor="let initiative of contributors_result_toc_result">
-    <app-toc-initiative-aao [initiative]="initiative"
-        [editable]="(this.api.rolesSE.validateInitiative(initiative?.initiative_id) || this.api.rolesSE.isAdmin) && !this.dataControlSE?.currentResult?.status">
+<div *ngFor="let initiative of contributors_result_toc_result; let i = index">
+    <app-toc-initiative-aao [initiative]="initiative" [indexList]="i + 1"
+        [editable]="(this.api.rolesSE.validateInitiative(initiative?.initiative_id) || this.api.rolesSE.isAdmin)">
     </app-toc-initiative-aao>
 </div>
+
+<app-no-data-text
+ *ngIf="this.api.rolesSE.readOnly && !result_toc_result?.action_area_outcome_id && !this.api.rolesSE.validateInitiative(result_toc_result?.initiative_id)"
+ title = "No Action Area outcomes selected."
+></app-no-data-text>

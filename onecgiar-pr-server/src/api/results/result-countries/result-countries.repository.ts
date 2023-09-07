@@ -1,18 +1,92 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultCountry } from './entities/result-country.entity';
+import {
+  ReplicableConfigInterface,
+  ReplicableInterface,
+} from '../../../shared/globalInterfaces/replicable.interface';
 
 @Injectable()
-export class ResultCountryRepository extends Repository<ResultCountry> {
+export class ResultCountryRepository
+  extends Repository<ResultCountry>
+  implements ReplicableInterface<ResultCountry>
+{
+  private readonly _logger: Logger = new Logger(ResultCountryRepository.name);
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
   ) {
     super(ResultCountry, dataSource.createEntityManager());
   }
+  async replicable(
+    config: ReplicableConfigInterface<ResultCountry>,
+  ): Promise<ResultCountry[]> {
+    let final_data: ResultCountry[] = null;
+    try {
+      if (config.f?.custonFunction) {
+        const queryData = `
+        select 
+        null as result_country_id,
+        rc.is_active,
+        ? as result_id,
+        rc.country_id,
+        now() as created_date,
+        now() as last_updated_date
+        from result_country rc WHERE rc.result_id = ? and is_active > 0`;
+        const response = await (<Promise<ResultCountry[]>>(
+          this.query(queryData, [config.new_result_id, config.old_result_id])
+        ));
+        const response_edit = <ResultCountry[]>(
+          config.f.custonFunction(response)
+        );
+        final_data = await this.save(response_edit);
+      } else {
+        const queryData: string = `
+        insert into result_country (
+          is_active,
+          result_id,
+          country_id,
+          created_date,
+          last_updated_date
+          )
+          select
+          rc.is_active,
+          ? as result_id,
+          rc.country_id,
+          now() as created_date,
+          now() as last_updated_date
+          from result_country rc WHERE rc.result_id = ? and is_active > 0;`;
+        await this.query(queryData, [
+          config.new_result_id,
+          config.old_result_id,
+        ]);
+        const queryFind = `
+        select 
+        rc.result_country_id,
+        rc.is_active,
+        rc.result_id,
+        rc.country_id,
+        rc.created_date,
+        rc.last_updated_date
+        from result_country rc WHERE rc.result_id = ?`;
+        final_data = await this.query(queryFind, [config.new_result_id]);
+      }
+    } catch (error) {
+      config.f?.errorFunction
+        ? config.f.errorFunction(error)
+        : this._logger.error(error);
+      final_data = null;
+    }
 
-  async getAllResultCountries(version: number = 1){
+    config.f?.completeFunction
+      ? config.f.completeFunction({ ...final_data })
+      : null;
+
+    return final_data;
+  }
+
+  async getAllResultCountries(version: number = 1) {
     const query = `
     select 
     rc.result_country_id,
@@ -22,12 +96,11 @@ export class ResultCountryRepository extends Repository<ResultCountry> {
     rc.created_date,
     rc.last_updated_date 
     from result_country rc 
-    where rc.is_active > 0
-      and rc.version_id = ?;
+    where rc.is_active > 0;
     `;
 
     try {
-      const result: ResultCountry[] = await this.query(query, [version]);
+      const result: ResultCountry[] = await this.query(query, []);
       return result;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -38,7 +111,7 @@ export class ResultCountryRepository extends Repository<ResultCountry> {
     }
   }
 
-  async getResultCountriesByResultId(resultId: number){
+  async getResultCountriesByResultId(resultId: number) {
     const query = `
     select 
     rc.result_country_id,
@@ -67,7 +140,10 @@ export class ResultCountryRepository extends Repository<ResultCountry> {
     }
   }
 
-  async getResultCountrieByIdResultAndCountryId(resultId: number, countryId: number){
+  async getResultCountrieByIdResultAndCountryId(
+    resultId: number,
+    countryId: number,
+  ) {
     const query = `
     select 
     rc.result_country_id,
@@ -83,8 +159,11 @@ export class ResultCountryRepository extends Repository<ResultCountry> {
     `;
 
     try {
-      const result: ResultCountry[] = await this.query(query, [resultId, countryId]);
-      return result?.length?result[0]:undefined;
+      const result: ResultCountry[] = await this.query(query, [
+        resultId,
+        countryId,
+      ]);
+      return result?.length ? result[0] : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultCountryRepository.name,
@@ -95,7 +174,7 @@ export class ResultCountryRepository extends Repository<ResultCountry> {
   }
 
   async updateCountries(resultId: number, countriesArray: number[]) {
-    const Countries = countriesArray??[];
+    const Countries = countriesArray ?? [];
     const upDateInactive = `
     update result_country  
     set is_active = 0, 
@@ -121,18 +200,14 @@ export class ResultCountryRepository extends Repository<ResultCountry> {
     `;
 
     try {
-      if(Countries?.length){
+      if (Countries?.length) {
         const upDateInactiveResult = await this.query(upDateInactive, [
-          resultId
+          resultId,
         ]);
-  
-        return await this.query(upDateActive, [
-          resultId
-        ]);
-      }else{
-        return await this.query(upDateAllInactive, [
-          resultId
-        ]);
+
+        return await this.query(upDateActive, [resultId]);
+      } else {
+        return await this.query(upDateAllInactive, [resultId]);
       }
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

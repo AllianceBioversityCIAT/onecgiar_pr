@@ -3,6 +3,7 @@ import { DataSource, Repository } from 'typeorm';
 import { RoleByUser } from './entities/role-by-user.entity';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { getSpecificRoleDto } from './dto/getSpecificRole.dto';
+import { RoleTypeEnum } from '../../../shared/constants/role-type.enum';
 
 @Injectable()
 export class RoleByUserRepository extends Repository<RoleByUser> {
@@ -35,6 +36,25 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
         debug: true,
       });
     }
+  }
+
+  $_getMaxRoleByUser(userId: number) {
+    const queryData = `
+	select min(rbu.role) max_role
+		from role_by_user rbu 
+		where rbu.\`user\` = 2 
+		and rbu.active > 0 
+		and rbu.initiative_id is null 
+		and rbu.action_area_id is null 
+		LIMIT  1;
+	`;
+    const res = this.query(queryData, [userId]);
+
+    return res
+      .then((data) => {
+        return data?.length ? data[0].max_role : null;
+      })
+      .catch((error) => null);
   }
 
   async deleteAllData() {
@@ -117,7 +137,11 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
     }
   }
 
-  async validationRolePermissions(userId: number, resultId: number, rolesToValidate: number[]) {
+  async validationRolePermissions(
+    userId: number,
+    resultId: number,
+    rolesToValidate: number[],
+  ) {
     const queryData = `
     SELECT
 	    CASE
@@ -153,14 +177,21 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
 	    				results_by_inititiative rbi
 	    			where
 	    				rbi.result_id = ?
-	    				and rbi.initiative_role_id = 1)) in (${rolesToValidate?.toString() || 'NAN'})) THEN TRUE
+	    				and rbi.initiative_role_id = 1)) in (${
+                rolesToValidate?.toString() || 'NAN'
+              })) THEN TRUE
 	    		else false
 	    	END
 	    END as validation;
     `;
     try {
-      const getSpecificRole: Array<{validation: string}> = await this.query(queryData, [userId,userId, resultId]);
-      return getSpecificRole?.length? parseInt(getSpecificRole[0].validation): 0;
+      const getSpecificRole: Array<{ validation: string }> = await this.query(
+        queryData,
+        [userId, userId, resultId],
+      );
+      return getSpecificRole?.length
+        ? parseInt(getSpecificRole[0].validation)
+        : 0;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: RoleByUserRepository.name,
@@ -168,5 +199,31 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
         debug: true,
       });
     }
+  }
+
+  async $_isValidRole(
+    userId: number,
+    type: RoleTypeEnum = RoleTypeEnum.APPLICATION,
+  ): Promise<number> {
+    const query = `
+    select 
+    min(ubr.role) max_role  
+  from role_by_user ubr 
+  where ubr.user = ? 
+    and ubr.active = true
+    and ubr.initiative_id is ${
+      type == RoleTypeEnum.INITIATIVE ? 'not' : ''
+    } NULL 
+    and ubr.action_area_id is ${
+      type == RoleTypeEnum.ACTION_AREA ? 'not' : ''
+    } NULL
+    or (ubr.\`role\` = 1 and ubr.user = ?)
+  group by ubr.user;
+    `;
+    const result: { max_role: number }[] = await this.query(query, [
+      userId,
+      userId,
+    ]);
+    return result?.length ? result[0].max_role : null;
   }
 }

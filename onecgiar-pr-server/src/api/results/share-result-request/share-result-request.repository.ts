@@ -6,15 +6,19 @@ import { RequestStatus } from './entities/request-status.entity';
 
 @Injectable()
 export class ShareResultRequestRepository extends Repository<ShareResultRequest> {
-	constructor(
-		private dataSource: DataSource,
-		private _handlersError: HandlersError
-	) {
-		super(ShareResultRequest, dataSource.createEntityManager());
-	}
+  constructor(
+    private dataSource: DataSource,
+    private _handlersError: HandlersError,
+  ) {
+    super(ShareResultRequest, dataSource.createEntityManager());
+  }
 
-	async shareResultRequestExists(resultId: number, ownerInitId: number, shareInitId: number) {
-		const queryData = `
+  async shareResultRequestExists(
+    resultId: number,
+    ownerInitId: number,
+    shareInitId: number,
+  ) {
+    const queryData = `
     SELECT
     	srr.share_result_request_id,
     	srr.is_active,
@@ -38,20 +42,23 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
       and srr.request_status_id in (1)
 	  and srr.is_active > 0;
     `;
-		try {
-			const shareResultRequest: ShareResultRequest[] = await this.query(queryData, [resultId, ownerInitId, shareInitId]);
-			return shareResultRequest.length ? shareResultRequest[0] : undefined;
-		} catch (error) {
-			throw this._handlersError.returnErrorRepository({
-				className: ShareResultRequestRepository.name,
-				error: error,
-				debug: true,
-			});
-		}
-	}
+    try {
+      const shareResultRequest: ShareResultRequest[] = await this.query(
+        queryData,
+        [resultId, ownerInitId, shareInitId],
+      );
+      return shareResultRequest.length ? shareResultRequest[0] : undefined;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ShareResultRequestRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
 
-	async getAllRequestStatus() {
-		const queryData = `
+  async getAllRequestStatus() {
+    const queryData = `
     SELECT
     	rs.request_status_id,
     	rs.name,
@@ -59,20 +66,20 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     FROM
     	request_status rs;
     `;
-		try {
-			const shareResultRequest: RequestStatus[] = await this.query(queryData);
-			return shareResultRequest;
-		} catch (error) {
-			throw this._handlersError.returnErrorRepository({
-				className: ShareResultRequestRepository.name,
-				error: error,
-				debug: true,
-			});
-		}
-	}
+    try {
+      const shareResultRequest: RequestStatus[] = await this.query(queryData);
+      return shareResultRequest;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ShareResultRequestRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
 
-	async getRequestByUser(userId: number, version: number = 1) {
-		const queryData = `
+  async getRequestByUser(userId: number, roleId: number) {
+    const queryData = `
     SELECT
     	srr.share_result_request_id,
     	srr.is_active,
@@ -101,50 +108,63 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     	r.description,
     	r.title,
 		r.status,
+		r.status_id,
+		rs.status_name,
 		r.result_level_id,
 		r.result_type_id,
     	rt.name as result_type_name,
     	rl.name as result_level_name,
-		false as is_requester
+		false as is_requester,
+		v.status as version_status,
+		v.id as version_id,
+		v.phase_year
     FROM
     	share_result_request srr
     	inner join \`result\` r on r.id = srr.result_id 
     						and r.is_active > 0
-							and r.version_id = ?
     	inner join result_level rl on rl.id = r.result_level_id 
     	inner join result_type rt on rt.id = r.result_type_id 
 		left join users u on u.id = srr.requested_by 
     	left join users u2 on u2.id = srr.approved_by 
 		left join clarisa_initiatives ci on ci.id = srr.approving_inititiative_id 
     	left join clarisa_initiatives ci2 on ci2.id = srr.requester_initiative_id 
+		INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
+		inner join \`version\` v on v.id = r.version_id
     WHERE 
-    	srr.approving_inititiative_id in (
-    	SELECT
-    		rbu.initiative_id
-    	from
-    		role_by_user rbu
-    	WHERE
-    		rbu.\`user\` = ?
-    		and rbu.initiative_id is not null
-    		and rbu.action_area_id is null
-    	)
-		and srr.is_active > 0
+		srr.is_active > 0
+		${
+      roleId == 1
+        ? ''
+        : `and srr.approving_inititiative_id in (
+			SELECT
+				rbu.initiative_id
+			from
+				role_by_user rbu
+			WHERE
+				rbu.\`user\` = ?
+				and rbu.initiative_id is not null
+				and rbu.action_area_id is null
+			)`
+    }
 	order by srr.request_status_id ASC;
     `;
-		try {
-			const shareResultRequest: ShareResultRequest[] = await this.query(queryData, [version, userId]);
-			return shareResultRequest;
-		} catch (error) {
-			throw this._handlersError.returnErrorRepository({
-				className: ShareResultRequestRepository.name,
-				error: error,
-				debug: true,
-			});
-		}
-	}
+    try {
+      const shareResultRequest: ShareResultRequest[] = await this.query(
+        queryData,
+        [userId],
+      );
+      return shareResultRequest;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ShareResultRequestRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
 
-	async getPendingByUser(userId: number, version: number = 1) {
-		const queryData = `
+  async getPendingByUser(userId: number, roleId: number) {
+    const queryData = `
     SELECT
     	srr.share_result_request_id,
     	srr.is_active,
@@ -174,45 +194,55 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
 		r.result_type_id,
     	rt.name as result_type_name,
     	rl.name as result_level_name,
-		true as is_requester
+		true as is_requester,
+		v.status as version_status,
+		v.id as version_id
     FROM
     	share_result_request srr
     	inner join \`result\` r on r.id = srr.result_id 
     						and r.is_active > 0
-							and r.version_id = ?
     	inner join result_level rl on rl.id = r.result_level_id 
     	inner join result_type rt on rt.id = r.result_type_id 
 		left join users u on u.id = srr.requested_by 
     	left join users u2 on u2.id = srr.approved_by  
 		left join clarisa_initiatives ci on ci.id = srr.approving_inititiative_id 
     	left join clarisa_initiatives ci2 on ci2.id = srr.requester_initiative_id 
+		inner join \`version\` v on v.id = r.version_id 
     WHERE 
-    	srr.requester_initiative_id in (
-    	SELECT
-    		rbu.initiative_id
-    	from
-    		role_by_user rbu
-    	WHERE
-    		rbu.\`user\` = ?
-    		and rbu.initiative_id is not null
-    		and rbu.action_area_id is null
-    	)
-		and srr.is_active > 0;
+	srr.is_active > 0
+	${
+    roleId == 1
+      ? ''
+      : `and srr.requester_initiative_id in (
+				SELECT
+					rbu.initiative_id
+				from
+					role_by_user rbu
+				WHERE
+					rbu.\`user\` = ?
+					and rbu.initiative_id is not null
+					and rbu.action_area_id is null
+				)`
+  }
+		order by srr.request_status_id ASC;
     `;
-		try {
-			const shareResultRequest: ShareResultRequest[] = await this.query(queryData, [version, userId]);
-			return shareResultRequest;
-		} catch (error) {
-			throw this._handlersError.returnErrorRepository({
-				className: ShareResultRequestRepository.name,
-				error: error,
-				debug: true,
-			});
-		}
-	}
+    try {
+      const shareResultRequest: ShareResultRequest[] = await this.query(
+        queryData,
+        [userId],
+      );
+      return shareResultRequest;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ShareResultRequestRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
 
-	async getInitiativeOnlyPendingByResult(userId: number, version: number = 1) {
-		const queryData = `
+  async getInitiativeOnlyPendingByResult(userId: number, version: number = 1) {
+    const queryData = `
     SELECT
     	srr.share_result_request_id,
     	srr.is_active,
@@ -235,7 +265,6 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     	share_result_request srr
     	inner join \`result\` r on r.id = srr.result_id 
     						and r.is_active > 0
-							and r.version_id = ?
     	inner join result_level rl on rl.id = r.result_level_id 
     	inner join result_type rt on rt.id = r.result_type_id 
     WHERE 
@@ -251,20 +280,23 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     	)
 		and srr.is_active > 0;
     `;
-		try {
-			const shareResultRequest: ShareResultRequest[] = await this.query(queryData, [userId, version]);
-			return shareResultRequest;
-		} catch (error) {
-			throw this._handlersError.returnErrorRepository({
-				className: ShareResultRequestRepository.name,
-				error: error,
-				debug: true,
-			});
-		}
-	}
+    try {
+      const shareResultRequest: ShareResultRequest[] = await this.query(
+        queryData,
+        [userId, version],
+      );
+      return shareResultRequest;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ShareResultRequestRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
 
-	async getRequestByUserId(userId: number) {
-		const queryData = `
+  async getRequestByUserId(userId: number) {
+    const queryData = `
     SELECT
     	srr.share_result_request_id,
     	srr.is_active,
@@ -287,36 +319,37 @@ export class ShareResultRequestRepository extends Repository<ShareResultRequest>
     	and srr.shared_inititiative_id = ?
 		and srr.is_active > 0;
     `;
-		try {
-			const shareResultRequest: ShareResultRequest[] = await this.query(queryData, [userId]);
-			return shareResultRequest.length ? shareResultRequest[0] : undefined;
-		} catch (error) {
-			throw this._handlersError.returnErrorRepository({
-				className: ShareResultRequestRepository.name,
-				error: error,
-				debug: true,
-			});
-		}
-	}
+    try {
+      const shareResultRequest: ShareResultRequest[] = await this.query(
+        queryData,
+        [userId],
+      );
+      return shareResultRequest.length ? shareResultRequest[0] : undefined;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ShareResultRequestRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
 
-	async cancelRequest(requestIds: number[]) {
-		const queryData = `
+  async cancelRequest(requestIds: number[]) {
+    const queryData = `
     update share_result_request 
 	set is_active = FALSE 
 	where is_active > 0
 		and share_result_request_id in (${requestIds.toString()})
     `;
-		try {
-			const shareResultRequest = await this.query(queryData);
-			return shareResultRequest;
-		} catch (error) {
-			throw this._handlersError.returnErrorRepository({
-				className: ShareResultRequestRepository.name,
-				error: error,
-				debug: true,
-			});
-		}
-	}
-
+    try {
+      const shareResultRequest = await this.query(queryData);
+      return shareResultRequest;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ShareResultRequestRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
 }
-

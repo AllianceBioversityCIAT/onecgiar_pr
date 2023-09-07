@@ -34,14 +34,18 @@ export class ResultDetailComponent {
     this.dataControlSE.currentResult = null;
     this.api.resultsSE.currentResultId = null;
     this.api.resultsSE.currentResultCode = null;
+    this.api.resultsSE.currentResultPhase = null;
     this.api.updateUserData(() => {
       //(this.dataControlSE.currentResult);
     });
-    this.api.resultsSE.currentResultId = this.activatedRoute.snapshot.paramMap.get('id');
+    // this.api.resultsSE.currentResultId = this.activatedRoute.snapshot.paramMap.get('id');
     this.api.resultsSE.currentResultCode = this.activatedRoute.snapshot.paramMap.get('id');
+    // console.log(this.activatedRoute.snapshot.queryParamMap.get('phase'));
+    this.api.resultsSE.currentResultPhase = this.activatedRoute.snapshot.queryParamMap.get('phase');
     await this.GET_resultIdToCode();
     await this.currentResultSE.GET_resultById();
-    await this.greenChecksSE.updateGreenChecks();
+    await this.greenChecksSE.getGreenChecks();
+    this.GET_versioningResult();
 
     this.shareRequestModalSE.inNotifications = false;
   }
@@ -49,7 +53,7 @@ export class ResultDetailComponent {
   GET_resultIdToCode() {
     this.currentResultSE.resultIdIsconverted = false;
     return new Promise((resolve, reject) => {
-      this.api.resultsSE.GET_resultIdToCode(this.api.resultsSE.currentResultId).subscribe(
+      this.api.resultsSE.GET_resultIdToCode(this.api.resultsSE.currentResultCode, this.api.resultsSE.currentResultPhase).subscribe(
         ({ response }) => {
           this.api.resultsSE.currentResultId = response;
           //('GET_resultIdToCode');
@@ -62,8 +66,16 @@ export class ResultDetailComponent {
       );
     });
   }
+  GET_versioningResult() {
+    this.api.resultsSE.GET_versioningResult().subscribe(({ response }) => {
+      console.log(response);
+      this.api.dataControlSE.resultPhaseList = response;
+    });
+  }
 
   ngDoCheck(): void {
-    this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.section_container');
+    setTimeout(() => {
+      this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.section_container');
+    }, 10);
   }
 }

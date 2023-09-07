@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { MenuItem } from 'primeng/api';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { internationalizationData } from '../../../../../../shared/data/internationalizationData';
@@ -7,6 +7,8 @@ import { ResultLevelService } from '../../../result-creator/services/result-leve
 import { ExportTablesService } from '../../../../../../shared/services/export-tables.service';
 import { ShareRequestModalService } from '../../../result-detail/components/share-request-modal/share-request-modal.service';
 import { RetrieveModalService } from '../../../result-detail/components/retrieve-modal/retrieve-modal.service';
+import { PhasesService } from '../../../../../../shared/services/global/phases.service';
+import { Table } from 'primeng/table';
 
 @Component({
   selector: 'app-results-list',
@@ -15,10 +17,12 @@ import { RetrieveModalService } from '../../../result-detail/components/retrieve
 })
 export class ResultsListComponent implements OnInit {
   gettingReport = false;
+  combine = true;
   columnOrder = [
-    { title: 'Result code', attr: 'result_code' },
+    // { title: 'Result code', attr: 'result_code' },
     { title: 'Title', attr: 'title', class: 'notCenter' },
-    { title: 'Reporting year', attr: 'reported_year' },
+    { title: 'Phase', attr: 'phase_name' },
+    // { title: 'Reporting year', attr: 'phase_year' },
     { title: 'Result type', attr: 'result_type' },
     { title: 'Submitter', attr: 'submitter' },
     { title: 'Status', attr: 'status_name' },
@@ -52,6 +56,13 @@ export class ResultsListComponent implements OnInit {
         // event
       }
     },
+    {
+      label: 'Update result',
+      icon: 'pi pi-fw pi-clone',
+      command: () => {
+        this.api.dataControlSE.chagePhaseModal = true;
+      }
+    },
     // { label: 'Edit', icon: 'pi pi-fw pi-pencil' },
     {
       label: 'Delete',
@@ -62,21 +73,39 @@ export class ResultsListComponent implements OnInit {
     }
     // { label: 'Submit', icon: 'pi pi-fw pi-reply' }
   ];
+  @ViewChild('table') table: Table;
+  constructor(public api: ApiService, public resultsListService: ResultsListService, private ResultLevelSE: ResultLevelService, private exportTablesSE: ExportTablesService, private shareRequestModalSE: ShareRequestModalService, private retrieveModalSE: RetrieveModalService, public phasesService: PhasesService) {}
 
-  constructor(public api: ApiService, public resultsListService: ResultsListService, private ResultLevelSE: ResultLevelService, private exportTablesSE: ExportTablesService, private shareRequestModalSE: ShareRequestModalService, private retrieveModalSE: RetrieveModalService) {}
+  validateOrder(columnAttr) {
+    setTimeout(() => {
+      console.log(columnAttr);
+      if (columnAttr == 'result_code') return (this.combine = true);
+      const resultListTableHTML = document.getElementById('resultListTable');
+      // if (document.getElementById('resultListTable').querySelectorAll('th[aria-sort="ascending"]').length) this.resetSort();
+      this.combine = !resultListTableHTML.querySelectorAll('th[aria-sort="descending"]').length && !resultListTableHTML.querySelectorAll('th[aria-sort="ascending"]').length;
+      // console.log(document.getElementById('resultListTable').querySelectorAll('th[aria-sort="descending"]').length); ascending
+      // this.resetSort();
+      return null;
+    }, 100);
+  }
+  resetSort() {
+    this.table.sortOrder = 0;
+    this.table.sortField = '';
+    this.table.reset();
+  }
 
   ngOnInit(): void {
     // this.api.rolesSE.validateReadOnly();
     this.api.updateResultsList();
     this.items;
-    this.api.alertsFs.show({
-      id: 'indoasd',
-      status: 'success',
-      title: '',
-      description: internationalizationData?.resultsList?.alerts?.info,
-      querySelector: '.alert',
-      position: 'beforebegin'
-    });
+    // this.api.alertsFs.show({
+    //   id: 'indoasd',
+    //   status: 'success',
+    //   title: '',
+    //   description: internationalizationData?.resultsList?.alerts?.info,
+    //   querySelector: '.alert',
+    //   position: 'beforebegin'
+    // });
     this.shareRequestModalSE.inNotifications = false;
   }
   onPressAction(result) {

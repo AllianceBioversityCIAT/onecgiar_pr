@@ -12,12 +12,13 @@ import { User } from '../../../../auth/modules/user/entities/user.entity';
 import { ClarisaMeliaStudyType } from '../../../../clarisa/clarisa-melia-study-type/entities/clarisa-melia-study-type.entity';
 import { Result } from '../../entities/result.entity';
 import { KnowledgeProductFairBaseline } from '../../knowledge_product_fair_baseline/entities/knowledge_product_fair_baseline.entity';
-import { Version } from '../../versions/entities/version.entity';
+import { Version } from '../../../versioning/entities/version.entity';
 import { ResultsKnowledgeProductAltmetric } from './results-knowledge-product-altmetrics.entity';
 import { ResultsKnowledgeProductAuthor } from './results-knowledge-product-authors.entity';
 import { ResultsKnowledgeProductInstitution } from './results-knowledge-product-institution.entity';
 import { ResultsKnowledgeProductKeyword } from './results-knowledge-product-keywords.entity';
 import { ResultsKnowledgeProductMetadata } from './results-knowledge-product-metadata.entity';
+import { ResultsKnowledgeProductFairScore } from './results-knowledge-product-fair-scores.entity';
 
 @Entity()
 export class ResultsKnowledgeProduct {
@@ -120,7 +121,7 @@ export class ResultsKnowledgeProduct {
   @Column({
     name: 'is_melia',
     type: 'boolean',
-    default: false
+    default: false,
   })
   is_melia: boolean;
 
@@ -147,10 +148,6 @@ export class ResultsKnowledgeProduct {
     nullable: true,
   })
   cgspace_countries: string;
-
-  //versioning field
-  @Column()
-  version_id: number;
 
   //audit fields
   @Column({
@@ -218,17 +215,17 @@ export class ResultsKnowledgeProduct {
   )
   knowledge_product_fair_baseline_array: KnowledgeProductFairBaseline[];
 
+  @OneToMany(
+    () => ResultsKnowledgeProductFairScore,
+    (rkpfs) => rkpfs.result_knowledge_product_object,
+  )
+  result_knowledge_product_fair_score_array: ResultsKnowledgeProductFairScore[];
+
   @ManyToOne(() => Result, (r) => r.id)
   @JoinColumn({
     name: 'results_id',
   })
   result_object: Result;
-
-  @ManyToOne(() => Version, (v) => v.id, { nullable: false })
-  @JoinColumn({
-    name: 'version_id',
-  })
-  version_object: number;
 
   @ManyToOne(() => User, (u) => u.id, { nullable: false })
   @JoinColumn({

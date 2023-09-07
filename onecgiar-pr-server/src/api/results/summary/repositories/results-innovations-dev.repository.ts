@@ -1,15 +1,153 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
 import { ResultsInnovationsDev } from '../entities/results-innovations-dev.entity';
+import {
+  ReplicableConfigInterface,
+  ReplicableInterface,
+} from '../../../../shared/globalInterfaces/replicable.interface';
 
 @Injectable()
-export class ResultsInnovationsDevRepository extends Repository<ResultsInnovationsDev> {
+export class ResultsInnovationsDevRepository
+  extends Repository<ResultsInnovationsDev>
+  implements ReplicableInterface<ResultsInnovationsDev>
+{
+  private readonly _logger: Logger = new Logger(
+    ResultsInnovationsDevRepository.name,
+  );
+
   constructor(
     private dataSource: DataSource,
     private _handlersError: HandlersError,
   ) {
     super(ResultsInnovationsDev, dataSource.createEntityManager());
+  }
+
+  async replicable(
+    config: ReplicableConfigInterface<ResultsInnovationsDev>,
+  ): Promise<ResultsInnovationsDev[]> {
+    let final_data: ResultsInnovationsDev[] = null;
+    try {
+      if (config.f?.custonFunction) {
+        const queryData = `
+        select 
+        null as result_innovation_dev_id,
+        rid.short_title,
+        rid.is_new_variety,
+        rid.number_of_varieties,
+        rid.innovation_developers,
+        rid.innovation_collaborators,
+        rid.readiness_level,
+        rid.evidences_justification,
+        rid.is_active,
+        now() as created_date,
+        null as last_updated_date,
+        ? as results_id,
+        ? as created_by,
+        null as last_updated_by,
+        rid.innovation_characterization_id,
+        rid.innovation_nature_id,
+        rid.innovation_readiness_level_id,
+        rid.innovation_acknowledgement,
+        rid.innovation_pdf
+        from results_innovations_dev rid where rid.results_id = ? and rid.is_active > 0
+        `;
+        const response = await (<Promise<ResultsInnovationsDev[]>>(
+          this.query(queryData, [
+            config.new_result_id,
+            config.user.id,
+            config.old_result_id,
+          ])
+        ));
+        const response_edit = <ResultsInnovationsDev[]>(
+          config.f.custonFunction(response)
+        );
+        final_data = await this.save(response_edit);
+      } else {
+        const queryData: string = `
+        insert into results_innovations_dev
+        (
+        short_title,
+        is_new_variety,
+        number_of_varieties,
+        innovation_developers,
+        innovation_collaborators,
+        readiness_level,
+        evidences_justification,
+        is_active,
+        created_date,
+        last_updated_date,
+        results_id,
+        created_by,
+        last_updated_by,
+        innovation_characterization_id,
+        innovation_nature_id,
+        innovation_readiness_level_id,
+        innovation_acknowledgement,
+        innovation_pdf
+        )
+        select 
+        rid.short_title,
+        rid.is_new_variety,
+        rid.number_of_varieties,
+        rid.innovation_developers,
+        rid.innovation_collaborators,
+        rid.readiness_level,
+        rid.evidences_justification,
+        rid.is_active,
+        now() as created_date,
+        null as last_updated_date,
+        ? as results_id,
+        ? as created_by,
+        null as last_updated_by,
+        rid.innovation_characterization_id,
+        rid.innovation_nature_id,
+        rid.innovation_readiness_level_id,
+        rid.innovation_acknowledgement,
+        rid.innovation_pdf
+        from results_innovations_dev rid where rid.results_id = ? and rid.is_active > 0`;
+        await this.query(queryData, [
+          config.new_result_id,
+          config.user.id,
+          config.old_result_id,
+        ]);
+
+        const queryFind = `
+        select 
+        rid.result_innovation_dev_id,
+        rid.short_title,
+        rid.is_new_variety,
+        rid.number_of_varieties,
+        rid.innovation_developers,
+        rid.innovation_collaborators,
+        rid.readiness_level,
+        rid.evidences_justification,
+        rid.is_active,
+        rid.created_date,
+        rid.last_updated_date,
+        rid.results_id,
+        rid.created_by,
+        rid.last_updated_by,
+        rid.innovation_characterization_id,
+        rid.innovation_nature_id,
+        rid.innovation_readiness_level_id,
+        rid.innovation_acknowledgement,
+        rid.innovation_pdf
+        from results_innovations_dev rid where rid.results_id = ?`;
+        final_data = await this.query(queryFind, [config.new_result_id]);
+      }
+    } catch (error) {
+      config.f?.errorFunction
+        ? config.f.errorFunction(error)
+        : this._logger.error(error);
+      final_data = null;
+    }
+
+    config.f?.completeFunction
+      ? config.f.completeFunction({ ...final_data })
+      : null;
+
+    return final_data;
   }
 
   async InnovationDevExists(resultId: number) {
@@ -27,7 +165,6 @@ export class ResultsInnovationsDevRepository extends Repository<ResultsInnovatio
     	rid.created_date,
     	rid.last_updated_date,
     	rid.results_id,
-    	rid.version_id,
     	rid.created_by,
     	rid.last_updated_by,
     	rid.innovation_characterization_id,

@@ -6,7 +6,7 @@ import { ResultsInnovationsUseRepository } from './repositories/results-innovati
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResultsInnovationsUse } from './entities/results-innovations-use.entity';
 import { VersionsService } from '../versions/versions.service';
-import { Version } from '../versions/entities/version.entity';
+import { Version } from '../../versioning/entities/version.entity';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultsInnovationsUseMeasuresRepository } from './repositories/results-innovations-use-measures.repository';
 import { ResultsInnovationsUseMeasures } from './entities/results-innovations-use-measures.entity';
@@ -25,7 +25,6 @@ import { ResultsPolicyChangesRepository } from './repositories/results-policy-ch
 
 @Injectable()
 export class SummaryService {
-
   constructor(
     private readonly _resultsInnovationsUseRepository: ResultsInnovationsUseRepository,
     private readonly _esultsInnovationsUseMeasuresRepository: ResultsInnovationsUseMeasuresRepository,
@@ -35,8 +34,8 @@ export class SummaryService {
     private readonly _resultsPolicyChangesRepository: ResultsPolicyChangesRepository,
     private readonly _resultRepository: ResultRepository,
     private readonly _versionsService: VersionsService,
-    private readonly _handlersError: HandlersError
-  ) { }
+    private readonly _handlersError: HandlersError,
+  ) {}
 
   create(createSummaryDto: CreateSummaryDto) {
     return 'This action adds a new summary';
@@ -59,16 +58,24 @@ export class SummaryService {
   }
 
   /**
-   * 
-   * @param innovation 
-   * @param resultId 
-   * @param user 
-   * @returns 
+   *
+   * @param innovation
+   * @param resultId
+   * @param user
+   * @returns
    */
-  async saveInnovationUse(innovation: InnovationUseDto, resultId: number, user: TokenDto) {
+  async saveInnovationUse(
+    innovation: InnovationUseDto,
+    resultId: number,
+    user: TokenDto,
+  ) {
     try {
-      const { result_innovation_use_id, female_using, male_using, other } = innovation;
-      const innExists = await this._resultsInnovationsUseRepository.InnovatonUseExists(resultId);
+      const { result_innovation_use_id, female_using, male_using, other } =
+        innovation;
+      const innExists =
+        await this._resultsInnovationsUseRepository.InnovatonUseExists(
+          resultId,
+        );
       let InnovationUse: ResultsInnovationsUse = undefined;
       const version = await this._versionsService.findBaseVersion();
       if (version.status >= 300) {
@@ -79,26 +86,42 @@ export class SummaryService {
         innExists.female_using = female_using || null;
         innExists.male_using = male_using || null;
         innExists.last_updated_by = user.id;
-        InnovationUse = await this._resultsInnovationsUseRepository.save(innExists);
+        InnovationUse = await this._resultsInnovationsUseRepository.save(
+          innExists,
+        );
       } else {
-
         const newInne = new ResultsInnovationsUse();
         newInne.created_by = user.id;
         newInne.last_updated_by = user.id;
         newInne.female_using = female_using;
         newInne.male_using = male_using;
-        newInne.version_id = vrs.id;
         newInne.results_id = resultId;
-        InnovationUse = await this._resultsInnovationsUseRepository.save(newInne);
+        InnovationUse = await this._resultsInnovationsUseRepository.save(
+          newInne,
+        );
       }
 
       if (other?.length) {
-        const measureList = other.filter(el => !!el.result_innovations_use_measure_id).map(d => d.result_innovations_use_measure_id);
-        await this._esultsInnovationsUseMeasuresRepository.updateInnovatonUseMeasures(InnovationUse.result_innovation_use_id, measureList, user.id);
-        let tesultsInnovationsUseMeasuresList: ResultsInnovationsUseMeasures[] = [];
+        const measureList = other
+          .filter((el) => !!el.result_innovations_use_measure_id)
+          .map((d) => d.result_innovations_use_measure_id);
+        await this._esultsInnovationsUseMeasuresRepository.updateInnovatonUseMeasures(
+          InnovationUse.result_innovation_use_id,
+          measureList,
+          user.id,
+        );
+        let tesultsInnovationsUseMeasuresList: ResultsInnovationsUseMeasures[] =
+          [];
         for (let index = 0; index < other.length; index++) {
-          const { quantity, unit_of_measure, result_innovations_use_measure_id } = other[index];
-          const innMesExists = await this._esultsInnovationsUseMeasuresRepository.innovatonUseMeasuresExists(result_innovations_use_measure_id);
+          const {
+            quantity,
+            unit_of_measure,
+            result_innovations_use_measure_id,
+          } = other[index];
+          const innMesExists =
+            await this._esultsInnovationsUseMeasuresRepository.innovatonUseMeasuresExists(
+              result_innovations_use_measure_id,
+            );
           if (innMesExists) {
             innMesExists.last_updated_by = user.id;
             innMesExists.quantity = quantity;
@@ -110,14 +133,20 @@ export class SummaryService {
             newInnMes.last_updated_by = user.id;
             newInnMes.quantity = quantity;
             newInnMes.unit_of_measure = unit_of_measure;
-            newInnMes.result_innovation_use_id = InnovationUse.result_innovation_use_id;
-            newInnMes.version_id = vrs.id;
+            newInnMes.result_innovation_use_id =
+              InnovationUse.result_innovation_use_id;
             tesultsInnovationsUseMeasuresList.push(newInnMes);
           }
         }
-        await this._esultsInnovationsUseMeasuresRepository.save(tesultsInnovationsUseMeasuresList);
+        await this._esultsInnovationsUseMeasuresRepository.save(
+          tesultsInnovationsUseMeasuresList,
+        );
       } else {
-        await this._esultsInnovationsUseMeasuresRepository.updateInnovatonUseMeasures(InnovationUse.result_innovation_use_id, [], user.id);
+        await this._esultsInnovationsUseMeasuresRepository.updateInnovatonUseMeasures(
+          InnovationUse.result_innovation_use_id,
+          [],
+          user.id,
+        );
       }
 
       return {
@@ -128,18 +157,19 @@ export class SummaryService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
-
-
   }
 
   /**
-   * 
-   * @param resultId 
-   * @returns 
+   *
+   * @param resultId
+   * @returns
    */
   async getInnovationUse(resultId: number) {
     try {
-      const innExists = await this._resultsInnovationsUseRepository.InnovatonUseExists(resultId);
+      const innExists =
+        await this._resultsInnovationsUseRepository.InnovatonUseExists(
+          resultId,
+        );
       if (!innExists) {
         throw {
           response: {},
@@ -148,11 +178,14 @@ export class SummaryService {
         };
       }
 
-      const allInnUseMes = await this._esultsInnovationsUseMeasuresRepository.getAllResultInnovationsUseMeasureByInnoUseId(innExists.result_innovation_use_id);
+      const allInnUseMes =
+        await this._esultsInnovationsUseMeasuresRepository.getAllResultInnovationsUseMeasureByInnoUseId(
+          innExists.result_innovation_use_id,
+        );
       return {
         response: {
           ...innExists,
-          other: allInnUseMes
+          other: allInnUseMes,
         },
         message: 'Successful response',
         status: HttpStatus.OK,
@@ -163,15 +196,30 @@ export class SummaryService {
   }
 
   /**
-   * 
-   * @param capdev 
-   * @param resultId 
-   * @param user 
+   *
+   * @param capdev
+   * @param resultId
+   * @param user
    */
-  async saveCapacityDevelopents(capdev: capdevDto, resultId: number, user: TokenDto) {
+  async saveCapacityDevelopents(
+    capdev: capdevDto,
+    resultId: number,
+    user: TokenDto,
+  ) {
     try {
-      const { result_capacity_development_id, female_using, male_using, capdev_delivery_method_id, capdev_term_id, institutions } = capdev;
-      const capDevExists = await this._resultsCapacityDevelopmentsRepository.capDevExists(resultId);
+      const {
+        result_capacity_development_id,
+        female_using,
+        male_using,
+        capdev_delivery_method_id,
+        capdev_term_id,
+        institutions,
+        is_attending_for_organization,
+      } = capdev;
+      const capDevExists =
+        await this._resultsCapacityDevelopmentsRepository.capDevExists(
+          resultId,
+        );
       let CapDevData: ResultsCapacityDevelopments = undefined;
       const version = await this._versionsService.findBaseVersion();
       if (version.status >= 300) {
@@ -184,32 +232,48 @@ export class SummaryService {
         capDevExists.last_updated_by = user.id;
         capDevExists.capdev_delivery_method_id = capdev_delivery_method_id;
         capDevExists.capdev_term_id = capdev_term_id;
-        CapDevData = await this._resultsCapacityDevelopmentsRepository.save(capDevExists);
+        capDevExists.is_attending_for_organization =
+          is_attending_for_organization;
+        CapDevData = await this._resultsCapacityDevelopmentsRepository.save(
+          capDevExists,
+        );
       } else {
         const newCapDev = new ResultsCapacityDevelopments();
         newCapDev.created_by = user.id;
         newCapDev.last_updated_by = user.id;
         newCapDev.female_using = female_using || null;
         newCapDev.male_using = male_using || null;
-        newCapDev.version_id = vrs.id;
         newCapDev.result_id = resultId;
         newCapDev.capdev_delivery_method_id = capdev_delivery_method_id;
         newCapDev.capdev_term_id = capdev_term_id;
-        CapDevData = await this._resultsCapacityDevelopmentsRepository.save(newCapDev);
+        newCapDev.is_attending_for_organization =
+          is_attending_for_organization;
+        CapDevData = await this._resultsCapacityDevelopmentsRepository.save(
+          newCapDev,
+        );
       }
 
       if (institutions?.length) {
         let institutionsList: ResultsByInstitution[] = [];
-        await this._resultByIntitutionsRepository.updateGenericIstitutions(resultId, institutions, 3, user.id);
+        await this._resultByIntitutionsRepository.updateGenericIstitutions(
+          resultId,
+          institutions,
+          3,
+          user.id,
+        );
         for (let index = 0; index < institutions.length; index++) {
           const { institutions_id } = institutions[index];
-          const instiExists = await this._resultByIntitutionsRepository.getGenericResultByInstitutionExists(resultId, institutions_id, 3);
+          const instiExists =
+            await this._resultByIntitutionsRepository.getGenericResultByInstitutionExists(
+              resultId,
+              institutions_id,
+              3,
+            );
           if (!instiExists) {
             const newInstitution = new ResultsByInstitution();
             newInstitution.institution_roles_id = 3;
             newInstitution.created_by = user.id;
             newInstitution.last_updated_by = user.id;
-            newInstitution.version_id = vrs.id;
             newInstitution.institutions_id = institutions_id;
             newInstitution.result_id = resultId;
             institutionsList.push(newInstitution);
@@ -217,9 +281,13 @@ export class SummaryService {
         }
         await this._resultByIntitutionsRepository.save(institutionsList);
       } else {
-        await this._resultByIntitutionsRepository.updateGenericIstitutions(resultId, [], 3, user.id);
+        await this._resultByIntitutionsRepository.updateGenericIstitutions(
+          resultId,
+          [],
+          3,
+          user.id,
+        );
       }
-
 
       return {
         response: CapDevData,
@@ -232,14 +300,21 @@ export class SummaryService {
   }
 
   /**
-   * 
-   * @param resultId 
-   * @returns 
+   *
+   * @param resultId
+   * @returns
    */
   async getCapacityDevelopents(resultId: number) {
     try {
-      const capDevExists = await this._resultsCapacityDevelopmentsRepository.capDevExists(resultId);
-      const capDepInstitutions = await this._resultByIntitutionsRepository.getGenericAllResultByInstitutionByRole(resultId, 3);
+      const capDevExists =
+        await this._resultsCapacityDevelopmentsRepository.capDevExists(
+          resultId,
+        );
+      const capDepInstitutions =
+        await this._resultByIntitutionsRepository.getGenericAllResultByInstitutionByRole(
+          resultId,
+          3,
+        );
 
       if (!capDevExists) {
         throw {
@@ -252,7 +327,7 @@ export class SummaryService {
       return {
         response: {
           ...capDevExists,
-          institutions: capDepInstitutions
+          institutions: capDepInstitutions,
         },
         message: 'Capacity Developents has been created successfully',
         status: HttpStatus.CREATED,
@@ -263,26 +338,44 @@ export class SummaryService {
   }
 
   /**
-   * 
-   * @param createInnovationDevDto 
-   * @param resultId 
-   * @param user 
-   * @returns 
+   *
+   * @param createInnovationDevDto
+   * @param resultId
+   * @param user
+   * @returns
    */
-  async saveInnovationDev(createInnovationDevDto: CreateInnovationDevDto, resultId: number, user: TokenDto) {
+  async saveInnovationDev(
+    createInnovationDevDto: CreateInnovationDevDto,
+    resultId: number,
+    user: TokenDto,
+  ) {
     try {
       const version = await this._versionsService.findBaseVersion();
       if (version.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: version });
       }
       const vrs: Version = <Version>version.response;
-      const innDevExists = await this._resultsInnovationsDevRepository.InnovationDevExists(resultId);
-      const { evidences_justification, innovation_characterization_id,
-        innovation_collaborators, innovation_developers, innovation_nature_id,
-        innovation_readiness_level_id, is_new_variety, number_of_varieties, readiness_level,
-        result_innovation_dev_id, short_title, innovation_acknowledgement, innovation_pdf } = createInnovationDevDto;
+      const innDevExists =
+        await this._resultsInnovationsDevRepository.InnovationDevExists(
+          resultId,
+        );
+      const {
+        evidences_justification,
+        innovation_characterization_id,
+        innovation_collaborators,
+        innovation_developers,
+        innovation_nature_id,
+        innovation_readiness_level_id,
+        is_new_variety,
+        number_of_varieties,
+        readiness_level,
+        result_innovation_dev_id,
+        short_title,
+        innovation_acknowledgement,
+        innovation_pdf,
+      } = createInnovationDevDto;
 
-      let InnDevRes:ResultsInnovationsDev = undefined;
+      let InnDevRes: ResultsInnovationsDev = undefined;
       if (innDevExists) {
         innDevExists.short_title = short_title;
         innDevExists.last_updated_by = user.id;
@@ -294,14 +387,17 @@ export class SummaryService {
         innDevExists.evidences_justification = evidences_justification;
         innDevExists.innovation_collaborators = innovation_collaborators;
         innDevExists.result_innovation_dev_id = result_innovation_dev_id;
-        innDevExists.innovation_readiness_level_id = innovation_readiness_level_id;
-        innDevExists.innovation_characterization_id = innovation_characterization_id;
+        innDevExists.innovation_readiness_level_id =
+          innovation_readiness_level_id;
+        innDevExists.innovation_characterization_id =
+          innovation_characterization_id;
         innDevExists.innovation_acknowledgement = innovation_acknowledgement;
         innDevExists.innovation_pdf = innovation_pdf;
-        InnDevRes = await this._resultsInnovationsDevRepository.save(innDevExists);
+        InnDevRes = await this._resultsInnovationsDevRepository.save(
+          innDevExists,
+        );
       } else {
         const newInnDev = new ResultsInnovationsDev();
-        newInnDev.version_id = vrs.id;
         newInnDev.created_by = user.id;
         newInnDev.results_id = resultId;
         newInnDev.last_updated_by = user.id;
@@ -315,7 +411,8 @@ export class SummaryService {
         newInnDev.innovation_collaborators = innovation_collaborators;
         newInnDev.result_innovation_dev_id = result_innovation_dev_id;
         newInnDev.innovation_readiness_level_id = innovation_readiness_level_id;
-        newInnDev.innovation_characterization_id = innovation_characterization_id;
+        newInnDev.innovation_characterization_id =
+          innovation_characterization_id;
         newInnDev.innovation_acknowledgement = innovation_acknowledgement;
         newInnDev.innovation_pdf = innovation_pdf;
         InnDevRes = await this._resultsInnovationsDevRepository.save(newInnDev);
@@ -332,19 +429,22 @@ export class SummaryService {
   }
 
   /**
-   * 
-   * @param resultId 
-   * @returns 
+   *
+   * @param resultId
+   * @returns
    */
   async getInnovationDev(resultId: number) {
     try {
-      const innDevExists = await this._resultsInnovationsDevRepository.InnovationDevExists(resultId);
+      const innDevExists =
+        await this._resultsInnovationsDevRepository.InnovationDevExists(
+          resultId,
+        );
 
       const result = await this._resultRepository.getResultById(resultId);
       return {
         response: {
           ...innDevExists,
-          result: result
+          result: result,
         },
         message: 'Successful response',
         status: HttpStatus.OK,
@@ -355,55 +455,80 @@ export class SummaryService {
   }
 
   /**
-   * 
-   * @param policyChangesDto 
-   * @param resultId 
-   * @param user 
-   * @returns 
+   *
+   * @param policyChangesDto
+   * @param resultId
+   * @param user
+   * @returns
    */
-  async savePolicyChanges(policyChangesDto: PolicyChangesDto, resultId: number, user: TokenDto) {
+  async savePolicyChanges(
+    policyChangesDto: PolicyChangesDto,
+    resultId: number,
+    user: TokenDto,
+  ) {
     try {
       const version = await this._versionsService.findBaseVersion();
       if (version.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: version });
       }
       const vrs: Version = <Version>version.response;
-      const resultsPolicyChanges = await this._resultsPolicyChangesRepository.ResultsPolicyChangesExists(resultId);
-      const { amount,institutions,policy_stage_id,policy_type_id, status_amount} = policyChangesDto;
+      const resultsPolicyChanges =
+        await this._resultsPolicyChangesRepository.ResultsPolicyChangesExists(
+          resultId,
+        );
+      const {
+        amount,
+        institutions,
+        policy_stage_id,
+        policy_type_id,
+        status_amount,
+      } = policyChangesDto;
 
-      let policyChangesData:ResultsPolicyChanges = undefined;
+      let policyChangesData: ResultsPolicyChanges = undefined;
       if (resultsPolicyChanges) {
         resultsPolicyChanges.amount = amount || null;
         resultsPolicyChanges.last_updated_by = user.id;
         resultsPolicyChanges.policy_stage_id = policy_stage_id;
         resultsPolicyChanges.policy_type_id = policy_type_id;
         resultsPolicyChanges.status_amount = status_amount;
-        policyChangesData = await this._resultsPolicyChangesRepository.save(resultsPolicyChanges);
+        policyChangesData = await this._resultsPolicyChangesRepository.save(
+          resultsPolicyChanges,
+        );
       } else {
         const newResultsPolicyChanges = new ResultsPolicyChanges();
         newResultsPolicyChanges.amount = amount || null;
         newResultsPolicyChanges.policy_stage_id = policy_stage_id;
         newResultsPolicyChanges.policy_type_id = policy_type_id;
-        newResultsPolicyChanges.version_id = vrs.id;
         newResultsPolicyChanges.result_id = resultId;
         newResultsPolicyChanges.created_by = user.id;
         newResultsPolicyChanges.last_updated_by = user.id;
         newResultsPolicyChanges.status_amount = status_amount;
-        policyChangesData = await this._resultsPolicyChangesRepository.save(newResultsPolicyChanges);
+        policyChangesData = await this._resultsPolicyChangesRepository.save(
+          newResultsPolicyChanges,
+        );
       }
 
       if (institutions?.length) {
         let institutionsList: ResultsByInstitution[] = [];
-        await this._resultByIntitutionsRepository.updateGenericIstitutions(resultId, institutions, 4, user.id);
+        await this._resultByIntitutionsRepository.updateGenericIstitutions(
+          resultId,
+          institutions,
+          4,
+          user.id,
+        );
         for (let index = 0; index < institutions.length; index++) {
           const { institutions_id } = institutions[index];
-          const instiExists = await this._resultByIntitutionsRepository.getGenericResultByInstitutionExists(resultId, institutions_id, 4);
+          const instiExists =
+            await this._resultByIntitutionsRepository.getGenericResultByInstitutionExists(
+              resultId,
+              institutions_id,
+              4,
+            );
           if (!instiExists) {
             const newInstitution = new ResultsByInstitution();
             newInstitution.institution_roles_id = 4;
             newInstitution.created_by = user.id;
             newInstitution.last_updated_by = user.id;
-            newInstitution.version_id = vrs.id;
             newInstitution.institutions_id = institutions_id;
             newInstitution.result_id = resultId;
             institutionsList.push(newInstitution);
@@ -411,9 +536,13 @@ export class SummaryService {
         }
         await this._resultByIntitutionsRepository.save(institutionsList);
       } else {
-        await this._resultByIntitutionsRepository.updateGenericIstitutions(resultId, [], 4, user.id);
+        await this._resultByIntitutionsRepository.updateGenericIstitutions(
+          resultId,
+          [],
+          4,
+          user.id,
+        );
       }
-
 
       return {
         response: policyChangesData,
@@ -426,13 +555,16 @@ export class SummaryService {
   }
 
   /**
-   * 
-   * @param resultId 
-   * @returns 
+   *
+   * @param resultId
+   * @returns
    */
   async getPolicyChanges(resultId: number) {
     try {
-      const policyChangesExists = await this._resultsPolicyChangesRepository.ResultsPolicyChangesExists(resultId);
+      const policyChangesExists =
+        await this._resultsPolicyChangesRepository.ResultsPolicyChangesExists(
+          resultId,
+        );
       if (!policyChangesExists) {
         throw {
           response: {},
@@ -440,11 +572,15 @@ export class SummaryService {
           status: HttpStatus.NOT_FOUND,
         };
       }
-      const policyChangesInstitutions = await this._resultByIntitutionsRepository.getGenericAllResultByInstitutionByRole(resultId, 4);
+      const policyChangesInstitutions =
+        await this._resultByIntitutionsRepository.getGenericAllResultByInstitutionByRole(
+          resultId,
+          4,
+        );
       return {
         response: {
           ...policyChangesExists,
-          institutions: policyChangesInstitutions
+          institutions: policyChangesInstitutions,
         },
         message: 'Successful response',
         status: HttpStatus.OK,

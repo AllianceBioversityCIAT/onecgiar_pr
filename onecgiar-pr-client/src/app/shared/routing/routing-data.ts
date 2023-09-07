@@ -1,5 +1,7 @@
 import { Route } from '@angular/router';
 import { CheckLoginGuard } from '../guards/check-login.guard';
+import { PhaseManagementModule } from '../../pages/admin-section/pages/phase-management/phase-management.module';
+import { CheckAdminGuard } from '../guards/check-admin.guard';
 
 export const routingApp: PrRoute[] = [
   // { prName: 'Home', canActivate: [CheckLoginGuard], path: 'home', loadChildren: () => import('../../pages/home/home.module').then(m => m.HomeModule) },
@@ -15,7 +17,7 @@ export const routingApp: PrRoute[] = [
 
 // reporting.cgiar.org/reports/fullResultReport/1234?version=1
 
-export const extraRoutingApp: PrRoute[] = [{ prName: 'Admin module', onlytest: false, prHide: false, path: 'admin-module', loadChildren: () => import('../../pages/admin-section/admin-section.module').then(m => m.AdminSectionModule) }];
+export const extraRoutingApp: PrRoute[] = [{ prName: 'Admin module', onlytest: false, canActivate: [CheckAdminGuard], prHide: false, path: 'admin-module', loadChildren: () => import('../../pages/admin-section/admin-section.module').then(m => m.AdminSectionModule) }];
 
 export const resultRouting: PrRoute[] = [
   { prName: 'Result Creator', path: 'result-creator', loadChildren: () => import('../../pages/results/pages/result-creator/result-creator.module').then(m => m.ResultCreatorModule) },
@@ -27,6 +29,7 @@ export const resultRouting: PrRoute[] = [
 export const adminModuleRouting: PrRoute[] = [
   { prName: 'Completeness status', path: 'completeness-status', loadChildren: () => import('../../pages/admin-section/pages/completeness-status/completeness-status.module').then(m => m.CompletenessStatusModule) },
   { prName: 'User report', path: 'user-report', loadChildren: () => import('../../pages/admin-section/pages/user-report/user-report.module').then(m => m.UserReportModule) },
+  { prName: 'Phase management', path: 'phase-management', loadChildren: () => import('../../pages/admin-section/pages/phase-management/phase-management.module').then(m => m.PhaseManagementModule) },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'completeness-status' }
 ];
 

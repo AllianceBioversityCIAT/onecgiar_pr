@@ -8,7 +8,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Version } from '../../versions/entities/version.entity';
+import { Version } from '../../../versioning/entities/version.entity';
 import { Result } from '../../entities/result.entity';
 import { EvidenceType } from '../../evidence_types/entities/evidence_type.entity';
 
@@ -37,7 +37,7 @@ export class Evidence {
   @Column({
     name: 'result_id',
     type: 'bigint',
-    nullable: true
+    nullable: true,
   })
   result_id: number;
 
@@ -64,6 +64,30 @@ export class Evidence {
   youth_related!: boolean;
 
   @Column({
+    name: 'nutrition_related',
+    type: 'boolean',
+    nullable: true,
+    default: null,
+  })
+  nutrition_related!: boolean;
+
+  @Column({
+    name: 'environmental_biodiversity_related',
+    type: 'boolean',
+    nullable: true,
+    default: null,
+  })
+  environmental_biodiversity_related!: boolean;
+
+  @Column({
+    name: 'poverty_related',
+    type: 'boolean',
+    nullable: true,
+    default: null,
+  })
+  poverty_related!: boolean;
+
+  @Column({
     name: 'is_supplementary',
     type: 'boolean',
     nullable: true,
@@ -76,19 +100,6 @@ export class Evidence {
     name: 'knowledge_product_related',
   })
   knowledge_product_related!: number;
-
-  @Column({
-    name: 'version_id',
-    type: 'bigint',
-    nullable: false
-  })
-  version_id: number;
-
-  @ManyToOne(() => Version, (v) => v.id, { nullable: false })
-  @JoinColumn({
-    name: 'version_id',
-  })
-  obj_version: Version;
 
   @Column({
     name: 'is_active',
@@ -125,13 +136,13 @@ export class Evidence {
   @Column({
     name: 'evidence_type_id',
     type: 'bigint',
-    nullable: true
+    nullable: true,
   })
   evidence_type_id: number;
 
-  @ManyToOne(() => EvidenceType, et => et.id)
+  @ManyToOne(() => EvidenceType, (et) => et.id)
   @JoinColumn({
-    name: 'evidence_type_id'
+    name: 'evidence_type_id',
   })
   evidence_type: EvidenceType;
 }

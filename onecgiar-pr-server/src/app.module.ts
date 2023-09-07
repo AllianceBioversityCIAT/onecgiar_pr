@@ -33,6 +33,8 @@ import { ResultDashboardBIdModule } from './result-dashboard-bi/result-dashboard
 import { DynamodbLogsModule } from './connection/dynamodb-logs/dynamodb-logs.module';
 import { IpsrModule } from './api/ipsr/ipsr.module';
 import { PlatformReportModule } from './api/platform-report/platform-report.module';
+import { VersioningModule } from './api/versioning/versioning.module';
+import { GlobalNarrativesModule } from './api/global-narratives/global-narratives.module';
 
 @Module({
   imports: [
@@ -62,6 +64,8 @@ import { PlatformReportModule } from './api/platform-report/platform-report.modu
     DynamodbLogsModule,
     IpsrModule,
     PlatformReportModule,
+    VersioningModule,
+    GlobalNarrativesModule,
   ],
   controllers: [AppController],
   providers: [

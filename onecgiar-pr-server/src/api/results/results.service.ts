@@ -8,12 +8,13 @@ import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import {
   HandlersError,
+  ReturnResponse,
   returnErrorDto,
 } from '../../shared/handlers/error.utils';
 import { ResultTypesService } from './result_types/result_types.service';
 import { ResultType } from './result_types/entities/result_type.entity';
 import { VersionsService } from './versions/versions.service';
-import { Version } from './versions/entities/version.entity';
+import { Version } from '../versioning/entities/version.entity';
 import { returnFormatResult } from './dto/return-format-result.dto';
 import { Result } from './entities/result.entity';
 import { CreateGeneralInformationResultDto } from './dto/create-general-information-result.dto';
@@ -48,7 +49,7 @@ import { ResultRegion } from './result-regions/entities/result-region.entity';
 import { ResultSimpleDto } from './dto/result-simple.dto';
 import { ElasticService } from '../../elastic/elastic.service';
 import { ElasticOperationDto } from '../../elastic/dto/elastic-operation.dto';
-import process from 'process';
+import process, { env } from 'process';
 import { resultValidationRepository } from './results-validation-module/results-validation-module.repository';
 import { ResultsKnowledgeProductAuthorRepository } from './results-knowledge-products/repositories/results-knowledge-product-authors.repository';
 import { ResultsKnowledgeProductInstitutionRepository } from './results-knowledge-products/repositories/results-knowledge-product-institution.repository';
@@ -59,6 +60,12 @@ import { ResultsImpactAreaIndicatorRepository } from './results-impact-area-indi
 import { ResultsImpactAreaTargetRepository } from './results-impact-area-target/results-impact-area-target.repository';
 import { LogRepository } from '../../connection/dynamodb-logs/dynamodb-logs.repository';
 import { Actions } from 'src/connection/dynamodb-logs/dto/enumAction.const';
+import { VersioningService } from '../versioning/versioning.service';
+import { AppModuleIdEnum } from 'src/shared/constants/role-type.enum';
+import { InstitutionRoleEnum } from './results_by_institutions/entities/institution_role.enum';
+import { ResultsKnowledgeProductFairScoreRepository } from './results-knowledge-products/repositories/results-knowledge-product-fair-scores.repository';
+import { ResultsInvestmentDiscontinuedOptionRepository } from './results-investment-discontinued-options/results-investment-discontinued-options.repository';
+import { ResultsCenterRepository } from './results-centers/results-centers.repository';
 
 @Injectable()
 export class ResultsService {
@@ -94,9 +101,14 @@ export class ResultsService {
     private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
     private readonly _resultsKnowledgeProductKeywordRepository: ResultsKnowledgeProductKeywordRepository,
     private readonly _resultsKnowledgeProductMetadataRepository: ResultsKnowledgeProductMetadataRepository,
+    private readonly _resultsKnowledgeProductFairScoreRepository: ResultsKnowledgeProductFairScoreRepository,
     //private readonly _resultsImpactAreaIndicatorRepository: ResultsImpactAreaIndicatorRepository,
     //private readonly _resultsImpactAreaTargetRepository: ResultsImpactAreaTargetRepository,
-    private readonly _logRepository: LogRepository
+    private readonly _logRepository: LogRepository,
+    private readonly _versioningService: VersioningService,
+    private readonly _returnResponse: ReturnResponse,
+    private readonly _resultsInvestmentDiscontinuedOptionRepository: ResultsInvestmentDiscontinuedOptionRepository,
+    private readonly _resultsCenterRepository: ResultsCenterRepository,
   ) {}
 
   /**
@@ -168,14 +180,15 @@ export class ResultsService {
       const rl: ResultLevel = <ResultLevel>resultLevel;
       const rt: ResultType = <ResultType>resultType.response;
 
-      const version = await this._versionsService.findBaseVersion();
-      if (version.status >= 300) {
+      const version = await this._versioningService.$_findActivePhase(
+        AppModuleIdEnum.REPORTING,
+      );
+      if (!version) {
         throw this._handlersError.returnErrorRes({
           error: version,
           debug: true,
         });
       }
-      const vrs: Version = <Version>version.response;
 
       const year: Year = await this._yearRepository.findOne({
         where: { active: true },
@@ -193,7 +206,7 @@ export class ResultsService {
         created_by: user.id,
         last_updated_by: user.id,
         result_type_id: rt.id,
-        version_id: vrs.id,
+        version_id: version.id,
         title: createResultDto.result_name,
         reported_year_id: year.year,
         result_level_id: rl.id,
@@ -206,7 +219,6 @@ export class ResultsService {
           initiative_id: initiative.id,
           initiative_role_id: 1,
           result_id: newResultHeader.id,
-          version_id: vrs.id,
         },
       );
 
@@ -268,6 +280,20 @@ export class ResultsService {
 
       return {
         response: entities,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async getChildlessInstitutionTypes() {
+    try {
+      const institutionTypes =
+        await this._clarisaInstitutionsTypeRepository.getChildlessInstitutionTypes();
+      return {
+        response: institutionTypes,
         message: 'Successful response',
         status: HttpStatus.OK,
       };
@@ -359,6 +385,43 @@ export class ResultsService {
           status: HttpStatus.NOT_FOUND,
         };
       }
+
+      const nutritionTag = await this._genderTagRepository.findOne({
+        where: { id: resultGeneralInformation.nutrition_tag_level_id },
+      });
+      if (!climateTag) {
+        throw {
+          response: {},
+          message: 'The Nutrition tag does not exist',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const environmentalBiodiversityTag =
+        await this._genderTagRepository.findOne({
+          where: {
+            id: resultGeneralInformation.environmental_biodiversity_tag_level_id,
+          },
+        });
+      if (!climateTag) {
+        throw {
+          response: {},
+          message: 'The Environmental or/and biodiversity tag does not exist',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const povertyTag = await this._genderTagRepository.findOne({
+        where: { id: resultGeneralInformation.poverty_tag_level_id },
+      });
+      if (!climateTag) {
+        throw {
+          response: {},
+          message: 'The Poverty tag does not exist',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
       if (resultGeneralInformation.institutions.length) {
         const validInstitutions =
           await this._clarisaInstitutionsRepository.getValidInstitution(
@@ -399,17 +462,67 @@ export class ResultsService {
         resultGeneralInformation.krs_url = null;
       }
 
-      const version = await this._versionsService.findBaseVersion();
-      if (version.status >= 300) {
+      const version = await this._versioningService.$_findActivePhase(
+        AppModuleIdEnum.REPORTING,
+      );
+      if (!version) {
         throw this._handlersError.returnErrorRes({
           error: version,
           debug: true,
         });
       }
-      const vrs: Version = <Version>version.response;
+      if (
+        resultGeneralInformation?.is_discontinued &&
+        result.result_type_id == 7
+      ) {
+        await this._resultsInvestmentDiscontinuedOptionRepository.inactiveData(
+          resultGeneralInformation.discontinued_options.map(
+            (el) => el.investment_discontinued_option_id,
+          ),
+          result.id,
+          user.id,
+        );
+        for (const i of resultGeneralInformation.discontinued_options) {
+          const res =
+            await this._resultsInvestmentDiscontinuedOptionRepository.findOne({
+              where: {
+                result_id: resultGeneralInformation.result_id,
+                investment_discontinued_option_id:
+                  i.investment_discontinued_option_id,
+              },
+            });
+
+          if (res) {
+            await this._resultsInvestmentDiscontinuedOptionRepository.update(
+              res.results_investment_discontinued_option_id,
+              {
+                is_active: i.is_active,
+                description: i?.description,
+                last_updated_by: user.id,
+              },
+            );
+          } else {
+            await this._resultsInvestmentDiscontinuedOptionRepository.save({
+              result_id: result.id,
+              investment_discontinued_option_id:
+                i.investment_discontinued_option_id,
+              description: i?.description,
+              created_by: user.id,
+              last_updated_by: user.id,
+            });
+          }
+        }
+      } else if (result.result_type_id == 7) {
+        await this._resultsInvestmentDiscontinuedOptionRepository.inactiveData(
+          [],
+          result.id,
+          user.id,
+        );
+      }
 
       const updateResult = await this._resultRepository.save({
         id: result.id,
+        is_discontinued: resultGeneralInformation?.is_discontinued,
         title: resultGeneralInformation.result_name,
         result_type_id: resultByLevel.result_type_id,
         result_level_id: resultByLevel.result_level_id,
@@ -419,10 +532,28 @@ export class ResultsService {
           : null,
         climate_change_tag_level_id:
           resultGeneralInformation.climate_change_tag_id ? climateTag.id : null,
+        nutrition_tag_level_id: resultGeneralInformation.nutrition_tag_level_id
+          ? nutritionTag.id
+          : null,
+        environmental_biodiversity_tag_level_id:
+          resultGeneralInformation.environmental_biodiversity_tag_level_id
+            ? environmentalBiodiversityTag.id
+            : null,
+        poverty_tag_level_id: resultGeneralInformation.poverty_tag_level_id
+          ? povertyTag.id
+          : null,
         krs_url: resultGeneralInformation.krs_url,
         is_krs: resultGeneralInformation.is_krs,
         last_updated_by: user.id,
         lead_contact_person: resultGeneralInformation.lead_contact_person,
+        status_id:
+          result.result_type_id == 7
+            ? resultGeneralInformation?.is_discontinued
+              ? 4
+              : result.status_id == 4
+              ? 1
+              : result.status_id
+            : result.status_id,
       });
 
       const toAddFromElastic = await this.findAllSimplified(
@@ -459,8 +590,9 @@ export class ResultsService {
         await this._resultByIntitutionsRepository.updateIstitutions(
           resultGeneralInformation.result_id,
           resultGeneralInformation.institutions,
-          true,
           user.id,
+          false,
+          [InstitutionRoleEnum.ACTOR],
         );
       let saveInstitutions: ResultsByInstitution[] = [];
       for (
@@ -472,7 +604,7 @@ export class ResultsService {
           await this._resultByIntitutionsRepository.getResultByInstitutionExists(
             resultGeneralInformation.result_id,
             resultGeneralInformation.institutions[index].institutions_id,
-            true,
+            InstitutionRoleEnum.ACTOR,
           );
         if (!isInstitutions) {
           const institutionsNew: ResultsByInstitution =
@@ -483,7 +615,6 @@ export class ResultsService {
             resultGeneralInformation.institutions[index].institutions_id;
           institutionsNew.last_updated_by = user.id;
           institutionsNew.result_id = resultGeneralInformation.result_id;
-          institutionsNew.version_id = vrs.id;
           institutionsNew.is_active = true;
           saveInstitutions.push(institutionsNew);
         }
@@ -523,7 +654,6 @@ export class ResultsService {
             ].institutions_type_id;
           institutionsTypeNew.last_updated_by = user.id;
           institutionsTypeNew.results_id = resultGeneralInformation.result_id;
-          institutionsTypeNew.version_id = vrs.id;
           institutionsTypeNew.is_active = true;
           saveInstitutionsType.push(institutionsTypeNew);
         }
@@ -554,14 +684,14 @@ export class ResultsService {
 
   /**
    * !dIMPORTANTE REVISAR
-   * @param resultId 
-   * @returns 
+   * @param resultId
+   * @returns
    */
 
   async deleteResult(resultId: number, user: TokenDto) {
     try {
       const result: Result = await this._resultRepository.findOne({
-        where: { id: resultId }
+        where: { id: resultId },
       });
       if (!result) {
         throw {
@@ -575,10 +705,9 @@ export class ResultsService {
       await this._resultRepository.save(result);
 
       if (result?.legacy_id) {
-        await this._resultLegacyRepository.update(
-          result.legacy_id,
-          { is_migrated: false },
-        );
+        await this._resultLegacyRepository.update(result.legacy_id, {
+          is_migrated: false,
+        });
       }
 
       await this._resultByInitiativesRepository.logicalElimination(resultId);
@@ -593,13 +722,35 @@ export class ResultsService {
         true,
       );
 
-      if(result.result_type_id == 6){
-        const {result_knowledge_product_id: kpId} = await this._resultKnowledgeProductRepository.findOne({where: { results_id: result.id }});
-        await this._resultsKnowledgeProductAltmetricRepository.statusElement(kpId, false);
-        await this._resultsKnowledgeProductAuthorRepository.statusElement(kpId, false);
-        await this._resultsKnowledgeProductInstitutionRepository.statusElement(kpId, false);
-        await this._resultsKnowledgeProductKeywordRepository.statusElement(kpId, false);
-        await this._resultsKnowledgeProductMetadataRepository.statusElement(kpId, false);
+      if (result.result_type_id == 6) {
+        const { result_knowledge_product_id: kpId } =
+          await this._resultKnowledgeProductRepository.findOne({
+            where: { results_id: result.id },
+          });
+        await this._resultsKnowledgeProductAltmetricRepository.statusElement(
+          kpId,
+          false,
+        );
+        await this._resultsKnowledgeProductAuthorRepository.statusElement(
+          kpId,
+          false,
+        );
+        await this._resultsKnowledgeProductInstitutionRepository.statusElement(
+          kpId,
+          false,
+        );
+        await this._resultsKnowledgeProductKeywordRepository.statusElement(
+          kpId,
+          false,
+        );
+        await this._resultsKnowledgeProductMetadataRepository.statusElement(
+          kpId,
+          false,
+        );
+        await this._resultsKnowledgeProductFairScoreRepository.statusElement(
+          kpId,
+          false,
+        );
         await this._resultKnowledgeProductRepository.statusElement(kpId, false);
       }
 
@@ -622,7 +773,12 @@ export class ResultsService {
           const bulk = await this._elasticService.sendBulkOperationToElastic(
             elasticJson,
           );
-          await this._logRepository.createLog(result.result_code, user, Actions.DELETE, {class: ResultsService.name, method: `deleteResult`});
+          await this._logRepository.createLog(
+            result.result_code,
+            user,
+            Actions.DELETE,
+            { class: ResultsService.name, method: `deleteResult` },
+          );
         } catch (error) {
           this._logger.warn(
             `the elastic removal failed for the result #${result.id}`,
@@ -663,35 +819,7 @@ export class ResultsService {
   }
 
   async findForElasticSearch(documentName: string, id?: string) {
-    try {
-      const queryResult =
-        await this._customResultRepository.resultsForElasticSearch(id);
-
-      if (!queryResult.length) {
-        throw {
-          response: {},
-          message: 'Results Not Found',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
-
-      const operations: ElasticOperationDto<ResultSimpleDto>[] =
-        queryResult.map((r) => new ElasticOperationDto('PATCH', r));
-
-      const elasticJson: string =
-        this._elasticService.getBulkElasticOperationResults(
-          documentName,
-          operations,
-        );
-
-      return {
-        response: elasticJson,
-        message: 'Successful response',
-        status: HttpStatus.OK,
-      };
-    } catch (error) {
-      return this._handlersError.returnErrorRes({ error, debug: true });
-    }
+    return this._elasticService.findForElasticSearch(documentName, id);
   }
 
   async findAllSimplified(id?: string, allowDeleted: boolean = false) {
@@ -853,8 +981,10 @@ export class ResultsService {
         };
       }
 
-      const version = await this._versionsService.findBaseVersion();
-      if (version.status >= 300) {
+      const version = await this._versioningService.$_findActivePhase(
+        AppModuleIdEnum.REPORTING,
+      );
+      if (!version) {
         throw this._handlersError.returnErrorRes({
           error: version,
           debug: true,
@@ -874,7 +1004,6 @@ export class ResultsService {
 
       const rl: ResultLevel = <ResultLevel>resultLevel;
       const rt: ResultType = <ResultType>resultType.response;
-      const vrs: Version = <Version>version.response;
 
       const legacyResult = await this._resultLegacyRepository.findOne({
         where: { legacy_id: mapLegacy.legacy_id },
@@ -890,7 +1019,7 @@ export class ResultsService {
         created_by: user.id,
         last_updated_by: user.id,
         result_type_id: rt.id,
-        version_id: vrs.id,
+        version_id: version.id,
         title: legacyResult.title,
         description: legacyResult.description,
         reported_year_id: year.year,
@@ -906,7 +1035,6 @@ export class ResultsService {
           initiative_id: initiative.id,
           initiative_role_id: 1,
           result_id: newResultHeader.id,
-          version_id: vrs.id,
         },
       );
 
@@ -918,7 +1046,7 @@ export class ResultsService {
           await this._resultByIntitutionsRepository.getResultByInstitutionExists(
             newResultHeader.id,
             partner[index].clarisa_id,
-            true,
+            InstitutionRoleEnum.ACTOR,
           );
         if (!isInstitutions) {
           const institutionsNew: ResultsByInstitution =
@@ -928,7 +1056,6 @@ export class ResultsService {
           institutionsNew.institutions_id = partner[index].clarisa_id;
           institutionsNew.last_updated_by = user.id;
           institutionsNew.result_id = newResultHeader.id;
-          institutionsNew.version_id = vrs.id;
           institutionsNew.is_active = true;
           saveInstitutions.push(institutionsNew);
         }
@@ -1013,6 +1140,13 @@ export class ResultsService {
         await this._resultByIntitutionsTypeRepository.getResultByInstitutionTypeActorFull(
           result.id,
         );
+      const discontinued_options =
+        await this._resultsInvestmentDiscontinuedOptionRepository.find({
+          where: {
+            result_id: result.id,
+            is_active: true,
+          },
+        });
       return {
         response: {
           result_id: result.id,
@@ -1025,11 +1159,19 @@ export class ResultsService {
           result_description: result.description ?? null,
           gender_tag_id: result.gender_tag_level_id || null,
           climate_change_tag_id: result.climate_change_tag_level_id || null,
+          nutrition_tag_level_id: result.nutrition_tag_level_id || null,
+          environmental_biodiversity_tag_level_id:
+            result.environmental_biodiversity_tag_level_id || null,
+          poverty_tag_level_id: result.poverty_tag_level_id || null,
           institutions: institutions,
           institutions_type: institutionsType,
           krs_url: result.krs_url ?? null,
           is_krs: result.is_krs ? true : false,
           lead_contact_person: result.lead_contact_person ?? null,
+          phase_name: result['phase_name'],
+          phase_year: result['phase_year'],
+          is_discontinued: result['is_discontinued'],
+          discontinued_options: discontinued_options,
         },
         message: 'Successful response',
         status: HttpStatus.OK,
@@ -1159,27 +1301,29 @@ export class ResultsService {
     }
   }
 
-  async transformResultCode(resultCode: number) {
+  async transformResultCode(resultCode: number, phase_id: number = null) {
     try {
+      const phase = await this._versioningService.$_findPhase(phase_id);
       const result = await this._resultRepository.transformResultCode(
         resultCode,
+        phase ? phase.id : null,
       );
 
       if (!result) {
-        throw {
-          response: {},
-          message: 'Results Not Found',
-          status: HttpStatus.NOT_FOUND,
-        };
+        throw this._returnResponse.format({
+          message: 'Result Not Found',
+          statusCode: HttpStatus.NOT_FOUND,
+          response: resultCode,
+        });
       }
 
-      return {
-        response: result,
+      return this._returnResponse.format({
         message: 'Successful response',
-        status: HttpStatus.OK,
-      };
+        statusCode: HttpStatus.OK,
+        response: result,
+      });
     } catch (error) {
-      return this._handlersError.returnErrorRes({ error, debug: true });
+      return this._returnResponse.format(error, !env.IS_PRODUCTION);
     }
   }
 
@@ -1191,16 +1335,31 @@ export class ResultsService {
     return `This action removes a #${id} result`;
   }
 
-
-  async versioningResultsById(resultId: number, user: TokenDto){
-    const {id: result_id, result_code} = await this._resultRepository.findOne({where: {id: resultId}});
-    this._logger.verbose(`The versioning process of the result with id ${result_id} and code ${result_code} was started by ${user.id}: ${user.first_name} ${user.last_name}.`);
-
-
+  async versioningResultsById(resultId: number, user: TokenDto) {
+    const { id: result_id, result_code } = await this._resultRepository.findOne(
+      { where: { id: resultId } },
+    );
+    this._logger.verbose(
+      `The versioning process of the result with id ${result_id} and code ${result_code} was started by ${user.id}: ${user.first_name} ${user.last_name}.`,
+    );
   }
 
-  bulkVersinoningResult(){
+  bulkVersinoningResult() {}
 
+  async getCenters(resultId: number) {
+    try {
+      const centers =
+        await this._resultsCenterRepository.getAllResultsCenterByResultId(
+          resultId,
+        );
+
+      return this._returnResponse.format({
+        message: 'Successful response',
+        statusCode: HttpStatus.OK,
+        response: centers,
+      });
+    } catch (error) {
+      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+    }
   }
-
 }

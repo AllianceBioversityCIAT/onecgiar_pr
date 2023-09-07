@@ -1,15 +1,90 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { LinkedResult } from './entities/linked-result.entity';
+import {
+  ReplicableConfigInterface,
+  ReplicableInterface,
+} from '../../../shared/globalInterfaces/replicable.interface';
+import { VERSIONING } from '../../../shared/utils/versioning.utils';
 
 @Injectable()
-export class LinkedResultRepository extends Repository<LinkedResult> {
+export class LinkedResultRepository
+  extends Repository<LinkedResult>
+  implements ReplicableInterface<LinkedResult>
+{
+  private readonly _logger: Logger = new Logger(LinkedResultRepository.name);
+
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
   ) {
     super(LinkedResult, dataSource.createEntityManager());
+  }
+  async replicable(
+    config: ReplicableConfigInterface<LinkedResult>,
+  ): Promise<LinkedResult[]> {
+    let final_data: LinkedResult[] = null;
+    try {
+      if (config.f?.custonFunction) {
+        const response = await this.find({
+          where: { origin_result_id: config.old_result_id, is_active: true },
+        });
+        response.map((el) => {
+          delete el.id;
+          delete el.created_date;
+          delete el.last_updated_date;
+          el.origin_result_id = config.new_result_id;
+        });
+        const response_edit = <LinkedResult[]>config.f.custonFunction(response);
+        final_data = await this.save(response_edit);
+      } else {
+        const queryData: string = `
+        insert into linked_result (
+          is_active,
+          created_date,
+          last_updated_date,
+          linked_results_id,
+          origin_result_id,
+          created_by,
+          last_updated_by,
+          legacy_link
+          )
+          select
+          lr.is_active,
+          now() as created_date,
+          null as last_updated_date,
+          ${VERSIONING.QUERY.Get_link_result_qa(
+            `lr.linked_results_id`,
+          )} as linked_results_id,
+          ? as origin_result_id,
+          lr.created_by,
+          lr.last_updated_by,
+          lr.legacy_link
+          from linked_result lr WHERE lr.origin_result_id = ? and is_active > 0`;
+        await this.query(queryData, [
+          config.new_result_id,
+          config.phase,
+          config.old_result_id,
+        ]);
+        final_data = await this.find({
+          where: {
+            origin_result_id: config.new_result_id,
+          },
+        });
+      }
+    } catch (error) {
+      config.f?.errorFunction
+        ? config.f.errorFunction(error)
+        : this._logger.error(error);
+      final_data = null;
+    }
+
+    config.f?.completeFunction
+      ? config.f.completeFunction({ ...final_data })
+      : null;
+
+    return final_data;
   }
 
   async deleteAllData() {
@@ -85,6 +160,35 @@ export class LinkedResultRepository extends Repository<LinkedResult> {
     }
   }
 
+  async getMostUpDateResult(result_code: number) {
+    const query = `
+    select * from (SELECT 
+      r2.id,
+      if(r2.version_id  = (select max(r3.version_id) 
+            from \`result\` r3 
+            where r3.result_code = r2.result_code),1,0) +
+      if(r2.status_id = 3,1,0) as max_data
+    FROM \`result\` r2 
+    WHERE r2.result_code = ?) f;
+    `;
+    try {
+      const result: { id: number; max_data: number }[] = await this.query(
+        query,
+        [result_code],
+      );
+      const largestObject = result.reduce((acc, obj) => {
+        if (obj.max_data > acc.max_data) {
+          return obj;
+        } else {
+          return acc;
+        }
+      });
+      return largestObject?.id ? largestObject.id : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
   async getLinkResultByIdResult(resultId: number) {
     const query = `
     select 
@@ -100,9 +204,10 @@ export class LinkedResultRepository extends Repository<LinkedResult> {
     r.is_active,
     r.last_updated_date,
     r.gender_tag_level_id,
-    r.version_id,
     r.result_type_id,
     r.status,
+    r.status_id,
+    rs.status_name,
     r.created_by,
     r.last_updated_by,
     r.reported_year_id,
@@ -116,11 +221,17 @@ export class LinkedResultRepository extends Repository<LinkedResult> {
     rt.name as result_type,
     r.has_regions,
     r.has_countries,
-    lr.legacy_link 
+    lr.legacy_link,
+    v.id as version_id,
+    v.phase_name,
+    rs.status_name,
+    r.result_code
   from linked_result lr 
   	left join \`result\` r on r.id  = lr.linked_results_id 
     left join result_level rl on rl.id = r.result_level_id 
-    left join result_type rt on rt.id = r.result_type_id  
+    left join result_type rt on rt.id = r.result_type_id 
+    left JOIN result_status rs ON rs.result_status_id = r.status_id  
+    left join \`version\` v on v.id = r.version_id 
     where lr.origin_result_id = ?
           and lr.is_active > 0;
     `;

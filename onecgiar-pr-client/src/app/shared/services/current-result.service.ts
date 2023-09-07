@@ -23,11 +23,25 @@ export class CurrentResultService {
         this.resultLevelSE.currentResultTypeId = response.result_type_id;
         //(response);
         this.dataControlSE.currentResult = response;
+        console.log(this.dataControlSE.currentResult);
+
+        console.log({ is_discontinued: response.is_discontinued });
+        const is_phase_open = response.is_phase_open;
+        switch (is_phase_open) {
+          case 0:
+            this.api.rolesSE.readOnly = !this.api.rolesSE.isAdmin;
+            break;
+
+          case 1:
+            if (this.dataControlSE.currentResult.status_id != 1 && !this.api.rolesSE.isAdmin) this.api.rolesSE.readOnly = true;
+            if (response.is_discontinued) this.api.rolesSE.readOnly = response.is_discontinued;
+            break;
+        }
       },
       err => {
         //(err.error);
         if (err.error.statusCode == 404) this.router.navigate([`/`]);
-        this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: 'result not found', status: 'error' });
+        this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: 'Result not found.', status: 'error' });
       }
     );
   }

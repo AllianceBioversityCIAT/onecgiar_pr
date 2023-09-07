@@ -11,14 +11,18 @@ import { RdPartnersService } from './rd-partners.service';
   styleUrls: ['./rd-partners.component.scss']
 })
 export class RdPartnersComponent {
-  constructor(public api: ApiService, public institutionsSE: InstitutionsService, public rolesSE: RolesService, private rdPartnersSE: RdPartnersService) {}
+  primaryText = ' - <strong>Primary</strong> ';
+  constructor(public api: ApiService, public institutionsSE: InstitutionsService, public rolesSE: RolesService, public rdPartnersSE: RdPartnersService) {}
   ngOnInit(): void {
     this.rdPartnersSE.partnersBody = new PartnersBody();
     this.rdPartnersSE.getSectionInformation();
+    this.rdPartnersSE.getCenterInformation();
     this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
       try {
-        document.querySelector('.alert-event').addEventListener('click', e => {
-          this.api.dataControlSE.showPartnersRequest = true;
+        document.querySelectorAll('.alert-event').forEach(element => {
+          element.addEventListener('click', e => {
+            this.api.dataControlSE.showPartnersRequest = true;
+          });
         });
       } catch (error) {}
     });
@@ -32,6 +36,7 @@ export class RdPartnersComponent {
 
   onSaveSection() {
     //(this.rdPartnersSE.partnersBody);
+    if (this.rdPartnersSE.partnersBody.no_applicable_partner) this.rdPartnersSE.partnersBody.institutions = [];
     this.api.resultsSE.PATCH_partnersSection(this.rdPartnersSE.partnersBody).subscribe(resp => {
       //(resp);
       this.rdPartnersSE.getSectionInformation();

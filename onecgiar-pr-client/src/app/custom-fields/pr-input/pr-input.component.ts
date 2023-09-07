@@ -31,6 +31,9 @@ export class PrInputComponent implements ControlValueAccessor {
   @Input() editable: boolean = false;
   @Input() noDataText: string = '';
 
+  @Input() variant?: 'xs' | 'sm';
+  @Input() numberMode?: 'decimal';
+
   private _value: any;
   private beforeValue: string;
   public wordCount: number = 0;
@@ -50,6 +53,17 @@ export class PrInputComponent implements ControlValueAccessor {
       if (Number(v) < 0) this._value = 0;
       this.onChange(v);
     }
+  }
+
+  get badLink() {
+    const regex = new RegExp(/^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$/i);
+    return !regex.test(this.value);
+  }
+
+  aTag(link) {
+    console.log('Link');
+    console.log(link);
+    return `<a class="open_route" target="_blank" href="${link}">${link}</a>`;
   }
 
   onChange(_) {}

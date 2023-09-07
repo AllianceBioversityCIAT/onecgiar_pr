@@ -1,10 +1,13 @@
-<app-detail-section-title sectionName="Contributors"></app-detail-section-title>
+<app-detail-section-title sectionName="Knowledge Product information"></app-detail-section-title>
 <div class="detail_container">
 
     <app-alert-status [description]="warning" *ngFor="let warning of this.knowledgeProductBody?.warnings">
     </app-alert-status>
     <app-alert-status
         description="In case some of the metadata fields are incorrect, please get in touch with the library staff of your Center to update them in the repository. Before the end of the reporting period, metadata will be automatically refreshed on this page.">
+    </app-alert-status>
+    <app-alert-status
+        description="Some information in this section is automatically collected from external sources such as the Web of Science, Scopus, and Unpaywall using the DOI (Digital Object Identifier) linked to this knowledge product in CGSpace. In the case of any discrepancies, the CGIAR Quality Assurance team will manually validate the record. ">
     </app-alert-status>
 
     <app-pr-input [(ngModel)]="knowledgeProductBody.handle" label="Handle" [required]="false" [disabled]="true">
@@ -81,57 +84,23 @@
 
 
     <app-pr-field-header label="FAIR score for this knowledge product"
-        description="FAIR (findability, accessibility, interoperability, and reusability) scores are calculated based on the presence or absence of metadata in the CGSpace repository. If you wish to improve these scores, please liaise with your Center librarian."
+        [description]="this.fairGuideline"
         [required]="false"></app-pr-field-header>
 
     <div class="circle-progress-group">
-
-        <div class="item">
-            <circle-progress [percent]="knowledgeProductBody.findable * 100" subtitle="F" subtitleFontSize="30"
+        <div class="item" *ngFor="let indicator of fair_data">
+            <circle-progress [percent]="indicator.value.score * 100" [subtitle]="indicator.key" subtitleFontSize="30"
                 [radius]="50" [outerStrokeWidth]="7" [innerStrokeWidth]="7"
-                [outerStrokeColor]="calculateBorderColor(knowledgeProductBody.findable)" innerStrokeColor="#F0F0F0"
+                [outerStrokeColor]="calculateBorderColor(indicator.value.score)" innerStrokeColor="#F0F0F0"
                 [space]="$any(-7)" [animation]="true" [animationDuration]="300">
             </circle-progress>
             <div class="texts">
-                F1 - The knowledge product is retrievable through its handle<br>
-                F2 - The knowledge product is described by rich metadata<br>
-                F3 - At least one author is linked through their ORCID
-            </div>
-        </div>
-
-        <div class="item">
-            <circle-progress [percent]="knowledgeProductBody.accessible * 100" subtitle="A" subtitleFontSize="30"
-                [radius]="50" [outerStrokeWidth]="7" [innerStrokeWidth]="7"
-                [outerStrokeColor]="calculateBorderColor(knowledgeProductBody.accessible)" innerStrokeColor="#F0F0F0"
-                [space]="$any(-7)" [animation]="true" [animationDuration]="300">
-            </circle-progress>
-            <div class="texts">
-                A1 - Metadata are retrievable through the handle
-            </div>
-        </div>
-
-
-        <div class="item">
-            <circle-progress [percent]="knowledgeProductBody.interoperable * 100" subtitle="I" subtitleFontSize="30"
-                [radius]="50" [outerStrokeWidth]="7" [innerStrokeWidth]="7"
-                [outerStrokeColor]="calculateBorderColor(knowledgeProductBody.interoperable)" innerStrokeColor="#F0F0F0"
-                [space]="$any(-7)" [animation]="true" [animationDuration]="300">
-            </circle-progress>
-            <div class="texts">
-                I1 - Metadata contain AGROVOC keywords<br>
-                I2 - Metadata include qualified references to other (meta)data
-            </div>
-        </div>
-
-
-        <div class="item">
-            <circle-progress [percent]="knowledgeProductBody.reusable * 100" subtitle="R" subtitleFontSize="30"
-                [radius]="50" [outerStrokeWidth]="7" [innerStrokeWidth]="7"
-                [outerStrokeColor]="calculateBorderColor(knowledgeProductBody.reusable)" innerStrokeColor="#F0F0F0"
-                [space]="$any(-7)" [animation]="true" [animationDuration]="300">
-            </circle-progress>
-            <div class="texts">
-                R1 - The knowledge product is Open Access (OA) and has a clear and accessible usage license
+                <div *ngFor="let subIndicator of (indicator.value.indicators??[])" class="indicators">
+                    <i class="material-icons-round"
+                        ngClass="{{subIndicator.score ? 'check':'incomplete'}}">{{subIndicator.score ?
+                        'check':'cancel'}}</i>
+                    <span>{{subIndicator.name}} - {{subIndicator.description}}</span>
+                </div>
             </div>
         </div>
     </div>
@@ -140,7 +109,7 @@
     </app-pr-yes-or-not>
 
     <div style="padding-left: 50px;" *ngIf="this.sectionData.isMeliaProduct === true">
-        <app-pr-yes-or-not label="Was this MELIA product previously submitted in the OST?"
+        <app-pr-yes-or-not label="Was it planned in your Initiative proposal?"
             [(ngModel)]="this.sectionData.ostSubmitted">
         </app-pr-yes-or-not>
         <app-pr-select [options]="this.meliaTypes" label="Select MELIA type" optionLabel="name" optionValue="id"

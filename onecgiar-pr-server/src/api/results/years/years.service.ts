@@ -6,28 +6,42 @@ import { YearRepository } from './year.repository';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { IsNull } from 'typeorm';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import { env } from 'process';
+import {
+  HandlersError,
+  ReturnResponse,
+} from '../../../shared/handlers/error.utils';
 
 @Injectable()
 export class YearsService {
-
   constructor(
     private readonly _yearRepository: YearRepository,
     private readonly _roleByUserRepository: RoleByUserRepository,
-    private readonly _handlersError: HandlersError
-  ) { }
+    private readonly _handlersError: HandlersError,
+    private readonly _returnResponse: ReturnResponse,
+  ) {}
 
   async create(year: string, user: TokenDto, options?: CreateYearDto) {
     try {
-      const userRole = await this._roleByUserRepository.findOne({ where: { user: user.id, action_area_id: IsNull(), initiative_id: IsNull(), role: 1 } });
+      const userRole = await this._roleByUserRepository.findOne({
+        where: {
+          user: user.id,
+          action_area_id: IsNull(),
+          initiative_id: IsNull(),
+          role: 1,
+        },
+      });
       if (!userRole) {
         throw {
           response: user,
-          message: 'The user does not have the necessary permissions for this action, please contact the technical team.',
+          message:
+            'The user does not have the necessary permissions for this action, please contact the technical team.',
           status: HttpStatus.UNAUTHORIZED,
         };
       }
-      const yearExists = await this._yearRepository.findOne({ where: { year: +year } });
+      const yearExists = await this._yearRepository.findOne({
+        where: { year: +year },
+      });
       if (yearExists) {
         throw {
           response: yearExists,
@@ -35,28 +49,27 @@ export class YearsService {
           status: HttpStatus.BAD_REQUEST,
         };
       }
-      const currentYear = await this._yearRepository.findOne({ where: { active: true } });
+      const currentYear = await this._yearRepository.findOne({
+        where: { active: true },
+      });
       const newYear = await this._yearRepository.create({
         year: +year,
         start_date: options?.start_date || null,
         end_date: options?.end_date || null,
-        active: options?.set_active_year || false
+        active: options?.set_active_year || false,
       });
 
       if (options?.set_active_year) {
-        await this._yearRepository.update(
-          currentYear.year,
-          {
-            active: false
-          }
-        );
+        await this._yearRepository.update(currentYear.year, {
+          active: false,
+        });
       }
 
       return {
         response: newYear,
         message: 'The year has been created successfully.',
         status: HttpStatus.CREATED,
-      }
+      };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
@@ -64,16 +77,26 @@ export class YearsService {
 
   async activeYear(year: string, user: TokenDto) {
     try {
-      const userRole = await this._roleByUserRepository.findOne({ where: { user: user.id, action_area_id: IsNull(), initiative_id: IsNull(), role: 1 } });
+      const userRole = await this._roleByUserRepository.findOne({
+        where: {
+          user: user.id,
+          action_area_id: IsNull(),
+          initiative_id: IsNull(),
+          role: 1,
+        },
+      });
       if (!userRole) {
         throw {
           response: user,
-          message: 'The user does not have the necessary permissions for this action, please contact the technical team.',
+          message:
+            'The user does not have the necessary permissions for this action, please contact the technical team.',
           status: HttpStatus.UNAUTHORIZED,
         };
       }
 
-      const yearExists = await this._yearRepository.findOne({ where: { year: +year } });
+      const yearExists = await this._yearRepository.findOne({
+        where: { year: +year },
+      });
       if (!yearExists) {
         throw {
           response: yearExists,
@@ -81,38 +104,48 @@ export class YearsService {
           status: HttpStatus.NOT_FOUND,
         };
       }
-      const oldYear = await this._yearRepository.findOne({ where: { active: true } });
+      const oldYear = await this._yearRepository.findOne({
+        where: { active: true },
+      });
       if (oldYear.year == yearExists.year) {
         throw {
           response: yearExists,
           message: 'The year is already active.',
           status: HttpStatus.BAD_REQUEST,
-        }
+        };
       }
-      await this._yearRepository.update(
-        oldYear.year,
-        {
-          active: false
-        }
-      );
+      await this._yearRepository.update(oldYear.year, {
+        active: false,
+      });
 
-      await this._yearRepository.update(
-        yearExists.year,
-        {
-          active: true
-        }
-      );
+      await this._yearRepository.update(yearExists.year, {
+        active: true,
+      });
 
       return {
         response: {
           newYear: yearExists,
-          oldYear: oldYear
+          oldYear: oldYear,
         },
         message: 'The year has been activated successfully.',
         status: HttpStatus.OK,
-      }
+      };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async findAllYear() {
+    try {
+      const years = await this._yearRepository.find();
+
+      return this._returnResponse.format({
+        response: years,
+        message: 'The years have been found successfully.',
+        statusCode: HttpStatus.OK,
+      });
+    } catch (error) {
+      return this._returnResponse.format(error, !env.IS_PRODUCTION);
     }
   }
 }

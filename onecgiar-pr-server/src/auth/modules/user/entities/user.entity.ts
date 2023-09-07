@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   OneToMany,
@@ -10,6 +11,7 @@ import {
 } from 'typeorm';
 
 @Entity('users')
+@Index(['email'], { unique: true })
 export class User {
   @PrimaryGeneratedColumn()
   id: number;
@@ -20,7 +22,7 @@ export class User {
   @Column({ name: 'last_name', type: 'text' })
   last_name: string;
 
-  @Column({ name: 'email', type: 'text' })
+  @Column({ name: 'email', type: 'varchar', length: 150, nullable: false })
   email: string;
 
   @Column({

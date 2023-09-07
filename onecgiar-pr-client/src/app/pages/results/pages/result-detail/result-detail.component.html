@@ -6,9 +6,15 @@
   </div>
   <div>
     <!-- <app-breadcrumb></app-breadcrumb> -->
+    <div class="phase_switcher_container">
+      <app-phase-switcher></app-phase-switcher>
+    </div>
     <app-result-title></app-result-title>
     <div class="section_container">
       <div class="metadata">
+        <div class="item">
+          Status: <strong>{{this.dataControlSE?.currentResult?.status_name}}</strong>
+        </div>
         <div class="item">
           Result level: <strong>{{this.dataControlSE.currentResult?.result_level_name}}</strong>
         </div>

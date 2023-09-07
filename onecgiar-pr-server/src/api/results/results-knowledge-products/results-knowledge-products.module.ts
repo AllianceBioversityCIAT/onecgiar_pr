@@ -4,9 +4,12 @@ import { ResultsKnowledgeProductsController } from './results-knowledge-products
 import { ResultsKnowledgeProductsRepository } from './repositories/results-knowledge-products.repository';
 import { ResultRepository } from '../result.repository';
 import { MQAPService } from '../../m-qap/m-qap.service';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import {
+  HandlersError,
+  ReturnResponse,
+} from '../../../shared/handlers/error.utils';
 import { HttpModule } from '@nestjs/axios';
-import { VersionRepository } from '../versions/version.repository';
+import { VersionRepository } from '../../versioning/versioning.repository';
 import { ResultsKnowledgeProductMapper } from './results-knowledge-products.mapper';
 import { ResultsKnowledgeProductAltmetricRepository } from './repositories/results-knowledge-product-altmetrics.repository';
 import { ResultsKnowledgeProductAuthorRepository } from './repositories/results-knowledge-product-authors.repository';
@@ -29,9 +32,15 @@ import { ResultRegionRepository } from '../result-regions/result-regions.reposit
 import { ClarisaRegionsRepository } from '../../../clarisa/clarisa-regions/ClariasaRegions.repository';
 import { CGSpaceCountryMappingsRepository } from './repositories/cgspace-country-mappings.repository';
 import { ResultCountryRepository } from '../result-countries/result-countries.repository';
+import { VersioningModule } from '../../versioning/versioning.module';
+import { ClarisaCountriesRepository } from '../../../clarisa/clarisa-countries/ClarisaCountries.repository';
+import { ResultsKnowledgeProductFairScoreRepository } from './repositories/results-knowledge-product-fair-scores.repository';
+import { FairFieldRepository } from './repositories/fair-fields.repository';
+import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
+import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
 
 @Module({
-  imports: [HttpModule],
+  imports: [HttpModule, VersioningModule],
   controllers: [ResultsKnowledgeProductsController],
   providers: [
     ResultsKnowledgeProductsService,
@@ -39,7 +48,7 @@ import { ResultCountryRepository } from '../result-countries/result-countries.re
     ResultsKnowledgeProductsRepository,
     ResultRepository,
     MQAPService,
-    VersionRepository,
+    VersionsService,
     ResultsKnowledgeProductMapper,
     ResultsKnowledgeProductAltmetricRepository,
     ResultsKnowledgeProductAuthorRepository,
@@ -59,12 +68,18 @@ import { ResultCountryRepository } from '../result-countries/result-countries.re
     ClarisaRegionsRepository,
     CGSpaceCountryMappingsRepository,
     ResultCountryRepository,
+    ClarisaCountriesRepository,
+    ResultsKnowledgeProductFairScoreRepository,
+    FairFieldRepository,
+    ReturnResponse,
+    ResultsCenterRepository,
+    ClarisaInstitutionsRepository,
   ],
   exports: [
     ResultsKnowledgeProductsRepository,
     ResultRepository,
     MQAPService,
-    VersionRepository,
+    VersionsService,
     ResultsKnowledgeProductMapper,
     ResultsKnowledgeProductAltmetricRepository,
     ResultsKnowledgeProductAuthorRepository,
@@ -84,6 +99,11 @@ import { ResultCountryRepository } from '../result-countries/result-countries.re
     ClarisaRegionsRepository,
     CGSpaceCountryMappingsRepository,
     ResultCountryRepository,
+    ClarisaCountriesRepository,
+    ResultsKnowledgeProductFairScoreRepository,
+    FairFieldRepository,
+    ResultsCenterRepository,
+    ClarisaInstitutionsRepository,
   ],
 })
 export class ResultsKnowledgeProductsModule {}
