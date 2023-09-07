@@ -18,9 +18,9 @@
                 [required]="!!this.actorItem?.result_actors_id">
             </app-pr-select>
             <div style="margin-top: 13px;"></div>
-            <app-pr-input *ngIf="actorItem.actor_type_id == 5"
+            <app-pr-input *ngIf="actorItem.actor_type_id == 5" label="Other actor type"
                 description="Specify the other actor type in the text box below" placeholder="Specify other.."
-                type="text" [required]="false" [(ngModel)]="this.actorItem.other_actor_type">
+                type="text" [(ngModel)]="this.actorItem.other_actor_type">
             </app-pr-input>
         </div>
         <div class="">
