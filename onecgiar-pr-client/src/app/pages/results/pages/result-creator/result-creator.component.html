@@ -5,7 +5,7 @@
   </a>
   <div class="local_container section_container">
     <div class="greeting"
-      [innerHTML]="naratives.greeting(this.api.authSE.localStorageUser?.user_name,this.api.dataControlSE.myInitiativesListText(this.api.dataControlSE.myInitiativesList))">
+      [innerHTML]="naratives.greeting(this.api.authSE.localStorageUser?.user_name , this.api.dataControlSE.myInitiativesListText(this.api.dataControlSE.myInitiativesList), this.api.rolesSE.isAdmin)">
     </div>
     <div class="report_container">
 
