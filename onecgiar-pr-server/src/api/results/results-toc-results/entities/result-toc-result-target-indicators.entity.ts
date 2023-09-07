@@ -29,6 +29,14 @@ export class ResultIndicatorTarget extends BaseEntity {
     })
     contributing_indicator: string;
 
+    @Column({
+        type: 'boolean',
+        name: 'indicator_question',
+        nullable: true,
+        
+    })
+    indicator_question: boolean;
+
     @ManyToOne(() => ResultsTocResultIndicators, cs => cs.result_toc_result_indicator_id, { nullable: true })
     @JoinColumn({
         name: 'result_toc_result_indicator_id'

@@ -81,7 +81,7 @@ export class RdTheoryOfChangeComponent {
     let initiativesAux = this.theoryOfChangeBody.contributing_and_primary_initiative.concat(this.contributingInitiativeNew);
     this.theoryOfChangeBody.contributing_initiatives = initiativesAux.filter(init => init.id != this.theoryOfChangeBody.result_toc_result.initiative_id);
     console.log(this.theoryOfChangeBody);
-    /*
+    
     const saveSection = () => {
       this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
         //(resp);
@@ -99,7 +99,7 @@ export class RdTheoryOfChangeComponent {
         saveSection();
       });
 
-    return saveSection();*/
+    return saveSection();
   }
 
   someEditable() {

@@ -849,19 +849,21 @@ export class ResultsTocResultRepository
 
             const queryTargetContributing = `
               select * from results_toc_result_indicators
-                where results_toc_results_id = ? ;
+                where results_toc_results_id = ? and toc_results_indicator_id = ?;
             `;
-            const queryTargetContributingData = await this.query(queryTargetContributing, [IndicatorTargetId]);
+            const queryTargetContributingData = await this.query(queryTargetContributing, [IndicatorTargetId, itemIndicator.toc_results_indicator_id]);
             if(queryTargetContributingData.length){
               itemIndicator.targets.forEach(async element => {
-                element.indicator_question = null;
+               
                 const queryContributingPrimary = ` 
                   select * from result_indicators_targets 
                     where result_toc_result_indicator_id = ? and number_target = ?;
                 `;
+                
                 const queryContributingPrimaryData = await this.query(queryContributingPrimary, [queryTargetContributingData[0].result_toc_result_indicator_id, element.number_target]);
                 if(queryContributingPrimaryData.length){
                   element.contributing = queryContributingPrimaryData[0].contributing_indicator;
+                  element.indicator_question = queryContributingPrimaryData[0].indicator_question;;
                 }
                 const queryTargetContributing = `
                 select r.description, r.title, r.result_code, rit.contributing_indicator from results_toc_result rtr 
@@ -1075,93 +1077,69 @@ export class ResultsTocResultRepository
         { is_active: false },
       );
 
-      for (let element of targetsIndicator) {
-        let targetIndicators = await this._resultsTocResultIndicator.findOne({
-          where: {
-            results_toc_results_id: id_result_toc_result,
-            toc_results_indicator_id: element.toc_results_indicator_id,
-          },
-        });
-
-        if (element.is_not_aplicable == null) {
-          element.is_not_aplicable = false;
-        }
-
-        if (targetIndicators != null) {
-          if (element.is_calculable && !element.is_not_aplicable) {
-            targetIndicators.indicator_contributing =
-              element.indicator_contributing;
-            targetIndicators.is_active = true;
-            targetIndicators.is_not_aplicable = element.is_not_aplicable;
-            let calulate = await this._resultsTocResultIndicator.find({
-              where: {
-                toc_results_indicator_id: element.toc_results_indicator_id,
-              },
-            });
-            let indicator_new = 0;
-            for (let i of calulate)
-              indicator_new += Number(i.indicator_contributing);
-            indicator_new = element.indicator_contributing + indicator_new;
-            if (indicator_new >= Number(element.target_value)) {
-              targetIndicators.status = 2;
-            } else if (indicator_new != 0) {
-              targetIndicators.status = 1;
-            }
-          } else {
-            targetIndicators.is_active = true;
-            targetIndicators.is_not_aplicable = element.is_not_aplicable;
-            if (element.is_not_aplicable) {
-              targetIndicators.indicator_contributing = null;
-            } else {
-              targetIndicators.indicator_contributing =
-                element.indicator_contributing;
-            }
-          }
-          await this._resultsTocResultIndicator.update(
-            {
-              result_toc_result_indicator_id:
-                targetIndicators.result_toc_result_indicator_id,
+        for(let itemIndicator of targetsIndicator){
+          let targetIndicators = await this._resultsTocResultIndicator.findOne({
+            where: {
+              results_toc_results_id: id_result_toc_result,
+              toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
             },
-            targetIndicators,
-          );
-        } else {
-          if (element.is_calculable) {
-            let calulate = await this._resultsTocResultIndicator.find({
-              where: {
-                toc_results_indicator_id: element.toc_results_indicator_id,
-              },
+          });
+          
+          
+          if(targetIndicators != null){
+            targetIndicators.is_active = true;
+            await this._resultsTocResultIndicator.update({
+              results_toc_results_id: id_result_toc_result,
+              toc_results_indicator_id: itemIndicator.toc_results_indicator_id,}, targetIndicators);
+              console.log('llegue aqui');
+            await this._resultTocIndicatorTargetRepository.update(
+             { result_toc_result_indicator_id: targetIndicators.result_toc_result_indicator_id},
+              { is_active: false },
+            );
+            
+            for(let target of itemIndicator.targets){
+              let targetInfo = await this._resultTocIndicatorTargetRepository.findOne({
+                where: {
+                  result_toc_result_indicator_id: targetIndicators.result_toc_result_indicator_id,
+                  number_target: target.number_target,
+                },
+              });
+              if(targetInfo != null){
+                targetInfo.is_active = true;
+                targetInfo.contributing_indicator = target.contributing;
+                targetInfo.indicator_question = target.indicator_question;
+                await this._resultTocIndicatorTargetRepository.update({
+                  result_toc_result_indicator_id: targetIndicators.result_toc_result_indicator_id,
+                  number_target: target.number_target,
+                }, targetInfo);
+              }else{
+                await this._resultTocIndicatorTargetRepository.save({
+                  result_toc_result_indicator_id: targetIndicators.result_toc_result_indicator_id,
+                  contributing_indicator:  target.contributing,
+                  indicator_question: target.indicator_question,
+                  number_target: target.number_target,
+                  is_active: true,
+                });
+              }
+            }
+          }else{
+            let resultTocResultIndicator = await this._resultsTocResultIndicator.save({
+              results_toc_results_id: id_result_toc_result,
+              toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
+              is_active: true,
             });
-
-            let indicator_new = 0;
-            for (let i of calulate)
-              indicator_new += Number(i.indicator_contributing);
-            indicator_new = element.indicator_contributing + indicator_new;
-            if (indicator_new >= Number(element.target_value)) {
-              element.status = 2;
-            } else if (indicator_new != 0) {
-              element.status = 1;
-            } else {
-              element.status = 0;
-            }
-
-            if (element.is_not_aplicable) {
-              element.indicator_contributing = null;
-            } else {
-              element.indicator_contributing = element.indicator_contributing;
-            }
-          } else {
-            element.status = 3;
-            if (element.is_not_aplicable) {
-              element.indicator_contributing = null;
-            } else {
-              element.indicator_contributing = element.indicator_contributing;
+            for(let target of itemIndicator.targets){
+              await this._resultTocIndicatorTargetRepository.save({
+                result_toc_result_indicator_id: resultTocResultIndicator.result_toc_result_indicator_id,
+                contributing_indicator:  target.contributing,
+                indicator_question: target.indicator_question,
+                is_active: true,
+                number_target: target.number_target,
+              });
             }
           }
-          element.results_toc_results_id = id_result_toc_result;
-          element.is_active = true;
-          await this._resultsTocResultIndicator.save(element);
         }
-      }
+      
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
