@@ -1,29 +1,31 @@
 .local_container {
-    padding: 10px 100px;
+  padding: 10px 100px;
 
-    .section_container {
-        width: 100% !important;
-        padding: 50px 50px 50px 50px;
+  .section_container {
+    width: 100% !important;
+    padding: 50px 50px 50px 50px;
+    margin-bottom: 120px;
+  }
+
+  .greeting {
+  }
+
+  .mqap_sync_title {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 20px;
+
+    .sync_button {
+      margin-top: 45px;
     }
-
-    .greeting {}
-
-    .mqap_sync_title {
-        display: grid;
-        grid-template-columns: 1fr auto;
-        gap: 20px;
-
-        .sync_button {
-            margin-top: 45px;
-        }
-    }
+  }
 }
 
 .save_and_continue {
-    position: fixed;
-    right: 100px;
-    bottom: 0;
-    z-index: 14;
-    margin-right: 150px;
-    margin-bottom: 50px;
+  position: fixed;
+  right: 100px;
+  bottom: 0;
+  z-index: 14;
+  margin-right: 150px;
+  margin-bottom: 50px;
 }
