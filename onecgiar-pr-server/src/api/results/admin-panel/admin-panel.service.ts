@@ -250,7 +250,10 @@ export class AdminPanelService implements OnModuleInit {
 
       let resultsAgaintsToc: any[];
 
-      if (resultLevels[0].result_level_id == 3 || resultLevels[0].result_level_id == 4) {
+      if (
+        resultLevels[0].result_level_id == 3 ||
+        resultLevels[0].result_level_id == 4
+      ) {
         resultsAgaintsToc = await this._resultRepository.getResultAgainstToc(
           resultCodes,
         );

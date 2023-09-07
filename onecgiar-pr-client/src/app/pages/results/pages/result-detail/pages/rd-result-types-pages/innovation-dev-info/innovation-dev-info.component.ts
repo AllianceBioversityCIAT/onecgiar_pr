@@ -44,7 +44,7 @@ export class InnovationDevInfoComponent implements OnInit {
         //(response);
         this.convertOrganizations(response?.innovatonUse?.organization);
         this.innovationDevInfoBody = response;
-        console.log(response);
+        //(response);
         this.savingSection = false;
       },
       err => {
@@ -72,7 +72,7 @@ export class InnovationDevInfoComponent implements OnInit {
   }
 
   onSaveSection() {
-    console.log({ ...this.innovationDevInfoBody, ...this.innovationDevelopmentQuestions });
+    //({ ...this.innovationDevInfoBody, ...this.innovationDevelopmentQuestions });
     this.convertOrganizationsTosave();
     // this.PATCH_InnovationDevSummary();
     if (this.innovationDevInfoBody.innovation_nature_id != 12) {

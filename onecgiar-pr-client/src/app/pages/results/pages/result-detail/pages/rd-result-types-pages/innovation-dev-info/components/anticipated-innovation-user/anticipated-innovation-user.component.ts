@@ -98,7 +98,7 @@ export class AnticipatedInnovationUserComponent implements OnInit {
   }
 
   addActor() {
-    console.log('addActor');
+    //('addActor');
     this.body.innovatonUse.actors.push(new Actor());
   }
 

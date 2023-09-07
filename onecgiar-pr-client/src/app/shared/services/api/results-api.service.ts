@@ -279,7 +279,7 @@ export class ResultsApiService {
   }
 
   POST_toc(body: TheoryOfChangeBody) {
-    console.log(body);
+    //(body);
 
     return this.http.post<any>(`${this.apiBaseUrl}toc/create/toc/result/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
@@ -316,12 +316,11 @@ export class ResultsApiService {
   }
 
   Get_indicator(id_toc, init) {
-    if(this.currentResultId == null){
+    if (this.currentResultId == null) {
       return this.http.get<any>(`${this.apiBaseUrl}toc/get/indicator/${id_toc}/result/${this.ipsrDataControlSE.resultInnovationId}/initiative/${init}`).pipe(this.saveButtonSE.isGettingSectionPipe());
-    }else{
+    } else {
       return this.http.get<any>(`${this.apiBaseUrl}toc/get/indicator/${id_toc}/result/${this.currentResultId}/initiative/${init}`).pipe(this.saveButtonSE.isGettingSectionPipe());
     }
-    
   }
   get_vesrsionDashboard(id_toc, init) {
     return this.http.get<any>(`${this.apiBaseUrl}toc/get/version/${this.currentResultId}/initiative/${init}/resultToc/${id_toc}`);
@@ -628,7 +627,7 @@ export class ResultsApiService {
   }
 
   GETInnovationPathwayStepTwoInnovationSelect() {
-    console.log(this.ipsrDataControlSE.resultInnovationId);
+    //(this.ipsrDataControlSE.resultInnovationId);
 
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/step-two/${this.ipsrDataControlSE.resultInnovationId}`);
   }

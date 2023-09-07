@@ -1054,7 +1054,7 @@ WHERE
 
   async getTypesOfResultByCodes(
     resultCodes: number[],
-    version: number = 1,
+    version: number = 18,
   ): Promise<ResultTypeDto[]> {
     const queryData = `
     select

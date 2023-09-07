@@ -78,12 +78,12 @@ export class ResultsListComponent implements OnInit {
 
   validateOrder(columnAttr) {
     setTimeout(() => {
-      console.log(columnAttr);
+      //(columnAttr);
       if (columnAttr == 'result_code') return (this.combine = true);
       const resultListTableHTML = document.getElementById('resultListTable');
       // if (document.getElementById('resultListTable').querySelectorAll('th[aria-sort="ascending"]').length) this.resetSort();
       this.combine = !resultListTableHTML.querySelectorAll('th[aria-sort="descending"]').length && !resultListTableHTML.querySelectorAll('th[aria-sort="ascending"]').length;
-      // console.log(document.getElementById('resultListTable').querySelectorAll('th[aria-sort="descending"]').length); ascending
+      // //(document.getElementById('resultListTable').querySelectorAll('th[aria-sort="descending"]').length); ascending
       // this.resetSort();
       return null;
     }, 100);
