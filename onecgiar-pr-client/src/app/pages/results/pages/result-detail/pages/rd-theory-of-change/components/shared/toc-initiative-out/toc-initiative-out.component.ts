@@ -197,6 +197,8 @@ export class TocInitiativeOutComponent {
         initiative:response?.initiative,
         is_sdg_action_impact:response?.is_sdg_action_impact,
       };
+      console.log(this.theoryOfChangesServices.body);
+      
       if (this.indicators.length == 1) {
         this.disabledInput = true;
       }
