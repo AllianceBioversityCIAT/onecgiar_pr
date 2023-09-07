@@ -272,6 +272,7 @@ export class ResultRepository
       select
         concat(r.id, '') as id,
         r.result_code,
+        r.version_id,
         r.title,
         r.description,
         concat(ci.official_code, '-', ci.short_name) as crp,
@@ -314,6 +315,7 @@ export class ResultRepository
       select
         lr.legacy_id as id,
         lr.legacy_id as result_code,
+        null as version_id,
         lr.title,
         lr.description,
         lr.crp,
@@ -1905,7 +1907,7 @@ left join clarisa_countries cc3
         LEFT JOIN Integration_information.work_packages wp ON wp.id = tr.work_packages_id
         LEFT JOIN Integration_information.toc_results_indicators tri ON tr.id = tri.toc_results_id AND tri.toc_result_indicator_id = rtri.toc_results_indicator_id COLLATE utf8mb3_general_ci
     WHERE
-        r.result_code ${resultCodes.length ? `in (${resultCodes})`: '= 0' }
+        r.result_code ${resultCodes.length ? `in (${resultCodes})` : '= 0'}
         AND rbi.is_active = 1
         AND rtr.is_active = 1
         AND rtr.planned_result = 1
