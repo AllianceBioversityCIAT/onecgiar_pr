@@ -44,6 +44,7 @@ export class InnovationDevInfoComponent implements OnInit {
         //(response);
         this.convertOrganizations(response?.innovatonUse?.organization);
         this.innovationDevInfoBody = response;
+        this.innovationDevInfoBody.innovation_user_to_be_determined = Boolean(this.innovationDevInfoBody.innovation_user_to_be_determined);
         //(response);
         this.savingSection = false;
       },

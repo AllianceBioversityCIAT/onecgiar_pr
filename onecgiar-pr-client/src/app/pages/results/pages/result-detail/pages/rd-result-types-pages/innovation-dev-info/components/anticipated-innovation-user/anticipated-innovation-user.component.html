@@ -5,9 +5,10 @@
 
 <div class="paddingLeft20">
     <app-pr-radio-button optionLabel="name" optionValue="id"
-        [options]="[{ name: 'This is yet to be determined', id: true }]" [(ngModel)]="isCollapsed">
+        [options]="[{ name: 'This is yet to be determined', id: true }]"
+        [(ngModel)]="this.body.innovation_user_to_be_determined">
     </app-pr-radio-button>
-    <div *ngIf="!isCollapsed">
+    <div *ngIf="!this.body?.innovation_user_to_be_determined">
         <app-pr-field-header label="Actors" [useColon]="false" [required]="false"
             [description]="this.actorDescription()"></app-pr-field-header>
 

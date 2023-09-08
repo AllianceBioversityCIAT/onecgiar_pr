@@ -16,6 +16,7 @@ export class InnovationDevInfoBody {
   public reference_materials: linkType[] = [{ link: '' }];
   public innovatonUse: InnovatonUse = new InnovatonUse();
   public innovation_pdf: boolean;
+  public innovation_user_to_be_determined: boolean;
   public initiative_expected_investment: Initiative_expected_investment[] = [];
   public bilateral_expected_investment: Bilateral_expected_investment[] = [];
   public institutions_expected_investment: Institutions_expected_investment[] = [];
