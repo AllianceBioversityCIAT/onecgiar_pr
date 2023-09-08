@@ -171,7 +171,8 @@ export class ResultsInnovationsDevRepository
     	rid.innovation_nature_id,
     	rid.innovation_readiness_level_id,
       rid.innovation_acknowledgement,
-      rid.innovation_pdf
+      rid.innovation_pdf,
+      rid.innovation_user_to_be_determined
     FROM
     	results_innovations_dev rid 
     WHERE 
