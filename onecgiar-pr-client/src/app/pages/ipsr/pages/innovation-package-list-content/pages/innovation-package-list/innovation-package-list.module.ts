@@ -8,17 +8,10 @@ import { InnovationPackageCustomTableModule } from './components/innovation-pack
 import { SectionHeaderModule } from 'src/app/pages/ipsr/components/section-header/section-header.module';
 import { FilterByTextModule } from 'src/app/shared/pipes/filter-by-text.module';
 import { InnovationPackageListFilterPipe } from './components/innovation-package-custom-table/pipes/innovation-package-list-filter.pipe';
-
+import { IpsrListFiltersComponent } from './components/ipsr-list-filters/ipsr-list-filters.component';
 
 @NgModule({
-  declarations: [
-    InnovationPackageListComponent,
-    InnovationPackageListFilterPipe
-  ],
-  imports: [
-    CommonModule,
-    InnovationPackageListRoutingModule,
-    CustomFieldsModule, InnovationPackageCustomTableModule, SectionHeaderModule, FilterByTextModule
-  ]
+  declarations: [InnovationPackageListComponent, InnovationPackageListFilterPipe, IpsrListFiltersComponent],
+  imports: [CommonModule, InnovationPackageListRoutingModule, CustomFieldsModule, InnovationPackageCustomTableModule, SectionHeaderModule, FilterByTextModule]
 })
-export class InnovationPackageListModule { }
+export class InnovationPackageListModule {}
