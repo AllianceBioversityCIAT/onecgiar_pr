@@ -120,8 +120,9 @@ export class RdGeneralInformationComponent {
   }
 
   nutritionInformation() {
-    return `<strong>Nutrition tag guidance</strong>
-    <br> Nutrition, health and food security scores should be determined based on the following: 
+    return `<strong>Nutrition tag guidance</strong><br>
+    Nutrition, health and food security scores should be determined based on the following: 
+    <ul>
     <li><strong>0 : Not targeted</strong> The activity has been screened against the marker but has not been found to target any aspects of nutrition, health and food security.</li>
     <li><strong>1 : Significant</strong> The activity has significant contribution to the above-described aspects of nutrition, health and food security, but not the principal reason for undertaking the activity.</li>
     <li><strong>2 : Principal</strong> The activity is principally meeting any aspects of nutrition, health and food security, and this is fundamental in its design and expected results. The activity would not have been undertaken, without this objective.</li>
@@ -132,7 +133,7 @@ export class RdGeneralInformationComponent {
     return `<strong>Environment tag guidance</strong> 
     <br>There are five environmental targets and one biodiversity target in the Environmental Health and Biodiversity Impact Area:
 
-    <br><br>Stay within planetary and regional environmental boundaries: consumptive water use in food production of less than 2,500 km3 per year (with a focus on the most stressed basins), zero net deforestation, nitrogen application of 90 Tg per year (with a redistribution towards low-input farming systems) and increased use efficiency; and phosphorus application of 10 Tg per year.
+    <br><br>Stay within planetary and regional environmental boundaries: consumptive water use in food production of less than 2,500 km³ per year (with a focus on the most stressed basins), zero net deforestation, nitrogen application of 90 Tg per year (with a redistribution towards low-input farming systems) and increased use efficiency; and phosphorus application of 10 Tg per year.
 
     <br><br>Maintain the genetic diversity of seed varieties, cultivated plants and farmed and domesticated animals and their related wild species, including through soundly managed genebanks at the national, regional, and international levels.
 
@@ -140,11 +141,11 @@ export class RdGeneralInformationComponent {
 
     <br><br>Environmental Health and Biodiversity Scores should be determined based on the following: <br>
 
+    <ul>
     <li><strong>0 : Not targeted</strong> The activity has been screened against the marker (see reference list above), but it has not been found to target any aspects of environmental health and biodiversity.</li>
     <li><strong>1 : Significant</strong> The activity has significant contribution to the above-described aspects of environmental health and biodiversity, but not the principal reason of undertaking the activity.</li>
     <li><strong>2 : Principal</strong>  The activity is principally meeting any aspects of environmental health and biodiversity, and this is fundamental in its design and expected results.</li>
-   
-   `;
+    </ul>`;
   }
 
   povertyInformation() {
@@ -157,10 +158,11 @@ export class RdGeneralInformationComponent {
     <br><br>"Reduce by at least half the proportion of men, women and children of all ages living in poverty in all its dimensions, according to national definitions"<br><br>
 
     Poverty Reduction, Livelihoods and Jobs scores should be determined based on the following:
+    <ul>
     <li><strong>0 : Not targeted</strong> The activity has been screened against the marker but has not been found to target any aspects of poverty reduction, livelihoods and jobs.</li>
     <li><strong>1 : Significant</strong> The activity has significant contribution to any of the aspects of poverty reduction, livelihoods and jobs, but not the principal reason for undertaking the activity.</li>
     <li><strong>2 : Principal</strong> The activity is principally meeting any aspects of poverty reduction, livelihoods and jobs, and this is fundamental in its design and expected results. The activity would not have been undertaken, without this objective.</li>
-    `;
+    </ul>`;
   }
 
   climateInformation() {

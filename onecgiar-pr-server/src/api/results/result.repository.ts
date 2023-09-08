@@ -254,7 +254,6 @@ export class ResultRepository
   }
 
   /**
-   * !Revisar asignacion de de parametros sql
    * @param id
    * @param allowDeleted
    * @param version
@@ -272,6 +271,7 @@ export class ResultRepository
       select
         concat(r.id, '') as id,
         r.result_code,
+        r.version_id,
         r.title,
         r.description,
         concat(ci.official_code, '-', ci.short_name) as crp,
@@ -300,7 +300,8 @@ export class ResultRepository
         and rc.is_active > 0
       left join clarisa_countries cc on
         cc.id = rc.country_id
-        ${!allowDeleted ? 'where r.is_active > 0' : ''}
+      where r.result_type_id not in (10,11) 
+        ${!allowDeleted ? 'and r.is_active > 0' : ''}
       group by
         r.id,
         r.title,
@@ -314,6 +315,7 @@ export class ResultRepository
       select
         lr.legacy_id as id,
         lr.legacy_id as result_code,
+        null as version_id,
         lr.title,
         lr.description,
         lr.crp,
