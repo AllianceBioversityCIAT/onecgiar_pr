@@ -798,7 +798,8 @@ export class resultValidationRepository extends Repository<Validation> {
 				and rid.innovation_readiness_level_id <> ''
 			) 
 			AND (rid.innovation_pdf NOT IN (1, 0)) THEN FALSE
-			WHEN (
+			WHEN rid.innovation_user_to_be_determined != 1
+			AND (
 				(
 					SELECT
 						COUNT(*)
@@ -878,7 +879,7 @@ export class resultValidationRepository extends Repository<Validation> {
 						AND rim.unit_of_measure IS NOT NULL
 				) = 0
 			) THEN FALSE
-			WHEN(
+			WHEN (
 				SELECT
 					COUNT(*)
 				FROM
@@ -916,7 +917,7 @@ export class resultValidationRepository extends Repository<Validation> {
 						)
 					)
 			) > 0 THEN FALSE
-			WHEN(
+			WHEN (
 				SELECT
 					COUNT(*)
 				FROM
