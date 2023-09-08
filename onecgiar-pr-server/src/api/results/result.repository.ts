@@ -254,7 +254,6 @@ export class ResultRepository
   }
 
   /**
-   * !Revisar asignacion de de parametros sql
    * @param id
    * @param allowDeleted
    * @param version
@@ -301,7 +300,8 @@ export class ResultRepository
         and rc.is_active > 0
       left join clarisa_countries cc on
         cc.id = rc.country_id
-        ${!allowDeleted ? 'where r.is_active > 0' : ''}
+      where r.result_type_id not in (10,11) 
+        ${!allowDeleted ? 'and r.is_active > 0' : ''}
       group by
         r.id,
         r.title,
