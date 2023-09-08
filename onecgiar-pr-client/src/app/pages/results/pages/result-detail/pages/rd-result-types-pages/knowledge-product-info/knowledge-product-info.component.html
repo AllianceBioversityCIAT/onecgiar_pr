@@ -109,7 +109,7 @@
     </app-pr-yes-or-not>
 
     <div style="padding-left: 50px;" *ngIf="this.sectionData.isMeliaProduct === true">
-        <app-pr-yes-or-not label="Was this MELIA product previously submitted in the OST?"
+        <app-pr-yes-or-not label="Was it planned in your Initiative proposal?"
             [(ngModel)]="this.sectionData.ostSubmitted">
         </app-pr-yes-or-not>
         <app-pr-select [options]="this.meliaTypes" label="Select MELIA type" optionLabel="name" optionValue="id"

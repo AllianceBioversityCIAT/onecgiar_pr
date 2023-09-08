@@ -13,4 +13,11 @@ import { DataControlService } from '../../../../../../../../shared/services/data
 })
 export class NormalSelectorComponent {
   constructor(public rolesSE: RolesService, public rdPartnersSE: RdPartnersService, public institutionsSE: InstitutionsService, public greenChecksSE: GreenChecksService, public dataControlSE: DataControlService) {}
+  public disableOptions: any[] = null;
+  getDisableOptions() {
+    this.disableOptions = [];
+    this.rdPartnersSE.partnersBody.mqap_institutions.forEach(element => {
+      this.disableOptions.push(element?.user_matched_institution);
+    });
+  }
 }

@@ -272,6 +272,7 @@ export class ResultRepository
       select
         concat(r.id, '') as id,
         r.result_code,
+        r.version_id,
         r.title,
         r.description,
         concat(ci.official_code, '-', ci.short_name) as crp,
@@ -314,6 +315,7 @@ export class ResultRepository
       select
         lr.legacy_id as id,
         lr.legacy_id as result_code,
+        null as version_id,
         lr.title,
         lr.description,
         lr.crp,
