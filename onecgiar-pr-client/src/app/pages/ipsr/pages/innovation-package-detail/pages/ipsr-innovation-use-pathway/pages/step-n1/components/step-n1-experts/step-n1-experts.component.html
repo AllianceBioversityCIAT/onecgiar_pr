@@ -39,6 +39,9 @@
                         selectedOptionLabel="name" [(ngModel)]="this.expert.expertises">
                     </app-pr-multi-select>
 
+                    <div appFeedbackValidation labelText="What expertises will this expert contribute?"
+                        [isComplete]="!!this.expert.expertises?.length">
+                    </div>
                     <!-- <app-pr-multi-select *ngIf="body.geo_scope_id == 2" [options]="this.regionsCountriesSE.regionsList"
                     [description]="selectRegionsDescription" label="Select regions" selectedLabel="Regions(s) selected"
                     selectedOptionLabel="name" optionLabel="name" optionValue="id" placeholder="Select regions"
