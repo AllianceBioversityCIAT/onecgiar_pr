@@ -71,12 +71,13 @@
         [description]="readiness_of_this_innovation_description()">
     </app-pr-field-header>
 
-    <app-pr-range-level [(ngModel)]="innovationDevInfoBody.innovation_readiness_level_id" optionLabel="name"
-        optionValue="id" [options]="this.innovationControlListSE.readinessLevelsList"></app-pr-range-level>
+    <app-pr-range-level itemTitle="name" itemDescription="definition" optionLabel="name" optionValue="id"
+        [options]="this.innovationControlListSE.readinessLevelsList"
+        [(ngModel)]="innovationDevInfoBody.innovation_readiness_level_id"></app-pr-range-level>
 
-
-    <div class="pr_description"> <a href="https://drive.google.com/file/d/1muDLtqpeaSCIX60g6qQG_GGOPR61Rq7E/view"
-            class="open_route" target="_blank">Click here </a> to see the definition of all readiness levels</div>
+    <div class="pr_description" style="margin-top: 1rem;"> <a
+            href="https://drive.google.com/file/d/1muDLtqpeaSCIX60g6qQG_GGOPR61Rq7E/view" class="open_route"
+            target="_blank">Click here </a> to see the definition of all readiness levels</div>
 
     <app-alert-status [description]="alertInfoText2()">
     </app-alert-status>

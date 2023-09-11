@@ -2,35 +2,23 @@ import { Injectable, HttpStatus } from '@nestjs/common';
 import { CreateSummaryDto } from './dto/create-summary.dto';
 import { UpdateSummaryDto } from './dto/update-summary.dto';
 import { InnovationUseDto } from './dto/create-innovation-use.dto';
-import { ResultsInnovationsUseRepository } from './repositories/results-innovations-use.repository';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
-import { ResultsInnovationsUse } from './entities/results-innovations-use.entity';
 import { VersionsService } from '../versions/versions.service';
 import { Version } from '../../versioning/entities/version.entity';
 import { HandlersError } from '../../../shared/handlers/error.utils';
-import { ResultsInnovationsUseMeasuresRepository } from './repositories/results-innovations-use-measures.repository';
-import { ResultsInnovationsUseMeasures } from './entities/results-innovations-use-measures.entity';
 import { capdevDto } from './dto/create-capacity-developents.dto';
 import { ResultsCapacityDevelopmentsRepository } from './repositories/results-capacity-developments.repository';
 import { ResultsCapacityDevelopments } from './entities/results-capacity-developments.entity';
 import { ResultByIntitutionsRepository } from '../results_by_institutions/result_by_intitutions.repository';
 import { ResultsByInstitution } from '../results_by_institutions/entities/results_by_institution.entity';
-import {
-  CreateInnovationDevDto,
-  Option,
-  SubOption,
-} from './dto/create-innovation-dev.dto';
+import { CreateInnovationDevDto } from './dto/create-innovation-dev.dto';
 import { ResultsInnovationsDevRepository } from './repositories/results-innovations-dev.repository';
 import { ResultsInnovationsDev } from './entities/results-innovations-dev.entity';
 import { ResultRepository } from '../result.repository';
 import { PolicyChangesDto } from './dto/create-policy-changes.dto';
 import { ResultsPolicyChanges } from './entities/results-policy-changes.entity';
 import { ResultsPolicyChangesRepository } from './repositories/results-policy-changes.repository';
-import { ResultAnswerRepository } from '../result-questions/repository/result-answers.repository';
-import { ResultAnswer } from '../result-questions/entities/result-answers.entity';
 import { EvidencesRepository } from '../evidences/evidences.repository';
-import { Evidence } from '../evidences/entities/evidence.entity';
-import { Result } from '../entities/result.entity';
 import { ResultActor } from '../result-actors/entities/result-actor.entity';
 import { In, IsNull } from 'typeorm';
 import { ResultActorRepository } from '../result-actors/repositories/result-actors.repository';
@@ -45,12 +33,11 @@ import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/
 import { NonPooledProjectRepository } from '../non-pooled-projects/non-pooled-projects.repository';
 import { ResultInstitutionsBudget } from '../result_budget/entities/result_institutions_budget.entity';
 import { ResultInstitutionsBudgetRepository } from '../result_budget/repositories/result_institutions_budget.repository';
+import { InnoDevService } from './innovation_dev.service';
 
 @Injectable()
 export class SummaryService {
   constructor(
-    private readonly _resultsInnovationsUseRepository: ResultsInnovationsUseRepository,
-    private readonly _esultsInnovationsUseMeasuresRepository: ResultsInnovationsUseMeasuresRepository,
     private readonly _resultsCapacityDevelopmentsRepository: ResultsCapacityDevelopmentsRepository,
     private readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
     private readonly _resultsInnovationsDevRepository: ResultsInnovationsDevRepository,
@@ -58,7 +45,6 @@ export class SummaryService {
     private readonly _resultRepository: ResultRepository,
     private readonly _versionsService: VersionsService,
     private readonly _handlersError: HandlersError,
-    private readonly _resultAnswerRepository: ResultAnswerRepository,
     private readonly _evidenceRepository: EvidencesRepository,
     private readonly _resultActorRepository: ResultActorRepository,
     private readonly _resultByIntitutionsTypeRepository: ResultByIntitutionsTypeRepository,
@@ -68,27 +54,8 @@ export class SummaryService {
     private readonly _resultBilateralBudgetRepository: NonPooledProjectBudgetRepository,
     private readonly _nonPooledProjectRepository: NonPooledProjectRepository,
     private readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
+    private readonly _innoDevService: InnoDevService,
   ) {}
-
-  create(createSummaryDto: CreateSummaryDto) {
-    return 'This action adds a new summary';
-  }
-
-  findAll() {
-    return `This action returns all summary`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} summary`;
-  }
-
-  update(id: number, updateSummaryDto: UpdateSummaryDto) {
-    return `This action updates a #${id} summary`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} summary`;
-  }
 
   /**
    *
@@ -103,95 +70,15 @@ export class SummaryService {
     user: TokenDto,
   ) {
     try {
-      // const { result_innovation_use_id, female_using, male_using, other } =
-      //   innovationUseDto;
-
-      // const innExists =
-      //   await this._resultsInnovationsUseRepository.InnovatonUseExists(
-      //     resultId,
-      //   );
       const resultExist = await this._resultRepository.findOne({
         where: { id: resultId },
       });
 
-      const InnovationUse = await this.saveAnticepatedInnoUser(
+      const InnovationUse = await this._innoDevService.saveAnticepatedInnoUser(
         resultExist.id,
         user.id,
         innovationUseDto,
       );
-
-      // let InnovationUse: ResultsInnovationsUse = undefined;
-      // const version = await this._versionsService.findBaseVersion();
-      // if (version.status >= 300) {
-      //   throw this._handlersError.returnErrorRes({ error: version });
-      // }
-      // const vrs: Version = <Version>version.response;
-      // if (innExists) {
-      //   innExists.female_using = female_using || null;
-      //   innExists.male_using = male_using || null;
-      //   innExists.last_updated_by = user.id;
-      //   InnovationUse = await this._resultsInnovationsUseRepository.save(
-      //     innExists,
-      //   );
-      // } else {
-      //   const newInne = new ResultsInnovationsUse();
-      //   newInne.created_by = user.id;
-      //   newInne.last_updated_by = user.id;
-      //   newInne.female_using = female_using;
-      //   newInne.male_using = male_using;
-      //   newInne.results_id = resultId;
-      //   InnovationUse = await this._resultsInnovationsUseRepository.save(
-      //     newInne,
-      //   );
-      // }
-
-      // if (other?.length) {
-      //   const measureList = other
-      //     .filter((el) => !!el.result_innovations_use_measure_id)
-      //     .map((d) => d.result_innovations_use_measure_id);
-      //   await this._esultsInnovationsUseMeasuresRepository.updateInnovatonUseMeasures(
-      //     InnovationUse.result_innovation_use_id,
-      //     measureList,
-      //     user.id,
-      //   );
-      //   let tesultsInnovationsUseMeasuresList: ResultsInnovationsUseMeasures[] =
-      //     [];
-      //   for (let index = 0; index < other.length; index++) {
-      //     const {
-      //       quantity,
-      //       unit_of_measure,
-      //       result_innovations_use_measure_id,
-      //     } = other[index];
-      //     const innMesExists =
-      //       await this._esultsInnovationsUseMeasuresRepository.innovatonUseMeasuresExists(
-      //         result_innovations_use_measure_id,
-      //       );
-      //     if (innMesExists) {
-      //       innMesExists.last_updated_by = user.id;
-      //       innMesExists.quantity = quantity;
-      //       innMesExists.unit_of_measure = unit_of_measure;
-      //       tesultsInnovationsUseMeasuresList.push(innMesExists);
-      //     } else {
-      //       const newInnMes = new ResultsInnovationsUseMeasures();
-      //       newInnMes.created_by = user.id;
-      //       newInnMes.last_updated_by = user.id;
-      //       newInnMes.quantity = quantity;
-      //       newInnMes.unit_of_measure = unit_of_measure;
-      //       newInnMes.result_innovation_use_id =
-      //         InnovationUse.result_innovation_use_id;
-      //       tesultsInnovationsUseMeasuresList.push(newInnMes);
-      //     }
-      //   }
-      //   await this._esultsInnovationsUseMeasuresRepository.save(
-      //     tesultsInnovationsUseMeasuresList,
-      //   );
-      // } else {
-      //   await this._esultsInnovationsUseMeasuresRepository.updateInnovatonUseMeasures(
-      //     InnovationUse.result_innovation_use_id,
-      //     [],
-      //     user.id,
-      //   );
-      // }
 
       return {
         response: InnovationUse,
@@ -210,23 +97,6 @@ export class SummaryService {
    */
   async getInnovationUse(resultId: number) {
     try {
-      // const innExists =
-      //   await this._resultsInnovationsUseRepository.InnovatonUseExists(
-      //     resultId,
-      //   );
-      // if (!innExists) {
-      //   throw {
-      //     response: {},
-      //     message: 'Results Innovations Use not found',
-      //     status: HttpStatus.NOT_FOUND,
-      //   };
-      // }
-
-      // const allInnUseMes =
-      //   await this._esultsInnovationsUseMeasuresRepository.getAllResultInnovationsUseMeasureByInnoUseId(
-      //     innExists.result_innovation_use_id,
-      //   );
-
       let actorsData = await this._resultActorRepository.find({
         where: { result_id: resultId, is_active: true },
         relations: { obj_actor_type: true },
@@ -448,6 +318,7 @@ export class SummaryService {
         short_title,
         innovation_acknowledgement,
         innovation_pdf,
+        innovation_user_to_be_determined,
       } = createInnovationDevDto;
 
       let InnDevRes: ResultsInnovationsDev = undefined;
@@ -468,6 +339,8 @@ export class SummaryService {
           innovation_characterization_id;
         innDevExists.innovation_acknowledgement = innovation_acknowledgement;
         innDevExists.innovation_pdf = innovation_pdf;
+        innDevExists.innovation_user_to_be_determined =
+          innovation_user_to_be_determined;
         InnDevRes = await this._resultsInnovationsDevRepository.save(
           innDevExists,
         );
@@ -490,163 +363,84 @@ export class SummaryService {
           innovation_characterization_id;
         newInnDev.innovation_acknowledgement = innovation_acknowledgement;
         newInnDev.innovation_pdf = innovation_pdf;
+        newInnDev.innovation_user_to_be_determined =
+          innovation_user_to_be_determined;
         InnDevRes = await this._resultsInnovationsDevRepository.save(newInnDev);
       }
 
-      const saveOptionsAndSubOptions = async (options: Option[]) => {
-        for (const optionData of options) {
-          if (
-            optionData.answer_boolean == null &&
-            optionData.answer_text == null
-          ) {
-            continue;
-          }
-          const optionExist = await this._resultAnswerRepository.findOne({
-            where: {
-              result_id: resultId,
-              result_question_id: optionData.result_question_id,
-            },
-          });
-
-          if (optionExist) {
-            optionExist.answer_boolean = optionData.answer_boolean;
-            optionExist.answer_text = optionData.answer_text;
-            optionExist.last_updated_by = user.id;
-            await this._resultAnswerRepository.save(optionExist);
-          } else {
-            const optionAnswer = new ResultAnswer();
-            optionAnswer.result_question_id = optionData.result_question_id;
-            optionAnswer.answer_boolean = optionData.answer_boolean;
-            optionAnswer.answer_text = optionData.answer_text;
-            optionAnswer.result_id = resultId;
-            optionAnswer.created_by = user.id;
-            optionAnswer.last_updated_by = user.id;
-
-            await this._resultAnswerRepository.save(optionAnswer);
-          }
-
-          for (const subOptionData of optionData.subOptions) {
-            if (
-              subOptionData.answer_boolean === null &&
-              subOptionData.answer_text === null
-            ) {
-              continue;
-            }
-            const subOptionExist = await this._resultAnswerRepository.findOne({
-              where: {
-                result_id: resultId,
-                result_question_id: subOptionData.result_question_id,
-              },
-            });
-            if (subOptionExist) {
-              subOptionExist.answer_boolean = subOptionData.answer_boolean;
-              subOptionExist.answer_text = subOptionData.answer_text;
-              subOptionExist.last_updated_by = user.id;
-              await this._resultAnswerRepository.save(subOptionExist);
-            } else {
-              const subOptionAnswer = new ResultAnswer();
-              subOptionAnswer.result_question_id =
-                subOptionData.result_question_id;
-              subOptionAnswer.answer_boolean = subOptionData.answer_boolean;
-              subOptionAnswer.answer_text = subOptionData.answer_text;
-              subOptionAnswer.result_id = resultId;
-              subOptionAnswer.created_by = user.id;
-              subOptionAnswer.last_updated_by = user.id;
-
-              await this._resultAnswerRepository.save(subOptionAnswer);
-            }
-          }
-        }
-      };
-
-      await saveOptionsAndSubOptions(
+      // * Save Questions
+      await this._innoDevService.saveOptionsAndSubOptions(
+        resultId,
+        user.id,
         createInnovationDevDto?.responsible_innovation_and_scaling.q1.options,
       );
-      await saveOptionsAndSubOptions(
+      await this._innoDevService.saveOptionsAndSubOptions(
+        resultId,
+        user.id,
         createInnovationDevDto?.responsible_innovation_and_scaling.q2.options,
       );
-      await saveOptionsAndSubOptions(
+      await this._innoDevService.saveOptionsAndSubOptions(
+        resultId,
+        user.id,
         createInnovationDevDto?.intellectual_property_rights.q1.options,
       );
-      await saveOptionsAndSubOptions(
+      await this._innoDevService.saveOptionsAndSubOptions(
+        resultId,
+        user.id,
         createInnovationDevDto?.intellectual_property_rights.q2.options,
       );
-      await saveOptionsAndSubOptions(
+      await this._innoDevService.saveOptionsAndSubOptions(
+        resultId,
+        user.id,
         createInnovationDevDto?.intellectual_property_rights.q3.options,
       );
-      await saveOptionsAndSubOptions(
+      await this._innoDevService.saveOptionsAndSubOptions(
+        resultId,
+        user.id,
         createInnovationDevDto?.innovation_team_diversity.options,
       );
 
-      const saveEvidence = async (
-        evidences: Evidence[],
-        evidence_type_id: number,
-      ) => {
-        const existingEvidences = await this._evidenceRepository.find({
-          where: {
-            result_id: resultId,
-            evidence_type_id: evidence_type_id,
-          },
-        });
+      // * Save Evidence
+      await this._innoDevService.saveEvidence(
+        resultId,
+        user.id,
+        createInnovationDevDto.pictures,
+        3,
+      );
+      await this._innoDevService.saveEvidence(
+        resultId,
+        user.id,
+        createInnovationDevDto.reference_materials,
+        4,
+      );
 
-        for (const existingEvidence of existingEvidences) {
-          const matchingEvidence = evidences.find(
-            (evidence) => evidence.link === existingEvidence.link,
-          );
-
-          if (matchingEvidence) {
-            existingEvidence.link = matchingEvidence.link;
-            existingEvidence.last_updated_by = user.id;
-            await this._evidenceRepository.save(existingEvidence);
-          } else {
-            existingEvidence.is_active = 0;
-            existingEvidence.last_updated_by = user.id;
-            await this._evidenceRepository.save(existingEvidence);
-          }
-        }
-
-        for (const evidence of evidences) {
-          const evidenceExist = await this._evidenceRepository.findOne({
-            where: {
-              result_id: resultId,
-              evidence_type_id: evidence_type_id,
-              link: evidence.link,
-            },
-          });
-
-          if (evidenceExist) {
-            evidenceExist.link = evidence.link;
-            evidenceExist.last_updated_by = user.id;
-            await this._evidenceRepository.save(evidenceExist);
-          } else {
-            const newEvidence = new Evidence();
-            newEvidence.result_id = resultId;
-            newEvidence.evidence_type_id = evidence_type_id;
-            newEvidence.link = evidence.link;
-            newEvidence.created_by = user.id;
-            newEvidence.last_updated_by = user.id;
-
-            await this._evidenceRepository.save(newEvidence);
-          }
-        }
-      };
-
-      await saveEvidence(createInnovationDevDto.pictures, 3);
-      await saveEvidence(createInnovationDevDto.reference_materials, 4);
-
-      await this.saveInitiativeInvestment(
+      // * Save Investment
+      await this._innoDevService.saveInitiativeInvestment(
         resultId,
         user.id,
         createInnovationDevDto,
       );
-      await this.saveBillateralInvestment(
+      await this._innoDevService.saveBillateralInvestment(
         resultId,
         user.id,
         createInnovationDevDto,
       );
-      await this.savePartnerInvestment(user.id, createInnovationDevDto);
+      await this._innoDevService.savePartnerInvestment(
+        user.id,
+        createInnovationDevDto,
+      );
 
-      await this.saveAnticepatedInnoUser(resultId, user.id, innovationUseDto);
+      if (
+        innovation_user_to_be_determined != false ||
+        innovation_user_to_be_determined != null
+      ) {
+        // * Save InnovationUser
+        await this._innoDevService.saveAnticepatedInnoUser(
+          resultId,
+          user.id,
+          innovationUseDto,
+        );
+      }
 
       return {
         response: InnDevRes,
@@ -743,7 +537,7 @@ export class SummaryService {
           },
           relations: {
             obj_non_pooled_projetct: {
-              obj_funder_institution_id: true
+              obj_funder_institution_id: true,
             },
           },
         });
@@ -928,402 +722,6 @@ export class SummaryService {
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
-    }
-  }
-
-  private async saveAnticepatedInnoUser(
-    resultId: number,
-    user: number,
-    { innovatonUse: crtr }: InnovationUseDto,
-  ) {
-    if (crtr?.actors?.length) {
-      const { actors } = crtr;
-      for (const el of actors) {
-        let actorExists: ResultActor = null;
-
-        if (el?.actor_type_id) {
-          const { actor_type_id } = el;
-          const whereOptions: any = {
-            actor_type_id: el.actor_type_id,
-            result_id: resultId,
-            result_actors_id: el.result_actors_id ?? IsNull(),
-            is_active: true,
-          };
-
-          if (!el?.result_actors_id) {
-            switch (`${actor_type_id}`) {
-              case '5':
-                whereOptions.other_actor_type =
-                  el?.other_actor_type || IsNull();
-                break;
-            }
-          } else {
-            delete whereOptions.actor_type_id;
-          }
-          actorExists = await this._resultActorRepository.findOne({
-            where: whereOptions,
-          });
-        } else if (!actorExists && el?.result_actors_id) {
-          actorExists = await this._resultActorRepository.findOne({
-            where: {
-              result_actors_id: el.result_actors_id,
-              result_id: resultId,
-            },
-          });
-        } else if (!actorExists) {
-          actorExists = await this._resultActorRepository.findOne({
-            where: { actor_type_id: IsNull(), result_id: resultId },
-          });
-        }
-
-        let saveActor;
-        if (actorExists) {
-          if (!el?.actor_type_id && el?.is_active !== false) {
-            return {
-              response: { status: 'Error' },
-              message: 'The field actor type is required',
-              status: HttpStatus.BAD_REQUEST,
-            };
-          }
-          saveActor = await this._resultActorRepository.update(
-            actorExists.result_actors_id,
-            {
-              actor_type_id: this.isNullData(el?.actor_type_id),
-              is_active: el.is_active == undefined ? true : el.is_active,
-              has_men: this.isNullData(el?.has_men),
-              has_men_youth: this.isNullData(el?.has_men_youth),
-              has_women: this.isNullData(el?.has_women),
-              has_women_youth: this.isNullData(el?.has_women_youth),
-              men: this.isNullData(el?.men),
-              men_youth: this.isNullData(el?.men_youth),
-              women: this.isNullData(el?.women),
-              women_youth: this.isNullData(el?.women_youth),
-              last_updated_by: user,
-              other_actor_type: this.isNullData(el?.other_actor_type),
-              sex_and_age_disaggregation:
-                el?.sex_and_age_disaggregation === true ? true : false,
-              how_many: el?.how_many,
-            },
-          );
-        } else {
-          if (!el?.actor_type_id) {
-            return {
-              response: { status: 'Error' },
-              message: 'The field actor type is required',
-              status: HttpStatus.BAD_REQUEST,
-            };
-          }
-          saveActor = await this._resultActorRepository.save({
-            actor_type_id: this.isNullData(el?.actor_type_id),
-            is_active: el?.is_active,
-            has_men: this.isNullData(el?.has_men),
-            has_men_youth: this.isNullData(el?.has_men_youth),
-            has_women: this.isNullData(el?.has_women),
-            has_women_youth: this.isNullData(el?.has_women_youth),
-            men: this.isNullData(el?.men),
-            men_youth: this.isNullData(el?.men_youth),
-            women: this.isNullData(el?.women),
-            women_youth: this.isNullData(el?.women_youth),
-            other_actor_type: this.isNullData(el?.other_actor_type),
-            last_updated_by: user,
-            created_by: user,
-            result_id: resultId,
-            sex_and_age_disaggregation:
-              el?.sex_and_age_disaggregation === true ? true : false,
-            how_many: el?.how_many,
-          });
-        }
-      }
-    }
-
-    if (crtr?.organization?.length) {
-      const { organization } = crtr;
-      for (const el of organization) {
-        let ite: ResultsByInstitutionType = null;
-
-        if (el?.institution_types_id && el?.institution_types_id != 78) {
-          ite =
-            await this._resultByIntitutionsTypeRepository.getNewResultByInstitutionTypeExists(
-              resultId,
-              el.institution_types_id,
-              5,
-            );
-        }
-
-        if (!ite && el?.id) {
-          ite =
-            await this._resultByIntitutionsTypeRepository.getNewResultByIdExists(
-              resultId,
-              el.id,
-              5,
-            );
-        }
-
-        if (ite) {
-          if (!el?.institution_types_id && el?.is_active !== false) {
-            return {
-              response: { status: 'Error' },
-              message: 'The field institution type is required',
-              status: HttpStatus.BAD_REQUEST,
-            };
-          } else {
-            await this._resultByIntitutionsTypeRepository.update(ite.id, {
-              institution_types_id: this.isNullData(el?.institution_types_id),
-              last_updated_by: user,
-              other_institution: this.isNullData(el?.other_institution),
-              how_many: this.isNullData(el?.how_many),
-              is_active: el?.is_active,
-              graduate_students: this.isNullData(el?.graduate_students),
-            });
-          }
-        } else {
-          if (!el?.institution_types_id) {
-            return {
-              response: { status: 'Error' },
-              message: 'The field institution type is required',
-              status: HttpStatus.BAD_REQUEST,
-            };
-          }
-          await this._resultByIntitutionsTypeRepository.save({
-            results_id: resultId,
-            created_by: user,
-            last_updated_by: user,
-            other_institution: this.isNullData(el?.other_institution),
-            institution_types_id: this.isNullData(el.institution_types_id),
-            graduate_students: this.isNullData(el?.graduate_students),
-            institution_roles_id: 5,
-            how_many: el?.how_many,
-          });
-        }
-      }
-    }
-
-    if (crtr?.measures?.length) {
-      const { measures } = crtr;
-      for (const el of measures) {
-        let ripm: ResultIpMeasure = null;
-        if (el?.result_ip_measure_id) {
-          ripm = await this._resultIpMeasureRepository.findOne({
-            where: {
-              result_ip_measure_id: el.result_ip_measure_id,
-            },
-          });
-        } else if (!ripm && el?.unit_of_measure) {
-          ripm = await this._resultIpMeasureRepository.findOne({
-            where: {
-              unit_of_measure: el.unit_of_measure,
-              result_id: resultId,
-              quantity: el?.quantity,
-            },
-          });
-        } else if (!ripm) {
-          ripm = await this._resultIpMeasureRepository.findOne({
-            where: {
-              unit_of_measure: IsNull(),
-              result_id: resultId,
-              quantity: el?.quantity,
-            },
-          });
-        }
-
-        if (ripm) {
-          if (!el?.unit_of_measure && el?.is_active != false) {
-            return {
-              response: { valid: false },
-              message: 'The field Unit of Measure is required',
-              status: HttpStatus.BAD_REQUEST,
-            };
-          }
-          await this._resultIpMeasureRepository.update(
-            ripm.result_ip_measure_id,
-            {
-              unit_of_measure: this.isNullData(el.unit_of_measure),
-              quantity: this.isNullData(el.quantity),
-              last_updated_by: user,
-              is_active: el.is_active == undefined ? true : el.is_active,
-            },
-          );
-        } else {
-          if (!el?.unit_of_measure) {
-            return {
-              response: { valid: false },
-              message: 'The field Unit of Measure',
-              status: HttpStatus.BAD_REQUEST,
-            };
-          }
-          await this._resultIpMeasureRepository.save({
-            result_id: resultId,
-            quantity: this.isNullData(el?.quantity),
-            unit_of_measure: this.isNullData(el?.unit_of_measure),
-            created_by: user,
-            last_updated_by: user,
-          });
-        }
-      }
-    }
-  }
-
-  isNullData(data: any) {
-    return data == undefined ? null : data;
-  }
-
-  async saveInitiativeInvestment(
-    resultId: number,
-    user: number,
-    { initiative_expected_investment: inv }: CreateInnovationDevDto,
-  ) {
-    try {
-      if (inv?.length) {
-        const initiativeInvestments = inv;
-
-        for (const initiative of initiativeInvestments) {
-          const ibr = await this._resultByInitiativeRepository.findOne({
-            where: {
-              result_id: resultId,
-              is_active: true,
-              id: initiative.result_initiative_id,
-            },
-          });
-
-          if (ibr) {
-            let rie: ResultInitiativeBudget =
-              await this._resultInitiativesBudgetRepository.findOne({
-                where: {
-                  result_initiative_id: ibr.id,
-                  is_active: true,
-                },
-              });
-
-            if (rie) {
-              rie.kind_cash = initiative.kind_cash;
-              rie.is_determined = initiative.is_determined;
-              rie.last_updated_by = user;
-
-              await this._resultInitiativesBudgetRepository.save(rie);
-            } else {
-              const newRie = this._resultInitiativesBudgetRepository.create({
-                result_initiative_id: ibr.id,
-                kind_cash: initiative.kind_cash,
-                is_determined: initiative.is_determined,
-                created_by: user,
-                last_updated_by: user,
-              });
-
-              await this._resultInitiativesBudgetRepository.save(newRie);
-            }
-          }
-        }
-
-        return {
-          valid: true,
-        };
-      }
-    } catch (error) {
-      return this._handlersError.returnErrorRes({ error, debug: true });
-    }
-  }
-
-  async saveBillateralInvestment(
-    resultId: number,
-    user: number,
-    { bilateral_expected_investment: inv }: CreateInnovationDevDto,
-  ) {
-    try {
-      if (inv?.length) {
-        const bei = inv;
-
-        bei.forEach(async (i) => {
-          const npp = await this._nonPooledProjectRepository.findOne({
-            where: {
-              results_id: resultId,
-              is_active: true,
-              id: i.non_pooled_projetct_id,
-            },
-          });
-
-          if (npp) {
-            const rbb = await this._resultBilateralBudgetRepository.findOne({
-              where: {
-                non_pooled_projetct_id: npp.id,
-                is_active: true,
-              },
-            });
-
-            if (rbb) {
-              await this._resultBilateralBudgetRepository.update(
-                rbb.non_pooled_projetct_budget_id,
-                {
-                  kind_cash: i.kind_cash,
-                  is_determined: i.is_determined,
-                  last_updated_by: user,
-                },
-              );
-            } else {
-              await this._resultBilateralBudgetRepository.save({
-                non_pooled_projetct_id: npp.id,
-                kind_cash: i.kind_cash,
-                is_determined: i.is_determined,
-                created_by: user,
-                last_updated_by: user,
-              });
-            }
-          }
-        });
-
-        return {
-          valid: true,
-        };
-      }
-    } catch (error) {
-      return this._handlersError.returnErrorRes({ error, debug: true });
-    }
-  }
-
-  async savePartnerInvestment(
-    user: number,
-    { institutions_expected_investment: inv }: CreateInnovationDevDto,
-  ) {
-    try {
-      if (inv?.length) {
-        const iei = inv;
-
-        for (const el of iei) {
-          let existBud: ResultInstitutionsBudget = null;
-          if (el?.result_institutions_budget_id) {
-            existBud = await this._resultInstitutionsBudgetRepository.findOne({
-              where: {
-                result_institutions_budget_id:
-                  el?.result_institutions_budget_id,
-              },
-            });
-          } else if (!existBud) {
-            existBud = await this._resultInstitutionsBudgetRepository.findOne({
-              where: { result_institution_id: el.result_institution_id },
-            });
-          }
-
-          if (existBud) {
-            await this._resultInstitutionsBudgetRepository.update(
-              el?.result_institutions_budget_id,
-              {
-                last_updated_by: user,
-                is_determined: el?.is_determined,
-                kind_cash: el?.kind_cash,
-              },
-            );
-          } else {
-            await this._resultInstitutionsBudgetRepository.save({
-              result_institution_id: el?.result_institutions_budget_id,
-              last_updated_by: user,
-              is_determined: el?.is_determined,
-              kind_cash: el?.kind_cash,
-              created_by: user,
-            });
-          }
-        }
-      }
-    } catch (error) {
-      return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 }

@@ -20,6 +20,7 @@ export class CreateInnovationDevDto {
   public evidences_justification: string;
   public innovation_acknowledgement: string;
   public innovation_pdf!: boolean;
+  public innovation_user_to_be_determined!: boolean;
   public responsible_innovation_and_scaling!: TopLevelQuestions;
   public intellectual_property_rights!: TopLevelQuestions;
   public innovation_team_diversity!: TopLevelQuestions;

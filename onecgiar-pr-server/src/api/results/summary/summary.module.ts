@@ -24,11 +24,13 @@ import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/
 import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/result_initiative_budget.repository';
 import { ResultInstitutionsBudgetRepository } from '../result_budget/repositories/result_institutions_budget.repository';
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
+import { InnoDevService } from './innovation_dev.service';
 
 @Module({
   controllers: [SummaryController],
   providers: [
     SummaryService,
+    InnoDevService,
     ResultsInnovationsUseRepository,
     HandlersError,
     ResultsInnovationsUseMeasuresRepository,

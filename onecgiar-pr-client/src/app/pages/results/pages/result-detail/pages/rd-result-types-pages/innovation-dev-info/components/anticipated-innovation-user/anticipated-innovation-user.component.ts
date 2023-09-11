@@ -7,10 +7,9 @@ import { ApiService } from 'src/app/shared/services/api/api.service';
   templateUrl: './anticipated-innovation-user.component.html',
   styleUrls: ['./anticipated-innovation-user.component.scss']
 })
-export class AnticipatedInnovationUserComponent implements OnInit {
+export class AnticipatedInnovationUserComponent {
   @Input() body = new InnovationDevInfoBody();
   @Input() saving: boolean = false;
-  isCollapsed: boolean | null = null;
   actorsTypeList = [];
   institutionsTypeTreeList = [];
 
@@ -86,8 +85,6 @@ export class AnticipatedInnovationUserComponent implements OnInit {
     const finalList = this.api.rolesSE.readOnly ? list.filter(item => item[attr]) : list.filter(item => item.is_active != false);
     return finalList.length;
   }
-
-  ngOnInit(): void {}
 
   actorDescription() {
     return `<li>If the innovation does not target specific groups of actors or people, then please specify the expected innovation use at organizational level or other use below.</li><li>CGIAR follows the United Nations definition of 'youth' as those persons between the ages of 15 and 24 years.</li>`;
