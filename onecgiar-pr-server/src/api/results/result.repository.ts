@@ -525,7 +525,8 @@ WHERE
     u.last_name as create_last_name,
     r.version_id,
     v.phase_name,
-    v.phase_year
+    v.phase_year,
+    v.status as phase_status
 FROM
     \`result\` r
     INNER JOIN result_type rt ON rt.id = r.result_type_id
