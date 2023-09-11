@@ -45,16 +45,16 @@ export class RdEvidencesComponent {
   addEvidence() {
     this.evidencesBody.evidences.push({});
   }
-  addLink() {
-    this.evidencesBody.supplementary.push({});
-  }
+  // addLink() {
+  //   this.evidencesBody.supplementary.push({});
+  // }
 
   deleteEvidence(index) {
     this.evidencesBody.evidences.splice(index, 1);
   }
-  deleteLink(index) {
-    this.evidencesBody.supplementary.splice(index, 1);
-  }
+  // deleteLink(index) {
+  //   this.evidencesBody.supplementary.splice(index, 1);
+  // }
   validateCheckBoxes() {
     let text = '<ul>';
     const gender_related = this.evidencesBody.evidences.some(evidence => evidence.gender_related === true);
@@ -86,13 +86,13 @@ export class RdEvidencesComponent {
       }
     }
 
-    for (const iterator of this.evidencesBody.supplementary) {
-      if (this.evidencesBody.supplementary.find(evidence => !Boolean(evidence.link))) return true;
-      const supplementaryFinded = this.evidencesBody.supplementary.filter(evidence => evidence.link == iterator.link);
-      if (supplementaryFinded.length >= 2) {
-        return supplementaryFinded.length >= 2;
-      }
-    }
+    // for (const iterator of this.evidencesBody.supplementary) {
+    //   if (this.evidencesBody.supplementary.find(evidence => !Boolean(evidence.link))) return true;
+    //   const supplementaryFinded = this.evidencesBody.supplementary.filter(evidence => evidence.link == iterator.link);
+    //   if (supplementaryFinded.length >= 2) {
+    //     return supplementaryFinded.length >= 2;
+    //   }
+    // }
     return false;
     // !this.evidencesBody.evidences.every(evidence => evidence?.link?.includes('https://cgspace.cgiar.org') || evidence?.link?.includes('/10568/'));
   }
