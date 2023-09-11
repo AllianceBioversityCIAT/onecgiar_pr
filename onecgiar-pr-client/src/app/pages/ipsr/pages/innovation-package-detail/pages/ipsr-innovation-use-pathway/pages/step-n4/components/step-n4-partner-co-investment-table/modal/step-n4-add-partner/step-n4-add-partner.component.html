@@ -5,7 +5,7 @@
     <div class="modal_container partners-request-container" *ngIf="showForm">
 
         <app-alert-status *ngIf="!this.rolesSE.readOnly" (click)=" openPartner()"
-            description="If you don't find the partner you are looking for, <a class='open_route alert-event-3'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list">
+            description="If you don't find the partner you are looking for, <a class='open_route alert-event-3'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list.">
         </app-alert-status>
 
         <app-pr-select [options]="this.institutionsSE.institutionsList" label="Organization" optionLabel="full_name"

@@ -15,7 +15,7 @@ export class CustomizedAlertsFeService {
   // showed = false;
   statusIcons = [];
   constructor() {
-    this.statusIcons['error'] = 'close';
+    this.statusIcons['error'] = 'priority_high';
     this.statusIcons['success'] = 'check';
     this.statusIcons['warning'] = 'priority_high';
     this.statusIcons['information'] = 'priority_high';
