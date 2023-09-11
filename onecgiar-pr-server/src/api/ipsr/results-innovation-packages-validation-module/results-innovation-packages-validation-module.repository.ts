@@ -39,18 +39,6 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                 OR r.climate_change_tag_level_id = 0
             )
             OR (
-                r.nutrition_tag_level_id IS NULL
-                OR r.nutrition_tag_level_id = 0
-            )
-            OR (
-                r.environmental_biodiversity_tag_level_id IS NULL
-                OR r.environmental_biodiversity_tag_level_id = 0
-            )
-            OR (
-                r.poverty_tag_level_id IS NULL
-                OR r.poverty_tag_level_id = 0
-            )
-            OR (
                 r.gender_tag_level_id = 3
                 AND (
                     SELECT
@@ -75,47 +63,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                         AND e.youth_related
                         AND e.is_active = 1
                 ) = 0
-            )
-            OR (
-                r.nutrition_tag_level_id = 3
-                AND (
-                    SELECT
-                        COUNT(*)
-                    FROM
-                        evidence e
-                    WHERE
-                        e.result_id = r.id
-                        AND e.nutrition_related
-                        AND e.is_active = 1
-                ) = 0
-            )
-            OR (
-                r.environmental_biodiversity_tag_level_id = 3
-                AND (
-                    SELECT
-                        COUNT(*)
-                    FROM
-                        evidence e
-                    WHERE
-                        e.result_id = r.id
-                        AND e.environmental_biodiversity_related
-                        AND e.is_active = 1
-                ) = 0
-            )
-            OR (
-                r.poverty_tag_level_id = 3
-                AND (
-                    SELECT
-                        COUNT(*)
-                    FROM
-                        evidence e
-                    WHERE
-                        e.result_id = r.id
-                        AND e.poverty_related
-                        AND e.is_active = 1
-                ) = 0
-            )
-            THEN FALSE
+            ) THEN FALSE
             ELSE TRUE
         END AS validation
     FROM
