@@ -36,25 +36,24 @@
         <td>
           {{result?.result_code}}
         </td>
-        <td *ngFor="let column of columnOrder; let i = index" class="{{ column.attr }}">
-          <div class="subResults">
-            <ng-container *ngFor="let subResult of result['results']">
-              <a class="{{ subResult.class }}" [routerLink]="'/result/result-detail/' + subResult?.result_code"
-                [queryParams]="{ phase: subResult?.version_id }">
-                <div class="point"
-                  [style.background]="'var(--pr-color-result-level-' + subResult?.result_level_id + ')'"
-                  *ngIf="subResult.attr === 'result_type'"></div>
+        <td *ngFor="let column of columnOrder; let i = index" class="{{ column.attr }}" style="max-width: 440px;">
+          <!-- <div class="subResults"> -->
+          <ng-container *ngFor="let subResult of result['results']">
+            <a class="{{ subResult.class }}" [routerLink]="'/result/result-detail/' + subResult?.result_code"
+              [queryParams]="{ phase: subResult?.version_id }">
+              <div class="point" [style.background]="'var(--pr-color-result-level-' + subResult?.result_level_id + ')'"
+                *ngIf="subResult.attr === 'result_type'"></div>
 
-                <div class="new_tag" *ngIf="i == 0 && subResult.is_new && !subResult.legacy_id">New</div>
-                <div class="new_tag pre" *ngIf="i == 0 && subResult.legacy_id">Pre 2022</div>
-                {{ column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date :
-                'YYYY-MM-dd') }}
-              </a>
-              <!-- <div class="transparent_text">
+              <div class="new_tag" *ngIf="i == 0 && subResult.is_new && !subResult.legacy_id">New</div>
+              <div class="new_tag pre" *ngIf="i == 0 && subResult.legacy_id">Pre 2022</div>
+              {{ column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date :
+              'YYYY-MM-dd') }}
+            </a>
+            <!-- <div class="transparent_text">
                 {{ result[column.attr] }}
               </div> -->
-            </ng-container>
-          </div>
+          </ng-container>
+          <!-- </div> -->
 
 
 
