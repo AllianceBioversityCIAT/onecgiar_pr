@@ -967,6 +967,10 @@ export class ResultsTocResultRepository
               }else{
                 itemIndicator.full_geo = ' No region(s) provided';
               }
+          }if(itemIndicator.location == 'global'){
+            
+            itemIndicator.location = `Global`;
+            itemIndicator.full_geo = '';
           }
 
           //Finish Section get to location
