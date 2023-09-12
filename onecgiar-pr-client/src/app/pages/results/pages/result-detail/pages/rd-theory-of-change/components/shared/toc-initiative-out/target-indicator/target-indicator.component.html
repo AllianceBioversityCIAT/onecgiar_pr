@@ -203,7 +203,9 @@
                               <th class="row-one">Other results contributing to the target</th>
                               <th>Target contribution</th>
                             </tr>
-      
+                            <tr *ngIf="item?.results_contributing.length == 0">
+                                <td colspan="2"><h4>At this moment there are no results contributing.</h4></td>
+                              </tr>
                             <tr *ngFor="let itemsContri of item?.results_contributing">
                               <td><a  [routerLink]="'/result/result-detail/' + itemsContri?.result_code" target="_blank" [queryParams]="{ phase: initiative?.result.version_id }">{{itemsContri.result_code}} - {{itemsContri.title}}</a></td>
                               <td> {{itemsContri.contributing_indicator}}</td>
