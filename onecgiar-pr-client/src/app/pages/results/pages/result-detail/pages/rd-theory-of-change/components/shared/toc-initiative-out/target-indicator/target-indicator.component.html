@@ -52,7 +52,11 @@
     </div>
     <div class="line"></div>
 
-    <div class="messurement">
+    <div *ngIf="initiative.targets.length == 0">
+        <app-alert-status [description]="'There are no targets for this indicator.'" status="warning"></app-alert-status>
+    </div>
+
+    <div class="messurement" *ngIf="initiative.targets.length">
         <div class="title-mesuren">
             <div class="square-messerunet"></div>
             <div style="margin-top: -15px;"><h4>Measurement</h4></div>
@@ -93,7 +97,7 @@
                     <app-alert-status status="warning" [description]="descriptionWarning(initiative?.result.name, initiative.type)"></app-alert-status>
                 </div>
 
-                <div *ngIf="descriptionWarningYear(item?.target_date, initiative.result.phase_year).is_alert == false">
+                <div *ngIf="descriptionWarningYear(item?.target_date, initiative.result.phase_year).is_alert && false and initiative.number_result_type ==  initiative?.result.result_type_id">
                     <app-alert-status status="warning" [description]="descriptionWarningYear(item?.target_date, initiative.result).description"></app-alert-status>
                 </div>
 
@@ -165,20 +169,22 @@
                         
                     </div>
                 </div>
-                <div >
+                <div *ngIf="initiative.number_result_type ==  initiative?.result.result_type_id">
                     <app-alert-status status="warning" [description]="'PRMS can only identify planned targets as numerical values. If your result framework has defined a target value with a unit of measurement other than numbers, PRMS will prompt you to indicate the contribution to the quantitative indicator using a text box.'"></app-alert-status>
                 </div>
                 <div *ngIf="initiative.type_value != 'custom' && initiative.number_result_type !=  initiative?.result.result_type_id">
                     <app-alert-status status="warning" [description]="descriptionWarning(initiative?.result.name, initiative.type)"></app-alert-status>
                 </div>
 
-                <div *ngIf="descriptionWarningYear(item?.target_date, initiative.result).is_alert">
+                <div *ngIf="descriptionWarningYear(item?.target_date, initiative.result).is_alert and initiative.number_result_type ==  initiative?.result.result_type_id">
                     <app-alert-status status="warning" [description]="descriptionWarningYear(item?.target_date, initiative.result).description"></app-alert-status>
                 </div>
-                <div style="margin-bottom: 10px;">
-                    <app-pr-yes-or-not [label]="'Have you achieved the target of this indicator?'" [required]="true" [(ngModel)]="item.indicator_question"
+                <div style="margin-bottom: 10px;" *ngIf = "initiative.type_value == 'custom' || initiative.number_result_type ==  initiative?.result.result_type_id">
+                    <app-pr-yes-or-not [label]="'Have you achieved the target of this indicator?'" [required]="true" [(ngModel)]="item.indicator_question" 
+                    (selectOptionEvent)="item.contributing = item.indicator_question == true ? 1:0 "
                     ></app-pr-yes-or-not>
                 </div>
+
     
                 <div class="table-indicator">
                     <table >
