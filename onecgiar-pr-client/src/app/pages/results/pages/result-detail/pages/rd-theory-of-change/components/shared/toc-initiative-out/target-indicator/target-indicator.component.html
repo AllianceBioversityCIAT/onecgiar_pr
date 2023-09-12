@@ -43,7 +43,7 @@
                 <div>
                     <h4>Location:</h4>
                 </div>
-                <div style="margin-top: 16px; margin-left: 5px; height:auto"><span>{{initiative.location}}</span> (<span *ngIf="initiative.full_geo != ':null'">{{initiative.full_geo}}</span>)</div>
+                <div style="margin-top: 16px; margin-left: 5px; height:auto"><span>{{initiative.location}}</span> <span *ngIf="initiative.full_geo != ''">(<span *ngIf="initiative.full_geo != ':null'">{{initiative.full_geo}}</span>)</span></div>
             </div>
             <div style="margin-left: -20px;margin-top: -20px;">
                 <app-alert-status [description]="descriptionAlert()"></app-alert-status>
@@ -129,7 +129,7 @@
                             <td> {{itemsContri.contributing_indicator}} out of  {{item.target_value}}</td>
                           </tr>
                           <tr *ngIf="item?.results_contributing.length == 0">
-                            <td colspan="2"><h4>At this moment there are no results contributing.</h4></td>
+                            <td colspan="2">Currently there are no other results contributing to this target.</td>
                           </tr>
                           <tr class="footer">
                             <th class="row-one">Overall progress against planned target</th>
@@ -204,7 +204,7 @@
                               <th>Target contribution</th>
                             </tr>
                             <tr *ngIf="item?.results_contributing.length == 0">
-                                <td colspan="2"><h4>At this moment there are no results contributing.</h4></td>
+                                <td colspan="2">Currently there are no other results contributing to this target.</td>
                               </tr>
                             <tr *ngFor="let itemsContri of item?.results_contributing">
                               <td><a  [routerLink]="'/result/result-detail/' + itemsContri?.result_code" target="_blank" [queryParams]="{ phase: initiative?.result.version_id }">{{itemsContri.result_code}} - {{itemsContri.title}}</a></td>
