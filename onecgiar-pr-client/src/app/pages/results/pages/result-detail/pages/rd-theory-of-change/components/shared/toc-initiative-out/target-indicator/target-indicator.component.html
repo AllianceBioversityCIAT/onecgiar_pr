@@ -128,7 +128,9 @@
                             <td><a  [routerLink]="'/result/result-detail/' + itemsContri?.result_code" target="_blank" [queryParams]="{ phase: initiative?.result.version_id }">{{itemsContri.result_code}} - {{itemsContri.title}}</a></td>
                             <td> {{itemsContri.contributing_indicator}} out of  {{item.target_value}}</td>
                           </tr>
-
+                          <tr *ngIf="item?.results_contributing.length == 0">
+                            <td colspan="2"><h4>At this moment there are no results contributing.</h4></td>
+                          </tr>
                           <tr class="footer">
                             <th class="row-one">Overall progress against planned target</th>
                             <th>{{initiative.total}} out of  {{item.target_value}}</th>
