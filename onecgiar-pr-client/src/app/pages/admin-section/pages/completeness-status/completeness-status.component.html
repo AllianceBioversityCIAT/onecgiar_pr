@@ -126,7 +126,7 @@
     </p-table>
     <div class="counter">
         <div class="name">Results: </div> {{(this.resultsList |
-        filterByText:this.textToFind).length}}/{{this.resultsList?.length}}
+        filterByText:this.textToFind)?.length}}/{{this.resultsList?.length}}
     </div>
 </div>
 
