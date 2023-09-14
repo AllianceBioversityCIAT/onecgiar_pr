@@ -97,14 +97,14 @@ export class ClarisaTaskService {
     count = await this.cloneClarisaImpactArea(count);
     count = await this.cloneClarisaGlobalTargetType(count);
     count = await this.cloneClarisaImpactAreaIndicators(count);
-    count = await this.cloneClarisaOutcomeIndicators(count);
+    //count = await this.cloneClarisaOutcomeIndicators(count);
     count = await this.cloneClarisaRegionsType(count);
     count = await this.cloneClarisaInstitutionsType(count);
     count = await this.cloneClarisaPolicyStageRepository(count);
     count = await this.cloneClarisaInnovationTypeRepository(count);
     count = await this.cloneClarisaInnovationReadinessLevelRepository(count);
     count = await this.cloneClarisaInnovationCharacteristicRepository(count);
-    count = await this.cloneClarisaActionAreaOutcomeRepository(count);
+    //count = await this.cloneClarisaActionAreaOutcomeRepository(count);
     count = await this.cloneClarisaGeographicScope(count);
     count = await this.cloneResultTocRepository(count);
     count = await this.cloneClarisaCenterRepository(count);
