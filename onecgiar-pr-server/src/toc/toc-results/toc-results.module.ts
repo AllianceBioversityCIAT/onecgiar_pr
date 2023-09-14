@@ -41,6 +41,7 @@ import { ResultsTocSdgTargetRepository } from 'src/api/results/results-toc-resul
 import { ResultsSdgTargetRepository } from 'src/api/results/results-toc-results/results-sdg-targets.respository';
 import { ResultsActionAreaOutcomeRepository } from 'src/api/results/results-toc-results/result-toc-action-area.repository';
 import { ResultsTocTargetIndicatorRepository } from 'src/api/results/results-toc-results/result-toc-result-target-indicator.repository';
+import { ResultInitiativeBudgetRepository } from '../../api/results/result_budget/repositories/result_initiative_budget.repository';
 
 @Module({
   controllers: [TocResultsController],
@@ -83,7 +84,8 @@ import { ResultsTocTargetIndicatorRepository } from 'src/api/results/results-toc
     ResultsTocImpactAreaTargetRepository,
     ResultsSdgTargetRepository,
     ResultsActionAreaOutcomeRepository,
-    ResultsTocTargetIndicatorRepository
+    ResultsTocTargetIndicatorRepository,
+    ResultInitiativeBudgetRepository,
   ],
   exports: [TocResultsRepository],
 })
