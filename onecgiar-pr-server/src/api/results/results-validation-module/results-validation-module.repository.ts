@@ -66,6 +66,15 @@ export class resultValidationRepository extends Repository<Validation> {
 				and r.climate_change_tag_level_id <> ''
 			)
 			and (
+				case 
+					when r.is_replicated = false then true
+				else case 
+						when r.is_discontinued = false then true
+					else case 
+						when (select sum(if(rido.investment_discontinued_option_id = 6, if(rido.description <> '' and rido.description is not null, 1, 0),1)) - count(rido.results_investment_discontinued_option_id) as datas from results_investment_discontinued_options rido where rido.is_active > 0 and rido.result_id = r.id ) = 0 then true
+					else false end end end
+			)
+			and (
 				r.nutrition_tag_level_id is not null
 				and r.nutrition_tag_level_id <> ''
 			)
@@ -182,7 +191,24 @@ export class resultValidationRepository extends Repository<Validation> {
 						AND rbi.is_active > 0
 					)
 				) <> 0`
-          : ``
+          : `
+					OR (
+						(SELECT COUNT(DISTINCT cgt.impactAreaId)
+						FROM results_impact_area_target riat 
+						INNER JOIN clarisa_global_targets cgt ON cgt.targetId = riat.impact_area_target_id 
+						WHERE riat.result_id = r.id
+						AND riat.impact_area_target_id IS NULL
+						AND riat.is_active > 0) < 5
+					)
+					OR (
+						(SELECT COUNT(DISTINCT ciai.impact_area_id)
+						FROM results_impact_area_indicators riai 
+						INNER JOIN clarisa_impact_area_indicator ciai ON ciai.id = riai.impact_area_indicator_id 
+						WHERE riai.result_id = r.id
+						AND riai.impact_area_indicator_id IS NULL
+						AND riai.is_active > 0) < 5
+					)
+				`
       }
 			OR (
 				(
@@ -300,29 +326,10 @@ export class resultValidationRepository extends Repository<Validation> {
 							AND rst.is_active = 1
 					) = 0
 				) 
-				THEN FALSE`
+				THEN TRUE`
           : ``
       }
-			  ${
-          resultLevel == 2
-            ? `
-				  WHEN (
-					rtr1.planned_result = 1
-					AND rtr1.is_sdg_action_impact = 1
-					AND (
-						SELECT
-							COUNT(*)
-						FROM
-							result_toc_impact_area_target rtia
-							LEFT JOIN results_toc_result rtr2 ON rtr2.result_toc_result_id = rtia.result_toc_result_id
-						WHERE
-							rtr2.results_id = r.id
-							AND rtia.is_active = 1
-					) = 0
-				) THEN FALSE`
-            : ``
-        }
-			ELSE TRUE
+			ELSE FALSE
 		END AS validation
 	FROM
 		\`result\` r
