@@ -70,7 +70,6 @@ export class ResultInitiativeBudgetRepository
         const queryData: string = `
         INSERT INTO result_initiative_budget (
           created_by
-          ,created_date
           ,current_year
           ,is_active
           ,is_determined
@@ -82,7 +81,6 @@ export class ResultInitiativeBudgetRepository
           )
           SELECT 
           ? as created_by
-          ,rib.created_date
           ,rib.current_year
           ,1 as is_active
           ,rib.is_determined
