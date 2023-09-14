@@ -132,6 +132,14 @@ export class ResultsService {
         };
       }
 
+      if (createResultDto?.result_type_id == 3) {
+        throw {
+          response: createResultDto?.result_type_id,
+          message: 'Result type not allowed',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
       const initiative = await this._clarisaInitiativesRepository.findOne({
         where: { id: createResultDto.initiative_id },
       });

@@ -24,4 +24,12 @@ export class ResultType {
     nullable: true,
   })
   description!: string;
+
+  @Column({
+    name: 'is_active',
+    type: 'boolean',
+    nullable: true,
+    default: true,
+  })
+  isActive!: boolean;
 }
