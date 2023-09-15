@@ -84,7 +84,7 @@
     *ngIf="(this.api.dataControlSE.resultsList | resultsListFilter : this.resultsListService.text_to_search : this.combine: this.api.resultsListFilterSE.filterJoin)?.length">
     Total: {{ (this.api.dataControlSE.resultsList | resultsListFilter : this.resultsListService.text_to_search :
     this.combine:
-    this.api.resultsListFilterSE.filterJoin)?.length }} / {{ this.api.dataControlSE.resultsList?.length }}</div>
+    this.api.resultsListFilterSE.filterJoin)?.length }}/{{ this.api.dataControlSE.resultsList?.length }}</div>
   <div class="noDataText"
     *ngIf="!(this.api.dataControlSE.resultsList | resultsListFilter : this.resultsListService.text_to_search :  this.combine:this.api.resultsListFilterSE.filterJoin)?.length">
     There are no results for the selected filters.</div>

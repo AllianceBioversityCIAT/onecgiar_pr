@@ -12,11 +12,11 @@ export class RdAnnualUpdatingComponent implements OnInit {
   discontinuedOptions = [];
   options = [
     {
-      name: 'Innovation development is active / investment was continued',
+      name: 'Innovation development is active/investment was continued',
       value: false
     },
     {
-      name: 'Innovation development is inactive / investment was discontinued, because:',
+      name: 'Innovation development is inactive/investment was discontinued, because:',
       value: true
     }
   ];
