@@ -26,6 +26,7 @@ import { ResultsTocImpactAreaTargetRepository } from './result-toc-impact-area-r
 import { ResultsSdgTargetRepository } from './results-sdg-targets.respository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { ResultsActionAreaOutcomeRepository } from './result-toc-action-area.repository';
+import { ResultsTocTargetIndicatorRepository } from './result-toc-result-target-indicator.repository';
 
 @Module({
   controllers: [ResultsTocResultsController],
@@ -54,6 +55,7 @@ import { ResultsActionAreaOutcomeRepository } from './result-toc-action-area.rep
     ResultsSdgTargetRepository,
     RoleByUserRepository,
     ResultsActionAreaOutcomeRepository,
+    ResultsTocTargetIndicatorRepository,
   ],
   exports: [ResultsTocResultRepository],
 })
