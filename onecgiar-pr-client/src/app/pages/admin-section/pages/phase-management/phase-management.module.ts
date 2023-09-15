@@ -19,7 +19,7 @@ import { MassivePhaseShiftComponent } from './other-functionalities/components/m
 import { DialogModule } from 'primeng/dialog';
 
 @NgModule({
-  declarations: [PhaseManagementComponent, OtherFunctionalitiesComponent, MassivePhaseShiftComponent],
+  declarations: [PhaseManagementComponent],
   exports: [PhaseManagementComponent],
   imports: [CommonModule, DialogModule, ButtonModule, DropdownModule, TagModule, InputTextModule, PhaseManagementRoutingModule, TableModule, FormsModule, CustomFieldsModule, ResultHistoryOfChangesModalModule, FilterByTextModule, TooltipModule, CalendarModule]
 })
