@@ -123,6 +123,10 @@ export class PhaseManagementComponent implements OnInit {
 
   getTocPhases() {
     this.resultsSE.GET_tocPhases().subscribe(({ response }) => {
+      // Add fullText property to each element in the array
+      response.forEach(element => {
+        element.fullText = element.name + ' - ' + element.status;
+      });
       this.tocPhaseList = response;
     });
   }
@@ -192,7 +196,7 @@ export class PhaseManagementComponent implements OnInit {
 
   getTocPhaseName(toc_pahse_id) {
     const tocPhaseElement = this.tocPhaseList.find(phaseItem => phaseItem?.phase_id == toc_pahse_id);
-    return tocPhaseElement?.name;
+    return tocPhaseElement?.name + ' - ' + tocPhaseElement?.status;
   }
 
   getFeedback() {
