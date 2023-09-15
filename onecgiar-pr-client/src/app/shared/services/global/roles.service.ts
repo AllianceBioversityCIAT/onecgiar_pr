@@ -25,7 +25,7 @@ export class RolesService {
     },
     {
       id: 2,
-      description: 'Not able to accept/reject results from other initiatives',
+      description: 'Not able to accept/reject results from other Initiatives',
       roleIds: [6]
     },
     {

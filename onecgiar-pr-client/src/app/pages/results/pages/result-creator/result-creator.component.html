@@ -11,13 +11,13 @@
 
       <app-pr-select class="segment_title_margin" [options]="this.api.dataControlSE.myInitiativesList"
         *ngIf="!this.api.rolesSE.isAdmin" label="Report for" [isStatic]="true" optionLabel="full_name"
-        optionValue="initiative_id" placeholder="Select initiative"
+        optionValue="initiative_id" placeholder="Select Initiative"
         [(ngModel)]="this.resultLevelSE.resultBody.initiative_id">
       </app-pr-select>
 
       <app-pr-select class="segment_title_margin" [options]="this.allInitiatives" label="Report for" [isStatic]="true"
         *ngIf="this.api.rolesSE.isAdmin" optionLabel="full_name" optionValue="initiative_id"
-        placeholder="Select initiative" [(ngModel)]="this.resultLevelSE.resultBody.initiative_id">
+        placeholder="Select Initiative" [(ngModel)]="this.resultLevelSE.resultBody.initiative_id">
       </app-pr-select>
 
 

@@ -5,13 +5,13 @@
             <app-pr-multi-select *ngIf="this.api.rolesSE.isAdmin" [options]="this.allInitiatives "
                 optionLabel="full_name" [isStatic]="true" optionValue="id" (selectOptionEvent)="onSelectInit()"
                 [required]="false" (removeOptionEvent)="onRemoveinit($event)" selectedOptionLabel="full_name"
-                [(ngModel)]="this.initiativesSelected" [confirmDeletion]="true" placeholder="Select initiative(s)">
+                [(ngModel)]="this.initiativesSelected" [confirmDeletion]="true" placeholder="Select Initiative(s)">
             </app-pr-multi-select>
             <app-pr-multi-select *ngIf="!this.api.rolesSE.isAdmin"
                 [options]="this.api.dataControlSE.myInitiativesList | filterInitWithRoleCoordAndLead"
                 optionLabel="full_name" [isStatic]="true" optionValue="id" (selectOptionEvent)="onSelectInit()"
                 [required]="false" (removeOptionEvent)="onRemoveinit($event)" selectedOptionLabel="full_name"
-                [(ngModel)]="this.initiativesSelected" [confirmDeletion]="true" placeholder="Select initiative(s)">
+                [(ngModel)]="this.initiativesSelected" [confirmDeletion]="true" placeholder="Select Initiative(s)">
             </app-pr-multi-select>
         </div>
 
