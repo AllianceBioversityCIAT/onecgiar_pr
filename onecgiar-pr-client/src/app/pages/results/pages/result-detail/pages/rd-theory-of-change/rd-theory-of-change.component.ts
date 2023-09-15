@@ -78,9 +78,10 @@ export class RdTheoryOfChangeComponent {
     this.theoryOfChangeBody.bodyNewTheoryOfChanges = this.theoryOfChangesServices.body;
     this.theoryOfChangeBody.bodyActionArea = this.theoryOfChangesServices.resultActionArea;
 
-    let initiativesAux = this.theoryOfChangeBody.contributing_and_primary_initiative.concat(this.contributingInitiativeNew);
+    const initiativesAux = this.theoryOfChangeBody.contributing_and_primary_initiative.concat(this.contributingInitiativeNew);
     this.theoryOfChangeBody.contributing_initiatives = initiativesAux.filter(init => init.id != this.theoryOfChangeBody.result_toc_result.initiative_id);
     console.log(this.theoryOfChangeBody);
+    
     const saveSection = () => {
       this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
         //(resp);
@@ -94,7 +95,7 @@ export class RdTheoryOfChangeComponent {
     const newInit = this.theoryOfChangeBody.contributing_and_primary_initiative.find(init => init.id == this.theoryOfChangeBody.result_toc_result.initiative_id);
     const newInitOfficialCode = newInit?.official_code;
     if (this.currentInitOfficialCode != newInitOfficialCode)
-      return this.api.alertsFe.show({ id: 'primary-submitter', title: 'Change in primary submitter', description: `The <strong>${newInitOfficialCode}</strong> will now be the primary submitter of this result and will have exclusive editing rights for all sections and submission. <strong>${this.currentInitOfficialCode}</strong> will lose editing and submission rights but will remain as a contributing initiative in this result. <br> <br> Please ensure that the new primary submitter of this result is aware of this change.`, status: 'success', confirmText: 'Proceed' }, () => {
+      return this.api.alertsFe.show({ id: 'primary-submitter', title: 'Change in primary submitter', description: `The <strong>${newInitOfficialCode}</strong> will now be the primary submitter of this result and will have exclusive editing rights for all sections and submission. <strong>${this.currentInitOfficialCode}</strong> will lose editing and submission rights but will remain as a contributing Initiative in this result. <br> <br> Please ensure that the new primary submitter of this result is aware of this change.`, status: 'success', confirmText: 'Proceed' }, () => {
         saveSection();
       });
 

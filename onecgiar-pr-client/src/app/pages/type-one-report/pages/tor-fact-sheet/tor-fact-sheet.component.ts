@@ -56,10 +56,10 @@ export class TorFactSheetComponent {
       this.concatEoiOutcome(data);
       //(data);
       const genderDescription = 'This score is derived from assessing the Initiative Proposal against adapted OECD gender equity scoring criteria.';
-      this.data[9].value = data?.climateGenderScore[0]?.adaptation_score ? `<strong>${data?.climateGenderScore[0]?.adaptation_score}</strong><br>${data?.climateGenderScore[0]?.adaptation_desc}` : '<div class="no-data-text-format">This initiative does not have OECD DAC Climate marker Adaptation score</strong>';
-      this.data[10].value = data.climateGenderScore[0]?.mitigation_score ? `<strong>${data.climateGenderScore[0]?.mitigation_score}</strong><br>${data.climateGenderScore[0]?.mitigation_desc}` : '<div class="no-data-text-format">This initiative does not have OECD DAC Climate marker Mitigation score</strong>';
-      this.data[11].value = data.climateGenderScore[0]?.gender_score ? `<strong class="tor-fact-desc">${genderDescription}</strong><br><strong>Score ${data.climateGenderScore[0]?.gender_score}</strong><br>${data.climateGenderScore[0]?.gender_desc}` : '<div class="no-data-text-format">This initiative does not have OECD DAC Gender equity marker score</strong>';
-      this.data[12].value = data?.web_page ? `<a href="${data?.web_page}" target="_blank">${data?.web_page}</a>` : '<div class="no-data-text-format">This initiative does not have Links to webpage</strong>';
+      this.data[9].value = data?.climateGenderScore[0]?.adaptation_score ? `<strong>${data?.climateGenderScore[0]?.adaptation_score}</strong><br>${data?.climateGenderScore[0]?.adaptation_desc}` : '<div class="no-data-text-format">This Initiative does not have OECD DAC Climate marker Adaptation score</strong>';
+      this.data[10].value = data.climateGenderScore[0]?.mitigation_score ? `<strong>${data.climateGenderScore[0]?.mitigation_score}</strong><br>${data.climateGenderScore[0]?.mitigation_desc}` : '<div class="no-data-text-format">This Initiative does not have OECD DAC Climate marker Mitigation score</strong>';
+      this.data[11].value = data.climateGenderScore[0]?.gender_score ? `<strong class="tor-fact-desc">${genderDescription}</strong><br><strong>Score ${data.climateGenderScore[0]?.gender_score}</strong><br>${data.climateGenderScore[0]?.gender_desc}` : '<div class="no-data-text-format">This Initiative does not have OECD DAC Gender equity marker score</strong>';
+      this.data[12].value = data?.web_page ? `<a href="${data?.web_page}" target="_blank">${data?.web_page}</a>` : '<div class="no-data-text-format">This Initiative does not have Links to webpage</strong>';
       this.loadingData = false;
     });
   }
@@ -112,7 +112,7 @@ export class TorFactSheetComponent {
       this.data[7].value = this.data[7].value.substring(0, this.data[7].value.length - 2);
       this.data[7].value += '<br>';
     } else {
-      this.data[7].value += '<div class="no-data-text-format">This initiative does not have regions targeted in the proposal</div>';
+      this.data[7].value += '<div class="no-data-text-format">This Initiative does not have regions targeted in the proposal</div>';
     }
 
     //* Countries targeted in the proposal:
@@ -125,7 +125,7 @@ export class TorFactSheetComponent {
       this.data[7].value = this.data[7].value.substring(0, this.data[7].value.length - 2);
       this.data[7].value += '<br>';
     } else {
-      this.data[7].value += '<div class="no-data-text-format">This initiative does not have regions targeted in the proposal</div>';
+      this.data[7].value += '<div class="no-data-text-format">This Initiative does not have regions targeted in the proposal</div>';
     }
 
     // //* Regions with results reported in 2022:
@@ -142,6 +142,6 @@ export class TorFactSheetComponent {
     data.eoiOutcome?.forEach(element => {
       this.data[8].value += `<strong>${element?.type_name} - ${element?.result_title}</strong><br><strong>Description:</strong> ${element?.result_description}<br><br>`;
     });
-    if (!data.eoiOutcome?.length) this.data[8].value += `<div class="no-data-text-format">This initiative does not have a Measurable three-year outcome</div>`;
+    if (!data.eoiOutcome?.length) this.data[8].value += `<div class="no-data-text-format">This Initiative does not have a Measurable three-year outcome</div>`;
   }
 }

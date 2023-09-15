@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 
 @Component({
   selector: 'app-pr-button',
@@ -16,5 +16,13 @@ export class PrButtonComponent {
   @Input() padding: 'small' | 'medium' | 'big' = 'small';
   @Input() pulse: boolean = false;
   @Input() verticalMargin: number = 10;
+  @Input() disabled: boolean = false;
+  @Input() tooltipText: string = '';
+  @Input() tooltipTextPosition: 'right' | 'left' | 'top' | 'bottom' = 'top';
+  @Output() clickEvent = new EventEmitter<any>();
   constructor() {}
+
+  onClick() {
+    if (!this.disabled) this.clickEvent.emit();
+  }
 }

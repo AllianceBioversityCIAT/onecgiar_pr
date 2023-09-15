@@ -4,7 +4,7 @@
 <div class="field_container" *ngIf="!flatFormat && this.selectOptions?.length">
     <app-pr-select class="segment_title_margin" [options]="this.selectOptions" label="Impact areas" [isStatic]="true"
         description="Select a primary impact area" optionLabel="nameImpact" optionValue="id_impactArea"
-        placeholder="Select initiative"
+        placeholder="Select Initiative"
         [(ngModel)]="this.typeOneReportSE.keyResultStoryData[this.resultIndex].impact_area_id">
     </app-pr-select>
     <!-- <app-pr-button padding="medium" [text]="isSaving?'Saving':'Save'" [rotating]="isSaving" (click)="onSave()"

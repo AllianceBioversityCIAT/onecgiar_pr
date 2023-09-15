@@ -1,6 +1,5 @@
 import { Component } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
-import { environment } from 'src/environments/environment';
 
 @Component({
   selector: 'app-report-new-result-button',

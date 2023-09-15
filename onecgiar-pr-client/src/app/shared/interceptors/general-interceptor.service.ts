@@ -35,11 +35,15 @@ export class GeneralInterceptorService implements HttpInterceptor {
             const validateGreenCheckRoute = req.url.indexOf('green-checks') > 0;
             const inResultsModule = req.url.includes('/api/results/');
             const inIPSRModule = req.url.includes('/api/ipsr/');
-            if (!validateGreenCheckRoute && inResultsModule) {
-              this.greenChecksSE.updateGreenChecks();
-            }
-            if (inIPSRModule) {
-              this.ipsrCompletenessStatusSE.updateGreenChecks();
+            const notValidateList = ['/api/ipsr/all-innovations'];
+            // if the req.url has some text from the blackList, then don't update the green checks
+            if (!notValidateList.some(url => req.url.includes(url))) {
+              if (!validateGreenCheckRoute && inResultsModule) {
+                this.greenChecksSE.updateGreenChecks();
+              }
+              if (inIPSRModule) {
+                this.ipsrCompletenessStatusSE.updateGreenChecks();
+              }
             }
           }
         }),
