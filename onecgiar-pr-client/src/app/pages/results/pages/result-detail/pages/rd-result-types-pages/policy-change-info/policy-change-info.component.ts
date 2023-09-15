@@ -55,6 +55,6 @@ export class PolicyChangeInfoComponent implements OnInit {
   //   }
   //   this.cantidad = formatCurrency(val, 'en-US', getCurrencySymbol('USD', 'wide'));
   //   //(this.innovationUseInfoBody.amount);
-  //   console.log(this.innovationUseInfoBody.amount);
+  //   //(this.innovationUseInfoBody.amount);
   // }
 }

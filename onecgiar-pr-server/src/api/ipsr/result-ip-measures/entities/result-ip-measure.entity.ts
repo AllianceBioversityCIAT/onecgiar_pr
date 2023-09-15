@@ -8,6 +8,7 @@ import {
 import { BaseEntity } from '../../../../shared/entities/base-entity';
 import { Version } from '../../../versioning/entities/version.entity';
 import { ResultInnovationPackage } from '../../result-innovation-package/entities/result-innovation-package.entity';
+import { Result } from '../../../results/entities/result.entity';
 
 @Entity('result_ip_measure')
 export class ResultIpMeasure extends BaseEntity {
@@ -32,8 +33,16 @@ export class ResultIpMeasure extends BaseEntity {
   quantity!: number;
 
   @Column({
+    name: 'result_id',
+    type: 'bigint',
+    nullable: true
+  })
+  result_id: number;
+
+  @Column({
     name: 'result_ip_id',
     type: 'bigint',
+    nullable: true
   })
   result_ip_id: number;
 
@@ -44,5 +53,14 @@ export class ResultIpMeasure extends BaseEntity {
   @JoinColumn({
     name: 'result_ip_id',
   })
-  obj_result: ResultInnovationPackage;
+  obj_result_ip_id: ResultInnovationPackage;
+
+  @ManyToOne(
+    () => Result,
+    (r) => r.id,
+  )
+  @JoinColumn({
+    name: 'result_id',
+  })
+  obj_result_id: Result;
 }

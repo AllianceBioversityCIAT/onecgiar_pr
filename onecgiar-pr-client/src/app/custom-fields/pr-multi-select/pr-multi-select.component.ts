@@ -58,8 +58,8 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
 
     this.value?.map(savedListItem => {
       const itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == savedListItem[this.optionValue]);
-      // console.log(itemFinded);
-      // console.log(savedListItem);
+      // //(itemFinded);
+      // //(savedListItem);
       if (itemFinded) itemFinded.selected = true;
 
       if (itemFinded && this.logicalDeletion) itemFinded.selected = savedListItem.is_active;
@@ -140,7 +140,7 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   }
 
   onSelectOption(option) {
-    console.log('onSelectOption');
+    //('onSelectOption');
     this.selectAll = null;
     if (option?.disabled) return;
     // this.onChange(null);

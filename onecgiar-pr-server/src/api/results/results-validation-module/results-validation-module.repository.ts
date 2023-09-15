@@ -332,7 +332,7 @@ export class resultValidationRepository extends Repository<Validation> {
 			ELSE FALSE
 		END AS validation
 	FROM
-		result r
+		\`result\` r
 	INNER JOIN results_by_inititiative rbi ON rbi.result_id = r.id AND rbi.initiative_role_id = 1
 	LEFT JOIN results_toc_result rtr1 ON rtr1.results_id = r.id
 	WHERE
@@ -414,7 +414,7 @@ export class resultValidationRepository extends Repository<Validation> {
 			ELSE TRUE
 		END AS validation
 	FROM
-		result r
+		\`result\` r
 	WHERE
 		r.id = ?
 		AND r.is_active > 0
@@ -783,32 +783,415 @@ export class resultValidationRepository extends Repository<Validation> {
 	SELECT
 		'innovation-dev-info' as section_name,
 		CASE
-			when (rid.short_title is not null
-			and rid.short_title <> '')
-			AND 
-			(rid.innovation_characterization_id is not null
-			and rid.innovation_characterization_id <> '')
-			AND 
-			(rid.innovation_nature_id is not null
-			and rid.innovation_nature_id <> '')
-			AND 
-			(if(rid.innovation_nature_id = 12, rid.is_new_variety in (1,0), true))
-			AND 
-			(rid.innovation_readiness_level_id is not null
-			and rid.innovation_readiness_level_id <> '')
-			AND 
-			(rid.innovation_pdf in (1,0))
-			then true
-			else false
-		END as validation
+			when (
+				rid.short_title is null
+				or rid.short_title = ''
+			)
+			AND (
+				rid.innovation_characterization_id is null
+				or rid.innovation_characterization_id = ''
+			)
+			AND (
+				rid.innovation_nature_id is null
+				or rid.innovation_nature_id = ''
+			)
+			AND (
+				if(
+					rid.innovation_nature_id != 12,
+					rid.is_new_variety not in (1, 0),
+					false
+				)
+			)
+			AND (
+				rid.innovation_readiness_level_id is null
+				and rid.innovation_readiness_level_id <> ''
+			) 
+			AND (rid.innovation_pdf NOT IN (1, 0)) THEN FALSE
+			WHEN rid.innovation_user_to_be_determined != 1
+			AND (
+				(
+					SELECT
+						COUNT(*)
+					FROM
+						result_actors ra
+					WHERE
+						ra.result_id = r.id
+						AND ra.is_active = 1
+						AND (
+							(
+								ra.sex_and_age_disaggregation = 0
+								AND (
+									(
+										ra.actor_type_id != 5
+										AND ra.has_women IS NOT NULL
+										AND ra.has_women_youth IS NOT NULL
+										AND ra.has_men IS NOT NULL
+										AND ra.has_men_youth IS NOT NULL
+									)
+									OR (
+										ra.actor_type_id = 5
+										AND (
+											ra.other_actor_type IS NOT NULL
+											OR TRIM(ra.other_actor_type) <> ''
+										)
+									)
+								)
+							)
+							OR (
+								ra.sex_and_age_disaggregation = 1
+								OR (
+									ra.actor_type_id = 5
+									AND (
+										ra.other_actor_type IS NOT NULL
+										AND TRIM(ra.other_actor_type) <> ''
+										AND ra.how_many IS NOT NULL
+									)
+								)
+							)
+						)
+				) = 0
+				AND (
+					SELECT
+						COUNT(*)
+					FROM
+						results_by_institution_type rbit
+					WHERE
+						rbit.results_id = r.id
+						AND rbit.is_active = true
+						AND (
+							(
+								rbit.institution_types_id != 78
+								AND(
+									rbit.institution_roles_id IS NOT NULL
+									AND rbit.institution_types_id IS NOT NULL
+								)
+							)
+							OR (
+								rbit.institution_types_id = 78
+								AND (
+									rbit.other_institution IS NOT NULL
+									OR rbit.other_institution != ''
+									AND rbit.institution_roles_id IS NOT NULL
+									AND rbit.institution_types_id IS NOT NULL
+								)
+							)
+						)
+				) = 0
+				AND (
+					SELECT
+						COUNT(*)
+					FROM
+						result_ip_measure rim
+					WHERE
+						rim.result_id = r.id
+						AND rim.is_active = TRUE
+						AND rim.unit_of_measure IS NOT NULL
+				) = 0
+			) THEN FALSE
+			WHEN (
+				SELECT
+					COUNT(*)
+				FROM
+					result_actors ra
+				WHERE
+					ra.result_id = r.id
+					AND ra.is_active = 1
+					AND (
+						(
+							ra.sex_and_age_disaggregation = 0
+							AND (
+								ra.women IS NULL
+								AND ra.has_women IS NULL
+								AND ra.has_women_youth IS NULL
+								AND ra.has_men IS NULL
+								AND ra.has_men_youth IS NULL
+								OR (
+									ra.actor_type_id = 5
+									AND (
+										ra.other_actor_type IS NULL
+										OR TRIM(ra.other_actor_type) = ''
+									)
+								)
+							)
+						)
+						OR (
+							ra.sex_and_age_disaggregation = 1
+							OR (
+								ra.actor_type_id = 5
+								AND (
+									ra.other_actor_type IS NULL
+									OR TRIM(ra.other_actor_type) = ''
+								)
+							)
+						)
+					)
+			) > 0 THEN FALSE
+			WHEN (
+				SELECT
+					COUNT(*)
+				FROM
+					results_by_institution_type rbit
+				WHERE
+					rbit.results_id = r.id
+					AND rbit.is_active = true
+					AND (
+						rbit.institution_roles_id IS NULL
+						OR rbit.institution_types_id IS NULL
+						OR (
+							rbit.institution_types_id = 78
+							AND (
+								rbit.other_institution IS NULL
+								OR rbit.other_institution = ''
+							)
+						)
+					)
+			) > 0 THEN FALSE
+			WHEN (
+				SELECT
+					COUNT(*)
+				FROM
+					result_ip_measure rim
+				WHERE
+					rim.result_id = r.id
+					AND rim.is_active = TRUE
+					AND (rim.unit_of_measure IS NULL)
+			) > 0 THEN FALSE
+			WHEN (
+				SELECT
+					COUNT(*)
+				FROM
+					result_questions rq
+					LEFT JOIN result_answers ra2 ON rq.result_question_id = ra2.result_question_id
+				WHERE
+					ra2.result_id = r.id
+					AND ra2.is_active = TRUE
+					AND ra2.answer_boolean = TRUE
+					AND (
+						rq.parent_question_id = 2
+						OR rq.parent_question_id = 3
+					)
+			) != 2 THEN FALSE
+			WHEN (
+				SELECT
+					COUNT(*)
+				FROM
+					result_questions rq
+					LEFT JOIN result_answers ra2 ON rq.result_question_id = ra2.result_question_id
+				WHERE
+					ra2.result_id = r.id
+					AND ra2.is_active = TRUE
+					AND ra2.answer_boolean = TRUE
+					AND (
+						ra2.result_question_id = 4
+						OR ra2.result_question_id = 8
+					)
+			) != (
+				SELECT
+					COUNT(DISTINCT rq2.parent_question_id)
+				FROM
+					result_answers ra3
+					LEFT JOIN result_questions rq2 ON rq2.result_question_id = ra3.result_question_id
+				WHERE
+					ra3.result_id = r.id
+					AND ra3.is_active = TRUE
+					AND ra3.answer_boolean = TRUE
+					AND (
+						rq2.parent_question_id = 4
+						OR rq2.parent_question_id = 8
+					)
+			) THEN FALSE
+			WHEN (
+				SELECT
+					COUNT(*)
+				FROM
+					result_answers ra4
+					LEFT JOIN result_questions rq3 ON rq3.result_question_id = ra4.result_question_id
+				WHERE
+					ra4.result_id = r.id
+					AND ra4.is_active = TRUE
+					AND rq3.result_question_id IN (17, 24)
+					AND ra4.answer_boolean = TRUE
+					AND ra4.answer_text IS NULL
+			) > 0 THEN FALSE
+			WHEN (
+				SELECT
+					COUNT(*)
+				FROM
+					result_questions rq
+					LEFT JOIN result_answers ra2 ON rq.result_question_id = ra2.result_question_id
+				WHERE
+					ra2.result_id = r.id
+					AND ra2.is_active = TRUE
+					AND ra2.answer_boolean = TRUE
+					AND rq.parent_question_id = 27
+			) = 0 THEN FALSE
+			WHEN (
+				SELECT
+					COUNT(*)
+				FROM
+					result_questions rq
+					LEFT JOIN result_answers ra2 ON rq.result_question_id = ra2.result_question_id
+				WHERE
+					ra2.result_id = r.id
+					AND ra2.is_active = TRUE
+					AND ra2.answer_boolean = TRUE
+					AND rq.parent_question_id = 27
+			) = 0 THEN FALSE
+			WHEN (
+				(
+					SELECT
+						COUNT(*)
+					FROM
+						result_answers ra2
+					WHERE
+						ra2.result_id = r.id
+						AND ra2.is_active = TRUE
+						AND ra2.answer_boolean = TRUE
+						AND (
+							ra2.result_question_id = 30
+							OR ra2.result_question_id = 31
+						)
+				) != (
+					SELECT
+						COUNT(*)
+					FROM
+						result_answers ra5
+						LEFT JOIN result_questions rq4 ON rq4.result_question_id = ra5.result_question_id
+					WHERE
+						ra5.result_id = r.id
+						AND ra5.is_active = TRUE
+						AND ra5.answer_boolean = TRUE
+						AND rq4.parent_question_id = 28
+				)
+			) THEN FALSE
+			WHEN (
+				(
+					SELECT
+						COUNT(*)
+					FROM
+						result_answers ra2
+					WHERE
+						ra2.result_id = r.id
+						AND ra2.is_active = TRUE
+						AND ra2.answer_boolean = TRUE
+						AND (
+							ra2.result_question_id = 33
+							OR ra2.result_question_id = 34
+						)
+				) != (
+					SELECT
+						COUNT(*)
+					FROM
+						result_answers ra5
+						LEFT JOIN result_questions rq4 ON rq4.result_question_id = ra5.result_question_id
+					WHERE
+						ra5.result_id = r.id
+						AND ra5.is_active = TRUE
+						AND ra5.answer_boolean = TRUE
+						AND rq4.parent_question_id = 29
+				)
+			) THEN FALSE
+			WHEN (
+				SELECT
+					COUNT(*)
+				FROM
+					result_initiative_budget ripb
+				WHERE
+					result_initiative_id IN (
+						SELECT
+							rbi.id
+						FROM
+							results_by_inititiative rbi
+						WHERE
+							rbi.is_active = 1
+							AND rbi.result_id = r.id
+					)
+					AND is_active = TRUE
+					AND (
+						ripb.is_determined != 1
+						OR ripb.is_determined IS NULL
+					)
+					AND ripb.kind_cash IS NULL
+			) > 0 THEN FALSE
+			WHEN (
+				SELECT
+					COUNT(*)
+				FROM
+					non_pooled_projetct_budget nppb
+				WHERE
+					nppb.non_pooled_projetct_id IN (
+						SELECT
+							npp.id
+						FROM
+							non_pooled_project npp
+						WHERE
+							npp.is_active = 1
+							AND npp.results_id = r.id
+					)
+					AND nppb.is_active = 1
+					AND (
+						nppb.is_determined != 1
+						OR nppb.is_determined IS NULL
+					)
+					AND nppb.kind_cash IS NULL
+			) > 0 THEN FALSE
+			WHEN (
+				SELECT
+					COUNT(*)
+				FROM
+					result_institutions_budget ribu
+				WHERE
+					ribu.result_institution_id IN (
+						SELECT
+							rbi.id
+						FROM
+							results_by_institution rbi
+						WHERE
+							rbi.is_active = 1
+							AND rbi.result_id = r.id
+					)
+					AND ribu.is_active = 1
+					AND (
+						ribu.is_determined != 1
+						OR ribu.is_determined IS NULL
+					)
+					AND ribu.kind_cash IS NULL
+			) > 0 THEN FALSE
+			WHEN (
+				rid.innovation_pdf = 1
+				AND (
+					SELECT 
+						COUNT(*)
+					FROM 
+						evidence e 
+					WHERE
+						e.result_id = r.id
+						AND e.evidence_type_id = 3
+						AND e.is_active = 1
+				) < 3
+			) THEN FALSE
+			WHEN (
+				rid.innovation_pdf = 1
+				AND (
+					SELECT 
+						COUNT(*)
+					FROM 
+						evidence e 
+					WHERE
+						e.result_id = r.id
+						AND e.evidence_type_id = 4
+						AND e.is_active = 1
+				) < 3
+			) THEN FALSE
+			ELSE TRUE
+		END AS validation
 	from
-		\`result\` r
-	left join results_innovations_dev rid on
-		rid.results_id = r.id
-		and rid.is_active > 0
+		result r
+		LEFT JOIN results_innovations_dev rid on rid.results_id = r.id
+		AND rid.is_active > 0
 	WHERE
 		r.id = ?
-		and r.is_active > 0
+		AND r.is_active > 0
 		and r.version_id = ${version};
     `;
     try {
@@ -845,7 +1228,7 @@ export class resultValidationRepository extends Repository<Validation> {
 			else false
 		END as validation
 	from
-		result r
+		\`result\` r
 		left join results_knowledge_product rkp on rkp.results_id = r.id
 	WHERE
 		r.id = ?
