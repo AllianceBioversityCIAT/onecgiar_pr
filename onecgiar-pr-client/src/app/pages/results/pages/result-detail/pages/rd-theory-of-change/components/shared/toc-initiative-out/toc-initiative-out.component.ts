@@ -173,7 +173,6 @@ export class TocInitiativeOutComponent {
 
     this.indicatorView = false;
     this.disabledInput = false;
-    console.log(this.theoryOfChangesServices.body);
     await this.api.resultsSE.Get_indicator(this.initiative.toc_result_id, this.initiative.initiative_id).subscribe(({ response }) => {
       this.theoryOfChangesServices.targetsIndicators = response?.informationIndicator;
       this.theoryOfChangesServices.impactAreasTargets = response?.impactAreas;
