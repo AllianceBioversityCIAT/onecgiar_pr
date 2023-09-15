@@ -1,7 +1,6 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { MenuItem } from 'primeng/api';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
-import { internationalizationData } from '../../../../../../shared/data/internationalizationData';
 import { ResultsListService } from './services/results-list.service';
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
 import { ExportTablesService } from '../../../../../../shared/services/export-tables.service';
