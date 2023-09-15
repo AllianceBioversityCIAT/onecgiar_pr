@@ -3,7 +3,7 @@
     <app-pr-field-header
         label="Identify a diverse group of public/ private experts that need to be engaged in Innovation Package design and Scaling Readiness assessment"></app-pr-field-header>
     <app-alert-status *ngIf="!this.rolesSE.readOnly"
-        description="If you don't find the partner you are looking for, <a class='open_route alert-event-2'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list">
+        description="If you don't find the partner you are looking for, <a class='open_route alert-event-2'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list.">
     </app-alert-status>
     <app-pr-field-header description="{{narrativeActors()}}"></app-pr-field-header>
     <div class="step_divider"></div>
@@ -33,12 +33,15 @@
                     </app-pr-input>
 
                     <app-pr-multi-select [logicalDeletion]="true" label="What expertises will this expert contribute?"
-                        description="To design a realistic innovation package, the engagement of a diverse group of experts is recommended. Please consider the following scaling expertises when developing the invitee list for the innovation packaging and scaling readiness assessment workshop"
+                        description="To design a realistic innovation package, the engagement of a diverse group of experts is recommended. Please consider the following scaling expertises when developing the invitee list for the innovation packaging and scaling readiness assessment workshop."
                         [options]="this.expertisesList" optionLabel="name" optionValue="expertises_id"
                         selectedLabel="Expertises(s) selected" placeholder="Select expertises"
                         selectedOptionLabel="name" [(ngModel)]="this.expert.expertises">
                     </app-pr-multi-select>
 
+                    <div appFeedbackValidation labelText="What expertises will this expert contribute?"
+                        [isComplete]="!!this.expert.expertises?.length">
+                    </div>
                     <!-- <app-pr-multi-select *ngIf="body.geo_scope_id == 2" [options]="this.regionsCountriesSE.regionsList"
                     [description]="selectRegionsDescription" label="Select regions" selectedLabel="Regions(s) selected"
                     selectedOptionLabel="name" optionLabel="name" optionValue="id" placeholder="Select regions"

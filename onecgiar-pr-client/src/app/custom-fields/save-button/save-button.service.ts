@@ -43,7 +43,7 @@ export class SaveButtonService {
     return pipe(
       tap(resp => {
         this.hideSaveSpinner();
-        this.customizedAlertsFeSE.show({ id: 'save-button', title: 'Section saved correctly', description: '', status: 'success', closeIn: 500 });
+        this.customizedAlertsFeSE.show({ id: 'save-button', title: 'Section saved successfully', description: '', status: 'success', closeIn: 500 });
       }),
       catchError(err => {
         this.hideSaveSpinner();
@@ -54,13 +54,13 @@ export class SaveButtonService {
     );
   }
 
-  isSavingPipeNextStep(nextPrevious:string): any {
-    let decrip = `Redirecting to the `+nextPrevious+` step`;
+  isSavingPipeNextStep(nextPrevious: string): any {
+    const decrip = `Redirecting to the ` + nextPrevious + ` step`;
     this.showSaveSpinner();
     return pipe(
       tap(resp => {
         this.hideSaveSpinner();
-        this.customizedAlertsFeSE.show({ id: 'save-button', title: 'Section saved correctly', description: decrip, status: 'success', closeIn: 500 });
+        this.customizedAlertsFeSE.show({ id: 'save-button', title: 'Section saved successfully', description: decrip, status: 'success', closeIn: 500 });
       }),
       catchError(err => {
         this.hideSaveSpinner();

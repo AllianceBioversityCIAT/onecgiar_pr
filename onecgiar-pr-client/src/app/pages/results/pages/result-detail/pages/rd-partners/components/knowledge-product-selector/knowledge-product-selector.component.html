@@ -1,12 +1,11 @@
 <app-alert-status
-    description="Partner organization that you collaborated with to generate this result/who contributed to this result.">
+    description="In this section you can enter partner organizations that you collaborated with to generate this result or who contributed to this result.<br><br>Please note that CGIAR Centers will not be listed here. They will be directly linked to Section 2, Theory of Change.">
 </app-alert-status>
 <app-alert-status
     description="In case some of the metadata fields are incorrect, please get in touch with the library staff of your Center to update them in the repository. Before the end of the reporting period, metadata will be automatically refreshed on this page.">
 </app-alert-status>
 
-<app-alert-status *ngIf="!this.api.rolesSE.readOnly" description="If you don't find the partner you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list
-    ">
+<app-alert-status *ngIf="!this.api.rolesSE.readOnly" description="If you don't find the partner you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list.">
 </app-alert-status>
 
 <div class="local_grid">
@@ -36,8 +35,9 @@
             [(ngModel)]="this.partnersRequestBody.institutionTypeCode" placeholder="Select type">
         </app-pr-select> -->
             <div style="padding-bottom: 10px;">
-                <app-pr-select [options]="this.institutionsSE.institutionsWithoutCentersList" [required]="false" label="Partner"
-                    optionLabel="full_name" optionValue="institutions_id" placeholder="Select Partners"
+                <!-- TODO -->
+                <app-pr-select [options]="this.institutionsSE.institutionsWithoutCentersList" [required]="false"
+                    label="Partner" optionLabel="full_name" optionValue="institutions_id" placeholder="Select Partners"
                     (selectOptionEvent)="institutions_institutions_type_name(partner);this.rdPartnersSE.toggle = this.rdPartnersSE.toggle+1"
                     [(ngModel)]="partner.user_matched_institution.institutions_id">
                 </app-pr-select>

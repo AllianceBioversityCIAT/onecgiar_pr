@@ -1150,6 +1150,7 @@ export class ResultsService {
       return {
         response: {
           result_id: result.id,
+          is_replicated: result.is_replicated,
           initiative_id: initiativa.id,
           result_type_id: result.result_type_id,
           result_type_name: result.result_type_name,

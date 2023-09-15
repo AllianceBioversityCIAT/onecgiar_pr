@@ -10,23 +10,23 @@
             recorded for
             <strong>{{this.api?.dataControlSE?.currentResult?.submitter?this.api?.dataControlSE?.currentResult?.submitter:
                 'INIT-'+this.retrieveModalSE.requester_initiative_id }}
-            </strong> and your initiative was
+            </strong> and your Initiative was
             not added as
             contributor.
         </div>
 
         <app-pr-select class="segment_title_margin" [options]="this.api.dataControlSE.myInitiativesList"
-            *ngIf="!this.api.rolesSE.isAdmin" label="Select initiative" [isStatic]="true" optionLabel="full_name"
+            *ngIf="!this.api.rolesSE.isAdmin" label="Select Initiative" [isStatic]="true" optionLabel="full_name"
             disableOptionsText="<strong class='init-mapped'>Mapped</strong> " optionValue="initiative_id"
-            placeholder="Select initiative" [disableOptions]="[{  
+            placeholder="Select Initiative" [disableOptions]="[{  
                 initiative_id: this.api?.dataControlSE?.currentResult?.submitter_id
               }]" [disabled]="this.api.dataControlSE.inNotifications"
             [(ngModel)]="this.shareRequestModalSE.shareRequestBody.initiative_id" (selectOptionEvent)="modelChange()">
         </app-pr-select>
 
-        <app-pr-select class="segment_title_margin" [options]="this.allInitiatives" label="Select initiative"
+        <app-pr-select class="segment_title_margin" [options]="this.allInitiatives" label="Select Initiative"
             [isStatic]="true" *ngIf="this.api.rolesSE.isAdmin" optionLabel="full_name" optionValue="initiative_id"
-            placeholder="Select initiative" [(ngModel)]="this.shareRequestModalSE.shareRequestBody.initiative_id"
+            placeholder="Select Initiative" [(ngModel)]="this.shareRequestModalSE.shareRequestBody.initiative_id"
             (selectOptionEvent)="modelChange()">
         </app-pr-select>
 

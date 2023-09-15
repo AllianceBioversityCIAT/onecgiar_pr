@@ -55,7 +55,7 @@ import { ResultsTocTargetIndicatorRepository } from './result-toc-result-target-
     ResultsSdgTargetRepository,
     RoleByUserRepository,
     ResultsActionAreaOutcomeRepository,
-    ResultsTocTargetIndicatorRepository
+    ResultsTocTargetIndicatorRepository,
   ],
   exports: [ResultsTocResultRepository],
 })
