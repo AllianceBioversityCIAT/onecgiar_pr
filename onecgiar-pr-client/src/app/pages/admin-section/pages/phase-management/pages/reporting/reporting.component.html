@@ -32,6 +32,7 @@
             [(ngModel)]="phase.phase_year_ts">
           </app-pr-select>
         </td>
+        <td [style.width.px]="180">
           <!--Todo Toc phase-->
 
           <div class="text" *ngIf="!phase.isNew">{{this.getTocPhaseName(phase?.toc_pahse_id)}}</div>
