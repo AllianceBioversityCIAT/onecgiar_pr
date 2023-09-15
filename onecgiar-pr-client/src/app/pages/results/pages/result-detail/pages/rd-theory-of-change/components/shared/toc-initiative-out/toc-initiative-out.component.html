@@ -6,11 +6,15 @@
             [description]="this.headerDescription(initiative.planned_result == false)" [readOnly]="!editable"
             [editable]="editable">
         </app-pr-yes-or-not>
-        <a [href]="'https://toc.loc.codeobia.com/toc/'+this.fullInitiativeToc" target="_blank"
+        <<<<<<< HEAD <a [href]="'https://toc.loc.codeobia.com/toc/'+this.fullInitiativeToc" target="_blank"
             class="toc_button"><span>See
-                ToC</span>
-            <img src="assets/icons/toc_icon.png" alt="">
-        </a>
+                =======
+                <a [href]="this.api.dataControlSE.tocUrl+this.fullInitiativeToc" target="_blank"
+                    class="toc_button"><span>See
+                        >>>>>>> staging
+                        ToC</span>
+                    <img src="assets/icons/toc_icon.png" alt="">
+                </a>
 
     </div>
 
@@ -51,8 +55,8 @@
     </div>
     <hr class="divider-20">
 </div>
-<div *ngIf="indicatorView" class="in-construction">
-    <img src="assets/work-in-progress.png" alt="" class="img-construction">
+<div *ngIf="indicatorView">
+
     <app-alert-status description="The selected ToC element does not have any indicators associated with it."
         *ngIf="!this.theoryOfChangesServices.body[indexYesorNo].targetsIndicators.length"></app-alert-status>
     <app-pr-field-header label="{{narrativeTypeResult()}}" [required]="false"
@@ -73,4 +77,3 @@
                 [sdgRequid]="true"></app-sdg-targets>
         </div>
     </div>
-</div>

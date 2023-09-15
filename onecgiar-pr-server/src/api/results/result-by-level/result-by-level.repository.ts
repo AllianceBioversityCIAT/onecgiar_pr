@@ -36,7 +36,8 @@ export class ResultByLevelRepository extends Repository<ResultByLevel> {
     	rt.name,
     	rt.description 
     from result_by_level rbl  
-    	inner join result_type rt on rt.id = rbl.result_type_id;
+    	inner join result_type rt on rt.id = rbl.result_type_id
+                                and rt.is_active > 0;
     `;
     try {
       const resultByLevel: getResultTypeLevelDto[] = await this.query(
@@ -59,6 +60,8 @@ export class ResultByLevelRepository extends Repository<ResultByLevel> {
     	rbl.result_level_id,
     	rbl.result_type_id 
     from result_by_level rbl 
+    inner join result_type rt on rt.id = rbl.result_type_id
+                                and rt.is_active > 0
     where rbl.result_level_id = ?
     	and rbl.result_type_id = ?;
     `;

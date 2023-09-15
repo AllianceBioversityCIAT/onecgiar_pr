@@ -29,4 +29,11 @@ export class ResultType {
 
   @OneToMany(() => ResultQuestion, (rq) => rq.obj_result_type)
   obj_result_type: ResultQuestion[];
+  @Column({
+    name: 'is_active',
+    type: 'boolean',
+    nullable: true,
+    default: true,
+  })
+  isActive!: boolean;
 }

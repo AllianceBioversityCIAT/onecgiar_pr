@@ -66,6 +66,15 @@ export class resultValidationRepository extends Repository<Validation> {
 				and r.climate_change_tag_level_id <> ''
 			)
 			and (
+				case 
+					when r.is_replicated = false then true
+				else case 
+						when r.is_discontinued = false then true
+					else case 
+						when (select sum(if(rido.investment_discontinued_option_id = 6, if(rido.description <> '' and rido.description is not null, 1, 0),1)) - count(rido.results_investment_discontinued_option_id) as datas from results_investment_discontinued_options rido where rido.is_active > 0 and rido.result_id = r.id ) = 0 then true
+					else false end end end
+			)
+			and (
 				r.nutrition_tag_level_id is not null
 				and r.nutrition_tag_level_id <> ''
 			)
