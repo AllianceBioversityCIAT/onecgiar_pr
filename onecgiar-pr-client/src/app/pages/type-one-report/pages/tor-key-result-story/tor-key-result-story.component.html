@@ -4,13 +4,13 @@
         Key result story
     </div>
 
-    <app-no-data-text title="There is no information for this initiative."
+    <app-no-data-text title="There is no information for this Initiative."
         *ngIf="!this.tablesList.length"></app-no-data-text>
 
     <div *ngFor="let table of this.tablesList">
         <app-simple-table-with-clipboard *ngIf="this.table.data" distribution="left" [data]="table.data"
             [header]="table.header" tableTitle="Key Result Story info"></app-simple-table-with-clipboard>
-        <app-no-data-text title="There is no information for this initiative."
+        <app-no-data-text title="There is no information for this Initiative."
             *ngIf="!this.table.data"></app-no-data-text>
         <br><br><br>
     </div>

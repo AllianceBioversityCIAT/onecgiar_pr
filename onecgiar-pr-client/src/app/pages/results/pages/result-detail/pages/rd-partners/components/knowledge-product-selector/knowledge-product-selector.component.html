@@ -35,8 +35,9 @@
             [(ngModel)]="this.partnersRequestBody.institutionTypeCode" placeholder="Select type">
         </app-pr-select> -->
             <div style="padding-bottom: 10px;">
-                <app-pr-select [options]="this.institutionsSE.institutionsWithoutCentersList" [required]="false" label="Partner"
-                    optionLabel="full_name" optionValue="institutions_id" placeholder="Select Partners"
+                <!-- TODO -->
+                <app-pr-select [options]="this.institutionsSE.institutionsWithoutCentersList" [required]="false"
+                    label="Partner" optionLabel="full_name" optionValue="institutions_id" placeholder="Select Partners"
                     (selectOptionEvent)="institutions_institutions_type_name(partner);this.rdPartnersSE.toggle = this.rdPartnersSE.toggle+1"
                     [(ngModel)]="partner.user_matched_institution.institutions_id">
                 </app-pr-select>

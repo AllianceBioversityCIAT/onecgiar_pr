@@ -9,7 +9,7 @@
             <div class="filter_title">Initiatives (s)</div>
             <div class="chips">
                 <div class="chip" [ngClass]="{'chip_selected': everyDeselected}" (click)="deselectInits()">
-                    All initiatives
+                    All Initiatives
                 </div>
                 <div *ngFor="let option of this.api.dataControlSE.myInitiativesList" class="chip"
                     [ngClass]="{'chip_selected': option.selected}" (click)="this.onSelectChip(option)">

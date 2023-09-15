@@ -53,7 +53,7 @@ import { ResultsActionAreaOutcomeRepository } from './result-toc-action-area.rep
     ResultsTocImpactAreaTargetRepository,
     ResultsSdgTargetRepository,
     RoleByUserRepository,
-    ResultsActionAreaOutcomeRepository
+    ResultsActionAreaOutcomeRepository,
   ],
   exports: [ResultsTocResultRepository],
 })

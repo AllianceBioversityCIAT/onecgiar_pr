@@ -18,6 +18,7 @@ export class DataControlService {
   fieldFeedbackList = [];
   showShareRequest = false;
   chagePhaseModal = false;
+  updateResultModal = false;
   inNotifications = false;
   currentNotification = null;
   green_checks = null;
@@ -26,6 +27,7 @@ export class DataControlService {
   resultPhaseList = [];
   showMassivePhaseShiftModal = false;
   massivePhaseShiftIsRunning = false;
+  tocUrl = environment?.tocUrl;
 
   constructor(private titleService: Title) {}
   validateBody(body: any) {

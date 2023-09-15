@@ -9,7 +9,7 @@
     <div *ngIf="getConsumed">
         <app-pr-select class="segment_title_margin"
             [options]="this.theoryOfChangeBody.contributing_and_primary_initiative" label="Primary submitter"
-            optionLabel="full_name" optionValue="id" placeholder="Select initiative" description="Select an initiative"
+            optionLabel="full_name" optionValue="id" placeholder="Select Initiative" description="Select an Initiative"
             [(ngModel)]="this.theoryOfChangeBody.result_toc_result.initiative_id"
             [fieldDisabled]="!!(this.theoryOfChangeBody.contributing_and_primary_initiative?.length == 1 && this.theoryOfChangeBody.result_toc_result.initiative_id)">
         </app-pr-select>
@@ -18,7 +18,7 @@
             Since
             this result
             has not been shared and
-            accepted by other initiatives, it is not possible to change the primary submitter.</div>
+            accepted by other Initiatives, it is not possible to change the primary submitter.</div>
 
     </div>
 
@@ -30,7 +30,7 @@
     [disableOptions]="this.theoryOfChangeBody?.pending_contributing_initiatives"
      optionLabel="full_name" optionValue="id"
     (selectOptionEvent)="onSelectContributingInitiative()" [required]="false" selectedOptionLabel="full_name"
-    [(ngModel)]="contributingInitiativeNew" [confirmDeletion]="true" placeholder="Select initiative(s)
+    [(ngModel)]="contributingInitiativeNew" [confirmDeletion]="true" placeholder="Select Initiative(s)
     ">
     </app-pr-multi-select>
 
@@ -40,7 +40,7 @@
         [readOnly]="true"
         (selectOptionEvent)="onSelectContributingInitiative()" [required]="false"
         (removeOptionEvent)="onRemoveContributingInitiative($event)" selectedOptionLabel="full_name"
-        [(ngModel)]="this.theoryOfChangeBody.contributing_initiatives" [confirmDeletion]="true" placeholder="Select initiative(s)
+        [(ngModel)]="this.theoryOfChangeBody.contributing_initiatives" [confirmDeletion]="true" placeholder="Select Initiative(s)
         ">
     </app-pr-multi-select>
 
