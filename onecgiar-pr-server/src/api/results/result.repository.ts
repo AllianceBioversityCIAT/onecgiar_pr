@@ -58,7 +58,8 @@ export class ResultRepository
           r2.has_countries,
           r2.geographic_scope_id,
           r2.lead_contact_person,
-          r2.result_code
+          r2.result_code,
+          true as is_replicated
           from \`result\` r2 WHERE r2.id = ? and r2.is_active > 0`;
         const response = await (<Promise<Result[]>>(
           this.query(queryData, [
@@ -100,6 +101,7 @@ export class ResultRepository
           ,geographic_scope_id
           ,lead_contact_person
           ,result_code
+          ,is_replicated
           ) select
           r2.description,
           r2.is_active,
@@ -124,7 +126,8 @@ export class ResultRepository
           r2.has_countries,
           r2.geographic_scope_id,
           r2.lead_contact_person,
-          r2.result_code
+          r2.result_code,
+          true as is_replicated
           from \`result\` r2 WHERE r2.id = ? and r2.is_active > 0`;
         const response = await (<Promise<{ insertId }>>(
           this.query(queryData, [
@@ -162,7 +165,8 @@ export class ResultRepository
           r2.has_countries,
           r2.geographic_scope_id,
           r2.lead_contact_person,
-          r2.result_code
+          r2.result_code,
+          r2.is_replicated
           from \`result\` r2 WHERE r2.id = ?
         `;
         const temp = await (<Promise<Result[]>>(
@@ -961,7 +965,8 @@ WHERE
     v.id as version_id,
     v.phase_name,
     v.phase_year,
-    r.is_discontinued
+    r.is_discontinued,
+    r.is_replicated
 FROM
     result r
     inner join results_by_inititiative rbi ON rbi.result_id = r.id 
