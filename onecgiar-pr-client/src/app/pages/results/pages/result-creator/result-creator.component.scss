@@ -13,6 +13,7 @@
   .mqap_sync_title {
     display: grid;
     grid-template-columns: 1fr auto;
+    align-items: center;
     gap: 20px;
 
     .sync_button {

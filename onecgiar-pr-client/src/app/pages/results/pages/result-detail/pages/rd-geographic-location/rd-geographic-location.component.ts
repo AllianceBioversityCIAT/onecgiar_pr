@@ -34,7 +34,6 @@ export class RdGeographicLocationComponent {
     }
   ];
   ngOnInit(): void {
-    this.showAlerts();
     this.getSectionInformation();
   }
   geographic_focus_description(id) {
@@ -66,26 +65,6 @@ export class RdGeographicLocationComponent {
     this.api.resultsSE.PATCH_resyncKnowledgeProducts().subscribe(resp => {
       this.getSectionInformation();
     });
-  }
-  showAlerts() {
-    this.api.alertsFs.show({
-      status: 'success',
-      title: 'sd',
-      description: `Select the geographical locations where this result is taking place. Please be as specific as possible and do not forget to include the locations coming from any Bilateral contributing to this result.`,
-      querySelector: '#alert',
-      position: 'beforeend'
-    });
-
-    if (this.api.dataControlSE.isKnowledgeProduct) {
-      //this should be executed after the page initialization
-      this.api.alertsFs.show({
-        status: 'success',
-        title: 'sd',
-        description: `In case some of the metadata fields are incorrect, please get in touch with the library staff of your Center to update them in the repository. Before the end of the reporting period, metadata will be automatically refreshed on this page.`,
-        querySelector: '#alert',
-        position: 'beforeend'
-      });
-    }
   }
   thereAnyRegionText() {
     return `The list of regions below follows the <a href='${this.UNM49}' class="open_route" target='_blank'>UN (M.49)<a> standard`;

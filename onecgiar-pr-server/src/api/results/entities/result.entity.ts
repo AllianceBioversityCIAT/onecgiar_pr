@@ -314,6 +314,14 @@ export class Result {
   })
   is_discontinued: boolean;
 
+  @Column({
+    name: 'is_replicated',
+    nullable: true,
+    type: 'boolean',
+    default: false,
+  })
+  is_replicated!: boolean;
+
   // helpers??
   initiative_id!: number;
 

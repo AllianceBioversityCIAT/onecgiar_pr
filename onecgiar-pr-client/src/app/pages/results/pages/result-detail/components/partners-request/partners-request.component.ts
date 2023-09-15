@@ -56,7 +56,7 @@ export class PartnersRequestComponent {
     this.partnersRequestBody.externalUserComments = `
     User info : (Id: ${id}) - ${user_name} - ${email} - ${this.getInitiativeAndRole()},
     Result: [Role: ${initiativeFinded?.description}] - (Code:  ${this.ipsrDataControlSE.inIpsr ? this.ipsrDataControlSE.detailData?.result_code : this.api.resultsSE?.currentResultCode}) - ${this.ipsrDataControlSE.inIpsr ? this.ipsrDataControlSE.detailData?.title : this.api.dataControlSE?.currentResult?.title},
-    Leading initiative: (Id: ${initiative_official_code}) - ${initiative_short_name} - ${initiative_name},
+    Leading Initiative: (Id: ${initiative_official_code}) - ${initiative_short_name} - ${initiative_name},
     App role: ${application?.description},
     Digital tool: PRMS Reporting Tool,
     Section: ${this.api.dataControlSE.currentSectionName}
