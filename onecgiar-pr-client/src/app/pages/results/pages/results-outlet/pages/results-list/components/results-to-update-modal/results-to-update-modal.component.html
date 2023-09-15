@@ -72,7 +72,7 @@
 
         <div class="total"
             *ngIf="(this.api.dataControlSE.resultsList | resultsToUpdateFilter : text_to_search)?.length">
-            Total: {{ (this.api.dataControlSE.resultsList | resultsToUpdateFilter : text_to_search)?.length }} / {{
+            Total: {{ (this.api.dataControlSE.resultsList | resultsToUpdateFilter : text_to_search)?.length }}/{{
             this.api.dataControlSE.resultsList?.length }}</div>
         <div class="noDataText"
             *ngIf="!(this.api.dataControlSE.resultsList | resultsToUpdateFilter : text_to_search)?.length">

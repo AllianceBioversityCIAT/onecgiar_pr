@@ -133,7 +133,7 @@
     </div>
 </div>
 
-<app-pr-yes-or-not label="Is this result featured in a Key Result Story for the Reporting year?"
+<app-pr-yes-or-not label="Is this result featured in a Key Result Story for the reporting year?"
     (ngModelChange)="onChangeKrs()" [(ngModel)]="this.ipsrGeneralInformationBody.is_krs"></app-pr-yes-or-not>
 <app-pr-input *ngIf="this.ipsrGeneralInformationBody.is_krs" placeholder="e.g. https://www.cgiar.org/example"
     type="text" [required]="false" [(ngModel)]="this.ipsrGeneralInformationBody.krs_url">

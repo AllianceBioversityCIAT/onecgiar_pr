@@ -15,10 +15,10 @@
             <div class="component_fields two_elements_grid">
                 <div>
                     <div class="two_elements_grid">
-                        <app-pr-input placeholder="Write some..." label="First name" type="text"
+                        <app-pr-input placeholder="Enter text" label="First name" type="text"
                             [(ngModel)]="this.expert.first_name">
                         </app-pr-input>
-                        <app-pr-input placeholder="Write some..." label="Last name" type="text"
+                        <app-pr-input placeholder="Enter text" label="Last name" type="text"
                             [(ngModel)]="this.expert.last_name">
                         </app-pr-input>
                     </div>
@@ -28,7 +28,7 @@
                     </app-pr-select>
                 </div>
                 <div>
-                    <app-pr-input placeholder="Write some..." label="Email" type="text" [required]="false"
+                    <app-pr-input placeholder="Enter text" label="Email" type="text" [required]="false"
                         [(ngModel)]="this.expert.email">
                     </app-pr-input>
 
@@ -68,7 +68,7 @@
         [(ngModel)]="this.body.result_ip.experts_is_diverse">
     </app-pr-radio-button>
     <br>
-    <app-pr-textarea *ngIf="this.body.result_ip.experts_is_diverse === false" placeholder="Write some..." type="text"
+    <app-pr-textarea *ngIf="this.body.result_ip.experts_is_diverse === false" placeholder="Enter text" type="text"
         [(ngModel)]="this.body.result_ip.is_not_diverse_justification"></app-pr-textarea>
 
     <!-- <div class="step_divider"></div> -->
