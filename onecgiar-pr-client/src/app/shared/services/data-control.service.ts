@@ -27,6 +27,7 @@ export class DataControlService {
   resultPhaseList = [];
   showMassivePhaseShiftModal = false;
   massivePhaseShiftIsRunning = false;
+  tocUrl = environment?.tocUrl;
 
   constructor(private titleService: Title) {}
   validateBody(body: any) {
