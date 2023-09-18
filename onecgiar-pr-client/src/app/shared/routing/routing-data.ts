@@ -51,10 +51,10 @@ export const resultsOutletRouting: PrRoute[] = [
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'results-list' }
 ];
 export const rdResultTypesPages: PrRoute[] = [
-  { prName: 'CapDev info', path: 'cap-dev-info', prHide: 5, underConstruction: false, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-result-types-pages/cap-dev-info/cap-dev-info.module').then(m => m.CapDevInfoModule) },
-  { prName: 'Innovation Dev info', path: 'innovation-dev-info', prHide: 7, underConstruction: true, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-result-types-pages/innovation-dev-info/innovation-dev-info.module').then(m => m.InnovationDevInfoModule) },
+  { prName: 'CapSharing info', path: 'cap-dev-info', prHide: 5, underConstruction: false, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-result-types-pages/cap-dev-info/cap-dev-info.module').then(m => m.CapDevInfoModule) },
+  { prName: 'Innovation Dev info', path: 'innovation-dev-info', prHide: 7, underConstruction: false, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-result-types-pages/innovation-dev-info/innovation-dev-info.module').then(m => m.InnovationDevInfoModule) },
   { prName: 'Innovation use info', path: 'innovation-use-info', prHide: 2, underConstruction: false, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-result-types-pages/innovation-use-info/innovation-use-info.module').then(m => m.InnovationUseInfoModule) },
-  { prName: 'Knowledge Product info', path: 'knowledge-product-info', prHide: 6, underConstruction: false, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-result-types-pages/knowledge-product-info/knowledge-product-info.module').then(m => m.KnowledgeProductInfoModule) },
+  { prName: 'Knowledge product info', path: 'knowledge-product-info', prHide: 6, underConstruction: false, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-result-types-pages/knowledge-product-info/knowledge-product-info.module').then(m => m.KnowledgeProductInfoModule) },
   { prName: 'Policy change info', path: 'policy-change1-info', prHide: 1, underConstruction: false, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-result-types-pages/policy-change-info/policy-change-info.module').then(m => m.PolicyChangeInfoModule) }
 ];
 

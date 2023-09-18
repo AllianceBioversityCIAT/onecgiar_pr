@@ -11,8 +11,7 @@
 
     <div style="position: relative; z-index: 1;">
         <div *ngIf="this.api.dataControlSE.isKnowledgeProduct">
-            <app-alert-status *ngIf="this.api.dataControlSE.isKnowledgeProduct"
-                description="This section displays CGIAR Center partners as they appear in Section 2, Theory of Change. Should you identify any inconsistencies, please update Section 2">
+            <app-alert-status *ngIf="this.api.dataControlSE.isKnowledgeProduct" [description]="alertStatusMessage">
             </app-alert-status>
             <div class="column_title">
                 Contributing Center(s)
