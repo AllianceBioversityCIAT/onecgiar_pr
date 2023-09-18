@@ -11,10 +11,8 @@ import { BreadcrumbModule } from '../../../../shared/components/breadcrumb/bread
 import { NoEditContainerComponent } from './components/no-edit-container/no-edit-container.component';
 import { ButtonModule } from 'primeng/button';
 import { ResultTitleComponent } from './components/result-title/result-title.component';
-import { SubmissionModalComponent } from './components/submission-modal/submission-modal.component';
 import { SubmissionModalModule } from './components/submission-modal/submission-modal.module';
 import { UnsubmitModalModule } from './components/unsubmit-modal/unsubmit-modal.module';
-import { PdfActionsComponent } from './components/pdf-actions/pdf-actions.component';
 import { PdfActionsModule } from './components/pdf-actions/pdf-actions.module';
 import { ToastModule } from 'primeng/toast';
 import { PhaseSwitcherModule } from '../../../../shared/components/phase-switcher/phase-switcher.module';
