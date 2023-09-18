@@ -745,23 +745,167 @@ export class resultValidationRepository extends Repository<Validation> {
 	SELECT
 		'innovation-use-info' as section_name,
 		CASE
-			when (riu.male_using is not null
-			and riu.male_using <> '')
-			and 
-		(riu.female_using is not null
-			and riu.female_using <> '')
-		then TRUE
-			else false
-		END as validation
-	from
-		\`result\` r
-	left join results_innovations_use riu on
-		riu.results_id = r.id
-		and riu.is_active > 0
+			WHEN (
+				(
+					SELECT
+						COUNT(*)
+					FROM
+						result_actors ra
+					WHERE
+						ra.result_id = r.id
+						AND ra.is_active = 1
+						AND (
+							(
+								ra.sex_and_age_disaggregation = 0
+								AND (
+									(
+										ra.actor_type_id != 5
+										AND ra.women IS NOT NULL
+										AND ra.women_youth IS NOT NULL
+										AND ra.men IS NOT NULL
+										AND ra.men_youth IS NOT NULL
+									)
+									OR (
+										ra.actor_type_id = 5
+										AND (
+											ra.other_actor_type IS NOT NULL
+											OR TRIM(ra.other_actor_type) <> ''
+										)
+									)
+								)
+							)
+							OR (
+								ra.sex_and_age_disaggregation = 1
+								OR (
+									ra.actor_type_id = 5
+									AND (
+										ra.other_actor_type IS NOT NULL
+										AND TRIM(ra.other_actor_type) <> ''
+										AND ra.how_many IS NOT NULL
+									)
+								)
+							)
+						)
+				) = 0
+				AND (
+					SELECT
+						COUNT(*)
+					FROM
+						results_by_institution_type rbit
+					WHERE
+						rbit.results_id = r.id
+						AND rbit.is_active = true
+						AND rbit.institution_roles_id = 5
+						AND (
+							(
+								rbit.institution_types_id != 78
+								AND(
+									rbit.institution_roles_id IS NOT NULL
+									AND rbit.institution_types_id IS NOT NULL
+								)
+							)
+							OR (
+								rbit.institution_types_id = 78
+								AND (
+									rbit.other_institution IS NOT NULL
+									OR rbit.other_institution != ''
+									AND rbit.institution_roles_id IS NOT NULL
+									AND rbit.institution_types_id IS NOT NULL
+								)
+							)
+						)
+				) = 0
+				AND (
+					SELECT
+						COUNT(*)
+					FROM
+						result_ip_measure rim
+					WHERE
+						rim.result_id = r.id
+						AND rim.is_active = TRUE
+						AND rim.unit_of_measure IS NOT NULL
+				) = 0
+			) THEN FALSE
+			WHEN (
+				SELECT
+					COUNT(*)
+				FROM
+					result_actors ra
+				WHERE
+					ra.result_id = r.id
+					AND ra.is_active = 1
+					AND (
+						(
+							ra.sex_and_age_disaggregation = 0
+							AND (
+								ra.women IS NULL
+								AND ra.women IS NULL
+								AND ra.women_youth IS NULL
+								AND ra.men IS NULL
+								AND ra.men_youth IS NULL
+								OR (
+									ra.actor_type_id = 5
+									AND (
+										ra.other_actor_type IS NULL
+										OR TRIM(ra.other_actor_type) = ''
+									)
+								)
+							)
+						)
+						OR (
+							ra.sex_and_age_disaggregation = 1
+							OR (
+								ra.actor_type_id = 5
+								AND (
+									ra.other_actor_type IS NULL
+									OR TRIM(ra.other_actor_type) = ''
+								)
+							)
+						)
+					)
+			) > 0 THEN FALSE
+			WHEN (
+				SELECT
+					COUNT(*)
+				FROM
+					results_by_institution_type rbit
+				WHERE
+					rbit.results_id = r.id
+					AND rbit.is_active = true
+					AND rbit.institution_roles_id = 5
+					AND (
+						rbit.institution_roles_id IS NULL
+						OR rbit.institution_types_id IS NULL
+						OR (
+							rbit.institution_types_id = 78
+							AND (
+								rbit.other_institution IS NULL
+								OR rbit.other_institution = ''
+							)
+						)
+					)
+			) > 0 THEN FALSE
+			WHEN (
+				SELECT
+					COUNT(*)
+				FROM
+					result_ip_measure rim
+				WHERE
+					rim.result_id = r.id
+					AND rim.is_active = TRUE
+					AND (
+						rim.unit_of_measure IS NULL
+						OR rim.quantity IS NULL
+					)
+			) > 0 THEN FALSE
+			ELSE TRUE
+		END AS validation
+	FROM
+		result r
 	WHERE
 		r.id = ?
-		and r.is_active > 0
-		and r.version_id = ${version};
+		AND r.is_active > 0
+		AND r.version_id = ${version};
     `;
     try {
       const shareResultRequest: GetValidationSectionDto[] =
