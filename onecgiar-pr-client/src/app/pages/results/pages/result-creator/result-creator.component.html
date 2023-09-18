@@ -3,6 +3,12 @@
     <app-pr-button text="Back to results" icon="arrow_back" [reverse]="true" [showBackground]="false" optionLabel="name"
       optionValue="code"></app-pr-button>
   </a>
+
+  <div style="width: 100%;">
+    <app-alert-global-info className="section_container local_container"
+      inlineStyles="width: 100%"></app-alert-global-info>
+  </div>
+
   <div class="local_container section_container">
     <div class="greeting"
       [innerHTML]="naratives.greeting(this.api.authSE.localStorageUser?.user_name , this.api.dataControlSE.myInitiativesListText(this.api.dataControlSE.myInitiativesList), this.api.rolesSE.isAdmin)">
