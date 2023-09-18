@@ -65,8 +65,8 @@ import { AppModuleIdEnum } from 'src/shared/constants/role-type.enum';
 import { InstitutionRoleEnum } from './results_by_institutions/entities/institution_role.enum';
 import { ResultsKnowledgeProductFairScoreRepository } from './results-knowledge-products/repositories/results-knowledge-product-fair-scores.repository';
 import { ResultsInvestmentDiscontinuedOptionRepository } from './results-investment-discontinued-options/results-investment-discontinued-options.repository';
-import { ResultsCenterRepository } from './results-centers/results-centers.repository';
 import { ResultInitiativeBudgetRepository } from './result_budget/repositories/result_initiative_budget.repository';
+import { ResultsCenterRepository } from './results-centers/results-centers.repository';
 
 @Injectable()
 export class ResultsService {
@@ -109,8 +109,8 @@ export class ResultsService {
     private readonly _versioningService: VersioningService,
     private readonly _returnResponse: ReturnResponse,
     private readonly _resultsInvestmentDiscontinuedOptionRepository: ResultsInvestmentDiscontinuedOptionRepository,
-    private readonly _resultsCenterRepository: ResultsCenterRepository,
     private readonly _resultInitiativeBudgetRepository: ResultInitiativeBudgetRepository,
+    private readonly _resultsCenterRepository: ResultsCenterRepository,
   ) {}
 
   /**
@@ -610,7 +610,7 @@ export class ResultsService {
           false,
           [InstitutionRoleEnum.ACTOR],
         );
-      let saveInstitutions: ResultsByInstitution[] = [];
+      const saveInstitutions: ResultsByInstitution[] = [];
       for (
         let index = 0;
         index < resultGeneralInformation.institutions.length;
@@ -646,7 +646,7 @@ export class ResultsService {
           true,
           user.id,
         );
-      let saveInstitutionsType: ResultsByInstitutionType[] = [];
+      const saveInstitutionsType: ResultsByInstitutionType[] = [];
       for (
         let index = 0;
         index < resultGeneralInformation.institutions_type.length;
@@ -838,7 +838,7 @@ export class ResultsService {
     return this._elasticService.findForElasticSearch(documentName, id);
   }
 
-  async findAllSimplified(id?: string, allowDeleted: boolean = false) {
+  async findAllSimplified(id?: string, allowDeleted = false) {
     try {
       const result = await this._customResultRepository.resultsForElasticSearch(
         id,
@@ -1056,7 +1056,7 @@ export class ResultsService {
 
       await this._resultLegacyRepository.save(legacyResult);
 
-      let saveInstitutions: ResultsByInstitution[] = [];
+      const saveInstitutions: ResultsByInstitution[] = [];
       for (let index = 0; index < partner.length; index++) {
         const isInstitutions =
           await this._resultByIntitutionsRepository.getResultByInstitutionExists(
@@ -1243,7 +1243,7 @@ export class ResultsService {
     }
   }
 
-  async getGeoScope(resultId: number, version: number = 1) {
+  async getGeoScope(resultId: number, version = 1) {
     try {
       const result = await this._resultRepository.getResultById(resultId);
 
@@ -1255,9 +1255,9 @@ export class ResultsService {
         };
       }
 
-      let regions: (ResultRegion | string)[] =
+      const regions: (ResultRegion | string)[] =
         await this._resultRegionRepository.getResultRegionByResultId(resultId);
-      let contries: (ResultCountry | string)[] =
+      const contries: (ResultCountry | string)[] =
         await this._resultCountryRepository.getResultCountriesByResultId(
           resultId,
         );
@@ -1272,7 +1272,7 @@ export class ResultsService {
         //regions = knowledgeProduct.cgspace_regions?.split('; ') ?? [];
       }
 
-      let scope: number = 0;
+      let scope = 0;
       if (result.geographic_scope_id == 1 || result.geographic_scope_id == 2) {
         scope = result.geographic_scope_id;
       } else if (

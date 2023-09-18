@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { RetrieveModalService } from '../../../../../result-detail/components/retrieve-modal/retrieve-modal.service';
 
@@ -7,7 +7,7 @@ import { RetrieveModalService } from '../../../../../result-detail/components/re
   templateUrl: './results-to-update-modal.component.html',
   styleUrls: ['./results-to-update-modal.component.scss']
 })
-export class ResultsToUpdateModalComponent implements OnInit {
+export class ResultsToUpdateModalComponent {
   text_to_search = null;
   columnOrder = [
     // { title: 'Result code', attr: 'result_code' },
@@ -21,12 +21,6 @@ export class ResultsToUpdateModalComponent implements OnInit {
     { title: 'Created by	', attr: 'full_name' }
   ];
   constructor(public api: ApiService, private retrieveModalSE: RetrieveModalService) {}
-
-  ngOnInit(): void {
-    setTimeout(() => {
-      console.log(this.api.dataControlSE.resultsList);
-    }, 2000);
-  }
 
   onPressAction(result) {
     //(result);

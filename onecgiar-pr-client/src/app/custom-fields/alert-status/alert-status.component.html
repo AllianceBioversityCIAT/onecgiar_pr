@@ -1,4 +1,4 @@
-<div class="pr_alert">
+<div class="pr_alert" [style]="inlineStyles">
     <div class="line {{status}}"></div>
     <div class="text" [innerHTML]="this.description"></div>
     <div class="black_point" *ngIf="status == 'warning'"></div>

@@ -1,7 +1,7 @@
 <app-detail-section-title sectionName="Contributors" title="Theory of Change"></app-detail-section-title>
 <div class="detail_container">
     <app-alert-status
-        description="Initiatives and non-pooled projects that you collaborated with to generated this result/contributed to this result.">
+        description="Initiatives and non-pooled projects that you collaborated with to generate this result/contributed to this result.">
     </app-alert-status>
     <!-- <app-pr-input label="Primary submitter" [required]="false" [readOnly]="true" [(ngModel)]="psub">
     </app-pr-input> -->
@@ -27,17 +27,15 @@
 
 
     <app-pr-multi-select [options]="this.contributingInitiativesList" label="Contributing Initiatives"
-    [disableOptions]="this.theoryOfChangeBody?.pending_contributing_initiatives"
-     optionLabel="full_name" optionValue="id"
-    (selectOptionEvent)="onSelectContributingInitiative()" [required]="false" selectedOptionLabel="full_name"
-    [(ngModel)]="contributingInitiativeNew" [confirmDeletion]="true" placeholder="Select Initiative(s)
+        [disableOptions]="this.theoryOfChangeBody?.pending_contributing_initiatives" optionLabel="full_name"
+        optionValue="id" (selectOptionEvent)="onSelectContributingInitiative()" [required]="false"
+        selectedOptionLabel="full_name" [(ngModel)]="contributingInitiativeNew" [confirmDeletion]="true" placeholder="Select Initiative(s)
     ">
     </app-pr-multi-select>
 
-    <app-pr-multi-select [options]="this.contributingInitiativesList" 
+    <app-pr-multi-select [options]="this.contributingInitiativesList"
         [disableOptions]="this.theoryOfChangeBody?.pending_contributing_initiatives"
-        selectedLabel="Contributing Initiatives" optionLabel="full_name" optionValue="id"
-        [readOnly]="true"
+        selectedLabel="Contributing Initiatives" optionLabel="full_name" optionValue="id" [readOnly]="true"
         (selectOptionEvent)="onSelectContributingInitiative()" [required]="false"
         (removeOptionEvent)="onRemoveContributingInitiative($event)" selectedOptionLabel="full_name"
         [(ngModel)]="this.theoryOfChangeBody.contributing_initiatives" [confirmDeletion]="true" placeholder="Select Initiative(s)
@@ -121,7 +119,7 @@
         [disableOptions]="this.disabledCenters">
     </app-pr-multi-select>
     <div class="medal_info">
-        Please select the primary center by clicking the medal icon <i
+        Please select the primary Center by clicking the medal icon <i
             class="material-icons-round">workspace_premium</i>
     </div>
     <div class="medal_selector selected_container">
@@ -141,7 +139,8 @@
         *ngIf="getConsumed && this.theoryOfChangeBody?.result_toc_result?.initiative_id || getConsumed && this.theoryOfChangeBody?.impacts">
         <div *ngSwitchCase="1">
             <app-toc-impact-section [contributing_initiatives]="this.theoryOfChangeBody.contributing_initiatives"
-                [impacts]="this.theoryOfChangeBody.impactsTarge" [sdg]="this.theoryOfChangeBody.sdgTargets"></app-toc-impact-section>
+                [impacts]="this.theoryOfChangeBody.impactsTarge"
+                [sdg]="this.theoryOfChangeBody.sdgTargets"></app-toc-impact-section>
         </div>
         <div *ngSwitchCase="2">
             <app-toc-action-area-outcome-section [result_toc_result]="this.theoryOfChangeBody.result_toc_result"

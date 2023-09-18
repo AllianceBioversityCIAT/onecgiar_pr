@@ -89,7 +89,6 @@ export class ShareRequestModalComponent {
     const body = { ...this.api.dataControlSE.currentNotification, ...this.shareRequestModalSE.shareRequestBody, request_status_id: 2, bodyNewTheoryOfChanges: this.theoryOfChangesServices.body };
     //(this.api.resultsSE.ipsrDataControlSE.inIpsr);
     this.requesting = true;
-    //(body);
 
     this.api.resultsSE.PATCH_updateRequest(body).subscribe(
       resp => {
