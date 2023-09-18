@@ -7,23 +7,35 @@
 
   .tabs {
     display: flex;
+    border-bottom: 3px solid #556add36;
+    width: max-content;
 
     .active {
       background-color: var(--pr-color-primary) !important;
       color: white !important;
-      font-weight: 600;
+
+      &:hover {
+        background-color: #556addea !important;
+
+      }
     }
 
     .tab {
+      font-weight: 600;
       background-color: var(--pr-color-medium-2);
-      color: var(--pr-color-medium);
+      color: var(--pr-color-primary);
       text-decoration: none;
-      padding: 5px 100px;
+      padding: 8px 100px;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: background-color 0.3s ease-in-out;
       gap: 20px;
+      transition: all ease-in-out 0.2s;
+
+      &:hover {
+        background-color: #1b1b1b15;
+
+      }
     }
   }
 
