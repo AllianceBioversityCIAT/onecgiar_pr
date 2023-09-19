@@ -3,7 +3,7 @@
     <div>
         <div class="link">
             <app-pr-input label="Link" [(ngModel)]="this.evidence.link" placeholder="Add link" type="link"
-                [disabled]=" this.dataControlSE.isKnowledgeProduct"></app-pr-input>
+                [disabled]=" this.dataControlSE.isKnowledgeProduct" [required]="!isOptional"></app-pr-input>
         </div>
         <app-pr-field-header label="Please indicate for which markers this evidence is related to" [required]="false"
             *ngIf="!isSuppInfo"></app-pr-field-header>
