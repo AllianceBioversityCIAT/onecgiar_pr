@@ -164,6 +164,9 @@ export class InnovationUseFormComponent {
     If the innovation does not target specific groups of actors or people, then please specify the expected innovation use at organizational level or other use below. The numbers should reflect the expected innovation use by end of 2024.
     </li>
     <li>
+    Individuals, organizations or networks operating within or beyond the system the Initiative or intervention aims to influence and whose actions can advance or impede the Initiative’s aims.
+    </li>
+    <li>
     The numbers for ‘youth' and 'non-youth' equal the total number for 'Women' or 'Men’.
     </li>
     </ul>
