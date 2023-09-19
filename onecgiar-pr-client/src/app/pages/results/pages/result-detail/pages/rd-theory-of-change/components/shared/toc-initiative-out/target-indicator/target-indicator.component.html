@@ -171,7 +171,7 @@
                         
                     </div>
                 </div>
-                <div *ngIf="initiative.number_result_type ==  initiative?.result.result_type_id">
+                <div *ngIf="initiative.number_result_type ==  initiative?.result.result_type_id || initiative.type_value == 'custom'">
                     <app-alert-status status="warning" [description]="'PRMS can only identify planned targets as numerical values. If your result framework has defined a target value with a unit of measurement other than numbers, PRMS will prompt you to indicate the contribution to the quantitative indicator using a text box.'"></app-alert-status>
                 </div>
                 <div *ngIf="initiative.type_value != 'custom' && initiative.number_result_type !=  initiative?.result.result_type_id">
