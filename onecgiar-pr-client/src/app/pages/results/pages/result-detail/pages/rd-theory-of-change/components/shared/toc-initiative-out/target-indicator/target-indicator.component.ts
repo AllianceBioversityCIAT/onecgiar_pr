@@ -76,8 +76,13 @@ export class TargetIndicatorComponent implements OnInit {
 
   descriptionWarningYear(item, itemTwo) {
     const year = new Date(item).getFullYear();
+    let booleanYear = false;
+    if(year == itemTwo){
+      booleanYear = true;
+    }
+    
     return {
-      is_alert: year == itemTwo,
+      is_alert: booleanYear,
       description: 'You are reporting against an indicator that had a target in a following year. If you feel the TOC Result Framework is outdated please edit it. If the result framework is correct and you are reporting this result in advance, please go ahead.'
     };
   }
