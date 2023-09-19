@@ -252,7 +252,7 @@ export class RdGeneralInformationComponent {
     this.api.alertsFs.show({
       status: 'success',
       title: 'sd',
-      description: `As a score of 2 has been selected, you are required to provide evidence of the environment and/or biodiversity tag in the <a class="open_route" href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultCode}/evidences" target='_blank'>Evidence</a> section`,
+      description: `As a score of 2 has been selected, you are required to provide evidence of the Environment tag in the <a class="open_route" href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultCode}/evidences" target='_blank'>Evidence</a> section`,
       querySelector: '#environment_tag_alert',
       position: 'beforeend'
     });

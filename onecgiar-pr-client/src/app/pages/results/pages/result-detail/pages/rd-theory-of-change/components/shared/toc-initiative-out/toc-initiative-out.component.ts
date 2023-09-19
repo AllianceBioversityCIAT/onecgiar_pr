@@ -48,14 +48,14 @@ export class TocInitiativeOutComponent {
   }
 
   getDescription(official_code, short_name) {
-    const tocText = `<strong>${official_code} ${short_name}</strong> - Are you able to match your reported result to a planned result in this Initiative's Theory of Change?`;
+    const tocText = `<strong>${official_code} ${short_name}</strong> - Does this result match a planned result in your Theory of Change?`;
     const contributorsText = `Is this result planned in the <strong>${official_code} ${short_name}</strong> ToC?`;
     return this.isIpsr ? contributorsText : tocText;
   }
 
   headerDescription(allText) {
-    let text = '<ul> <li>Specify to which Work Package or End-of-Initiative Outcomes the scaling of the core innovation is expected to contribute to by 2024 in the specific geolocation</li>';
-    if (allText) text += '<li>Please select the End of Initiative (EOI)-Outcome that most closely matches this result. You will have time during the reflect moment to update your ToC</li> ';
+    let text = '<ul> <li>Specify to which Work Package or End of Initiative outcomes the scaling of the core innovation is expected to contribute to by 2024 in the specific geolocation</li>';
+    if (allText) text += '<li>Which End of Initiative outcome does it link to most closely?. You will have time during the reflect moment to update your ToC</li> ';
     text += '</ul>';
     return text;
   }
