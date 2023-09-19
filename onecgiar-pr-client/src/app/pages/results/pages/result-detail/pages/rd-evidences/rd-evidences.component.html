@@ -19,9 +19,9 @@
     </app-add-button>
 
     <br><br>
-    <app-pr-field-header *ngIf="!this.api.dataControlSE.isKnowledgeProduct" label="Supplementary information"
-        [required]="false"></app-pr-field-header>
-    <app-alert-status *ngIf="!this.api.dataControlSE.isKnowledgeProduct" description="<ul>
+    <!-- <app-pr-field-header *ngIf="!this.api.dataControlSE.isKnowledgeProduct" label="Supplementary information"
+        [required]="false"></app-pr-field-header> -->
+    <!-- <app-alert-status *ngIf="!this.api.dataControlSE.isKnowledgeProduct" description="<ul>
         <li>Submit a maximum of 2 links for supplementary information. This is not QAed.</li></ul> ">
     </app-alert-status>
     <div class="evidences">
@@ -34,7 +34,7 @@
         title="No links added"></app-no-data-text>
     <app-add-button name="Add link" (clickEvent)="addLink()"
         *ngIf="this.evidencesBody?.supplementary?.length < 2 && !this.api.dataControlSE.isKnowledgeProduct && !this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status">
-    </app-add-button>
+    </app-add-button>-->
     <div appFeedbackValidation labelText="Empty or repeated link" [isComplete]="!this.validateCGSpaceLinks">
     </div>
 </div>

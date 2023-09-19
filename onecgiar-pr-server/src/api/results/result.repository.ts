@@ -58,7 +58,8 @@ export class ResultRepository
           r2.has_countries,
           r2.geographic_scope_id,
           r2.lead_contact_person,
-          r2.result_code
+          r2.result_code,
+          true as is_replicated
           from \`result\` r2 WHERE r2.id = ? and r2.is_active > 0`;
         const response = await (<Promise<Result[]>>(
           this.query(queryData, [
@@ -100,6 +101,7 @@ export class ResultRepository
           ,geographic_scope_id
           ,lead_contact_person
           ,result_code
+          ,is_replicated
           ) select
           r2.description,
           r2.is_active,
@@ -124,7 +126,8 @@ export class ResultRepository
           r2.has_countries,
           r2.geographic_scope_id,
           r2.lead_contact_person,
-          r2.result_code
+          r2.result_code,
+          true as is_replicated
           from \`result\` r2 WHERE r2.id = ? and r2.is_active > 0`;
         const response = await (<Promise<{ insertId }>>(
           this.query(queryData, [
@@ -162,7 +165,8 @@ export class ResultRepository
           r2.has_countries,
           r2.geographic_scope_id,
           r2.lead_contact_person,
-          r2.result_code
+          r2.result_code,
+          r2.is_replicated
           from \`result\` r2 WHERE r2.id = ?
         `;
         const temp = await (<Promise<Result[]>>(
@@ -254,7 +258,6 @@ export class ResultRepository
   }
 
   /**
-   * !Revisar asignacion de de parametros sql
    * @param id
    * @param allowDeleted
    * @param version
@@ -272,6 +275,7 @@ export class ResultRepository
       select
         concat(r.id, '') as id,
         r.result_code,
+        r.version_id,
         r.title,
         r.description,
         concat(ci.official_code, '-', ci.short_name) as crp,
@@ -300,7 +304,8 @@ export class ResultRepository
         and rc.is_active > 0
       left join clarisa_countries cc on
         cc.id = rc.country_id
-        ${!allowDeleted ? 'where r.is_active > 0' : ''}
+      where r.result_type_id not in (10,11) 
+        ${!allowDeleted ? 'and r.is_active > 0' : ''}
       group by
         r.id,
         r.title,
@@ -314,6 +319,7 @@ export class ResultRepository
       select
         lr.legacy_id as id,
         lr.legacy_id as result_code,
+        null as version_id,
         lr.title,
         lr.description,
         lr.crp,
@@ -523,7 +529,8 @@ WHERE
     u.last_name as create_last_name,
     r.version_id,
     v.phase_name,
-    v.phase_year
+    v.phase_year,
+    v.status as phase_status
 FROM
     \`result\` r
     INNER JOIN result_type rt ON rt.id = r.result_type_id
@@ -958,7 +965,8 @@ WHERE
     v.id as version_id,
     v.phase_name,
     v.phase_year,
-    r.is_discontinued
+    r.is_discontinued,
+    r.is_replicated
 FROM
     result r
     inner join results_by_inititiative rbi ON rbi.result_id = r.id 
@@ -1053,7 +1061,7 @@ WHERE
 
   async getTypesOfResultByCodes(
     resultCodes: number[],
-    version: number = 1,
+    version: number = 18,
   ): Promise<ResultTypeDto[]> {
     const queryData = `
     select
@@ -1905,7 +1913,7 @@ left join clarisa_countries cc3
         LEFT JOIN Integration_information.work_packages wp ON wp.id = tr.work_packages_id
         LEFT JOIN Integration_information.toc_results_indicators tri ON tr.id = tri.toc_results_id AND tri.toc_result_indicator_id = rtri.toc_results_indicator_id COLLATE utf8mb3_general_ci
     WHERE
-        r.result_code ${resultCodes.length ? `in (${resultCodes})`: '= 0' }
+        r.result_code ${resultCodes.length ? `in (${resultCodes})` : '= 0'}
         AND rbi.is_active = 1
         AND rtr.is_active = 1
         AND rtr.planned_result = 1

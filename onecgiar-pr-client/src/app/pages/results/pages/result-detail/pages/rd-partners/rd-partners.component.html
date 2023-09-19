@@ -11,8 +11,7 @@
 
     <div style="position: relative; z-index: 1;">
         <div *ngIf="this.api.dataControlSE.isKnowledgeProduct">
-            <app-alert-status *ngIf="this.api.dataControlSE.isKnowledgeProduct"
-                description="Guideline pending (this is only a placeholder to help seeing the separation between the two partner sections)">
+            <app-alert-status *ngIf="this.api.dataControlSE.isKnowledgeProduct" [description]="alertStatusMessage">
             </app-alert-status>
             <div class="column_title">
                 Contributing Center(s)

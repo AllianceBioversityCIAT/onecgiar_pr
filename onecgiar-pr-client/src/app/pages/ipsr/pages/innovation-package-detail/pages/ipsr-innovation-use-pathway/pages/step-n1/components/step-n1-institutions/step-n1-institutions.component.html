@@ -2,7 +2,7 @@
     description="Which government, public or private sector organization is expected to scale the innovation in the selected geoscope?"></app-pr-field-header>
 
 <app-alert-status *ngIf="!this.rolesSE.readOnly"
-    description="If you don't find the partner you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list">
+    description="If you don't find the partner you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list.">
 </app-alert-status>
 <div appFeedbackValidation labelText="Partners" [isComplete]="!!body?.institutions?.length">
 </div>
@@ -10,7 +10,7 @@
     <div class="dropdown-50p">
         <app-pr-multi-select [options]="this.institutionsSE.institutionsList" label="Partners"
             selectedOptionLabel="institutions_name" optionLabel="full_name" optionValue="institutions_id"
-            [(ngModel)]="body.institutions" placeholder="Select Partners"
+            [(ngModel)]="body.institutions" placeholder="Select partner"
             (selectOptionEvent)="onSelectPartner($event);toggle = toggle+1">
         </app-pr-multi-select>
         <div class="partners_selected_header" [style]="this.rolesSE.readOnly?'margin-top: -15px':''">

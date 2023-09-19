@@ -126,7 +126,7 @@ export class ComplementaryInnovationComponent implements OnInit {
   }
 
   async onSavePreviuosNext(descrip) {
-    console.log(descrip);
+    //(descrip);
     if (this.api.rolesSE.readOnly) {
       if (descrip == 'next') {
         this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-3']);

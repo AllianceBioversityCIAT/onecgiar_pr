@@ -1,17 +1,16 @@
-<app-alert-status *ngIf="!dataControlSE.isKnowledgeProduct"
-    description="Partner organization that you collaborated with or are currently collaborating with to generate this result">
+<app-alert-status *ngIf="!dataControlSE.isKnowledgeProduct" [description]="alertStatusMessage">
 </app-alert-status>
 <app-alert-status *ngIf="dataControlSE.isKnowledgeProduct"
-    description="Guideline pending (this is only a placeholder to help seeing the separation between the two partner sections)">
+    description="In this section you can include additional partners. If you do not find the partner in the dropdown menu, you can <a class='open_route alert-event'>request</a> to have it added to the list. Once approved, it may take up to an hour for the partner to appear in the CLARISA institutions list">
 </app-alert-status>
 <div class="column_title" *ngIf="dataControlSE.isKnowledgeProduct">
-    Additional Partners
+    Additional partners
 </div>
 <div [ngSwitch]="this.rolesSE.readOnly">
     <div *ngSwitchCase="true">{{this.rdPartnersSE.partnersBody.no_applicable_partner?'Marked as not applicable':''}}
     </div>
     <div *ngSwitchCase="false">
-        <app-pr-checkbox label="Mark this option if this section is not applicable"
+        <app-pr-checkbox label="This section is not applicable."
             [(ngModel)]="this.rdPartnersSE.partnersBody.no_applicable_partner">
             <!--(ngModelChange)="this.rdPartnersSE.cleanBody()"-->
         </app-pr-checkbox>
@@ -20,17 +19,17 @@
 
 <app-alert-status [hidden]="this.rdPartnersSE.partnersBody.no_applicable_partner"
     *ngIf="!this.rolesSE.readOnly && !dataControlSE.isKnowledgeProduct"
-    description="If you don't find the partner you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list">
+    description="In this section you can include additional partners. If you do not find the partner in the dropdown menu, you can <a class='open_route alert-event'>request</a> to have it added to the list. Once approved, it may take up to an hour for the partner to appear in the CLARISA institutions list.">
 </app-alert-status>
 
-
-
 <div class="auto_fit_container fadeIn" *ngIf="this.rdPartnersSE.partnersBody.no_applicable_partner !== true">
-    <div>
-        <app-pr-multi-select [options]="this.institutionsSE.institutionsWithoutCentersList" [required]="false" label="Partners"
-            selectedOptionLabel="institutions_name" optionLabel="full_name" optionValue="institutions_id"
-            [(ngModel)]="this.rdPartnersSE.partnersBody.institutions" placeholder="Select Partners"
-            (selectOptionEvent)="this.rdPartnersSE.toggle = this.rdPartnersSE.toggle+1">
+    <div (click)="getDisableOptions()">
+        <!-- TODO -->
+        <app-pr-multi-select [options]="this.institutionsSE.institutionsWithoutCentersList" [required]="false"
+            label="Partners" selectedOptionLabel="institutions_name" optionLabel="full_name"
+            optionValue="institutions_id" [(ngModel)]="this.rdPartnersSE.partnersBody.institutions"
+            [disableOptions]="this.disableOptions" placeholder="Select partner"
+            (selectOptionEvent)="this.rdPartnersSE.toggle = this.rdPartnersSE.toggle+1;">
         </app-pr-multi-select>
         <div class="partners_selected_header" [style]="this.rolesSE.readOnly?'margin-top: -15px':''">
             <app-pr-field-header
@@ -53,15 +52,22 @@
                     <div class="delivery"
                         *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelection(option?.deliveries,1) : true"
                         [ngClass]="{'active': this.rdPartnersSE.validateDeliverySelection(option?.deliveries,1)}"
-                        (click)="this.rdPartnersSE.onSelectDelivery(option,1)">Scaling</div>
+                        (click)="this.rdPartnersSE.onSelectDelivery(option,1)"
+                        pTooltip="Organizations or entities that CGIAR collaborates with to advance the uptake and use of innovations at scale."
+                        tooltipPosition="top">Scaling</div>
                     <div class="delivery"
                         *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelection(option?.deliveries,2) : true"
                         [ngClass]="{'active': this.rdPartnersSE.validateDeliverySelection(option?.deliveries,2)}"
-                        (click)="this.rdPartnersSE.onSelectDelivery(option,2)">Demand</div>
+                        (click)="this.rdPartnersSE.onSelectDelivery(option,2)"
+                        pTooltip="Organizations or entities that have (expressed) an explicit or implicit demand for an innovation, change or who aspire to a specific goal or impact to which CGIAR can contribute."
+                        tooltipPosition="top">Demand
+                    </div>
                     <div class="delivery"
                         *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelection(option?.deliveries,3) : true"
                         [ngClass]="{'active': this.rdPartnersSE.validateDeliverySelection(option?.deliveries,3)}"
-                        (click)="this.rdPartnersSE.onSelectDelivery(option,3)">Innovation</div>
+                        (click)="this.rdPartnersSE.onSelectDelivery(option,3)"
+                        pTooltip="Organizations or entities that CGIAR collaborates and co-invests with to develop, improve the readiness of, or apply innovations to contribute to impact at scale."
+                        tooltipPosition="top">Innovation</div>
                     <div class="delivery"
                         *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelection(option?.deliveries,4) : true"
                         [ngClass]="{'active': this.rdPartnersSE.validateDeliverySelection(option?.deliveries,4)}"
@@ -75,7 +81,7 @@
     </div>
 
     <div>
-        <app-pr-field-header label="Partners types"
+        <app-pr-field-header label="Partner types"
             [description]="'Total partner(s) type ('+this.rdPartnersSE.partnersBody.institutions?.length+'):'"
             [required]="false">
         </app-pr-field-header>

@@ -15,14 +15,14 @@
         [options]="this.api.dataControlSE.myInitiativesList | filterInitWithRoleCoordAndLead" optionLabel="full_name"
         [isStatic]="true" optionValue="id" (selectOptionEvent)="onSelectInit()" [required]="false"
         (removeOptionEvent)="onRemoveinit($event)" selectedOptionLabel="full_name" [showSelectAll]="true"
-        [(ngModel)]="this.initiativesSelected" placeholder="Select initiative(s)">
+        [(ngModel)]="this.initiativesSelected" placeholder="Select Initiative(s)">
     </app-pr-multi-select>
 
     <app-pr-multi-select *ngIf="this.api.rolesSE.isAdmin" label="Initiatives" selectedLabel="Initiatives selected"
         [isStatic]="true" [options]="this.allInitiatives" optionLabel="full_name" optionValue="id"
         [showSelectAll]="true" (selectOptionEvent)="onSelectInit()" [required]="false"
         (removeOptionEvent)="onRemoveinit($event)" selectedOptionLabel="full_name"
-        [(ngModel)]="this.initiativesSelected" placeholder="Select initiative(s)">
+        [(ngModel)]="this.initiativesSelected" placeholder="Select Initiative(s)">
     </app-pr-multi-select>
 
     <br>

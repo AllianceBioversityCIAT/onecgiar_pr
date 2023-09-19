@@ -1,5 +1,4 @@
-.filter_title {
-}
+.filter_title {}
 
 .filters {
   display: flex;
@@ -35,14 +34,7 @@
     }
   }
 
-  .submitter {
-    width: 50%;
-
-    .chip_selected {
-      background-color: var(--pr-color-secondary) !important;
-    }
-  }
-
+  .submitter,
   .reported_year {
     width: 50%;
 
@@ -53,6 +45,9 @@
 
   .chip_selected {
     color: white !important;
+  }
+
+  .phase_name .chip_selected {
     background-color: var(--pr-color-secondary) !important;
   }
 

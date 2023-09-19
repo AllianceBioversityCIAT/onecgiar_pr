@@ -56,7 +56,7 @@ export class TorKeyResultStoryComponent {
     let data = [
       { category: 'Result title', value: '', id: null },
       { category: 'Primary submitter', value: '' },
-      { category: 'Contributing initiatives', value: '' },
+      { category: 'Contributing Initiatives', value: '' },
       { category: 'Contributing centers', value: '' },
       { category: 'Contributing external partner(s)', value: '' },
       { category: 'Geographic location', value: '' },
@@ -72,12 +72,12 @@ export class TorKeyResultStoryComponent {
 
     const is_impact = Boolean(Number(table.is_impact));
 
-    const noDataText = '<div class="no-data-text-format">This result is not a impact reported in the PRMS Reporting tool</div>';
+    const noDataText = '<div class="no-data-text-format">This result is not a impact reported in the PRMS Reporting Tool</div>';
 
     data[0].value = table.result_title || '<div class="no-data-text-format">There are not result title data</div>';
     data[0].id = table.result_code;
     data[1].value = table.primary_submitter || '<div class="no-data-text-format">There are not primary submitter data</div>';
-    data[2].value = table.contributing_initiative || '<div class="no-data-text-format">There are not contributing initiatives data</div>';
+    data[2].value = table.contributing_initiative || '<div class="no-data-text-format">There are not contributing Initiatives data</div>';
     data[3].value = table.contributing_center || '<div class="no-data-text-format">There are not contributing centers data</div>';
     data[4].value = table.contribution_external_partner || '<div class="no-data-text-format">There are not contributing external partner(s) data</div>';
     const countriesText = `<strong>Countries:</strong><br> ${table.countries} <br>`;

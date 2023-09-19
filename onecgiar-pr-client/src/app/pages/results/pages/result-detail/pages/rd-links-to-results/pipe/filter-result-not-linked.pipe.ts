@@ -38,12 +38,12 @@ export class FilterResultNotLinkedPipe implements PipeTransform {
     results.map(result => {
       result.results = [result];
     });
-    // console.log(results);
+    // //(results);
     return results;
   }
 
   combineRepeatedResults(results) {
-    // console.log('combineRepeatedResults');
+    // //('combineRepeatedResults');
     const resultMap: Record<number, any> = {};
 
     results.forEach(result => {
@@ -62,7 +62,7 @@ export class FilterResultNotLinkedPipe implements PipeTransform {
     });
 
     const transformedData = Object.values(resultMap);
-    // console.log(transformedData);
+    // //(transformedData);
 
     return transformedData;
 

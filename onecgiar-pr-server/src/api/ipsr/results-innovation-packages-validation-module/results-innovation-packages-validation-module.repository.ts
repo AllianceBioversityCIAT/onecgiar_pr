@@ -39,18 +39,6 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                 OR r.climate_change_tag_level_id = 0
             )
             OR (
-                r.nutrition_tag_level_id IS NULL
-                OR r.nutrition_tag_level_id = 0
-            )
-            OR (
-                r.environmental_biodiversity_tag_level_id IS NULL
-                OR r.environmental_biodiversity_tag_level_id = 0
-            )
-            OR (
-                r.poverty_tag_level_id IS NULL
-                OR r.poverty_tag_level_id = 0
-            )
-            OR (
                 r.gender_tag_level_id = 3
                 AND (
                     SELECT
@@ -75,47 +63,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                         AND e.youth_related
                         AND e.is_active = 1
                 ) = 0
-            )
-            OR (
-                r.nutrition_tag_level_id = 3
-                AND (
-                    SELECT
-                        COUNT(*)
-                    FROM
-                        evidence e
-                    WHERE
-                        e.result_id = r.id
-                        AND e.nutrition_related
-                        AND e.is_active = 1
-                ) = 0
-            )
-            OR (
-                r.environmental_biodiversity_tag_level_id = 3
-                AND (
-                    SELECT
-                        COUNT(*)
-                    FROM
-                        evidence e
-                    WHERE
-                        e.result_id = r.id
-                        AND e.environmental_biodiversity_related
-                        AND e.is_active = 1
-                ) = 0
-            )
-            OR (
-                r.poverty_tag_level_id = 3
-                AND (
-                    SELECT
-                        COUNT(*)
-                    FROM
-                        evidence e
-                    WHERE
-                        e.result_id = r.id
-                        AND e.poverty_related
-                        AND e.is_active = 1
-                ) = 0
-            )
-            THEN FALSE
+            ) THEN FALSE
             ELSE TRUE
         END AS validation
     FROM
@@ -363,7 +311,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                     FROM
                         result_ip_measure rim
                     WHERE
-                        rim.result_ip_id = r.id
+                        rim.result_id = r.id
                         AND rim.is_active = TRUE
                         AND rim.unit_of_measure IS NOT NULL
                         AND rim.quantity IS NOT NULL
@@ -434,7 +382,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                 FROM
                     result_ip_measure rim
                 WHERE
-                    rim.result_ip_id = r.id
+                    rim.result_id = r.id
                     AND rim.is_active = TRUE
                     AND (
                         rim.unit_of_measure IS NULL
@@ -696,20 +644,30 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                 )
             ) THEN FALSE
             WHEN (
-                rbip.readiness_level_evidence_based IS NULL
-                OR rbip.readiness_level_evidence_based = ''
+                (
+                    rbip.readiness_level_evidence_based IS NULL
+                    OR rbip.readiness_level_evidence_based = ''
+                )
+                AND (
+                    rbip.use_level_evidence_based IS NULL
+                    OR rbip.use_level_evidence_based = ''
+                )
             )
             OR (
-                rbip.use_level_evidence_based IS NULL
-                OR rbip.use_level_evidence_based = ''
-            )
-            OR (
-                rbip.readinees_evidence_link IS NULL
-                OR rbip.readinees_evidence_link = ''
-            )
-            OR (
-                rbip.use_evidence_link IS NULL
-                OR rbip.use_evidence_link = ''
+                (
+                    rbip.readiness_level_evidence_based != 11
+                    AND (
+                        rbip.readinees_evidence_link IS NULL
+                        OR rbip.readinees_evidence_link = ''
+                    )
+                )
+                OR (
+                    rbip.use_level_evidence_based != 1
+                    AND (
+                        rbip.use_evidence_link IS NULL
+                        OR rbip.use_evidence_link = ''
+                    )
+                )
             ) THEN FALSE
             WHEN (
                 (
@@ -895,14 +853,22 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                     AND rbip2.ipsr_role_id = 2
                     AND rbip2.result_innovation_package_id = r.id
                     AND (
-                        rbip2.readiness_level_evidence_based IS NULL
-                        OR rbip2.readiness_level_evidence_based = ''
-                        OR rbip2.use_level_evidence_based IS NULL
-                        OR rbip2.use_level_evidence_based = ''
-                        OR rbip2.readinees_evidence_link IS NULL
-                        OR rbip2.readinees_evidence_link = ''
-                        OR rbip2.use_evidence_link IS NULL
-                        OR rbip2.use_evidence_link = ''
+                        (
+                            rbip2.readiness_level_evidence_based IS NULL
+                            OR rbip2.readiness_level_evidence_based <> 11
+                            AND (
+                                rbip2.readinees_evidence_link IS NULL
+                                OR rbip2.readinees_evidence_link = ''
+                            )
+                        )
+                        OR (
+                            rbip2.use_level_evidence_based IS NULL
+                            OR rbip2.use_level_evidence_based <> 1
+                            AND(
+                                rbip2.use_evidence_link IS NULL
+                                OR rbip2.use_evidence_link = ''
+                            )
+                        )
                     )
             ) > 0 THEN FALSE
             ELSE TRUE
