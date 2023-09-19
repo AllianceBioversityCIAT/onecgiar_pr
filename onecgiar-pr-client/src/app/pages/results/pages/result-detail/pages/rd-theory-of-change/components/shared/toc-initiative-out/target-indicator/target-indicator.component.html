@@ -97,7 +97,7 @@
                     <app-alert-status status="warning" [description]="descriptionWarning(initiative?.result.name, initiative.type)"></app-alert-status>
                 </div>
 
-                <div *ngIf="descriptionWarningYear(item?.target_date, initiative.result.phase_year).is_alert == false && initiative.number_result_type ==  initiative?.result.result_type_id">
+                <div *ngIf="descriptionWarningYear(item?.target_date, initiative.result.phase_year).is_alert == false && (initiative.number_result_type ==  initiative?.result.result_type_id || initiative.type_value == 'custom')">
                     <app-alert-status status="warning" [description]="descriptionWarningYear(item?.target_date, initiative.result).description"></app-alert-status>
                 </div>
 
