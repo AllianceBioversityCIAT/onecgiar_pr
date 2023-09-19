@@ -800,6 +800,7 @@ export class resultValidationRepository extends Repository<Validation> {
 						)
 						OR (
 							ra.sex_and_age_disaggregation = 1
+							AND ra.how_many IS NULL
 							OR (
 								ra.actor_type_id = 5
 								AND (
