@@ -162,14 +162,10 @@ export class resultValidationRepository extends Repository<Validation> {
 				WHERE rtr.results_id = r.id
 				AND rtr.is_active > 0
 			) = 0
-		)`
-          : ``
-      }
-			${
-        resultLevel != 1
-          ? `AND (
+		)
+		AND (
 			(
-				SELECT IF(rtr.toc_result_id IS NOT NULL OR rtr.action_area_outcome_id IS NOT NULL, 1, 0)
+				SELECT IF(rtr.toc_result_id IS NOT NULL, 1, 0)
 				FROM results_toc_result rtr
 				WHERE rtr.initiative_id IN (rbi.inititiative_id)
 				AND rtr.results_id = r.id
@@ -180,7 +176,7 @@ export class resultValidationRepository extends Repository<Validation> {
 			(
 				IFNULL(
 					(
-						SELECT SUM(IF(rtr.toc_result_id IS NULL OR rtr.action_area_outcome_id IS NULL, 1, 0))
+						SELECT SUM(IF(rtr.toc_result_id IS NULL, 1, 0))
 						FROM results_toc_result rtr
 						WHERE rtr.initiative_id NOT IN (rbi.inititiative_id)
 						AND rtr.results_id = r.id
@@ -196,7 +192,11 @@ export class resultValidationRepository extends Repository<Validation> {
 				AND rbi.is_active > 0
 			)
 		) = 0`
-          : `
+          : ``
+      }
+			${
+        resultLevel == 1
+          ? `
 					AND (
 						(SELECT COUNT(DISTINCT cgt.impactAreaId)
 						FROM results_impact_area_target riat 
@@ -214,6 +214,7 @@ export class resultValidationRepository extends Repository<Validation> {
 						AND riai.is_active > 0) < 5
 					)
 				`
+          : ``
       }
 	  AND  (
 		(
@@ -231,20 +232,20 @@ export class resultValidationRepository extends Repository<Validation> {
 	) 
 			${
         resultLevel == 3 || resultLevel == 4
-          ? `AND (select count(*)
+          ? `AND IF((select count(*)
 		  from  ${env.DB_TOC}.toc_results tr
 			  join ${env.DB_TOC}.toc_results_indicators tri on tri.toc_results_id = tr.id
 			  where id = rtr1.toc_result_id and tr.phase = (select v.toc_pahse_id
 												from result r2
 												join version v on r2.version_id = v.id
-												where r2.id = r.id)) = (select SUM(IF(rit.indicator_question IS NOT NULL AND rit.contributing_indicator <> '' AND rit.contributing_indicator IS NOT NULL, 1, 0)) 
+												where r2.id = r.id)) > 0, IF((select SUM(IF(rit.indicator_question IS NOT NULL AND rit.contributing_indicator <> '' AND rit.contributing_indicator IS NOT NULL, 1, 0)) 
 												from results_toc_result rtr 
 												left join results_toc_result_indicators rtri on rtri.results_toc_results_id = rtr.result_toc_result_id 
 																							and rtri.is_active > 0
 												left join result_indicators_targets rit on rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id 
 																							and rit.is_active > 0
 												where rtr.results_id = r.id
-													and rtr.is_active > 0)
+													and rtr.is_active > 0) > 0, TRUE, FALSE), TRUE )
 			AND IF(rtr1.is_sdg_action_impact, IF(
 				(SELECT COUNT(*) 
 				FROM result_toc_impact_area_target rtiat 
@@ -267,6 +268,14 @@ export class resultValidationRepository extends Repository<Validation> {
 		  FROM result_sdg_targets rst 
 		  WHERE rst.result_id = r.id
 			  AND rst.is_active > 0) > 0
+		${
+      resultLevel == 2
+        ? `AND (SELECT COUNT(*) 
+		FROM result_toc_action_area rtaa  
+		WHERE rtaa.result_toc_result_id = rtr1.result_toc_result_id  
+		AND rtaa.is_active > 0) > 0`
+        : ``
+    }
 		AND 
 			(SELECT COUNT(*) 
 			FROM results_impact_area_target riat 
@@ -281,6 +290,7 @@ export class resultValidationRepository extends Repository<Validation> {
 		\`result\` r
 	INNER JOIN results_by_inititiative rbi ON rbi.result_id = r.id AND rbi.initiative_role_id = 1
 	LEFT JOIN results_toc_result rtr1 ON rtr1.results_id = r.id
+	  		AND rtr1.is_active > 0
 	WHERE
 		r.id = ?
 	AND
