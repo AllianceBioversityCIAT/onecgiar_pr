@@ -117,7 +117,6 @@ export class ReportingComponent implements OnInit {
   get_resultYears() {
     this.resultsSE.GET_resultYears().subscribe(({ response }) => {
       this.resultYearsList = response;
-      console.log(response);
     });
   }
 
@@ -144,10 +143,7 @@ export class ReportingComponent implements OnInit {
   }
 
   savePhase(phase) {
-    console.log('savePhase');
-    console.log(phase);
     this.updateMainVariables(phase);
-    console.log(phase);
     this.resultsSE.PATCH_updatePhase(phase.id, phase).subscribe(
       () => {
         this.getAllPhases();
@@ -161,11 +157,8 @@ export class ReportingComponent implements OnInit {
   }
 
   createPhase(phase) {
-    console.log('createPhase');
     phase.app_module_id = 1;
-    console.log(phase);
     this.updateMainVariables(phase);
-    console.log(phase);
 
     this.resultsSE.POST_createPhase(phase).subscribe(
       () => {
@@ -182,8 +175,6 @@ export class ReportingComponent implements OnInit {
 
   deletePhase({ id }) {
     this.customizedAlertsFeSE.show({ id: 'manage-phase', title: 'Delete phase', description: 'Are you sure you want to delete the current phase?', status: 'warning', confirmText: 'Yes, delete' }, () => {
-      console.log('DELETE_updatePhase');
-      console.log(id);
       this.resultsSE.DELETE_updatePhase(id).subscribe(
         () => this.getAllPhases(),
         err => {
