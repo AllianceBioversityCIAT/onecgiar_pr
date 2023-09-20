@@ -117,5 +117,9 @@ export class PlatformReportModule {
         }"`;
       },
     );
+
+    Handlebars.registerHelper('safeString', function(text) {
+      return new Handlebars.SafeString(text);
+    });
   }
 }
