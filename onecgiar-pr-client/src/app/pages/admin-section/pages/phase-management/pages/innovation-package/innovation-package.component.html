@@ -34,6 +34,15 @@
           </app-pr-select>
         </td>
         <td>
+          <!--Todo Reporting phase  -->
+          <div class="text" *ngIf="!phase.isNew">{{phase?.reporting_phase}}</div>
+          <!--Todo Reporting phases list not show data in the dropdown-->
+          <app-pr-select *ngIf="phase.isNew" class="segment_title_margin" [options]="this.reportingPhasesList"
+            optionLabel="reporting phase" optionValue="phase_name" placeholder="select phase"
+            [(ngModel)]="phase.reporting_phase_ts">
+          </app-pr-select>
+        </td>
+        <td>
           <!--Todo Toc phase-->
 
           <div class="text" *ngIf="!phase.isNew">{{this.getTocPhaseName(phase?.toc_pahse_id)}}</div>
