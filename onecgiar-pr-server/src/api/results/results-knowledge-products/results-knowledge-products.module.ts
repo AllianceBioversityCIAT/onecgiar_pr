@@ -36,6 +36,8 @@ import { VersioningModule } from '../../versioning/versioning.module';
 import { ClarisaCountriesRepository } from '../../../clarisa/clarisa-countries/ClarisaCountries.repository';
 import { ResultsKnowledgeProductFairScoreRepository } from './repositories/results-knowledge-product-fair-scores.repository';
 import { FairFieldRepository } from './repositories/fair-fields.repository';
+import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
+import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
 
 @Module({
   imports: [HttpModule, VersioningModule],
@@ -70,6 +72,8 @@ import { FairFieldRepository } from './repositories/fair-fields.repository';
     ResultsKnowledgeProductFairScoreRepository,
     FairFieldRepository,
     ReturnResponse,
+    ResultsCenterRepository,
+    ClarisaInstitutionsRepository,
   ],
   exports: [
     ResultsKnowledgeProductsRepository,
@@ -98,6 +102,8 @@ import { FairFieldRepository } from './repositories/fair-fields.repository';
     ClarisaCountriesRepository,
     ResultsKnowledgeProductFairScoreRepository,
     FairFieldRepository,
+    ResultsCenterRepository,
+    ClarisaInstitutionsRepository,
   ],
 })
 export class ResultsKnowledgeProductsModule {}

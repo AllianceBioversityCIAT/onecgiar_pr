@@ -12,15 +12,24 @@ export class RdAnnualUpdatingComponent implements OnInit {
   discontinuedOptions = [];
   options = [
     {
-      name: 'Investment was continued',
+      name: 'Innovation development is active/investment was continued',
       value: false
     },
     {
-      name: 'Investment was discontinued, because',
+      name: 'Innovation development is inactive/investment was discontinued, because:',
       value: true
     }
   ];
   constructor(public api: ApiService) {}
 
   ngOnInit(): void {}
+
+  // Create a function that determines if this.generalInfoBody.discontinued_options some value is true if this.generalInfoBody.is_discontinued is true
+  isDiscontinuedOptionsTrue() {
+    if (!this.generalInfoBody.is_discontinued) return true;
+
+    if (!!this.generalInfoBody.is_discontinued) {
+      return this.generalInfoBody.discontinued_options.some(option => option.value);
+    } else return false;
+  }
 }

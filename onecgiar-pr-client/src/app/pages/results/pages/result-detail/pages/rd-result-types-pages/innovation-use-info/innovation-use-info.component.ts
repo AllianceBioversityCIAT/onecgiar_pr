@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { environment } from 'src/environments/environment';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { InnovationUseInfoBody } from './model/innovationUseInfoBody';
+import { IpsrStep1Body } from 'src/app/pages/ipsr/pages/innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n1/model/Ipsr-step-1-body.model';
 
 @Component({
   selector: 'app-innovation-use-info',
@@ -9,17 +10,22 @@ import { InnovationUseInfoBody } from './model/innovationUseInfoBody';
   styleUrls: ['./innovation-use-info.component.scss']
 })
 export class InnovationUseInfoComponent implements OnInit {
-  innovationUseInfoBody = new InnovationUseInfoBody();
+  innovationUseInfoBody = new IpsrStep1Body();
+  savingSection = false;
   constructor(private api: ApiService) {}
 
   ngOnInit(): void {
     this.getSectionInformation();
   }
+
   getSectionInformation() {
     this.api.resultsSE.GET_innovationUse().subscribe(
       ({ response }) => {
-        this.innovationUseInfoBody = response;
+        this.innovationUseInfoBody.innovatonUse = response;
+        this.convertOrganizations(this.innovationUseInfoBody?.innovatonUse?.organization);
         //(response);
+        //(response);
+        // //(this.innovationUseInfoBody);
       },
       err => {
         console.error(err);
@@ -28,24 +34,41 @@ export class InnovationUseInfoComponent implements OnInit {
   }
   onSaveSection() {
     //(this.innovationUseInfoBody);
-    this.api.resultsSE.PATCH_innovationUse(this.innovationUseInfoBody).subscribe(
+    this.savingSection = true;
+    this.convertOrganizationsTosave();
+    //({ innovatonUse: this.innovationUseInfoBody.innovatonUse });
+    this.api.resultsSE.PATCH_innovationUse({ innovatonUse: this.innovationUseInfoBody.innovatonUse }).subscribe(
       resp => {
+        //(resp);
+        // setTimeout(() => {
         this.getSectionInformation();
+        // }, 3000);
+        this.savingSection = false;
       },
       err => {
         console.error(err);
+        this.savingSection = false;
       }
     );
   }
-  alertInfoText() {
-    return `Please fill in the following fields that are required based on the result type. <br>
-    Please provide evidence of use claims in the <a href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultCode}/general-information" class="open_route" target="_blank">General information</a> section. `;
+
+  convertOrganizations(organizations) {
+    organizations?.map((item: any) => {
+      if (item.parent_institution_type_id) {
+        item.institution_sub_type_id = item?.institution_types_id;
+        item.institution_types_id = item?.parent_institution_type_id;
+        //(item.institution_sub_type_id);
+        //(item.institution_types_id);
+        //('...');
+      }
+    });
   }
-  onAddMore() {
-    //('onAddMore');
-    this.innovationUseInfoBody.other.push({});
-  }
-  onRemoveOne(index) {
-    this.innovationUseInfoBody.other.splice(index, 1);
+
+  convertOrganizationsTosave() {
+    this.innovationUseInfoBody.innovatonUse.organization.map((item: any) => {
+      if (item.institution_sub_type_id) {
+        item.institution_types_id = item.institution_sub_type_id;
+      }
+    });
   }
 }

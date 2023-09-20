@@ -39,18 +39,25 @@ export class LinksToResultsGlobalComponent implements OnInit {
       const resultListTableHTML = document.getElementById('resultListTable');
       // if (document.getElementById('resultListTable').querySelectorAll('th[aria-sort="ascending"]').length) this.resetSort();
       this.combine = !resultListTableHTML.querySelectorAll('th[aria-sort="descending"]').length && !resultListTableHTML.querySelectorAll('th[aria-sort="ascending"]').length;
-      // console.log(document.getElementById('resultListTable').querySelectorAll('th[aria-sort="descending"]').length); ascending
+      // //(document.getElementById('resultListTable').querySelectorAll('th[aria-sort="descending"]').length); ascending
       // this.resetSort();
       return null;
     }, 100);
   }
 
+  contributeDescription() {
+    return `
+    <ul>
+      <li>To search for results that have already been reported, enter keywords into the title box below and click on the link button of the result found if it contributes to this result you are reporting.</li>
+      <li>Users will be able to select other results from previous phase</li>
+    </ul>`;
+  }
   getFirstByDate(results) {
     // ordernar los resultados por fecha de creacion "created_date" para obetener el primero, es decir el mas reciente
     const re = results.sort((a, b) => {
       return new Date(b.created_date).getTime() - new Date(a.created_date).getTime();
     });
-    console.log(re);
+    //(re);
     return re[0];
   }
 
@@ -66,7 +73,7 @@ export class LinksToResultsGlobalComponent implements OnInit {
   getSectionInformation() {
     this.api.resultsSE.GET_resultsLinked(this.isIpsr).subscribe(({ response }) => {
       //(response);
-      console.log(response);
+      //(response);
       this.linksToResultsBody = response;
     });
   }
@@ -85,8 +92,8 @@ export class LinksToResultsGlobalComponent implements OnInit {
     });
   }
   openInNewPage(link) {
-    console.log('openInNewPage');
-    console.log(link);
+    //('openInNewPage');
+    //(link);
     window.open(link, '_blank');
   }
 

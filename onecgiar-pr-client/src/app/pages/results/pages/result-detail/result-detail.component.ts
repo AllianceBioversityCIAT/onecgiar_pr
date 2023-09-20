@@ -40,11 +40,12 @@ export class ResultDetailComponent {
     });
     // this.api.resultsSE.currentResultId = this.activatedRoute.snapshot.paramMap.get('id');
     this.api.resultsSE.currentResultCode = this.activatedRoute.snapshot.paramMap.get('id');
-    // console.log(this.activatedRoute.snapshot.queryParamMap.get('phase'));
+    // //(this.activatedRoute.snapshot.queryParamMap.get('phase'));
     this.api.resultsSE.currentResultPhase = this.activatedRoute.snapshot.queryParamMap.get('phase');
     await this.GET_resultIdToCode();
     await this.currentResultSE.GET_resultById();
     await this.greenChecksSE.updateGreenChecks();
+    await this.greenChecksSE.getGreenChecks();
     this.GET_versioningResult();
 
     this.shareRequestModalSE.inNotifications = false;
@@ -68,7 +69,6 @@ export class ResultDetailComponent {
   }
   GET_versioningResult() {
     this.api.resultsSE.GET_versioningResult().subscribe(({ response }) => {
-      console.log(response);
       this.api.dataControlSE.resultPhaseList = response;
     });
   }

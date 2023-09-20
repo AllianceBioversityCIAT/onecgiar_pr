@@ -28,6 +28,7 @@ import { SubmissionsModule } from './submissions/submissions.module';
 import { AdminPanelModule } from './admin-panel/admin-panel.module';
 import { ResultActorsModule } from './result-actors/result-actors.module';
 import { YearsModule } from './years/years.module';
+import { ResultQuestionsModule } from './result-questions/result-questions.module';
 import { InvestmentDiscontinuedOption } from './investment-discontinued-options/entities/investment-discontinued-option.entity';
 import { ResultsInvestmentDiscontinuedOptionsModule } from './results-investment-discontinued-options/results-investment-discontinued-options.module';
 import { InvestmentDiscontinuedOptionsModule } from './investment-discontinued-options/investment-discontinued-options.module';
@@ -148,6 +149,10 @@ export const ResultsRoutes: Routes = [
   {
     path: 'years',
     module: YearsModule,
+  },
+  {
+    path: 'questions',
+    module: ResultQuestionsModule,
   },
   {
     path: 'investment-discontinued-options',

@@ -1,7 +1,7 @@
 <div class="ipsr-sub-title-2">Targeted innovation use</div>
 
 <app-pr-field-header
-    label="Specify targeted innovation user and also specify how many users are expected to benefit from scaling the core innovation by end of 2024?"></app-pr-field-header>
+    label="Specify the targeted innovation user and how many users are expected to benefit from scaling the core innovation by the end of 2024"></app-pr-field-header>
 
 <app-pr-field-header [required]="false" label="Actors" description="{{narrativeActors()}}"></app-pr-field-header>
 <input type="text" id="removeFocus" style="position: absolute; opacity: 0;">
@@ -10,6 +10,7 @@
         (deleteEvent)="actorItem.is_active = false; actorItem.actor_type_id = null"
         *ngFor="let actorItem of this.body.innovatonUse.actors; let i=index"
         [ngClass]="{'hideElement': actorItem.is_active == false || (!this.actorItem?.result_actors_id && this.api.rolesSE.readOnly)}">
+
         <div>
             <app-pr-select [options]="this.actorsTypeList" [indexReference]="i" label="Actor type" optionLabel="name"
                 optionValue="actor_type_id" [(ngModel)]="actorItem.actor_type_id"
@@ -18,9 +19,9 @@
                 [required]="!!this.actorItem?.result_actors_id">
             </app-pr-select>
             <div style="margin-top: 13px;"></div>
-            <app-pr-input *ngIf="actorItem.actor_type_id == 5"
+            <app-pr-input *ngIf="actorItem.actor_type_id == 5" label="Other actor type"
                 description="Specify the other actor type in the text box below" placeholder="Specify other.."
-                type="text" [required]="false" [(ngModel)]="this.actorItem.other_actor_type">
+                type="text" [(ngModel)]="this.actorItem.other_actor_type">
             </app-pr-input>
         </div>
         <div class="">
@@ -36,15 +37,15 @@
                 <div class="explanation_message" *ngIf="this.actorItem['showWomenExplanationwomen']">
                     Remember that the value of Youth cannot be greater than total of Women
                 </div>
-                <app-pr-input placeholder="Write some..." label="Women" type="number"
+                <app-pr-input placeholder="Enter text" label="Women" type="number"
                     [required]="!!this.actorItem?.result_actors_id" [(ngModel)]="this.actorItem.women"
                     (ngModelChange)="validateYouth(i,true,this.actorItem)">
                 </app-pr-input>
-                <app-pr-input placeholder="Write some..." label="Youth" type="number"
+                <app-pr-input placeholder="Enter text" label="Youth" type="number"
                     [required]="!!this.actorItem?.result_actors_id" [(ngModel)]="this.actorItem.women_youth"
                     (ngModelChange)="validateYouth(i,true,this.actorItem)">
                 </app-pr-input>
-                <app-pr-input noDataText="Save to calculate" placeholder="Write some..." label="Non-youth" type="number"
+                <app-pr-input noDataText="Save to calculate" placeholder="Enter text" label="Non-youth" type="number"
                     [required]="false" [readOnly]="true" [(ngModel)]="this.actorItem.women_non_youth">
                 </app-pr-input>
             </div>
@@ -52,26 +53,26 @@
                 <div class="explanation_message" *ngIf="this.actorItem['showWomenExplanationmen']">
                     Remember that the value of Youth cannot be greater than total of Men
                 </div>
-                <app-pr-input placeholder="Write some..." label="Men" type="number"
+                <app-pr-input placeholder="Enter text" label="Men" type="number"
                     [required]="!!this.actorItem?.result_actors_id" [(ngModel)]="this.actorItem.men"
                     (ngModelChange)="validateYouth(i,false,this.actorItem)">
                 </app-pr-input>
-                <app-pr-input placeholder="Write some..." label="Youth" type="number"
+                <app-pr-input placeholder="Enter text" label="Youth" type="number"
                     [required]="!!this.actorItem?.result_actors_id" [(ngModel)]="this.actorItem.men_youth"
                     (ngModelChange)="validateYouth(i,false,this.actorItem)">
                 </app-pr-input>
-                <app-pr-input noDataText="Save to calculate" placeholder="Write some..." label="Non-youth" type="number"
+                <app-pr-input noDataText="Save to calculate" placeholder="Enter text" label="Non-youth" type="number"
                     [required]="false" [readOnly]="true" [(ngModel)]="this.actorItem.men_non_youth">
                 </app-pr-input>
             </div>
             <div class="right_content one_field" *ngIf="!this.actorItem.sex_and_age_disaggregation">
-                <app-pr-input placeholder="Write some..." label="Total" type="number" [required]="false" noDataText="0"
+                <app-pr-input placeholder="Enter text" label="Total" type="number" [required]="false" noDataText="0"
                     [readOnly]="true" [(ngModel)]="this.actorItem.how_many"
                     (ngModelChange)="validateYouth(i,true,this.actorItem)">
                 </app-pr-input>
             </div>
             <div class="right_content" *ngIf="this.actorItem.sex_and_age_disaggregation">
-                <app-pr-input placeholder="Write some..." label="How many" type="number"
+                <app-pr-input placeholder="Enter text" label="How many" type="number"
                     [required]="!!this.actorItem?.result_actors_id" [(ngModel)]="this.actorItem.how_many"
                     (ngModelChange)="validateYouth(i,true,this.actorItem)">
                 </app-pr-input>
@@ -118,7 +119,7 @@
                 </app-pr-select>
             </div>
             <div class="right_content">
-                <app-pr-input placeholder="Write some..." label="How many" type="number"
+                <app-pr-input placeholder="Enter text" label="How many" type="number"
                     [required]="!!organizationItem?.id" [(ngModel)]="this.organizationItem.how_many">
                 </app-pr-input>
                 <app-pr-input *ngIf="organizationItem.institution_types_id == 50" label="# of graduate students"
@@ -144,14 +145,16 @@
                 <app-pr-input placeholder="e.g. # of projects" label="Unit of measure" type="text"
                     [required]="!!measuresItem?.result_ip_measure_id" [(ngModel)]="this.measuresItem.unit_of_measure">
                 </app-pr-input>
-                <app-pr-input placeholder="Write some..." label="Quantity" type="number"
+                <app-pr-input placeholder="Enter text" label="Quantity" type="number"
                     [required]="!!measuresItem?.result_ip_measure_id" [(ngModel)]="this.measuresItem.quantity">
                 </app-pr-input>
             </div>
 
         </div>
+
     </div>
-    <app-no-data-text *ngIf="!hasElementsWithId(this.body.innovatonUse.measures,'result_ip_measure_id')"
-        title="Other quantitative measures not added">
-    </app-no-data-text>
-    <app-add-button name="Add other" *ngIf="!this.api.rolesSE.readOnly" (clickEvent)="addOther()"></app-add-button>
+</div>
+<app-no-data-text *ngIf="!hasElementsWithId(this.body.innovatonUse.measures,'result_ip_measure_id')"
+    title="Other quantitative measures not added">
+</app-no-data-text>
+<app-add-button name="Add other" *ngIf="!this.api.rolesSE.readOnly" (clickEvent)="addOther()"></app-add-button>

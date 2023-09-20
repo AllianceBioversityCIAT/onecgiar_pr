@@ -6,10 +6,13 @@ import { OutcomeLevelFilterPipe } from '../../../outcome-level-filter.pipe';
 import { TargetIndicatorComponent } from './target-indicator/target-indicator.component';
 import { ImpactAreaTargetsComponent } from './impact-area-targets/impact-area-targets.component';
 import { SdgTargetsComponent } from './sdg-targets/sdg-targets.component';
-
+import { FeedbackValidationDirectiveModule } from 'src/app/shared/directives/feedback-validation-directive.module';
+import { ActionAreaOutcomeComponent } from './action-area-outcome/action-area-outcome.component';
+import { TableModule } from 'primeng/table';
+import { RouterModule } from '@angular/router';
 @NgModule({
-  declarations: [TocInitiativeOutComponent, OutcomeLevelFilterPipe, TargetIndicatorComponent, ImpactAreaTargetsComponent, SdgTargetsComponent],
-  exports: [TocInitiativeOutComponent, ImpactAreaTargetsComponent, SdgTargetsComponent],
-  imports: [CommonModule, CustomFieldsModule]
+  declarations: [TocInitiativeOutComponent, OutcomeLevelFilterPipe, TargetIndicatorComponent, ImpactAreaTargetsComponent, SdgTargetsComponent, ActionAreaOutcomeComponent, ],
+  exports: [TocInitiativeOutComponent, ImpactAreaTargetsComponent, SdgTargetsComponent, ActionAreaOutcomeComponent],
+  imports: [CommonModule, CustomFieldsModule, FeedbackValidationDirectiveModule, TableModule, RouterModule]
 })
 export class TocInitiativeOutModule {}

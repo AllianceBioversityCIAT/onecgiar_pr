@@ -14,9 +14,10 @@ import { FilterTargetsPipe } from './components/toc-impact-section/pipes/filter-
 import { FilterIndicatorsPipe } from './components/toc-impact-section/pipes/filter-indicators.pipe';
 import { TocInitiativeOutModule } from './components/shared/toc-initiative-out/toc-initiative-out.module';
 import { FeedbackValidationDirectiveModule } from 'src/app/shared/directives/feedback-validation-directive.module';
+import { TooltipModule } from 'primeng/tooltip';
 
 @NgModule({
   declarations: [RdTheoryOfChangeComponent, TocImpactSectionComponent, TocActionAreaOutcomeSectionComponent, TocInitiativeOutcomeSectionComponent, TocInitiativeOutputSectionComponent, TocInitiativeAaoComponent, FilterTargetsPipe, FilterIndicatorsPipe],
-  imports: [CommonModule, RdTheoryOfChangeRoutingModule, CustomFieldsModule, RadioButtonModule, TocInitiativeOutModule, FeedbackValidationDirectiveModule]
+  imports: [CommonModule, RdTheoryOfChangeRoutingModule, CustomFieldsModule, RadioButtonModule, TocInitiativeOutModule, FeedbackValidationDirectiveModule, TooltipModule]
 })
 export class RdTheoryOfChangeModule {}

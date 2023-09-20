@@ -1,7 +1,7 @@
 <app-detail-section-title sectionName="Links to results"></app-detail-section-title>
 <div class="detail_container">
     <app-pr-field-header label="Did another result type contribute to this result?" [required]="false"
-        description="To search for results that have already been reported, enter keywords into the title box below and click on the link button of the result found if it contributes to this result you are reporting.">
+        [description]="contributeDescription()" [useColon]="false">
     </app-pr-field-header>
     <div class="search_input">
         <i class="material-icons-round">search</i>
@@ -15,8 +15,10 @@
         [rowsPerPageOptions]="[5,50,100]">
         <ng-template pTemplate="header">
             <tr>
-                <th (click)="validateOrder('result_code')" pSortableColumn="result_code"> <p-sortIcon field="result_code"></p-sortIcon>Result code</th>
-                <th (click)="validateOrder(column.attr)"  pSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder">
+                <th (click)="validateOrder('result_code')" pSortableColumn="result_code"> <p-sortIcon
+                        field="result_code"></p-sortIcon>Result code</th>
+                <th (click)="validateOrder(column.attr)" pSortableColumn="{{column.attr}}"
+                    *ngFor="let column of columnOrder">
                     <p-sortIcon field="{{column.attr}}"></p-sortIcon>{{column.title}}
                 </th>
                 <th>Action</th>
@@ -27,19 +29,19 @@
                 <td>
                     {{result?.result_code}}
                 </td>
-                <td *ngFor="let column of columnOrder; let i=index" class="{{column.attr}}">
-                    <div class="subResults">
-                        <ng-container *ngFor="let subResult of result['results']">
-                            <a class="{{subResult.class}}">
-                                <div class="point"
-                                    [style.background]="'var(--pr-color-result-level-'+subResult?.result_level_id+')'"
-                                    *ngIf="column.attr === 'result_type'"></div>
+                <td *ngFor="let column of columnOrder; let i=index" class="{{column.attr}}" style="max-width: 440px;">
+                    <!-- <div class=" subResults"> -->
+                    <ng-container *ngFor="let subResult of result['results']">
+                        <a class="{{subResult.class}}">
+                            <div class="point"
+                                [style.background]="'var(--pr-color-result-level-'+subResult?.result_level_id+')'"
+                                *ngIf="column.attr === 'result_type'"></div>
 
-                                <div class="new_tag" *ngIf="i==1 && subResult.is_new">New</div> {{column.attr !==
-                                'created_date' ?
-                                subResult[column.attr] : (subResult[column.attr] | date: 'YYYY-MM-dd')}}
-                            </a>
-                            <!-- <div class="transparent_text {{column.class}}">
+                            <div class="new_tag" *ngIf="i==0 && subResult.is_new">New</div> {{column.attr !==
+                            'created_date' ?
+                            subResult[column.attr] : (subResult[column.attr] | date: 'YYYY-MM-dd')}}
+                        </a>
+                        <!-- <div class="transparent_text {{column.class}}">
                                 <div class="point"
                                     [style.background]="'var(--pr-color-result-level-'+subResult?.result_level_id+')'"
                                     *ngIf="column.attr === 'result_type'"></div>
@@ -48,8 +50,8 @@
                                 'created_date' ?
                                 subResult[column.attr] : (subResult[column.attr] | date: 'YYYY-MM-dd')}}
                             </div> -->
-                        </ng-container>
-                    </div>
+                    </ng-container>
+                    <!-- </div> -->
                 </td>
                 <td>
                     <div class="actions">
@@ -60,13 +62,10 @@
                             </div>
                         </div>
 
-                        <div class="center_flex">
-                            <div class="link_button"
-                                *ngIf="!this.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"
-                                [ngClass]="{'globalDisabled': result.selected}"
-                                (click)="!result.selected ? onLinkResult(result) : null">{{result.selected ? 'Selected'
-                                :
-                                'Link'}}</div>
+                        <div class="link_button" *ngIf="!this.rolesSE.readOnly"
+                            [ngClass]="{'globalDisabled': result.selected}"
+                            (click)="!result.selected ? onLinkResult(result) : null">{{result.selected ? 'Selected' :
+                            'Link'}}
                         </div>
                     </div>
                 </td>
@@ -76,7 +75,8 @@
     <div class="total"
         *ngIf="(this.api.dataControlSE.resultsList  | filterResultNotLinked:this.linksToResultsBody.links  : this.combine:counterPipe :this.text_to_search)?.length">
         Total:
-        {{(this.api.dataControlSE.resultsList | filterResultNotLinked:this.linksToResultsBody.links : this.combine:counterPipe:this.text_to_search)?.length}} /
+        {{(this.api.dataControlSE.resultsList | filterResultNotLinked:this.linksToResultsBody.links :
+        this.combine:counterPipe:this.text_to_search)?.length}} /
         {{this.api.dataControlSE.resultsList?.length-1}}</div>
     <div class="noDataText"
         *ngIf="!(this.api.dataControlSE.resultsList | filterResultNotLinked:this.linksToResultsBody.links : this.combine:counterPipe:this.text_to_search)?.length">
@@ -119,11 +119,10 @@
 
     </div>
 
-    <app-no-data-text
-        *ngIf="!this.linksToResultsBody.legacy_link.length && !this.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"
+    <app-no-data-text *ngIf="!this.linksToResultsBody.legacy_link.length && !this.rolesSE.readOnly"
         title="No results from previous portfolio added"></app-no-data-text>
     <app-add-button name="Add results from previous portfolio" (clickEvent)="addLegacy_link()"
-        *ngIf="!this.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status">
+        *ngIf="!this.rolesSE.readOnly">
     </app-add-button>
 
     <app-save-button [disabled]="validateCGSpaceLinks" class="position_sticky" (clickSave)="onSaveSection()">

@@ -42,10 +42,20 @@ export class StepN3Component implements OnInit {
     return response;
   }
 
+  updateRangeLevel1(bodyItem) {
+    const readiness_level_evidence_based_index = this.rangesOptions.findIndex(item => item.id == bodyItem['readiness_level_evidence_based']);
+    return readiness_level_evidence_based_index != 0;
+  }
+  rangeLevel2Required = true;
+  updateRangeLevel2(bodyItem) {
+    const use_level_evidence_based_index = this.innovationUseList.findIndex(item => item.id == bodyItem['use_level_evidence_based']);
+    return use_level_evidence_based_index != 0;
+  }
+
   getSectionInformation() {
     this.api.resultsSE.GETInnovationPathwayByRiId().subscribe(({ response }) => {
       //('%cGET', 'font-size: 20px; color: #2BBE28;');
-      console.log(response);
+      //(response);
       //(response);
       this.ipsrStep3Body = this.openClosed(response);
 

@@ -12,7 +12,6 @@ import { DialogModule } from 'primeng/dialog';
 
 @NgModule({
   declarations: [InnovationPackageCreatorComponent],
-  imports: [CommonModule, InnovationPackageCreatorRoutingModule, CustomFieldsModule, SectionHeaderModule, ResultsInnovationOutputListModule, IpsrGeoscopeCreatorModule, FeedbackValidationDirectiveModule,
-    DialogModule ]
+  imports: [CommonModule, InnovationPackageCreatorRoutingModule, CustomFieldsModule, SectionHeaderModule, ResultsInnovationOutputListModule, IpsrGeoscopeCreatorModule, FeedbackValidationDirectiveModule, DialogModule]
 })
 export class InnovationPackageCreatorModule {}

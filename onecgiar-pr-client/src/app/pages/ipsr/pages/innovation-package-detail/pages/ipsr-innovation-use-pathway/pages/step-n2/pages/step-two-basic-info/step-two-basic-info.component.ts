@@ -27,9 +27,9 @@ export class StepTwoBasicInfoComponent implements OnInit {
   }
 
   onSaveSection() {
-    console.log(this.bodyStep2);
+    //(this.bodyStep2);
     this.api.resultsSE.PostStepTwoComentariesInnovation(this.bodyStep2).subscribe(resp => {
-      console.log(resp);
+      //(resp);
     });
   }
 
@@ -102,7 +102,7 @@ export class StepTwoBasicInfoComponent implements OnInit {
       return;
     }
     this.api.resultsSE.PostStepTwoComentariesInnovationPrevius(this.bodyStep2, descrip).subscribe(resp => {
-      //console.log(resp);
+      ////(resp);
       if (this.api.isStepTwoTwo && descrip == 'next') {
         this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-3']);
       }

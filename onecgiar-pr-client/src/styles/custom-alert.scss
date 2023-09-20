@@ -30,6 +30,10 @@
         &.warning {
             background-color: #FDC82F;
         }
+
+        &.information {
+            background-color: #4e9deb;
+        }
     }
 
     .custom-alert {
@@ -100,6 +104,12 @@
             &.warning {
                 .icon {
                     background-color: #FDC82F;
+                }
+            }
+
+            &.information {
+                .icon {
+                    background-color: #4e9deb;
                 }
             }
 

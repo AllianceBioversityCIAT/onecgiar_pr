@@ -1,7 +1,6 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { MenuItem } from 'primeng/api';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
-import { internationalizationData } from '../../../../../../shared/data/internationalizationData';
 import { ResultsListService } from './services/results-list.service';
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
 import { ExportTablesService } from '../../../../../../shared/services/export-tables.service';
@@ -57,7 +56,7 @@ export class ResultsListComponent implements OnInit {
       }
     },
     {
-      label: 'Report in another phase',
+      label: 'Update result',
       icon: 'pi pi-fw pi-clone',
       command: () => {
         this.api.dataControlSE.chagePhaseModal = true;
@@ -78,12 +77,12 @@ export class ResultsListComponent implements OnInit {
 
   validateOrder(columnAttr) {
     setTimeout(() => {
-      console.log(columnAttr);
+      //(columnAttr);
       if (columnAttr == 'result_code') return (this.combine = true);
       const resultListTableHTML = document.getElementById('resultListTable');
       // if (document.getElementById('resultListTable').querySelectorAll('th[aria-sort="ascending"]').length) this.resetSort();
       this.combine = !resultListTableHTML.querySelectorAll('th[aria-sort="descending"]').length && !resultListTableHTML.querySelectorAll('th[aria-sort="ascending"]').length;
-      // console.log(document.getElementById('resultListTable').querySelectorAll('th[aria-sort="descending"]').length); ascending
+      // //(document.getElementById('resultListTable').querySelectorAll('th[aria-sort="descending"]').length); ascending
       // this.resetSort();
       return null;
     }, 100);
@@ -98,14 +97,14 @@ export class ResultsListComponent implements OnInit {
     // this.api.rolesSE.validateReadOnly();
     this.api.updateResultsList();
     this.items;
-    this.api.alertsFs.show({
-      id: 'indoasd',
-      status: 'success',
-      title: '',
-      description: internationalizationData?.resultsList?.alerts?.info,
-      querySelector: '.alert',
-      position: 'beforebegin'
-    });
+    // this.api.alertsFs.show({
+    //   id: 'indoasd',
+    //   status: 'success',
+    //   title: '',
+    //   description: internationalizationData?.resultsList?.alerts?.info,
+    //   querySelector: '.alert',
+    //   position: 'beforebegin'
+    // });
     this.shareRequestModalSE.inNotifications = false;
   }
   onPressAction(result) {

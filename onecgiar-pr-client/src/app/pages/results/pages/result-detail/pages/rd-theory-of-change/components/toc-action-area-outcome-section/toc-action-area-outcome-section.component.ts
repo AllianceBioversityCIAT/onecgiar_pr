@@ -2,6 +2,7 @@ import { Component, Input, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { resultToResultInterfaceToc } from '../../model/theoryOfChangeBody';
 import { DataControlService } from '../../../../../../../../shared/services/data-control.service';
+import { RdTheoryOfChangesServicesService } from '../../rd-theory-of-changes-services.service';
 
 @Component({
   selector: 'app-toc-action-area-outcome-section',
@@ -11,7 +12,8 @@ import { DataControlService } from '../../../../../../../../shared/services/data
 export class TocActionAreaOutcomeSectionComponent {
   @Input() result_toc_result = new resultToResultInterfaceToc();
   @Input() contributors_result_toc_result: any;
-  constructor(public api: ApiService, public dataControlSE: DataControlService) {
-    console.log(this.api.rolesSE.validateInitiative(19));
+  constructor(public api: ApiService, public dataControlSE: DataControlService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {
+    //(this.api.rolesSE.validateInitiative(19));
+    this.theoryOfChangesServices.resultActionArea = [];
   }
 }

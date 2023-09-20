@@ -40,6 +40,10 @@ a {
   text-decoration: none;
 }
 
+.no-margin-top {
+  margin-top: 0px !important;
+}
+
 .search_input {
   display: flex;
   align-items: center;
@@ -142,7 +146,7 @@ a {
 }
 
 .support_information .p-dialog .p-dialog-content {
-  overflow-y: scroll !important;
+  overflow-y: auto !important;
 }
 
 .toc_button {

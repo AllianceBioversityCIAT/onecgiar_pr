@@ -30,7 +30,24 @@
             placeholder="0" [(ngModel)]="innovationDevInfoBody.number_of_varieties">
         </app-pr-input>
     </div>
-    <!-- Todo -->
+
+    <!-- Todo New field -->
+    <!-- Innovation dev -->
+    <app-anticipated-innovation-user [body]="innovationDevInfoBody"
+        [saving]="this.savingSection"></app-anticipated-innovation-user>
+
+    <app-pr-field-header label="Responsible innovation and scaling" [required]="false"></app-pr-field-header>
+
+    <div class="paddingLeft20">
+        <app-gesi-innovation-assessment [body]="innovationDevInfoBody"
+            [options]="innovationDevelopmentQuestions"></app-gesi-innovation-assessment>
+        <app-scale-impact-analysis [body]="innovationDevInfoBody"
+            [options]="innovationDevelopmentQuestions"></app-scale-impact-analysis>
+    </div>
+
+    <app-intellectual-property-rights [body]="innovationDevInfoBody"
+        [options]="innovationDevelopmentQuestions"></app-intellectual-property-rights>
+    <!-- Innovation dev -->
 
     <app-pr-textarea placeholder="Contact persons info goes here..." [required]="false" label="Innovation Developer"
         description="Provide the full name(s), email address and organizational affiliation(s) of the innovation developer/ contact person
@@ -45,22 +62,22 @@
         [(ngModel)]="innovationDevInfoBody.innovation_collaborators">
     </app-pr-textarea>
 
-    <app-pr-textarea placeholder="Contact persons info goes here..." [required]="false"
-        label="Innovation acknowledgement" [description]="acknowledgementDescription()"
-        [(ngModel)]="innovationDevInfoBody.innovation_acknowledgement">
-    </app-pr-textarea>
+    <!-- Innovation dev -->
+    <app-innovation-team-diversity [body]="innovationDevInfoBody"
+        [options]="innovationDevelopmentQuestions"></app-innovation-team-diversity>
+    <!-- Innovation dev -->
 
     <app-pr-field-header label="How would you assess the current readiness of this innovation?"
         [description]="readiness_of_this_innovation_description()">
     </app-pr-field-header>
 
-    <app-pr-range-level [(ngModel)]="innovationDevInfoBody.innovation_readiness_level_id" optionLabel="name"
-        optionValue="id" [options]="this.innovationControlListSE.readinessLevelsList"></app-pr-range-level>
+    <app-pr-range-level itemTitle="name" itemDescription="definition" optionLabel="name" optionValue="id"
+        [options]="this.innovationControlListSE.readinessLevelsList"
+        [(ngModel)]="innovationDevInfoBody.innovation_readiness_level_id"></app-pr-range-level>
 
-
-    <div class="pr_description"> <a href="https://drive.google.com/file/d/1muDLtqpeaSCIX60g6qQG_GGOPR61Rq7E/view"
-            class="open_route" target="_blank">Click here </a> to see the definition of all readiness
-        levels</div>
+    <div class="pr_description" style="margin-top: 1rem;"> <a
+            href="https://drive.google.com/file/d/1muDLtqpeaSCIX60g6qQG_GGOPR61Rq7E/view" class="open_route"
+            target="_blank">Click here </a> to see the definition of all readiness levels</div>
 
     <app-alert-status [description]="alertInfoText2()">
     </app-alert-status>
@@ -71,11 +88,23 @@
         description="<strong>Example:</strong> We chose readiness level 6 (semi-controlled testing) for the genetically improved farm tilapia (GIFT) because it is currently being tested under semi-controlled conditions in the multiplication center and hatchery in the selected countries as shown in the provided evidence. ">
     </app-pr-textarea>
 
+    <!-- Innovation dev -->
+    <app-estimates [body]="innovationDevInfoBody"></app-estimates>
+    <!-- Innovation dev -->
+
     <app-pr-radio-button label="Would you like this innovation to be published as a CGIAR IPSR Innovation Profile PDF?"
         [description]="pdfDescription()" [options]="this.pdfOptions" optionLabel="name" optionValue='value'
         [(ngModel)]="this.innovationDevInfoBody.innovation_pdf">
     </app-pr-radio-button>
 
+    <app-pr-textarea *ngIf="this.innovationDevInfoBody.innovation_pdf" placeholder="Contact persons info goes here..."
+        [required]="false" label="Innovation acknowledgement" [description]="acknowledgementDescription()"
+        [(ngModel)]="innovationDevInfoBody.innovation_acknowledgement">
+    </app-pr-textarea>
+
+    <!-- Innovation dev -->
+    <app-innovation-links [body]="innovationDevInfoBody" [options]="innovationDevelopmentLinks"></app-innovation-links>
+    <!-- Innovation dev -->
 </div>
 
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>
