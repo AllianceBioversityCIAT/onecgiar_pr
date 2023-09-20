@@ -15,17 +15,17 @@
     </ng-template>
     <ng-template pTemplate="body" let-phase>
       <tr>
-        <td>
+        <td [style.width.px]="30">
           {{phase?.id}}
         </td>
-        <td>
+        <td [style.width.px]="130">
           <!--Todo Name  -->
           <div class="text" *ngIf="!phase.editing">{{phase?.phase_name}}</div>
           <app-pr-input *ngIf="phase.editing" placeholder="Provide input here..." type="text"
             [(ngModel)]="phase.phase_name_ts">
           </app-pr-input>
         </td>
-        <td>
+        <td [style.width.px]="110">
           <!--Todo Reporting year  -->
           <div class="text" *ngIf="!phase.isNew">{{phase?.phase_year}}</div>
           <app-pr-select *ngIf="phase.isNew" class="segment_title_margin" [options]="this.resultYearsList"
@@ -34,11 +34,20 @@
           </app-pr-select>
         </td>
         <td>
+          <!--Todo Reporting phase  -->
+          <div class="text" *ngIf="!phase.isNew">{{phase?.obj_reporting_phase?.phase_name}}</div>
+          <!--Todo Reporting phases list not show data in the dropdown-->
+          <app-pr-select *ngIf="phase.isNew" class="segment_title_margin" [options]="this.reportingPhasesList"
+            optionLabel="phase_name" optionValue="id" placeholder="Select phase"
+            [(ngModel)]="phase.reporting_phase_ts">
+          </app-pr-select>
+        </td>
+        <td [style.width.px]="180">
           <!--Todo Toc phase-->
 
           <div class="text" *ngIf="!phase.isNew">{{this.getTocPhaseName(phase?.toc_pahse_id)}}</div>
           <app-pr-select *ngIf="phase.isNew" class="segment_title_margin" [options]="this.tocPhaseList"
-            optionLabel="name" optionValue="phase_id" placeholder="Select phase" [(ngModel)]="phase.toc_pahse_id_ts">
+            optionLabel="fullText" optionValue="phase_id" placeholder="Select phase" [(ngModel)]="phase.toc_pahse_id_ts">
           </app-pr-select>
         </td>
         <td [style.width.px]="120">
@@ -58,7 +67,13 @@
         <td [style.width.px]="90">
           <!--Todo  status -->
           <div class="text" *ngIf="!phase.editing">
-            <div class="tag_container" [ngClass]="phase?.status ? 'open':'closed'">{{phase?.status ? 'Open':'Closed'}}
+            <div class="tag_container" [ngClass]="phase?.status ? 'open':'closed'">
+                {{phase?.status ? 'Open':'Closed'}}
+            </div>
+          </div>
+          <div class="text" *ngIf="phase.isNew">
+            <div class="tag_container" [ngClass]="'closed'">
+              Closed
             </div>
           </div>
           <app-pr-select *ngIf="phase.editing  && !phase.isNew" class="segment_title_margin" [options]="this.status"
@@ -75,7 +90,7 @@
           </app-pr-select>
         </td>
 
-        <td [style.width.px]="90">
+        <td [style.width.px]="85">
           <div class="actions" *ngIf="!phase.editing">
             <div class="action_button edit" (click)="getFeedback() ? null:phase.editing = true"
               [ngClass]="{'disabled': getFeedback()}"><i class="material-icons-round"
@@ -90,14 +105,12 @@
           <div class="actions" *ngIf="phase.editing">
             <div class="action_button save" tooltipPosition="top"
               [ngClass]="{'disabled': phase?.isNew  &&  getMandatoryIncompleteFields(phase)}"
-              [pTooltip]="phase?.isNew ? getMandatoryIncompleteFields(phase):null" [escape]="false">
-              <div class="text"
-                (click)="phase?.isNew  &&  getMandatoryIncompleteFields(phase) ?null:(phase?.isNew ? createPhase(phase) :savePhase(phase))">
-                {{phase?.isNew ? 'Create'
-                : 'Save'}}</div> <i class="material-icons-round">{{phase?.isNew ? 'add_circle' : 'save'}}</i>
+              [pTooltip]="phase?.isNew ? getMandatoryIncompleteFields(phase):null" [escape]="false"
+              (click)="phase?.isNew  &&  getMandatoryIncompleteFields(phase) ?null:(phase?.isNew ? createPhase(phase) :savePhase(phase))">
+              <i class="material-icons-round">{{phase?.isNew ? 'add_circle' : 'save'}}</i>
             </div>
             <div class="action_button cancel" (click)="cancelAction(phase); this.updateVariablesToSave(phase)">
-              <div class="text">Cancel</div><i class="material-icons-round">close</i>
+              <i class="material-icons-round">close</i>
             </div>
           </div>
         </td>

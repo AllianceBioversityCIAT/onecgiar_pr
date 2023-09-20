@@ -15,6 +15,7 @@ export class InnovationPackageComponent implements OnInit {
     { title: '#', attr: 'id' },
     { title: 'Name', attr: 'phase_name' },
     { title: 'Reporting year', attr: 'phase_year' },
+    { title: 'Result phase', attr: 'reporting_phase' },
     { title: 'Toc phase', attr: 'toc_pahse_id' },
     { title: 'Start date', attr: 'start_date' },
     { title: 'End date', attr: 'end_date' },
@@ -27,6 +28,7 @@ export class InnovationPackageComponent implements OnInit {
   previousPhaseList: any[] = [];
   tocPhaseList = [];
   resultYearsList = [];
+  reportingPhasesList: any[] = [];
   // clonedphaseList: { [s: string]: any } = {};
   textToFind = '';
   disabledActionsText = 'Finish editing the phase to be able to edit or delete this phase.';
@@ -48,6 +50,7 @@ export class InnovationPackageComponent implements OnInit {
     this.getAllPhases();
     this.getTocPhases();
     this.get_resultYears();
+    this.getReportingPhases();
   }
 
   disablePreviousYear() {
@@ -92,6 +95,7 @@ export class InnovationPackageComponent implements OnInit {
     phaseItem.end_date_ts = phaseItem.end_date;
     phaseItem.status_ts = phaseItem.status;
     phaseItem.previous_phase_ts = phaseItem.previous_phase;
+    phaseItem.reporting_phase_ts = phaseItem.reporting_phase;
   }
 
   updateMainVariables(phaseItem) {
@@ -102,6 +106,7 @@ export class InnovationPackageComponent implements OnInit {
     phaseItem.end_date = phaseItem.end_date_ts;
     phaseItem.status = phaseItem.status_ts;
     phaseItem.previous_phase = phaseItem.previous_phase_ts;
+    phaseItem.reporting_phase = phaseItem.reporting_phase_ts;
   }
 
   getMandatoryIncompleteFields(phaseItem): string {
@@ -111,19 +116,31 @@ export class InnovationPackageComponent implements OnInit {
     if (!phaseItem.toc_pahse_id_ts) text += '<strong> Toc phase </strong> is required to create <br>';
     if (!phaseItem.start_date_ts) text += '<strong> Start date </strong> is required to create <br>';
     if (!phaseItem.end_date_ts) text += '<strong> End date </strong>is required to create <br>';
+    if (!phaseItem.reporting_phase_ts) text += '<strong> Reporting phase </strong>is required to create <br>';
     return text;
   }
 
   get_resultYears() {
     this.resultsSE.GET_resultYears().subscribe(({ response }) => {
       this.resultYearsList = response;
-      console.log(response);
     });
   }
 
   getTocPhases() {
     this.resultsSE.GET_tocPhases().subscribe(({ response }) => {
+      response.forEach(element => {
+        element.fullText = element.name + ' - ' + element.status;
+      });
+
       this.tocPhaseList = response;
+    });
+  }
+
+  getReportingPhases() {
+    this.resultsSE.GET_versioning(StatusPhaseEnum.ALL, ModuleTypeEnum.REPORTING).subscribe({
+      next: ({ response }) => {
+        this.reportingPhasesList = response;
+      }
     });
   }
 
@@ -140,10 +157,7 @@ export class InnovationPackageComponent implements OnInit {
   }
 
   savePhase(phase) {
-    console.log('savePhase');
-    console.log(phase);
     this.updateMainVariables(phase);
-    console.log(phase);
     this.resultsSE.PATCH_updatePhase(phase.id, phase).subscribe(
       () => {
         this.getAllPhases();
@@ -157,11 +171,8 @@ export class InnovationPackageComponent implements OnInit {
   }
 
   createPhase(phase) {
-    console.log('createPhase');
     phase.app_module_id = 2;
-    console.log(phase);
     this.updateMainVariables(phase);
-    console.log(phase);
 
     this.resultsSE.POST_createPhase(phase).subscribe(
       () => {
@@ -178,8 +189,6 @@ export class InnovationPackageComponent implements OnInit {
 
   deletePhase({ id }) {
     this.customizedAlertsFeSE.show({ id: 'manage-phase', title: 'Delete phase', description: 'Are you sure you want to delete the current phase?', status: 'warning', confirmText: 'Yes, delete' }, () => {
-      console.log('DELETE_updatePhase');
-      console.log(id);
       this.resultsSE.DELETE_updatePhase(id).subscribe(
         () => this.getAllPhases(),
         err => {
@@ -192,7 +201,7 @@ export class InnovationPackageComponent implements OnInit {
 
   getTocPhaseName(toc_pahse_id) {
     const tocPhaseElement = this.tocPhaseList.find(phaseItem => phaseItem?.phase_id == toc_pahse_id);
-    return tocPhaseElement?.name;
+    return tocPhaseElement?.name + ' - ' + tocPhaseElement?.status;
   }
 
   getFeedback() {

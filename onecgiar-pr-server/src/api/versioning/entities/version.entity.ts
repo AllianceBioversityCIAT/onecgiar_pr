@@ -89,6 +89,17 @@ export class Version extends VersionBaseEntity {
   })
   app_module_id: number;
 
+  @Column({
+    name: 'reporting_phase',
+    type: 'bigint',
+    nullable: true,
+  })
+  reporting_phase!: number;
+
+  @ManyToOne(() => Version, (v) => v.id, { nullable: true })
+  @JoinColumn({ name: 'reporting_phase' })
+  obj_reporting_phase: Version;
+
   @ManyToOne(() => ApplicationModules, (app) => app.obj_version)
   @JoinColumn({ name: 'app_module_id' })
   obj_app_module: ApplicationModules;
