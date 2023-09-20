@@ -9,47 +9,35 @@
     </div>
 
     <div class="indicator-info">
+        <div class="title">
+            <div class="square"></div>
 
+            <strong>Indicator info</strong>
+
+        </div>
         <div class="indicator">
-            <div class="title">
-                <div class="square"></div>
-                <div style="margin-top: -15px;">
-                    <h4>Indicator info</h4>
-                </div>
-            </div>
+
             <div class="one-description">
-                <div class="source">
-                    <div>
-                        <h4>Source:</h4>
-                    </div>
-                    <div style="margin-top: 16px; margin-left: 5px;">
-                        <span *ngIf="initiative.type_value != 'custom'">PRMF Framework</span><span
-                            *ngIf="initiative.type_value == 'custom'">Custom</span>
-                    </div>
+                <div class="indicator-item ">
+                    <strong>Source:</strong>
+                    <span *ngIf="initiative.type_value != 'custom'">PRMF Framework</span><span
+                        *ngIf="initiative.type_value == 'custom'">Custom</span>
                 </div>
-                <div class="type">
-                    <div>
-                        <h4>Type:</h4>
-                    </div>
-                    <div style="margin-top: 16px; margin-left: 5px;">{{initiative.type}}</div>
+                <div class="indicator-item">
+                    <strong>Type:</strong>
+                    <div>{{initiative.type}}</div>
                 </div>
             </div>
-            <div class="two-info">
-                <div class="description">
-                    <h4>Description:</h4>
-                </div>
-                <div style="margin-top: 16px; margin-left: 5px; height:auto">{{initiative.indicator_description}}</div>
+            <div class="indicator-item">
+                <strong>Description:</strong>{{initiative.indicator_description}}
             </div>
 
-            <div class="three-info">
-                <div>
-                    <h4>Location:</h4>
-                </div>
-                <div style="margin-top: 16px; margin-left: 5px; height:auto"><span>{{initiative.location}}</span> <span
-                        *ngIf="initiative.full_geo != ''">(<span
-                            *ngIf="initiative.full_geo != ':null'">{{initiative.full_geo}}</span>)</span></div>
+            <div class="indicator-item">
+                <strong>Location:</strong>
+                <span>{{initiative.location}}</span> <span *ngIf="initiative.full_geo != ''">(<span
+                        *ngIf="initiative.full_geo != ':null'">{{initiative.full_geo}}</span>)</span>
             </div>
-            <div style="margin-left: -20px;margin-top: -20px;">
+            <div style="margin-left: -20px;margin-top: -5px;">
                 <app-alert-status [description]="descriptionAlert()"></app-alert-status>
             </div>
         </div>

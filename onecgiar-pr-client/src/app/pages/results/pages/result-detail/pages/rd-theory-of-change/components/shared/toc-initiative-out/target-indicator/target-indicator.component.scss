@@ -49,59 +49,39 @@ input:disabled {
 .indicator-info {
     display: flex;
     flex-direction: column;
+    margin-top: 15px;
+
+    .title {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+
+        .square {
+            width: 10px;
+            height: 10px;
+            background-color: #808080;
+        }
+    }
 
     .indicator {
         display: flex;
         flex-direction: column;
+        gap: 10px;
+        padding: 10px 20px 20px 12px;
 
-        .title {
+        .indicator-item {
             display: flex;
-            flex-direction: row;
-            margin-left: 10px;
-            width: 100%;
-            margin-top: 10px;
-
-            .square {
-                width: 10px;
-                height: 10px;
-                background-color: #808080;
-                margin-right: 5px;
-                margin-top: 5px;
-            }
+            align-items: center;
+            gap: 5px;
         }
+
 
         .one-description {
             display: flex;
-            flex-direction: row;
-            margin-left: 20px;
-            margin-top: -20px;
-
-            .source {
-                display: flex;
-                flex-direction: row;
-            }
-
-            .type {
-                display: flex;
-                flex-direction: row;
-                margin-left: 40px;
-            }
+            gap: 30px;
         }
 
-        .two-info {
-            display: flex;
-            flex-direction: row;
-            margin-left: 20px;
-            margin-top: -20px;
 
-        }
-
-        .three-info {
-            display: flex;
-            flex-direction: row;
-            margin-left: 20px;
-            margin-top: -20px;
-        }
     }
 }
 
