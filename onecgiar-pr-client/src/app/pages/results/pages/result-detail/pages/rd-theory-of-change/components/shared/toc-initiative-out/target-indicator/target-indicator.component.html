@@ -73,30 +73,17 @@
 
                 <div class="section-one">
                     <div class="info-messurent">
-                        <div class="target-number">
-                            <div>
-                                <h4>Target #<span>{{sumIndicator(item.number_target)}}</span></h4>
-                            </div>
+                        <div class="info-messurent-item target-number">
+                            <strong>Target #{{sumIndicator(item.number_target)}}</strong>
                         </div>
-                        <div class="unit-messurent">
-                            <div>
-                                <h4>Unit of measure:</h4>
-                            </div>
-                            <div style="margin-top: 16px; margin-left: 5px;" class="description">
-                                {{initiative.unit_messurament}}</div>
+                        <div class="info-messurent-item unit-messurent">
+                            <strong>Unit of measure:</strong>{{initiative.unit_messurament}}
                         </div>
-                        <div class="overall-target">
-                            <div>
-                                <h4>Overall target:</h4>
-                            </div>
-                            <div style="margin-top: 16px; margin-left: 5px;">{{item.target_value}}</div>
+                        <div class="info-messurent-item overall-target">
+                            <strong>Overall target:</strong>{{item.target_value}}
                         </div>
-                        <div class="target-date">
-                            <div>
-                                <h4>Target date:</h4>
-                            </div>
-                            <div style="margin-top: 16px; margin-left: 5px;">{{item?.target_date | date: 'dd-MM-yyyy'}}
-                            </div>
+                        <div class="info-messurent-item target-date">
+                            <strong>Target date:</strong>{{item?.target_date | date: 'dd-MM-yyyy'}}
                         </div>
 
                     </div>
