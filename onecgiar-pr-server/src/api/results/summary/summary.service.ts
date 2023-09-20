@@ -2,14 +2,10 @@ import { Injectable, HttpStatus } from '@nestjs/common';
 import { CreateSummaryDto } from './dto/create-summary.dto';
 import { UpdateSummaryDto } from './dto/update-summary.dto';
 import { InnovationUseDto } from './dto/create-innovation-use.dto';
-import { ResultsInnovationsUseRepository } from './repositories/results-innovations-use.repository';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
-import { ResultsInnovationsUse } from './entities/results-innovations-use.entity';
 import { VersionsService } from '../versions/versions.service';
 import { Version } from '../../versioning/entities/version.entity';
 import { HandlersError } from '../../../shared/handlers/error.utils';
-import { ResultsInnovationsUseMeasuresRepository } from './repositories/results-innovations-use-measures.repository';
-import { ResultsInnovationsUseMeasures } from './entities/results-innovations-use-measures.entity';
 import { capdevDto } from './dto/create-capacity-developents.dto';
 import { ResultsCapacityDevelopmentsRepository } from './repositories/results-capacity-developments.repository';
 import { ResultsCapacityDevelopments } from './entities/results-capacity-developments.entity';
@@ -22,12 +18,26 @@ import { ResultRepository } from '../result.repository';
 import { PolicyChangesDto } from './dto/create-policy-changes.dto';
 import { ResultsPolicyChanges } from './entities/results-policy-changes.entity';
 import { ResultsPolicyChangesRepository } from './repositories/results-policy-changes.repository';
+import { EvidencesRepository } from '../evidences/evidences.repository';
+import { ResultActor } from '../result-actors/entities/result-actor.entity';
+import { In, IsNull } from 'typeorm';
+import { ResultActorRepository } from '../result-actors/repositories/result-actors.repository';
+import { ResultsByInstitutionType } from '../results_by_institution_types/entities/results_by_institution_type.entity';
+import { ResultByIntitutionsTypeRepository } from '../results_by_institution_types/result_by_intitutions_type.repository';
+import { ResultIpMeasure } from '../../ipsr/result-ip-measures/entities/result-ip-measure.entity';
+import { ResultIpMeasureRepository } from '../../ipsr/result-ip-measures/result-ip-measures.repository';
+import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
+import { ResultInitiativeBudget } from '../result_budget/entities/result_initiative_budget.entity';
+import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/result_initiative_budget.repository';
+import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/non_pooled_proyect_budget.repository';
+import { NonPooledProjectRepository } from '../non-pooled-projects/non-pooled-projects.repository';
+import { ResultInstitutionsBudget } from '../result_budget/entities/result_institutions_budget.entity';
+import { ResultInstitutionsBudgetRepository } from '../result_budget/repositories/result_institutions_budget.repository';
+import { InnoDevService } from './innovation_dev.service';
 
 @Injectable()
 export class SummaryService {
   constructor(
-    private readonly _resultsInnovationsUseRepository: ResultsInnovationsUseRepository,
-    private readonly _esultsInnovationsUseMeasuresRepository: ResultsInnovationsUseMeasuresRepository,
     private readonly _resultsCapacityDevelopmentsRepository: ResultsCapacityDevelopmentsRepository,
     private readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
     private readonly _resultsInnovationsDevRepository: ResultsInnovationsDevRepository,
@@ -35,27 +45,17 @@ export class SummaryService {
     private readonly _resultRepository: ResultRepository,
     private readonly _versionsService: VersionsService,
     private readonly _handlersError: HandlersError,
+    private readonly _evidenceRepository: EvidencesRepository,
+    private readonly _resultActorRepository: ResultActorRepository,
+    private readonly _resultByIntitutionsTypeRepository: ResultByIntitutionsTypeRepository,
+    private readonly _resultIpMeasureRepository: ResultIpMeasureRepository,
+    private readonly _resultInitiativesBudgetRepository: ResultInitiativeBudgetRepository,
+    private readonly _resultByInitiativeRepository: ResultByInitiativesRepository,
+    private readonly _resultBilateralBudgetRepository: NonPooledProjectBudgetRepository,
+    private readonly _nonPooledProjectRepository: NonPooledProjectRepository,
+    private readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
+    private readonly _innoDevService: InnoDevService,
   ) {}
-
-  create(createSummaryDto: CreateSummaryDto) {
-    return 'This action adds a new summary';
-  }
-
-  findAll() {
-    return `This action returns all summary`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} summary`;
-  }
-
-  update(id: number, updateSummaryDto: UpdateSummaryDto) {
-    return `This action updates a #${id} summary`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} summary`;
-  }
 
   /**
    *
@@ -65,89 +65,20 @@ export class SummaryService {
    * @returns
    */
   async saveInnovationUse(
-    innovation: InnovationUseDto,
+    innovationUseDto: InnovationUseDto,
     resultId: number,
     user: TokenDto,
   ) {
     try {
-      const { result_innovation_use_id, female_using, male_using, other } =
-        innovation;
-      const innExists =
-        await this._resultsInnovationsUseRepository.InnovatonUseExists(
-          resultId,
-        );
-      let InnovationUse: ResultsInnovationsUse = undefined;
-      const version = await this._versionsService.findBaseVersion();
-      if (version.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: version });
-      }
-      const vrs: Version = <Version>version.response;
-      if (innExists) {
-        innExists.female_using = female_using || null;
-        innExists.male_using = male_using || null;
-        innExists.last_updated_by = user.id;
-        InnovationUse = await this._resultsInnovationsUseRepository.save(
-          innExists,
-        );
-      } else {
-        const newInne = new ResultsInnovationsUse();
-        newInne.created_by = user.id;
-        newInne.last_updated_by = user.id;
-        newInne.female_using = female_using;
-        newInne.male_using = male_using;
-        newInne.results_id = resultId;
-        InnovationUse = await this._resultsInnovationsUseRepository.save(
-          newInne,
-        );
-      }
+      const resultExist = await this._resultRepository.findOne({
+        where: { id: resultId },
+      });
 
-      if (other?.length) {
-        const measureList = other
-          .filter((el) => !!el.result_innovations_use_measure_id)
-          .map((d) => d.result_innovations_use_measure_id);
-        await this._esultsInnovationsUseMeasuresRepository.updateInnovatonUseMeasures(
-          InnovationUse.result_innovation_use_id,
-          measureList,
-          user.id,
-        );
-        let tesultsInnovationsUseMeasuresList: ResultsInnovationsUseMeasures[] =
-          [];
-        for (let index = 0; index < other.length; index++) {
-          const {
-            quantity,
-            unit_of_measure,
-            result_innovations_use_measure_id,
-          } = other[index];
-          const innMesExists =
-            await this._esultsInnovationsUseMeasuresRepository.innovatonUseMeasuresExists(
-              result_innovations_use_measure_id,
-            );
-          if (innMesExists) {
-            innMesExists.last_updated_by = user.id;
-            innMesExists.quantity = quantity;
-            innMesExists.unit_of_measure = unit_of_measure;
-            tesultsInnovationsUseMeasuresList.push(innMesExists);
-          } else {
-            const newInnMes = new ResultsInnovationsUseMeasures();
-            newInnMes.created_by = user.id;
-            newInnMes.last_updated_by = user.id;
-            newInnMes.quantity = quantity;
-            newInnMes.unit_of_measure = unit_of_measure;
-            newInnMes.result_innovation_use_id =
-              InnovationUse.result_innovation_use_id;
-            tesultsInnovationsUseMeasuresList.push(newInnMes);
-          }
-        }
-        await this._esultsInnovationsUseMeasuresRepository.save(
-          tesultsInnovationsUseMeasuresList,
-        );
-      } else {
-        await this._esultsInnovationsUseMeasuresRepository.updateInnovatonUseMeasures(
-          InnovationUse.result_innovation_use_id,
-          [],
-          user.id,
-        );
-      }
+      const InnovationUse = await this._innoDevService.saveAnticepatedInnoUser(
+        resultExist.id,
+        user.id,
+        innovationUseDto,
+      );
 
       return {
         response: InnovationUse,
@@ -166,27 +97,41 @@ export class SummaryService {
    */
   async getInnovationUse(resultId: number) {
     try {
-      const innExists =
-        await this._resultsInnovationsUseRepository.InnovatonUseExists(
-          resultId,
-        );
-      if (!innExists) {
-        throw {
-          response: {},
-          message: 'Results Innovations Use not found',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
+      let actorsData = await this._resultActorRepository.find({
+        where: { result_id: resultId, is_active: true },
+        relations: { obj_actor_type: true },
+      });
+      actorsData.map((el) => {
+        el['men_non_youth'] = el.men - el.men_youth;
+        el['women_non_youth'] = el.women - el.women_youth;
+      });
+      const innovatonUse = {
+        actors: actorsData,
+        measures: await this._resultIpMeasureRepository.find({
+          where: { result_id: resultId, is_active: true },
+        }),
+        organization: (
+          await this._resultByIntitutionsTypeRepository.find({
+            where: {
+              results_id: resultId,
+              institution_roles_id: 5,
+              is_active: true,
+            },
+            relations: {
+              obj_institution_types: { obj_parent: { obj_parent: true } },
+            },
+          })
+        ).map((el) => ({
+          ...el,
+          parent_institution_type_id: el.obj_institution_types?.obj_parent
+            ?.obj_parent?.code
+            ? el.obj_institution_types?.obj_parent?.obj_parent?.code
+            : el.obj_institution_types?.obj_parent?.code || null,
+        })),
+      };
 
-      const allInnUseMes =
-        await this._esultsInnovationsUseMeasuresRepository.getAllResultInnovationsUseMeasureByInnoUseId(
-          innExists.result_innovation_use_id,
-        );
       return {
-        response: {
-          ...innExists,
-          other: allInnUseMes,
-        },
+        response: innovatonUse,
         message: 'Successful response',
         status: HttpStatus.OK,
       };
@@ -246,8 +191,7 @@ export class SummaryService {
         newCapDev.result_id = resultId;
         newCapDev.capdev_delivery_method_id = capdev_delivery_method_id;
         newCapDev.capdev_term_id = capdev_term_id;
-        newCapDev.is_attending_for_organization =
-          is_attending_for_organization;
+        newCapDev.is_attending_for_organization = is_attending_for_organization;
         CapDevData = await this._resultsCapacityDevelopmentsRepository.save(
           newCapDev,
         );
@@ -346,6 +290,7 @@ export class SummaryService {
    */
   async saveInnovationDev(
     createInnovationDevDto: CreateInnovationDevDto,
+    innovationUseDto: InnovationUseDto,
     resultId: number,
     user: TokenDto,
   ) {
@@ -373,6 +318,7 @@ export class SummaryService {
         short_title,
         innovation_acknowledgement,
         innovation_pdf,
+        innovation_user_to_be_determined,
       } = createInnovationDevDto;
 
       let InnDevRes: ResultsInnovationsDev = undefined;
@@ -393,6 +339,8 @@ export class SummaryService {
           innovation_characterization_id;
         innDevExists.innovation_acknowledgement = innovation_acknowledgement;
         innDevExists.innovation_pdf = innovation_pdf;
+        innDevExists.innovation_user_to_be_determined =
+          innovation_user_to_be_determined;
         InnDevRes = await this._resultsInnovationsDevRepository.save(
           innDevExists,
         );
@@ -415,7 +363,83 @@ export class SummaryService {
           innovation_characterization_id;
         newInnDev.innovation_acknowledgement = innovation_acknowledgement;
         newInnDev.innovation_pdf = innovation_pdf;
+        newInnDev.innovation_user_to_be_determined =
+          innovation_user_to_be_determined;
         InnDevRes = await this._resultsInnovationsDevRepository.save(newInnDev);
+      }
+
+      // * Save Questions
+      await this._innoDevService.saveOptionsAndSubOptions(
+        resultId,
+        user.id,
+        createInnovationDevDto?.responsible_innovation_and_scaling.q1.options,
+      );
+      await this._innoDevService.saveOptionsAndSubOptions(
+        resultId,
+        user.id,
+        createInnovationDevDto?.responsible_innovation_and_scaling.q2.options,
+      );
+      await this._innoDevService.saveOptionsAndSubOptions(
+        resultId,
+        user.id,
+        createInnovationDevDto?.intellectual_property_rights.q1.options,
+      );
+      await this._innoDevService.saveOptionsAndSubOptions(
+        resultId,
+        user.id,
+        createInnovationDevDto?.intellectual_property_rights.q2.options,
+      );
+      await this._innoDevService.saveOptionsAndSubOptions(
+        resultId,
+        user.id,
+        createInnovationDevDto?.intellectual_property_rights.q3.options,
+      );
+      await this._innoDevService.saveOptionsAndSubOptions(
+        resultId,
+        user.id,
+        createInnovationDevDto?.innovation_team_diversity.options,
+      );
+
+      // * Save Evidence
+      await this._innoDevService.saveEvidence(
+        resultId,
+        user.id,
+        createInnovationDevDto.pictures,
+        3,
+      );
+      await this._innoDevService.saveEvidence(
+        resultId,
+        user.id,
+        createInnovationDevDto.reference_materials,
+        4,
+      );
+
+      // * Save Investment
+      await this._innoDevService.saveInitiativeInvestment(
+        resultId,
+        user.id,
+        createInnovationDevDto,
+      );
+      await this._innoDevService.saveBillateralInvestment(
+        resultId,
+        user.id,
+        createInnovationDevDto,
+      );
+      await this._innoDevService.savePartnerInvestment(
+        user.id,
+        createInnovationDevDto,
+      );
+
+      if (
+        innovation_user_to_be_determined != false ||
+        innovation_user_to_be_determined != null
+      ) {
+        // * Save InnovationUser
+        await this._innoDevService.saveAnticepatedInnoUser(
+          resultId,
+          user.id,
+          innovationUseDto,
+        );
       }
 
       return {
@@ -440,10 +464,121 @@ export class SummaryService {
           resultId,
         );
 
+      const pictures = await this._evidenceRepository.find({
+        where: { result_id: resultId, evidence_type_id: 3, is_active: 1 },
+      });
+      const reference_materials = await this._evidenceRepository.find({
+        where: { result_id: resultId, evidence_type_id: 4, is_active: 1 },
+      });
       const result = await this._resultRepository.getResultById(resultId);
+
+      let actorsData = await this._resultActorRepository.find({
+        where: { result_id: resultId, is_active: true },
+        relations: { obj_actor_type: true },
+      });
+      const innovatonUse = {
+        actors: actorsData,
+        measures: await this._resultIpMeasureRepository.find({
+          where: { result_id: resultId, is_active: true },
+        }),
+        organization: (
+          await this._resultByIntitutionsTypeRepository.find({
+            where: {
+              results_id: resultId,
+              institution_roles_id: 5,
+              is_active: true,
+            },
+            relations: {
+              obj_institution_types: { obj_parent: { obj_parent: true } },
+            },
+          })
+        ).map((el) => ({
+          ...el,
+          parent_institution_type_id: el.obj_institution_types?.obj_parent
+            ?.obj_parent?.code
+            ? el.obj_institution_types?.obj_parent?.obj_parent?.code
+            : el.obj_institution_types?.obj_parent?.code || null,
+        })),
+      };
+
+      const initiatives = await this._resultByInitiativeRepository.find({
+        where: {
+          result_id: resultId,
+          is_active: true,
+        },
+      });
+
+      const initiative_expected_investment =
+        await this._resultInitiativesBudgetRepository.find({
+          where: {
+            result_initiative_id: In(initiatives.map((el) => el.id)),
+            is_active: true,
+          },
+          relations: {
+            obj_result_initiative: {
+              obj_initiative: true,
+            },
+          },
+        });
+
+      const npp = await this._nonPooledProjectRepository.find({
+        where: {
+          results_id: resultId,
+          is_active: true,
+          non_pooled_project_type_id: 1,
+        },
+      });
+
+      const bilateral_expected_investment =
+        await this._resultBilateralBudgetRepository.find({
+          where: {
+            non_pooled_projetct_id: In(npp.map((el) => el.id)),
+            is_active: true,
+          },
+          relations: {
+            obj_non_pooled_projetct: {
+              obj_funder_institution_id: true,
+            },
+          },
+        });
+
+      const institutions: ResultsByInstitution[] =
+        await this._resultByIntitutionsRepository.find({
+          where: { result_id: resultId, is_active: true },
+        });
+      const institutions_expected_investment =
+        await this._resultInstitutionsBudgetRepository.find({
+          where: {
+            result_institution_id: In(institutions.map((el) => el.id)),
+            is_active: true,
+          },
+          relations: {
+            obj_result_institution: {
+              obj_institutions: {
+                obj_institution_type_code: true,
+              },
+            },
+          },
+        });
+
+      // const institutions_expected_investment = institutions.map((el) => {
+      //   return {
+      //     institution: el,
+      //     budget: institutions_investment.filter(
+      //       (b) => b.result_institution_id == el.id,
+      //     ),
+      //   };
+      // });
+
       return {
         response: {
           ...innDevExists,
+          pictures,
+          innovatonUse,
+          initiative_expected_investment,
+          bilateral_expected_investment,
+          institutions_expected_investment,
+          reference_materials,
           result: result,
         },
         message: 'Successful response',

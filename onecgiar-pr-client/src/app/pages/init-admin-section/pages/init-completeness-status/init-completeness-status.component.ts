@@ -36,7 +36,7 @@ export class InitCompletenessStatusComponent implements OnInit {
     // if (!this.api.rolesSE.isAdmin) return;
     this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
       //(response);
-      console.log(response);
+      //(response);
       this.allInitiatives = response;
     });
   }

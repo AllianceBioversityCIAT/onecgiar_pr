@@ -58,8 +58,8 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
 
     this.value?.map(savedListItem => {
       const itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == savedListItem[this.optionValue]);
-      // console.log(itemFinded);
-      // console.log(savedListItem);
+      // //(itemFinded);
+      // //(savedListItem);
       if (itemFinded) itemFinded.selected = true;
 
       if (itemFinded && this.logicalDeletion) itemFinded.selected = savedListItem.is_active;
@@ -134,13 +134,13 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   }
 
   confirmDeletionEvent(option) {
-    this.customizedAlertsFeSE.show({ id: 'confirm-delete-item', title: `Are you sure you want to remove this initiative from the contributors?`, description: `This will remove the ToC match made by the initiative and in case you want to add it again, you will need to submit a new request.`, status: 'warning', confirmText: 'Yes, delete' }, () => {
+    this.customizedAlertsFeSE.show({ id: 'confirm-delete-item', title: `Are you sure you want to remove this Initiative from the contributors?`, description: `This will remove the ToC match made by the Initiative and in case you want to add it again, you will need to submit a new request.`, status: 'warning', confirmText: 'Yes, delete' }, () => {
       this.removeOption(option);
     });
   }
 
   onSelectOption(option) {
-    console.log('onSelectOption');
+    //('onSelectOption');
     this.selectAll = null;
     if (option?.disabled) return;
     // this.onChange(null);

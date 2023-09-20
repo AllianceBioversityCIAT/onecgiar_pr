@@ -18,7 +18,7 @@ export class RdEvidencesComponent {
     //(this.api.dataControlSE?.currentResult);
     if (this.api.dataControlSE.isKnowledgeProduct) return 'As this knowledge product is stored in CGSpace, this section only requires an indication of whether the knowledge product is associated with any of the Impact Area tags provided below.';
     let mainText = '<ul><li>Submit a maximum of 6 pieces of evidence.</li><li>Please list evidence from most to least important.</li><li>Files cannot be uploaded; only links can be entered.</li>';
-    if (this.api.dataControlSE?.currentResult?.result_type_id === 5) mainText += '<li>Capacity development do not currently require evidence submission for QA due to the time/resource burden and unresolved potential GDPR issues</li><li>By submitting a cap dev result is it understood that you have evidence available to support the result submission, and that should a sub-sample be required this evidence could be made available</li>';
+    if (this.api.dataControlSE?.currentResult?.result_type_id === 5) mainText += '<li>Capacity sharing for development does not currently require evidence submission for quality assurance due to the time/resource burden and potential unresolved General Data Protection Regulation (GDPR) issues.</li><li>By submitting a capacity sharing for development result it is understood that you have evidence to support the result submission, and that should a sub-sample be required this evidence could be made available.</li>';
     mainText += '</ul> ';
     return mainText;
   }
@@ -32,7 +32,7 @@ export class RdEvidencesComponent {
       this.evidencesBody = response;
       //(this.evidencesBody);
       //(this.evidencesBody?.gender_tag_level);
-      console.log(response);
+      //(response);
     });
   }
   onSaveSection() {
@@ -66,7 +66,7 @@ export class RdEvidencesComponent {
     if (!youth_related && this.evidencesBody?.climate_change_tag_level == '3') text += '<li>At least one of the evidence sources must have the climate checkbox marked if the climate change tag has a score of 2.</li>';
     // Todo new fields
     if (!nutrition_related && this.evidencesBody?.nutrition_tag_level == '3') text += '<li>At least one of the evidence sources must have the nutrition checkbox marked if the nutrition tag has a score of 2.</li>';
-    if (!environmental_biodiversity_related && this.evidencesBody?.environmental_biodiversity_tag_level == '3') text += '<li>At least one of the evidence sources must have the environment and/or biodiversity checkbox marked if the environment and/or biodiversity tag has a score of 2.</li>';
+    if (!environmental_biodiversity_related && this.evidencesBody?.environmental_biodiversity_tag_level == '3') text += '<li>At least one of the evidence sources must have the environment checkbox marked if the environment tag has a score of 2.</li>';
     if (!poverty_related && this.evidencesBody?.poverty_tag_level == '3') text += '<li>At least one of the evidence sources must have the poverty checkbox marked if the poverty tag has a score of 2.</li>';
     // nutrition_tag_level
     // environmental_biodiversity_tag_level

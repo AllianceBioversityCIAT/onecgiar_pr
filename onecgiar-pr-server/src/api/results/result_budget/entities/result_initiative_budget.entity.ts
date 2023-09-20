@@ -44,6 +44,15 @@ export class ResultInitiativeBudget extends BaseEntity {
   next_year!: number;
 
   @Column({
+    name: 'kind_cash',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
+  kind_cash!: number;
+
+  @Column({
     name: 'is_determined',
     type: 'boolean',
     nullable: true,
