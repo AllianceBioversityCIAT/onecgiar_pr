@@ -2,6 +2,9 @@ import { Component, OnInit } from '@angular/core';
 import { InnovationDevInfoBody } from './model/innovationDevInfoBody';
 import { InnovationControlListService } from '../../../../../../../shared/services/global/innovation-control-list.service';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
+import { InnovationDevelopmentQuestions } from './model/InnovationDevelopmentQuestions.model';
+import { InnovationDevInfoUtilsService } from './services/innovation-dev-info-utils.service';
+import { InnovationDevelopmentLinks } from './model/InnovationDevelopmentLinks.model';
 
 @Component({
   selector: 'app-innovation-dev-info',
@@ -11,32 +14,74 @@ import { ApiService } from '../../../../../../../shared/services/api/api.service
 export class InnovationDevInfoComponent implements OnInit {
   innovationDevInfoBody = new InnovationDevInfoBody();
   range = 5;
-  constructor(private api: ApiService, public innovationControlListSE: InnovationControlListService) {}
+  savingSection = false;
+  innovationDevelopmentQuestions: InnovationDevelopmentQuestions = new InnovationDevelopmentQuestions();
+  innovationDevelopmentLinks: InnovationDevelopmentLinks = new InnovationDevelopmentLinks();
+  constructor(private api: ApiService, public innovationControlListSE: InnovationControlListService, private innovationDevInfoUtilsSE: InnovationDevInfoUtilsService) {}
 
   ngOnInit(): void {
     this.getSectionInformation();
+    this.GET_questionsInnovationDevelopment();
   }
+
+  GET_questionsInnovationDevelopment() {
+    this.api.resultsSE.GET_questionsInnovationDevelopment().subscribe(({ response }) => {
+      this.innovationDevelopmentQuestions = response;
+      this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.responsible_innovation_and_scaling.q1);
+      this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.responsible_innovation_and_scaling.q2);
+      this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.innovation_team_diversity);
+      this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q1);
+      this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q2);
+      this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q3);
+    });
+  }
+
   getSectionInformation() {
+    this.savingSection = true;
+    this.GET_questionsInnovationDevelopment();
     this.api.resultsSE.GET_innovationDev().subscribe(
       ({ response }) => {
         //(response);
+        this.convertOrganizations(response?.innovatonUse?.organization);
         this.innovationDevInfoBody = response;
+        this.innovationDevInfoBody.innovation_user_to_be_determined = Boolean(this.innovationDevInfoBody.innovation_user_to_be_determined);
+        //(response);
+        this.savingSection = false;
       },
       err => {
         console.error(err);
+        this.savingSection = false;
       }
     );
   }
+
+  convertOrganizations(organizations) {
+    organizations.map((item: any) => {
+      if (item.parent_institution_type_id) {
+        item.institution_sub_type_id = item?.institution_types_id;
+        item.institution_types_id = item?.parent_institution_type_id;
+      }
+    });
+  }
+
+  convertOrganizationsTosave() {
+    this.innovationDevInfoBody.innovatonUse.organization.map((item: any) => {
+      if (item.institution_sub_type_id) {
+        item.institution_types_id = item.institution_sub_type_id;
+      }
+    });
+  }
+
   onSaveSection() {
-    //(this.innovationDevInfoBody);
+    //({ ...this.innovationDevInfoBody, ...this.innovationDevelopmentQuestions });
+    this.convertOrganizationsTosave();
+    // this.PATCH_InnovationDevSummary();
     if (this.innovationDevInfoBody.innovation_nature_id != 12) {
-      //('clean');
       this.innovationDevInfoBody.number_of_varieties = null;
       this.innovationDevInfoBody.is_new_variety = null;
     }
-    this.api.resultsSE.PATCH_innovationDev(this.innovationDevInfoBody).subscribe(
+    this.api.resultsSE.PATCH_innovationDev({ ...this.innovationDevInfoBody, ...this.innovationDevelopmentQuestions }).subscribe(
       ({ response }) => {
-        //(response);
         this.getSectionInformation();
       },
       err => {
@@ -59,7 +104,7 @@ export class InnovationDevInfoComponent implements OnInit {
   }
   alertInfoText2() {
     return `Please make sure you provide evidence/documentation that support the current innovation readiness level.<br>
-    * Evidence are inputted in the General information section (click here to go there)<br>
+    * Evidence are inputted in the General information section <a class="open_route" target="_blank" href="/result/result-detail/${this.api.resultsSE?.currentResultCode}/general-information?phase=${this.api.resultsSE?.currentResultPhase}">(click here to go there)</a><br>    
     <br><br>
     Documentation may include idea-notes, concept-notes, technical report, pilot testing report, experimental data paper, newsletter, etc. It may be project reports, scientific publications, book chapters, communication materials that provide evidence of the current development/ maturity stage of the innovation. 
     <br><br>

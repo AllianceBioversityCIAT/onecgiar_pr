@@ -5,9 +5,10 @@ import { StepN1RoutingModule } from './step-n1-routing.module';
 import { StepN1Component } from './step-n1.component';
 import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
 import { StepN1ComponentsModule } from './components/step-n1-components.module';
+import { InnovationUseFormModule } from '../../../../../../../../shared/components/innovation-use-form/innovation-use-form.module';
 
 @NgModule({
   declarations: [StepN1Component],
-  imports: [CommonModule, StepN1RoutingModule, CustomFieldsModule, StepN1ComponentsModule]
+  imports: [CommonModule, StepN1RoutingModule, CustomFieldsModule, StepN1ComponentsModule, InnovationUseFormModule]
 })
 export class StepN1Module {}

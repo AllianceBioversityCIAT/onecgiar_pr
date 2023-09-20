@@ -146,4 +146,11 @@ export class ResultsInnovationsDev {
     nullable: true,
   })
   last_updated_date!: Date;
+
+  @Column({
+    name: 'innovation_user_to_be_determined',
+    type: 'boolean',
+    nullable: true,
+  })
+  innovation_user_to_be_determined!: boolean;
 }

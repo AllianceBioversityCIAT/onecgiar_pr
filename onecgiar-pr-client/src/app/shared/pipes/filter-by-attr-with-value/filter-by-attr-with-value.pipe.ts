@@ -5,10 +5,12 @@ import { Pipe, PipeTransform } from '@angular/core';
 })
 export class FilterByAttrWithValuePipe implements PipeTransform {
   transform(list, attr, value) {
-    if (value === null) return list;
-    const resultList = list.filter(item => item[attr] == value);
+    if (!value) return list;
+
+    const resultList = list?.filter(item => item[attr].toUpperCase().indexOf(value?.toUpperCase()) > -1);
+
     if (!resultList?.length) return [];
-    //(resultList);
+
     return resultList;
   }
 }

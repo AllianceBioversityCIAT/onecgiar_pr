@@ -18,7 +18,7 @@ export class ChangePhaseModalComponent implements OnInit {
     this._resultsApiService.GET_versioning(StatusPhaseEnum.OPEN, ModuleTypeEnum.REPORTING).subscribe({
       next: ({ response }) => {
         this.version = response?.length ? response[0] : null;
-        // console.log('23456', this.version);
+        // //('23456', this.version);
       }
     });
   }
@@ -33,11 +33,11 @@ export class ChangePhaseModalComponent implements OnInit {
         this.requesting = false;
         this.api.updateResultsList();
         this.api.dataControlSE.chagePhaseModal = false;
-        // console.log(response);
+        // //(response);
         this.router.navigate([`/result/result-detail/${response?.result_code}/general-information`], { queryParams: { phase: response?.version_id } });
       },
       error: error => {
-        console.log(error);
+        console.error(error);
         error.status == 409 ? this.api.alertsFe.show({ id: 'noti', title: `Information`, description: `${error.error.message}`, status: 'information' }) : this.api.alertsFe.show({ id: 'noti', title: `Error`, description: `${error.error.message}`, status: 'error' });
 
         this.requesting = false;

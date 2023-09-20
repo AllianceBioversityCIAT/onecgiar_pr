@@ -36,8 +36,8 @@ export class IpsrGeoscopeCreatorComponent {
   }
 
   cleanSubNationals() {
-    console.log('cleanSubNationals');
-    console.log(this.body);
+    //('cleanSubNationals');
+    //(this.body);
     this.sub_scope = [];
   }
 

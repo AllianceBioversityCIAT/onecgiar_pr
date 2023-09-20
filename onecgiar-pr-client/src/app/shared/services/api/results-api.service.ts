@@ -279,7 +279,7 @@ export class ResultsApiService {
   }
 
   POST_toc(body: TheoryOfChangeBody) {
-    console.log(body);
+    //(body);
 
     return this.http.post<any>(`${this.apiBaseUrl}toc/create/toc/result/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
@@ -316,12 +316,11 @@ export class ResultsApiService {
   }
 
   Get_indicator(id_toc, init) {
-    if(this.currentResultId == null){
+    if (this.currentResultId == null) {
       return this.http.get<any>(`${this.apiBaseUrl}toc/get/indicator/${id_toc}/result/${this.ipsrDataControlSE.resultInnovationId}/initiative/${init}`).pipe(this.saveButtonSE.isGettingSectionPipe());
-    }else{
+    } else {
       return this.http.get<any>(`${this.apiBaseUrl}toc/get/indicator/${id_toc}/result/${this.currentResultId}/initiative/${init}`).pipe(this.saveButtonSE.isGettingSectionPipe());
     }
-    
   }
   get_vesrsionDashboard(id_toc, init) {
     return this.http.get<any>(`${this.apiBaseUrl}toc/get/version/${this.currentResultId}/initiative/${init}/resultToc/${id_toc}`);
@@ -628,7 +627,7 @@ export class ResultsApiService {
   }
 
   GETInnovationPathwayStepTwoInnovationSelect() {
-    console.log(this.ipsrDataControlSE.resultInnovationId);
+    //(this.ipsrDataControlSE.resultInnovationId);
 
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/step-two/${this.ipsrDataControlSE.resultInnovationId}`);
   }
@@ -772,8 +771,6 @@ export class ResultsApiService {
   GET_versioning(status, modules) {
     return this.http.get<any>(`${environment.apiBaseUrl}api/versioning?status=${status}&module=${modules}`).pipe(
       map(resp => {
-        //(resp);
-        console.log(resp);
         resp?.response.map(phase => (phase.phase_name_status = `${phase.phase_name} - (${phase.status ? 'Open' : 'Closed'})`));
         return resp;
       })
@@ -807,7 +804,7 @@ export class ResultsApiService {
   GET_questionsInnovationDevelopment() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results/questions/innovation-development/${this.currentResultId}`);
   }
-  
+
   GET_investmentDiscontinuedOptions() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results/investment-discontinued-options`);
   }

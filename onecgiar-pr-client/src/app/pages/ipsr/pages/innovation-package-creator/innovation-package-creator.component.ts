@@ -17,7 +17,7 @@ export class InnovationPackageCreatorComponent {
   statusPdialog: boolean = false;
   constructor(public api: ApiService, private router: Router, public manageInnovationsListSE: ManageInnovationsListService) {
     this.GET_AllInitiatives();
-    console.log(this.api.dataControlSE.myInitiativesList.length);
+    //(this.api.dataControlSE.myInitiativesList.length);
     if (this.api.dataControlSE.myInitiativesList.length) {
       this.api.rolesSE.readOnly = false;
       if (this.api?.dataControlSE?.currentResult?.status) this.api.dataControlSE.currentResult.status = null;
@@ -57,8 +57,8 @@ export class InnovationPackageCreatorComponent {
             allFields.push(countryField || SubNationalLevelOneField);
           });
         const someNull = allFields.length ? allFields.some(item => item === true) : true;
-        console.log(someNull);
-        console.log(this.innovationPackageCreatorBody.countries.length);
+        //(someNull);
+        //(this.innovationPackageCreatorBody.countries.length);
         return !someNull;
       default:
         return false;
@@ -75,7 +75,7 @@ export class InnovationPackageCreatorComponent {
   }
 
   onSaveSection() {
-    console.log(this.innovationPackageCreatorBody);
+    //(this.innovationPackageCreatorBody);
     this.innovationPackageCreatorBody.geoScopeSubNatinals.forEach(resp => {
       const subCountry = this.innovationPackageCreatorBody.countries.filter(country => resp.idCountry == country.id)[0];
       if (resp.isRegister != 0) {

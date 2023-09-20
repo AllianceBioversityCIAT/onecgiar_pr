@@ -11,14 +11,14 @@
         <app-pr-select *ngIf="!this.api.rolesSE.isAdmin" class="segment_title_margin"
             [options]="this.api.dataControlSE.myInitiativesList" label="Primary submitter of the innovation package"
             [isStatic]="true" optionLabel="full_name" optionValue="initiative_id" placeholder="Select initiative"
-            description="Select an initiative"
+            description="Select an Initiative"
             (selectOptionEvent)="this.manageInnovationsListSE.GETallInnovations(this.innovationPackageCreatorBody.initiative_id); status= false; this.api.rolesSE.readOnly = false;"
             [(ngModel)]="this.innovationPackageCreatorBody.initiative_id">
         </app-pr-select>
 
         <app-pr-select *ngIf="this.api.rolesSE.isAdmin" class="segment_title_margin" [options]="this.allInitiatives"
             label="Primary submitter of the innovation package" [isStatic]="true" optionLabel="full_name"
-            optionValue="initiative_id" placeholder="Select initiative" description="Select an initiative"
+            optionValue="initiative_id" placeholder="Select initiative" description="Select an Initiative"
             (selectOptionEvent)="this.manageInnovationsListSE.GETallInnovations(this.innovationPackageCreatorBody.initiative_id); status= false;"
             [(ngModel)]="this.innovationPackageCreatorBody.initiative_id">
         </app-pr-select>
