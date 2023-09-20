@@ -592,6 +592,7 @@ export class VersioningService {
         where: where,
         relations: {
           obj_previous_phase: true,
+          obj_reporting_phase: true,
         },
       });
 
