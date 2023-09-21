@@ -1,0 +1,13 @@
+.peopleFields {
+    // display: flex;
+    align-items: center;
+
+    &.small {
+        max-width: 500px;
+        ;
+    }
+
+    app-pr-checkbox {
+        margin-top: 40px;
+    }
+}
