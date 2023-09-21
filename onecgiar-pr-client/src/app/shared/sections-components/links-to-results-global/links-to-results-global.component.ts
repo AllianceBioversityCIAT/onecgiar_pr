@@ -22,7 +22,7 @@ export class LinksToResultsGlobalComponent implements OnInit {
     { title: 'Title', attr: 'title', class: 'notCenter' },
     // { title: 'Reporting year', attr: 'reported_year' },
     { title: 'Phase', attr: 'phase_name' },
-    { title: 'Result type', attr: 'result_type' },
+    { title: 'Indicator category', attr: 'result_type' },
     { title: 'Submitter', attr: 'submitter' },
     { title: 'Status', attr: 'status_name' },
     { title: 'Creation date	', attr: 'created_date' }
