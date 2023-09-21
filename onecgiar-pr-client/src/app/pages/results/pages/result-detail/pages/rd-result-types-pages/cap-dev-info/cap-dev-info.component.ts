@@ -49,8 +49,14 @@ export class CapDevInfoComponent implements OnInit {
     this.api.resultsSE.GET_capacityDevelopent().subscribe(({ response }) => {
       //(response);
       this.capDevInfoRoutingBody = response;
+      this.capDevInfoRoutingBody.unkown_using = Boolean(this.capDevInfoRoutingBody.unkown_using);
+      console.log(this.capDevInfoRoutingBody);
       this.get_capdev_term_id();
     });
+  }
+
+  cleanPeopleValues() {
+    console.log('cleanPeopleValues');
   }
 
   clean_capdev_term_2() {
@@ -94,6 +100,7 @@ export class CapDevInfoComponent implements OnInit {
     this.validate_capdev_term_id();
 
     if (!this.capDevInfoRoutingBody.is_attending_for_organization) this.cleanOrganizationsList();
+    console.log(this.capDevInfoRoutingBody);
     this.api.resultsSE.PATCH_capacityDevelopent(this.capDevInfoRoutingBody).subscribe((resp: any) => {
       this.getSectionInformation();
     });
