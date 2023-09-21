@@ -471,217 +471,225 @@ export class resultValidationRepository extends Repository<Validation> {
     }
   }
 
-  async evidenceValidation(resultId: number) {
-    const { version } = await this.version();
-
-    const queryData = `
-	SELECT
-		'evidences' AS section_name,
-		CASE
-			WHEN IF(
-				rid.innovation_readiness_level_id = 11
-				AND r.result_type_id = 7,
-				TRUE,
-				(
-					(
-						SELECT
-							IF(
-								(
-									SUM(
-										IF(
-											e.link IS NOT NULL
-											AND e.link <> '',
-											1,
-											0
-										)
-									) - COUNT(e.id)
-								) IS NULL,
-								0,
-								(
-									SUM(
-										IF(
-											e.link IS NOT NULL
-											AND e.link <> '',
-											1,
-											0
-										)
-									) - COUNT(e.id)
-								)
-							)
-						FROM
-							evidence e
-						WHERE
-							e.result_id = r.id
-							AND e.is_supplementary = 0
-							AND e.is_active > 0
-					) = 0
-				)
-				AND (
-					(
-						SELECT
-							SUM(
-								IF(
-									r.gender_tag_level_id = 3
-									AND e.gender_related = 1,
-									1,
-									IF(
-										r.gender_tag_level_id IN (1, 2),
-										1,
-										IF(r.gender_tag_level_id IS NULL, 1, 0)
-									)
-								)
-							)
-						FROM
-							evidence e
-						WHERE
-							e.result_id = r.id
-							AND e.is_supplementary = 0
-							AND e.is_active > 0
-					) > 0
-				)
-				AND (
-					(
-						SELECT
-							SUM(
-								IF(
-									r.climate_change_tag_level_id = 3
-									AND e.youth_related = 1,
-									1,
-									IF(
-										r.climate_change_tag_level_id IN (1, 2),
-										1,
-										IF(r.climate_change_tag_level_id IS NULL, 1, 0)
-									)
-								)
-							)
-						FROM
-							evidence e
-						WHERE
-							e.result_id = r.id
-							AND e.is_supplementary = 0
-							AND e.is_active > 0
-					) > 0
-				)
-				AND (
-					(
-						SELECT
-							SUM(
-								IF(
-									r.nutrition_tag_level_id = 3
-									AND e.nutrition_related = 1,
-									1,
-									IF(
-										r.nutrition_tag_level_id IN (1, 2),
-										1,
-										IF(r.nutrition_tag_level_id IS NULL, 1, 0)
-									)
-								)
-							)
-						FROM
-							evidence e
-						WHERE
-							e.result_id = r.id
-							AND e.is_supplementary = 0
-							AND e.is_active > 0
-					) > 0
-				)
-				AND (
-					(
-						SELECT
-							SUM(
-								IF(
-									r.environmental_biodiversity_tag_level_id = 3
-									AND e.environmental_biodiversity_related = 1,
-									1,
-									IF(
-										r.environmental_biodiversity_tag_level_id IN (1, 2),
-										1,
-										IF(
-											r.environmental_biodiversity_tag_level_id IS NULL,
-											1,
-											0
-										)
-									)
-								)
-							)
-						FROM
-							evidence e
-						WHERE
-							e.result_id = r.id
-							AND e.is_supplementary = 0
-							AND e.is_active > 0
-					) > 0
-				)
-				AND (
-					(
-						SELECT
-							SUM(
-								IF(
-									r.poverty_tag_level_id = 3
-									AND e.poverty_related = 1,
-									1,
-									IF(
-										r.poverty_tag_level_id IN (1, 2),
-										1,
-										IF(r.poverty_tag_level_id IS NULL, 1, 0)
-									)
-								)
-							)
-						FROM
-							evidence e
-						WHERE
-							e.result_id = r.id
-							AND e.is_supplementary = 0
-							AND e.is_active > 0
-					) > 0
-				)
-				AND (
-					(
-						SELECT
-							IF(
-								(
-									SUM(
-										IF(
-											e.link IS NOT NULL
-											AND e.link <> '',
-											1,
-											0
-										)
-									) - COUNT(e.id)
-								) IS NULL,
-								0,
-								(
-									SUM(
-										IF(
-											e.link IS NOT NULL
-											AND e.link <> '',
-											1,
-											0
-										)
-									) - COUNT(e.id)
-								)
-							)
-						FROM
-							evidence e
-						WHERE
-							e.result_id = r.id
-							AND e.is_supplementary = 1
-							AND e.is_active > 0
-					) = 0
-				)
-			) THEN TRUE
-			ELSE FALSE
-		END AS validation
-	FROM
-		result r
-		LEFT JOIN results_innovations_dev rid ON rid.results_id = r.id
-		AND rid.is_active > 0
-	WHERE
-		r.id = ?
-		AND r.is_active > 0
-		AND r.version_id = ${version};
-    `;
+  async evidenceValidation(resultTypeId: number, resultId: number) {
     try {
+      const { version } = await this.version();
+      const level = await this.innoReadinessLevel(resultId);
+
+      if (resultTypeId == 7 && level == 0) {
+        return {
+          section_name: 'evidences',
+          validation: 1,
+        };
+      }
+      const queryData = `
+		SELECT
+			'evidences' AS section_name,
+			CASE
+				WHEN IF(
+					rid.innovation_readiness_level_id = 11
+					AND r.result_type_id = 7,
+					TRUE,
+					(
+						(
+							SELECT
+								IF(
+									(
+										SUM(
+											IF(
+												e.link IS NOT NULL
+												AND e.link <> '',
+												1,
+												0
+											)
+										) - COUNT(e.id)
+									) IS NULL,
+									0,
+									(
+										SUM(
+											IF(
+												e.link IS NOT NULL
+												AND e.link <> '',
+												1,
+												0
+											)
+										) - COUNT(e.id)
+									)
+								)
+							FROM
+								evidence e
+							WHERE
+								e.result_id = r.id
+								AND e.is_supplementary = 0
+								AND e.is_active > 0
+						) = 0
+					)
+					AND (
+						(
+							SELECT
+								SUM(
+									IF(
+										r.gender_tag_level_id = 3
+										AND e.gender_related = 1,
+										1,
+										IF(
+											r.gender_tag_level_id IN (1, 2),
+											1,
+											IF(r.gender_tag_level_id IS NULL, 1, 0)
+										)
+									)
+								)
+							FROM
+								evidence e
+							WHERE
+								e.result_id = r.id
+								AND e.is_supplementary = 0
+								AND e.is_active > 0
+						) > 0
+					)
+					AND (
+						(
+							SELECT
+								SUM(
+									IF(
+										r.climate_change_tag_level_id = 3
+										AND e.youth_related = 1,
+										1,
+										IF(
+											r.climate_change_tag_level_id IN (1, 2),
+											1,
+											IF(r.climate_change_tag_level_id IS NULL, 1, 0)
+										)
+									)
+								)
+							FROM
+								evidence e
+							WHERE
+								e.result_id = r.id
+								AND e.is_supplementary = 0
+								AND e.is_active > 0
+						) > 0
+					)
+					AND (
+						(
+							SELECT
+								SUM(
+									IF(
+										r.nutrition_tag_level_id = 3
+										AND e.nutrition_related = 1,
+										1,
+										IF(
+											r.nutrition_tag_level_id IN (1, 2),
+											1,
+											IF(r.nutrition_tag_level_id IS NULL, 1, 0)
+										)
+									)
+								)
+							FROM
+								evidence e
+							WHERE
+								e.result_id = r.id
+								AND e.is_supplementary = 0
+								AND e.is_active > 0
+						) > 0
+					)
+					AND (
+						(
+							SELECT
+								SUM(
+									IF(
+										r.environmental_biodiversity_tag_level_id = 3
+										AND e.environmental_biodiversity_related = 1,
+										1,
+										IF(
+											r.environmental_biodiversity_tag_level_id IN (1, 2),
+											1,
+											IF(
+												r.environmental_biodiversity_tag_level_id IS NULL,
+												1,
+												0
+											)
+										)
+									)
+								)
+							FROM
+								evidence e
+							WHERE
+								e.result_id = r.id
+								AND e.is_supplementary = 0
+								AND e.is_active > 0
+						) > 0
+					)
+					AND (
+						(
+							SELECT
+								SUM(
+									IF(
+										r.poverty_tag_level_id = 3
+										AND e.poverty_related = 1,
+										1,
+										IF(
+											r.poverty_tag_level_id IN (1, 2),
+											1,
+											IF(r.poverty_tag_level_id IS NULL, 1, 0)
+										)
+									)
+								)
+							FROM
+								evidence e
+							WHERE
+								e.result_id = r.id
+								AND e.is_supplementary = 0
+								AND e.is_active > 0
+						) > 0
+					)
+					AND (
+						(
+							SELECT
+								IF(
+									(
+										SUM(
+											IF(
+												e.link IS NOT NULL
+												AND e.link <> '',
+												1,
+												0
+											)
+										) - COUNT(e.id)
+									) IS NULL,
+									0,
+									(
+										SUM(
+											IF(
+												e.link IS NOT NULL
+												AND e.link <> '',
+												1,
+												0
+											)
+										) - COUNT(e.id)
+									)
+								)
+							FROM
+								evidence e
+							WHERE
+								e.result_id = r.id
+								AND e.is_supplementary = 1
+								AND e.is_active > 0
+						) = 0
+					)
+				) THEN TRUE
+				ELSE FALSE
+			END AS validation
+		FROM
+			result r
+			LEFT JOIN results_innovations_dev rid ON rid.results_id = r.id
+			AND rid.is_active > 0
+		WHERE
+			r.id = ${resultId}
+			AND r.is_active > 0
+			AND r.version_id = ${version};
+	`;
+
       const shareResultRequest: GetValidationSectionDto[] =
         await this.dataSource.query(queryData, [resultId]);
       return shareResultRequest.length ? shareResultRequest[0] : undefined;
@@ -1550,6 +1558,38 @@ export class resultValidationRepository extends Repository<Validation> {
     try {
       const shareResultRequest = await this.dataSource.query(queryData);
       return shareResultRequest;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: resultValidationRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async innoReadinessLevel(resultId: number) {
+	const { version } = await this.version();
+
+    const innovationDevValidation = `
+		SELECT
+			cirl.level
+		FROM
+			results_innovations_dev rid
+			LEFT JOIN clarisa_innovation_readiness_level cirl ON cirl.id = rid.innovation_readiness_level_id
+			LEFT JOIN result r ON r.id = rid.results_id
+		WHERE
+			rid.results_id = ?
+			AND rid.is_active > 0
+			AND r.version_id = ${version};
+	`;
+
+    try {
+      const innovationDevValidationResult: Array<{ level: number }> =
+        await this.dataSource.query(innovationDevValidation, [resultId]);
+
+      return innovationDevValidationResult.length
+        ? innovationDevValidationResult[0].level
+        : null;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: resultValidationRepository.name,
