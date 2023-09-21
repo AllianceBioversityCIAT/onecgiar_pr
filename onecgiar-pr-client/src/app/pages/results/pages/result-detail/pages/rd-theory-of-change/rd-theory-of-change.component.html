@@ -22,10 +22,6 @@
 
     </div>
 
-
-
-
-
     <app-pr-multi-select [options]="this.contributingInitiativesList" label="Contributing Initiatives"
         [disableOptions]="this.theoryOfChangeBody?.pending_contributing_initiatives" optionLabel="full_name"
         optionValue="id" (selectOptionEvent)="onSelectContributingInitiative()" [required]="false"
@@ -41,7 +37,6 @@
         [(ngModel)]="this.theoryOfChangeBody.contributing_initiatives" [confirmDeletion]="true" placeholder="Select Initiative(s)
         ">
     </app-pr-multi-select>
-
 
     <div class="selected_container custom_scroll">
         <app-pr-field-header
@@ -119,8 +114,7 @@
         [disableOptions]="this.disabledCenters">
     </app-pr-multi-select>
     <div class="medal_info">
-        Please select the primary Center by clicking the medal icon <i
-            class="material-icons-round">workspace_premium</i>
+        Please select the primary Center by clicking the medal icon <i class="material-icons-round">workspace_premium</i>
     </div>
     <div class="medal_selector selected_container">
         <div class="centers chips_container">
