@@ -54,8 +54,14 @@ export class TocInitiativeOutComponent {
   }
 
   headerDescription(allText) {
-    let text = '<ul> <li>Specify to which Work Package or End of Initiative outcomes the scaling of the core innovation is expected to contribute to by 2024 in the specific geolocation</li>';
-    if (allText) text += '<li>Which End of Initiative outcome does it link to most closely?. You will have time during the reflect moment to update your ToC</li> ';
+    let text = '<ul>';
+
+    if (allText) {
+      text += '<li>Specify to which Work Package or End of Initiative outcomes the scaling of the core innovation is expected to contribute to by 2024 in the specific geolocation</li>';
+    } else {
+      text += '<li>Which End of Initiative outcome does it link to most closely?. You will have time during the reflect moment to update your ToC</li> ';
+    }
+
     text += '</ul>';
     return text;
   }
