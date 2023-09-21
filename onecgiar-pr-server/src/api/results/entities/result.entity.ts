@@ -29,7 +29,6 @@ import { ResultAnswer } from '../result-questions/entities/result-answers.entity
 import { ResultsCenter } from '../results-centers/entities/results-center.entity';
 
 @Entity()
-@Index(['result_code', 'version_id'], { unique: true })
 export class Result {
   @PrimaryGeneratedColumn({
     name: 'id',
