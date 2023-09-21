@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { EvidencesBody } from './model/evidencesBody.model';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InnovationControlListService } from '../../../../../../shared/services/global/innovation-control-list.service';
@@ -8,7 +8,7 @@ import { InnovationControlListService } from '../../../../../../shared/services/
   templateUrl: './rd-evidences.component.html',
   styleUrls: ['./rd-evidences.component.scss']
 })
-export class RdEvidencesComponent {
+export class RdEvidencesComponent implements OnInit {
   links1 = 'https://www.google.com/doodles/dragon-boat-festival-2023';
   links2 = 'http://localhost:4200/result/result-detail/4800/evidences';
   links3 = 'testing';
@@ -63,15 +63,20 @@ export class RdEvidencesComponent {
     const environmental_biodiversity_related = this.evidencesBody.evidences.some(evidence => evidence.environmental_biodiversity_related === true);
     const poverty_related = this.evidencesBody.evidences.some(evidence => evidence.poverty_related === true);
 
-    if (!gender_related && this.evidencesBody?.gender_tag_level == '3' && !this.isOptional) text += '<li>At least one of the evidence sources must have the gender checkbox marked if the gender tag has a score of 2.</li>';
-    if (!youth_related && this.evidencesBody?.climate_change_tag_level == '3' && !this.isOptional) text += '<li>At least one of the evidence sources must have the climate checkbox marked if the climate change tag has a score of 2.</li>';
-    if (!nutrition_related && this.evidencesBody?.nutrition_tag_level == '3' && !this.isOptional) text += '<li>At least one of the evidence sources must have the nutrition checkbox marked if the nutrition tag has a score of 2.</li>';
-    if (!environmental_biodiversity_related && this.evidencesBody?.environmental_biodiversity_tag_level == '3' && !this.isOptional) text += '<li>At least one of the evidence sources must have the environment and/or biodiversity checkbox marked if the environment and/or biodiversity tag has a score of 2.</li>';
-    if (!poverty_related && this.evidencesBody?.poverty_tag_level == '3' && !this.isOptional) text += '<li>At least one of the evidence sources must have the poverty checkbox marked if the poverty tag has a score of 2.</li>';
+    if (!gender_related && this.evidencesBody?.gender_tag_level == '3') text += '<li>At least one of the evidence sources must have the gender checkbox marked if the gender tag has a score of 2.</li>';
+    if (!youth_related && this.evidencesBody?.climate_change_tag_level == '3') text += '<li>At least one of the evidence sources must have the climate checkbox marked if the climate change tag has a score of 2.</li>';
+    if (!nutrition_related && this.evidencesBody?.nutrition_tag_level == '3') text += '<li>At least one of the evidence sources must have the nutrition checkbox marked if the nutrition tag has a score of 2.</li>';
+    if (!environmental_biodiversity_related && this.evidencesBody?.environmental_biodiversity_tag_level == '3') text += '<li>At least one of the evidence sources must have the environment checkbox marked if the environment tag has a score of 2.</li>';
+    if (!poverty_related && this.evidencesBody?.poverty_tag_level == '3') text += '<li>At least one of the evidence sources must have the poverty checkbox marked if the poverty tag has a score of 2.</li>';
 
     text += '</ul>';
+
     if (text == '<ul></ul>') return '';
+
     if (gender_related && youth_related && nutrition_related && environmental_biodiversity_related && poverty_related) return '';
+
+    this.isOptional = false;
+
     return text;
   }
 
