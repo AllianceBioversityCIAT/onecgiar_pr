@@ -56,28 +56,33 @@ export class RdEvidencesComponent implements OnInit {
   }
 
   validateCheckBoxes() {
-    let text = '<ul>';
-    const gender_related = this.evidencesBody.evidences.some(evidence => evidence.gender_related === true);
-    const youth_related = this.evidencesBody.evidences.some(evidence => evidence.youth_related === true);
-    const nutrition_related = this.evidencesBody.evidences.some(evidence => evidence.nutrition_related === true);
-    const environmental_biodiversity_related = this.evidencesBody.evidences.some(evidence => evidence.environmental_biodiversity_related === true);
-    const poverty_related = this.evidencesBody.evidences.some(evidence => evidence.poverty_related === true);
+    const tags = [
+      { tag: 'gender', level: this.evidencesBody?.gender_tag_level, related: 'gender_related' },
+      { tag: 'climate change', level: this.evidencesBody?.climate_change_tag_level, related: 'youth_related' },
+      { tag: 'nutrition', level: this.evidencesBody?.nutrition_tag_level, related: 'nutrition_related' },
+      { tag: 'environment', level: this.evidencesBody?.environmental_biodiversity_tag_level, related: 'environmental_biodiversity_related' },
+      { tag: 'poverty', level: this.evidencesBody?.poverty_tag_level, related: 'poverty_related' }
+    ];
 
-    if (!gender_related && this.evidencesBody?.gender_tag_level == '3') text += '<li>At least one of the evidence sources must have the gender checkbox marked if the gender tag has a score of 2.</li>';
-    if (!youth_related && this.evidencesBody?.climate_change_tag_level == '3') text += '<li>At least one of the evidence sources must have the climate checkbox marked if the climate change tag has a score of 2.</li>';
-    if (!nutrition_related && this.evidencesBody?.nutrition_tag_level == '3') text += '<li>At least one of the evidence sources must have the nutrition checkbox marked if the nutrition tag has a score of 2.</li>';
-    if (!environmental_biodiversity_related && this.evidencesBody?.environmental_biodiversity_tag_level == '3') text += '<li>At least one of the evidence sources must have the environment checkbox marked if the environment tag has a score of 2.</li>';
-    if (!poverty_related && this.evidencesBody?.poverty_tag_level == '3') text += '<li>At least one of the evidence sources must have the poverty checkbox marked if the poverty tag has a score of 2.</li>';
+    const evidences = this.evidencesBody.evidences;
+    const hasTagRelated = (related: string) => evidences.some(evidence => evidence[related]);
 
-    text += '</ul>';
+    const text = tags
+      .filter(({ level, related }) => level === '3' && !hasTagRelated(related))
+      .map(({ tag }) => `<li>At least one of the evidence sources must have the ${tag} checkbox marked if the ${tag} tag has a score of 2.</li>`)
+      .join('');
 
-    if (text == '<ul></ul>') return '';
+    if (!text) {
+      return '';
+    }
 
-    if (gender_related && youth_related && nutrition_related && environmental_biodiversity_related && poverty_related) return '';
+    const allTagsRelated = tags.every(({ related }) => hasTagRelated(related));
 
-    this.isOptional = false;
+    if (!allTagsRelated) {
+      this.isOptional = false;
+    }
 
-    return text;
+    return `<ul>${text}</ul>`;
   }
 
   get validateCGSpaceLinks() {
