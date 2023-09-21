@@ -4,8 +4,9 @@
     <app-alert-status description="Please fill in the following required fields for this indicator category.">
     </app-alert-status>
     <app-pr-field-header label="Number of people trained"
-        description="In the case where the gender balance of trainees is not known (e.g. online training), assume 50-50 split.">
+        description="Please enter the number of trainees for which gender disaggregation data is not available.">
     </app-pr-field-header>
+    <!-- In the case where the gender balance of trainees is not known (e.g. online training), assume 50-50 split. -->
     <div class="auto_fit_container peopleFields" [ngClass]="{'small': this.capDevInfoRoutingBody.unkown_using}">
         <app-pr-input placeholder="Type quantity" label="Female" type="number" [required]="false"
             *ngIf="!this.capDevInfoRoutingBody.unkown_using" [(ngModel)]="this.capDevInfoRoutingBody.female_using">
