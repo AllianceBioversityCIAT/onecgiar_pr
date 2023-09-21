@@ -46,7 +46,9 @@ export class InnovationUseFormComponent {
   }
 
   actorTypeDescription() {
-    return `<li>CGIAR follows the United Nations definition of 'youth' as those persons between the ages of 15 and 24 years</li><li>If age disaggregation does not apply, then please apply a 50/50% rule in dividing women or men across the youth/non-youth category</li>`;
+    return `<li>CGIAR follows the United Nations definition of 'youth' as those persons between the ages of 15 and 24 years</li>
+    <li>If age disaggregation does not apply, then please apply a 50/50% rule in dividing women or men across the youth/non-youth category</li>
+    <li>We are currently working to include broader diversity dimensions beyond male, female and youth, which will be implemented in future reporting periods.</li>`;
   }
 
   cleanActor(actorItem) {
@@ -158,16 +160,16 @@ export class InnovationUseFormComponent {
   }
 
   narrativeActors() {
-    return `
-    <ul>
+    return `<ul>
     <li>
     If the innovation does not target specific groups of actors or people, then please specify the expected innovation use at organizational level or other use below. The numbers should reflect the expected innovation use by end of 2024.
     </li>
     <li>
+    Individuals, organizations or networks operating within or beyond the system the Initiative or intervention aims to influence and whose actions can advance or impede the Initiative’s aims.
+    </li>
+    <li>
     The numbers for ‘youth' and 'non-youth' equal the total number for 'Women' or 'Men’.
     </li>
-    </ul>
-
-    `;
+    </ul>`;
   }
 }

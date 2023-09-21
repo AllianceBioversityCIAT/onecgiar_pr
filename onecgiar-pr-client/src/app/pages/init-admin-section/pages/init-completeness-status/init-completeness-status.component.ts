@@ -68,7 +68,7 @@ export class InitCompletenessStatusComponent implements OnInit {
       result_code: 'Result code',
       result_title: 'Title',
       official_code: 'Submitter',
-      result_type_name: 'Result type',
+      result_type_name: 'Indicator category',
       completeness: 'Progress',
       is_submitted: 'Submitted',
       general_information: 'General information',

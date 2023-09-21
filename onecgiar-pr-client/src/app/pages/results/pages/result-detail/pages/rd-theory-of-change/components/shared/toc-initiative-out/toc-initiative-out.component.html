@@ -3,8 +3,9 @@
         <app-pr-yes-or-not [label]="getDescription(initiative?.official_code,initiative?.short_name)"
             (selectOptionEvent)="valdiateEOI(initiative);initiative.toc_result_id = null;"
             [(ngModel)]="initiative.planned_result"
-            [description]="this.headerDescription(initiative.planned_result == false)" [readOnly]="!editable"
-            [editable]="editable">
+            [description]="this.headerDescription(initiative.planned_result)" [readOnly]="!editable"
+            [editable]="editable"
+            [hideDescription]="initiative.planned_result === null">
         </app-pr-yes-or-not>
 
         <a [href]="this.api.dataControlSE.tocUrl+this.fullInitiativeToc" target="_blank" class="toc_button"><span>See

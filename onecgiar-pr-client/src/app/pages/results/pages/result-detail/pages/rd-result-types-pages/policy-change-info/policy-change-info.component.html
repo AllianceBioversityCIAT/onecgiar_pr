@@ -1,8 +1,7 @@
 <app-detail-section-title sectionName="Policy change information"></app-detail-section-title>
 
 <div class="detail_container">
-    <app-alert-status
-        description="Please fill in the following fields that are required based on the type of this result.">
+    <app-alert-status description="Please fill in the following required fields for this indicator category.">
     </app-alert-status>
     <app-alert-status [description]="policyTypeDescriptions()">
     </app-alert-status>
@@ -12,7 +11,8 @@
             [(ngModel)]="innovationUseInfoBody.policy_type_id">
         </app-pr-select>
         <app-pr-input label="USD amount" type="currency" description="USD amount" placeholder="0"
-            *ngIf="innovationUseInfoBody.policy_type_id == 1" [required]="false" [(ngModel)]="innovationUseInfoBody.amount">
+            *ngIf="innovationUseInfoBody.policy_type_id == 1" [required]="false"
+            [(ngModel)]="innovationUseInfoBody.amount">
             <!-- (change)="updateValue($any($event.target).value)" -->
         </app-pr-input>
 

@@ -1,5 +1,5 @@
 <app-pr-field-header
-    label="Specify targeted innovation user and also specify how many users are expected to benefit from scaling the core innovation by end of 2024?"></app-pr-field-header>
+    label="Specify the targeted innovation user and how many users are expected to benefit from scaling the core innovation by the end of 2024"></app-pr-field-header>
 
 <app-pr-field-header [required]="false" label="Actors" description="{{narrativeActors()}}"></app-pr-field-header>
 <input type="text" id="removeFocus" style="position: absolute; opacity: 0;">
@@ -74,6 +74,7 @@
                     (ngModelChange)="validateYouth(i,true,this.actorItem)">
                 </app-pr-input>
             </div>
+            <br>
         </div>
     </div>
 </div>
