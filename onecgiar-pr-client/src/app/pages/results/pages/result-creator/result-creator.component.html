@@ -31,7 +31,7 @@
       <!-- <div class="segment_title segment_title_margin" *ngIf="this.resultLevelSE?.currentResultTypeList?.length">Result
         type
       </div> -->
-      <app-pr-radio-button label="Result type" *ngIf="this.resultLevelSE?.currentResultTypeList?.length"
+      <app-pr-radio-button label="Indicator category" *ngIf="this.resultLevelSE?.currentResultTypeList?.length"
         [options]="this.resultLevelSE.currentResultTypeList" [isStatic]="true" optionLabel="name" optionValue='id'
         [(ngModel)]="this.resultLevelSE.resultBody.result_type_id" (ngModelChange)="clean()">
       </app-pr-radio-button>
