@@ -156,6 +156,9 @@ export class SummaryService {
         result_capacity_development_id,
         female_using,
         male_using,
+        has_unkown_using,
+        unkown_using,
+        non_binary_using,
         capdev_delivery_method_id,
         capdev_term_id,
         institutions,
@@ -172,8 +175,10 @@ export class SummaryService {
       }
       const vrs: Version = <Version>version.response;
       if (capDevExists) {
-        capDevExists.female_using = female_using || null;
-        capDevExists.male_using = male_using || null;
+        capDevExists.female_using = unkown_using ? 0 : female_using || 0;
+        capDevExists.male_using = unkown_using ? 0 : male_using || 0;
+        capDevExists.has_unkown_using = has_unkown_using || 0;
+        capDevExists.non_binary_using = non_binary_using;
         capDevExists.last_updated_by = user.id;
         capDevExists.capdev_delivery_method_id = capdev_delivery_method_id;
         capDevExists.capdev_term_id = capdev_term_id;
@@ -186,8 +191,10 @@ export class SummaryService {
         const newCapDev = new ResultsCapacityDevelopments();
         newCapDev.created_by = user.id;
         newCapDev.last_updated_by = user.id;
-        newCapDev.female_using = female_using || null;
-        newCapDev.male_using = male_using || null;
+        newCapDev.female_using = unkown_using ? 0 : female_using || 0;
+        newCapDev.male_using = unkown_using ? 0 : male_using || 0;
+        newCapDev.has_unkown_using = has_unkown_using || 0;
+        newCapDev.non_binary_using = non_binary_using;
         newCapDev.result_id = resultId;
         newCapDev.capdev_delivery_method_id = capdev_delivery_method_id;
         newCapDev.capdev_term_id = capdev_term_id;
