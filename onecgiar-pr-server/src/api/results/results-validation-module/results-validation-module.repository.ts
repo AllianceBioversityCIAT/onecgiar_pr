@@ -708,28 +708,27 @@ export class resultValidationRepository extends Repository<Validation> {
             row.environmental_biodiversity_tag_level_id == 3 ||
             row.poverty_tag_level_id == 3,
         );
-		console.log('Si');
-		
 
         if (isAnyDAC3) {
-          console.log('Si');
+          const evidenceValidations: GetValidationSectionDto[] =
+            await this.dataSource.query(queryData);
 
-          const evidenceValidation: GetValidationSectionDto[] =
-            await this.dataSource.query(queryData, [resultId]);
-          return evidenceValidation.length ? evidenceValidation[0] : undefined;
+          return evidenceValidations.length
+            ? evidenceValidations[0]
+            : undefined;
         } else if (resultTypeId == 7 && level == 0) {
-			console.log('No');
-			
-          return {
+          const response = {
             section_name: 'evidences',
             validation: 1,
           };
+
+          return response;
         }
-      } else {
-        const evidenceValidation: GetValidationSectionDto[] =
-          await this.dataSource.query(queryData, [resultId]);
-        return evidenceValidation.length ? evidenceValidation[0] : undefined;
       }
+      const evidenceValidations: GetValidationSectionDto[] =
+        await this.dataSource.query(queryData, [resultId]);
+
+      return evidenceValidations.length ? evidenceValidations[0] : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: resultValidationRepository.name,
