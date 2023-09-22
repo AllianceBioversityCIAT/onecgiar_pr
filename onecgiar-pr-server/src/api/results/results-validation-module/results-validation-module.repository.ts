@@ -472,24 +472,14 @@ export class resultValidationRepository extends Repository<Validation> {
   }
 
   async evidenceValidation(resultTypeId: number, resultId: number) {
-    try {
-      const { version } = await this.version();
-      const level = await this.innoReadinessLevel(resultId);
+    const { version } = await this.version();
 
-      if (resultTypeId == 7 && level == 0) {
-        return {
-          section_name: 'evidences',
-          validation: 1,
-        };
-      }
+    try {
       const queryData = `
 		SELECT
 			'evidences' AS section_name,
 			CASE
-				WHEN IF(
-					rid.innovation_readiness_level_id = 11
-					AND r.result_type_id = 7,
-					TRUE,
+				WHEN (
 					(
 						(
 							SELECT
@@ -690,9 +680,56 @@ export class resultValidationRepository extends Repository<Validation> {
 			AND r.version_id = ${version};
 	`;
 
-      const shareResultRequest: GetValidationSectionDto[] =
-        await this.dataSource.query(queryData, [resultId]);
-      return shareResultRequest.length ? shareResultRequest[0] : undefined;
+      const level = await this.innoReadinessLevel(resultId);
+      let isAnyDAC3 = false;
+
+      if (resultTypeId == 7) {
+        const dacQuery = `
+			SELECT
+				r.gender_tag_level_id,
+				r.climate_change_tag_level_id,
+				r.nutrition_tag_level_id,
+				r.environmental_biodiversity_tag_level_id,
+				r.poverty_tag_level_id
+			FROM 
+				result r
+			WHERE
+				r.id = ${resultId}
+				AND r.is_active > 0
+				AND r.version_id = ${version};
+		`;
+
+        const dacResults = await this.dataSource.query(dacQuery);
+        isAnyDAC3 = dacResults.some(
+          (row: any) =>
+            row.gender_tag_level_id == 3 ||
+            row.climate_change_tag_level_id == 3 ||
+            row.nutrition_tag_level_id == 3 ||
+            row.environmental_biodiversity_tag_level_id == 3 ||
+            row.poverty_tag_level_id == 3,
+        );
+		console.log('Si');
+		
+
+        if (isAnyDAC3) {
+          console.log('Si');
+
+          const evidenceValidation: GetValidationSectionDto[] =
+            await this.dataSource.query(queryData, [resultId]);
+          return evidenceValidation.length ? evidenceValidation[0] : undefined;
+        } else if (resultTypeId == 7 && level == 0) {
+			console.log('No');
+			
+          return {
+            section_name: 'evidences',
+            validation: 1,
+          };
+        }
+      } else {
+        const evidenceValidation: GetValidationSectionDto[] =
+          await this.dataSource.query(queryData, [resultId]);
+        return evidenceValidation.length ? evidenceValidation[0] : undefined;
+      }
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: resultValidationRepository.name,
@@ -1025,7 +1062,7 @@ export class resultValidationRepository extends Repository<Validation> {
 						)
 						OR (
 							ra.sex_and_age_disaggregation = 1
-							OR (
+							AND (
 								ra.actor_type_id = 5
 								AND (
 									ra.other_actor_type IS NULL
@@ -1568,7 +1605,7 @@ export class resultValidationRepository extends Repository<Validation> {
   }
 
   async innoReadinessLevel(resultId: number) {
-	const { version } = await this.version();
+    const { version } = await this.version();
 
     const innovationDevValidation = `
 		SELECT
