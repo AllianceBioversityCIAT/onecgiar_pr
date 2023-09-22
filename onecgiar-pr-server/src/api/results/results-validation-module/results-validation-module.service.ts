@@ -66,7 +66,10 @@ export class ResultsValidationModuleService {
         response.push({ section_name: 'evidences', validation: 1 });
       } else {
         response.push(
-          await this._resultValidationRepository.evidenceValidation(result.id),
+          await this._resultValidationRepository.evidenceValidation(
+            result.result_type_id,
+            result.id,
+          ),
         );
       }
 
@@ -319,7 +322,10 @@ export class ResultsValidationModuleService {
         });
       } else {
         const vEvidence =
-          await this._resultValidationRepository.evidenceValidation(result.id);
+          await this._resultValidationRepository.evidenceValidation(
+            result.result_type_id,
+            result.id,
+          );
         newValidation.evidence = vEvidence.validation;
         response.push(vEvidence);
       }
@@ -480,6 +486,7 @@ export class ResultsValidationModuleService {
         } else {
           const vEvidence =
             await this._resultValidationRepository.evidenceValidation(
+              result.result_type_id,
               result.id,
             );
           newValidation.evidence = vEvidence.validation;
