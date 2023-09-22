@@ -34,10 +34,8 @@ export class RdEvidencesComponent implements OnInit {
   getSectionInformation() {
     this.api.resultsSE.GET_evidences().subscribe(({ response }) => {
       this.evidencesBody = response;
-    });
-    this.api.resultsSE.GET_innovationDev().subscribe(({ response }) => {
       this.readinessLevel = this.innovationControlListSE.readinessLevelsList.findIndex(item => item.id == response?.innovation_readiness_level_id);
-      this.isOptional = this.readinessLevel === 0;
+      this.isOptional = Boolean(this.readinessLevel === 0);
     });
   }
 
