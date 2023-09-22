@@ -1,8 +1,8 @@
 <p-dialog class="support_information" header="Title" [(visible)]="this.api.dataControlSE.showShareRequest"
     (onHide)="cleanObject()" [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false"
     [dismissableMask]="true" [style]="{padding: '0px'}">
-    <div class="modal_title">Request to be added as contributor of a result.
-    </div>
+    <div class="modal_title">Request to be added as contributor of a result.</div>
+
     <div class="modal_container partners-request-container" *ngIf="showForm">
         <div class="information">
             {{this.api?.dataControlSE?.currentResult?.result_type}} -
@@ -36,9 +36,8 @@
             [editable]="!this.api.rolesSE.platformIsClosed && (this.rolesSE.validateInitiative(shareRequestModalSE.shareRequestBody?.initiative_id) || this.rolesSE.isAdmin || this.api.dataControlSE.inNotifications)"
             [resultLevelId]="this.api.dataControlSE?.currentResult?.result_level_id==4 && !this.api.resultsSE.ipsrDataControlSE.inIpsr ?1:2">
         </app-toc-initiative-out>
-
-        <!-- flagsCode="iso_alpha_2" -->
     </div>
+
     <div class="buttons">
         <app-pr-button padding="medium" text="Cancel" icon="cancel_schedule_send" colorType="secondary"
             (click)="this.api.dataControlSE.showShareRequest = false" *ngIf="!this.api.dataControlSE.inNotifications">
