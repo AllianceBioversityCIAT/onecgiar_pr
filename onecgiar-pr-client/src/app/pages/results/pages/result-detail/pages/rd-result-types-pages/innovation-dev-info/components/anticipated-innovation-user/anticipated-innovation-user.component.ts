@@ -87,7 +87,9 @@ export class AnticipatedInnovationUserComponent {
   }
 
   actorDescription() {
-    return `<li>If the innovation does not target specific groups of actors or people, then please specify the expected innovation use at organizational level or other use below.</li><li>CGIAR follows the United Nations definition of 'youth' as those persons between the ages of 15 and 24 years.</li>`;
+    return `<li>If the innovation does not target specific groups of actors or people, then please specify the expected innovation use at organizational level or other use below.</li>
+    <li>CGIAR follows the United Nations definition of 'youth' as those persons between the ages of 15 and 24 years.</li>
+    <li>We are currently working to include broader diversity dimensions beyond male, female and youth, which will be implemented in future reporting periods.</li>`;
   }
 
   removeOther(actors) {

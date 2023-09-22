@@ -33,13 +33,13 @@ export class CompletenessStatusComponent {
   exportExcel(resultsList) {
     this.requesting = true;
     console.table(resultsList);
-    let resultsListMapped = [];
+    const resultsListMapped = [];
     //header
     resultsListMapped.push({
       result_code: 'Result code',
       result_title: 'Title',
       official_code: 'Submitter',
-      result_type_name: 'Result type',
+      result_type_name: 'Indicator category',
       completeness: 'Progress',
       is_submitted: 'Submitted',
       general_information: 'General information',
@@ -88,7 +88,7 @@ export class CompletenessStatusComponent {
   }
 
   onSelectInit() {
-    let inits = [];
+    const inits = [];
     this.initiativesSelected.map(init => {
       //(init);
       inits.push(init.id);
