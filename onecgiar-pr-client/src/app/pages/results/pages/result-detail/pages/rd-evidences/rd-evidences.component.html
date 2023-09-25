@@ -1,40 +1,30 @@
 <app-detail-section-title sectionName="Evidence" title="Evidence"></app-detail-section-title>
 
 <div class="detail_container">
-    <!-- <app-pr-field-header label="Evidence"></app-pr-field-header> -->
     <app-alert-status [description]="alertStatus()">
+    </app-alert-status>
+    <app-alert-status *ngIf="isOptional"
+        description="No evidence is required for innovations that are at innovation readiness level 0 (idea).">
     </app-alert-status>
     <app-alert-status *ngIf="validateCheckBoxes()" [description]="validateCheckBoxes()" status="warning">
     </app-alert-status>
     <div class="evidences">
         <div class="evidence evidenceItem" *ngFor="let evidence of this.evidencesBody.evidences; let i=index">
-            <app-evidence-item [evidence]="evidence" [index]="i+1" (deleteEvent)="deleteEvidence(i)">
+            <app-evidence-item [evidence]="evidence" [index]="i+1" (deleteEvent)="deleteEvidence(i)"
+                [isOptional]="isOptional">
             </app-evidence-item>
         </div>
     </div>
     <app-no-data-text *ngIf="!this.evidencesBody?.evidences?.length"
         [title]="this.api.dataControlSE.isKnowledgeProduct ? 'No evidence' :'No evidence added'"></app-no-data-text>
+
+    <br>
     <app-add-button name="Add evidence" (clickEvent)="addEvidence()"
         *ngIf="this.evidencesBody?.evidences?.length < 6 && !this.api.dataControlSE.isKnowledgeProduct && !this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status">
     </app-add-button>
 
     <br><br>
-    <!-- <app-pr-field-header *ngIf="!this.api.dataControlSE.isKnowledgeProduct" label="Supplementary information"
-        [required]="false"></app-pr-field-header> -->
-    <!-- <app-alert-status *ngIf="!this.api.dataControlSE.isKnowledgeProduct" description="<ul>
-        <li>Submit a maximum of 2 links for supplementary information. This is not QAed.</li></ul> ">
-    </app-alert-status>
-    <div class="evidences">
-        <div class="evidence supp_info" *ngFor="let evidence of this.evidencesBody.supplementary; let i=index">
-            <app-evidence-item [evidence]="evidence" [index]="i+1" [isSuppInfo]="true" (deleteEvent)="deleteLink(i)">
-            </app-evidence-item>
-        </div>
-    </div>
-    <app-no-data-text *ngIf="!this.evidencesBody?.supplementary?.length&& !this.api.dataControlSE.isKnowledgeProduct"
-        title="No links added"></app-no-data-text>
-    <app-add-button name="Add link" (clickEvent)="addLink()"
-        *ngIf="this.evidencesBody?.supplementary?.length < 2 && !this.api.dataControlSE.isKnowledgeProduct && !this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status">
-    </app-add-button>-->
+
     <div appFeedbackValidation labelText="Empty or repeated link" [isComplete]="!this.validateCGSpaceLinks">
     </div>
 </div>
