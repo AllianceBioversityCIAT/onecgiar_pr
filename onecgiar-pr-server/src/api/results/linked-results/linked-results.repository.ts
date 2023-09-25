@@ -7,11 +7,12 @@ import {
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
 import { VERSIONING } from '../../../shared/utils/versioning.utils';
+import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
 export class LinkedResultRepository
   extends Repository<LinkedResult>
-  implements ReplicableInterface<LinkedResult>
+  implements ReplicableInterface<LinkedResult>, LogicalDelete<LinkedResult>
 {
   private readonly _logger: Logger = new Logger(LinkedResultRepository.name);
 
@@ -21,6 +22,20 @@ export class LinkedResultRepository
   ) {
     super(LinkedResult, dataSource.createEntityManager());
   }
+
+  logicalDelete(resultId: number): Promise<LinkedResult> {
+    const dataQuery = `update linked_result lr set lr.is_active = 0 where lr.origin_result_id = ?;`;
+    return this.query(dataQuery, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: LinkedResultRepository.name,
+          debug: true,
+        }),
+      );
+  }
+
   async replicable(
     config: ReplicableConfigInterface<LinkedResult>,
   ): Promise<LinkedResult[]> {

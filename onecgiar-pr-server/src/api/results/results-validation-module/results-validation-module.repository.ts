@@ -2,14 +2,31 @@ import { Injectable } from '@nestjs/common';
 import { DataSource, Repository, QueryRunner } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { Validation } from './entities/validation.entity';
+import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
-export class resultValidationRepository extends Repository<Validation> {
+export class resultValidationRepository
+  extends Repository<Validation>
+  implements LogicalDelete<Validation>
+{
   constructor(
     private dataSource: DataSource,
     private _handlersError: HandlersError,
   ) {
     super(Validation, dataSource.createEntityManager());
+  }
+
+  logicalDelete(resultId: number): Promise<Validation> {
+    const queryData = `update validation v set v.is_active = 0 where v.results_id = ? and v.is_active > 0;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: resultValidationRepository.name,
+          debug: true,
+        }),
+      );
   }
 
   async version() {

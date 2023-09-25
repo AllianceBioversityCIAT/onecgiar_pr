@@ -11,19 +11,4 @@ export class ResultLegacyRepository extends Repository<LegacyResult> {
   ) {
     super(LegacyResult, dataSource.createEntityManager());
   }
-
-  async deleteAllData() {
-    const queryData = `
-    DELETE FROM legacy_result;
-    `;
-    try {
-      await this.query(queryData);
-    } catch (error) {
-      throw this._handlersError.returnErrorRepository({
-        className: ResultLegacyRepository.name,
-        error: error,
-        debug: true,
-      });
-    }
-  }
 }

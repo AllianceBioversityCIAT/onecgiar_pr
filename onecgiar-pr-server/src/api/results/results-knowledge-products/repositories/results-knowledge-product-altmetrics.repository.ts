@@ -7,11 +7,14 @@ import {
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
 import { VERSIONING } from 'src/shared/utils/versioning.utils';
+import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
 export class ResultsKnowledgeProductAltmetricRepository
   extends Repository<ResultsKnowledgeProductAltmetric>
-  implements ReplicableInterface<ResultsKnowledgeProductAltmetric>
+  implements
+    ReplicableInterface<ResultsKnowledgeProductAltmetric>,
+    LogicalDelete<ResultsKnowledgeProductAltmetric>
 {
   private readonly _logger: Logger = new Logger(
     ResultsKnowledgeProductAltmetricRepository.name,
@@ -22,6 +25,23 @@ export class ResultsKnowledgeProductAltmetricRepository
     private readonly _handlersError: HandlersError,
   ) {
     super(ResultsKnowledgeProductAltmetric, dataSource.createEntityManager());
+  }
+
+  logicalDelete(resultId: number): Promise<ResultsKnowledgeProductAltmetric> {
+    const queryData = `update results_kp_altmetrics rka 
+    inner join results_knowledge_product rkp on rka.result_knowledge_product_id = rkp.result_knowledge_product_id 
+      set rka.is_active = 0
+      where rkp.results_id = ?
+        and rka.is_active > 0`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsKnowledgeProductAltmetricRepository.name,
+          debug: true,
+        }),
+      );
   }
 
   async replicable(
