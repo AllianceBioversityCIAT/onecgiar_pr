@@ -177,7 +177,9 @@ export class SummaryService {
       if (capDevExists) {
         capDevExists.female_using = unkown_using ? 0 : female_using || 0;
         capDevExists.male_using = unkown_using ? 0 : male_using || 0;
-        capDevExists.has_unkown_using = !unkown_using ? null : has_unkown_using || null;
+        capDevExists.has_unkown_using = !unkown_using
+          ? null
+          : has_unkown_using || null;
         capDevExists.non_binary_using = unkown_using
           ? 0
           : non_binary_using || 0;
@@ -196,7 +198,9 @@ export class SummaryService {
         newCapDev.last_updated_by = user.id;
         newCapDev.female_using = unkown_using ? 0 : female_using || 0;
         newCapDev.male_using = unkown_using ? 0 : male_using || 0;
-        newCapDev.has_unkown_using = !unkown_using ? null : has_unkown_using || null;
+        newCapDev.has_unkown_using = !unkown_using
+          ? null
+          : has_unkown_using || null;
         newCapDev.non_binary_using = unkown_using ? 0 : non_binary_using || 0;
         newCapDev.unkown_using = unkown_using;
         newCapDev.result_id = resultId;
