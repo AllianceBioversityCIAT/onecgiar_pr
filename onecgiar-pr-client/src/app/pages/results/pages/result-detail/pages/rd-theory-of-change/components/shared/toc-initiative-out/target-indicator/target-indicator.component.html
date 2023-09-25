@@ -11,9 +11,7 @@
     <div class="indicator-info">
         <div class="title">
             <div class="square"></div>
-
             <strong>Indicator info</strong>
-
         </div>
         <div class="indicator">
 
@@ -73,7 +71,6 @@
                         <div class="info-messurent-item target-date">
                             <strong>Target date:</strong>{{item?.target_date | date: 'dd-MM-yyyy'}}
                         </div>
-
                     </div>
 
                 </div>
@@ -95,8 +92,6 @@
                         [(ngModel)]="item.indicator_question"
                         (selectOptionEvent)="item.contributing = item.indicator_question == true ? 1:0 "></app-pr-yes-or-not>
                 </div>
-
-
 
                 <div class="table-indicator">
                     <table>
@@ -158,75 +153,65 @@
 
                     </div>
                 </div>
-                <<<<<<< HEAD <div
+                <div
                     *ngIf="initiative.number_result_type ==  initiative?.result.result_type_id || initiative.type_value == 'custom'">
                     <app-alert-status status="warning"
                         [description]="'PRMS can only identify planned targets as numerical values. If your result framework has defined a target value with a unit of measurement other than numbers, PRMS will prompt you to indicate the contribution to the quantitative indicator using a text box.'"></app-alert-status>
-                    =======
-                    <div *ngIf="initiative.number_result_type ==  initiative?.result.result_type_id">
-                        <app-alert-status status="warning"
-                            [description]="'PRMS can only identify planned targets as numerical values. If your result framework has defined a target value with a unit of measurement other than numbers, PRMS will prompt you to indicate the contribution to the quantitative indicator using a text box.'"></app-alert-status>
-                        >>>>>>> staging
-                    </div>
-                    <div
-                        *ngIf="initiative.type_value != 'custom' && initiative.number_result_type !=  initiative?.result.result_type_id">
-                        <app-alert-status status="warning"
-                            [description]="descriptionWarning(initiative?.result.name, initiative.type)"></app-alert-status>
-                    </div>
+                </div>
 
-                    <<<<<<< HEAD <div
-                        *ngIf="descriptionWarningYear(item?.target_date, initiative.result.phase_year).is_alert == false && (initiative.number_result_type ==  initiative?.result.result_type_id || initiative.type_value == 'custom')">
-                        <app-alert-status status="warning"
-                            [description]="descriptionWarningYear(item?.target_date, initiative.result).description"></app-alert-status>
-                        =======
-                        <div
-                            *ngIf="descriptionWarningYear(item?.target_date, initiative.result).is_alert and initiative.number_result_type ==  initiative?.result.result_type_id">
-                            <app-alert-status status="warning"
-                                [description]="descriptionWarningYear(item?.target_date, initiative.result).description"></app-alert-status>
-                            >>>>>>> staging
-                        </div>
-                        <div style="margin-bottom: 10px;"
+                <div
+                    *ngIf="initiative.type_value != 'custom' && initiative.number_result_type !=  initiative?.result.result_type_id">
+                    <app-alert-status status="warning"
+                        [description]="descriptionWarning(initiative?.result.name, initiative.type)"></app-alert-status>
+                </div>
+
+                <div
+                    *ngIf="descriptionWarningYear(item?.target_date, initiative.result.phase_year).is_alert == false && (initiative.number_result_type ==  initiative?.result.result_type_id || initiative.type_value == 'custom')">
+                    <app-alert-status status="warning"
+                        [description]="descriptionWarningYear(item?.target_date, initiative.result).description"></app-alert-status>
+                </div>
+
+                <div style="margin-bottom: 10px;"
+                    *ngIf="initiative.type_value == 'custom' || initiative.number_result_type ==  initiative?.result.result_type_id">
+                    <app-pr-yes-or-not [label]="'Have you achieved the target of this indicator?'" [required]="true"
+                        [(ngModel)]="item.indicator_question"
+                        (selectOptionEvent)="item.contributing = item.indicator_question == true ? 1:0 "></app-pr-yes-or-not>
+                </div>
+
+
+                <div class="table-indicator">
+                    <table>
+
+                        <tr class="header"
                             *ngIf="initiative.type_value == 'custom' || initiative.number_result_type ==  initiative?.result.result_type_id">
-                            <app-pr-yes-or-not [label]="'Have you achieved the target of this indicator?'"
-                                [required]="true" [(ngModel)]="item.indicator_question"
-                                (selectOptionEvent)="item.contributing = item.indicator_question == true ? 1:0 "></app-pr-yes-or-not>
-                        </div>
-
-
-                        <div class="table-indicator">
-                            <table>
-
-                                <tr class="header"
-                                    *ngIf="initiative.type_value == 'custom' || initiative.number_result_type ==  initiative?.result.result_type_id">
-                                    <th class="row-one">Result being reported</th>
-                                    <th>Target contribution</th>
-                                </tr>
-                                <tr
-                                    *ngIf="initiative.type_value == 'custom' || initiative.number_result_type ==  initiative?.result.result_type_id">
-                                    <td><a [routerLink]="'/result/result-detail/' + initiative?.result.result_code"
-                                            target="_blank"
-                                            [queryParams]="{ phase: initiative?.result.version_id }">{{initiative?.result.result_code}}
-                                            - {{initiative?.result.title}}</a></td>
-                                    <td><textarea type="text" class="input-not-calculable"
-                                            [(ngModel)]="item.contributing">{{item.contributing}} </textarea></td>
-                                </tr>
-                                <tr class="header">
-                                    <th class="row-one">Other results contributing to the target</th>
-                                    <th>Target contribution</th>
-                                </tr>
-                                <tr *ngIf="item?.results_contributing.length == 0">
-                                    <td colspan="2">Currently there are no other results contributing to this target.
-                                    </td>
-                                </tr>
-                                <tr *ngFor="let itemsContri of item?.results_contributing">
-                                    <td><a [routerLink]="'/result/result-detail/' + itemsContri?.result_code"
-                                            target="_blank"
-                                            [queryParams]="{ phase: initiative?.result.version_id }">{{itemsContri.result_code}}
-                                            - {{itemsContri.title}}</a></td>
-                                    <td> {{itemsContri.contributing_indicator}}</td>
-                                </tr>
-                            </table>
-                        </div>
+                            <th class="row-one">Result being reported</th>
+                            <th>Target contribution</th>
+                        </tr>
+                        <tr
+                            *ngIf="initiative.type_value == 'custom' || initiative.number_result_type ==  initiative?.result.result_type_id">
+                            <td><a [routerLink]="'/result/result-detail/' + initiative?.result.result_code"
+                                    target="_blank"
+                                    [queryParams]="{ phase: initiative?.result.version_id }">{{initiative?.result.result_code}}
+                                    - {{initiative?.result.title}}</a></td>
+                            <td><textarea type="text" class="input-not-calculable"
+                                    [(ngModel)]="item.contributing">{{item.contributing}} </textarea></td>
+                        </tr>
+                        <tr class="header">
+                            <th class="row-one">Other results contributing to the target</th>
+                            <th>Target contribution</th>
+                        </tr>
+                        <tr *ngIf="item?.results_contributing.length == 0">
+                            <td colspan="2">Currently there are no other results contributing to this target.
+                            </td>
+                        </tr>
+                        <tr *ngFor="let itemsContri of item?.results_contributing">
+                            <td><a [routerLink]="'/result/result-detail/' + itemsContri?.result_code" target="_blank"
+                                    [queryParams]="{ phase: initiative?.result.version_id }">{{itemsContri.result_code}}
+                                    - {{itemsContri.title}}</a></td>
+                            <td> {{itemsContri.contributing_indicator}}</td>
+                        </tr>
+                    </table>
+                </div>
             </div>
         </div>
 
