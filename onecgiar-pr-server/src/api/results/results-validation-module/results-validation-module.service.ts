@@ -266,6 +266,19 @@ export class ResultsValidationModuleService {
       let response: GetValidationSectionDto[] = [];
       const validation =
         await this._resultValidationRepository.validationResultExist(result.id);
+
+      const phase = await this._resultValidationRepository.version();
+      if (phase.version != result.version_id) {
+        const previousPhase = await this._resultValidationRepository.oldGreenCheckVersion(result.id)
+        return {
+          response: {
+            green_checks: previousPhase,
+          },
+          message: 'Result for previus phase',
+          status: HttpStatus.OK,
+        };
+      }
+
       await this._resultValidationRepository.inactiveOldInserts(result.id);
       let newValidation = new Validation();
 
