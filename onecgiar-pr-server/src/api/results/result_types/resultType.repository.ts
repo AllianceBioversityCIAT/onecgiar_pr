@@ -33,7 +33,7 @@ export class ResultTypeRepository extends Repository<ResultType> {
         rt.id,
         rt.name,
         rt.description
-    from result_type rt;
+    from result_type rt where rt.is_active > 0;
     `;
     try {
       const resultType = await this.query(queryData);

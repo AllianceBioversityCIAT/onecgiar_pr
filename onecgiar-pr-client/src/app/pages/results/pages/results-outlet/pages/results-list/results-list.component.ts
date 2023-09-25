@@ -22,7 +22,7 @@ export class ResultsListComponent implements OnInit {
     { title: 'Title', attr: 'title', class: 'notCenter' },
     { title: 'Phase', attr: 'phase_name' },
     // { title: 'Reporting year', attr: 'phase_year' },
-    { title: 'Result type', attr: 'result_type' },
+    { title: 'Indicator category', attr: 'result_type' },
     { title: 'Submitter', attr: 'submitter' },
     { title: 'Status', attr: 'status_name' },
     { title: 'Creation date	', attr: 'created_date' },
@@ -77,12 +77,12 @@ export class ResultsListComponent implements OnInit {
 
   validateOrder(columnAttr) {
     setTimeout(() => {
-      console.log(columnAttr);
+      //(columnAttr);
       if (columnAttr == 'result_code') return (this.combine = true);
       const resultListTableHTML = document.getElementById('resultListTable');
       // if (document.getElementById('resultListTable').querySelectorAll('th[aria-sort="ascending"]').length) this.resetSort();
       this.combine = !resultListTableHTML.querySelectorAll('th[aria-sort="descending"]').length && !resultListTableHTML.querySelectorAll('th[aria-sort="ascending"]').length;
-      // console.log(document.getElementById('resultListTable').querySelectorAll('th[aria-sort="descending"]').length); ascending
+      // //(document.getElementById('resultListTable').querySelectorAll('th[aria-sort="descending"]').length); ascending
       // this.resetSort();
       return null;
     }, 100);

@@ -311,7 +311,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                     FROM
                         result_ip_measure rim
                     WHERE
-                        rim.result_ip_id = r.id
+                        rim.result_id = r.id
                         AND rim.is_active = TRUE
                         AND rim.unit_of_measure IS NOT NULL
                         AND rim.quantity IS NOT NULL
@@ -382,7 +382,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                 FROM
                     result_ip_measure rim
                 WHERE
-                    rim.result_ip_id = r.id
+                    rim.result_id = r.id
                     AND rim.is_active = TRUE
                     AND (
                         rim.unit_of_measure IS NULL

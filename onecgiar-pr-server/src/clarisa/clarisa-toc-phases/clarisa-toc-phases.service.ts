@@ -14,11 +14,7 @@ export class ClarisaTocPhasesService {
 
   async findAll() {
     try {
-      const res = await this._clarisaTocPhaseRepository.find({
-        where: {
-          active: true,
-        },
-      });
+      const res = await this._clarisaTocPhaseRepository.find();
       return this._returnResponse.format({
         response: res,
         message: 'ToC phases found successfully',

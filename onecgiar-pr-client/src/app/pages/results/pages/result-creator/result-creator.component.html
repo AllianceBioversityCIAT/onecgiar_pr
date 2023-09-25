@@ -3,6 +3,12 @@
     <app-pr-button text="Back to results" icon="arrow_back" [reverse]="true" [showBackground]="false" optionLabel="name"
       optionValue="code"></app-pr-button>
   </a>
+
+  <div style="width: 100%;">
+    <app-alert-global-info className="section_container local_container"
+      inlineStyles="width: 100%"></app-alert-global-info>
+  </div>
+
   <div class="local_container section_container">
     <div class="greeting"
       [innerHTML]="naratives.greeting(this.api.authSE.localStorageUser?.user_name , this.api.dataControlSE.myInitiativesListText(this.api.dataControlSE.myInitiativesList), this.api.rolesSE.isAdmin)">
@@ -25,7 +31,7 @@
       <!-- <div class="segment_title segment_title_margin" *ngIf="this.resultLevelSE?.currentResultTypeList?.length">Result
         type
       </div> -->
-      <app-pr-radio-button label="Result type" *ngIf="this.resultLevelSE?.currentResultTypeList?.length"
+      <app-pr-radio-button label="Indicator category" *ngIf="this.resultLevelSE?.currentResultTypeList?.length"
         [options]="this.resultLevelSE.currentResultTypeList" [isStatic]="true" optionLabel="name" optionValue='id'
         [(ngModel)]="this.resultLevelSE.resultBody.result_type_id" (ngModelChange)="clean()">
       </app-pr-radio-button>
@@ -66,7 +72,6 @@
         [icon]="this.isSaving?'loop':'save'" [ngClass]="{'globalDisabled ':this.isSaving}">
       </app-pr-button>
     </div> -->
-    <br><br><br><br><br><br><br><br><br><br>
 
     <app-save-button [editable]="true" (clickSave)="onSaveSection()" text="Save and continue"
       [disabled]="(valdiateNormalFields() || exactTitleFound) || (isKnowledgeProduct ? false:this.api.wordCounterSE.counter(this.resultLevelSE.resultBody.result_name) > 30)  ">

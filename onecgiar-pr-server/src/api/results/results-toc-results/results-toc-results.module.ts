@@ -24,6 +24,7 @@ import { ResultsTocResultIndicatorsRepository } from './results-toc-results-indi
 import { ResultsTocSdgTargetRepository } from './result-toc-sdg-target-repository';
 import { ResultsTocImpactAreaTargetRepository } from './result-toc-impact-area-repository';
 import { ResultsSdgTargetRepository } from './results-sdg-targets.respository';
+import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/non_pooled_proyect_budget.repository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { ResultsActionAreaOutcomeRepository } from './result-toc-action-area.repository';
 import { ResultsTocTargetIndicatorRepository } from './result-toc-result-target-indicator.repository';
@@ -54,6 +55,9 @@ import { ResultsTocTargetIndicatorRepository } from './result-toc-result-target-
     ResultsTocImpactAreaTargetRepository,
     ResultsSdgTargetRepository,
     RoleByUserRepository,
+    ResultsSdgTargetRepository,
+    NonPooledProjectBudgetRepository,
+    ResultsActionAreaOutcomeRepository,
     ResultsActionAreaOutcomeRepository,
     ResultsTocTargetIndicatorRepository,
   ],

@@ -21,8 +21,8 @@ export class ResultsListFilterPipe implements PipeTransform {
         if (attr != 'created_date' && attr != 'id') item.joinAll += (item[attr] ? item[attr] : '') + ' ';
       });
     });
-    // console.log(resultList);
-    // console.log(resultList.filter(item => item.joinAll.toUpperCase().indexOf(word?.toUpperCase()) > -1));
+    // //(resultList);
+    // //(resultList.filter(item => item.joinAll.toUpperCase().indexOf(word?.toUpperCase()) > -1));
     return resultList.filter(item => item.joinAll.toUpperCase().indexOf(word?.toUpperCase()) > -1);
   }
 
@@ -79,12 +79,12 @@ export class ResultsListFilterPipe implements PipeTransform {
     results.map(result => {
       result.results = [result];
     });
-    // console.log(results);
+    // //(results);
     return results;
   }
 
   combineRepeatedResults(results) {
-    // console.log('combineRepeatedResults');
+    // //('combineRepeatedResults');
     const resultMap: Record<number, any> = {};
 
     results.forEach(result => {
@@ -101,7 +101,7 @@ export class ResultsListFilterPipe implements PipeTransform {
     });
 
     const transformedData = Object.values(resultMap);
-    // console.log(transformedData);
+    // //(transformedData);
 
     return transformedData;
 

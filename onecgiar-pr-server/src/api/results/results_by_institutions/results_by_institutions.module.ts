@@ -13,6 +13,7 @@ import { ResultByInstitutionsByDeliveriesTypeRepository } from '../result-by-ins
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 import { ResultsKnowledgeProductsRepository } from '../results-knowledge-products/repositories/results-knowledge-products.repository';
 import { ResultsKnowledgeProductInstitutionRepository } from '../results-knowledge-products/repositories/results-knowledge-product-institution.repository';
+import { ResultInstitutionsBudgetRepository } from '../result_budget/repositories/result_institutions_budget.repository';
 
 @Module({
   controllers: [ResultsByInstitutionsController],
@@ -28,6 +29,7 @@ import { ResultsKnowledgeProductInstitutionRepository } from '../results-knowled
     ResultsKnowledgeProductsRepository,
     ResultsKnowledgeProductInstitutionRepository,
     ReturnResponse,
+    ResultInstitutionsBudgetRepository
   ],
   imports: [],
   exports: [ResultByIntitutionsRepository],

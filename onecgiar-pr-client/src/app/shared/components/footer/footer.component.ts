@@ -18,7 +18,7 @@ export class FooterComponent {
   termsAndCondition = environment.footerUrls.termsAndCondition;
   constructor(private router: Router, public footerSE: FooterService) {}
   showIfRouteIsInList() {
-    // console.log(this.router.url);
+    // //(this.router.url);
     this.isFloating = false;
     for (const route of this.routes) {
       if (this.router.url.includes(route?.path)) {

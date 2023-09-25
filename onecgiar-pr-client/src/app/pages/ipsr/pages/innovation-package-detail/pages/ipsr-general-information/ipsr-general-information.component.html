@@ -83,19 +83,19 @@
         </app-pr-input>
     </div>
 </div>
-<!--TODO #2 Environment and/or biodiversity tag -->
+<!--TODO #2 Environment tag -->
 <div class="block_container">
     <app-alert-status [description]="environmentInformation()">
     </app-alert-status>
     <div class="radio_grid">
         <app-pr-radio-button [(ngModel)]="this.ipsrGeneralInformationBody.environmental_biodiversity_tag_level_id"
             [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
-            label="Environment and/or biodiversity tag">
+            label="Environment tag">
         </app-pr-radio-button>
         <!-- [hidden]="this.generalInfoBody.gender_tag_id != 3" -->
         <div *ngIf="this.ipsrGeneralInformationBody.environmental_biodiversity_tag_level_id == 3">
             <app-alert-status
-                description="As a score of 2 has been selected, you are required to provide evidence of the environment and/or biodiversity tag.">
+                description="As a score of 2 has been selected, you are required to provide evidence of the Environment tag.">
             </app-alert-status>
 
         </div>
@@ -133,7 +133,7 @@
     </div>
 </div>
 
-<app-pr-yes-or-not label="Is this result featured in a Key Result Story for the Reporting year?"
+<app-pr-yes-or-not label="Is this result featured in a Key Result Story for the reporting year?"
     (ngModelChange)="onChangeKrs()" [(ngModel)]="this.ipsrGeneralInformationBody.is_krs"></app-pr-yes-or-not>
 <app-pr-input *ngIf="this.ipsrGeneralInformationBody.is_krs" placeholder="e.g. https://www.cgiar.org/example"
     type="text" [required]="false" [(ngModel)]="this.ipsrGeneralInformationBody.krs_url">
