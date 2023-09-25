@@ -1400,14 +1400,24 @@ export class resultValidationRepository extends Repository<Validation> {
 		'cap-dev-info' as section_name,
 		CASE
 			WHEN (
-				rcd.female_using IS NULL
-				OR rcd.female_using = 0
-			)
-			OR (
-				rcd.male_using IS NULL
-				OR rcd.male_using = 0
-			)
-			OR (
+				rcd.unkown_using = 0
+				AND (
+					rcd.female_using IS NULL
+					OR rcd.female_using = 0
+					OR rcd.male_using IS NULL
+					OR rcd.male_using = 0
+					OR non_binary_using IS NULL
+					OR non_binary_using = 0
+				)
+			) THEN FALSE
+			WHEN (
+				rcd.unkown_using = 1
+				AND (
+					rcd.has_unkown_using IS NULL
+					OR rcd.has_unkown_using = 0
+				)
+			) THEN FALSE
+			WHEN (
 				rcd.capdev_term_id IS NULL
 				OR rcd.capdev_term_id = ''
 			)
@@ -1415,9 +1425,7 @@ export class resultValidationRepository extends Repository<Validation> {
 				rcd.capdev_delivery_method_id IS NULL
 				OR rcd.capdev_delivery_method_id = ''
 			)
-			OR (
-				rcd.is_attending_for_organization IS NULL
-			) THEN FALSE
+			OR (rcd.is_attending_for_organization IS NULL) THEN FALSE
 			WHEN (
 				rcd.is_attending_for_organization = 1
 				AND (
