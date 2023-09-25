@@ -11,9 +11,7 @@
     <div class="indicator-info">
         <div class="title">
             <div class="square"></div>
-
             <strong>Indicator info</strong>
-
         </div>
         <div class="indicator">
 
@@ -73,7 +71,6 @@
                         <div class="info-messurent-item target-date">
                             <strong>Target date:</strong>{{item?.target_date | date: 'dd-MM-yyyy'}}
                         </div>
-
                     </div>
 
                 </div>
@@ -95,8 +92,6 @@
                         [(ngModel)]="item.indicator_question"
                         (selectOptionEvent)="item.contributing = item.indicator_question == true ? 1:0 "></app-pr-yes-or-not>
                 </div>
-
-
 
                 <div class="table-indicator">
                     <table>
@@ -163,6 +158,7 @@
                     <app-alert-status status="warning"
                         [description]="'PRMS can only identify planned targets as numerical values. If your result framework has defined a target value with a unit of measurement other than numbers, PRMS will prompt you to indicate the contribution to the quantitative indicator using a text box.'"></app-alert-status>
                 </div>
+
                 <div
                     *ngIf="initiative.type_value != 'custom' && initiative.number_result_type !=  initiative?.result.result_type_id">
                     <app-alert-status status="warning"
@@ -174,6 +170,7 @@
                     <app-alert-status status="warning"
                         [description]="descriptionWarningYear(item?.target_date, initiative.result).description"></app-alert-status>
                 </div>
+
                 <div style="margin-bottom: 10px;"
                     *ngIf="initiative.type_value == 'custom' || initiative.number_result_type ==  initiative?.result.result_type_id">
                     <app-pr-yes-or-not [label]="'Have you achieved the target of this indicator?'" [required]="true"
@@ -204,7 +201,8 @@
                             <th>Target contribution</th>
                         </tr>
                         <tr *ngIf="item?.results_contributing.length == 0">
-                            <td colspan="2">Currently there are no other results contributing to this target.</td>
+                            <td colspan="2">Currently there are no other results contributing to this target.
+                            </td>
                         </tr>
                         <tr *ngFor="let itemsContri of item?.results_contributing">
                             <td><a [routerLink]="'/result/result-detail/' + itemsContri?.result_code" target="_blank"
