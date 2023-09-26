@@ -13,6 +13,36 @@ export class resultValidationRepository extends Repository<Validation> {
     super(Validation, dataSource.createEntityManager());
   }
 
+  async oldGreenCheckVersion(resultId: number) {
+    const query = `
+	SELECT
+		v.section_seven,
+		v.general_information,
+		v.theory_of_change,
+		v.partners,
+		v.geographic_location,
+		v.links_to_results,
+		v.evidence
+	from
+		validation v
+	WHERE
+		v.results_id = ${resultId}
+		and v.is_active > 0
+	LIMIT
+		1;
+  	`;
+    try {
+      const oldGC = await this.dataSource.query(query);
+      return oldGC[0];
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: resultValidationRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async version() {
     const query = `
 	SELECT
