@@ -166,10 +166,10 @@ export class LinkedResultRepository
       r2.id,
       if(r2.version_id  = (select max(r3.version_id) 
             from \`result\` r3 
-            where r3.result_code = r2.result_code),1,0) +
-      if(r2.status_id = 3,1,0) as max_data
+            where r3.result_code = r2.result_code and r3.is_active > 0),1,0) +
+      if(r2.status_id = 2,2,0) as max_data
     FROM \`result\` r2 
-    WHERE r2.result_code = ?) f;
+    WHERE r2.result_code = ? and r2.is_active > 0) f;
     `;
     try {
       const result: { id: number; max_data: number }[] = await this.query(
