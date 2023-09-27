@@ -76,7 +76,7 @@ export class IpsrRepository
             result r
             LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
         WHERE
-            r.status_id = 3
+            r.status_id = 2
             AND r.is_active = 1
             AND rbi.inititiative_id IN (?)
             AND (
