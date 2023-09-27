@@ -134,7 +134,9 @@ export class ResultsPolicyChangesRepository
     	rpc.last_updated_by,
     	rpc.policy_stage_id,
     	rpc.policy_type_id,
-      rpc.status_amount
+      rpc.status_amount,
+      rpc.linked_innovation_dev,
+      rpc.linked_innovation_use
     FROM
     	results_policy_changes rpc
     WHERE 

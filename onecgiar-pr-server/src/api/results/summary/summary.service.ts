@@ -561,14 +561,6 @@ export class SummaryService {
           },
         });
 
-      // const institutions_expected_investment = institutions.map((el) => {
-      //   return {
-      //     institution: el,
-      //     budget: institutions_investment.filter(
-      //       (b) => b.result_institution_id == el.id,
-      //     ),
-      //   };
-      // });
 
       return {
         response: {
@@ -617,6 +609,8 @@ export class SummaryService {
         policy_stage_id,
         policy_type_id,
         status_amount,
+        linked_innovation_dev,
+        linked_innovation_use,
       } = policyChangesDto;
 
       let policyChangesData: ResultsPolicyChanges = undefined;
@@ -625,6 +619,8 @@ export class SummaryService {
         resultsPolicyChanges.last_updated_by = user.id;
         resultsPolicyChanges.policy_stage_id = policy_stage_id;
         resultsPolicyChanges.policy_type_id = policy_type_id;
+        resultsPolicyChanges.linked_innovation_dev = linked_innovation_dev;
+        resultsPolicyChanges.linked_innovation_use = linked_innovation_use;
         resultsPolicyChanges.status_amount = status_amount;
         policyChangesData = await this._resultsPolicyChangesRepository.save(
           resultsPolicyChanges,
@@ -634,6 +630,8 @@ export class SummaryService {
         newResultsPolicyChanges.amount = amount || null;
         newResultsPolicyChanges.policy_stage_id = policy_stage_id;
         newResultsPolicyChanges.policy_type_id = policy_type_id;
+        newResultsPolicyChanges.linked_innovation_dev = linked_innovation_dev;
+        newResultsPolicyChanges.linked_innovation_use = linked_innovation_use;
         newResultsPolicyChanges.result_id = resultId;
         newResultsPolicyChanges.created_by = user.id;
         newResultsPolicyChanges.last_updated_by = user.id;
