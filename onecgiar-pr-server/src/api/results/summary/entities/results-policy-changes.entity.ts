@@ -54,6 +54,22 @@ export class ResultsPolicyChanges {
   status_amount!: string;
 
   @Column({
+    name: 'linked_innovation_dev',
+    type: 'boolean',
+    nullable: false,
+    default: false,
+  })
+  linked_innovation_dev: boolean;
+
+  @Column({
+    name: 'linked_innovation_use',
+    type: 'boolean',
+    nullable: false,
+    default: false,
+  })
+  linked_innovation_use: boolean;
+
+  @Column({
     name: 'is_active',
     type: 'boolean',
     nullable: false,
