@@ -11,6 +11,7 @@ import { InstitutionsService } from '../../../../../../../shared/services/global
 })
 export class PolicyChangeInfoComponent implements OnInit {
   innovationUseInfoBody = new InnovationUseInfoBody();
+  policyChangeQuestions: any = {};
   cantidad: string = '';
   relatedTo: string = '';
   relatedToOptions = [
@@ -23,6 +24,7 @@ export class PolicyChangeInfoComponent implements OnInit {
   ngOnInit(): void {
     this.showAlerts();
     this.getSectionInformation();
+    this.getPolicyChangesQuestions();
     this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
       try {
         document.querySelector('.alert-event').addEventListener('click', e => {
@@ -32,9 +34,22 @@ export class PolicyChangeInfoComponent implements OnInit {
     });
   }
 
+  changeAnswerBoolean(value) {
+    this.policyChangeQuestions.optionsWithAnswers.forEach(option => {
+      option.answer_boolean = option.result_question_id === value ? true : null;
+    });
+  }
+
   getSectionInformation() {
     this.api.resultsSE.GET_policyChanges().subscribe(({ response }) => {
       this.innovationUseInfoBody = response;
+    });
+  }
+
+  getPolicyChangesQuestions() {
+    this.api.resultsSE.GET_policyChangesQuestions().subscribe(({ response }) => {
+      this.policyChangeQuestions = response;
+      // console.log(this.policyChangeQuestions);
     });
   }
 
@@ -47,10 +62,20 @@ export class PolicyChangeInfoComponent implements OnInit {
   }
 
   onSaveSection() {
-    this.api.resultsSE.PATCH_policyChanges(this.innovationUseInfoBody).subscribe(resp => {
-      this.getSectionInformation();
-    });
-    console.log(this.relatedTo);
+    // this.api.resultsSE.PATCH_policyChanges(this.innovationUseInfoBody).subscribe(resp => {
+    //   this.getSectionInformation();
+    // });
+
+    const result = this.policyChangeQuestions.optionsWithAnswers.filter(option => option.answer_boolean === true);
+
+    const body = {
+      ...this.innovationUseInfoBody,
+      ...this.policyChangeQuestions,
+      optionsWithAnswers: {},
+      ...result[0]
+    };
+
+    console.log(body);
   }
 
   showAlerts() {}
