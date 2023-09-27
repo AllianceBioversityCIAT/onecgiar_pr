@@ -3,11 +3,10 @@
 <div class="detail_container">
     <app-alert-status description="Please fill in the following required fields for this indicator category.">
     </app-alert-status>
-    <app-pr-field-header label="Number of people trained"
-        description="Please enter the number of trainees for which gender disaggregation data is not available.">
+    <app-pr-field-header label="Number of people trained">
     </app-pr-field-header>
     <!-- In the case where the gender balance of trainees is not known (e.g. online training), assume 50-50 split. -->
-    <div class="auto_fit_container peopleFields" [ngClass]="{'small': this.capDevInfoRoutingBody.unkown_using}">
+    <div class="auto_fit_container peopleFields">
         <app-pr-input placeholder="Type quantity" label="Female" type="number" [required]="false"
             *ngIf="!this.capDevInfoRoutingBody.unkown_using" [(ngModel)]="this.capDevInfoRoutingBody.female_using">
         </app-pr-input>
@@ -18,10 +17,13 @@
             *ngIf="!this.capDevInfoRoutingBody.unkown_using" [(ngModel)]="this.capDevInfoRoutingBody.non_binary_using">
         </app-pr-input>
         <app-pr-input placeholder="Type quantity" label="Unknown" type="number"
-            [(ngModel)]="this.capDevInfoRoutingBody.has_unkown_using" *ngIf="this.capDevInfoRoutingBody.unkown_using">
+            description="Please enter the number of trainees for which gender disaggregation data is not available."
+            descInlineStyles="width: calc(100vw - 545px); max-width: 1350px; min-width: 265px;"
+            [showDescription]="false" [(ngModel)]="this.capDevInfoRoutingBody.has_unkown_using"
+            *ngIf="this.capDevInfoRoutingBody.unkown_using">
         </app-pr-input>
         <app-pr-checkbox label="Unknown" (selectOptionEvent)="cleanPeopleValues()"
-            [(ngModel)]="this.capDevInfoRoutingBody.unkown_using">
+            [(ngModel)]="this.capDevInfoRoutingBody.unkown_using" class="peopleFields__checkbox">
         </app-pr-checkbox>
     </div>
 
