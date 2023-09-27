@@ -66,7 +66,10 @@ export class ResultsValidationModuleService {
         response.push({ section_name: 'evidences', validation: 1 });
       } else {
         response.push(
-          await this._resultValidationRepository.evidenceValidation(result.id),
+          await this._resultValidationRepository.evidenceValidation(
+            result.result_type_id,
+            result.id,
+          ),
         );
       }
 
@@ -263,6 +266,19 @@ export class ResultsValidationModuleService {
       let response: GetValidationSectionDto[] = [];
       const validation =
         await this._resultValidationRepository.validationResultExist(result.id);
+
+      const phase = await this._resultValidationRepository.version();
+      if (phase.version != result.version_id) {
+        const previousPhase = await this._resultValidationRepository.oldGreenCheckVersion(result.id)
+        return {
+          response: {
+            green_checks: previousPhase,
+          },
+          message: 'Result for previus phase',
+          status: HttpStatus.OK,
+        };
+      }
+
       await this._resultValidationRepository.inactiveOldInserts(result.id);
       let newValidation = new Validation();
 
@@ -319,7 +335,10 @@ export class ResultsValidationModuleService {
         });
       } else {
         const vEvidence =
-          await this._resultValidationRepository.evidenceValidation(result.id);
+          await this._resultValidationRepository.evidenceValidation(
+            result.result_type_id,
+            result.id,
+          );
         newValidation.evidence = vEvidence.validation;
         response.push(vEvidence);
       }
@@ -480,6 +499,7 @@ export class ResultsValidationModuleService {
         } else {
           const vEvidence =
             await this._resultValidationRepository.evidenceValidation(
+              result.result_type_id,
               result.id,
             );
           newValidation.evidence = vEvidence.validation;

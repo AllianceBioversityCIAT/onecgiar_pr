@@ -9,9 +9,10 @@ import { InstitutionsPipesModule } from '../rd-general-information/pipes/institu
 import { NormalSelectorComponent } from './components/normal-selector/normal-selector.component';
 import { KnowledgeProductSelectorComponent } from './components/knowledge-product-selector/knowledge-product-selector.component';
 import { FeedbackValidationDirectiveModule } from '../../../../../../shared/directives/feedback-validation-directive.module';
+import { TooltipModule } from 'primeng/tooltip';
 
 @NgModule({
   declarations: [RdPartnersComponent, InstToInstTypesPipe, NormalSelectorComponent, KnowledgeProductSelectorComponent],
-  imports: [CommonModule, RdPartnersRoutingModule, CustomFieldsModule, InstitutionsPipesModule, FeedbackValidationDirectiveModule]
+  imports: [CommonModule, RdPartnersRoutingModule, CustomFieldsModule, InstitutionsPipesModule, FeedbackValidationDirectiveModule, TooltipModule]
 })
 export class RdPartnersModule {}

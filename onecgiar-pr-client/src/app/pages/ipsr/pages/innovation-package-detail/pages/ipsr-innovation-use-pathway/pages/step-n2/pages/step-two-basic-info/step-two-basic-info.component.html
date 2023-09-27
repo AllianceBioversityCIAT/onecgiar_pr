@@ -1,5 +1,9 @@
 <div style="height: 100%;">
 
+    <app-alert-status
+        description="If you are viewing this section, it is because you have been designated as an admin. This section is not visible to users with other roles.">
+    </app-alert-status>
+
     <h2>Basic info on the innovation package elements</h2>
     <div class="complementary_innovations" *ngFor="let bodyItem of this.informartion; let i=index">
         <app-collapsible-container [collapse]="bodyItem.open" *ngIf="allInformation == true">
@@ -50,7 +54,7 @@
 
     </div>
     <app-no-data-text *ngIf="this.informartion.length == 0"
-        title="There are no complementary innovations / enablers / solutions selected for this innovation package. {{goToStep()}} to add them."></app-no-data-text>
+        title="There are no complementary innovations/enablers/solutions selected for this innovation package. {{goToStep()}} to add them."></app-no-data-text>
 </div>
 
 

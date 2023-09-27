@@ -25,10 +25,10 @@ import { ResultActor } from '../result-actors/entities/result-actor.entity';
 import { ResultsByInititiative } from '../results_by_inititiatives/entities/results_by_inititiative.entity';
 import { ResultIpExpertWorkshopOrganized } from '../../ipsr/innovation-pathway/entities/result-ip-expert-workshop-organized.entity';
 import { ResultStatus } from '../result-status/entities/result-status.entity';
+import { ResultAnswer } from '../result-questions/entities/result-answers.entity';
 import { ResultsCenter } from '../results-centers/entities/results-center.entity';
 
 @Entity()
-@Index(['result_code', 'version_id'], { unique: true })
 export class Result {
   @PrimaryGeneratedColumn({
     name: 'id',
@@ -314,6 +314,14 @@ export class Result {
   })
   is_discontinued: boolean;
 
+  @Column({
+    name: 'is_replicated',
+    nullable: true,
+    type: 'boolean',
+    default: false,
+  })
+  is_replicated!: boolean;
+
   // helpers??
   initiative_id!: number;
 
@@ -343,4 +351,7 @@ export class Result {
     (ripewo) => ripewo.obj_result_expert_workshop,
   )
   obj_result_expert_workshop: ResultIpExpertWorkshopOrganized[];
+
+  @OneToMany(() => ResultAnswer, (ra) => ra.obj_result_id)
+  obj_result_id: ResultAnswer[];
 }

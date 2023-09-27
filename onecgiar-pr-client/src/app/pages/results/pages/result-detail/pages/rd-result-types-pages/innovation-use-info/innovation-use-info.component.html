@@ -1,41 +1,8 @@
 <app-detail-section-title sectionName="Innovation use information"></app-detail-section-title>
+
+
 <div class="detail_container">
-    <app-alert-status [description]="alertInfoText()">
-    </app-alert-status>
-    <app-pr-field-header label="Number of people using the innovation, dissagregated by gender"
-        description="Innovation usage number evidence is required."></app-pr-field-header>
-
-    <div class="auto_fit_container">
-        <app-pr-input placeholder="Type quantity" label="Female" type="number" [required]="false"
-            [(ngModel)]="this.innovationUseInfoBody.female_using">
-        </app-pr-input>
-        <app-pr-input placeholder="Type quantity" label="Male" type="number" [required]="false"
-            [(ngModel)]="this.innovationUseInfoBody.male_using">
-        </app-pr-input>
-    </div>
-
-    <app-pr-field-header label="Other quantitative measures of innovation use (e.g. area)" [required]="false">
-    </app-pr-field-header>
-    <br>
-    <div class="other_items">
-        <div class="auto_fit_container other_item"
-            *ngFor="let otherItem of this.innovationUseInfoBody.other; let i=index">
-            <app-pr-input placeholder="e.g. Area" label="Unit of measure" [required]="false"
-                [(ngModel)]="otherItem.unit_of_measure">
-            </app-pr-input>
-            <app-pr-input placeholder="Type quantity" label="Quantity" type="number" [required]="false"
-                [(ngModel)]="otherItem.quantity">
-            </app-pr-input>
-            <app-edit-or-delete-item-button (click)="onRemoveOne(i)"></app-edit-or-delete-item-button>
-        </div>
-    </div>
-
-    <div style="margin-top: 20px;"></div>
-    <app-no-data-text *ngIf="!this.innovationUseInfoBody.other?.length" title="No quantitative measure added">
-    </app-no-data-text>
-
-    <app-add-button name="Add quantitative measure" (clickEvent)="onAddMore()"></app-add-button>
-
+    <app-innovation-use-form [body]="innovationUseInfoBody" [saving]="this.savingSection"></app-innovation-use-form>
 </div>
 
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>

@@ -14,15 +14,15 @@
 
 
         <app-pr-select class="segment_title_margin" [options]="this.api.dataControlSE.myInitiativesList"
-            *ngIf="!this.api.rolesSE.isAdmin" label="Select the initiative where the result will be retrieved"
-            [isStatic]="true" optionLabel="full_name" optionValue="initiative_id" placeholder="Select initiative"
+            *ngIf="!this.api.rolesSE.isAdmin" label="Select the Initiative where the result will be retrieved"
+            [isStatic]="true" optionLabel="full_name" optionValue="initiative_id" placeholder="Select Initiative"
             [(ngModel)]="this.retrieveModalSE.retrieveRequestBody.initiative_id">
         </app-pr-select>
 
         <app-pr-select class="segment_title_margin" [options]="this.allInitiatives"
-            label="Select the initiative where the result will be retrieved" [isStatic]="true"
+            label="Select the Initiative where the result will be retrieved" [isStatic]="true"
             *ngIf="this.api.rolesSE.isAdmin" optionLabel="full_name" optionValue="initiative_id"
-            placeholder="Select initiative" [(ngModel)]="this.retrieveModalSE.retrieveRequestBody.initiative_id">
+            placeholder="Select Initiative" [(ngModel)]="this.retrieveModalSE.retrieveRequestBody.initiative_id">
         </app-pr-select>
 
         <div class="information" style="margin-top: 50px;">
@@ -31,7 +31,7 @@
             <strong>{{this.api.dataControlSE.currentResult?.result_type_name}}</strong> as
             result
             type.
-            In case you want to change the result type, please contact us at <strong
+            In case you want to change the indicator category, please contact us at <strong
                 class="email">PRMSTechSupport@cgiar.org</strong>
 
         </div>

@@ -20,6 +20,7 @@ export class GeneralInfoBody {
   public poverty_tag_level_id = null;
   public is_discontinued: boolean;
   public discontinued_options: any[] = [];
+  public is_replicated: boolean = false;
 }
 
 interface institutionsInterface {

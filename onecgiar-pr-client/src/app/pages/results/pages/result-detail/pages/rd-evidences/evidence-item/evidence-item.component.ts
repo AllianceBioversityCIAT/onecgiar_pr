@@ -12,6 +12,8 @@ export class EvidenceItemComponent {
   @Input() evidence: EvidencesCreateInterface;
   @Input() index: number;
   @Input() isSuppInfo: boolean;
+  @Input() isOptional: boolean = false;
   @Output() deleteEvent = new EventEmitter();
+
   constructor(public dataControlSE: DataControlService, public api: ApiService) {}
 }

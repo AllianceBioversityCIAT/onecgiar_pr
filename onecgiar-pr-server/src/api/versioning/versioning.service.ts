@@ -45,6 +45,7 @@ import {
 } from '../../shared/constants/role-type.enum';
 import { In } from 'typeorm';
 import { UpdateQaResults } from './dto/update-qa.dto';
+import { ResultInitiativeBudgetRepository } from '../results/result_budget/repositories/result_initiative_budget.repository';
 
 @Injectable()
 export class VersioningService {
@@ -78,6 +79,7 @@ export class VersioningService {
     private readonly _resultsKnowledgeProductKeywordRepository: ResultsKnowledgeProductKeywordRepository,
     private readonly _resultsKnowledgeProductMetadataRepository: ResultsKnowledgeProductMetadataRepository,
     private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
+    private readonly _resultInitiativeBudgetRepository: ResultInitiativeBudgetRepository,
   ) {}
 
   /**
@@ -232,6 +234,7 @@ export class VersioningService {
           break;
         case 7:
           await this._resultsInnovationsDevRepository.replicable(config);
+          await this._resultInitiativeBudgetRepository.replicable(config);
           break;
       }
 

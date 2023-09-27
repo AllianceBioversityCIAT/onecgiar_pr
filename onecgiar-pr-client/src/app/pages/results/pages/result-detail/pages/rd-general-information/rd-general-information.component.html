@@ -1,4 +1,5 @@
-<app-rd-annual-updating [generalInfoBody]="this.generalInfoBody"></app-rd-annual-updating>
+<app-rd-annual-updating *ngIf="this.generalInfoBody.is_replicated"
+  [generalInfoBody]="this.generalInfoBody"></app-rd-annual-updating>
 <app-detail-section-title sectionName="General information"></app-detail-section-title>
 <div class="detail_container">
   <app-alert-status *ngIf="this.api.dataControlSE.isKnowledgeProduct"
@@ -6,7 +7,7 @@
   </app-alert-status>
 
   <div class="general_header">
-    <app-pr-input placeholder="Write some..." label="Result level" type="text" [required]="false" [readOnly]="true"
+    <app-pr-input placeholder="Enter text" label="Result level" type="text" [required]="false" [readOnly]="true"
       [(ngModel)]="this.generalInfoBody.result_level_name"> </app-pr-input>
     <div class="reporting_year">
       <div class="pr_label segment_title">Reporting year</div>
@@ -14,18 +15,18 @@
     </div>
   </div>
 
-  <app-pr-input [attr.attribute-you-are-targeting]="'expression'" placeholder="Write some..." label="Result type"
+  <app-pr-input [attr.attribute-you-are-targeting]="'expression'" placeholder="Enter text" label="Indicator category"
     type="text" [required]="false" [readOnly]="true" [(ngModel)]="this.generalInfoBody.result_type_name">
   </app-pr-input>
-  <app-pr-input placeholder="Write some..." label="Title" type="text" [description]="titleTextInfo()"
+  <app-pr-input placeholder="Enter text" label="Title" type="text" [description]="titleTextInfo()"
     [readOnly]="this.dataControlSE.isKnowledgeProduct" [(ngModel)]="this.generalInfoBody.result_name" [maxWords]="30">
   </app-pr-input>
 
-  <app-pr-textarea placeholder="Write some..." label="Description" type="text" [description]="descriptionTextInfo()"
+  <app-pr-textarea placeholder="Enter text" label="Description" type="text" [description]="descriptionTextInfo()"
     [readOnly]="this.dataControlSE.isKnowledgeProduct" [required]="!this.dataControlSE.isKnowledgeProduct"
     [(ngModel)]="this.generalInfoBody.result_description" [maxWords]="150"></app-pr-textarea>
 
-  <app-pr-input placeholder="Write some..." label="Lead contact person" type="text" [required]="false"
+  <app-pr-input placeholder="Enter text" label="Lead contact person" type="text" [required]="false"
     [(ngModel)]="this.generalInfoBody.lead_contact_person"> </app-pr-input>
 
   <div class="block_container">
@@ -57,13 +58,13 @@
     </div>
   </div>
 
-  <!-- TODO #2  Environment and/or biodiversity tag -->
+  <!-- TODO #2  Environment tag -->
   <div class="block_container">
     <app-alert-status [description]="environmentInformation()"> </app-alert-status>
     <div class="radio_grid">
       <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
-        label="Environment and/or biodiversity tag"
-        [(ngModel)]="this.generalInfoBody.environmental_biodiversity_tag_level_id"> </app-pr-radio-button>
+        label="Environment tag" [(ngModel)]="this.generalInfoBody.environmental_biodiversity_tag_level_id">
+      </app-pr-radio-button>
       <div id="environment_tag_alert" [hidden]="this.generalInfoBody.environmental_biodiversity_tag_level_id != 3">
       </div>
     </div>
@@ -109,13 +110,13 @@
     </div>
   </div>
 
-  <app-pr-yes-or-not label="Is this result featured in a Key Result Story for the Reporting year?"
+  <app-pr-yes-or-not label="Is this result featured in a Key Result Story for the reporting year?"
     [(ngModel)]="this.generalInfoBody.is_krs" (ngModelChange)="onChangeKrs()"></app-pr-yes-or-not>
 
 
   <app-pr-input *ngIf="this.generalInfoBody.is_krs" placeholder="e.g. https://www.cgiar.org/example"
-    description="Link to Key Result Story - Please note this is not intended to be reported in December." type="text"
-    [required]="false" [(ngModel)]="this.generalInfoBody.krs_url"> </app-pr-input>
+    description="Link to Key Result Story. It is also possible to select “no” and then later update this to “yes” if the result is later selected as a key result story."
+    type="text" [required]="false" [(ngModel)]="this.generalInfoBody.krs_url"> </app-pr-input>
 
   <app-save-button class="position_sticky" (clickSave)="onSaveSection()"
     [editable]="this.api.dataControlSE.currentResult?.result_type_id == 7 ?this.api.rolesSE.access.canDdit && !this.dataControlSE?.currentResult?.status :false"
