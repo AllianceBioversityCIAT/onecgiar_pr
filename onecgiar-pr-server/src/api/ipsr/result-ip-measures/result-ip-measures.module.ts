@@ -6,6 +6,10 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 
 @Module({
   controllers: [ResultIpMeasuresController],
-  providers: [ResultIpMeasuresService, ResultIpMeasureRepository, HandlersError]
+  providers: [
+    ResultIpMeasuresService,
+    ResultIpMeasureRepository,
+    HandlersError,
+  ],
 })
 export class ResultIpMeasuresModule {}

@@ -42,7 +42,7 @@ export class ResultsInnovationPackagesEnablerTypeRepository
   createResultInnovationPackages(
     createInnovation: CreateResultsInnovationPackagesEnablerTypeDto[],
   ) {
-    let returnVariable = [];
+    const returnVariable = [];
 
     createInnovation.forEach(async (createIn) => {
       if (
@@ -60,7 +60,7 @@ export class ResultsInnovationPackagesEnablerTypeRepository
           });
           createIn.complementary_innovation_enabler_types_one.forEach(
             async (innovation) => {
-              let createInnovations = {
+              const createInnovations = {
                 result_by_innovation_package_id:
                   createIn.result_by_innovation_package_id,
                 complementary_innovation_enable_type_id: innovation,
@@ -77,7 +77,7 @@ export class ResultsInnovationPackagesEnablerTypeRepository
       ) {
         createIn.complementary_innovation_enabler_types_two.forEach(
           async (innovation) => {
-            let createInnovations = {
+            const createInnovations = {
               result_by_innovation_package_id:
                 createIn.result_by_innovation_package_id,
               complementary_innovation_enable_type_id: innovation,
@@ -88,8 +88,6 @@ export class ResultsInnovationPackagesEnablerTypeRepository
         );
       }
     });
-
-    console.log(returnVariable);
 
     return {
       response: {
@@ -137,7 +135,7 @@ export class ResultsInnovationPackagesEnablerTypeRepository
         `;
 
     try {
-      let enablers: getEnablersType[] = await this.query(queryComplementary, [
+      const enablers: getEnablersType[] = await this.query(queryComplementary, [
         id_innovation,
       ]);
 
@@ -163,5 +161,5 @@ export class getEnablersType {
   group: string;
   type: string;
   level: number;
-  subCategories: any[] = new Array();
+  subCategories: any[] = [];
 }
