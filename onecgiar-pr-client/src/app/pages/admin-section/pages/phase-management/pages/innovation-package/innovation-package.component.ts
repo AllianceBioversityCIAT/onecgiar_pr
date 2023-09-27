@@ -15,7 +15,7 @@ export class InnovationPackageComponent implements OnInit {
     { title: '#', attr: 'id' },
     { title: 'Name', attr: 'phase_name' },
     { title: 'Reporting year', attr: 'phase_year' },
-    { title: 'Result phase', attr: 'reporting_phase' },
+    { title: 'Results phase', attr: 'reporting_phase' },
     { title: 'Toc phase', attr: 'toc_pahse_id' },
     { title: 'Start date', attr: 'start_date' },
     { title: 'End date', attr: 'end_date' },
