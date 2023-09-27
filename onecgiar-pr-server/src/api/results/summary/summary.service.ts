@@ -34,6 +34,8 @@ import { NonPooledProjectRepository } from '../non-pooled-projects/non-pooled-pr
 import { ResultInstitutionsBudget } from '../result_budget/entities/result_institutions_budget.entity';
 import { ResultInstitutionsBudgetRepository } from '../result_budget/repositories/result_institutions_budget.repository';
 import { InnoDevService } from './innovation_dev.service';
+import { ResultAnswerRepository } from '../result-questions/repository/result-answers.repository';
+import { ResultAnswer } from '../result-questions/entities/result-answers.entity';
 
 @Injectable()
 export class SummaryService {
@@ -55,6 +57,7 @@ export class SummaryService {
     private readonly _nonPooledProjectRepository: NonPooledProjectRepository,
     private readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
     private readonly _innoDevService: InnoDevService,
+    private readonly _resultAnswerRepository: ResultAnswerRepository,
   ) {}
 
   /**
@@ -561,7 +564,6 @@ export class SummaryService {
           },
         });
 
-
       return {
         response: {
           ...innDevExists,
@@ -609,8 +611,7 @@ export class SummaryService {
         policy_stage_id,
         policy_type_id,
         status_amount,
-        linked_innovation_dev,
-        linked_innovation_use,
+        optionsWithAnswers,
       } = policyChangesDto;
 
       let policyChangesData: ResultsPolicyChanges = undefined;
@@ -619,8 +620,6 @@ export class SummaryService {
         resultsPolicyChanges.last_updated_by = user.id;
         resultsPolicyChanges.policy_stage_id = policy_stage_id;
         resultsPolicyChanges.policy_type_id = policy_type_id;
-        resultsPolicyChanges.linked_innovation_dev = linked_innovation_dev;
-        resultsPolicyChanges.linked_innovation_use = linked_innovation_use;
         resultsPolicyChanges.status_amount = status_amount;
         policyChangesData = await this._resultsPolicyChangesRepository.save(
           resultsPolicyChanges,
@@ -630,8 +629,6 @@ export class SummaryService {
         newResultsPolicyChanges.amount = amount || null;
         newResultsPolicyChanges.policy_stage_id = policy_stage_id;
         newResultsPolicyChanges.policy_type_id = policy_type_id;
-        newResultsPolicyChanges.linked_innovation_dev = linked_innovation_dev;
-        newResultsPolicyChanges.linked_innovation_use = linked_innovation_use;
         newResultsPolicyChanges.result_id = resultId;
         newResultsPolicyChanges.created_by = user.id;
         newResultsPolicyChanges.last_updated_by = user.id;
@@ -675,6 +672,30 @@ export class SummaryService {
           4,
           user.id,
         );
+      }
+
+      const optionExist = await this._resultAnswerRepository.findOne({
+        where: {
+          result_id: resultId,
+          result_question_id: optionsWithAnswers.result_question_id,
+        },
+      });
+
+      if (optionExist) {
+        optionExist.answer_boolean = optionsWithAnswers.answer_boolean;
+        optionExist.answer_text = optionsWithAnswers.answer_text;
+        optionExist.last_updated_by = user.id;
+        await this._resultAnswerRepository.save(optionExist);
+      } else {
+        const optionAnswer = new ResultAnswer();
+        optionAnswer.result_question_id = optionsWithAnswers.result_question_id;
+        optionAnswer.answer_boolean = optionsWithAnswers.answer_boolean;
+        optionAnswer.answer_text = optionsWithAnswers.answer_text;
+        optionAnswer.result_id = resultId;
+        optionAnswer.created_by = user.id;
+        optionAnswer.last_updated_by = user.id;
+
+        await this._resultAnswerRepository.save(optionAnswer);
       }
 
       return {
