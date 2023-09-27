@@ -14,7 +14,7 @@ export class IpsrRepository extends Repository<Ipsr> {
     super(Ipsr, dataSource.createEntityManager());
   }
 
-  async getResultsInnovation(initiativeId: number) {
+  async getResultsInnovation(initiativeId: number[]) {
     const resultInnovationQuery = `
         SELECT
             DISTINCT r.id AS result_id,
@@ -59,7 +59,7 @@ export class IpsrRepository extends Repository<Ipsr> {
             result r
             LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
         WHERE
-            r.status_id = 3
+            r.status_id = 2
             AND r.is_active = 1
             AND rbi.inititiative_id IN (?)
             AND (
