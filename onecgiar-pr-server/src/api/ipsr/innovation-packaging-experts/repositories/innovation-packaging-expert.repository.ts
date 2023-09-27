@@ -17,7 +17,7 @@ export class InnovationPackagingExpertRepository
   }
 
   logicalDelete(resultId: number): Promise<InnovationPackagingExpert> {
-    const dataQuery = `update innovation_packaging_expert ipe set ipe.is_active = 0 where ipe.result_id = ?;`;
+    const dataQuery = `update result_ip_expert ipe set ipe.is_active = 0 where ipe.result_id = ?;`;
     return this.query(dataQuery, [resultId])
       .then((res) => res)
       .catch((err) =>
