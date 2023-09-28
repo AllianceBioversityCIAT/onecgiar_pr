@@ -164,10 +164,23 @@ export class LinkedResultsService {
         resultId,
       );
 
+      const result: Result = await this._resultRepository.getResultById(
+        resultId,
+      );
+
+      let linkedInnovation: any = null;
+      if (result.result_type_id == 1) {
+        linkedInnovation = await this._policyChangeRepository.findOne({
+          where: { result_id: result.id },
+          select: ['linked_innovation_dev', 'linked_innovation_use']
+        });
+      }
+
       return {
         response: {
           links: links.filter((el) => !!el.id),
           legacy_link: links.filter((el) => !el.id),
+          linked: linkedInnovation ? linkedInnovation : null,
         },
         message: 'The data was updated correctly',
         status: HttpStatus.OK,
