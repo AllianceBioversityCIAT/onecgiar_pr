@@ -139,9 +139,9 @@ export class LinkedResultsService {
           { result_id: result.id },
           {
             linked_innovation_dev:
-              createLinkedResultDto.linked_innovation_dev || false,
+              createLinkedResultDto.linkedInnovation.linked_innovation_dev || false,
             linked_innovation_use:
-              createLinkedResultDto.linked_innovation_use || false,
+              createLinkedResultDto.linkedInnovation.linked_innovation_use || false,
             last_updated_by: user.id,
             last_updated_date: new Date(),
           },
@@ -180,7 +180,7 @@ export class LinkedResultsService {
         response: {
           links: links.filter((el) => !!el.id),
           legacy_link: links.filter((el) => !el.id),
-          linked: linkedInnovation ? linkedInnovation : null,
+          linkedInnovation: linkedInnovation ? linkedInnovation : null,
         },
         message: 'The data was updated correctly',
         status: HttpStatus.OK,
