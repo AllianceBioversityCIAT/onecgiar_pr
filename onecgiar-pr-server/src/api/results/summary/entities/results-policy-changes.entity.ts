@@ -21,11 +21,18 @@ export class ResultsPolicyChanges {
   })
   result_policy_change_id: number;
 
+  @Column({
+    name: 'result_id',
+    type: 'bigint',
+    nullable: false,
+  })
+  result_id: number;
+
   @OneToOne(() => Result, (r) => r.id, { nullable: false })
   @JoinColumn({
     name: 'result_id',
   })
-  result_id: number;
+  obj_result: Result;
 
   @ManyToOne(() => ClarisaPolicyStage, (cps) => cps.id, { nullable: true })
   @JoinColumn({
@@ -52,6 +59,22 @@ export class ResultsPolicyChanges {
     nullable: true,
   })
   status_amount!: string;
+
+  @Column({
+    name: 'linked_innovation_dev',
+    type: 'boolean',
+    nullable: false,
+    default: false,
+  })
+  linked_innovation_dev: boolean;
+
+  @Column({
+    name: 'linked_innovation_use',
+    type: 'boolean',
+    nullable: false,
+    default: false,
+  })
+  linked_innovation_use: boolean;
 
   @Column({
     name: 'is_active',

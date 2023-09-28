@@ -409,6 +409,10 @@ export class ResultsApiService {
     return this.http.patch<any>(`${this.apiBaseUrl}summary/policy-changes/create/result/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
+  GET_policyChangesQuestions() {
+    return this.http.get<any>(`${this.apiBaseUrl}questions/policy-change/${this.currentResultId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+  }
+
   GET_policyChanges() {
     return this.http.get<any>(`${this.apiBaseUrl}summary/policy-changes/get/result/${this.currentResultId}`).pipe(
       this.saveButtonSE.isGettingSectionPipe(),

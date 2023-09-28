@@ -34,6 +34,8 @@ import { NonPooledProjectRepository } from '../non-pooled-projects/non-pooled-pr
 import { ResultInstitutionsBudget } from '../result_budget/entities/result_institutions_budget.entity';
 import { ResultInstitutionsBudgetRepository } from '../result_budget/repositories/result_institutions_budget.repository';
 import { InnoDevService } from './innovation_dev.service';
+import { ResultAnswerRepository } from '../result-questions/repository/result-answers.repository';
+import { ResultAnswer } from '../result-questions/entities/result-answers.entity';
 
 @Injectable()
 export class SummaryService {
@@ -55,6 +57,7 @@ export class SummaryService {
     private readonly _nonPooledProjectRepository: NonPooledProjectRepository,
     private readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
     private readonly _innoDevService: InnoDevService,
+    private readonly _resultAnswerRepository: ResultAnswerRepository,
   ) {}
 
   /**
@@ -576,15 +579,6 @@ export class SummaryService {
           },
         });
 
-      // const institutions_expected_investment = institutions.map((el) => {
-      //   return {
-      //     institution: el,
-      //     budget: institutions_investment.filter(
-      //       (b) => b.result_institution_id == el.id,
-      //     ),
-      //   };
-      // });
-
       return {
         response: {
           ...innDevExists,
@@ -632,6 +626,7 @@ export class SummaryService {
         policy_stage_id,
         policy_type_id,
         status_amount,
+        optionsWithAnswers,
       } = policyChangesDto;
 
       let policyChangesData: ResultsPolicyChanges = undefined;
@@ -692,6 +687,35 @@ export class SummaryService {
           4,
           user.id,
         );
+      }
+
+      for (const answer of optionsWithAnswers) {
+        const optionExist = await this._resultAnswerRepository.findOne({
+          where: {
+            result_id: resultId,
+            result_question_id: answer.result_question_id,
+          },
+        });
+
+        if (optionExist) {
+          optionExist.answer_boolean =
+            answer.answer_boolean || false;
+          optionExist.answer_text = answer.answer_text;
+          optionExist.last_updated_by = user.id;
+          await this._resultAnswerRepository.save(optionExist);
+        } else {
+          const optionAnswer = new ResultAnswer();
+          optionAnswer.result_question_id =
+            answer.result_question_id;
+          optionAnswer.answer_boolean =
+            answer.answer_boolean || false;
+          optionAnswer.answer_text = answer.answer_text;
+          optionAnswer.result_id = resultId;
+          optionAnswer.created_by = user.id;
+          optionAnswer.last_updated_by = user.id;
+
+          await this._resultAnswerRepository.save(optionAnswer);
+        }
       }
 
       return {
