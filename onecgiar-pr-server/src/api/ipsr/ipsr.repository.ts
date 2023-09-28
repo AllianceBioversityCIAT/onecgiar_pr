@@ -4,14 +4,31 @@ import { DataSource, Repository } from 'typeorm';
 import { Ipsr } from './entities/ipsr.entity';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { ResultCountriesSubNational } from '../results/result-countries-sub-national/entities/result-countries-sub-national.entity';
+import { LogicalDelete } from '../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
-export class IpsrRepository extends Repository<Ipsr> {
+export class IpsrRepository
+  extends Repository<Ipsr>
+  implements LogicalDelete<Ipsr>
+{
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
   ) {
     super(Ipsr, dataSource.createEntityManager());
+  }
+
+  logicalDelete(resultId: number): Promise<Ipsr> {
+    const dataQuery = `update result_by_innovation_package rbip set rbip.is_active = 0 where rbip.result_innovation_package_id = ?;`;
+    return this.query(dataQuery, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: IpsrRepository.name,
+          debug: true,
+        }),
+      );
   }
 
   async getResultsInnovation(initiativeId: number[]) {

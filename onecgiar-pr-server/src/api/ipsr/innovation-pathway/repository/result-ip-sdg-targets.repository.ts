@@ -2,15 +2,36 @@ import { Injectable } from '@nestjs/common';
 import { HandlersError } from 'src/shared/handlers/error.utils';
 import { DataSource, Repository } from 'typeorm';
 import { ResultIpSdgTargets } from '../entities/result-ip-sdg-targets.entity';
-const { env } = process;
+import { env } from 'process';
+import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
-export class ResultIpSdgTargetRepository extends Repository<ResultIpSdgTargets> {
+export class ResultIpSdgTargetRepository
+  extends Repository<ResultIpSdgTargets>
+  implements LogicalDelete<ResultIpSdgTargets>
+{
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
   ) {
     super(ResultIpSdgTargets, dataSource.createEntityManager());
+  }
+
+  logicalDelete(resultId: number): Promise<ResultIpSdgTargets> {
+    const dataQuery = `update result_ip_sdg_targets rist 
+    inner join result_by_innovation_package rbip on rbip.result_by_innovation_package_id = rist.result_by_innovation_package_id 
+    set rist.is_active = 0
+    where rist.is_active > 0
+      and rbip.result_innovation_package_id = ?;`;
+    return this.query(dataQuery, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultIpSdgTargetRepository.name,
+          debug: true,
+        }),
+      );
   }
 
   async getSdgs(resultByInnovationPackageId: number) {

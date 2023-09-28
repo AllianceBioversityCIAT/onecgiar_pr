@@ -13,10 +13,8 @@ import { ResultRepository } from '../../results/result.repository';
     ResultsInnovationPackagesValidationModuleRepository,
     IpsrRepository,
     ResultRepository,
-    HandlersError
+    HandlersError,
   ],
-  exports: [
-    ResultsInnovationPackagesValidationModuleService
-  ]
+  exports: [ResultsInnovationPackagesValidationModuleService],
 })
 export class ResultsInnovationPackagesValidationModuleModule {}

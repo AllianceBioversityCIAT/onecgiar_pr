@@ -3,7 +3,6 @@ import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultsInnovationPackagesValidationModule } from './entities/results-innovation-packages-validation-module.entity';
 import { GetValidationSectionInnoPckgDto } from './dto/get-validation-section-inno-pckg.dto';
-import { BooleanModel } from 'aws-sdk/clients/gamelift';
 
 @Injectable()
 export class ResultsInnovationPackagesValidationModuleRepository extends Repository<ResultsInnovationPackagesValidationModule> {
