@@ -682,14 +682,14 @@ export class SummaryService {
       });
 
       if (optionExist) {
-        optionExist.answer_boolean = optionsWithAnswers.answer_boolean;
+        optionExist.answer_boolean = optionsWithAnswers.answer_boolean || false;
         optionExist.answer_text = optionsWithAnswers.answer_text;
         optionExist.last_updated_by = user.id;
         await this._resultAnswerRepository.save(optionExist);
       } else {
         const optionAnswer = new ResultAnswer();
         optionAnswer.result_question_id = optionsWithAnswers.result_question_id;
-        optionAnswer.answer_boolean = optionsWithAnswers.answer_boolean;
+        optionAnswer.answer_boolean = optionsWithAnswers.answer_boolean || false;
         optionAnswer.answer_text = optionsWithAnswers.answer_text;
         optionAnswer.result_id = resultId;
         optionAnswer.created_by = user.id;
