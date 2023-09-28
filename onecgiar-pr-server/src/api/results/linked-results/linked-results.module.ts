@@ -9,6 +9,7 @@ import {
 import { ResultRepository } from '../result.repository';
 import { VersionRepository } from '../../versioning/versioning.repository';
 import { VersionsService } from '../versions/versions.service';
+import { ResultsPolicyChangesRepository } from '../summary/repositories/results-policy-changes.repository';
 
 @Module({
   controllers: [LinkedResultsController],
@@ -20,6 +21,7 @@ import { VersionsService } from '../versions/versions.service';
     VersionsService,
     VersionRepository,
     ReturnResponse,
+    ResultsPolicyChangesRepository
   ],
   exports: [LinkedResultRepository],
 })
