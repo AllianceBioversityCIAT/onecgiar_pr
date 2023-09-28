@@ -55,6 +55,10 @@ import { ResultsInnovationsDevRepository } from '../results/summary/repositories
 import { ResultsInnovationsUseMeasuresRepository } from '../results/summary/repositories/results-innovations-use-measures.repository';
 import { ResultsInnovationsUseRepository } from '../results/summary/repositories/results-innovations-use.repository';
 import { ResultsPolicyChangesRepository } from '../results/summary/repositories/results-policy-changes.repository';
+import { ShareResultRequestRepository } from '../results/share-result-request/share-result-request.repository';
+import { EvidencesRepository } from '../results/evidences/evidences.repository';
+import { ResultsKnowledgeProductFairScoreRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-fair-scores.repository';
+import { ResultsKnowledgeProductInstitutionRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-institution.repository';
 
 @Module({
   controllers: [DeleteRecoverDataController],
@@ -112,6 +116,10 @@ import { ResultsPolicyChangesRepository } from '../results/summary/repositories/
     ResultsInnovationsUseMeasuresRepository,
     ResultsInnovationsUseRepository,
     ResultsPolicyChangesRepository,
+    ShareResultRequestRepository,
+    EvidencesRepository,
+    ResultsKnowledgeProductFairScoreRepository,
+    ResultsKnowledgeProductInstitutionRepository,
   ],
 })
 export class DeleteRecoverDataModule {}

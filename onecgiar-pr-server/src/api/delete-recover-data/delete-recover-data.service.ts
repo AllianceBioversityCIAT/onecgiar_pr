@@ -52,6 +52,10 @@ import { ResultsInnovationsUseMeasuresRepository } from '../results/summary/repo
 import { ResultsInnovationsUseRepository } from '../results/summary/repositories/results-innovations-use.repository';
 import { ResultsPolicyChangesRepository } from '../results/summary/repositories/results-policy-changes.repository';
 import { env } from 'process';
+import { ShareResultRequestRepository } from '../results/share-result-request/share-result-request.repository';
+import { EvidencesRepository } from '../results/evidences/evidences.repository';
+import { ResultsKnowledgeProductFairScoreRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-fair-scores.repository';
+import { ResultsKnowledgeProductInstitutionRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-institution.repository';
 
 @Injectable()
 export class DeleteRecoverDataService {
@@ -107,6 +111,10 @@ export class DeleteRecoverDataService {
     private readonly _resultsInnovationsUseMeasuresRepository: ResultsInnovationsUseMeasuresRepository,
     private readonly _resultsInnovationsUseRepository: ResultsInnovationsUseRepository,
     private readonly _resultsPolicyChangesRepository: ResultsPolicyChangesRepository,
+    private readonly _shareResultRequestRepository: ShareResultRequestRepository,
+    private readonly _evidencesRepository: EvidencesRepository,
+    private readonly _resultsKnowledgeProductFairScoreRepository: ResultsKnowledgeProductFairScoreRepository,
+    private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
   ) {}
 
   async deleteResult(result_id: number) {
@@ -222,8 +230,16 @@ export class DeleteRecoverDataService {
       );
       await this._resultsInnovationsUseRepository.logicalDelete(resultData.id);
       await this._resultsPolicyChangesRepository.logicalDelete(resultData.id);
+      await this._shareResultRequestRepository.logicalDelete(resultData.id);
+      await this._evidencesRepository.logicalDelete(resultData.id);
+      await this._resultsKnowledgeProductFairScoreRepository.logicalDelete(
+        resultData.id,
+      );
+      await this._resultsKnowledgeProductInstitutionRepository.logicalDelete(
+        resultData.id,
+      );
       return this._returnResponse.format({
-        message: 'Result deleted',
+        message: `The result with code ${resultData.result_code} has been deleted`,
         response: resultData,
         statusCode: HttpStatus.OK,
       });
