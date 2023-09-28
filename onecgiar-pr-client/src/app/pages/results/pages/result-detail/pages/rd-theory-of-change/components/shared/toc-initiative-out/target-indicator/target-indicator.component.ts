@@ -71,7 +71,7 @@ export class TargetIndicatorComponent implements OnInit {
   }
 
   descriptionWarning(item, itemTwo) {
-    return 'The type of result (' + item + ') you are reporting does not match the type (' + itemTwo + ') of this indicator, therefore, progress cannot be reported. Please ensure that the result type matches the indicator type for accurate reporting.';
+    return 'The type of result (' + item + ') you are reporting does not match the type (' + itemTwo + ') of this indicator, therefore, progress cannot be reported. Please ensure that the indicator category matches the indicator type for accurate reporting.';
   }
 
   descriptionWarningYear(item, itemTwo) {

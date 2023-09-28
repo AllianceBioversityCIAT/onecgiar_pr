@@ -34,7 +34,7 @@ import { ReturnResponse } from '../../shared/handlers/error.utils';
 
 @Module({
   controllers: [IpsrController],
-  providers: [IpsrService, IpsrRepository, HandlersError],
+  providers: [IpsrService, IpsrRepository, HandlersError, ReturnResponse],
   imports: [
     RouterModule.register(IpsrRoutes),
     ResultInnovationPackageModule,

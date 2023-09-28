@@ -12,6 +12,7 @@ import { EvidencesRepository } from './evidences.repository';
 import { ResultRepository } from '../result.repository';
 import { VersionRepository } from '../../versioning/versioning.repository';
 import { ResultsKnowledgeProductsRepository } from '../results-knowledge-products/repositories/results-knowledge-products.repository';
+import { ResultsInnovationsDevRepository } from '../summary/repositories/results-innovations-dev.repository';
 import {
   HandlersError,
   ReturnResponse,
@@ -27,6 +28,7 @@ import {
     VersionRepository,
     ResultsKnowledgeProductsRepository,
     ReturnResponse,
+    ResultsInnovationsDevRepository,
   ],
   imports: [AuthModule],
   exports: [EvidencesRepository],
