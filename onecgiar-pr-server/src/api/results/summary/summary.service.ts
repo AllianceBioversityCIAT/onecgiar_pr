@@ -674,28 +674,33 @@ export class SummaryService {
         );
       }
 
-      const optionExist = await this._resultAnswerRepository.findOne({
-        where: {
-          result_id: resultId,
-          result_question_id: optionsWithAnswers.result_question_id,
-        },
-      });
+      for (const answer of optionsWithAnswers) {
+        const optionExist = await this._resultAnswerRepository.findOne({
+          where: {
+            result_id: resultId,
+            result_question_id: answer.result_question_id,
+          },
+        });
 
-      if (optionExist) {
-        optionExist.answer_boolean = optionsWithAnswers.answer_boolean || false;
-        optionExist.answer_text = optionsWithAnswers.answer_text;
-        optionExist.last_updated_by = user.id;
-        await this._resultAnswerRepository.save(optionExist);
-      } else {
-        const optionAnswer = new ResultAnswer();
-        optionAnswer.result_question_id = optionsWithAnswers.result_question_id;
-        optionAnswer.answer_boolean = optionsWithAnswers.answer_boolean || false;
-        optionAnswer.answer_text = optionsWithAnswers.answer_text;
-        optionAnswer.result_id = resultId;
-        optionAnswer.created_by = user.id;
-        optionAnswer.last_updated_by = user.id;
+        if (optionExist) {
+          optionExist.answer_boolean =
+            answer.answer_boolean || false;
+          optionExist.answer_text = answer.answer_text;
+          optionExist.last_updated_by = user.id;
+          await this._resultAnswerRepository.save(optionExist);
+        } else {
+          const optionAnswer = new ResultAnswer();
+          optionAnswer.result_question_id =
+            answer.result_question_id;
+          optionAnswer.answer_boolean =
+            answer.answer_boolean || false;
+          optionAnswer.answer_text = answer.answer_text;
+          optionAnswer.result_id = resultId;
+          optionAnswer.created_by = user.id;
+          optionAnswer.last_updated_by = user.id;
 
-        await this._resultAnswerRepository.save(optionAnswer);
+          await this._resultAnswerRepository.save(optionAnswer);
+        }
       }
 
       return {
