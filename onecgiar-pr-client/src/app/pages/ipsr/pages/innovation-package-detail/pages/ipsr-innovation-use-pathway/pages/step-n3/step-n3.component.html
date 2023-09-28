@@ -135,7 +135,7 @@
         solutions</div>
     <div class="Complementary_innovations">
         <app-pr-field-header label="" [required]="false"
-            [description]="this.ipsrStep3Body.result_ip_result_complementary?.length?'In case you want to add one more complementary innovation/enabler/solution'+(goToStep()|lowercase):''"></app-pr-field-header>
+            [description]="this.ipsrStep3Body.result_ip_result_complementary?.length ? goToStep() : ''"></app-pr-field-header>
         <app-step-n3-complementary-innovations [body]="this.ipsrStep3Body" [rangesOptions]="this.rangesOptions"
             [innovationUseList]="this.innovationUseList"
             *ngIf="this.rangesOptions?.length && this.ipsrStep3Body.result_ip_result_complementary?.length">

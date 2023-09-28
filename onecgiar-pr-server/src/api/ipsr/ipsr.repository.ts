@@ -31,7 +31,7 @@ export class IpsrRepository
       );
   }
 
-  async getResultsInnovation(initiativeId: number) {
+  async getResultsInnovation(initiativeId: number[]) {
     const resultInnovationQuery = `
         SELECT
             DISTINCT r.id AS result_id,
