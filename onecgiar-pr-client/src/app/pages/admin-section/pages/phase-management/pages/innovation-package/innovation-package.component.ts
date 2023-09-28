@@ -15,6 +15,7 @@ export class InnovationPackageComponent implements OnInit {
     { title: '#', attr: 'id' },
     { title: 'Name', attr: 'phase_name' },
     { title: 'Reporting year', attr: 'phase_year' },
+    { title: 'Results phase', attr: 'reporting_phase' },
     { title: 'Toc phase', attr: 'toc_pahse_id' },
     { title: 'Start date', attr: 'start_date' },
     { title: 'End date', attr: 'end_date' },
@@ -27,6 +28,7 @@ export class InnovationPackageComponent implements OnInit {
   previousPhaseList: any[] = [];
   tocPhaseList = [];
   resultYearsList = [];
+  reportingPhasesList: any[] = [];
   // clonedphaseList: { [s: string]: any } = {};
   textToFind = '';
   disabledActionsText = 'Finish editing the phase to be able to edit or delete this phase.';
@@ -48,6 +50,7 @@ export class InnovationPackageComponent implements OnInit {
     this.getAllPhases();
     this.getTocPhases();
     this.get_resultYears();
+    this.getReportingPhases();
   }
 
   disablePreviousYear() {
@@ -92,6 +95,7 @@ export class InnovationPackageComponent implements OnInit {
     phaseItem.end_date_ts = phaseItem.end_date;
     phaseItem.status_ts = phaseItem.status;
     phaseItem.previous_phase_ts = phaseItem.previous_phase;
+    phaseItem.reporting_phase_ts = phaseItem.reporting_phase;
   }
 
   updateMainVariables(phaseItem) {
@@ -102,6 +106,7 @@ export class InnovationPackageComponent implements OnInit {
     phaseItem.end_date = phaseItem.end_date_ts;
     phaseItem.status = phaseItem.status_ts;
     phaseItem.previous_phase = phaseItem.previous_phase_ts;
+    phaseItem.reporting_phase = phaseItem.reporting_phase_ts;
   }
 
   getMandatoryIncompleteFields(phaseItem): string {
@@ -111,6 +116,7 @@ export class InnovationPackageComponent implements OnInit {
     if (!phaseItem.toc_pahse_id_ts) text += '<strong> Toc phase </strong> is required to create <br>';
     if (!phaseItem.start_date_ts) text += '<strong> Start date </strong> is required to create <br>';
     if (!phaseItem.end_date_ts) text += '<strong> End date </strong>is required to create <br>';
+    if (!phaseItem.reporting_phase_ts) text += '<strong> Reporting phase </strong>is required to create <br>';
     return text;
   }
 
@@ -127,6 +133,14 @@ export class InnovationPackageComponent implements OnInit {
       });
 
       this.tocPhaseList = response;
+    });
+  }
+
+  getReportingPhases() {
+    this.resultsSE.GET_versioning(StatusPhaseEnum.ALL, ModuleTypeEnum.REPORTING).subscribe({
+      next: ({ response }) => {
+        this.reportingPhasesList = response;
+      }
     });
   }
 
