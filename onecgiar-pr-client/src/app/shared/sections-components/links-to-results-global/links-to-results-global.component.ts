@@ -27,15 +27,10 @@ export class LinksToResultsGlobalComponent implements OnInit {
     { title: 'Creation date	', attr: 'created_date' }
   ];
 
-  // New
-  linkedInnoDev = false;
-  linkedInnoUse = false;
-
   filteredResults = [];
 
   innoDevLinks = [];
   innoUseLinks = [];
-  // New
 
   constructor(public api: ApiService, public resultsListService: ResultsListService, public rolesSE: RolesService, public greenChecksSE: GreenChecksService) {}
 
@@ -57,8 +52,8 @@ export class LinksToResultsGlobalComponent implements OnInit {
         this.innoUseLinks = filterByResultTypeId(2);
         this.filteredResults = this.linksToResultsBody.links.filter((evidence: any) => ![2, 7].includes(evidence.result_type_id));
 
-        this.linkedInnoDev = this.innoDevLinks.length > 0;
-        this.linkedInnoUse = this.innoUseLinks.length > 0;
+        this.linksToResultsBody.linkedInnovation.linked_innovation_dev = this.innoDevLinks.length > 0;
+        this.linksToResultsBody.linkedInnovation.linked_innovation_use = this.innoUseLinks.length > 0;
       } else {
         this.filteredResults = this.linksToResultsBody.links;
       }
@@ -97,13 +92,13 @@ export class LinksToResultsGlobalComponent implements OnInit {
     if (currentResultTypeId === 1) {
       switch (firstResultByDate.result_type_id) {
         case 2:
-          this.linkedInnoUse = true;
+          this.linksToResultsBody.linkedInnovation.linked_innovation_use = true;
           this.innoUseLinks.push(firstResultByDate);
           this.linksToResultsBody.links.push(firstResultByDate);
           this.filteredResults = this.linksToResultsBody.links.filter((evidence: any) => ![2, 7].includes(evidence.result_type_id));
           break;
         case 7:
-          this.linkedInnoDev = true;
+          this.linksToResultsBody.linkedInnovation.linked_innovation_dev = true;
           this.innoDevLinks.push(firstResultByDate);
           this.linksToResultsBody.links.push(firstResultByDate);
           this.filteredResults = this.linksToResultsBody.links.filter((evidence: any) => ![2, 7].includes(evidence.result_type_id));
@@ -137,14 +132,14 @@ export class LinksToResultsGlobalComponent implements OnInit {
   // New
   onRemoveInnoDev(result) {
     this.innoDevLinks = this.innoDevLinks.filter((evidence: any) => evidence.result_code !== result.result_code);
-    this.linkedInnoDev = this.innoDevLinks.length > 0;
+    this.linksToResultsBody.linkedInnovation.linked_innovation_dev = this.innoDevLinks.length > 0;
     this.linksToResultsBody.links = this.linksToResultsBody.links.filter((evidence: any) => evidence.result_code !== result.result_code);
     this.counterPipe++;
   }
 
   onRemoveInnoUse(result) {
     this.innoUseLinks = this.innoUseLinks.filter((evidence: any) => evidence.result_code !== result.result_code);
-    this.linkedInnoUse = this.innoUseLinks.length > 0;
+    this.linksToResultsBody.linkedInnovation.linked_innovation_use = this.innoUseLinks.length > 0;
     this.linksToResultsBody.links = this.linksToResultsBody.links.filter((evidence: any) => evidence.result_code !== result.result_code);
     this.counterPipe++;
   }
@@ -159,7 +154,6 @@ export class LinksToResultsGlobalComponent implements OnInit {
   }
 
   onSaveSection() {
-    console.log(this.linksToResultsBody);
     this.api.resultsSE.POST_resultsLinked(this.linksToResultsBody, this.isIpsr).subscribe((resp: any) => {
       this.getSectionInformation();
     });

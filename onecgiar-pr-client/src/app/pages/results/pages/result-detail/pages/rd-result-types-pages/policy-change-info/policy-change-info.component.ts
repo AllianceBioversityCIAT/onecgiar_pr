@@ -49,7 +49,7 @@ export class PolicyChangeInfoComponent implements OnInit {
   getPolicyChangesQuestions() {
     this.api.resultsSE.GET_policyChangesQuestions().subscribe(({ response }) => {
       this.policyChangeQuestions = response;
-      // console.log(this.policyChangeQuestions);
+      this.relatedTo = this.policyChangeQuestions.optionsWithAnswers.filter(option => option.answer_boolean === true)[0].result_question_id;
     });
   }
 
@@ -62,20 +62,16 @@ export class PolicyChangeInfoComponent implements OnInit {
   }
 
   onSaveSection() {
-    // this.api.resultsSE.PATCH_policyChanges(this.innovationUseInfoBody).subscribe(resp => {
-    //   this.getSectionInformation();
-    // });
-
     const result = this.policyChangeQuestions.optionsWithAnswers.filter(option => option.answer_boolean === true);
 
     const body = {
       ...this.innovationUseInfoBody,
-      ...this.policyChangeQuestions,
-      optionsWithAnswers: {},
-      ...result[0]
+      ...this.policyChangeQuestions
     };
 
-    console.log(body);
+    this.api.resultsSE.PATCH_policyChanges(body).subscribe(resp => {
+      this.getSectionInformation();
+    });
   }
 
   showAlerts() {}

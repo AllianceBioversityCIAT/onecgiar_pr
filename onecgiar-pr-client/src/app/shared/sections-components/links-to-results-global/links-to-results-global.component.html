@@ -83,13 +83,11 @@
         description="Please note that when you link to an existing result and this is later deleted, the system will remove the selection from your record.">
     </app-pr-field-header>
 
-    <!-- New -->
     <div *ngIf="this.api?.dataControlSE?.currentResult?.result_type_id === 1">
-        <!-- New -->
         <app-pr-yes-or-not label="Is this policy change linked to a reported innovation development output?"
-            [(ngModel)]="this.linkedInnoDev" [readOnly]="this.innoDevLinks.length > 0"></app-pr-yes-or-not>
+            [(ngModel)]="this.linksToResultsBody.linkedInnovation.linked_innovation_dev" [readOnly]="this.innoDevLinks.length > 0"></app-pr-yes-or-not>
 
-        <app-alert-status *ngIf="this.linkedInnoDev && this.innoDevLinks.length === 0 && !this.api.rolesSE.readOnly"
+        <app-alert-status *ngIf="this.linksToResultsBody.linkedInnovation.linked_innovation_dev && this.innoDevLinks.length === 0 && !this.api.rolesSE.readOnly"
             description="Please link at least one innovation development" status="warning"></app-alert-status>
 
         <app-no-data-text *ngIf="this.innoDevLinks.length === 0 && this.api.rolesSE.readOnly"
@@ -113,13 +111,11 @@
                 </i>
             </div>
         </div>
-        <!-- New -->
 
-        <!-- New -->
         <app-pr-yes-or-not label="Is this policy change linked to a reported innovation use outcome?"
-            [(ngModel)]="this.linkedInnoUse" [readOnly]="this.innoUseLinks.length > 0"></app-pr-yes-or-not>
+            [(ngModel)]="this.linksToResultsBody.linkedInnovation.linked_innovation_use" [readOnly]="this.innoUseLinks.length > 0"></app-pr-yes-or-not>
 
-        <app-alert-status *ngIf="this.linkedInnoUse && this.innoUseLinks.length === 0 && !this.api.rolesSE.readOnly"
+        <app-alert-status *ngIf="this.linksToResultsBody.linkedInnovation.linked_innovation_use && this.innoUseLinks.length === 0 && !this.api.rolesSE.readOnly"
             description="Please link at least one innovation use" status="warning"></app-alert-status>
 
         <app-no-data-text *ngIf="this.innoUseLinks.length === 0 && this.api.rolesSE.readOnly"
@@ -144,10 +140,8 @@
                 </i>
             </div>
         </div>
-        <!-- New -->
         <app-pr-field-header label="Other results" [required]="false"></app-pr-field-header>
     </div>
-    <!-- New -->
 
     <app-no-data-text *ngIf="this.filteredResults.length === 0" title="No links added"></app-no-data-text>
 

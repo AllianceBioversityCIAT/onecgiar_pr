@@ -6,13 +6,11 @@
     <app-alert-status [description]="policyTypeDescriptions()">
     </app-alert-status>
 
-    <!-- New field -->
     <app-pr-select [options]="this.policyChangeQuestions.optionsWithAnswers"
         [label]="this.policyChangeQuestions.question_text" optionLabel="question_text" optionValue="result_question_id"
         placeholder="Select an answer" [(ngModel)]="this.relatedTo"
         (ngModelChange)="changeAnswerBoolean(this.relatedTo)">
     </app-pr-select>
-    <!-- New field -->
 
     <div class="auto_fit_container">
         <app-pr-select [options]="this.policyControlListSE.policyTypesList" label="Policy type"
