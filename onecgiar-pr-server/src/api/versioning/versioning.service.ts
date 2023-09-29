@@ -495,6 +495,7 @@ export class VersioningService {
         previous_phase: createVersioningDto?.previous_phase,
         app_module_id: createVersioningDto.app_module_id,
         created_by: user.id,
+        reporting_phase: createVersioningDto?.reporting_phase,
       });
 
       return this._returnResponse.format({
@@ -592,6 +593,7 @@ export class VersioningService {
         where: where,
         relations: {
           obj_previous_phase: true,
+          obj_reporting_phase: true,
         },
       });
 
