@@ -143,7 +143,7 @@ export class StepN3CurrentUseComponent {
     return `
     <ul>
     <li>
-    If the innovation does not target specific groups of actors or people, then please specify the expected innovation use at organizational level or other use below. The numbers should reflect the expected innovation use by end of 2024.
+    If the innovation does not target specific groups of actors or people, then please specify the expected innovation use at organizational level or other use below.
     </li>
     <li>
     The numbers for ‘youth' and 'non-youth' equal the total number for 'Women' or 'Men’.
