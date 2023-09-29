@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { ReturnResponse } from '../../shared/handlers/error.utils';
 
 import { IpsrRepository } from '../ipsr/ipsr.repository';
@@ -56,9 +56,16 @@ import { ShareResultRequestRepository } from '../results/share-result-request/sh
 import { EvidencesRepository } from '../results/evidences/evidences.repository';
 import { ResultsKnowledgeProductFairScoreRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-fair-scores.repository';
 import { ResultsKnowledgeProductInstitutionRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-institution.repository';
+import { ElasticService } from '../../elastic/elastic.service';
+import { ResultsService } from '../results/results.service';
+import { ElasticOperationDto } from '../../elastic/dto/elastic-operation.dto';
+import { LogRepository } from '../../connection/dynamodb-logs/dynamodb-logs.repository';
+import { Actions } from '../../connection/dynamodb-logs/dto/enumAction.const';
+import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 
 @Injectable()
 export class DeleteRecoverDataService {
+  private readonly _logger = new Logger(DeleteRecoverDataService.name);
   constructor(
     private readonly _returnResponse: ReturnResponse,
     private readonly _ipsrRepository: IpsrRepository,
@@ -115,9 +122,12 @@ export class DeleteRecoverDataService {
     private readonly _evidencesRepository: EvidencesRepository,
     private readonly _resultsKnowledgeProductFairScoreRepository: ResultsKnowledgeProductFairScoreRepository,
     private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
+    private readonly _elasticService: ElasticService,
+    private readonly _resultsService: ResultsService,
+    private readonly _logRepository: LogRepository,
   ) {}
 
-  async deleteResult(result_id: number) {
+  async deleteResult(result_id: number, user: TokenDto) {
     try {
       const resultData = await this._resultRepository.findOne({
         where: {
@@ -238,6 +248,41 @@ export class DeleteRecoverDataService {
       await this._resultsKnowledgeProductInstitutionRepository.logicalDelete(
         resultData.id,
       );
+      const toUpdateFromElastic = await this._resultsService.findAllSimplified(
+        resultData.id.toString(),
+        true,
+      );
+      if (toUpdateFromElastic.status !== HttpStatus.OK) {
+        this._logger.warn(
+          `the result #${resultData.id} could not be found to be deleted in the elastic search`,
+        );
+      } else {
+        try {
+          const elasticOperations = [
+            new ElasticOperationDto('DELETE', toUpdateFromElastic.response[0]),
+          ];
+
+          const elasticJson =
+            this._elasticService.getBulkElasticOperationResults(
+              process.env.ELASTIC_DOCUMENT_NAME,
+              elasticOperations,
+            );
+
+          const bulk = await this._elasticService.sendBulkOperationToElastic(
+            elasticJson,
+          );
+          await this._logRepository.createLog(
+            resultData.result_code,
+            user,
+            Actions.DELETE,
+            { class: ResultsService.name, method: `deleteResult` },
+          );
+        } catch (error) {
+          this._logger.warn(
+            `the elastic removal failed for the result #${resultData.id}`,
+          );
+        }
+      }
       return this._returnResponse.format({
         message: `The result with code ${resultData.result_code} has been deleted`,
         response: resultData,

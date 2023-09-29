@@ -59,6 +59,29 @@ import { ShareResultRequestRepository } from '../results/share-result-request/sh
 import { EvidencesRepository } from '../results/evidences/evidences.repository';
 import { ResultsKnowledgeProductFairScoreRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-fair-scores.repository';
 import { ResultsKnowledgeProductInstitutionRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-institution.repository';
+import { ResultsService } from '../results/results.service';
+import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
+import { ResultTypesService } from '../results/result_types/result_types.service';
+import { VersionsService } from '../results/versions/versions.service';
+import { ResultsByInititiativesService } from '../results/results_by_inititiatives/results_by_inititiatives.service';
+import { YearRepository } from '../results/years/year.repository';
+import { ResultLevelRepository } from '../results/result_levels/resultLevel.repository';
+import { ResultByLevelRepository } from '../results/result-by-level/result-by-level.repository';
+import { ResultLegacyRepository } from '../results/legacy-result/legacy-result.repository';
+import { ClarisaInstitutionsRepository } from '../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
+import { ClarisaInstitutionsTypeRepository } from '../../clarisa/clarisa-institutions-type/ClariasaInstitutionsType.repository';
+import { ResultRegionsService } from '../results/result-regions/result-regions.service';
+import { ResultCountriesService } from '../results/result-countries/result-countries.service';
+import { GenderTagRepository } from '../results/gender_tag_levels/genderTag.repository';
+import { ElasticService } from '../../elastic/elastic.service';
+import { LogRepository } from '../../connection/dynamodb-logs/dynamodb-logs.repository';
+import { VersioningService } from '../versioning/versioning.service';
+import { ResultInitiativeBudgetRepository } from '../results/result_budget/repositories/result_initiative_budget.repository';
+import { ResultTypeRepository } from '../results/result_types/resultType.repository';
+import { VersionRepository } from '../versioning/versioning.repository';
+import { ClarisaGeographicScopeRepository } from '../../clarisa/clarisa-geographic-scopes/clarisa-geographic-scopes.repository';
+import { HttpModule, HttpService } from '@nestjs/axios';
+import { ApplicationModulesRepository } from '../versioning/repositories/application-modules.repository';
 
 @Module({
   controllers: [DeleteRecoverDataController],
@@ -120,6 +143,29 @@ import { ResultsKnowledgeProductInstitutionRepository } from '../results/results
     EvidencesRepository,
     ResultsKnowledgeProductFairScoreRepository,
     ResultsKnowledgeProductInstitutionRepository,
+    ResultsService,
+    ClarisaInitiativesRepository,
+    ResultTypesService,
+    VersionsService,
+    ResultsByInititiativesService,
+    YearRepository,
+    ResultLevelRepository,
+    ResultByLevelRepository,
+    ResultLegacyRepository,
+    ClarisaInstitutionsRepository,
+    ClarisaInstitutionsTypeRepository,
+    ResultRegionsService,
+    ResultCountriesService,
+    GenderTagRepository,
+    ElasticService,
+    LogRepository,
+    VersioningService,
+    ResultInitiativeBudgetRepository,
+    ResultTypeRepository,
+    VersionRepository,
+    ClarisaGeographicScopeRepository,
+    ApplicationModulesRepository,
   ],
+  imports: [HttpModule],
 })
 export class DeleteRecoverDataModule {}
