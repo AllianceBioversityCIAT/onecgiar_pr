@@ -1,15 +1,30 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { ResultsComplementaryInnovationsFunctionsService } from './results-complementary-innovations-functions.service';
 import { CreateResultsComplementaryInnovationsFunctionDto } from './dto/create-results-complementary-innovations-function.dto';
 import { UpdateResultsComplementaryInnovationsFunctionDto } from './dto/update-results-complementary-innovations-function.dto';
 
 @Controller('results-complementary-innovations-functions')
 export class ResultsComplementaryInnovationsFunctionsController {
-  constructor(private readonly resultsComplementaryInnovationsFunctionsService: ResultsComplementaryInnovationsFunctionsService) {}
+  constructor(
+    private readonly resultsComplementaryInnovationsFunctionsService: ResultsComplementaryInnovationsFunctionsService,
+  ) {}
 
   @Post()
-  create(@Body() createResultsComplementaryInnovationsFunctionDto: CreateResultsComplementaryInnovationsFunctionDto) {
-    return this.resultsComplementaryInnovationsFunctionsService.create(createResultsComplementaryInnovationsFunctionDto);
+  create(
+    @Body()
+    createResultsComplementaryInnovationsFunctionDto: CreateResultsComplementaryInnovationsFunctionDto,
+  ) {
+    return this.resultsComplementaryInnovationsFunctionsService.create(
+      createResultsComplementaryInnovationsFunctionDto,
+    );
   }
 
   @Get()
@@ -23,8 +38,15 @@ export class ResultsComplementaryInnovationsFunctionsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateResultsComplementaryInnovationsFunctionDto: UpdateResultsComplementaryInnovationsFunctionDto) {
-    return this.resultsComplementaryInnovationsFunctionsService.update(+id, updateResultsComplementaryInnovationsFunctionDto);
+  update(
+    @Param('id') id: string,
+    @Body()
+    updateResultsComplementaryInnovationsFunctionDto: UpdateResultsComplementaryInnovationsFunctionDto,
+  ) {
+    return this.resultsComplementaryInnovationsFunctionsService.update(
+      +id,
+      updateResultsComplementaryInnovationsFunctionDto,
+    );
   }
 
   @Delete(':id')

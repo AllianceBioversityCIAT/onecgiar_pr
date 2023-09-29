@@ -10,6 +10,7 @@ import { IpsrRoutes } from './ipsr/ipsr.routes';
 import { PlatformReportModule } from './platform-report/platform-report.module';
 import { VersioningModule } from './versioning/versioning.module';
 import { GlobalNarrativesModule } from './global-narratives/global-narratives.module';
+import { DeleteRecoverDataModule } from './delete-recover-data/delete-recover-data.module';
 
 export const ModulesRoutes: Routes = [
   {
@@ -46,5 +47,9 @@ export const ModulesRoutes: Routes = [
   {
     path: 'global-narratives',
     module: GlobalNarrativesModule,
+  },
+  {
+    path: 'manage-data',
+    module: DeleteRecoverDataModule,
   },
 ];

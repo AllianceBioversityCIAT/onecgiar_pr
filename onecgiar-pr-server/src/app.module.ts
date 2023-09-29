@@ -35,6 +35,7 @@ import { IpsrModule } from './api/ipsr/ipsr.module';
 import { PlatformReportModule } from './api/platform-report/platform-report.module';
 import { VersioningModule } from './api/versioning/versioning.module';
 import { GlobalNarrativesModule } from './api/global-narratives/global-narratives.module';
+import { DeleteRecoverDataModule } from './api/delete-recover-data/delete-recover-data.module';
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { GlobalNarrativesModule } from './api/global-narratives/global-narrative
     PlatformReportModule,
     VersioningModule,
     GlobalNarrativesModule,
+    DeleteRecoverDataModule,
   ],
   controllers: [AppController],
   providers: [
