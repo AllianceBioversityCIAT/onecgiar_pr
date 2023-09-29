@@ -1492,28 +1492,43 @@ export class resultValidationRepository extends Repository<Validation> {
 	SELECT
 		'policy-change1-info' as section_name,
 		CASE
-			when (rpc.policy_type_id is not null
-			and rpc.policy_type_id <> '')
-			AND 
-			(rpc.policy_stage_id is not null
-			and rpc.policy_stage_id <> '')
-			AND 
-			((
-			SELECT
-				count(rbi.id)
-			from
-				results_by_institution rbi
-			where
-				rbi.result_id = r.id
-				and rbi.institution_roles_id = 4
-				and rbi.is_active > 0) > 0)
-			then TRUE
+			WHEN (
+				(
+					SELECT
+						COUNT(*)
+					FROM
+						result_answers ra
+					WHERE
+						ra.result_id = r.id
+						AND ra.is_active > 0
+						AND ra.answer_boolean = 1
+				) > 0
+			)
+			AND (
+				rpc.policy_type_id is not null
+				and rpc.policy_type_id <> ''
+			)
+			AND (
+				rpc.policy_stage_id is not null
+				and rpc.policy_stage_id <> ''
+			)
+			AND (
+				(
+					SELECT
+						count(rbi.id)
+					from
+						results_by_institution rbi
+					where
+						rbi.result_id = r.id
+						and rbi.institution_roles_id = 4
+						and rbi.is_active > 0
+				) > 0
+			) then TRUE
 			else false
 		END as validation
 	from
-		\`result\` r
-	left join results_policy_changes rpc on
-		rpc.result_id = r.id
+		result r
+		left join results_policy_changes rpc on rpc.result_id = r.id
 		and rpc.is_active > 0
 	WHERE
 		r.id = ?
