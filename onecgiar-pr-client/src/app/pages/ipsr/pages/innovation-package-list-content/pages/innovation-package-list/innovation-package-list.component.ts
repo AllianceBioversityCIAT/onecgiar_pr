@@ -1,5 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
+import { PhasesService } from '../../../../../../shared/services/global/phases.service';
+import { IpsrListService } from './services/ipsr-list.service';
+import { IpsrListFilterService } from './services/ipsr-list-filter.service';
 
 @Component({
   selector: 'app-innovation-package-list',
@@ -7,13 +10,15 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
   styleUrls: ['./innovation-package-list.component.scss']
 })
 export class InnovationPackageListComponent implements OnInit {
-
   innovationPackagesList = [];
   searchText = '';
-  constructor(public api: ApiService) {}
+  phasesList = [];
+  filterJoin = 0;
+  constructor(public api: ApiService, public phaseServices: PhasesService, public ipsrListService: IpsrListService, public ipsrListFilterSE: IpsrListFilterService) {}
   ngOnInit(): void {
     this.api.rolesSE.isAdmin ? this.deselectInits() : null;
     this.GETAllInnovationPackages();
+    this.phaseServices.phases.ipsr.map(item => ({ ...item, selected: item.status }));
   }
 
   GETAllInnovationPackages() {
@@ -28,10 +33,11 @@ export class InnovationPackageListComponent implements OnInit {
 
   onSelectChip(option) {
     option.selected = !option.selected;
+    this.filterJoin++;
   }
 
   get initsSelectedJoinText() {
-    return JSON.stringify(this.api.dataControlSE?.myInitiativesList);
+    return JSON.stringify([...this.api.dataControlSE?.myInitiativesList, ...this.ipsrListFilterSE.filters.general[1].options]);
   }
   get everyDeselected() {
     return this.api.dataControlSE.myInitiativesList.every(item => item.selected != true);
@@ -44,5 +50,4 @@ export class InnovationPackageListComponent implements OnInit {
   ngOnDestroy(): void {
     this.api.dataControlSE?.myInitiativesList.map(item => (item.selected = true));
   }
-
 }

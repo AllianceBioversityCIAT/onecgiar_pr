@@ -8,11 +8,12 @@ import {
 } from '../../../shared/globalInterfaces/replicable.interface';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { VERSIONING } from '../../../shared/utils/versioning.utils';
+import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
 export class EvidencesRepository
   extends Repository<Evidence>
-  implements ReplicableInterface<Evidence>
+  implements ReplicableInterface<Evidence>, LogicalDelete<Evidence>
 {
   private readonly _logger: Logger = new Logger(EvidencesRepository.name);
 
@@ -21,6 +22,19 @@ export class EvidencesRepository
     private readonly _handlersError: HandlersError,
   ) {
     super(Evidence, dataSource.createEntityManager());
+  }
+
+  logicalDelete(resultId: number): Promise<Evidence> {
+    const queryData = `update evidence set is_active = 0 where result_id = ?`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          className: EvidencesRepository.name,
+          error: err,
+          debug: true,
+        }),
+      );
   }
 
   async replicable(

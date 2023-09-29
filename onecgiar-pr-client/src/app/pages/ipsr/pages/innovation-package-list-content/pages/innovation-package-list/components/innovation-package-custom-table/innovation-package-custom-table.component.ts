@@ -18,7 +18,8 @@ export class InnovationPackageCustomTableComponent {
     { title: 'Title', attr: 'title', class: 'notCenter' },
     { title: 'Submitter', attr: 'official_code' },
     { title: 'Status', attr: 'status' },
-    { title: 'Year', attr: 'reported_year_id' },
+    { title: 'Phase year', attr: 'phase_year' },
+    { title: 'Phase name', attr: 'phase_name' },
     { title: 'Created by', attr: 'created_by' }
   ];
   constructor(public api: ApiService, private retrieveModalSE: RetrieveModalService) {}

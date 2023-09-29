@@ -6,16 +6,8 @@ import { InnovationPackageListContentComponent } from './innovation-package-list
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { SectionHeaderModule } from '../../components/section-header/section-header.module';
 
-
 @NgModule({
-  declarations: [
-    InnovationPackageListContentComponent
-  ],
-  imports: [
-    CommonModule,
-    InnovationPackageListContentRoutingModule,
-    CustomFieldsModule,
-    SectionHeaderModule
-  ]
+  declarations: [InnovationPackageListContentComponent],
+  imports: [CommonModule, InnovationPackageListContentRoutingModule, CustomFieldsModule, SectionHeaderModule]
 })
-export class InnovationPackageListContentModule { }
+export class InnovationPackageListContentModule {}

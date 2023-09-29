@@ -2,14 +2,35 @@ import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
 import { ResultIpEoiOutcome } from '../entities/result-ip-eoi-outcome.entity';
+import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
-export class ResultIpEoiOutcomeRepository extends Repository<ResultIpEoiOutcome> {
+export class ResultIpEoiOutcomeRepository
+  extends Repository<ResultIpEoiOutcome>
+  implements LogicalDelete<ResultIpEoiOutcome>
+{
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
   ) {
     super(ResultIpEoiOutcome, dataSource.createEntityManager());
+  }
+
+  logicalDelete(resultId: number): Promise<ResultIpEoiOutcome> {
+    const dataQuery = `update result_ip_eoi_outcomes rieo
+    inner join result_by_innovation_package rbip on rbip.result_by_innovation_package_id = rieo.result_by_innovation_package_id  
+    set rieo.is_active = 0
+    where rieo.is_active > 0
+        and rbip.result_innovation_package_id = ?;`;
+    return this.query(dataQuery, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultIpEoiOutcomeRepository.name,
+          debug: true,
+        }),
+      );
   }
 
   async getEoiOutcomes(resultByInnovationPackageId: number) {
@@ -29,7 +50,9 @@ export class ResultIpEoiOutcomeRepository extends Repository<ResultIpEoiOutcome>
     `;
 
     try {
-      const eoiOutcome: any[] = await this.query(query, [resultByInnovationPackageId]);
+      const eoiOutcome: any[] = await this.query(query, [
+        resultByInnovationPackageId,
+      ]);
       return eoiOutcome;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
