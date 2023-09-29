@@ -9,7 +9,6 @@ import { IpsrListService } from '../../../services/ipsr-list.service';
 export class InnovationPackageListFilterPipe implements PipeTransform {
   constructor(public ipsrListService: IpsrListService, public ipsrListFilterSE: IpsrListFilterService) {}
   transform(list, word: string, initsSelectedJoinText: number) {
-    console.log(this.ipsrListFilterSE.filters.general[0].options);
     return this.filterByInits(this.filterByText(this.filterByPhase(list), word));
   }
 
