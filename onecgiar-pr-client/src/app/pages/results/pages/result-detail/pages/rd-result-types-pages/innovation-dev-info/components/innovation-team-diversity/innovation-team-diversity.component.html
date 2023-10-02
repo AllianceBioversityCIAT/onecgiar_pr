@@ -10,4 +10,8 @@
         [checkboxConfig]="{ listAttr: 'subOptions', optionLabel: 'question_text', optionValue: 'answer_boolean', optionTextValue: 'answer_text'}"
         [(ngModel)]="this.options?.innovation_team_diversity['radioButtonValue']">
     </app-pr-radio-button>
+
+    <div appFeedbackValidation labelText="Innovation team diversity"
+        [isComplete]="this.options?.innovation_team_diversity['radioButtonValue']">
+    </div>
 </div>

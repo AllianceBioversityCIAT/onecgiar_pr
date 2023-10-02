@@ -9,3 +9,8 @@
     [checkboxConfig]="{ listAttr: 'subOptions', optionLabel: 'question_text', optionValue: 'answer_boolean', optionTextValue: 'answer_text'}"
     [(ngModel)]="this.options?.responsible_innovation_and_scaling?.q1['radioButtonValue']">
 </app-pr-radio-button>
+
+<div appFeedbackValidation
+    labelText="Have concrete actions been taken to understand and improve Gender Equality and Social Inclusivity (GESI) in developing this innovation?"
+    [isComplete]="this.options?.responsible_innovation_and_scaling?.q1['radioButtonValue']">
+</div>
