@@ -180,7 +180,10 @@ export class LinkedResultsService {
         response: {
           links: links.filter((el) => !!el.id),
           legacy_link: links.filter((el) => !el.id),
-          linkedInnovation: linkedInnovation ? linkedInnovation : null,
+          linkedInnovation: linkedInnovation ? linkedInnovation : {
+            linked_innovation_dev: false,
+            linked_innovation_use: false
+          },
         },
         message: 'The data was updated correctly',
         status: HttpStatus.OK,
