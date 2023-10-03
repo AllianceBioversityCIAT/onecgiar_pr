@@ -152,7 +152,8 @@ export class ResultsPolicyChangesRepository
     	rpc.policy_type_id,
       rpc.status_amount,
       rpc.linked_innovation_dev,
-      rpc.linked_innovation_use
+      rpc.linked_innovation_use,
+      rpc.result_related_engagement
     FROM
     	results_policy_changes rpc
     WHERE 

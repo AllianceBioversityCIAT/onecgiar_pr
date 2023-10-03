@@ -77,6 +77,13 @@ export class ResultsPolicyChanges {
   linked_innovation_use: boolean;
 
   @Column({
+    name: 'result_related_engagement',
+    type: 'boolean',
+    nullable: true,
+  })
+  result_related_engagement: boolean;
+
+  @Column({
     name: 'is_active',
     type: 'boolean',
     nullable: false,

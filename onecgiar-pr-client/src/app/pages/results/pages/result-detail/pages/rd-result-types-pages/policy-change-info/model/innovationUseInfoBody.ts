@@ -4,6 +4,7 @@ export class InnovationUseInfoBody {
   public amount: number;
   public status_amount: number;
   public institutions: institutionsPCInterface[] = [];
+  public result_related_engagement: boolean;
 }
 
 export class policyChangeQuestions {
