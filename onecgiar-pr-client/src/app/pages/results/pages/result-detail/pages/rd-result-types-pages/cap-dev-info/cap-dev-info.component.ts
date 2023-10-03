@@ -21,6 +21,7 @@ export class CapDevInfoComponent implements OnInit {
     { id: true, name: 'Yes' },
     { id: false, name: 'No' }
   ];
+
   constructor(public api: ApiService, public institutionsSE: InstitutionsService) {}
 
   ngOnInit(): void {
@@ -34,21 +35,19 @@ export class CapDevInfoComponent implements OnInit {
     this.api.resultsSE.GET_capdevsTerms().subscribe(({ response }) => {
       this.capdevsSubTerms = response.splice(0, 2);
       this.capdevsTerms = response.splice(0, 2);
-      //(this.capdevsSubTerms);
-      //(this.capdevsTerms);
     });
   }
   GET_capdevsDeliveryMethod() {
     this.api.resultsSE.GET_capdevsDeliveryMethod().subscribe(({ response }) => {
-      //(response);
       this.deliveryMethodOptions = response;
     });
   }
 
   getSectionInformation() {
     this.api.resultsSE.GET_capacityDevelopent().subscribe(({ response }) => {
-      //(response);
       this.capDevInfoRoutingBody = response;
+      this.capDevInfoRoutingBody.unkown_using = Boolean(this.capDevInfoRoutingBody.unkown_using);
+
       this.get_capdev_term_id();
     });
   }
@@ -66,7 +65,6 @@ export class CapDevInfoComponent implements OnInit {
   }
 
   get_capdev_term_id() {
-    //(this.capDevInfoRoutingBody.capdev_term_id);
     if (this.capDevInfoRoutingBody.capdev_term_id == 4) return (this.capdev_term_id_1 = 4);
     if (this.capDevInfoRoutingBody.capdev_term_id == 3) {
       return (this.capdev_term_id_1 = 3);
@@ -84,16 +82,14 @@ export class CapDevInfoComponent implements OnInit {
   }
 
   validate_capdev_term_id() {
-    //(this.capdev_term_id_1);
-    //(this.capdev_term_id_2);
     this.capDevInfoRoutingBody.capdev_term_id = this.capdev_term_id_2 ? this.capdev_term_id_2 : this.capdev_term_id_1;
   }
 
   onSaveSection() {
-    //(this.capDevInfoRoutingBody);
     this.validate_capdev_term_id();
 
     if (!this.capDevInfoRoutingBody.is_attending_for_organization) this.cleanOrganizationsList();
+
     this.api.resultsSE.PATCH_capacityDevelopent(this.capDevInfoRoutingBody).subscribe((resp: any) => {
       this.getSectionInformation();
     });

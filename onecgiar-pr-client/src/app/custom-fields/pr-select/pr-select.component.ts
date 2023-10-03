@@ -77,7 +77,7 @@ export class PrSelectComponent implements ControlValueAccessor {
     if (!this.options?.length) return [];
     if (!this._optionsIntance?.length) this._optionsIntance = [...this.options];
 
-    this._optionsIntance.map((resp: any) => {
+    this._optionsIntance.forEach((resp: any) => {
       resp.disabled = false;
       resp.selected = false;
     });
