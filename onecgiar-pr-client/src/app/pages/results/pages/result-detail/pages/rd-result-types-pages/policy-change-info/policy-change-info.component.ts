@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
-import { InnovationUseInfoBody } from './model/innovationUseInfoBody';
+import { InnovationUseInfoBody, policyChangeQuestions } from './model/innovationUseInfoBody';
 import { PolicyControlListService } from '../../../../../../../shared/services/global/policy-control-list.service';
 import { InstitutionsService } from '../../../../../../../shared/services/global/institutions.service';
 
@@ -11,7 +11,7 @@ import { InstitutionsService } from '../../../../../../../shared/services/global
 })
 export class PolicyChangeInfoComponent implements OnInit {
   innovationUseInfoBody = new InnovationUseInfoBody();
-  policyChangeQuestions: any = {};
+  policyChangeQuestions = new policyChangeQuestions();
   cantidad: string = '';
   relatedTo: string = '';
   relatedToOptions = [
@@ -49,7 +49,7 @@ export class PolicyChangeInfoComponent implements OnInit {
   getPolicyChangesQuestions() {
     this.api.resultsSE.GET_policyChangesQuestions().subscribe(({ response }) => {
       this.policyChangeQuestions = response;
-      this.relatedTo = this.policyChangeQuestions.optionsWithAnswers.filter(option => option.answer_boolean === true)[0].result_question_id;
+      this.relatedTo = this.policyChangeQuestions?.optionsWithAnswers.filter(option => option.answer_boolean === true)[0]?.result_question_id;
     });
   }
 
@@ -62,8 +62,6 @@ export class PolicyChangeInfoComponent implements OnInit {
   }
 
   onSaveSection() {
-    const result = this.policyChangeQuestions.optionsWithAnswers.filter(option => option.answer_boolean === true);
-
     const body = {
       ...this.innovationUseInfoBody,
       ...this.policyChangeQuestions

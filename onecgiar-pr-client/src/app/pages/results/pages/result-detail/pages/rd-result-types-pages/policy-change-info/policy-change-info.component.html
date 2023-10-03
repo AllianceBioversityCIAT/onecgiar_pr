@@ -3,10 +3,9 @@
 <div class="detail_container">
     <app-alert-status description="Please fill in the following required fields for this indicator category.">
     </app-alert-status>
+
     <app-alert-status [description]="policyTypeDescriptions()">
     </app-alert-status>
-
-
 
     <div class="auto_fit_container">
         <app-pr-select [options]="this.policyControlListSE.policyTypesList" label="Policy type"
@@ -26,11 +25,11 @@
         </app-pr-select>
     </div>
 
-    <app-pr-select [options]="this.policyChangeQuestions.optionsWithAnswers"
-        [label]="this.policyChangeQuestions.question_text" optionLabel="question_text" optionValue="result_question_id"
-        placeholder="Select an answer" [(ngModel)]="this.relatedTo"
-        (ngModelChange)="changeAnswerBoolean(this.relatedTo)">
+    <app-pr-select [options]="policyChangeQuestions.optionsWithAnswers" [label]="policyChangeQuestions.question_text"
+        optionLabel="question_text" optionValue="result_question_id" placeholder="Select an answer"
+        [(ngModel)]="this.relatedTo" (ngModelChange)="changeAnswerBoolean(this.relatedTo)">
     </app-pr-select>
+
 
     <app-pr-select [options]="this.policyControlListSE.policyStages" label="Stage" description="Select stage"
         optionLabel="full_name" optionValue="id" placeholder="Select stage"
