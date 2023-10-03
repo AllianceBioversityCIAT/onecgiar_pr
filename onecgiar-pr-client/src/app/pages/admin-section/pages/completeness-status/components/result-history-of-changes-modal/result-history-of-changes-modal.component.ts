@@ -9,12 +9,29 @@ import { ExportTablesService } from '../../../../../../shared/services/export-ta
   styleUrls: ['./result-history-of-changes-modal.component.scss']
 })
 export class ResultHistoryOfChangesModalComponent {
+  columnOrder = [
+    { title: 'Result code', attr: 'result_code' },
+    { title: 'Title', attr: 'result_title' },
+    { title: 'Submitter', attr: 'official_code' },
+    { title: 'Indicator category', attr: 'result_type_name' },
+    { title: 'Progress', attr: 'completeness' },
+    { title: 'Submitted', attr: 'is_submitted' },
+    { title: 'Submissions', attr: 'end_date', noSort: true },
+    { title: 'General information', attr: 'general_information_value' },
+    { title: 'Theory of change', attr: 'theory_of_change_value' },
+    { title: 'Partners', attr: 'partners_value' },
+    { title: 'Geographic location', attr: 'geographic_location_value' },
+    { title: 'Links to results', attr: 'links_to_results_value' },
+    { title: 'Evidence', attr: 'evidence_value' },
+    { title: 'Section seven', attr: 'section_seven_value' }
+  ];
+
   constructor(public api: ApiService, public resultHistoryOfChangesModalSE: ResultHistoryOfChangesModalService, public exportTablesSE: ExportTablesService) {}
   cleanObject() {}
 
   exportExcel(resultsList) {
     // console.table(resultsList);
-    let resultsListMapped = [];
+    const resultsListMapped = [];
     resultsListMapped.push({
       comment: 'Comment',
       user_last_name: 'Last name',

@@ -1,8 +1,6 @@
 .no_data_text {
-    text-align: center;
-    background-color: var(--pr-color-primary-2);
-    color: var(--pr-color-primary);
-    padding: 20px 100px;
-    background: rgb(68, 92, 224);
-    background: linear-gradient(180deg, #ebebeb 0%, rgba(255, 255, 255, 1) 100%);
+  text-align: center;
+  color: var(--pr-color-primary);
+  padding: 20px 100px;
+  background: linear-gradient(180deg, #ebebeb 0%, rgba(255, 255, 255, 1) 100%);
 }

@@ -20,11 +20,12 @@
             [rowsPerPageOptions]="[10, 50, 100]">
             <ng-template pTemplate="header">
                 <tr>
-                    <th pSortableColumn="result_code"> <p-sortIcon field="result_code"></p-sortIcon>Result code</th>
-                    <th pSortableColumn="{{ column.attr }}" *ngFor="let column of columnOrder">
-                        <p-sortIcon field="{{ column.attr }}"></p-sortIcon>{{ column.title }}
+                    <th id="result_code" pSortableColumn="result_code"> <p-sortIcon
+                            field="result_code"></p-sortIcon>Result code</th>
+                    <th id="{{column.attr}}" pSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder">
+                        <p-sortIcon field="{{column.attr}}"></p-sortIcon>{{ column.title }}
                     </th>
-                    <th *ngIf="!this.api.rolesSE.platformIsClosed">Action</th>
+                    <th *ngIf="!this.api.rolesSE.platformIsClosed" id="actions">Action</th>
                 </tr>
             </ng-template>
             <ng-template pTemplate="body" let-result>
@@ -34,10 +35,7 @@
                     </td>
                     <td *ngFor="let column of columnOrder; let i = index" class="{{ column.attr }}"
                         style="max-width: 440px;">
-                        <!-- <div class="subResults"> -->
                         <ng-container>
-                            <!-- [routerLink]="'/result/result-detail/' + result?.result_code"
-                                [queryParams]="{ phase: result?.version_id }" -->
                             <a class="{{ column.class }}">
                                 <div class="point"
                                     [style.background]="'var(--pr-color-result-level-' + result?.result_level_id + ')'"
@@ -51,20 +49,13 @@
                                 'YYYY-MM-dd') }}
                             </a>
                         </ng-container>
-                        <!-- </div> -->
-
-
-
                     </td>
-
                     <td>
-
                         <div class="actions_buttons">
                             <a [href]="'/result/result-detail/' + result?.result_code+'?phase='+ result?.version_id"
                                 target="_blank" class="link_button view">View</a>
                             <div class="link_button update" (click)="onPressAction(result)">Update</div>
                         </div>
-
                     </td>
                 </tr>
             </ng-template>
@@ -77,26 +68,5 @@
         <div class="noDataText"
             *ngIf="!(this.api.dataControlSE.resultsList | resultsToUpdateFilter : text_to_search)?.length">
             There are no results for the selected filters.</div>
-
-
-
-
-
-
-
-
-
-
-        <!-- flagsCode="iso_alpha_2" -->
     </div>
-    <!-- <div class="buttons">
-        <app-pr-button padding="medium" text="Cancel" icon="cancel_schedule_send" colorType="secondary"
-            (click)="this.api.dataControlSE.showRetrieveRequest = false">
-        </app-pr-button>
-        <app-pr-button
-            [ngClass]="{'globalDisabled': this.requesting || !this.retrieveModalSE.retrieveRequestBody.initiative_id}"
-            [text]="this.requesting?'Requesting':'Retrieve'" [rotating]="this.requesting"
-            [icon]="this.requesting?'loop':'send'" padding="medium" (click)="onRequestRetrieve()"></app-pr-button>
-    </div> -->
-
 </p-dialog>
