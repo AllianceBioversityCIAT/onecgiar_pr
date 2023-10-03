@@ -3,6 +3,7 @@ export class PolicyChangesDto {
   public policy_type_id: number;
   public amount: number;
   public status_amount: string;
+  public result_related_engagement: boolean;
   public optionsWithAnswers: Option[];
   public institutions: institutionsPCInterface[];
 }
