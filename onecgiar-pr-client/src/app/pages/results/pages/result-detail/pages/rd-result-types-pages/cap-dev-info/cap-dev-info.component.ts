@@ -52,10 +52,6 @@ export class CapDevInfoComponent implements OnInit {
     });
   }
 
-  cleanPeopleValues() {
-    console.log('cleanPeopleValues');
-  }
-
   clean_capdev_term_2() {
     if (this.capdev_term_id_1 == 3) this.capdev_term_id_2 = null;
   }
@@ -69,7 +65,6 @@ export class CapDevInfoComponent implements OnInit {
   }
 
   get_capdev_term_id() {
-    //(this.capDevInfoRoutingBody.capdev_term_id);
     if (this.capDevInfoRoutingBody.capdev_term_id == 4) return (this.capdev_term_id_1 = 4);
     if (this.capDevInfoRoutingBody.capdev_term_id == 3) {
       return (this.capdev_term_id_1 = 3);
