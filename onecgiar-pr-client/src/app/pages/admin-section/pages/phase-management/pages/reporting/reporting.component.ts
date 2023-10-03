@@ -22,15 +22,12 @@ export class ReportingComponent implements OnInit {
     { title: 'Previous phase', attr: 'obj_previous_phase' }
   ];
 
-  // show_full_screen = false;
   phaseList: any[] = [];
   previousPhaseList: any[] = [];
   tocPhaseList = [];
   resultYearsList = [];
-  // clonedphaseList: { [s: string]: any } = {};
   textToFind = '';
   disabledActionsText = 'Finish editing the phase to be able to edit or delete this phase.';
-  // newPhase: any[] = [];
   @ViewChild('dt') table: Table;
   status = [
     {
@@ -42,6 +39,7 @@ export class ReportingComponent implements OnInit {
       name: 'Closed'
     }
   ];
+
   constructor(public resultsSE: ResultsApiService, private customizedAlertsFeSE: CustomizedAlertsFeService) {}
 
   ngOnInit(): void {
@@ -51,38 +49,8 @@ export class ReportingComponent implements OnInit {
   }
 
   disablePreviousYear() {
-    return this.phaseList.map((phase: any) => ({ year: phase.phase_year }));
+    return this.phaseList.forEach((phase: any) => ({ year: phase.phase_year }));
   }
-
-  // onRowEditInit(phase: any) {
-  //   this.clonedphaseList[phase.id as string] = { ...phase };
-  // }
-
-  // onRowEditSave(phase: any) {
-  //   console.log(phase);
-  //   this.resultsSE.PATCH_updatePhase(phase.id, phase).subscribe({
-  //     next: ({ response }) => {
-  //       this.getAllPhases();
-  //     }
-  //   });
-  //   delete this.clonedphaseList[phase.id as string];
-  // }
-
-  // onRowEditCancel(phase: any, index: number) {
-  //   if (!!phase?.is_new) {
-  //     const temp = this.phaseList.filter((el, ind) => ind != index);
-  //     this.phaseList = temp;
-  //   }
-  //   this.phaseList[index].status = this.clonedphaseList[phase.id as string].status;
-  //   this.phaseList[index].phase_name = this.clonedphaseList[phase.id as string].phase_name;
-  //   delete this.clonedphaseList[phase.id as string];
-  // }
-
-  // activeRow(data) {
-  //   data = false;
-  // }
-
-  //TODO new
 
   updateVariablesToSave(phaseItem) {
     phaseItem.phase_name_ts = phaseItem.phase_name;
@@ -200,16 +168,13 @@ export class ReportingComponent implements OnInit {
     const tempNewPhase: any = new Phase();
     tempNewPhase.isNew = true;
     tempNewPhase.editing = true;
-    // tempNewPhase.is_new = true;
     this.phaseList = [...this.phaseList, tempNewPhase];
-    // this.newPhase.forEach((el, index) => {
-    //   this.table.initRowEdit(this.phaseList[this.phaseList.length - (this.newPhase.length - index)]);
-    // });
   }
 
   onlyPreviousPhase(currentPhase: any) {
     return this.phaseList.filter(el => el.phase_year_ts >= currentPhase.phase_year_ts);
   }
+
   cancelAction(phase) {
     phase.editing = false;
     if (!phase.isNew) return;
