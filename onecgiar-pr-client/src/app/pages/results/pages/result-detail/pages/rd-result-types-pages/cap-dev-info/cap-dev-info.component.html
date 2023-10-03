@@ -6,7 +6,7 @@
     <app-pr-field-header label="Number of people trained">
     </app-pr-field-header>
     <!-- In the case where the gender balance of trainees is not known (e.g. online training), assume 50-50 split. -->
-    <div class="auto_fit_container peopleFields">
+    <div class="peopleFields" [ngClass]="{'Colums2': this.capDevInfoRoutingBody.unkown_using}">
         <app-pr-input placeholder="Type quantity" label="Female" type="number" [required]="false"
             *ngIf="!this.capDevInfoRoutingBody.unkown_using" [(ngModel)]="this.capDevInfoRoutingBody.female_using">
         </app-pr-input>
@@ -22,8 +22,8 @@
             [showDescription]="false" [(ngModel)]="this.capDevInfoRoutingBody.has_unkown_using"
             *ngIf="this.capDevInfoRoutingBody.unkown_using">
         </app-pr-input>
-        <app-pr-checkbox label="Unknown" (selectOptionEvent)="cleanPeopleValues()"
-            [(ngModel)]="this.capDevInfoRoutingBody.unkown_using" class="peopleFields__checkbox">
+        <app-pr-checkbox label="Unknown" [(ngModel)]="this.capDevInfoRoutingBody.unkown_using"
+            class="peopleFields__checkbox">
         </app-pr-checkbox>
     </div>
 

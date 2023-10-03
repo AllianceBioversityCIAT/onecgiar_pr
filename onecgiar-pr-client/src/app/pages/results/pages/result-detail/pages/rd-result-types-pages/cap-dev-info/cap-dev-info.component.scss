@@ -1,6 +1,8 @@
 .peopleFields {
-  // display: flex;
+  display: grid;
+  grid-template-columns: 2fr 2fr 2fr 1fr;
   align-items: flex-end;
+  gap: 1rem;
 
   &__checkbox {
     margin-bottom: 1rem;
@@ -13,4 +15,8 @@
   app-pr-checkbox {
     margin-top: 40px;
   }
+}
+
+.Colums2 {
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
 }
