@@ -30,6 +30,10 @@
         [(ngModel)]="this.relatedTo" (ngModelChange)="changeAnswerBoolean(this.relatedTo)">
     </app-pr-select>
 
+    <app-pr-radio-button [options]="this.relatedToEngagementOptions" optionLabel="label" optionValue="value"
+        label="Is this capacity development or policy change result related to any engagement activity or event?"
+        [(ngModel)]="innovationUseInfoBody.result_related_engagement">
+    </app-pr-radio-button>
 
     <app-pr-select [options]="this.policyControlListSE.policyStages" label="Stage" description="Select stage"
         optionLabel="full_name" optionValue="id" placeholder="Select stage"
