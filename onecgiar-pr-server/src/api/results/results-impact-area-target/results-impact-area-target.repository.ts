@@ -8,6 +8,7 @@ import {
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
+import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
 
 @Injectable()
 export class ResultsImpactAreaTargetRepository
@@ -50,7 +51,9 @@ export class ResultsImpactAreaTargetRepository
         SELECT 
         null as result_impact_area_target_id,
         riat.is_active,
-        now() as created_date,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date,
         null as last_updated_date,
         ? as result_id,
         riat.impact_area_target_id,
@@ -83,7 +86,9 @@ export class ResultsImpactAreaTargetRepository
         )
         SELECT 
         riat.is_active,
-        now() as created_date,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date,
         null as last_updated_date,
         ? as result_id,
         riat.impact_area_target_id,
@@ -116,9 +121,7 @@ export class ResultsImpactAreaTargetRepository
       final_data = null;
     }
 
-    config.f?.completeFunction
-      ? config.f.completeFunction({ ...final_data })
-      : null;
+    config.f?.completeFunction?.({ ...final_data });
 
     return final_data;
   }

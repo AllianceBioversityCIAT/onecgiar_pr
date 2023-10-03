@@ -6,6 +6,7 @@ import {
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
+import { predeterminedDateValidation } from '../../../../shared/utils/versioning.utils';
 
 @Injectable()
 export class ResultInitiativeBudgetRepository
@@ -32,7 +33,9 @@ export class ResultInitiativeBudgetRepository
         const queryData = `
         SELECT 
         ? as created_by
-        ,rib.created_date
+        ,${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date
         ,rib.current_year
         ,1 as is_active
         ,rib.is_determined
@@ -69,7 +72,8 @@ export class ResultInitiativeBudgetRepository
       } else {
         const queryData: string = `
         INSERT INTO result_initiative_budget (
-          created_by
+          created_date
+          ,created_by
           ,current_year
           ,is_active
           ,is_determined
@@ -80,7 +84,10 @@ export class ResultInitiativeBudgetRepository
           ,result_initiative_id
           )
           SELECT 
-          ? as created_by
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date
+          ,? as created_by
           ,rib.current_year
           ,1 as is_active
           ,rib.is_determined
@@ -133,9 +140,7 @@ export class ResultInitiativeBudgetRepository
       final_data = null;
     }
 
-    config.f?.completeFunction
-      ? config.f.completeFunction({ ...final_data })
-      : null;
+    config.f?.completeFunction?.({ ...final_data });
 
     return final_data;
   }

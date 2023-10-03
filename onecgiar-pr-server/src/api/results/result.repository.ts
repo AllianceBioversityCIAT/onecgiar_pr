@@ -15,10 +15,9 @@ import {
   ReplicableInterface,
 } from '../../shared/globalInterfaces/replicable.interface';
 
-import {
-  LogicalDelete
-} from '../../shared/globalInterfaces/delete.interface';
+import { LogicalDelete } from '../../shared/globalInterfaces/delete.interface';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
+import { predeterminedDateValidation } from '../../shared/utils/versioning.utils';
 
 @Injectable()
 export class ResultRepository
@@ -64,7 +63,9 @@ export class ResultRepository
           ? as created_by,
           ? as last_updated_by,
           (select v.phase_year  from \`version\` v where v.id = ?) as reported_year_id,
-          now() as created_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date,
           r2.result_level_id,
           r2.title,
           r2.legacy_id,
@@ -132,7 +133,9 @@ export class ResultRepository
           ? as created_by,
           ? as last_updated_by,
           (select v.phase_year  from \`version\` v where v.id = ?) as reported_year_id,
-          now() as created_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date,
           r2.result_level_id,
           r2.title,
           r2.legacy_id,
@@ -199,9 +202,7 @@ export class ResultRepository
       final_data = null;
     }
 
-    config.f?.completeFunction
-      ? config.f.completeFunction({ ...final_data })
-      : null;
+    config.f?.completeFunction?.({ ...final_data });
     return final_data;
   }
 

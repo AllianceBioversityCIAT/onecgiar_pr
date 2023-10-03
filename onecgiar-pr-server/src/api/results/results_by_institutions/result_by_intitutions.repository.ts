@@ -9,6 +9,7 @@ import {
 import { institutionsInterface } from './dto/save_results_by_institution.dto';
 import { InstitutionRoleEnum } from './entities/institution_role.enum';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
+import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
 
 @Injectable()
 export class ResultByIntitutionsRepository
@@ -52,7 +53,9 @@ export class ResultByIntitutionsRepository
           rbi.institutions_id,
           rbi.institution_roles_id,
           rbi.is_active,
-          now() as created_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date,
           null as last_updated_date,
           ? as created_by,
           ? as last_updated_by,
@@ -86,7 +89,9 @@ export class ResultByIntitutionsRepository
           rbi.institutions_id,
           rbi.institution_roles_id,
           rbi.is_active,
-          now() as created_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date,
           null as last_updated_date,
           ? as created_by,
           ? as last_updated_by,
@@ -120,9 +125,7 @@ export class ResultByIntitutionsRepository
       final_data = null;
     }
 
-    config.f?.completeFunction
-      ? config.f.completeFunction({ ...final_data })
-      : null;
+    config.f?.completeFunction?.({ ...final_data });
 
     return final_data;
   }

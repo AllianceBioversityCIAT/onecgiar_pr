@@ -7,6 +7,7 @@ import {
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
+import { predeterminedDateValidation } from '../../../../shared/utils/versioning.utils';
 
 @Injectable()
 export class ResultsInnovationsUseRepository
@@ -51,7 +52,9 @@ export class ResultsInnovationsUseRepository
           riu.male_using,
           riu.female_using,
           riu.is_active,
-          now() as created_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date,
           null as last_updated_date,
           ? as results_id,
           ? as created_by,
@@ -86,7 +89,9 @@ export class ResultsInnovationsUseRepository
           riu.male_using,
           riu.female_using,
           riu.is_active,
-          now() as created_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date,
           null as last_updated_date,
           ? as results_id,
           ? as created_by,
@@ -122,9 +127,7 @@ export class ResultsInnovationsUseRepository
       final_data = null;
     }
 
-    config.f?.completeFunction
-      ? config.f.completeFunction({ ...final_data })
-      : null;
+    config.f?.completeFunction?.({ ...final_data });
 
     return final_data;
   }

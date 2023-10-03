@@ -14,6 +14,7 @@ import { ResultsSdgTargetRepository } from './results-sdg-targets.respository';
 import { ResultsActionAreaOutcomeRepository } from './result-toc-action-area.repository';
 import { ResultsTocTargetIndicatorRepository } from './result-toc-result-target-indicator.repository';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
+import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
 
 @Injectable()
 export class ResultsTocResultRepository
@@ -63,7 +64,9 @@ export class ResultsTocResultRepository
           null as result_toc_result_id,
           null as planned_result,
           rtr.is_active,
-          now() as created_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date,
           null as last_updated_date,
           null as toc_result_id,
           ? as results_id,
@@ -105,7 +108,9 @@ export class ResultsTocResultRepository
         SELECT 
         null as planned_result,
         rtr.is_active,
-        now() as created_date,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date,
         null as last_updated_date,
         null as toc_result_id,
         ? as results_id,
@@ -147,9 +152,7 @@ export class ResultsTocResultRepository
       final_data = null;
     }
 
-    config.f?.completeFunction
-      ? config.f.completeFunction({ ...final_data })
-      : null;
+    config.f?.completeFunction?.({ ...final_data });
 
     return final_data;
   }

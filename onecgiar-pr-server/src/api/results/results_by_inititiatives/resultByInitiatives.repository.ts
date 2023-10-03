@@ -8,6 +8,7 @@ import {
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
+import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
 
 @Injectable()
 export class ResultByInitiativesRepository
@@ -55,7 +56,9 @@ export class ResultByInitiativesRepository
           rbi.initiative_role_id,
           ? as created_by,
           null as last_updated_by,
-          now() as created_date
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date
           from results_by_inititiative rbi where rbi.result_id = ? and rbi.is_active > 0
         `;
         const response = await (<Promise<ResultsByInititiative[]>>(
@@ -89,7 +92,9 @@ export class ResultByInitiativesRepository
           rbi.initiative_role_id,
           ? as created_by,
           null as last_updated_by,
-          now() as created_date
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date
           from results_by_inititiative rbi where rbi.result_id = ? and rbi.is_active > 0`;
         await this.query(queryData, [
           config.new_result_id,
@@ -118,10 +123,7 @@ export class ResultByInitiativesRepository
       final_data = null;
     }
 
-    config.f?.completeFunction
-      ? config.f.completeFunction({ ...final_data })
-      : null;
-
+    config.f?.completeFunction?.({ ...final_data });
     return final_data;
   }
 

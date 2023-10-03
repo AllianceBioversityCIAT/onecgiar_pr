@@ -7,7 +7,10 @@ import {
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
-import { VERSIONING } from '../../../shared/utils/versioning.utils';
+import {
+  VERSIONING,
+  predeterminedDateValidation,
+} from '../../../shared/utils/versioning.utils';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
@@ -48,7 +51,9 @@ export class EvidencesRepository
           null as id,
           e.description,
           e.is_active,
-          now() as creation_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as creation_date,
           e.last_updated_date,
           ? as created_by,
           ? as last_updated_by,
@@ -100,7 +105,9 @@ export class EvidencesRepository
           ) select
           e.description,
           e.is_active,
-          now() as creation_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as creation_date,
           e.last_updated_date,
           ? as created_by,
           ? as last_updated_by,
@@ -154,10 +161,7 @@ export class EvidencesRepository
       final_data = null;
     }
 
-    config.f?.completeFunction
-      ? config.f.completeFunction({ ...final_data })
-      : null;
-
+    config.f?.completeFunction?.({ ...final_data });
     return final_data;
   }
 

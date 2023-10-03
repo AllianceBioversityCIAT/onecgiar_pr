@@ -6,7 +6,10 @@ import {
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
-import { VERSIONING } from '../../../../shared/utils/versioning.utils';
+import {
+  VERSIONING,
+  predeterminedDateValidation,
+} from '../../../../shared/utils/versioning.utils';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
@@ -63,7 +66,9 @@ export class ResultsKnowledgeProductsRepository
           rkp.is_melia,
           rkp.melia_previous_submitted,
           rkp.is_active,
-          now() as created_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date,
           null as last_updated_date,
           ? as results_id,
           rkp.melia_type_id,
@@ -129,7 +134,9 @@ export class ResultsKnowledgeProductsRepository
           rkp.is_melia,
           rkp.melia_previous_submitted,
           rkp.is_active,
-          now() as created_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date,
           null as last_updated_date,
           ? as results_id,
           rkp.melia_type_id,
@@ -186,7 +193,7 @@ export class ResultsKnowledgeProductsRepository
       final_data = null;
     }
 
-    config.f?.completeFunction ? config.f.completeFunction(final_data) : null;
+    config.f?.completeFunction?.(final_data);
 
     return final_data;
   }

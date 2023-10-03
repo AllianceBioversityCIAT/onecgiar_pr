@@ -7,7 +7,10 @@ import {
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
-import { VERSIONING } from '../../../../shared/utils/versioning.utils';
+import {
+  VERSIONING,
+  predeterminedDateValidation,
+} from '../../../../shared/utils/versioning.utils';
 
 @Injectable()
 export class ResultsKnowledgeProductAuthorRepository
@@ -56,7 +59,9 @@ export class ResultsKnowledgeProductAuthorRepository
         rkpa.author_name,
         rkpa.orcid,
         rkpa.is_active,
-        now() as created_date,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date,
         null as last_updated_date,
         ${VERSIONING.QUERY.Get_kp_phases(
           config.new_result_id,
@@ -91,7 +96,9 @@ export class ResultsKnowledgeProductAuthorRepository
         rkpa.author_name,
         rkpa.orcid,
         rkpa.is_active,
-        now() as created_date,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date,
         null as last_updated_date,
         ${VERSIONING.QUERY.Get_kp_phases(
           config.new_result_id,
@@ -129,9 +136,7 @@ export class ResultsKnowledgeProductAuthorRepository
       final_data = null;
     }
 
-    config.f?.completeFunction
-      ? config.f.completeFunction({ ...final_data })
-      : null;
+    config.f?.completeFunction?.({ ...final_data });
 
     return final_data;
   }

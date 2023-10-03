@@ -7,6 +7,7 @@ import {
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
+import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
 
 @Injectable()
 export class ResultRegionRepository
@@ -45,7 +46,9 @@ export class ResultRegionRepository
         select 
         null as result_region_id,
         rr.is_active,
-        now() as created_date,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date,
         null as last_updated_date,
         rr.region_id,
         ? as result_id
@@ -67,7 +70,9 @@ export class ResultRegionRepository
           )
           select
           rr.is_active,
-          now() as created_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date,
           null as last_updated_date,
           rr.region_id,
           ? as result_id
@@ -96,9 +101,7 @@ export class ResultRegionRepository
       final_data = null;
     }
 
-    config.f?.completeFunction
-      ? config.f.completeFunction({ ...final_data })
-      : null;
+    config.f?.completeFunction?.({ ...final_data });
 
     return final_data;
   }

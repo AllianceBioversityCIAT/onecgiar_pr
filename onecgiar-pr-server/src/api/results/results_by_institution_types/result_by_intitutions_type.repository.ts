@@ -7,6 +7,7 @@ import {
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
+import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
 
 @Injectable()
 export class ResultByIntitutionsTypeRepository
@@ -49,7 +50,9 @@ export class ResultByIntitutionsTypeRepository
         select 
           null as id,
           rbit.is_active,
-          now() as creation_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as creation_date,
           null as last_updated_date,
           ? as results_id,
           rbit.institution_roles_id,
@@ -90,7 +93,9 @@ export class ResultByIntitutionsTypeRepository
           )
           select
           rbit.is_active,
-          now() as creation_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as creation_date,
           null as last_updated_date,
           ? as results_id,
           rbit.institution_roles_id,
@@ -131,9 +136,7 @@ export class ResultByIntitutionsTypeRepository
       final_data = null;
     }
 
-    config.f?.completeFunction
-      ? config.f.completeFunction({ ...final_data })
-      : null;
+    config.f?.completeFunction?.({ ...final_data });
 
     return final_data;
   }

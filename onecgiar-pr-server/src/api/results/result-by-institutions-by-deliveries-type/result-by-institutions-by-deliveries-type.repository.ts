@@ -6,7 +6,10 @@ import {
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
-import { VERSIONING } from '../../../shared/utils/versioning.utils';
+import {
+  VERSIONING,
+  predeterminedDateValidation,
+} from '../../../shared/utils/versioning.utils';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
@@ -56,7 +59,9 @@ export class ResultByInstitutionsByDeliveriesTypeRepository
         const queryData = `
         select null as id,
         rbibdt.is_active,
-        now() as created_date,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date,
         null as last_updated_date,
         rbibdt.partner_delivery_type_id,
         rbi2.id as result_by_institution_id,
@@ -97,7 +102,9 @@ export class ResultByInstitutionsByDeliveriesTypeRepository
           )
           select
           rbibdt.is_active,
-          now() as created_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date,
           now() as last_updated_date,
           rbibdt.partner_delivery_type_id,
           rbi2.id as result_by_institution_id,
@@ -143,9 +150,7 @@ export class ResultByInstitutionsByDeliveriesTypeRepository
       final_data = null;
     }
 
-    config.f?.completeFunction
-      ? config.f.completeFunction({ ...final_data })
-      : null;
+    config.f?.completeFunction?.({ ...final_data });
 
     return final_data;
   }

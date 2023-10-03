@@ -7,6 +7,7 @@ import {
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
+import { predeterminedDateValidation } from '../../../../shared/utils/versioning.utils';
 
 @Injectable()
 export class ResultsPolicyChangesRepository
@@ -50,7 +51,9 @@ export class ResultsPolicyChangesRepository
         null as result_policy_change_id,
         rpc.amount,
         rpc.is_active,
-        now() as created_date,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date,
         null as last_updated_date,
         ? as result_id,
         ? as created_by,
@@ -90,7 +93,9 @@ export class ResultsPolicyChangesRepository
         select 
         rpc.amount,
         rpc.is_active,
-        now() as created_date,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date,
         null as last_updated_date,
         ? as result_id,
         ? as created_by,
@@ -130,9 +135,7 @@ export class ResultsPolicyChangesRepository
       final_data = null;
     }
 
-    config.f?.completeFunction
-      ? config.f.completeFunction({ ...final_data })
-      : null;
+    config.f?.completeFunction?.({ ...final_data });
 
     return final_data;
   }

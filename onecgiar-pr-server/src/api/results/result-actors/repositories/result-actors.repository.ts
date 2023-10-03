@@ -7,6 +7,7 @@ import {
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
+import { predeterminedDateValidation } from '../../../../shared/utils/versioning.utils';
 
 @Injectable()
 export class ResultActorRepository
@@ -44,7 +45,9 @@ export class ResultActorRepository
         SELECT 
         ra.actor_type_id
         ,? as created_by
-        ,ra.created_date
+        ,${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date
         ,ra.has_men
         ,ra.has_men_youth
         ,ra.has_women
@@ -98,7 +101,9 @@ export class ResultActorRepository
           SELECT 
           ra.actor_type_id
           ,? as created_by
-          ,ra.created_date
+          ,${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date
           ,ra.has_men
           ,ra.has_men_youth
           ,ra.has_women
@@ -159,9 +164,7 @@ export class ResultActorRepository
       final_data = null;
     }
 
-    config.f?.completeFunction
-      ? config.f.completeFunction({ ...final_data })
-      : null;
+    config.f?.completeFunction?.({ ...final_data });
     return final_data;
   }
 }
