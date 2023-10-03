@@ -4,6 +4,9 @@ export class LinksToResultsBody {
   public linkedInnovation: {
     linked_innovation_dev: boolean;
     linked_innovation_use: boolean;
+  } = {
+    linked_innovation_dev: false,
+    linked_innovation_use: false
   };
 }
 

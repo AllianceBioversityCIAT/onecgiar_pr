@@ -1,6 +1,8 @@
 <app-detail-section-title sectionName="Links to results"></app-detail-section-title>
 <div class="detail_container">
-    <app-pr-field-header label="Did another indicator category contribute to this result?" [required]="false"
+    <app-pr-field-header [label]="this.api?.dataControlSE?.currentResult?.result_type_id === 1 
+        ? 'Did another result contribute to this outcome?' 
+        : 'Did another indicator category contribute to this result?'" [required]="false"
         [description]="contributeDescription()" [useColon]="false">
     </app-pr-field-header>
     <div class="search_input">
@@ -85,9 +87,11 @@
 
     <div *ngIf="this.api?.dataControlSE?.currentResult?.result_type_id === 1">
         <app-pr-yes-or-not label="Is this policy change linked to a reported innovation development output?"
-            [(ngModel)]="this.linksToResultsBody.linkedInnovation.linked_innovation_dev" [readOnly]="this.innoDevLinks.length > 0"></app-pr-yes-or-not>
+            [(ngModel)]="this.linksToResultsBody.linkedInnovation.linked_innovation_dev"
+            [readOnly]="this.innoDevLinks.length > 0"></app-pr-yes-or-not>
 
-        <app-alert-status *ngIf="this.linksToResultsBody.linkedInnovation.linked_innovation_dev && this.innoDevLinks.length === 0 && !this.api.rolesSE.readOnly"
+        <app-alert-status
+            *ngIf="this.linksToResultsBody.linkedInnovation.linked_innovation_dev && this.innoDevLinks.length === 0 && !this.api.rolesSE.readOnly"
             description="Please link at least one innovation development" status="warning"></app-alert-status>
 
         <app-no-data-text *ngIf="this.innoDevLinks.length === 0 && this.api.rolesSE.readOnly"
@@ -113,9 +117,11 @@
         </div>
 
         <app-pr-yes-or-not label="Is this policy change linked to a reported innovation use outcome?"
-            [(ngModel)]="this.linksToResultsBody.linkedInnovation.linked_innovation_use" [readOnly]="this.innoUseLinks.length > 0"></app-pr-yes-or-not>
+            [(ngModel)]="this.linksToResultsBody?.linkedInnovation.linked_innovation_use"
+            [readOnly]="this.innoUseLinks.length > 0"></app-pr-yes-or-not>
 
-        <app-alert-status *ngIf="this.linksToResultsBody.linkedInnovation.linked_innovation_use && this.innoUseLinks.length === 0 && !this.api.rolesSE.readOnly"
+        <app-alert-status
+            *ngIf="this.linksToResultsBody?.linkedInnovation?.linked_innovation_use && this.innoUseLinks.length === 0 && !this.api.rolesSE.readOnly"
             description="Please link at least one innovation use" status="warning"></app-alert-status>
 
         <app-no-data-text *ngIf="this.innoUseLinks.length === 0 && this.api.rolesSE.readOnly"
