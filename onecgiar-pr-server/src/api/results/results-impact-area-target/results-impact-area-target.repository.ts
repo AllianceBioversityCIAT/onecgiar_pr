@@ -7,11 +7,14 @@ import {
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
+import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
 export class ResultsImpactAreaTargetRepository
   extends Repository<ResultsImpactAreaTarget>
-  implements ReplicableInterface<ResultsImpactAreaTarget>
+  implements
+    ReplicableInterface<ResultsImpactAreaTarget>,
+    LogicalDelete<ResultsImpactAreaTarget>
 {
   private readonly _logger: Logger = new Logger(
     ResultsImpactAreaTargetRepository.name,
@@ -22,6 +25,19 @@ export class ResultsImpactAreaTargetRepository
     private _handlersError: HandlersError,
   ) {
     super(ResultsImpactAreaTarget, dataSource.createEntityManager());
+  }
+
+  logicalDelete(resultId: number): Promise<ResultsImpactAreaTarget> {
+    const queryData = `update results_impact_area_target riat set riat.is_active = 0 where riat.result_id = ? and riat.is_active > 0;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsImpactAreaTargetRepository.name,
+          debug: true,
+        }),
+      );
   }
 
   async replicable(
@@ -252,10 +268,7 @@ export class ResultsImpactAreaTargetRepository
 	where riat.result_id = ? and riat.is_active > 0;
     `;
     try {
-      const resultTocResult: any[] = await this.query(
-        queryData,
-        [resultId],
-      );
+      const resultTocResult: any[] = await this.query(queryData, [resultId]);
       return resultTocResult;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -266,7 +279,11 @@ export class ResultsImpactAreaTargetRepository
     }
   }
 
-  async saveImpactAreaTarget(resultId:number, impactsTarget:any[], userId: number,){
+  async saveImpactAreaTarget(
+    resultId: number,
+    impactsTarget: any[],
+    userId: number,
+  ) {
     const queryData = `
     select * 
 	from clarisa_global_targets cgt 
@@ -275,31 +292,36 @@ export class ResultsImpactAreaTargetRepository
 	where riat.result_id = ? and cgt.targetId = ?;
     `;
     try {
-      
-      await this.update({result_id:resultId}, {is_active:false});
+      await this.update({ result_id: resultId }, { is_active: false });
 
-      if(impactsTarget.length){
-        for(let impact of impactsTarget){
-          
-          let targetIndicators = await this.query(queryData, [resultId, impact.targetId]);
+      if (impactsTarget.length) {
+        for (let impact of impactsTarget) {
+          let targetIndicators = await this.query(queryData, [
+            resultId,
+            impact.targetId,
+          ]);
           console.log(targetIndicators);
-          
-        
-        if(targetIndicators != null && targetIndicators.length > 0){
-          await this.update({result_impact_area_target_id:targetIndicators[0].result_impact_area_target_id}, {
-            is_active:true,
-          });
-        }else{
-          await this.save({
-            result_id:resultId,
-            impact_area_target_id:impact.targetId,
-            created_by:userId,
-            last_updated_by:userId,
-          })
-        }
+
+          if (targetIndicators != null && targetIndicators.length > 0) {
+            await this.update(
+              {
+                result_impact_area_target_id:
+                  targetIndicators[0].result_impact_area_target_id,
+              },
+              {
+                is_active: true,
+              },
+            );
+          } else {
+            await this.save({
+              result_id: resultId,
+              impact_area_target_id: impact.targetId,
+              created_by: userId,
+              last_updated_by: userId,
+            });
+          }
         }
       }
-
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsImpactAreaTargetRepository.name,

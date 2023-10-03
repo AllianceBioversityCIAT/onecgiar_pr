@@ -4,7 +4,9 @@ import { UpdateResultsPackageByInitiativeDto } from './dto/update-results-packag
 
 @Injectable()
 export class ResultsPackageByInitiativesService {
-  create(createResultsPackageByInitiativeDto: CreateResultsPackageByInitiativeDto) {
+  create(
+    createResultsPackageByInitiativeDto: CreateResultsPackageByInitiativeDto,
+  ) {
     return 'This action adds a new resultsPackageByInitiative';
   }
 
@@ -16,7 +18,10 @@ export class ResultsPackageByInitiativesService {
     return `This action returns a #${id} resultsPackageByInitiative`;
   }
 
-  update(id: number, updateResultsPackageByInitiativeDto: UpdateResultsPackageByInitiativeDto) {
+  update(
+    id: number,
+    updateResultsPackageByInitiativeDto: UpdateResultsPackageByInitiativeDto,
+  ) {
     return `This action updates a #${id} resultsPackageByInitiative`;
   }
 

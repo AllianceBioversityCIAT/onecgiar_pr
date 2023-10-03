@@ -6,11 +6,14 @@ import {
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
+import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
 export class ResultsPolicyChangesRepository
   extends Repository<ResultsPolicyChanges>
-  implements ReplicableInterface<ResultsPolicyChanges>
+  implements
+    ReplicableInterface<ResultsPolicyChanges>,
+    LogicalDelete<ResultsPolicyChanges>
 {
   private readonly _logger: Logger = new Logger(
     ResultsPolicyChangesRepository.name,
@@ -21,6 +24,19 @@ export class ResultsPolicyChangesRepository
     private _handlersError: HandlersError,
   ) {
     super(ResultsPolicyChanges, dataSource.createEntityManager());
+  }
+
+  logicalDelete(resultId: number): Promise<ResultsPolicyChanges> {
+    const queryData = `update results_policy_changes rpc set rpc.is_active = 0 where rpc.result_id = ? and rpc.is_active > 0;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsPolicyChangesRepository.name,
+          debug: true,
+        }),
+      );
   }
 
   async replicable(

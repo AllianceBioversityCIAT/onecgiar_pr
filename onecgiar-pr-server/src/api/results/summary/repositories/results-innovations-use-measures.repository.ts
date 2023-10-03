@@ -6,11 +6,14 @@ import {
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
+import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
 export class ResultsInnovationsUseMeasuresRepository
   extends Repository<ResultsInnovationsUseMeasures>
-  implements ReplicableInterface<ResultsInnovationsUseMeasures>
+  implements
+    ReplicableInterface<ResultsInnovationsUseMeasures>,
+    LogicalDelete<ResultsInnovationsUseMeasures>
 {
   private readonly _logger: Logger = new Logger(
     ResultsInnovationsUseMeasuresRepository.name,
@@ -21,6 +24,22 @@ export class ResultsInnovationsUseMeasuresRepository
     private _handlersError: HandlersError,
   ) {
     super(ResultsInnovationsUseMeasures, dataSource.createEntityManager());
+  }
+
+  logicalDelete(resultId: number): Promise<ResultsInnovationsUseMeasures> {
+    const queryData = `update results_innovations_use_measures rium 
+                            inner join results_innovations_use riu on riu.result_innovation_use_id = rium.result_innovation_use_id
+                        set rium.is_active = 0
+                        where riu.results_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsInnovationsUseMeasuresRepository.name,
+          debug: true,
+        }),
+      );
   }
 
   async replicable(

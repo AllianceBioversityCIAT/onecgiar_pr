@@ -2,14 +2,31 @@ import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultsByEvidence } from './entities/results_by_evidence.entity';
+import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
-export class ResultByEvidencesRepository extends Repository<ResultsByEvidence> {
+export class ResultByEvidencesRepository
+  extends Repository<ResultsByEvidence>
+  implements LogicalDelete<ResultsByEvidence>
+{
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
   ) {
     super(ResultsByEvidence, dataSource.createEntityManager());
+  }
+
+  logicalDelete(resultId: number): Promise<ResultsByEvidence> {
+    const dataQuery = `update results_by_evidence rbe set rbe.is_active = 0 where rbe.results_id = ? and rbe.is_active > 0;`;
+    return this.query(dataQuery, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultByEvidencesRepository.name,
+          debug: true,
+        }),
+      );
   }
 
   async getResultByEvidenceFull(resultId: number) {
