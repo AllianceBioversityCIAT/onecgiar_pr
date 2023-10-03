@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultCountry } from './entities/result-country.entity';
+import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 import {
   ReplicableConfigInterface,
   ReplicableInterface,
@@ -10,7 +11,7 @@ import {
 @Injectable()
 export class ResultCountryRepository
   extends Repository<ResultCountry>
-  implements ReplicableInterface<ResultCountry>
+  implements ReplicableInterface<ResultCountry>, LogicalDelete<ResultCountry>
 {
   private readonly _logger: Logger = new Logger(ResultCountryRepository.name);
   constructor(
@@ -19,6 +20,20 @@ export class ResultCountryRepository
   ) {
     super(ResultCountry, dataSource.createEntityManager());
   }
+
+  logicalDelete(resultId: number): Promise<ResultCountry> {
+    const queryData = `UPDATE \`result_country\` SET is_active = 0 WHERE result_id = ?`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          className: ResultCountryRepository.name,
+          error: err,
+          debug: true,
+        }),
+      );
+  }
+
   async replicable(
     config: ReplicableConfigInterface<ResultCountry>,
   ): Promise<ResultCountry[]> {

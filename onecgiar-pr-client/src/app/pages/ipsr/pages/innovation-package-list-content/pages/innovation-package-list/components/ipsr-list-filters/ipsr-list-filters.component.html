@@ -1,0 +1,17 @@
+<div class="filters">
+    <div *ngFor="let filter of this.ipsrListFilterSE.filters.general" class="filter {{filter.attr}}">
+        <div class="filter_title">{{filter.filter_title}}</div>
+        <div class="chips">
+            <div class="chip"
+                [ngClass]="{'chip_selected': option.selected,'disabled':option.name=='2023' || option.name=='2024'}"
+                (click)="this.ipsrListFilterSE.onSelectChip(option); this.ipsrListFilterSE.cleanAllFilters(option)"
+                *ngFor="let option of filter?.options">
+                {{option.name}}</div>
+        </div>
+    </div>
+</div>
+
+<div class="search_input ipsr_searhc_input">
+    <i class="material-icons-round">search</i>
+    <input type="text" placeholder="Find result..." [(ngModel)]="this.ipsrListService.text_to_search">
+</div>

@@ -26,6 +26,7 @@ import { ModuleTypeEnum, StatusPhaseEnum } from '../../enum/api.enum';
 export class ResultsApiService {
   constructor(public http: HttpClient, private saveButtonSE: SaveButtonService, public ipsrDataControlSE: IpsrDataControlService) {}
   apiBaseUrl = environment.apiBaseUrl + 'api/results/';
+  baseApiBaseUrl = environment.apiBaseUrl + 'api/';
   currentResultId: number | string = null;
   currentResultCode: number | string = null;
   currentResultPhase: number | string = null;
@@ -51,8 +52,9 @@ export class ResultsApiService {
       })
     );
   }
+
   PATCH_DeleteResult(resultIdToDelete: string | number) {
-    return this.http.patch<any>(`${this.apiBaseUrl}delete/${resultIdToDelete}`, null);
+    return this.http.delete<any>(`${this.baseApiBaseUrl}manage-data/result/${resultIdToDelete}/delete`);
   }
 
   GET_FindResultsElastic(search?: string, type?: string) {

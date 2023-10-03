@@ -1,6 +1,4 @@
-import { Injectable } from "@nestjs/common";
-import { HandlersError } from "src/shared/handlers/error.utils";
-import { DataSource, Repository } from "typeorm";
+import { Injectable } from '@nestjs/common';
 
 @Injectable()
-export class ResultInnovationPackageByInitiativeRepository{}
+export class ResultInnovationPackageByInitiativeRepository {}

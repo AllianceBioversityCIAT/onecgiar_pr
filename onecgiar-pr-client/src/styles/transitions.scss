@@ -154,3 +154,36 @@
   @extend .animate__infinite;
   @extend .animate__pulse;
 }
+
+.animate__shakeX {
+  @extend .animate__animated;
+  @extend .shakeX;
+}
+
+
+@keyframes shakeX {
+
+  from,
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translate3d(-10px, 0, 0);
+  }
+
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translate3d(10px, 0, 0);
+  }
+}
+
+.shakeX {
+  animation-name: shakeX;
+}

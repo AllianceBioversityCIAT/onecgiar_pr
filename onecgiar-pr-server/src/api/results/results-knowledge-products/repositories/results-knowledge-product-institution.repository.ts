@@ -7,11 +7,14 @@ import {
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
 import { VERSIONING } from 'src/shared/utils/versioning.utils';
+import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
 export class ResultsKnowledgeProductInstitutionRepository
   extends Repository<ResultsKnowledgeProductInstitution>
-  implements ReplicableInterface<ResultsKnowledgeProductInstitution>
+  implements
+    ReplicableInterface<ResultsKnowledgeProductInstitution>,
+    LogicalDelete<ResultsKnowledgeProductInstitution>
 {
   private readonly _logger: Logger = new Logger(
     ResultsKnowledgeProductInstitutionRepository.name,
@@ -22,6 +25,23 @@ export class ResultsKnowledgeProductInstitutionRepository
     private readonly _handlersError: HandlersError,
   ) {
     super(ResultsKnowledgeProductInstitution, dataSource.createEntityManager());
+  }
+
+  logicalDelete(resultId: number): Promise<ResultsKnowledgeProductInstitution> {
+    const queryData = `update results_kp_mqap_institutions rkk 
+    inner join results_knowledge_product rkp on rkk.result_knowledge_product_id = rkp.result_knowledge_product_id 
+  set rkk.is_active = 0
+  where rkp.results_id = ?
+    and rkk.is_active > 0;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsKnowledgeProductInstitutionRepository.name,
+          debug: true,
+        }),
+      );
   }
   async replicable(
     config: ReplicableConfigInterface<ResultsKnowledgeProductInstitution>,

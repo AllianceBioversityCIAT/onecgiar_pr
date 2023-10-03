@@ -7,11 +7,14 @@ import {
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
 import { VERSIONING } from 'src/shared/utils/versioning.utils';
+import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
 export class ResultsKnowledgeProductKeywordRepository
   extends Repository<ResultsKnowledgeProductKeyword>
-  implements ReplicableInterface<ResultsKnowledgeProductKeyword>
+  implements
+    ReplicableInterface<ResultsKnowledgeProductKeyword>,
+    LogicalDelete<ResultsKnowledgeProductKeyword>
 {
   private readonly _logger: Logger = new Logger(
     ResultsKnowledgeProductKeywordRepository.name,
@@ -22,6 +25,23 @@ export class ResultsKnowledgeProductKeywordRepository
     private readonly _handlersError: HandlersError,
   ) {
     super(ResultsKnowledgeProductKeyword, dataSource.createEntityManager());
+  }
+
+  logicalDelete(resultId: number): Promise<ResultsKnowledgeProductKeyword> {
+    const queryData = `update results_kp_keywords rkk 
+    inner join results_knowledge_product rkp on rkk.result_knowledge_product_id = rkp.result_knowledge_product_id 
+  set rkk.is_active = 0
+  where rkp.results_id = ?
+    and rkk.is_active > 0;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsKnowledgeProductKeywordRepository.name,
+          debug: true,
+        }),
+      );
   }
 
   async replicable(
@@ -48,9 +68,7 @@ export class ResultsKnowledgeProductKeywordRepository
         )} and rkpk.is_active > 0
         `;
         const response = await (<Promise<ResultsKnowledgeProductKeyword[]>>(
-          this.query(queryData, [
-            config.user.id,
-          ])
+          this.query(queryData, [config.user.id])
         ));
         const response_edit = <ResultsKnowledgeProductKeyword>(
           config.f.custonFunction(response?.length ? response[0] : null)
@@ -83,7 +101,7 @@ export class ResultsKnowledgeProductKeywordRepository
         from results_kp_keywords rkpk where rkpk.result_knowledge_product_id = ${VERSIONING.QUERY.Get_kp_phases(
           config.old_result_id,
         )} and rkpk.is_active > 0`;
-        await this.query(queryData, [ config.user.id]);
+        await this.query(queryData, [config.user.id]);
 
         const queryFind = `
         SELECT 

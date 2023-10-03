@@ -8,11 +8,14 @@ import {
 } from '../../../shared/globalInterfaces/replicable.interface';
 import { institutionsInterface } from './dto/save_results_by_institution.dto';
 import { InstitutionRoleEnum } from './entities/institution_role.enum';
+import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
 export class ResultByIntitutionsRepository
   extends Repository<ResultsByInstitution>
-  implements ReplicableInterface<ResultsByInstitution>
+  implements
+    ReplicableInterface<ResultsByInstitution>,
+    LogicalDelete<ResultsByInstitution>
 {
   private readonly _logger: Logger = new Logger(
     ResultByIntitutionsRepository.name,
@@ -23,6 +26,20 @@ export class ResultByIntitutionsRepository
   ) {
     super(ResultsByInstitution, dataSource.createEntityManager());
   }
+
+  logicalDelete(resultId: number): Promise<ResultsByInstitution> {
+    const queryData = `update results_by_institution set is_active = false where result_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          className: ResultByIntitutionsRepository.name,
+          error: err,
+          debug: true,
+        }),
+      );
+  }
+
   async replicable(
     config: ReplicableConfigInterface<ResultsByInstitution>,
   ): Promise<ResultsByInstitution[]> {
