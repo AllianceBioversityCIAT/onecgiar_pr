@@ -1,0 +1,77 @@
+.local_container {
+  margin-top: 30px;
+  padding-bottom: 10px;
+  margin-bottom: 50px;
+  overflow: hidden;
+  border-radius: 5px;
+  width: 100%;
+
+  .section_container {
+    padding: 50px 50px 50px 50px;
+    margin-bottom: 120px;
+  }
+
+  .tabs {
+    display: grid;
+    overflow-x: auto;
+    background-color: var(--pr-color-medium-2);
+
+    .active {
+      background-color: var(--pr-color-primary) !important;
+      color: white !important;
+      font-weight: 600;
+      // width: 100%;
+    }
+
+    .tab {
+      background-color: var(--pr-color-medium-2);
+      color: var(--pr-color-medium);
+      text-decoration: none;
+      padding: 10px 8px;
+      // display: flex;
+      // align-items: center;
+      // justify-content: center;
+      display: grid;
+      grid-template-columns: 1fr 5fr 1fr;
+      align-items: center;
+      gap: 0.5rem;
+      // transition: all 0s ease-in-out;
+
+      .tab-title {
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin: 0;
+      }
+    }
+
+    .tab-add-button {
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      cursor: pointer;
+      padding: 0.5rem;
+
+      .tab-add-button-item {
+        padding: 0.5rem;
+        background-color: #fff;
+        border-radius: 5px;
+      }
+    }
+
+    .tab-delete-button-item {
+      cursor: pointer;
+      font-size: 16px;
+      text-align: end;
+    }
+  }
+}
+
+.valid {
+  color: #34b734;
+}
+
+.invalid {
+  color: #c0c0c0;
+}

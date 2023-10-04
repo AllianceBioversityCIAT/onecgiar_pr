@@ -2,19 +2,17 @@
     <div class="editable_field" [ngClass]="{'global-editable': this.editable}">
         <app-pr-yes-or-not [label]="getDescription(initiative?.official_code,initiative?.short_name)"
             (selectOptionEvent)="valdiateEOI(initiative);initiative.toc_result_id = null;"
-            [(ngModel)]="initiative.planned_result"
-            [description]="this.headerDescription(initiative.planned_result)" [readOnly]="!editable"
-            [editable]="editable"
-            [hideDescription]="initiative.planned_result === null">
+            [(ngModel)]="initiative.planned_result" [description]="this.headerDescription(initiative.planned_result)"
+            [readOnly]="!editable" [editable]="editable" [hideDescription]="initiative.planned_result === null">
         </app-pr-yes-or-not>
 
         <a [href]="this.api.dataControlSE.tocUrl+this.fullInitiativeToc" target="_blank" class="toc_button"><span>See
                 ToC</span>
             <img src="assets/icons/toc_icon.png" alt="">
         </a>
-
     </div>
 
+    <app-multiple-wps></app-multiple-wps>
 
     <div class="flex-no-wrap" *ngIf="initiative.planned_result == true || initiative.planned_result == false ">
         <app-pr-select *ngIf="this.initiative?.planned_result && resultLevelId == 1" [options]="this.outputList"
@@ -22,6 +20,7 @@
             [editable]="editable" placeholder="Select output" [(ngModel)]="initiative.toc_result_id"
             [extraInformation]="true" (selectOptionEvent)="getIndicator();this.get_versionDashboard()">
         </app-pr-select>
+
         <div style="max-width: 250px;"
             *ngIf="this.showOutcomeLevel && (resultLevelId == 1 ? this.initiative?.planned_result == false : true)">
             <app-pr-select [options]="this.tocInitiativeOutcomeListsSE.outcomeLevelList|outcomeLevelFilter:2"
@@ -47,13 +46,11 @@
             optionValue="toc_result_id" placeholder="Select outcome" [(ngModel)]="initiative.toc_result_id"
             (selectOptionEvent)="getIndicator(); this.get_versionDashboard()">
         </app-pr-select>
-
-
     </div>
     <hr class="divider-20">
 </div>
-<div *ngIf="indicatorView">
 
+<div *ngIf="indicatorView">
     <app-alert-status description="The selected ToC element does not have any indicators associated with it."
         *ngIf="!this.theoryOfChangesServices.body[indexYesorNo].targetsIndicators.length"></app-alert-status>
     <app-pr-field-header label="{{narrativeTypeResult()}}" [required]="false"

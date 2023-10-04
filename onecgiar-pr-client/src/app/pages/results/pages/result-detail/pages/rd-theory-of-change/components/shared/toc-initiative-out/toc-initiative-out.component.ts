@@ -8,7 +8,7 @@ import { RdTheoryOfChangesServicesService } from '../../../rd-theory-of-changes-
   templateUrl: './toc-initiative-out.component.html',
   styleUrls: ['./toc-initiative-out.component.scss']
 })
-export class TocInitiativeOutComponent {
+export class TocInitiativeOutComponent implements OnInit {
   @Input() editable: boolean;
   @Input() initiative: any;
   @Input() resultLevelId: number | string;
@@ -67,8 +67,6 @@ export class TocInitiativeOutComponent {
   }
 
   GET_outputList() {
-    //(this.api.dataControlSE.currentNotification);
-
     this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.api.dataControlSE.currentNotification?.results_id || this.initiative?.results_id || this.api.dataControlSE?.currentResult?.id, this.initiative.initiative_id, 1).subscribe({
       next: ({ response }) => {
         this.outputList = [];
@@ -79,17 +77,6 @@ export class TocInitiativeOutComponent {
         console.error(err);
       }
     });
-    /*this.api.tocApiSE.GET_tocLevelsByresultId(this.initiative.initiative_id, 1).subscribe(
-      ({ response }) => {
-        this.outputList = [];
-        this.outputList = response;
-        //(response);
-      },
-      err => {
-        this.outputList = [];
-        console.error(err);
-      }
-    );*/
   }
 
   GET_outcomeList() {
@@ -102,16 +89,6 @@ export class TocInitiativeOutComponent {
         console.error(err);
       }
     });
-    /*this.api.tocApiSE.GET_tocLevelsByresultId(this.initiative.initiative_id, 2).subscribe(
-      ({ response }) => {
-        this.outcomeList = response;
-        //(this.outcomeList);
-      },
-      err => {
-        this.outcomeList = [];
-        console.error(err);
-      }
-    );*/
   }
 
   GET_EOIList() {
@@ -124,16 +101,6 @@ export class TocInitiativeOutComponent {
         console.error(err);
       }
     });
-    /*this.api.tocApiSE.GET_tocLevelsByresultId(this.initiative.initiative_id, 3).subscribe(
-      ({ response }) => {
-        this.eoiList = response;
-        //(this.eoiList);
-      },
-      err => {
-        this.eoiList = [];
-        console.error(err);
-      }
-    );*/
   }
 
   GET_fullInitiativeTocByinitId() {
