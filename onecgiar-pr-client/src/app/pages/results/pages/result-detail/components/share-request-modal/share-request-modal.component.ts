@@ -82,7 +82,6 @@ export class ShareRequestModalComponent implements OnInit {
 
     this.api.resultsSE.PATCH_updateRequest(body).subscribe(
       resp => {
-        //(resp);
         this.api.dataControlSE.showShareRequest = false;
         this.api.alertsFe.show({ id: 'noti', title: `Request sent`, description: `Once your request is accepted, the result can be mapped to your Initiative's ToC.`, status: 'success' });
         this.requesting = false;
