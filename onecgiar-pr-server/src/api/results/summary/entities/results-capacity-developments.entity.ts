@@ -41,6 +41,27 @@ export class ResultsCapacityDevelopments {
   })
   female_using!: number;
 
+  @Column({
+    name: 'non_binary_using',
+    type: 'bigint',
+    nullable: true,
+  })
+  non_binary_using!: number;
+
+  @Column({
+    name: 'has_unkown_using',
+    type: 'bigint',
+    nullable: true,
+  })
+  has_unkown_using!: number;
+
+  @Column({
+    name: 'unkown_using',
+    type: 'boolean',
+    nullable: true,
+  })
+  unkown_using!: boolean;
+
   @ManyToOne(
     () => CapdevsDeliveryMethod,
     (cdm) => cdm.capdev_delivery_method_id,

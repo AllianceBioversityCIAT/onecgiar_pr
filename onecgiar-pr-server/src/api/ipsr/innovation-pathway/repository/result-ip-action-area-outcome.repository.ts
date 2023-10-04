@@ -3,14 +3,35 @@ import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
 import { ResultIpAAOutcome } from '../entities/result-ip-action-area-outcome.entity';
 import { env } from 'process';
+import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
-export class ResultIpAAOutcomeRepository extends Repository<ResultIpAAOutcome> {
+export class ResultIpAAOutcomeRepository
+  extends Repository<ResultIpAAOutcome>
+  implements LogicalDelete<ResultIpAAOutcome>
+{
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
   ) {
     super(ResultIpAAOutcome, dataSource.createEntityManager());
+  }
+
+  logicalDelete(resultId: number): Promise<ResultIpAAOutcome> {
+    const dataQuery = `update result_ip_action_area_outcome riaao 
+    inner join result_by_innovation_package rbip on rbip.result_by_innovation_package_id = riaao.result_by_innovation_package_id 
+    set riaao.is_active = 0
+    where riaao.is_active > 0
+        and rbip.result_innovation_package_id = ?;`;
+    return this.query(dataQuery, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultIpAAOutcomeRepository.name,
+          debug: true,
+        }),
+      );
   }
 
   async mapActionAreaOutcome(coreId: number, initId: number) {

@@ -5,13 +5,30 @@ import { ResultsTocResultIndicators } from './entities/results-toc-results-indic
 import { ResultTocImpactArea } from './entities/result-toc-impact-area-target.entity';
 import { ResultTocSdgTargets } from './entities/result-toc-sdg-target.entity';
 import { ResultSdgTargets } from './entities/results-sdg-targets.entity';
+import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
-export class ResultsSdgTargetRepository extends Repository<ResultSdgTargets> {
+export class ResultsSdgTargetRepository
+  extends Repository<ResultSdgTargets>
+  implements LogicalDelete<ResultSdgTargets>
+{
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
   ) {
     super(ResultSdgTargets, dataSource.createEntityManager());
+  }
+
+  logicalDelete(resultId: number): Promise<ResultSdgTargets> {
+    const queryData = `update result_sdg_targets rst set rst.is_active = 0 where rst.result_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsSdgTargetRepository.name,
+          debug: true,
+        }),
+      );
   }
 }

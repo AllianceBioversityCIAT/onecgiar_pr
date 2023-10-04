@@ -8,11 +8,14 @@ import {
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
+import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
 export class ResultsImpactAreaIndicatorRepository
   extends Repository<ResultsImpactAreaIndicator>
-  implements ReplicableInterface<ResultsImpactAreaIndicator>
+  implements
+    ReplicableInterface<ResultsImpactAreaIndicator>,
+    LogicalDelete<ResultsImpactAreaIndicator>
 {
   private readonly _logger: Logger = new Logger(
     ResultsImpactAreaIndicatorRepository.name,
@@ -23,6 +26,19 @@ export class ResultsImpactAreaIndicatorRepository
     private _handlersError: HandlersError,
   ) {
     super(ResultsImpactAreaIndicator, dataSource.createEntityManager());
+  }
+
+  logicalDelete(resultId: number): Promise<ResultsImpactAreaIndicator> {
+    const queryData = `update results_impact_area_indicators riai set riai.is_active = 0 where riai.result_id = ? and riai.is_active > 0;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsImpactAreaIndicatorRepository.name,
+          debug: true,
+        }),
+      );
   }
 
   async replicable(

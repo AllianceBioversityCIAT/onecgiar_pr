@@ -7,11 +7,14 @@ import {
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
 import { VERSIONING } from '../../../../shared/utils/versioning.utils';
+import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
 export class ResultsKnowledgeProductsRepository
   extends Repository<ResultsKnowledgeProduct>
-  implements ReplicableInterface<ResultsKnowledgeProduct>
+  implements
+    ReplicableInterface<ResultsKnowledgeProduct>,
+    LogicalDelete<ResultsKnowledgeProduct>
 {
   private readonly _logger: Logger = new Logger(
     ResultsKnowledgeProductsRepository.name,
@@ -22,6 +25,19 @@ export class ResultsKnowledgeProductsRepository
     private _handlersError: HandlersError,
   ) {
     super(ResultsKnowledgeProduct, dataSource.createEntityManager());
+  }
+
+  logicalDelete(resultId: number): Promise<ResultsKnowledgeProduct> {
+    const dataQuery = `update results_knowledge_product set is_active = 0 where results_id = ?`;
+    return this.query(dataQuery, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsKnowledgeProductsRepository.name,
+          debug: true,
+        }),
+      );
   }
 
   async replicable(

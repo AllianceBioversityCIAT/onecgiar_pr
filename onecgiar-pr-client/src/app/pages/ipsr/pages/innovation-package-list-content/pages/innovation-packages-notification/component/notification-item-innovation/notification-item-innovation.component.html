@@ -13,41 +13,30 @@
             the result: </div>
         <div class="sub_title" *ngIf="!notification?.action_area_outcome_id && !notification?.toc_result_id">
             <strong>({{notification?.requester_official_code}})</strong>
-            -{{notification?.result_type_name}} - <a class="open_route" target="_blank"
+            -{{notification?.result_type_name}} - <a class="open_route" target="_blank" rel="noopener noreferrer"
                 [href]="resultUrl(notification?.result_code)">(Result code: {{notification?.result_code}})
                 {{notification?.title}}</a>
         </div>
         <div class="sub_title" *ngIf="notification?.action_area_outcome_id || notification?.toc_result_id">
             <strong>({{notification?.approving_official_code}})</strong>
-            -{{notification?.result_type_name}} - <a class="open_route" target="_blank"
+            -{{notification?.result_type_name}} - <a class="open_route" target="_blank" rel="noopener noreferrer"
                 [href]="resultUrl(notification?.result_code)">(Result code: {{notification?.result_code}})
                 {{notification?.title}}</a>
         </div>
         <div class="buttons">
             <app-pr-button text="Map and accept" colorType="success" (click)="mapAndAccept(notification)"
                 [rotating]="this.requesting" [icon]="this.requesting?'loop':''"
-                [ngClass]="{'globalDisabled': this.requesting || this.api.rolesSE.platformIsClosed|| this.isSubmitted}"
+                [ngClass]="{'globalDisabled': this.requesting || this.api.rolesSE.platformIsClosed|| this.isSubmitted || !this.notification?.version_status}"
                 *ngIf="!notification?.action_area_outcome_id && !notification?.toc_result_id"></app-pr-button>
 
             <app-pr-button text="Accept" colorType="success" (click)="acceptOrReject(true)" [rotating]="this.requesting"
                 [icon]="this.requesting?'loop':''"
-                [ngClass]="{'globalDisabled': this.requesting || this.api.rolesSE.platformIsClosed|| this.isSubmitted}"
+                [ngClass]="{'globalDisabled': this.requesting || this.api.rolesSE.platformIsClosed|| this.isSubmitted || !this.notification?.version_status}"
                 *ngIf="notification?.action_area_outcome_id || notification?.toc_result_id"></app-pr-button>
 
             <app-pr-button text="Reject" colorType="danger" (click)="acceptOrReject(false)" [rotating]="this.requesting"
                 [icon]="this.requesting?'loop':''"
-                [ngClass]="{'globalDisabled': this.requesting || this.api.rolesSE.platformIsClosed}"></app-pr-button>
-
-            <!-- <button pButton type="button" label="Accept" class="p-button-success"
-                *ngIf="!notification?.action_area_outcome_id && !notification?.toc_result_id"
-                (click)="mapAndAccept(notification)"></button>
-
-            <button pButton type="button" label="Accept" class="p-button-success"
-                *ngIf="notification?.action_area_outcome_id || notification?.toc_result_id"
-                (click)="acceptOrReject(true)"></button>
-
-            <button pButton type="button" label="Reject" class="p-button-danger"
-                (click)="acceptOrReject(false)"></button> -->
+                [ngClass]="{'globalDisabled': this.requesting || this.api.rolesSE.platformIsClosed || !this.notification?.version_status}"></app-pr-button>
         </div>
 
     </div>
@@ -56,7 +45,7 @@
             to be added as a contributor to
             the result: </div>
         <div class="sub_title"><strong>({{notification?.approving_official_code}})</strong>
-            -{{notification?.result_type_name}} - <a class="open_route" target="_blank"
+            -{{notification?.result_type_name}} - <a class="open_route" target="_blank" rel="noopener noreferrer"
                 [href]="resultUrl(notification?.result_code)">(Result code: {{notification?.result_code}})
                 {{notification?.title}}</a>
         </div>
@@ -73,7 +62,7 @@
             to be added as a contributor to
             the result: </div>
         <div class="sub_title"><strong>({{notification?.approving_official_code}})</strong>
-            - {{notification?.result_type_name}} - <a class="open_route" target="_blank"
+            - {{notification?.result_type_name}} - <a class="open_route" target="_blank" rel="noopener noreferrer"
                 [href]="resultUrl(notification?.result_code)">(Result code: {{notification?.result_code}})
                 {{notification?.title}}</a>
         </div>
@@ -89,7 +78,8 @@
         <div class="title">Request from {{notification?.requester_official_code}} to
             {{notification?.approving_official_code}} to be added as a contributor to the result:</div>
         <div class="sub_title">{{notification?.result_type_name}} - <a class="open_route" target="_blank"
-                [href]="resultUrl(notification?.result_code)">(Result code: {{notification?.result_code}})
+                rel="noopener noreferrer" [href]="resultUrl(notification?.result_code)">(Result code:
+                {{notification?.result_code}})
                 {{notification?.title}}</a></div>
 
         <div class="text_icon pending"> Pending

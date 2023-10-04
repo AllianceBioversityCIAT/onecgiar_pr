@@ -43,7 +43,6 @@ export class ShareRequestModalComponent implements OnInit {
   onRequest() {
     this.requesting = true;
     this.shareRequestModalSE.shareRequestBody.initiativeShareId.push(this.shareRequestModalSE.shareRequestBody.initiative_id);
-
     this.api.resultsSE.POST_createRequest(this.shareRequestModalSE.shareRequestBody).subscribe(
       resp => {
         this.api.dataControlSE.showShareRequest = false;
@@ -79,7 +78,6 @@ export class ShareRequestModalComponent implements OnInit {
 
   acceptOrReject() {
     const body = { ...this.api.dataControlSE.currentNotification, ...this.shareRequestModalSE.shareRequestBody, request_status_id: 2, bodyNewTheoryOfChanges: this.theoryOfChangesServices.body };
-
     this.requesting = true;
 
     this.api.resultsSE.PATCH_updateRequest(body).subscribe(

@@ -2,15 +2,32 @@ import { Injectable } from '@nestjs/common';
 import { DataSource, Repository, QueryRunner } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { Validation } from './entities/validation.entity';
+import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 import { env } from 'process';
 
 @Injectable()
-export class resultValidationRepository extends Repository<Validation> {
+export class resultValidationRepository
+  extends Repository<Validation>
+  implements LogicalDelete<Validation>
+{
   constructor(
     private dataSource: DataSource,
     private _handlersError: HandlersError,
   ) {
     super(Validation, dataSource.createEntityManager());
+  }
+
+  logicalDelete(resultId: number): Promise<Validation> {
+    const queryData = `update validation v set v.is_active = 0 where v.results_id = ? and v.is_active > 0;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: resultValidationRepository.name,
+          debug: true,
+        }),
+      );
   }
 
   async oldGreenCheckVersion(resultId: number) {
@@ -1430,14 +1447,24 @@ export class resultValidationRepository extends Repository<Validation> {
 		'cap-dev-info' as section_name,
 		CASE
 			WHEN (
-				rcd.female_using IS NULL
-				OR rcd.female_using = 0
-			)
-			OR (
-				rcd.male_using IS NULL
-				OR rcd.male_using = 0
-			)
-			OR (
+				rcd.unkown_using = 0
+				AND (
+					rcd.female_using IS NULL
+					OR rcd.female_using = 0
+					OR rcd.male_using IS NULL
+					OR rcd.male_using = 0
+					OR non_binary_using IS NULL
+					OR non_binary_using = 0
+				)
+			) THEN FALSE
+			WHEN (
+				rcd.unkown_using = 1
+				AND (
+					rcd.has_unkown_using IS NULL
+					OR rcd.has_unkown_using = 0
+				)
+			) THEN FALSE
+			WHEN (
 				rcd.capdev_term_id IS NULL
 				OR rcd.capdev_term_id = ''
 			)
@@ -1445,9 +1472,7 @@ export class resultValidationRepository extends Repository<Validation> {
 				rcd.capdev_delivery_method_id IS NULL
 				OR rcd.capdev_delivery_method_id = ''
 			)
-			OR (
-				rcd.is_attending_for_organization IS NULL
-			) THEN FALSE
+			OR (rcd.is_attending_for_organization IS NULL) THEN FALSE
 			WHEN (
 				rcd.is_attending_for_organization = 1
 				AND (

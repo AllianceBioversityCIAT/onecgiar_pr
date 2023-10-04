@@ -2,9 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultsInvestmentDiscontinuedOption } from './entities/results-investment-discontinued-option.entity';
+import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
-export class ResultsInvestmentDiscontinuedOptionRepository extends Repository<ResultsInvestmentDiscontinuedOption> {
+export class ResultsInvestmentDiscontinuedOptionRepository
+  extends Repository<ResultsInvestmentDiscontinuedOption>
+  implements LogicalDelete<ResultsInvestmentDiscontinuedOption>
+{
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
@@ -13,6 +17,21 @@ export class ResultsInvestmentDiscontinuedOptionRepository extends Repository<Re
       ResultsInvestmentDiscontinuedOption,
       dataSource.createEntityManager(),
     );
+  }
+
+  logicalDelete(
+    resultId: number,
+  ): Promise<ResultsInvestmentDiscontinuedOption> {
+    const queryData = `update results_investment_discontinued_options rido set rido.is_active = 0 where rido.result_id = ? and rido.is_active > 0;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsInvestmentDiscontinuedOptionRepository.name,
+          debug: true,
+        }),
+      );
   }
 
   async inactiveData(options: number[], result_id: number, user_id: number) {
