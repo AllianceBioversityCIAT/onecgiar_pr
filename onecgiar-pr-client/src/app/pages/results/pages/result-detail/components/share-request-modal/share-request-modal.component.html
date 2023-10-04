@@ -51,7 +51,7 @@
         </app-pr-button>
 
         <app-pr-button
-            [ngClass]="this.api.dataControlSE?.currentResult?.result_level_id !== 3 && {'globalDisabled': this.requesting  || !this.shareRequestModalSE.shareRequestBody.initiative_id  || !this.shareRequestModalSE.shareRequestBody.toc_result_id}"
+            [ngClass]="this.api.dataControlSE?.currentResult?.result_level_id !== 1 && this.api.dataControlSE?.currentResult?.result_level_id !== 2 && {'globalDisabled': this.requesting  || !this.shareRequestModalSE.shareRequestBody.initiative_id  || !this.shareRequestModalSE.shareRequestBody.toc_result_id}"
             [text]="this.requesting ? 'Saving' : 'Accept'" [rotating]="this.requesting"
             [icon]="this.requesting ? 'loop' : 'send'" padding="medium" (click)="acceptOrReject()"
             *ngIf="this.api.dataControlSE.inNotifications ">
