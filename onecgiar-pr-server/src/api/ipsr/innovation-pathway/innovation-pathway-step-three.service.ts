@@ -100,14 +100,21 @@ export class InnovationPathwayStepThreeService {
           last_updated_by: user.id,
         },
       );
-
-      await this.saveinnovationWorkshop(user, result_ip_core);
+      await this.saveinnovationWorkshop(
+        user,
+        result_ip_core,
+        result_ip.assessed_during_expert_workshop_id,
+      );
 
       await this.saveInnovationUse(user, version, saveData);
 
       if (result_ip_complementary?.length) {
         for (const ripc of result_ip_complementary) {
-          await this.saveinnovationWorkshop(user, ripc);
+          await this.saveinnovationWorkshop(
+            user,
+            ripc,
+            result_ip.assessed_during_expert_workshop_id,
+          );
         }
       }
 
@@ -126,46 +133,53 @@ export class InnovationPathwayStepThreeService {
     }
   }
 
-  async saveinnovationWorkshop(user: TokenDto, rbi: Ipsr) {
+  async saveinnovationWorkshop(user: TokenDto, rbi: Ipsr, data_id: any) {
     try {
       await this._innovationByResultRepository.update(
         rbi.result_by_innovation_package_id,
         {
-          readiness_level_evidence_based: this.isNullData(
-            rbi?.readiness_level_evidence_based,
-          ),
-          readinees_evidence_link: this.isNullData(
-            rbi?.readinees_evidence_link,
-          ),
-          use_level_evidence_based: this.isNullData(
-            rbi?.use_level_evidence_based,
-          ),
-          use_evidence_link: this.isNullData(rbi?.use_evidence_link),
-          use_details_of_evidence: this.isNullData(
-            rbi?.use_details_of_evidence,
-          ),
-          readiness_details_of_evidence: this.isNullData(
-            rbi?.readiness_details_of_evidence,
-          ),
-          potential_innovation_readiness_level: this.isNullData(
+          readiness_level_evidence_based: rbi?.readiness_level_evidence_based,
+
+          readinees_evidence_link: rbi?.readinees_evidence_link,
+
+          use_level_evidence_based: rbi?.use_level_evidence_based,
+
+          use_evidence_link: rbi?.use_evidence_link,
+          use_details_of_evidence: rbi?.use_details_of_evidence,
+
+          readiness_details_of_evidence: rbi?.readiness_details_of_evidence,
+
+          potential_innovation_readiness_level: this.validData(
             rbi?.potential_innovation_readiness_level,
+            data_id,
+            [2],
           ),
-          potential_innovation_use_level: this.isNullData(
+          potential_innovation_use_level: this.validData(
             rbi?.potential_innovation_use_level,
+            data_id,
+            [2],
           ),
-          current_innovation_readiness_level: this.isNullData(
+          current_innovation_readiness_level: this.validData(
             rbi?.current_innovation_readiness_level,
+            data_id,
+            [1, 2],
           ),
-          current_innovation_use_level: this.isNullData(
+          current_innovation_use_level: this.validData(
             rbi?.current_innovation_use_level,
+            data_id,
+            [1, 2],
           ),
-          last_updated_by: this.isNullData(user?.id),
+          last_updated_by: user?.id,
         },
       );
       return;
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  private validData(data: any, data_id: number, valid: number[]) {
+    return valid.includes(parseInt(`${data_id}`)) ? data : null;
   }
 
   async saveWorkshop(
@@ -359,7 +373,11 @@ export class InnovationPathwayStepThreeService {
           result_innovation_package_id: result_ip.result_innovation_package_id,
           is_active: true,
         },
-        relations: ['obj_result', 'obj_readiness_level_evidence_based', 'obj_use_level_evidence_based'],
+        relations: [
+          'obj_result',
+          'obj_readiness_level_evidence_based',
+          'obj_use_level_evidence_based',
+        ],
       });
       const core_innovation = await this._resultRepository.findOne({
         where: { id: result_core.result_id, is_active: true },
@@ -372,7 +390,11 @@ export class InnovationPathwayStepThreeService {
               result_ip.result_innovation_package_id,
             is_active: true,
           },
-          relations: ['obj_result', 'obj_readiness_level_evidence_based', 'obj_use_level_evidence_based'],
+          relations: [
+            'obj_result',
+            'obj_readiness_level_evidence_based',
+            'obj_use_level_evidence_based',
+          ],
         });
 
       const link_workshop_list = await this._evidenceRepository.findOne({
@@ -520,14 +542,14 @@ export class InnovationPathwayStepThreeService {
           await this._resultsIpActorRepository.update(
             actorExists.result_ip_actors_id,
             {
-              actor_type_id: this.isNullData(el?.actor_type_id),
+              actor_type_id: el?.actor_type_id,
               is_active: el.is_active == undefined ? true : el.is_active,
-              men: this.isNullData(el?.men),
-              men_youth: this.isNullData(el?.men_youth),
-              women: this.isNullData(el?.women),
-              women_youth: this.isNullData(el?.women_youth),
-              evidence_link: this.isNullData(el?.evidence_link),
-              other_actor_type: this.isNullData(el?.other_actor_type),
+              men: el?.men,
+              men_youth: el?.men_youth,
+              women: el?.women,
+              women_youth: el?.women_youth,
+              evidence_link: el?.evidence_link,
+              other_actor_type: el?.other_actor_type,
               last_updated_by: user.id,
               sex_and_age_disaggregation:
                 el?.sex_and_age_disaggregation === true ? true : false,
@@ -597,11 +619,11 @@ export class InnovationPathwayStepThreeService {
           await this._resultsIpInstitutionTypeRepository.update(ite.id, {
             last_updated_by: user.id,
             institution_types_id: el.institution_types_id,
-            how_many: this.isNullData(el.how_many),
+            how_many: el?.how_many,
             other_institution: el?.other_institution,
             graduate_students: el?.graduate_students,
             is_active: el.is_active == undefined ? true : el.is_active,
-            evidence_link: this.isNullData(el.evidence_link),
+            evidence_link: el?.evidence_link,
           });
         } else {
           if (!el?.institution_types_id) {
