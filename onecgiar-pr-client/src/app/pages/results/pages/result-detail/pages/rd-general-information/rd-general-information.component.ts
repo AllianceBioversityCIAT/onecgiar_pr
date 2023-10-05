@@ -31,36 +31,14 @@ export class RdGeneralInformationComponent {
       this.generalInfoBody = response;
       this.generalInfoBody.reporting_year = response['phase_year'];
       this.generalInfoBody.institutions_type = [...this.generalInfoBody.institutions_type, ...this.generalInfoBody.institutions] as any;
-      //(this.generalInfoBody);
-      // this.api.dataControlSE.currentResult.is_discontinued = this.generalInfoBody.is_discontinued;
-
-      // this.generalInfoBody.discontinued_options = [
-      //   {
-      //     investment_discontinued_option_id: '1',
-      //     option: 'No or limited progress in improving the readiness of the innovation.',
-      //     value: true
-      //   },
-      //   {
-      //     investment_discontinued_option_id: '6',
-      //     option: 'Other',
-      //     value: true,
-      //     description: 'some'
-      //   }
-      // ];
       this.GET_investmentDiscontinuedOptions();
     });
   }
   GET_investmentDiscontinuedOptions() {
     this.api.resultsSE.GET_investmentDiscontinuedOptions().subscribe(({ response }) => {
-      //(response);
-      //(this.generalInfoBody.discontinued_options);
-      // this.generalInfoBody.discontinued_options = response;
-      // this.parseData
       this.convertChecklistToDiscontinuedOptions(response);
     });
   }
-
-  //TODO -
 
   convertChecklistToDiscontinuedOptions(response) {
     const options = [...response];
@@ -76,16 +54,13 @@ export class RdGeneralInformationComponent {
   discontinuedOptionsToIds() {
     this.generalInfoBody.discontinued_options = this.generalInfoBody.discontinued_options.filter(option => option.value === true);
     this.generalInfoBody.discontinued_options.map(option => (option.is_active = true));
-    //(this.generalInfoBody.discontinued_options);
   }
 
   onSaveSection() {
     this.discontinuedOptionsToIds();
     this.generalInfoBody.institutions_type = this.generalInfoBody.institutions_type.filter(inst => !inst.hasOwnProperty('institutions_id'));
-    //(this.generalInfoBody);
 
     if (!this.generalInfoBody.is_discontinued) this.generalInfoBody.discontinued_options = [];
-    //(this.generalInfoBody);
     this.api.resultsSE.PATCH_generalInformation(this.generalInfoBody).subscribe(
       resp => {
         this.currentResultSE.GET_resultById();
@@ -153,7 +128,7 @@ export class RdGeneralInformationComponent {
     return `<strong>Environment tag guidance</strong> 
     <br>
     
-    There are five environmental targets and one biodiversity target at systems level:
+    There are three environmental targets and one biodiversity target at systems level:
 
     <ul>
       <li>Stay within planetary and regional environmental boundaries: consumptive water use in food production of less than 2,500 km³ per year (with a focus on the most stressed basins), zero net deforestation, nitrogen application of 90 Tg per year (with a redistribution towards low-input farming systems) and increased use efficiency; and phosphorus application of 10 Tg per year.</li>
@@ -211,9 +186,7 @@ export class RdGeneralInformationComponent {
   }
 
   sendIntitutionsTypes() {
-    //(this.generalInfoBody.institutions_type);
     this.generalInfoBody.institutions_type = this.generalInfoBody.institutions_type.filter(inst => !inst.hasOwnProperty('institutions_id'));
-    //(this.generalInfoBody.institutions_type);
     this.generalInfoBody.institutions_type = [...this.generalInfoBody?.institutions_type, ...this.generalInfoBody?.institutions] as any;
   }
   onChangeKrs() {
