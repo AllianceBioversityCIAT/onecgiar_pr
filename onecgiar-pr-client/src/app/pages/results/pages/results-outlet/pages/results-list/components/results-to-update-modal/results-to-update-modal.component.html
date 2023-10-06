@@ -58,8 +58,8 @@
                             <a [href]="'/result/result-detail/' + result?.result_code+'?phase='+ result?.version_id"
                                 target="_blank" class="link_button view">View</a>
                             <app-pr-button text="Update" [verticalMargin]="0" (clickEvent)="onPressAction(result)"
-                                [disabled]="(result.result_type_id === 3 && !this.api.rolesSE.isAdmin)"
-                                [tooltipText]="(result.result_type_id === 3 && !this.api.rolesSE.isAdmin) ? 'This functionality is not available for capacity change result types.' : null"></app-pr-button>
+                                [disabled]="result.result_type_id === 3"
+                                [tooltipText]="result.result_type_id === 3 ? 'This functionality is not available for capacity change result types.' : null"></app-pr-button>
                         </div>
                     </td>
                 </tr>
