@@ -31,6 +31,18 @@ export class ResultRepository
   ) {
     super(Result, dataSource.createEntityManager());
   }
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete r from \`result\` r where r.id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          className: ResultRepository.name,
+          error: err,
+          debug: true,
+        }),
+      );
+  }
 
   logicalDelete(resultId: number): Promise<Result> {
     const queryData = `update \`result\` set is_active = 0 where id = ?`;

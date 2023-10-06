@@ -16,6 +16,20 @@ export class ResultIpAAOutcomeRepository
   ) {
     super(ResultIpAAOutcome, dataSource.createEntityManager());
   }
+  fisicalDelete(resultId: number): Promise<any> {
+    const dataQuery = `delete riaao from result_ip_action_area_outcome riaao 
+    inner join result_by_innovation_package rbip on rbip.result_by_innovation_package_id = riaao.result_by_innovation_package_id 
+    where rbip.result_innovation_package_id = ?;`;
+    return this.query(dataQuery, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultIpAAOutcomeRepository.name,
+          debug: true,
+        }),
+      );
+  }
 
   logicalDelete(resultId: number): Promise<ResultIpAAOutcome> {
     const dataQuery = `update result_ip_action_area_outcome riaao 

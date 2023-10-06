@@ -16,6 +16,21 @@ export class ResultIpImpactAreaRepository
     super(ResultIpImpactArea, dataSource.createEntityManager());
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const dataQuery = `delete ria from result_ip_impact_area_target ria 
+    inner join result_by_innovation_package rbip on rbip.result_by_innovation_package_id = ria.result_by_innovation_package_id 
+    where rbip.result_innovation_package_id = ?;`;
+    return this.query(dataQuery, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultIpImpactAreaRepository.name,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(resultId: number): Promise<ResultIpImpactArea> {
     const dataQuery = `update result_ip_impact_area_target ria 
     inner join result_by_innovation_package rbip on rbip.result_by_innovation_package_id = ria.result_by_innovation_package_id 

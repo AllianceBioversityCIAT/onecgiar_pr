@@ -32,6 +32,21 @@ export class ResultByInstitutionsByDeliveriesTypeRepository
     );
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete rbibdt from result_by_institutions_by_deliveries_type rbibdt 
+    inner join results_by_institution rbi on rbi.id = rbibdt.result_by_institution_id
+  where rbi.result_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultByInstitutionsByDeliveriesType.name,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(
     resultId: number,
   ): Promise<ResultByInstitutionsByDeliveriesType> {

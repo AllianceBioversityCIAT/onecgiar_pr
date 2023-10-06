@@ -29,6 +29,19 @@ export class NonPooledProjectRepository
     super(NonPooledProject, dataSource.createEntityManager());
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete npp from non_pooled_project npp where npp.results_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: NonPooledProjectRepository.name,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(resultId: number): Promise<NonPooledProject> {
     const queryData = `update non_pooled_project npp set npp.is_active = 0 where npp.results_id = ? and npp.is_active > 0;`;
     return this.query(queryData, [resultId])

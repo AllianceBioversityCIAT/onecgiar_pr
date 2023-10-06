@@ -20,6 +20,19 @@ export class ResultActorRepository
   ) {
     super(ResultActor, dataSource.createEntityManager());
   }
+
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete ra from \`result_actors\` ra where ra.result_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          className: ResultActorRepository.name,
+          error: err,
+          debug: true,
+        }),
+      );
+  }
   private readonly _logger: Logger = new Logger(ResultActorRepository.name);
 
   logicalDelete(resultId: number): Promise<any> {

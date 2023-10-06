@@ -26,6 +26,19 @@ export class LinkedResultRepository
     super(LinkedResult, dataSource.createEntityManager());
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const dataQuery = `delete lr from linked_result lr where lr.origin_result_id = ?;`;
+    return this.query(dataQuery, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: LinkedResultRepository.name,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(resultId: number): Promise<LinkedResult> {
     const dataQuery = `update linked_result lr set lr.is_active = 0 where lr.origin_result_id = ?;`;
     return this.query(dataQuery, [resultId])

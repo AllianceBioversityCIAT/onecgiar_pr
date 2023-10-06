@@ -23,6 +23,19 @@ export class ResultsCenterRepository
     super(ResultsCenter, dataSource.createEntityManager());
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete rc from results_center rc where rc.result_id = ?`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsCenterRepository.name,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(resultId: number): Promise<ResultsCenter> {
     const queryData = `update results_center rc set rc.is_active = 0 where rc.result_id = ? and rc.is_active > 0;`;
     return this.query(queryData, [resultId])

@@ -27,6 +27,19 @@ export class EvidencesRepository
     super(Evidence, dataSource.createEntityManager());
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete e from evidence e where e.result_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          className: EvidencesRepository.name,
+          error: err,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(resultId: number): Promise<Evidence> {
     const queryData = `update evidence set is_active = 0 where result_id = ?`;
     return this.query(queryData, [resultId])
