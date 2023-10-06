@@ -1,4 +1,6 @@
-<p-dialog class="support_information" header="Title" [(visible)]="this.api.dataControlSE.chagePhaseModal" (onHide)="cleanObject()" [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true" [style]="{ padding: '0px' }">
+<p-dialog class="support_information" header="Title" [(visible)]="this.api.dataControlSE.chagePhaseModal"
+  (onHide)="cleanObject()" [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false"
+  [dismissableMask]="true" [style]="{ padding: '0px' }">
   <div id="change-phase">
     <div class="lateral-bar"></div>
     <div class="content-change-phase">
@@ -14,34 +16,28 @@
       </div>
       <div class="info-phase-change">
         <div class="phase-data pa-l">
-          <i
-            ><b>{{ api.dataControlSE?.currentResult?.phase_name }}</b></i
-          >
+          <i><b>{{ api.dataControlSE?.currentResult?.phase_name }}</b></i>
         </div>
         <div class="icon-change">
           <img src="../../../../assets/icons/data_transfer.svg" [style]="{ width: '100px' }" />
         </div>
         <div class="phase-data pa-r">
-          <i
-            ><b>{{ version?.phase_name }}</b></i
-          >
+          <i><b>{{ version?.phase_name }}</b></i>
         </div>
       </div>
       <div [style]="{ 'text-align': 'center' }">
-        <span
-          ><i
-            >Metadata from the phase <b>'{{ api.dataControlSE?.currentResult?.phase_name }}'</b> will be duplicated in the</i
-          ></span
-        ><br />
-        <span
-          ><i
-            >phase <b>'{{ version?.phase_name }}'</b>.</i
-          ></span
-        >
+        <span><i>Metadata from the phase <b>'{{ api.dataControlSE?.currentResult?.phase_name }}'</b> will be duplicated
+            in the</i></span><br />
+        <span><i>phase <b>'{{ version?.phase_name }}'</b>.</i></span>
       </div>
       <div class="buttons">
-        <app-pr-button padding="medium" [style]="{ margin: '1rem 2rem', 'font-size': '1.5rem' }" text="Cancel" colorType="secondary" (click)="this.api.dataControlSE.chagePhaseModal = false"> </app-pr-button>
-        <app-pr-button [ngClass]="{ globalDisabled: this.requesting }" [rotating]="this.requesting" padding="medium" [style]="{ margin: '1rem 2rem', 'font-size': '1.5rem' }" text="Confirm" (click)="accept()" [icon]="this.requesting ? 'loop' : ''"> </app-pr-button>
+        <app-pr-button padding="medium" [style]="{ margin: '1rem 2rem', 'font-size': '1.5rem' }" text="Cancel"
+          colorType="secondary" (click)="this.api.dataControlSE.chagePhaseModal = false"> </app-pr-button>
+        <app-pr-button [ngClass]="{ globalDisabled: this.requesting }" [rotating]="this.requesting" padding="medium"
+          [disabled]="this.api.dataControlSE?.currentResult?.result_type_id === 3"
+          [tooltipText]="this.api.dataControlSE?.currentResult?.result_type_id === 3 ? 'The Capacity change update is not available at this time.' : null"
+          [style]="{ margin: '1rem 2rem', 'font-size': '1.5rem' }" text="Confirm" (clickEvent)="accept()"
+          [icon]="this.requesting ? 'loop' : ''"> </app-pr-button>
       </div>
     </div>
     <div class="lateral-bar"></div>
