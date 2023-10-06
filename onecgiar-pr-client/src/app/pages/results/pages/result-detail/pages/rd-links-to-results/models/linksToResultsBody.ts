@@ -1,6 +1,13 @@
 export class LinksToResultsBody {
   public links: interfaceLinkResults[] = [];
   public legacy_link: interfaceLinkResults[] = [];
+  public linkedInnovation: {
+    linked_innovation_dev: boolean;
+    linked_innovation_use: boolean;
+  } = {
+    linked_innovation_dev: false,
+    linked_innovation_use: false
+  };
 }
 
 interface interfaceLinkResults {
