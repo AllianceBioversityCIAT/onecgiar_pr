@@ -34,8 +34,8 @@
         <app-pr-button padding="medium" [style]="{ margin: '1rem 2rem', 'font-size': '1.5rem' }" text="Cancel"
           colorType="secondary" (click)="this.api.dataControlSE.chagePhaseModal = false"> </app-pr-button>
         <app-pr-button [ngClass]="{ globalDisabled: this.requesting }" [rotating]="this.requesting" padding="medium"
-          [disabled]="(this.api.dataControlSE?.currentResult?.result_type_id === 3 && !this.api.rolesSE.isAdmin)"
-          [tooltipText]="(this.api.dataControlSE?.currentResult?.result_type_id === 3 && !this.api.rolesSE.isAdmin) ? 'This functionality is not available for capacity change result types.' : null"
+          [disabled]="this.api.dataControlSE?.currentResult?.result_type_id === 3"
+          [tooltipText]="this.api.dataControlSE?.currentResult?.result_type_id === 3 ? 'This functionality is not available for capacity change result types.' : null"
           [style]="{ margin: '1rem 2rem', 'font-size': '1.5rem' }" text="Confirm" (clickEvent)="accept()"
           [icon]="this.requesting ? 'loop' : ''"> </app-pr-button>
       </div>
