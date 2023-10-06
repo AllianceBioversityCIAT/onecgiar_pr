@@ -6,18 +6,11 @@ import { InnovationPackagesNotificationComponent } from './innovation-packages-n
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { ButtonModule } from 'primeng/button';
 import { NotificationItemInnovationComponent } from './component/notification-item-innovation/notification-item-innovation.component';
-
+import { FilterNotificationByPhasePipe } from './pipes/filter-notification-by-phase.pipe';
+import { FilterNotificationByInitiativePipe } from './pipes/filter-notification-by-initiative.pipe';
 
 @NgModule({
-  declarations: [
-    InnovationPackagesNotificationComponent,
-    NotificationItemInnovationComponent,
-  ],
-  imports: [
-    CommonModule,
-    InnovationPackagesNotificationRoutingModule,
-    ButtonModule, CustomFieldsModule,
-    
-  ]
+  declarations: [InnovationPackagesNotificationComponent, NotificationItemInnovationComponent, FilterNotificationByPhasePipe, FilterNotificationByInitiativePipe],
+  imports: [CommonModule, InnovationPackagesNotificationRoutingModule, ButtonModule, CustomFieldsModule]
 })
-export class InnovationPackagesNotificationModule { }
+export class InnovationPackagesNotificationModule {}

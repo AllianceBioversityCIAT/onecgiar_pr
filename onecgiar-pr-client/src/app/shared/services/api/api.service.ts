@@ -11,12 +11,13 @@ import { RolesService } from '../global/roles.service';
 import { TocApiService } from './toc-api.service';
 import { QualityAssuranceService } from '../../../pages/quality-assurance/quality-assurance.service';
 import { Title } from '@angular/platform-browser';
+import { IpsrListFilterService } from '../../../pages/ipsr/pages/innovation-package-list-content/pages/innovation-package-list/services/ipsr-list-filter.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ApiService {
-  constructor(private titleService: Title, public resultsSE: ResultsApiService, public alertsFs: CustomizedAlertsFsService, private qaSE: QualityAssuranceService, public authSE: AuthService, public alertsFe: CustomizedAlertsFeService, public dataControlSE: DataControlService, public resultsListFilterSE: ResultsListFilterService, public wordCounterSE: WordCounterService, public rolesSE: RolesService, public tocApiSE: TocApiService) {}
+  constructor(private titleService: Title, public resultsSE: ResultsApiService, public alertsFs: CustomizedAlertsFsService, private qaSE: QualityAssuranceService, public authSE: AuthService, public alertsFe: CustomizedAlertsFeService, public dataControlSE: DataControlService, public resultsListFilterSE: ResultsListFilterService, public wordCounterSE: WordCounterService, public rolesSE: RolesService, public tocApiSE: TocApiService, public ipsrListFilterService: IpsrListFilterService) {}
   isStepTwoTwo: boolean = false;
   isStepTwoOne: boolean = false;
 
@@ -37,6 +38,7 @@ export class ApiService {
           myInit.official_code_short_name = myInit.official_code + ' ' + myInit.short_name;
         });
         this.resultsListFilterSE.updateMyInitiatives(this.dataControlSE.myInitiativesList);
+        this.ipsrListFilterService.updateMyInitiatives(this.dataControlSE.myInitiativesList);
         callback();
       },
       err => {

@@ -7,11 +7,14 @@ import {
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
 import { VERSIONING } from '../../../shared/utils/versioning.utils';
+import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
 export class ResultByInstitutionsByDeliveriesTypeRepository
   extends Repository<ResultByInstitutionsByDeliveriesType>
-  implements ReplicableInterface<ResultByInstitutionsByDeliveriesType>
+  implements
+    ReplicableInterface<ResultByInstitutionsByDeliveriesType>,
+    LogicalDelete<ResultByInstitutionsByDeliveriesType>
 {
   private readonly _logger: Logger = new Logger(
     ResultByInstitutionsByDeliveriesTypeRepository.name,
@@ -24,6 +27,24 @@ export class ResultByInstitutionsByDeliveriesTypeRepository
       ResultByInstitutionsByDeliveriesType,
       dataSource.createEntityManager(),
     );
+  }
+
+  logicalDelete(
+    resultId: number,
+  ): Promise<ResultByInstitutionsByDeliveriesType> {
+    const queryData = `update result_by_institutions_by_deliveries_type rbibdt 
+                          inner join results_by_institution rbi on rbi.id = rbibdt.result_by_institution_id
+                        set rbibdt.is_active = false
+                        where rbi.result_id = ?`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultByInstitutionsByDeliveriesType.name,
+          debug: true,
+        }),
+      );
   }
 
   async replicable(

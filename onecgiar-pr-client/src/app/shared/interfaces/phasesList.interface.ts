@@ -21,4 +21,5 @@ export interface Phases {
   app_module_id: number;
   obj_previous_phase: Phases;
   can_be_deleted: boolean;
+  selected: boolean;
 }

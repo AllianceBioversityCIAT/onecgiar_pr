@@ -58,6 +58,7 @@
 
 .action_buttons {
   display: flex;
+  align-items: center;
   gap: 10px;
 }
 
@@ -67,22 +68,8 @@
 
 td {
   a {
-    // width: max-content;
     display: flex;
     color: var(--pr-color-secondary);
-  }
-}
-
-.title {
-  a {
-    // white-space: nowrap;
-    /* Evita que el texto se divida en líneas */
-    // overflow: hidden;
-    /* Oculta el texto que excede el ancho del contenedor */
-    // text-overflow: ellipsis;
-    /* Agrega el ellipsis (...) al final del texto cortado */
-    // max-width: 300px !important;
-    /* Define el ancho del contenedor */
   }
 }
 
@@ -200,6 +187,7 @@ td {
 
 .actions_buttons {
   display: flex;
+  align-items: center;
   gap: 10px;
 }
 

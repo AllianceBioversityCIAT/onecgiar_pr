@@ -1,7 +1,8 @@
 <div class="position-relative">
     <app-under-construction-point *ngIf="this.underConstruction"></app-under-construction-point>
     <app-pr-field-header [label]="this.label" [description]="this.description" [required]="this.required"
-        [readOnly]="(readOnly || this.rolesSE.readOnly) && (!isStatic)">
+        [readOnly]="(readOnly || this.rolesSE.readOnly) && (!isStatic)" [showDescriptionLabel]="this.showDescription"
+        [descInlineStyles]="descInlineStyles">
     </app-pr-field-header>
     <div [ngSwitch]="(readOnly || this.rolesSE.readOnly) && (!isStatic)"
         [ngClass]="{'mandatory': this.required,'readOnly':(readOnly || this.rolesSE.readOnly) && (!isStatic)}"

@@ -14,12 +14,16 @@ import {
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../shared/globalInterfaces/replicable.interface';
+
+import {
+  LogicalDelete
+} from '../../shared/globalInterfaces/delete.interface';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 
 @Injectable()
 export class ResultRepository
   extends Repository<Result>
-  implements ReplicableInterface<Result>
+  implements ReplicableInterface<Result>, LogicalDelete<Result>
 {
   private readonly _logger: Logger = new Logger(ResultRepository.name);
   constructor(
@@ -28,6 +32,20 @@ export class ResultRepository
   ) {
     super(Result, dataSource.createEntityManager());
   }
+
+  logicalDelete(resultId: number): Promise<Result> {
+    const queryData = `update \`result\` set is_active = 0 where id = ?`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          className: ResultRepository.name,
+          error: err,
+          debug: true,
+        }),
+      );
+  }
+
   async replicable(config: ReplicableConfigInterface<Result>): Promise<Result> {
     let final_data: Result = null;
     try {

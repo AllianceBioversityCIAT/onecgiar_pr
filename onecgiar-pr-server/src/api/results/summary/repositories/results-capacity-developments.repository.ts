@@ -6,11 +6,14 @@ import {
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
+import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
 export class ResultsCapacityDevelopmentsRepository
   extends Repository<ResultsCapacityDevelopments>
-  implements ReplicableInterface<ResultsCapacityDevelopments>
+  implements
+    ReplicableInterface<ResultsCapacityDevelopments>,
+    LogicalDelete<ResultsCapacityDevelopments>
 {
   private readonly _logger: Logger = new Logger(
     ResultsCapacityDevelopmentsRepository.name,
@@ -21,6 +24,19 @@ export class ResultsCapacityDevelopmentsRepository
     private _handlersError: HandlersError,
   ) {
     super(ResultsCapacityDevelopments, dataSource.createEntityManager());
+  }
+
+  logicalDelete(resultId: number): Promise<ResultsCapacityDevelopments> {
+    const queryData = `update results_capacity_developments set is_active = 0 where result_id = ?`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsCapacityDevelopmentsRepository.name,
+          debug: true,
+        }),
+      );
   }
 
   async replicable(
@@ -129,6 +145,9 @@ export class ResultsCapacityDevelopmentsRepository
     	rcd.last_updated_by,
     	rcd.male_using,
     	rcd.female_using,
+    	rcd.non_binary_using,
+      rcd.has_unkown_using,
+      rcd.unkown_using,
     	rcd.capdev_delivery_method_id,
     	rcd.capdev_term_id,
       rcd.is_attending_for_organization,
@@ -165,8 +184,26 @@ export class ResultsCapacityDevelopmentsRepository
       r.id 'Result ID', 
       r.result_code 'Result Code',
       -- Initiative Output - Capacity sharing for development specific fields
-      rcd.female_using 'Number of females (CapDev)',
-      rcd.male_using 'Number of males (CapDev)',
+      IF(
+          rcd.unkown_using = 1,
+          'Not applicable',
+          format(rcd.female_using, 0, 'es_ES')
+      ) 'Number of females (CapDev)',
+      IF(
+          rcd.unkown_using = 1,
+          'Not applicable',
+          format(rcd.male_using, 0, 'es_ES')
+      ) 'Number of males (CapDev)',
+      IF(
+          rcd.unkown_using = 1,
+          'Not applicable',
+          format(rcd.non_binary_using, 0, 'es_ES')
+      ) 'Number of non-binary (CapDev)',
+      IF(
+        rcd.unkown_using = 0,
+        'Not applicable',
+        rcd.has_unkown_using
+      ) 'Has unknown using (CapDev)',
       if(ct.capdev_term_id in (3,4), ct.name, concat(ct.term, ' - ', ct.name)) as 'Lenght of training',
       cdm.name 'Delivery method',
       (case

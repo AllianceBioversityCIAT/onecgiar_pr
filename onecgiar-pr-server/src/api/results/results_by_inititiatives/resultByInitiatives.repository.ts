@@ -7,11 +7,14 @@ import {
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
+import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
 export class ResultByInitiativesRepository
   extends Repository<ResultsByInititiative>
-  implements ReplicableInterface<ResultsByInititiative>
+  implements
+    ReplicableInterface<ResultsByInititiative>,
+    LogicalDelete<ResultsByInititiative>
 {
   private readonly _logger: Logger = new Logger(
     ResultByInitiativesRepository.name,
@@ -22,6 +25,20 @@ export class ResultByInitiativesRepository
   ) {
     super(ResultsByInititiative, dataSource.createEntityManager());
   }
+
+  logicalDelete(resultId: number): Promise<ResultsByInititiative> {
+    const queryData = `update results_by_inititiative set is_active = false where result_id = ?`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          className: ResultByInitiativesRepository.name,
+          error: err,
+          debug: true,
+        }),
+      );
+  }
+
   async replicable(
     config: ReplicableConfigInterface<ResultsByInititiative>,
   ): Promise<ResultsByInititiative[]> {
@@ -39,7 +56,7 @@ export class ResultByInitiativesRepository
           ? as created_by,
           null as last_updated_by,
           now() as created_date
-          from results_by_inititiative rbi where rbi.result_id = ? and rbi.is_active > 0
+          from results_by_inititiative rbi where rbi.result_id = ? and rbi.is_active > 0 and rbi.initiative_role_id = 1
         `;
         const response = await (<Promise<ResultsByInititiative[]>>(
           this.query(queryData, [
@@ -73,7 +90,7 @@ export class ResultByInitiativesRepository
           ? as created_by,
           null as last_updated_by,
           now() as created_date
-          from results_by_inititiative rbi where rbi.result_id = ? and rbi.is_active > 0`;
+          from results_by_inititiative rbi where rbi.result_id = ? and rbi.is_active > 0 and rbi.initiative_role_id = 1`;
         await this.query(queryData, [
           config.new_result_id,
           config.user.id,
@@ -479,21 +496,13 @@ export class ResultByInitiativesRepository
 
     try {
       if (initiative?.length) {
-        return await this.query(upDateInactive, [
-          userId,
-          resultId,
-          2,
-        ]);
+        return await this.query(upDateInactive, [userId, resultId, 2]);
 
         /*return await this.query(upDateActive, [
           userId, resultId, isOwner?1:2
         ]);*/
       } else {
-        return await this.query(upDateAllInactive, [
-          userId,
-          resultId,
-          2,
-        ]);
+        return await this.query(upDateAllInactive, [userId, resultId, 2]);
       }
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -508,24 +517,29 @@ export class ResultByInitiativesRepository
       let updateIniciative;
       if (resultId != null) {
         const updateIniciatives = await this.update(
-          { result_id: resultId},
+          { result_id: resultId },
           {
             initiative_role_id: 2,
-            is_active: true
+            is_active: true,
           },
         );
-        
+
         updateIniciative = await this.update(
-          { result_id: resultId, initiative_id:initiative_id},
+          { result_id: resultId, initiative_id: initiative_id },
           {
             initiative_role_id: 1,
-            is_active: true
+            is_active: true,
           },
         );
       }
 
-      console.log('Log',await this.findOneBy({ result_id: resultId, initiative_id:initiative_id}));
-      
+      console.log(
+        'Log',
+        await this.findOneBy({
+          result_id: resultId,
+          initiative_id: initiative_id,
+        }),
+      );
 
       return {
         initiative_id: initiative_id,
