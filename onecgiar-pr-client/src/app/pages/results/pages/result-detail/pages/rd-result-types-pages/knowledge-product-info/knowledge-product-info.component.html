@@ -13,6 +13,9 @@
     <app-pr-input [(ngModel)]="knowledgeProductBody.handle" label="Handle" [required]="false" [disabled]="true">
     </app-pr-input>
     <div class="auto_fit_container">
+        <app-pr-input [(ngModel)]="knowledgeProductBody.onlineYearCG" label="Date online (CGSpace)" [required]="false"
+            [readOnly]="true">
+        </app-pr-input>
         <app-pr-input [(ngModel)]="knowledgeProductBody.yearCG" label="Issue date (CGSpace)" [required]="false"
             [readOnly]="true">
         </app-pr-input>
