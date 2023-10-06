@@ -68,6 +68,7 @@ export class KnowledgeProductInfoComponent implements OnInit {
     mapped.altmetric_details_url = response.altmetric_detail_url;
     mapped.altmetric_img_url = response.altmetric_image_url;
     mapped.references = response.references_other_knowledge_products;
+    mapped.onlineYearCG = response.metadataCG?.online_year;
     //mapped.findable = response.findable;
     //mapped.accessible = response.accessible;
     //mapped.interoperable = response.interoperable;
