@@ -8,7 +8,7 @@ import { RdTheoryOfChangesServicesService } from '../../../rd-theory-of-changes-
   templateUrl: './toc-initiative-out.component.html',
   styleUrls: ['./toc-initiative-out.component.scss']
 })
-export class TocInitiativeOutComponent {
+export class TocInitiativeOutComponent implements OnInit {
   @Input() editable: boolean;
   @Input() initiative: any;
   @Input() resultLevelId: number | string;
@@ -23,6 +23,7 @@ export class TocInitiativeOutComponent {
   disabledInput = false;
   testingYesOrNo;
   SDGtestingYesorNo;
+
   constructor(public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {}
 
   ngOnInit(): void {
@@ -67,8 +68,6 @@ export class TocInitiativeOutComponent {
   }
 
   GET_outputList() {
-    //(this.api.dataControlSE.currentNotification);
-
     this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.api.dataControlSE.currentNotification?.results_id || this.initiative?.results_id || this.api.dataControlSE?.currentResult?.id, this.initiative.initiative_id, 1).subscribe({
       next: ({ response }) => {
         this.outputList = [];
@@ -79,17 +78,6 @@ export class TocInitiativeOutComponent {
         console.error(err);
       }
     });
-    /*this.api.tocApiSE.GET_tocLevelsByresultId(this.initiative.initiative_id, 1).subscribe(
-      ({ response }) => {
-        this.outputList = [];
-        this.outputList = response;
-        //(response);
-      },
-      err => {
-        this.outputList = [];
-        console.error(err);
-      }
-    );*/
   }
 
   GET_outcomeList() {
@@ -102,16 +90,6 @@ export class TocInitiativeOutComponent {
         console.error(err);
       }
     });
-    /*this.api.tocApiSE.GET_tocLevelsByresultId(this.initiative.initiative_id, 2).subscribe(
-      ({ response }) => {
-        this.outcomeList = response;
-        //(this.outcomeList);
-      },
-      err => {
-        this.outcomeList = [];
-        console.error(err);
-      }
-    );*/
   }
 
   GET_EOIList() {
@@ -124,16 +102,6 @@ export class TocInitiativeOutComponent {
         console.error(err);
       }
     });
-    /*this.api.tocApiSE.GET_tocLevelsByresultId(this.initiative.initiative_id, 3).subscribe(
-      ({ response }) => {
-        this.eoiList = response;
-        //(this.eoiList);
-      },
-      err => {
-        this.eoiList = [];
-        console.error(err);
-      }
-    );*/
   }
 
   GET_fullInitiativeTocByinitId() {
@@ -150,7 +118,6 @@ export class TocInitiativeOutComponent {
   get_versionDashboard() {
     this.api.resultsSE.get_vesrsionDashboard(this.initiative.toc_result_id, this.initiative.initiative_id).subscribe(
       ({ response }) => {
-        //(response);
         this.fullInitiativeToc = response?.version_id;
       },
       err => {
@@ -186,7 +153,7 @@ export class TocInitiativeOutComponent {
       this.theoryOfChangesServices.actionAreaOutcome = response?.actionAreaOutcome;
       this.theoryOfChangesServices.impactAreasTargets.map(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
       this.theoryOfChangesServices.sdgTargest.map(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
-      this.theoryOfChangesServices.actionAreaOutcome.map(item => (item.full_name = `<strong>${item.outcomeSMOcode}</strong> - ${item.outcomeStatement}`));
+      this.theoryOfChangesServices.actionAreaOutcome.map(item => (item.full_name = `${item.actionAreaId === 1 ? '<strong>Systems Transformation</strong>' : item.actionAreaId === 2 ? '<strong>Resilient Agrifood Systems</strong>' : '<strong>Genetic Innovation</strong>'} (${item.outcomeSMOcode}) - ${item.outcomeStatement}`));
       this.theoryOfChangesServices.body[this.indexYesorNo] = {
         impactAreasTargets: this.theoryOfChangesServices.impactAreasTargets,
         sdgTargest: this.theoryOfChangesServices.sdgTargest,
@@ -204,7 +171,6 @@ export class TocInitiativeOutComponent {
       }
       setTimeout(() => {
         this.indicatorView = true;
-        //(this.theoryOfChangesServices.body);
       }, 100);
     });
     this.indicatorView = true;
