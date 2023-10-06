@@ -23,6 +23,7 @@ export class TocInitiativeOutComponent implements OnInit {
   disabledInput = false;
   testingYesOrNo;
   SDGtestingYesorNo;
+
   constructor(public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {}
 
   ngOnInit(): void {
@@ -117,7 +118,6 @@ export class TocInitiativeOutComponent implements OnInit {
   get_versionDashboard() {
     this.api.resultsSE.get_vesrsionDashboard(this.initiative.toc_result_id, this.initiative.initiative_id).subscribe(
       ({ response }) => {
-        //(response);
         this.fullInitiativeToc = response?.version_id;
       },
       err => {
@@ -153,7 +153,7 @@ export class TocInitiativeOutComponent implements OnInit {
       this.theoryOfChangesServices.actionAreaOutcome = response?.actionAreaOutcome;
       this.theoryOfChangesServices.impactAreasTargets.map(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
       this.theoryOfChangesServices.sdgTargest.map(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
-      this.theoryOfChangesServices.actionAreaOutcome.map(item => (item.full_name = `<strong>${item.outcomeSMOcode}</strong> - ${item.outcomeStatement}`));
+      this.theoryOfChangesServices.actionAreaOutcome.map(item => (item.full_name = `${item.actionAreaId === 1 ? '<strong>Systems Transformation</strong>' : item.actionAreaId === 2 ? '<strong>Resilient Agrifood Systems</strong>' : '<strong>Genetic Innovation</strong>'} (${item.outcomeSMOcode}) - ${item.outcomeStatement}`));
       this.theoryOfChangesServices.body[this.indexYesorNo] = {
         impactAreasTargets: this.theoryOfChangesServices.impactAreasTargets,
         sdgTargest: this.theoryOfChangesServices.sdgTargest,
@@ -171,7 +171,6 @@ export class TocInitiativeOutComponent implements OnInit {
       }
       setTimeout(() => {
         this.indicatorView = true;
-        //(this.theoryOfChangesServices.body);
       }, 100);
     });
     this.indicatorView = true;

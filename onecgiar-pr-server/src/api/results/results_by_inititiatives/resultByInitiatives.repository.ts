@@ -56,7 +56,7 @@ export class ResultByInitiativesRepository
           ? as created_by,
           null as last_updated_by,
           now() as created_date
-          from results_by_inititiative rbi where rbi.result_id = ? and rbi.is_active > 0
+          from results_by_inititiative rbi where rbi.result_id = ? and rbi.is_active > 0 and rbi.initiative_role_id = 1
         `;
         const response = await (<Promise<ResultsByInititiative[]>>(
           this.query(queryData, [
@@ -90,7 +90,7 @@ export class ResultByInitiativesRepository
           ? as created_by,
           null as last_updated_by,
           now() as created_date
-          from results_by_inititiative rbi where rbi.result_id = ? and rbi.is_active > 0`;
+          from results_by_inititiative rbi where rbi.result_id = ? and rbi.is_active > 0 and rbi.initiative_role_id = 1`;
         await this.query(queryData, [
           config.new_result_id,
           config.user.id,
