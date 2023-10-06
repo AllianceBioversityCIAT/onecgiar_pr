@@ -46,6 +46,7 @@ import {
 import { In } from 'typeorm';
 import { UpdateQaResults } from './dto/update-qa.dto';
 import { ResultInitiativeBudgetRepository } from '../results/result_budget/repositories/result_initiative_budget.repository';
+import { ResultTypeRepository } from '../results/result_types/resultType.repository';
 
 @Injectable()
 export class VersioningService {
@@ -80,6 +81,7 @@ export class VersioningService {
     private readonly _resultsKnowledgeProductMetadataRepository: ResultsKnowledgeProductMetadataRepository,
     private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
     private readonly _resultInitiativeBudgetRepository: ResultInitiativeBudgetRepository,
+    private readonly _resultTypeRepository: ResultTypeRepository,
   ) {}
 
   /**
@@ -316,6 +318,20 @@ export class VersioningService {
           response: result_id,
           statusCode: HttpStatus.CONFLICT,
         });
+      }
+      const resultType = await this._resultTypeRepository.findOne({
+        where: {
+          id: legacy_result?.result_type_id,
+          isActive: true,
+        },
+      });
+
+      if (!resultType) {
+        throw {
+          response: legacy_result?.result_type_id,
+          message: 'The result type does not exist',
+          status: HttpStatus.BAD_REQUEST,
+        };
       }
 
       const module_id = this.$_validationModule(legacy_result.result_type_id);
