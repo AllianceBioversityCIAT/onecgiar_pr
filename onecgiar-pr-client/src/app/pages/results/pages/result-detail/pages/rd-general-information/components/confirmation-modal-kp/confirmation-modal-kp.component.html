@@ -1,0 +1,19 @@
+<p-dialog class="support_information" header="Title" [(visible)]="this.api.dataControlSE.confirmChangeResultTypeModal"
+  [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true"
+  [style]="{padding: '0px'}">
+
+  <div class="modal_title">Change result type</div>
+
+  <div class="modal_container">
+    <app-confirmation-kp [body]="this.body" [selectedResultType]="selectedResultType"></app-confirmation-kp>
+
+    <div *ngIf="selectedResultType" class="confirm_change_buttons">
+      <app-pr-button padding="medium" text="Cancel" colorType="secondary" [verticalMargin]="0"
+        (clickEvent)="closeModals()">
+      </app-pr-button>
+
+      <app-pr-button padding="medium" [text]="selectedResultType?.id !== 6 ? 'Confirm' : 'Continue'"
+        [verticalMargin]="0" (clickEvent)="changeResultType()"></app-pr-button>
+    </div>
+  </div>
+</p-dialog>

@@ -1,0 +1,23 @@
+.modal_container {
+  padding: 20px 40px 50px 40px;
+  width: 100% !important;
+  font-family: 'Poppins', sans-serif !important;
+}
+
+.modal_title {
+  background-color: var(--pr-color-secondary);
+  width: 100%;
+  font-size: 1.3em;
+  font-weight: 600;
+  color: white;
+  padding: 10px 20px;
+  border-bottom-right-radius: 10px;
+}
+
+.confirm_change_buttons {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 3rem;
+}

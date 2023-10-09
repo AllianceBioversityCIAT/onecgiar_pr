@@ -1,0 +1,36 @@
+<div id="change-phase">
+  <div class="content-change-phase">
+
+    <header [style]="{ 'text-align': 'center' }">
+      <h2 [style]="{ 'margin-bottom': '0px'}">Confirmation</h2>
+    </header>
+
+    <div class="phase-info-result">
+      <p class="phase-info-result-desc">Before continuing, please review the metadata PDF to confirm the current
+        status information. Make sure to
+        save a copy of this information, as any changes to the result type are irreversible and will alter this
+        data.
+      </p>
+      <div class="link_button update" (click)="downloadPDF()">
+        <app-pdf-icon hexadecimalColor="#FFFFFF"></app-pdf-icon>
+        Download PDF
+      </div>
+    </div>
+
+    <div class="info-phase-change">
+      <div class="phase-data pa-l">
+        <i><b>{{this.body?.result_type_name}}</b></i>
+      </div>
+      <div class="icon-change">
+        <i class="material-icons-round rotate-right">move_up</i>
+      </div>
+      <div class="phase-data pa-r">
+        <i><b>{{selectedResultType?.name}}</b></i>
+      </div>
+    </div>
+
+    <app-pr-input placeholder="Enter text" label="What is the reason for this change?" type="text" [required]="true"
+      [(ngModel)]="confirmationText"></app-pr-input>
+
+  </div>
+</div>
