@@ -28,6 +28,19 @@ export class ResultByIntitutionsRepository
     super(ResultsByInstitution, dataSource.createEntityManager());
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete rbi from results_by_institution rbi where rbi.result_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          className: ResultByIntitutionsRepository.name,
+          error: err,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(resultId: number): Promise<ResultsByInstitution> {
     const queryData = `update results_by_institution set is_active = false where result_id = ?;`;
     return this.query(queryData, [resultId])

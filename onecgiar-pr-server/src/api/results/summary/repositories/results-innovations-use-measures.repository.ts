@@ -27,6 +27,21 @@ export class ResultsInnovationsUseMeasuresRepository
     super(ResultsInnovationsUseMeasures, dataSource.createEntityManager());
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete rium from results_innovations_use_measures rium 
+    inner join results_innovations_use riu on riu.result_innovation_use_id = rium.result_innovation_use_id
+where riu.results_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsInnovationsUseMeasuresRepository.name,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(resultId: number): Promise<ResultsInnovationsUseMeasures> {
     const queryData = `update results_innovations_use_measures rium 
                             inner join results_innovations_use riu on riu.result_innovation_use_id = rium.result_innovation_use_id

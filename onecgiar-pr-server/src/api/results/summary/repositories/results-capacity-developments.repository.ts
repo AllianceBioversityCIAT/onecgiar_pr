@@ -27,6 +27,19 @@ export class ResultsCapacityDevelopmentsRepository
     super(ResultsCapacityDevelopments, dataSource.createEntityManager());
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete rcd from results_capacity_developments rcd where rcd.result_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsCapacityDevelopmentsRepository.name,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(resultId: number): Promise<ResultsCapacityDevelopments> {
     const queryData = `update results_capacity_developments set is_active = 0 where result_id = ?`;
     return this.query(queryData, [resultId])

@@ -27,6 +27,19 @@ export class ResultsInnovationsDevRepository
     super(ResultsInnovationsDev, dataSource.createEntityManager());
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete rid from results_innovations_dev rid where rid.results_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsInnovationsDevRepository.name,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(resultId: number): Promise<ResultsInnovationsDev> {
     const queryData = `update results_innovations_dev set is_active = 0 where results_id = ?`;
     return this.query(queryData, [resultId])

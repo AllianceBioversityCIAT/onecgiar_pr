@@ -27,6 +27,19 @@ export class ResultsPolicyChangesRepository
     super(ResultsPolicyChanges, dataSource.createEntityManager());
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete rpc from results_policy_changes rpc where rpc.result_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsPolicyChangesRepository.name,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(resultId: number): Promise<ResultsPolicyChanges> {
     const queryData = `update results_policy_changes rpc set rpc.is_active = 0 where rpc.result_id = ? and rpc.is_active > 0;`;
     return this.query(queryData, [resultId])
