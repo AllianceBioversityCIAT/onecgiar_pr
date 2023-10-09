@@ -52,6 +52,8 @@ export class ChangeResultTypeModalComponent implements OnInit {
   changeResultType() {
     if (this.selectedResultType?.id === 6) {
       this.api.dataControlSE.confirmChangeResultTypeModal = true;
+      console.log('open confirmation modal');
+      return;
     }
 
     console.log('changing result type');

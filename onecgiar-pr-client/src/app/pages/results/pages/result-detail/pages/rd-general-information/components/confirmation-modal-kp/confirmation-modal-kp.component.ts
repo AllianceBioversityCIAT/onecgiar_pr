@@ -13,12 +13,10 @@ export class ConfirmationModalKPComponent {
   constructor(public api: ApiService) {}
 
   closeModals() {
-    // this.api.dataControlSE.changeResultTypeModal = false;
     this.api.dataControlSE.confirmChangeResultTypeModal = false;
   }
 
   changeResultType() {
-    console.log('changing result type');
-    console.log(this.body);
+    console.log('changing result type from confirmation modal');
   }
 }

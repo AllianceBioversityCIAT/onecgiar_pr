@@ -12,8 +12,8 @@
         (clickEvent)="closeModals()">
       </app-pr-button>
 
-      <app-pr-button padding="medium" [text]="selectedResultType?.id !== 6 ? 'Confirm' : 'Continue'"
-        [verticalMargin]="0" (clickEvent)="changeResultType()"></app-pr-button>
+      <app-pr-button padding="medium" text="Confirm" [verticalMargin]="0"
+        (clickEvent)="changeResultType()"></app-pr-button>
     </div>
   </div>
 </p-dialog>

@@ -22,9 +22,12 @@
       type="text" [required]="false" [readOnly]="true" [(ngModel)]="this.generalInfoBody.result_type_name">
     </app-pr-input>
 
-    <app-pr-button text="Change result type" icon="move_up" [reverse]="true"
-      (click)="this.api.dataControlSE.changeResultTypeModal = true;" [rotateRight]="true" [verticalMargin]="0">
-    </app-pr-button>
+    <div class="change_result_type">
+      <app-pr-button text="Change result type" icon="move_up" [reverse]="true"
+        (click)="this.api.dataControlSE.changeResultTypeModal = true;" [rotateRight]="true" [verticalMargin]="0">
+      </app-pr-button>
+      <img class="under_construction" src="assets/work-in-progress.png" alt="" srcset="" width="30px" />
+    </div>
   </div>
 
   <app-pr-input placeholder="Enter text" label="Title" type="text" [description]="titleTextInfo()"

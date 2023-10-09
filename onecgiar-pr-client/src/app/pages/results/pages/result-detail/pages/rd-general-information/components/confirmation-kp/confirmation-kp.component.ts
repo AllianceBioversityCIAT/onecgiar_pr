@@ -14,6 +14,6 @@ export class ConfirmationKPComponent {
   constructor() {}
 
   downloadPDF() {
-    console.log('loading pdf');
+    console.log('Downloading pdf...');
   }
 }
