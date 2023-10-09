@@ -13,6 +13,8 @@ export class LogsModel {
   public onClass: string;
   public onMethod: string;
   public moreInfo?: string;
+  public objBefore?: any;
+  public objAfter?: any;
 
   constructor(
     action: Actions,
@@ -20,6 +22,8 @@ export class LogsModel {
     onResult: Result,
     actionInfo?: { class?: string; method?: string },
     moreInfo?: string,
+    objBefore?: any,
+    objAfter?: any,
   ) {
     this.id = uuidv4();
     this.userId = user.id;
@@ -30,6 +34,8 @@ export class LogsModel {
     this.moreInfo = moreInfo;
     this.onClass = actionInfo.class;
     this.onMethod = actionInfo.method;
+    this.objBefore = objBefore;
+    this.objAfter = objAfter;
   }
 
   public getDataInsert(): any {
@@ -47,6 +53,8 @@ export class LogsModel {
           resultCode: { N: `${this.onResult.result_code}` },
           resultId: { N: `${this.onResult.id}` },
           versionId: { N: `${this.onResult.version_id}` },
+          before: { M: this.creatAnyObject(this.objBefore) },
+          after: { M: this.creatAnyObject(this.objAfter) },
         },
       },
       action: { S: `${this.action}` },
@@ -59,5 +67,29 @@ export class LogsModel {
       moreInfo: { S: `${this.moreInfo}` },
       createDate: { S: `${new Date().toLocaleDateString()}` },
     };
+  }
+
+  creatAnyObject(obj: any) {
+    if (!obj) return {};
+    let temp: any = {};
+    for (let key in obj) {
+      if (typeof obj[key] == 'object') {
+        temp = { ...temp, ...{ [key]: { M: this.creatAnyObject(obj[key]) } } };
+      } else {
+        temp = { ...temp, ...this.convertChanges(obj[key], key) };
+      }
+    }
+    return temp;
+  }
+
+  convertChanges(data, key) {
+    switch (typeof data) {
+      case 'string':
+        return { [key]: { S: data } };
+      case 'number':
+        return { [key]: { N: data } };
+      case 'boolean':
+        return { [key]: { BOOL: data } };
+    }
   }
 }
