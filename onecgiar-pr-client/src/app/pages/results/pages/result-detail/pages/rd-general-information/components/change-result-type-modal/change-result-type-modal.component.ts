@@ -17,8 +17,11 @@ interface IOption {
 export class ChangeResultTypeModalComponent implements OnInit {
   @Input() body = new GeneralInfoBody();
 
+  validating = false;
   cgSpaceHandle = '';
-  newTitleText = '';
+  cgSpaceTitle = '';
+
+  mqapJson: {};
 
   selectedResultType: IOption | null = null;
   alertStatusDescKnowledgeProduct = `<dl>
@@ -49,6 +52,12 @@ export class ChangeResultTypeModalComponent implements OnInit {
     }
   }
 
+  isContinueButtonDisabled() {
+    if (!this.selectedResultType) return true;
+    if (this.selectedResultType?.id === 6 && this.cgSpaceTitle?.length === 0) return true;
+    return false;
+  }
+
   changeResultType() {
     if (this.selectedResultType?.id === 6) {
       this.api.dataControlSE.confirmChangeResultTypeModal = true;
@@ -57,5 +66,26 @@ export class ChangeResultTypeModalComponent implements OnInit {
     }
 
     console.log('changing result type');
+  }
+
+  GET_mqapValidation() {
+    this.validating = true;
+    this.api.resultsSE.GET_mqapValidation(this.cgSpaceHandle).subscribe({
+      next: resp => {
+        this.mqapJson = resp.response;
+        this.mqapJson['id'] = this.api.resultsSE.currentResultId;
+        this.mqapJson['result_code'] = this.api.resultsSE.currentResultCode;
+        this.mqapJson['version_id'] = this.api.resultsSE.currentResultPhase;
+        this.cgSpaceTitle = resp.response.title;
+        this.validating = false;
+        console.log('this.mqapJson', this.mqapJson);
+        this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Metadata successfully retrieved', description: 'Title: ' + this.cgSpaceTitle, status: 'success' });
+      },
+      error: err => {
+        this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
+        this.validating = false;
+        this.cgSpaceTitle = '';
+      }
+    });
   }
 }

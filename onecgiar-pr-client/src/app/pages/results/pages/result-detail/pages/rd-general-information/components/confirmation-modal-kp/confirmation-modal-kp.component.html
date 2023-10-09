@@ -5,7 +5,7 @@
   <div class="modal_title">Change result type</div>
 
   <div class="modal_container">
-    <app-confirmation-kp [body]="this.body" [selectedResultType]="selectedResultType"></app-confirmation-kp>
+    <app-confirmation-kp [body]="this.body" [selectedResultType]="selectedResultType" [mqapResult]="this.mqapResult"></app-confirmation-kp>
 
     <div *ngIf="selectedResultType" class="confirm_change_buttons">
       <app-pr-button padding="medium" text="Cancel" colorType="secondary" [verticalMargin]="0"

@@ -35,14 +35,21 @@
 
       <app-alert-status [description]="alertStatusDescKnowledgeProduct"></app-alert-status>
 
-      <app-pr-input [isStatic]="true" placeholder="Handle..." label="CGSpace link" type="text"
-        [(ngModel)]="cgSpaceHandle">
-      </app-pr-input>
+      <div [ngClass]="{'mqap_sync_title': selectedResultType?.id === 6}">
+        <app-pr-input [isStatic]="true" placeholder="Handle..." label="CGSpace link" type="text"
+          [(ngModel)]="cgSpaceHandle">
+        </app-pr-input>
+        <div (click)="GET_mqapValidation()" class="sync_button" *ngIf="selectedResultType?.id === 6"
+          [ngClass]="{'globalDisabled': validating}">
+          <app-pr-button padding="medium" [text]="validating?'Fetching metadata from CGSpace' : 'Sync'" icon="sync"
+            [rotating]="validating"></app-pr-button>
+        </div>
+      </div>
 
       <app-pr-input [disabled]="selectedResultType?.id === 6" [readOnly]="selectedResultType?.id === 6"
         [isStatic]="true" placeholder="CGSpace link" label="Title" type="text" [description]="CGSpaceDesc()"
         [showDescription]="false" [required]="false" description="Title retrieved from CGSpace"
-        [(ngModel)]="newTitleText">
+        [(ngModel)]="this.cgSpaceTitle">
       </app-pr-input>
     </div>
 
@@ -55,10 +62,10 @@
         (clickEvent)="this.api.dataControlSE.changeResultTypeModal = false">
       </app-pr-button>
 
-      <app-pr-button padding="medium" [text]="selectedResultType?.id !== 6 ? 'Confirm' : 'Continue'"
+      <app-pr-button [disabled]="isContinueButtonDisabled()" padding="medium" [text]="selectedResultType?.id !== 6 ? 'Confirm' : 'Continue'"
         [verticalMargin]="0" (clickEvent)="changeResultType()"></app-pr-button>
     </div>
   </div>
 </p-dialog>
 
-<app-confirmation-modal-kp [body]="this.body" [selectedResultType]="selectedResultType"></app-confirmation-modal-kp>
+<app-confirmation-modal-kp [body]="this.body" [selectedResultType]="selectedResultType" [mqapResult]="this.mqapJson"></app-confirmation-modal-kp>

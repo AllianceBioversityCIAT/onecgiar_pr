@@ -45,6 +45,7 @@ export class PlatformReportController {
 
     res.set({
       'Content-Disposition': contentDisposition,
+      'Access-Control-Expose-Headers': 'Content-Disposition',
     });
 
     return new StreamableFile(result.pdf, { type: 'application/pdf' });

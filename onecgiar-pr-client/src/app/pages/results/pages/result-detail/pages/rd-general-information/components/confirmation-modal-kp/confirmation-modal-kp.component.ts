@@ -8,6 +8,7 @@ import { ApiService } from 'src/app/shared/services/api/api.service';
 })
 export class ConfirmationModalKPComponent {
   @Input() body: any;
+  @Input() mqapResult: any;
   @Input() selectedResultType: any;
 
   constructor(public api: ApiService) {}
