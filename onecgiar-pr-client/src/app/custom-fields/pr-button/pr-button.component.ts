@@ -10,6 +10,7 @@ export class PrButtonComponent {
   @Input() icon: string;
   @Input() reverse: boolean = false;
   @Input() rotating: boolean = false;
+  @Input() rotateRight: boolean = false;
   @Input() underConstruction: boolean = false;
   @Input() showBackground: boolean = true;
   @Input() colorType: 'primary' | 'danger' | 'secondary' | 'success' = 'primary';
@@ -20,6 +21,7 @@ export class PrButtonComponent {
   @Input() tooltipText: string = '';
   @Input() tooltipTextPosition: 'right' | 'left' | 'top' | 'bottom' = 'top';
   @Output() clickEvent = new EventEmitter<any>();
+
   constructor() {}
 
   onClick() {

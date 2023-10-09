@@ -23,7 +23,7 @@ export class PlatformReportController {
   @Get('/result/:code')
   async getFullResultReportByResultCode(
     @Param('code') code: string,
-    @Query() query: { phase: string },
+    @Query() query: { phase: string; downloadable: boolean },
     @Res({ passthrough: true }) res: Response,
   ): Promise<StreamableFile | returnErrorDto> {
     code = code?.trim();
@@ -39,9 +39,12 @@ export class PlatformReportController {
     }
     result = <{ pdf: ReadStream; filename_date: any }>result;
 
+    const contentDisposition = `${
+      query.downloadable ?? false ? 'attachment;' : ''
+    }filename="PRMS-Result-${code}_${result.filename_date}.pdf"`;
+
     res.set({
-      //'Content-Type': 'application/pdf',
-      'Content-Disposition': `filename="PRMS-Result-${code}_${result.filename_date}.pdf"`,
+      'Content-Disposition': contentDisposition,
     });
 
     return new StreamableFile(result.pdf, { type: 'application/pdf' });

@@ -1,0 +1,64 @@
+<p-dialog class="support_information" header="Title" [(visible)]="this.api.dataControlSE.changeResultTypeModal"
+  [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true"
+  [style]="{padding: '0px'}">
+
+  <div class="modal_title">Change result type</div>
+
+  <div class="modal_container">
+    <app-pr-input [attr.attribute-you-are-targeting]="'expression'" placeholder="Enter text" label="Current result type"
+      type="text" [required]="false" [readOnly]="true" [(ngModel)]="this.body.result_type_name"
+      InlineStyles="box-shadow: none;">
+    </app-pr-input>
+
+    <app-pr-field-header label="Select the type of result you want to change to"
+      [required]="true"></app-pr-field-header>
+
+    <div class="result_level_container">
+      <div class="result_level_title">Result level</div>
+      <div class="filters">
+        <div *ngFor="let filter of this.resultsListFilterSE.filters.resultLevel" class="filter">
+          <div class="filter_title">{{filter.name}}</div>
+          <div class="chips">
+            <div class="chip"
+              [ngClass]="{'chip_selected': option.id !== this.body.result_type_id && option.selected, 'chip_disabled' : option.id === this.body.result_type_id}"
+              [style.background]="option.id !== this.body.result_type_id && option.selected ?'var(--pr-color-result-level-'+filter?.id+')':''"
+              (click)="this.resultsListFilterSE.onSelectChip(option);onSelectOneChip(option)"
+              *ngFor="let option of filter?.options">
+              {{option.name}}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="selectedResultType && selectedResultType?.id === 6">
+
+      <app-alert-status [description]="alertStatusDescKnowledgeProduct"></app-alert-status>
+
+      <app-pr-input [isStatic]="true" placeholder="Handle..." label="CGSpace link" type="text"
+        [(ngModel)]="cgSpaceHandle">
+      </app-pr-input>
+
+      <app-pr-input [disabled]="selectedResultType?.id === 6" [readOnly]="selectedResultType?.id === 6"
+        [isStatic]="true" placeholder="CGSpace link" label="Title" type="text" [description]="CGSpaceDesc()"
+        [showDescription]="false" [required]="false" description="Title retrieved from CGSpace"
+        [(ngModel)]="newTitleText">
+      </app-pr-input>
+    </div>
+
+    <div *ngIf="selectedResultType && selectedResultType?.id !== 6">
+      <app-confirmation-kp [body]="this.body" [selectedResultType]="selectedResultType"></app-confirmation-kp>
+    </div>
+
+    <div *ngIf="selectedResultType" class="change_result_buttons">
+      <app-pr-button padding="medium" text="Cancel" colorType="secondary" [verticalMargin]="0"
+        (clickEvent)="this.api.dataControlSE.changeResultTypeModal = false">
+      </app-pr-button>
+
+      <app-pr-button padding="medium" [text]="selectedResultType?.id !== 6 ? 'Confirm' : 'Continue'"
+        [verticalMargin]="0" (clickEvent)="changeResultType()"></app-pr-button>
+    </div>
+  </div>
+</p-dialog>
+
+<app-confirmation-modal-kp [body]="this.body" [selectedResultType]="selectedResultType"></app-confirmation-modal-kp>

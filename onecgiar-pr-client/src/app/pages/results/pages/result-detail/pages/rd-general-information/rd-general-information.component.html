@@ -17,9 +17,18 @@
     </div>
   </div>
 
-  <app-pr-input [attr.attribute-you-are-targeting]="'expression'" placeholder="Enter text" label="Indicator category"
-    type="text" [required]="false" [readOnly]="true" [(ngModel)]="this.generalInfoBody.result_type_name">
-  </app-pr-input>
+  <div style="display: flex; gap: 1rem; align-items: flex-end;">
+    <app-pr-input [attr.attribute-you-are-targeting]="'expression'" placeholder="Enter text" label="Indicator category"
+      type="text" [required]="false" [readOnly]="true" [(ngModel)]="this.generalInfoBody.result_type_name">
+    </app-pr-input>
+
+    <div class="change_result_type">
+      <app-pr-button text="Change result type" icon="move_up" [reverse]="true"
+        (click)="this.api.dataControlSE.changeResultTypeModal = true;" [rotateRight]="true" [verticalMargin]="0">
+      </app-pr-button>
+      <img class="under_construction" src="assets/work-in-progress.png" alt="" srcset="" width="30px" />
+    </div>
+  </div>
 
   <app-pr-input placeholder="Enter text" label="Title" type="text" [description]="titleTextInfo()"
     [readOnly]="this.dataControlSE.isKnowledgeProduct" [(ngModel)]="this.generalInfoBody.result_name" [maxWords]="30">
@@ -125,3 +134,5 @@
     [disabled]="!this.generalInfoBody.result_name"></app-save-button>
   <app-sync-button (clickSave)="onSyncSection()"></app-sync-button>
 </div>
+
+<app-change-result-type-modal [body]="this.generalInfoBody"></app-change-result-type-modal>
