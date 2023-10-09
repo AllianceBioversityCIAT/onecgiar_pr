@@ -213,7 +213,7 @@ export class ResultsTocResultRepository
     }
   }
 
-  async getRTRById(RtRId: number, resultId: number, initiativeId: number) {
+  async getRTRById(trId: number) {
     const queryData = `
     SELECT
       rtr.result_toc_result_id,
@@ -235,8 +235,7 @@ export class ResultsTocResultRepository
       results_toc_result rtr
       left join clarisa_initiatives ci on ci.id = rtr.initiative_id 
       left JOIN ${env.DB_TOC}.toc_results tr on tr.id = rtr.toc_result_id
-    where rtr.result_toc_result_id = ${RtRId || null}
-      or (rtr.initiative_id = ${initiativeId} and rtr.results_id = ${resultId});
+    where rtr.toc_result_id = ${trId || null};
     `;
     try {
       const resultTocResult: ResultsTocResult[] = await this.query(queryData);

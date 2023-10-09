@@ -3,7 +3,7 @@ export class CreateResultsTocResultDto {
     contributing_initiatives: initiativeInterfaces[];
     contributing_np_projects: donorInterfaceToc[];
     contributing_center: centerInterfacesToc[];
-    result_toc_result: resultToResultInterfaceToc;
+    result_toc_result: resultToResultInterfaceToc[];
     contributors_result_toc_result: resultToResultInterfaceToc[];
     impacts: ResultTocImpactsInterface[];
     pending_contributing_initiatives: shareResultRequestInterface[];

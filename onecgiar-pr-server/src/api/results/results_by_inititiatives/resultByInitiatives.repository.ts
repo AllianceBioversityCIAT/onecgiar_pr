@@ -533,13 +533,10 @@ export class ResultByInitiativesRepository
         );
       }
 
-      console.log(
-        'Log',
-        await this.findOneBy({
-          result_id: resultId,
-          initiative_id: initiative_id,
-        }),
-      );
+      await this.findOneBy({
+        result_id: resultId,
+        initiative_id: initiative_id,
+      });
 
       return {
         initiative_id: initiative_id,
