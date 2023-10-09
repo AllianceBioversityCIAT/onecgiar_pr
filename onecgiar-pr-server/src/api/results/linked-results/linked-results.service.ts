@@ -9,6 +9,7 @@ import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { LinkedResult } from './entities/linked-result.entity';
 import { VersionsService } from '../versions/versions.service';
 import { Version } from '../../versioning/entities/version.entity';
+import { ResultsPolicyChangesRepository } from '../summary/repositories/results-policy-changes.repository';
 
 @Injectable()
 export class LinkedResultsService {
@@ -17,6 +18,7 @@ export class LinkedResultsService {
     private readonly _handlersError: HandlersError,
     private readonly _versionsService: VersionsService,
     private readonly _resultRepository: ResultRepository,
+    private readonly _policyChangeRepository: ResultsPolicyChangesRepository,
   ) {}
   async create(createLinkedResultDto: CreateLinkedResultDto, user: TokenDto) {
     try {
@@ -131,8 +133,23 @@ export class LinkedResultsService {
           true,
         );
       }
+
+      if (result.result_type_id == 1) {
+        await this._policyChangeRepository.update(
+          { result_id: result.id },
+          {
+            linked_innovation_dev:
+              createLinkedResultDto.linkedInnovation.linked_innovation_dev || false,
+            linked_innovation_use:
+              createLinkedResultDto.linkedInnovation.linked_innovation_use || false,
+            last_updated_by: user.id,
+            last_updated_date: new Date(),
+          },
+        );
+      }
+
       return {
-        response: {},
+        response: 'Yasta',
         message: 'The data was updated correctly',
         status: HttpStatus.OK,
       };
@@ -147,10 +164,26 @@ export class LinkedResultsService {
         resultId,
       );
 
+      const result: Result = await this._resultRepository.getResultById(
+        resultId,
+      );
+
+      let linkedInnovation: any = null;
+      if (result.result_type_id == 1) {
+        linkedInnovation = await this._policyChangeRepository.findOne({
+          where: { result_id: result.id },
+          select: ['linked_innovation_dev', 'linked_innovation_use']
+        });
+      }
+
       return {
         response: {
           links: links.filter((el) => !!el.id),
           legacy_link: links.filter((el) => !el.id),
+          linkedInnovation: linkedInnovation ? linkedInnovation : {
+            linked_innovation_dev: false,
+            linked_innovation_use: false
+          },
         },
         message: 'The data was updated correctly',
         status: HttpStatus.OK,
