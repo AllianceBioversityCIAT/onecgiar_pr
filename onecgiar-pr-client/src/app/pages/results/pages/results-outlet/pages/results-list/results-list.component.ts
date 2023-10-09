@@ -107,6 +107,9 @@ export class ResultsListComponent implements OnInit, OnDestroy {
   onDeleteREsult() {
     this.api.alertsFe.show({ id: 'confirm-delete-result', title: `Are you sure you want to delete the result "${this.api.dataControlSE?.currentResult?.title}"?`, description: `If you delete this result it will no longer be displayed in the list of results.`, status: 'success', confirmText: 'Yes, delete' }, () => {
       this.resultsListService.showDeletingResultSpinner = true;
+      setTimeout(() => {
+        document.getElementById('custom-spinner').scrollIntoView({ behavior: 'smooth' });
+      }, 100);
       this.api.resultsSE.PATCH_DeleteResult(this.api.dataControlSE.currentResult.id).subscribe(
         resp => {
           this.api.alertsFe.show({ id: 'confirm-delete-result-su', title: `The result "${this.api.dataControlSE?.currentResult?.title}" was deleted`, description: ``, status: 'success' });
