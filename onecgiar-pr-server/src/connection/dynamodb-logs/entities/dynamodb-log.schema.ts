@@ -46,6 +46,7 @@ export class LogsModel {
         M: {
           resultCode: { N: `${this.onResult.result_code}` },
           resultId: { N: `${this.onResult.id}` },
+          versionId: { N: `${this.onResult.version_id}` },
         },
       },
       action: { S: `${this.action}` },
