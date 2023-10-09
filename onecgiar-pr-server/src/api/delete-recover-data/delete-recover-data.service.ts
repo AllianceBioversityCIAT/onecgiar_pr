@@ -276,6 +276,9 @@ export class DeleteRecoverDataService {
             user,
             Actions.DELETE,
             { class: ResultsService.name, method: `deleteResult` },
+            null,
+            { is_active: true },
+            { is_active: false },
           );
         } catch (error) {
           this._logger.warn(

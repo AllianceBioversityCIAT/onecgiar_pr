@@ -109,6 +109,8 @@ export class LogRepository {
     action: Actions,
     actionInfo?: { class?: string; method?: string },
     moreInfo?: string,
+    objBefore?: any,
+    objAfter?: any,
   ): Promise<LogsSchemaDto[]> {
     try {
       const dataLog = new LogsModel(
@@ -117,6 +119,8 @@ export class LogRepository {
         resultData,
         actionInfo,
         moreInfo,
+        objBefore,
+        objAfter,
       );
       const params = {
         TableName: 'reporting_logs_test',
