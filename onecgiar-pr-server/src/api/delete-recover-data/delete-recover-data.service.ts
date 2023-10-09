@@ -272,7 +272,7 @@ export class DeleteRecoverDataService {
             elasticJson,
           );
           await this._logRepository.createLog(
-            resultData.result_code,
+            resultData,
             user,
             Actions.DELETE,
             { class: ResultsService.name, method: `deleteResult` },
