@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 
 @Component({
@@ -11,13 +11,18 @@ export class ConfirmationKPComponent {
   @Input() mqapResult: any;
   @Input() selectedResultType: any;
 
-  confirmationText: string;
+  justification: string = '';
+  @Output() eventTextChanged: EventEmitter<string> = new EventEmitter();
 
   constructor(public api: ApiService) {}
 
+  emitJustificationUpdate() {
+    this.eventTextChanged.emit(this.justification);
+  }
+
   downloadPDF() {
     console.log('incoming body', this.body);
-    this.api.resultsSE.GET_downloadPDF(this.mqapResult.result_code, this.mqapResult.version_id).subscribe({
+    this.api.resultsSE.GET_downloadPDF(this.body.result_code, this.body.version_id).subscribe({
       next: response => {
         console.log('Downloading pdf...');
         let fileName = 'ResultReport.pdf'; // Default name if not found

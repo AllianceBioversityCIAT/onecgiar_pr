@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
 import { ApiService } from 'src/app/shared/services/api/api.service';
 import { GeneralInfoBody } from '../../models/generalInfoBody';
 import { ResultsListFilterService } from 'src/app/pages/results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
@@ -14,7 +14,7 @@ interface IOption {
   templateUrl: './change-result-type-modal.component.html',
   styleUrls: ['./change-result-type-modal.component.scss']
 })
-export class ChangeResultTypeModalComponent implements OnInit {
+export class ChangeResultTypeModalComponent implements OnInit, OnChanges {
   @Input() body = new GeneralInfoBody();
 
   validating = false;
@@ -22,6 +22,8 @@ export class ChangeResultTypeModalComponent implements OnInit {
   cgSpaceTitle = '';
 
   mqapJson: {};
+
+  confirmationText: string = '';
 
   selectedResultType: IOption | null = null;
   alertStatusDescKnowledgeProduct = `<dl>
@@ -32,10 +34,20 @@ export class ChangeResultTypeModalComponent implements OnInit {
 
   constructor(public api: ApiService, public resultsListFilterSE: ResultsListFilterService) {}
 
+  ngOnChanges(changes: SimpleChanges): void {
+    this.body['result_code'] = this.api.resultsSE.currentResultCode;
+    this.body['version_id'] = this.api.resultsSE.currentResultPhase;
+  }
+
   ngOnInit(): void {}
 
   CGSpaceDesc() {
     return `<strong>Disclaimer:</strong> please note that the old title <strong>"${this.body.result_name}"</strong> will be replace by the CGSpace title.`;
+  }
+
+  updateJustification(newJustification: string) {
+    console.log('change result type justification', newJustification);
+    this.confirmationText = newJustification;
   }
 
   onSelectOneChip(option: any) {
@@ -55,6 +67,7 @@ export class ChangeResultTypeModalComponent implements OnInit {
   isContinueButtonDisabled() {
     if (!this.selectedResultType) return true;
     if (this.selectedResultType?.id === 6 && this.cgSpaceTitle?.length === 0) return true;
+    if (this.selectedResultType?.id !== 6 && this.confirmationText?.length === 0) return true;
     return false;
   }
 
@@ -74,11 +87,8 @@ export class ChangeResultTypeModalComponent implements OnInit {
       next: resp => {
         this.mqapJson = resp.response;
         this.mqapJson['id'] = this.api.resultsSE.currentResultId;
-        this.mqapJson['result_code'] = this.api.resultsSE.currentResultCode;
-        this.mqapJson['version_id'] = this.api.resultsSE.currentResultPhase;
         this.cgSpaceTitle = resp.response.title;
         this.validating = false;
-        console.log('this.mqapJson', this.mqapJson);
         this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Metadata successfully retrieved', description: 'Title: ' + this.cgSpaceTitle, status: 'success' });
       },
       error: err => {

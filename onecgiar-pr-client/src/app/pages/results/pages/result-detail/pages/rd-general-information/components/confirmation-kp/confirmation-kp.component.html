@@ -30,7 +30,7 @@
     </div>
 
     <app-pr-input placeholder="Enter text" label="What is the reason for this change?" type="text" [required]="true"
-      [(ngModel)]="confirmationText"></app-pr-input>
+      [(ngModel)]="justification" (input)="emitJustificationUpdate();"></app-pr-input>
 
   </div>
 </div>

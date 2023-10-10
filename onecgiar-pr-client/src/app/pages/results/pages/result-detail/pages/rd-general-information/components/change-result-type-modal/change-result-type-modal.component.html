@@ -54,7 +54,7 @@
     </div>
 
     <div *ngIf="selectedResultType && selectedResultType?.id !== 6">
-      <app-confirmation-kp [body]="this.body" [selectedResultType]="selectedResultType"></app-confirmation-kp>
+      <app-confirmation-kp [body]="this.body" [selectedResultType]="selectedResultType" (eventTextChanged)="updateJustification($event)"></app-confirmation-kp>
     </div>
 
     <div *ngIf="selectedResultType" class="change_result_buttons">
