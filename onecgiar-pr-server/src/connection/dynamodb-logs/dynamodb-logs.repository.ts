@@ -128,7 +128,12 @@ export class LogRepository {
         Item: dataLog.getDataInsert(),
       };
       console.log('paramas: ', params);
-      const result = await ddbClient.send(new PutItemCommand(params));
+      const result = ddbClient
+        .send(new PutItemCommand(params))
+        .then((data) => data)
+        .catch((error) => {
+          console.log(error);
+        });
       console.log('result: ', result);
       return result['Items'];
     } catch (error) {
