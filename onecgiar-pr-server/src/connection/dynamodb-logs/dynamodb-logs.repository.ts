@@ -132,7 +132,7 @@ export class LogRepository {
         .send(new PutItemCommand(params))
         .then((data) => {
           console.log('data: ', data);
-          return (data as any).Item;
+          return (data as any)?.Item;
         })
         .catch((error) => {
           console.log('error: ', error);
