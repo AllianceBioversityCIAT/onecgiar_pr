@@ -249,13 +249,9 @@ export class DeleteRecoverDataService {
         resultData.id,
       );
 
-      console.log(`finished deleting the result with id ${resultData.id}`);
       const toUpdateFromElastic = await this._resultsService.findAllSimplified(
         resultData.id.toString(),
         true,
-      );
-      console.log(
-        `finish findAllSimplified for the result with id ${toUpdateFromElastic}`,
       );
       if (toUpdateFromElastic.status !== HttpStatus.OK) {
         this._logger.warn(
@@ -263,27 +259,17 @@ export class DeleteRecoverDataService {
         );
       } else {
         try {
-          console.log(
-            `start ElasticOperationDto for the result with id ${toUpdateFromElastic.response[0]}`,
-          );
           const elasticOperations = [
             new ElasticOperationDto('DELETE', toUpdateFromElastic.response[0]),
           ];
-          console.log(
-            `getBulkElasticOperationResults for the result with id ${elasticOperations}`,
-          );
           const elasticJson =
             this._elasticService.getBulkElasticOperationResults(
               process.env.ELASTIC_DOCUMENT_NAME,
               elasticOperations,
             );
-          console.log(
-            `sendBulkOperationToElastic for the result with id ${elasticJson}`,
-          );
           const bulk = await this._elasticService.sendBulkOperationToElastic(
             elasticJson,
           );
-          console.log(`bulk for the result with id ${bulk}`);
           await this._logRepository.createLog(
             resultData,
             user,
@@ -293,14 +279,12 @@ export class DeleteRecoverDataService {
             { is_active: true },
             { is_active: false },
           );
-          console.log('end of the try');
         } catch (error) {
           this._logger.warn(
             `the elastic removal failed for the result #${resultData.id}`,
           );
         }
       }
-      console.log(`finished deleting the result with id ${resultData.id}`);
       return this._returnResponse.format({
         message: `The result with code ${resultData.result_code} has been deleted`,
         response: resultData,

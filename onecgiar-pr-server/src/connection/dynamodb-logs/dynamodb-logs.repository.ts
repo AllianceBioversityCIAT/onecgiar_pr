@@ -113,6 +113,7 @@ export class LogRepository {
     objAfter?: any,
   ): Promise<LogsSchemaDto[]> {
     try {
+      console.log(`start createLog`);
       const dataLog = new LogsModel(
         action,
         user,
@@ -126,8 +127,9 @@ export class LogRepository {
         TableName: 'reporting_logs_test',
         Item: dataLog.getDataInsert(),
       };
-
+      console.log('paramas: ', params);
       const result = await ddbClient.send(new PutItemCommand(params));
+      console.log('result: ', result);
       return result['Items'];
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
