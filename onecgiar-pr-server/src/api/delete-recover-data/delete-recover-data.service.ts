@@ -129,6 +129,7 @@ export class DeleteRecoverDataService {
 
   async deleteResult(result_id: number, user: TokenDto) {
     try {
+      console.log(`A result is going to be deleted with id ${result_id}`);
       const resultData = await this._resultRepository.findOne({
         where: {
           id: result_id,
@@ -286,6 +287,7 @@ export class DeleteRecoverDataService {
           );
         }
       }
+      console.log(`finished deleting the result with id ${resultData.id}`);
       return this._returnResponse.format({
         message: `The result with code ${resultData.result_code} has been deleted`,
         response: resultData,
