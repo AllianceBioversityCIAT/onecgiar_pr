@@ -142,113 +142,280 @@ export class DeleteRecoverDataService {
           statusCode: HttpStatus.NOT_FOUND,
         });
       }
-
-      await this._ipsrRepository.logicalDelete(resultData.id);
-      await this._innovationPackagingExpertRepository.logicalDelete(
-        resultData.id,
+      let count = 0;
+      console.log(
+        `step: ${count++}`,
+        await this._ipsrRepository.logicalDelete(resultData.id),
       );
-      await this._resultIpExpertisesRepository.logicalDelete(resultData.id);
-      await this._resultIpAAOutcomeRepository.logicalDelete(resultData.id);
-      await this._resultIpEoiOutcomeRepository.logicalDelete(resultData.id);
-      await this._resultIpExpertWorkshopOrganizedRepostory.logicalDelete(
-        resultData.id,
+      console.log(
+        `step: ${count++}`,
+        await this._innovationPackagingExpertRepository.logicalDelete(
+          resultData.id,
+        ),
       );
-      await this._resultIpImpactAreaRepository.logicalDelete(resultData.id);
-      await this._resultIpSdgTargetRepository.logicalDelete(resultData.id);
-      await this._resultInnovationPackageRepository.logicalDelete(
-        resultData.id,
+      console.log(
+        `step: ${count++}`,
+        await this._resultIpExpertisesRepository.logicalDelete(resultData.id),
       );
-      await this._resultIpMeasureRepository.logicalDelete(resultData.id);
-      await this._resultsByIpInnovationUseMeasureRepository.logicalDelete(
-        resultData.id,
+      console.log(
+        `step: ${count++}`,
+        await this._resultIpAAOutcomeRepository.logicalDelete(resultData.id),
       );
-      await this._resultsComplementaryInnovationRepository.logicalDelete(
-        resultData.id,
+      console.log(
+        `step: ${count++}`,
+        await this._resultIpEoiOutcomeRepository.logicalDelete(resultData.id),
       );
-      await this._resultsComplementaryInnovationsFunctionRepository.logicalDelete(
-        resultData.id,
+      console.log(
+        `step: ${count++}`,
+        await this._resultIpExpertWorkshopOrganizedRepostory.logicalDelete(
+          resultData.id,
+        ),
       );
-      await this._resultsInnovationPackagesEnablerTypeRepository.logicalDelete(
-        resultData.id,
+      console.log(
+        `step: ${count++}`,
+        await this._resultIpImpactAreaRepository.logicalDelete(resultData.id),
       );
-      await this._resultsIpActorRepository.logicalDelete(resultData.id);
-      await this._resultsIpInstitutionTypeRepository.logicalDelete(
-        resultData.id,
+      console.log(
+        `step: ${count++}`,
+        await this._resultIpSdgTargetRepository.logicalDelete(resultData.id),
       );
-      await this._resultRepository.logicalDelete(resultData.id);
-      await this._linkedResultRepository.logicalDelete(resultData.id);
-      await this._nonPooledProjectRepository.logicalDelete(resultData.id);
-      await this._resultActorRepository.logicalDelete(resultData.id);
-      await this._resultByInstitutionsByDeliveriesTypeRepository.logicalDelete(
-        resultData.id,
+      console.log(
+        `step: ${count++}`,
+        await this._resultInnovationPackageRepository.logicalDelete(
+          resultData.id,
+        ),
       );
-      await this._resultCountryRepository.logicalDelete(resultData.id);
-      await this._resultAnswerRepository.logicalDelete(resultData.id);
-      await this._resultRegionRepository.logicalDelete(resultData.id);
-      await this._resultsCenterRepository.logicalDelete(resultData.id);
-      await this._resultsImpactAreaIndicatorRepository.logicalDelete(
-        resultData.id,
+      console.log(
+        `step: ${count++}`,
+        await this._resultIpMeasureRepository.logicalDelete(resultData.id),
       );
-      await this._resultsImpactAreaTargetRepository.logicalDelete(
-        resultData.id,
+      console.log(
+        `step: ${count++}`,
+        await this._resultsByIpInnovationUseMeasureRepository.logicalDelete(
+          resultData.id,
+        ),
       );
-      await this._resultsInvestmentDiscontinuedOptionRepository.logicalDelete(
-        resultData.id,
+      console.log(
+        `step: ${count++}`,
+        await this._resultsComplementaryInnovationRepository.logicalDelete(
+          resultData.id,
+        ),
       );
-      await this._resultsKnowledgeProductAltmetricRepository.logicalDelete(
-        resultData.id,
+      console.log(
+        `step: ${count++}`,
+        await this._resultsComplementaryInnovationsFunctionRepository.logicalDelete(
+          resultData.id,
+        ),
       );
-      await this._resultsKnowledgeProductAuthorRepository.logicalDelete(
-        resultData.id,
+      console.log(
+        `step: ${count++}`,
+        await this._resultsInnovationPackagesEnablerTypeRepository.logicalDelete(
+          resultData.id,
+        ),
       );
-      await this._resultsKnowledgeProductKeywordRepository.logicalDelete(
-        resultData.id,
+      console.log(
+        `step: ${count++}`,
+        await this._resultsIpActorRepository.logicalDelete(resultData.id),
       );
-      await this._resultsKnowledgeProductMetadataRepository.logicalDelete(
-        resultData.id,
+      console.log(
+        `step: ${count++}`,
+        await this._resultsIpInstitutionTypeRepository.logicalDelete(
+          resultData.id,
+        ),
       );
-      await this._resultsKnowledgeProductsRepository.logicalDelete(
-        resultData.id,
+      console.log(
+        `step: ${count++}`,
+        await this._resultRepository.logicalDelete(resultData.id),
       );
-      await this._resultsActionAreaOutcomeRepository.logicalDelete(
-        resultData.id,
+      console.log(
+        `step: ${count++}`,
+        await this._linkedResultRepository.logicalDelete(resultData.id),
       );
-      await this._resultsTocImpactAreaTargetRepository.logicalDelete(
-        resultData.id,
+      console.log(
+        `step: ${count++}`,
+        await this._nonPooledProjectRepository.logicalDelete(resultData.id),
       );
-      await this._resultsTocTargetIndicatorRepository.logicalDelete(
-        resultData.id,
+      console.log(
+        `step: ${count++}`,
+        await this._resultActorRepository.logicalDelete(resultData.id),
       );
-      await this._resultsTocSdgTargetRepository.logicalDelete(resultData.id);
-      await this._resultsSdgTargetRepository.logicalDelete(resultData.id);
-      await this._resultsTocResultIndicatorsRepository.logicalDelete(
-        resultData.id,
+      console.log(
+        `step: ${count++}`,
+        await this._resultByInstitutionsByDeliveriesTypeRepository.logicalDelete(
+          resultData.id,
+        ),
       );
-      await this._resultsTocResultRepository.logicalDelete(resultData.id);
-      await this._resultValidationRepository.logicalDelete(resultData.id);
-      await this._resultByEvidencesRepository.logicalDelete(resultData.id);
-      await this._resultByInitiativesRepository.logicalDelete(resultData.id);
-      await this._resultByIntitutionsTypeRepository.logicalDelete(
-        resultData.id,
+      console.log(
+        `step: ${count++}`,
+        await this._resultCountryRepository.logicalDelete(resultData.id),
       );
-      await this._resultByIntitutionsRepository.logicalDelete(resultData.id);
-      await this._resultsCapacityDevelopmentsRepository.logicalDelete(
-        resultData.id,
+      console.log(
+        `step: ${count++}`,
+        await this._resultAnswerRepository.logicalDelete(resultData.id),
       );
-      await this._resultsInnovationsDevRepository.logicalDelete(resultData.id);
-      await this._resultsInnovationsUseMeasuresRepository.logicalDelete(
-        resultData.id,
+      console.log(
+        `step: ${count++}`,
+        await this._resultRegionRepository.logicalDelete(resultData.id),
       );
-      await this._resultsInnovationsUseRepository.logicalDelete(resultData.id);
-      await this._resultsPolicyChangesRepository.logicalDelete(resultData.id);
-      await this._shareResultRequestRepository.logicalDelete(resultData.id);
-      await this._evidencesRepository.logicalDelete(resultData.id);
-      await this._resultsKnowledgeProductFairScoreRepository.logicalDelete(
-        resultData.id,
+      console.log(
+        `step: ${count++}`,
+        await this._resultsCenterRepository.logicalDelete(resultData.id),
       );
-      await this._resultsKnowledgeProductInstitutionRepository.logicalDelete(
-        resultData.id,
+      console.log(
+        `step: ${count++}`,
+        await this._resultsImpactAreaIndicatorRepository.logicalDelete(
+          resultData.id,
+        ),
       );
+      console.log(
+        `step: ${count++}`,
+        await this._resultsImpactAreaTargetRepository.logicalDelete(
+          resultData.id,
+        ),
+      );
+      console.log(
+        `step: ${count++}`,
+        await this._resultsInvestmentDiscontinuedOptionRepository.logicalDelete(
+          resultData.id,
+        ),
+      );
+      console.log(
+        `step: ${count++}`,
+        await this._resultsKnowledgeProductAltmetricRepository.logicalDelete(
+          resultData.id,
+        ),
+      );
+      console.log(
+        `step: ${count++}`,
+        await this._resultsKnowledgeProductAuthorRepository.logicalDelete(
+          resultData.id,
+        ),
+      );
+      console.log(
+        `step: ${count++}`,
+        await this._resultsKnowledgeProductKeywordRepository.logicalDelete(
+          resultData.id,
+        ),
+      );
+      console.log(
+        `step: ${count++}`,
+        await this._resultsKnowledgeProductMetadataRepository.logicalDelete(
+          resultData.id,
+        ),
+      );
+      console.log(
+        `step: ${count++}`,
+        await this._resultsKnowledgeProductsRepository.logicalDelete(
+          resultData.id,
+        ),
+      );
+      console.log(
+        `step: ${count++}`,
+        await this._resultsActionAreaOutcomeRepository.logicalDelete(
+          resultData.id,
+        ),
+      );
+      console.log(
+        `step: ${count++}`,
+        await this._resultsTocImpactAreaTargetRepository.logicalDelete(
+          resultData.id,
+        ),
+      );
+      console.log(
+        `step: ${count++}`,
+        await this._resultsTocTargetIndicatorRepository.logicalDelete(
+          resultData.id,
+        ),
+      );
+      console.log(
+        `step: ${count++}`,
+        await this._resultsTocSdgTargetRepository.logicalDelete(resultData.id),
+      );
+      console.log(
+        `step: ${count++}`,
+        await this._resultsSdgTargetRepository.logicalDelete(resultData.id),
+      );
+      console.log(
+        `step: ${count++}`,
+        await this._resultsTocResultIndicatorsRepository.logicalDelete(
+          resultData.id,
+        ),
+      );
+      console.log(
+        `step: ${count++}`,
+        await this._resultsTocResultRepository.logicalDelete(resultData.id),
+      );
+      console.log(
+        `step: ${count++}`,
+        await this._resultValidationRepository.logicalDelete(resultData.id),
+      );
+      console.log(
+        `step: ${count++}`,
+        await this._resultByEvidencesRepository.logicalDelete(resultData.id),
+      );
+      console.log(
+        `step: ${count++}`,
+        await this._resultByInitiativesRepository.logicalDelete(resultData.id),
+      );
+      console.log(
+        `step: ${count++}`,
+        await this._resultByIntitutionsTypeRepository.logicalDelete(
+          resultData.id,
+        ),
+      );
+      console.log(
+        `step: ${count++}`,
+        await this._resultByIntitutionsRepository.logicalDelete(resultData.id),
+      );
+      console.log(
+        `step: ${count++}`,
+        await this._resultsCapacityDevelopmentsRepository.logicalDelete(
+          resultData.id,
+        ),
+      );
+      console.log(
+        `step: ${count++}`,
+        await this._resultsInnovationsDevRepository.logicalDelete(
+          resultData.id,
+        ),
+      );
+      console.log(
+        `step: ${count++}`,
+        await this._resultsInnovationsUseMeasuresRepository.logicalDelete(
+          resultData.id,
+        ),
+      );
+      console.log(
+        `step: ${count++}`,
+        await this._resultsInnovationsUseRepository.logicalDelete(
+          resultData.id,
+        ),
+      );
+      console.log(
+        `step: ${count++}`,
+        await this._resultsPolicyChangesRepository.logicalDelete(resultData.id),
+      );
+      console.log(
+        `step: ${count++}`,
+        await this._shareResultRequestRepository.logicalDelete(resultData.id),
+      );
+      console.log(
+        `step: ${count++}`,
+        await this._evidencesRepository.logicalDelete(resultData.id),
+      );
+      console.log(
+        `step: ${count++}`,
+        await this._resultsKnowledgeProductFairScoreRepository.logicalDelete(
+          resultData.id,
+        ),
+      );
+      console.log(
+        `step: ${count++}`,
+        await this._resultsKnowledgeProductInstitutionRepository.logicalDelete(
+          resultData.id,
+        ),
+      );
+      console.log(`complete all the logical deletes`);
       const toUpdateFromElastic = await this._resultsService.findAllSimplified(
         resultData.id.toString(),
         true,
