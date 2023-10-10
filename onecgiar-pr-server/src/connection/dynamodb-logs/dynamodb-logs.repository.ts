@@ -128,14 +128,16 @@ export class LogRepository {
         Item: dataLog.getDataInsert(),
       };
       console.log('paramas: ', params);
-      const result = ddbClient
+      return await ddbClient
         .send(new PutItemCommand(params))
-        .then((data) => data)
+        .then((data) => {
+          console.log('data: ', data);
+          return (data as any).Item;
+        })
         .catch((error) => {
-          console.log(error);
+          console.log('error: ', error);
+          return error;
         });
-      console.log('result: ', result);
-      return result['Items'];
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: LogRepository.name,
