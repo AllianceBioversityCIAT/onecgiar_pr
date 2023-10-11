@@ -47,4 +47,5 @@ export class ResultsKnowledgeProductDto {
   cgspace_phase_year: number;
   result_code?: number;
   version_id?: number;
+  modification_justification?: string;
 }

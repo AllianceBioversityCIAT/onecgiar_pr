@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders, HttpParamsOptions } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParamsOptions, HttpResponse } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
 import { map, tap, catchError, of, retry, throwError } from 'rxjs';
 import { ResultBody } from '../../interfaces/result.interface';
@@ -564,6 +564,10 @@ export class ResultsApiService {
 
   GETInnovationByResultId(resultId) {
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation/${resultId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+  }
+
+  GET_downloadPDF(resultCode, resultPhase) {
+    return this.http.get(`${environment.apiBaseUrl}api/platform-report/result/${resultCode}?phase=${resultPhase}&downloadable=true`, { responseType: 'blob', observe: 'response' });
   }
 
   POSTResultInnovationPackage(body) {

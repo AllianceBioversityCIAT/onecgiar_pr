@@ -11,8 +11,9 @@
         save a copy of this information, as any changes to the result type are irreversible and will alter this
         data.
       </p>
-      <div class="link_button update" (click)="downloadPDF()">
-        <app-pdf-icon hexadecimalColor="#FFFFFF"></app-pdf-icon>
+      <div class="link_button update" (click)="downloadPDF()" [ngClass]="{'globalDisabled': this.isDownloading}">
+        <app-pdf-icon hexadecimalColor="#FFFFFF" *ngIf="!this.isDownloading "></app-pdf-icon>
+        <i class="material-icons-round" [ngClass]="{'rotating': true}" *ngIf="this.isDownloading">loop</i>
         Download PDF
       </div>
     </div>
@@ -30,7 +31,7 @@
     </div>
 
     <app-pr-input placeholder="Enter text" label="What is the reason for this change?" type="text" [required]="true"
-      [(ngModel)]="confirmationText"></app-pr-input>
+      [(ngModel)]="justification" (input)="emitJustificationUpdate();" [isStatic]="true"></app-pr-input>
 
   </div>
 </div>

@@ -63,6 +63,7 @@ import { ResultsKnowledgeProductFairScoreRepository } from './repositories/resul
 import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
 import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
 import { ResultsCenter } from '../results-centers/entities/results-center.entity';
+import { Actions } from '../../../connection/dynamodb-logs/dto/enumAction.const';
 
 @Injectable()
 export class ResultsKnowledgeProductsService {
@@ -679,10 +680,15 @@ export class ResultsKnowledgeProductsService {
     user: TokenDto,
   ) {
     try {
-      if (!resultsKnowledgeProductDto.result_data) {
+      if (
+        !(
+          resultsKnowledgeProductDto.id ||
+          resultsKnowledgeProductDto.result_data
+        )
+      ) {
         throw {
           response: {},
-          message: 'missing data needed to create a result',
+          message: 'Missing data needed to create a result',
           status: HttpStatus.BAD_REQUEST,
         };
       }
@@ -700,16 +706,42 @@ export class ResultsKnowledgeProductsService {
         };
       }
 
-      let newResultResponse = await this.createOwnerResult(
-        resultsKnowledgeProductDto.result_data,
-        user,
-      );
+      let newResult: Result = null;
 
-      if (newResultResponse.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: newResultResponse });
+      if (!resultsKnowledgeProductDto.id) {
+        let newResultResponse = await this.createOwnerResult(
+          resultsKnowledgeProductDto.result_data,
+          user,
+        );
+
+        if (newResultResponse.status >= 300) {
+          throw this._handlersError.returnErrorRes({
+            error: newResultResponse,
+          });
+        }
+
+        newResult = newResultResponse.response as Result;
+      } else {
+        newResult = await this._resultRepository.findOne({
+          where: { id: resultsKnowledgeProductDto.id },
+        });
+        newResult.result_type_id = 6;
+        newResult.result_level_id = 4;
+        newResult.last_action_type = Actions.CHANGE_RESULT_TYPE;
+        newResult.justification_action_type =
+          resultsKnowledgeProductDto.modification_justification;
+
+        await this._resultRepository.update(
+          { id: newResult.id },
+          {
+            result_type_id: newResult.result_type_id,
+            result_level_id: newResult.result_level_id,
+            last_action_type: newResult.last_action_type,
+            justification_action_type: newResult.justification_action_type,
+          },
+        );
       }
 
-      const newResult = newResultResponse.response as Result;
       resultsKnowledgeProductDto.version_id = newResult.version_id;
       resultsKnowledgeProductDto.result_code = newResult.result_code;
 

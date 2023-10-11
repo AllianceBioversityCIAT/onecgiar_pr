@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { ApiService } from 'src/app/shared/services/api/api.service';
 import { GeneralInfoBody } from '../../models/generalInfoBody';
 import { ResultsListFilterService } from 'src/app/pages/results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
@@ -14,11 +14,16 @@ interface IOption {
   templateUrl: './change-result-type-modal.component.html',
   styleUrls: ['./change-result-type-modal.component.scss']
 })
-export class ChangeResultTypeModalComponent implements OnInit {
+export class ChangeResultTypeModalComponent implements OnChanges {
   @Input() body = new GeneralInfoBody();
 
+  validating = false;
   cgSpaceHandle = '';
-  newTitleText = '';
+  cgSpaceTitle = '';
+
+  mqapJson: {};
+
+  confirmationText: string = '';
 
   selectedResultType: IOption | null = null;
   alertStatusDescKnowledgeProduct = `<dl>
@@ -29,24 +34,39 @@ export class ChangeResultTypeModalComponent implements OnInit {
 
   constructor(public api: ApiService, public resultsListFilterSE: ResultsListFilterService) {}
 
-  ngOnInit(): void {}
+  ngOnChanges(changes: SimpleChanges): void {
+    this.body['result_code'] = this.api.resultsSE.currentResultCode;
+    this.body['version_id'] = this.api.resultsSE.currentResultPhase;
+  }
 
   CGSpaceDesc() {
     return `<strong>Disclaimer:</strong> please note that the old title <strong>"${this.body.result_name}"</strong> will be replace by the CGSpace title.`;
   }
 
-  onSelectOneChip(option: any) {
+  updateJustification(newJustification: string) {
+    this.confirmationText = newJustification;
+  }
+
+  onSelectOneChip(option: any, filter: any) {
     if (option.id !== this.body.result_type_id) {
-      if (!option.selected) return (this.selectedResultType = null);
-
-      this.selectedResultType = option;
-
-      this.resultsListFilterSE.filters.resultLevel.forEach((option: any) => {
-        option.options.forEach((option: any) => {
-          if (option.id !== this.selectedResultType?.id) option.selected = false;
+      this.resultsListFilterSE.filters.resultLevel.forEach((resultLevelOption: any) => {
+        resultLevelOption.options.forEach((resultTypeOption: any) => {
+          resultTypeOption.resultLevelId = resultLevelOption.id;
+          resultTypeOption.selected = false;
         });
       });
+
+      this.selectedResultType = { ...option, selected: true };
+
+      this.resultsListFilterSE.filters.resultLevel.find((resultLevelOption: any) => resultLevelOption.id === filter.id).options.find((resultTypeOption: any) => resultTypeOption.id === option.id).selected = true;
     }
+  }
+
+  isContinueButtonDisabled() {
+    if (!this.selectedResultType) return true;
+    if (this.selectedResultType?.id === 6 && this.cgSpaceTitle?.length === 0) return true;
+    if (this.selectedResultType?.id !== 6 && this.confirmationText?.length === 0) return true;
+    return false;
   }
 
   changeResultType() {
@@ -57,5 +77,23 @@ export class ChangeResultTypeModalComponent implements OnInit {
     }
 
     console.log('changing result type');
+  }
+
+  GET_mqapValidation() {
+    this.validating = true;
+    this.api.resultsSE.GET_mqapValidation(this.cgSpaceHandle).subscribe({
+      next: resp => {
+        this.mqapJson = resp.response;
+        this.mqapJson['id'] = this.api.resultsSE.currentResultId;
+        this.cgSpaceTitle = resp.response.title;
+        this.validating = false;
+        this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Metadata successfully retrieved', description: 'Title: ' + this.cgSpaceTitle, status: 'success' });
+      },
+      error: err => {
+        this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
+        this.validating = false;
+        this.cgSpaceTitle = '';
+      }
+    });
   }
 }
