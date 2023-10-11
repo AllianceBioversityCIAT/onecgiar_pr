@@ -29,6 +29,19 @@ export class ResultsImpactAreaIndicatorRepository
     super(ResultsImpactAreaIndicator, dataSource.createEntityManager());
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete riai from results_impact_area_indicators riai where riai.result_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsImpactAreaIndicatorRepository.name,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(resultId: number): Promise<ResultsImpactAreaIndicator> {
     const queryData = `update results_impact_area_indicators riai set riai.is_active = 0 where riai.result_id = ? and riai.is_active > 0;`;
     return this.query(queryData, [resultId])

@@ -26,6 +26,18 @@ export class ResultByInitiativesRepository
   ) {
     super(ResultsByInititiative, dataSource.createEntityManager());
   }
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete rbi from results_by_inititiative rbi where result_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          className: ResultByInitiativesRepository.name,
+          error: err,
+          debug: true,
+        }),
+      );
+  }
 
   logicalDelete(resultId: number): Promise<ResultsByInititiative> {
     const queryData = `update results_by_inititiative set is_active = false where result_id = ?`;

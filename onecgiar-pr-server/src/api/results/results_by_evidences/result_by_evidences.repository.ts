@@ -16,6 +16,19 @@ export class ResultByEvidencesRepository
     super(ResultsByEvidence, dataSource.createEntityManager());
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const dataQuery = `delete rbe from results_by_evidence rbe where rbe.results_id = ?;`;
+    return this.query(dataQuery, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultByEvidencesRepository.name,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(resultId: number): Promise<ResultsByEvidence> {
     const dataQuery = `update results_by_evidence rbe set rbe.is_active = 0 where rbe.results_id = ? and rbe.is_active > 0;`;
     return this.query(dataQuery, [resultId])

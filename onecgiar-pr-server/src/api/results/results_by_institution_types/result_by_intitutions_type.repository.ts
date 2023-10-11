@@ -27,6 +27,19 @@ export class ResultByIntitutionsTypeRepository
     super(ResultsByInstitutionType, dataSource.createEntityManager());
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete rbit from results_by_institution_type rbit where rbit.results_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          className: ResultByIntitutionsTypeRepository.name,
+          error: err,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(resultId: number): Promise<ResultsByInstitutionType> {
     const queryData = `update results_by_institution_type set is_active = false where results_id = ?`;
     return this.query(queryData, [resultId])

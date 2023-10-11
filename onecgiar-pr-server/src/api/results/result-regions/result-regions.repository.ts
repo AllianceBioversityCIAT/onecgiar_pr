@@ -23,6 +23,19 @@ export class ResultRegionRepository
     super(ResultRegion, dataSource.createEntityManager());
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete rr from result_region rr where rr.result_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultRegionRepository.name,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(resultId: number): Promise<ResultRegion> {
     const queryData = `update result_region set is_active = 0 where result_id = ?;`;
     return this.query(queryData, [resultId])

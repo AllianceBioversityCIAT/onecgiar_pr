@@ -30,6 +30,21 @@ export class ResultsKnowledgeProductAltmetricRepository
     super(ResultsKnowledgeProductAltmetric, dataSource.createEntityManager());
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete rka from results_kp_altmetrics rka 
+    inner join results_knowledge_product rkp on rka.result_knowledge_product_id = rkp.result_knowledge_product_id 
+      where rkp.results_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsKnowledgeProductAltmetricRepository.name,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(resultId: number): Promise<ResultsKnowledgeProductAltmetric> {
     const queryData = `update results_kp_altmetrics rka 
     inner join results_knowledge_product rkp on rka.result_knowledge_product_id = rkp.result_knowledge_product_id 

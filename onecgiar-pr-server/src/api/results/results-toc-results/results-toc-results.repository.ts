@@ -40,6 +40,19 @@ export class ResultsTocResultRepository
     super(ResultsTocResult, dataSource.createEntityManager());
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const dataQuery = `delete rtr from results_toc_result rtr where rtr.results_id = ?;`;
+    return this.query(dataQuery, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsTocResultRepository.name,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(resultId: number): Promise<ResultsTocResult> {
     const dataQuery = `update results_toc_result rtr set rtr.is_active = 0 where rtr.results_id = ? and rtr.is_active > 0;`;
     return this.query(dataQuery, [resultId])

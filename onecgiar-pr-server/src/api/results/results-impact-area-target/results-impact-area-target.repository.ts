@@ -28,6 +28,19 @@ export class ResultsImpactAreaTargetRepository
     super(ResultsImpactAreaTarget, dataSource.createEntityManager());
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete riat from results_impact_area_target riat where riat.result_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsImpactAreaTargetRepository.name,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(resultId: number): Promise<ResultsImpactAreaTarget> {
     const queryData = `update results_impact_area_target riat set riat.is_active = 0 where riat.result_id = ? and riat.is_active > 0;`;
     return this.query(queryData, [resultId])

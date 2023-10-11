@@ -30,6 +30,19 @@ export class ResultsKnowledgeProductsRepository
     super(ResultsKnowledgeProduct, dataSource.createEntityManager());
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const dataQuery = `delete rkp from results_knowledge_product rkp where rkp.results_id = ?;`;
+    return this.query(dataQuery, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsKnowledgeProductsRepository.name,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(resultId: number): Promise<ResultsKnowledgeProduct> {
     const dataQuery = `update results_knowledge_product set is_active = 0 where results_id = ?`;
     return this.query(dataQuery, [resultId])

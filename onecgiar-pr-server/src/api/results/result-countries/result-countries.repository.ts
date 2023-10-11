@@ -22,6 +22,19 @@ export class ResultCountryRepository
     super(ResultCountry, dataSource.createEntityManager());
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete rc from result_country rc WHERE rc.result_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          className: ResultCountryRepository.name,
+          error: err,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(resultId: number): Promise<ResultCountry> {
     const queryData = `UPDATE \`result_country\` SET is_active = 0 WHERE result_id = ?`;
     return this.query(queryData, [resultId])

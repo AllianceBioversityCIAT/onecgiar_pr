@@ -30,6 +30,21 @@ export class ResultsKnowledgeProductMetadataRepository
     super(ResultsKnowledgeProductMetadata, dataSource.createEntityManager());
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete rkm from results_kp_metadata rkm 
+    inner join results_knowledge_product rkp on rkm.result_knowledge_product_id = rkp.result_knowledge_product_id 
+  where rkp.results_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsKnowledgeProductMetadataRepository.name,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(resultId: number): Promise<ResultsKnowledgeProductMetadata> {
     const queryData = `update results_kp_metadata rkm 
     inner join results_knowledge_product rkp on rkm.result_knowledge_product_id = rkp.result_knowledge_product_id 
