@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultHistoryOfChangesModalService } from './components/result-history-of-changes-modal/result-history-of-changes-modal.service';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
+import { PhasesService } from '../../../../shared/services/global/phases.service';
 
 @Component({
   selector: 'app-completeness-status',
@@ -12,6 +13,7 @@ export class CompletenessStatusComponent implements OnInit {
   textToFind = '';
   resultsList: any[];
   initiativesSelected = [];
+  phasesSelected = [];
   show_full_screen = false;
   allInitiatives = [];
   requesting = false;
@@ -33,16 +35,17 @@ export class CompletenessStatusComponent implements OnInit {
     { title: 'Section seven', attr: 'section_seven_value' }
   ];
 
-  constructor(public api: ApiService, public resultHistoryOfChangesModalSE: ResultHistoryOfChangesModalService, public exportTablesSE: ExportTablesService) {}
+  constructor(public api: ApiService, public phasesSE: PhasesService, public resultHistoryOfChangesModalSE: ResultHistoryOfChangesModalService, public exportTablesSE: ExportTablesService) {}
 
   ngOnInit(): void {
-    this.POST_reportSesultsCompleteness([], 1);
+    this.POST_reportSesultsCompleteness([], [], 1);
     this.GET_AllInitiatives();
   }
 
-  POST_reportSesultsCompleteness(inits: any[], role?: number) {
-    this.api.resultsSE.POST_reportSesultsCompleteness(inits, role).subscribe(({ response }) => {
+  POST_reportSesultsCompleteness(inits: any[], phases: any[], role?: number) {
+    this.api.resultsSE.POST_reportSesultsCompleteness(inits, phases, role).subscribe(({ response }) => {
       this.resultsList = response;
+      console.log(response);
     });
   }
 
@@ -104,8 +107,8 @@ export class CompletenessStatusComponent implements OnInit {
 
   onSelectInit() {
     const inits = this.initiativesSelected.map(init => init.id);
-
-    this.POST_reportSesultsCompleteness(inits, inits?.length ? null : 1);
+    const phases = this.phasesSelected.map(phase => phase.id);
+    this.POST_reportSesultsCompleteness(inits, phases, inits?.length ? null : 1);
   }
 
   convertToYesOrNot(value, nullOptionindex?) {

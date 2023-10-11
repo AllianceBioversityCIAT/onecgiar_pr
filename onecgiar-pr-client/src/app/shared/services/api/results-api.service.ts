@@ -495,8 +495,8 @@ export class ResultsApiService {
     return this.http.patch<any>(`${this.apiBaseUrl}submissions/unsubmit/${this.currentResultId}`, { comment });
   }
 
-  POST_reportSesultsCompleteness(initiatives: any[], rol_user?) {
-    return this.http.post<any>(`${this.apiBaseUrl}admin-panel/report/results/completeness`, { rol_user, initiatives }).pipe(
+  POST_reportSesultsCompleteness(initiatives: any[], phases: any[], rol_user?) {
+    return this.http.post<any>(`${this.apiBaseUrl}admin-panel/report/results/completeness`, { rol_user, initiatives, phases }).pipe(
       map(resp => {
         //(resp.responee);
         resp?.response.map(result => {
