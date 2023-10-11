@@ -12,6 +12,8 @@ export class ConfirmationKPComponent {
   @Input() selectedResultType: any;
 
   justification: string = '';
+  isDownloading = false;
+
   @Output() eventTextChanged: EventEmitter<string> = new EventEmitter();
 
   constructor(public api: ApiService) {}
@@ -21,11 +23,11 @@ export class ConfirmationKPComponent {
   }
 
   downloadPDF() {
-    console.log('incoming body', this.body);
+    this.isDownloading = true;
+
     this.api.resultsSE.GET_downloadPDF(this.body.result_code, this.body.version_id).subscribe({
       next: response => {
-        console.log('Downloading pdf...');
-        let fileName = 'ResultReport.pdf'; // Default name if not found
+        let fileName = 'ResultReport.pdf';
         response.headers.keys().forEach(key => {
           if (key.toLowerCase() === 'content-disposition') {
             const contentDisposition = response.headers.get(key);
@@ -50,9 +52,11 @@ export class ConfirmationKPComponent {
         document.body.removeChild(a);
 
         URL.revokeObjectURL(pdfBlobUrl);
+        this.isDownloading = false;
       },
       error: err => {
         console.error('your error handling here...', err);
+        this.isDownloading = false;
       }
     });
   }

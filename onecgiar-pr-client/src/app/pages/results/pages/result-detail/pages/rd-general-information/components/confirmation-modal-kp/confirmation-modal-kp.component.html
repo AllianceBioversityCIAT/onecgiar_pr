@@ -13,8 +13,9 @@
         (clickEvent)="closeModals()">
       </app-pr-button>
 
-      <app-pr-button padding="medium" text="Confirm" [verticalMargin]="0"
-        (clickEvent)="changeResultType()" [disabled]="this.confirmationText?.length == 0"></app-pr-button>
+      <app-pr-button padding="medium" text="Confirm" [verticalMargin]="0" [rotating]="this.isSaving"
+        [ngClass]="{'globalDisabled': this.isSaving || this.confirmationText?.length == 0}"
+        (clickEvent)="changeResultType()" [icon]="this.isSaving ? 'loop' : 'save'"></app-pr-button>
     </div>
   </div>
 </p-dialog>

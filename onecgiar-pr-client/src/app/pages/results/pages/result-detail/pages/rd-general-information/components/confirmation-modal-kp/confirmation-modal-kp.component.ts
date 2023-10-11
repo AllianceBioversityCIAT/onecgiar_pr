@@ -13,6 +13,7 @@ export class ConfirmationModalKPComponent {
   @Input() selectedResultType: any;
 
   confirmationText: string = '';
+  isSaving: boolean = false;
 
   constructor(public api: ApiService, private router: Router) {}
 
@@ -21,17 +22,26 @@ export class ConfirmationModalKPComponent {
   }
 
   updateJustificationKp(newJustification: string) {
-    console.log('change confirmation modal kp justification', newJustification);
     this.confirmationText = newJustification;
   }
 
   changeResultType() {
+    const currentUrl = this.router.url;
+    this.isSaving = true;
+
     this.api.resultsSE.POST_createWithHandle({ ...this.mqapResult, modification_justification: this.confirmationText }).subscribe({
       next: (resp: any) => {
-        this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result type successfully updated', status: 'success', closeIn: 500 });
+        this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result type successfully updated', status: 'success', closeIn: 600 });
+        this.router.navigateByUrl(`/result/result-detail/${this.api.resultsSE.currentResultId}/partners`).then(() => {
+          this.router.navigateByUrl(currentUrl);
+        });
+        this.api.dataControlSE.confirmChangeResultTypeModal = false;
+        this.api.dataControlSE.changeResultTypeModal = false;
+        this.isSaving = false;
       },
       error: err => {
         this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
+        this.isSaving = false;
       }
     });
   }

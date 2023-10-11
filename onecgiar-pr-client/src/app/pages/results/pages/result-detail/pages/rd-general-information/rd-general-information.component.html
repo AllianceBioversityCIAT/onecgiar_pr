@@ -22,7 +22,7 @@
       type="text" [required]="false" [readOnly]="true" [(ngModel)]="this.generalInfoBody.result_type_name">
     </app-pr-input>
 
-    <div class="change_result_type">
+    <div class="change_result_type" *ngIf="!this.api.rolesSE.readOnly && this.generalInfoBody.result_type_id !== 6">
       <app-pr-button text="Change result type" icon="move_up" [reverse]="true"
         (click)="this.api.dataControlSE.changeResultTypeModal = true;" [rotateRight]="true" [verticalMargin]="0">
       </app-pr-button>
