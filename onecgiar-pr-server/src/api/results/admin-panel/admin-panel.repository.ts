@@ -13,10 +13,14 @@ export class AdminPanelRepository {
   ) {}
 
   async reportResultCompleteness(filterIntiatives: FilterInitiativesDto) {
-    const complement =
-      filterIntiatives.rol_user != 1
-        ? 'and rbi.inititiative_id in (' + filterIntiatives.initiatives + ')'
-        : '';
+    const filterByInitiatives = filterIntiatives.initiatives?.length
+      ? ` and rbi.inititiative_id in (${filterIntiatives.initiatives})`
+      : '';
+    const filterByPhases = filterIntiatives.phases.length
+      ? ` and r.version_id in (${filterIntiatives.phases})`
+      : '';
+    const complement = filterByInitiatives + filterByPhases;
+    console.log(complement);
     const queryData = `
     SELECT
       v.id,
@@ -139,7 +143,7 @@ export class AdminPanelRepository {
     `;
 
     try {
-      let submissionsByResult: any = await this.dataSource.query(queryData, [
+      const submissionsByResult: any = await this.dataSource.query(queryData, [
         '?',
       ]);
 
