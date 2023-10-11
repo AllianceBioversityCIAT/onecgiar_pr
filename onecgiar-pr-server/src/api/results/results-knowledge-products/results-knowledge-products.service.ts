@@ -64,6 +64,8 @@ import { ResultsCenterRepository } from '../results-centers/results-centers.repo
 import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
 import { ResultsCenter } from '../results-centers/entities/results-center.entity';
 import { Actions } from '../../../connection/dynamodb-logs/dto/enumAction.const';
+import { ResultsService } from '../results.service';
+import { DeleteRecoverDataService } from '../../delete-recover-data/delete-recover-data.service';
 
 @Injectable()
 export class ResultsKnowledgeProductsService {
@@ -101,6 +103,7 @@ export class ResultsKnowledgeProductsService {
     private readonly _resultsKnowledgeProductRepository: ResultsKnowledgeProductsRepository,
     private readonly _handlersError: HandlersError,
     private readonly _resultRepository: ResultRepository,
+    private readonly _resultService: ResultsService,
     private readonly _mqapService: MQAPService,
     private readonly _resultsKnowledgeProductMapper: ResultsKnowledgeProductMapper,
     private readonly _resultsKnowledgeProductAltmetricRepository: ResultsKnowledgeProductAltmetricRepository,
@@ -125,107 +128,8 @@ export class ResultsKnowledgeProductsService {
     private readonly _resultsKnowledgeProductFairScoreRepository: ResultsKnowledgeProductFairScoreRepository,
     private readonly _resultCenterRepository: ResultsCenterRepository,
     private readonly _clarisaInstitutionRepository: ClarisaInstitutionsRepository,
+    private readonly _deleteRecoverDataService: DeleteRecoverDataService,
   ) {}
-
-  private async createOwnerResult(
-    createResultDto: CreateResultDto,
-    user: TokenDto,
-  ): Promise<returnFormatResult | returnErrorDto> {
-    try {
-      if (
-        !createResultDto?.result_name ||
-        !createResultDto?.initiative_id ||
-        !createResultDto?.result_type_id ||
-        !createResultDto?.result_level_id
-      ) {
-        throw {
-          response: {},
-          message: 'missing data: Result name, Initiative or Result type',
-          status: HttpStatus.BAD_REQUEST,
-        };
-      }
-
-      const initiative = await this._clarisaInitiativesRepository.findOne({
-        where: { id: createResultDto.initiative_id },
-      });
-      if (!initiative) {
-        throw {
-          response: {},
-          message: 'Initiative Not Found',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
-
-      const resultByLevel =
-        await this._resultByLevelRepository.getByTypeAndLevel(
-          createResultDto.result_level_id,
-          createResultDto.result_type_id,
-        );
-      const resultLevel = await this._resultLevelRepository.findOne({
-        where: { id: createResultDto.result_level_id },
-      });
-      const resultType = await this._resultTypeRepository.findOneBy({
-        id: createResultDto.result_type_id,
-      });
-      if (!resultLevel) {
-        throw {
-          response: {},
-          message: 'Result Level not found',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
-
-      if (!resultByLevel) {
-        throw {
-          response: {},
-          message: 'The type or level is not compatible',
-          status: HttpStatus.BAD_REQUEST,
-        };
-      }
-
-      const rl: ResultLevel = <ResultLevel>resultLevel;
-
-      const currentVersion: Version =
-        await this._versioningService.$_findActivePhase(
-          AppModuleIdEnum.REPORTING,
-        );
-
-      if (!currentVersion) {
-        throw {
-          response: {},
-          message: 'Current Version Not Found',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
-
-      const last_code = await this._resultRepository.getLastResultCode();
-      const newResultHeader: Result = await this._resultRepository.save({
-        created_by: user.id,
-        last_updated_by: user.id,
-        result_type_id: resultType.id,
-        version_id: currentVersion.id,
-        title: createResultDto.result_name,
-        reported_year_id: currentVersion.phase_year,
-        result_level_id: rl.id,
-        result_code: last_code + 1,
-      });
-
-      await this._resultByInitiativesRepository.save({
-        created_by: newResultHeader.created_by,
-        initiative_id: initiative.id,
-        initiative_role_id: 1,
-        result_id: newResultHeader.id,
-      });
-
-      return {
-        response: newResultHeader,
-        message: 'The Result has been created successfully',
-        status: HttpStatus.CREATED,
-      };
-    } catch (error) {
-      return this._handlersError.returnErrorRes({ error });
-    }
-  }
 
   async syncAgain(resultId: number, user: TokenDto) {
     try {
@@ -592,11 +496,12 @@ export class ResultsKnowledgeProductsService {
           await this._resultsKnowledgeProductRepository.findOne({
             where: {
               handle: Like(handleId),
+              is_active: true,
               result_object: {
                 is_active: true,
               },
             },
-            relations: this._resultsKnowledgeProductRelations,
+            //relations: this._resultsKnowledgeProductRelations,
           });
 
         if (resultKnowledgeProduct) {
@@ -713,7 +618,7 @@ export class ResultsKnowledgeProductsService {
       let newResult: Result = null;
 
       if (!resultsKnowledgeProductDto.id) {
-        let newResultResponse = await this.createOwnerResult(
+        let newResultResponse = await this._resultService.createOwnerResult(
           resultsKnowledgeProductDto.result_data,
           user,
         );
@@ -726,24 +631,23 @@ export class ResultsKnowledgeProductsService {
 
         newResult = newResultResponse.response as Result;
       } else {
-        newResult = await this._resultRepository.findOne({
-          where: { id: resultsKnowledgeProductDto.id },
-        });
-        newResult.result_type_id = 6;
-        newResult.result_level_id = 4;
-        newResult.last_action_type = Actions.CHANGE_RESULT_TYPE;
-        newResult.justification_action_type =
-          resultsKnowledgeProductDto.modification_justification;
+        const changeResultType =
+          await this._deleteRecoverDataService.changeResultType(
+            resultsKnowledgeProductDto.id,
+            4,
+            6,
+            resultsKnowledgeProductDto.modification_justification,
+            user,
+            resultsKnowledgeProductDto.title,
+          );
 
-        await this._resultRepository.update(
-          { id: newResult.id },
-          {
-            result_type_id: newResult.result_type_id,
-            result_level_id: newResult.result_level_id,
-            last_action_type: newResult.last_action_type,
-            justification_action_type: newResult.justification_action_type,
-          },
-        );
+        if (changeResultType.statusCode >= 300) {
+          throw this._handlersError.returnErrorRes({
+            error: changeResultType.response,
+          });
+        }
+
+        newResult = changeResultType.response as Result;
       }
 
       resultsKnowledgeProductDto.version_id = newResult.version_id;

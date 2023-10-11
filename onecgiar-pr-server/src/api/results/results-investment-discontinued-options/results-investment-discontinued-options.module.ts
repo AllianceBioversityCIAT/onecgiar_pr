@@ -11,5 +11,6 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
     ResultsInvestmentDiscontinuedOptionRepository,
     HandlersError,
   ],
+  exports: [ResultsInvestmentDiscontinuedOptionRepository],
 })
 export class ResultsInvestmentDiscontinuedOptionsModule {}
