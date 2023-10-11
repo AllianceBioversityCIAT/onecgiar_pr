@@ -20,9 +20,9 @@
             <input type="text" placeholder="Find result..." [(ngModel)]="this.textToFind">
         </div>
 
-        <app-pr-multi-select (selectOptionEvent)="onSelectInit()" label="Phases"
-            [options]="this.phasesSE.phases.reporting" [isStatic]="true" [required]="false"
-            optionLabel="phase_name_status" optionValue="id" placeholder="Select phase" [(ngModel)]="phasesSelected">
+        <app-pr-multi-select (selectOptionEvent)="onSelectInit()" [options]="this.phasesSE.phases.reporting"
+            [isStatic]="true" [required]="false" optionLabel="phase_name_status" optionValue="id"
+            placeholder="Select phase" [(ngModel)]="phasesSelected">
         </app-pr-multi-select>
 
     </div>
