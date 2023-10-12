@@ -11,7 +11,9 @@ describe('ShareResultRequestController', () => {
       providers: [ShareResultRequestService],
     }).compile();
 
-    controller = module.get<ShareResultRequestController>(ShareResultRequestController);
+    controller = module.get<ShareResultRequestController>(
+      ShareResultRequestController,
+    );
   });
 
   it('should be defined', () => {

@@ -11,7 +11,9 @@ describe('ShareResultInnovationPackageRequestController', () => {
       providers: [ShareResultInnovationPackageRequestService],
     }).compile();
 
-    controller = module.get<ShareResultInnovationPackageRequestController>(ShareResultInnovationPackageRequestController);
+    controller = module.get<ShareResultInnovationPackageRequestController>(
+      ShareResultInnovationPackageRequestController,
+    );
   });
 
   it('should be defined', () => {

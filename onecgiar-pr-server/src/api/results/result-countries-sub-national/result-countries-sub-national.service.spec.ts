@@ -9,7 +9,9 @@ describe('ResultCountriesSubNationalService', () => {
       providers: [ResultCountriesSubNationalService],
     }).compile();
 
-    service = module.get<ResultCountriesSubNationalService>(ResultCountriesSubNationalService);
+    service = module.get<ResultCountriesSubNationalService>(
+      ResultCountriesSubNationalService,
+    );
   });
 
   it('should be defined', () => {

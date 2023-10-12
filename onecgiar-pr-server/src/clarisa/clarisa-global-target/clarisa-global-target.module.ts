@@ -8,7 +8,11 @@ import { HandlersError } from '../../shared/handlers/error.utils';
 
 @Module({
   controllers: [ClarisaGlobalTargetController],
-  providers: [ClarisaGlobalTargetService, ClarisaGobalTargetRepository, HandlersError],
+  providers: [
+    ClarisaGlobalTargetService,
+    ClarisaGobalTargetRepository,
+    HandlersError,
+  ],
   imports: [],
   exports: [ClarisaGobalTargetRepository],
 })

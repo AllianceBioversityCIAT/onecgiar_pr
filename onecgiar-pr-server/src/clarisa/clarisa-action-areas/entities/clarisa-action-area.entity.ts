@@ -14,7 +14,6 @@ export class ClarisaActionArea {
   @Column({ name: 'description', type: 'text' })
   description: string;
 
-  @OneToMany(() => ResultsTocResult, rtr => rtr.action_areas)
+  @OneToMany(() => ResultsTocResult, (rtr) => rtr.action_areas)
   obj_results_toc_result: ResultsTocResult[];
-
 }

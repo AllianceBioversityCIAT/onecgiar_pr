@@ -6,10 +6,9 @@ import { BiReportRepository } from './repository/bi-report.repository';
 
 @Injectable()
 export class BiReportsService {
+  constructor(private biReportRepository: BiReportRepository) {}
 
-  constructor(private biReportRepository: BiReportRepository){}
-
-  create(createBiReportDto: CreateBiReportDto,) {
+  create(createBiReportDto: CreateBiReportDto) {
     return this.biReportRepository.createNewRegisterBi(createBiReportDto);
   }
 
@@ -21,7 +20,7 @@ export class BiReportsService {
     return this.biReportRepository.getTokenAndReportById(id);
   }
 
-  findAllReports(){
+  findAllReports() {
     return this.biReportRepository.getReportsBi();
   }
 
@@ -29,7 +28,7 @@ export class BiReportsService {
     return this.biReportRepository.getTokenAndReportByName(report_name);
   }
 
-  azureToken(){
+  azureToken() {
     return this.biReportRepository.getBarerTokenAzure();
   }
 }

@@ -30,7 +30,7 @@ export class ClarisaInstitutionsTypeController {
   @Get('tree')
   async findAll() {
     const { message, response, status } =
-    await this.clarisaInstitutionsTypeService.findAllNotLegacy();
+      await this.clarisaInstitutionsTypeService.findAllNotLegacy();
     throw new HttpException({ message, response }, status);
   }
 

@@ -6,7 +6,11 @@ import { HandlersError } from '../../shared/handlers/error.utils';
 
 @Module({
   controllers: [ClarisaCountriesController],
-  providers: [ClarisaCountriesService, ClarisaCountriesRepository, HandlersError],
+  providers: [
+    ClarisaCountriesService,
+    ClarisaCountriesRepository,
+    HandlersError,
+  ],
   exports: [ClarisaCountriesRepository],
 })
 export class ClarisaCountriesModule {}

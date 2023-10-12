@@ -399,8 +399,8 @@ export class ResultInnovationPackageService {
         last_updated_by: user.id,
       });
 
-      let resultRegions: ResultRegion[] = [];
-      let newInnovationCountries: ResultCountry[] = [];
+      const resultRegions: ResultRegion[] = [];
+      const newInnovationCountries: ResultCountry[] = [];
 
       if (CreateResultInnovationPackageDto.geo_scope_id === 2) {
         if (regions) {

@@ -1,15 +1,30 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { ClarisaActionAreaOutcomesActionAreaService } from './clarisa-action-area-outcomes-action-area.service';
 import { CreateClarisaActionAreaOutcomesActionAreaDto } from './dto/create-clarisa-action-area-outcomes-action-area.dto';
 import { UpdateClarisaActionAreaOutcomesActionAreaDto } from './dto/update-clarisa-action-area-outcomes-action-area.dto';
 
 @Controller('clarisa-action-area-outcomes-action-area')
 export class ClarisaActionAreaOutcomesActionAreaController {
-  constructor(private readonly clarisaActionAreaOutcomesActionAreaService: ClarisaActionAreaOutcomesActionAreaService) {}
+  constructor(
+    private readonly clarisaActionAreaOutcomesActionAreaService: ClarisaActionAreaOutcomesActionAreaService,
+  ) {}
 
   @Post()
-  create(@Body() createClarisaActionAreaOutcomesActionAreaDto: CreateClarisaActionAreaOutcomesActionAreaDto) {
-    return this.clarisaActionAreaOutcomesActionAreaService.create(createClarisaActionAreaOutcomesActionAreaDto);
+  create(
+    @Body()
+    createClarisaActionAreaOutcomesActionAreaDto: CreateClarisaActionAreaOutcomesActionAreaDto,
+  ) {
+    return this.clarisaActionAreaOutcomesActionAreaService.create(
+      createClarisaActionAreaOutcomesActionAreaDto,
+    );
   }
 
   @Get()
@@ -23,8 +38,15 @@ export class ClarisaActionAreaOutcomesActionAreaController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateClarisaActionAreaOutcomesActionAreaDto: UpdateClarisaActionAreaOutcomesActionAreaDto) {
-    return this.clarisaActionAreaOutcomesActionAreaService.update(+id, updateClarisaActionAreaOutcomesActionAreaDto);
+  update(
+    @Param('id') id: string,
+    @Body()
+    updateClarisaActionAreaOutcomesActionAreaDto: UpdateClarisaActionAreaOutcomesActionAreaDto,
+  ) {
+    return this.clarisaActionAreaOutcomesActionAreaService.update(
+      +id,
+      updateClarisaActionAreaOutcomesActionAreaDto,
+    );
   }
 
   @Delete(':id')

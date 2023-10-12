@@ -1,11 +1,22 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  HttpException,
+} from '@nestjs/common';
 import { ClarisaPolicyStagesService } from './clarisa-policy-stages.service';
 import { CreateClarisaPolicyStageDto } from './dto/create-clarisa-policy-stage.dto';
 import { UpdateClarisaPolicyStageDto } from './dto/update-clarisa-policy-stage.dto';
 
 @Controller()
 export class ClarisaPolicyStagesController {
-  constructor(private readonly clarisaPolicyStagesService: ClarisaPolicyStagesService) {}
+  constructor(
+    private readonly clarisaPolicyStagesService: ClarisaPolicyStagesService,
+  ) {}
 
   @Post()
   create(@Body() createClarisaPolicyStageDto: CreateClarisaPolicyStageDto) {
@@ -14,10 +25,9 @@ export class ClarisaPolicyStagesController {
 
   @Get('get/all')
   async findAll() {
-    const { message, response, status } = 
+    const { message, response, status } =
       await this.clarisaPolicyStagesService.findAll();
     throw new HttpException({ message, response }, status);
-
   }
 
   @Get(':id')
@@ -26,8 +36,14 @@ export class ClarisaPolicyStagesController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateClarisaPolicyStageDto: UpdateClarisaPolicyStageDto) {
-    return this.clarisaPolicyStagesService.update(+id, updateClarisaPolicyStageDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateClarisaPolicyStageDto: UpdateClarisaPolicyStageDto,
+  ) {
+    return this.clarisaPolicyStagesService.update(
+      +id,
+      updateClarisaPolicyStageDto,
+    );
   }
 
   @Delete(':id')

@@ -72,7 +72,7 @@ export class ResultByIntitutionsRepository
         );
         final_data = await this.save(response_edit);
       } else {
-        const queryData: string = `
+        const queryData = `
         insert into results_by_institution (
           institutions_id,
           institution_roles_id,
@@ -381,7 +381,7 @@ export class ResultByIntitutionsRepository
     resultId: number,
     institutionsArray: institutionsInterface[],
     userId: number,
-    notApplicablePartner: boolean = false,
+    notApplicablePartner = false,
     institutionRole: InstitutionRoleEnum[] = [InstitutionRoleEnum.PARTNER],
   ) {
     const institutions = notApplicablePartner
@@ -551,7 +551,7 @@ export class ResultByIntitutionsRepository
     institutionsArray: institutionsInterface[],
     institutionRole: 1 | 2 | 3 | 4 | 5,
     userId: number,
-    applicablePartner: boolean = false,
+    applicablePartner = false,
   ) {
     const institutions = !applicablePartner
       ? institutionsArray.map((el) => el.institutions_id)

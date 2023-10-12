@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseInterceptors,
+} from '@nestjs/common';
 import { NonPooledProjectsService } from './non-pooled-projects.service';
 import { CreateNonPooledProjectDto } from './dto/create-non-pooled-project.dto';
 import { UpdateNonPooledProjectDto } from './dto/update-non-pooled-project.dto';
@@ -9,7 +18,9 @@ import { returnFormatService } from '../../../shared/extendsGlobalDTO/returnServ
 @Controller()
 @UseInterceptors(ResponseInterceptor)
 export class NonPooledProjectsController {
-  constructor(private readonly nonPooledProjectsService: NonPooledProjectsService) { }
+  constructor(
+    private readonly nonPooledProjectsService: NonPooledProjectsService,
+  ) {}
 
   @Post()
   create(@Body() createNonPooledProjectDto: CreateNonPooledProjectDto) {
@@ -27,8 +38,14 @@ export class NonPooledProjectsController {
   }
 
   @Patch(':id')
-  async update(@Param('id') id: string, @Body() updateNonPooledProjectDto: NonPooledProject): Promise<returnFormatService> {
-    return await this.nonPooledProjectsService.update(+id, updateNonPooledProjectDto);
+  async update(
+    @Param('id') id: string,
+    @Body() updateNonPooledProjectDto: NonPooledProject,
+  ): Promise<returnFormatService> {
+    return await this.nonPooledProjectsService.update(
+      +id,
+      updateNonPooledProjectDto,
+    );
   }
 
   @Delete(':id')

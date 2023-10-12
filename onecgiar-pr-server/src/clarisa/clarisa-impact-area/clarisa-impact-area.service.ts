@@ -6,11 +6,10 @@ import { ClarisaImpactAreaRepository } from './ClarisaImpactArea.repository';
 
 @Injectable()
 export class ClarisaImpactAreaService {
-
   constructor(
     private readonly _handlersError: HandlersError,
-    private readonly _clarisaImpactAreaRepository: ClarisaImpactAreaRepository
-  ){}
+    private readonly _clarisaImpactAreaRepository: ClarisaImpactAreaRepository,
+  ) {}
 
   create(createClarisaImpactAreaDto: CreateClarisaImpactAreaDto) {
     return 'This action adds a new clarisaImpactArea';
@@ -18,7 +17,8 @@ export class ClarisaImpactAreaService {
 
   async findAll() {
     try {
-      const carisaImpactArea = await this._clarisaImpactAreaRepository.getAllImpactArea();
+      const carisaImpactArea =
+        await this._clarisaImpactAreaRepository.getAllImpactArea();
 
       return {
         response: carisaImpactArea,
@@ -26,7 +26,7 @@ export class ClarisaImpactAreaService {
         status: HttpStatus.OK,
       };
     } catch (error) {
-      this._handlersError.returnErrorRes({error, debug: true});
+      this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 

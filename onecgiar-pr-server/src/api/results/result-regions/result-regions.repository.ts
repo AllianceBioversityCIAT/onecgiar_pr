@@ -57,7 +57,7 @@ export class ResultRegionRepository
         const response_edit = <ResultRegion[]>config.f.custonFunction(response);
         final_data = await this.save(response_edit);
       } else {
-        const queryData: string = `
+        const queryData = `
         insert into result_region (
           is_active,
           created_date,
@@ -103,7 +103,7 @@ export class ResultRegionRepository
     return final_data;
   }
 
-  async getAllResultRegion(version: number = 1) {
+  async getAllResultRegion(version = 1) {
     const query = `
     select 
     rr.result_region_id,

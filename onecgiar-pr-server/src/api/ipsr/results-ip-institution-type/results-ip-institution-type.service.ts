@@ -16,7 +16,10 @@ export class ResultsIpInstitutionTypeService {
     return `This action returns a #${id} resultsIpInstitutionType`;
   }
 
-  update(id: number, updateResultsIpInstitutionTypeDto: UpdateResultsIpInstitutionTypeDto) {
+  update(
+    id: number,
+    updateResultsIpInstitutionTypeDto: UpdateResultsIpInstitutionTypeDto,
+  ) {
     return `This action updates a #${id} resultsIpInstitutionType`;
   }
 

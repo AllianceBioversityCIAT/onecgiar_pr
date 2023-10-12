@@ -4,7 +4,9 @@ import { UpdateResultsByIpInnovationUseMeasureDto } from './dto/update-results-b
 
 @Injectable()
 export class ResultsByIpInnovationUseMeasuresService {
-  create(createResultsByIpInnovationUseMeasureDto: CreateResultsByIpInnovationUseMeasureDto) {
+  create(
+    createResultsByIpInnovationUseMeasureDto: CreateResultsByIpInnovationUseMeasureDto,
+  ) {
     return 'This action adds a new resultsByIpInnovationUseMeasure';
   }
 
@@ -16,7 +18,10 @@ export class ResultsByIpInnovationUseMeasuresService {
     return `This action returns a #${id} resultsByIpInnovationUseMeasure`;
   }
 
-  update(id: number, updateResultsByIpInnovationUseMeasureDto: UpdateResultsByIpInnovationUseMeasureDto) {
+  update(
+    id: number,
+    updateResultsByIpInnovationUseMeasureDto: UpdateResultsByIpInnovationUseMeasureDto,
+  ) {
     return `This action updates a #${id} resultsByIpInnovationUseMeasure`;
   }
 

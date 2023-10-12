@@ -6,11 +6,10 @@ import { TocLevelRepository } from './toc-level.repository';
 
 @Injectable()
 export class TocLevelService {
-
   constructor(
     private readonly _handlersError: HandlersError,
-    private readonly _tocLevelRepository :TocLevelRepository
-  ){}
+    private readonly _tocLevelRepository: TocLevelRepository,
+  ) {}
 
   create(createTocLevelDto: CreateTocLevelDto) {
     return 'This action adds a new tocLevel';
@@ -19,7 +18,7 @@ export class TocLevelService {
   async findAll() {
     try {
       const tocResults = await this._tocLevelRepository.getAllTocLevel();
-      if(!tocResults.length){
+      if (!tocResults.length) {
         throw {
           response: {},
           message: 'ToC Results Not Found',

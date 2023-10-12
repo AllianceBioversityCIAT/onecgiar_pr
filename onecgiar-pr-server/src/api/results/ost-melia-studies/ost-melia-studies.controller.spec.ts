@@ -11,7 +11,9 @@ describe('OstMeliaStudiesController', () => {
       providers: [OstMeliaStudiesService],
     }).compile();
 
-    controller = module.get<OstMeliaStudiesController>(OstMeliaStudiesController);
+    controller = module.get<OstMeliaStudiesController>(
+      OstMeliaStudiesController,
+    );
   });
 
   it('should be defined', () => {

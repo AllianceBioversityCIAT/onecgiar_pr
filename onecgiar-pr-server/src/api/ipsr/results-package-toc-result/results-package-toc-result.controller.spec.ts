@@ -11,7 +11,9 @@ describe('ResultsPackageTocResultController', () => {
       providers: [ResultsPackageTocResultService],
     }).compile();
 
-    controller = module.get<ResultsPackageTocResultController>(ResultsPackageTocResultController);
+    controller = module.get<ResultsPackageTocResultController>(
+      ResultsPackageTocResultController,
+    );
   });
 
   it('should be defined', () => {

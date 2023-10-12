@@ -1,15 +1,30 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { ResultsInnovationPackagesEnablerTypeService } from './results-innovation-packages-enabler-type.service';
 import { CreateResultsInnovationPackagesEnablerTypeDto } from './dto/create-results-innovation-packages-enabler-type.dto';
 import { UpdateResultsInnovationPackagesEnablerTypeDto } from './dto/update-results-innovation-packages-enabler-type.dto';
 
 @Controller()
 export class ResultsInnovationPackagesEnablerTypeController {
-  constructor(private readonly resultsInnovationPackagesEnablerTypeService: ResultsInnovationPackagesEnablerTypeService) {}
+  constructor(
+    private readonly resultsInnovationPackagesEnablerTypeService: ResultsInnovationPackagesEnablerTypeService,
+  ) {}
 
   @Post('createInnovationEnablers')
-  create(@Body() createResultsInnovationPackagesEnablerTypeDto: CreateResultsInnovationPackagesEnablerTypeDto[]) {
-    return this.resultsInnovationPackagesEnablerTypeService.create(createResultsInnovationPackagesEnablerTypeDto);
+  create(
+    @Body()
+    createResultsInnovationPackagesEnablerTypeDto: CreateResultsInnovationPackagesEnablerTypeDto[],
+  ) {
+    return this.resultsInnovationPackagesEnablerTypeService.create(
+      createResultsInnovationPackagesEnablerTypeDto,
+    );
   }
 
   @Get()
@@ -23,8 +38,15 @@ export class ResultsInnovationPackagesEnablerTypeController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateResultsInnovationPackagesEnablerTypeDto: UpdateResultsInnovationPackagesEnablerTypeDto) {
-    return this.resultsInnovationPackagesEnablerTypeService.update(+id, updateResultsInnovationPackagesEnablerTypeDto);
+  update(
+    @Param('id') id: string,
+    @Body()
+    updateResultsInnovationPackagesEnablerTypeDto: UpdateResultsInnovationPackagesEnablerTypeDto,
+  ) {
+    return this.resultsInnovationPackagesEnablerTypeService.update(
+      +id,
+      updateResultsInnovationPackagesEnablerTypeDto,
+    );
   }
 
   @Delete(':id')

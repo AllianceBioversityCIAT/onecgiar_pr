@@ -30,11 +30,11 @@ export const MainRoutes: Routes = [
     children: TocRoutes,
   },
   {
-    path:'result-dashboard-bi',
-    children:ResultDashboardBIRoutes
+    path: 'result-dashboard-bi',
+    children: ResultDashboardBIRoutes,
   },
   {
     path: 'logs',
-    children: dynamoRoutes
-  }
+    children: dynamoRoutes,
+  },
 ];

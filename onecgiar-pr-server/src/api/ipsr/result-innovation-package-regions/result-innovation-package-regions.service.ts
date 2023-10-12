@@ -4,7 +4,9 @@ import { UpdateResultInnovationPackageRegionDto } from './dto/update-result-inno
 
 @Injectable()
 export class ResultInnovationPackageRegionsService {
-  create(createResultInnovationPackageRegionDto: CreateResultInnovationPackageRegionDto) {
+  create(
+    createResultInnovationPackageRegionDto: CreateResultInnovationPackageRegionDto,
+  ) {
     return 'This action adds a new resultInnovationPackageRegion';
   }
 
@@ -16,7 +18,10 @@ export class ResultInnovationPackageRegionsService {
     return `This action returns a #${id} resultInnovationPackageRegion`;
   }
 
-  update(id: number, updateResultInnovationPackageRegionDto: UpdateResultInnovationPackageRegionDto) {
+  update(
+    id: number,
+    updateResultInnovationPackageRegionDto: UpdateResultInnovationPackageRegionDto,
+  ) {
     return `This action updates a #${id} resultInnovationPackageRegion`;
   }
 

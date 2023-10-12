@@ -66,7 +66,7 @@ export class ResultRegionsService {
             createResultRegionDto.regions.map((el) => el.id),
           );
           if (regions?.length) {
-            let resultRegionArray: ResultRegion[] = [];
+            const resultRegionArray: ResultRegion[] = [];
             for (let index = 0; index < regions.length; index++) {
               const exist =
                 await this._resultRegionRepository.getResultRegionByResultIdAndRegionId(

@@ -8,6 +8,11 @@ import { HandlersError } from '../../shared/handlers/error.utils';
 @Module({
   controllers: [ClarisaSecondOrderAdministrativeDivisionController],
   imports: [HttpModule],
-  providers: [ClarisaSecondOrderAdministrativeDivisionService, ClarisaSecondOrderAdministrativeDivisionRepository, HttpModule, HandlersError]
+  providers: [
+    ClarisaSecondOrderAdministrativeDivisionService,
+    ClarisaSecondOrderAdministrativeDivisionRepository,
+    HttpModule,
+    HandlersError,
+  ],
 })
-export class ClarisaSecondOrderAdministrativeDivisionModule { }
+export class ClarisaSecondOrderAdministrativeDivisionModule {}

@@ -4,7 +4,9 @@ import { UpdateResultsInvestmentDiscontinuedOptionDto } from './dto/update-resul
 
 @Injectable()
 export class ResultsInvestmentDiscontinuedOptionsService {
-  create(createResultsInvestmentDiscontinuedOptionDto: CreateResultsInvestmentDiscontinuedOptionDto) {
+  create(
+    createResultsInvestmentDiscontinuedOptionDto: CreateResultsInvestmentDiscontinuedOptionDto,
+  ) {
     return 'This action adds a new resultsInvestmentDiscontinuedOption';
   }
 
@@ -16,7 +18,10 @@ export class ResultsInvestmentDiscontinuedOptionsService {
     return `This action returns a #${id} resultsInvestmentDiscontinuedOption`;
   }
 
-  update(id: number, updateResultsInvestmentDiscontinuedOptionDto: UpdateResultsInvestmentDiscontinuedOptionDto) {
+  update(
+    id: number,
+    updateResultsInvestmentDiscontinuedOptionDto: UpdateResultsInvestmentDiscontinuedOptionDto,
+  ) {
     return `This action updates a #${id} resultsInvestmentDiscontinuedOption`;
   }
 

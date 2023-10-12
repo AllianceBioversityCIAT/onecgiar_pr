@@ -6,11 +6,10 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 
 @Injectable()
 export class CapdevsTermsService {
-
   constructor(
     private readonly _capdevsTermRepository: CapdevsTermRepository,
-    private readonly _handlersError: HandlersError
-  ){}
+    private readonly _handlersError: HandlersError,
+  ) {}
 
   create(createCapdevsTermDto: CreateCapdevsTermDto) {
     return 'This action adds a new capdevsTerm';
@@ -18,7 +17,7 @@ export class CapdevsTermsService {
 
   async findAll() {
     try {
-      const capdevsTerm =  await this._capdevsTermRepository.find();
+      const capdevsTerm = await this._capdevsTermRepository.find();
       return {
         response: capdevsTerm,
         message: 'Successful response',

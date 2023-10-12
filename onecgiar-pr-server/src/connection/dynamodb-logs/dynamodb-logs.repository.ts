@@ -57,7 +57,7 @@ export class LogRepository {
     }
   }
 
-  async findByResultCode(resultCode: Number): Promise<LogsSchemaDto[]> {
+  async findByResultCode(resultCode: number): Promise<LogsSchemaDto[]> {
     try {
       const params = {
         TableName: 'reporting_logs_test',
@@ -80,7 +80,7 @@ export class LogRepository {
     }
   }
 
-  async findByUser(userId: Number): Promise<LogsSchemaDto[]> {
+  async findByUser(userId: number): Promise<LogsSchemaDto[]> {
     try {
       const params = {
         TableName: 'reporting_logs_test',

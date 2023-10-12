@@ -16,7 +16,10 @@ export class NonPooledPackageProjectsService {
     return `This action returns a #${id} nonPooledPackageProject`;
   }
 
-  update(id: number, updateNonPooledPackageProjectDto: UpdateNonPooledPackageProjectDto) {
+  update(
+    id: number,
+    updateNonPooledPackageProjectDto: UpdateNonPooledPackageProjectDto,
+  ) {
     return `This action updates a #${id} nonPooledPackageProject`;
   }
 

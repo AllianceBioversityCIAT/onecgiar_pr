@@ -11,7 +11,9 @@ describe('ResultsByIpInnovationUseMeasuresController', () => {
       providers: [ResultsByIpInnovationUseMeasuresService],
     }).compile();
 
-    controller = module.get<ResultsByIpInnovationUseMeasuresController>(ResultsByIpInnovationUseMeasuresController);
+    controller = module.get<ResultsByIpInnovationUseMeasuresController>(
+      ResultsByIpInnovationUseMeasuresController,
+    );
   });
 
   it('should be defined', () => {

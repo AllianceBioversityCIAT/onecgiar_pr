@@ -1,4 +1,11 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn, JoinColumn, OneToMany } from 'typeorm';
+import {
+  Column,
+  Entity,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+  JoinColumn,
+  OneToMany,
+} from 'typeorm';
 import { Auditable } from '../../../shared/entities/auditableEntity';
 
 @Entity('clarisa_institution_types')
@@ -15,7 +22,7 @@ export class ClarisaInstitutionsType {
   @Column({
     name: 'id_parent',
     nullable: true,
-    type: 'number'
+    type: 'number',
   })
   id_parent!: number;
 
@@ -26,15 +33,16 @@ export class ClarisaInstitutionsType {
   })
   is_legacy: boolean;
 
-  @OneToMany(() => ClarisaInstitutionsType, cit => cit.obj_parent, {nullable: true})
+  @OneToMany(() => ClarisaInstitutionsType, (cit) => cit.obj_parent, {
+    nullable: true,
+  })
   children: ClarisaInstitutionsType[];
 
-  @ManyToOne(() => ClarisaInstitutionsType, cit => cit.children , {nullable: true})
+  @ManyToOne(() => ClarisaInstitutionsType, (cit) => cit.children, {
+    nullable: true,
+  })
   @JoinColumn({
-    name: 'id_parent'
+    name: 'id_parent',
   })
   obj_parent: ClarisaInstitutionsType;
-
-  
-
 }

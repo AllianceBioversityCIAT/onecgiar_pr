@@ -11,7 +11,9 @@ describe('ResultsInvestmentDiscontinuedOptionsController', () => {
       providers: [ResultsInvestmentDiscontinuedOptionsService],
     }).compile();
 
-    controller = module.get<ResultsInvestmentDiscontinuedOptionsController>(ResultsInvestmentDiscontinuedOptionsController);
+    controller = module.get<ResultsInvestmentDiscontinuedOptionsController>(
+      ResultsInvestmentDiscontinuedOptionsController,
+    );
   });
 
   it('should be defined', () => {

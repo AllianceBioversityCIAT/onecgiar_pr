@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { ClarisaSdgsService } from './clarisa-sdgs.service';
 import { CreateClarisaSdgDto } from './dto/create-clarisa-sdg.dto';
 import { UpdateClarisaSdgDto } from './dto/update-clarisa-sdg.dto';
@@ -23,7 +31,10 @@ export class ClarisaSdgsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateClarisaSdgDto: UpdateClarisaSdgDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateClarisaSdgDto: UpdateClarisaSdgDto,
+  ) {
     return this.clarisaSdgsService.update(+id, updateClarisaSdgDto);
   }
 

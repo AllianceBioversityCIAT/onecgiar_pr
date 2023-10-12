@@ -998,8 +998,8 @@ export class ClarisaTaskService {
   }
 
   private removeDuplicates(originalArray, prop) {
-    var newArray = [];
-    var lookupObject = {};
+    const newArray = [];
+    const lookupObject = {};
 
     for (var i in originalArray) {
       lookupObject[originalArray[i][prop]] = originalArray[i];

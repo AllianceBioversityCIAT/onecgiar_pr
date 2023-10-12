@@ -9,7 +9,9 @@ describe('AssessedDuringExpertWorkshopService', () => {
       providers: [AssessedDuringExpertWorkshopService],
     }).compile();
 
-    service = module.get<AssessedDuringExpertWorkshopService>(AssessedDuringExpertWorkshopService);
+    service = module.get<AssessedDuringExpertWorkshopService>(
+      AssessedDuringExpertWorkshopService,
+    );
   });
 
   it('should be defined', () => {

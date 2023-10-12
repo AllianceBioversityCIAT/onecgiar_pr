@@ -9,7 +9,9 @@ describe('ResultsPackageTocResultService', () => {
       providers: [ResultsPackageTocResultService],
     }).compile();
 
-    service = module.get<ResultsPackageTocResultService>(ResultsPackageTocResultService);
+    service = module.get<ResultsPackageTocResultService>(
+      ResultsPackageTocResultService,
+    );
   });
 
   it('should be defined', () => {

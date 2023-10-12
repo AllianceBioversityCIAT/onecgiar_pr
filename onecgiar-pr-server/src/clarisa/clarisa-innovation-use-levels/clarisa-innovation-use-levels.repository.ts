@@ -8,4 +8,3 @@ export class ClarisaInnovationUseLevelRepository extends Repository<ClarisaInnov
     super(ClarisaInnovationUseLevel, dataSource.createEntityManager());
   }
 }
-

@@ -6,11 +6,10 @@ import { HandlersError } from '../../shared/handlers/error.utils';
 
 @Injectable()
 export class ClarisaImpactAreaIndicatorsService {
-
   constructor(
     private readonly _clarisaImpactAreaInticatorsRepository: ClarisaImpactAreaInticatorsRepository,
-    private readonly _handlersError: HandlersError
-  ){}
+    private readonly _handlersError: HandlersError,
+  ) {}
 
   create(
     createClarisaImpactAreaIndicatorDto: CreateClarisaImpactAreaIndicatorDto,
@@ -20,7 +19,8 @@ export class ClarisaImpactAreaIndicatorsService {
 
   async findAll() {
     try {
-      const carisaImpactIndicators = await this._clarisaImpactAreaInticatorsRepository.getAllImpactAreaIndicators();
+      const carisaImpactIndicators =
+        await this._clarisaImpactAreaInticatorsRepository.getAllImpactAreaIndicators();
 
       return {
         response: carisaImpactIndicators,
@@ -28,7 +28,7 @@ export class ClarisaImpactAreaIndicatorsService {
         status: HttpStatus.OK,
       };
     } catch (error) {
-      return this._handlersError.returnErrorRes({error, debug: true});
+      return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 

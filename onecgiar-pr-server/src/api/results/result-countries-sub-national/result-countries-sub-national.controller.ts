@@ -1,15 +1,30 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { ResultCountriesSubNationalService } from './result-countries-sub-national.service';
 import { CreateResultCountriesSubNationalDto } from './dto/create-result-countries-sub-national.dto';
 import { UpdateResultCountriesSubNationalDto } from './dto/update-result-countries-sub-national.dto';
 
 @Controller('result-countries-sub-national')
 export class ResultCountriesSubNationalController {
-  constructor(private readonly resultCountriesSubNationalService: ResultCountriesSubNationalService) {}
+  constructor(
+    private readonly resultCountriesSubNationalService: ResultCountriesSubNationalService,
+  ) {}
 
   @Post()
-  create(@Body() createResultCountriesSubNationalDto: CreateResultCountriesSubNationalDto) {
-    return this.resultCountriesSubNationalService.create(createResultCountriesSubNationalDto);
+  create(
+    @Body()
+    createResultCountriesSubNationalDto: CreateResultCountriesSubNationalDto,
+  ) {
+    return this.resultCountriesSubNationalService.create(
+      createResultCountriesSubNationalDto,
+    );
   }
 
   @Get()
@@ -23,8 +38,15 @@ export class ResultCountriesSubNationalController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateResultCountriesSubNationalDto: UpdateResultCountriesSubNationalDto) {
-    return this.resultCountriesSubNationalService.update(+id, updateResultCountriesSubNationalDto);
+  update(
+    @Param('id') id: string,
+    @Body()
+    updateResultCountriesSubNationalDto: UpdateResultCountriesSubNationalDto,
+  ) {
+    return this.resultCountriesSubNationalService.update(
+      +id,
+      updateResultCountriesSubNationalDto,
+    );
   }
 
   @Delete(':id')

@@ -47,8 +47,8 @@ export class LinkedResultsService {
       }
       const version: Version = <Version>vTemp.response;
 
-      let isExistsNew: number[] = [];
-      let isExistsNewLegacy: string[] = [];
+      const isExistsNew: number[] = [];
+      const isExistsNewLegacy: string[] = [];
       createLinkedResultDto.links = createLinkedResultDto.links ?? [];
       createLinkedResultDto.legacy_link =
         createLinkedResultDto.legacy_link ?? [];
@@ -140,9 +140,11 @@ export class LinkedResultsService {
           { result_id: result.id },
           {
             linked_innovation_dev:
-              createLinkedResultDto.linkedInnovation.linked_innovation_dev || false,
+              createLinkedResultDto.linkedInnovation.linked_innovation_dev ||
+              false,
             linked_innovation_use:
-              createLinkedResultDto.linkedInnovation.linked_innovation_use || false,
+              createLinkedResultDto.linkedInnovation.linked_innovation_use ||
+              false,
             last_updated_by: user.id,
             last_updated_date: new Date(),
           },
@@ -173,7 +175,7 @@ export class LinkedResultsService {
       if (result.result_type_id == 1) {
         linkedInnovation = await this._policyChangeRepository.findOne({
           where: { result_id: result.id },
-          select: ['linked_innovation_dev', 'linked_innovation_use']
+          select: ['linked_innovation_dev', 'linked_innovation_use'],
         });
       }
 
@@ -181,10 +183,12 @@ export class LinkedResultsService {
         response: {
           links: links.filter((el) => !!el.id),
           legacy_link: links.filter((el) => !el.id),
-          linkedInnovation: linkedInnovation ? linkedInnovation : {
-            linked_innovation_dev: false,
-            linked_innovation_use: false
-          },
+          linkedInnovation: linkedInnovation
+            ? linkedInnovation
+            : {
+                linked_innovation_dev: false,
+                linked_innovation_use: false,
+              },
         },
         message: 'The data was updated correctly',
         status: HttpStatus.OK,

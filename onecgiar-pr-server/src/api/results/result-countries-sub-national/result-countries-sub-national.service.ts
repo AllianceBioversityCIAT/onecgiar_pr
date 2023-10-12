@@ -4,7 +4,9 @@ import { UpdateResultCountriesSubNationalDto } from './dto/update-result-countri
 
 @Injectable()
 export class ResultCountriesSubNationalService {
-  create(createResultCountriesSubNationalDto: CreateResultCountriesSubNationalDto) {
+  create(
+    createResultCountriesSubNationalDto: CreateResultCountriesSubNationalDto,
+  ) {
     return 'This action adds a new resultCountriesSubNational';
   }
 
@@ -16,7 +18,10 @@ export class ResultCountriesSubNationalService {
     return `This action returns a #${id} resultCountriesSubNational`;
   }
 
-  update(id: number, updateResultCountriesSubNationalDto: UpdateResultCountriesSubNationalDto) {
+  update(
+    id: number,
+    updateResultCountriesSubNationalDto: UpdateResultCountriesSubNationalDto,
+  ) {
     return `This action updates a #${id} resultCountriesSubNational`;
   }
 

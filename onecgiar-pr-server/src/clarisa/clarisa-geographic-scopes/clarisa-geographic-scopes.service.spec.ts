@@ -9,7 +9,9 @@ describe('ClarisaGeographicScopesService', () => {
       providers: [ClarisaGeographicScopesService],
     }).compile();
 
-    service = module.get<ClarisaGeographicScopesService>(ClarisaGeographicScopesService);
+    service = module.get<ClarisaGeographicScopesService>(
+      ClarisaGeographicScopesService,
+    );
   });
 
   it('should be defined', () => {

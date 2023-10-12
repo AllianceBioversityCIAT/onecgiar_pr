@@ -6,11 +6,10 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 
 @Injectable()
 export class CapdevsDeliveryMethodsService {
-
   constructor(
     private readonly _capdevsDeliveryMethodRepository: CapdevsDeliveryMethodRepository,
-    private readonly _handlersError: HandlersError
-  ){}
+    private readonly _handlersError: HandlersError,
+  ) {}
 
   create(createCapdevsDeliveryMethodDto: CreateCapdevsDeliveryMethodDto) {
     return 'This action adds a new capdevsDeliveryMethod';
@@ -18,7 +17,8 @@ export class CapdevsDeliveryMethodsService {
 
   async findAll() {
     try {
-      const capdevsDeliveryMethod = await this._capdevsDeliveryMethodRepository.find();
+      const capdevsDeliveryMethod =
+        await this._capdevsDeliveryMethodRepository.find();
       return {
         response: capdevsDeliveryMethod,
         message: 'Successful response',
@@ -33,7 +33,10 @@ export class CapdevsDeliveryMethodsService {
     return `This action returns a #${id} capdevsDeliveryMethod`;
   }
 
-  update(id: number, updateCapdevsDeliveryMethodDto: UpdateCapdevsDeliveryMethodDto) {
+  update(
+    id: number,
+    updateCapdevsDeliveryMethodDto: UpdateCapdevsDeliveryMethodDto,
+  ) {
     return `This action updates a #${id} capdevsDeliveryMethod`;
   }
 

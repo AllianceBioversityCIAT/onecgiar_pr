@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Headers, HttpException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Headers,
+  HttpException,
+} from '@nestjs/common';
 import { ShareResultRequestService } from './share-result-request.service';
 import { CreateShareResultRequestDto } from './dto/create-share-result-request.dto';
 import { UpdateShareResultRequestDto } from './dto/update-share-result-request.dto';
@@ -9,7 +19,9 @@ import { ShareResultRequest } from './entities/share-result-request.entity';
 
 @Controller()
 export class ShareResultRequestController {
-  constructor(private readonly shareResultRequestService: ShareResultRequestService) {}
+  constructor(
+    private readonly shareResultRequestService: ShareResultRequestService,
+  ) {}
 
   @Post()
   create(@Body() createShareResultRequestDto: CreateShareResultRequestDto) {
@@ -20,20 +32,22 @@ export class ShareResultRequestController {
   async reateRequest(
     @Body() createTocShareResult: CreateTocShareResult,
     @Param('resultId') resultId: number,
-    @Headers() auth: HeadersDto
-  ){
+    @Headers() auth: HeadersDto,
+  ) {
     const token: TokenDto = <TokenDto>(
       JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
     );
     const { message, response, status } =
-      await this.shareResultRequestService.resultRequest(createTocShareResult, resultId, token);
+      await this.shareResultRequestService.resultRequest(
+        createTocShareResult,
+        resultId,
+        token,
+      );
     throw new HttpException({ message, response }, status);
   }
 
   @Get('get/all')
-  async findAll(
-    @Headers() auth: HeadersDto
-  ) {
+  async findAll(@Headers() auth: HeadersDto) {
     const token: TokenDto = <TokenDto>(
       JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
     );
@@ -45,13 +59,16 @@ export class ShareResultRequestController {
   @Patch('update')
   async updateRequest(
     @Headers() auth: HeadersDto,
-    @Body() updateShareResultRequestDto: ShareResultRequest
+    @Body() updateShareResultRequestDto: ShareResultRequest,
   ) {
     const token: TokenDto = <TokenDto>(
       JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
     );
     const { message, response, status } =
-      await this.shareResultRequestService.updateResultRequestByUser(updateShareResultRequestDto, token);
+      await this.shareResultRequestService.updateResultRequestByUser(
+        updateShareResultRequestDto,
+        token,
+      );
     throw new HttpException({ message, response }, status);
   }
 

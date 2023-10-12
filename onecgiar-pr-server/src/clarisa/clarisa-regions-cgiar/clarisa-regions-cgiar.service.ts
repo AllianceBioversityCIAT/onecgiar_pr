@@ -16,7 +16,10 @@ export class ClarisaRegionsCgiarService {
     return `This action returns a #${id} clarisaRegionsCgiar`;
   }
 
-  update(id: number, updateClarisaRegionsCgiarDto: UpdateClarisaRegionsCgiarDto) {
+  update(
+    id: number,
+    updateClarisaRegionsCgiarDto: UpdateClarisaRegionsCgiarDto,
+  ) {
     return `This action updates a #${id} clarisaRegionsCgiar`;
   }
 

@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Headers, HttpException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Headers,
+  HttpException,
+} from '@nestjs/common';
 import { LinkedResultsService } from './linked-results.service';
 import { CreateLinkedResultDto } from './dto/create-linked-result.dto';
 import { UpdateLinkedResultDto } from './dto/update-linked-result.dto';
@@ -13,21 +23,21 @@ export class LinkedResultsController {
   async create(
     @Body() createLinkedResultDto: CreateLinkedResultDto,
     @Headers() auth: HeadersDto,
-    @Param('resultId') resultId: number
-    ) {
-      const token: TokenDto = <TokenDto>(
-        JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
-      );
-      createLinkedResultDto.result_id = resultId;
-      const { message, response, status } =
-        await this.linkedResultsService.create(createLinkedResultDto, token);
-        throw new HttpException({ message, response }, status);
+    @Param('resultId') resultId: number,
+  ) {
+    const token: TokenDto = <TokenDto>(
+      JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
+    );
+    createLinkedResultDto.result_id = resultId;
+    const { message, response, status } =
+      await this.linkedResultsService.create(createLinkedResultDto, token);
+    throw new HttpException({ message, response }, status);
   }
 
   @Get('get/:resultId')
   async findAllByResult(@Param('resultId') resultId: number) {
     const { message, response, status } =
-    await this.linkedResultsService.findAllLinksByResult(resultId);
+      await this.linkedResultsService.findAllLinksByResult(resultId);
     throw new HttpException({ message, response }, status);
   }
 
@@ -37,7 +47,10 @@ export class LinkedResultsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateLinkedResultDto: UpdateLinkedResultDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateLinkedResultDto: UpdateLinkedResultDto,
+  ) {
     return this.linkedResultsService.update(+id, updateLinkedResultDto);
   }
 

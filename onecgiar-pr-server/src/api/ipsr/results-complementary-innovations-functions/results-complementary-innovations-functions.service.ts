@@ -4,7 +4,9 @@ import { UpdateResultsComplementaryInnovationsFunctionDto } from './dto/update-r
 
 @Injectable()
 export class ResultsComplementaryInnovationsFunctionsService {
-  create(createResultsComplementaryInnovationsFunctionDto: CreateResultsComplementaryInnovationsFunctionDto) {
+  create(
+    createResultsComplementaryInnovationsFunctionDto: CreateResultsComplementaryInnovationsFunctionDto,
+  ) {
     return 'This action adds a new resultsComplementaryInnovationsFunction';
   }
 
@@ -16,7 +18,10 @@ export class ResultsComplementaryInnovationsFunctionsService {
     return `This action returns a #${id} resultsComplementaryInnovationsFunction`;
   }
 
-  update(id: number, updateResultsComplementaryInnovationsFunctionDto: UpdateResultsComplementaryInnovationsFunctionDto) {
+  update(
+    id: number,
+    updateResultsComplementaryInnovationsFunctionDto: UpdateResultsComplementaryInnovationsFunctionDto,
+  ) {
     return `This action updates a #${id} resultsComplementaryInnovationsFunction`;
   }
 

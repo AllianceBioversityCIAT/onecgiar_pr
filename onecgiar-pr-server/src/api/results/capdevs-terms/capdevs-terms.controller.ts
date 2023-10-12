@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  HttpException,
+} from '@nestjs/common';
 import { CapdevsTermsService } from './capdevs-terms.service';
 import { CreateCapdevsTermDto } from './dto/create-capdevs-term.dto';
 import { UpdateCapdevsTermDto } from './dto/update-capdevs-term.dto';
@@ -25,7 +34,10 @@ export class CapdevsTermsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateCapdevsTermDto: UpdateCapdevsTermDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateCapdevsTermDto: UpdateCapdevsTermDto,
+  ) {
     return this.capdevsTermsService.update(+id, updateCapdevsTermDto);
   }
 

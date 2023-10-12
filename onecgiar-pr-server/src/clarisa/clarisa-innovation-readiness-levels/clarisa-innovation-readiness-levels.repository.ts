@@ -2,7 +2,6 @@ import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { ClarisaInnovationReadinessLevel } from './entities/clarisa-innovation-readiness-level.entity';
 
-
 @Injectable()
 export class ClarisaInnovationReadinessLevelRepository extends Repository<ClarisaInnovationReadinessLevel> {
   constructor(private dataSource: DataSource) {

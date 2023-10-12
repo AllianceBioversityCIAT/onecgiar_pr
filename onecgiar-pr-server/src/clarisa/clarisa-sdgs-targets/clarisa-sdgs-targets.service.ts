@@ -8,8 +8,8 @@ import { UpdateClarisaSdgsTargetDto } from './dto/update-clarisa-sdgs-target.dto
 export class ClarisaSdgsTargetsService {
   constructor(
     private readonly _sdgsTargets: ClarisaSdgsTargetsRepository,
-    private readonly _handlersError: HandlersError
-  ) { }
+    private readonly _handlersError: HandlersError,
+  ) {}
 
   create(createClarisaSdgsTargetDto: CreateClarisaSdgsTargetDto) {
     return 'This action adds a new clarisaSdgsTarget';
@@ -22,8 +22,8 @@ export class ClarisaSdgsTargetsService {
       return {
         response: sdgsTargets,
         message: 'All SDGs targets',
-        status: HttpStatus.OK
-      }
+        status: HttpStatus.OK,
+      };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }

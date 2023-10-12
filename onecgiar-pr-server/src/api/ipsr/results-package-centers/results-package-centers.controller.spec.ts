@@ -11,7 +11,9 @@ describe('ResultsPackageCentersController', () => {
       providers: [ResultsPackageCentersService],
     }).compile();
 
-    controller = module.get<ResultsPackageCentersController>(ResultsPackageCentersController);
+    controller = module.get<ResultsPackageCentersController>(
+      ResultsPackageCentersController,
+    );
   });
 
   it('should be defined', () => {

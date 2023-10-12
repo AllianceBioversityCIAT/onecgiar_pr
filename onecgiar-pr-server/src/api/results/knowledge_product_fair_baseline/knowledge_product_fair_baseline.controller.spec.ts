@@ -11,7 +11,9 @@ describe('KnowledgeProductFairBaselineController', () => {
       providers: [KnowledgeProductFairBaselineService],
     }).compile();
 
-    controller = module.get<KnowledgeProductFairBaselineController>(KnowledgeProductFairBaselineController);
+    controller = module.get<KnowledgeProductFairBaselineController>(
+      KnowledgeProductFairBaselineController,
+    );
   });
 
   it('should be defined', () => {

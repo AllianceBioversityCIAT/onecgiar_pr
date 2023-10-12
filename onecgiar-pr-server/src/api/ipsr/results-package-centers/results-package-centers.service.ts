@@ -16,7 +16,10 @@ export class ResultsPackageCentersService {
     return `This action returns a #${id} resultsPackageCenter`;
   }
 
-  update(id: number, updateResultsPackageCenterDto: UpdateResultsPackageCenterDto) {
+  update(
+    id: number,
+    updateResultsPackageCenterDto: UpdateResultsPackageCenterDto,
+  ) {
     return `This action updates a #${id} resultsPackageCenter`;
   }
 

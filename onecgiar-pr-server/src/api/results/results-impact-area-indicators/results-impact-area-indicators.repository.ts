@@ -71,7 +71,7 @@ export class ResultsImpactAreaIndicatorRepository
         );
         final_data = await this.save(response_edit);
       } else {
-        const queryData: string = `
+        const queryData = `
         insert into results_impact_area_indicators 
         (
           is_active,

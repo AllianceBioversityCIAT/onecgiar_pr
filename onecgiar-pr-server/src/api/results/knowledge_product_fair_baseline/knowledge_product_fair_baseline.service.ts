@@ -4,7 +4,9 @@ import { UpdateKnowledgeProductFairBaselineDto } from './dto/update-knowledge_pr
 
 @Injectable()
 export class KnowledgeProductFairBaselineService {
-  create(createKnowledgeProductFairBaselineDto: CreateKnowledgeProductFairBaselineDto) {
+  create(
+    createKnowledgeProductFairBaselineDto: CreateKnowledgeProductFairBaselineDto,
+  ) {
     return 'This action adds a new knowledgeProductFairBaseline';
   }
 
@@ -16,7 +18,10 @@ export class KnowledgeProductFairBaselineService {
     return `This action returns a #${id} knowledgeProductFairBaseline`;
   }
 
-  update(id: number, updateKnowledgeProductFairBaselineDto: UpdateKnowledgeProductFairBaselineDto) {
+  update(
+    id: number,
+    updateKnowledgeProductFairBaselineDto: UpdateKnowledgeProductFairBaselineDto,
+  ) {
     return `This action updates a #${id} knowledgeProductFairBaseline`;
   }
 

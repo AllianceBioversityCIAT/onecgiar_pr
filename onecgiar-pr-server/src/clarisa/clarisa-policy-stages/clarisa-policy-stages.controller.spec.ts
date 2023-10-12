@@ -11,7 +11,9 @@ describe('ClarisaPolicyStagesController', () => {
       providers: [ClarisaPolicyStagesService],
     }).compile();
 
-    controller = module.get<ClarisaPolicyStagesController>(ClarisaPolicyStagesController);
+    controller = module.get<ClarisaPolicyStagesController>(
+      ClarisaPolicyStagesController,
+    );
   });
 
   it('should be defined', () => {

@@ -11,7 +11,9 @@ describe('ResultInnovationPackageCountriesController', () => {
       providers: [ResultInnovationPackageCountriesService],
     }).compile();
 
-    controller = module.get<ResultInnovationPackageCountriesController>(ResultInnovationPackageCountriesController);
+    controller = module.get<ResultInnovationPackageCountriesController>(
+      ResultInnovationPackageCountriesController,
+    );
   });
 
   it('should be defined', () => {

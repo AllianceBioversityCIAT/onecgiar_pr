@@ -83,10 +83,10 @@ export class AdminPanelService implements OnModuleInit {
         await this._resultRepository.getBasicResultDataForReport(resultCodes);
       fullReport = [...baseReport];
 
-      let resultTypes: ResultTypeDto[] =
+      const resultTypes: ResultTypeDto[] =
         await this._resultRepository.getTypesOfResultByCodes(resultCodes);
 
-      let resultsByTypes = new Map<number, ResultTypeDto[]>();
+      const resultsByTypes = new Map<number, ResultTypeDto[]>();
       resultTypes.forEach((rt) => {
         const results = resultsByTypes.get(rt.typeId);
         if (!results) {
@@ -280,10 +280,10 @@ export class AdminPanelService implements OnModuleInit {
         );
       fullReport = [...baseReport];
 
-      let resultTypes: ResultTypeDto[] =
+      const resultTypes: ResultTypeDto[] =
         await this._resultRepository.getTypesOfResultByInitiative(initiativeId);
 
-      let resultsByTypes = new Map<number, ResultTypeDto[]>();
+      const resultsByTypes = new Map<number, ResultTypeDto[]>();
       resultTypes.forEach((rt) => {
         const results = resultsByTypes.get(rt.typeId);
         if (!results) {
@@ -496,7 +496,7 @@ export class AdminPanelService implements OnModuleInit {
         `Bulk sync process started at ${initDate}. Sync for ${kps.length} kp(s).`,
       );
 
-      let responses: {
+      const responses: {
         response: any;
         message: string;
         status: HttpStatus;
@@ -517,10 +517,12 @@ export class AdminPanelService implements OnModuleInit {
       }
 
       const endDate: Date = new Date();
-      let successful = responses.filter(
+      const successful = responses.filter(
         (res) => res.status === HttpStatus.CREATED,
       );
-      let failed = responses.filter((res) => res.status !== HttpStatus.CREATED);
+      const failed = responses.filter(
+        (res) => res.status !== HttpStatus.CREATED,
+      );
 
       this._logger.debug(
         `Bulk sync process finished at ${endDate}. Time took: ${

@@ -4,7 +4,9 @@ import { UpdateResultByInstitutionsByDeliveriesTypeDto } from './dto/update-resu
 
 @Injectable()
 export class ResultByInstitutionsByDeliveriesTypeService {
-  create(createResultByInstitutionsByDeliveriesTypeDto: CreateResultByInstitutionsByDeliveriesTypeDto) {
+  create(
+    createResultByInstitutionsByDeliveriesTypeDto: CreateResultByInstitutionsByDeliveriesTypeDto,
+  ) {
     return 'This action adds a new resultByInstitutionsByDeliveriesType';
   }
 
@@ -16,7 +18,10 @@ export class ResultByInstitutionsByDeliveriesTypeService {
     return `This action returns a #${id} resultByInstitutionsByDeliveriesType`;
   }
 
-  update(id: number, updateResultByInstitutionsByDeliveriesTypeDto: UpdateResultByInstitutionsByDeliveriesTypeDto) {
+  update(
+    id: number,
+    updateResultByInstitutionsByDeliveriesTypeDto: UpdateResultByInstitutionsByDeliveriesTypeDto,
+  ) {
     return `This action updates a #${id} resultByInstitutionsByDeliveriesType`;
   }
 

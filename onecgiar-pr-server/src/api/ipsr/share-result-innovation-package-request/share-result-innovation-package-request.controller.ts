@@ -1,15 +1,30 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { ShareResultInnovationPackageRequestService } from './share-result-innovation-package-request.service';
 import { CreateShareResultInnovationPackageRequestDto } from './dto/create-share-result-innovation-package-request.dto';
 import { UpdateShareResultInnovationPackageRequestDto } from './dto/update-share-result-innovation-package-request.dto';
 
 @Controller('share-result-innovation-package-request')
 export class ShareResultInnovationPackageRequestController {
-  constructor(private readonly shareResultInnovationPackageRequestService: ShareResultInnovationPackageRequestService) {}
+  constructor(
+    private readonly shareResultInnovationPackageRequestService: ShareResultInnovationPackageRequestService,
+  ) {}
 
   @Post()
-  create(@Body() createShareResultInnovationPackageRequestDto: CreateShareResultInnovationPackageRequestDto) {
-    return this.shareResultInnovationPackageRequestService.create(createShareResultInnovationPackageRequestDto);
+  create(
+    @Body()
+    createShareResultInnovationPackageRequestDto: CreateShareResultInnovationPackageRequestDto,
+  ) {
+    return this.shareResultInnovationPackageRequestService.create(
+      createShareResultInnovationPackageRequestDto,
+    );
   }
 
   @Get()
@@ -23,8 +38,15 @@ export class ShareResultInnovationPackageRequestController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateShareResultInnovationPackageRequestDto: UpdateShareResultInnovationPackageRequestDto) {
-    return this.shareResultInnovationPackageRequestService.update(+id, updateShareResultInnovationPackageRequestDto);
+  update(
+    @Param('id') id: string,
+    @Body()
+    updateShareResultInnovationPackageRequestDto: UpdateShareResultInnovationPackageRequestDto,
+  ) {
+    return this.shareResultInnovationPackageRequestService.update(
+      +id,
+      updateShareResultInnovationPackageRequestDto,
+    );
   }
 
   @Delete(':id')

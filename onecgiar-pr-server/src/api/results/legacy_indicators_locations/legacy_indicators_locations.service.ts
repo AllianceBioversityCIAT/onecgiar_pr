@@ -16,7 +16,10 @@ export class LegacyIndicatorsLocationsService {
     return `This action returns a #${id} legacyIndicatorsLocation`;
   }
 
-  update(id: number, updateLegacyIndicatorsLocationDto: UpdateLegacyIndicatorsLocationDto) {
+  update(
+    id: number,
+    updateLegacyIndicatorsLocationDto: UpdateLegacyIndicatorsLocationDto,
+  ) {
     return `This action updates a #${id} legacyIndicatorsLocation`;
   }
 

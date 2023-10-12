@@ -11,7 +11,9 @@ describe('ClarisaInnovationReadinessLevelsController', () => {
       providers: [ClarisaInnovationReadinessLevelsService],
     }).compile();
 
-    controller = module.get<ClarisaInnovationReadinessLevelsController>(ClarisaInnovationReadinessLevelsController);
+    controller = module.get<ClarisaInnovationReadinessLevelsController>(
+      ClarisaInnovationReadinessLevelsController,
+    );
   });
 
   it('should be defined', () => {

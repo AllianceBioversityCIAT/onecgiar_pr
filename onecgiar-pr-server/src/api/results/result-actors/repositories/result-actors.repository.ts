@@ -74,7 +74,7 @@ export class ResultActorRepository
         );
         final_data = await this.save(response_edit);
       } else {
-        const queryData: string = `
+        const queryData = `
         INSERT INTO result_actors (
           actor_type_id
           ,created_by

@@ -8,8 +8,8 @@ import { UpdateClarisaActionAreaOutcomeDto } from './dto/update-clarisa-action-a
 export class ClarisaActionAreaOutcomeService {
   constructor(
     private readonly _clarisaActionAreaOutcomes: ClarisaActionAreaOutcomeRepository,
-    private readonly _handlersError: HandlersError
-  ) { }
+    private readonly _handlersError: HandlersError,
+  ) {}
 
   create(createClarisaActionAreaOutcomeDto: CreateClarisaActionAreaOutcomeDto) {
     return 'This action adds a new clarisaActionAreaOutcome';
@@ -22,8 +22,8 @@ export class ClarisaActionAreaOutcomeService {
       return {
         response: aaOutcomes,
         message: 'All Action Area Outcomes targets',
-        status: HttpStatus.OK
-      }
+        status: HttpStatus.OK,
+      };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
@@ -33,7 +33,10 @@ export class ClarisaActionAreaOutcomeService {
     return `This action returns a #${id} clarisaActionAreaOutcome`;
   }
 
-  update(id: number, updateClarisaActionAreaOutcomeDto: UpdateClarisaActionAreaOutcomeDto) {
+  update(
+    id: number,
+    updateClarisaActionAreaOutcomeDto: UpdateClarisaActionAreaOutcomeDto,
+  ) {
     return `This action updates a #${id} clarisaActionAreaOutcome`;
   }
 

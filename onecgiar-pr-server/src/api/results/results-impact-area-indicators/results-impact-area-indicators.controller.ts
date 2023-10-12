@@ -1,15 +1,30 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { ResultsImpactAreaIndicatorsService } from './results-impact-area-indicators.service';
 import { CreateResultsImpactAreaIndicatorDto } from './dto/create-results-impact-area-indicator.dto';
 import { UpdateResultsImpactAreaIndicatorDto } from './dto/update-results-impact-area-indicator.dto';
 
 @Controller()
 export class ResultsImpactAreaIndicatorsController {
-  constructor(private readonly resultsImpactAreaIndicatorsService: ResultsImpactAreaIndicatorsService) {}
+  constructor(
+    private readonly resultsImpactAreaIndicatorsService: ResultsImpactAreaIndicatorsService,
+  ) {}
 
   @Post()
-  create(@Body() createResultsImpactAreaIndicatorDto: CreateResultsImpactAreaIndicatorDto) {
-    return this.resultsImpactAreaIndicatorsService.create(createResultsImpactAreaIndicatorDto);
+  create(
+    @Body()
+    createResultsImpactAreaIndicatorDto: CreateResultsImpactAreaIndicatorDto,
+  ) {
+    return this.resultsImpactAreaIndicatorsService.create(
+      createResultsImpactAreaIndicatorDto,
+    );
   }
 
   @Get()
@@ -23,8 +38,15 @@ export class ResultsImpactAreaIndicatorsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateResultsImpactAreaIndicatorDto: UpdateResultsImpactAreaIndicatorDto) {
-    return this.resultsImpactAreaIndicatorsService.update(+id, updateResultsImpactAreaIndicatorDto);
+  update(
+    @Param('id') id: string,
+    @Body()
+    updateResultsImpactAreaIndicatorDto: UpdateResultsImpactAreaIndicatorDto,
+  ) {
+    return this.resultsImpactAreaIndicatorsService.update(
+      +id,
+      updateResultsImpactAreaIndicatorDto,
+    );
   }
 
   @Delete(':id')

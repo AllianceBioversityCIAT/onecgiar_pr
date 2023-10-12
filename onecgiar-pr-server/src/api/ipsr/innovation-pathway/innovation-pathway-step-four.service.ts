@@ -432,7 +432,7 @@ export class InnovationPathwayStepFourService {
           });
 
           if (ibr) {
-            let rie: ResultInitiativeBudget =
+            const rie: ResultInitiativeBudget =
               await this._resultInitiativesBudgetRepository.findOne({
                 where: {
                   result_initiative_id: ibr.id,

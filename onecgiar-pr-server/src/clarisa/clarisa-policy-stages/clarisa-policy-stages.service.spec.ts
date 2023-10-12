@@ -9,7 +9,9 @@ describe('ClarisaPolicyStagesService', () => {
       providers: [ClarisaPolicyStagesService],
     }).compile();
 
-    service = module.get<ClarisaPolicyStagesService>(ClarisaPolicyStagesService);
+    service = module.get<ClarisaPolicyStagesService>(
+      ClarisaPolicyStagesService,
+    );
   });
 
   it('should be defined', () => {

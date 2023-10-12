@@ -8,11 +8,10 @@ import { returnFormatService } from '../../../shared/extendsGlobalDTO/returnServ
 
 @Injectable()
 export class NonPooledProjectsService {
-
   constructor(
     protected readonly _nonPooledProjectRepository: NonPooledProjectRepository,
-    protected readonly _handlersError: HandlersError
-  ) { }
+    protected readonly _handlersError: HandlersError,
+  ) {}
 
   create(createNonPooledProjectDto: CreateNonPooledProjectDto) {
     return 'This action adds a new nonPooledProject';
@@ -26,15 +25,20 @@ export class NonPooledProjectsService {
     return `This action returns a #${id} nonPooledProject`;
   }
 
-  async update(id: number, nonpp: NonPooledProject): Promise<returnFormatService> {
+  async update(
+    id: number,
+    nonpp: NonPooledProject,
+  ): Promise<returnFormatService> {
     try {
-      const existnpp = await this._nonPooledProjectRepository.findOne({ where: { id: id, is_active: true } })
+      const existnpp = await this._nonPooledProjectRepository.findOne({
+        where: { id: id, is_active: true },
+      });
       if (!existnpp) {
         throw {
           response: id,
           message: 'Non-Pooled Project not found',
           status: HttpStatus.BAD_REQUEST,
-        }
+        };
       }
 
       await this._nonPooledProjectRepository.update(existnpp.id, {
@@ -55,11 +59,9 @@ export class NonPooledProjectsService {
         message: 'The Non-Pooled Project has been updated successfully',
         status: HttpStatus.OK,
       };
-
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
-
   }
 
   remove(id: number) {

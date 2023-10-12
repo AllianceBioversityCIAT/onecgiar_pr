@@ -1,15 +1,29 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { LegacyIndicatorsPartnersService } from './legacy_indicators_partners.service';
 import { CreateLegacyIndicatorsPartnerDto } from './dto/create-legacy_indicators_partner.dto';
 import { UpdateLegacyIndicatorsPartnerDto } from './dto/update-legacy_indicators_partner.dto';
 
 @Controller('legacy-indicators-partners')
 export class LegacyIndicatorsPartnersController {
-  constructor(private readonly legacyIndicatorsPartnersService: LegacyIndicatorsPartnersService) {}
+  constructor(
+    private readonly legacyIndicatorsPartnersService: LegacyIndicatorsPartnersService,
+  ) {}
 
   @Post()
-  create(@Body() createLegacyIndicatorsPartnerDto: CreateLegacyIndicatorsPartnerDto) {
-    return this.legacyIndicatorsPartnersService.create(createLegacyIndicatorsPartnerDto);
+  create(
+    @Body() createLegacyIndicatorsPartnerDto: CreateLegacyIndicatorsPartnerDto,
+  ) {
+    return this.legacyIndicatorsPartnersService.create(
+      createLegacyIndicatorsPartnerDto,
+    );
   }
 
   @Get()
@@ -23,8 +37,14 @@ export class LegacyIndicatorsPartnersController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateLegacyIndicatorsPartnerDto: UpdateLegacyIndicatorsPartnerDto) {
-    return this.legacyIndicatorsPartnersService.update(+id, updateLegacyIndicatorsPartnerDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateLegacyIndicatorsPartnerDto: UpdateLegacyIndicatorsPartnerDto,
+  ) {
+    return this.legacyIndicatorsPartnersService.update(
+      +id,
+      updateLegacyIndicatorsPartnerDto,
+    );
   }
 
   @Delete(':id')

@@ -33,7 +33,7 @@ export class TocLevelRepository extends Repository<TocLevel> {
       from toc_level tl;
     `;
     try {
-      const tocResult:TocLevel[] = await this.query(queryData);
+      const tocResult: TocLevel[] = await this.query(queryData);
       return tocResult;
     } catch (error) {
       throw {
@@ -53,7 +53,7 @@ export class TocLevelRepository extends Repository<TocLevel> {
       from toc_level tl;
     `;
     try {
-      const tocResult:TocLevel[] = await this.query(queryData);
+      const tocResult: TocLevel[] = await this.query(queryData);
       return tocResult;
     } catch (error) {
       throw {
@@ -64,4 +64,3 @@ export class TocLevelRepository extends Repository<TocLevel> {
     }
   }
 }
-

@@ -6,11 +6,10 @@ import { ClarisaCentersRepository } from './clarisa-centers.repository';
 
 @Injectable()
 export class ClarisaCentersService {
-
   constructor(
     private readonly _handlersError: HandlersError,
-    private readonly _clarisaCentersRepository: ClarisaCentersRepository
-  ){}
+    private readonly _clarisaCentersRepository: ClarisaCentersRepository,
+  ) {}
 
   create(createClarisaCenterDto: CreateClarisaCenterDto) {
     return 'This action adds a new clarisaCenter';
@@ -18,9 +17,10 @@ export class ClarisaCentersService {
 
   async findAll() {
     try {
-      const clarisaCenter = await this._clarisaCentersRepository.getAllCenters();
+      const clarisaCenter =
+        await this._clarisaCentersRepository.getAllCenters();
 
-      if(!clarisaCenter.length){
+      if (!clarisaCenter.length) {
         throw {
           response: {},
           message: 'Centers Not Found',

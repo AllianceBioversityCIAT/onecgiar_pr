@@ -1,11 +1,21 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { ClarisaRegionsCgiarService } from './clarisa-regions-cgiar.service';
 import { CreateClarisaRegionsCgiarDto } from './dto/create-clarisa-regions-cgiar.dto';
 import { UpdateClarisaRegionsCgiarDto } from './dto/update-clarisa-regions-cgiar.dto';
 
 @Controller('clarisa-regions-cgiar')
 export class ClarisaRegionsCgiarController {
-  constructor(private readonly clarisaRegionsCgiarService: ClarisaRegionsCgiarService) {}
+  constructor(
+    private readonly clarisaRegionsCgiarService: ClarisaRegionsCgiarService,
+  ) {}
 
   @Post()
   create(@Body() createClarisaRegionsCgiarDto: CreateClarisaRegionsCgiarDto) {
@@ -23,8 +33,14 @@ export class ClarisaRegionsCgiarController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateClarisaRegionsCgiarDto: UpdateClarisaRegionsCgiarDto) {
-    return this.clarisaRegionsCgiarService.update(+id, updateClarisaRegionsCgiarDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateClarisaRegionsCgiarDto: UpdateClarisaRegionsCgiarDto,
+  ) {
+    return this.clarisaRegionsCgiarService.update(
+      +id,
+      updateClarisaRegionsCgiarDto,
+    );
   }
 
   @Delete(':id')

@@ -9,7 +9,9 @@ describe('CapdevsDeliveryMethodsService', () => {
       providers: [CapdevsDeliveryMethodsService],
     }).compile();
 
-    service = module.get<CapdevsDeliveryMethodsService>(CapdevsDeliveryMethodsService);
+    service = module.get<CapdevsDeliveryMethodsService>(
+      CapdevsDeliveryMethodsService,
+    );
   });
 
   it('should be defined', () => {

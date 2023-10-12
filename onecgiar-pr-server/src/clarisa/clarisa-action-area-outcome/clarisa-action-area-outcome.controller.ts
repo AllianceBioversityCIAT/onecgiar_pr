@@ -1,20 +1,37 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  HttpException,
+} from '@nestjs/common';
 import { ClarisaActionAreaOutcomeService } from './clarisa-action-area-outcome.service';
 import { CreateClarisaActionAreaOutcomeDto } from './dto/create-clarisa-action-area-outcome.dto';
 import { UpdateClarisaActionAreaOutcomeDto } from './dto/update-clarisa-action-area-outcome.dto';
 
 @Controller()
 export class ClarisaActionAreaOutcomeController {
-  constructor(private readonly clarisaActionAreaOutcomeService: ClarisaActionAreaOutcomeService) { }
+  constructor(
+    private readonly clarisaActionAreaOutcomeService: ClarisaActionAreaOutcomeService,
+  ) {}
 
   @Post()
-  create(@Body() createClarisaActionAreaOutcomeDto: CreateClarisaActionAreaOutcomeDto) {
-    return this.clarisaActionAreaOutcomeService.create(createClarisaActionAreaOutcomeDto);
+  create(
+    @Body()
+    createClarisaActionAreaOutcomeDto: CreateClarisaActionAreaOutcomeDto,
+  ) {
+    return this.clarisaActionAreaOutcomeService.create(
+      createClarisaActionAreaOutcomeDto,
+    );
   }
 
   @Get('all')
   async findAll() {
-    const { response, message, status } = await this.clarisaActionAreaOutcomeService.findAll();
+    const { response, message, status } =
+      await this.clarisaActionAreaOutcomeService.findAll();
 
     throw new HttpException({ message, response }, status);
   }
@@ -25,8 +42,15 @@ export class ClarisaActionAreaOutcomeController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateClarisaActionAreaOutcomeDto: UpdateClarisaActionAreaOutcomeDto) {
-    return this.clarisaActionAreaOutcomeService.update(+id, updateClarisaActionAreaOutcomeDto);
+  update(
+    @Param('id') id: string,
+    @Body()
+    updateClarisaActionAreaOutcomeDto: UpdateClarisaActionAreaOutcomeDto,
+  ) {
+    return this.clarisaActionAreaOutcomeService.update(
+      +id,
+      updateClarisaActionAreaOutcomeDto,
+    );
   }
 
   @Delete(':id')

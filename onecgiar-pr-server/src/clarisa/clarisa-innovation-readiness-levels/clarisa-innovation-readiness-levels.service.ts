@@ -6,27 +6,29 @@ import { ClarisaInnovationReadinessLevelRepository } from './clarisa-innovation-
 
 @Injectable()
 export class ClarisaInnovationReadinessLevelsService {
-
   constructor(
     private readonly _handlersError: HandlersError,
-    private readonly _clarisaInnovationReadinessLevelRepository: ClarisaInnovationReadinessLevelRepository
-  ){}
+    private readonly _clarisaInnovationReadinessLevelRepository: ClarisaInnovationReadinessLevelRepository,
+  ) {}
 
-  create(createClarisaInnovationReadinessLevelDto: CreateClarisaInnovationReadinessLevelDto) {
+  create(
+    createClarisaInnovationReadinessLevelDto: CreateClarisaInnovationReadinessLevelDto,
+  ) {
     return 'This action adds a new clarisaInnovationReadinessLevel';
   }
 
   async findAll() {
     try {
-      const InnovationReadinessLevel = await this._clarisaInnovationReadinessLevelRepository.find();
-      
+      const InnovationReadinessLevel =
+        await this._clarisaInnovationReadinessLevelRepository.find();
+
       return {
         response: InnovationReadinessLevel,
         message: 'Successful response',
         status: HttpStatus.OK,
       };
     } catch (error) {
-      this._handlersError.returnErrorRes({error, debug: true})
+      this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 
@@ -34,7 +36,10 @@ export class ClarisaInnovationReadinessLevelsService {
     return `This action returns a #${id} clarisaInnovationReadinessLevel`;
   }
 
-  update(id: number, updateClarisaInnovationReadinessLevelDto: UpdateClarisaInnovationReadinessLevelDto) {
+  update(
+    id: number,
+    updateClarisaInnovationReadinessLevelDto: UpdateClarisaInnovationReadinessLevelDto,
+  ) {
     return `This action updates a #${id} clarisaInnovationReadinessLevel`;
   }
 

@@ -186,7 +186,7 @@ export class InnovationPathwayStepOneService {
           },
         });
       });
-      let actorsData = await this._resultActorRepository.find({
+      const actorsData = await this._resultActorRepository.find({
         where: { result_id: result.id, is_active: true },
         relations: { obj_actor_type: true },
       });
@@ -351,7 +351,7 @@ export class InnovationPathwayStepOneService {
       return '<Data not provided>';
     }
     const lastElement = arrayData.pop();
-    let actors: string = '';
+    let actors = '';
     for (const i of arrayData) {
       actors += `${i?.how_many} ${
         i?.obj_institution_types?.name || `<Institution type not provided>`
@@ -371,7 +371,7 @@ export class InnovationPathwayStepOneService {
       return '<Data not provided>';
     }
     const lastElement = arrayData.pop();
-    let actors: string = '';
+    let actors = '';
     for (const i of arrayData) {
       actors += `${+i?.quantity} ${
         i?.unit_of_measure || `<Unit of measure not provided>`
@@ -399,7 +399,7 @@ export class InnovationPathwayStepOneService {
     r: ResultRegion[],
     c: ResultCountry[],
   ) {
-    let returnData: string = '';
+    let returnData = '';
     if (geoId == 1) {
       return;
     } else if (geoId == 2) {
@@ -419,7 +419,7 @@ export class InnovationPathwayStepOneService {
       return '<Data not provided>';
     }
     const lastElement = arrayData.pop();
-    let actors: string = '';
+    let actors = '';
     for (const i of arrayData) {
       actors += `${
         i?.sex_and_age_disaggregation
@@ -806,7 +806,7 @@ export class InnovationPathwayStepOneService {
     const id = result.id;
     try {
       let saveSdgs: any;
-      let sdgsTargets: ResultIpSdgTargets[] = [];
+      const sdgsTargets: ResultIpSdgTargets[] = [];
       const resultByInnovationPackageId =
         await this._innovationByResultRepository.findOneBy({
           result_innovation_package_id: id,

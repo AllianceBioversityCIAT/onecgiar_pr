@@ -1,11 +1,21 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { ResultIpMeasuresService } from './result-ip-measures.service';
 import { CreateResultIpMeasureDto } from './dto/create-result-ip-measure.dto';
 import { UpdateResultIpMeasureDto } from './dto/update-result-ip-measure.dto';
 
 @Controller('result-ip-measures')
 export class ResultIpMeasuresController {
-  constructor(private readonly resultIpMeasuresService: ResultIpMeasuresService) {}
+  constructor(
+    private readonly resultIpMeasuresService: ResultIpMeasuresService,
+  ) {}
 
   @Post()
   create(@Body() createResultIpMeasureDto: CreateResultIpMeasureDto) {
@@ -23,7 +33,10 @@ export class ResultIpMeasuresController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateResultIpMeasureDto: UpdateResultIpMeasureDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateResultIpMeasureDto: UpdateResultIpMeasureDto,
+  ) {
     return this.resultIpMeasuresService.update(+id, updateResultIpMeasureDto);
   }
 

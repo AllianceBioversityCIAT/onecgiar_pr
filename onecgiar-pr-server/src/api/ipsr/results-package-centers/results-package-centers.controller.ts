@@ -1,15 +1,27 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { ResultsPackageCentersService } from './results-package-centers.service';
 import { CreateResultsPackageCenterDto } from './dto/create-results-package-center.dto';
 import { UpdateResultsPackageCenterDto } from './dto/update-results-package-center.dto';
 
 @Controller('results-package-centers')
 export class ResultsPackageCentersController {
-  constructor(private readonly resultsPackageCentersService: ResultsPackageCentersService) {}
+  constructor(
+    private readonly resultsPackageCentersService: ResultsPackageCentersService,
+  ) {}
 
   @Post()
   create(@Body() createResultsPackageCenterDto: CreateResultsPackageCenterDto) {
-    return this.resultsPackageCentersService.create(createResultsPackageCenterDto);
+    return this.resultsPackageCentersService.create(
+      createResultsPackageCenterDto,
+    );
   }
 
   @Get()
@@ -23,8 +35,14 @@ export class ResultsPackageCentersController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateResultsPackageCenterDto: UpdateResultsPackageCenterDto) {
-    return this.resultsPackageCentersService.update(+id, updateResultsPackageCenterDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateResultsPackageCenterDto: UpdateResultsPackageCenterDto,
+  ) {
+    return this.resultsPackageCentersService.update(
+      +id,
+      updateResultsPackageCenterDto,
+    );
   }
 
   @Delete(':id')

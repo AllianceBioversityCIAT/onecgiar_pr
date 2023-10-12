@@ -6,11 +6,10 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 
 @Injectable()
 export class PartnerDeliveryTypeService {
-
   constructor(
     private readonly _partnerDeliveryTypeRepository: PartnerDeliveryTypeRepository,
-    private readonly _handlersError: HandlersError
-  ){}
+    private readonly _handlersError: HandlersError,
+  ) {}
 
   create(createPartnerDeliveryTypeDto: CreatePartnerDeliveryTypeDto) {
     return 'This action adds a new partnerDeliveryType';
@@ -33,7 +32,10 @@ export class PartnerDeliveryTypeService {
     return `This action returns a #${id} partnerDeliveryType`;
   }
 
-  update(id: number, updatePartnerDeliveryTypeDto: UpdatePartnerDeliveryTypeDto) {
+  update(
+    id: number,
+    updatePartnerDeliveryTypeDto: UpdatePartnerDeliveryTypeDto,
+  ) {
     return `This action updates a #${id} partnerDeliveryType`;
   }
 

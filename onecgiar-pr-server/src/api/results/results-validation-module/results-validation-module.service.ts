@@ -31,7 +31,7 @@ export class ResultsValidationModuleService {
           status: HttpStatus.NOT_FOUND,
         };
       }
-      let response: GetValidationSectionDto[] = [];
+      const response: GetValidationSectionDto[] = [];
 
       response.push(
         await this._resultValidationRepository.generalInformationValidation(
@@ -157,7 +157,7 @@ export class ResultsValidationModuleService {
           status: HttpStatus.NOT_FOUND,
         };
       }
-      let response: GetValidationSectionDto[] = [];
+      const response: GetValidationSectionDto[] = [];
       const validation =
         await this._resultValidationRepository.validationResultExist(result.id);
 
@@ -263,13 +263,16 @@ export class ResultsValidationModuleService {
           status: HttpStatus.NOT_FOUND,
         };
       }
-      let response: GetValidationSectionDto[] = [];
+      const response: GetValidationSectionDto[] = [];
       const validation =
         await this._resultValidationRepository.validationResultExist(result.id);
 
       const phase = await this._resultValidationRepository.version();
       if (phase.version != result.version_id) {
-        const previousPhase = await this._resultValidationRepository.oldGreenCheckVersion(result.id)
+        const previousPhase =
+          await this._resultValidationRepository.oldGreenCheckVersion(
+            result.id,
+          );
         return {
           response: {
             green_checks: previousPhase,
@@ -280,7 +283,7 @@ export class ResultsValidationModuleService {
       }
 
       await this._resultValidationRepository.inactiveOldInserts(result.id);
-      let newValidation = new Validation();
+      const newValidation = new Validation();
 
       newValidation.is_active = true;
       const vGeneral =
@@ -426,13 +429,13 @@ export class ResultsValidationModuleService {
         if (!result) {
           continue;
         }
-        let response: GetValidationSectionDto[] = [];
+        const response: GetValidationSectionDto[] = [];
         const validation =
           await this._resultValidationRepository.validationResultExist(
             result.id,
           );
         await this._resultValidationRepository.inactiveOldInserts(result.id);
-        let newValidation = new Validation();
+        const newValidation = new Validation();
 
         if (validation) {
           newValidation.id = validation.id;

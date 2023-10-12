@@ -1,21 +1,38 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  HttpException,
+} from '@nestjs/common';
 import { ResultInnovationPackageService } from './result-innovation-package.service';
-import { CreateResultInnovationPackageDto, UpdateGeneralInformationDto } from './dto/create-result-innovation-package.dto';
+import {
+  CreateResultInnovationPackageDto,
+  UpdateGeneralInformationDto,
+} from './dto/create-result-innovation-package.dto';
 import { UpdateResultInnovationPackageDto } from './dto/update-result-innovation-package.dto';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 
 @Controller()
 export class ResultInnovationPackageController {
-  constructor(private readonly resultInnovationPackageService: ResultInnovationPackageService) { }
+  constructor(
+    private readonly resultInnovationPackageService: ResultInnovationPackageService,
+  ) {}
 
   @Post('create-header')
   async createHeader(
     @Body() CreateResultInnovationPackageDto: CreateResultInnovationPackageDto,
-    @UserToken() user: TokenDto
+    @UserToken() user: TokenDto,
   ) {
     const { message, response, status } =
-      await this.resultInnovationPackageService.createHeader(CreateResultInnovationPackageDto, user);
+      await this.resultInnovationPackageService.createHeader(
+        CreateResultInnovationPackageDto,
+        user,
+      );
 
     throw new HttpException({ message, response }, status);
   }
@@ -24,10 +41,14 @@ export class ResultInnovationPackageController {
   async generalInformation(
     @Param('resultId') resultId: number,
     @Body() updateGeneralInformationDto: UpdateGeneralInformationDto,
-    @UserToken() user: TokenDto
+    @UserToken() user: TokenDto,
   ) {
     const { message, response, status } =
-      await this.resultInnovationPackageService.generalInformation(resultId, updateGeneralInformationDto, user);
+      await this.resultInnovationPackageService.generalInformation(
+        resultId,
+        updateGeneralInformationDto,
+        user,
+      );
 
     throw new HttpException({ message, response }, status);
   }
@@ -71,7 +92,7 @@ export class ResultInnovationPackageController {
   @Delete(':resultId')
   async delete(
     @Param('resultId') resultId: number,
-    @UserToken() user: TokenDto
+    @UserToken() user: TokenDto,
   ) {
     const { message, response, status } =
       await this.resultInnovationPackageService.delete(resultId, user);

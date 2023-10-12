@@ -15,7 +15,6 @@ export class ResultQuestionsRepository extends Repository<ResultQuestion> {
 
   async innovationDev() {
     try {
-      
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultQuestionsRepository.name,

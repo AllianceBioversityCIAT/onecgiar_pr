@@ -145,7 +145,6 @@ export class ResultsTocResult {
     name: 'version_dashboard_id',
     type: 'text',
     nullable: true,
-    
   })
   version_dashboard_id: boolean;
 }

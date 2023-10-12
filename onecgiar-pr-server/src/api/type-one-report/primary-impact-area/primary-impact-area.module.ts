@@ -7,7 +7,11 @@ import { HandlersError } from 'src/shared/handlers/error.utils';
 
 @Module({
   controllers: [PrimaryImpactAreaController],
-  providers: [PrimaryImpactAreaService, PrimaryImpactAreaRepository, HandlersError],
-  exports:[PrimaryImpactAreaRepository]
+  providers: [
+    PrimaryImpactAreaService,
+    PrimaryImpactAreaRepository,
+    HandlersError,
+  ],
+  exports: [PrimaryImpactAreaRepository],
 })
 export class PrimaryImpactAreaModule {}

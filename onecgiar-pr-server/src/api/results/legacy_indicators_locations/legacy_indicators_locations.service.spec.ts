@@ -9,7 +9,9 @@ describe('LegacyIndicatorsLocationsService', () => {
       providers: [LegacyIndicatorsLocationsService],
     }).compile();
 
-    service = module.get<LegacyIndicatorsLocationsService>(LegacyIndicatorsLocationsService);
+    service = module.get<LegacyIndicatorsLocationsService>(
+      LegacyIndicatorsLocationsService,
+    );
   });
 
   it('should be defined', () => {

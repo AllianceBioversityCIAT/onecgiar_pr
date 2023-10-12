@@ -1,15 +1,30 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { ResultInnovationPackageRegionsService } from './result-innovation-package-regions.service';
 import { CreateResultInnovationPackageRegionDto } from './dto/create-result-innovation-package-region.dto';
 import { UpdateResultInnovationPackageRegionDto } from './dto/update-result-innovation-package-region.dto';
 
 @Controller('result-innovation-package-regions')
 export class ResultInnovationPackageRegionsController {
-  constructor(private readonly resultInnovationPackageRegionsService: ResultInnovationPackageRegionsService) {}
+  constructor(
+    private readonly resultInnovationPackageRegionsService: ResultInnovationPackageRegionsService,
+  ) {}
 
   @Post()
-  create(@Body() createResultInnovationPackageRegionDto: CreateResultInnovationPackageRegionDto) {
-    return this.resultInnovationPackageRegionsService.create(createResultInnovationPackageRegionDto);
+  create(
+    @Body()
+    createResultInnovationPackageRegionDto: CreateResultInnovationPackageRegionDto,
+  ) {
+    return this.resultInnovationPackageRegionsService.create(
+      createResultInnovationPackageRegionDto,
+    );
   }
 
   @Get()
@@ -23,8 +38,15 @@ export class ResultInnovationPackageRegionsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateResultInnovationPackageRegionDto: UpdateResultInnovationPackageRegionDto) {
-    return this.resultInnovationPackageRegionsService.update(+id, updateResultInnovationPackageRegionDto);
+  update(
+    @Param('id') id: string,
+    @Body()
+    updateResultInnovationPackageRegionDto: UpdateResultInnovationPackageRegionDto,
+  ) {
+    return this.resultInnovationPackageRegionsService.update(
+      +id,
+      updateResultInnovationPackageRegionDto,
+    );
   }
 
   @Delete(':id')

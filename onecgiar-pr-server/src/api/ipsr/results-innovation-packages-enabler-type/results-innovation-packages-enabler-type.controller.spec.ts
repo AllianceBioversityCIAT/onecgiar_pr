@@ -11,7 +11,9 @@ describe('ResultsInnovationPackagesEnablerTypeController', () => {
       providers: [ResultsInnovationPackagesEnablerTypeService],
     }).compile();
 
-    controller = module.get<ResultsInnovationPackagesEnablerTypeController>(ResultsInnovationPackagesEnablerTypeController);
+    controller = module.get<ResultsInnovationPackagesEnablerTypeController>(
+      ResultsInnovationPackagesEnablerTypeController,
+    );
   });
 
   it('should be defined', () => {

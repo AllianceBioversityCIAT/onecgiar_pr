@@ -6,13 +6,14 @@ import { HandlersError } from '../../shared/handlers/error.utils';
 
 @Injectable()
 export class ClarisaInnovationUseLevelsService {
-
   constructor(
     private readonly _clarisaInnovationUseLevelRepository: ClarisaInnovationUseLevelRepository,
-    private readonly _handlersError: HandlersError
-  ) { }
+    private readonly _handlersError: HandlersError,
+  ) {}
 
-  create(createClarisaInnovationUseLevelDto: CreateClarisaInnovationUseLevelDto) {
+  create(
+    createClarisaInnovationUseLevelDto: CreateClarisaInnovationUseLevelDto,
+  ) {
     return 'This action adds a new clarisaInnovationUseLevel';
   }
 
@@ -31,7 +32,7 @@ export class ClarisaInnovationUseLevelsService {
         response: response,
         message: 'All innovation use levels were found',
         status: HttpStatus.OK,
-      }
+      };
     } catch (error) {
       return this._handlersError.returnErrorRes({
         error,
@@ -44,7 +45,10 @@ export class ClarisaInnovationUseLevelsService {
     return `This action returns a #${id} clarisaInnovationUseLevel`;
   }
 
-  update(id: number, updateClarisaInnovationUseLevelDto: UpdateClarisaInnovationUseLevelDto) {
+  update(
+    id: number,
+    updateClarisaInnovationUseLevelDto: UpdateClarisaInnovationUseLevelDto,
+  ) {
     return `This action updates a #${id} clarisaInnovationUseLevel`;
   }
 

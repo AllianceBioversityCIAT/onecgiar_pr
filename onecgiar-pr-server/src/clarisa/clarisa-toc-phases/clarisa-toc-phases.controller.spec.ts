@@ -11,7 +11,9 @@ describe('ClarisaTocPhasesController', () => {
       providers: [ClarisaTocPhasesService],
     }).compile();
 
-    controller = module.get<ClarisaTocPhasesController>(ClarisaTocPhasesController);
+    controller = module.get<ClarisaTocPhasesController>(
+      ClarisaTocPhasesController,
+    );
   });
 
   it('should be defined', () => {

@@ -9,7 +9,9 @@ describe('ResultsPackageByInitiativesService', () => {
       providers: [ResultsPackageByInitiativesService],
     }).compile();
 
-    service = module.get<ResultsPackageByInitiativesService>(ResultsPackageByInitiativesService);
+    service = module.get<ResultsPackageByInitiativesService>(
+      ResultsPackageByInitiativesService,
+    );
   });
 
   it('should be defined', () => {

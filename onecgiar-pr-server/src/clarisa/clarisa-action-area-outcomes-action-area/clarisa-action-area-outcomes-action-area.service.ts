@@ -4,7 +4,9 @@ import { UpdateClarisaActionAreaOutcomesActionAreaDto } from './dto/update-clari
 
 @Injectable()
 export class ClarisaActionAreaOutcomesActionAreaService {
-  create(createClarisaActionAreaOutcomesActionAreaDto: CreateClarisaActionAreaOutcomesActionAreaDto) {
+  create(
+    createClarisaActionAreaOutcomesActionAreaDto: CreateClarisaActionAreaOutcomesActionAreaDto,
+  ) {
     return 'This action adds a new clarisaActionAreaOutcomesActionArea';
   }
 
@@ -16,7 +18,10 @@ export class ClarisaActionAreaOutcomesActionAreaService {
     return `This action returns a #${id} clarisaActionAreaOutcomesActionArea`;
   }
 
-  update(id: number, updateClarisaActionAreaOutcomesActionAreaDto: UpdateClarisaActionAreaOutcomesActionAreaDto) {
+  update(
+    id: number,
+    updateClarisaActionAreaOutcomesActionAreaDto: UpdateClarisaActionAreaOutcomesActionAreaDto,
+  ) {
     return `This action updates a #${id} clarisaActionAreaOutcomesActionArea`;
   }
 

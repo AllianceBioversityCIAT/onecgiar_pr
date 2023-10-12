@@ -6,11 +6,10 @@ import { ClarisaRegionsRepository } from './ClariasaRegions.repository';
 
 @Injectable()
 export class ClarisaRegionsService {
-
   constructor(
     private readonly _handlersError: HandlersError,
-    private readonly _clarisaRegionsRepository: ClarisaRegionsRepository
-  ){}
+    private readonly _clarisaRegionsRepository: ClarisaRegionsRepository,
+  ) {}
 
   create(createClarisaRegionDto: CreateClarisaRegionDto) {
     return 'This action adds a new clarisaRegion';
@@ -18,7 +17,8 @@ export class ClarisaRegionsService {
 
   async findAllNoParent() {
     try {
-      const region = await this._clarisaRegionsRepository.getAllNoParentRegions();
+      const region =
+        await this._clarisaRegionsRepository.getAllNoParentRegions();
       return {
         response: region,
         message: 'Successful response',

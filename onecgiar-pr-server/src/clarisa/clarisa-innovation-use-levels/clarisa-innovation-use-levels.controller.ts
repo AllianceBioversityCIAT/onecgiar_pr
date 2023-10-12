@@ -1,15 +1,30 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { ClarisaInnovationUseLevelsService } from './clarisa-innovation-use-levels.service';
 import { CreateClarisaInnovationUseLevelDto } from './dto/create-clarisa-innovation-use-level.dto';
 import { UpdateClarisaInnovationUseLevelDto } from './dto/update-clarisa-innovation-use-level.dto';
 
 @Controller()
 export class ClarisaInnovationUseLevelsController {
-  constructor(private readonly clarisaInnovationUseLevelsService: ClarisaInnovationUseLevelsService) { }
+  constructor(
+    private readonly clarisaInnovationUseLevelsService: ClarisaInnovationUseLevelsService,
+  ) {}
 
   @Post()
-  create(@Body() createClarisaInnovationUseLevelDto: CreateClarisaInnovationUseLevelDto) {
-    return this.clarisaInnovationUseLevelsService.create(createClarisaInnovationUseLevelDto);
+  create(
+    @Body()
+    createClarisaInnovationUseLevelDto: CreateClarisaInnovationUseLevelDto,
+  ) {
+    return this.clarisaInnovationUseLevelsService.create(
+      createClarisaInnovationUseLevelDto,
+    );
   }
 
   @Get()
@@ -23,8 +38,15 @@ export class ClarisaInnovationUseLevelsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateClarisaInnovationUseLevelDto: UpdateClarisaInnovationUseLevelDto) {
-    return this.clarisaInnovationUseLevelsService.update(+id, updateClarisaInnovationUseLevelDto);
+  update(
+    @Param('id') id: string,
+    @Body()
+    updateClarisaInnovationUseLevelDto: UpdateClarisaInnovationUseLevelDto,
+  ) {
+    return this.clarisaInnovationUseLevelsService.update(
+      +id,
+      updateClarisaInnovationUseLevelDto,
+    );
   }
 
   @Delete(':id')

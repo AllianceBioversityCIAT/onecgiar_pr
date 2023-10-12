@@ -9,7 +9,9 @@ describe('ResultsByIpInnovationUseMeasuresService', () => {
       providers: [ResultsByIpInnovationUseMeasuresService],
     }).compile();
 
-    service = module.get<ResultsByIpInnovationUseMeasuresService>(ResultsByIpInnovationUseMeasuresService);
+    service = module.get<ResultsByIpInnovationUseMeasuresService>(
+      ResultsByIpInnovationUseMeasuresService,
+    );
   });
 
   it('should be defined', () => {

@@ -11,7 +11,9 @@ describe('ResultsValidationModuleController', () => {
       providers: [ResultsValidationModuleService],
     }).compile();
 
-    controller = module.get<ResultsValidationModuleController>(ResultsValidationModuleController);
+    controller = module.get<ResultsValidationModuleController>(
+      ResultsValidationModuleController,
+    );
   });
 
   it('should be defined', () => {

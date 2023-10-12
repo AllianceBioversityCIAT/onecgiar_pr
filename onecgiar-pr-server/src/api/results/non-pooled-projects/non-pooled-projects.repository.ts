@@ -74,7 +74,7 @@ export class NonPooledProjectRepository
         );
         final_data = await this.save(response_edit);
       } else {
-        const queryData: string = `
+        const queryData = `
         insert into non_pooled_project (
           grant_title,
           center_grant_id,

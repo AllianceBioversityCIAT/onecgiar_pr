@@ -6,27 +6,29 @@ import { ClarisaInnovationCharacteristicRepository } from './clarisa-innovation-
 
 @Injectable()
 export class ClarisaInnovationCharacteristicsService {
-
   constructor(
     private readonly _handlersError: HandlersError,
-    private readonly _clarisaInnovationCharacteristicRepository : ClarisaInnovationCharacteristicRepository
-  ){}
+    private readonly _clarisaInnovationCharacteristicRepository: ClarisaInnovationCharacteristicRepository,
+  ) {}
 
-  create(createClarisaInnovationCharacteristicDto: CreateClarisaInnovationCharacteristicDto) {
+  create(
+    createClarisaInnovationCharacteristicDto: CreateClarisaInnovationCharacteristicDto,
+  ) {
     return 'This action adds a new clarisaInnovationCharacteristic';
   }
 
   async findAll() {
     try {
-      const InnovationReadinessLevel = await this._clarisaInnovationCharacteristicRepository.find();
-      
+      const InnovationReadinessLevel =
+        await this._clarisaInnovationCharacteristicRepository.find();
+
       return {
         response: InnovationReadinessLevel,
         message: 'Successful response',
         status: HttpStatus.OK,
       };
     } catch (error) {
-      this._handlersError.returnErrorRes({error, debug: true})
+      this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 
@@ -34,7 +36,10 @@ export class ClarisaInnovationCharacteristicsService {
     return `This action returns a #${id} clarisaInnovationCharacteristic`;
   }
 
-  update(id: number, updateClarisaInnovationCharacteristicDto: UpdateClarisaInnovationCharacteristicDto) {
+  update(
+    id: number,
+    updateClarisaInnovationCharacteristicDto: UpdateClarisaInnovationCharacteristicDto,
+  ) {
     return `This action updates a #${id} clarisaInnovationCharacteristic`;
   }
 

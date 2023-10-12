@@ -6,11 +6,10 @@ import { ClarisaInnovationTypeRepository } from './clarisa-innovation-type.repos
 
 @Injectable()
 export class ClarisaInnovationTypeService {
-
   constructor(
     private readonly _handlersError: HandlersError,
-    private readonly _clarisaInnovationTypeRepository: ClarisaInnovationTypeRepository
-  ){}
+    private readonly _clarisaInnovationTypeRepository: ClarisaInnovationTypeRepository,
+  ) {}
 
   create(createClarisaInnovationTypeDto: CreateClarisaInnovationTypeDto) {
     return 'This action adds a new clarisaInnovationType';
@@ -19,14 +18,14 @@ export class ClarisaInnovationTypeService {
   async findAll() {
     try {
       const innocationType = await this._clarisaInnovationTypeRepository.find();
-      
+
       return {
         response: innocationType,
         message: 'Successful response',
         status: HttpStatus.OK,
       };
     } catch (error) {
-      this._handlersError.returnErrorRes({error, debug: true})
+      this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 
@@ -34,7 +33,10 @@ export class ClarisaInnovationTypeService {
     return `This action returns a #${id} clarisaInnovationType`;
   }
 
-  update(id: number, updateClarisaInnovationTypeDto: UpdateClarisaInnovationTypeDto) {
+  update(
+    id: number,
+    updateClarisaInnovationTypeDto: UpdateClarisaInnovationTypeDto,
+  ) {
     return `This action updates a #${id} clarisaInnovationType`;
   }
 

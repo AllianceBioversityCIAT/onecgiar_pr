@@ -1,11 +1,21 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { ResultsIpActorsService } from './results-ip-actors.service';
 import { CreateResultsIpActorDto } from './dto/create-results-ip-actor.dto';
 import { UpdateResultsIpActorDto } from './dto/update-results-ip-actor.dto';
 
 @Controller('results-ip-actors')
 export class ResultsIpActorsController {
-  constructor(private readonly resultsIpActorsService: ResultsIpActorsService) {}
+  constructor(
+    private readonly resultsIpActorsService: ResultsIpActorsService,
+  ) {}
 
   @Post()
   create(@Body() createResultsIpActorDto: CreateResultsIpActorDto) {
@@ -23,7 +33,10 @@ export class ResultsIpActorsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateResultsIpActorDto: UpdateResultsIpActorDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateResultsIpActorDto: UpdateResultsIpActorDto,
+  ) {
     return this.resultsIpActorsService.update(+id, updateResultsIpActorDto);
   }
 

@@ -1,11 +1,22 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  HttpException,
+} from '@nestjs/common';
 import { PartnerDeliveryTypeService } from './partner-delivery-type.service';
 import { CreatePartnerDeliveryTypeDto } from './dto/create-partner-delivery-type.dto';
 import { UpdatePartnerDeliveryTypeDto } from './dto/update-partner-delivery-type.dto';
 
 @Controller()
 export class PartnerDeliveryTypeController {
-  constructor(private readonly partnerDeliveryTypeService: PartnerDeliveryTypeService) {}
+  constructor(
+    private readonly partnerDeliveryTypeService: PartnerDeliveryTypeService,
+  ) {}
 
   @Post()
   create(@Body() createPartnerDeliveryTypeDto: CreatePartnerDeliveryTypeDto) {
@@ -14,7 +25,8 @@ export class PartnerDeliveryTypeController {
 
   @Get('get/all')
   async findAll() {
-    const { message, response, status } = await this.partnerDeliveryTypeService.findAll();
+    const { message, response, status } =
+      await this.partnerDeliveryTypeService.findAll();
     throw new HttpException({ message, response }, status);
   }
 
@@ -24,8 +36,14 @@ export class PartnerDeliveryTypeController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updatePartnerDeliveryTypeDto: UpdatePartnerDeliveryTypeDto) {
-    return this.partnerDeliveryTypeService.update(+id, updatePartnerDeliveryTypeDto);
+  update(
+    @Param('id') id: string,
+    @Body() updatePartnerDeliveryTypeDto: UpdatePartnerDeliveryTypeDto,
+  ) {
+    return this.partnerDeliveryTypeService.update(
+      +id,
+      updatePartnerDeliveryTypeDto,
+    );
   }
 
   @Delete(':id')

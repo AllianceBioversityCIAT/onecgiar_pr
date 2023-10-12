@@ -33,21 +33,25 @@ export class ResultsByInstitutionsController {
   @Get('result/:id')
   async findAll(@Param('id') id: number) {
     const { message, response, status } =
-       await this.resultsByInstitutionsService.getGetInstitutionsByResultId(id);
+      await this.resultsByInstitutionsService.getGetInstitutionsByResultId(id);
     throw new HttpException({ message, response }, status);
   }
 
   @Get('actors/result/:id')
   async findAllByActors(@Param('id') id: number) {
     const { message, response, status } =
-       await this.resultsByInstitutionsService.getGetInstitutionsActorsByResultId(id);
+      await this.resultsByInstitutionsService.getGetInstitutionsActorsByResultId(
+        id,
+      );
     throw new HttpException({ message, response }, status);
   }
 
   @Get('partners/result/:id')
   async findAllByPartners(@Param('id') id: number) {
     const { message, response, status } =
-       await this.resultsByInstitutionsService.getGetInstitutionsPartnersByResultId(id);
+      await this.resultsByInstitutionsService.getGetInstitutionsPartnersByResultId(
+        id,
+      );
     throw new HttpException({ message, response }, status);
   }
 
@@ -55,14 +59,18 @@ export class ResultsByInstitutionsController {
   async findOne(
     @Body() updatePartners: SaveResultsByInstitutionDto,
     @Headers() auth: HeadersDto,
-    @Param('id') id: number
-    ) {
-      const token: TokenDto = <TokenDto>(
-        JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
+    @Param('id') id: number,
+  ) {
+    const token: TokenDto = <TokenDto>(
+      JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
+    );
+    updatePartners.result_id = id;
+    const { message, response, status } =
+      await this.resultsByInstitutionsService.savePartnersInstitutionsByResult(
+        updatePartners,
+        token,
       );
-      updatePartners.result_id = id;
-      const { message, response, status } = await this.resultsByInstitutionsService.savePartnersInstitutionsByResult(updatePartners, token);
-      throw new HttpException({ message, response }, status);
+    throw new HttpException({ message, response }, status);
   }
 
   @Patch(':id')

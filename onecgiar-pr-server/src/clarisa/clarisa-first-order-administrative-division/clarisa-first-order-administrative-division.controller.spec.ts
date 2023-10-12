@@ -11,7 +11,9 @@ describe('ClarisaFirstOrderAdministrativeDivisionController', () => {
       providers: [ClarisaFirstOrderAdministrativeDivisionService],
     }).compile();
 
-    controller = module.get<ClarisaFirstOrderAdministrativeDivisionController>(ClarisaFirstOrderAdministrativeDivisionController);
+    controller = module.get<ClarisaFirstOrderAdministrativeDivisionController>(
+      ClarisaFirstOrderAdministrativeDivisionController,
+    );
   });
 
   it('should be defined', () => {

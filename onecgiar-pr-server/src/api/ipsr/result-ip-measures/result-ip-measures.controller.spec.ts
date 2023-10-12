@@ -11,7 +11,9 @@ describe('ResultIpMeasuresController', () => {
       providers: [ResultIpMeasuresService],
     }).compile();
 
-    controller = module.get<ResultIpMeasuresController>(ResultIpMeasuresController);
+    controller = module.get<ResultIpMeasuresController>(
+      ResultIpMeasuresController,
+    );
   });
 
   it('should be defined', () => {

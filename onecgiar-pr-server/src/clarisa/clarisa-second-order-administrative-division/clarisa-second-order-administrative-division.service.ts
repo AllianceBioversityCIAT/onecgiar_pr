@@ -6,15 +6,18 @@ import { HandlersError } from '../../shared/handlers/error.utils';
 
 @Injectable()
 export class ClarisaSecondOrderAdministrativeDivisionService {
-
   constructor(
     private readonly _clarisaSecondOrderAdministrativeDivisionRepository: ClarisaSecondOrderAdministrativeDivisionRepository,
-    private readonly _handlersError: HandlersError
-  ) { }
+    private readonly _handlersError: HandlersError,
+  ) {}
 
   async getIsoAlpha2AdminCode(isoAlpha2: string, adminCode1: string) {
     try {
-      const response = await this._clarisaSecondOrderAdministrativeDivisionRepository.getIsoAlpha2AdminCode(isoAlpha2, adminCode1);
+      const response =
+        await this._clarisaSecondOrderAdministrativeDivisionRepository.getIsoAlpha2AdminCode(
+          isoAlpha2,
+          adminCode1,
+        );
       return {
         response: response,
         message: 'Successful response',

@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  HttpException,
+} from '@nestjs/common';
 import { ResultsCentersService } from './results-centers.service';
 import { CreateResultsCenterDto } from './dto/create-results-center.dto';
 import { UpdateResultsCenterDto } from './dto/update-results-center.dto';
@@ -13,10 +22,8 @@ export class ResultsCentersController {
   }
 
   @Get('get/result/:resultId')
-  async findREsultCenterByResultId(
-    @Param('resultId') resultId: number
-  ) {
-    const {message, response, status} =
+  async findREsultCenterByResultId(@Param('resultId') resultId: number) {
+    const { message, response, status } =
       await this.resultsCentersService.findREsultCenterByResultId(resultId);
     throw new HttpException({ message, response }, status);
   }
@@ -27,7 +34,10 @@ export class ResultsCentersController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateResultsCenterDto: UpdateResultsCenterDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateResultsCenterDto: UpdateResultsCenterDto,
+  ) {
     return this.resultsCentersService.update(+id, updateResultsCenterDto);
   }
 

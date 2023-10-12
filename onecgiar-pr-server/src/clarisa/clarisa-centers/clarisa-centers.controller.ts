@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  HttpException,
+} from '@nestjs/common';
 import { ClarisaCentersService } from './clarisa-centers.service';
 import { CreateClarisaCenterDto } from './dto/create-clarisa-center.dto';
 import { UpdateClarisaCenterDto } from './dto/update-clarisa-center.dto';
@@ -15,7 +24,7 @@ export class ClarisaCentersController {
   @Get('get/all')
   async findAll() {
     const { message, response, status } =
-    await this.clarisaCentersService.findAll();
+      await this.clarisaCentersService.findAll();
     throw new HttpException({ message, response }, status);
   }
 
@@ -25,7 +34,10 @@ export class ClarisaCentersController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateClarisaCenterDto: UpdateClarisaCenterDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateClarisaCenterDto: UpdateClarisaCenterDto,
+  ) {
     return this.clarisaCentersService.update(+id, updateClarisaCenterDto);
   }
 

@@ -139,7 +139,7 @@ export class AdminPanelRepository {
     `;
 
     try {
-      let submissionsByResult: any = await this.dataSource.query(queryData, [
+      const submissionsByResult: any = await this.dataSource.query(queryData, [
         '?',
       ]);
 

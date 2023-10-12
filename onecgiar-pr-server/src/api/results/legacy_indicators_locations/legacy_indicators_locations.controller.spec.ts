@@ -11,7 +11,9 @@ describe('LegacyIndicatorsLocationsController', () => {
       providers: [LegacyIndicatorsLocationsService],
     }).compile();
 
-    controller = module.get<LegacyIndicatorsLocationsController>(LegacyIndicatorsLocationsController);
+    controller = module.get<LegacyIndicatorsLocationsController>(
+      LegacyIndicatorsLocationsController,
+    );
   });
 
   it('should be defined', () => {

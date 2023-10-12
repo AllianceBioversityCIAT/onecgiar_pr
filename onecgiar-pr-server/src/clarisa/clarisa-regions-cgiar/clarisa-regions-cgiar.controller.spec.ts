@@ -11,7 +11,9 @@ describe('ClarisaRegionsCgiarController', () => {
       providers: [ClarisaRegionsCgiarService],
     }).compile();
 
-    controller = module.get<ClarisaRegionsCgiarController>(ClarisaRegionsCgiarController);
+    controller = module.get<ClarisaRegionsCgiarController>(
+      ClarisaRegionsCgiarController,
+    );
   });
 
   it('should be defined', () => {

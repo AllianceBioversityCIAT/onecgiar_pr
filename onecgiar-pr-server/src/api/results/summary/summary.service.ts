@@ -100,7 +100,7 @@ export class SummaryService {
    */
   async getInnovationUse(resultId: number) {
     try {
-      let actorsData = await this._resultActorRepository.find({
+      const actorsData = await this._resultActorRepository.find({
         where: { result_id: resultId, is_active: true },
         relations: { obj_actor_type: true },
       });
@@ -216,7 +216,7 @@ export class SummaryService {
       }
 
       if (institutions?.length) {
-        let institutionsList: ResultsByInstitution[] = [];
+        const institutionsList: ResultsByInstitution[] = [];
         await this._resultByIntitutionsRepository.updateGenericIstitutions(
           resultId,
           institutions,
@@ -490,7 +490,7 @@ export class SummaryService {
       });
       const result = await this._resultRepository.getResultById(resultId);
 
-      let actorsData = await this._resultActorRepository.find({
+      const actorsData = await this._resultActorRepository.find({
         where: { result_id: resultId, is_active: true },
         relations: { obj_actor_type: true },
       });
@@ -659,7 +659,7 @@ export class SummaryService {
       }
 
       if (institutions?.length) {
-        let institutionsList: ResultsByInstitution[] = [];
+        const institutionsList: ResultsByInstitution[] = [];
         await this._resultByIntitutionsRepository.updateGenericIstitutions(
           resultId,
           institutions,

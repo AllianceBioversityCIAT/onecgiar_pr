@@ -9,7 +9,9 @@ describe('ResultsInnovationPackagesEnablerTypeService', () => {
       providers: [ResultsInnovationPackagesEnablerTypeService],
     }).compile();
 
-    service = module.get<ResultsInnovationPackagesEnablerTypeService>(ResultsInnovationPackagesEnablerTypeService);
+    service = module.get<ResultsInnovationPackagesEnablerTypeService>(
+      ResultsInnovationPackagesEnablerTypeService,
+    );
   });
 
   it('should be defined', () => {

@@ -342,7 +342,7 @@ export class ResultsByInstitutionsService {
 
             const delivery = incomingInstitution.deliveries;
             if (delivery) {
-              let InstitutionsDeliveriesArray: ResultByInstitutionsByDeliveriesType[] =
+              const InstitutionsDeliveriesArray: ResultByInstitutionsByDeliveriesType[] =
                 [];
               for (let i = 0; i < delivery.length; i++) {
                 const newInstitutionsDeliveries =
@@ -386,7 +386,7 @@ export class ResultsByInstitutionsService {
               incomingInstitution.deliveries,
               user.id,
             );
-            let InstitutionsDeliveriesArray: ResultByInstitutionsByDeliveriesType[] =
+            const InstitutionsDeliveriesArray: ResultByInstitutionsByDeliveriesType[] =
               [];
             if (delivery) {
               for (let i = 0; i < delivery.length; i++) {

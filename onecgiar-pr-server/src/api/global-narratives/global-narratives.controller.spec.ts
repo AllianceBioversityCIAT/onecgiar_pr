@@ -11,7 +11,9 @@ describe('GlobalNarrativesController', () => {
       providers: [GlobalNarrativesService],
     }).compile();
 
-    controller = module.get<GlobalNarrativesController>(GlobalNarrativesController);
+    controller = module.get<GlobalNarrativesController>(
+      GlobalNarrativesController,
+    );
   });
 
   it('should be defined', () => {

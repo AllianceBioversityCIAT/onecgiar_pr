@@ -87,7 +87,7 @@ export class VersionRepository extends Repository<Version> {
 
   $_getAllInovationDevToReplicate(
     phase: Version,
-    result_type: number = 7,
+    result_type = 7,
   ): Promise<Result[]> {
     const queryData = `
     select *

@@ -52,5 +52,3 @@ export class ClarisaGobalTargetRepository extends Repository<ClarisaGlobalTarget
     }
   }
 }
-
-

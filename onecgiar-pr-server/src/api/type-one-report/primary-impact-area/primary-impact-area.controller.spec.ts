@@ -11,7 +11,9 @@ describe('PrimaryImpactAreaController', () => {
       providers: [PrimaryImpactAreaService],
     }).compile();
 
-    controller = module.get<PrimaryImpactAreaController>(PrimaryImpactAreaController);
+    controller = module.get<PrimaryImpactAreaController>(
+      PrimaryImpactAreaController,
+    );
   });
 
   it('should be defined', () => {

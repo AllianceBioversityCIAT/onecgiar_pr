@@ -9,7 +9,9 @@ describe('ResultsImpactAreaIndicatorsService', () => {
       providers: [ResultsImpactAreaIndicatorsService],
     }).compile();
 
-    service = module.get<ResultsImpactAreaIndicatorsService>(ResultsImpactAreaIndicatorsService);
+    service = module.get<ResultsImpactAreaIndicatorsService>(
+      ResultsImpactAreaIndicatorsService,
+    );
   });
 
   it('should be defined', () => {

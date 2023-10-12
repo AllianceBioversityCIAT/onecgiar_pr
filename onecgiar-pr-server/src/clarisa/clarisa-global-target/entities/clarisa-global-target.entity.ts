@@ -11,7 +11,7 @@ import { Auditable } from '../../../shared/entities/auditableEntity';
 @Entity('clarisa_global_targets')
 export class ClarisaGlobalTarget {
   @PrimaryGeneratedColumn({
-    name:'targetId'
+    name: 'targetId',
   })
   targetId: number;
 

@@ -11,7 +11,9 @@ describe('ResultsImpactAreaIndicatorsController', () => {
       providers: [ResultsImpactAreaIndicatorsService],
     }).compile();
 
-    controller = module.get<ResultsImpactAreaIndicatorsController>(ResultsImpactAreaIndicatorsController);
+    controller = module.get<ResultsImpactAreaIndicatorsController>(
+      ResultsImpactAreaIndicatorsController,
+    );
   });
 
   it('should be defined', () => {

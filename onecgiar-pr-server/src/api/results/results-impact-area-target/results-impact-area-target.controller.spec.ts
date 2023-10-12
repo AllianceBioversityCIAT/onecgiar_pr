@@ -11,7 +11,9 @@ describe('ResultsImpactAreaTargetController', () => {
       providers: [ResultsImpactAreaTargetService],
     }).compile();
 
-    controller = module.get<ResultsImpactAreaTargetController>(ResultsImpactAreaTargetController);
+    controller = module.get<ResultsImpactAreaTargetController>(
+      ResultsImpactAreaTargetController,
+    );
   });
 
   it('should be defined', () => {

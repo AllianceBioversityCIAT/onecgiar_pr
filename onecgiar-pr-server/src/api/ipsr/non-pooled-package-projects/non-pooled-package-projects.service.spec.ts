@@ -9,7 +9,9 @@ describe('NonPooledPackageProjectsService', () => {
       providers: [NonPooledPackageProjectsService],
     }).compile();
 
-    service = module.get<NonPooledPackageProjectsService>(NonPooledPackageProjectsService);
+    service = module.get<NonPooledPackageProjectsService>(
+      NonPooledPackageProjectsService,
+    );
   });
 
   it('should be defined', () => {

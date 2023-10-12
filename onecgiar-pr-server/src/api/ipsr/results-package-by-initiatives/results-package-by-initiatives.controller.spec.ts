@@ -11,7 +11,9 @@ describe('ResultsPackageByInitiativesController', () => {
       providers: [ResultsPackageByInitiativesService],
     }).compile();
 
-    controller = module.get<ResultsPackageByInitiativesController>(ResultsPackageByInitiativesController);
+    controller = module.get<ResultsPackageByInitiativesController>(
+      ResultsPackageByInitiativesController,
+    );
   });
 
   it('should be defined', () => {

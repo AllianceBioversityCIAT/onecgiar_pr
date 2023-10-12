@@ -16,7 +16,10 @@ export class LegacyIndicatorsPartnersService {
     return `This action returns a #${id} legacyIndicatorsPartner`;
   }
 
-  update(id: number, updateLegacyIndicatorsPartnerDto: UpdateLegacyIndicatorsPartnerDto) {
+  update(
+    id: number,
+    updateLegacyIndicatorsPartnerDto: UpdateLegacyIndicatorsPartnerDto,
+  ) {
     return `This action updates a #${id} legacyIndicatorsPartner`;
   }
 

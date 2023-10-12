@@ -120,5 +120,4 @@ export class ResultActor extends BaseEntity {
     name: 'actor_type_id',
   })
   obj_actor_type: ActorType;
-  
 }

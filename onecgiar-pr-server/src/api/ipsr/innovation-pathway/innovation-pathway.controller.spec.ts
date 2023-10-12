@@ -9,7 +9,9 @@ describe('InnovationPathwayController', () => {
       controllers: [InnovationPathwayController],
     }).compile();
 
-    controller = module.get<InnovationPathwayController>(InnovationPathwayController);
+    controller = module.get<InnovationPathwayController>(
+      InnovationPathwayController,
+    );
   });
 
   it('should be defined', () => {

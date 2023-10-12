@@ -11,7 +11,9 @@ describe('ResultsIpInstitutionTypeController', () => {
       providers: [ResultsIpInstitutionTypeService],
     }).compile();
 
-    controller = module.get<ResultsIpInstitutionTypeController>(ResultsIpInstitutionTypeController);
+    controller = module.get<ResultsIpInstitutionTypeController>(
+      ResultsIpInstitutionTypeController,
+    );
   });
 
   it('should be defined', () => {

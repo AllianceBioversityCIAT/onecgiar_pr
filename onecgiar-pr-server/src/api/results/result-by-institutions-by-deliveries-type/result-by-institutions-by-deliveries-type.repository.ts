@@ -83,7 +83,7 @@ export class ResultByInstitutionsByDeliveriesTypeRepository
         );
         final_data = await this.save(response_edit);
       } else {
-        const queryData: string = `
+        const queryData = `
         insert into result_by_institutions_by_deliveries_type 
           (
           is_active,

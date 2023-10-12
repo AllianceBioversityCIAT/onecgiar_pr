@@ -9,7 +9,9 @@ describe('ClarisaActionAreaOutcomeService', () => {
       providers: [ClarisaActionAreaOutcomeService],
     }).compile();
 
-    service = module.get<ClarisaActionAreaOutcomeService>(ClarisaActionAreaOutcomeService);
+    service = module.get<ClarisaActionAreaOutcomeService>(
+      ClarisaActionAreaOutcomeService,
+    );
   });
 
   it('should be defined', () => {

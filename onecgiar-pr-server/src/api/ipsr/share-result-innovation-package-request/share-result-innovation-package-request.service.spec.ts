@@ -9,7 +9,9 @@ describe('ShareResultInnovationPackageRequestService', () => {
       providers: [ShareResultInnovationPackageRequestService],
     }).compile();
 
-    service = module.get<ShareResultInnovationPackageRequestService>(ShareResultInnovationPackageRequestService);
+    service = module.get<ShareResultInnovationPackageRequestService>(
+      ShareResultInnovationPackageRequestService,
+    );
   });
 
   it('should be defined', () => {

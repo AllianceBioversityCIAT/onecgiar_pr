@@ -9,7 +9,9 @@ describe('InvestmentDiscontinuedOptionsService', () => {
       providers: [InvestmentDiscontinuedOptionsService],
     }).compile();
 
-    service = module.get<InvestmentDiscontinuedOptionsService>(InvestmentDiscontinuedOptionsService);
+    service = module.get<InvestmentDiscontinuedOptionsService>(
+      InvestmentDiscontinuedOptionsService,
+    );
   });
 
   it('should be defined', () => {

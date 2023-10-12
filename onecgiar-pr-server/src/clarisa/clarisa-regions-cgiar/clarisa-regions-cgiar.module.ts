@@ -4,6 +4,6 @@ import { ClarisaRegionsCgiarController } from './clarisa-regions-cgiar.controlle
 
 @Module({
   controllers: [ClarisaRegionsCgiarController],
-  providers: [ClarisaRegionsCgiarService]
+  providers: [ClarisaRegionsCgiarService],
 })
 export class ClarisaRegionsCgiarModule {}

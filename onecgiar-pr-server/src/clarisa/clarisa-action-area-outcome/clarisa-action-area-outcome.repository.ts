@@ -45,14 +45,16 @@ export class ClarisaActionAreaOutcomeRepository extends Repository<ClarisaAction
 
     try {
       const systemTrasnformation = await this.query(systemTrasnformationQuery);
-      const resilientAgrifoodSystems = await this.query(resilientAgrifoodSystemsQuery);
+      const resilientAgrifoodSystems = await this.query(
+        resilientAgrifoodSystemsQuery,
+      );
       const geneticInnovation = await this.query(geneticInnovationQuery);
 
       return {
         systemTrasnformation,
         resilientAgrifoodSystems,
-        geneticInnovation
-      }
+        geneticInnovation,
+      };
     } catch (error) {
       throw {
         message: `[${ClarisaActionAreaOutcomeRepository.name}] => deleteAllData error: ${error}`,

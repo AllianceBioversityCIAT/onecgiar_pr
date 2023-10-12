@@ -9,7 +9,9 @@ describe('ResultsImpactAreaTargetService', () => {
       providers: [ResultsImpactAreaTargetService],
     }).compile();
 
-    service = module.get<ResultsImpactAreaTargetService>(ResultsImpactAreaTargetService);
+    service = module.get<ResultsImpactAreaTargetService>(
+      ResultsImpactAreaTargetService,
+    );
   });
 
   it('should be defined', () => {

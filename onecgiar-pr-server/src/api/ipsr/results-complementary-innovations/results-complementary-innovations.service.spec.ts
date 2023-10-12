@@ -9,7 +9,9 @@ describe('ResultsComplementaryInnovationsService', () => {
       providers: [ResultsComplementaryInnovationsService],
     }).compile();
 
-    service = module.get<ResultsComplementaryInnovationsService>(ResultsComplementaryInnovationsService);
+    service = module.get<ResultsComplementaryInnovationsService>(
+      ResultsComplementaryInnovationsService,
+    );
   });
 
   it('should be defined', () => {

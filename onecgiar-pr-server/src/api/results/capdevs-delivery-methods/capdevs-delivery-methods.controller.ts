@@ -1,15 +1,30 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  HttpException,
+} from '@nestjs/common';
 import { CapdevsDeliveryMethodsService } from './capdevs-delivery-methods.service';
 import { CreateCapdevsDeliveryMethodDto } from './dto/create-capdevs-delivery-method.dto';
 import { UpdateCapdevsDeliveryMethodDto } from './dto/update-capdevs-delivery-method.dto';
 
 @Controller()
 export class CapdevsDeliveryMethodsController {
-  constructor(private readonly capdevsDeliveryMethodsService: CapdevsDeliveryMethodsService) {}
+  constructor(
+    private readonly capdevsDeliveryMethodsService: CapdevsDeliveryMethodsService,
+  ) {}
 
   @Post()
-  create(@Body() createCapdevsDeliveryMethodDto: CreateCapdevsDeliveryMethodDto) {
-    return this.capdevsDeliveryMethodsService.create(createCapdevsDeliveryMethodDto);
+  create(
+    @Body() createCapdevsDeliveryMethodDto: CreateCapdevsDeliveryMethodDto,
+  ) {
+    return this.capdevsDeliveryMethodsService.create(
+      createCapdevsDeliveryMethodDto,
+    );
   }
 
   @Get('get/all')
@@ -25,8 +40,14 @@ export class CapdevsDeliveryMethodsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateCapdevsDeliveryMethodDto: UpdateCapdevsDeliveryMethodDto) {
-    return this.capdevsDeliveryMethodsService.update(+id, updateCapdevsDeliveryMethodDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateCapdevsDeliveryMethodDto: UpdateCapdevsDeliveryMethodDto,
+  ) {
+    return this.capdevsDeliveryMethodsService.update(
+      +id,
+      updateCapdevsDeliveryMethodDto,
+    );
   }
 
   @Delete(':id')

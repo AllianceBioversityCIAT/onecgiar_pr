@@ -61,7 +61,7 @@ export class ResultCountriesService {
             createResultCountryDto.countries.map((e) => e.id),
           );
           if (countries?.length) {
-            let resultRegionArray: ResultCountry[] = [];
+            const resultRegionArray: ResultCountry[] = [];
             for (let index = 0; index < countries?.length; index++) {
               const exist =
                 await this._resultCountryRepository.getResultCountrieByIdResultAndCountryId(

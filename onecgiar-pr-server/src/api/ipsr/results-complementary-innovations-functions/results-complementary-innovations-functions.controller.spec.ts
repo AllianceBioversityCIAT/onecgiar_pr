@@ -11,7 +11,9 @@ describe('ResultsComplementaryInnovationsFunctionsController', () => {
       providers: [ResultsComplementaryInnovationsFunctionsService],
     }).compile();
 
-    controller = module.get<ResultsComplementaryInnovationsFunctionsController>(ResultsComplementaryInnovationsFunctionsController);
+    controller = module.get<ResultsComplementaryInnovationsFunctionsController>(
+      ResultsComplementaryInnovationsFunctionsController,
+    );
   });
 
   it('should be defined', () => {

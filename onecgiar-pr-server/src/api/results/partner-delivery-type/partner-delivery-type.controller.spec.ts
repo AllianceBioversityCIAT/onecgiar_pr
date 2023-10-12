@@ -11,7 +11,9 @@ describe('PartnerDeliveryTypeController', () => {
       providers: [PartnerDeliveryTypeService],
     }).compile();
 
-    controller = module.get<PartnerDeliveryTypeController>(PartnerDeliveryTypeController);
+    controller = module.get<PartnerDeliveryTypeController>(
+      PartnerDeliveryTypeController,
+    );
   });
 
   it('should be defined', () => {

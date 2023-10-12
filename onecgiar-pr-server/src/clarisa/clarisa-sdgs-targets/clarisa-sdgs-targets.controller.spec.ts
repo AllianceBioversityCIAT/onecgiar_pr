@@ -11,7 +11,9 @@ describe('ClarisaSdgsTargetsController', () => {
       providers: [ClarisaSdgsTargetsService],
     }).compile();
 
-    controller = module.get<ClarisaSdgsTargetsController>(ClarisaSdgsTargetsController);
+    controller = module.get<ClarisaSdgsTargetsController>(
+      ClarisaSdgsTargetsController,
+    );
   });
 
   it('should be defined', () => {

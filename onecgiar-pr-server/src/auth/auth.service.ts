@@ -15,7 +15,6 @@ import { pusherAuthDot } from './dto/pusher-auth.dto';
 import { TokenDto } from '../shared/globalInterfaces/token.dto';
 import Pusher from 'pusher';
 
-
 @Injectable()
 export class AuthService {
   private readonly _logger: Logger = new Logger(AuthService.name);
@@ -34,7 +33,7 @@ export class AuthService {
       key: `${env.PUSHER_API_KEY}`,
       secret: `${env.PUSHER_API_SECRET}`,
       cluster: `${env.PUSHER_APP_CLUSTER}`,
-      useTLS: true
+      useTLS: true,
     });
   }
   create(createAuthDto: CreateAuthDto) {
@@ -105,14 +104,14 @@ export class AuthService {
       const user: User = await this._customUserRepository.findOne({
         where: {
           email: userLogin.email,
-          active: true
+          active: true,
         },
       });
       let valid: any;
       if (user) {
         const { email, first_name, last_name, is_cgiar, id } = <
           FullUserRequestDto
-          >user;
+        >user;
         if (is_cgiar) {
           const { response, message, status }: any = await this.validateAD(
             email,
@@ -134,7 +133,10 @@ export class AuthService {
         }
 
         if (valid) {
-          const userData = await this._userRepository.updateLastLoginUserByEmail(userLogin.email);
+          const userData =
+            await this._userRepository.updateLastLoginUserByEmail(
+              userLogin.email,
+            );
           return {
             message: 'Successful login',
             response: {

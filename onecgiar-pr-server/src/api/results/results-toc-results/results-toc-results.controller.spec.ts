@@ -11,7 +11,9 @@ describe('ResultsTocResultsController', () => {
       providers: [ResultsTocResultsService],
     }).compile();
 
-    controller = module.get<ResultsTocResultsController>(ResultsTocResultsController);
+    controller = module.get<ResultsTocResultsController>(
+      ResultsTocResultsController,
+    );
   });
 
   it('should be defined', () => {

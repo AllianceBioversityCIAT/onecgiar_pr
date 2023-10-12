@@ -11,7 +11,9 @@ describe('ClarisaGeographicScopesController', () => {
       providers: [ClarisaGeographicScopesService],
     }).compile();
 
-    controller = module.get<ClarisaGeographicScopesController>(ClarisaGeographicScopesController);
+    controller = module.get<ClarisaGeographicScopesController>(
+      ClarisaGeographicScopesController,
+    );
   });
 
   it('should be defined', () => {

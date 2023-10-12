@@ -9,7 +9,9 @@ describe('ClarisaRegionsCgiarService', () => {
       providers: [ClarisaRegionsCgiarService],
     }).compile();
 
-    service = module.get<ClarisaRegionsCgiarService>(ClarisaRegionsCgiarService);
+    service = module.get<ClarisaRegionsCgiarService>(
+      ClarisaRegionsCgiarService,
+    );
   });
 
   it('should be defined', () => {

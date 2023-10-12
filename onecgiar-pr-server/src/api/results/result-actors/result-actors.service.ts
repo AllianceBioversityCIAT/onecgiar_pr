@@ -6,11 +6,10 @@ import { ActorTypeRepository } from './repositories/actors-type.repository';
 
 @Injectable()
 export class ResultActorsService {
-
   constructor(
     protected readonly _handlersError: HandlersError,
-    protected readonly _actorTypeRepository: ActorTypeRepository
-  ){}
+    protected readonly _actorTypeRepository: ActorTypeRepository,
+  ) {}
 
   create(createResultActorDto: CreateResultActorDto) {
     return 'This action adds a new resultActor';

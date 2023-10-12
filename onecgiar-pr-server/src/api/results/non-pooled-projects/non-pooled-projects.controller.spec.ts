@@ -11,7 +11,9 @@ describe('NonPooledProjectsController', () => {
       providers: [NonPooledProjectsService],
     }).compile();
 
-    controller = module.get<NonPooledProjectsController>(NonPooledProjectsController);
+    controller = module.get<NonPooledProjectsController>(
+      NonPooledProjectsController,
+    );
   });
 
   it('should be defined', () => {

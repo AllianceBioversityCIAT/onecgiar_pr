@@ -11,7 +11,9 @@ describe('AssessedDuringExpertWorkshopController', () => {
       providers: [AssessedDuringExpertWorkshopService],
     }).compile();
 
-    controller = module.get<AssessedDuringExpertWorkshopController>(AssessedDuringExpertWorkshopController);
+    controller = module.get<AssessedDuringExpertWorkshopController>(
+      AssessedDuringExpertWorkshopController,
+    );
   });
 
   it('should be defined', () => {

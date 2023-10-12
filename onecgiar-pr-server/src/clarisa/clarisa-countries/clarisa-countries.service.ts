@@ -6,12 +6,10 @@ import { ClarisaCountriesRepository } from './ClarisaCountries.repository';
 
 @Injectable()
 export class ClarisaCountriesService {
-
   constructor(
     private readonly _handlersError: HandlersError,
-    private readonly _clarisaCountriesRepository: ClarisaCountriesRepository
-
-  ){}
+    private readonly _clarisaCountriesRepository: ClarisaCountriesRepository,
+  ) {}
 
   create(createClarisaCountryDto: CreateClarisaCountryDto) {
     return 'This action adds a new clarisaCountry';

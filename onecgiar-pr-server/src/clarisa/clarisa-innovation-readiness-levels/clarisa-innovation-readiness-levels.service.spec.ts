@@ -9,7 +9,9 @@ describe('ClarisaInnovationReadinessLevelsService', () => {
       providers: [ClarisaInnovationReadinessLevelsService],
     }).compile();
 
-    service = module.get<ClarisaInnovationReadinessLevelsService>(ClarisaInnovationReadinessLevelsService);
+    service = module.get<ClarisaInnovationReadinessLevelsService>(
+      ClarisaInnovationReadinessLevelsService,
+    );
   });
 
   it('should be defined', () => {

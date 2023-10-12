@@ -11,7 +11,9 @@ describe('ClarisaInnovationTypeController', () => {
       providers: [ClarisaInnovationTypeService],
     }).compile();
 
-    controller = module.get<ClarisaInnovationTypeController>(ClarisaInnovationTypeController);
+    controller = module.get<ClarisaInnovationTypeController>(
+      ClarisaInnovationTypeController,
+    );
   });
 
   it('should be defined', () => {

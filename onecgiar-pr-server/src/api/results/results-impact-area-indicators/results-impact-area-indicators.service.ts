@@ -4,7 +4,9 @@ import { UpdateResultsImpactAreaIndicatorDto } from './dto/update-results-impact
 
 @Injectable()
 export class ResultsImpactAreaIndicatorsService {
-  create(createResultsImpactAreaIndicatorDto: CreateResultsImpactAreaIndicatorDto) {
+  create(
+    createResultsImpactAreaIndicatorDto: CreateResultsImpactAreaIndicatorDto,
+  ) {
     return 'This action adds a new resultsImpactAreaIndicator';
   }
 
@@ -16,7 +18,10 @@ export class ResultsImpactAreaIndicatorsService {
     return `This action returns a #${id} resultsImpactAreaIndicator`;
   }
 
-  update(id: number, updateResultsImpactAreaIndicatorDto: UpdateResultsImpactAreaIndicatorDto) {
+  update(
+    id: number,
+    updateResultsImpactAreaIndicatorDto: UpdateResultsImpactAreaIndicatorDto,
+  ) {
     return `This action updates a #${id} resultsImpactAreaIndicator`;
   }
 

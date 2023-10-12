@@ -15,9 +15,7 @@ import {
   ReplicableInterface,
 } from '../../shared/globalInterfaces/replicable.interface';
 
-import {
-  LogicalDelete
-} from '../../shared/globalInterfaces/delete.interface';
+import { LogicalDelete } from '../../shared/globalInterfaces/delete.interface';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 
 @Injectable()
@@ -93,7 +91,7 @@ export class ResultRepository
         );
         final_data = await this.save(response_edit);
       } else {
-        const queryData: string = `
+        const queryData = `
         insert into \`result\` (
           description
           ,is_active
@@ -283,7 +281,7 @@ export class ResultRepository
    */
   async resultsForElasticSearch(
     id?: string,
-    allowDeleted: boolean = false,
+    allowDeleted = false,
   ): Promise<ResultSimpleDto[]> {
     const queryData = `
     select
@@ -425,7 +423,7 @@ export class ResultRepository
    * !reported_year revisar
    * @returns
    */
-  async AllResults(version: number = 1) {
+  async AllResults(version = 1) {
     const queryData = `
     SELECT
     r.id,
@@ -673,7 +671,7 @@ WHERE
     }
   }
 
-  async AllResultsLegacyNewByTitle(title: string, version: number = 1) {
+  async AllResultsLegacyNewByTitle(title: string, version = 1) {
     const queryData = `
     (select 
       lr.legacy_id as id,
@@ -1010,7 +1008,7 @@ WHERE
     }
   }
 
-  async getLastResultCode(version: number = 1): Promise<number> {
+  async getLastResultCode(version = 1): Promise<number> {
     const queryData = `
     SELECT max(r.result_code) as last_code from \`result\` r;
     `;
@@ -1079,7 +1077,7 @@ WHERE
 
   async getTypesOfResultByCodes(
     resultCodes: number[],
-    version: number = 18,
+    version = 18,
   ): Promise<ResultTypeDto[]> {
     const queryData = `
     select
@@ -1109,7 +1107,7 @@ WHERE
 
   async getTypesOfResultByInitiative(
     initiativeId: number,
-    version: number = 1,
+    version = 1,
   ): Promise<ResultTypeDto[]> {
     const queryData = `
     select

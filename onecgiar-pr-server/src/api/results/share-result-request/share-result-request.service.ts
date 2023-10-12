@@ -45,12 +45,10 @@ export class ShareResultRequestService {
     user: TokenDto,
   ) {
     try {
-      
-      
       /*const result: any = await this._resultRepository.getResultById(
         parseInt(`${resultId}`),
       );*/
-      let result: { initiative_id: number } = { initiative_id: null };
+      const result: { initiative_id: number } = { initiative_id: null };
       const res = await this._resultByInitiativesRepository.InitiativeByResult(
         resultId,
       );
@@ -59,7 +57,7 @@ export class ShareResultRequestService {
       let saveData = [];
       if (createTocShareResult?.initiativeShareId?.length) {
         const { initiativeShareId } = createTocShareResult;
-        let saredInit: ShareResultRequest[] = [];
+        const saredInit: ShareResultRequest[] = [];
         for (let index = 0; index < initiativeShareId.length; index++) {
           const shareInitId = initiativeShareId[index];
           const initExist =
@@ -155,8 +153,6 @@ export class ShareResultRequestService {
 
   async updateResultRequestByUser(data: ShareResultRequest, user: TokenDto) {
     try {
-      
-      
       const res = await this._resultRepository.findOne({
         where: {
           id: data.result_id,
@@ -336,8 +332,10 @@ export class ShareResultRequestService {
             });
           }
         }
-        let auxBody:any = data;
-        await this._resultsTocResultRepository.saveSectionNewTheoryOfChange(auxBody?.bodyNewTheoryOfChanges)
+        const auxBody: any = data;
+        await this._resultsTocResultRepository.saveSectionNewTheoryOfChange(
+          auxBody?.bodyNewTheoryOfChanges,
+        );
       }
 
       return {

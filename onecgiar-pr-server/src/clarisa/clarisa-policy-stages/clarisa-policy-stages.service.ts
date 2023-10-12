@@ -6,11 +6,10 @@ import { ClarisaPolicyStageRepository } from './clarisa-policy-stages.repository
 
 @Injectable()
 export class ClarisaPolicyStagesService {
-
   constructor(
     private readonly _handlersError: HandlersError,
-    private readonly _clarisaPolicyStageRepository: ClarisaPolicyStageRepository
-  ){}
+    private readonly _clarisaPolicyStageRepository: ClarisaPolicyStageRepository,
+  ) {}
 
   create(createClarisaPolicyStageDto: CreateClarisaPolicyStageDto) {
     return 'This action adds a new clarisaPolicyStage';
@@ -18,15 +17,16 @@ export class ClarisaPolicyStagesService {
 
   async findAll() {
     try {
-      const clarisaPolicyStage = await this._clarisaPolicyStageRepository.find();
-      
+      const clarisaPolicyStage =
+        await this._clarisaPolicyStageRepository.find();
+
       return {
         response: clarisaPolicyStage,
         message: 'Successful response',
         status: HttpStatus.OK,
       };
     } catch (error) {
-      this._handlersError.returnErrorRes({error, debug: true})
+      this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 

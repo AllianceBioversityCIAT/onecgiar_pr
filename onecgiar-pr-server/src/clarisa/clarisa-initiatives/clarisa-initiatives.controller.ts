@@ -25,10 +25,12 @@ export class ClarisaInitiativesController {
 
   @Get('get/all/without/result/:resultId')
   async getAllInitiativesWithoutCurrentInitiative(
-    @Param('resultId') resultId: number
-  ){
+    @Param('resultId') resultId: number,
+  ) {
     const { message, response, status } =
-      await this.clarisaInitiativesService.getAllInitiativesWithoutCurrentInitiative(resultId);
+      await this.clarisaInitiativesService.getAllInitiativesWithoutCurrentInitiative(
+        resultId,
+      );
     throw new HttpException({ message, response }, status);
   }
 

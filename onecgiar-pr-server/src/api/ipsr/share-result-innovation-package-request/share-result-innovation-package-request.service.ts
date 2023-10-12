@@ -4,7 +4,9 @@ import { UpdateShareResultInnovationPackageRequestDto } from './dto/update-share
 
 @Injectable()
 export class ShareResultInnovationPackageRequestService {
-  create(createShareResultInnovationPackageRequestDto: CreateShareResultInnovationPackageRequestDto) {
+  create(
+    createShareResultInnovationPackageRequestDto: CreateShareResultInnovationPackageRequestDto,
+  ) {
     return 'This action adds a new shareResultInnovationPackageRequest';
   }
 
@@ -16,7 +18,10 @@ export class ShareResultInnovationPackageRequestService {
     return `This action returns a #${id} shareResultInnovationPackageRequest`;
   }
 
-  update(id: number, updateShareResultInnovationPackageRequestDto: UpdateShareResultInnovationPackageRequestDto) {
+  update(
+    id: number,
+    updateShareResultInnovationPackageRequestDto: UpdateShareResultInnovationPackageRequestDto,
+  ) {
     return `This action updates a #${id} shareResultInnovationPackageRequest`;
   }
 

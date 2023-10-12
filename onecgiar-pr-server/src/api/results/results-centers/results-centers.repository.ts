@@ -66,7 +66,7 @@ export class ResultsCenterRepository
         );
         final_data = await this.save(response_edit);
       } else {
-        const queryData: string = `
+        const queryData = `
         insert into results_center (
         is_primary,
         is_active,

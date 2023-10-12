@@ -1,15 +1,30 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { ResultsByIpInnovationUseMeasuresService } from './results-by-ip-innovation-use-measures.service';
 import { CreateResultsByIpInnovationUseMeasureDto } from './dto/create-results-by-ip-innovation-use-measure.dto';
 import { UpdateResultsByIpInnovationUseMeasureDto } from './dto/update-results-by-ip-innovation-use-measure.dto';
 
 @Controller('results-by-ip-innovation-use-measures')
 export class ResultsByIpInnovationUseMeasuresController {
-  constructor(private readonly resultsByIpInnovationUseMeasuresService: ResultsByIpInnovationUseMeasuresService) {}
+  constructor(
+    private readonly resultsByIpInnovationUseMeasuresService: ResultsByIpInnovationUseMeasuresService,
+  ) {}
 
   @Post()
-  create(@Body() createResultsByIpInnovationUseMeasureDto: CreateResultsByIpInnovationUseMeasureDto) {
-    return this.resultsByIpInnovationUseMeasuresService.create(createResultsByIpInnovationUseMeasureDto);
+  create(
+    @Body()
+    createResultsByIpInnovationUseMeasureDto: CreateResultsByIpInnovationUseMeasureDto,
+  ) {
+    return this.resultsByIpInnovationUseMeasuresService.create(
+      createResultsByIpInnovationUseMeasureDto,
+    );
   }
 
   @Get()
@@ -23,8 +38,15 @@ export class ResultsByIpInnovationUseMeasuresController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateResultsByIpInnovationUseMeasureDto: UpdateResultsByIpInnovationUseMeasureDto) {
-    return this.resultsByIpInnovationUseMeasuresService.update(+id, updateResultsByIpInnovationUseMeasureDto);
+  update(
+    @Param('id') id: string,
+    @Body()
+    updateResultsByIpInnovationUseMeasureDto: UpdateResultsByIpInnovationUseMeasureDto,
+  ) {
+    return this.resultsByIpInnovationUseMeasuresService.update(
+      +id,
+      updateResultsByIpInnovationUseMeasureDto,
+    );
   }
 
   @Delete(':id')

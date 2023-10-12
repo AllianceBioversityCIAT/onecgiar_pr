@@ -16,7 +16,10 @@ export class ResultsImpactAreaTargetService {
     return `This action returns a #${id} resultsImpactAreaTarget`;
   }
 
-  update(id: number, updateResultsImpactAreaTargetDto: UpdateResultsImpactAreaTargetDto) {
+  update(
+    id: number,
+    updateResultsImpactAreaTargetDto: UpdateResultsImpactAreaTargetDto,
+  ) {
     return `This action updates a #${id} resultsImpactAreaTarget`;
   }
 

@@ -54,7 +54,7 @@ export class LinkedResultRepository
         const response_edit = <LinkedResult[]>config.f.custonFunction(response);
         final_data = await this.save(response_edit);
       } else {
-        const queryData: string = `
+        const queryData = `
         insert into linked_result (
           is_active,
           created_date,
