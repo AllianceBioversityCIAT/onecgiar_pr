@@ -22,6 +22,7 @@ export class GlobalCompletenessStatusComponent implements OnInit {
   columnOrder = [
     { title: 'Result code', attr: 'result_code' },
     { title: 'Title', attr: 'result_title' },
+    { title: 'Phase', attr: 'phase_name' },
     { title: 'Submitter', attr: 'official_code' },
     { title: 'Indicator category', attr: 'result_type_name' },
     { title: 'Progress', attr: 'completeness' },
@@ -76,6 +77,7 @@ export class GlobalCompletenessStatusComponent implements OnInit {
 
     resultsListMapped.push({
       result_code: 'Result code',
+      phase_name: 'Phase',
       result_title: 'Title',
       official_code: 'Submitter',
       result_type_name: 'Indicator category',
@@ -92,10 +94,11 @@ export class GlobalCompletenessStatusComponent implements OnInit {
     });
 
     resultsList.map((result: any) => {
-      const { result_code, result_title, official_code, completeness, result_type_name, general_information, theory_of_change, partners, geographic_location, links_to_results, evidence, section_seven, is_submitted, pdf_link } = result;
+      const { result_code, result_title, phase_name, official_code, completeness, result_type_name, general_information, theory_of_change, partners, geographic_location, links_to_results, evidence, section_seven, is_submitted, pdf_link } = result;
 
       resultsListMapped.push({
         result_code,
+        phase_name,
         result_title,
         official_code,
         result_type_name,
@@ -111,7 +114,7 @@ export class GlobalCompletenessStatusComponent implements OnInit {
         pdf_link: pdf_link
       });
     });
-    const wscols = [{ wpx: 70 }, { wpx: 800 }, { wpx: 100 }, { wpx: 130 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }];
+    const wscols = [{ wpx: 70 }, { wpx: 100 }, { wpx: 800 }, { wpx: 100 }, { wpx: 130 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }];
     this.exportTablesSE.exportExcel(resultsListMapped, 'completeness_status', wscols);
     this.requesting = false;
   }

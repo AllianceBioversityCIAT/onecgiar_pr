@@ -13,10 +13,10 @@ export class AdminPanelRepository {
   ) {}
 
   async reportResultCompleteness(filterIntiatives: FilterInitiativesDto) {
-    const filterByInitiatives = filterIntiatives.initiatives?.length
+    const filterByInitiatives = filterIntiatives?.initiatives?.length
       ? ` and rbi.inititiative_id in (${filterIntiatives.initiatives})`
       : '';
-    const filterByPhases = filterIntiatives.phases.length
+    const filterByPhases = filterIntiatives?.phases?.length
       ? ` and r.version_id in (${filterIntiatives.phases})`
       : '';
     const complement = filterByInitiatives + filterByPhases;
@@ -24,6 +24,7 @@ export class AdminPanelRepository {
     const queryData = `
     SELECT
       v.id,
+      version.phase_name,
       r.result_code,
       r.id AS results_id,
       r.reported_year_id AS year,
@@ -133,6 +134,7 @@ export class AdminPanelRepository {
       AND rbi.initiative_role_id = 1
       INNER JOIN clarisa_initiatives ci ON ci.id = rbi.inititiative_id
       INNER JOIN result_type rt ON rt.id = r.result_type_id
+      inner join version on version.id = r.version_id
     WHERE
       r.is_active > 0 
       AND r.result_type_id NOT IN (10, 11)
