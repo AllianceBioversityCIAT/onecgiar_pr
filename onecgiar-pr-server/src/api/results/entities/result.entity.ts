@@ -322,6 +322,20 @@ export class Result {
   })
   is_replicated!: boolean;
 
+  @Column({
+    name: 'last_action_type',
+    nullable: true,
+    type: 'text',
+  })
+  last_action_type!: string;
+
+  @Column({
+    name: 'justification_action_type',
+    nullable: true,
+    type: 'text',
+  })
+  justification_action_type!: string;
+
   // helpers??
   initiative_id!: number;
 
