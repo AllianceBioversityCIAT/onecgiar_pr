@@ -59,7 +59,6 @@ export class ResultsTocResultsService {
         result_id,
         contributing_center,
         contributing_initiatives,
-        result_toc_result,
         contributors_result_toc_result,
         impacts,
         pending_contributing_initiatives,
@@ -274,10 +273,18 @@ export class ResultsTocResultsService {
         );
 
         // * Map multiple WPs to the same initiative
-        for (const toc of result_toc_result) {
-          let RtR = await this._resultsTocResultRepository.getRTRById(
-            toc?.toc_result_id,
-          );
+        for (const toc of createResultsTocResultDto?.result_toc_result) {
+          let RtR: ResultsTocResult | null;
+          if (toc?.result_toc_result_id) {
+            RtR = await this._resultsTocResultRepository.findOne({
+              where: {
+                result_toc_result_id: toc?.result_toc_result_id,
+              },
+            }) || null;
+          } else {
+            RtR = null;
+          }
+
           if (RtR) {
             console.log('Update, ', toc.toc_result_id);
             if (result.result_level_id == 2) {
@@ -332,12 +339,12 @@ export class ResultsTocResultsService {
           where: { result_id },
         });
         for (const rtr of allRtRs) {
-          const tocResultIds = result_toc_result.map(
+          const tocResultIds = createResultsTocResultDto?.result_toc_result.map(
             (toc) => toc.toc_result_id,
           );
           if (!tocResultIds.includes(rtr.toc_result_id)) {
             console.log('Delete ', rtr.result_toc_result_id);
-            
+
             rtr.is_active = false;
             rtr.last_updated_by = user.id;
             await this._resultsTocResultRepository.update(
