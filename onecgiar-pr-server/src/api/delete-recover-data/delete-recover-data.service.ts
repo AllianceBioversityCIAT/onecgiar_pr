@@ -411,7 +411,7 @@ export class DeleteRecoverDataService {
 
       // updating dynamodb logs
       await this._logRepository.createLog(
-        resultToUpdate.result_code,
+        resultToUpdate,
         user,
         Actions.CHANGE_RESULT_TYPE,
         {
