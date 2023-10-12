@@ -29,7 +29,6 @@ export class LinkedResultsService {
           status: HttpStatus.BAD_REQUEST,
         };
       }
-      console.log(createLinkedResultDto);
 
       const result: Result = await this._resultRepository.getResultById(
         createLinkedResultDto.result_id,
@@ -58,6 +57,11 @@ export class LinkedResultsService {
         createLinkedResultDto.legacy_link;
       if (createLinkedResultDto?.links?.length) {
         const newLinks: LinkedResult[] = [];
+        for (const i in links) {
+          links[i].id = await this._linkedResultRepository.getMostUpDateResult(
+            links[i]['result_code'],
+          );
+        }
         await this._linkedResultRepository.updateLink(
           createLinkedResultDto.result_id,
           links.map((e) => e.id),
@@ -76,10 +80,7 @@ export class LinkedResultsService {
             newLink.created_by = user.id;
             newLink.last_updated_by = user.id;
             newLink.origin_result_id = result.id;
-            newLink.linked_results_id =
-              (await this._linkedResultRepository.getMostUpDateResult(
-                links[index]['result_code'],
-              )) || links[index]?.id;
+            newLink.linked_results_id = links[index].id;
             isExistsNew.push(links[index].id);
             newLinks.push(newLink);
           }
