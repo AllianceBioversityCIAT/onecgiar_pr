@@ -10,28 +10,37 @@
 
     </div>
 
+    <div class="dropwon-filters">
+        <app-pr-multi-select label="Reporting phase" (selectOptionEvent)="onSelectDropdown()"
+            [options]="this.reportingPhases" [isStatic]="true" [required]="false" optionLabel="phase_name_status"
+            selectedLabel="Phases selected" optionValue="id" placeholder="Select phase" [(ngModel)]="phasesSelected"
+            selectedOptionLabel="phase_name_status">
+        </app-pr-multi-select>
 
-    <app-pr-multi-select *ngIf="!this.api.rolesSE.isAdmin" label="Initiatives" selectedLabel="Initiatives selected"
-        [options]="this.api.dataControlSE.myInitiativesList | filterInitWithRoleCoordAndLead" optionLabel="full_name"
-        [isStatic]="true" optionValue="id" (selectOptionEvent)="onSelectInit()" [required]="false"
-        (removeOptionEvent)="onRemoveinit($event)" selectedOptionLabel="full_name" [showSelectAll]="true"
-        [(ngModel)]="this.initiativesSelected" placeholder="Select Initiative(s)">
-    </app-pr-multi-select>
+        <app-pr-multi-select *ngIf="!this.api.rolesSE.isAdmin" label="Initiatives" selectedLabel="Initiatives selected"
+            [options]="this.api.dataControlSE.myInitiativesList | filterInitWithRoleCoordAndLead"
+            optionLabel="full_name" [isStatic]="true" optionValue="id" (selectOptionEvent)="onSelectDropdown()"
+            [required]="false" (removeOptionEvent)="onRemoveinit($event)" selectedOptionLabel="full_name"
+            [showSelectAll]="true" [(ngModel)]="this.initiativesSelected" placeholder="Select Initiative(s)">
+        </app-pr-multi-select>
 
-    <app-pr-multi-select *ngIf="this.api.rolesSE.isAdmin" label="Initiatives" selectedLabel="Initiatives selected"
-        [isStatic]="true" [options]="this.allInitiatives" optionLabel="full_name" optionValue="id"
-        [showSelectAll]="true" (selectOptionEvent)="onSelectInit()" [required]="false"
-        (removeOptionEvent)="onRemoveinit($event)" selectedOptionLabel="full_name"
-        [(ngModel)]="this.initiativesSelected" placeholder="Select Initiative(s)">
-    </app-pr-multi-select>
+        <app-pr-multi-select *ngIf="this.api.rolesSE.isAdmin" label="Initiatives" selectedLabel="Initiatives selected"
+            [isStatic]="true" [options]="this.allInitiatives" optionLabel="full_name" optionValue="id"
+            [showSelectAll]="true" (selectOptionEvent)="onSelectDropdown()" [required]="false"
+            (removeOptionEvent)="onRemoveinit($event)" selectedOptionLabel="full_name"
+            [(ngModel)]="this.initiativesSelected" placeholder="Select Initiative(s)">
+        </app-pr-multi-select>
+    </div>
+
+
+
 
     <br>
 
     <!-- <div class="table_container"> -->
 
 
-    <app-pr-multi-select
-        [options]="this.resultsList | filterByAttrWithValue:'is_submitted':valueToFilter |  filterByAttrWithValue:'year':yearToFilter"
+    <app-pr-multi-select [options]="this.resultsList | filterByAttrWithValue:'is_submitted':valueToFilter"
         label="Results" [isStatic]="true" *ngIf="this.resultsList?.length" optionLabel="full_name_html" optionValue="id"
         [showSelectAll]="true" [required]="false" selectedOptionLabel="full_name" [(ngModel)]="this.resultsSelected"
         itemSize="15" placeholder="Select result(s)

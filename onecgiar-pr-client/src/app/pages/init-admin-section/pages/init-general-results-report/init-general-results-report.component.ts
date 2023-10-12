@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 import { CustomizedAlertsFeService } from '../../../../shared/services/customized-alerts-fe.service';
+import { PhasesService } from '../../../../shared/services/global/phases.service';
 
 @Component({
   selector: 'app-init-general-results-report',
@@ -15,26 +16,41 @@ export class InitGeneralResultsReportComponent {
   resultsList;
   requesting = false;
   valueToFilter = null;
-  yearToFilter = null;
   requestCounter = 0;
   allInitiatives = [];
-
-  constructor(public api: ApiService, private exportTablesSE: ExportTablesService, private customAlertService: CustomizedAlertsFeService) {}
+  reportingPhases: any[] = [];
+  phasesSelected = [];
+  constructor(public api: ApiService, private exportTablesSE: ExportTablesService, private customAlertService: CustomizedAlertsFeService, private phasesSE: PhasesService) {}
 
   ngOnInit(): void {
     //Called after the constructor, initializing input properties, and the first call to ngOnChanges.
     //Add 'implements OnInit' to the class.
     this.getAll();
+    this.getPhases();
   }
 
-  onSelectInit() {
-    const inits = [];
-    this.initiativesSelected.map(init => {
-      inits.push(init.initiative_id);
-      // this.initiativesSelected.push({ id: init.initiative_id, full_name: init.full_name });
-    });
+  getPhases() {
+    const selectOpenPhases = (phases: any[]) => (this.phasesSelected = phases.filter((phase: any) => phase.status));
+    const useAlreadyLoadedPhases = () => {
+      selectOpenPhases(this.phasesSE.phases.reporting);
+      this.reportingPhases = this.phasesSE.phases.reporting;
+    };
+
+    const listenWhenPhasesAreLoaded = () => {
+      this.phasesSE.getPhasesObservable().subscribe((phases: any[]) => {
+        this.reportingPhases = phases;
+        selectOpenPhases(this.reportingPhases);
+      });
+    };
+
+    this.phasesSE.phases.reporting.length ? useAlreadyLoadedPhases() : listenWhenPhasesAreLoaded();
+  }
+
+  onSelectDropdown() {
+    const inits = this.initiativesSelected.map((init: any) => init.initiative_id);
+    const phases = this.phasesSelected.map((phase: any) => phase.id);
     // (inits);
-    this.POST_reportSesultsCompleteness(inits);
+    this.POST_reportSesultsCompleteness(inits, phases);
   }
 
   async getAll() {
@@ -54,10 +70,10 @@ export class InitGeneralResultsReportComponent {
     return `In this <a href="https://cgiar.sharepoint.com/:f:/s/PRMSProject/Ev8QdqJv6vtPmcRvE4QLnDUB17Hke9nHOUneI1AZCI5KHg?e=5He46N"  class="open_route" target="_blank">folder</a>, you will find the latest reports that contains all the results reported in the tool. Please make sure to check the date of each report to ensure that you are always downloading the most recent version.`;
   }
 
-  POST_reportSesultsCompleteness(inits: any[]) {
+  POST_reportSesultsCompleteness(inits: any[], phases: any[]) {
     this.resultsList = [];
-    this.api.resultsSE.POST_reportSesultsCompleteness(inits, [], 2).subscribe(({ response }) => {
-      // (response);
+    this.api.resultsSE.POST_reportSesultsCompleteness(inits, phases, 2).subscribe(({ response }) => {
+      console.log(response);
       this.resultsList = response;
     });
   }

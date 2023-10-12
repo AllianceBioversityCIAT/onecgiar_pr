@@ -3,6 +3,12 @@
     max-height: calc(100vh - 127px);
     overflow-y: scroll;
 
+    .dropwon-filters {
+        display: grid;
+        gap: 20px;
+        grid-template-columns: minmax(200px, 250px) 1fr;
+    }
+
     .filter_submission_buttons {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
