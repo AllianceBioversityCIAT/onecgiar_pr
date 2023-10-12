@@ -300,6 +300,8 @@ export class DeleteRecoverDataService {
    * @param result_level_id
    * @param result_type_id
    * @param justification
+   * @param user
+   * @param from_endpoint
    * @param new_name
    */
   async changeResultType(
@@ -308,15 +310,50 @@ export class DeleteRecoverDataService {
     result_type_id: number,
     justification: string,
     user: TokenDto,
+    from_endpoint: boolean = true,
     new_name?: string,
   ) {
     try {
+      if (
+        !result_id ||
+        result_id < 1 ||
+        !result_level_id ||
+        result_level_id < 1 ||
+        !result_type_id ||
+        result_type_id < 1 ||
+        !justification ||
+        justification.length < 1
+      ) {
+        throw this._returnResponse.format({
+          message: `The result id, result level id, result type id and justification are required`,
+          response: null,
+          statusCode: HttpStatus.BAD_REQUEST,
+        });
+      }
+
       const resultToUpdate = await this._resultRepository.findOne({
         where: {
           id: result_id,
           is_active: true,
         },
       });
+
+      if (!resultToUpdate) {
+        throw this._returnResponse.format({
+          message: `The result with id ${result_id} was not found`,
+          response: null,
+          statusCode: HttpStatus.NOT_FOUND,
+        });
+      }
+
+      if (resultToUpdate.result_type_id == 6 && from_endpoint) {
+        throw this._returnResponse.format({
+          message: `The result with id ${result_id} is a knowledge product and can not be changed from the endpoint`,
+          response: null,
+          statusCode: HttpStatus.BAD_REQUEST,
+        });
+      }
+
       resultToUpdate.result_type_id = result_type_id;
       resultToUpdate.result_level_id = result_level_id;
       resultToUpdate.last_action_type = Actions.CHANGE_RESULT_TYPE;
@@ -336,6 +373,7 @@ export class DeleteRecoverDataService {
 
       //TODO add validations when the result changes its type
 
+      //updating elastic search
       if (new_name) {
         const toUpdateFromElastic =
           await this._resultsService.findAllSimplified(
@@ -360,15 +398,6 @@ export class DeleteRecoverDataService {
             const bulk = await this._elasticService.sendBulkOperationToElastic(
               elasticJson,
             );
-            await this._logRepository.createLog(
-              resultToUpdate.result_code,
-              user,
-              Actions.CHANGE_RESULT_TYPE,
-              {
-                class: DeleteRecoverDataService.name,
-                method: `changeResultType`,
-              },
-            );
           } catch (error) {
             this._logger.warn(
               `the elastic removal failed for the result #${resultToUpdate.id}`,
@@ -376,6 +405,17 @@ export class DeleteRecoverDataService {
           }
         }
       }
+
+      // updating dynamodb logs
+      await this._logRepository.createLog(
+        resultToUpdate.result_code,
+        user,
+        Actions.CHANGE_RESULT_TYPE,
+        {
+          class: DeleteRecoverDataService.name,
+          method: `changeResultType`,
+        },
+      );
 
       return this._returnResponse.format({
         message: `The result with code ${resultToUpdate.result_code} and phase ${resultToUpdate.version_id} has its type updated successfully`,

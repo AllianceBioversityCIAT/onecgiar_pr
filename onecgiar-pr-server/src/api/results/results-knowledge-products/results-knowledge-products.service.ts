@@ -638,6 +638,7 @@ export class ResultsKnowledgeProductsService {
             6,
             resultsKnowledgeProductDto.modification_justification,
             user,
+            false,
             resultsKnowledgeProductDto.title,
           );
 
