@@ -270,7 +270,7 @@ export class DeleteRecoverDataService {
           const bulk = await this._elasticService.sendBulkOperationToElastic(
             elasticJson,
           );
-          await this._logRepository.createLog(
+          /*await this._logRepository.createLog(
             resultData,
             user,
             Actions.DELETE,
@@ -278,7 +278,7 @@ export class DeleteRecoverDataService {
             null,
             { is_active: true },
             { is_active: false },
-          );
+          );*/
         } catch (error) {
           this._logger.warn(
             `the elastic removal failed for the result #${resultData.id}`,
