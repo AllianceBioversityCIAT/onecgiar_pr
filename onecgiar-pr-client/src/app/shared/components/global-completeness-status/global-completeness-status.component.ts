@@ -18,7 +18,7 @@ export class GlobalCompletenessStatusComponent implements OnInit {
   show_full_screen = false;
   allInitiatives = [];
   requesting = false;
-
+  reportingPhases: any[] = [];
   columnOrder = [
     { title: 'Result code', attr: 'result_code' },
     { title: 'Title', attr: 'result_title' },
@@ -40,14 +40,30 @@ export class GlobalCompletenessStatusComponent implements OnInit {
 
   ngOnInit(): void {
     this.POST_reportSesultsCompleteness([], [], 1);
-
     this.initMode ? this.GET_initiativesByUser() : this.GET_AllInitiatives();
+    this.getPhases();
+  }
+
+  getPhases() {
+    const selectOpenPhases = (phases: any[]) => (this.phasesSelected = phases.filter((phase: any) => phase.status));
+    const useAlreadyLoadedPhases = () => {
+      selectOpenPhases(this.phasesSE.phases.reporting);
+      this.reportingPhases = this.phasesSE.phases.reporting;
+    };
+
+    const listenWhenPhasesAreLoaded = () => {
+      this.phasesSE.getPhasesObservable().subscribe((phases: any[]) => {
+        this.reportingPhases = phases;
+        selectOpenPhases(this.reportingPhases);
+      });
+    };
+
+    this.phasesSE.phases.reporting.length ? useAlreadyLoadedPhases() : listenWhenPhasesAreLoaded();
   }
 
   POST_reportSesultsCompleteness(inits: any[], phases: any[], role?: number) {
     this.api.resultsSE.POST_reportSesultsCompleteness(inits, phases, role).subscribe(({ response }) => {
       this.resultsList = response;
-      console.log(response);
     });
   }
 
@@ -75,7 +91,7 @@ export class GlobalCompletenessStatusComponent implements OnInit {
       pdf_link: 'PDF Link'
     });
 
-    resultsList.map(result => {
+    resultsList.map((result: any) => {
       const { result_code, result_title, official_code, completeness, result_type_name, general_information, theory_of_change, partners, geographic_location, links_to_results, evidence, section_seven, is_submitted, pdf_link } = result;
 
       resultsListMapped.push({
@@ -103,7 +119,7 @@ export class GlobalCompletenessStatusComponent implements OnInit {
   GET_initiativesByUser() {
     this.api.authSE.GET_initiativesByUser().subscribe(({ response }) => {
       const inits = [];
-      response.map(init => {
+      response.map((init: any) => {
         //(init);
         inits.push(init.initiative_id);
         this.initiativesSelected.push({ id: init.initiative_id, full_name: init.full_name });
@@ -119,8 +135,8 @@ export class GlobalCompletenessStatusComponent implements OnInit {
   }
 
   onSelectInit() {
-    const inits = this.initiativesSelected.map(init => init.id);
-    const phases = this.phasesSelected.map(phase => phase.id);
+    const inits = this.initiativesSelected.map((init: any) => init.id);
+    const phases = this.phasesSelected.map((phase: any) => phase.id);
     this.POST_reportSesultsCompleteness(inits, phases, inits?.length ? null : 1);
   }
 
