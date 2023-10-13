@@ -110,9 +110,9 @@ export class ResultsKnowledgeProductMapper {
     metadataCGSpace.issue_year = this.extractOnlyYearFromDateString(
       dto?.['Issued date'],
     );
-    metadataCGSpace.online_year = this.extractOnlyYearFromDateString(
-      dto?.['Online publication date'],
-    );
+    metadataCGSpace.online_year = dto?.['Online publication date']
+      ? this.extractOnlyYearFromDateString(dto?.['Online publication date'])
+      : null;
 
     metadataHolder.push(metadataCGSpace);
     knowledgeProductDto.metadataCG = metadataCGSpace;
