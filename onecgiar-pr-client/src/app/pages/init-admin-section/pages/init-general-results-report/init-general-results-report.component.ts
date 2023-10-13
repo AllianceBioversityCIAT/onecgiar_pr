@@ -20,6 +20,7 @@ export class InitGeneralResultsReportComponent {
   allInitiatives = [];
   reportingPhases: any[] = [];
   phasesSelected = [];
+  resultStatusList = [];
   constructor(public api: ApiService, private exportTablesSE: ExportTablesService, private customAlertService: CustomizedAlertsFeService, private phasesSE: PhasesService) {}
 
   ngOnInit(): void {
@@ -27,6 +28,17 @@ export class InitGeneralResultsReportComponent {
     //Add 'implements OnInit' to the class.
     this.getAll();
     this.getPhases();
+    this.getAllResultStatuses();
+  }
+
+  getAllResultStatuses() {
+    this.api.resultsSE.GET_allResultStatuses().subscribe(({ response }) => {
+      console.log(response);
+      this.resultStatusList = response;
+      this.resultStatusList.forEach((status: any) => {
+        status.className = status.name.replace(' ', '-').toLowerCase();
+      });
+    });
   }
 
   getPhases() {
@@ -75,6 +87,15 @@ export class InitGeneralResultsReportComponent {
     this.api.resultsSE.POST_reportSesultsCompleteness(inits, phases, 2).subscribe(({ response }) => {
       console.log(response);
       this.resultsList = response;
+
+      this.resultsList.forEach((result: any) => {
+        // result.full_name_html = `<div class="completeness-${result.is_submitted == 1 ? 'submitted' : 'editing'} completeness-state">${result.is_submitted == 1 ? 'Submitted' : 'Editing'}</div> <strong>Result code: (${result.result_code})</strong> - ${result.result_title}  - <strong>Official code: (${result.official_code})</strong> - <strong>Indicator category: (${result.result_type_name})</strong>`;
+        // Get status name
+        const status = this.resultStatusList.find((status: any) => status.status_id == result.status_id);
+        const statusName = status?.name;
+        const className = status?.className;
+        result.full_name_html = `<div class="completeness-${className} completeness-state">${statusName}</div> <strong>Result code: (${result.result_code})</strong> - ${result.result_title}  - <strong>Official code: (${result.official_code})</strong> - <strong>Indicator category: (${result.result_type_name})</strong>`;
+      });
     });
   }
 
