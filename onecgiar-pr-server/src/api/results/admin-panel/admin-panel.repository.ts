@@ -26,6 +26,7 @@ export class AdminPanelRepository {
       v.id,
       version.phase_name,
       r.result_code,
+      r.status_id,
       r.id AS results_id,
       r.reported_year_id AS year,
       ci.official_code,
