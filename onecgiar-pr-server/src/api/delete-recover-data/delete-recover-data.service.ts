@@ -272,10 +272,13 @@ export class DeleteRecoverDataService {
             elasticJson,
           );
           await this._logRepository.createLog(
-            resultData.result_code,
+            resultData,
             user,
             Actions.DELETE,
             { class: ResultsService.name, method: `deleteResult` },
+            null,
+            { is_active: true },
+            { is_active: false },
           );
         } catch (error) {
           this._logger.warn(

@@ -20,10 +20,10 @@ export class ResultsToUpdateModalComponent {
     { title: 'Creation date	', attr: 'created_date' },
     { title: 'Created by	', attr: 'full_name' }
   ];
+
   constructor(public api: ApiService, private retrieveModalSE: RetrieveModalService) {}
 
   onPressAction(result) {
-    //(result);
     this.retrieveModalSE.title = result?.title;
     this.api.resultsSE.currentResultId = result?.id;
     this.api.dataControlSE.currentResult = result;

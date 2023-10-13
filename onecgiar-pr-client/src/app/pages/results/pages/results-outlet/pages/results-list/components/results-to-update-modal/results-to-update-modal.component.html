@@ -7,11 +7,14 @@
             Here you have the ability to choose a result from a previous phase and replicate its metadata into the
             current phase. This allows you to conveniently update and modify the information for the current phase.
         </div>
+
         <app-pr-field-header label="Result"></app-pr-field-header>
+
         <div class="search_input">
             <i class="material-icons-round">search</i>
             <input type="text" placeholder="Find result..." [(ngModel)]="this.text_to_search">
         </div>
+
         <p-table id="resultListTable" #table sortField="result_code" [sortOrder]="-1"
             [value]="this.api.dataControlSE.resultsList | resultsToUpdateFilter :text_to_search "
             responsiveLayout="scroll"
@@ -54,7 +57,9 @@
                         <div class="actions_buttons">
                             <a [href]="'/result/result-detail/' + result?.result_code+'?phase='+ result?.version_id"
                                 target="_blank" class="link_button view">View</a>
-                            <div class="link_button update" (click)="onPressAction(result)">Update</div>
+                            <app-pr-button text="Update" [verticalMargin]="0" (clickEvent)="onPressAction(result)"
+                                [disabled]="result.result_type_id === 3"
+                                [tooltipText]="result.result_type_id === 3 ? 'This functionality is not available for capacity change result types.' : null"></app-pr-button>
                         </div>
                     </td>
                 </tr>
