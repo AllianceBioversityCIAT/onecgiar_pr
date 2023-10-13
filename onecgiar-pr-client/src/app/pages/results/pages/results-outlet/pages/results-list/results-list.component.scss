@@ -12,6 +12,7 @@
 
 .table {
   padding-bottom: 100px;
+  position: relative;
 }
 
 td {
@@ -36,6 +37,7 @@ td {
     height: 35px;
     display: flex;
     align-items: center;
+
     &:nth-child(2) {
       height: 45px;
       border-top: 1px solid #eaeaea;
@@ -50,6 +52,7 @@ td {
     height: 35px;
     display: flex;
     align-items: center;
+
     &:nth-child(2) {
       height: 45px;
       border-top: 1px solid #eaeaea;
@@ -64,6 +67,7 @@ td {
     height: 35px;
     display: flex;
     align-items: center;
+
     &:nth-child(2) {
       height: 45px;
       border-top: 1px solid #eaeaea;
@@ -78,6 +82,7 @@ td {
     height: 35px;
     display: flex;
     align-items: center;
+
     &:nth-child(2) {
       height: 45px;
       border-top: 1px solid #eaeaea;
@@ -92,6 +97,7 @@ td {
     height: 35px;
     display: flex;
     align-items: center;
+
     &:nth-child(2) {
       height: 45px;
       border-top: 1px solid #eaeaea;
@@ -106,6 +112,7 @@ td {
     height: 35px;
     display: flex;
     align-items: center;
+
     &:nth-child(2) {
       height: 45px;
       border-top: 1px solid #eaeaea;

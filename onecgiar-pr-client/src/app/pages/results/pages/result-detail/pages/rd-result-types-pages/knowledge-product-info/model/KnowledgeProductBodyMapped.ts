@@ -16,6 +16,7 @@ export class KnowledgeProductBodyMapped {
   //accessible: number;
   //interoperable: number;
   //reusable: number;
+  onlineYearCG: number;
   yearCG: number;
   is_peer_reviewed_CG: string;
   is_isi_CG: string;
