@@ -151,7 +151,7 @@ import { ResultInitiativeBudgetRepository } from './result_budget/repositories/r
     ResultQuestionsRepository,
     ResultAnswerRepository,
     ResultsInvestmentDiscontinuedOptionRepository,
-    ResultInitiativeBudgetRepository
+    ResultInitiativeBudgetRepository,
   ],
   exports: [ResultRepository, JwtMiddleware],
 })
