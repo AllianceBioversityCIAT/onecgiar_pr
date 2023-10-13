@@ -742,6 +742,7 @@ export class ResultsTocResultsService {
           toc_result_id,
           init,
         );
+
       return {
         response: {
           initiative: init,

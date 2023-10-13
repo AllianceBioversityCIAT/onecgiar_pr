@@ -43,7 +43,6 @@ export class ResultsKnowledgeProductMapper {
       .join('; ');
     knowledgeProductDto.type = mqapResponseDto?.Type;
 
-    //TODO remove when this mapping is done
     knowledgeProductDto.cgspace_countries = this.getAsArray(
       mqapResponseDto?.['Country ISO code'],
     );
@@ -108,8 +107,12 @@ export class ResultsKnowledgeProductMapper {
     metadataCGSpace.doi = dto?.DOI;
     metadataCGSpace.is_isi = dto?.ISI === 'ISI Journal';
     metadataCGSpace.is_peer_reviewed = dto?.['Peer-reviewed'] === 'Peer Review';
-    metadataCGSpace.issue_year =
-      this.getPublicationYearFromMQAPResponse(dto)?.year;
+    metadataCGSpace.issue_year = this.extractOnlyYearFromDateString(
+      dto?.['Issued date'],
+    );
+    metadataCGSpace.online_year = dto?.['Online publication date']
+      ? this.extractOnlyYearFromDateString(dto?.['Online publication date'])
+      : null;
 
     metadataHolder.push(metadataCGSpace);
     knowledgeProductDto.metadataCG = metadataCGSpace;
@@ -127,7 +130,7 @@ export class ResultsKnowledgeProductMapper {
       metadataWoS.is_isi = mqapDOIData.is_isi
         ?.toLocaleLowerCase()
         ?.includes('yes');
-      metadataWoS.is_peer_reviewed = metadataWoS.is_isi; //TODO implement the convoluted logic regarding this field
+      metadataWoS.is_peer_reviewed = metadataWoS.is_isi;
       metadataWoS.issue_year = mqapDOIData.publication_year;
 
       metadataHolder.push(metadataWoS);
@@ -159,8 +162,7 @@ export class ResultsKnowledgeProductMapper {
       return institution;
     });
 
-    //TODO map country information
-    const regions = this.getAsArray(dto?.['Region of the research']);
+    let regions = this.getAsArray(dto?.['Region of the research']);
     knowledgeProductDto.clarisa_regions = regions
       .filter((r) => r)
       .map((r) => r.clarisa_id);
@@ -303,19 +305,25 @@ export class ResultsKnowledgeProductMapper {
       fieldName = 'publication_date';
     }
 
-    const isComposed: boolean = publicationDate.indexOf('-') > 0;
-    let year = 0;
-
-    if (isComposed) {
-      year = Number(publicationDate.slice(0, publicationDate.indexOf('-')));
-    } else {
-      year = Number(publicationDate);
-    }
+    const numericYear = this.extractOnlyYearFromDateString(publicationDate);
 
     return {
       field_name: fieldName,
-      year: Number.isNaN(year) ? undefined : year,
+      year: numericYear,
     };
+  }
+
+  private extractOnlyYearFromDateString(dateString: string): number {
+    const isComposed: boolean = dateString.indexOf('-') > 0;
+    let year: number = 0;
+
+    if (isComposed) {
+      year = Number(dateString.slice(0, dateString.indexOf('-')));
+    } else {
+      year = Number(dateString);
+    }
+
+    return Number.isNaN(year) ? undefined : year;
   }
 
   getAuthorsFromMQAPResponse(dto: MQAPResultDto): MQAPAuthor[] {
@@ -369,7 +377,6 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProductDto.ost_melia_study_id = entity.ost_melia_study_id;
     knowledgeProductDto.cgspace_phase_year =
       entity?.result_object?.obj_version?.cgspace_year;
-    //TODO remove when this mapping is done
     //knowledgeProductDto.cgspace_countries = entity.cgspace_countries;
     //knowledgeProductDto.cgspace_regions = entity.cgspace_regions;
 
@@ -404,6 +411,7 @@ export class ResultsKnowledgeProductMapper {
       metadataDto.is_isi = m.is_isi;
       metadataDto.is_peer_reviewed = m.is_peer_reviewed;
       metadataDto.issue_year = m.year;
+      metadataDto.online_year = m.online_year;
 
       return metadataDto;
     });
@@ -437,7 +445,7 @@ export class ResultsKnowledgeProductMapper {
       return institutionDto;
     });
 
-    //knowledgeProductDto.cgspace_countries = null; //TODO TBD
+    //knowledgeProductDto.cgspace_countries = null;
 
     const regions = entity.result_object?.result_region_array;
     knowledgeProductDto.clarisa_regions = (regions ?? []).map(
@@ -570,7 +578,6 @@ export class ResultsKnowledgeProductMapper {
 
     knowledgeProduct.results_id = resultId;
 
-    //TODO remove when mapping of countries is done
     //knowledgeProduct.cgspace_countries = dto.cgspace_countries;
     //knowledgeProduct.cgspace_regions = dto.cgspace_regions;
 
@@ -586,7 +593,6 @@ export class ResultsKnowledgeProductMapper {
     this.patchMetadata(knowledgeProduct, dto);
     this.patchAltmetricData(knowledgeProduct, dto);
     this.patchInstitutions(knowledgeProduct, dto);
-    //TODO map country information to results relation
     this.patchRegions(knowledgeProduct, dto);
 
     return knowledgeProduct;
@@ -715,10 +721,6 @@ export class ResultsKnowledgeProductMapper {
     altmetric.result_knowledge_product_id =
       knowledgeProduct.result_knowledge_product_id;
 
-    /*FIXME Beware of this line, as this will mean that in future reporting
-    periods all previous altmetric data will be removed. I did not fix this
-    as I have no clue what will be the future filters to get only
-    */
     knowledgeProduct.result_knowledge_product_altmetric_array = [altmetric];
   }
 
@@ -746,6 +748,7 @@ export class ResultsKnowledgeProductMapper {
       metadata.is_isi = m.is_isi;
       metadata.is_peer_reviewed = m.is_peer_reviewed;
       metadata.year = m.issue_year;
+      metadata.online_year = m.online_year;
 
       if (!knowledgeProduct.last_updated_by) {
         metadata.created_by = knowledgeProduct.created_by;

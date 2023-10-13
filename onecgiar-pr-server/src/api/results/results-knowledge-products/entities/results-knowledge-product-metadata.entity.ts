@@ -51,6 +51,13 @@ export class ResultsKnowledgeProductMetadata {
   year: number;
 
   @Column({
+    name: 'online_year',
+    type: 'bigint',
+    nullable: true,
+  })
+  online_year: number;
+
+  @Column({
     name: 'doi',
     type: 'text',
     nullable: true,
