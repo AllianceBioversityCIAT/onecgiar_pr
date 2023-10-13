@@ -1,6 +1,10 @@
 <app-detail-section-title sectionName="Contributors" title="Theory of Change"></app-detail-section-title>
 
 <div class="detail_container">
+    <app-alert-status *ngIf="!!this.dataControlSE?.currentResult?.is_replicated"
+        description="Dear user, note that data from the previous year data has been replicated, however the information related to collaboration with other initiatives have not been replicated. Please add collaborating intiatives in section 2 and be aware that they will receive a notification to confirm the collaboration and map this result against their ToC.">
+    </app-alert-status>
+
     <app-alert-status
         description="Initiatives and non-pooled projects that you collaborated with to generate this result/contributed to this result.">
     </app-alert-status>
