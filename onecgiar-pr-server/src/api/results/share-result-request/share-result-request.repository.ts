@@ -3,14 +3,34 @@ import { DataSource, Repository } from 'typeorm';
 import { ShareResultRequest } from './entities/share-result-request.entity';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { RequestStatus } from './entities/request-status.entity';
+import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
-export class ShareResultRequestRepository extends Repository<ShareResultRequest> {
+export class ShareResultRequestRepository
+  extends Repository<ShareResultRequest>
+  implements LogicalDelete<ShareResultRequest>
+{
   constructor(
     private dataSource: DataSource,
     private _handlersError: HandlersError,
   ) {
     super(ShareResultRequest, dataSource.createEntityManager());
+  }
+
+  logicalDelete(resultId: number): Promise<ShareResultRequest> {
+    const queryData = `update share_result_request srr 
+		set srr.is_active = 0
+		where srr.is_active > 0
+			and srr.result_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ShareResultRequestRepository.name,
+          debug: true,
+        }),
+      );
   }
 
   async shareResultRequestExists(

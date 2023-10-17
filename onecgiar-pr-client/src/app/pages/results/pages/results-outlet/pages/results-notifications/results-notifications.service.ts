@@ -7,13 +7,11 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 export class ResultsNotificationsService {
   interactiveNotisList = [];
   staticNotisList = [];
+
   constructor(private api: ApiService) {}
 
   get_section_information() {
-    //('get_section_information');
     this.api.resultsSE.GET_allRequest().subscribe(({ response }) => {
-      //(response);
-      console.log(response);
       this.interactiveNotisList = null;
       this.staticNotisList = null;
       if (response) {
@@ -24,8 +22,6 @@ export class ResultsNotificationsService {
           if (item.request_status_id == 1) item.request_status_id = 4;
         });
         this.api.dataControlSE.myInitiativesList.map(myInit => {
-          //(myInit);
-          //(myInit?.role == 'Member');
           if (myInit?.role == 'Member') {
             const notiFinded = this.interactiveNotisList.find(noti => noti.approving_inititiative_id == myInit.initiative_id);
             if (notiFinded) notiFinded.readOnly = true;
@@ -33,15 +29,11 @@ export class ResultsNotificationsService {
         });
       }
     });
-    this.api.resultsSE.GET_requestStatus().subscribe(resp => {
-      //(resp);
-    });
+    this.api.resultsSE.GET_requestStatus().subscribe(resp => {});
   }
 
   get_section_innovation_packages() {
-    //('get_section_innovation_packages');
     this.api.resultsSE.GET_allRequest().subscribe(({ response }) => {
-      //(response);
       this.interactiveNotisList = null;
       this.staticNotisList = null;
       if (response) {
@@ -52,8 +44,6 @@ export class ResultsNotificationsService {
           if (item.request_status_id == 1) item.request_status_id = 4;
         });
         this.api.dataControlSE.myInitiativesList.map(myInit => {
-          //(myInit);
-          //(myInit?.role == 'Member');
           if (myInit?.role == 'Member') {
             const notiFinded = this.interactiveNotisList.find(noti => noti.approving_inititiative_id == myInit.initiative_id);
             if (notiFinded) notiFinded.readOnly = true;
@@ -61,8 +51,6 @@ export class ResultsNotificationsService {
         });
       }
     });
-    this.api.resultsSE.GET_requestStatus().subscribe(resp => {
-      //(resp);
-    });
+    this.api.resultsSE.GET_requestStatus().subscribe(resp => {});
   }
 }

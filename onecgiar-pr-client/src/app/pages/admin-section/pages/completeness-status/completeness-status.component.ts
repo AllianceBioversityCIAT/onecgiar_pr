@@ -8,7 +8,7 @@ import { ExportTablesService } from '../../../../shared/services/export-tables.s
   templateUrl: './completeness-status.component.html',
   styleUrls: ['./completeness-status.component.scss']
 })
-export class CompletenessStatusComponent {
+export class CompletenessStatusComponent implements OnInit {
   textToFind = '';
   resultsList: any[];
   initiativesSelected = [];
@@ -16,15 +16,33 @@ export class CompletenessStatusComponent {
   allInitiatives = [];
   requesting = false;
 
+  columnOrder = [
+    { title: 'Result code', attr: 'result_code' },
+    { title: 'Title', attr: 'result_title' },
+    { title: 'Submitter', attr: 'official_code' },
+    { title: 'Indicator category', attr: 'result_type_name' },
+    { title: 'Progress', attr: 'completeness' },
+    { title: 'Submitted', attr: 'is_submitted' },
+    { title: 'Submissions', attr: 'end_date', noSort: true },
+    { title: 'General information', attr: 'general_information_value' },
+    { title: 'Theory of change', attr: 'theory_of_change_value' },
+    { title: 'Partners', attr: 'partners_value' },
+    { title: 'Geographic location', attr: 'geographic_location_value' },
+    { title: 'Links to results', attr: 'links_to_results_value' },
+    { title: 'Evidence', attr: 'evidence_value' },
+    { title: 'Section seven', attr: 'section_seven_value' }
+  ];
+
   constructor(public api: ApiService, public resultHistoryOfChangesModalSE: ResultHistoryOfChangesModalService, public exportTablesSE: ExportTablesService) {}
+
   ngOnInit(): void {
     this.POST_reportSesultsCompleteness([], 1);
     this.GET_AllInitiatives();
   }
+
   POST_reportSesultsCompleteness(inits: any[], role?: number) {
     this.api.resultsSE.POST_reportSesultsCompleteness(inits, role).subscribe(({ response }) => {
       this.resultsList = response;
-      //(response);
     });
   }
 
@@ -32,14 +50,14 @@ export class CompletenessStatusComponent {
 
   exportExcel(resultsList) {
     this.requesting = true;
-    console.table(resultsList);
-    let resultsListMapped = [];
-    //header
+
+    const resultsListMapped = [];
+
     resultsListMapped.push({
       result_code: 'Result code',
       result_title: 'Title',
       official_code: 'Submitter',
-      result_type_name: 'Result type',
+      result_type_name: 'Indicator category',
       completeness: 'Progress',
       is_submitted: 'Submitted',
       general_information: 'General information',
@@ -51,10 +69,10 @@ export class CompletenessStatusComponent {
       section_seven: 'Section seven',
       pdf_link: 'PDF Link'
     });
+
     resultsList.map(result => {
       const { result_code, result_title, official_code, completeness, result_type_name, general_information, theory_of_change, partners, geographic_location, links_to_results, evidence, section_seven, is_submitted, pdf_link } = result;
-      //(is_submitted);
-      // content
+
       resultsListMapped.push({
         result_code,
         result_title,
@@ -72,27 +90,21 @@ export class CompletenessStatusComponent {
         pdf_link: pdf_link
       });
     });
-    // console.table(resultsListMapped);
     const wscols = [{ wpx: 70 }, { wpx: 800 }, { wpx: 100 }, { wpx: 130 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }];
     this.exportTablesSE.exportExcel(resultsListMapped, 'completeness_status', wscols);
     this.requesting = false;
   }
 
   GET_AllInitiatives() {
-    //(this.api.rolesSE.isAdmin);
     if (!this.api.rolesSE.isAdmin) return;
     this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
-      //(response);
       this.allInitiatives = response;
     });
   }
 
   onSelectInit() {
-    let inits = [];
-    this.initiativesSelected.map(init => {
-      //(init);
-      inits.push(init.id);
-    });
+    const inits = this.initiativesSelected.map(init => init.id);
+
     this.POST_reportSesultsCompleteness(inits, inits?.length ? null : 1);
   }
 
@@ -111,9 +123,7 @@ export class CompletenessStatusComponent {
     this.api.dataControlSE.showResultHistoryOfChangesModal = true;
     this.resultHistoryOfChangesModalSE.historyOfChangesList = [];
     this.api.resultsSE.GET_historicalByResultId(resultId).subscribe(({ response }) => {
-      //(response);
       this.resultHistoryOfChangesModalSE.historyOfChangesList = response;
     });
-    //(resultId);
   }
 }

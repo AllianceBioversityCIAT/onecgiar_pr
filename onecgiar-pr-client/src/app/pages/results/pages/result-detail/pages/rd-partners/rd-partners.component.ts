@@ -11,14 +11,24 @@ import { RdPartnersService } from './rd-partners.service';
   styleUrls: ['./rd-partners.component.scss']
 })
 export class RdPartnersComponent {
-  constructor(public api: ApiService, public institutionsSE: InstitutionsService, public rolesSE: RolesService, private rdPartnersSE: RdPartnersService) {}
+  primaryText = ' - <strong>Primary</strong> ';
+
+  resultCode = this?.api?.dataControlSE?.currentResult?.result_code;
+  versionId = this?.api?.dataControlSE?.currentResult?.version_id;
+
+  alertStatusMessage: string = `This section displays CGIAR Center partners as they appear in <a class="open_route" href="/result/result-detail/${this.resultCode}/theory-of-change?phase=${this.versionId}" target="_blank">Section 2, Theory of Change</a>.</li> Should you identify any inconsistencies, please update Section 2`;
+
+  constructor(public api: ApiService, public institutionsSE: InstitutionsService, public rolesSE: RolesService, public rdPartnersSE: RdPartnersService) {}
   ngOnInit(): void {
     this.rdPartnersSE.partnersBody = new PartnersBody();
     this.rdPartnersSE.getSectionInformation();
+    this.rdPartnersSE.getCenterInformation();
     this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
       try {
-        document.querySelector('.alert-event').addEventListener('click', e => {
-          this.api.dataControlSE.showPartnersRequest = true;
+        document.querySelectorAll('.alert-event').forEach(element => {
+          element.addEventListener('click', e => {
+            this.api.dataControlSE.showPartnersRequest = true;
+          });
         });
       } catch (error) {}
     });

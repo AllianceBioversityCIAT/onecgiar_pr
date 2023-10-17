@@ -5,13 +5,13 @@
             <app-pr-multi-select *ngIf="this.api.rolesSE.isAdmin" [options]="this.allInitiatives "
                 optionLabel="full_name" [isStatic]="true" optionValue="id" (selectOptionEvent)="onSelectInit()"
                 [required]="false" (removeOptionEvent)="onRemoveinit($event)" selectedOptionLabel="full_name"
-                [(ngModel)]="this.initiativesSelected" [confirmDeletion]="true" placeholder="Select initiative(s)">
+                [(ngModel)]="this.initiativesSelected" [confirmDeletion]="true" placeholder="Select Initiative(s)">
             </app-pr-multi-select>
             <app-pr-multi-select *ngIf="!this.api.rolesSE.isAdmin"
                 [options]="this.api.dataControlSE.myInitiativesList | filterInitWithRoleCoordAndLead"
                 optionLabel="full_name" [isStatic]="true" optionValue="id" (selectOptionEvent)="onSelectInit()"
                 [required]="false" (removeOptionEvent)="onRemoveinit($event)" selectedOptionLabel="full_name"
-                [(ngModel)]="this.initiativesSelected" [confirmDeletion]="true" placeholder="Select initiative(s)">
+                [(ngModel)]="this.initiativesSelected" [confirmDeletion]="true" placeholder="Select Initiative(s)">
             </app-pr-multi-select>
         </div>
 
@@ -43,17 +43,16 @@
                 <th pSortableColumn="official_code" style="min-width:150px">Submitter <p-sortIcon
                         field="official_code"></p-sortIcon>
                 </th>
-                <th pSortableColumn="result_type_name" style="min-width:180px">Result type <p-sortIcon
+                <th pSortableColumn="result_type_name" style="min-width:180px">Indicator category<p-sortIcon
                         field="result_type_name"></p-sortIcon>
                 </th>
-                <th pSortableColumn="completeness" style="min-width:150px">Progress <p-sortIcon
+                <th pSortableColumn="completeness" style="min-width:150px">Progress<p-sortIcon
                         field="completeness"></p-sortIcon>
                 </th>
-                <th pSortableColumn="is_submitted" style="min-width:150px">Submitted <p-sortIcon
+                <th pSortableColumn="is_submitted" style="min-width:150px">Submitted<p-sortIcon
                         field="is_submitted"></p-sortIcon>
                 </th>
-                <th style="min-width:180px">Submissions
-                </th>
+                <th style="min-width:180px">Submissions</th>
 
                 <th pSortableColumn="general_information_value">General information <p-sortIcon
                         field="general_information_value"></p-sortIcon></th>

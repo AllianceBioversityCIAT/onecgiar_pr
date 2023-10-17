@@ -11,7 +11,6 @@ import { GreenChecksService } from '../../services/global/green-checks.service';
   styleUrls: ['./links-to-results-global.component.scss']
 })
 export class LinksToResultsGlobalComponent implements OnInit {
-  constructor(public api: ApiService, public resultsListService: ResultsListService, public rolesSE: RolesService, public greenChecksSE: GreenChecksService) {}
   @Input() isIpsr: boolean = false;
   linksToResultsBody = new LinksToResultsBody();
   text_to_search: string = '';
@@ -22,54 +21,130 @@ export class LinksToResultsGlobalComponent implements OnInit {
     { title: 'Title', attr: 'title', class: 'notCenter' },
     // { title: 'Reporting year', attr: 'reported_year' },
     { title: 'Phase', attr: 'phase_name' },
-    { title: 'Result type', attr: 'result_type' },
+    { title: 'Indicator category', attr: 'result_type' },
     { title: 'Submitter', attr: 'submitter' },
     { title: 'Status', attr: 'status_name' },
     { title: 'Creation date	', attr: 'created_date' }
   ];
+
+  filteredResults = [];
+
+  innoDevLinks = [];
+  innoUseLinks = [];
+
+  constructor(public api: ApiService, public resultsListService: ResultsListService, public rolesSE: RolesService, public greenChecksSE: GreenChecksService) {}
 
   ngOnInit(): void {
     this.api.updateResultsList();
     this.getSectionInformation();
   }
 
+  getSectionInformation() {
+    this.api.resultsSE.GET_resultsLinked(this.isIpsr).subscribe(({ response }) => {
+      this.linksToResultsBody = response;
+
+      const currentResultTypeId = this.api?.dataControlSE?.currentResult?.result_type_id;
+
+      if (currentResultTypeId === 1) {
+        const filterByResultTypeId = (resultTypeId: number) => this.linksToResultsBody.links.filter((evidence: any) => evidence.result_type_id === resultTypeId);
+
+        this.innoDevLinks = filterByResultTypeId(7);
+        this.innoUseLinks = filterByResultTypeId(2);
+        this.filteredResults = this.linksToResultsBody.links.filter((evidence: any) => ![2, 7].includes(evidence.result_type_id));
+
+        this.linksToResultsBody.linkedInnovation.linked_innovation_dev = this.innoDevLinks.length > 0;
+        this.linksToResultsBody.linkedInnovation.linked_innovation_use = this.innoUseLinks.length > 0;
+      } else {
+        this.filteredResults = this.linksToResultsBody.links;
+      }
+    });
+  }
+
   validateOrder(columnAttr) {
     setTimeout(() => {
       if (columnAttr == 'result_code') return (this.combine = true);
       const resultListTableHTML = document.getElementById('resultListTable');
-      // if (document.getElementById('resultListTable').querySelectorAll('th[aria-sort="ascending"]').length) this.resetSort();
       this.combine = !resultListTableHTML.querySelectorAll('th[aria-sort="descending"]').length && !resultListTableHTML.querySelectorAll('th[aria-sort="ascending"]').length;
-      // console.log(document.getElementById('resultListTable').querySelectorAll('th[aria-sort="descending"]').length); ascending
-      // this.resetSort();
+
       return null;
     }, 100);
   }
 
+  contributeDescription() {
+    return `<ul>
+      <li>To search for results that have already been reported, enter keywords into the title box below and click on the link button of the result found if it contributes to this result you are reporting.</li>
+      <li>Users will be able to select other results from previous phase</li>
+    </ul>`;
+  }
+
   getFirstByDate(results) {
-    // ordernar los resultados por fecha de creacion "created_date" para obetener el primero, es decir el mas reciente
     const re = results.sort((a, b) => {
       return new Date(b.created_date).getTime() - new Date(a.created_date).getTime();
     });
-    console.log(re);
+
     return re[0];
   }
 
   onLinkResult(result) {
-    this.linksToResultsBody.links.push(this.getFirstByDate(result.results));
-    this.counterPipe++;
-  }
-  onRemove(index) {
-    this.linksToResultsBody.links.splice(index, 1);
+    const currentResultTypeId = this.api?.dataControlSE?.currentResult?.result_type_id;
+    const firstResultByDate = this.getFirstByDate(result.results);
+
+    if (currentResultTypeId === 1) {
+      switch (firstResultByDate.result_type_id) {
+        case 2:
+          this.linksToResultsBody.linkedInnovation.linked_innovation_use = true;
+          this.innoUseLinks.push(firstResultByDate);
+          this.linksToResultsBody.links.push(firstResultByDate);
+          this.filteredResults = this.linksToResultsBody.links.filter((evidence: any) => ![2, 7].includes(evidence.result_type_id));
+          break;
+        case 7:
+          this.linksToResultsBody.linkedInnovation.linked_innovation_dev = true;
+          this.innoDevLinks.push(firstResultByDate);
+          this.linksToResultsBody.links.push(firstResultByDate);
+          this.filteredResults = this.linksToResultsBody.links.filter((evidence: any) => ![2, 7].includes(evidence.result_type_id));
+          break;
+        default:
+          this.linksToResultsBody.links.push(firstResultByDate);
+          this.filteredResults = this.linksToResultsBody.links.filter((evidence: any) => ![2, 7].includes(evidence.result_type_id));
+          break;
+      }
+    } else {
+      this.linksToResultsBody.links.push(firstResultByDate);
+      this.filteredResults = this.linksToResultsBody.links;
+    }
+
     this.counterPipe++;
   }
 
-  getSectionInformation() {
-    this.api.resultsSE.GET_resultsLinked(this.isIpsr).subscribe(({ response }) => {
-      //(response);
-      console.log(response);
-      this.linksToResultsBody = response;
-    });
+  onRemove(result) {
+    this.linksToResultsBody.links = this.linksToResultsBody.links.filter((evidence: any) => evidence.result_code !== result.result_code);
+    this.counterPipe++;
+
+    const currentResultTypeId = this.api?.dataControlSE?.currentResult?.result_type_id;
+
+    if (currentResultTypeId === 1) {
+      this.filteredResults = this.linksToResultsBody.links.filter((evidence: any) => ![2, 7].includes(evidence.result_type_id));
+    } else {
+      this.filteredResults = this.linksToResultsBody.links;
+    }
   }
+
+  // New
+  onRemoveInnoDev(result) {
+    this.innoDevLinks = this.innoDevLinks.filter((evidence: any) => evidence.result_code !== result.result_code);
+    this.linksToResultsBody.linkedInnovation.linked_innovation_dev = this.innoDevLinks.length > 0;
+    this.linksToResultsBody.links = this.linksToResultsBody.links.filter((evidence: any) => evidence.result_code !== result.result_code);
+    this.counterPipe++;
+  }
+
+  onRemoveInnoUse(result) {
+    this.innoUseLinks = this.innoUseLinks.filter((evidence: any) => evidence.result_code !== result.result_code);
+    this.linksToResultsBody.linkedInnovation.linked_innovation_use = this.innoUseLinks.length > 0;
+    this.linksToResultsBody.links = this.linksToResultsBody.links.filter((evidence: any) => evidence.result_code !== result.result_code);
+    this.counterPipe++;
+  }
+  // New
+
   addLegacy_link() {
     this.linksToResultsBody.legacy_link.push({});
   }
@@ -77,16 +152,14 @@ export class LinksToResultsGlobalComponent implements OnInit {
   deleteLegacy_link(index) {
     this.linksToResultsBody.legacy_link.splice(index, 1);
   }
+
   onSaveSection() {
-    //(this.linksToResultsBody);
     this.api.resultsSE.POST_resultsLinked(this.linksToResultsBody, this.isIpsr).subscribe((resp: any) => {
-      //(resp);
       this.getSectionInformation();
     });
   }
+
   openInNewPage(link) {
-    console.log('openInNewPage');
-    console.log(link);
     window.open(link, '_blank');
   }
 

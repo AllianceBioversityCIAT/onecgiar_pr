@@ -19,12 +19,11 @@
                 <app-pr-range-level itemTitle="name" itemDescription="definition" [options]="this.rangesOptions"
                     optionLabel="name" optionValue="id"
                     [(ngModel)]="bodyItem.readiness_level_evidence_based"></app-pr-range-level>
-
                 <app-pr-input label="Evidence link" placeholder="Link goes here..." type="link"
-                    [(ngModel)]="bodyItem.readinees_evidence_link">
+                    [required]="rangeLevel1Required" [(ngModel)]="bodyItem.readinees_evidence_link">
                 </app-pr-input>
 
-                <app-pr-textarea placeholder="Write some..."
+                <app-pr-textarea placeholder="Enter text"
                     label="Please provide details of where evidence can be found within the source link (e.g. page number, slide number, table number)"
                     type="text" [required]="false"
                     [(ngModel)]="bodyItem.readiness_details_of_evidence"></app-pr-textarea>
@@ -39,10 +38,10 @@
                     [(ngModel)]="bodyItem.use_level_evidence_based"></app-pr-range-level>
 
                 <app-pr-input label="Evidence link" placeholder="Link goes here..." type="link"
-                    [(ngModel)]="bodyItem.use_evidence_link">
+                    [required]="rangeLevel2Required" [(ngModel)]="bodyItem.use_evidence_link">
                 </app-pr-input>
 
-                <app-pr-textarea placeholder="Write some..."
+                <app-pr-textarea placeholder="Enter text"
                     label="Please provide details of where evidence can be found within the source link (e.g. page number, slide number, table number)"
                     type="text" [required]="false" [(ngModel)]="bodyItem.use_details_of_evidence"></app-pr-textarea>
             </div>

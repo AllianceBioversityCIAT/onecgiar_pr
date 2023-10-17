@@ -77,7 +77,7 @@ export class Template {
   parent_object: Template;
 
   @OneToMany(() => Template, (t) => t.parent_object)
-  children_array: PlatformReport[];
+  children_array: Template[];
 
   @ManyToOne(() => User, (u) => u.id, { nullable: false })
   @JoinColumn({

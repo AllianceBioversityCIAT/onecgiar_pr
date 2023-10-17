@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { TypeOneReportService } from '../../type-one-report.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
@@ -17,11 +17,8 @@ export class TorInitProgressAndKeyResultsComponent {
     this.requesting = true;
     this.api.resultsSE.GET_excelFullReportByInitiativeId(this.typeOneReportSE.getInitiativeID(initiativeSelected)?.id).subscribe(
       ({ response }) => {
-        //(response);
         this.exportTablesSE.exportExcel(response, 'Initiative-progress-and-key-results');
-        //(response);
         this.requesting = false;
-        // TODO(Yecksin): clean console logs
       },
       err => {
         this.api.alertsFe.show({ id: 'loginAlert', title: 'Oops!', description: 'There was an error in the system while generating the report. If the issue persists, please contact the technical team.', status: 'error' });

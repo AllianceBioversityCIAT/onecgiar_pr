@@ -197,7 +197,7 @@ export class InnovationPathwayStepOneService {
       const innovatonUse = {
         actors: actorsData,
         measures: await this._resultIpMeasureRepository.find({
-          where: { result_ip_id: result.id, is_active: true },
+          where: { result_id: result.id, is_active: true },
         }),
         organization: (
           await this._resultByIntitutionsTypeRepository.find({
@@ -897,17 +897,12 @@ export class InnovationPathwayStepOneService {
               result_id: result.id,
             },
           });
-        } else if (!innExp && ex?.email) {
-          innExp = await this._innovationPackagingExpertRepository.findOne({
-            where: {
-              email: ex.email,
-              result_id: result.id,
-            },
-          });
-        } else if (!innExp) {
+        } else if (!innExp && ex?.first_name && ex?.last_name) {
           innExp = await this._innovationPackagingExpertRepository.findOne({
             where: {
               email: IsNull(),
+              first_name: ex.first_name,
+              last_name: ex.last_name,
               result_id: result.id,
             },
           });
@@ -1146,7 +1141,8 @@ export class InnovationPathwayStepOneService {
           const whereOptions: any = {
             actor_type_id: el.actor_type_id,
             result_id: result.id,
-            result_actors_id: el.result_actors_id,
+            result_actors_id: el.result_actors_id ?? IsNull(),
+            is_active: true,
           };
 
           if (!el?.result_actors_id) {
@@ -1156,11 +1152,9 @@ export class InnovationPathwayStepOneService {
                   el?.other_actor_type || IsNull();
                 break;
             }
-            delete whereOptions.result_actors_id;
           } else {
             delete whereOptions.actor_type_id;
           }
-
           actorExists = await this._resultActorRepository.findOne({
             where: whereOptions,
           });
@@ -1304,14 +1298,14 @@ export class InnovationPathwayStepOneService {
           ripm = await this._resultIpMeasureRepository.findOne({
             where: {
               unit_of_measure: el.unit_of_measure,
-              result_ip_id: result.id,
+              result_id: result.id,
             },
           });
         } else if (!ripm) {
           ripm = await this._resultIpMeasureRepository.findOne({
             where: {
               unit_of_measure: IsNull(),
-              result_ip_id: result.id,
+              result_id: result.id,
             },
           });
         }
@@ -1342,7 +1336,7 @@ export class InnovationPathwayStepOneService {
             };
           }
           await this._resultIpMeasureRepository.save({
-            result_ip_id: result.id,
+            result_id: result.id,
             unit_of_measure: el.unit_of_measure,
             quantity: el.quantity,
             created_by: user.id,

@@ -7,11 +7,12 @@ import {
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
 import { VERSIONING } from '../../../shared/utils/versioning.utils';
+import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
 export class LinkedResultRepository
   extends Repository<LinkedResult>
-  implements ReplicableInterface<LinkedResult>
+  implements ReplicableInterface<LinkedResult>, LogicalDelete<LinkedResult>
 {
   private readonly _logger: Logger = new Logger(LinkedResultRepository.name);
 
@@ -21,6 +22,20 @@ export class LinkedResultRepository
   ) {
     super(LinkedResult, dataSource.createEntityManager());
   }
+
+  logicalDelete(resultId: number): Promise<LinkedResult> {
+    const dataQuery = `update linked_result lr set lr.is_active = 0 where lr.origin_result_id = ?;`;
+    return this.query(dataQuery, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: LinkedResultRepository.name,
+          debug: true,
+        }),
+      );
+  }
+
   async replicable(
     config: ReplicableConfigInterface<LinkedResult>,
   ): Promise<LinkedResult[]> {
@@ -166,10 +181,10 @@ export class LinkedResultRepository
       r2.id,
       if(r2.version_id  = (select max(r3.version_id) 
             from \`result\` r3 
-            where r3.result_code = r2.result_code),1,0) +
-      if(r2.status_id = 3,1,0) as max_data
+            where r3.result_code = r2.result_code and r3.is_active > 0),1,0) +
+      if(r2.status_id = 2,2,0) as max_data
     FROM \`result\` r2 
-    WHERE r2.result_code = ?) f;
+    WHERE r2.result_code = ? and r2.is_active > 0) f;
     `;
     try {
       const result: { id: number; max_data: number }[] = await this.query(
@@ -230,8 +245,8 @@ export class LinkedResultRepository
   	left join \`result\` r on r.id  = lr.linked_results_id 
     left join result_level rl on rl.id = r.result_level_id 
     left join result_type rt on rt.id = r.result_type_id 
-    INNER JOIN result_status rs ON rs.result_status_id = r.status_id  
-    inner join \`version\` v on v.id = r.version_id 
+    left JOIN result_status rs ON rs.result_status_id = r.status_id  
+    left join \`version\` v on v.id = r.version_id 
     where lr.origin_result_id = ?
           and lr.is_active > 0;
     `;

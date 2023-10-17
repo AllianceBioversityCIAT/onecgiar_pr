@@ -18,6 +18,7 @@ import { ResultsKnowledgeProductInstitutionRepository } from '../results-knowled
 import { IsNull } from 'typeorm';
 import { MQAPInstitutionDto } from './dto/mqap-institutions.dto';
 import { InstitutionRoleEnum } from './entities/institution_role.enum';
+import { ResultInstitutionsBudgetRepository } from '../result_budget/repositories/result_institutions_budget.repository';
 
 @Injectable()
 export class ResultsByInstitutionsService {
@@ -30,6 +31,7 @@ export class ResultsByInstitutionsService {
     private readonly _userRepository: UserRepository,
     private readonly _resultKnowledgeProductRepository: ResultsKnowledgeProductsRepository,
     private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
+    private readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
   ) {}
 
   create(createResultsByInstitutionDto: CreateResultsByInstitutionDto) {
@@ -94,6 +96,26 @@ export class ResultsByInstitutionsService {
             result_knowledge_product_institution_array: true,
           },
         });
+
+      if (!result?.id) {
+        throw {
+          response: id,
+          message: 'Results Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      if (
+        result.result_type_id == 6 &&
+        !knowledgeProduct?.result_knowledge_product_id
+      ) {
+        throw {
+          response: { result_id: id },
+          message: 'Knowledge Product Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
       const institutions =
         await this._resultByIntitutionsRepository.getResultByInstitutionPartnersFull(
           id,
@@ -213,18 +235,22 @@ export class ResultsByInstitutionsService {
         throw this._handlersError.returnErrorRes({ error: version });
       }
 
-      if (knowledgeProduct && data.mqap_institutions?.length) {
-        //here we filter out from the additional contributors the mqap manual mappings
-        data.institutions = data.institutions.filter(
-          (i) =>
-            !data.mqap_institutions
-              .filter((mqap) => mqap.user_matched_institution?.institutions_id)
-              .find(
-                (mqap) =>
-                  mqap.user_matched_institution.institutions_id ==
-                  i.institutions_id,
-              ),
-        );
+      if (knowledgeProduct) {
+        if (data.mqap_institutions?.length) {
+          //here we filter out from the additional contributors the mqap manual mappings
+          data.institutions = data.institutions.filter(
+            (i) =>
+              !data.mqap_institutions
+                .filter(
+                  (mqap) => mqap.user_matched_institution?.institutions_id,
+                )
+                .find(
+                  (mqap) =>
+                    mqap.user_matched_institution.institutions_id ==
+                    i.institutions_id,
+                ),
+          );
+        }
 
         /*
           in case we have additional contributors, we need to merge them with the 
@@ -287,6 +313,12 @@ export class ResultsByInstitutionsService {
             institutionsNew.is_active = true;
             const responseInstitution =
               await this._resultByIntitutionsRepository.save(institutionsNew);
+
+            await this._resultInstitutionsBudgetRepository.save({
+              result_institution_id: institutionsNew.id,
+              created_by: user.id,
+              last_updated_by: user.id,
+            });
 
             if (knowledgeProduct) {
               const kpInstitution =

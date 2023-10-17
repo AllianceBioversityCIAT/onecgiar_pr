@@ -1,5 +1,11 @@
 import { HttpStatus, Injectable, OnModuleInit } from '@nestjs/common';
-import { FindOptionsRelations, FindOptionsWhere, IsNull, Like } from 'typeorm';
+import {
+  FindOptionsRelations,
+  FindOptionsWhere,
+  In,
+  IsNull,
+  Like,
+} from 'typeorm';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import {
   HandlersError,
@@ -54,6 +60,9 @@ import { FairFieldRepository } from './repositories/fair-fields.repository';
 import { FairFieldEnum } from './entities/fair-fields.enum';
 import { FairSpecificData, FullFairData } from './dto/fair-data.dto';
 import { ResultsKnowledgeProductFairScoreRepository } from './repositories/results-knowledge-product-fair-scores.repository';
+import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
+import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
+import { ResultsCenter } from '../results-centers/entities/results-center.entity';
 
 @Injectable()
 export class ResultsKnowledgeProductsService {
@@ -62,6 +71,9 @@ export class ResultsKnowledgeProductsService {
       result_knowledge_product_altmetric_array: true,
       result_knowledge_product_institution_array: {
         results_by_institutions_object: true,
+        predicted_institution_object: {
+          clarisa_center: true,
+        },
       },
       result_knowledge_product_metadata_array: true,
       result_knowledge_product_keyword_array: true,
@@ -75,6 +87,7 @@ export class ResultsKnowledgeProductsService {
             cgspace_country_mapping_array: true,
           },
         },
+        obj_version: true,
       },
       result_knowledge_product_fair_score_array: {
         fair_field_object: {
@@ -109,6 +122,8 @@ export class ResultsKnowledgeProductsService {
     private readonly _versioningService: VersioningService,
     private readonly _fairFieldRepository: FairFieldRepository,
     private readonly _resultsKnowledgeProductFairScoreRepository: ResultsKnowledgeProductFairScoreRepository,
+    private readonly _resultCenterRepository: ResultsCenterRepository,
+    private readonly _clarisaInstitutionRepository: ClarisaInstitutionsRepository,
   ) {}
 
   private async createOwnerResult(
@@ -310,6 +325,11 @@ export class ResultsKnowledgeProductsService {
           title: newMetadata.title,
           description: newMetadata.description,
         },
+      );
+
+      await this.separateCentersFromCgspacePartners(
+        updatedKnowledgeProduct,
+        true,
       );
 
       //updating relations
@@ -584,7 +604,8 @@ export class ResultsKnowledgeProductsService {
           );
           return {
             response: infoToMap,
-            message: 'The Result Knowledge Product has already been created.',
+            message:
+              'This knowledge product has already been reported in the PRMS Reporting Tool.',
             status: HttpStatus.CONFLICT,
           };
         }
@@ -610,9 +631,9 @@ export class ResultsKnowledgeProductsService {
         throw {
           response: { title: mqapResponse?.Title },
           message:
-            `You can't report knowledge products from years different than ${versionCgspaceYear} ` +
-            'for the current reporting cycle. In case you need support to correct the publication ' +
-            'year of this knowledge product, please contact the librarian of your Center.',
+            `Reporting knowledge products from years outside the current reporting cycle (${versionCgspaceYear}) is not possible. ` +
+            'Should you require assistance in modifying the publication year for this knowledge product, ' +
+            'please contact your Center’s knowledge management team to review this information in CGSpace.',
           status: HttpStatus.UNPROCESSABLE_ENTITY,
         };
       } else if (
@@ -622,20 +643,16 @@ export class ResultsKnowledgeProductsService {
           (mqapResponse?.Type ?? '') == 'Journal Article' &&
           (cgYear.year ?? 0) != versionCgspaceYear)
       ) {
-        const dateFieldName = (cgYear?.field_name ?? '')
-          .split('_')
-          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-          .join(' ');
         throw {
           response: { title: mqapResponse?.Title },
           message:
-            `Only Journal Articles <b>published online<b> in 2023 will be allowed for this reporting cycle. ` +
-            "The knowledge product's date type you are trying to create is " +
-            `"${
-              dateFieldName || 'Not Defined'
-            }" and the year is "${cgYear}". ` +
-            'If you believe there has been a mistake, please get in touch with the library staff ' +
-            'of your Center to review this information in the repository.',
+            `Only journal articles published online in ${versionCgspaceYear} are eligible for this reporting cycle.<br>` +
+            'The knowledge product you are attempting to report either lacks the online publication date in CGSpace ' +
+            `or has an online publication date other than ${versionCgspaceYear}.<br><br>` +
+            'If you believe this is an error, please contact your Center’s knowledge management team to review this information in CGSpace.<br><br>' +
+            '<b>About this error:</b><br>Please be aware that for journal articles, the reporting system automatically verifies ' +
+            `the “Date Online” field in CGSpace, specifically checking for the year ${versionCgspaceYear}. If this field is empty or contains a year ` +
+            `other than ${versionCgspaceYear}, the submission will not be accepted. This prevents double counting of publications across consecutive years.`,
           status: HttpStatus.UNPROCESSABLE_ENTITY,
         };
       }
@@ -719,6 +736,8 @@ export class ResultsKnowledgeProductsService {
           newKnowledgeProduct,
           resultsKnowledgeProductDto,
         );
+
+      await this.separateCentersFromCgspacePartners(newKnowledgeProduct, false);
 
       //updating relations
       await this._resultsKnowledgeProductAltmetricRepository.save(
@@ -837,6 +856,110 @@ export class ResultsKnowledgeProductsService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
+  }
+
+  async separateCentersFromCgspacePartners(
+    knowledgeProduct: ResultsKnowledgeProduct,
+    upsert: boolean = false,
+  ) {
+    // we get the centers currently mapped to the result
+    let sectionTwoCenters = await this._resultCenterRepository.find({
+      where: {
+        result_id: knowledgeProduct.result_object.id,
+        is_active: true,
+      },
+      relations: {
+        clarisa_center_object: true,
+      },
+    });
+
+    /*if the kp is new, we need to load the institution corresponding to the 
+    id returned by cgspace in order to execute the next step*/
+    if (!upsert) {
+      const possibleCgInstitutionIds = (
+        knowledgeProduct.result_knowledge_product_institution_array ?? []
+      )
+        .filter((cgi) => cgi.predicted_institution_id)
+        .map((cgi) => cgi.predicted_institution_id);
+      const possibleCgInstitutions =
+        await this._clarisaInstitutionRepository.find({
+          where: {
+            id: In(possibleCgInstitutionIds),
+          },
+          relations: { clarisa_center: true },
+        });
+
+      knowledgeProduct.result_knowledge_product_institution_array = (
+        knowledgeProduct.result_knowledge_product_institution_array ?? []
+      ).map((cgi) => {
+        const possibleCgInstitution = possibleCgInstitutions.find(
+          (pci) => pci.id == cgi.predicted_institution_id,
+        );
+        if (possibleCgInstitution) {
+          cgi.predicted_institution_object = possibleCgInstitution;
+        }
+        return cgi;
+      });
+    }
+
+    let newSectionTwoCenters: ResultsCenter[] = [];
+
+    const updatedCgInstitutions = (
+      knowledgeProduct.result_knowledge_product_institution_array ?? []
+    ).map((cgi) => {
+      //if m-qap >97% certain of the institution match AND the institution is a center
+      if (
+        cgi.confidant > 97 &&
+        cgi.predicted_institution_object.clarisa_center
+      ) {
+        cgi.is_active = false;
+      }
+
+      //if the center has not been mapped already, we will create a new db record
+      if (
+        !sectionTwoCenters.find(
+          (stc) =>
+            stc.clarisa_center_object.institutionId ==
+            cgi.predicted_institution_id,
+        ) &&
+        cgi.predicted_institution_object.clarisa_center
+      ) {
+        const newSectionTwoCenter: ResultsCenter = new ResultsCenter();
+        newSectionTwoCenter.center_id =
+          cgi.predicted_institution_object.clarisa_center.code;
+        newSectionTwoCenter.is_primary = false;
+        newSectionTwoCenter.result_id = knowledgeProduct.results_id;
+        newSectionTwoCenter.created_by =
+          knowledgeProduct.last_updated_by || knowledgeProduct.created_by;
+        newSectionTwoCenter.from_cgspace = true;
+
+        newSectionTwoCenters.push(newSectionTwoCenter);
+      }
+
+      return cgi;
+    });
+
+    if (upsert) {
+      //if the center already existed, we will update the flag depending on
+      //the check if now comes from cgspace or not
+      sectionTwoCenters.forEach((stc) => {
+        const updatedCenter = updatedCgInstitutions.find(
+          (cgi) =>
+            cgi.predicted_institution_id ==
+            stc.clarisa_center_object.institutionId,
+        );
+
+        stc.from_cgspace = !!updatedCenter;
+      });
+    }
+
+    newSectionTwoCenters = await this._resultCenterRepository.save([
+      ...newSectionTwoCenters,
+      ...sectionTwoCenters,
+    ]);
+
+    knowledgeProduct.result_knowledge_product_institution_array =
+      updatedCgInstitutions;
   }
 
   private async updateGeoLocation(
@@ -996,7 +1119,8 @@ export class ResultsKnowledgeProductsService {
         this._resultsKnowledgeProductMapper.entityToDto(knowledgeProduct);
       return {
         response,
-        message: 'The Result Knowledge Product has already been created.',
+        message:
+          'This knowledge product has already been reported in the PRMS Reporting Tool.',
         status: HttpStatus.OK,
       };
     } catch (error) {

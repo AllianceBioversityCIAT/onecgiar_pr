@@ -26,6 +26,7 @@ import { ModuleTypeEnum, StatusPhaseEnum } from '../../enum/api.enum';
 export class ResultsApiService {
   constructor(public http: HttpClient, private saveButtonSE: SaveButtonService, public ipsrDataControlSE: IpsrDataControlService) {}
   apiBaseUrl = environment.apiBaseUrl + 'api/results/';
+  baseApiBaseUrl = environment.apiBaseUrl + 'api/';
   currentResultId: number | string = null;
   currentResultCode: number | string = null;
   currentResultPhase: number | string = null;
@@ -51,8 +52,9 @@ export class ResultsApiService {
       })
     );
   }
+
   PATCH_DeleteResult(resultIdToDelete: string | number) {
-    return this.http.patch<any>(`${this.apiBaseUrl}delete/${resultIdToDelete}`, null);
+    return this.http.delete<any>(`${this.baseApiBaseUrl}manage-data/result/${resultIdToDelete}/delete`);
   }
 
   GET_FindResultsElastic(search?: string, type?: string) {
@@ -279,8 +281,8 @@ export class ResultsApiService {
   }
 
   POST_toc(body: TheoryOfChangeBody) {
-    console.log(body);
-    
+    //(body);
+
     return this.http.post<any>(`${this.apiBaseUrl}toc/create/toc/result/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
@@ -311,8 +313,23 @@ export class ResultsApiService {
     );
   }
 
+  GET_centers() {
+    return this.http.get<any>(`${this.apiBaseUrl}get/centers/${this.currentResultId}`);
+  }
+
   Get_indicator(id_toc, init) {
-    return this.http.get<any>(`${this.apiBaseUrl}toc/get/indicator/${id_toc}/result/${this.currentResultId}/initiative/${init}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+    if (this.currentResultId == null) {
+      return this.http.get<any>(`${this.apiBaseUrl}toc/get/indicator/${id_toc}/result/${this.ipsrDataControlSE.resultInnovationId}/initiative/${init}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+    } else {
+      return this.http.get<any>(`${this.apiBaseUrl}toc/get/indicator/${id_toc}/result/${this.currentResultId}/initiative/${init}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+    }
+  }
+  get_vesrsionDashboard(id_toc, init) {
+    return this.http.get<any>(`${this.apiBaseUrl}toc/get/version/${this.currentResultId}/initiative/${init}/resultToc/${id_toc}`);
+  }
+
+  GET_resultActionArea(resultId, initiative) {
+    return this.http.get<any>(`${this.apiBaseUrl}toc/get/result/${resultId}/initiative/${initiative}`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   PATCH_innovationUse(body) {
@@ -390,6 +407,10 @@ export class ResultsApiService {
 
   PATCH_policyChanges(body) {
     return this.http.patch<any>(`${this.apiBaseUrl}summary/policy-changes/create/result/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+  }
+
+  GET_policyChangesQuestions() {
+    return this.http.get<any>(`${this.apiBaseUrl}questions/policy-change/${this.currentResultId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   GET_policyChanges() {
@@ -480,7 +501,7 @@ export class ResultsApiService {
         //(resp.responee);
         resp?.response.map(result => {
           result.full_name = `${result.result_title} ${result.result_code} ${result.official_code} ${result.result_type_name}`;
-          result.full_name_html = `<div class="completeness-${result.is_submitted == 1 ? 'submitted' : 'editing'} completeness-state">${result.is_submitted == 1 ? 'Submitted' : 'Editing'}</div> <strong>Result code: (${result.result_code})</strong> - ${result.result_title}  - <strong>Official code: (${result.official_code})</strong> - <strong>Result Type: (${result.result_type_name})</strong>`;
+          result.full_name_html = `<div class="completeness-${result.is_submitted == 1 ? 'submitted' : 'editing'} completeness-state">${result.is_submitted == 1 ? 'Submitted' : 'Editing'}</div> <strong>Result code: (${result.result_code})</strong> - ${result.result_title}  - <strong>Official code: (${result.official_code})</strong> - <strong>Indicator category: (${result.result_type_name})</strong>`;
           result.result_code = Number(result.result_code);
           result.completeness = Number(result.completeness);
           result.general_information_value = Number(result?.general_information?.value);
@@ -612,7 +633,7 @@ export class ResultsApiService {
   }
 
   GETInnovationPathwayStepTwoInnovationSelect() {
-    console.log(this.ipsrDataControlSE.resultInnovationId);
+    //(this.ipsrDataControlSE.resultInnovationId);
 
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/step-two/${this.ipsrDataControlSE.resultInnovationId}`);
   }
@@ -756,8 +777,6 @@ export class ResultsApiService {
   GET_versioning(status, modules) {
     return this.http.get<any>(`${environment.apiBaseUrl}api/versioning?status=${status}&module=${modules}`).pipe(
       map(resp => {
-        //(resp);
-        console.log(resp);
         resp?.response.map(phase => (phase.phase_name_status = `${phase.phase_name} - (${phase.status ? 'Open' : 'Closed'})`));
         return resp;
       })
@@ -786,6 +805,10 @@ export class ResultsApiService {
 
   GET_resultYears() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results/years`);
+  }
+
+  GET_questionsInnovationDevelopment() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/questions/innovation-development/${this.currentResultId}`);
   }
 
   GET_investmentDiscontinuedOptions() {

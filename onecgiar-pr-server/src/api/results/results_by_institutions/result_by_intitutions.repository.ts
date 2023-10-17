@@ -8,11 +8,14 @@ import {
 } from '../../../shared/globalInterfaces/replicable.interface';
 import { institutionsInterface } from './dto/save_results_by_institution.dto';
 import { InstitutionRoleEnum } from './entities/institution_role.enum';
+import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
 export class ResultByIntitutionsRepository
   extends Repository<ResultsByInstitution>
-  implements ReplicableInterface<ResultsByInstitution>
+  implements
+    ReplicableInterface<ResultsByInstitution>,
+    LogicalDelete<ResultsByInstitution>
 {
   private readonly _logger: Logger = new Logger(
     ResultByIntitutionsRepository.name,
@@ -23,6 +26,20 @@ export class ResultByIntitutionsRepository
   ) {
     super(ResultsByInstitution, dataSource.createEntityManager());
   }
+
+  logicalDelete(resultId: number): Promise<ResultsByInstitution> {
+    const queryData = `update results_by_institution set is_active = false where result_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          className: ResultByIntitutionsRepository.name,
+          error: err,
+          debug: true,
+        }),
+      );
+  }
+
   async replicable(
     config: ReplicableConfigInterface<ResultsByInstitution>,
   ): Promise<ResultsByInstitution[]> {
@@ -198,20 +215,20 @@ export class ResultByIntitutionsRepository
   ) {
     const queryData = `
     select 
-    	rbi.id,
-    	rbi.institutions_id,
-    	ci.name institutions_name,
-    	ci.acronym as institutions_acronym,
-    	rbi.institution_roles_id,
-    	cit.code as institutions_type_id, 
-    	cit.name as institutions_type_name
+    rbi.id,
+    rbi.institutions_id,
+    ci.name institutions_name,
+    ci.acronym as institutions_acronym,
+    rbi.institution_roles_id,
+    cit.code as institutions_type_id, 
+    cit.name as institutions_type_name
     from results_by_institution rbi 
     inner join clarisa_institutions ci on ci.id  = rbi.institutions_id 
     and ci.is_active > 0
     inner join clarisa_institution_types cit on cit.code = ci.institution_type_code
     where rbi.result_id = ?
-      and rbi.institution_roles_id in (${institutionRoles.join()})
-    	and rbi.is_active > 0;
+    and rbi.institution_roles_id in (${institutionRoles.join()})
+    and rbi.is_active > 0;
     `;
     try {
       const completeUser: ResultsByInstitution[] = await this.query(queryData, [
@@ -472,7 +489,7 @@ export class ResultByIntitutionsRepository
         ]);
       }
 
-      if (!(notApplicablePartner && !isKP)) {
+      if (institutionIds?.length && !(notApplicablePartner && !isKP)) {
         executionResult = await this.query(upDateActiveRBI, [
           userId,
           resultId,

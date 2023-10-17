@@ -8,6 +8,7 @@ import { ResultRepository } from '../result.repository';
 import { Evidence } from './entities/evidence.entity';
 import { VersionRepository } from '../../versioning/versioning.repository';
 import { ResultsKnowledgeProductsRepository } from '../results-knowledge-products/repositories/results-knowledge-products.repository';
+import { ResultsInnovationsDevRepository } from '../summary/repositories/results-innovations-dev.repository';
 import { Like } from 'typeorm';
 import { Result } from '../entities/result.entity';
 
@@ -19,6 +20,7 @@ export class EvidencesService {
     private readonly _resultRepository: ResultRepository,
     private readonly _versionRepository: VersionRepository,
     private readonly _resultsKnowledgeProductsRepository: ResultsKnowledgeProductsRepository,
+    private readonly _resultsInnovationsDevRepository: ResultsInnovationsDevRepository,
   ) {}
   async create(createEvidenceDto: CreateEvidenceDto, user: TokenDto) {
     try {
@@ -47,10 +49,10 @@ export class EvidencesService {
         );
         const long: number =
           evidencesArray.length > 6 ? 6 : evidencesArray.length;
-        let newsEvidencesArray: Evidence[] = [];
+        const newsEvidencesArray: Evidence[] = [];
         for (let index = 0; index < long; index++) {
-          let evidence = evidencesArray[index];
-          let eExists =
+          const evidence = evidencesArray[index];
+          const eExists =
             await this._evidencesRepository.getEvidencesByResultIdAndLink(
               result.id,
               evidence.link,
@@ -58,7 +60,7 @@ export class EvidencesService {
               1,
             );
           if (!eExists) {
-            let newEvidence = new Evidence();
+            const newEvidence = new Evidence();
 
             newEvidence.created_by = user.id;
             newEvidence.last_updated_by = user.id;
@@ -141,7 +143,7 @@ export class EvidencesService {
         );
         const long: number =
           supplementaryArray.length > 3 ? 3 : supplementaryArray.length;
-        let newsEvidencesArray: Evidence[] = [];
+        const newsEvidencesArray: Evidence[] = [];
         for (let index = 0; index < long; index++) {
           const supplementary = supplementaryArray[index];
           const eExists =
@@ -152,7 +154,7 @@ export class EvidencesService {
               1,
             );
           if (!eExists) {
-            let newEvidnece = new Evidence();
+            const newEvidnece = new Evidence();
             newEvidnece.created_by = user.id;
             newEvidnece.last_updated_by = user.id;
             newEvidnece.description = supplementary?.description ?? null;
@@ -191,6 +193,11 @@ export class EvidencesService {
         };
       }
 
+      const innoDev =
+        await this._resultsInnovationsDevRepository.InnovationDevExists(
+          resultId,
+        );
+
       const evidences = await this._evidencesRepository.getEvidencesByResultId(
         resultId,
         false,
@@ -223,6 +230,9 @@ export class EvidencesService {
 
       return {
         response: {
+          innovation_readiness_level_id: innoDev
+            ? innoDev.innovation_readiness_level_id
+            : null,
           result_id: result.id,
           gender_tag_level: result.gender_tag_level_id,
           climate_change_tag_level: result.climate_change_tag_level_id,

@@ -41,7 +41,7 @@ export class InnovationPackageDetailComponent {
           break;
       }
 
-      console.log(response.is_phase_open);
+      //(response.is_phase_open);
       this.ipsrDataControlSE.initiative_id = response?.inititiative_id;
 
       this.ipsrDataControlSE.detailData = response;

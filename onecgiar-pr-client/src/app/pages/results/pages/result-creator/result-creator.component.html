@@ -3,21 +3,28 @@
     <app-pr-button text="Back to results" icon="arrow_back" [reverse]="true" [showBackground]="false" optionLabel="name"
       optionValue="code"></app-pr-button>
   </a>
+
+  <!-- Don't delete - Global banner -->
+  <!-- <div style="width: 100%;">
+    <app-alert-global-info className="section_container local_container"
+      inlineStyles="width: 100%"></app-alert-global-info>
+  </div> -->
+
   <div class="local_container section_container">
     <div class="greeting"
-      [innerHTML]="naratives.greeting(this.api.authSE.localStorageUser?.user_name,this.api.dataControlSE.myInitiativesListText(this.api.dataControlSE.myInitiativesList))">
+      [innerHTML]="naratives.greeting(this.api.authSE.localStorageUser?.user_name , this.api.dataControlSE.myInitiativesListText(this.api.dataControlSE.myInitiativesList), this.api.rolesSE.isAdmin)">
     </div>
     <div class="report_container">
 
       <app-pr-select class="segment_title_margin" [options]="this.api.dataControlSE.myInitiativesList"
         *ngIf="!this.api.rolesSE.isAdmin" label="Report for" [isStatic]="true" optionLabel="full_name"
-        optionValue="initiative_id" placeholder="Select initiative"
+        optionValue="initiative_id" placeholder="Select Initiative"
         [(ngModel)]="this.resultLevelSE.resultBody.initiative_id">
       </app-pr-select>
 
       <app-pr-select class="segment_title_margin" [options]="this.allInitiatives" label="Report for" [isStatic]="true"
         *ngIf="this.api.rolesSE.isAdmin" optionLabel="full_name" optionValue="initiative_id"
-        placeholder="Select initiative" [(ngModel)]="this.resultLevelSE.resultBody.initiative_id">
+        placeholder="Select Initiative" [(ngModel)]="this.resultLevelSE.resultBody.initiative_id">
       </app-pr-select>
 
 
@@ -25,15 +32,13 @@
       <!-- <div class="segment_title segment_title_margin" *ngIf="this.resultLevelSE?.currentResultTypeList?.length">Result
         type
       </div> -->
-      <app-pr-radio-button label="Result type" *ngIf="this.resultLevelSE?.currentResultTypeList?.length"
+      <app-pr-radio-button label="Indicator category" *ngIf="this.resultLevelSE?.currentResultTypeList?.length"
         [options]="this.resultLevelSE.currentResultTypeList" [isStatic]="true" optionLabel="name" optionValue='id'
-        [(ngModel)]="this.resultLevelSE.resultBody.result_type_id" (ngModelChange)="cleanTitle()">
+        [(ngModel)]="this.resultLevelSE.resultBody.result_type_id" (ngModelChange)="clean()">
       </app-pr-radio-button>
 
       <div *ngIf="this.resultLevelSE.resultBody.result_level_id">
-        <app-alert-status *ngIf="isKnowledgeProduct" description="Dear user, please add the handle generated in CGSpace for the knowledge product you wish to report. All metadata will be automatically retrieved by the system and will not be possible to edit in the PRMS. The handle will be checked for validity, and only knowledge products for 2022 will be accepted.<br><br> 
-          Please be aware that the PRMS will accept only knowledge products reported in CGSpace. If you need further support to modify any of the harvested fields contact the librarian of your Center.
-          ">
+        <app-alert-status *ngIf="isKnowledgeProduct" [description]="this.kpAlertDescription">
         </app-alert-status>
 
         <div [ngClass]="{'mqap_sync_title': isKnowledgeProduct}">
@@ -48,8 +53,8 @@
           </div>
         </div>
         <app-pr-input [disabled]="isKnowledgeProduct" [readOnly]="isKnowledgeProduct" [isStatic]="true"
-          *ngIf="this.resultLevelSE.resultBody.result_type_id" [placeholder]="resultTypeNamePlaceholder+ ''" label="Title"
-          type="text" [maxWords]="30" [required]="resultLevelSE.resultBody.result_type_id != 6"
+          *ngIf="this.resultLevelSE.resultBody.result_type_id" [placeholder]="resultTypeNamePlaceholder+ ''"
+          label="Title" type="text" [maxWords]="30" [required]="resultLevelSE.resultBody.result_type_id != 6"
           [description]="isKnowledgeProduct ? 'Title retrieved from CGSpace' :'To search for results that have already been reported, enter key words into the title box below. If your result has not already been reported, you can add it here.'"
           [(ngModel)]="this.resultLevelSE.resultBody.result_name"
           (ngModelChange)="depthSearch(this.resultLevelSE.resultBody.result_name)">
@@ -68,7 +73,6 @@
         [icon]="this.isSaving?'loop':'save'" [ngClass]="{'globalDisabled ':this.isSaving}">
       </app-pr-button>
     </div> -->
-    <br><br><br><br><br><br><br><br><br><br>
 
     <app-save-button [editable]="true" (clickSave)="onSaveSection()" text="Save and continue"
       [disabled]="(valdiateNormalFields() || exactTitleFound) || (isKnowledgeProduct ? false:this.api.wordCounterSE.counter(this.resultLevelSE.resultBody.result_name) > 30)  ">

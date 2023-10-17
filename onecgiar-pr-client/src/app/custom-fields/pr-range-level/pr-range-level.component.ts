@@ -1,5 +1,5 @@
-import { Component, Input, OnInit, forwardRef } from '@angular/core';
-import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { Component, EventEmitter, Input, Output, forwardRef } from '@angular/core';
+import { NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from 'src/app/shared/services/global/roles.service';
 
 @Component({
@@ -21,6 +21,7 @@ export class PrRangeLevelComponent {
   @Input() options: any;
   @Input() itemTitle: string = null;
   @Input() itemDescription: string = null;
+  @Output() selectOptionEvent = new EventEmitter<any>();
   hoverData = {
     show: false,
     object: {},
@@ -37,6 +38,7 @@ export class PrRangeLevelComponent {
     }
   };
   public list = [];
+
   constructor(private rolesSE: RolesService) {}
 
   private _value: string;
@@ -59,16 +61,18 @@ export class PrRangeLevelComponent {
   writeValue(value: any): void {
     this._value = value;
   }
+
   registerOnChange(fn: any): void {
     this.onChange = fn;
   }
+
   registerOnTouched(fn: any): void {
     this.onTouch = fn;
   }
-  //? Extra
 
   get sizeArray() {
-    if (!this.list?.length) Array.from({ length: this.size + 1 }).map((_, i) => this.list.push(i));
+    if (!this.list?.length) Array.from({ length: this.size + 1 }).forEach((_, i) => this.list.push(i));
+
     return this.list;
   }
 
@@ -84,5 +88,6 @@ export class PrRangeLevelComponent {
     });
     htmlElement.classList.add('active');
     this.value = option;
+    this.selectOptionEvent.emit(option);
   }
 }

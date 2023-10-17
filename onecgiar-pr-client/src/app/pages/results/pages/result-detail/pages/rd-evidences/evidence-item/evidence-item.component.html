@@ -3,10 +3,10 @@
     <div>
         <div class="link">
             <app-pr-input label="Link" [(ngModel)]="this.evidence.link" placeholder="Add link" type="link"
-                [disabled]=" this.dataControlSE.isKnowledgeProduct"></app-pr-input>
+                [disabled]=" this.dataControlSE.isKnowledgeProduct" [required]="!isOptional"></app-pr-input>
         </div>
-        <app-pr-field-header label="Please indicate for which markers this evidence is related to"
-            [required]="false"></app-pr-field-header>
+        <app-pr-field-header label="Please indicate for which Impact Area tags this evidence is related to"
+            [required]="false" *ngIf="!isSuppInfo"></app-pr-field-header>
         <div class="checkboxes" *ngIf="!isSuppInfo">
             <app-pr-checkbox label="Gender" [(ngModel)]="this.evidence.gender_related">
             </app-pr-checkbox>
@@ -14,8 +14,7 @@
             </app-pr-checkbox>
             <app-pr-checkbox label="Nutrition" [(ngModel)]="this.evidence.nutrition_related">
             </app-pr-checkbox>
-            <app-pr-checkbox label="Environment and/or biodiversity"
-                [(ngModel)]="this.evidence.environmental_biodiversity_related">
+            <app-pr-checkbox label="Environment" [(ngModel)]="this.evidence.environmental_biodiversity_related">
             </app-pr-checkbox>
             <app-pr-checkbox label="Poverty" [(ngModel)]="this.evidence.poverty_related">
             </app-pr-checkbox>

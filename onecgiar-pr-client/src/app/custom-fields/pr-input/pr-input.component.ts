@@ -31,6 +31,11 @@ export class PrInputComponent implements ControlValueAccessor {
   @Input() editable: boolean = false;
   @Input() noDataText: string = '';
 
+  @Input() variant?: 'xs' | 'sm';
+  @Input() numberMode?: 'decimal';
+  @Input() showDescription?: boolean = true;
+  @Input() descInlineStyles?: string = '';
+
   private _value: any;
   private beforeValue: string;
   public wordCount: number = 0;
@@ -58,8 +63,6 @@ export class PrInputComponent implements ControlValueAccessor {
   }
 
   aTag(link) {
-    console.log('Link');
-    console.log(link);
     return `<a class="open_route" target="_blank" href="${link}">${link}</a>`;
   }
 

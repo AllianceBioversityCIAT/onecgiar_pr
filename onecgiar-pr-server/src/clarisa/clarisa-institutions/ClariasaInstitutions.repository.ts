@@ -53,19 +53,20 @@ export class ClarisaInstitutionsRepository extends Repository<ClarisaInstitution
 
   async getAllInstitutions() {
     const queryData = `
-    select 
-    	ci.id as institutions_id,
-    	ci.name institutions_name,
-    	ci.acronym as institutions_acronym,
-      ci.website_link,
-    	cit.code as institutions_type_id, 
-    	cit.name as institutions_type_name,
-      cc.name as  headquarter_name
-    from clarisa_institutions ci 
-    inner join clarisa_institution_types cit on cit.code = ci.institution_type_code
-    left join clarisa_countries cc on cc.iso_alpha_2 = ci.headquarter_country_iso2 
-    where 
-    ci.is_active > 0;
+      SELECT
+        ci.id AS institutions_id,
+        ci.name AS institutions_name,
+        ci.acronym AS institutions_acronym,
+        ci.website_link,
+        cit.code AS institutions_type_id,
+        cit.name AS institutions_type_name,
+        cco.name AS headquarter_name,
+        IF(cce.code IS NULL, 0, 1) AS is_center
+      FROM clarisa_institutions ci
+      INNER JOIN clarisa_institution_types cit ON cit.code = ci.institution_type_code
+      LEFT JOIN clarisa_countries cco ON cco.iso_alpha_2 = ci.headquarter_country_iso2
+      LEFT JOIN clarisa_center cce ON ci.id = cce.institutionId
+      WHERE ci.is_active > 0;
     `;
     try {
       const deleteData: ClarisaInstitution[] = await this.query(queryData);

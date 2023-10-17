@@ -22,7 +22,7 @@
             <i class="pi pi-chevron-down icon_dropdown"></i>
 
             <div class="remove_focus" (click)="removeFocus()"></div>
-            <div class="options">
+            <div class="options" style="min-width: 200px;">
                 <div class="search_input_container">
                     <div class="p-input-icon-left p-fluid">
                         <i class="pi pi-search"></i>
@@ -43,11 +43,13 @@
                             [innerHtml]="(option?.disabled?disableOptionsText:'')+option[this.optionLabel]"></div>
                         <div class="event"></div>
                     </div>
+                    <div class="no-options-text" *ngIf="!optionsIntance?.length">There are no items available for this
+                        list.</div>
                 </cdk-virtual-scroll-viewport>
             </div>
         </a>
     </div>
     <app-alert-status *ngIf="showPartnerAlert"
-        description="If you don't find the partner you are looking for, <a class='open_route pSelectP'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list">
+        description="If you don't find the partner you are looking for, <a class='open_route pSelectP'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list.">
     </app-alert-status>
 </div>

@@ -7,11 +7,14 @@ import {
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
 import { VERSIONING } from '../../../shared/utils/versioning.utils';
+import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
 export class NonPooledProjectRepository
   extends Repository<NonPooledProject>
-  implements ReplicableInterface<NonPooledProject>
+  implements
+    ReplicableInterface<NonPooledProject>,
+    LogicalDelete<NonPooledProject>
 {
   private readonly _logger: Logger = new Logger(
     NonPooledProjectRepository.name,
@@ -21,6 +24,19 @@ export class NonPooledProjectRepository
     private readonly _handlersError: HandlersError,
   ) {
     super(NonPooledProject, dataSource.createEntityManager());
+  }
+
+  logicalDelete(resultId: number): Promise<NonPooledProject> {
+    const queryData = `update non_pooled_project npp set npp.is_active = 0 where npp.results_id = ? and npp.is_active > 0;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: NonPooledProjectRepository.name,
+          debug: true,
+        }),
+      );
   }
 
   async replicable(

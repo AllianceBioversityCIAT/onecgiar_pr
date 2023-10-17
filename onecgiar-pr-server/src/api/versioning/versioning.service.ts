@@ -45,6 +45,7 @@ import {
 } from '../../shared/constants/role-type.enum';
 import { In } from 'typeorm';
 import { UpdateQaResults } from './dto/update-qa.dto';
+import { ResultInitiativeBudgetRepository } from '../results/result_budget/repositories/result_initiative_budget.repository';
 
 @Injectable()
 export class VersioningService {
@@ -78,6 +79,7 @@ export class VersioningService {
     private readonly _resultsKnowledgeProductKeywordRepository: ResultsKnowledgeProductKeywordRepository,
     private readonly _resultsKnowledgeProductMetadataRepository: ResultsKnowledgeProductMetadataRepository,
     private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
+    private readonly _resultInitiativeBudgetRepository: ResultInitiativeBudgetRepository,
   ) {}
 
   /**
@@ -232,6 +234,7 @@ export class VersioningService {
           break;
         case 7:
           await this._resultsInnovationsDevRepository.replicable(config);
+          await this._resultInitiativeBudgetRepository.replicable(config);
           break;
       }
 
@@ -319,10 +322,20 @@ export class VersioningService {
 
       const phase = await this._versionRepository.findOne({
         where: {
+          app_module_id: module_id,
           is_active: true,
           status: true,
         },
       });
+
+      if (!phase) {
+        throw this._returnResponse.format({
+          message: `No active phases`,
+          response: null,
+          statusCode: HttpStatus.CONFLICT,
+        });
+      }
+
       let res: any = null;
       if (await this.$_genericValidation(legacy_result.result_code, phase.id)) {
         res = await this.$_versionManagement(
@@ -482,6 +495,7 @@ export class VersioningService {
         previous_phase: createVersioningDto?.previous_phase,
         app_module_id: createVersioningDto.app_module_id,
         created_by: user.id,
+        reporting_phase: createVersioningDto?.reporting_phase,
       });
 
       return this._returnResponse.format({
@@ -579,6 +593,7 @@ export class VersioningService {
         where: where,
         relations: {
           obj_previous_phase: true,
+          obj_reporting_phase: true,
         },
       });
 

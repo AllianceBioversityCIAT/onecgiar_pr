@@ -1,6 +1,11 @@
 <div class="local_container">
-  <app-report-new-result-button> </app-report-new-result-button>
-  <div class="alert"></div>
+  <div class="action_buttons">
+    <app-report-new-result-button> </app-report-new-result-button>
+    <app-pr-button text="Update result" icon="moving" [reverse]="true"
+      (click)="this.api.dataControlSE.updateResultModal = true;"></app-pr-button>
+  </div>
+  <!-- <div class="alert"></div> -->
+  <br>
   <app-results-list-filters></app-results-list-filters>
 </div>
 <div class="download_button_container">
@@ -31,25 +36,24 @@
         <td>
           {{result?.result_code}}
         </td>
-        <td *ngFor="let column of columnOrder; let i = index" class="{{ column.attr }}">
-          <div class="subResults">
-            <ng-container *ngFor="let subResult of result['results']">
-              <a class="{{ subResult.class }}" [routerLink]="'/result/result-detail/' + subResult?.result_code"
-                [queryParams]="{ phase: subResult?.version_id }">
-                <div class="point"
-                  [style.background]="'var(--pr-color-result-level-' + subResult?.result_level_id + ')'"
-                  *ngIf="subResult.attr === 'result_type'"></div>
+        <td *ngFor="let column of columnOrder; let i = index" class="{{ column.attr }}" style="max-width: 440px;">
+          <!-- <div class="subResults"> -->
+          <ng-container *ngFor="let subResult of result['results']">
+            <a class="{{ subResult.class }}" [routerLink]="'/result/result-detail/' + subResult?.result_code"
+              [queryParams]="{ phase: subResult?.version_id }">
+              <div class="point" [style.background]="'var(--pr-color-result-level-' + subResult?.result_level_id + ')'"
+                *ngIf="subResult.attr === 'result_type'"></div>
 
-                <div class="new_tag" *ngIf="i == 0 && subResult.is_new && !subResult.legacy_id">New</div>
-                <div class="new_tag pre" *ngIf="i == 0 && subResult.legacy_id">Pre 2022</div>
-                {{ column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date :
-                'YYYY-MM-dd') }}
-              </a>
-              <!-- <div class="transparent_text">
+              <div class="new_tag" *ngIf="i == 0 && subResult.is_new && !subResult.legacy_id">New</div>
+              <div class="new_tag pre" *ngIf="i == 0 && subResult.legacy_id">Pre 2022</div>
+              {{ column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date :
+              'YYYY-MM-dd') }}
+            </a>
+            <!-- <div class="transparent_text">
                 {{ result[column.attr] }}
               </div> -->
-            </ng-container>
-          </div>
+          </ng-container>
+          <!-- </div> -->
 
 
 
@@ -80,12 +84,18 @@
     *ngIf="(this.api.dataControlSE.resultsList | resultsListFilter : this.resultsListService.text_to_search : this.combine: this.api.resultsListFilterSE.filterJoin)?.length">
     Total: {{ (this.api.dataControlSE.resultsList | resultsListFilter : this.resultsListService.text_to_search :
     this.combine:
-    this.api.resultsListFilterSE.filterJoin)?.length }} / {{ this.api.dataControlSE.resultsList?.length }}</div>
+    this.api.resultsListFilterSE.filterJoin)?.length }}/{{ this.api.dataControlSE.resultsList?.length }}</div>
   <div class="noDataText"
     *ngIf="!(this.api.dataControlSE.resultsList | resultsListFilter : this.resultsListService.text_to_search :  this.combine:this.api.resultsListFilterSE.filterJoin)?.length">
     There are no results for the selected filters.</div>
+
+  <app-custom-spinner *ngIf="this.resultsListService.showDeletingResultSpinner"
+    text="Deleting result"></app-custom-spinner>
+
 </div>
 
 <p-menu #menu [popup]="true"
   [model]="this.api.dataControlSE?.currentResult?.role_id || this.api.rolesSE.isAdmin ? itemsWithDelete : items">
 </p-menu>
+
+<app-results-to-update-modal></app-results-to-update-modal>

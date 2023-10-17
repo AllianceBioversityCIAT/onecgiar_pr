@@ -1,6 +1,6 @@
 <div class="field_container">
     <div class="title">
-        <app-pr-field-header [label]="this.label" [required]="this.required">
+        <app-pr-field-header [label]="this.label" [required]="this.required" [useColon]="false">
         </app-pr-field-header>
         <div class="choices" *ngIf="!hideOptions">
             <div class="choice" [ngClass]="{'yes': this.value == true}"
@@ -15,7 +15,7 @@
             </div>
         </div>
     </div>
-    <div class="description">
+    <div class="description" *ngIf="!hideDescription">
         <app-pr-field-header [description]="this.description">
         </app-pr-field-header>
     </div>

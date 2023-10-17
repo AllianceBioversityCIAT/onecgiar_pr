@@ -9,12 +9,15 @@ import {
   returnErrorDto,
 } from '../../shared/handlers/error.utils';
 import { env } from 'process';
+import { ResultRepository } from '../results/result.repository';
+import { Result } from '../results/entities/result.entity';
 
 @Injectable()
 export class PlatformReportService {
   public constructor(
     private readonly _platformReportRepository: PlatformReportRepository,
     private readonly _handlerError: HandlersError,
+    private readonly _resultRepository: ResultRepository,
   ) {}
 
   async getFullResultReportByResultCode(result_code: string, phase: string) {
@@ -29,8 +32,19 @@ export class PlatformReportService {
         throw error;
       }
 
-      //FIXME when the versioning is implemented to take the last active phase as the default parameter
+      if ((phase?.trim() ?? '').length === 0) {
+        const results: Result[] = await this._resultRepository.find({
+          where: {
+            result_code: cleanResultCodeInput,
+            is_active: true,
+          },
+          order: { version_id: 'DESC' },
+        });
+        phase = String(results[0]?.version_id ?? '0');
+      }
+
       const cleanPhaseInput = Number(phase ?? '1');
+
       if (Number.isNaN(cleanPhaseInput)) {
         const error: returnErrorDto = {
           status: 404,
@@ -39,10 +53,11 @@ export class PlatformReportService {
         };
         throw error;
       }
+      const enumValue = PlatformReportEnum.FULL_RESULT_REPORT;
 
       const report = await this._platformReportRepository.findOne({
-        where: { id: PlatformReportEnum.FULL_RESULT_REPORT.id },
-        relations: { template_object: true },
+        where: { id: enumValue.id },
+        relations: { template_object: { children_array: true } },
       });
 
       const data =
@@ -61,6 +76,15 @@ export class PlatformReportService {
         };
         throw error;
       }
+
+      /*const header = report.template_object.children_array.find(
+        (c) => c.name === enumValue.children.header_name,
+      )?.template;
+      const footer = report.template_object.children_array.find(
+        (c) => c.name === enumValue.children.footer_name,
+      )?.template;
+      const compiledHeader = Handlebars.compile(header)(data);
+      const compiledFooter = Handlebars.compile(footer)(data);*/
 
       const options = {
         format: 'A3',

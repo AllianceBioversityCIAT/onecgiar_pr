@@ -6,11 +6,14 @@ import {
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
+import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
 export class ResultsPolicyChangesRepository
   extends Repository<ResultsPolicyChanges>
-  implements ReplicableInterface<ResultsPolicyChanges>
+  implements
+    ReplicableInterface<ResultsPolicyChanges>,
+    LogicalDelete<ResultsPolicyChanges>
 {
   private readonly _logger: Logger = new Logger(
     ResultsPolicyChangesRepository.name,
@@ -21,6 +24,19 @@ export class ResultsPolicyChangesRepository
     private _handlersError: HandlersError,
   ) {
     super(ResultsPolicyChanges, dataSource.createEntityManager());
+  }
+
+  logicalDelete(resultId: number): Promise<ResultsPolicyChanges> {
+    const queryData = `update results_policy_changes rpc set rpc.is_active = 0 where rpc.result_id = ? and rpc.is_active > 0;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsPolicyChangesRepository.name,
+          debug: true,
+        }),
+      );
   }
 
   async replicable(
@@ -134,7 +150,10 @@ export class ResultsPolicyChangesRepository
     	rpc.last_updated_by,
     	rpc.policy_stage_id,
     	rpc.policy_type_id,
-      rpc.status_amount
+      rpc.status_amount,
+      rpc.linked_innovation_dev,
+      rpc.linked_innovation_use,
+      rpc.result_related_engagement
     FROM
     	results_policy_changes rpc
     WHERE 
@@ -164,6 +183,30 @@ export class ResultsPolicyChangesRepository
       r.result_code 'Result Code',
       -- Action Area Outcome - Policy change specific fields
       cpt.name as 'Policy type',
+      (
+        SELECT
+          GROUP_CONCAT(
+            (
+              SELECT
+                rq2.question_text
+              FROM
+                result_questions rq2
+              WHERE
+                rq2.result_question_id = rq.parent_question_id
+            ),
+            '  ',
+            rq.question_text SEPARATOR '\n'
+          ) AS 'Questions'
+        FROM
+          result_answers ra2
+          LEFT JOIN result_questions rq ON rq.result_question_id = ra2.result_question_id
+        WHERE
+          ra2.result_id = r.id
+          AND ra2.is_active = TRUE
+          AND ra2.answer_boolean = TRUE
+        ORDER BY
+          rq.result_question_id ASC
+      ) AS 'Is this result related to',
       if(cpt.id <> 1, 'Not applicable', format(rpc.amount, 2)) 'USD Amount',
       if(cpt.id <> 1, 'Not applicable', 
         (

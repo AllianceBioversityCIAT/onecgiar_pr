@@ -7,6 +7,7 @@ import {
   ReturnResponse,
 } from '../../shared/handlers/error.utils';
 import { PlatformReportRepository } from './platform-report.repository';
+import { ResultRepository } from '../results/result.repository';
 
 @Module({
   controllers: [PlatformReportController],
@@ -15,6 +16,7 @@ import { PlatformReportRepository } from './platform-report.repository';
     HandlersError,
     PlatformReportRepository,
     ReturnResponse,
+    ResultRepository,
   ],
 })
 export class PlatformReportModule {
@@ -100,5 +102,26 @@ export class PlatformReportModule {
         return value ? 'Yes' : 'No';
       },
     );
+
+    Handlebars.registerHelper(
+      'conditionalAttribiute',
+      function (
+        originalValue,
+        valueToCompare,
+        attribute,
+        valueToApplyIfTrue,
+        valueToApplyIfFalse,
+      ) {
+        return `${attribute}="${
+          originalValue == valueToCompare
+            ? valueToApplyIfTrue
+            : valueToApplyIfFalse
+        }"`;
+      },
+    );
+
+    Handlebars.registerHelper('safeString', function (text) {
+      return new Handlebars.SafeString(text);
+    });
   }
 }

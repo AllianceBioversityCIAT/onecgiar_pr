@@ -6,11 +6,12 @@ import {
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
+import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
 export class ResultRegionRepository
   extends Repository<ResultRegion>
-  implements ReplicableInterface<ResultRegion>
+  implements ReplicableInterface<ResultRegion>, LogicalDelete<ResultRegion>
 {
   private readonly _logger: Logger = new Logger(ResultRegionRepository.name);
 
@@ -20,6 +21,20 @@ export class ResultRegionRepository
   ) {
     super(ResultRegion, dataSource.createEntityManager());
   }
+
+  logicalDelete(resultId: number): Promise<ResultRegion> {
+    const queryData = `update result_region set is_active = 0 where result_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultRegionRepository.name,
+          debug: true,
+        }),
+      );
+  }
+
   async replicable(
     config: ReplicableConfigInterface<ResultRegion>,
   ): Promise<ResultRegion[]> {

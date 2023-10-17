@@ -19,11 +19,13 @@ export class StepN1ActionAreaOutcomesComponent {
 
     this.api.resultsSE.GETAllClarisaActionAreasOutcomes().subscribe(
       ({ response }) => {
+        //(response);
         this.actionAreasOutcomesList = response;
         this.actionAreasOutcomesList.geneticInnovation.map(item => (item.full_name = `<strong>${item.outcomeSMOcode}</strong> - ${item.outcomeStatement}`));
         this.actionAreasOutcomesList.resilientAgrifoodSystems.map(item => (item.full_name = `<strong>${item.outcomeSMOcode}</strong> - ${item.outcomeStatement}`));
         this.actionAreasOutcomesList.systemTrasnformation.map(item => (item.full_name = `<strong>${item.outcomeSMOcode}</strong> - ${item.outcomeStatement}`));
 
+        //(this.actionAreasOutcomesList);
         //(this.actionAreasOutcomesList);
       },
       err => {

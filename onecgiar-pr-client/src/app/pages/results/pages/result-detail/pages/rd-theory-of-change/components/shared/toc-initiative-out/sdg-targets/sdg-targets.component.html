@@ -1,6 +1,7 @@
 <app-pr-field-header
-    label="Select an SDG to filter SDG Targets" [required]="sdgRequid"></app-pr-field-header>
+    label="Mapping to SDG targets" [required]="sdgRequid"></app-pr-field-header>
 
+    <div>Select an SDG to filter SDG Targets:</div>
 <div class="sdg_targets">
     <div class="sdg_item" *ngFor="let sdgItem of this.sdgTargetLis" (click)="onSelectSDG(sdgItem)">
         <img [src]="'assets/sdg/'+sdgItem?.sdgId+'.png'" alt="" srcset=""
@@ -9,7 +10,7 @@
 </div>
 
 <div class="sdg_targets_dropdowns">
-    <div class="dropdown-50p" *ngFor="let item of sdgTargetLis">
+    <div class="dropdown-100p" *ngFor="let item of sdgTargetLis">
         <app-pr-multi-select [options]="item?.sdgList" optionLabel="full_name" optionValue="id"
             *ngIf="this.currentsdgID ==item?.sdgId" selectedOptionLabel="indicator_statement"
             [placeholder]="'Select ' +item?.short_name+ ' target(s)'" [(ngModel)]="this.body">
@@ -17,7 +18,7 @@
     </div>
 </div>
 
-<div class="selected_container custom_scroll dropdown-50p">
+<div class="selected_container custom_scroll dropdown-100p">
     <br>
     <app-pr-field-header [description]="'All SDG target(s) selected('+this.body?.length+'):'">
     </app-pr-field-header>
