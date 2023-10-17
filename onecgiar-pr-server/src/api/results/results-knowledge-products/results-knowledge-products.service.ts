@@ -643,10 +643,6 @@ export class ResultsKnowledgeProductsService {
           (mqapResponse?.Type ?? '') == 'Journal Article' &&
           (cgYear.year ?? 0) != versionCgspaceYear)
       ) {
-        const dateFieldName = (cgYear?.field_name ?? '')
-          .split('_')
-          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-          .join(' ');
         throw {
           response: { title: mqapResponse?.Title },
           message:
