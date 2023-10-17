@@ -1537,7 +1537,6 @@ export class resultValidationRepository
 				rpc.policy_stage_id is not null
 				and rpc.policy_stage_id <> ''
 			)
-			AND rpc.result_related_engagement is not null
 			AND (
 				(
 					SELECT
