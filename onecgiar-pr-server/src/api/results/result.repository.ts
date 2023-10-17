@@ -1336,7 +1336,9 @@ left join clarisa_countries cc3
     left join results_knowledge_product rkp on rkp.results_id = r.id and rkp.is_active > 0
     INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
   /*  left join evidence e on e.result_id = r.id and e.is_active > 0 */
-    WHERE r.result_code ${resultCodes.length ? `in (${resultCodes})` : '= 0'}
+    WHERE r.result_code ${
+      resultCodes.length ? `in (${resultCodes})` : '= 0'
+    } and r.is_active > 0
     GROUP by 
     r.result_code,
     r.id,
