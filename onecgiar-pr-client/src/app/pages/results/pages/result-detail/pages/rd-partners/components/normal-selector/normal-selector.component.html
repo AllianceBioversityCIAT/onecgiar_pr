@@ -12,7 +12,6 @@
     <div *ngSwitchCase="false">
         <app-pr-checkbox label="This section is not applicable."
             [(ngModel)]="this.rdPartnersSE.partnersBody.no_applicable_partner">
-            <!--(ngModelChange)="this.rdPartnersSE.cleanBody()"-->
         </app-pr-checkbox>
     </div>
 </div>
@@ -24,12 +23,11 @@
 
 <div class="auto_fit_container fadeIn" *ngIf="this.rdPartnersSE.partnersBody.no_applicable_partner !== true">
     <div (click)="getDisableOptions()">
-        <!-- TODO -->
         <app-pr-multi-select [options]="this.institutionsSE.institutionsWithoutCentersList" [required]="false"
             label="Partners" selectedOptionLabel="institutions_name" optionLabel="full_name"
             optionValue="institutions_id" [(ngModel)]="this.rdPartnersSE.partnersBody.institutions"
             [disableOptions]="this.disableOptions" placeholder="Select partner"
-            (selectOptionEvent)="this.rdPartnersSE.toggle = this.rdPartnersSE.toggle+1;">
+            (selectOptionEvent)="this.rdPartnersSE.toggle = this.rdPartnersSE.toggle+1; getOnlyPartnerTypes();">
         </app-pr-multi-select>
         <div class="partners_selected_header" [style]="this.rolesSE.readOnly?'margin-top: -15px':''">
             <app-pr-field-header
@@ -82,11 +80,8 @@
 
     <div>
         <app-pr-field-header label="Partner types"
-            [description]="'Total partner(s) type ('+this.rdPartnersSE.partnersBody.institutions?.length+'):'"
-            [required]="false">
+            [description]="'Total partner(s) type ('+ this.partnerUniqueTypes.length + '):'" [required]="false">
         </app-pr-field-header>
-        <!-- <app-pr-field-header [description]="'Partner(s) selected ('+this.rdPartnersSE.partnersBody.institutions?.length+'):'">
-    </app-pr-field-header> -->
 
         <div class="chips_container custom_scroll">
             <div class="pr_chip_selected"
