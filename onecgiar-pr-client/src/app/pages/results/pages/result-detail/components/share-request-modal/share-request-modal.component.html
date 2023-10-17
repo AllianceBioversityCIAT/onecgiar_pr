@@ -31,7 +31,14 @@
         </app-pr-select>
 
         <app-toc-initiative-out
-            *ngIf="shareRequestModalSE.shareRequestBody?.initiative_id && this.showTocOut && this.api.dataControlSE?.currentResult?.result_level_id === 4"
+            *ngIf="shareRequestModalSE.shareRequestBody?.initiative_id && this.showTocOut && !this.api.dataControlSE.inNotifications"
+            [initiative]="shareRequestModalSE.shareRequestBody" [indexYesorNo]="0"
+            [editable]="!this.api.rolesSE.platformIsClosed && (this.rolesSE.validateInitiative(shareRequestModalSE.shareRequestBody?.initiative_id) || this.rolesSE.isAdmin || this.api.dataControlSE.inNotifications)"
+            [resultLevelId]="this.api.dataControlSE?.currentResult?.result_level_id === 4 && !this.api.resultsSE.ipsrDataControlSE.inIpsr ? 1 : 2">
+        </app-toc-initiative-out>
+
+        <app-toc-initiative-out
+            *ngIf="shareRequestModalSE.shareRequestBody?.initiative_id && this.showTocOut && this.api.dataControlSE.inNotifications && (this.api.dataControlSE?.currentResult?.result_level_id === 4 || this.api.dataControlSE?.currentResult?.result_level_id === 3)"
             [initiative]="shareRequestModalSE.shareRequestBody" [indexYesorNo]="0"
             [editable]="!this.api.rolesSE.platformIsClosed && (this.rolesSE.validateInitiative(shareRequestModalSE.shareRequestBody?.initiative_id) || this.rolesSE.isAdmin || this.api.dataControlSE.inNotifications)"
             [resultLevelId]="this.api.dataControlSE?.currentResult?.result_level_id === 4 && !this.api.resultsSE.ipsrDataControlSE.inIpsr ? 1 : 2">
@@ -47,14 +54,14 @@
             [ngClass]="{'globalDisabled': this.requesting  || !this.shareRequestModalSE.shareRequestBody.initiative_id  || !this.shareRequestModalSE.shareRequestBody.toc_result_id}"
             [text]="this.requesting ? 'Saving' : 'Send Request'" [rotating]="this.requesting"
             [icon]="this.requesting ? 'loop' : 'send'" padding="medium" (click)="onRequest()"
-            *ngIf="!this.api.dataControlSE.inNotifications ">
+            *ngIf="!this.api.dataControlSE.inNotifications">
         </app-pr-button>
 
         <app-pr-button
             [ngClass]="this.api.dataControlSE?.currentResult?.result_level_id === 4 && {'globalDisabled': this.requesting  || !this.shareRequestModalSE.shareRequestBody.initiative_id  || !this.shareRequestModalSE.shareRequestBody.toc_result_id}"
             [text]="this.requesting ? 'Saving' : 'Accept'" [rotating]="this.requesting"
             [icon]="this.requesting ? 'loop' : 'send'" padding="medium" (click)="acceptOrReject()"
-            *ngIf="this.api.dataControlSE.inNotifications ">
+            *ngIf="this.api.dataControlSE.inNotifications">
         </app-pr-button>
     </div>
 

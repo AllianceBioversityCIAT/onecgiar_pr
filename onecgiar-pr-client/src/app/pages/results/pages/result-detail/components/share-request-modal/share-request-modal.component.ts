@@ -43,8 +43,8 @@ export class ShareRequestModalComponent implements OnInit {
   onRequest() {
     this.requesting = true;
     this.shareRequestModalSE.shareRequestBody.initiativeShareId.push(this.shareRequestModalSE.shareRequestBody.initiative_id);
-    this.api.resultsSE.POST_createRequest(this.shareRequestModalSE.shareRequestBody).subscribe(
-      resp => {
+    this.api.resultsSE.POST_createRequest(this.shareRequestModalSE.shareRequestBody).subscribe({
+      next: resp => {
         this.api.dataControlSE.showShareRequest = false;
 
         this.api.alertsFe.show({ id: 'requesqshared', title: `Request sent`, description: `Once your request is accepted, the result can be mapped to your Initiative's ToC.`, status: 'success' });
@@ -55,14 +55,14 @@ export class ShareRequestModalComponent implements OnInit {
           this.router.navigate([`/result/results-outlet/results-list`]);
         }
       },
-      err => {
+      error: err => {
         console.error(err);
         this.api.dataControlSE.showShareRequest = false;
 
         this.api.alertsFe.show({ id: 'requesqsharederror', title: 'Error when requesting', description: '', status: 'error' });
         this.requesting = false;
       }
-    );
+    });
   }
 
   modelChange() {
@@ -79,9 +79,8 @@ export class ShareRequestModalComponent implements OnInit {
   acceptOrReject() {
     const body = { ...this.api.dataControlSE.currentNotification, ...this.shareRequestModalSE.shareRequestBody, request_status_id: 2, bodyNewTheoryOfChanges: this.theoryOfChangesServices.body };
     this.requesting = true;
-
-    this.api.resultsSE.PATCH_updateRequest(body).subscribe(
-      resp => {
+    this.api.resultsSE.PATCH_updateRequest(body).subscribe({
+      next: resp => {
         this.api.dataControlSE.showShareRequest = false;
         this.api.alertsFe.show({ id: 'noti', title: `Request sent`, description: `Once your request is accepted, the result can be mapped to your Initiative's ToC.`, status: 'success' });
         this.requesting = false;
@@ -91,12 +90,12 @@ export class ShareRequestModalComponent implements OnInit {
           this.resultsNotificationsSE.get_section_information();
         }
       },
-      err => {
+      error: err => {
         this.api.dataControlSE.showShareRequest = false;
         this.api.alertsFe.show({ id: 'noti-error', title: 'Error when requesting ', description: '', status: 'error' });
         this.requesting = false;
       }
-    );
+    });
   }
 
   GET_AllInitiatives() {
