@@ -1,9 +1,21 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 
 interface Tab {
-  id: number;
-  content: string;
-  validation: boolean;
+  action_area_outcome_id: number | null;
+  created_by: number | null;
+  created_date: string | null;
+  initiative_id: number | null;
+  is_active: number | null;
+  last_updated_by: number | null;
+  last_updated_date: string | null;
+  name: string | null;
+  official_code: string | null;
+  planned_result: number | null;
+  result_toc_result_id: string | null;
+  results_id: string | null;
+  short_name: string | null;
+  toc_level_id: number | null;
+  toc_result_id: number | null;
 }
 
 @Component({
@@ -12,41 +24,53 @@ interface Tab {
   styleUrls: ['./multiple-wps.component.scss']
 })
 export class MultipleWPsComponent implements OnInit {
-  multipleWPsTabs: Tab[] = [
-    {
-      id: 1 * Math.random(),
-      content: 'WP1 content',
-      validation: true
-    }
-  ];
+  @Input() editable: boolean;
+  @Input() initiative: any;
+  @Input() resultLevelId: number | string;
+  @Input() isIpsr: boolean = false;
+  @Input() indexYesorNo: number;
 
-  activeTab: Tab = this.multipleWPsTabs[0];
+  activeTab: any;
 
   constructor() {}
 
-  onAddTab() {
-    const idRandomNumber = (this.multipleWPsTabs.length + 1) * Math.random();
+  ngOnInit(): void {
+    console.log('this.initiative', this.initiative);
+    this.activeTab = this.initiative[0];
+  }
 
-    this.multipleWPsTabs.push({
-      id: idRandomNumber,
-      content: `WP${idRandomNumber.toFixed(2)} content`,
-      validation: false
+  onAddTab() {
+    this.initiative.push({
+      action_area_outcome_id: null,
+      created_by: null,
+      created_date: null,
+      initiative_id: null,
+      is_active: null,
+      last_updated_by: null,
+      last_updated_date: null,
+      name: null,
+      official_code: null,
+      planned_result: null,
+      result_toc_result_id: null,
+      results_id: null,
+      short_name: null,
+      toc_level_id: null,
+      toc_result_id: null
     });
   }
 
   onActiveTab(tab: Tab) {
     this.activeTab = tab;
+    console.log('this.activeTab', this.activeTab);
   }
 
   onDeleteTab(tab: Tab) {
-    if (this.multipleWPsTabs.length === 1) {
+    if (this.initiative.length === 1) {
       return;
     }
 
-    this.multipleWPsTabs = this.multipleWPsTabs.filter(t => t.id !== tab.id);
+    this.initiative = this.initiative.filter(t => t.result_toc_result_id !== tab.result_toc_result_id);
 
-    this.activeTab = this.multipleWPsTabs[0];
+    this.activeTab = this.initiative[0];
   }
-
-  ngOnInit(): void {}
 }

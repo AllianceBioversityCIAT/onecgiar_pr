@@ -1,11 +1,12 @@
 <div class=" local_container section_container">
-  <div class="tabs" [style]="'grid-template-columns: repeat(' + (multipleWPsTabs.length + 1) + ', 1fr)'">
-    <div *ngFor="let tab of multipleWPsTabs; let i = index">
-      <a class="tab" [ngClass]="{'active' : tab.id === activeTab.id}" (click)="onActiveTab(tab)">
+  <div class="tabs" [style]="'grid-template-columns: repeat(' + (initiative.length + 1) + ', 1fr)'">
+    <div *ngFor="let tab of initiative; let i = index">
+      <a class="tab" [ngClass]="{'active' : tab.result_toc_result_id === activeTab.result_toc_result_id}"
+        (click)="onActiveTab(tab)">
         <i class="material-icons-round {{ tab.validation ? 'valid' : 'invalid' }}" style="font-size: 20px;">
           check_circle </i>
-        <p class="tab-title">TOC Result N° {{i + 1}}</p>
-        <i *ngIf="this.multipleWPsTabs.length !== 1" class="material-icons-round close_icon tab-delete-button-item"
+        <p class="tab-title">TOC-Outcome N° {{i + 1}}</p>
+        <i *ngIf="this.initiative.length !== 1" class="material-icons-round close_icon tab-delete-button-item"
           (click)="onDeleteTab(tab)">backspace</i>
       </a>
     </div>
@@ -18,7 +19,10 @@
   </div>
 
   <div class="multiple-wps-container">
-    <h1>{{activeTab.content}}</h1>
+    <h1>{{activeTab?.result_toc_result_id}}</h1>
+
+    <app-multiple-wps-content [editable]="editable" [initiative]="activeTab" [resultLevelId]="resultLevelId"
+      [isIpsr]="isIpsr" [indexYesorNo]="indexYesorNo"></app-multiple-wps-content>
   </div>
 
 </div>

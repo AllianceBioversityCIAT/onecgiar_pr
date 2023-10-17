@@ -1,14 +1,14 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { TocInitiativeOutcomeListsService } from '../../toc-initiative-outcome-section/services/toc-initiative-outcome-lists.service';
-import { ApiService } from '../../../../../../../../../shared/services/api/api.service';
-import { RdTheoryOfChangesServicesService } from '../../../rd-theory-of-changes-services.service';
+import { TocInitiativeOutcomeListsService } from '../../../toc-initiative-outcome-section/services/toc-initiative-outcome-lists.service';
+import { ApiService } from 'src/app/shared/services/api/api.service';
+import { RdTheoryOfChangesServicesService } from '../../../../rd-theory-of-changes-services.service';
 
 @Component({
-  selector: 'app-toc-initiative-out',
-  templateUrl: './toc-initiative-out.component.html',
-  styleUrls: ['./toc-initiative-out.component.scss']
+  selector: 'app-multiple-wps-content',
+  templateUrl: './multiple-wps-content.component.html',
+  styleUrls: ['./multiple-wps-content.component.scss']
 })
-export class TocInitiativeOutComponent implements OnInit {
+export class MultipleWPsContentComponent implements OnInit {
   @Input() editable: boolean;
   @Input() initiative: any;
   @Input() resultLevelId: number | string;
@@ -151,9 +151,9 @@ export class TocInitiativeOutComponent implements OnInit {
       this.theoryOfChangesServices.impactAreasTargets = response?.impactAreas;
       this.theoryOfChangesServices.sdgTargest = response?.sdgTargets;
       this.theoryOfChangesServices.actionAreaOutcome = response?.actionAreaOutcome;
-      this.theoryOfChangesServices.impactAreasTargets.forEach(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
-      this.theoryOfChangesServices.sdgTargest.forEach(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
-      this.theoryOfChangesServices.actionAreaOutcome.forEach(item => (item.full_name = `${item.actionAreaId === 1 ? '<strong>Systems Transformation</strong>' : item.actionAreaId === 2 ? '<strong>Resilient Agrifood Systems</strong>' : '<strong>Genetic Innovation</strong>'} (${item.outcomeSMOcode}) - ${item.outcomeStatement}`));
+      this.theoryOfChangesServices.impactAreasTargets.map(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
+      this.theoryOfChangesServices.sdgTargest.map(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
+      this.theoryOfChangesServices.actionAreaOutcome.map(item => (item.full_name = `${item.actionAreaId === 1 ? '<strong>Systems Transformation</strong>' : item.actionAreaId === 2 ? '<strong>Resilient Agrifood Systems</strong>' : '<strong>Genetic Innovation</strong>'} (${item.outcomeSMOcode}) - ${item.outcomeStatement}`));
       this.theoryOfChangesServices.body[this.indexYesorNo] = {
         impactAreasTargets: this.theoryOfChangesServices.impactAreasTargets,
         sdgTargest: this.theoryOfChangesServices.sdgTargest,

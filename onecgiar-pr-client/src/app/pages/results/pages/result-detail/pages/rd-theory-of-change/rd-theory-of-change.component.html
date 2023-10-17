@@ -9,7 +9,7 @@
         <app-pr-select class="segment_title_margin"
             [options]="this.theoryOfChangeBody.contributing_and_primary_initiative" label="Primary submitter"
             optionLabel="full_name" optionValue="id" placeholder="Select Initiative" description="Select an Initiative"
-            [(ngModel)]="this.theoryOfChangeBody.result_toc_result.initiative_id"
+            [(ngModel)]="primarySubmitter.id"
             [fieldDisabled]="!!(this.theoryOfChangeBody.contributing_and_primary_initiative?.length == 1 && this.theoryOfChangeBody.result_toc_result.initiative_id)">
         </app-pr-select>
 
@@ -135,7 +135,7 @@
     </div>
 
     <div [ngSwitch]="this.resultLevelSE.currentResultLevelId"
-        *ngIf="getConsumed && this.theoryOfChangeBody?.result_toc_result?.initiative_id || getConsumed && this.theoryOfChangeBody?.impacts">
+        *ngIf="getConsumed && primarySubmitter.id || getConsumed && this.theoryOfChangeBody?.impacts">
         <div *ngSwitchCase="1">
             <app-toc-impact-section [contributing_initiatives]="this.theoryOfChangeBody.contributing_initiatives"
                 [impacts]="this.theoryOfChangeBody.impactsTarge"

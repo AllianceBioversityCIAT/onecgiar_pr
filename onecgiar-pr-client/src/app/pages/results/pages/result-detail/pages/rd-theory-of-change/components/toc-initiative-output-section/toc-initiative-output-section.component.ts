@@ -4,24 +4,30 @@ import { resultToResultInterfaceToc } from '../../model/theoryOfChangeBody';
 import { TocInitiativeOutcomeListsService } from '../toc-initiative-outcome-section/services/toc-initiative-outcome-lists.service';
 import { DataControlService } from '../../../../../../../../shared/services/data-control.service';
 import { environment } from '../../../../../../../../../environments/environment';
+import { RdTheoryOfChangesServicesService } from '../../rd-theory-of-changes-services.service';
 
 @Component({
   selector: 'app-toc-initiative-output-section',
   templateUrl: './toc-initiative-output-section.component.html',
   styleUrls: ['./toc-initiative-output-section.component.scss']
 })
-export class TocInitiativeOutputSectionComponent {
+export class TocInitiativeOutputSectionComponent implements OnInit {
   outcomeList = [];
   outputList = [];
 
   @Input() result_toc_result = new resultToResultInterfaceToc();
   @Input() contributors_result_toc_result: any;
   fullInitiativeToc = null;
-  constructor(public api: ApiService, public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public dataControlSE: DataControlService) {}
+  primarySubmitter = null;
+
+  constructor(public api: ApiService, public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public dataControlSE: DataControlService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {}
+
   ngOnInit(): void {
     this.GET_outcomeList();
     this.GET_outputList();
     this.GET_fullInitiativeTocByinitId();
+    this.primarySubmitter = this.theoryOfChangesServices.getPrimarySubmitter();
+    console.log('este', this.theoryOfChangesServices);
   }
 
   GET_outputList() {
