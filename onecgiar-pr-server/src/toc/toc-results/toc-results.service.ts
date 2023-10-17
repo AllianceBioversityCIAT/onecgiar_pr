@@ -15,12 +15,7 @@ export class TocResultsService {
     private readonly _handlersError: HandlersError,
     private readonly _tocResultsRepository: TocResultsRepository,
     private readonly _returnResponse: ReturnResponse,
-    private readonly _versioningService: VersioningService,
   ) {}
-
-  create(createTocResultDto: CreateTocResultDto) {
-    return 'This action adds a new tocResult';
-  }
 
   async findTocResultByConfig(
     result_id: number,
@@ -123,13 +118,5 @@ export class TocResultsService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
-  }
-
-  update(id: number, updateTocResultDto: UpdateTocResultDto) {
-    return `This action updates a #${id} tocResult`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} tocResult`;
   }
 }

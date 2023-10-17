@@ -12,10 +12,6 @@ export class ClarisaInstitutionsTypeService {
     private readonly _handlersError: HandlersError,
   ) {}
 
-  create(createClarisaInstitutionsTypeDto: CreateClarisaInstitutionsTypeDto) {
-    return 'This action adds a new clarisaInstitutionsType';
-  }
-
   async findAllNotLegacy() {
     try {
       const dataParent = await this._clarisaInstitutionsTypeRepository.find({
@@ -51,20 +47,5 @@ export class ClarisaInstitutionsTypeService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} clarisaInstitutionsType`;
-  }
-
-  update(
-    id: number,
-    updateClarisaInstitutionsTypeDto: UpdateClarisaInstitutionsTypeDto,
-  ) {
-    return `This action updates a #${id} clarisaInstitutionsType`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} clarisaInstitutionsType`;
   }
 }

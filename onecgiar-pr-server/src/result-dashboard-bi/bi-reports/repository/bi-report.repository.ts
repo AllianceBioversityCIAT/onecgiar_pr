@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common/decorators';
-import { DataSource, FindOptionsWhere, Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { BiReport } from '../entities/bi-report.entity';
 import { HttpService } from '@nestjs/axios';
 import { ClarisaCredentialsBiService } from 'src/result-dashboard-bi/clarisa-credentials-bi.service';
 import { CredentialsClarisaBi } from '../dto/crendentials-clarisa.dto';
-import { filter, lastValueFrom, map } from 'rxjs';
+import { lastValueFrom, map } from 'rxjs';
 import {
   BodyPowerBiDTO,
   EmbedCredentialsDTO,
@@ -13,13 +13,11 @@ import {
 import { CreateBiReportDto } from '../dto/create-bi-report.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { TokenBiReport } from '../entities/token-bi-reports.entity';
-import { log } from 'console';
 import { TokenReportBiDto } from '../dto/create-token-bi-report.dto';
 import { NotFoundException } from '@nestjs/common';
 
 @Injectable()
 export class BiReportRepository extends Repository<BiReport> {
-  private linkAzure: string;
   private credentialsBi: CredentialsClarisaBi;
   constructor(
     private dataSource: DataSource,
@@ -51,8 +49,8 @@ export class BiReportRepository extends Repository<BiReport> {
         this.credentialsBi.tenant_id,
       );
 
-    //Barer token
-    let dataCredentials;
+    //Bearer token
+    let dataCredentials: any;
 
     try {
       dataCredentials = await lastValueFrom(

@@ -5,7 +5,6 @@ import {
   ManyToOne,
   OneToMany,
   PrimaryColumn,
-  PrimaryGeneratedColumn,
 } from 'typeorm';
 import { ClarisaInstitution } from '../../clarisa-institutions/entities/clarisa-institution.entity';
 import { ResultsCenter } from '../../../api/results/results-centers/entities/results-center.entity';

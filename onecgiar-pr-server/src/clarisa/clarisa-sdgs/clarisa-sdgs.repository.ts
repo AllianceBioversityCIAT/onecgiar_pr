@@ -1,4 +1,4 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { ClarisaSdg } from './entities/clarisa-sdg.entity';
 
@@ -9,9 +9,7 @@ export class ClarisaSdgsRepository extends Repository<ClarisaSdg> {
   }
 
   async deleteAllData() {
-    const queryData = `
-            DELETE FROM clarisa_sdgs;
-            `;
+    const queryData = `DELETE FROM clarisa_sdgs;`;
     try {
       const deleteData = await this.query(queryData);
       return deleteData;

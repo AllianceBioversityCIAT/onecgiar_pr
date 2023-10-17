@@ -1,7 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { CreateBiReportDto } from './dto/create-bi-report.dto';
-import { UpdateBiReportDto } from './dto/update-bi-report.dto';
-import { ClarisaCredentialsBiService } from '../clarisa-credentials-bi.service';
 import { BiReportRepository } from './repository/bi-report.repository';
 
 @Injectable()

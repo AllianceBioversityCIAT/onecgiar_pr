@@ -1,16 +1,5 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  HttpException,
-} from '@nestjs/common';
+import { Controller, Get, Param, HttpException } from '@nestjs/common';
 import { ClarisaSecondOrderAdministrativeDivisionService } from './clarisa-second-order-administrative-division.service';
-import { CreateClarisaSecondOrderAdministrativeDivisionDto } from './dto/create-clarisa-second-order-administrative-division.dto';
-import { UpdateClarisaSecondOrderAdministrativeDivisionDto } from './dto/update-clarisa-second-order-administrative-division.dto';
 
 @Controller()
 export class ClarisaSecondOrderAdministrativeDivisionController {

@@ -1,6 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { CreateClarisaConnectionDto } from './dto/create-clarisa-connection.dto';
-import { UpdateClarisaConnectionDto } from './dto/update-clarisa-connection.dto';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { HttpService } from '@nestjs/axios';
 import { env } from 'process';
@@ -120,13 +119,5 @@ export class ClarisaConnectionsService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
-  }
-
-  update(id: number, updateClarisaConnectionDto: UpdateClarisaConnectionDto) {
-    return `This action updates a #${id} clarisaConnection`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} clarisaConnection`;
   }
 }

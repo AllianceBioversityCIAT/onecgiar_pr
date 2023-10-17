@@ -1,6 +1,4 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { CreateClarisaInnovationReadinessLevelDto } from './dto/create-clarisa-innovation-readiness-level.dto';
-import { UpdateClarisaInnovationReadinessLevelDto } from './dto/update-clarisa-innovation-readiness-level.dto';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { ClarisaInnovationReadinessLevelRepository } from './clarisa-innovation-readiness-levels.repository';
 
@@ -10,12 +8,6 @@ export class ClarisaInnovationReadinessLevelsService {
     private readonly _handlersError: HandlersError,
     private readonly _clarisaInnovationReadinessLevelRepository: ClarisaInnovationReadinessLevelRepository,
   ) {}
-
-  create(
-    createClarisaInnovationReadinessLevelDto: CreateClarisaInnovationReadinessLevelDto,
-  ) {
-    return 'This action adds a new clarisaInnovationReadinessLevel';
-  }
 
   async findAll() {
     try {
@@ -30,20 +22,5 @@ export class ClarisaInnovationReadinessLevelsService {
     } catch (error) {
       this._handlersError.returnErrorRes({ error, debug: true });
     }
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} clarisaInnovationReadinessLevel`;
-  }
-
-  update(
-    id: number,
-    updateClarisaInnovationReadinessLevelDto: UpdateClarisaInnovationReadinessLevelDto,
-  ) {
-    return `This action updates a #${id} clarisaInnovationReadinessLevel`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} clarisaInnovationReadinessLevel`;
   }
 }

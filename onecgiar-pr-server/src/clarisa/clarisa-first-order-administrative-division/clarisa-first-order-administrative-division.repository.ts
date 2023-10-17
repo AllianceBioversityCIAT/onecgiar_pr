@@ -1,5 +1,5 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
-import { DataSource, IsNull, Repository, TreeRepository } from 'typeorm';
+import { Injectable } from '@nestjs/common';
+import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { lastValueFrom, map } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
@@ -8,7 +8,6 @@ import {
   OrderAministrativeDivisionDto,
   geonameResponseDto,
 } from '../../shared/extendsGlobalDTO/order-administrative-division.dto';
-import { AxiosResponse } from 'axios';
 import { ClarisaFirstOrderAdministrativeDivision } from './entities/clarisa-first-order-administrative-division.entity';
 
 @Injectable()

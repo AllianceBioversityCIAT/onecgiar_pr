@@ -11,10 +11,6 @@ export class ClarisaGeographicScopesService {
     private readonly _clarisaGeographicScopeRepository: ClarisaGeographicScopeRepository,
   ) {}
 
-  create(createClarisaGeographicScopeDto: CreateClarisaGeographicScopeDto) {
-    return 'This action adds a new clarisaGeographicScope';
-  }
-
   async findAllPRMS() {
     try {
       const scopesPrms =
@@ -27,20 +23,5 @@ export class ClarisaGeographicScopesService {
     } catch (error) {
       return this._handlersError.returnErrorRes(error);
     }
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} clarisaGeographicScope`;
-  }
-
-  update(
-    id: number,
-    updateClarisaGeographicScopeDto: UpdateClarisaGeographicScopeDto,
-  ) {
-    return `This action updates a #${id} clarisaGeographicScope`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} clarisaGeographicScope`;
   }
 }

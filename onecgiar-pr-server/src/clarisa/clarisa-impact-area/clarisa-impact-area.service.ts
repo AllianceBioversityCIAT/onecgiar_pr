@@ -11,10 +11,6 @@ export class ClarisaImpactAreaService {
     private readonly _clarisaImpactAreaRepository: ClarisaImpactAreaRepository,
   ) {}
 
-  create(createClarisaImpactAreaDto: CreateClarisaImpactAreaDto) {
-    return 'This action adds a new clarisaImpactArea';
-  }
-
   async findAll() {
     try {
       const carisaImpactArea =
@@ -28,17 +24,5 @@ export class ClarisaImpactAreaService {
     } catch (error) {
       this._handlersError.returnErrorRes({ error, debug: true });
     }
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} clarisaImpactArea`;
-  }
-
-  update(id: number, updateClarisaImpactAreaDto: UpdateClarisaImpactAreaDto) {
-    return `This action updates a #${id} clarisaImpactArea`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} clarisaImpactArea`;
   }
 }

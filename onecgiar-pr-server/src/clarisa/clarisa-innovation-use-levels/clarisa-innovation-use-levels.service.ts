@@ -1,6 +1,4 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
-import { CreateClarisaInnovationUseLevelDto } from './dto/create-clarisa-innovation-use-level.dto';
-import { UpdateClarisaInnovationUseLevelDto } from './dto/update-clarisa-innovation-use-level.dto';
 import { ClarisaInnovationUseLevelRepository } from './clarisa-innovation-use-levels.repository';
 import { HandlersError } from '../../shared/handlers/error.utils';
 
@@ -10,12 +8,6 @@ export class ClarisaInnovationUseLevelsService {
     private readonly _clarisaInnovationUseLevelRepository: ClarisaInnovationUseLevelRepository,
     private readonly _handlersError: HandlersError,
   ) {}
-
-  create(
-    createClarisaInnovationUseLevelDto: CreateClarisaInnovationUseLevelDto,
-  ) {
-    return 'This action adds a new clarisaInnovationUseLevel';
-  }
 
   async findAll() {
     try {
@@ -39,20 +31,5 @@ export class ClarisaInnovationUseLevelsService {
         debug: true,
       });
     }
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} clarisaInnovationUseLevel`;
-  }
-
-  update(
-    id: number,
-    updateClarisaInnovationUseLevelDto: UpdateClarisaInnovationUseLevelDto,
-  ) {
-    return `This action updates a #${id} clarisaInnovationUseLevel`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} clarisaInnovationUseLevel`;
   }
 }

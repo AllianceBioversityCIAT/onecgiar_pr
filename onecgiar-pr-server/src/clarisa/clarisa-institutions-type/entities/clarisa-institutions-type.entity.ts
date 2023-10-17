@@ -6,7 +6,6 @@ import {
   JoinColumn,
   OneToMany,
 } from 'typeorm';
-import { Auditable } from '../../../shared/entities/auditableEntity';
 
 @Entity('clarisa_institution_types')
 export class ClarisaInstitutionsType {

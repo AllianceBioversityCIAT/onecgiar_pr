@@ -1,15 +1,6 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Param } from '@nestjs/common';
 import { BiReportsService } from './bi-reports.service';
 import { CreateBiReportDto } from './dto/create-bi-report.dto';
-import { UpdateBiReportDto } from './dto/update-bi-report.dto';
 
 @Controller()
 export class BiReportsController {

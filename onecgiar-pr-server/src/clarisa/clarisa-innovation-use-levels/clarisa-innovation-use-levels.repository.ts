@@ -1,4 +1,4 @@
-import { Injectable, HttpStatus } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { ClarisaInnovationUseLevel } from './entities/clarisa-innovation-use-level.entity';
 

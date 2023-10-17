@@ -1,6 +1,5 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
-import { DataSource, IsNull, Repository, TreeRepository } from 'typeorm';
-import { Tree } from '../../shared/entities/tree/tree';
+import { Injectable, HttpStatus } from '@nestjs/common';
+import { DataSource, Repository } from 'typeorm';
 import { WorldRegionTree } from '../../shared/entities/tree/world-region-tree';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { RegionDistanceDto } from './dto/region-distance.dto';

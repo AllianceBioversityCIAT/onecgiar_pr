@@ -162,7 +162,7 @@ export class ResultsKnowledgeProductMapper {
       return institution;
     });
 
-    let regions = this.getAsArray(dto?.['Region of the research']);
+    const regions = this.getAsArray(dto?.['Region of the research']);
     knowledgeProductDto.clarisa_regions = regions
       .filter((r) => r)
       .map((r) => r.clarisa_id);
@@ -315,7 +315,7 @@ export class ResultsKnowledgeProductMapper {
 
   private extractOnlyYearFromDateString(dateString: string): number {
     const isComposed: boolean = dateString.indexOf('-') > 0;
-    let year: number = 0;
+    let year = 0;
 
     if (isComposed) {
       year = Number(dateString.slice(0, dateString.indexOf('-')));

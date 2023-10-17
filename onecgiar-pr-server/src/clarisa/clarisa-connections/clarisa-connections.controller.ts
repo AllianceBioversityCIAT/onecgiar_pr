@@ -3,15 +3,12 @@ import {
   Get,
   Post,
   Body,
-  Patch,
   Param,
-  Delete,
   Headers,
   HttpException,
 } from '@nestjs/common';
 import { ClarisaConnectionsService } from './clarisa-connections.service';
 import { CreateClarisaConnectionDto } from './dto/create-clarisa-connection.dto';
-import { UpdateClarisaConnectionDto } from './dto/update-clarisa-connection.dto';
 import { HeadersDto } from '../../shared/globalInterfaces/headers.dto';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 
@@ -54,21 +51,5 @@ export class ClarisaConnectionsController {
     const { message, response, status } =
       await this.clarisaConnectionsService.clarisaQaToken(officialCode, token);
     throw new HttpException({ message, response }, status);
-  }
-
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateClarisaConnectionDto: UpdateClarisaConnectionDto,
-  ) {
-    return this.clarisaConnectionsService.update(
-      +id,
-      updateClarisaConnectionDto,
-    );
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.clarisaConnectionsService.remove(+id);
   }
 }

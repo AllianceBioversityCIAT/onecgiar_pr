@@ -1,6 +1,4 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
-import { CreateClarisaFirstOrderAdministrativeDivisionDto } from './dto/create-clarisa-first-order-administrative-division.dto';
-import { UpdateClarisaFirstOrderAdministrativeDivisionDto } from './dto/update-clarisa-first-order-administrative-division.dto';
 import { ClarisaFirstOrderAdministrativeDivisionRepository } from './clarisa-first-order-administrative-division.repository';
 import { HandlersError } from '../../shared/handlers/error.utils';
 

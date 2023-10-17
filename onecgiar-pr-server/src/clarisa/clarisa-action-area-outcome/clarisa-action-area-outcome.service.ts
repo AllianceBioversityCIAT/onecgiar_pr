@@ -11,10 +11,6 @@ export class ClarisaActionAreaOutcomeService {
     private readonly _handlersError: HandlersError,
   ) {}
 
-  create(createClarisaActionAreaOutcomeDto: CreateClarisaActionAreaOutcomeDto) {
-    return 'This action adds a new clarisaActionAreaOutcome';
-  }
-
   async findAll() {
     try {
       const aaOutcomes = await this._clarisaActionAreaOutcomes.aaOutcomes();
@@ -27,20 +23,5 @@ export class ClarisaActionAreaOutcomeService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} clarisaActionAreaOutcome`;
-  }
-
-  update(
-    id: number,
-    updateClarisaActionAreaOutcomeDto: UpdateClarisaActionAreaOutcomeDto,
-  ) {
-    return `This action updates a #${id} clarisaActionAreaOutcome`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} clarisaActionAreaOutcome`;
   }
 }

@@ -1,4 +1,4 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { ClarisaGeographicScope } from './entities/clarisa-geographic-scope.entity';
 

@@ -1,6 +1,4 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
-import { CreateClarisaCenterDto } from './dto/create-clarisa-center.dto';
-import { UpdateClarisaCenterDto } from './dto/update-clarisa-center.dto';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { ClarisaCentersRepository } from './clarisa-centers.repository';
 
@@ -10,10 +8,6 @@ export class ClarisaCentersService {
     private readonly _handlersError: HandlersError,
     private readonly _clarisaCentersRepository: ClarisaCentersRepository,
   ) {}
-
-  create(createClarisaCenterDto: CreateClarisaCenterDto) {
-    return 'This action adds a new clarisaCenter';
-  }
 
   async findAll() {
     try {
@@ -36,17 +30,5 @@ export class ClarisaCentersService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} clarisaCenter`;
-  }
-
-  update(id: number, updateClarisaCenterDto: UpdateClarisaCenterDto) {
-    return `This action updates a #${id} clarisaCenter`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} clarisaCenter`;
   }
 }
