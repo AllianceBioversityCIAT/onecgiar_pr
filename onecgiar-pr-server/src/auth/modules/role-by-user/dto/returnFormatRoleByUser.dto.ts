@@ -2,5 +2,5 @@ import { returnFormatService } from 'src/shared/extendsGlobalDTO/returnServices.
 import { resultRolesDto } from './resultRoles.dto';
 
 export class returnFormatRoleByUser extends returnFormatService {
-  public response!: resultRolesDto | {};
+  public response!: any; //FIXME workaround until we find a better solution
 }

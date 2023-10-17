@@ -1,17 +1,13 @@
 import {
   Controller,
   Get,
-  Post,
   Body,
   Patch,
   Param,
-  Delete,
   Headers,
   HttpException,
 } from '@nestjs/common';
 import { SummaryService } from './summary.service';
-import { CreateSummaryDto } from './dto/create-summary.dto';
-import { UpdateSummaryDto } from './dto/update-summary.dto';
 import { InnovationUseDto } from './dto/create-innovation-use.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
@@ -42,13 +38,7 @@ export class SummaryController {
   }
 
   @Get('innovation-use/get/result/:resultId')
-  async getInnovationUse(
-    @Param('resultId') resultId: number,
-    @Headers() auth: HeadersDto,
-  ) {
-    const token: TokenDto = <TokenDto>(
-      JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
-    );
+  async getInnovationUse(@Param('resultId') resultId: number) {
     const { message, response, status } =
       await this.summaryService.getInnovationUse(resultId);
     throw new HttpException({ message, response }, status);

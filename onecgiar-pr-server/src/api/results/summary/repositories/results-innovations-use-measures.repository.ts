@@ -249,10 +249,7 @@ export class ResultsInnovationsUseMeasuresRepository
 
     try {
       if (initiative?.length) {
-        const upDateInactiveResult = await this.query(upDateInactive, [
-          userId,
-          innovationUseId,
-        ]);
+        await this.query(upDateInactive, [userId, innovationUseId]);
 
         return await this.query(upDateActive, [userId, innovationUseId]);
       } else {

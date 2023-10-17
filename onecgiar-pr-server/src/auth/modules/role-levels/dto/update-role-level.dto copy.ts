@@ -2,5 +2,5 @@ import { returnFormatService } from 'src/shared/extendsGlobalDTO/returnServices.
 import { RoleLevel } from '../entities/role-level.entity';
 
 export class returnFormatRoleLevels extends returnFormatService {
-  public response!: RoleLevel | RoleLevel[] | {};
+  public response!: any; //FIXME workaround until we find a better solution
 }

@@ -383,11 +383,7 @@ export class ResultByIntitutionsTypeRepository
     `;
     try {
       if (institutions.length) {
-        const upDateInactiveResult = await this.query(upDateInactive, [
-          userId,
-          resultId,
-          isActor ? 1 : 2,
-        ]);
+        await this.query(upDateInactive, [userId, resultId, isActor ? 1 : 2]);
 
         return await this.query(upDateActive, [
           userId,

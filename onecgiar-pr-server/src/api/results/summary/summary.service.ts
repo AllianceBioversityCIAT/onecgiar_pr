@@ -1,6 +1,4 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
-import { CreateSummaryDto } from './dto/create-summary.dto';
-import { UpdateSummaryDto } from './dto/update-summary.dto';
 import { InnovationUseDto } from './dto/create-innovation-use.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { VersionsService } from '../versions/versions.service';
@@ -19,19 +17,14 @@ import { PolicyChangesDto } from './dto/create-policy-changes.dto';
 import { ResultsPolicyChanges } from './entities/results-policy-changes.entity';
 import { ResultsPolicyChangesRepository } from './repositories/results-policy-changes.repository';
 import { EvidencesRepository } from '../evidences/evidences.repository';
-import { ResultActor } from '../result-actors/entities/result-actor.entity';
-import { In, IsNull } from 'typeorm';
+import { In } from 'typeorm';
 import { ResultActorRepository } from '../result-actors/repositories/result-actors.repository';
-import { ResultsByInstitutionType } from '../results_by_institution_types/entities/results_by_institution_type.entity';
 import { ResultByIntitutionsTypeRepository } from '../results_by_institution_types/result_by_intitutions_type.repository';
-import { ResultIpMeasure } from '../../ipsr/result-ip-measures/entities/result-ip-measure.entity';
 import { ResultIpMeasureRepository } from '../../ipsr/result-ip-measures/result-ip-measures.repository';
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
-import { ResultInitiativeBudget } from '../result_budget/entities/result_initiative_budget.entity';
 import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/result_initiative_budget.repository';
 import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/non_pooled_proyect_budget.repository';
 import { NonPooledProjectRepository } from '../non-pooled-projects/non-pooled-projects.repository';
-import { ResultInstitutionsBudget } from '../result_budget/entities/result_institutions_budget.entity';
 import { ResultInstitutionsBudgetRepository } from '../result_budget/repositories/result_institutions_budget.repository';
 import { InnoDevService } from './innovation_dev.service';
 import { ResultAnswerRepository } from '../result-questions/repository/result-answers.repository';
@@ -176,7 +169,6 @@ export class SummaryService {
       if (version.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: version });
       }
-      const vrs: Version = <Version>version.response;
       if (capDevExists) {
         capDevExists.female_using = unkown_using ? 0 : female_using || 0;
         capDevExists.male_using = unkown_using ? 0 : male_using || 0;
@@ -317,7 +309,6 @@ export class SummaryService {
       if (version.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: version });
       }
-      const vrs: Version = <Version>version.response;
       const innDevExists =
         await this._resultsInnovationsDevRepository.InnovationDevExists(
           resultId,
@@ -615,7 +606,6 @@ export class SummaryService {
       if (version.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: version });
       }
-      const vrs: Version = <Version>version.response;
       const resultsPolicyChanges =
         await this._resultsPolicyChangesRepository.ResultsPolicyChangesExists(
           resultId,

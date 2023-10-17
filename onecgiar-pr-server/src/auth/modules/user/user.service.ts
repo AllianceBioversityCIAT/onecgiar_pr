@@ -1,6 +1,5 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -8,7 +7,6 @@ import { returnFormatUser } from './dto/return-create-user.dto';
 import { UserRepository } from './repositories/user.repository';
 import { BcryptPasswordEncoder } from '../../utils/bcrypt.util';
 import { RoleByUserRepository } from '../role-by-user/RoleByUser.repository';
-import { RoleByUser } from '../role-by-user/entities/role-by-user.entity';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import {
   HandlersError,
@@ -79,7 +77,7 @@ export class UserService {
       createUserDto.last_updated_by = createdBy ? createdBy.id : null;
 
       const newUser: User = await this._userRepository.save(createUserDto);
-      const newRole: RoleByUser = await this._roleByUserRepository.save({
+      await this._roleByUserRepository.save({
         role: role,
         user: newUser.id,
         created_by: createdBy ? createdBy.id : null,
@@ -187,18 +185,5 @@ export class UserService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
-  }
-
-  async getRolesByUser(userId: number) {
-    try {
-    } catch (error) {}
-  }
-
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} user`;
   }
 }

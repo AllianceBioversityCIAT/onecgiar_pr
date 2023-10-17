@@ -12,8 +12,8 @@ import { FullUserRequestDto } from './modules/user/dto/full-user-request.dto';
 import { User } from './modules/user/entities/user.entity';
 import { HandlersError } from '../shared/handlers/error.utils';
 import { pusherAuthDot } from './dto/pusher-auth.dto';
-import { TokenDto } from '../shared/globalInterfaces/token.dto';
 import Pusher from 'pusher';
+import ActiveDirectory from 'activedirectory';
 
 @Injectable()
 export class AuthService {
@@ -38,22 +38,6 @@ export class AuthService {
   }
   create(createAuthDto: CreateAuthDto) {
     return createAuthDto;
-  }
-
-  findAll() {
-    return `This action returns all auth`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} auth`;
-  }
-
-  update(id: number, updateAuthDto: UpdateAuthDto) {
-    return `This action updates a #${id} auth ${updateAuthDto}`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} auth`;
   }
 
   async pusherAuth(
@@ -133,10 +117,9 @@ export class AuthService {
         }
 
         if (valid) {
-          const userData =
-            await this._userRepository.updateLastLoginUserByEmail(
-              userLogin.email,
-            );
+          await this._userRepository.updateLastLoginUserByEmail(
+            userLogin.email,
+          );
           return {
             message: 'Successful login',
             response: {
@@ -177,7 +160,8 @@ export class AuthService {
   }
 
   validateAD(email, password) {
-    const ActiveDirectory = require('activedirectory');
+    //!INFO: this is the original code. remove the import above and uncomment this one to revert to the original code
+    //const ActiveDirectory = require('activedirectory');
     const ad = new ActiveDirectory(config.active_directory);
 
     return new Promise((resolve, reject) => {

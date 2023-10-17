@@ -15,7 +15,6 @@ import { UpdateResultsByInstitutionDto } from './dto/update-results_by_instituti
 import { SaveResultsByInstitutionDto } from './dto/save_results_by_institution.dto';
 import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
-import { HttpStatus } from '@nestjs/common';
 
 @Controller('/')
 export class ResultsByInstitutionsController {

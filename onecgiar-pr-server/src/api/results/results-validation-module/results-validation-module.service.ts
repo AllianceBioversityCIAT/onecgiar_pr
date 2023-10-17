@@ -1,6 +1,4 @@
 import { Injectable, HttpStatus, Logger } from '@nestjs/common';
-import { CreateResultsValidationModuleDto } from './dto/create-results-validation-module.dto';
-import { UpdateResultsValidationModuleDto } from './dto/update-results-validation-module.dto';
 import { resultValidationRepository } from './results-validation-module.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultRepository } from '../result.repository';
@@ -16,10 +14,6 @@ export class ResultsValidationModuleService {
     private readonly _resultRepository: ResultRepository,
     private readonly _handlersError: HandlersError,
   ) {}
-
-  create(createResultsValidationModuleDto: CreateResultsValidationModuleDto) {
-    return 'This action adds a new resultsValidationModule';
-  }
 
   async getGreenchecksByResult1(resultId: number) {
     try {
@@ -130,21 +124,6 @@ export class ResultsValidationModuleService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} resultsValidationModule`;
-  }
-
-  update(
-    id: number,
-    updateResultsValidationModuleDto: UpdateResultsValidationModuleDto,
-  ) {
-    return `This action updates a #${id} resultsValidationModule`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} resultsValidationModule`;
   }
 
   async getGreenchecksByResult(resultId: number) {

@@ -10,7 +10,6 @@ import { returnFormatRoleByUser } from './dto/returnFormatRoleByUser.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { UserRepository } from '../user/repositories/user.repository';
 import { User } from '../user/entities/user.entity';
-import { env } from 'process';
 
 @Injectable()
 export class RoleByUserService {
@@ -25,6 +24,7 @@ export class RoleByUserService {
     createRoleByUserDto: CreateRoleByUserDto,
     user: TokenDto,
   ): Promise<returnFormatRoleByUser> {
+    //FIXME change update by/created by using the user parameter
     try {
       const targetsValues: any[] = Object.values(createRoleByUserDto.target);
       let validCount = false;
@@ -45,7 +45,7 @@ export class RoleByUserService {
       if (targetsValues.length) {
         validCount =
           targetsValues.reduce(
-            (sum, data, initial = 0) => (data ? ++initial : initial),
+            (_sum, data, initial = 0) => (data ? ++initial : initial),
             0,
           ) > 1
             ? true
@@ -150,17 +150,5 @@ export class RoleByUserService {
     });
 
     return role;
-  }
-
-  getAllUsersAndRoles() {
-    return `This action returns a #$} roleByUser`;
-  }
-
-  update(id: number, updateRoleByUserDto: UpdateRoleByUserDto) {
-    return `This action updates a #${id} roleByUser`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} roleByUser`;
   }
 }

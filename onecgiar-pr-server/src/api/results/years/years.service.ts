@@ -1,9 +1,7 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { CreateYearDto } from './dto/create-year.dto';
-import { UpdateYearDto } from './dto/update-year.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { YearRepository } from './year.repository';
-import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { IsNull } from 'typeorm';
 import { env } from 'process';

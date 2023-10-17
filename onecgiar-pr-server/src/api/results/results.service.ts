@@ -1,7 +1,6 @@
-import { ConsoleLogger, HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { returnFormatUser } from 'src/auth/modules/user/dto/return-create-user.dto';
 import { CreateResultDto } from './dto/create-result.dto';
-import { FullResultsRequestDto } from './dto/full-results-request.dto';
 import { UpdateResultDto } from './dto/update-result.dto';
 import { ResultRepository } from './result.repository';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
@@ -14,7 +13,6 @@ import {
 import { ResultTypesService } from './result_types/result_types.service';
 import { ResultType } from './result_types/entities/result_type.entity';
 import { VersionsService } from './versions/versions.service';
-import { Version } from '../versioning/entities/version.entity';
 import { returnFormatResult } from './dto/return-format-result.dto';
 import { Result } from './entities/result.entity';
 import { CreateGeneralInformationResultDto } from './dto/create-general-information-result.dto';
@@ -30,12 +28,10 @@ import { ResultLevelRepository } from './result_levels/resultLevel.repository';
 import { ResultByLevelRepository } from './result-by-level/result-by-level.repository';
 import { ResultLevel } from './result_levels/entities/result_level.entity';
 import { ResultLegacyRepository } from './legacy-result/legacy-result.repository';
-import { DepthSearchOne } from './dto/depth-search-one.dto';
 import { MapLegacy } from './dto/map-legacy.dto';
 import { ClarisaInstitutionsRepository } from '../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
 import { ClarisaInstitutionsTypeRepository } from '../../clarisa/clarisa-institutions-type/ClariasaInstitutionsType.repository';
 import { GenderTagRepository } from './gender_tag_levels/genderTag.repository';
-import { In } from 'typeorm';
 import { ResultsByInstitution } from './results_by_institutions/entities/results_by_institution.entity';
 import { ResultsByInstitutionType } from './results_by_institution_types/entities/results_by_institution_type.entity';
 import { CreateResultGeoDto } from './dto/create-result-geo-scope.dto';
@@ -46,7 +42,6 @@ import { ResultCountryRepository } from './result-countries/result-countries.rep
 import { ResultsKnowledgeProductsRepository } from './results-knowledge-products/repositories/results-knowledge-products.repository';
 import { ResultCountry } from './result-countries/entities/result-country.entity';
 import { ResultRegion } from './result-regions/entities/result-region.entity';
-import { ResultSimpleDto } from './dto/result-simple.dto';
 import { ElasticService } from '../../elastic/elastic.service';
 import { ElasticOperationDto } from '../../elastic/dto/elastic-operation.dto';
 import process, { env } from 'process';
@@ -56,8 +51,6 @@ import { ResultsKnowledgeProductInstitutionRepository } from './results-knowledg
 import { ResultsKnowledgeProductMetadataRepository } from './results-knowledge-products/repositories/results-knowledge-product-metadata.repository';
 import { ResultsKnowledgeProductKeywordRepository } from './results-knowledge-products/repositories/results-knowledge-product-keywords.repository';
 import { ResultsKnowledgeProductAltmetricRepository } from './results-knowledge-products/repositories/results-knowledge-product-altmetrics.repository';
-import { ResultsImpactAreaIndicatorRepository } from './results-impact-area-indicators/results-impact-area-indicators.repository';
-import { ResultsImpactAreaTargetRepository } from './results-impact-area-target/results-impact-area-target.repository';
 import { LogRepository } from '../../connection/dynamodb-logs/dynamodb-logs.repository';
 import { Actions } from 'src/connection/dynamodb-logs/dto/enumAction.const';
 import { VersioningService } from '../versioning/versioning.service';
@@ -258,9 +251,7 @@ export class ResultsService {
               elasticOperations,
             );
 
-          const bulk = await this._elasticService.sendBulkOperationToElastic(
-            elasticJson,
-          );
+          await this._elasticService.sendBulkOperationToElastic(elasticJson);
         } catch (error) {
           this._logger.warn(
             `the elastic upload failed for the result #${newResultHeader.id}`,
@@ -592,9 +583,7 @@ export class ResultsService {
               elasticOperations,
             );
 
-          const bulk = await this._elasticService.sendBulkOperationToElastic(
-            elasticJson,
-          );
+          await this._elasticService.sendBulkOperationToElastic(elasticJson);
         } catch (error) {
           this._logger.warn(
             `the elastic update failed for the result #${updateResult.id}`,
@@ -674,10 +663,8 @@ export class ResultsService {
           saveInstitutionsType.push(institutionsTypeNew);
         }
       }
-      const updateInstitutionsType =
-        await this._resultByIntitutionsTypeRepository.save(
-          saveInstitutionsType,
-        );
+
+      await this._resultByIntitutionsTypeRepository.save(saveInstitutionsType);
       return {
         response: {
           updateResult,
@@ -786,9 +773,7 @@ export class ResultsService {
               elasticOperations,
             );
 
-          const bulk = await this._elasticService.sendBulkOperationToElastic(
-            elasticJson,
-          );
+          await this._elasticService.sendBulkOperationToElastic(elasticJson);
           await this._logRepository.createLog(result, user, Actions.DELETE, {
             class: ResultsService.name,
             method: `deleteResult`,
@@ -861,6 +846,7 @@ export class ResultsService {
     }
   }
 
+  //FIXME this is a result, not an user, so the return type here does not make sense
   async findResultById(id: number): Promise<returnFormatUser> {
     try {
       const result: Result = await this._customResultRepository.getResultById(
@@ -1043,14 +1029,12 @@ export class ResultsService {
         result_code: last_code + 1,
       });
 
-      const resultByInitiative = await this._resultByInitiativesRepository.save(
-        {
-          created_by: newResultHeader.created_by,
-          initiative_id: initiative.id,
-          initiative_role_id: 1,
-          result_id: newResultHeader.id,
-        },
-      );
+      await this._resultByInitiativesRepository.save({
+        created_by: newResultHeader.created_by,
+        initiative_id: initiative.id,
+        initiative_role_id: 1,
+        result_id: newResultHeader.id,
+      });
 
       await this._resultLegacyRepository.save(legacyResult);
 
@@ -1107,9 +1091,7 @@ export class ResultsService {
               elasticOperations,
             );
 
-          const bulk = await this._elasticService.sendBulkOperationToElastic(
-            elasticJson,
-          );
+          await this._elasticService.sendBulkOperationToElastic(elasticJson);
         } catch (error) {
           this._logger.warn(
             `the elastic update failed for the result #${legacyResult.legacy_id}`,
@@ -1221,9 +1203,7 @@ export class ResultsService {
               elasticOperations,
             );
 
-          const bulk = await this._elasticService.sendBulkOperationToElastic(
-            elasticJson,
-          );
+          await this._elasticService.sendBulkOperationToElastic(elasticJson);
         } catch (error) {
           this._logger.warn(
             `the elastic update of the geoscope failed for the result #${createResultGeo.result_id}`,
@@ -1241,7 +1221,7 @@ export class ResultsService {
     }
   }
 
-  async getGeoScope(resultId: number, version = 1) {
+  async getGeoScope(resultId: number) {
     try {
       const result = await this._resultRepository.getResultById(resultId);
 
@@ -1358,8 +1338,6 @@ export class ResultsService {
       `The versioning process of the result with id ${result_id} and code ${result_code} was started by ${user.id}: ${user.first_name} ${user.last_name}.`,
     );
   }
-
-  bulkVersinoningResult() {}
 
   async getCenters(resultId: number) {
     try {

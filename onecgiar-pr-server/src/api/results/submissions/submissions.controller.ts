@@ -1,17 +1,13 @@
 import {
   Controller,
-  Get,
-  Post,
   Body,
   Patch,
   Param,
-  Delete,
   Headers,
   HttpException,
 } from '@nestjs/common';
 import { SubmissionsService } from './submissions.service';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
-import { UpdateSubmissionDto } from './dto/update-submission.dto';
 import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 
@@ -89,28 +85,5 @@ export class SubmissionsController {
         createSubmissionDto,
       );
     throw new HttpException({ message, response }, status);
-  }
-
-  @Get('get')
-  findAll() {
-    return this.submissionsService.findAll();
-  }
-
-  @Get('get/:resultId')
-  findOne(@Param('resultId') resultId: number) {
-    return this.submissionsService.findOne(+resultId);
-  }
-
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateSubmissionDto: UpdateSubmissionDto,
-  ) {
-    return this.submissionsService.update(+id, updateSubmissionDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.submissionsService.remove(+id);
   }
 }

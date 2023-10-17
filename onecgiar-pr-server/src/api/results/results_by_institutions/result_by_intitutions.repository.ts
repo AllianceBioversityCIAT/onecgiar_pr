@@ -476,11 +476,7 @@ export class ResultByIntitutionsRepository
       const isKP: boolean =
         (await this.$_getResultTypeFromResultId(resultId)) == 6;
 
-      const upDateInactiveResult = await this.query(upDateInactiveRBI, [
-        userId,
-        resultId,
-        institutionRole,
-      ]);
+      await this.query(upDateInactiveRBI, [userId, resultId, institutionRole]);
 
       if (isKP) {
         executionResult = await this.query(removeRelationRKPMI, [
@@ -609,11 +605,11 @@ export class ResultByIntitutionsRepository
 
     try {
       if (institutions?.length) {
-        const upDateInactiveResult = await this.query(upDateInactiveRBI, [
+        await this.query(upDateInactiveRBI, [
           userId,
           resultId,
           institutionRole,
-        ]).then((res) => {
+        ]).then((_res) => {
           this.query(removeRelationRKPMI, [userId, resultId]);
         });
 

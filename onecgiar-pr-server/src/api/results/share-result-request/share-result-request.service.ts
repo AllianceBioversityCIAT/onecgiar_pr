@@ -1,24 +1,17 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { CreateShareResultRequestDto } from './dto/create-share-result-request.dto';
-import { UpdateShareResultRequestDto } from './dto/update-share-result-request.dto';
-import {
-  HandlersError,
-  ReturnResponse,
-} from '../../../shared/handlers/error.utils';
+import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ShareResultRequestRepository } from './share-result-request.repository';
 import { CreateTocShareResult } from './dto/create-toc-share-result.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ShareResultRequest } from './entities/share-result-request.entity';
 import { ResultRepository } from '../result.repository';
-import { getResultIdFullData } from '../dto/get-result-id-full.dto';
 import { ResultsByInititiative } from '../results_by_inititiatives/entities/results_by_inititiative.entity';
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
 import { VersionsService } from '../versions/versions.service';
 import { Version } from '../../versioning/entities/version.entity';
 import { ResultsTocResult } from '../results-toc-results/entities/results-toc-result.entity';
 import { ResultsTocResultRepository } from '../results-toc-results/results-toc-results.repository';
-import { Result } from '../entities/result.entity';
-import { getRepository } from 'typeorm';
 import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/result_initiative_budget.repository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 
@@ -175,7 +168,7 @@ export class ShareResultRequestService {
       if (version.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: version });
       }
-      const vrs: Version = <Version>version.response;
+
       if (!data?.share_result_request_id) {
         throw {
           response: {},
