@@ -10,7 +10,7 @@
 
     </div>
 
-    <div class="dropwon-filters">
+    <div class="dropdown-filters">
         <app-pr-multi-select label="Reporting phase" (selectOptionEvent)="onSelectDropdown()"
             [options]="this.reportingPhases" [isStatic]="true" [required]="false" optionLabel="phase_name_status"
             selectedLabel="Phases selected" optionValue="id" placeholder="Select phase" [(ngModel)]="phasesSelected"
