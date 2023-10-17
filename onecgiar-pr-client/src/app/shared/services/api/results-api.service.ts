@@ -495,13 +495,12 @@ export class ResultsApiService {
     return this.http.patch<any>(`${this.apiBaseUrl}submissions/unsubmit/${this.currentResultId}`, { comment });
   }
 
-  POST_reportSesultsCompleteness(initiatives: any[], rol_user?) {
-    return this.http.post<any>(`${this.apiBaseUrl}admin-panel/report/results/completeness`, { rol_user, initiatives }).pipe(
+  POST_reportSesultsCompleteness(initiatives: any[], phases: any[], rol_user?) {
+    return this.http.post<any>(`${this.apiBaseUrl}admin-panel/report/results/completeness`, { rol_user, initiatives, phases }).pipe(
       map(resp => {
         //(resp.responee);
         resp?.response.map(result => {
           result.full_name = `${result.result_title} ${result.result_code} ${result.official_code} ${result.result_type_name}`;
-          result.full_name_html = `<div class="completeness-${result.is_submitted == 1 ? 'submitted' : 'editing'} completeness-state">${result.is_submitted == 1 ? 'Submitted' : 'Editing'}</div> <strong>Result code: (${result.result_code})</strong> - ${result.result_title}  - <strong>Official code: (${result.official_code})</strong> - <strong>Indicator category: (${result.result_type_name})</strong>`;
           result.result_code = Number(result.result_code);
           result.completeness = Number(result.completeness);
           result.general_information_value = Number(result?.general_information?.value);
@@ -829,5 +828,9 @@ export class ResultsApiService {
 
   GET_numberOfResultsByResultType(statusId, resultTypeId) {
     return this.http.get<any>(`${environment.apiBaseUrl}api/versioning/number/results/status/${statusId}/result-type/${resultTypeId}`);
+  }
+
+  GET_allResultStatuses() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/result-status/all`);
   }
 }
