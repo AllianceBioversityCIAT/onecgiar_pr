@@ -36,6 +36,19 @@
     padding: 6px 5px;
 }
 
+.first_options {
+    grid-template-columns: 250px 2fr 1fr;
+
+
+    .initiatives_selector {
+        min-width: 300px;
+    }
+
+    .search_input {
+        width: auto;
+    }
+}
+
 .first_options .search_input {
     margin-bottom: 0px !important;
 }

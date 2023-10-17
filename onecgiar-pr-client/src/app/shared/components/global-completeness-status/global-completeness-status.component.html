@@ -1,9 +1,12 @@
 <div class="table_container" [ngClass]="{'expand_table': show_full_screen}">
     <div class="first_options">
-        <app-pr-multi-select (selectOptionEvent)="onSelectInit()" [options]="this.reportingPhases" [isStatic]="true"
-            [required]="false" optionLabel="phase_name_status" optionValue="id" placeholder="Select phase"
-            [(ngModel)]="phasesSelected">
-        </app-pr-multi-select>
+
+        <div class="phases_selector">
+            <app-pr-multi-select (selectOptionEvent)="onSelectInit()" [options]="this.reportingPhases" [isStatic]="true"
+                [required]="false" optionLabel="phase_name_status" optionValue="id" placeholder="Select phase"
+                [(ngModel)]="phasesSelected">
+            </app-pr-multi-select>
+        </div>
 
         <div class="initiatives_selector">
             <app-pr-multi-select *ngIf="!this.api.rolesSE.isAdmin" [isStatic]="true"

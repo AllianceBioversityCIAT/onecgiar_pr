@@ -77,7 +77,7 @@ export class GlobalCompletenessStatusComponent implements OnInit {
 
     resultsListMapped.push({
       result_code: 'Result code',
-      phase_name: 'Phase',
+      phase_name: 'Reporting phase',
       result_title: 'Title',
       official_code: 'Submitter',
       result_type_name: 'Indicator category',
