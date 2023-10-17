@@ -130,9 +130,6 @@ export class InitGeneralResultsReportComponent {
     return new Promise((resolve, reject) => {
       this.api.resultsSE.POST_excelFullReport([result]).subscribe(
         ({ response }) => {
-          // (response);
-          // this.validateLength(response);
-          //(response);
           this.requestCounter++;
           this.dataToExport.push(...response.fullReport);
           this.tocToExport.push(...response.resultsAgaintsToc);
