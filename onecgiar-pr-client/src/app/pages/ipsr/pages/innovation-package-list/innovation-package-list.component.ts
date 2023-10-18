@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ApiService } from '../../../../shared/services/api/api.service';
 
 @Component({
@@ -6,7 +6,7 @@ import { ApiService } from '../../../../shared/services/api/api.service';
   templateUrl: './innovation-package-list.component.html',
   styleUrls: ['./innovation-package-list.component.scss']
 })
-export class InnovationPackageListComponent {
+export class InnovationPackageListComponent implements OnInit, OnDestroy {
   innovationPackagesList = [];
   searchText = '';
   constructor(public api: ApiService) {}

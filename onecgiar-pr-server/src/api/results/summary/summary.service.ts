@@ -34,6 +34,8 @@ import { NonPooledProjectRepository } from '../non-pooled-projects/non-pooled-pr
 import { ResultInstitutionsBudget } from '../result_budget/entities/result_institutions_budget.entity';
 import { ResultInstitutionsBudgetRepository } from '../result_budget/repositories/result_institutions_budget.repository';
 import { InnoDevService } from './innovation_dev.service';
+import { ResultAnswerRepository } from '../result-questions/repository/result-answers.repository';
+import { ResultAnswer } from '../result-questions/entities/result-answers.entity';
 
 @Injectable()
 export class SummaryService {
@@ -55,6 +57,7 @@ export class SummaryService {
     private readonly _nonPooledProjectRepository: NonPooledProjectRepository,
     private readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
     private readonly _innoDevService: InnoDevService,
+    private readonly _resultAnswerRepository: ResultAnswerRepository,
   ) {}
 
   /**
@@ -156,6 +159,9 @@ export class SummaryService {
         result_capacity_development_id,
         female_using,
         male_using,
+        has_unkown_using,
+        unkown_using,
+        non_binary_using,
         capdev_delivery_method_id,
         capdev_term_id,
         institutions,
@@ -172,8 +178,15 @@ export class SummaryService {
       }
       const vrs: Version = <Version>version.response;
       if (capDevExists) {
-        capDevExists.female_using = female_using || null;
-        capDevExists.male_using = male_using || null;
+        capDevExists.female_using = unkown_using ? 0 : female_using || 0;
+        capDevExists.male_using = unkown_using ? 0 : male_using || 0;
+        capDevExists.has_unkown_using = !unkown_using
+          ? null
+          : has_unkown_using || null;
+        capDevExists.non_binary_using = unkown_using
+          ? 0
+          : non_binary_using || 0;
+        capDevExists.unkown_using = unkown_using;
         capDevExists.last_updated_by = user.id;
         capDevExists.capdev_delivery_method_id = capdev_delivery_method_id;
         capDevExists.capdev_term_id = capdev_term_id;
@@ -186,8 +199,13 @@ export class SummaryService {
         const newCapDev = new ResultsCapacityDevelopments();
         newCapDev.created_by = user.id;
         newCapDev.last_updated_by = user.id;
-        newCapDev.female_using = female_using || null;
-        newCapDev.male_using = male_using || null;
+        newCapDev.female_using = unkown_using ? 0 : female_using || 0;
+        newCapDev.male_using = unkown_using ? 0 : male_using || 0;
+        newCapDev.has_unkown_using = !unkown_using
+          ? null
+          : has_unkown_using || null;
+        newCapDev.non_binary_using = unkown_using ? 0 : non_binary_using || 0;
+        newCapDev.unkown_using = unkown_using;
         newCapDev.result_id = resultId;
         newCapDev.capdev_delivery_method_id = capdev_delivery_method_id;
         newCapDev.capdev_term_id = capdev_term_id;
@@ -561,15 +579,6 @@ export class SummaryService {
           },
         });
 
-      // const institutions_expected_investment = institutions.map((el) => {
-      //   return {
-      //     institution: el,
-      //     budget: institutions_investment.filter(
-      //       (b) => b.result_institution_id == el.id,
-      //     ),
-      //   };
-      // });
-
       return {
         response: {
           ...innDevExists,
@@ -617,6 +626,8 @@ export class SummaryService {
         policy_stage_id,
         policy_type_id,
         status_amount,
+        optionsWithAnswers,
+        result_related_engagement,
       } = policyChangesDto;
 
       let policyChangesData: ResultsPolicyChanges = undefined;
@@ -625,6 +636,8 @@ export class SummaryService {
         resultsPolicyChanges.last_updated_by = user.id;
         resultsPolicyChanges.policy_stage_id = policy_stage_id;
         resultsPolicyChanges.policy_type_id = policy_type_id;
+        resultsPolicyChanges.result_related_engagement =
+          result_related_engagement;
         resultsPolicyChanges.status_amount = status_amount;
         policyChangesData = await this._resultsPolicyChangesRepository.save(
           resultsPolicyChanges,
@@ -634,6 +647,8 @@ export class SummaryService {
         newResultsPolicyChanges.amount = amount || null;
         newResultsPolicyChanges.policy_stage_id = policy_stage_id;
         newResultsPolicyChanges.policy_type_id = policy_type_id;
+        newResultsPolicyChanges.result_related_engagement =
+          result_related_engagement;
         newResultsPolicyChanges.result_id = resultId;
         newResultsPolicyChanges.created_by = user.id;
         newResultsPolicyChanges.last_updated_by = user.id;
@@ -677,6 +692,32 @@ export class SummaryService {
           4,
           user.id,
         );
+      }
+
+      for (const answer of optionsWithAnswers) {
+        const optionExist = await this._resultAnswerRepository.findOne({
+          where: {
+            result_id: resultId,
+            result_question_id: answer.result_question_id,
+          },
+        });
+
+        if (optionExist) {
+          optionExist.answer_boolean = answer.answer_boolean || false;
+          optionExist.answer_text = answer.answer_text;
+          optionExist.last_updated_by = user.id;
+          await this._resultAnswerRepository.save(optionExist);
+        } else {
+          const optionAnswer = new ResultAnswer();
+          optionAnswer.result_question_id = answer.result_question_id;
+          optionAnswer.answer_boolean = answer.answer_boolean || false;
+          optionAnswer.answer_text = answer.answer_text;
+          optionAnswer.result_id = resultId;
+          optionAnswer.created_by = user.id;
+          optionAnswer.last_updated_by = user.id;
+
+          await this._resultAnswerRepository.save(optionAnswer);
+        }
       }
 
       return {

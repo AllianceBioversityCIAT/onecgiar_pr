@@ -45,6 +45,7 @@ interface Metadatum {
   is_isi: boolean;
   is_peer_reviewed: boolean;
   issue_year: number;
+  online_year: number;
 }
 
 interface Author {

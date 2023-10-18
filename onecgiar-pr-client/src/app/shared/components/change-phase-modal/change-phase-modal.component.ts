@@ -33,6 +33,7 @@ export class ChangePhaseModalComponent implements OnInit {
         this.requesting = false;
         this.api.updateResultsList();
         this.api.dataControlSE.chagePhaseModal = false;
+        this.api.dataControlSE.updateResultModal = false;
         // //(response);
         this.router.navigate([`/result/result-detail/${response?.result_code}/general-information`], { queryParams: { phase: response?.version_id } });
       },

@@ -13,6 +13,73 @@ export class ResultQuestionsService {
     private readonly _resultAnswerRepository: ResultAnswerRepository,
   ) {}
 
+  async findQuestionPolicyChange(resultId: number) {
+    try {
+      const getAnswersForQuestion = async (
+        questionId: number,
+      ): Promise<any> => {
+        return await this._resultAnswerRepository.find({
+          select: ['answer_boolean', 'answer_text'],
+          where: {
+            result_id: resultId,
+            result_question_id: questionId,
+          },
+        });
+      };
+
+      const topLevelQuestions = await this._resultQuestionRepository.find({
+        where: {
+          question_level: 1,
+          result_type_id: 1,
+        },
+      });
+
+      const mapOptions = async (options: any[]) => {
+        return Promise.all(
+          options.map(async (option) => {
+            const answers = await getAnswersForQuestion(
+              option.result_question_id,
+            );
+            return {
+              ...option,
+              answer_boolean:
+                answers[0] === undefined ? null : answers[0].answer_boolean,
+              answer_text:
+                answers[0] === undefined ? null : answers[0].answer_text,
+            };
+          }),
+        );
+      };
+
+      const policyResultRelated = await Promise.all(
+        topLevelQuestions.map(async (topLevelQuestion) => {
+          const childQuestions = await this._resultQuestionRepository.find({
+            where: {
+              question_level: 2,
+              parent_question_id: topLevelQuestion.result_question_id,
+            },
+          });
+
+          const optionsWithAnswers = await mapOptions(childQuestions);
+
+          return {
+            ...topLevelQuestion,
+            optionsWithAnswers,
+          };
+        }),
+      );
+
+      const policyResultRelatedWithAnswers = policyResultRelated[0];
+      return {
+        response: policyResultRelatedWithAnswers,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlerError.returnErrorRes({ error, debug: true });
+    }
+  }
+
   async findQuestionInnovationDevelopment(resultId: number) {
     try {
       const scaling = await this.responsibleInnovationAndScaling(resultId);

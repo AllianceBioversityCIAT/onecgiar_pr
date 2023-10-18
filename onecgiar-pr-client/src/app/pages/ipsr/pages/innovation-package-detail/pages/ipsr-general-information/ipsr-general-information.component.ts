@@ -85,7 +85,7 @@ export class IpsrGeneralInformationComponent {
     return `<strong>Environment tag guidance</strong> 
     <br>
     
-    There are five environmental targets and one biodiversity target at systems level:
+    There are three environmental targets and one biodiversity target at systems level:
 
     <ul>
       <li>Stay within planetary and regional environmental boundaries: consumptive water use in food production of less than 2,500 km³ per year (with a focus on the most stressed basins), zero net deforestation, nitrogen application of 90 Tg per year (with a redistribution towards low-input farming systems) and increased use efficiency; and phosphorus application of 10 Tg per year.</li>

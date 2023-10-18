@@ -166,7 +166,10 @@ export class ResultsPolicyChangesRepository
     	rpc.last_updated_by,
     	rpc.policy_stage_id,
     	rpc.policy_type_id,
-      rpc.status_amount
+      rpc.status_amount,
+      rpc.linked_innovation_dev,
+      rpc.linked_innovation_use,
+      rpc.result_related_engagement
     FROM
     	results_policy_changes rpc
     WHERE 
@@ -196,6 +199,30 @@ export class ResultsPolicyChangesRepository
       r.result_code 'Result Code',
       -- Action Area Outcome - Policy change specific fields
       cpt.name as 'Policy type',
+      (
+        SELECT
+          GROUP_CONCAT(
+            (
+              SELECT
+                rq2.question_text
+              FROM
+                result_questions rq2
+              WHERE
+                rq2.result_question_id = rq.parent_question_id
+            ),
+            '  ',
+            rq.question_text SEPARATOR '\n'
+          ) AS 'Questions'
+        FROM
+          result_answers ra2
+          LEFT JOIN result_questions rq ON rq.result_question_id = ra2.result_question_id
+        WHERE
+          ra2.result_id = r.id
+          AND ra2.is_active = TRUE
+          AND ra2.answer_boolean = TRUE
+        ORDER BY
+          rq.result_question_id ASC
+      ) AS 'Is this result related to',
       if(cpt.id <> 1, 'Not applicable', format(rpc.amount, 2)) 'USD Amount',
       if(cpt.id <> 1, 'Not applicable', 
         (

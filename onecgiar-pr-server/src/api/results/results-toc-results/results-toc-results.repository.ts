@@ -761,15 +761,15 @@ export class ResultsTocResultRepository
                                               join result_type rt on rt.id = r.result_type_id
                                               where r.id = ${resultId} and r.is_active = 1;`);
         const IndicatorTarget = await this.query(
-          `select * from results_toc_result where results_id = ${resultId} and is_active = true and initiative_id = ${init};`,
+          `select * from results_toc_result where results_id = ${resultId} and is_active = 1 and initiative_id = ${init};`,
         );
 
         const queryDataIndicators = `
-        select tr.phase, tri.toc_result_indicator_id as toc_results_indicator_id,
+        select tr.phase, tri.related_node_id as toc_results_indicator_id,
             tri.indicator_description,tri.unit_messurament,
             tri.location, tri.type_value, tri.type_name as 'statement'
         from  ${env.DB_TOC}.toc_results tr 
-            join ${env.DB_TOC}.toc_results_indicators tri on tri.toc_results_id = tr.id
+            join ${env.DB_TOC}.toc_results_indicators tri on tri.toc_results_id = tr.id and tri.is_active = 1
             where id = ? and tr.phase = (select v.toc_pahse_id 
                                               from result r 	
                                               join version v on r.version_id = v.id  
@@ -920,10 +920,10 @@ export class ResultsTocResultRepository
                 }
                 const queryTargetContributing = `
                 select r.description, r.title, r.result_code, rit.contributing_indicator from results_toc_result rtr 
-		              join results_toc_result_indicators rtri on rtri.results_toc_results_id = rtr.result_toc_result_id 
-      	          join result_indicators_targets rit on rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
+		              join results_toc_result_indicators rtri on rtri.results_toc_results_id = rtr.result_toc_result_id and rtri.is_active = 1
+      	          join result_indicators_targets rit on rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id and rit.is_active = 1
       	          join result r on r.id = rtr.results_id 
-      	          where rtri.results_toc_results_id != ? and rtri.toc_results_indicator_id = ? and rit.number_target = ?;
+      	          where rtri.results_toc_results_id != ? and rtri.toc_results_indicator_id = ? and rit.number_target = ? and rtr.is_active = 1;
                 `;
 
                 const queryTargetothercontributing = await this.query(
@@ -957,10 +957,10 @@ export class ResultsTocResultRepository
                 element.indicator_question = null;
                 const queryTargetContributing = `
                     select r.description, r.title, r.result_code, rit.contributing_indicator from results_toc_result rtr 
-                      join results_toc_result_indicators rtri on rtri.results_toc_results_id = rtr.result_toc_result_id 
-                      join result_indicators_targets rit on rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
+                      join results_toc_result_indicators rtri on rtri.results_toc_results_id = rtr.result_toc_result_id and rtri.is_active = 1
+                      join result_indicators_targets rit on rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id and rit.is_active = 1
                       join result r on r.id = rtr.results_id 
-                      where rtri.toc_results_indicator_id = ? and rit.number_target = ?;
+                      where rtri.toc_results_indicator_id = ? and rit.number_target = ? rtr.is_active = 1;
                     `;
 
                 const queryTargetothercontributing = await this.query(
@@ -1110,10 +1110,10 @@ export class ResultsTocResultRepository
               element.indicator_question = null;
               const queryTargetContributing = `
                 select r.description, r.title, r.result_code, rit.contributing_indicator from results_toc_result rtr 
-		              join results_toc_result_indicators rtri on rtri.results_toc_results_id = rtr.result_toc_result_id 
-      	          join result_indicators_targets rit on rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
+		              join results_toc_result_indicators rtri on rtri.results_toc_results_id = rtr.result_toc_result_id and rtri.is_active = 1
+      	          join result_indicators_targets rit on rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id and rit.is_active = 1
       	          join result r on r.id = rtr.results_id 
-      	          where rtri.toc_results_indicator_id = ? and rit.number_target = ?;
+      	          where rtri.toc_results_indicator_id = ? and rit.number_target = ? and rtr.is_active = 1;
                 `;
 
               const queryTargetothercontributing = await this.query(

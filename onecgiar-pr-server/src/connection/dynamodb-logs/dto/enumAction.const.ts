@@ -1,6 +1,7 @@
-export enum Actions{
-    DELETE = 'Delete',
-    UPDATE = 'Update',
-    SELECT = 'Select',
-    CREATE = 'Create'
+export enum Actions {
+  DELETE = 'Delete',
+  UPDATE = 'Update',
+  SELECT = 'Select',
+  CREATE = 'Create',
+  CHANGE_RESULT_TYPE = 'ChangeResultType',
 }

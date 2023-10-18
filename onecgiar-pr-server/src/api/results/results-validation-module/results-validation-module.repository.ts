@@ -1460,14 +1460,24 @@ export class resultValidationRepository
 		'cap-dev-info' as section_name,
 		CASE
 			WHEN (
-				rcd.female_using IS NULL
-				OR rcd.female_using = 0
-			)
-			OR (
-				rcd.male_using IS NULL
-				OR rcd.male_using = 0
-			)
-			OR (
+				rcd.unkown_using = 0
+				AND (
+					rcd.female_using IS NULL
+					OR rcd.female_using = 0
+					OR rcd.male_using IS NULL
+					OR rcd.male_using = 0
+					OR non_binary_using IS NULL
+					OR non_binary_using = 0
+				)
+			) THEN FALSE
+			WHEN (
+				rcd.unkown_using = 1
+				AND (
+					rcd.has_unkown_using IS NULL
+					OR rcd.has_unkown_using = 0
+				)
+			) THEN FALSE
+			WHEN (
 				rcd.capdev_term_id IS NULL
 				OR rcd.capdev_term_id = ''
 			)
@@ -1475,9 +1485,7 @@ export class resultValidationRepository
 				rcd.capdev_delivery_method_id IS NULL
 				OR rcd.capdev_delivery_method_id = ''
 			)
-			OR (
-				rcd.is_attending_for_organization IS NULL
-			) THEN FALSE
+			OR (rcd.is_attending_for_organization IS NULL) THEN FALSE
 			WHEN (
 				rcd.is_attending_for_organization = 1
 				AND (
@@ -1522,28 +1530,44 @@ export class resultValidationRepository
 	SELECT
 		'policy-change1-info' as section_name,
 		CASE
-			when (rpc.policy_type_id is not null
-			and rpc.policy_type_id <> '')
-			AND 
-			(rpc.policy_stage_id is not null
-			and rpc.policy_stage_id <> '')
-			AND 
-			((
-			SELECT
-				count(rbi.id)
-			from
-				results_by_institution rbi
-			where
-				rbi.result_id = r.id
-				and rbi.institution_roles_id = 4
-				and rbi.is_active > 0) > 0)
-			then TRUE
+			WHEN (
+				(
+					SELECT
+						COUNT(*)
+					FROM
+						result_answers ra
+					WHERE
+						ra.result_id = r.id
+						AND ra.is_active > 0
+						AND ra.answer_boolean = 1
+				) > 0
+			)
+			AND (
+				rpc.policy_type_id is not null
+				and rpc.policy_type_id <> ''
+			)
+			AND (
+				rpc.policy_stage_id is not null
+				and rpc.policy_stage_id <> ''
+			)
+			AND rpc.result_related_engagement is not null
+			AND (
+				(
+					SELECT
+						count(rbi.id)
+					from
+						results_by_institution rbi
+					where
+						rbi.result_id = r.id
+						and rbi.institution_roles_id = 4
+						and rbi.is_active > 0
+				) > 0
+			) then TRUE
 			else false
 		END as validation
 	from
-		\`result\` r
-	left join results_policy_changes rpc on
-		rpc.result_id = r.id
+		result r
+		left join results_policy_changes rpc on rpc.result_id = r.id
 		and rpc.is_active > 0
 	WHERE
 		r.id = ?
