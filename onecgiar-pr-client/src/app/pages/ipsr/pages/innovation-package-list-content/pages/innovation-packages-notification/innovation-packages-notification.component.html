@@ -16,22 +16,22 @@
         </div>
     </div>
 
-<div class="all_notifications">
-    <div *ngFor="let notification of this.resultsNotificationsSE.interactiveNotisList | filterNotificationByInitiative:initiativeIdFilter | filterNotificationByPhase:phaseFilter">
-        <app-notification-item-innovation [comes]="true" [readOnly]="notification.readOnly"
-            (requestEvent)="this.resultsNotificationsSE.get_section_innovation_packages()" [notification]="notification">
-        </app-notification-item-innovation>
-    </div>
-</div>
-<br>
-    <div class="all_notifications">
-        <div *ngFor="let notification of this.resultsNotificationsSE.staticNotisList | filterNotificationByInitiative:initiativeIdFilter | filterNotificationByPhase:phaseFilter">
-                <app-notification-item-innovation  [comes]="false" [notification]="notification">
-                </app-notification-item-innovation>
+    <div
+        *ngIf="(this.resultsNotificationsSE?.dataIPSR | filterNotificationByInitiative:initiativeIdFilter | filterNotificationByPhase:phaseFilter).length > 0">
+        <div class="all_notifications">
+            <cdk-virtual-scroll-viewport itemSize="190" class="custom_scroll virtual_scroll all_notifications">
+                <div style="display: flex; flex-direction: column; gap: 10px;"
+                    *cdkVirtualFor="let notification of this.resultsNotificationsSE?.dataIPSR | filterNotificationByInitiative:initiativeIdFilter | filterNotificationByPhase:phaseFilter; let i =index">
+                    <app-notification-item-innovation [comes]="true" [readOnly]="notification.readOnly"
+                        (requestEvent)="this.resultsNotificationsSE.get_section_innovation_packages()"
+                        [notification]="notification" style="margin-bottom: 10px;">
+                    </app-notification-item-innovation>
+                </div>
+            </cdk-virtual-scroll-viewport>
         </div>
     </div>
 
     <app-no-data-text title="No notifications"
-        *ngIf="!(this.resultsNotificationsSE.interactiveNotisList | filterNotificationByInitiative:initiativeIdFilter | filterNotificationByPhase:phaseFilter).length && !(this.resultsNotificationsSE.staticNotisList | filterNotificationByInitiative:initiativeIdFilter | filterNotificationByPhase:phaseFilter).length">
+        *ngIf="!(this.resultsNotificationsSE?.dataIPSR | filterNotificationByInitiative:initiativeIdFilter | filterNotificationByPhase:phaseFilter).length">
     </app-no-data-text>
 </div>
