@@ -1,4 +1,4 @@
-export class capdevDto {
+export class CapdevDto {
   public result_capacity_development_id?: number;
   public male_using: number;
   public female_using: number;

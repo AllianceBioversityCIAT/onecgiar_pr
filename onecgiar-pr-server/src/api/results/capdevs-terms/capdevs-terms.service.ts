@@ -1,6 +1,4 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { CreateCapdevsTermDto } from './dto/create-capdevs-term.dto';
-import { UpdateCapdevsTermDto } from './dto/update-capdevs-term.dto';
 import { CapdevsTermRepository } from './capdevs-terms.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 

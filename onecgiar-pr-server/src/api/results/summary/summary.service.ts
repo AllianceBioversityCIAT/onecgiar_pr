@@ -3,7 +3,7 @@ import { InnovationUseDto } from './dto/create-innovation-use.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { VersionsService } from '../versions/versions.service';
 import { HandlersError } from '../../../shared/handlers/error.utils';
-import { capdevDto } from './dto/create-capacity-developents.dto';
+import { CapdevDto } from './dto/create-capacity-developents.dto';
 import { ResultsCapacityDevelopmentsRepository } from './repositories/results-capacity-developments.repository';
 import { ResultsCapacityDevelopments } from './entities/results-capacity-developments.entity';
 import { ResultByIntitutionsRepository } from '../results_by_institutions/result_by_intitutions.repository';
@@ -142,7 +142,7 @@ export class SummaryService {
    * @param user
    */
   async saveCapacityDevelopents(
-    capdev: capdevDto,
+    capdev: CapdevDto,
     resultId: number,
     user: TokenDto,
   ) {

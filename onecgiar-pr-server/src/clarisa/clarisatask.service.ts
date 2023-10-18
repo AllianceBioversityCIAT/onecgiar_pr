@@ -113,7 +113,7 @@ export class ClarisaTaskService {
 
   public async clarisaBootstrapImportantData() {
     this._logger.debug(`Cloning of CLARISA important control lists`);
-    let count = 1;
+    const count = 1;
     await this.cloneClarisaInstitutions(count);
   }
 

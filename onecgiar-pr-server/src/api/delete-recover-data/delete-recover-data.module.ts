@@ -80,7 +80,7 @@ import { ResultInitiativeBudgetRepository } from '../results/result_budget/repos
 import { ResultTypeRepository } from '../results/result_types/resultType.repository';
 import { VersionRepository } from '../versioning/versioning.repository';
 import { ClarisaGeographicScopeRepository } from '../../clarisa/clarisa-geographic-scopes/clarisa-geographic-scopes.repository';
-import { HttpModule, HttpService } from '@nestjs/axios';
+import { HttpModule } from '@nestjs/axios';
 import { ApplicationModulesRepository } from '../versioning/repositories/application-modules.repository';
 
 @Module({

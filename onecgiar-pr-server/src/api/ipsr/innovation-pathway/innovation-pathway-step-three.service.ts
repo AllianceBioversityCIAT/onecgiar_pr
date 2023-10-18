@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable, Type } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { ResultRepository } from '../../results/result.repository';
 import {
   HandlersError,

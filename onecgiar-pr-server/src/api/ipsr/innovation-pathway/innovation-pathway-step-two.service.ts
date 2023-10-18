@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable, Type } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { ResultRepository } from '../../results/result.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultRegionRepository } from '../../results/result-regions/result-regions.repository';
@@ -28,7 +28,6 @@ import { CreateComplementaryInnovationDto } from './dto/create-complementary-inn
 import { Result } from '../../../api/results/entities/result.entity';
 import { YearRepository } from '../../../api/results/years/year.repository';
 import { ResultByInitiativesRepository } from 'src/api/results/results_by_inititiatives/resultByInitiatives.repository';
-import { ResultsByInititiative } from 'src/api/results/results_by_inititiatives/entities/results_by_inititiative.entity';
 import { ResultsComplementaryInnovation } from '../results-complementary-innovations/entities/results-complementary-innovation.entity';
 import { ComplementaryInnovationFunctionsRepository } from '../results-complementary-innovations-functions/repositories/complementary-innovation-functions.repository';
 import { UpdateComplementaryInnovationDto } from './dto/update-innovation-pathway.dto';

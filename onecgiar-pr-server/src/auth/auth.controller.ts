@@ -3,7 +3,6 @@ import {
   Post,
   Body,
   Param,
-  Res,
   HttpException,
   UseFilters,
   HttpCode,
@@ -11,7 +10,6 @@ import {
 import { AuthService } from './auth.service';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { UserLoginDto } from './dto/login-user.dto';
-import { Response } from 'express';
 import { HttpExceptionFilter } from '../shared/handlers/error.exception';
 import { PusherAuthDot } from './dto/pusher-auth.dto';
 

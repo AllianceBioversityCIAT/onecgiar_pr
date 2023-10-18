@@ -1,6 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { HandlersError } from 'src/shared/handlers/error.utils';
-import { CreateIpsrDto } from './dto/create-ipsr.dto';
 import { IpsrRepository } from './ipsr.repository';
 import { ReturnResponse } from '../../shared/handlers/error.utils';
 import { env } from 'process';

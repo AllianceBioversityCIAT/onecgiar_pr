@@ -799,7 +799,6 @@ export class InnovationPathwayStepOneService {
   ) {
     const id = result.id;
     try {
-      let saveSdgs: any;
       const sdgsTargets: ResultIpSdgTargets[] = [];
       const resultByInnovationPackageId =
         await this._innovationByResultRepository.findOneBy({

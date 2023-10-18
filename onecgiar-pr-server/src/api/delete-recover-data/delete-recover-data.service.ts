@@ -268,9 +268,8 @@ export class DeleteRecoverDataService {
               elasticOperations,
             );
 
-          const bulk = await this._elasticService.sendBulkOperationToElastic(
-            elasticJson,
-          );
+          await this._elasticService.sendBulkOperationToElastic(elasticJson);
+
           await this._logRepository.createLog(
             resultData,
             user,

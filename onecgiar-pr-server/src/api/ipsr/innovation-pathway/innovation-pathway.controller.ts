@@ -92,14 +92,14 @@ export class InnovationPathwayController {
   @Post('save/complementary-innovation/:resultId')
   async saveComplementaryInnovation(
     @Param('resultId') resultId: string,
-    @Body() CreateComplementaryInnovationDto: CreateComplementaryInnovationDto,
+    @Body() createComplementaryInnovationDto: CreateComplementaryInnovationDto,
     @UserToken() User: TokenDto,
   ) {
     const { message, response, status } =
       await this._innovationPathwayStepTwoService.saveComplementaryInnovation(
         +resultId,
         User,
-        CreateComplementaryInnovationDto,
+        createComplementaryInnovationDto,
       );
     throw new HttpException({ message, response }, status);
   }
