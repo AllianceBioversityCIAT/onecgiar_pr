@@ -109,14 +109,14 @@ export class InitGeneralResultsReportComponent {
     this.requestCounter = 0;
 
     const list = [];
-    const uniqueResultCodesSet = new Set(resultsRelected.map((item: any) => item.result_code));
-    const uniqueResultCodes = [...uniqueResultCodesSet];
-    uniqueResultCodes?.forEach(element => {
+    const uniqueResultIdsSet = new Set(resultsRelected.map((item: any) => item.results_id));
+    const uniqueResultIds = [...uniqueResultIdsSet];
+    uniqueResultIds?.forEach(element => {
       list.push(element);
     });
 
     // Usar Promise.all para esperar a que todas las promesas se resuelvan
-    await Promise.all(list.map((element, key) => this.POST_excelFullReportPromise(element, key)));
+    await Promise.all(list.map((result, key) => this.POST_excelFullReportPromise(result, key)));
 
     this.exportTablesSE.exportMultipleSheetsExcel(this.dataToExport, 'results_list', null, this.tocToExport);
     this.requesting = false;
