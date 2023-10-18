@@ -1,6 +1,5 @@
 import { Injectable, HttpStatus, Logger } from '@nestjs/common';
 import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
 import { UserLoginDto } from './dto/login-user.dto';
 import { JwtService } from '@nestjs/jwt';
 import { BcryptPasswordEncoder } from './utils/bcrypt.util';
@@ -11,7 +10,7 @@ import { UserRepository } from './modules/user/repositories/user.repository';
 import { FullUserRequestDto } from './modules/user/dto/full-user-request.dto';
 import { User } from './modules/user/entities/user.entity';
 import { HandlersError } from '../shared/handlers/error.utils';
-import { pusherAuthDot } from './dto/pusher-auth.dto';
+import { PusherAuthDot } from './dto/pusher-auth.dto';
 import Pusher from 'pusher';
 import ActiveDirectory from 'activedirectory';
 
@@ -41,7 +40,7 @@ export class AuthService {
   }
 
   async pusherAuth(
-    pusherAuthDot: pusherAuthDot,
+    pusherAuthDot: PusherAuthDot,
     resultId: number,
     userId: number,
   ) {

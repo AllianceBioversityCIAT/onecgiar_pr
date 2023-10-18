@@ -1,8 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { ClarisaActionAreaOutcomeRepository } from './clarisa-action-area-outcome.repository';
-import { CreateClarisaActionAreaOutcomeDto } from './dto/create-clarisa-action-area-outcome.dto';
-import { UpdateClarisaActionAreaOutcomeDto } from './dto/update-clarisa-action-area-outcome.dto';
 
 @Injectable()
 export class ClarisaActionAreaOutcomeService {

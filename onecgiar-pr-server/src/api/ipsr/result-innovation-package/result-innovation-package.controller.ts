@@ -13,7 +13,6 @@ import {
   CreateResultInnovationPackageDto,
   UpdateGeneralInformationDto,
 } from './dto/create-result-innovation-package.dto';
-import { UpdateResultInnovationPackageDto } from './dto/update-result-innovation-package.dto';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 
@@ -25,12 +24,12 @@ export class ResultInnovationPackageController {
 
   @Post('create-header')
   async createHeader(
-    @Body() CreateResultInnovationPackageDto: CreateResultInnovationPackageDto,
+    @Body() createResultInnovationPackageDto: CreateResultInnovationPackageDto,
     @UserToken() user: TokenDto,
   ) {
     const { message, response, status } =
       await this.resultInnovationPackageService.createHeader(
-        CreateResultInnovationPackageDto,
+        createResultInnovationPackageDto,
         user,
       );
 

@@ -6,7 +6,6 @@ import {
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
-import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { VERSIONING } from '../../../shared/utils/versioning.utils';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 
@@ -344,7 +343,7 @@ export class EvidencesRepository
 
     try {
       if (evidences?.length) {
-        const upDateInactiveResult = await this.query(upDateInactive);
+        await this.query(upDateInactive);
 
         return await this.query(upDateActive);
       } else {

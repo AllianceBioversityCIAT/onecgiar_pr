@@ -101,7 +101,7 @@ export class ResultCountryRepository
     return final_data;
   }
 
-  async getAllResultCountries(version = 1) {
+  async getAllResultCountries() {
     const query = `
     select 
     rc.result_country_id,

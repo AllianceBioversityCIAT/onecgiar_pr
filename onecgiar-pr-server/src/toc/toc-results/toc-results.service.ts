@@ -1,13 +1,10 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
-import { CreateTocResultDto } from './dto/create-toc-result.dto';
-import { UpdateTocResultDto } from './dto/update-toc-result.dto';
 import {
   HandlersError,
   ReturnResponse,
 } from '../../shared/handlers/error.utils';
 import { TocResultsRepository } from './toc-results.repository';
 import { env } from 'process';
-import { VersioningService } from '../../api/versioning/versioning.service';
 
 @Injectable()
 export class TocResultsService {

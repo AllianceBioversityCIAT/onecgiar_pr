@@ -1,8 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { ClarisaMeliaStudyTypeRepository } from './ClariasaMeliasStudyType.repository';
-import { CreateClarisaMeliaStudyTypeDto } from './dto/create-clarisa-melia-study-type.dto';
-import { UpdateClarisaMeliaStudyTypeDto } from './dto/update-clarisa-melia-study-type.dto';
 
 @Injectable()
 export class ClarisaMeliaStudyTypeService {

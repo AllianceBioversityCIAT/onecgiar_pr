@@ -13,7 +13,7 @@ import { CreateAuthDto } from './dto/create-auth.dto';
 import { UserLoginDto } from './dto/login-user.dto';
 import { Response } from 'express';
 import { HttpExceptionFilter } from '../shared/handlers/error.exception';
-import { pusherAuthDot } from './dto/pusher-auth.dto';
+import { PusherAuthDot } from './dto/pusher-auth.dto';
 
 @Controller()
 @UseFilters(new HttpExceptionFilter())
@@ -26,7 +26,7 @@ export class AuthController {
   }
 
   @Post('/singin')
-  async singIn(@Body() userLogin: UserLoginDto, @Res() res: Response) {
+  async singIn(@Body() userLogin: UserLoginDto) {
     const { message, response, status } = await this.authService.singIn(
       userLogin,
     );
@@ -36,7 +36,7 @@ export class AuthController {
   @Post('/signin/pusher/result/:resultId/:userId')
   @HttpCode(200)
   async signInPusher(
-    @Body() pusherAuthDot: pusherAuthDot,
+    @Body() pusherAuthDot: PusherAuthDot,
     @Param('resultId') resultId: number,
     @Param('userId') userId: number,
   ) {

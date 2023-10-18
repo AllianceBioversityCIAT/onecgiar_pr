@@ -11,10 +11,6 @@ export class CapdevsTermsService {
     private readonly _handlersError: HandlersError,
   ) {}
 
-  create(createCapdevsTermDto: CreateCapdevsTermDto) {
-    return 'This action adds a new capdevsTerm';
-  }
-
   async findAll() {
     try {
       const capdevsTerm = await this._capdevsTermRepository.find();
@@ -26,17 +22,5 @@ export class CapdevsTermsService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} capdevsTerm`;
-  }
-
-  update(id: number, updateCapdevsTermDto: UpdateCapdevsTermDto) {
-    return `This action updates a #${id} capdevsTerm`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} capdevsTerm`;
   }
 }

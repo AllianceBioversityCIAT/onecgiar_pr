@@ -3,6 +3,7 @@ import { resultValidationRepository } from './results-validation-module.reposito
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultRepository } from '../result.repository';
 import { Validation } from './entities/validation.entity';
+import { GetValidationSectionDto } from './dto/getValidationSection.dto';
 
 @Injectable()
 export class ResultsValidationModuleService {

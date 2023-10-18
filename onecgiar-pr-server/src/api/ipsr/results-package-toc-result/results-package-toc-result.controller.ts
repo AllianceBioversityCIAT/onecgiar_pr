@@ -1,16 +1,13 @@
 import {
   Controller,
   Get,
-  Post,
   Body,
   Patch,
   Param,
-  Delete,
   HttpException,
 } from '@nestjs/common';
 import { ResultsPackageTocResultService } from './results-package-toc-result.service';
 import { CreateResultsPackageTocResultDto } from './dto/create-results-package-toc-result.dto';
-import { UpdateResultsPackageTocResultDto } from './dto/update-results-package-toc-result.dto';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 

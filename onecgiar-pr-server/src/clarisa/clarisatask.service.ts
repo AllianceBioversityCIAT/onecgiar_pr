@@ -108,13 +108,13 @@ export class ClarisaTaskService {
     count = await this.cloneClarisaPolicyTypeRepository(count);
     count = await this.cloneClarisaSdgs(count);
     count = await this.cloneClarisaSdgsTargets(count);
-    count = await this.cloneClarisaTocPhases(count);
+    await this.cloneClarisaTocPhases(count);
   }
 
   public async clarisaBootstrapImportantData() {
     this._logger.debug(`Cloning of CLARISA important control lists`);
     let count = 1;
-    count = await this.cloneClarisaInstitutions(count);
+    await this.cloneClarisaInstitutions(count);
   }
 
   private async cloneClarisaCountries(position: number, deleteItem = false) {

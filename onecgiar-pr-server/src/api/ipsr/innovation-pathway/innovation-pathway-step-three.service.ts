@@ -111,7 +111,7 @@ export class InnovationPathwayStepThreeService {
         }
       }
 
-      await this.saveWorkshop(result.id, user, saveData, version);
+      await this.saveWorkshop(result.id, user, saveData);
 
       const { response } = await this.getStepThree(resultId);
 
@@ -172,7 +172,6 @@ export class InnovationPathwayStepThreeService {
     resultId: number,
     user: TokenDto,
     saveStepTwoThree: SaveStepTwoThree,
-    version: Version,
   ) {
     const id: number = +resultId;
     try {

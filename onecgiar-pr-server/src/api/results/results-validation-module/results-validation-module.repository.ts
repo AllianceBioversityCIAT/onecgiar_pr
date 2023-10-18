@@ -4,6 +4,7 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 import { Validation } from './entities/validation.entity';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 import { env } from 'process';
+import { GetValidationSectionDto } from './dto/getValidationSection.dto';
 
 @Injectable()
 export class resultValidationRepository

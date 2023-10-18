@@ -1,6 +1,4 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { CreateClarisaImpactAreaDto } from './dto/create-clarisa-impact-area.dto';
-import { UpdateClarisaImpactAreaDto } from './dto/update-clarisa-impact-area.dto';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { ClarisaImpactAreaRepository } from './ClarisaImpactArea.repository';
 

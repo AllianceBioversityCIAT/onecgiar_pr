@@ -1,4 +1,3 @@
-import { ResultsByInstitution } from '../../../results/results_by_institutions/entities/results_by_institution.entity';
 export class CreateResultsPackageTocResultDto {
   result_id: number;
   contributing_initiatives: initiativeInterfaces[];
@@ -15,23 +14,9 @@ interface institutionsInterface {
   deliveries?: number[];
 }
 
-interface targetTocInterface {
-  targetId: number;
-  target?: string;
-}
-
-interface indicatorsTocInterface {
-  id: number;
-  indicator_statement?: string;
-}
-
 interface initiativeInterfaces {
   id: number;
   is_active: boolean;
-}
-
-interface institutionsInterfaceToc {
-  institutions_id: number;
 }
 
 interface donorInterfaceToc {

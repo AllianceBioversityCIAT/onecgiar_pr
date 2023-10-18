@@ -1,6 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { CreateRoleByUserDto } from './dto/create-role-by-user.dto';
-import { UpdateRoleByUserDto } from './dto/update-role-by-user.dto';
 import { RoleByUserRepository } from './RoleByUser.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { RoleLevelsService } from '../role-levels/role-levels.service';

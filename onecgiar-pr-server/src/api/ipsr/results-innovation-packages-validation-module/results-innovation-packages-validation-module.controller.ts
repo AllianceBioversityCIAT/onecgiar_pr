@@ -1,16 +1,5 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  HttpException,
-} from '@nestjs/common';
+import { Controller, Get, Param, HttpException } from '@nestjs/common';
 import { ResultsInnovationPackagesValidationModuleService } from './results-innovation-packages-validation-module.service';
-import { CreateResultsInnovationPackagesValidationModuleDto } from './dto/create-results-innovation-packages-validation-module.dto';
-import { UpdateResultsInnovationPackagesValidationModuleDto } from './dto/update-results-innovation-packages-validation-module.dto';
 
 @Controller()
 export class ResultsInnovationPackagesValidationModuleController {

@@ -3,11 +3,9 @@ import { HandlersError } from 'src/shared/handlers/error.utils';
 import { ResultRepository } from '../../../api/results/result.repository';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import {
-  countriesInterface,
   CreateResultInnovationPackageDto,
   UpdateGeneralInformationDto,
 } from './dto/create-result-innovation-package.dto';
-import { Version } from '../../versioning/entities/version.entity';
 import { VersionsService } from '../../../api/results/versions/versions.service';
 import { ResultRegion } from '../../../api/results/result-regions/entities/result-region.entity';
 import { ResultRegionRepository } from '../../../api/results/result-regions/result-regions.repository';
@@ -15,7 +13,6 @@ import { ResultByInitiativesRepository } from '../../../api/results/results_by_i
 import { ResultCountry } from '../../../api/results/result-countries/entities/result-country.entity';
 import { ResultCountryRepository } from '../../../api/results/result-countries/result-countries.repository';
 import { IpsrRepository } from '../ipsr.repository';
-import { ResultTypeRepository } from 'src/api/results/result_types/resultType.repository';
 import { ResultInnovationPackageRepository } from './repositories/result-innovation-package.repository';
 import { ResultIpAAOutcomeRepository } from '../innovation-pathway/repository/result-ip-action-area-outcome.repository';
 import { ClarisaActionAreaOutcomeRepository } from '../../../clarisa/clarisa-action-area-outcome/clarisa-action-area-outcome.repository';
@@ -37,9 +34,6 @@ import { ResultIpSdgTargetRepository } from '../innovation-pathway/repository/re
 import { ResultInitiativeBudgetRepository } from '../../../api/results/result_budget/repositories/result_initiative_budget.repository';
 import { UnitTimeRepository } from './repositories/unit_time.repository';
 import { TocResultsRepository } from '../../../toc/toc-results/toc-results.repository';
-import { ResultIpEoiOutcomeRepository } from '../innovation-pathway/repository/result-ip-eoi-outcomes.repository';
-import { ResultIpEoiOutcome } from '../innovation-pathway/entities/result-ip-eoi-outcome.entity';
-import { TocResult } from '../../../toc/toc-results/entities/toc-result.entity';
 import { ResultCountriesSubNationalRepository } from '../../results/result-countries-sub-national/result-countries-sub-national.repository';
 import { ResultCountriesSubNational } from '../../results/result-countries-sub-national/entities/result-countries-sub-national.entity';
 import { Year } from '../../results/years/entities/year.entity';
@@ -432,7 +426,6 @@ export class ResultInnovationPackageService {
                 newRc.result_country_id,
                 ct.result_countries_sub_national,
                 user,
-                version,
               );
             }
           }
@@ -447,7 +440,6 @@ export class ResultInnovationPackageService {
         coreInnovationInitiative.initiative_id,
         user.id,
         resultByInnivationPackage,
-        version.id,
       );
 
       const retrievedImpactArea = await this.retrievedImpactArea(
@@ -455,7 +447,6 @@ export class ResultInnovationPackageService {
         coreInnovationInitiative.initiative_id,
         user.id,
         resultByInnivationPackage,
-        version.id,
       );
 
       const retrieveSdgs = await this.retrievedSdgs(
@@ -463,7 +454,6 @@ export class ResultInnovationPackageService {
         coreInnovationInitiative.initiative_id,
         user.id,
         resultByInnivationPackage,
-        version.id,
       );
 
       return {
@@ -492,7 +482,6 @@ export class ResultInnovationPackageService {
     reCoId: number,
     subNationals: ResultCountriesSubNational[],
     user: TokenDto,
-    v: Version,
   ) {
     if (subNationals?.length) {
       subNationals.forEach(async (el) => {
@@ -575,7 +564,6 @@ export class ResultInnovationPackageService {
     initId: number,
     user: number,
     resultByIpId: number,
-    version: number,
   ) {
     try {
       let saveAAOutcome: any;
@@ -618,7 +606,6 @@ export class ResultInnovationPackageService {
     initId: number,
     user: number,
     resultByIpId: number,
-    version: number,
   ) {
     try {
       let saveImpactArea: any;
@@ -656,7 +643,6 @@ export class ResultInnovationPackageService {
     initId: number,
     user: number,
     resultByIpId: number,
-    version: number,
   ) {
     try {
       let saveSdgs: any;

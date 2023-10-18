@@ -1,6 +1,4 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
-import { CreateClarisaInstitutionsTypeDto } from './dto/create-clarisa-institutions-type.dto';
-import { UpdateClarisaInstitutionsTypeDto } from './dto/update-clarisa-institutions-type.dto';
 import { ClarisaInstitutionsTypeRepository } from './ClariasaInstitutionsType.repository';
 import { IsNull } from 'typeorm';
 import { HandlersError } from '../../shared/handlers/error.utils';

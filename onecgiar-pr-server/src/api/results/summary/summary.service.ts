@@ -2,7 +2,6 @@ import { Injectable, HttpStatus } from '@nestjs/common';
 import { InnovationUseDto } from './dto/create-innovation-use.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { VersionsService } from '../versions/versions.service';
-import { Version } from '../../versioning/entities/version.entity';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { capdevDto } from './dto/create-capacity-developents.dto';
 import { ResultsCapacityDevelopmentsRepository } from './repositories/results-capacity-developments.repository';
@@ -149,7 +148,6 @@ export class SummaryService {
   ) {
     try {
       const {
-        result_capacity_development_id,
         female_using,
         male_using,
         has_unkown_using,

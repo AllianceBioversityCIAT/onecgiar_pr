@@ -1,5 +1,4 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { CreateShareResultRequestDto } from './dto/create-share-result-request.dto';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ShareResultRequestRepository } from './share-result-request.repository';
 import { CreateTocShareResult } from './dto/create-toc-share-result.dto';
@@ -9,7 +8,6 @@ import { ResultRepository } from '../result.repository';
 import { ResultsByInititiative } from '../results_by_inititiatives/entities/results_by_inititiative.entity';
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
 import { VersionsService } from '../versions/versions.service';
-import { Version } from '../../versioning/entities/version.entity';
 import { ResultsTocResult } from '../results-toc-results/entities/results-toc-result.entity';
 import { ResultsTocResultRepository } from '../results-toc-results/results-toc-results.repository';
 import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/result_initiative_budget.repository';
@@ -27,10 +25,6 @@ export class ShareResultRequestService {
     private readonly _resultInitiativeBudgetRepository: ResultInitiativeBudgetRepository,
     private readonly _roleByUserRepository: RoleByUserRepository,
   ) {}
-
-  create(createShareResultRequestDto: CreateShareResultRequestDto) {
-    return 'This action adds a new shareResultRequest';
-  }
 
   async resultRequest(
     createTocShareResult: CreateTocShareResult,

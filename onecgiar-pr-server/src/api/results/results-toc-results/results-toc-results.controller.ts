@@ -3,15 +3,12 @@ import {
   Get,
   Post,
   Body,
-  Patch,
   Param,
-  Delete,
   Headers,
   HttpException,
 } from '@nestjs/common';
 import { ResultsTocResultsService } from './results-toc-results.service';
 import { CreateResultsTocResultDto } from './dto/create-results-toc-result.dto';
-import { UpdateResultsTocResultDto } from './dto/update-results-toc-result.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
 

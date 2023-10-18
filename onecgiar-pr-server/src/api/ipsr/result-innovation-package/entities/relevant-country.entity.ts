@@ -1,5 +1,4 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
-import { BaseEntity } from '../../../../shared/entities/base-entity';
 
 @Entity('relevant_country')
 export class RelevantCountry {

@@ -1,6 +1,5 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { CreateResultsTocResultDto } from './dto/create-results-toc-result.dto';
-import { UpdateResultsTocResultDto } from './dto/update-results-toc-result.dto';
 import { ResultsTocResultRepository } from './results-toc-results.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultsTocResult } from './entities/results-toc-result.entity';
@@ -11,7 +10,6 @@ import { ResultsCenterRepository } from '../results-centers/results-centers.repo
 import { ResultsCenter } from '../results-centers/entities/results-center.entity';
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
 import { VersionsService } from '../versions/versions.service';
-import { Version } from '../../versioning/entities/version.entity';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 import { ResultRepository } from '../result.repository';
 import { TocResultsRepository } from '../../../toc/toc-results/toc-results.repository';
@@ -57,7 +55,6 @@ export class ResultsTocResultsService {
         contributing_center,
         contributing_initiatives,
         result_toc_result,
-        impacts,
         pending_contributing_initiatives,
         bodyNewTheoryOfChanges,
         impactsTarge,

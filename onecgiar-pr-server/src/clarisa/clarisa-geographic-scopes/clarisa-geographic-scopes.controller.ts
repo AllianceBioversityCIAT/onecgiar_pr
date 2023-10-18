@@ -1,16 +1,5 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  HttpException,
-} from '@nestjs/common';
+import { Controller, Get, HttpException } from '@nestjs/common';
 import { ClarisaGeographicScopesService } from './clarisa-geographic-scopes.service';
-import { CreateClarisaGeographicScopeDto } from './dto/create-clarisa-geographic-scope.dto';
-import { UpdateClarisaGeographicScopeDto } from './dto/update-clarisa-geographic-scope.dto';
 
 @Controller()
 export class ClarisaGeographicScopesController {

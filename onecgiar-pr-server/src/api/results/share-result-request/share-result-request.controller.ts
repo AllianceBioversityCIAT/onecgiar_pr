@@ -9,7 +9,6 @@ import {
   HttpException,
 } from '@nestjs/common';
 import { ShareResultRequestService } from './share-result-request.service';
-import { CreateShareResultRequestDto } from './dto/create-share-result-request.dto';
 import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
 import { CreateTocShareResult } from './dto/create-toc-share-result.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
@@ -20,11 +19,6 @@ export class ShareResultRequestController {
   constructor(
     private readonly shareResultRequestService: ShareResultRequestService,
   ) {}
-
-  @Post()
-  create(@Body() createShareResultRequestDto: CreateShareResultRequestDto) {
-    return this.shareResultRequestService.create(createShareResultRequestDto);
-  }
 
   @Post('create/:resultId')
   async reateRequest(
@@ -71,7 +65,8 @@ export class ShareResultRequestController {
   }
 
   @Get('get/status')
-  async findOne(@Param('id') id: string) {
+  //FIXME: change the name of this method
+  async findOne() {
     const { message, response, status } =
       await this.shareResultRequestService.getAllStatus();
     throw new HttpException({ message, response }, status);

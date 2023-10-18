@@ -1,6 +1,4 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
-import { CreateClarisaGeographicScopeDto } from './dto/create-clarisa-geographic-scope.dto';
-import { UpdateClarisaGeographicScopeDto } from './dto/update-clarisa-geographic-scope.dto';
 import { ClarisaGeographicScopeRepository } from './clarisa-geographic-scopes.repository';
 import { HandlersError } from '../../shared/handlers/error.utils';
 
