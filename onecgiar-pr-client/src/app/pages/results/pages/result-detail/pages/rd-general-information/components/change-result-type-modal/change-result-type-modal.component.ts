@@ -2,6 +2,7 @@ import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { ApiService } from 'src/app/shared/services/api/api.service';
 import { GeneralInfoBody } from '../../models/generalInfoBody';
 import { ResultsListFilterService } from 'src/app/pages/results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
+import { ChangeResultTypeServiceService } from '../../services/change-result-type-service.service';
 
 interface IOption {
   description: string;
@@ -32,7 +33,7 @@ export class ChangeResultTypeModalComponent implements OnChanges {
   <dt>If you need support to modify any of the harvested metadata from CGSpace, contact your Center’s knowledge manager. <strong>And do the sync again.</strong></dt>
 </dl>`;
 
-  constructor(public api: ApiService, public resultsListFilterSE: ResultsListFilterService) {}
+  constructor(public api: ApiService, public resultsListFilterSE: ResultsListFilterService, public changeType: ChangeResultTypeServiceService) {}
 
   ngOnChanges(changes: SimpleChanges): void {
     this.body['result_code'] = this.api.resultsSE.currentResultCode;
@@ -43,9 +44,9 @@ export class ChangeResultTypeModalComponent implements OnChanges {
     return `<strong>Disclaimer:</strong> please note that the old title <strong>"${this.body.result_name}"</strong> will be replace by the CGSpace title.`;
   }
 
-  updateJustification(newJustification: string) {
-    this.confirmationText = newJustification;
-  }
+  // updateJustification(newJustification: string) {
+  //   this.confirmationText = newJustification;
+  // }
 
   onSelectOneChip(option: any, filter: any) {
     if (option.id !== this.body.result_type_id) {
@@ -65,7 +66,9 @@ export class ChangeResultTypeModalComponent implements OnChanges {
   isContinueButtonDisabled() {
     if (!this.selectedResultType) return true;
     if (this.selectedResultType?.id === 6 && this.cgSpaceTitle?.length === 0) return true;
-    if (this.selectedResultType?.id !== 6 && this.confirmationText?.length === 0) return true;
+    if (this.selectedResultType?.id !== 6 && this.changeType.justification === '') return true;
+    if (this.selectedResultType?.id !== 6 && this.changeType.justification === 'Other' && this.changeType.otherJustification === '') return true;
+
     return false;
   }
 
