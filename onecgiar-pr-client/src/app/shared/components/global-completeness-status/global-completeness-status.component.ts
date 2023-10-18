@@ -20,14 +20,14 @@ export class GlobalCompletenessStatusComponent implements OnInit {
   requesting = false;
   reportingPhases: any[] = [];
   columnOrder = [
-    { title: 'Result code', attr: 'result_code' },
-    { title: 'Title', attr: 'result_title' },
-    { title: 'Phase', attr: 'phase_name' },
-    { title: 'Submitter', attr: 'official_code' },
-    { title: 'Indicator category', attr: 'result_type_name' },
-    { title: 'Progress', attr: 'completeness' },
-    { title: 'Submitted', attr: 'is_submitted' },
-    { title: 'Submissions', attr: 'end_date', noSort: true },
+    { title: 'Result code', attr: 'result_code', minWidth: 200 },
+    { title: 'Title', attr: 'result_title', minWidth: 500 },
+    { title: 'Phase', attr: 'phase_name', minWidth: 150 },
+    { title: 'Submitter', attr: 'official_code', minWidth: 150 },
+    { title: 'Indicator category', attr: 'result_type_name', minWidth: 180 },
+    { title: 'Progress', attr: 'completeness', minWidth: 150 },
+    { title: 'Submitted', attr: 'is_submitted', minWidth: 150 },
+    { title: 'Submissions', attr: 'end_date', noSort: true, minWidth: 180 },
     { title: 'General information', attr: 'general_information_value' },
     { title: 'Theory of change', attr: 'theory_of_change_value' },
     { title: 'Partners', attr: 'partners_value' },
