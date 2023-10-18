@@ -35,10 +35,6 @@ interface initiativeInterfaces {
   id: number;
 }
 
-interface institutionsInterfaceToc {
-  institutions_id: number;
-}
-
 interface donorInterfaceToc {
   funder: number;
   grant_title: string;

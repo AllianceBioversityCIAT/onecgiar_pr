@@ -2,16 +2,13 @@ import {
   Column,
   CreateDateColumn,
   Entity,
-  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { TocResult } from '../../../../toc/toc-results/entities/toc-result.entity';
 import { Result } from '../../entities/result.entity';
 import { ClarisaActionAreaOutcome } from '../../../../clarisa/clarisa-action-area-outcome/entities/clarisa-action-area-outcome.entity';
-import { Version } from '../../../versioning/entities/version.entity';
 import { User } from '../../../../auth/modules/user/entities/user.entity';
 import { ClarisaInitiative } from '../../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { ClarisaActionArea } from '../../../../clarisa/clarisa-action-areas/entities/clarisa-action-area.entity';

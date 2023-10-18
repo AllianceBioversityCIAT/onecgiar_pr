@@ -1,5 +1,4 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { BaseEntity } from '../../../../shared/entities/base-entity';
 import { ResultActor } from './result-actor.entity';
 import { ResultsIpActor } from '../../../ipsr/results-ip-actors/entities/results-ip-actor.entity';
 

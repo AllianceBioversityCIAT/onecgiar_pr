@@ -1,11 +1,5 @@
-import { HttpStatus, Injectable, OnModuleInit } from '@nestjs/common';
-import {
-  FindOptionsRelations,
-  FindOptionsWhere,
-  In,
-  IsNull,
-  Like,
-} from 'typeorm';
+import { HttpStatus, Injectable } from '@nestjs/common';
+import { FindOptionsRelations, In, Like } from 'typeorm';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import {
   HandlersError,
@@ -26,29 +20,21 @@ import { ResultsKnowledgeProductKeywordRepository } from './repositories/results
 import { ResultsKnowledgeProductMetadataRepository } from './repositories/results-knowledge-product-metadata.repository';
 import { ResultsKnowledgeProductDto } from './dto/results-knowledge-product.dto';
 import { returnFormatResult } from '../dto/return-format-result.dto';
-import { ModuleRef } from '@nestjs/core';
 import { CreateResultDto } from '../dto/create-result.dto';
 import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { ResultByLevelRepository } from '../result-by-level/result-by-level.repository';
 import { ResultLevelRepository } from '../result_levels/resultLevel.repository';
-import { ResultTypesService } from '../result_types/result_types.service';
 import { ResultLevel } from '../result_levels/entities/result_level.entity';
-import { ResultType } from '../result_types/entities/result_type.entity';
-import { Year } from '../years/entities/year.entity';
-import { YearRepository } from '../years/year.repository';
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
 import { ResultTypeRepository } from '../result_types/resultType.repository';
 import { EvidencesRepository } from '../evidences/evidences.repository';
-import { ResultsKnowledgeProductMetadataDto } from './dto/results-knowledge-product-metadata.dto';
 import { ResultsKnowledgeProductSaveDto } from './dto/results-knowledge-product-save.dto';
-import { KnowledgeProductFairBaseline } from '../knowledge_product_fair_baseline/entities/knowledge_product_fair_baseline.entity';
 import { KnowledgeProductFairBaselineRepository } from '../knowledge_product_fair_baseline/knowledge_product_fair_baseline.repository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { ResultRegionRepository } from '../result-regions/result-regions.repository';
 import { ClarisaRegionsRepository } from '../../../clarisa/clarisa-regions/ClariasaRegions.repository';
 import { ClarisaRegion } from '../../../clarisa/clarisa-regions/entities/clarisa-region.entity';
 import { ResultRegion } from '../result-regions/entities/result-region.entity';
-import { CGSpaceCountryMappingsRepository } from './repositories/cgspace-country-mappings.repository';
 import { ResultCountry } from '../result-countries/entities/result-country.entity';
 import { ResultCountryRepository } from '../result-countries/result-countries.repository';
 import { VersioningService } from '../../versioning/versioning.service';

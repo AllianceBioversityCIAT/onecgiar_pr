@@ -115,7 +115,7 @@ export class ResultActorRepository
           ,ra.women
           ,ra.women_youth
            FROM result_actors ra WHERE ra.result_id = ? and ra.is_active > 0`;
-        const response = await (<Promise<{ insertId }>>(
+        await (<Promise<{ insertId }>>(
           this.query(queryData, [
             config.user.id,
             config.user.id,

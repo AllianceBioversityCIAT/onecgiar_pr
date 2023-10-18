@@ -4,8 +4,6 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
-  OneToMany,
-  PrimaryColumn,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { LegacyResult } from '../../legacy-result/entities/legacy-result.entity';

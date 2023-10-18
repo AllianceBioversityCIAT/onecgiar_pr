@@ -216,9 +216,7 @@ export class ResultCountryRepository
 
     try {
       if (Countries?.length) {
-        const upDateInactiveResult = await this.query(upDateInactive, [
-          resultId,
-        ]);
+        await this.query(upDateInactive, [resultId]);
 
         return await this.query(upDateActive, [resultId]);
       } else {

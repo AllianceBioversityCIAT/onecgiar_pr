@@ -1,13 +1,11 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { CreateResultRegionDto } from './dto/create-result-region.dto';
-import { UpdateResultRegionDto } from './dto/update-result-region.dto';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultRegionRepository } from './result-regions.repository';
 import { ClarisaGeographicScopeRepository } from '../../../clarisa/clarisa-geographic-scopes/clarisa-geographic-scopes.repository';
 import { ResultRepository } from '../result.repository';
 import { Result } from '../entities/result.entity';
 import { ResultRegion } from './entities/result-region.entity';
-import { Version } from '../../versioning/entities/version.entity';
 import { VersionsService } from '../versions/versions.service';
 
 @Injectable()
@@ -44,7 +42,6 @@ export class ResultRegionsService {
       if (vTemp.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: vTemp });
       }
-      const version: Version = <Version>vTemp.response;
 
       const regions = createResultRegionDto.regions;
       if (
@@ -108,21 +105,5 @@ export class ResultRegionsService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
-  }
-
-  findAll() {
-    return `This action returns all resultRegions`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} resultRegion`;
-  }
-
-  update(id: number, updateResultRegionDto: UpdateResultRegionDto) {
-    return `This action updates a #${id} resultRegion`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} resultRegion`;
   }
 }

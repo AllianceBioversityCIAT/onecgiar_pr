@@ -3,15 +3,12 @@ import {
   Get,
   Post,
   Body,
-  Patch,
   Param,
-  Delete,
   Headers,
   HttpException,
 } from '@nestjs/common';
 import { LinkedResultsService } from './linked-results.service';
 import { CreateLinkedResultDto } from './dto/create-linked-result.dto';
-import { UpdateLinkedResultDto } from './dto/update-linked-result.dto';
 import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 
@@ -39,23 +36,5 @@ export class LinkedResultsController {
     const { message, response, status } =
       await this.linkedResultsService.findAllLinksByResult(resultId);
     throw new HttpException({ message, response }, status);
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.linkedResultsService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateLinkedResultDto: UpdateLinkedResultDto,
-  ) {
-    return this.linkedResultsService.update(+id, updateLinkedResultDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.linkedResultsService.remove(+id);
   }
 }

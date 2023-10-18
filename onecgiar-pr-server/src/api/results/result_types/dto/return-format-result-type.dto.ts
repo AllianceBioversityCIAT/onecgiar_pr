@@ -1,6 +1,5 @@
-import { ResultType } from '../entities/result_type.entity';
 import { returnFormatService } from '../../../../shared/extendsGlobalDTO/returnServices.dto';
 
 export class returnFormatResultType extends returnFormatService {
-  public response!: ResultType[] | {};
+  public response!: any; //FIXME workaround until we find a better solution
 }

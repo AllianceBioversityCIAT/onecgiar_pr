@@ -713,10 +713,7 @@ export class ResultsTocResultRepository
 
     try {
       if (initiative?.length) {
-        const upDateInactiveResult = await this.query(upDateInactive, [
-          userId,
-          resultId,
-        ]);
+        await this.query(upDateInactive, [userId, resultId]);
 
         return await this.query(upDateActive, [userId, resultId]);
       } else {
@@ -1254,19 +1251,17 @@ export class ResultsTocResultRepository
       const impactAreaTarget = await this.query(
         `select * from results_toc_result where results_id = ${resultId} and is_active = true and initiative_id = ${init};`,
       );
-      let auxImpactAreaTargets = [];
       let returnInfo = [];
       if (
         impactAreaTarget != null &&
         impactAreaTarget[0]?.result_toc_result_id != null
       ) {
-        auxImpactAreaTargets =
-          await this._resultsTocImpactAreaTargetRepository.find({
-            where: {
-              result_toc_result_id: impactAreaTarget[0]?.result_toc_result_id,
-              is_active: true,
-            },
-          });
+        await this._resultsTocImpactAreaTargetRepository.find({
+          where: {
+            result_toc_result_id: impactAreaTarget[0]?.result_toc_result_id,
+            is_active: true,
+          },
+        });
         const queryImpactAreaTargets = `
     select * 
 	  from clarisa_global_targets cgt 
@@ -1326,13 +1321,12 @@ export class ResultsTocResultRepository
       const impactAreaTarget = await this.query(
         `select * from results_toc_result where results_id = ${resultId} and is_active = true and initiative_id = ${init};`,
       );
-      let auxImpactAreaTargets = [];
       let returnInfo = [];
       if (
         impactAreaTarget != null &&
         impactAreaTarget[0]?.result_toc_result_id != null
       ) {
-        auxImpactAreaTargets = await this._resultsTocSdgTargetRepository.find({
+        await this._resultsTocSdgTargetRepository.find({
           where: {
             result_toc_result_id: impactAreaTarget[0]?.result_toc_result_id,
           },
@@ -1530,7 +1524,7 @@ export class ResultsTocResultRepository
     }
   }
 
-  async saveSdg(id_result_toc_result, sdgTargets, result_id, init) {
+  async saveSdg(id_result_toc_result, sdgTargets, result_id) {
     try {
       await this._resultsTocSdgTargetRepository.update(
         { result_toc_result_id: id_result_toc_result },
@@ -1755,7 +1749,6 @@ select *
               result[0].result_toc_result_id,
               toc.sdgTargest,
               toc.resultId,
-              toc.initiative,
             );
 
             await this.saveActionAreaToc(

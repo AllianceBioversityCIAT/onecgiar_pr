@@ -103,7 +103,7 @@ export class ResultRegionRepository
     return final_data;
   }
 
-  async getAllResultRegion(version = 1) {
+  async getAllResultRegion() {
     const query = `
     select 
     rr.result_region_id,
@@ -244,9 +244,7 @@ export class ResultRegionRepository
 
     try {
       if (regions?.length) {
-        const upDateInactiveResult = await this.query(upDateInactive, [
-          resultId,
-        ]);
+        await this.query(upDateInactive, [resultId]);
 
         return await this.query(upDateActive, [resultId]);
       } else {

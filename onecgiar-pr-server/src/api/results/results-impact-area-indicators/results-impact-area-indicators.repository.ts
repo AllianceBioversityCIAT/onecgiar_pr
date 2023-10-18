@@ -240,11 +240,7 @@ export class ResultsImpactAreaIndicatorRepository
 
     try {
       if (indicators?.length) {
-        const upDateInactiveResult = await this.query(upDateInactive, [
-          userId,
-          resultId,
-          impactId,
-        ]);
+        await this.query(upDateInactive, [userId, resultId, impactId]);
 
         return await this.query(upDateActive, [userId, resultId, impactId]);
       } else {

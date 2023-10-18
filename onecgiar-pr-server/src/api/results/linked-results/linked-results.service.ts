@@ -1,6 +1,5 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { CreateLinkedResultDto } from './dto/create-linked-result.dto';
-import { UpdateLinkedResultDto } from './dto/update-linked-result.dto';
 import { LinkedResultRepository } from './linked-results.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultRepository } from '../result.repository';
@@ -8,7 +7,6 @@ import { Result } from '../entities/result.entity';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { LinkedResult } from './entities/linked-result.entity';
 import { VersionsService } from '../versions/versions.service';
-import { Version } from '../../versioning/entities/version.entity';
 import { ResultsPolicyChangesRepository } from '../summary/repositories/results-policy-changes.repository';
 
 @Injectable()
@@ -45,7 +43,6 @@ export class LinkedResultsService {
       if (vTemp.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: vTemp });
       }
-      const version: Version = <Version>vTemp.response;
 
       const isExistsNew: number[] = [];
       const isExistsNewLegacy: string[] = [];
@@ -196,18 +193,6 @@ export class LinkedResultsService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} linkedResult`;
-  }
-
-  update(id: number, updateLinkedResultDto: UpdateLinkedResultDto) {
-    return `This action updates a #${id} linkedResult`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} linkedResult`;
   }
 }
 

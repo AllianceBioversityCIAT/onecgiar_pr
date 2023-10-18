@@ -6,8 +6,6 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { BaseEntity } from '../../../../shared/entities/base-entity';
-import { Version } from '../../../versioning/entities/version.entity';
-import { ClarisaImpactAreaIndicator } from '../../../../clarisa/clarisa-impact-area-indicators/entities/clarisa-impact-area-indicator.entity';
 import { ClarisaGlobalTarget } from '../../../../clarisa/clarisa-global-target/entities/clarisa-global-target.entity';
 import { ResultsTocResult } from './results-toc-result.entity';
 

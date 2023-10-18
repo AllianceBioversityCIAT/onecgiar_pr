@@ -1,6 +1,4 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
-import { CreateNonPooledProjectDto } from './dto/create-non-pooled-project.dto';
-import { UpdateNonPooledProjectDto } from './dto/update-non-pooled-project.dto';
 import { NonPooledProject } from './entities/non-pooled-project.entity';
 import { NonPooledProjectRepository } from './non-pooled-projects.repository';
 import { HandlersError } from 'src/shared/handlers/error.utils';
@@ -12,18 +10,6 @@ export class NonPooledProjectsService {
     protected readonly _nonPooledProjectRepository: NonPooledProjectRepository,
     protected readonly _handlersError: HandlersError,
   ) {}
-
-  create(createNonPooledProjectDto: CreateNonPooledProjectDto) {
-    return 'This action adds a new nonPooledProject';
-  }
-
-  findAll() {
-    return `This action returns all nonPooledProjects`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} nonPooledProject`;
-  }
 
   async update(
     id: number,
@@ -62,9 +48,5 @@ export class NonPooledProjectsService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} nonPooledProject`;
   }
 }

@@ -85,21 +85,9 @@ export class ResultsTocResultsController {
     @Param('initiativeId') initiativeId: number,
     @Param('resultTocId') resultTocId: number,
   ) {
+    //FIXME check unused parameter
     const { message, response, status } =
       await this.resultsTocResultsService.getVersionId(resultId, initiativeId);
     throw new HttpException({ message, response }, status);
-  }
-
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateResultsTocResultDto: UpdateResultsTocResultDto,
-  ) {
-    return this.resultsTocResultsService.update(+id, updateResultsTocResultDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.resultsTocResultsService.remove(+id);
   }
 }

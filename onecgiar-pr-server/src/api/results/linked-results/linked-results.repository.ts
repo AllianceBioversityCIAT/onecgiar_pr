@@ -320,10 +320,7 @@ export class LinkedResultRepository
 
     try {
       if (results?.length || legacy?.length) {
-        const upDateInactiveResult = await this.query(upDateInactive, [
-          userId,
-          resultId,
-        ]);
+        await this.query(upDateInactive, [userId, resultId]);
 
         return await this.query(upDateActive, [userId, resultId]);
       } else {
