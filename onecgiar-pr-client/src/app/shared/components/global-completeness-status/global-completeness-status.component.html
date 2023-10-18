@@ -46,7 +46,8 @@
         scrollHeight="calc(100vh - 303px)" style="min-width: 200px;">
         <ng-template pTemplate="header">
             <tr>
-                <th *ngFor="let column of columnOrder" pSortableColumn="{{column.attr}}" id="{{column.attr}}">
+                <th [style.minWidth.px]="column.minWidth" *ngFor="let column of columnOrder"
+                    pSortableColumn="{{column.attr}}" id="{{column.attr}}">
                     {{column.title}}<p-sortIcon *ngIf="!column.noSort" field="{{column.attr}}"></p-sortIcon>
                 </th>
             </tr>
