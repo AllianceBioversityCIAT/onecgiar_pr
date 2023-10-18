@@ -537,8 +537,8 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}get/transform/${resultCode}?phase=${phase}`);
   }
 
-  POST_excelFullReport(resultCodes: any[]) {
-    return this.http.post<any>(`${this.apiBaseUrl}admin-panel/report/results/excel-full-report`, { resultCodes });
+  POST_excelFullReport(resultIds: any[]) {
+    return this.http.post<any>(`${this.apiBaseUrl}admin-panel/report/results/excel-full-report`, { resultIds });
   }
 
   GET_factSheetByInitiativeId(initiativeId) {

@@ -1079,9 +1079,10 @@ WHERE
   }
 
   async getTypesOfResultByCodes(
-    resultCodes: number[],
+    resultIdsArray: number[],
     version = 18,
   ): Promise<ResultTypeDto[]> {
+    const resultIds = (resultIdsArray ?? []).join(',');
     const queryData = `
     select
       r.id as resultId,
@@ -1093,9 +1094,10 @@ WHERE
     where
       r.is_active = 1
       and r.version_id = ?
-      and r.result_code ${resultCodes.length ? `in (${resultCodes})` : '= 0'}
+      and r.id ${resultIdsArray?.length ? `in (${resultIds})` : '= 0'}
     ;
     `;
+
     try {
       const results = await this.query(queryData, [version]);
       return results;
@@ -1139,8 +1141,8 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     }
   }
 
-  async getBasicResultDataForReport(resultCodesArray: number[]) {
-    const resultCodes = (resultCodesArray ?? []).join(',');
+  async getBasicResultDataForReport(resultIdsArray: number[]) {
+    const resultIds = (resultIdsArray ?? []).join(',');
     const query = `
     select 
     r.result_code as "Result Code",
@@ -1337,8 +1339,8 @@ left join clarisa_countries cc3
     left join results_knowledge_product rkp on rkp.results_id = r.id and rkp.is_active > 0
     INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
   /*  left join evidence e on e.result_id = r.id and e.is_active > 0 */
-    WHERE r.result_code ${
-      resultCodes.length ? `in (${resultCodes})` : '= 0'
+    WHERE r.id ${
+      resultIds.length ? `in (${resultIds})` : '= 0'
     } and r.is_active > 0
     GROUP by 
     r.result_code,
@@ -1613,8 +1615,8 @@ left join clarisa_countries cc3
     }
   }
 
-  async getTocDataForReport(resultCodesArray: number[]) {
-    const resultCodes = (resultCodesArray ?? []).join(',');
+  async getTocDataForReport(resultIdsArray: number[]) {
+    const resultIds = (resultIdsArray ?? []).join(',');
     const query = `
     select
       r.id as "Result ID",
@@ -1726,7 +1728,7 @@ left join clarisa_countries cc3
         )
       ) as "SDG(s)"
     from result r
-    WHERE r.result_code ${resultCodes.length ? `in (${resultCodes})` : '= 0'}
+    WHERE r.id ${resultIds.length ? `in (${resultIds})` : '= 0'}
     ;
     `;
 
@@ -1897,8 +1899,8 @@ left join clarisa_countries cc3
     }
   }
 
-  async getResultAgainstToc(resultCodesArray: number[]) {
-    const resultCodes = (resultCodesArray ?? []).join(',');
+  async getResultAgainstToc(resultIdsArray: number[]) {
+    const resultIds = (resultIdsArray ?? []).join(',');
     const query = `
     SELECT
         r.result_code AS 'Result Code',
@@ -1934,7 +1936,7 @@ left join clarisa_countries cc3
         LEFT JOIN Integration_information.work_packages wp ON wp.id = tr.work_packages_id
         LEFT JOIN Integration_information.toc_results_indicators tri ON tr.id = tri.toc_results_id AND tri.toc_result_indicator_id = rtri.toc_results_indicator_id COLLATE utf8mb3_general_ci
     WHERE
-        r.result_code ${resultCodes.length ? `in (${resultCodes})` : '= 0'}
+        r.id ${resultIds.length ? `in (${resultIds})` : '= 0'}
         AND rbi.is_active = 1
         AND rtr.is_active = 1
         AND rtr.planned_result = 1
