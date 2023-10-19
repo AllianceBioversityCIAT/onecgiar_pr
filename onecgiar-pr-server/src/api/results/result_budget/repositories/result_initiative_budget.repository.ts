@@ -7,17 +7,50 @@ import {
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
 import { predeterminedDateValidation } from '../../../../shared/utils/versioning.utils';
+import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
 export class ResultInitiativeBudgetRepository
   extends Repository<ResultInitiativeBudget>
-  implements ReplicableInterface<ResultInitiativeBudget>
+  implements
+    ReplicableInterface<ResultInitiativeBudget>,
+    LogicalDelete<ResultInitiativeBudget>
 {
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
   ) {
     super(ResultInitiativeBudget, dataSource.createEntityManager());
+  }
+
+  logicalDelete(resultId: number): Promise<ResultInitiativeBudget> {
+    const queryData = `delete rib from result_initiative_budget rib 
+    inner join results_by_inititiative rbi 
+    where rbi.result_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultInitiativeBudgetRepository.name,
+          debug: true,
+        }),
+      );
+  }
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `update result_initiative_budget rib 
+    inner join results_by_inititiative rbi 
+    set rib.is_active = 0
+    where rbi.result_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultInitiativeBudgetRepository.name,
+          debug: true,
+        }),
+      );
   }
 
   private readonly _logger: Logger = new Logger(

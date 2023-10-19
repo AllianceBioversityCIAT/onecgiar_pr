@@ -62,6 +62,9 @@ import { ElasticOperationDto } from '../../elastic/dto/elastic-operation.dto';
 import { LogRepository } from '../../connection/dynamodb-logs/dynamodb-logs.repository';
 import { Actions } from '../../connection/dynamodb-logs/dto/enumAction.const';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
+import { ResultInstitutionsBudgetRepository } from '../results/result_budget/repositories/result_institutions_budget.repository';
+import { NonPooledProjectBudgetRepository } from '../results/result_budget/repositories/non_pooled_proyect_budget.repository';
+import { ResultInitiativeBudgetRepository } from '../results/result_budget/repositories/result_initiative_budget.repository';
 
 @Injectable()
 export class DeleteRecoverDataService {
@@ -122,6 +125,9 @@ export class DeleteRecoverDataService {
     private readonly _evidencesRepository: EvidencesRepository,
     private readonly _resultsKnowledgeProductFairScoreRepository: ResultsKnowledgeProductFairScoreRepository,
     private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
+    private readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
+    private readonly _nonPooledProjectBudgetRepository: NonPooledProjectBudgetRepository,
+    private readonly _resultInitiativeBudgetRepository: ResultInitiativeBudgetRepository,
     private readonly _elasticService: ElasticService,
     private readonly _resultsService: ResultsService,
     private readonly _logRepository: LogRepository,
@@ -248,6 +254,11 @@ export class DeleteRecoverDataService {
       await this._resultsKnowledgeProductInstitutionRepository.logicalDelete(
         resultData.id,
       );
+      await this._resultInstitutionsBudgetRepository.logicalDelete(
+        resultData.id,
+      );
+      await this._nonPooledProjectBudgetRepository.logicalDelete(resultData.id);
+      await this._resultInitiativeBudgetRepository.logicalDelete(resultData.id);
       const toUpdateFromElastic = await this._resultsService.findAllSimplified(
         resultData.id.toString(),
         true,
