@@ -765,12 +765,12 @@ export class ResultsTocResultRepository
         );
 
         const queryDataIndicators = `
-        select tr.phase, tri.related_node_id as toc_results_indicator_id,
+        select tr.phase, tri.toc_result_indicator_id as toc_results_indicator_id,
             tri.indicator_description,tri.unit_messurament,
             tri.location, tri.type_value, tri.type_name as 'statement'
         from  ${env.DB_TOC}.toc_results tr 
             join ${env.DB_TOC}.toc_results_indicators tri on tri.toc_results_id = tr.id and tri.is_active = 1
-            where id = ? and tr.phase = (select v.toc_pahse_id 
+            where tr.id = ? and tr.phase = (select v.toc_pahse_id 
                                               from result r 	
                                               join version v on r.version_id = v.id  
                                               where r.id  = ?);`;
@@ -960,7 +960,7 @@ export class ResultsTocResultRepository
                       join results_toc_result_indicators rtri on rtri.results_toc_results_id = rtr.result_toc_result_id and rtri.is_active = 1
                       join result_indicators_targets rit on rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id and rit.is_active = 1
                       join result r on r.id = rtr.results_id 
-                      where rtri.toc_results_indicator_id = ? and rit.number_target = ? rtr.is_active = 1;
+                      where rtri.toc_results_indicator_id = ? and rit.number_target = ? and rtr.is_active = 1;
                     `;
 
                 const queryTargetothercontributing = await this.query(

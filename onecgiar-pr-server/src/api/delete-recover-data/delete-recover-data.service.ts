@@ -65,6 +65,9 @@ import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { ResultInstitutionsBudgetRepository } from '../results/result_budget/repositories/result_institutions_budget.repository';
 import { NonPooledProjectBudgetRepository } from '../results/result_budget/repositories/non_pooled_proyect_budget.repository';
 import { ResultInitiativeBudgetRepository } from '../results/result_budget/repositories/result_initiative_budget.repository';
+import { Result } from '../results/entities/result.entity';
+import { ResultLevelEnum } from '../../shared/constants/result-level.enum';
+import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 
 @Injectable()
 export class DeleteRecoverDataService {
@@ -306,4 +309,11 @@ export class DeleteRecoverDataService {
       return this._returnResponse.format(error, !env.IS_PRODUCTION);
     }
   }
+
+  manageChangedResultTypeData(
+    result: Result,
+    new_result_level: ResultLevelEnum,
+    new_result_type: ResultTypeEnum,
+    user: TokenDto,
+  ): void {}
 }

@@ -19,10 +19,10 @@ export class PolicyChangeInfoComponent implements OnInit {
     { value: 'capacity-development', label: 'The capacity development of key actors in a policy process' }
   ];
 
-  relatedToEngagementOptions = [
-    { value: true, label: 'Yes' },
-    { value: false, label: 'No' }
-  ];
+  // relatedToEngagementOptions = [
+  //   { value: true, label: 'Yes' },
+  //   { value: false, label: 'No' }
+  // ];
 
   constructor(public api: ApiService, public policyControlListSE: PolicyControlListService, public institutionsService: InstitutionsService) {}
 
