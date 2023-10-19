@@ -40,7 +40,7 @@ export class ConfirmationModalKPComponent {
     const currentUrl = this.router.url;
     this.isSaving = true;
 
-    this.api.resultsSE.POST_createWithHandle({ ...this.mqapResult, modification_justification: this.changeType.justification }).subscribe({
+    this.api.resultsSE.POST_createWithHandle({ ...this.mqapResult, modification_justification: `${this.changeType.justification}${this.changeType.otherJustification !== '' ? `: ${this.changeType.otherJustification}` : ''}` }).subscribe({
       next: (resp: any) => {
         this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result type successfully updated', status: 'success', closeIn: 600 });
         this.router.navigateByUrl(`/result/result-detail/${this.api.resultsSE.currentResultId}/partners`).then(() => {
