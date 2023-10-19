@@ -20,6 +20,21 @@ export class ResultsKnowledgeProductFairScoreRepository
     super(ResultsKnowledgeProductFairScore, dataSource.createEntityManager());
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete rkk from results_kp_fair_scores rkk 
+    inner join results_knowledge_product rkp on rkk.result_knowledge_product_id = rkp.result_knowledge_product_id
+  where rkp.results_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsKnowledgeProductFairScoreRepository.name,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(resultId: number): Promise<ResultsKnowledgeProductFairScore> {
     const queryData = `update results_kp_fair_scores rkk 
     inner join results_knowledge_product rkp on rkk.result_knowledge_product_id = rkp.result_knowledge_product_id 

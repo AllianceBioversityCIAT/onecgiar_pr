@@ -1,5 +1,8 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
-import { ReturnResponse } from '../../shared/handlers/error.utils';
+import {
+  ReturnResponse,
+  ReturnResponseDto,
+} from '../../shared/handlers/error.utils';
 
 import { IpsrRepository } from '../ipsr/ipsr.repository';
 import { InnovationPackagingExpertRepository } from '../ipsr/innovation-packaging-experts/repositories/innovation-packaging-expert.repository';
@@ -62,9 +65,13 @@ import { ElasticOperationDto } from '../../elastic/dto/elastic-operation.dto';
 import { LogRepository } from '../../connection/dynamodb-logs/dynamodb-logs.repository';
 import { Actions } from '../../connection/dynamodb-logs/dto/enumAction.const';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
+import { ResultInstitutionsBudgetRepository } from '../results/result_budget/repositories/result_institutions_budget.repository';
+import { NonPooledProjectBudgetRepository } from '../results/result_budget/repositories/non_pooled_proyect_budget.repository';
+import { ResultInitiativeBudgetRepository } from '../results/result_budget/repositories/result_initiative_budget.repository';
 import { Result } from '../results/entities/result.entity';
 import { ResultLevelEnum } from '../../shared/constants/result-level.enum';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
+import { InstitutionRoleEnum } from '../results/results_by_institutions/entities/institution_role.enum';
 
 @Injectable()
 export class DeleteRecoverDataService {
@@ -125,6 +132,9 @@ export class DeleteRecoverDataService {
     private readonly _evidencesRepository: EvidencesRepository,
     private readonly _resultsKnowledgeProductFairScoreRepository: ResultsKnowledgeProductFairScoreRepository,
     private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
+    private readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
+    private readonly _nonPooledProjectBudgetRepository: NonPooledProjectBudgetRepository,
+    private readonly _resultInitiativeBudgetRepository: ResultInitiativeBudgetRepository,
     private readonly _elasticService: ElasticService,
     private readonly _resultsService: ResultsService,
     private readonly _logRepository: LogRepository,
@@ -251,7 +261,11 @@ export class DeleteRecoverDataService {
       await this._resultsKnowledgeProductInstitutionRepository.logicalDelete(
         resultData.id,
       );
-
+      await this._resultInstitutionsBudgetRepository.logicalDelete(
+        resultData.id,
+      );
+      await this._nonPooledProjectBudgetRepository.logicalDelete(resultData.id);
+      await this._resultInitiativeBudgetRepository.logicalDelete(resultData.id);
       const toUpdateFromElastic = await this._resultsService.findAllSimplified(
         resultData.id.toString(),
         true,
@@ -431,10 +445,143 @@ export class DeleteRecoverDataService {
     }
   }
 
-  manageChangedResultTypeData(
+  /**
+   * @param result
+   * @param new_result_level
+   * @param new_result_type
+   * @param user
+   * @returns
+   * @description This method is used to manage the data of a result that has changed its type
+   */
+  async manageChangedResultTypeData(
     result: Result,
     new_result_level: ResultLevelEnum,
     new_result_type: ResultTypeEnum,
     user: TokenDto,
-  ): void {}
+  ): Promise<ReturnResponseDto<any>> {
+    try {
+      if (
+        !(
+          result.result_level_id == ResultLevelEnum.INITIATIVE_OUTPUT &&
+          new_result_level == ResultLevelEnum.INITIATIVE_OUTPUT &&
+          new_result_type == ResultTypeEnum.KNOWLEDGE_PRODUCT
+        )
+      ) {
+        return this._returnResponse.format({
+          message: `The data of the result with code ${result.id} has not been changed`,
+          response: result.result_code,
+          statusCode: HttpStatus.OK,
+        });
+      }
+
+      const returnDelete = await this.deleteDataByNewResultType(
+        result.id,
+        new_result_type,
+        new_result_level,
+        result.result_type_id,
+        result.result_level_id,
+      );
+
+      if (returnDelete.statusCode >= 300) {
+        throw this._returnResponse.format({
+          message: `The data at the time of deleting had an error`,
+          response: result.result_code,
+          statusCode: HttpStatus.OK,
+        });
+      }
+
+      const returnMigration = await this.migrateDataByNewResultType(
+        result.id,
+        new_result_type,
+        new_result_level,
+        result.result_type_id,
+        result.result_level_id,
+      );
+
+      if (returnMigration.statusCode >= 300) {
+        throw this._returnResponse.format({
+          message: `The data at the time of migrating had an error`,
+          response: result.result_code,
+          statusCode: HttpStatus.OK,
+        });
+      }
+
+      return this._returnResponse.format({
+        message: `The data of the result with code ${result.id} has been changed`,
+        response: result.result_code,
+        statusCode: HttpStatus.OK,
+      });
+    } catch (error) {
+      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+    }
+  }
+
+  /**
+   *
+   * @param result_id
+   * @param _new_result_type
+   * @param _new_result_level
+   * @param _old_result_type
+   * @param _old_result_level
+   * @returns
+   * @description This method is used to migrate the data of a result that has changed its type
+   *
+   */
+  async migrateDataByNewResultType(
+    result_id: number,
+    _new_result_type: ResultTypeEnum,
+    _new_result_level: ResultLevelEnum,
+    _old_result_type: ResultTypeEnum,
+    _old_result_level: ResultLevelEnum,
+  ) {
+    try {
+      await this._resultByIntitutionsRepository.changePartnersType(
+        result_id,
+        [InstitutionRoleEnum.PARTNER],
+        InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS,
+      );
+      await this._resultRepository.update(result_id, {
+        geographic_scope_id: null,
+      });
+      return this._returnResponse.format({
+        message: `The result with code ${result_id} has been migrated`,
+        response: result_id,
+        statusCode: HttpStatus.OK,
+      });
+    } catch (error) {
+      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+    }
+  }
+
+  /**
+   *
+   * @param result_id
+   * @param _new_result_type
+   * @param _new_result_level
+   * @param _old_result_type
+   * @param _old_result_level
+   * @returns
+   * @description This method is used to delete the data of a result that has changed its type
+   */
+  async deleteDataByNewResultType(
+    result_id: number,
+    _new_result_type: ResultTypeEnum,
+    _new_result_level: ResultLevelEnum,
+    _old_result_type: ResultTypeEnum,
+    _old_result_level: ResultLevelEnum,
+  ) {
+    try {
+      await this._evidencesRepository.fisicalDelete(result_id);
+      await this._resultCountryRepository.fisicalDelete(result_id);
+      await this._resultRegionRepository.fisicalDelete(result_id);
+      await this._resultsCenterRepository.fisicalDelete(result_id);
+      return this._returnResponse.format({
+        message: `The data of the result with code ${result_id} has been deleted`,
+        response: result_id,
+        statusCode: HttpStatus.OK,
+      });
+    } catch (error) {
+      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+    }
+  }
 }

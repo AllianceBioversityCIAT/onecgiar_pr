@@ -7,6 +7,7 @@ import {
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
+import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
 
 @Injectable()
 export class ResultByIntitutionsTypeRepository
@@ -24,6 +25,19 @@ export class ResultByIntitutionsTypeRepository
     private readonly _handlersError: HandlersError,
   ) {
     super(ResultsByInstitutionType, dataSource.createEntityManager());
+  }
+
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete rbit from results_by_institution_type rbit where rbit.results_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          className: ResultByIntitutionsTypeRepository.name,
+          error: err,
+          debug: true,
+        }),
+      );
   }
 
   logicalDelete(resultId: number): Promise<ResultsByInstitutionType> {
@@ -49,7 +63,9 @@ export class ResultByIntitutionsTypeRepository
         select 
           null as id,
           rbit.is_active,
-          now() as creation_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as creation_date,
           null as last_updated_date,
           ? as results_id,
           rbit.institution_roles_id,
@@ -90,7 +106,9 @@ export class ResultByIntitutionsTypeRepository
           )
           select
           rbit.is_active,
-          now() as creation_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as creation_date,
           null as last_updated_date,
           ? as results_id,
           rbit.institution_roles_id,
@@ -131,9 +149,7 @@ export class ResultByIntitutionsTypeRepository
       final_data = null;
     }
 
-    config.f?.completeFunction
-      ? config.f.completeFunction({ ...final_data })
-      : null;
+    config.f?.completeFunction?.({ ...final_data });
 
     return final_data;
   }

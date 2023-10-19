@@ -16,6 +16,21 @@ export class ResultsIpInstitutionTypeRepository
     super(ResultsIpInstitutionType, dataSource.createEntityManager());
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete ririt from result_ip_result_institution_types ririt 
+    inner join result_by_innovation_package rbip on rbip.result_by_innovation_package_id = ririt.result_ip_results_id 
+    where rbip.result_innovation_package_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsIpInstitutionTypeRepository.name,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(resultId: number): Promise<ResultsIpInstitutionType> {
     const queryData = `update result_ip_result_institution_types ririt 
     inner join result_by_innovation_package rbip on rbip.result_by_innovation_package_id = ririt.result_ip_results_id 

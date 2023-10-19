@@ -17,6 +17,19 @@ export class resultValidationRepository
     super(Validation, dataSource.createEntityManager());
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete v from validation v where v.results_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: resultValidationRepository.name,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(resultId: number): Promise<Validation> {
     const queryData = `update validation v set v.is_active = 0 where v.results_id = ? and v.is_active > 0;`;
     return this.query(queryData, [resultId])

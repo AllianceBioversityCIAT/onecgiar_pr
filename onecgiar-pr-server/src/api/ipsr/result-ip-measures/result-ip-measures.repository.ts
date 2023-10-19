@@ -16,6 +16,19 @@ export class ResultIpMeasureRepository
     super(ResultIpMeasure, dataSource.createEntityManager());
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const dataQuery = `delete rim from result_ip_measure rim where rim.result_id = ?;`;
+    return this.query(dataQuery, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultIpMeasureRepository.name,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(resultId: number): Promise<ResultIpMeasure> {
     const dataQuery = `update result_ip_measure rim set rim.is_active = 0 where rim.result_id = ?;`;
     return this.query(dataQuery, [resultId])

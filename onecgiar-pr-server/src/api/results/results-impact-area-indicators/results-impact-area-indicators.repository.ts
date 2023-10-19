@@ -9,6 +9,7 @@ import {
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
+import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
 
 @Injectable()
 export class ResultsImpactAreaIndicatorRepository
@@ -26,6 +27,19 @@ export class ResultsImpactAreaIndicatorRepository
     private _handlersError: HandlersError,
   ) {
     super(ResultsImpactAreaIndicator, dataSource.createEntityManager());
+  }
+
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete riai from results_impact_area_indicators riai where riai.result_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsImpactAreaIndicatorRepository.name,
+          debug: true,
+        }),
+      );
   }
 
   logicalDelete(resultId: number): Promise<ResultsImpactAreaIndicator> {
@@ -51,7 +65,9 @@ export class ResultsImpactAreaIndicatorRepository
         select
           null as results_impact_area_indicator_id,
           riai.is_active,
-          now() as created_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date,
           null as last_updated_date,
           riai.impact_area_indicator_id,
           ? as result_id,
@@ -84,7 +100,9 @@ export class ResultsImpactAreaIndicatorRepository
           )
         select
           riai.is_active,
-          now() as created_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date,
           null as last_updated_date,
           riai.impact_area_indicator_id,
           ? as result_id,
@@ -117,9 +135,7 @@ export class ResultsImpactAreaIndicatorRepository
       final_data = null;
     }
 
-    config.f?.completeFunction
-      ? config.f.completeFunction({ ...final_data })
-      : null;
+    config.f?.completeFunction?.({ ...final_data });
 
     return final_data;
   }

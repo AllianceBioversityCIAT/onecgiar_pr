@@ -6,7 +6,10 @@ import {
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
-import { VERSIONING } from '../../../shared/utils/versioning.utils';
+import {
+  VERSIONING,
+  predeterminedDateValidation,
+} from '../../../shared/utils/versioning.utils';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
@@ -21,6 +24,19 @@ export class LinkedResultRepository
     private readonly _handlersError: HandlersError,
   ) {
     super(LinkedResult, dataSource.createEntityManager());
+  }
+
+  fisicalDelete(resultId: number): Promise<any> {
+    const dataQuery = `delete lr from linked_result lr where lr.origin_result_id = ?;`;
+    return this.query(dataQuery, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: LinkedResultRepository.name,
+          debug: true,
+        }),
+      );
   }
 
   logicalDelete(resultId: number): Promise<LinkedResult> {
@@ -42,15 +58,26 @@ export class LinkedResultRepository
     let final_data: LinkedResult[] = null;
     try {
       if (config.f?.custonFunction) {
-        const response = await this.find({
-          where: { origin_result_id: config.old_result_id, is_active: true },
-        });
-        response.map((el) => {
-          delete el.id;
-          delete el.created_date;
-          delete el.last_updated_date;
-          el.origin_result_id = config.new_result_id;
-        });
+        const queryData = `select
+        lr.is_active,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date,
+        null as last_updated_date,
+        ${VERSIONING.QUERY.Get_link_result_qa(
+          `lr.linked_results_id`,
+        )} as linked_results_id,
+        ? as origin_result_id,
+        ? as created_by,
+        ? as last_updated_by,
+        lr.legacy_link
+        from linked_result lr WHERE lr.origin_result_id = ? and is_active > 0`;
+        const response = await this.query(queryData, [
+          config.new_result_id,
+          config.user.id,
+          config.user.id,
+          config.old_result_id,
+        ]);
         const response_edit = <LinkedResult[]>config.f.custonFunction(response);
         final_data = await this.save(response_edit);
       } else {
@@ -67,19 +94,22 @@ export class LinkedResultRepository
           )
           select
           lr.is_active,
-          now() as created_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date,
           null as last_updated_date,
           ${VERSIONING.QUERY.Get_link_result_qa(
             `lr.linked_results_id`,
           )} as linked_results_id,
           ? as origin_result_id,
-          lr.created_by,
-          lr.last_updated_by,
+          ? as created_by,
+          ? as last_updated_by,
           lr.legacy_link
           from linked_result lr WHERE lr.origin_result_id = ? and is_active > 0`;
         await this.query(queryData, [
           config.new_result_id,
-          config.phase,
+          config.user.id,
+          config.user.id,
           config.old_result_id,
         ]);
         final_data = await this.find({
@@ -95,16 +125,13 @@ export class LinkedResultRepository
       final_data = null;
     }
 
-    config.f?.completeFunction
-      ? config.f.completeFunction({ ...final_data })
-      : null;
+    config.f?.completeFunction?.({ ...final_data });
 
     return final_data;
   }
 
   async deleteAllData() {
     const queryData = `
-    DELETE FROM linked_result;
     `;
     try {
       await this.query(queryData);

@@ -17,6 +17,7 @@ import {
 
 import { LogicalDelete } from '../../shared/globalInterfaces/delete.interface';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
+import { predeterminedDateValidation } from '../../shared/utils/versioning.utils';
 
 @Injectable()
 export class ResultRepository
@@ -29,6 +30,18 @@ export class ResultRepository
     private readonly _handlersError: HandlersError,
   ) {
     super(Result, dataSource.createEntityManager());
+  }
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete r from \`result\` r where r.id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          className: ResultRepository.name,
+          error: err,
+          debug: true,
+        }),
+      );
   }
 
   logicalDelete(resultId: number): Promise<Result> {
@@ -62,7 +75,9 @@ export class ResultRepository
           ? as created_by,
           ? as last_updated_by,
           (select v.phase_year  from \`version\` v where v.id = ?) as reported_year_id,
-          now() as created_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date,
           r2.result_level_id,
           r2.title,
           r2.legacy_id,
@@ -130,7 +145,9 @@ export class ResultRepository
           ? as created_by,
           ? as last_updated_by,
           (select v.phase_year  from \`version\` v where v.id = ?) as reported_year_id,
-          now() as created_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date,
           r2.result_level_id,
           r2.title,
           r2.legacy_id,
@@ -197,9 +214,7 @@ export class ResultRepository
       final_data = null;
     }
 
-    config.f?.completeFunction
-      ? config.f.completeFunction({ ...final_data })
-      : null;
+    config.f?.completeFunction?.({ ...final_data });
     return final_data;
   }
 
