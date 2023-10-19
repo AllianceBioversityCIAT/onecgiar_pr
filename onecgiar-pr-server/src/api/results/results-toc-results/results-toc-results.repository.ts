@@ -765,7 +765,7 @@ export class ResultsTocResultRepository
         );
 
         const queryDataIndicators = `
-        select tr.phase, tri.toc_result_indicator_id as toc_results_indicator_id,
+        select tr.phase, tri.related_node_id as toc_results_indicator_id,
             tri.indicator_description,tri.unit_messurament,
             tri.location, tri.type_value, tri.type_name as 'statement'
         from  ${env.DB_TOC}.toc_results tr 
