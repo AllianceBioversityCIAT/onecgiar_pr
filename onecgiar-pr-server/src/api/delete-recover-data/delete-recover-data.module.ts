@@ -173,5 +173,10 @@ import { NonPooledProjectBudgetRepository } from '../results/result_budget/repos
     ResultInitiativeBudgetRepository,
   ],
   imports: [HttpModule, PrmsTablesTypesModule],
+  exports: [
+    ResultInstitutionsBudgetRepository,
+    NonPooledProjectBudgetRepository,
+    ResultInitiativeBudgetRepository,
+  ],
 })
 export class DeleteRecoverDataModule {}
