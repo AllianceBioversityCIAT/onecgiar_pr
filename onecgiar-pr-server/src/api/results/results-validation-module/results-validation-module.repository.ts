@@ -282,7 +282,7 @@ export class resultValidationRepository
           ? `AND IF((select count(*)
 		  from  ${env.DB_TOC}.toc_results tr
 			  join ${env.DB_TOC}.toc_results_indicators tri on tri.toc_results_id = tr.id
-			  where id = rtr1.toc_result_id and tr.phase = (select v.toc_pahse_id
+			  where tri.id = rtr1.toc_result_id and tr.phase = (select v.toc_pahse_id
 												from result r2
 												join version v on r2.version_id = v.id
 												where r2.id = r.id)) > 0, IF((select SUM(IF(rit.indicator_question IS NOT NULL AND rit.contributing_indicator <> '' AND rit.contributing_indicator IS NOT NULL, 1, 0)) 
