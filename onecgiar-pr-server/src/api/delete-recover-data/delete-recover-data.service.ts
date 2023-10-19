@@ -314,43 +314,89 @@ export class DeleteRecoverDataService {
     }
   }
 
+  /**
+   *
+   * @param result
+   * @param new_result_level
+   * @param new_result_type
+   * @param user
+   * @returns
+   * @description This method is used to manage the data of a result that has changed its type
+   */
   async manageChangedResultTypeData(
     result: Result,
     new_result_level: ResultLevelEnum,
     new_result_type: ResultTypeEnum,
     user: TokenDto,
-  ) {
-    if (
-      !(
-        result.result_level_id == ResultLevelEnum.INITIATIVE_OUTPUT &&
-        new_result_level == ResultLevelEnum.INITIATIVE_OUTPUT &&
-        new_result_type == ResultTypeEnum.KNOWLEDGE_PRODUCT
-      )
-    ) {
+  ): Promise<ReturnResponseDto<any>> {
+    try {
+      if (
+        !(
+          result.result_level_id == ResultLevelEnum.INITIATIVE_OUTPUT &&
+          new_result_level == ResultLevelEnum.INITIATIVE_OUTPUT &&
+          new_result_type == ResultTypeEnum.KNOWLEDGE_PRODUCT
+        )
+      ) {
+        return this._returnResponse.format({
+          message: `The data of the result with code ${result.id} has not been changed`,
+          response: result.result_code,
+          statusCode: HttpStatus.OK,
+        });
+      }
+
+      const returnDelete = await this.deleteDataByNewResultType(
+        result.id,
+        new_result_type,
+        new_result_level,
+        result.result_type_id,
+        result.result_level_id,
+      );
+
+      if (returnDelete.statusCode >= 300) {
+        throw this._returnResponse.format({
+          message: `The data at the time of deleting had an error`,
+          response: result.result_code,
+          statusCode: HttpStatus.OK,
+        });
+      }
+
+      const returnMigration = await this.migrateDataByNewResultType(
+        result.id,
+        new_result_type,
+        new_result_level,
+        result.result_type_id,
+        result.result_level_id,
+      );
+
+      if (returnMigration.statusCode >= 300) {
+        throw this._returnResponse.format({
+          message: `The data at the time of migrating had an error`,
+          response: result.result_code,
+          statusCode: HttpStatus.OK,
+        });
+      }
+
       return this._returnResponse.format({
-        message: `The data of the result with code ${result.id} has not been changed`,
+        message: `The data of the result with code ${result.id} has been changed`,
         response: result.result_code,
         statusCode: HttpStatus.OK,
       });
+    } catch (error) {
+      return this._returnResponse.format(error, !env.IS_PRODUCTION);
     }
-
-    this.deleteDataByNewResultType(
-      result.id,
-      new_result_type,
-      new_result_level,
-      result.result_type_id,
-      result.result_level_id,
-    );
-
-    this.migrateDataByNewResultType(
-      result.id,
-      new_result_type,
-      new_result_level,
-      result.result_type_id,
-      result.result_level_id,
-    );
   }
 
+  /**
+   *
+   * @param result_id
+   * @param _new_result_type
+   * @param _new_result_level
+   * @param _old_result_type
+   * @param _old_result_level
+   * @returns
+   * @description This method is used to migrate the data of a result that has changed its type
+   *
+   */
   async migrateDataByNewResultType(
     result_id: number,
     _new_result_type: ResultTypeEnum,
@@ -376,6 +422,17 @@ export class DeleteRecoverDataService {
       return this._returnResponse.format(error, !env.IS_PRODUCTION);
     }
   }
+
+  /**
+   *
+   * @param result_id
+   * @param _new_result_type
+   * @param _new_result_level
+   * @param _old_result_type
+   * @param _old_result_level
+   * @returns
+   * @description This method is used to delete the data of a result that has changed its type
+   */
   async deleteDataByNewResultType(
     result_id: number,
     _new_result_type: ResultTypeEnum,
