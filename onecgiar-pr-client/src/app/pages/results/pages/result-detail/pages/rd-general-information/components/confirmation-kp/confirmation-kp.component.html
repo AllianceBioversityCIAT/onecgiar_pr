@@ -30,8 +30,10 @@
       </div>
     </div>
 
-    <app-pr-input placeholder="Enter text" label="What is the reason for this change?" type="text" [required]="true"
-      [(ngModel)]="justification" (input)="emitJustificationUpdate();" [isStatic]="true"></app-pr-input>
+    <app-pr-select label="What is the reason for this change?" placeholder="Select reason" [required]="true" 
+    [options]="this.selectOptions" [(ngModel)]="this.changeType.justification" optionLabel="value" optionValue="value"></app-pr-select>
 
+    <app-pr-input label="Enter other reason" placeholder="Enter other reason" type="text" [required]="true"
+      [(ngModel)]="this.changeType.otherJustification" [isStatic]="true" *ngIf="this.changeType.justification === 'Other'"></app-pr-input>
   </div>
 </div>

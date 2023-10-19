@@ -54,7 +54,7 @@
     </div>
 
     <div *ngIf="selectedResultType && selectedResultType?.id !== 6">
-      <app-confirmation-kp [body]="this.body" [selectedResultType]="selectedResultType" (eventTextChanged)="updateJustification($event)"></app-confirmation-kp>
+      <app-confirmation-kp [body]="this.body" [selectedResultType]="selectedResultType"></app-confirmation-kp>
     </div>
 
     <div *ngIf="selectedResultType" class="change_result_buttons">
@@ -62,8 +62,8 @@
         (clickEvent)="this.api.dataControlSE.changeResultTypeModal = false">
       </app-pr-button>
 
-      <app-pr-button [disabled]="isContinueButtonDisabled()" padding="medium" [text]="selectedResultType?.id !== 6 ? 'Confirm' : 'Continue'"
-        [verticalMargin]="0" (clickEvent)="changeResultType()"></app-pr-button>
+      <app-pr-button padding="medium" [text]="selectedResultType?.id !== 6 ? 'Confirm' : 'Continue'"
+        [verticalMargin]="0" (clickEvent)="changeResultType()" [ngClass]="{'globalDisabled': isContinueButtonDisabled()}"></app-pr-button>
     </div>
   </div>
 </p-dialog>
