@@ -37,6 +37,10 @@ export class MultipleWPsComponent implements OnInit {
   ngOnInit(): void {
     console.log('this.initiative', this.initiative);
     this.activeTab = this.initiative[0];
+
+    this.initiative.forEach((tab: any) => {
+      tab.uniqueId = Math.random().toString(36).substring(7);
+    });
   }
 
   onAddTab() {
@@ -55,21 +59,22 @@ export class MultipleWPsComponent implements OnInit {
       results_id: null,
       short_name: null,
       toc_level_id: null,
-      toc_result_id: null
+      toc_result_id: null,
+      uniqueId: Math.random().toString(36).substring(7)
     });
   }
 
-  onActiveTab(tab: Tab) {
+  onActiveTab(tab: any) {
     this.activeTab = tab;
     console.log('this.activeTab', this.activeTab);
   }
 
-  onDeleteTab(tab: Tab) {
+  onDeleteTab(tab: any) {
     if (this.initiative.length === 1) {
       return;
     }
 
-    this.initiative = this.initiative.filter(t => t.result_toc_result_id !== tab.result_toc_result_id);
+    this.initiative = this.initiative.filter(t => t.uniqueId !== tab.uniqueId);
 
     this.activeTab = this.initiative[0];
   }

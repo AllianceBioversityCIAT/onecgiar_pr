@@ -1,7 +1,7 @@
 <div class=" local_container section_container">
   <div class="tabs" [style]="'grid-template-columns: repeat(' + (initiative.length + 1) + ', 1fr)'">
     <div *ngFor="let tab of initiative; let i = index">
-      <a class="tab" [ngClass]="{'active' : tab.result_toc_result_id === activeTab.result_toc_result_id}"
+      <a class="tab" [ngClass]="{'active' : tab.uniqueId === activeTab.uniqueId}"
         (click)="onActiveTab(tab)">
         <i class="material-icons-round {{ tab.validation ? 'valid' : 'invalid' }}" style="font-size: 20px;">
           check_circle </i>
