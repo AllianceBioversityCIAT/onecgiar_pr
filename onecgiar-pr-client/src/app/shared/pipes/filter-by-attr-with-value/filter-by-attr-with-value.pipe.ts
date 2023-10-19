@@ -4,13 +4,15 @@ import { Pipe, PipeTransform } from '@angular/core';
   name: 'filterByAttrWithValue'
 })
 export class FilterByAttrWithValuePipe implements PipeTransform {
-  transform(list, attr, value) {
-    if (!value) return list;
+  transform(list: any[], attr: string, value: string): any[] {
+    if (!value || !list?.length) {
+      return list;
+    }
 
-    const resultList = list?.filter(item => item[attr].toUpperCase().indexOf(value?.toUpperCase()) > -1);
+    const resultList = list.filter(item => {
+      return item[attr];
+    });
 
-    if (!resultList?.length) return [];
-
-    return resultList;
+    return resultList || [];
   }
 }

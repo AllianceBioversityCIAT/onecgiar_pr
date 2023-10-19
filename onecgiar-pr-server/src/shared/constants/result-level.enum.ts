@@ -1,0 +1,6 @@
+export enum ResultLevelEnum {
+  IMPACT = 1,
+  ACTION_AREA_OUTCOME = 2,
+  INITIATIVE_OUTCOME = 3,
+  INITIATIVE_OUTPUT = 4,
+}
