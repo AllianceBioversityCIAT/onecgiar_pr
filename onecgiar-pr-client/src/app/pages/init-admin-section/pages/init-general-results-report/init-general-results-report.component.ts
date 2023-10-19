@@ -8,7 +8,7 @@ import { CustomizedAlertsFeService } from '../../../../shared/services/customize
   templateUrl: './init-general-results-report.component.html',
   styleUrls: ['./init-general-results-report.component.scss']
 })
-export class InitGeneralResultsReportComponent {
+export class InitGeneralResultsReportComponent implements OnInit {
   textToFind = '';
   initiativesSelected = [];
   resultsSelected = [];
@@ -22,8 +22,6 @@ export class InitGeneralResultsReportComponent {
   constructor(public api: ApiService, private exportTablesSE: ExportTablesService, private customAlertService: CustomizedAlertsFeService) {}
 
   ngOnInit(): void {
-    //Called after the constructor, initializing input properties, and the first call to ngOnChanges.
-    //Add 'implements OnInit' to the class.
     this.getAll();
   }
 
@@ -31,9 +29,7 @@ export class InitGeneralResultsReportComponent {
     const inits = [];
     this.initiativesSelected.map(init => {
       inits.push(init.initiative_id);
-      // this.initiativesSelected.push({ id: init.initiative_id, full_name: init.full_name });
     });
-    // (inits);
     this.POST_reportSesultsCompleteness(inits);
   }
 
@@ -42,10 +38,8 @@ export class InitGeneralResultsReportComponent {
   }
 
   GET_AllInitiatives() {
-    //(this.api.rolesSE.isAdmin);
     if (!this.api.rolesSE.isAdmin) return;
     this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
-      //(response);
       this.allInitiatives = response;
     });
   }
@@ -57,7 +51,6 @@ export class InitGeneralResultsReportComponent {
   POST_reportSesultsCompleteness(inits: any[]) {
     this.resultsList = [];
     this.api.resultsSE.POST_reportSesultsCompleteness(inits, 2).subscribe(({ response }) => {
-      // (response);
       this.resultsList = response;
     });
   }
@@ -78,24 +71,16 @@ export class InitGeneralResultsReportComponent {
       list.push(element);
     });
 
-    // Usar Promise.all para esperar a que todas las promesas se resuelvan
     await Promise.all(list.map((element, key) => this.POST_excelFullReportPromise(element, key)));
 
     this.exportTablesSE.exportMultipleSheetsExcel(this.dataToExport, 'results_list', null, this.tocToExport);
     this.requesting = false;
   }
 
-  // validateLength(obj) {
-  //   Object.keys(obj[0]).forEach(item => //(item + ': ' + obj[0][item]?.length));
-  // }
-
   POST_excelFullReportPromise(result, key) {
     return new Promise((resolve, reject) => {
       this.api.resultsSE.POST_excelFullReport([result]).subscribe(
         ({ response }) => {
-          // (response);
-          // this.validateLength(response);
-          //(response);
           this.requestCounter++;
           this.dataToExport.push(...response.fullReport);
           this.tocToExport.push(...response.resultsAgaintsToc);
