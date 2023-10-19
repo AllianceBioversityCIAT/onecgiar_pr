@@ -6,7 +6,10 @@ import {
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
-import { VERSIONING } from 'src/shared/utils/versioning.utils';
+import {
+  VERSIONING,
+  predeterminedDateValidation,
+} from 'src/shared/utils/versioning.utils';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
@@ -25,6 +28,21 @@ export class ResultsKnowledgeProductKeywordRepository
     private readonly _handlersError: HandlersError,
   ) {
     super(ResultsKnowledgeProductKeyword, dataSource.createEntityManager());
+  }
+
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete rkk from  results_kp_keywords rkk 
+    inner join results_knowledge_product rkp on rkk.result_knowledge_product_id = rkp.result_knowledge_product_id 
+  where rkp.results_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsKnowledgeProductKeywordRepository.name,
+          debug: true,
+        }),
+      );
   }
 
   logicalDelete(resultId: number): Promise<ResultsKnowledgeProductKeyword> {
@@ -56,7 +74,9 @@ export class ResultsKnowledgeProductKeywordRepository
         rkpk.keyword,
         rkpk.is_agrovoc,
         rkpk.is_active,
-        now() as created_date,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date,
         null as last_updated_date,
         ${VERSIONING.QUERY.Get_kp_phases(
           config.new_result_id,
@@ -91,7 +111,9 @@ export class ResultsKnowledgeProductKeywordRepository
         rkpk.keyword,
         rkpk.is_agrovoc,
         rkpk.is_active,
-        now() as created_date,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date,
         null as last_updated_date,
         ${VERSIONING.QUERY.Get_kp_phases(
           config.new_result_id,
@@ -129,9 +151,7 @@ export class ResultsKnowledgeProductKeywordRepository
       final_data = null;
     }
 
-    config.f?.completeFunction
-      ? config.f.completeFunction({ ...final_data })
-      : null;
+    config.f?.completeFunction?.({ ...final_data });
 
     return final_data;
   }

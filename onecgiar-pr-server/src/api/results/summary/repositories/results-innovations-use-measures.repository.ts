@@ -7,6 +7,7 @@ import {
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
+import { predeterminedDateValidation } from '../../../../shared/utils/versioning.utils';
 
 @Injectable()
 export class ResultsInnovationsUseMeasuresRepository
@@ -24,6 +25,21 @@ export class ResultsInnovationsUseMeasuresRepository
     private _handlersError: HandlersError,
   ) {
     super(ResultsInnovationsUseMeasures, dataSource.createEntityManager());
+  }
+
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete rium from results_innovations_use_measures rium 
+    inner join results_innovations_use riu on riu.result_innovation_use_id = rium.result_innovation_use_id
+where riu.results_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsInnovationsUseMeasuresRepository.name,
+          debug: true,
+        }),
+      );
   }
 
   logicalDelete(resultId: number): Promise<ResultsInnovationsUseMeasures> {
@@ -54,7 +70,9 @@ export class ResultsInnovationsUseMeasuresRepository
         rium.unit_of_measure,
         rium.quantity,
         rium.is_active,
-        now() as created_date,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date,
         null as last_updated_date,
         riu2.result_innovation_use_id as result_innovation_use_id,
         rium.unit_of_measure_id,
@@ -95,7 +113,9 @@ export class ResultsInnovationsUseMeasuresRepository
           rium.unit_of_measure,
           rium.quantity,
           rium.is_active,
-          now() as created_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date,
           null as last_updated_date,
           riu2.result_innovation_use_id as result_innovation_use_id,
           rium.unit_of_measure_id,
@@ -137,9 +157,7 @@ export class ResultsInnovationsUseMeasuresRepository
       final_data = null;
     }
 
-    config.f?.completeFunction
-      ? config.f.completeFunction({ ...final_data })
-      : null;
+    config.f?.completeFunction?.({ ...final_data });
 
     return final_data;
   }

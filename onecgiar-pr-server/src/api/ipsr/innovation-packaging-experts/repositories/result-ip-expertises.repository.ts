@@ -17,6 +17,21 @@ export class ResultIpExpertisesRepository
     super(ResultIpExpertises, dataSource.createEntityManager());
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const dataQuery = `delete rie from result_ip_expertises rie 
+                            inner join result_ip_expert rip on rip.result_ip_expert_id = rie.result_ip_expert_id
+                        where rip.result_id = ?;`;
+    return this.query(dataQuery, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultIpExpertisesRepository.name,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(resultId: number): Promise<ResultIpExpertises> {
     const dataQuery = `update result_ip_expertises rie 
                             inner join result_ip_expert rip on rip.result_ip_expert_id = rie.result_ip_expert_id 

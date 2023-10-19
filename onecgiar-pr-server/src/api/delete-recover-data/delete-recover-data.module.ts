@@ -82,6 +82,9 @@ import { VersionRepository } from '../versioning/versioning.repository';
 import { ClarisaGeographicScopeRepository } from '../../clarisa/clarisa-geographic-scopes/clarisa-geographic-scopes.repository';
 import { HttpModule, HttpService } from '@nestjs/axios';
 import { ApplicationModulesRepository } from '../versioning/repositories/application-modules.repository';
+import { PrmsTablesTypesModule } from './prms-tables-types/prms-tables-types.module';
+import { ResultInstitutionsBudgetRepository } from '../results/result_budget/repositories/result_institutions_budget.repository';
+import { NonPooledProjectBudgetRepository } from '../results/result_budget/repositories/non_pooled_proyect_budget.repository';
 
 @Module({
   controllers: [DeleteRecoverDataController],
@@ -165,8 +168,11 @@ import { ApplicationModulesRepository } from '../versioning/repositories/applica
     VersionRepository,
     ClarisaGeographicScopeRepository,
     ApplicationModulesRepository,
+    ResultInstitutionsBudgetRepository,
+    NonPooledProjectBudgetRepository,
+    ResultInitiativeBudgetRepository,
   ],
-  imports: [HttpModule],
+  imports: [HttpModule, PrmsTablesTypesModule],
   exports: [
     DeleteRecoverDataService,
     HandlersError,
@@ -248,6 +254,9 @@ import { ApplicationModulesRepository } from '../versioning/repositories/applica
     ClarisaGeographicScopeRepository,
     ApplicationModulesRepository,
     DeleteRecoverDataService,
+    ResultInstitutionsBudgetRepository,
+    NonPooledProjectBudgetRepository,
+    ResultInitiativeBudgetRepository,
   ],
 })
 export class DeleteRecoverDataModule {}

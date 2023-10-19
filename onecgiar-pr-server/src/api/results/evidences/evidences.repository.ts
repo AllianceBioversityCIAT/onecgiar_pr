@@ -7,7 +7,10 @@ import {
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
-import { VERSIONING } from '../../../shared/utils/versioning.utils';
+import {
+  VERSIONING,
+  predeterminedDateValidation,
+} from '../../../shared/utils/versioning.utils';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
@@ -22,6 +25,19 @@ export class EvidencesRepository
     private readonly _handlersError: HandlersError,
   ) {
     super(Evidence, dataSource.createEntityManager());
+  }
+
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete e from evidence e where e.result_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          className: EvidencesRepository.name,
+          error: err,
+          debug: true,
+        }),
+      );
   }
 
   logicalDelete(resultId: number): Promise<Evidence> {
@@ -48,7 +64,9 @@ export class EvidencesRepository
           null as id,
           e.description,
           e.is_active,
-          now() as creation_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as creation_date,
           e.last_updated_date,
           ? as created_by,
           ? as last_updated_by,
@@ -100,7 +118,9 @@ export class EvidencesRepository
           ) select
           e.description,
           e.is_active,
-          now() as creation_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as creation_date,
           e.last_updated_date,
           ? as created_by,
           ? as last_updated_by,
@@ -154,10 +174,7 @@ export class EvidencesRepository
       final_data = null;
     }
 
-    config.f?.completeFunction
-      ? config.f.completeFunction({ ...final_data })
-      : null;
-
+    config.f?.completeFunction?.({ ...final_data });
     return final_data;
   }
 

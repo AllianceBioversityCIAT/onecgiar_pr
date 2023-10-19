@@ -20,6 +20,21 @@ export class ResultsInnovationPackagesEnablerTypeRepository
     );
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete ripet from results_innovatio_packages_enabler_type ripet 
+    inner join result_by_innovation_package rbip on rbip.result_by_innovation_package_id = ripet.result_by_innovation_package_id 
+    where rbip.result_innovation_package_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsInnovationPackagesEnablerType.name,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(
     resultId: number,
   ): Promise<ResultsInnovationPackagesEnablerType> {

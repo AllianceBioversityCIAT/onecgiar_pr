@@ -6,7 +6,10 @@ import {
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
-import { VERSIONING } from '../../../shared/utils/versioning.utils';
+import {
+  VERSIONING,
+  predeterminedDateValidation,
+} from '../../../shared/utils/versioning.utils';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
@@ -24,6 +27,19 @@ export class NonPooledProjectRepository
     private readonly _handlersError: HandlersError,
   ) {
     super(NonPooledProject, dataSource.createEntityManager());
+  }
+
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete npp from non_pooled_project npp where npp.results_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: NonPooledProjectRepository.name,
+          debug: true,
+        }),
+      );
   }
 
   logicalDelete(resultId: number): Promise<NonPooledProject> {
@@ -51,7 +67,9 @@ export class NonPooledProjectRepository
           npp.grant_title,
           npp.center_grant_id,
           npp.is_active,
-          now() as created_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date,
           null as last_updated_date,
           ? as results_id,
           npp.funder_institution_id,
@@ -91,7 +109,9 @@ export class NonPooledProjectRepository
           npp.grant_title,
           npp.center_grant_id,
           npp.is_active,
-          now() as created_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date,
           null as last_updated_date,
           ? as results_id,
           npp.funder_institution_id,
@@ -134,10 +154,7 @@ export class NonPooledProjectRepository
       final_data = null;
     }
 
-    config.f?.completeFunction
-      ? config.f.completeFunction({ ...final_data })
-      : null;
-
+    config.f?.completeFunction?.({ ...final_data });
     return final_data;
   }
 

@@ -6,7 +6,10 @@ import {
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
-import { VERSIONING } from '../../../../shared/utils/versioning.utils';
+import {
+  VERSIONING,
+  predeterminedDateValidation,
+} from '../../../../shared/utils/versioning.utils';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
@@ -25,6 +28,19 @@ export class ResultsKnowledgeProductsRepository
     private _handlersError: HandlersError,
   ) {
     super(ResultsKnowledgeProduct, dataSource.createEntityManager());
+  }
+
+  fisicalDelete(resultId: number): Promise<any> {
+    const dataQuery = `delete rkp from results_knowledge_product rkp where rkp.results_id = ?;`;
+    return this.query(dataQuery, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsKnowledgeProductsRepository.name,
+          debug: true,
+        }),
+      );
   }
 
   logicalDelete(resultId: number): Promise<ResultsKnowledgeProduct> {
@@ -63,7 +79,9 @@ export class ResultsKnowledgeProductsRepository
           rkp.is_melia,
           rkp.melia_previous_submitted,
           rkp.is_active,
-          now() as created_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date,
           null as last_updated_date,
           ? as results_id,
           rkp.melia_type_id,
@@ -129,7 +147,9 @@ export class ResultsKnowledgeProductsRepository
           rkp.is_melia,
           rkp.melia_previous_submitted,
           rkp.is_active,
-          now() as created_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date,
           null as last_updated_date,
           ? as results_id,
           rkp.melia_type_id,
@@ -186,7 +206,7 @@ export class ResultsKnowledgeProductsRepository
       final_data = null;
     }
 
-    config.f?.completeFunction ? config.f.completeFunction(final_data) : null;
+    config.f?.completeFunction?.(final_data);
 
     return final_data;
   }

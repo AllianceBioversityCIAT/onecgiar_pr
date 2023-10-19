@@ -7,6 +7,7 @@ import {
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
+import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
 
 @Injectable()
 export class ResultCountryRepository
@@ -19,6 +20,19 @@ export class ResultCountryRepository
     private readonly _handlersError: HandlersError,
   ) {
     super(ResultCountry, dataSource.createEntityManager());
+  }
+
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete rc from result_country rc WHERE rc.result_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          className: ResultCountryRepository.name,
+          error: err,
+          debug: true,
+        }),
+      );
   }
 
   logicalDelete(resultId: number): Promise<ResultCountry> {
@@ -46,7 +60,9 @@ export class ResultCountryRepository
         rc.is_active,
         ? as result_id,
         rc.country_id,
-        now() as created_date,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date,
         now() as last_updated_date
         from result_country rc WHERE rc.result_id = ? and is_active > 0`;
         const response = await (<Promise<ResultCountry[]>>(
@@ -69,7 +85,9 @@ export class ResultCountryRepository
           rc.is_active,
           ? as result_id,
           rc.country_id,
-          now() as created_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date,
           now() as last_updated_date
           from result_country rc WHERE rc.result_id = ? and is_active > 0;`;
         await this.query(queryData, [
@@ -94,10 +112,7 @@ export class ResultCountryRepository
       final_data = null;
     }
 
-    config.f?.completeFunction
-      ? config.f.completeFunction({ ...final_data })
-      : null;
-
+    config.f?.completeFunction?.({ ...final_data });
     return final_data;
   }
 

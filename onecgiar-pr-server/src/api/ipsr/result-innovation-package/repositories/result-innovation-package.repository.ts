@@ -15,6 +15,18 @@ export class ResultInnovationPackageRepository
   ) {
     super(ResultInnovationPackage, dataSource.createEntityManager());
   }
+  fisicalDelete(resultId: number): Promise<any> {
+    const dataQuery = `delete rip from result_innovation_package rip where rip.result_innovation_package_id = ?;`;
+    return this.query(dataQuery, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultInnovationPackageRepository.name,
+          debug: true,
+        }),
+      );
+  }
 
   logicalDelete(resultId: number): Promise<ResultInnovationPackage> {
     const dataQuery = `update result_innovation_package rip set rip.is_active = 0 where rip.result_innovation_package_id = ?;`;
