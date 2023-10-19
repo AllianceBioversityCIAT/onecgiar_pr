@@ -390,6 +390,12 @@ export class DeleteRecoverDataService {
       );
 
       //TODO add validations when the result changes its type
+      await this.manageChangedResultTypeData(
+        resultToUpdate,
+        result_level_id,
+        result_type_id,
+        user,
+      );
 
       //updating elastic search
       if (new_name) {
