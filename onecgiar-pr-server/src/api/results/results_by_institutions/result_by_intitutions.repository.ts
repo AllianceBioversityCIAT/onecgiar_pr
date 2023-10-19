@@ -28,6 +28,29 @@ export class ResultByIntitutionsRepository
     super(ResultsByInstitution, dataSource.createEntityManager());
   }
 
+  changePartnersType(
+    result_id: number,
+    current_partners_type: InstitutionRoleEnum[],
+    new_partner_type: InstitutionRoleEnum,
+  ) {
+    const queryData = `update results_by_institution rbi 
+    SET rbi.institution_roles_id = ?
+    where rbi.result_id = ? and rbi.institution_roles_id in (?);`;
+    return this.query(queryData, [
+      new_partner_type,
+      result_id,
+      current_partners_type,
+    ])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          className: ResultByIntitutionsRepository.name,
+          error: err,
+          debug: true,
+        }),
+      );
+  }
+
   fisicalDelete(resultId: number): Promise<any> {
     const queryData = `delete rbi from results_by_institution rbi where rbi.result_id = ?;`;
     return this.query(queryData, [resultId])

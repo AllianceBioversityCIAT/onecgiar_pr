@@ -68,6 +68,7 @@ import { ResultInitiativeBudgetRepository } from '../results/result_budget/repos
 import { Result } from '../results/entities/result.entity';
 import { ResultLevelEnum } from '../../shared/constants/result-level.enum';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
+import { InstitutionRoleEnum } from '../results/results_by_institutions/entities/institution_role.enum';
 
 @Injectable()
 export class DeleteRecoverDataService {
@@ -315,5 +316,82 @@ export class DeleteRecoverDataService {
     new_result_level: ResultLevelEnum,
     new_result_type: ResultTypeEnum,
     user: TokenDto,
-  ): void {}
+  ) {
+    if (
+      !(
+        result.result_level_id == ResultLevelEnum.INITIATIVE_OUTPUT &&
+        new_result_level == ResultLevelEnum.INITIATIVE_OUTPUT &&
+        new_result_type == ResultTypeEnum.KNOWLEDGE_PRODUCT
+      )
+    ) {
+      return this._returnResponse.format({
+        message: `The data of the result with code ${result.id} has not been changed`,
+        response: result.result_code,
+        statusCode: HttpStatus.OK,
+      });
+    }
+
+    this.deleteDataByNewResultType(
+      result.id,
+      new_result_type,
+      new_result_level,
+      result.result_type_id,
+      result.result_level_id,
+    );
+
+    this.migrateDataByNewResultType(
+      result.id,
+      new_result_type,
+      new_result_level,
+      result.result_type_id,
+      result.result_level_id,
+    );
+  }
+
+  async migrateDataByNewResultType(
+    result_id: number,
+    _new_result_type: ResultTypeEnum,
+    _new_result_level: ResultLevelEnum,
+    _old_result_type: ResultTypeEnum,
+    _old_result_level: ResultLevelEnum,
+  ) {
+    try {
+      await this._resultByIntitutionsRepository.changePartnersType(
+        result_id,
+        [InstitutionRoleEnum.PARTNER],
+        InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS,
+      );
+      await this._resultRepository.update(result_id, {
+        geographic_scope_id: null,
+      });
+      return this._returnResponse.format({
+        message: `The result with code ${result_id} has been migrated`,
+        response: result_id,
+        statusCode: HttpStatus.OK,
+      });
+    } catch (error) {
+      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+    }
+  }
+  async deleteDataByNewResultType(
+    result_id: number,
+    _new_result_type: ResultTypeEnum,
+    _new_result_level: ResultLevelEnum,
+    _old_result_type: ResultTypeEnum,
+    _old_result_level: ResultLevelEnum,
+  ) {
+    try {
+      await this._evidencesRepository.fisicalDelete(result_id);
+      await this._resultCountryRepository.fisicalDelete(result_id);
+      await this._resultRegionRepository.fisicalDelete(result_id);
+      await this._resultsCenterRepository.fisicalDelete(result_id);
+      return this._returnResponse.format({
+        message: `The data of the result with code ${result_id} has been deleted`,
+        response: result_id,
+        statusCode: HttpStatus.OK,
+      });
+    } catch (error) {
+      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+    }
+  }
 }
