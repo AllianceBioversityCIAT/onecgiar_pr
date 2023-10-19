@@ -1,5 +1,8 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
-import { ReturnResponse } from '../../shared/handlers/error.utils';
+import {
+  ReturnResponse,
+  ReturnResponseDto,
+} from '../../shared/handlers/error.utils';
 
 import { IpsrRepository } from '../ipsr/ipsr.repository';
 import { InnovationPackagingExpertRepository } from '../ipsr/innovation-packaging-experts/repositories/innovation-packaging-expert.repository';
@@ -299,10 +302,10 @@ export class DeleteRecoverDataService {
     }
   }
 
-  manageChangedResultTypeData(
+  async manageChangedResultTypeData(
     result: Result,
     new_result_level: ResultLevelEnum,
     new_result_type: ResultTypeEnum,
     user: TokenDto,
-  ): void {}
+  ) {}
 }
