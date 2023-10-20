@@ -27,6 +27,9 @@ export class ChangeResultTypeModalComponent implements OnChanges {
   confirmationText: string = '';
 
   selectedResultType: IOption | null = null;
+
+  alertStatusDesc = 'Currently, we have only enabled the option to change a result from "Other output" to "Knowledge product". We are actively working on extending this capability to include all the result types.';
+
   alertStatusDescKnowledgeProduct = `<dl>
   <dt>Please add the handle generated in CGSpace to report your knowledge product. Only knowledge products entered into CGSpace are accepted in the PRMS Reporting Tool. The PRMS Reporting Tool will automatically retrieve all metadata entered into CGSpace. This metadata cannot be edited in the PRMS.</dt> <br/>
   <dt>The handle will be verified, and only knowledge products from 2023 will be accepted. For journal articles, the PRMS Reporting Tool will check the online publication date added in CGSpace (“Date Online”). Articles Published online for a previous years will not be accepted to prevent double counting across consecutive years. </dt> <br/>
@@ -49,7 +52,7 @@ export class ChangeResultTypeModalComponent implements OnChanges {
   // }
 
   onSelectOneChip(option: any, filter: any) {
-    if (option.id !== this.body.result_type_id) {
+    if (option.id === 6) {
       this.resultsListFilterSE.filters.resultLevel.forEach((resultLevelOption: any) => {
         resultLevelOption.options.forEach((resultTypeOption: any) => {
           resultTypeOption.resultLevelId = resultLevelOption.id;
@@ -61,6 +64,16 @@ export class ChangeResultTypeModalComponent implements OnChanges {
 
       this.resultsListFilterSE.filters.resultLevel.find((resultLevelOption: any) => resultLevelOption.id === filter.id).options.find((resultTypeOption: any) => resultTypeOption.id === option.id).selected = true;
     }
+  }
+
+  onCancelModal() {
+    this.api.dataControlSE.changeResultTypeModal = false;
+    this.selectedResultType = null;
+    this.resultsListFilterSE.filters.resultLevel.forEach((resultLevelOption: any) => {
+      resultLevelOption.options.forEach((resultTypeOption: any) => {
+        resultTypeOption.selected = false;
+      });
+    });
   }
 
   isContinueButtonDisabled() {
