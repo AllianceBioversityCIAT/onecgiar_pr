@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { ApiService } from 'src/app/shared/services/api/api.service';
 
 @Component({
@@ -6,8 +6,6 @@ import { ApiService } from 'src/app/shared/services/api/api.service';
   templateUrl: './information-center-modal.component.html',
   styleUrls: ['./information-center-modal.component.scss']
 })
-export class InformationCenterModalComponent implements OnInit {
+export class InformationCenterModalComponent {
   constructor(public api: ApiService) {}
-
-  ngOnInit(): void {}
 }
