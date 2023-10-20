@@ -1,0 +1,80 @@
+<p-dialog class="support_information" header="Title" [(visible)]="this.api.dataControlSE.informationCenterModal"
+  [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true"
+  [style]="{padding: '0px'}">
+  <div class="modal_title">Information center</div>
+
+  <div class="modal_container partners-request-container">
+    <div class="information">
+      <h1>User Roles for PRMS Reporting Tool</h1>
+
+      <div>
+        <p class="info_title">Lead:</p>
+
+        <p class="info_desc">
+          The Lead is the proactive actor responsible for overseeing the approval of result indicators or requesting
+          revisions. If
+          the submission is successful, the results are forwarded for Quality Assurance (QA) processing.
+        </p>
+
+        <p class="info_title">Co-lead:</p>
+
+        <p class="info_desc">
+          The Co-lead serves as the Lead's right-hand person and plays an active role in reviewing and verifying all
+          created
+          results within their initiative. Additionally, they have the authority to approve result indicators or request
+          revisions. Successful submissions are subsequently sent for Quality Assurance (QA) processing.
+        </p>
+
+        <p class="info_title">Coordinator:</p>
+
+        <p class="info_desc">
+          The Coordinator is a designated representative of the PRMS Initiative, chosen by the Initiative itself. This
+          role
+          ensures that information is accurately and punctually added to the system. They possess the authority to make
+          necessary
+          changes and can act on behalf of the Work Package Leads and Lead, including approving results and forwarding
+          them for
+          Quality Assurance (QA).
+        </p>
+
+        <p class="info_title">Member:</p>
+
+        <p class="info_desc">
+          The Member role acts as the right hand to both the Lead and Co-lead, actively participating in the process of
+          populating
+          all necessary information within the created results. This role is primarily responsible for creating results
+          and
+          inputting all relevant data. Subsequently, the Member role should signal the Lead or Co-lead to review the
+          generated
+          result for further evaluation.
+        </p>
+
+        <p class="info_title">Admin:</p>
+
+        <p class="info_desc">
+          The admin role in PRMS has full access to all reporting tool features. Typically, admins are members of the
+          PPU/PCU.
+          this role enter the result indicators for their center and/or work project (WP). The admin can make changes
+          and
+          act on
+          behalf of the WP leads. For example, they can also approve results and send them to QA (Quality Assurance).
+          Additionally, the admin can approve result indicators or send them back for revision and phase management. In
+          addition
+          to this, the admin can report a result in a new phase and update a result for a previous phase, which avoids
+          delays in
+          reporting previously created results.
+        </p>
+
+        <p class="info_title">Guest:</p>
+
+        <p class="info_desc">
+          The basic role of access to the platform which will allow the user to view the information only in read mode,
+          as
+          long as
+          it does not belong to a specific initiative.
+        </p>
+      </div>
+    </div>
+  </div>
+
+</p-dialog>
