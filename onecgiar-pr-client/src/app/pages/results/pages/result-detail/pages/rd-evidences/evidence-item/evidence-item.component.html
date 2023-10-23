@@ -14,7 +14,21 @@
 
 
         <ng-template #upload_file>
-            file
+            <app-pr-field-header label="File to be uploaded on the repository"></app-pr-field-header>
+            <app-alert-status
+                description="This repository will be managed through SharePoint in the: “One CGIAR – PRMS Repository“. The documents within it will be view-only and can not be edited. Also the access will be limited to CGIAR accounts.">
+            </app-alert-status>
+
+            <div class="drag-and-drop-field" (drop)="onFileDropped($event)" (dragover)="onDragOver($event)"
+                (dragleave)="onDragLeave($event)">
+                <div class="content">
+                    <img src="assets/icons/feather_upload-cloud.svg" alt="" srcset="">
+                    <div class="title">Select a file or drag and drop here</div>
+                    <div class="description">jpg, png, doc, xlsx or PDF, file size no more than 5GB</div>
+                    <app-pr-button text="Select file"></app-pr-button>
+                </div>
+            </div>
+
         </ng-template>
 
         <app-pr-field-header label="Please indicate for which Impact Area tags this evidence is related to"

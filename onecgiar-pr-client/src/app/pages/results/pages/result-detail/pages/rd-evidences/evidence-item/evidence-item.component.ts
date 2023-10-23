@@ -23,4 +23,28 @@ export class EvidenceItemComponent {
   ];
 
   constructor(public dataControlSE: DataControlService, public api: ApiService) {}
+
+  onFileDropped(event: any) {
+    event.preventDefault();
+    event.stopPropagation();
+    const files = event.dataTransfer.files;
+    if (files.length > 0) {
+      this.handleFile(files[0]);
+    }
+  }
+
+  onDragOver(event: any) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  onDragLeave(event: any) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  handleFile(file: any) {
+    // Aquí puedes manejar el archivo según tus requisitos.
+    console.log('Archivo arrastrado:', file);
+  }
 }
