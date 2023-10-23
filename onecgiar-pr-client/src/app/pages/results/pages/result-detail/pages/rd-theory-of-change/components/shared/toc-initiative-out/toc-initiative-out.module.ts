@@ -11,9 +11,9 @@ import { ActionAreaOutcomeComponent } from './action-area-outcome/action-area-ou
 import { TableModule } from 'primeng/table';
 import { RouterModule } from '@angular/router';
 import { MultipleWPsComponent } from './multiple-wps/multiple-wps.component';
-import { MultipleWPsContentComponent } from './multiple-wps-content/multiple-wps-content.component';
+import { MultipleWPsContentComponent } from './multiple-wps/components/multiple-wps-content/multiple-wps-content.component';
 @NgModule({
-  declarations: [TocInitiativeOutComponent, OutcomeLevelFilterPipe, TargetIndicatorComponent, ImpactAreaTargetsComponent, SdgTargetsComponent, ActionAreaOutcomeComponent, MultipleWPsComponent, MultipleWPsContentComponent, ],
+  declarations: [TocInitiativeOutComponent, OutcomeLevelFilterPipe, TargetIndicatorComponent, ImpactAreaTargetsComponent, SdgTargetsComponent, ActionAreaOutcomeComponent, MultipleWPsComponent, MultipleWPsContentComponent],
   exports: [TocInitiativeOutComponent, ImpactAreaTargetsComponent, SdgTargetsComponent, ActionAreaOutcomeComponent],
   imports: [CommonModule, CustomFieldsModule, FeedbackValidationDirectiveModule, TableModule, RouterModule]
 })

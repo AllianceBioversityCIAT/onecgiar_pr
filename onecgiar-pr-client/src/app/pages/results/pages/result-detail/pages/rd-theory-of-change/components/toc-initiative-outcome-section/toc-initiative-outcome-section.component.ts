@@ -5,6 +5,7 @@ import { resultToResultInterfaceToc } from '../../model/theoryOfChangeBody';
 import { RolesService } from '../../../../../../../../shared/services/global/roles.service';
 import { DataControlService } from '../../../../../../../../shared/services/data-control.service';
 import { environment } from 'src/environments/environment';
+import { RdTheoryOfChangesServicesService } from '../../rd-theory-of-changes-services.service';
 
 @Component({
   selector: 'app-toc-initiative-outcome-section',
@@ -12,7 +13,7 @@ import { environment } from 'src/environments/environment';
   styleUrls: ['./toc-initiative-outcome-section.component.scss']
 })
 export class TocInitiativeOutcomeSectionComponent {
-  constructor(private api: ApiService, public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public rolesSE: RolesService, public dataControlSE: DataControlService) {}
+  constructor(private api: ApiService, public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public rolesSE: RolesService, public dataControlSE: DataControlService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {}
 
   outcomeList = [];
   outputList = [];

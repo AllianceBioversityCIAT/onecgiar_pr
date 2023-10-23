@@ -1,4 +1,6 @@
 import { Component, Input, OnInit } from '@angular/core';
+import { RdTheoryOfChangesServicesService } from '../../../../rd-theory-of-changes-services.service';
+import { MultipleWPsServiceService } from './services/multiple-wps-service.service';
 
 interface Tab {
   action_area_outcome_id: number | null;
@@ -32,10 +34,9 @@ export class MultipleWPsComponent implements OnInit {
 
   activeTab: any;
 
-  constructor() {}
+  constructor(public theoryOfChangesServices: RdTheoryOfChangesServicesService, public multipleWpsService: MultipleWPsServiceService) {}
 
   ngOnInit(): void {
-    console.log('this.initiative', this.initiative);
     this.activeTab = this.initiative[0];
 
     this.initiative.forEach((tab: any) => {
@@ -48,7 +49,7 @@ export class MultipleWPsComponent implements OnInit {
       action_area_outcome_id: null,
       created_by: null,
       created_date: null,
-      initiative_id: null,
+      initiative_id: this.theoryOfChangesServices?.primarySubmitter.id,
       is_active: null,
       last_updated_by: null,
       last_updated_date: null,
@@ -66,6 +67,12 @@ export class MultipleWPsComponent implements OnInit {
 
   onActiveTab(tab: any) {
     this.activeTab = tab;
+    this.multipleWpsService.showMultipleWPsContent = false;
+
+    setTimeout(() => {
+      this.multipleWpsService.showMultipleWPsContent = true;
+    }, 20);
+
     console.log('this.activeTab', this.activeTab);
   }
 

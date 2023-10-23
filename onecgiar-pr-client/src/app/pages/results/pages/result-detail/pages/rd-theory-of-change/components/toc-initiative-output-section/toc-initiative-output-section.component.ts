@@ -17,16 +17,16 @@ export class TocInitiativeOutputSectionComponent implements OnInit {
 
   @Input() result_toc_result = new resultToResultInterfaceToc();
   @Input() contributors_result_toc_result: any;
-  fullInitiativeToc = null;
-  primarySubmitter = null;
+  // fullInitiativeToc = null;
+  // primarySubmitter = null;
 
   constructor(public api: ApiService, public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public dataControlSE: DataControlService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {}
 
   ngOnInit(): void {
     this.GET_outcomeList();
     this.GET_outputList();
-    this.GET_fullInitiativeTocByinitId();
-    this.primarySubmitter = this.theoryOfChangesServices.getPrimarySubmitter();
+    // this.GET_fullInitiativeTocByinitId();
+    // this.primarySubmitter = this.theoryOfChangesServices.getPrimarySubmitter();
     console.log('este', this.theoryOfChangesServices);
   }
 
@@ -81,15 +81,15 @@ export class TocInitiativeOutputSectionComponent implements OnInit {
     );*/
   }
 
-  GET_fullInitiativeTocByinitId() {
-    this.api.tocApiSE.GET_fullInitiativeTocByinitId(this.result_toc_result.initiative_id).subscribe(
-      ({ response }) => {
-        //(response);
-        this.fullInitiativeToc = response[0]?.toc_id;
-      },
-      err => {
-        console.error(err);
-      }
-    );
-  }
+  // GET_fullInitiativeTocByinitId() {
+  //   this.api.tocApiSE.GET_fullInitiativeTocByinitId(this.result_toc_result.initiative_id).subscribe(
+  //     ({ response }) => {
+  //       //(response);
+  //       this.fullInitiativeToc = response[0]?.toc_id;
+  //     },
+  //     err => {
+  //       console.error(err);
+  //     }
+  //   );
+  // }
 }

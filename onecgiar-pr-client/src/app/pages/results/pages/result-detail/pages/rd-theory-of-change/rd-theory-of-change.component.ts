@@ -22,7 +22,7 @@ export class RdTheoryOfChangeComponent implements OnInit {
   psub = '';
   contributingInitiativeNew = [];
   currentInitOfficialCode = null;
-  primarySubmitter = null;
+  // primarySubmitter = null;
 
   constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public centersSE: CentersService, public institutionsSE: InstitutionsService, public greenChecksSE: GreenChecksService, public theoryOfChangesServices: RdTheoryOfChangesServicesService, public dataControlSE: DataControlService) {}
 
@@ -43,23 +43,25 @@ export class RdTheoryOfChangeComponent implements OnInit {
     this.api.resultsSE.GET_toc().subscribe({
       next: ({ response }) => {
         this.theoryOfChangeBody = response;
-        setTimeout(() => {
-          this.getConsumed = true;
-        }, 100);
 
         if (this.theoryOfChangeBody?.result_toc_result) this.psub = `${this.theoryOfChangeBody?.result_toc_result.official_code} ${this.theoryOfChangeBody?.result_toc_result.short_name}`;
-        this.theoryOfChangeBody?.contributing_and_primary_initiative.forEach(init => (init.full_name = `${init?.official_code} - <strong>${init?.short_name}</strong> - ${init?.initiative_name}`));
+        this.theoryOfChangeBody?.contributing_and_primary_initiative.forEach((init) => (init.full_name = `${init?.official_code} - <strong>${init?.short_name}</strong> - ${init?.initiative_name}`));
 
         this.currentInitOfficialCode = this.theoryOfChangeBody.result_toc_result.official_code;
 
-        if (this.theoryOfChangeBody?.impactsTarge) this.theoryOfChangeBody?.impactsTarge.forEach(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
-        if (this.theoryOfChangeBody?.sdgTargets) this.theoryOfChangeBody?.sdgTargets.forEach(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
+        if (this.theoryOfChangeBody?.impactsTarge) this.theoryOfChangeBody?.impactsTarge.forEach((item) => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
+        if (this.theoryOfChangeBody?.sdgTargets) this.theoryOfChangeBody?.sdgTargets.forEach((item) => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
 
-        this.primarySubmitter = this.theoryOfChangeBody?.contributing_and_primary_initiative.filter(item => item.initiative_role_id === '1')[0];
+        this.theoryOfChangesServices.primarySubmitter = this.theoryOfChangeBody?.contributing_and_primary_initiative.filter((item) => item.initiative_role_id === '1')[0];
         this.theoryOfChangesServices.theoryOfChangeBody = this.theoryOfChangeBody;
-        // console.log('body', this.theoryOfChangeBody);
+
+        setTimeout(() => {
+          this.getConsumed = true;
+        }, 0);
+
+        console.log('body', this.theoryOfChangesServices);
       },
-      error: err => {
+      error: (err) => {
         this.getConsumed = true;
         console.error(err);
       }
@@ -67,34 +69,34 @@ export class RdTheoryOfChangeComponent implements OnInit {
   }
 
   get disabledCenters() {
-    return this.theoryOfChangeBody.contributing_center.filter(center => center.from_cgspace);
+    return this.theoryOfChangeBody.contributing_center.filter((center) => center.from_cgspace);
   }
 
   get validateGranTitle() {
     for (const iterator of this.theoryOfChangeBody.contributing_np_projects) {
-      const evidencesFinded = this.theoryOfChangeBody.contributing_np_projects.filter(evidence => evidence.grant_title == iterator.grant_title);
+      const evidencesFinded = this.theoryOfChangeBody.contributing_np_projects.filter((evidence) => evidence.grant_title == iterator.grant_title);
       if (evidencesFinded.length >= 2) {
         return evidencesFinded.length >= 2;
       }
     }
 
-    return !!this.theoryOfChangeBody.contributing_np_projects.find(evidence => !evidence.grant_title);
+    return !!this.theoryOfChangeBody.contributing_np_projects.find((evidence) => !evidence.grant_title);
   }
 
   onSaveSection() {
     this.theoryOfChangeBody.bodyNewTheoryOfChanges = this.theoryOfChangesServices.body;
     this.theoryOfChangeBody.bodyActionArea = this.theoryOfChangesServices.resultActionArea;
     const initiativesAux = this.theoryOfChangeBody.contributing_and_primary_initiative.concat(this.contributingInitiativeNew);
-    this.theoryOfChangeBody.contributing_initiatives = initiativesAux.filter(init => init.id != this.theoryOfChangeBody.result_toc_result.initiative_id);
+    this.theoryOfChangeBody.contributing_initiatives = initiativesAux.filter((init) => init.id != this.theoryOfChangeBody.result_toc_result.initiative_id);
     const saveSection = () => {
-      this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
+      this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe((resp) => {
         this.getConsumed = false;
         this.theoryOfChangesServices.body = [];
         this.currentInitOfficialCode != newInitOfficialCode ? location.reload() : this.getSectionInformation();
         this.contributingInitiativeNew = [];
       });
     };
-    const newInit = this.theoryOfChangeBody.contributing_and_primary_initiative.find(init => init.id == this.theoryOfChangeBody.result_toc_result.initiative_id);
+    const newInit = this.theoryOfChangeBody.contributing_and_primary_initiative.find((init) => init.id == this.theoryOfChangeBody.result_toc_result.initiative_id);
     const newInitOfficialCode = newInit?.official_code;
     if (this.currentInitOfficialCode != newInitOfficialCode)
       return this.api.alertsFe.show({ id: 'primary-submitter', title: 'Change in primary submitter', description: `The <strong>${newInitOfficialCode}</strong> will now be the primary submitter of this result and will have exclusive editing rights for all sections and submission. <strong>${this.currentInitOfficialCode}</strong> will lose editing and submission rights but will remain as a contributing Initiative in this result. <br> <br> Please ensure that the new primary submitter of this result is aware of this change.`, status: 'success', confirmText: 'Proceed' }, () => {
@@ -136,17 +138,19 @@ export class RdTheoryOfChangeComponent implements OnInit {
   }
 
   requestEvent() {
-    this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
+    this.api.dataControlSE.findClassTenSeconds('alert-event').then((resp) => {
       try {
-        document.querySelector('.alert-event').addEventListener('click', e => {
+        document.querySelector('.alert-event').addEventListener('click', (e) => {
           this.api.dataControlSE.showPartnersRequest = true;
         });
-      } catch (error) {}
+      } catch (error) {
+        console.log(error);
+      }
     });
   }
 
   addPrimary(center) {
-    this.theoryOfChangeBody?.contributing_center.forEach(center => (center.primary = false));
+    this.theoryOfChangeBody?.contributing_center.forEach((center) => (center.primary = false));
     center.primary = true;
   }
 

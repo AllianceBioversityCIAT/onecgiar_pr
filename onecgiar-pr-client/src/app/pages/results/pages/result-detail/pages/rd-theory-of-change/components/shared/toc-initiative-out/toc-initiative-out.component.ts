@@ -46,6 +46,7 @@ export class TocInitiativeOutComponent implements OnInit {
     if (this.initiative.toc_result_id != null) {
       this.getIndicator();
     }
+    console.log('this.initiative', this.initiative);
   }
 
   getDescription(official_code, short_name) {
@@ -75,7 +76,7 @@ export class TocInitiativeOutComponent implements OnInit {
       },
       error: err => {
         this.outputList = [];
-        console.error(err);
+        // console.error(err);
       }
     });
   }
@@ -87,7 +88,7 @@ export class TocInitiativeOutComponent implements OnInit {
       },
       error: err => {
         this.outcomeList = [];
-        console.error(err);
+        // console.error(err);
       }
     });
   }
@@ -99,43 +100,43 @@ export class TocInitiativeOutComponent implements OnInit {
       },
       error: err => {
         this.eoiList = [];
-        console.error(err);
+        // console.error(err);
       }
     });
   }
 
-  GET_fullInitiativeTocByinitId() {
-    this.api.tocApiSE.GET_fullInitiativeTocByinitId(this.initiative.initiative_id).subscribe(
-      ({ response }) => {
-        this.fullInitiativeToc = response[0]?.toc_id;
-      },
-      err => {
-        console.error(err);
-      }
-    );
-  }
+  // GET_fullInitiativeTocByinitId() {
+  //   this.api.tocApiSE.GET_fullInitiativeTocByinitId(this.initiative.initiative_id).subscribe(
+  //     ({ response }) => {
+  //       this.fullInitiativeToc = response[0]?.toc_id;
+  //     },
+  //     err => {
+  //       console.error(err);
+  //     }
+  //   );
+  // }
 
   get_versionDashboard() {
-    this.api.resultsSE.get_vesrsionDashboard(this.initiative.toc_result_id, this.initiative.initiative_id).subscribe(
-      ({ response }) => {
+    this.api.resultsSE.get_vesrsionDashboard(this.initiative[0].toc_result_id, this.initiative[0].initiative_id).subscribe({
+      next: ({ response }) => {
         this.fullInitiativeToc = response?.version_id;
       },
-      err => {
+      error: err => {
         console.error(err);
       }
-    );
+    });
   }
 
   showOutcomeLevel = true;
 
   valdiateEOI(initiative) {
     this.showOutcomeLevel = false;
-    if (initiative.planned_result == false) initiative.toc_level_id = 3;
+    if (this.theoryOfChangesServices?.planned_result == false) initiative.toc_level_id = 3;
     setTimeout(() => {
       this.showOutcomeLevel = true;
     }, 100);
 
-    if (!initiative.planned_result) {
+    if (!this.theoryOfChangesServices?.planned_result) {
       this.indicatorView = false;
       this.indicators = [];
     }
@@ -181,13 +182,13 @@ export class TocInitiativeOutComponent implements OnInit {
     if (this.resultLevelId == 1) {
       narrative = 'output';
     }
-    if (this.showOutcomeLevel && (this.resultLevelId == 1 ? this.initiative?.planned_result == false : true)) {
+    if (this.showOutcomeLevel && (this.resultLevelId == 1 ? this.theoryOfChangesServices?.planned_result == false : true)) {
       narrative = 'outcome';
     }
-    if ((this.resultLevelId == 1 ? this.initiative?.planned_result == false : true) && this.initiative.toc_level_id != 3) {
+    if ((this.resultLevelId == 1 ? this.theoryOfChangesServices?.planned_result == false : true) && this.initiative.toc_level_id != 3) {
       narrative = 'outcome';
     }
-    if ((this.resultLevelId == 1 ? this.initiative?.planned_result == false : true) && this.initiative.toc_level_id == 3) {
+    if ((this.resultLevelId == 1 ? this.theoryOfChangesServices?.planned_result == false : true) && this.initiative.toc_level_id == 3) {
       narrative = 'outcome';
     }
 

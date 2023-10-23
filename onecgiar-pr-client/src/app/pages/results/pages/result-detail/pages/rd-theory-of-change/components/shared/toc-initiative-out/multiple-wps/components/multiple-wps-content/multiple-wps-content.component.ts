@@ -1,14 +1,15 @@
-import { Component, Input, OnInit } from '@angular/core';
-import { TocInitiativeOutcomeListsService } from '../../../toc-initiative-outcome-section/services/toc-initiative-outcome-lists.service';
+import { Component, Input, OnChanges, OnInit } from '@angular/core';
+import { TocInitiativeOutcomeListsService } from '../../../../../toc-initiative-outcome-section/services/toc-initiative-outcome-lists.service';
 import { ApiService } from 'src/app/shared/services/api/api.service';
-import { RdTheoryOfChangesServicesService } from '../../../../rd-theory-of-changes-services.service';
+import { RdTheoryOfChangesServicesService } from '../../../../../../rd-theory-of-changes-services.service';
+import { MultipleWPsServiceService } from '../../services/multiple-wps-service.service';
 
 @Component({
   selector: 'app-multiple-wps-content',
   templateUrl: './multiple-wps-content.component.html',
   styleUrls: ['./multiple-wps-content.component.scss']
 })
-export class MultipleWPsContentComponent implements OnInit {
+export class MultipleWPsContentComponent implements OnInit, OnChanges {
   @Input() editable: boolean;
   @Input() initiative: any;
   @Input() resultLevelId: number | string;
@@ -22,9 +23,9 @@ export class MultipleWPsContentComponent implements OnInit {
   indicatorView = false;
   disabledInput = false;
   testingYesOrNo;
-  SDGtestingYesorNo;
+  showOutcomeLevel = false;
 
-  constructor(public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {}
+  constructor(public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService, public multipleWpsService: MultipleWPsServiceService) {}
 
   ngOnInit(): void {
     this.theoryOfChangesServices.body.push({
@@ -43,7 +44,7 @@ export class MultipleWPsContentComponent implements OnInit {
     this.GET_outputList();
     this.GET_EOIList();
     this.valdiateEOI(this.initiative);
-    if (this.initiative.toc_result_id != null) {
+    if (this.initiative?.toc_result_id !== null) {
       this.getIndicator();
     }
   }
@@ -105,75 +106,83 @@ export class MultipleWPsContentComponent implements OnInit {
   }
 
   GET_fullInitiativeTocByinitId() {
-    this.api.tocApiSE.GET_fullInitiativeTocByinitId(this.initiative.initiative_id).subscribe(
-      ({ response }) => {
+    this.api.tocApiSE.GET_fullInitiativeTocByinitId(this.initiative.initiative_id).subscribe({
+      next: ({ response }) => {
         this.fullInitiativeToc = response[0]?.toc_id;
+        console.log('hola');
       },
-      err => {
+      error: err => {
         console.error(err);
       }
-    );
+    });
   }
 
   get_versionDashboard() {
-    this.api.resultsSE.get_vesrsionDashboard(this.initiative.toc_result_id, this.initiative.initiative_id).subscribe(
-      ({ response }) => {
+    this.api.resultsSE.get_vesrsionDashboard(this.initiative.toc_result_id, this.initiative.initiative_id).subscribe({
+      next: ({ response }) => {
         this.fullInitiativeToc = response?.version_id;
       },
-      err => {
+      error: err => {
         console.error(err);
       }
-    );
+    });
   }
-
-  showOutcomeLevel = true;
 
   valdiateEOI(initiative) {
     this.showOutcomeLevel = false;
-    if (initiative.planned_result == false) initiative.toc_level_id = 3;
+    if (this.theoryOfChangesServices?.planned_result === false) initiative.toc_level_id = 3;
+
     setTimeout(() => {
       this.showOutcomeLevel = true;
     }, 100);
 
-    if (!initiative.planned_result) {
+    if (!this.theoryOfChangesServices?.planned_result) {
       this.indicatorView = false;
       this.indicators = [];
     }
   }
 
-  async getIndicator() {
+  getIndicator() {
     this.indicators = [];
 
     this.indicatorView = false;
     this.disabledInput = false;
-    await this.api.resultsSE.Get_indicator(this.initiative.toc_result_id, this.initiative.initiative_id).subscribe(({ response }) => {
-      this.theoryOfChangesServices.targetsIndicators = response?.informationIndicator;
-      this.theoryOfChangesServices.impactAreasTargets = response?.impactAreas;
-      this.theoryOfChangesServices.sdgTargest = response?.sdgTargets;
-      this.theoryOfChangesServices.actionAreaOutcome = response?.actionAreaOutcome;
-      this.theoryOfChangesServices.impactAreasTargets.map(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
-      this.theoryOfChangesServices.sdgTargest.map(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
-      this.theoryOfChangesServices.actionAreaOutcome.map(item => (item.full_name = `${item.actionAreaId === 1 ? '<strong>Systems Transformation</strong>' : item.actionAreaId === 2 ? '<strong>Resilient Agrifood Systems</strong>' : '<strong>Genetic Innovation</strong>'} (${item.outcomeSMOcode}) - ${item.outcomeStatement}`));
-      this.theoryOfChangesServices.body[this.indexYesorNo] = {
-        impactAreasTargets: this.theoryOfChangesServices.impactAreasTargets,
-        sdgTargest: this.theoryOfChangesServices.sdgTargest,
-        targetsIndicators: this.theoryOfChangesServices.targetsIndicators,
-        actionAreaOutcome: this.theoryOfChangesServices.actionAreaOutcome,
-        isSdg: response?.isSdg,
-        isImpactArea: response?.isImpactArea,
-        resultId: response?.resultId,
-        initiative: response?.initiative,
-        is_sdg_action_impact: response?.is_sdg_action_impact
-      };
 
-      if (this.indicators.length == 1) {
-        this.disabledInput = true;
-      }
-      setTimeout(() => {
+    this.api.resultsSE.Get_indicator(this.initiative?.toc_result_id, this.initiative?.initiative_id).subscribe({
+      next: ({ response }) => {
+        this.theoryOfChangesServices.targetsIndicators = response?.informationIndicator;
+        this.theoryOfChangesServices.impactAreasTargets = response?.impactAreas;
+        this.theoryOfChangesServices.sdgTargest = response?.sdgTargets;
+        this.theoryOfChangesServices.actionAreaOutcome = response?.actionAreaOutcome;
+        this.theoryOfChangesServices.impactAreasTargets.forEach(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
+        this.theoryOfChangesServices.sdgTargest.forEach(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
+        this.theoryOfChangesServices.actionAreaOutcome.forEach(item => (item.full_name = `${item.actionAreaId === 1 ? '<strong>Systems Transformation</strong>' : item.actionAreaId === 2 ? '<strong>Resilient Agrifood Systems</strong>' : '<strong>Genetic Innovation</strong>'} (${item.outcomeSMOcode}) - ${item.outcomeStatement}`));
+        this.theoryOfChangesServices.body[this.indexYesorNo] = {
+          impactAreasTargets: this.theoryOfChangesServices.impactAreasTargets,
+          sdgTargest: this.theoryOfChangesServices.sdgTargest,
+          targetsIndicators: this.theoryOfChangesServices.targetsIndicators,
+          actionAreaOutcome: this.theoryOfChangesServices.actionAreaOutcome,
+          isSdg: response?.isSdg,
+          isImpactArea: response?.isImpactArea,
+          resultId: response?.resultId,
+          initiative: response?.initiative,
+          is_sdg_action_impact: response?.is_sdg_action_impact
+        };
+
+        if (this.indicators.length == 1) {
+          this.disabledInput = true;
+        }
+
+        setTimeout(() => {
+          this.indicatorView = true;
+        }, 100);
+
         this.indicatorView = true;
-      }, 100);
+      },
+      error: err => {
+        console.log(err);
+      }
     });
-    this.indicatorView = true;
   }
 
   narrativeTypeResult() {
@@ -181,16 +190,25 @@ export class MultipleWPsContentComponent implements OnInit {
     if (this.resultLevelId == 1) {
       narrative = 'output';
     }
-    if (this.showOutcomeLevel && (this.resultLevelId == 1 ? this.initiative?.planned_result == false : true)) {
+    if (this.showOutcomeLevel && (this.resultLevelId == 1 ? this.theoryOfChangesServices?.planned_result == false : true)) {
       narrative = 'outcome';
     }
-    if ((this.resultLevelId == 1 ? this.initiative?.planned_result == false : true) && this.initiative.toc_level_id != 3) {
+    if ((this.resultLevelId == 1 ? this.theoryOfChangesServices?.planned_result == false : true) && this.initiative.toc_level_id != 3) {
       narrative = 'outcome';
     }
-    if ((this.resultLevelId == 1 ? this.initiative?.planned_result == false : true) && this.initiative.toc_level_id == 3) {
+    if ((this.resultLevelId == 1 ? this.theoryOfChangesServices?.planned_result == false : true) && this.initiative.toc_level_id == 3) {
       narrative = 'outcome';
     }
 
     return 'Indicator(s) of the ' + narrative + ' selected';
+  }
+
+  // Change initiative info when change of active initiative
+
+  ngOnChanges() {
+    this.valdiateEOI(this?.initiative);
+    if (this.initiative.toc_result_id !== null) {
+      this.getIndicator();
+    }
   }
 }

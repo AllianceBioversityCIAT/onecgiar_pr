@@ -1,8 +1,10 @@
 <div class="editable_field" [ngClass]="{'global-editable': this.editable}">
-    <app-pr-yes-or-not [label]="getDescription(initiative?.official_code,initiative?.short_name)"
+    <app-pr-yes-or-not
+        [label]="getDescription(this.theoryOfChangesServices.primarySubmitter?.official_code,this.theoryOfChangesServices.primarySubmitter?.short_name)"
         (selectOptionEvent)="valdiateEOI(initiative);initiative.toc_result_id = null;"
-        [(ngModel)]="initiative.planned_result" [description]="this.headerDescription(initiative.planned_result)"
-        [readOnly]="!editable" [editable]="editable" [hideDescription]="initiative.planned_result === null">
+        [(ngModel)]="this.theoryOfChangesServices.planned_result"
+        [description]="this.headerDescription(this.theoryOfChangesServices.planned_result)" [readOnly]="!editable"
+        [editable]="editable" [hideDescription]="this.theoryOfChangesServices.planned_result === null">
     </app-pr-yes-or-not>
 
     <a [href]="this.api.dataControlSE.tocUrl+this.fullInitiativeToc" target="_blank" class="toc_button"><span>See
@@ -14,27 +16,28 @@
 <!-- <app-multiple-wps></app-multiple-wps> -->
 
 <app-multiple-wps [editable]="editable" [initiative]="initiative" [resultLevelId]="resultLevelId" [isIpsr]="isIpsr"
-    [indexYesorNo]="indexYesorNo"></app-multiple-wps>
+    [indexYesorNo]="indexYesorNo" *ngIf="this.theoryOfChangesServices.planned_result !== null"></app-multiple-wps>
 
-<div class="flex-no-wrap" *ngIf="initiative.planned_result !== null">
-    <app-pr-select *ngIf="this.initiative?.planned_result && resultLevelId == 1" [options]="this.outputList"
-        label="Output" optionLabel="extraInformation" optionValue="toc_result_id" [disabled]="!this.editable"
-        [editable]="editable" placeholder="Select output" [(ngModel)]="initiative.toc_result_id"
-        [extraInformation]="true" (selectOptionEvent)="getIndicator();this.get_versionDashboard()">
+<div class="flex-no-wrap" *ngIf="this.theoryOfChangesServices.planned_result !== null">
+    <app-pr-select *ngIf="this.theoryOfChangesServices?.planned_result && resultLevelId == 1"
+        [options]="this.outputList" label="Output" optionLabel="extraInformation" optionValue="toc_result_id"
+        [disabled]="!this.editable" [editable]="editable" placeholder="Select output"
+        [(ngModel)]="initiative.toc_result_id" [extraInformation]="true"
+        (selectOptionEvent)="getIndicator();this.get_versionDashboard()">
     </app-pr-select>
 
     <div style="max-width: 250px;"
-        *ngIf="this.showOutcomeLevel && (resultLevelId == 1 ? this.initiative?.planned_result == false : true)">
+        *ngIf="this.showOutcomeLevel && (resultLevelId == 1 ? this.theoryOfChangesServices?.planned_result == false : true)">
         <app-pr-select [options]="this.tocInitiativeOutcomeListsSE.outcomeLevelList|outcomeLevelFilter:2"
             label="Outcome level" [editable]="editable"
-            [disabled]="(resultLevelId == 1 ? true : this.initiative?.planned_result == false) || !this.editable"
+            [disabled]="(resultLevelId == 1 ? true : this.theoryOfChangesServices?.planned_result == false) || !this.editable"
             optionLabel="name" optionValue="toc_level_id" placeholder="Select outcome level"
             [(ngModel)]="initiative.toc_level_id" (selectOptionEvent)="indicatorView = false">
         </app-pr-select>
     </div>
 
     <app-pr-select
-        *ngIf="(resultLevelId == 1 ? this.initiative?.planned_result == false : true) && initiative.toc_level_id != 3"
+        *ngIf="(resultLevelId == 1 ? this.theoryOfChangesServices?.planned_result == false : true) && initiative.toc_level_id != 3"
         [options]="this.outcomeList" label="Outcome" [editable]="editable"
         [disabled]="(resultLevelId == 1 ? false : false) || !this.editable" optionLabel="extraInformation"
         [extraInformation]="true" optionValue="toc_result_id" placeholder="Select outcome"
@@ -42,7 +45,7 @@
     </app-pr-select>
 
     <app-pr-select
-        *ngIf="(resultLevelId == 1 ? this.initiative?.planned_result == false : true) && initiative.toc_level_id == 3"
+        *ngIf="(resultLevelId == 1 ? this.theoryOfChangesServices?.planned_result == false : true) && initiative.toc_level_id == 3"
         [options]="this.eoiList" label="Outcome" [editable]="editable"
         [disabled]="(resultLevelId == 1 ? false : false) || !this.editable" optionLabel="title"
         optionValue="toc_result_id" placeholder="Select outcome" [(ngModel)]="initiative.toc_result_id"

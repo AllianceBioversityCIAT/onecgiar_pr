@@ -4,7 +4,7 @@
 <div>
     <div class="date"><strong>Updated on:&nbsp;</strong> 6 October, 2022 - 2:00:22 PM - (CET)</div>
     <app-toc-initiative-out [initiative]="result_toc_result" [indexYesorNo]="0"
-        [editable]="!this.rolesSE.platformIsClosed && (this.rolesSE.validateInitiative(result_toc_result?.initiative_id) || this.rolesSE.isAdmin)"
+        [editable]="!this.rolesSE.platformIsClosed && (this.rolesSE.validateInitiative(this.theoryOfChangesServices?.primarySubmitter) || this.rolesSE.isAdmin)"
         [resultLevelId]="2">
     </app-toc-initiative-out>
 </div>

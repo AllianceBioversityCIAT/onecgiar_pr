@@ -14,6 +14,7 @@ export class RdTheoryOfChangesServicesService {
   resultActionArea: any = [];
   theoryOfChangeBody: any = [];
   primarySubmitter: any = null;
+  planned_result = null;
 
   constructor() {}
 
