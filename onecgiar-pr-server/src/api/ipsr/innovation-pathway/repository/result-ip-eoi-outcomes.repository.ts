@@ -3,6 +3,7 @@ import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
 import { ResultIpEoiOutcome } from '../entities/result-ip-eoi-outcome.entity';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
+import { env } from 'process';
 
 @Injectable()
 export class ResultIpEoiOutcomeRepository
@@ -54,9 +55,9 @@ export class ResultIpEoiOutcomeRepository
       rieo.toc_result_id,
       (
         SELECT
-          tr.title
-        FROM toc_result tr
-        WHERE toc_result_id = rieo.toc_result_id
+          tr.result_title 
+        FROM ${env.DB_TOC}.toc_results tr 
+        WHERE tr.id = rieo.toc_result_id
       ) AS title
     FROM
       result_ip_eoi_outcomes rieo
