@@ -1,10 +1,22 @@
 <div class="evidence_item">
     <div class="index">{{this.index}}</div>
-    <div>
-        <div class="link">
+    <div class="evidence_fields">
+
+        <app-pr-radio-button [options]="this.evidencesType" optionLabel="name" optionValue="id"
+            label="Source of the evidence" [(ngModel)]="this.eTExample">
+        </app-pr-radio-button>
+
+
+        <div class="link" *ngIf="this.eTExample == 1;else upload_file">
             <app-pr-input label="Link" [(ngModel)]="this.evidence.link" placeholder="Add link" type="link"
                 [disabled]=" this.dataControlSE.isKnowledgeProduct" [required]="!isOptional"></app-pr-input>
         </div>
+
+
+        <ng-template #upload_file>
+            file
+        </ng-template>
+
         <app-pr-field-header label="Please indicate for which Impact Area tags this evidence is related to"
             [required]="false" *ngIf="!isSuppInfo"></app-pr-field-header>
         <div class="checkboxes" *ngIf="!isSuppInfo">
