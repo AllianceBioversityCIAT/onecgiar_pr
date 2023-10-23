@@ -40,7 +40,7 @@ export class GlobalCompletenessStatusComponent implements OnInit {
   constructor(public api: ApiService, public phasesSE: PhasesService, public resultHistoryOfChangesModalSE: ResultHistoryOfChangesModalService, public exportTablesSE: ExportTablesService) {}
 
   ngOnInit(): void {
-    this.POST_reportSesultsCompleteness([], [], 1);
+    // this.POST_reportSesultsCompleteness([], []);
     this.initMode ? this.GET_initiativesByUser() : this.GET_AllInitiatives();
     this.getPhases();
   }
@@ -120,26 +120,30 @@ export class GlobalCompletenessStatusComponent implements OnInit {
   }
 
   GET_initiativesByUser() {
-    this.api.authSE.GET_initiativesByUser().subscribe(({ response }) => {
-      const inits = [];
-      response.map((init: any) => {
-        //(init);
-        inits.push(init.initiative_id);
-        this.initiativesSelected.push({ id: init.initiative_id, full_name: init.full_name });
-      });
-      this.POST_reportSesultsCompleteness(inits, []);
+    this.POST_reportSesultsCompleteness(this.mapMyInitiativesList(), []);
+  }
+
+  mapMyInitiativesList(): any[] {
+    const inits = [];
+    this.api.dataControlSE.myInitiativesList.map((init: any) => {
+      if (init?.role != 'Lead' && init?.role != 'Coordinator') return;
+      inits.push(init.initiative_id);
+      this.initiativesSelected.push({ id: init.initiative_id, full_name: init.full_name });
     });
+    return inits;
   }
 
   GET_AllInitiatives() {
     this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
       this.allInitiatives = response;
+      this.POST_reportSesultsCompleteness([], []);
     });
   }
 
   onSelectInit() {
-    const inits = this.initiativesSelected.map((init: any) => init.id);
+    let inits = this.initiativesSelected.map((init: any) => init.id);
     const phases = this.phasesSelected.map((phase: any) => phase.id);
+    if (this.initMode && !inits.length) inits = this.mapMyInitiativesList();
     this.POST_reportSesultsCompleteness(inits, phases, inits?.length ? null : 1);
   }
 

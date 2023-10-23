@@ -169,6 +169,7 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   }
 
   removeOption(option) {
+    this.selectAll = null;
     if (this.logicalDeletion && !option.new) {
       option.is_active = false;
     } else {
