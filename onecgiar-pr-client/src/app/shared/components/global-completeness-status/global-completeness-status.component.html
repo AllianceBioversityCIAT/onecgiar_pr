@@ -9,18 +9,14 @@
         </div>
 
         <div class="initiatives_selector">
-            <app-pr-multi-select *ngIf="!this.api.rolesSE.isAdmin" [isStatic]="true"
-                [options]="this.api.dataControlSE.myInitiativesList" optionLabel="full_name" optionValue="id"
-                (selectOptionEvent)="onSelectInit()" [required]="false" (removeOptionEvent)="onRemoveinit($event)"
-                selectedOptionLabel="full_name" [(ngModel)]="this.initiativesSelected" [confirmDeletion]="true"
-                placeholder="Select Initiative(s)">
-            </app-pr-multi-select>
-            <app-pr-multi-select *ngIf="this.api.rolesSE.isAdmin" [isStatic]="true"
-                [options]="this.initMode?(this.api.dataControlSE.myInitiativesList | filterInitWithRoleCoordAndLead):this.allInitiatives "
+
+            <app-pr-multi-select [isStatic]="true"
+                [options]="this.initMode ?(this.api.dataControlSE.myInitiativesList | filterInitWithRoleCoordAndLead):this.allInitiatives"
                 optionLabel="full_name" optionValue="id" (selectOptionEvent)="onSelectInit()" [required]="false"
                 (removeOptionEvent)="onRemoveinit($event)" selectedOptionLabel="full_name"
                 [(ngModel)]="this.initiativesSelected" [confirmDeletion]="true" placeholder="Select Initiative(s)">
             </app-pr-multi-select>
+
         </div>
 
         <div class="search_input">
