@@ -80,38 +80,6 @@
     </div>
   </div>
 
-  <app-pr-field-header *ngIf="this.generalInfoBody?.result_level_id !== 4" label="Actors"
-    [required]="this.generalInfoBody?.result_level_id !== 1"
-    description="An actor is an individual, organization or network operating within or beyond the system the Initiative or intervention aims to influence and whose actions can advance or impede the Initiative’s aims.">
-  </app-pr-field-header>
-
-  <app-alert-status [hidden]="this.generalInfoBody?.result_level_id === 4 || this.rolesSE.readOnly"
-    description="If you don't find the funder you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list.">
-  </app-alert-status>
-
-  <div class="auto_fit_container" *ngIf="this.generalInfoBody?.result_level_id !== 4">
-    <app-pr-multi-select [options]="this.institutionsSE.institutionsList" selectedLabel="Actor(s) selected"
-      selectedOptionLabel="institutions_name" optionLabel="full_name" optionValue="institutions_id"
-      [(ngModel)]="this.generalInfoBody.institutions" (selectOptionEvent)="sendIntitutionsTypes()"
-      placeholder="Select actors"> </app-pr-multi-select>
-
-    <div>
-      <app-pr-multi-select [options]="this.institutionsSE.institutionsTypesList"
-        selectedLabel="Actor(s) Types(s) selected" optionLabel="institutions_type_name"
-        optionValue="institutions_type_id" [disableOptions]="this.disableOptions"
-        [(ngModel)]="this.generalInfoBody.institutions_type" (selectOptionEvent)="toggle = toggle + 1"
-        placeholder="Select actor type"> </app-pr-multi-select>
-
-      <div class="chips_container">
-        <div class="pr_chip_selected"
-          *ngFor="let option of this.generalInfoBody.institutions_type | countInstitutionsTypes : toggle; let i = index">
-          <div class="name">{{ option?.count_name }}</div>
-          <i class="material-icons-round" *ngIf="false">remove_circle </i>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <app-pr-yes-or-not label="Is this result featured in a Key Result Story for the reporting year?"
     [(ngModel)]="this.generalInfoBody.is_krs" (ngModelChange)="onChangeKrs()"></app-pr-yes-or-not>
 

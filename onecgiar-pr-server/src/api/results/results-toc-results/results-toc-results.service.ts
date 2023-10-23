@@ -140,7 +140,7 @@ export class ResultsTocResultsService {
           user.id,
           1,
         );
-        let resultTocResultArray: NonPooledProject[] = [];
+        const resultTocResultArray: NonPooledProject[] = [];
         for (let index = 0; index < contributing_np_projects.length; index++) {
           if (contributing_np_projects[index]?.grant_title?.length) {
             const resultData =
@@ -218,7 +218,7 @@ export class ResultsTocResultsService {
           centerArray,
           user.id,
         );
-        let resultCenterArray: ResultsCenter[] = [];
+        const resultCenterArray: ResultsCenter[] = [];
         for (let index = 0; index < contributing_center.length; index++) {
           const exists =
             await this._resultsCenterRepository.getAllResultsCenterByResultIdAndCenterId(
@@ -276,11 +276,12 @@ export class ResultsTocResultsService {
         for (const toc of createResultsTocResultDto?.result_toc_result) {
           let RtR: ResultsTocResult | null;
           if (toc?.result_toc_result_id) {
-            RtR = await this._resultsTocResultRepository.findOne({
-              where: {
-                result_toc_result_id: toc?.result_toc_result_id,
-              },
-            }) || null;
+            RtR =
+              (await this._resultsTocResultRepository.findOne({
+                where: {
+                  result_toc_result_id: toc?.result_toc_result_id,
+                },
+              })) || null;
           } else {
             RtR = null;
           }
@@ -362,13 +363,13 @@ export class ResultsTocResultsService {
             contributors_result_toc_result.filter((el) =>
               initiativeArray.includes(el.initiative_id),
             );
-          let RtRArray: ResultsTocResult[] = [];
+          const RtRArray: ResultsTocResult[] = [];
           for (
             let index = 0;
             index < contributors_result_toc_result.length;
             index++
           ) {
-            let RtR = await this._resultsTocResultRepository.getRTRById(
+            const RtR = await this._resultsTocResultRepository.getRTRById(
               contributors_result_toc_result[index].result_toc_result_id,
             );
 
@@ -448,7 +449,7 @@ export class ResultsTocResultsService {
         }
 
         if (result.result_level_id == 2) {
-          for (let resultAction of bodyActionArea) {
+          for (const resultAction of bodyActionArea) {
             await this._resultsImpactAreaTargetRepository.saveImpactAreaTarget(
               result_id,
               resultAction?.consImpactTarget,
@@ -516,7 +517,7 @@ export class ResultsTocResultsService {
         await this._resultsCenterRepository.getAllResultsCenterByResultId(
           resultId,
         );
-      let impactAreaArray =
+      const impactAreaArray =
         await this._clarisaImpactAreaRepository.getAllImpactArea();
       let resTocRes: any[] = [];
       let conResTocRes: any[] = [];
@@ -703,6 +704,7 @@ export class ResultsTocResultsService {
           toc_result_id,
           init,
         );
+
       return {
         response: {
           initiative: init,

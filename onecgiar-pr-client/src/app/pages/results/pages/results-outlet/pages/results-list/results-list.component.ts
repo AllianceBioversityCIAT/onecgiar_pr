@@ -8,6 +8,7 @@ import { ShareRequestModalService } from '../../../result-detail/components/shar
 import { RetrieveModalService } from '../../../result-detail/components/retrieve-modal/retrieve-modal.service';
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 import { Table } from 'primeng/table';
+import { ModuleTypeEnum, StatusPhaseEnum } from 'src/app/shared/enum/api.enum';
 
 @Component({
   selector: 'app-results-list',
@@ -28,6 +29,8 @@ export class ResultsListComponent implements OnInit, OnDestroy {
     { title: 'Creation date	', attr: 'created_date' },
     { title: 'Created by	', attr: 'full_name' }
   ];
+
+  currentPhase;
 
   items: MenuItem[] = [
     {
@@ -83,11 +86,14 @@ export class ResultsListComponent implements OnInit, OnDestroy {
     this.api.updateResultsList();
     this.items;
     this.shareRequestModalSE.inNotifications = false;
+    this.getAllPhases();
   }
   onPressAction(result) {
     this.retrieveModalSE.title = result?.title;
     this.api.resultsSE.currentResultId = result?.id;
     this.api.dataControlSE.currentResult = result;
+
+    this.itemsWithDelete[1].visible = this.api.dataControlSE.currentResult?.phase_year !== this.currentPhase;
   }
 
   onDownLoadTableAsExcel() {
@@ -106,16 +112,28 @@ export class ResultsListComponent implements OnInit, OnDestroy {
 
   onDeleteREsult() {
     this.api.alertsFe.show({ id: 'confirm-delete-result', title: `Are you sure you want to delete the result "${this.api.dataControlSE?.currentResult?.title}"?`, description: `If you delete this result it will no longer be displayed in the list of results.`, status: 'success', confirmText: 'Yes, delete' }, () => {
+      this.resultsListService.showDeletingResultSpinner = true;
+      setTimeout(() => {
+        document.getElementById('custom-spinner').scrollIntoView({ behavior: 'smooth' });
+      }, 100);
       this.api.resultsSE.PATCH_DeleteResult(this.api.dataControlSE.currentResult.id).subscribe(
         resp => {
           this.api.alertsFe.show({ id: 'confirm-delete-result-su', title: `The result "${this.api.dataControlSE?.currentResult?.title}" was deleted`, description: ``, status: 'success' });
           this.api.updateResultsList();
+          this.resultsListService.showDeletingResultSpinner = false;
         },
         err => {
           console.error(err);
           this.api.alertsFe.show({ id: 'delete-error', title: 'Error when delete result', description: '', status: 'error' });
+          this.resultsListService.showDeletingResultSpinner = false;
         }
       );
+    });
+  }
+
+  getAllPhases() {
+    this.api.resultsSE.GET_versioning(StatusPhaseEnum.OPEN, ModuleTypeEnum.REPORTING).subscribe(({ response }) => {
+      this.currentPhase = response[0]?.phase_year;
     });
   }
 

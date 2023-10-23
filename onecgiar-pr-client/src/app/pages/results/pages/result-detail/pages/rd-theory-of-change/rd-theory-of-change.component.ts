@@ -6,6 +6,7 @@ import { CentersService } from '../../../../../../shared/services/global/centers
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { GreenChecksService } from '../../../../../../shared/services/global/green-checks.service';
 import { RdTheoryOfChangesServicesService } from './rd-theory-of-changes-services.service';
+import { DataControlService } from 'src/app/shared/services/data-control.service';
 
 @Component({
   selector: 'app-rd-theory-of-change',
@@ -23,7 +24,7 @@ export class RdTheoryOfChangeComponent implements OnInit {
   currentInitOfficialCode = null;
   primarySubmitter = null;
 
-  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public centersSE: CentersService, public institutionsSE: InstitutionsService, public greenChecksSE: GreenChecksService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {}
+  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public centersSE: CentersService, public institutionsSE: InstitutionsService, public greenChecksSE: GreenChecksService, public theoryOfChangesServices: RdTheoryOfChangesServicesService, public dataControlSE: DataControlService) {}
 
   ngOnInit(): void {
     this.requestEvent();
@@ -42,7 +43,6 @@ export class RdTheoryOfChangeComponent implements OnInit {
     this.api.resultsSE.GET_toc().subscribe({
       next: ({ response }) => {
         this.theoryOfChangeBody = response;
-
         setTimeout(() => {
           this.getConsumed = true;
         }, 100);
@@ -84,10 +84,8 @@ export class RdTheoryOfChangeComponent implements OnInit {
   onSaveSection() {
     this.theoryOfChangeBody.bodyNewTheoryOfChanges = this.theoryOfChangesServices.body;
     this.theoryOfChangeBody.bodyActionArea = this.theoryOfChangesServices.resultActionArea;
-
     const initiativesAux = this.theoryOfChangeBody.contributing_and_primary_initiative.concat(this.contributingInitiativeNew);
     this.theoryOfChangeBody.contributing_initiatives = initiativesAux.filter(init => init.id != this.theoryOfChangeBody.result_toc_result.initiative_id);
-
     const saveSection = () => {
       this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
         this.getConsumed = false;
@@ -102,7 +100,6 @@ export class RdTheoryOfChangeComponent implements OnInit {
       return this.api.alertsFe.show({ id: 'primary-submitter', title: 'Change in primary submitter', description: `The <strong>${newInitOfficialCode}</strong> will now be the primary submitter of this result and will have exclusive editing rights for all sections and submission. <strong>${this.currentInitOfficialCode}</strong> will lose editing and submission rights but will remain as a contributing Initiative in this result. <br> <br> Please ensure that the new primary submitter of this result is aware of this change.`, status: 'success', confirmText: 'Proceed' }, () => {
         saveSection();
       });
-
     return saveSection();
   }
 
@@ -113,7 +110,6 @@ export class RdTheoryOfChangeComponent implements OnInit {
   onSelectContributingInitiative() {
     this.theoryOfChangeBody?.contributing_initiatives.forEach((resp: any) => {
       const contributorFinded = this.theoryOfChangeBody.contributors_result_toc_result?.find((result: any) => result?.initiative_id == resp.id);
-
       const contributorToPush = new resultToResultInterfaceToc();
       contributorToPush.initiative_id = resp.id;
       contributorToPush.short_name = resp.short_name;

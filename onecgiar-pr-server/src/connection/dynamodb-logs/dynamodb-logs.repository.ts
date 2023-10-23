@@ -8,6 +8,7 @@ import { LogsModel } from './entities/dynamodb-log.schema';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { Actions } from './dto/enumAction.const';
 import { Number } from 'aws-sdk/clients/iot';
+import { Result } from '../../api/results/entities/result.entity';
 
 @Injectable()
 export class LogRepository {
@@ -103,19 +104,23 @@ export class LogRepository {
   }
 
   async createLog(
-    onResultCode: number,
+    resultData: Result,
     user: TokenDto,
     action: Actions,
     actionInfo?: { class?: string; method?: string },
     moreInfo?: string,
+    objBefore?: any,
+    objAfter?: any,
   ): Promise<LogsSchemaDto[]> {
     try {
       const dataLog = new LogsModel(
         action,
         user,
-        onResultCode,
+        resultData,
         actionInfo,
         moreInfo,
+        objBefore,
+        objAfter,
       );
       const params = {
         TableName: 'reporting_logs_test',

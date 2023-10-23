@@ -1,6 +1,10 @@
 <app-detail-section-title sectionName="Contributors" title="Theory of Change"></app-detail-section-title>
 
 <div class="detail_container">
+    <app-alert-status *ngIf="!!this.dataControlSE?.currentResult?.is_replicated"
+        description="Dear user, note that data from the previous year data has been replicated, however the information related to collaboration with other initiatives have not been replicated. Please add collaborating intiatives in section 2 and be aware that they will receive a notification to confirm the collaboration and map this result against their ToC.">
+    </app-alert-status>
+
     <app-alert-status
         description="Initiatives and non-pooled projects that you collaborated with to generate this result/contributed to this result.">
     </app-alert-status>
@@ -66,7 +70,7 @@
 
     <app-pr-field-header label="Contributing non-pooled projects" [required]="false"></app-pr-field-header>
     <app-alert-status *ngIf="!this.api.rolesSE.readOnly"
-        description="If you don't find the funder you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list.">
+        description="If you don't find the partner you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list.">
     </app-alert-status>
     <div class="donors">
         <div class="donor" *ngFor="let donor of this.theoryOfChangeBody.contributing_np_projects; let i=index">

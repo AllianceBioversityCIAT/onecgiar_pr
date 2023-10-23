@@ -26,7 +26,6 @@ export class NotificationItemInnovationComponent {
     this.api.dataControlSE.currentResult.submitter = approving_inititiative_id === owner_initiative_id ? `${approving_official_code} - ${approving_short_name}` : `${requester_official_code} - ${requester_short_name}`;
 
     if (this.api.rolesSE.platformIsClosed) return;
-    //(notification);
     this.retrieveModalSE.title = title;
     this.retrieveModalSE.requester_initiative_id = requester_initiative_id;
     this.api.resultsSE.currentResultId = result_id;
@@ -59,17 +58,17 @@ export class NotificationItemInnovationComponent {
     if (this.api.rolesSE.platformIsClosed) return;
     const body = { ...this.notification, request_status_id: response ? 2 : 3 };
     this.requesting = true;
-    this.api.resultsSE.PATCH_updateRequest(body).subscribe(
-      resp => {
+    this.api.resultsSE.PATCH_updateRequest(body).subscribe({
+      next: resp => {
         this.requesting = false;
         this.api.alertsFe.show({ id: 'noti', title: response ? 'Request accepted' : 'Request rejected', status: 'success' });
         this.requestEvent.emit();
       },
-      err => {
+      error: err => {
         this.requesting = false;
         this.api.alertsFe.show({ id: 'noti-error', title: 'Error when requesting ', description: '', status: 'error' });
         this.requestEvent.emit();
       }
-    );
+    });
   }
 }
