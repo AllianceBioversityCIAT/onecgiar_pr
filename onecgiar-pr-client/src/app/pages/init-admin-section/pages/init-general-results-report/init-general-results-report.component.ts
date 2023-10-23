@@ -123,8 +123,8 @@ export class InitGeneralResultsReportComponent implements OnInit {
       this.api.resultsSE.POST_excelFullReport([result]).subscribe(
         ({ response }) => {
           this.requestCounter++;
-          this.dataToExport.push(...response.fullReport);
-          this.tocToExport.push(...response.resultsAgaintsToc);
+          if (response?.fullReport?.length) this.dataToExport.push(...response.fullReport);
+          if (response?.resultsAgaintsToc?.length) this.tocToExport.push(...response.resultsAgaintsToc);
           resolve(null);
         },
         err => {
