@@ -111,7 +111,7 @@
                                 {{item.target_value}}</td>
                         </tr>
                         <tr class="header">
-                            <th class="row-one">Other results contributing to the target</th>
+                            <th class="row-one">{{showOutComeOrOutput()}}</th>
                             <th>Target contribution</th>
                         </tr>
 
@@ -197,7 +197,7 @@
                                     [(ngModel)]="item.contributing">{{item.contributing}} </textarea></td>
                         </tr>
                         <tr class="header">
-                            <th class="row-one">Other results contributing to the target</th>
+                            <th class="row-one">{{showOutComeOrOutput()}}</th>
                             <th>Target contribution</th>
                         </tr>
                         <tr *ngIf="item?.results_contributing.length == 0">
