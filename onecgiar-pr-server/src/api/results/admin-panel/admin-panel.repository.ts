@@ -13,8 +13,8 @@ export class AdminPanelRepository {
 
   async reportResultCompleteness(filterIntiatives: FilterInitiativesDto) {
     const complement =
-      filterIntiatives.rol_user != 1
-        ? 'and rbi.inititiative_id in (' + filterIntiatives.initiatives + ')'
+      filterIntiatives?.rol_user != 1
+        ? 'and rbi.inititiative_id in (' + filterIntiatives?.initiatives + ')'
         : '';
     const queryData = `
     SELECT
@@ -91,7 +91,8 @@ export class AdminPanelRepository {
       (
         IFNULL(v.section_seven, 1) * v.general_information * v.theory_of_change * v.partners * v.geographic_location * v.links_to_results * v.evidence
       ) AS validation,
-      if(r.status_id = 3,1,0) AS is_submitted,
+      if(r.status_id in (3, 2),1,0) AS is_submitted,
+      r.status_id,
       ROUND(
         (
           (

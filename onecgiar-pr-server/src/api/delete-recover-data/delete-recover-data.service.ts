@@ -1,5 +1,8 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
-import { ReturnResponse } from '../../shared/handlers/error.utils';
+import {
+  ReturnResponse,
+  ReturnResponseDto,
+} from '../../shared/handlers/error.utils';
 
 import { IpsrRepository } from '../ipsr/ipsr.repository';
 import { InnovationPackagingExpertRepository } from '../ipsr/innovation-packaging-experts/repositories/innovation-packaging-expert.repository';
@@ -62,6 +65,9 @@ import { ElasticOperationDto } from '../../elastic/dto/elastic-operation.dto';
 import { LogRepository } from '../../connection/dynamodb-logs/dynamodb-logs.repository';
 import { Actions } from '../../connection/dynamodb-logs/dto/enumAction.const';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
+import { Result } from '../results/entities/result.entity';
+import { ResultLevelEnum } from '../../shared/constants/result-level.enum';
+import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 
 @Injectable()
 export class DeleteRecoverDataService {
@@ -294,4 +300,11 @@ export class DeleteRecoverDataService {
       return this._returnResponse.format(error, !env.IS_PRODUCTION);
     }
   }
+
+  async manageChangedResultTypeData(
+    result: Result,
+    new_result_level: ResultLevelEnum,
+    new_result_type: ResultTypeEnum,
+    user: TokenDto,
+  ) {}
 }

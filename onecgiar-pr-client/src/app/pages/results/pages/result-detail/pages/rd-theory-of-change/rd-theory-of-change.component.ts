@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { TheoryOfChangeBody, donorInterfaceToc, resultToResultInterfaceToc } from './model/theoryOfChangeBody';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
@@ -6,14 +6,14 @@ import { CentersService } from '../../../../../../shared/services/global/centers
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { GreenChecksService } from '../../../../../../shared/services/global/green-checks.service';
 import { RdTheoryOfChangesServicesService } from './rd-theory-of-changes-services.service';
-import { map } from 'rxjs';
+import { DataControlService } from 'src/app/shared/services/data-control.service';
 
 @Component({
   selector: 'app-rd-theory-of-change',
   templateUrl: './rd-theory-of-change.component.html',
   styleUrls: ['./rd-theory-of-change.component.scss']
 })
-export class RdTheoryOfChangeComponent {
+export class RdTheoryOfChangeComponent implements OnInit {
   theoryOfChangeBody = new TheoryOfChangeBody();
   contributingInitiativesList = [];
   primaryText = ' - <strong>Primary</strong> ';
@@ -22,7 +22,9 @@ export class RdTheoryOfChangeComponent {
   psub = '';
   contributingInitiativeNew = [];
   currentInitOfficialCode = null;
-  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public centersSE: CentersService, public institutionsSE: InstitutionsService, public greenChecksSE: GreenChecksService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {}
+
+  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public centersSE: CentersService, public institutionsSE: InstitutionsService, public greenChecksSE: GreenChecksService, public theoryOfChangesServices: RdTheoryOfChangesServicesService, public dataControlSE: DataControlService) {}
+
   ngOnInit(): void {
     this.requestEvent();
     this.getSectionInformation();
@@ -40,16 +42,14 @@ export class RdTheoryOfChangeComponent {
     await this.api.resultsSE.GET_toc().subscribe({
       next: ({ response }) => {
         this.theoryOfChangeBody = response;
-        //(this.theoryOfChangeBody);
         setTimeout(() => {
           this.getConsumed = true;
         }, 100);
         if (this.theoryOfChangeBody?.result_toc_result) this.psub = `${this.theoryOfChangeBody?.result_toc_result.official_code} ${this.theoryOfChangeBody?.result_toc_result.short_name}`;
         this.theoryOfChangeBody?.contributing_and_primary_initiative.forEach(init => (init.full_name = `${init?.official_code} - <strong>${init?.short_name}</strong> - ${init?.initiative_name}`));
         this.currentInitOfficialCode = this.theoryOfChangeBody.result_toc_result.official_code;
-        // this.theoryOfChangeBody.result_toc_result;
-        this.theoryOfChangeBody.impactsTarge.map(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
-        this.theoryOfChangeBody.sdgTargets.map(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
+        if (this.theoryOfChangeBody.impactsTarge) this.theoryOfChangeBody?.impactsTarge.forEach(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
+        if (this.theoryOfChangeBody.sdgTargets) this.theoryOfChangeBody?.sdgTargets.forEach(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
       },
       error: err => {
         this.getConsumed = true;
@@ -63,7 +63,6 @@ export class RdTheoryOfChangeComponent {
   }
 
   get validateGranTitle() {
-    //(this.theoryOfChangeBody.contributing_np_projects);
     for (const iterator of this.theoryOfChangeBody.contributing_np_projects) {
       const evidencesFinded = this.theoryOfChangeBody.contributing_np_projects.filter(evidence => evidence.grant_title == iterator.grant_title);
       if (evidencesFinded.length >= 2) {
@@ -77,15 +76,11 @@ export class RdTheoryOfChangeComponent {
   onSaveSection() {
     this.theoryOfChangeBody.bodyNewTheoryOfChanges = this.theoryOfChangesServices.body;
     this.theoryOfChangeBody.bodyActionArea = this.theoryOfChangesServices.resultActionArea;
-
     const initiativesAux = this.theoryOfChangeBody.contributing_and_primary_initiative.concat(this.contributingInitiativeNew);
     this.theoryOfChangeBody.contributing_initiatives = initiativesAux.filter(init => init.id != this.theoryOfChangeBody.result_toc_result.initiative_id);
-
     const saveSection = () => {
       this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
-        //(resp);
         this.getConsumed = false;
-        // this.theoryOfChangeBody.result_toc_result.initiative_id = null;
         this.theoryOfChangesServices.body = [];
         this.currentInitOfficialCode != newInitOfficialCode ? location.reload() : this.getSectionInformation();
         this.contributingInitiativeNew = [];
@@ -97,29 +92,21 @@ export class RdTheoryOfChangeComponent {
       return this.api.alertsFe.show({ id: 'primary-submitter', title: 'Change in primary submitter', description: `The <strong>${newInitOfficialCode}</strong> will now be the primary submitter of this result and will have exclusive editing rights for all sections and submission. <strong>${this.currentInitOfficialCode}</strong> will lose editing and submission rights but will remain as a contributing Initiative in this result. <br> <br> Please ensure that the new primary submitter of this result is aware of this change.`, status: 'success', confirmText: 'Proceed' }, () => {
         saveSection();
       });
-
     return saveSection();
   }
 
   someEditable() {
     return Boolean(document.querySelector('.global-editable'));
   }
-  onSelectContributingInitiative() {
-    //();
-    //('onSelectContributingInitiative');
-    //(this.contributingInitiativeNew);
 
-    this.theoryOfChangeBody.contributing_initiatives?.map((resp: any) => {
-      //(resp);
-      //(this.theoryOfChangeBody.contributors_result_toc_result);
+  onSelectContributingInitiative() {
+    this.theoryOfChangeBody?.contributing_initiatives.forEach((resp: any) => {
       const contributorFinded = this.theoryOfChangeBody.contributors_result_toc_result?.find((result: any) => result?.initiative_id == resp.id);
-      //(contributorFinded);
       const contributorToPush = new resultToResultInterfaceToc();
       contributorToPush.initiative_id = resp.id;
       contributorToPush.short_name = resp.short_name;
       contributorToPush.official_code = resp.official_code;
       if (!contributorFinded) this.theoryOfChangeBody.contributors_result_toc_result?.push(contributorToPush);
-      //(contributorFinded);
     });
   }
 
@@ -128,20 +115,18 @@ export class RdTheoryOfChangeComponent {
   }
 
   onRemoveContributingInitiative(e) {
-    // console.clear();
-    //(e);
     const contributorFinded = this.theoryOfChangeBody.contributors_result_toc_result?.findIndex((result: any) => result?.initiative_id == e.remove.id);
     this.theoryOfChangeBody.contributors_result_toc_result.splice(contributorFinded, 1);
-    //(contributorFinded);
   }
 
   onRemoveContribuiting(index) {
     this.contributingInitiativeNew.splice(index, 1);
   }
+
   addBilateralContribution() {
     this.theoryOfChangeBody.contributing_np_projects.push(new donorInterfaceToc());
-    //(this.theoryOfChangeBody.contributing_np_projects);
   }
+
   requestEvent() {
     this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
       try {
@@ -151,18 +136,17 @@ export class RdTheoryOfChangeComponent {
       } catch (error) {}
     });
   }
+
   addPrimary(center) {
-    this.theoryOfChangeBody.contributing_center.map(center => (center.primary = false));
+    this.theoryOfChangeBody?.contributing_center.forEach(center => (center.primary = false));
     center.primary = true;
   }
 
   deletContributingCenter(index) {
-    //(index);
     this.theoryOfChangeBody?.contributing_center.splice(index, 1);
   }
 
   deleteEvidence(index) {
-    //(index);
     this.theoryOfChangeBody.contributing_np_projects.splice(index, 1);
   }
 

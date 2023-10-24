@@ -105,7 +105,7 @@ export class resultValidationRepository
 				(r.description is not null
 				and r.description <> '')`
           : ``
-      }
+      	}
 			and (
 				r.gender_tag_level_id is not null
 				and r.gender_tag_level_id <> ''
@@ -135,30 +135,8 @@ export class resultValidationRepository
 				r.poverty_tag_level_id is not null
 				and r.poverty_tag_level_id <> ''
 			)
-			and (r.is_krs in (0, 1)) ${
-        resultLevel != 4 && resultLevel != 1
-          ? `and 
-				(((
-				select
-					COUNT(rbi.id)
-				from
-					results_by_institution rbi
-				WHERE
-					rbi.institution_roles_id = 1
-					and rbi.result_id = r.id
-					and rbi.is_active > 0) > 0)
-				or
-				((
-				select
-				COUNT(rbit.id)
-				from
-				results_by_institution_type rbit
-				WHERE
-					rbit.institution_roles_id = 1
-				and rbit.results_id = r.id
-				and rbit.is_active > 0) > 0))`
-          : ``
-      } then true
+			and (r.is_krs in (0, 1)) 
+			then true
 			else false
 		END as validation
 	FROM
@@ -283,7 +261,7 @@ export class resultValidationRepository
           ? `AND IF((select count(*)
 		  from  ${env.DB_TOC}.toc_results tr
 			  join ${env.DB_TOC}.toc_results_indicators tri on tri.toc_results_id = tr.id
-			  where id = rtr1.toc_result_id and tr.phase = (select v.toc_pahse_id
+			  where tri.id = rtr1.toc_result_id and tr.phase = (select v.toc_pahse_id
 												from result r2
 												join version v on r2.version_id = v.id
 												where r2.id = r.id)) > 0, IF((select SUM(IF(rit.indicator_question IS NOT NULL AND rit.contributing_indicator <> '' AND rit.contributing_indicator IS NOT NULL, 1, 0)) 
@@ -1538,7 +1516,6 @@ export class resultValidationRepository
 				rpc.policy_stage_id is not null
 				and rpc.policy_stage_id <> ''
 			)
-			AND rpc.result_related_engagement is not null
 			AND (
 				(
 					SELECT
