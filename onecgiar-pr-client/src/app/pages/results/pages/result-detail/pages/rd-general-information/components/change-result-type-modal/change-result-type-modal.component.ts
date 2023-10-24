@@ -60,17 +60,18 @@ export class ChangeResultTypeModalComponent implements OnChanges {
   }
 
   onCloseModal() {
-    this.api.dataControlSE.changeResultTypeModal = false;
+    this.changeType.step = 0;
     this.selectedResultType = null;
     this.changeType.justification = '';
     this.cgSpaceTitle = '';
     this.cgSpaceHandle = '';
+    this.changeType.showConfirmation = false;
+    this.api.dataControlSE.changeResultTypeModal = false;
     this.resultsListFilterSE.filters.resultLevel.forEach((resultLevelOption: any) => {
       resultLevelOption.options.forEach((resultTypeOption: any) => {
         resultTypeOption.selected = false;
       });
     });
-    this.changeType.step = 0;
   }
 
   onCancelModal() {
@@ -106,11 +107,11 @@ export class ChangeResultTypeModalComponent implements OnChanges {
     this.api.resultsSE.POST_createWithHandle({ ...this.mqapJson, modification_justification: `${this.changeType.justification}${this.changeType.otherJustification !== '' ? `: ${this.changeType.otherJustification}` : ''}` }).subscribe({
       next: (resp: any) => {
         this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result type successfully updated', status: 'success', closeIn: 600 });
+        this.onCloseModal();
         this.router.navigateByUrl(`/result/result-detail/${this.api.resultsSE.currentResultId}/partners`).then(() => {
           this.router.navigateByUrl(currentUrl);
         });
         this.isChagingType = false;
-        this.onCloseModal();
       },
       error: err => {
         this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
