@@ -20,7 +20,6 @@ export class DataControlService {
   chagePhaseModal = false;
   updateResultModal = false;
   changeResultTypeModal = false;
-  confirmChangeResultTypeModal = false;
   inNotifications = false;
   currentNotification = null;
   green_checks = null;

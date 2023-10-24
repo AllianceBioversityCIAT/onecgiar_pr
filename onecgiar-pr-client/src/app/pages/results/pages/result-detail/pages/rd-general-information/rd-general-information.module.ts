@@ -11,11 +11,10 @@ import { ChangeResultTypeModalComponent } from './components/change-result-type-
 import { DialogModule } from 'primeng/dialog';
 import { TableModule } from 'primeng/table';
 import { PdfIconModule } from '../../../../../../shared/icon-components/pdf-icon/pdf-icon.module';
-import { ConfirmationModalKPComponent } from './components/confirmation-modal-kp/confirmation-modal-kp.component';
 import { ConfirmationKPComponent } from './components/confirmation-kp/confirmation-kp.component';
 
 @NgModule({
-  declarations: [RdGeneralInformationComponent, RdAnnualUpdatingComponent, ChangeResultTypeModalComponent, ConfirmationModalKPComponent, ConfirmationKPComponent],
+  declarations: [RdGeneralInformationComponent, RdAnnualUpdatingComponent, ChangeResultTypeModalComponent, ConfirmationKPComponent],
   imports: [CommonModule, RdGeneralInformationRoutingModule, CustomFieldsModule, InstitutionsPipesModule, FeedbackValidationDirectiveModule, DialogModule, TableModule, PdfIconModule]
 })
 export class RdGeneralInformationModule {}

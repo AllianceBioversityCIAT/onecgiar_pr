@@ -2,7 +2,11 @@
   [draggable]="false" [modal]="true" [showHeader]="false" [dismissableMask]="false" [closeOnEscape]="false"
   [style]="{padding: '0px'}" (onHide)="onCloseModal()">
 
-  <div class="modal_title">Change result type</div>
+  <div class="modal_header">
+    <h1 class="modal_title">Change result type</h1>
+    <i class="material-icons-round modal_close_icon" (click)="onCloseModal()"
+      *ngIf="!this.isChagingType && !this.validating">close</i>
+  </div>
 
   <div class="modal_container">
     <div *ngIf="!this.changeType.showConfirmation">

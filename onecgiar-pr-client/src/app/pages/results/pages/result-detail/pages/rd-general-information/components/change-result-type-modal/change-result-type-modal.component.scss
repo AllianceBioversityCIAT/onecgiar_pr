@@ -13,13 +13,25 @@
   }
 }
 
-.modal_title {
+.modal_header {
   background-color: var(--pr-color-secondary);
   width: 100%;
-  font-size: 1.3em;
-  font-weight: 600;
-  color: white;
   padding: 10px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  .modal_title {
+    font-size: 1.3em;
+    font-weight: 600;
+    color: white;
+    margin: 0;
+  }
+
+  .modal_close_icon {
+    cursor: pointer;
+    color: #fff;
+  }
 }
 
 .change_result_buttons {
