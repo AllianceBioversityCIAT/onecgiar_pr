@@ -20,6 +20,7 @@ export class ConfirmationModalKPComponent {
 
   closeModals() {
     this.api.dataControlSE.confirmChangeResultTypeModal = false;
+    this.api.dataControlSE.changeResultTypeModal = true;
   }
 
   // updateJustificationKp(newJustification: string) {

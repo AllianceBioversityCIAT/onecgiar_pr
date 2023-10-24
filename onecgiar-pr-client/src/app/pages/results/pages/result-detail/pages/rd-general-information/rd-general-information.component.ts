@@ -18,6 +18,7 @@ import { CurrentResultService } from '../../../../../../shared/services/current-
 export class RdGeneralInformationComponent implements OnInit {
   generalInfoBody = new GeneralInfoBody();
   toggle = 0;
+  isPhaseOpen = false;
 
   constructor(public api: ApiService, private currentResultSE: CurrentResultService, public scoreSE: ScoreService, public institutionsSE: InstitutionsService, public rolesSE: RolesService, public dataControlSE: DataControlService, private customizedAlertsFeSE: CustomizedAlertsFeService, public pusherSE: PusherService) {}
 
@@ -35,6 +36,7 @@ export class RdGeneralInformationComponent implements OnInit {
       this.generalInfoBody.reporting_year = response['phase_year'];
       this.generalInfoBody.institutions_type = [...this.generalInfoBody.institutions_type, ...this.generalInfoBody.institutions] as any;
       this.GET_investmentDiscontinuedOptions();
+      this.isPhaseOpen = !!this.api?.dataControlSE?.currentResult.is_phase_open;
     });
   }
 
@@ -46,7 +48,7 @@ export class RdGeneralInformationComponent implements OnInit {
 
   convertChecklistToDiscontinuedOptions(response) {
     const options = [...response];
-    options.map(option => {
+    options.forEach(option => {
       const found = this.generalInfoBody.discontinued_options.find(discontinuedOption => discontinuedOption.investment_discontinued_option_id == option.investment_discontinued_option_id);
       if (found) {
         (option.value = true), (option.description = found?.description);
@@ -57,7 +59,7 @@ export class RdGeneralInformationComponent implements OnInit {
 
   discontinuedOptionsToIds() {
     this.generalInfoBody.discontinued_options = this.generalInfoBody.discontinued_options.filter(option => option.value === true);
-    this.generalInfoBody.discontinued_options.map(option => (option.is_active = true));
+    this.generalInfoBody.discontinued_options.forEach(option => (option.is_active = true));
   }
 
   onSaveSection() {
@@ -65,17 +67,17 @@ export class RdGeneralInformationComponent implements OnInit {
     this.generalInfoBody.institutions_type = this.generalInfoBody.institutions_type.filter(inst => !inst.hasOwnProperty('institutions_id'));
 
     if (!this.generalInfoBody.is_discontinued) this.generalInfoBody.discontinued_options = [];
-    this.api.resultsSE.PATCH_generalInformation(this.generalInfoBody).subscribe(
-      resp => {
+    this.api.resultsSE.PATCH_generalInformation(this.generalInfoBody).subscribe({
+      next: resp => {
         this.currentResultSE.GET_resultById();
 
         this.getSectionInformation();
       },
-      err => {
+      error: err => {
         console.error(err);
         this.getSectionInformation();
       }
-    );
+    });
   }
 
   titleTextInfo() {
@@ -196,6 +198,7 @@ export class RdGeneralInformationComponent implements OnInit {
     this.generalInfoBody.institutions_type = this.generalInfoBody.institutions_type.filter(inst => !inst.hasOwnProperty('institutions_id'));
     this.generalInfoBody.institutions_type = [...this.generalInfoBody?.institutions_type, ...this.generalInfoBody?.institutions] as any;
   }
+
   onChangeKrs() {
     if (this.generalInfoBody.is_krs === false) this.generalInfoBody.krs_url = null;
   }
