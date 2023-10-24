@@ -1,5 +1,4 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
-import { returnFormatUser } from 'src/auth/modules/user/dto/return-create-user.dto';
 import { CreateResultDto } from './dto/create-result.dto';
 import { UpdateResultDto } from './dto/update-result.dto';
 import { ResultRepository } from './result.repository';
@@ -846,8 +845,9 @@ export class ResultsService {
     }
   }
 
-  //FIXME this is a result, not an user, so the return type here does not make sense
-  async findResultById(id: number): Promise<returnFormatUser> {
+  async findResultById(
+    id: number,
+  ): Promise<returnFormatResult | returnErrorDto> {
     try {
       const result: Result = await this._customResultRepository.getResultById(
         id,

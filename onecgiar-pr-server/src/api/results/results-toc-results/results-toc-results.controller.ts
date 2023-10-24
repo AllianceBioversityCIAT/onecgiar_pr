@@ -80,9 +80,10 @@ export class ResultsTocResultsController {
   async findVersionDashBoard(
     @Param('resultId') resultId: number,
     @Param('initiativeId') initiativeId: number,
-    @Param('resultTocId') resultTocId: number,
+    @Param('resultTocId') _resultTocId: number,
   ) {
-    //FIXME check unused parameter
+    //TODO: I cannot delete that value but I can accommodate it as an internal value,
+    //since the url would have to be modified and that would have to be modified from the front as well
     const { message, response, status } =
       await this.resultsTocResultsService.getVersionId(resultId, initiativeId);
     throw new HttpException({ message, response }, status);

@@ -65,8 +65,7 @@ export class ShareResultRequestController {
   }
 
   @Get('get/status')
-  //FIXME: change the name of this method
-  async findOne() {
+  async getAllStatus() {
     const { message, response, status } =
       await this.shareResultRequestService.getAllStatus();
     throw new HttpException({ message, response }, status);

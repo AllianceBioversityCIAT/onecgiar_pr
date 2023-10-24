@@ -34,7 +34,7 @@ export class UserService {
     createUserDto: CreateUserDto,
     role: number,
     token: TokenDto,
-  ): Promise<returnFormatUser> {
+  ): Promise<returnFormatUser | returnErrorDto> {
     try {
       createUserDto.is_cgiar =
         createUserDto.email.search(this.cgiarRegex) > -1 ? true : false;
@@ -89,7 +89,7 @@ export class UserService {
           id: newUser.id,
           first_name: newUser.first_name,
           last_name: newUser.last_name,
-        },
+        } as User,
         message: 'User successfully created',
         status: HttpStatus.CREATED,
       };
@@ -98,7 +98,7 @@ export class UserService {
     }
   }
 
-  async findAll(): Promise<returnFormatUser> {
+  async findAll(): Promise<returnFormatUser | returnErrorDto> {
     try {
       const user: User[] = await this._userRepository.find({
         select: [
@@ -125,7 +125,7 @@ export class UserService {
     }
   }
 
-  async findOne(id: number): Promise<returnFormatUser> {
+  async findOne(id: number): Promise<returnFormatUser | returnErrorDto> {
     try {
       const user: User = await this._userRepository.findOne({
         where: { id: id },
@@ -149,7 +149,9 @@ export class UserService {
     }
   }
 
-  async findOneByEmail(email: string): Promise<returnFormatUser> {
+  async findOneByEmail(
+    email: string,
+  ): Promise<returnFormatUser | returnErrorDto> {
     try {
       const user: User = await this._customUserRespository.findOne({
         where: { email: email },

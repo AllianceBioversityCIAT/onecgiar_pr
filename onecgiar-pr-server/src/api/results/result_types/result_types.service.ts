@@ -21,7 +21,9 @@ export class ResultTypesService {
     return createResultTypeDto;
   }
 
-  async getAllResultType(): Promise<returnFormatResultType | returnErrorDto> {
+  async getAllResultType(): Promise<
+    returnFormatResultType<ResultType[]> | returnErrorDto
+  > {
     try {
       const resultType: ResultType[] =
         await this._resultTypeRepository.getAllResultType();
@@ -45,7 +47,7 @@ export class ResultTypesService {
 
   async findOneResultType(
     id: number,
-  ): Promise<returnFormatResultType | returnErrorDto> {
+  ): Promise<returnFormatResultType<ResultType> | returnErrorDto> {
     try {
       if (!id) {
         throw {

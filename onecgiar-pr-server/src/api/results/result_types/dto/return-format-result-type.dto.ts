@@ -1,5 +1,5 @@
 import { returnFormatService } from '../../../../shared/extendsGlobalDTO/returnServices.dto';
 
-export class returnFormatResultType extends returnFormatService {
-  public response!: any; //FIXME workaround until we find a better solution
+export class returnFormatResultType<T> extends returnFormatService {
+  public response: T;
 }
