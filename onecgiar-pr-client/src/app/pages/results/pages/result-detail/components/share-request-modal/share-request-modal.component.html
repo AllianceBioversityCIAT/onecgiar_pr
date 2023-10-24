@@ -3,7 +3,8 @@
     [dismissableMask]="true" [style]="{padding: '0px'}">
     <div class="modal_title">Request to be added as contributor of a result.</div>
 
-    <div class="modal_container partners-request-container" *ngIf="showForm">
+    <div class="modal_container partners-request-container" *ngIf="showForm"
+        [ngClass]="{ 'small_height' :this.api.dataControlSE?.currentResult?.result_level_id !== 4 && this.api.dataControlSE?.currentResult?.result_level_id !== 3}">
         <div class="information">
             {{this.api?.dataControlSE?.currentResult?.result_type}} -
             <strong>
