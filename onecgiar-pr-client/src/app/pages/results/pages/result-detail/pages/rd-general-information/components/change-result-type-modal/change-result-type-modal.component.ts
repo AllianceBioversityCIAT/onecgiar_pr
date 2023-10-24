@@ -3,6 +3,7 @@ import { ApiService } from 'src/app/shared/services/api/api.service';
 import { GeneralInfoBody } from '../../models/generalInfoBody';
 import { ResultsListFilterService } from 'src/app/pages/results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
 import { ChangeResultTypeServiceService } from '../../services/change-result-type-service.service';
+import { Router } from '@angular/router';
 
 interface IOption {
   description: string;
@@ -21,22 +22,18 @@ export class ChangeResultTypeModalComponent implements OnChanges {
   validating = false;
   cgSpaceHandle = '';
   cgSpaceTitle = '';
-
   mqapJson: {};
-
   confirmationText: string = '';
-
   selectedResultType: IOption | null = null;
-
-  alertStatusDesc = 'Currently, we have only enabled the option to change a result from "Other output" to "Knowledge product". We are actively working on extending this capability to include all the result types.';
-
+  alertStatusDesc = 'Currently, we have only enabled the option to change a result from <strong>"Other output"</strong> to <strong>"Knowledge product"</strong>. We are actively working on extending this capability to include all the result types.';
   alertStatusDescKnowledgeProduct = `<dl>
   <dt>Please add the handle generated in CGSpace to report your knowledge product. Only knowledge products entered into CGSpace are accepted in the PRMS Reporting Tool. The PRMS Reporting Tool will automatically retrieve all metadata entered into CGSpace. This metadata cannot be edited in the PRMS.</dt> <br/>
   <dt>The handle will be verified, and only knowledge products from 2023 will be accepted. For journal articles, the PRMS Reporting Tool will check the online publication date added in CGSpace (“Date Online”). Articles Published online for a previous years will not be accepted to prevent double counting across consecutive years. </dt> <br/>
   <dt>If you need support to modify any of the harvested metadata from CGSpace, contact your Center’s knowledge manager. <strong>And do the sync again.</strong></dt>
 </dl>`;
+  isChagingType: boolean = false;
 
-  constructor(public api: ApiService, public resultsListFilterSE: ResultsListFilterService, public changeType: ChangeResultTypeServiceService) {}
+  constructor(public api: ApiService, public resultsListFilterSE: ResultsListFilterService, public changeType: ChangeResultTypeServiceService, private router: Router) {}
 
   ngOnChanges(changes: SimpleChanges): void {
     this.body['result_code'] = this.api.resultsSE.currentResultCode;
@@ -46,10 +43,6 @@ export class ChangeResultTypeModalComponent implements OnChanges {
   CGSpaceDesc() {
     return `<strong>Disclaimer:</strong> please note that the old title <strong>"${this.body.result_name}"</strong> will be replace by the CGSpace title.`;
   }
-
-  // updateJustification(newJustification: string) {
-  //   this.confirmationText = newJustification;
-  // }
 
   onSelectOneChip(option: any, filter: any) {
     if (option.id === 6) {
@@ -66,33 +59,82 @@ export class ChangeResultTypeModalComponent implements OnChanges {
     }
   }
 
-  onCancelModal() {
+  onCloseModal() {
     this.api.dataControlSE.changeResultTypeModal = false;
     this.selectedResultType = null;
+    this.changeType.justification = '';
+    this.cgSpaceTitle = '';
+    this.cgSpaceHandle = '';
     this.resultsListFilterSE.filters.resultLevel.forEach((resultLevelOption: any) => {
       resultLevelOption.options.forEach((resultTypeOption: any) => {
         resultTypeOption.selected = false;
       });
     });
+    this.changeType.step = 0;
+  }
+
+  onCancelModal() {
+    if (this.selectedResultType?.id === 6) {
+      if (this.changeType.step === 0) {
+        this.api.dataControlSE.changeResultTypeModal = false;
+      }
+
+      if (this.changeType.step === 1) {
+        this.changeType.showConfirmation = false;
+        this.changeType.step = 0;
+        this.changeType.justification = '';
+        this.changeType.otherJustification = '';
+      }
+    }
   }
 
   isContinueButtonDisabled() {
+    if (this.isChagingType) return true;
     if (!this.selectedResultType) return true;
-    if (this.selectedResultType?.id === 6 && this.cgSpaceTitle?.length === 0) return true;
+    if (this.selectedResultType?.id === 6 && this.changeType.step === 0 && this.cgSpaceTitle === '') return true;
+    if (this.selectedResultType?.id === 6 && this.changeType.step === 1 && this.changeType.justification === '') return true;
     if (this.selectedResultType?.id !== 6 && this.changeType.justification === '') return true;
     if (this.selectedResultType?.id !== 6 && this.changeType.justification === 'Other' && this.changeType.otherJustification === '') return true;
 
     return false;
   }
 
+  changeResultTypeKP() {
+    const currentUrl = this.router.url;
+    this.isChagingType = true;
+
+    this.api.resultsSE.POST_createWithHandle({ ...this.mqapJson, modification_justification: `${this.changeType.justification}${this.changeType.otherJustification !== '' ? `: ${this.changeType.otherJustification}` : ''}` }).subscribe({
+      next: (resp: any) => {
+        this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result type successfully updated', status: 'success', closeIn: 600 });
+        this.router.navigateByUrl(`/result/result-detail/${this.api.resultsSE.currentResultId}/partners`).then(() => {
+          this.router.navigateByUrl(currentUrl);
+        });
+        this.isChagingType = false;
+        this.onCloseModal();
+      },
+      error: err => {
+        this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
+        this.isChagingType = false;
+      }
+    });
+  }
+
   changeResultType() {
     if (this.selectedResultType?.id === 6) {
-      this.api.dataControlSE.confirmChangeResultTypeModal = true;
-      console.log('open confirmation modal');
-      return;
+      switch (this.changeType.step) {
+        case 0:
+          this.changeType.showConfirmation = true;
+          this.changeType.step = 1;
+          break;
+        case 1:
+          this.changeResultTypeKP();
+          break;
+        default:
+          break;
+      }
+    } else {
+      console.log('changing result type');
     }
-
-    console.log('changing result type');
   }
 
   GET_mqapValidation() {

@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { ChangeResultTypeServiceService } from '../../services/change-result-type-service.service';
 
@@ -12,18 +12,11 @@ export class ConfirmationKPComponent {
   @Input() mqapResult: any;
   @Input() selectedResultType: any;
 
-  // justification: string = '';
   isDownloading = false;
 
   selectOptions = [{ value: 'Quality Assurance Feedback' }, { value: 'Change to more appropriate result type based on guidelines' }, { value: 'Error Correction' }, { value: 'Other' }];
 
-  @Output() eventTextChanged: EventEmitter<string> = new EventEmitter();
-
   constructor(public api: ApiService, public changeType: ChangeResultTypeServiceService) {}
-
-  // emitJustificationUpdate() {
-  //   this.eventTextChanged.emit(this.justification);
-  // }
 
   downloadPDF() {
     this.isDownloading = true;

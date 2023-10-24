@@ -6,6 +6,8 @@ import { Injectable } from '@angular/core';
 export class ChangeResultTypeServiceService {
   justification = '';
   otherJustification = '';
+  showConfirmation = false;
+  step = 0;
 
   constructor() {}
 }
