@@ -56,7 +56,7 @@
         </div>
         <div *ngFor="let item of initiative.targets" >
             <div appFeedbackValidation labelText="Contribution to an indicator's target is missing"
-            [isComplete]="!checkAlert(item)"></div>
+            [isComplete]="!checkAlert()"></div>
         
             <div class="content-number" *ngIf="initiative.is_calculable; else contentNotNumber">
                 <div class="section-one">
