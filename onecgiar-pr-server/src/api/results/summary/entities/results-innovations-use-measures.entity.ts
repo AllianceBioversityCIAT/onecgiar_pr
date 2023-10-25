@@ -9,7 +9,6 @@ import {
 } from 'typeorm';
 import { ResultsInnovationsUse } from './results-innovations-use.entity';
 import { User } from '../../../../auth/modules/user/entities/user.entity';
-import { Version } from '../../../versioning/entities/version.entity';
 import { UnitsOfMeasure } from '../../units-of-measure/entities/units-of-measure.entity';
 
 @Entity('results_innovations_use_measures')

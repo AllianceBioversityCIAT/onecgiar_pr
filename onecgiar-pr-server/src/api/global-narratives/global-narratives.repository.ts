@@ -1,5 +1,4 @@
 import { DataSource, Repository } from 'typeorm';
-import { HandlersError } from '../../shared/handlers/error.utils';
 import { Injectable } from '@nestjs/common';
 import { GlobalNarrative } from './entities/global-narrative.entity';
 

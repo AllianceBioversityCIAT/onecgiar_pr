@@ -11,7 +11,9 @@ describe('InnovationPackagingExpertsController', () => {
       providers: [InnovationPackagingExpertsService],
     }).compile();
 
-    controller = module.get<InnovationPackagingExpertsController>(InnovationPackagingExpertsController);
+    controller = module.get<InnovationPackagingExpertsController>(
+      InnovationPackagingExpertsController,
+    );
   });
 
   it('should be defined', () => {

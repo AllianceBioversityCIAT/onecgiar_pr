@@ -1,6 +1,5 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
-import { DataSource, IsNull, Repository, TreeRepository } from 'typeorm';
-import { Tree } from '../../shared/entities/tree/tree';
+import { Injectable, HttpStatus } from '@nestjs/common';
+import { DataSource, Repository } from 'typeorm';
 import { WorldRegionTree } from '../../shared/entities/tree/world-region-tree';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { RegionDistanceDto } from './dto/region-distance.dto';
@@ -43,11 +42,11 @@ export class ClarisaRegionsRepository extends Repository<ClarisaRegion> {
 
     this._worldTree = new WorldRegionTree(root);
 
-    let allRegions = await this.find({
+    const allRegions = await this.find({
       relations: { parent_region_object: true },
     });
 
-    for (let region of allRegions) {
+    for (const region of allRegions) {
       const distance = await this.distanceToRoot(region.um49Code);
       region['level'] = distance.distance;
     }

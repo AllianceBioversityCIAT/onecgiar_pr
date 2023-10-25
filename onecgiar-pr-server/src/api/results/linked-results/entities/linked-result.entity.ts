@@ -9,7 +9,6 @@ import {
 } from 'typeorm';
 import { Result } from '../../entities/result.entity';
 import { User } from '../../../../auth/modules/user/entities/user.entity';
-import { Version } from '../../../versioning/entities/version.entity';
 
 @Entity('linked_result')
 export class LinkedResult {

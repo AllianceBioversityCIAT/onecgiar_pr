@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 import { DynamodbLogsService } from './dynamodb-logs.service';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { UserToken } from '../../shared/decorators/user-token.decorator';

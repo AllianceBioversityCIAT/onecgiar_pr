@@ -82,7 +82,7 @@ export class ResultsCenterRepository
         );
         final_data = await this.save(response_edit);
       } else {
-        const queryData: string = `
+        const queryData = `
         insert into results_center (
         is_primary,
         is_active,
@@ -268,10 +268,7 @@ export class ResultsCenterRepository
 
     try {
       if (center?.length) {
-        const upDateInactiveResult = await this.query(upDateInactive, [
-          userId,
-          resultId,
-        ]);
+        await this.query(upDateInactive, [userId, resultId]);
 
         return await this.query(upDateActive, [userId, resultId]);
       } else {

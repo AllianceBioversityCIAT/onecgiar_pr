@@ -4,6 +4,6 @@ import { ResultsIpActorsController } from './results-ip-actors.controller';
 
 @Module({
   controllers: [ResultsIpActorsController],
-  providers: [ResultsIpActorsService]
+  providers: [ResultsIpActorsService],
 })
 export class ResultsIpActorsModule {}

@@ -1,15 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { DataSource, In, Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultByInstitutionsByDeliveriesType } from './entities/result-by-institutions-by-deliveries-type.entity';
 import {
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
-import {
-  VERSIONING,
-  predeterminedDateValidation,
-} from '../../../shared/utils/versioning.utils';
+import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
@@ -103,7 +100,7 @@ export class ResultByInstitutionsByDeliveriesTypeRepository
         );
         final_data = await this.save(response_edit);
       } else {
-        const queryData: string = `
+        const queryData = `
         insert into result_by_institutions_by_deliveries_type 
           (
           is_active,
@@ -273,10 +270,7 @@ export class ResultByInstitutionsByDeliveriesTypeRepository
     `;
     try {
       if (deliveryType.length) {
-        const resultInactive = await this.query(updateInactive, [
-          userId,
-          resultByInstitution,
-        ]);
+        await this.query(updateInactive, [userId, resultByInstitution]);
 
         return await this.query(updateActive, [userId, resultByInstitution]);
       } else {

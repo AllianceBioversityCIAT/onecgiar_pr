@@ -29,9 +29,9 @@ export class ElasticService {
   public getSingleElasticOperation<T>(
     documentName: string,
     operation: ElasticOperationDto<T>,
-    fromBulk: boolean = false,
+    fromBulk = false,
   ): string {
-    let isPatch: boolean = operation.operation === 'PATCH';
+    const isPatch: boolean = operation.operation === 'PATCH';
     let elasticOperation = `{ "${
       isPatch ? 'create' : 'delete'
     }" : { "_index" : "${documentName}", "_id" : "${operation.data['id']}"  } }
@@ -46,9 +46,9 @@ export class ElasticService {
   public getSingleElasticOperationResult(
     documentName: string,
     operation: ElasticOperationDto<ResultSimpleDto>,
-    fromBulk: boolean = false,
+    fromBulk = false,
   ): string {
-    let isPatch: boolean = operation.operation === 'PATCH';
+    const isPatch: boolean = operation.operation === 'PATCH';
     operation.data['is_legacy'] =
       <unknown>operation.data['is_legacy'] === 'true';
 
@@ -104,7 +104,7 @@ export class ElasticService {
 
   public async sendBulkOperationToElastic(elasticJson: string) {
     try {
-      let { data } = await lastValueFrom(
+      const { data } = await lastValueFrom(
         this._http.post(this._bulkElasticUrl, elasticJson, this._headers),
       );
 

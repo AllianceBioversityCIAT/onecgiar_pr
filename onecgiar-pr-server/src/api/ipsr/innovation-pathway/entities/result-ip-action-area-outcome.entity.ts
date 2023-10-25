@@ -6,9 +6,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Ipsr } from '../../entities/ipsr.entity';
-import { TocResult } from '../../../../toc/toc-results/entities/toc-result.entity';
 import { BaseEntity } from '../../../../shared/entities/base-entity';
-import { Version } from '../../../versioning/entities/version.entity';
 import { ClarisaActionAreaOutcome } from '../../../../clarisa/clarisa-action-area-outcome/entities/clarisa-action-area-outcome.entity';
 
 @Entity('result_ip_action_area_outcome')

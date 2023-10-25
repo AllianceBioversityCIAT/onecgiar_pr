@@ -6,7 +6,6 @@ import {
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
-import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import {
   VERSIONING,
   predeterminedDateValidation,
@@ -97,7 +96,7 @@ export class EvidencesRepository
         const response_edit = <Evidence[]>config.f.custonFunction(response);
         final_data = await this.save(response_edit);
       } else {
-        const queryData: string = `
+        const queryData = `
         insert into evidence (
           description,
           is_active,
@@ -361,7 +360,7 @@ export class EvidencesRepository
 
     try {
       if (evidences?.length) {
-        const upDateInactiveResult = await this.query(upDateInactive);
+        await this.query(upDateInactive);
 
         return await this.query(upDateActive);
       } else {

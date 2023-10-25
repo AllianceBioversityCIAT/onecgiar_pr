@@ -96,7 +96,7 @@ where riu.results_id = ?;`;
         );
         final_data = await this.save(response_edit);
       } else {
-        const queryData: string = `
+        const queryData = `
         insert into results_innovations_use_measures 
           (
           unit_of_measure,
@@ -267,10 +267,7 @@ where riu.results_id = ?;`;
 
     try {
       if (initiative?.length) {
-        const upDateInactiveResult = await this.query(upDateInactive, [
-          userId,
-          innovationUseId,
-        ]);
+        await this.query(upDateInactive, [userId, innovationUseId]);
 
         return await this.query(upDateActive, [userId, innovationUseId]);
       } else {

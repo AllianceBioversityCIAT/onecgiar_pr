@@ -9,7 +9,6 @@ import {
   ReturnResponse,
 } from '../../../shared/handlers/error.utils';
 import { HttpModule } from '@nestjs/axios';
-import { VersionRepository } from '../../versioning/versioning.repository';
 import { ResultsKnowledgeProductMapper } from './results-knowledge-products.mapper';
 import { ResultsKnowledgeProductAltmetricRepository } from './repositories/results-knowledge-product-altmetrics.repository';
 import { ResultsKnowledgeProductAuthorRepository } from './repositories/results-knowledge-product-authors.repository';
@@ -19,14 +18,12 @@ import { ResultsKnowledgeProductMetadataRepository } from './repositories/result
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
 import { YearRepository } from '../years/year.repository';
 import { VersionsService } from '../versions/versions.service';
-import { ResultTypesService } from '../result_types/result_types.service';
 import { ResultLevelRepository } from '../result_levels/resultLevel.repository';
 import { ResultByLevelRepository } from '../result-by-level/result-by-level.repository';
 import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { ResultTypeRepository } from '../result_types/resultType.repository';
 import { EvidencesRepository } from '../evidences/evidences.repository';
 import { KnowledgeProductFairBaselineRepository } from '../knowledge_product_fair_baseline/knowledge_product_fair_baseline.repository';
-import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { ResultRegionRepository } from '../result-regions/result-regions.repository';
 import { ClarisaRegionsRepository } from '../../../clarisa/clarisa-regions/ClariasaRegions.repository';

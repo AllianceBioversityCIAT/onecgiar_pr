@@ -85,7 +85,7 @@ export class ResultByInitiativesRepository
         );
         final_data = await this.save(response_edit);
       } else {
-        const queryData: string = `
+        const queryData = `
         insert into results_by_inititiative (
           is_active,
           last_updated_date,
@@ -488,16 +488,6 @@ export class ResultByInitiativesRepository
       
     `;
 
-    const upDateActive = `
-      update results_by_inititiative  
-      set is_active  = 1,
-        last_updated_date = NOW(),
-        last_updated_by = ?
-      where result_id = ?
-        and initiative_role_id = ?
-        and inititiative_id in (${initiative.toString()});
-    `;
-
     const upDateAllInactive = `
     update results_by_inititiative  
       set is_active  = 0,
@@ -530,7 +520,7 @@ export class ResultByInitiativesRepository
     try {
       let updateIniciative;
       if (resultId != null) {
-        const updateIniciatives = await this.update(
+        await this.update(
           { result_id: resultId },
           {
             initiative_role_id: 2,

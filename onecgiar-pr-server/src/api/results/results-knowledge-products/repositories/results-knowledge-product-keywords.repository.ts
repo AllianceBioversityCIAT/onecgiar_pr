@@ -95,7 +95,7 @@ export class ResultsKnowledgeProductKeywordRepository
         );
         final_data = await this.save(response_edit);
       } else {
-        const queryData: string = `
+        const queryData = `
         insert into results_kp_keywords 
         (
         keyword,

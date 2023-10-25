@@ -16,7 +16,6 @@ import {
 } from '../../shared/globalInterfaces/replicable.interface';
 
 import { LogicalDelete } from '../../shared/globalInterfaces/delete.interface';
-import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { predeterminedDateValidation } from '../../shared/utils/versioning.utils';
 
 @Injectable()
@@ -1026,7 +1025,7 @@ WHERE
     }
   }
 
-  async getLastResultCode(version = 1): Promise<number> {
+  async getLastResultCode(): Promise<number> {
     const queryData = `
     SELECT max(r.result_code) as last_code from \`result\` r;
     `;
