@@ -243,19 +243,21 @@ export class InnovationPathwayStepThreeService {
       //   };
       // }
 
-      if (!workShopEvidence) {
-        await this._evidenceRepository.save({
-          result_id: resultId,
-          link: lwl,
-          evidence_type_id: 5,
-          created_by: user.id,
-          last_updated_by: user.id,
-        });
-      } else {
-        await this._evidenceRepository.update(workShopEvidence.id, {
-          link: lwl,
-          last_updated_by: user.id,
-        });
+      if (lwl) {
+        if (workShopEvidence) {
+          await this._evidenceRepository.update(workShopEvidence.id, {
+            link: lwl,
+            last_updated_by: user.id,
+          });
+        } else {
+          await this._evidenceRepository.save({
+            result_id: resultId,
+            link: lwl,
+            evidence_type_id: 5,
+            created_by: user.id,
+            last_updated_by: user.id,
+          });
+        }
       }
 
       if (ripewo?.length) {
