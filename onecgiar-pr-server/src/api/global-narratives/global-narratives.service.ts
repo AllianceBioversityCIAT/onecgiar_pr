@@ -12,7 +12,7 @@ export class GlobalNarrativesService {
   async findOne(id: number): Promise<ReturnResponseDto<string>> {
     try {
       return this._returnResponse.format({
-        response: 'Example',
+        response: `Example: ${id}`,
         statusCode: HttpStatus.ACCEPTED,
         message: 'nice',
       });

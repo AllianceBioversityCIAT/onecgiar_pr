@@ -105,7 +105,7 @@ export class resultValidationRepository
 				(r.description is not null
 				and r.description <> '')`
           : ``
-      	}
+      }
 			and (
 				r.gender_tag_level_id is not null
 				and r.gender_tag_level_id <> ''
