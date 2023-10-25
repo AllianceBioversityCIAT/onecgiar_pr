@@ -2,7 +2,6 @@ import { Injectable } from '@angular/core';
 import { PartnersBody } from './models/partnersBody';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { centerInterfacesToc } from '../rd-theory-of-change/model/theoryOfChangeBody';
-import { concatMap, filter } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -11,6 +10,7 @@ export class RdPartnersService {
   partnersBody = new PartnersBody();
   toggle = 0;
   centers: centerInterfacesToc[] = [];
+
   constructor(private api: ApiService) {}
 
   validateDeliverySelection(deliveries, deliveryId) {
@@ -18,6 +18,7 @@ export class RdPartnersService {
     const index = deliveries.indexOf(deliveryId);
     return index < 0 ? false : true;
   }
+
   onSelectDelivery(option, deliveryId) {
     if (this.api.rolesSE.readOnly) return;
     if (option?.deliveries?.find((deliveryId: any) => deliveryId == 4) && deliveryId != 4) {
@@ -29,31 +30,27 @@ export class RdPartnersService {
     if (!(typeof option?.deliveries == 'object')) option.deliveries = [];
     index < 0 ? option?.deliveries.push(deliveryId) : option?.deliveries.splice(index, 1);
   }
+
   removePartner(index) {
     this.partnersBody.institutions.splice(index, 1);
     this.toggle++;
   }
-  /*cleanBody() {
-    if (this.partnersBody.no_applicable_partner === true) this.partnersBody = new PartnersBody(true);
-    if (this.partnersBody.no_applicable_partner === false) this.getSectionInformation(false);
-  }*/
 
   getSectionInformation(no_applicable_partner?) {
-    this.api.resultsSE.GET_partnersSection().subscribe(
-      ({ response }) => {
+    this.api.resultsSE.GET_partnersSection().subscribe({
+      next: ({ response }) => {
         //(response);
         this.partnersBody = response;
         if (no_applicable_partner === true || no_applicable_partner === false) this.partnersBody.no_applicable_partner = no_applicable_partner;
       },
-      err => {
+      error: err => {
         if (no_applicable_partner === true || no_applicable_partner === false) this.partnersBody.no_applicable_partner = no_applicable_partner;
       }
-    );
+    });
   }
 
   getCenterInformation() {
     this.api.resultsSE.GET_centers().subscribe(({ response }) => {
-      //(response);
       this.centers = response;
     });
   }

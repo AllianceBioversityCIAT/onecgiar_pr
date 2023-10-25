@@ -9,7 +9,7 @@ import { PhasesService } from '../../../../shared/services/global/phases.service
   templateUrl: './init-general-results-report.component.html',
   styleUrls: ['./init-general-results-report.component.scss']
 })
-export class InitGeneralResultsReportComponent {
+export class InitGeneralResultsReportComponent implements OnInit {
   textToFind = '';
   initiativesSelected = [];
   resultsSelected = [];
@@ -24,8 +24,6 @@ export class InitGeneralResultsReportComponent {
   constructor(public api: ApiService, private exportTablesSE: ExportTablesService, private customAlertService: CustomizedAlertsFeService, private phasesSE: PhasesService) {}
 
   ngOnInit(): void {
-    //Called after the constructor, initializing input properties, and the first call to ngOnChanges.
-    //Add 'implements OnInit' to the class.
     this.getAll();
     this.getPhases();
     this.getAllResultStatuses();
@@ -70,10 +68,8 @@ export class InitGeneralResultsReportComponent {
   }
 
   GET_AllInitiatives() {
-    //(this.api.rolesSE.isAdmin);
     if (!this.api.rolesSE.isAdmin) return;
     this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
-      //(response);
       this.allInitiatives = response;
     });
   }
@@ -121,10 +117,6 @@ export class InitGeneralResultsReportComponent {
     this.exportTablesSE.exportMultipleSheetsExcel(this.dataToExport, 'results_list', null, this.tocToExport);
     this.requesting = false;
   }
-
-  // validateLength(obj) {
-  //   Object.keys(obj[0]).forEach(item => //(item + ': ' + obj[0][item]?.length));
-  // }
 
   POST_excelFullReportPromise(result, key) {
     return new Promise((resolve, reject) => {

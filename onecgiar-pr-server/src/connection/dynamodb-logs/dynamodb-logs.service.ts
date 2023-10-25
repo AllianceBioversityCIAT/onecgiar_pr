@@ -6,21 +6,22 @@ import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 
 @Injectable()
 export class DynamodbLogsService {
+  constructor(private readonly _logRepository: LogRepository) {}
 
-  constructor(
-    private readonly _logRepository: LogRepository
-  ){}
-
-  async create({onResultCode, action, moreInfo}: CreateDynamodbLogDto, user: TokenDto) {
-    return  await this._logRepository.createLog(
-      onResultCode, 
-      user, 
-      action, 
+  async create(
+    { result, action, moreInfo }: CreateDynamodbLogDto,
+    user: TokenDto,
+  ) {
+    return await this._logRepository.createLog(
+      result,
+      user,
+      action,
       {
         class: DynamodbLogsService.name,
-        method: `create`
+        method: `create`,
       },
-      moreInfo);
+      moreInfo,
+    );
   }
 
   async findAll() {

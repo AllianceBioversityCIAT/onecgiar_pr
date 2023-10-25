@@ -8,9 +8,10 @@ import { ButtonModule } from 'primeng/button';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { FilterNotificationByPhasePipe } from './pipes/filter-notification-by-phase.pipe';
 import { FilterNotificationByInitiativePipe } from './pipes/filter-notification-by-initiative.pipe';
+import { ScrollingModule } from '@angular/cdk/scrolling';
 
 @NgModule({
   declarations: [ResultsNotificationsComponent, NotificationItemComponent, FilterNotificationByPhasePipe, FilterNotificationByInitiativePipe],
-  imports: [CommonModule, ResultsNotificationsRoutingModule, ButtonModule, CustomFieldsModule]
+  imports: [CommonModule, ResultsNotificationsRoutingModule, ButtonModule, CustomFieldsModule, ScrollingModule]
 })
 export class ResultsNotificationsModule {}

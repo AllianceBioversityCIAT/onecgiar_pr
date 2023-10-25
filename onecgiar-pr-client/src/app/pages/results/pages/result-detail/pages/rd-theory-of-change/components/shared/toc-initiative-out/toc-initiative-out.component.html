@@ -2,10 +2,8 @@
     <div class="editable_field" [ngClass]="{'global-editable': this.editable}">
         <app-pr-yes-or-not [label]="getDescription(initiative?.official_code,initiative?.short_name)"
             (selectOptionEvent)="valdiateEOI(initiative);initiative.toc_result_id = null;"
-            [(ngModel)]="initiative.planned_result"
-            [description]="this.headerDescription(initiative.planned_result)" [readOnly]="!editable"
-            [editable]="editable"
-            [hideDescription]="initiative.planned_result === null">
+            [(ngModel)]="initiative.planned_result" [description]="this.headerDescription(initiative.planned_result)"
+            [readOnly]="!editable" [editable]="editable" [hideDescription]="initiative.planned_result === null">
         </app-pr-yes-or-not>
 
         <a [href]="this.api.dataControlSE.tocUrl+this.fullInitiativeToc" target="_blank" class="toc_button"><span>See
@@ -60,7 +58,8 @@
         *ngIf="this.theoryOfChangesServices.body[indexYesorNo].targetsIndicators.length">
     </app-pr-field-header>
     <app-target-indicator [initiative]="indicator" [disabledInputs]="disabledInput"
-        *ngFor="let indicator of this.theoryOfChangesServices.body[indexYesorNo].targetsIndicators"></app-target-indicator>
+        *ngFor="let indicator of this.theoryOfChangesServices.body[indexYesorNo].targetsIndicators"
+        [resultLevelId]="resultLevelId" [planned_result]="initiative.planned_result"></app-target-indicator>
     <div *ngIf="isIpsr == false">
         <app-pr-yes-or-not
             label="Do you want to review relations with AA Outcomes, IA, SDG and related Targets defined in your TOC for this result?"

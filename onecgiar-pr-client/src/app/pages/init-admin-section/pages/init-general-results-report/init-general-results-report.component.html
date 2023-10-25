@@ -1,13 +1,13 @@
 <div class="local_container">
     <app-alert-status [description]="openFolderText()">
     </app-alert-status>
+
     <div class="alert_status_container">
         <div [ngClass]="{'animate__pulse_infinite': this.requesting}">
             <app-alert-status status="warning"
                 [description]="this.requesting ?'The report may take some time to be generated, please do not close the window.':'This report consumes a considerable amount of system resources, therefore, we appreciate it if you do not generate reports too often.'">
             </app-alert-status>
         </div>
-
     </div>
 
     <div class="dropdown-filters">
@@ -17,19 +17,14 @@
             selectedOptionLabel="phase_name_status">
         </app-pr-multi-select>
 
-        <app-pr-multi-select *ngIf="!this.api.rolesSE.isAdmin" label="Initiatives" selectedLabel="Initiatives selected"
-            [options]="this.api.dataControlSE.myInitiativesList | filterInitWithRoleCoordAndLead"
+        <app-pr-multi-select label="Initiatives" selectedLabel="Initiatives selected"
+            [options]="this.api.rolesSE.isAdmin ? this.allInitiatives : this.api.dataControlSE.myInitiativesList | filterInitWithRoleCoordAndLead"
             optionLabel="full_name" [isStatic]="true" optionValue="id" (selectOptionEvent)="onSelectDropdown()"
             [required]="false" (removeOptionEvent)="onRemoveinit($event)" selectedOptionLabel="full_name"
             [showSelectAll]="true" [(ngModel)]="this.initiativesSelected" placeholder="Select Initiative(s)">
         </app-pr-multi-select>
 
-        <app-pr-multi-select *ngIf="this.api.rolesSE.isAdmin" label="Initiatives" selectedLabel="Initiatives selected"
-            [isStatic]="true" [options]="this.allInitiatives" optionLabel="full_name" optionValue="id"
-            [showSelectAll]="true" (selectOptionEvent)="onSelectDropdown()" [required]="false"
-            (removeOptionEvent)="onRemoveinit($event)" selectedOptionLabel="full_name"
-            [(ngModel)]="this.initiativesSelected" placeholder="Select Initiative(s)">
-        </app-pr-multi-select>
+
     </div>
 
 
@@ -43,8 +38,7 @@
     <app-pr-multi-select [options]="this.resultsList | filterByAttrWithValue:'status_id':valueToFilter" label="Results"
         [isStatic]="true" *ngIf="this.resultsList?.length" optionLabel="full_name_html" optionValue="id"
         [showSelectAll]="true" [required]="false" selectedOptionLabel="full_name" [(ngModel)]="this.resultsSelected"
-        itemSize="15" placeholder="Select result(s)
-        ">
+        itemSize="15" placeholder="Select result(s)">
         <div class="filter_submission_buttons" util>
             <div class="option all" [ngClass]="{'active': this.valueToFilter == null}"
                 (click)="this.valueToFilter = null">All</div>
@@ -56,81 +50,25 @@
         </div>
     </app-pr-multi-select>
 
-
-
-
-
     <div class="results_selected">
         <div class="title">
-            <div>Results selected ({{resultsSelected?.length}}): </div>
+            <div>Results selected ({{resultsSelected?.length}}):</div>
+
             <div class="download_button_container">
                 <app-pr-button icon="file_download" *ngIf="resultsSelected?.length"
                     [ngClass]="{'globalDisabled': this.requesting}"
                     [text]="this.requesting?'Downloading .xlsx - results '+requestCounter+'/'+(resultsSelected.length):'Download .xlsx'"
-                    [rotating]="this.requesting" [icon]="this.requesting?'loop':'send'"
+                    [rotating]="this.requesting" [icon]="this.requesting?'loop':'file_download'"
                     (click)="exportExcel(this.resultsSelected)"></app-pr-button>
             </div>
         </div>
+
         <div class="results">
             <div class="result" *ngFor="let result of resultsSelected; let i=index">
                 <div class="index">{{i+1}}</div>
                 <div [innerHTML]="result.full_name_html"></div>
             </div>
         </div>
-
     </div>
     <br>
-
-
-
-
-    <!-- <p-table [value]="this.resultsList | filterByText:this.textToFind" [scrollable]="true" [paginator]="true"
-            [rowsPerPageOptions]="[10,50,100]" [rows]="10" scrollHeight="calc(100vh - 403px)" style="min-width: 200px">
-            <ng-template pTemplate="header">
-                <tr>
-                    <th pSortableColumn="result_code" style="min-width:200px">Result code <p-sortIcon
-                            field="result_code"></p-sortIcon>
-                    </th>
-                    <th pSortableColumn="result_title" style="min-width:500px">Title <p-sortIcon
-                            field="result_title"></p-sortIcon></th>
-                    <th pSortableColumn="official_code" style="min-width:150px">Submitter <p-sortIcon
-                            field="official_code"></p-sortIcon>
-                    </th>
-                    <th pSortableColumn="result_type_name" style="min-width:180px">Result type <p-sortIcon
-                            field="result_type_name"></p-sortIcon>
-                    </th>
-                    <th pSortableColumn="completeness" style="min-width:150px">Progress <p-sortIcon
-                            field="completeness"></p-sortIcon>
-                    </th>
-                    <th pSortableColumn="is_submitted" style="min-width:150px">Submitted <p-sortIcon
-                            field="is_submitted"></p-sortIcon>
-                    </th>
-                    <th pSortableColumn="is_submitted" style="min-width:150px">Action <p-sortIcon
-                        field="is_submitted"></p-sortIcon>
-                </th>
-
-                </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-result>
-                <tr>
-                    <td style="min-width:200px">{{result.result_code}}</td>
-                    <td style="min-width:500px">{{result.result_title}}</td>
-                    <td style="min-width:150px">{{result.official_code}}</td>
-                    <td style="min-width:180px">{{result.result_type_name}}</td>
-                    <td style="min-width:150px">{{result.completeness}}%</td>
-                    <td style="min-width:150px">{{result.is_submitted ?'Yes':'No'}}</td>
-                    <div style="z-index: 0" *ngIf="result.is_submitted">
-                        <app-pr-button [ngClass]="{'globalDisabled': !result.is_submitted}" text="See more"
-                            (click)="selectResults(result?.results_id)"></app-pr-button>
-                    </div>
-
-                </tr>
-            </ng-template>
-        </p-table> -->
-    <!-- <div class="counter">
-            <div class="name">Results: </div> {{(this.resultsList |
-            filterByText:this.textToFind).length}}/{{this.resultsList?.length}}
-        </div> -->
-    <!-- </div> -->
-
 </div>

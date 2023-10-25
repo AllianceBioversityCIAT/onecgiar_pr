@@ -59,17 +59,17 @@ export class NotificationItemComponent {
     if (this.api.rolesSE.platformIsClosed) return;
     const body = { ...this.notification, request_status_id: response ? 2 : 3, bodyNewTheoryOfChanges: [] };
     this.requesting = true;
-    this.api.resultsSE.PATCH_updateRequest(body).subscribe(
-      resp => {
+    this.api.resultsSE.PATCH_updateRequest(body).subscribe({
+      next: resp => {
         this.requesting = false;
         this.api.alertsFe.show({ id: 'noti', title: response ? 'Request accepted' : 'Request rejected', status: 'success' });
         this.requestEvent.emit();
       },
-      err => {
+      error: err => {
         this.requesting = false;
         this.api.alertsFe.show({ id: 'noti-error', title: 'Error when requesting ', description: '', status: 'error' });
         this.requestEvent.emit();
       }
-    );
+    });
   }
 }

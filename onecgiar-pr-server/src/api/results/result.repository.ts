@@ -832,7 +832,8 @@ WHERE
     v.status as is_phase_open,
     v.phase_name,
     v.phase_year,
-    r.is_discontinued
+    r.is_discontinued,
+    r.is_replicated
 FROM
     \`result\` r
     inner join result_level rl on rl.id = r.result_level_id 

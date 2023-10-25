@@ -8,8 +8,6 @@ export class FilterByAttrWithValuePipe implements PipeTransform {
     if (!value) return list;
     const resultList = list?.filter(item => String(item[attr])?.toUpperCase()?.indexOf(String(value)?.toUpperCase()) > -1);
 
-    if (!resultList?.length) return [];
-
-    return resultList;
+    return resultList || [];
   }
 }

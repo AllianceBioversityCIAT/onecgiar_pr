@@ -88,6 +88,10 @@
   <div class="noDataText"
     *ngIf="!(this.api.dataControlSE.resultsList | resultsListFilter : this.resultsListService.text_to_search :  this.combine:this.api.resultsListFilterSE.filterJoin)?.length">
     There are no results for the selected filters.</div>
+
+  <app-custom-spinner *ngIf="this.resultsListService.showDeletingResultSpinner"
+    text="Deleting result"></app-custom-spinner>
+
 </div>
 
 <p-menu #menu [popup]="true"
