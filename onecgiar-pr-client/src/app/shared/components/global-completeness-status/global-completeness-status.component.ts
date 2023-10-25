@@ -125,7 +125,7 @@ export class GlobalCompletenessStatusComponent implements OnInit {
 
   mapMyInitiativesList(): any[] {
     const inits = [];
-    this.api.dataControlSE.myInitiativesList.map((init: any) => {
+    this.api.dataControlSE.myInitiativesList.forEach((init: any) => {
       if (init?.role != 'Lead' && init?.role != 'Coordinator') return;
       inits.push(init.initiative_id);
       this.initiativesSelected.push({ id: init.initiative_id, full_name: init.full_name });
