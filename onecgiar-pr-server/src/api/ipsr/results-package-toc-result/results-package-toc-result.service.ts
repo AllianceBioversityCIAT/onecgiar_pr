@@ -1,6 +1,9 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { CreateResultsPackageTocResultDto } from './dto/create-results-package-toc-result.dto';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import {
+  HandlersError,
+  ReturnResponse,
+} from '../../../shared/handlers/error.utils';
 import { VersionsService } from '../../results/versions/versions.service';
 import { ResultRepository } from '../../results/result.repository';
 import { Version } from '../../versioning/entities/version.entity';
@@ -38,6 +41,7 @@ export class ResultsPackageTocResultService {
     private readonly _versionsService: VersionsService,
     private readonly _ipsrRepository: IpsrRepository,
     private readonly _handlersError: HandlersError,
+    private readonly _returnResponse: ReturnResponse,
     private readonly _versioningService: VersioningService,
   ) {}
 
@@ -365,8 +369,8 @@ export class ResultsPackageTocResultService {
       });
     } else {
       await this._resultsTocResultRepository.save({
-        results_id: rip.id,
-        initiative_id: owner ? rip.initiative_id : initiative_id,
+        result_id: rip.id,
+        initiative_ids: owner ? rip.initiative_id : initiative_id,
         toc_result_id: toc_result_id,
         planned_result: planned_result,
         last_updated_by: user.id,
@@ -412,7 +416,10 @@ export class ResultsPackageTocResultService {
         },
       });
 
-      if (result_toc_result['toc_level_id'] !== 3) {
+      if (
+        result_toc_result['toc_level_id'] !== 3 &&
+        searchIpEoi?.result_ip_eoi_outcome_id
+      ) {
         await this._resultIpEoiOutcomesRepository.update(
           searchIpEoi?.result_ip_eoi_outcome_id,
           {
@@ -427,6 +434,12 @@ export class ResultsPackageTocResultService {
           message: 'No End of Initiative Outcomes were saved',
           status: HttpStatus.OK,
         };
+      } else {
+        return this._returnResponse.format({
+          message: `The EOI cannot be saved because the Toc level is 3 or the EOI does not have an eoi result ID.`,
+          statusCode: HttpStatus.BAD_REQUEST,
+          response: { valid: false },
+        });
       }
 
       const searchContributingToc =

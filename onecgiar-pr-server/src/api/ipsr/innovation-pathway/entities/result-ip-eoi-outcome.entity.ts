@@ -38,10 +38,4 @@ export class ResultIpEoiOutcome extends BaseEntity {
     name: 'result_by_innovation_package_id',
   })
   obj_result_by_innovation_package: Ipsr;
-
-  @ManyToOne(() => TocResult, (tr) => tr.toc_result_id)
-  @JoinColumn({
-    name: 'toc_result_id',
-  })
-  obj_toc_result: TocResult;
 }

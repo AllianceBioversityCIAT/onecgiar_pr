@@ -71,7 +71,4 @@ export class TocResult {
     default: true,
   })
   is_active: boolean;
-
-  @OneToMany(() => ResultIpEoiOutcome, (rio) => rio.obj_toc_result)
-  obj_toc_result: ResultIpEoiOutcome[];
 }

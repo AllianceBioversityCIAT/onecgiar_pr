@@ -54,6 +54,7 @@ import { ResultsTocTargetIndicatorRepository } from 'src/api/results/results-toc
     ResultsSdgTargetRepository,
     ResultsActionAreaOutcomeRepository,
     ResultsTocTargetIndicatorRepository,
+    ReturnResponse,
   ],
   exports: [],
 })
