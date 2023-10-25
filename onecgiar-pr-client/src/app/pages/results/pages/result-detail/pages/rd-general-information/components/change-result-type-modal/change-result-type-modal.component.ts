@@ -108,7 +108,7 @@ export class ChangeResultTypeModalComponent implements OnChanges {
       next: (resp: any) => {
         this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result type successfully updated', status: 'success', closeIn: 600 });
         this.onCloseModal();
-        this.router.navigateByUrl(`/result/result-detail/${this.api.resultsSE.currentResultId}/partners`).then(() => {
+        this.router.navigateByUrl(`/result/results-outlet/results-list`).then(() => {
           this.router.navigateByUrl(currentUrl);
         });
         this.isChagingType = false;
