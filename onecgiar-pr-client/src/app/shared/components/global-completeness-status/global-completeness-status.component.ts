@@ -42,24 +42,24 @@ export class GlobalCompletenessStatusComponent implements OnInit {
   ngOnInit(): void {
     // this.POST_reportSesultsCompleteness([], []);
     this.initMode ? this.GET_initiativesByUser() : this.GET_AllInitiatives();
-    this.getPhases();
+    this.getThePhases();
   }
 
-  getPhases() {
-    const selectOpenPhases = (phases: any[]) => (this.phasesSelected = phases.filter((phase: any) => phase.status));
-    const useAlreadyLoadedPhases = () => {
-      selectOpenPhases(this.phasesSE.phases.reporting);
+  getThePhases() {
+    const autoSelectOpenPhases = (phases: any[]) => (this.phasesSelected = phases.filter((phase: any) => phase.status));
+    const useLoadedPhases = () => {
+      autoSelectOpenPhases(this.phasesSE.phases.reporting);
       this.reportingPhases = this.phasesSE.phases.reporting;
     };
 
     const listenWhenPhasesAreLoaded = () => {
       this.phasesSE.getPhasesObservable().subscribe((phases: any[]) => {
         this.reportingPhases = phases;
-        selectOpenPhases(this.reportingPhases);
+        autoSelectOpenPhases(this.reportingPhases);
       });
     };
 
-    this.phasesSE.phases.reporting.length ? useAlreadyLoadedPhases() : listenWhenPhasesAreLoaded();
+    this.phasesSE.phases.reporting.length ? useLoadedPhases() : listenWhenPhasesAreLoaded();
   }
 
   POST_reportSesultsCompleteness(inits: any[], phases: any[], role?: number) {
@@ -125,7 +125,7 @@ export class GlobalCompletenessStatusComponent implements OnInit {
 
   mapMyInitiativesList(): any[] {
     const inits = [];
-    this.api.dataControlSE.myInitiativesList.map((init: any) => {
+    this.api.dataControlSE.myInitiativesList.forEach((init: any) => {
       if (init?.role != 'Lead' && init?.role != 'Coordinator') return;
       inits.push(init.initiative_id);
       this.initiativesSelected.push({ id: init.initiative_id, full_name: init.full_name });
