@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { environment } from '../../../../../../../../../../../environments/environment';
 import { ApiService } from 'src/app/shared/services/api/api.service';
 import { Router } from '@angular/router';
@@ -7,7 +7,7 @@ import { Router } from '@angular/router';
   templateUrl: './target-indicator.component.html',
   styleUrls: ['./target-indicator.component.scss']
 })
-export class TargetIndicatorComponent implements OnInit {
+export class TargetIndicatorComponent {
   disabledInput: boolean = false;
   itemReturn = null;
   iscalculated: string = 'width: 12px; height: 12px; border-radius: 100%; background-color: #B9B9B9;margin-top: 20px; margin-left: 7px;';
@@ -15,11 +15,8 @@ export class TargetIndicatorComponent implements OnInit {
   @Input() initiative: any;
   @Input() disabledInputs: any;
   text = `<span style="color: #6777D8; font-weight: bold;">4. Geographic location</span>`;
-  constructor(public api: ApiService, private router: Router) {}
 
-  ngOnInit(): void {
-    //(this.disabledInputs);
-  }
+  constructor(public api: ApiService) {}
 
   statusIndicator(status) {
     let statusIndicator = '';
@@ -72,6 +69,25 @@ export class TargetIndicatorComponent implements OnInit {
 
   descriptionWarning(item, itemTwo) {
     return 'The type of result (' + item + ') you are reporting does not match the type (' + itemTwo + ') of this indicator, therefore, progress cannot be reported. Please ensure that the indicator category matches the indicator type for accurate reporting.';
+  }
+
+  checkAlert(item) {
+    const isCustom = this.initiative.type_value === 'custom';
+    const isCalculable = this.initiative.is_calculable;
+    const isResultTypeMismatched = this.initiative.number_result_type !== this.initiative?.result.result_type_id;
+    const isYearMismatched = !this.descriptionWarningYear(item?.target_date, this.initiative.result.phase_year).is_alert;
+
+    if (isCalculable) {
+      if (!isCustom && isResultTypeMismatched) {
+        return true;
+      }
+    } else {
+      if (isCustom || isResultTypeMismatched || isYearMismatched) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   descriptionWarningYear(item, itemTwo) {
