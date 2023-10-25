@@ -72,6 +72,25 @@ export class TargetIndicatorComponent {
     return 'The type of result (' + item + ') you are reporting does not match the type (' + itemTwo + ') of this indicator, therefore, progress cannot be reported. Please ensure that the indicator category matches the indicator type for accurate reporting.';
   }
 
+  checkAlert(item) {
+    const isCustom = this.initiative.type_value === 'custom';
+    const isCalculable = this.initiative.is_calculable;
+    const isResultTypeMismatched = this.initiative.number_result_type !== this.initiative?.result.result_type_id;
+    const isYearMismatched = !this.descriptionWarningYear(item?.target_date, this.initiative.result.phase_year).is_alert;
+
+    if (isCalculable) {
+      if (!isCustom && isResultTypeMismatched) {
+        return true;
+      }
+    } else {
+      if (isCustom || isResultTypeMismatched || isYearMismatched) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   descriptionWarningYear(item, itemTwo) {
     const year = new Date(item).getFullYear();
     let booleanYear = false;
