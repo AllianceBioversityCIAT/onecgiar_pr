@@ -66,13 +66,13 @@ export class AdminPanelService implements OnModuleInit {
   }
 
   async excelFullReportByResultCodes(filterResults: FilterResultsDto) {
-    let resultCodes = [];
+    let resultIds = [];
     if (filterResults?.fullReport) {
-      resultCodes = (await this._resultRepository.getActiveResultCodes()).map(
-        (r) => r.result_code,
+      resultIds = (await this._resultRepository.getActiveResultCodes()).map(
+        (r) => r.id,
       );
     } else {
-      resultCodes = filterResults?.resultCodes ?? [];
+      resultIds = filterResults?.resultIds ?? [];
     }
 
     try {
@@ -80,13 +80,13 @@ export class AdminPanelService implements OnModuleInit {
 
       // gets the base report (sections 1 to 6)
       const baseReport =
-        await this._resultRepository.getBasicResultDataForReport(resultCodes);
+        await this._resultRepository.getBasicResultDataForReport(resultIds);
       fullReport = [...baseReport];
 
-      let resultTypes: ResultTypeDto[] =
-        await this._resultRepository.getTypesOfResultByCodes(resultCodes);
+      const resultTypes: ResultTypeDto[] =
+        await this._resultRepository.getTypesOfResultByCodes(resultIds);
 
-      let resultsByTypes = new Map<number, ResultTypeDto[]>();
+      const resultsByTypes = new Map<number, ResultTypeDto[]>();
       resultTypes.forEach((rt) => {
         const results = resultsByTypes.get(rt.typeId);
         if (!results) {
@@ -226,7 +226,7 @@ export class AdminPanelService implements OnModuleInit {
 
       //adding TOC related data (SDG and targets, Impact Area and targets)
       const tocData = await this._resultRepository.getTocDataForReport(
-        resultCodes,
+        resultIds,
       );
 
       fullReport = fullReport.map((fr) => {
@@ -245,7 +245,7 @@ export class AdminPanelService implements OnModuleInit {
 
       const resultLevels = await this._resultRepository.find({
         select: ['result_level_id'],
-        where: resultCodes.map((rc) => ({ result_code: rc })),
+        where: resultIds.map((rc) => ({ id: rc })),
       });
 
       let resultsAgaintsToc: any[];
@@ -255,7 +255,7 @@ export class AdminPanelService implements OnModuleInit {
         resultLevels[0].result_level_id == 4
       ) {
         resultsAgaintsToc = await this._resultRepository.getResultAgainstToc(
-          resultCodes,
+          resultIds,
         );
       }
 
@@ -280,10 +280,10 @@ export class AdminPanelService implements OnModuleInit {
         );
       fullReport = [...baseReport];
 
-      let resultTypes: ResultTypeDto[] =
+      const resultTypes: ResultTypeDto[] =
         await this._resultRepository.getTypesOfResultByInitiative(initiativeId);
 
-      let resultsByTypes = new Map<number, ResultTypeDto[]>();
+      const resultsByTypes = new Map<number, ResultTypeDto[]>();
       resultTypes.forEach((rt) => {
         const results = resultsByTypes.get(rt.typeId);
         if (!results) {
@@ -496,7 +496,7 @@ export class AdminPanelService implements OnModuleInit {
         `Bulk sync process started at ${initDate}. Sync for ${kps.length} kp(s).`,
       );
 
-      let responses: {
+      const responses: {
         response: any;
         message: string;
         status: HttpStatus;
@@ -517,10 +517,12 @@ export class AdminPanelService implements OnModuleInit {
       }
 
       const endDate: Date = new Date();
-      let successful = responses.filter(
+      const successful = responses.filter(
         (res) => res.status === HttpStatus.CREATED,
       );
-      let failed = responses.filter((res) => res.status !== HttpStatus.CREATED);
+      const failed = responses.filter(
+        (res) => res.status !== HttpStatus.CREATED,
+      );
 
       this._logger.debug(
         `Bulk sync process finished at ${endDate}. Time took: ${
