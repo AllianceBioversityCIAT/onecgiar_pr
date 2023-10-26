@@ -93,8 +93,8 @@
                     <table>
                         <tr class="header"
                             *ngIf="initiative.type_value == 'custom' || initiative.number_result_type ==  initiative?.result.result_type_id">
-                            <th class="row-one">Result being reported</th>
-                            <th>Target contribution</th>
+                            <th id="result_being_reported_is_calculable" class="row-one">Result being reported</th>
+                            <th id="target_contribution_is_calculable">Target contribution</th>
                         </tr>
                         <tr
                             *ngIf="initiative.type_value == 'custom' || initiative.number_result_type ==  initiative?.result.result_type_id">
@@ -107,8 +107,8 @@
                                 {{item.target_value}}</td>
                         </tr>
                         <tr class="header">
-                            <th class="row-one">Other results contributing to the target</th>
-                            <th>Target contribution</th>
+                            <th id="other_results_contributing_is_calculable" class="row-one">Other results contributing to the target</th>
+                            <th id="target_contribution_is_calculable_row_two">Target contribution</th>
                         </tr>
 
                         <tr *ngFor="let itemsContri of item?.results_contributing">
@@ -121,8 +121,8 @@
                             <td colspan="2">Currently there are no other results contributing to this target.</td>
                         </tr>
                         <tr class="footer">
-                            <th class="row-one">Overall progress against planned target</th>
-                            <th>{{initiative.total}} out of {{item.target_value}}</th>
+                            <th id="overall_progress_is_calculable" class="row-one">Overall progress against planned target</th>
+                            <th id="total_out_of_is_calculable">{{initiative.total}} out of {{item.target_value}}</th>
                         </tr>
                     </table>
                 </div>
@@ -178,8 +178,8 @@
                     <table>
                         <tr class="header"
                             *ngIf="initiative.type_value == 'custom' || initiative.number_result_type ==  initiative?.result.result_type_id">
-                            <th class="row-one">Result being reported</th>
-                            <th>Target contribution</th>
+                            <th id="result_being_not_calculable" class="row-one">Result being reported</th>
+                            <th id="target_contribution_not_calculable">Target contribution</th>
                         </tr>
                         <tr
                             *ngIf="initiative.type_value == 'custom' || initiative.number_result_type ==  initiative?.result.result_type_id">
@@ -191,8 +191,8 @@
                                     [(ngModel)]="item.contributing">{{item.contributing}} </textarea></td>
                         </tr>
                         <tr class="header">
-                            <th class="row-one">Other results contributing to the target</th>
-                            <th>Target contribution</th>
+                            <th id="other_results_contributing_not_calculable" class="row-one">Other results contributing to the target</th>
+                            <th id="target_contribution_not_calculable_row_two">Target contribution</th>
                         </tr>
                         <tr *ngIf="item?.results_contributing.length == 0">
                             <td colspan="2">Currently there are no other results contributing to this target.
