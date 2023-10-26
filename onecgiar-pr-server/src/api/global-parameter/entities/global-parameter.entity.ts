@@ -3,12 +3,16 @@ import {
   CreateDateColumn,
   Entity,
   Index,
+  JoinColumn,
+  ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { GlobalParameterCategory } from './global-parameter-category.entity';
+import { BaseEntity } from '../../../shared/entities/base-entity';
 
 @Entity('global_parameters')
-export class GlobalParameter {
+export class GlobalParameter extends BaseEntity {
   @PrimaryGeneratedColumn({
     name: 'id',
     type: 'bigint',
@@ -38,32 +42,12 @@ export class GlobalParameter {
   })
   value: string;
 
-  //audit fields
-  @Column({
-    name: 'is_active',
-    type: 'boolean',
-    nullable: false,
-    default: true,
+  @Column({ nullable: false, name: 'global_parameter_categories_id' })
+  global_parameter_categories_id: number;
+
+  @ManyToOne(() => GlobalParameterCategory, (gp) => gp.id)
+  @JoinColumn({
+    name: 'global_parameter_categories_id',
   })
-  is_active: boolean;
-
-  @Column()
-  created_by: number;
-
-  @CreateDateColumn({
-    name: 'created_date',
-    nullable: false,
-    type: 'timestamp',
-  })
-  created_date: Date;
-
-  @UpdateDateColumn({
-    name: 'last_updated_date',
-    type: 'timestamp',
-    nullable: true,
-  })
-  last_updated_date: Date;
-
-  @Column({ nullable: true })
-  last_updated_by: number;
+  global_parameter_categories_object: GlobalParameterCategory;
 }
