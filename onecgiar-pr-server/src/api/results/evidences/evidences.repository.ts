@@ -79,7 +79,7 @@ export class EvidencesRepository
         const response_edit = <Evidence[]>config.f.custonFunction(response);
         final_data = await this.save(response_edit);
       } else {
-        const queryData: string = `
+        const queryData = `
         insert into evidence (
           description,
           is_active,
@@ -386,7 +386,8 @@ export class EvidencesRepository
     where e.result_id = ?
       and e.is_supplementary = ?
       and e.is_active > 0
-      and e.evidence_type_id = ?;
+      and e.evidence_type_id = ?
+    order by e.creation_date asc;
     `;
 
     try {
