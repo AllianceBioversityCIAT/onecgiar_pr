@@ -1,18 +1,11 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-
-import { InitCompletenessStatusRoutingModule } from './init-completeness-status-routing.module';
 import { InitCompletenessStatusComponent } from './init-completeness-status.component';
-import { TableModule } from 'primeng/table';
-import { FormsModule } from '@angular/forms';
-import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
-import { ResultHistoryOfChangesModalModule } from '../../../admin-section/pages/completeness-status/components/result-history-of-changes-modal/result-history-of-changes-modal.module';
-import { FilterByTextModule } from '../../../../shared/pipes/filter-by-text.module';
-import { FilterInitWithRoleCoordAndLeadModule } from '../../pipes/filter-init-with-role-coord-and-lead/filter-init-with-role-coord-and-lead.module';
+import { InitCompletenessStatusRoutingModule } from './init-completeness-status-routing.module';
+import { GlobalCompletenessStatusModule } from 'src/app/shared/components/global-completeness-status/global-completeness-status.module';
 
 @NgModule({
   declarations: [InitCompletenessStatusComponent],
-  exports: [InitCompletenessStatusComponent],
-  imports: [CommonModule, InitCompletenessStatusRoutingModule, TableModule, FormsModule, CustomFieldsModule, ResultHistoryOfChangesModalModule, FilterByTextModule, FilterInitWithRoleCoordAndLeadModule]
+  imports: [CommonModule, InitCompletenessStatusRoutingModule, GlobalCompletenessStatusModule]
 })
 export class InitCompletenessStatusModule {}

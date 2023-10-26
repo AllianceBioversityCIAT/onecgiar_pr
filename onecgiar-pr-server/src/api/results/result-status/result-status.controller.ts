@@ -1,9 +1,18 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  HttpException,
+} from '@nestjs/common';
 import { ResultStatusService } from './result-status.service';
 import { CreateResultStatusDto } from './dto/create-result-status.dto';
 import { UpdateResultStatusDto } from './dto/update-result-status.dto';
 
-@Controller('result-status')
+@Controller()
 export class ResultStatusController {
   constructor(private readonly resultStatusService: ResultStatusService) {}
 
@@ -12,9 +21,11 @@ export class ResultStatusController {
     return this.resultStatusService.create(createResultStatusDto);
   }
 
-  @Get()
-  findAll() {
-    return this.resultStatusService.findAll();
+  @Get('all')
+  async findAll() {
+    const { response, message, status } =
+      await this.resultStatusService.findAll();
+    throw new HttpException({ message, response }, status);
   }
 
   @Get(':id')
@@ -23,7 +34,10 @@ export class ResultStatusController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateResultStatusDto: UpdateResultStatusDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateResultStatusDto: UpdateResultStatusDto,
+  ) {
     return this.resultStatusService.update(+id, updateResultStatusDto);
   }
 

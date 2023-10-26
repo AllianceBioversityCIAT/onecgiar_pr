@@ -9,7 +9,8 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint",
-    "lint:fix": "ng lint --fix"
+    "lint:fix": "ng lint --fix",
+    "tunnel": "ng serve -c production --port 19971"
   },
   "private": true,
   "dependencies": {
