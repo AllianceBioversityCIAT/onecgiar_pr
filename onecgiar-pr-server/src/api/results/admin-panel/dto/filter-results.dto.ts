@@ -1,4 +1,5 @@
 export class FilterResultsDto {
-  resultCodes: number[];
+  // resultCodes: number[];
+  resultIds: number[];
   fullReport = false;
 }
