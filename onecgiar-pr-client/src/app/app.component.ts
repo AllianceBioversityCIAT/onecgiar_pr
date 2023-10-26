@@ -27,5 +27,20 @@ export class AppComponent implements OnInit {
         });
       } catch (error) {}
     });
+    this.copyTokenToClipboard();
+  }
+
+  copyTokenToClipboard() {
+    if (environment.production) return;
+    document.onkeyup = function () {
+      var e = e || window.event; // for IE to cover IEs window event-object
+      if (e.altKey && e.which == 84) {
+        console.log('event');
+        navigator.clipboard.writeText(localStorage.getItem('token'));
+        alert('Token copied to clipboard');
+        return false;
+      }
+      return false;
+    };
   }
 }

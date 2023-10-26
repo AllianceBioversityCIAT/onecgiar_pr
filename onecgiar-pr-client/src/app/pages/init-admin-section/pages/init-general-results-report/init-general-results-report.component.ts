@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 import { CustomizedAlertsFeService } from '../../../../shared/services/customized-alerts-fe.service';
+import { PhasesService } from '../../../../shared/services/global/phases.service';
 
 @Component({
   selector: 'app-init-general-results-report',
@@ -15,22 +16,51 @@ export class InitGeneralResultsReportComponent implements OnInit {
   resultsList;
   requesting = false;
   valueToFilter = null;
-  yearToFilter = null;
   requestCounter = 0;
   allInitiatives = [];
-
-  constructor(public api: ApiService, private exportTablesSE: ExportTablesService, private customAlertService: CustomizedAlertsFeService) {}
+  reportingPhases: any[] = [];
+  phasesSelected = [];
+  resultStatusList = [];
+  constructor(public api: ApiService, private exportTablesSE: ExportTablesService, private customAlertService: CustomizedAlertsFeService, private phasesSE: PhasesService) {}
 
   ngOnInit(): void {
     this.getAll();
+    this.getPhases();
+    this.getAllResultStatuses();
   }
 
-  onSelectInit() {
-    const inits = [];
-    this.initiativesSelected.map(init => {
-      inits.push(init.initiative_id);
+  getAllResultStatuses() {
+    this.api.resultsSE.GET_allResultStatuses().subscribe(({ response }) => {
+      console.log(response);
+      this.resultStatusList = response;
+      this.resultStatusList.forEach((status: any) => {
+        status.className = status.name.replace(' ', '-').toLowerCase();
+      });
     });
-    this.POST_reportSesultsCompleteness(inits);
+  }
+
+  getPhases() {
+    const selectOpenPhases = (phases: any[]) => (this.phasesSelected = phases.filter((phase: any) => phase.status));
+    const useAlreadyLoadedPhases = () => {
+      selectOpenPhases(this.phasesSE.phases.reporting);
+      this.reportingPhases = this.phasesSE.phases.reporting;
+    };
+
+    const listenWhenPhasesAreLoaded = () => {
+      this.phasesSE.getPhasesObservable().subscribe((phases: any[]) => {
+        this.reportingPhases = phases;
+        selectOpenPhases(this.reportingPhases);
+      });
+    };
+
+    this.phasesSE.phases.reporting.length ? useAlreadyLoadedPhases() : listenWhenPhasesAreLoaded();
+  }
+
+  onSelectDropdown() {
+    const inits = this.initiativesSelected.map((init: any) => init.initiative_id);
+    const phases = this.phasesSelected.map((phase: any) => phase.id);
+    // (inits);
+    this.POST_reportSesultsCompleteness(inits, phases);
   }
 
   async getAll() {
@@ -48,10 +78,20 @@ export class InitGeneralResultsReportComponent implements OnInit {
     return `In this <a href="https://cgiar.sharepoint.com/:f:/s/PRMSProject/Ev8QdqJv6vtPmcRvE4QLnDUB17Hke9nHOUneI1AZCI5KHg?e=5He46N"  class="open_route" target="_blank">folder</a>, you will find the latest reports that contains all the results reported in the tool. Please make sure to check the date of each report to ensure that you are always downloading the most recent version.`;
   }
 
-  POST_reportSesultsCompleteness(inits: any[]) {
+  POST_reportSesultsCompleteness(inits: any[], phases: any[]) {
     this.resultsList = [];
-    this.api.resultsSE.POST_reportSesultsCompleteness(inits, 2).subscribe(({ response }) => {
+    this.api.resultsSE.POST_reportSesultsCompleteness(inits, phases, 2).subscribe(({ response }) => {
+      console.log(response);
       this.resultsList = response;
+
+      this.resultsList.forEach((result: any) => {
+        // result.full_name_html = `<div class="completeness-${result.is_submitted == 1 ? 'submitted' : 'editing'} completeness-state">${result.is_submitted == 1 ? 'Submitted' : 'Editing'}</div> <strong>Result code: (${result.result_code})</strong> - ${result.result_title}  - <strong>Official code: (${result.official_code})</strong> - <strong>Indicator category: (${result.result_type_name})</strong>`;
+        // Get status name
+        const status = this.resultStatusList.find((status: any) => status.status_id == result.status_id);
+        const statusName = status?.name;
+        const className = status?.className;
+        result.full_name_html = `<div class="completeness-${className} completeness-state">${statusName}</div> <strong>Result code: (${result.result_code})</strong> - ${result.result_title}  - <strong>Official code: (${result.official_code})</strong> - <strong>Indicator category: (${result.result_type_name})</strong>`;
+      });
     });
   }
 
@@ -65,13 +105,14 @@ export class InitGeneralResultsReportComponent implements OnInit {
     this.requestCounter = 0;
 
     const list = [];
-    const uniqueResultCodesSet = new Set(resultsRelected.map((item: any) => item.result_code));
-    const uniqueResultCodes = [...uniqueResultCodesSet];
-    uniqueResultCodes?.forEach(element => {
+    const uniqueResultIdsSet = new Set(resultsRelected.map((item: any) => item.results_id));
+    const uniqueResultIds = [...uniqueResultIdsSet];
+    uniqueResultIds?.forEach(element => {
       list.push(element);
     });
 
-    await Promise.all(list.map((element, key) => this.POST_excelFullReportPromise(element, key)));
+    // Usar Promise.all para esperar a que todas las promesas se resuelvan
+    await Promise.all(list.map((result, key) => this.POST_excelFullReportPromise(result, key)));
 
     this.exportTablesSE.exportMultipleSheetsExcel(this.dataToExport, 'results_list', null, this.tocToExport);
     this.requesting = false;
@@ -82,8 +123,8 @@ export class InitGeneralResultsReportComponent implements OnInit {
       this.api.resultsSE.POST_excelFullReport([result]).subscribe(
         ({ response }) => {
           this.requestCounter++;
-          this.dataToExport.push(...response.fullReport);
-          this.tocToExport.push(...response.resultsAgaintsToc);
+          if (response?.fullReport?.length) this.dataToExport.push(...response.fullReport);
+          if (response?.resultsAgaintsToc?.length) this.tocToExport.push(...response.resultsAgaintsToc);
           resolve(null);
         },
         err => {
