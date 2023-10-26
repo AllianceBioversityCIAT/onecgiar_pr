@@ -1,16 +1,8 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  OneToMany,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { GlobalParameter } from './global-parameter.entity';
-import { BaseEntity } from '../../../shared/entities/base-entity';
 
 @Entity('global_parameter_categories')
-export class GlobalParameterCategory extends BaseEntity {
+export class GlobalParameterCategory {
   @PrimaryGeneratedColumn({
     name: 'id',
     type: 'bigint',
@@ -31,4 +23,10 @@ export class GlobalParameterCategory extends BaseEntity {
     nullable: true,
   })
   description: string;
+
+  @OneToMany(
+    () => GlobalParameter,
+    (globalParameter) => globalParameter.global_parameter_category_object,
+  )
+  globalParameters: GlobalParameter[];
 }

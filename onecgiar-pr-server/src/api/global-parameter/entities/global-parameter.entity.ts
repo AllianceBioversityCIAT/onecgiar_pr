@@ -42,12 +42,12 @@ export class GlobalParameter extends BaseEntity {
   })
   value: string;
 
-  @Column({ nullable: false, name: 'global_parameter_categories_id' })
-  global_parameter_categories_id: number;
+  @Column({ nullable: false, name: 'global_parameter_category_id' })
+  global_parameter_category_id: number;
 
   @ManyToOne(() => GlobalParameterCategory, (gp) => gp.id)
   @JoinColumn({
-    name: 'global_parameter_categories_id',
+    name: 'global_parameter_category_id',
   })
-  global_parameter_categories_object: GlobalParameterCategory;
+  global_parameter_category_object: GlobalParameterCategory;
 }
