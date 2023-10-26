@@ -1,6 +1,7 @@
 import { Component, Input } from '@angular/core';
 import { environment } from '../../../../../../../../../../../environments/environment';
 import { ApiService } from 'src/app/shared/services/api/api.service';
+import { RdTheoryOfChangesServicesService } from '../../../../rd-theory-of-changes-services.service';
 @Component({
   selector: 'app-target-indicator',
   templateUrl: './target-indicator.component.html',
@@ -14,10 +15,10 @@ export class TargetIndicatorComponent {
   @Input() initiative: any;
   @Input() disabledInputs: any;
   @Input() resultLevelId: any;
-  @Input() planned_result: any;
+
   text = `<span style="color: #6777D8; font-weight: bold;">4. Geographic location</span>`;
 
-  constructor(public api: ApiService) {}
+  constructor(public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {}
 
   statusIndicator(status) {
     let statusIndicator = '';
@@ -92,6 +93,6 @@ export class TargetIndicatorComponent {
   }
 
   showOutComeOrOutput() {
-    return `Other results contributing to the indicator of the ${this.planned_result && this.resultLevelId === 1 ? 'output' : 'outcome'}`;
+    return `Other results contributing to the indicator of the ${this.theoryOfChangesServices?.planned_result && this.resultLevelId === 1 ? 'output' : 'outcome'}`;
   }
 }

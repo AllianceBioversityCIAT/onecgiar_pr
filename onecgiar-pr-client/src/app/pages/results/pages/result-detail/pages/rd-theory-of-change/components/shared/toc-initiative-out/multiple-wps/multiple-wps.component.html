@@ -4,7 +4,7 @@
       <a class="tab" [ngClass]="{'active' : tab.uniqueId === activeTab.uniqueId}" (click)="onActiveTab(tab)">
         <i class="material-icons-round {{ tab.validation ? 'valid' : 'invalid' }}" style="font-size: 20px;">
           check_circle </i>
-        <p class="tab-title">TOC-Outcome N° {{i + 1}}</p>
+        <p class="tab-title">{{dynamicTabTitle(i + 1)}}</p>
         <i *ngIf="this.initiative.length !== 1" class="material-icons-round close_icon tab-delete-button-item"
           (click)="onDeleteTab(tab)">backspace</i>
       </a>

@@ -46,7 +46,7 @@ export class TocInitiativeOutComponent implements OnInit {
     if (this.initiative.toc_result_id != null) {
       this.getIndicator();
     }
-    console.log('this.initiative', this.initiative);
+    console.log('Recived initiative', this.initiative);
   }
 
   getDescription(official_code, short_name) {
@@ -88,7 +88,7 @@ export class TocInitiativeOutComponent implements OnInit {
       },
       error: err => {
         this.outcomeList = [];
-        // console.error(err);
+        console.error(err);
       }
     });
   }

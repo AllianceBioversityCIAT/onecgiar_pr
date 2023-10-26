@@ -69,7 +69,7 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
   }
 
   GET_outputList() {
-    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.api.dataControlSE.currentNotification?.results_id || this.initiative?.results_id || this.api.dataControlSE?.currentResult?.id, this.initiative.initiative_id, 1).subscribe({
+    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.api.dataControlSE.currentNotification?.results_id || this.initiative?.results_id || this.api.dataControlSE?.currentResult?.id, this.initiative?.initiative_id, 1).subscribe({
       next: ({ response }) => {
         this.outputList = [];
         this.outputList = response;
@@ -82,7 +82,7 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
   }
 
   GET_outcomeList() {
-    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.api.dataControlSE.currentNotification?.result_id || this.initiative?.results_id || this.api.dataControlSE?.currentResult?.id, this.initiative.initiative_id, 2).subscribe({
+    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.api.dataControlSE.currentNotification?.result_id || this.initiative?.results_id || this.api.dataControlSE?.currentResult?.id, this.initiative?.initiative_id, 2).subscribe({
       next: ({ response }) => {
         this.outcomeList = response;
       },
@@ -94,7 +94,7 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
   }
 
   GET_EOIList() {
-    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.api.dataControlSE.currentNotification?.result_id || this.initiative?.results_id || this.api.dataControlSE?.currentResult?.id, this.initiative.initiative_id, 3).subscribe({
+    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.api.dataControlSE.currentNotification?.result_id || this.initiative?.results_id || this.api.dataControlSE?.currentResult?.id, this.initiative?.initiative_id, 3).subscribe({
       next: ({ response }) => {
         this.eoiList = response;
       },
@@ -109,7 +109,6 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
     this.api.tocApiSE.GET_fullInitiativeTocByinitId(this.initiative.initiative_id).subscribe({
       next: ({ response }) => {
         this.fullInitiativeToc = response[0]?.toc_id;
-        console.log('hola');
       },
       error: err => {
         console.error(err);
@@ -180,7 +179,7 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
         this.indicatorView = true;
       },
       error: err => {
-        console.log(err);
+        console.error(err);
       }
     });
   }

@@ -42,6 +42,12 @@ export class MultipleWPsComponent implements OnInit {
     this.initiative.forEach((tab: any) => {
       tab.uniqueId = Math.random().toString(36).substring(7);
     });
+
+    console.log('this.initiative', this.initiative);
+  }
+
+  dynamicTabTitle(tabNumber) {
+    return `TOC-${this.theoryOfChangesServices?.planned_result && this.resultLevelId === 1 ? 'Output' : 'Outcome'} N° ${tabNumber}`;
   }
 
   onAddTab() {
@@ -82,7 +88,10 @@ export class MultipleWPsComponent implements OnInit {
     }
 
     this.initiative = this.initiative.filter(t => t.uniqueId !== tab.uniqueId);
+    this.theoryOfChangesServices.result_toc_result = this.theoryOfChangesServices.result_toc_result.filter(t => t.uniqueId !== tab.uniqueId);
 
     this.activeTab = this.initiative[0];
+
+    console.log('borrado', this.initiative);
   }
 }

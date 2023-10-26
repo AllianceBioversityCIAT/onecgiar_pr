@@ -26,8 +26,7 @@ export class TocInitiativeOutputSectionComponent implements OnInit {
     this.GET_outcomeList();
     this.GET_outputList();
     // this.GET_fullInitiativeTocByinitId();
-    // this.primarySubmitter = this.theoryOfChangesServices.getPrimarySubmitter();
-    console.log('este', this.theoryOfChangesServices);
+    // console.log('este', this.theoryOfChangesServices);
   }
 
   GET_outputList() {

@@ -18,7 +18,7 @@
 <app-multiple-wps [editable]="editable" [initiative]="initiative" [resultLevelId]="resultLevelId" [isIpsr]="isIpsr"
     [indexYesorNo]="indexYesorNo" *ngIf="this.theoryOfChangesServices.planned_result !== null"></app-multiple-wps>
 
-<div class="flex-no-wrap" *ngIf="this.theoryOfChangesServices.planned_result !== null">
+<!-- <div class="flex-no-wrap" *ngIf="this.theoryOfChangesServices.planned_result !== null">
     <app-pr-select *ngIf="this.theoryOfChangesServices?.planned_result && resultLevelId == 1"
         [options]="this.outputList" label="Output" optionLabel="extraInformation" optionValue="toc_result_id"
         [disabled]="!this.editable" [editable]="editable" placeholder="Select output"
@@ -38,16 +38,15 @@
 
     <app-pr-select
         *ngIf="(resultLevelId == 1 ? this.theoryOfChangesServices?.planned_result == false : true) && initiative.toc_level_id != 3"
-        [options]="this.outcomeList" label="Outcome" [editable]="editable"
-        [disabled]="(resultLevelId == 1 ? false : false) || !this.editable" optionLabel="extraInformation"
-        [extraInformation]="true" optionValue="toc_result_id" placeholder="Select outcome"
-        [(ngModel)]="initiative.toc_result_id" (selectOptionEvent)="getIndicator(); this.get_versionDashboard()">
+        [options]="this.outcomeList" label="Outcome" [editable]="editable" [disabled]="!this.editable"
+        optionLabel="extraInformation" [extraInformation]="true" optionValue="toc_result_id"
+        placeholder="Select outcome" [(ngModel)]="initiative.toc_result_id"
+        (selectOptionEvent)="getIndicator(); this.get_versionDashboard()">
     </app-pr-select>
 
     <app-pr-select
         *ngIf="(resultLevelId == 1 ? this.theoryOfChangesServices?.planned_result == false : true) && initiative.toc_level_id == 3"
-        [options]="this.eoiList" label="Outcome" [editable]="editable"
-        [disabled]="(resultLevelId == 1 ? false : false) || !this.editable" optionLabel="title"
+        [options]="this.eoiList" label="Outcome" [editable]="editable" [disabled]="!this.editable" optionLabel="title"
         optionValue="toc_result_id" placeholder="Select outcome" [(ngModel)]="initiative.toc_result_id"
         (selectOptionEvent)="getIndicator(); this.get_versionDashboard()">
     </app-pr-select>
@@ -78,4 +77,4 @@
                 [sdgRequid]="true"></app-sdg-targets>
         </div>
     </div>
-</div>
+</div> -->

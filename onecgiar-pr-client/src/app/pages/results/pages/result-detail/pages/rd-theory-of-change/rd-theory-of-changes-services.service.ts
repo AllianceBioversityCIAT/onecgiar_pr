@@ -15,12 +15,9 @@ export class RdTheoryOfChangesServicesService {
   theoryOfChangeBody: any = [];
   primarySubmitter: any = null;
   planned_result = null;
+  result_toc_result = null;
 
   constructor() {}
-
-  getPrimarySubmitter() {
-    return (this.primarySubmitter = this.theoryOfChangeBody?.contributing_and_primary_initiative.filter(item => item.initiative_role_id === '1')[0]);
-  }
 }
 
 export class intefacesTheoryOfChanges {
