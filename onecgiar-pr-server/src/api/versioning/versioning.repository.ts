@@ -5,7 +5,6 @@ import {
   HandlersError,
   ReturnResponse,
 } from '../../shared/handlers/error.utils';
-import { env } from 'process';
 import { Result } from '../results/entities/result.entity';
 
 @Injectable()
@@ -80,14 +79,14 @@ export class VersionRepository extends Repository<Version> {
       .then((res: { version_id: number }[]) => {
         return res.map((item) => item.version_id);
       })
-      .catch((err) => {
+      .catch((_err) => {
         return [];
       });
   }
 
   $_getAllInovationDevToReplicate(
     phase: Version,
-    result_type: number = 7,
+    result_type = 7,
   ): Promise<Result[]> {
     const queryData = `
     select *
@@ -107,7 +106,7 @@ export class VersionRepository extends Repository<Version> {
       .then((res) => {
         return res;
       })
-      .catch((err) => {
+      .catch((_err) => {
         return [];
       });
   }
@@ -122,7 +121,7 @@ export class VersionRepository extends Repository<Version> {
     `;
     return this.query(queryData)
       .then((res) => res)
-      .catch((err) => null);
+      .catch((_err) => null);
   }
 
   $_updateLinkResultByPhase(phase_id: number) {
@@ -137,7 +136,7 @@ export class VersionRepository extends Repository<Version> {
     	and r.version_id = ?;`;
     return this.query(queryData, [phase_id, phase_id])
       .then((res) => res)
-      .catch((err) => null);
+      .catch((_err) => null);
   }
 
   async getDataStatusAndTypeResult(status_id: number, type_id: number) {

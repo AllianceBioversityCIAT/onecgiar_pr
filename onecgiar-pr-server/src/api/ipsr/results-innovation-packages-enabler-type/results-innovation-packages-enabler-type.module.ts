@@ -9,11 +9,10 @@ import { ComplementaryInnovationEnablerTypesRepository } from './repositories/co
   controllers: [ResultsInnovationPackagesEnablerTypeController],
   providers: [
     ResultsInnovationPackagesEnablerTypeService,
-     ResultsInnovationPackagesEnablerTypeRepository, 
-     ComplementaryInnovationEnablerTypesRepository,
-     HandlersError],
-  exports:[
-    ResultsInnovationPackagesEnablerTypeService
-  ]
+    ResultsInnovationPackagesEnablerTypeRepository,
+    ComplementaryInnovationEnablerTypesRepository,
+    HandlersError,
+  ],
+  exports: [ResultsInnovationPackagesEnablerTypeService],
 })
 export class ResultsInnovationPackagesEnablerTypeModule {}

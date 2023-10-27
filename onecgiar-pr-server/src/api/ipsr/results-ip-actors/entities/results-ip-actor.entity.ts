@@ -6,7 +6,6 @@ import {
   Entity,
 } from 'typeorm';
 import { Ipsr } from '../../entities/ipsr.entity';
-import { Version } from '../../../versioning/entities/version.entity';
 import { ActorType } from '../../../results/result-actors/entities/actor-type.entity';
 import { BaseEntity } from '../../../../shared/entities/base-entity';
 

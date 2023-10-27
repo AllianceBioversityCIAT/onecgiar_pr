@@ -6,7 +6,6 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { BaseEntity } from '../../../../shared/entities/base-entity';
-import { Version } from '../../../versioning/entities/version.entity';
 import { ResultCountry } from '../../result-countries/entities/result-country.entity';
 
 @Entity('result_countries_sub_national')

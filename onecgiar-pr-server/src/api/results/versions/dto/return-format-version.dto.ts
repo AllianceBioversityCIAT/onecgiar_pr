@@ -2,5 +2,5 @@ import { returnFormatService } from '../../../../shared/extendsGlobalDTO/returnS
 import { Version } from '../../../versioning/entities/version.entity';
 
 export class returnFormatVersion extends returnFormatService {
-  public response!: Version[] | {};
+  public response!: Version;
 }

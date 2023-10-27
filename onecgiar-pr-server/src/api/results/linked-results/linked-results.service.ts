@@ -1,6 +1,5 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { CreateLinkedResultDto } from './dto/create-linked-result.dto';
-import { UpdateLinkedResultDto } from './dto/update-linked-result.dto';
 import { LinkedResultRepository } from './linked-results.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultRepository } from '../result.repository';
@@ -8,7 +7,6 @@ import { Result } from '../entities/result.entity';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { LinkedResult } from './entities/linked-result.entity';
 import { VersionsService } from '../versions/versions.service';
-import { Version } from '../../versioning/entities/version.entity';
 import { ResultsPolicyChangesRepository } from '../summary/repositories/results-policy-changes.repository';
 
 @Injectable()
@@ -45,10 +43,9 @@ export class LinkedResultsService {
       if (vTemp.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: vTemp });
       }
-      const version: Version = <Version>vTemp.response;
 
-      let isExistsNew: number[] = [];
-      let isExistsNewLegacy: string[] = [];
+      const isExistsNew: number[] = [];
+      const isExistsNewLegacy: string[] = [];
       createLinkedResultDto.links = createLinkedResultDto.links ?? [];
       createLinkedResultDto.legacy_link =
         createLinkedResultDto.legacy_link ?? [];
@@ -140,9 +137,11 @@ export class LinkedResultsService {
           { result_id: result.id },
           {
             linked_innovation_dev:
-              createLinkedResultDto.linkedInnovation.linked_innovation_dev || false,
+              createLinkedResultDto.linkedInnovation.linked_innovation_dev ||
+              false,
             linked_innovation_use:
-              createLinkedResultDto.linkedInnovation.linked_innovation_use || false,
+              createLinkedResultDto.linkedInnovation.linked_innovation_use ||
+              false,
             last_updated_by: user.id,
             last_updated_date: new Date(),
           },
@@ -173,7 +172,7 @@ export class LinkedResultsService {
       if (result.result_type_id == 1) {
         linkedInnovation = await this._policyChangeRepository.findOne({
           where: { result_id: result.id },
-          select: ['linked_innovation_dev', 'linked_innovation_use']
+          select: ['linked_innovation_dev', 'linked_innovation_use'],
         });
       }
 
@@ -181,10 +180,12 @@ export class LinkedResultsService {
         response: {
           links: links.filter((el) => !!el.id),
           legacy_link: links.filter((el) => !el.id),
-          linkedInnovation: linkedInnovation ? linkedInnovation : {
-            linked_innovation_dev: false,
-            linked_innovation_use: false
-          },
+          linkedInnovation: linkedInnovation
+            ? linkedInnovation
+            : {
+                linked_innovation_dev: false,
+                linked_innovation_use: false,
+              },
         },
         message: 'The data was updated correctly',
         status: HttpStatus.OK,
@@ -192,18 +193,6 @@ export class LinkedResultsService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} linkedResult`;
-  }
-
-  update(id: number, updateLinkedResultDto: UpdateLinkedResultDto) {
-    return `This action updates a #${id} linkedResult`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} linkedResult`;
   }
 }
 

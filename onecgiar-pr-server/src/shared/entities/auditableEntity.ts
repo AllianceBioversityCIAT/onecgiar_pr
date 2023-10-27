@@ -1,8 +1,4 @@
-import {
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 export abstract class Auditable {
   @CreateDateColumn({

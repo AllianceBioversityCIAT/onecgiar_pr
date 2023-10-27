@@ -29,7 +29,7 @@ import { ResultInstitutionsBudgetRepository } from '../result_budget/repositorie
     ResultsKnowledgeProductsRepository,
     ResultsKnowledgeProductInstitutionRepository,
     ReturnResponse,
-    ResultInstitutionsBudgetRepository
+    ResultInstitutionsBudgetRepository,
   ],
   imports: [],
   exports: [ResultByIntitutionsRepository],

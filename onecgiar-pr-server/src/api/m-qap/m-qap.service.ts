@@ -1,6 +1,5 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
-import axios from 'axios';
 import { env } from 'process';
 import { lastValueFrom, map } from 'rxjs';
 import { MQAPResultDto } from './dtos/m-qap.dto';

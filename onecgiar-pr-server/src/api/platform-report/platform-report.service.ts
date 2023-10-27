@@ -173,7 +173,7 @@ export class PlatformReportService {
           //console.log(res);
           return res;
         })
-        .catch((error) => {
+        .catch((_error) => {
           return null;
         });
 
