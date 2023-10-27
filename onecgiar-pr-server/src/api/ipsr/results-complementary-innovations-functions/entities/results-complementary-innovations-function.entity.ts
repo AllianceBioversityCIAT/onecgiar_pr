@@ -6,7 +6,6 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { BaseEntity } from '../../../../shared/entities/base-entity';
-import { Version } from '../../../versioning/entities/version.entity';
 import { ResultsComplementaryInnovation } from '../../results-complementary-innovations/entities/results-complementary-innovation.entity';
 import { ComplementaryInnovationFunctions } from './complementary-innovation-functions.entity';
 

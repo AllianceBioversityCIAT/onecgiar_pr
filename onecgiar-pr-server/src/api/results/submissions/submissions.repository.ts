@@ -1,15 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, Repository, QueryRunner } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { Submission } from './entities/submission.entity';
 
 @Injectable()
-export class submissionRepository extends Repository<Submission>{
+export class submissionRepository extends Repository<Submission> {
   constructor(
     private dataSource: DataSource,
-    private _handlersError: HandlersError
+    private _handlersError: HandlersError,
   ) {
-	super(Submission, dataSource.createEntityManager());
+    super(Submission, dataSource.createEntityManager());
   }
 
   async submissionsByResult(resultId: number) {
@@ -29,17 +29,17 @@ export class submissionRepository extends Repository<Submission>{
 			and s.results_id = ?;
     `;
     try {
-      const submissionsByResult: Submission[] = await this.dataSource.query(queryData, [resultId]); 
-	  return submissionsByResult;
+      const submissionsByResult: Submission[] = await this.dataSource.query(
+        queryData,
+        [resultId],
+      );
+      return submissionsByResult;
     } catch (error) {
-		throw this._handlersError.returnErrorRepository({
+      throw this._handlersError.returnErrorRepository({
         className: submissionRepository.name,
         error: error,
         debug: true,
       });
     }
   }
-
-
 }
-

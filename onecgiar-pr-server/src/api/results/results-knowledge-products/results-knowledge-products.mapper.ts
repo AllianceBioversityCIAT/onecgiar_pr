@@ -162,7 +162,7 @@ export class ResultsKnowledgeProductMapper {
       return institution;
     });
 
-    let regions = this.getAsArray(dto?.['Region of the research']);
+    const regions = this.getAsArray(dto?.['Region of the research']);
     knowledgeProductDto.clarisa_regions = regions
       .filter((r) => r)
       .map((r) => r.clarisa_id);
@@ -315,7 +315,7 @@ export class ResultsKnowledgeProductMapper {
 
   private extractOnlyYearFromDateString(dateString: string): number {
     const isComposed: boolean = dateString.indexOf('-') > 0;
-    let year: number = 0;
+    let year = 0;
 
     if (isComposed) {
       year = Number(dateString.slice(0, dateString.indexOf('-')));
@@ -601,7 +601,7 @@ export class ResultsKnowledgeProductMapper {
   public patchInstitutions(
     knowledgeProduct: ResultsKnowledgeProduct,
     dto: ResultsKnowledgeProductDto,
-    upsert: boolean = false,
+    upsert = false,
   ) {
     const institutions = (dto.institutions ?? []).map((i) => {
       let institution: ResultsKnowledgeProductInstitution;
@@ -656,7 +656,7 @@ export class ResultsKnowledgeProductMapper {
   public patchRegions(
     knowledgeProduct: ResultsKnowledgeProduct,
     dto: ResultsKnowledgeProductDto,
-    upsert: boolean = false,
+    upsert = false,
   ) {
     const regions = (dto.clarisa_regions ?? []).map((r) => {
       let region: ResultRegion;
@@ -695,7 +695,7 @@ export class ResultsKnowledgeProductMapper {
   public patchAltmetricData(
     knowledgeProduct: ResultsKnowledgeProduct,
     dto: ResultsKnowledgeProductDto,
-    upsert: boolean = false,
+    upsert = false,
   ) {
     let altmetric: ResultsKnowledgeProductAltmetric;
     if (upsert) {
@@ -727,7 +727,7 @@ export class ResultsKnowledgeProductMapper {
   public patchMetadata(
     knowledgeProduct: ResultsKnowledgeProduct,
     dto: ResultsKnowledgeProductDto,
-    upsert: boolean = false,
+    upsert = false,
   ) {
     const metadataArray = (dto.metadata ?? []).map((m) => {
       let metadata: ResultsKnowledgeProductMetadata;
@@ -783,7 +783,7 @@ export class ResultsKnowledgeProductMapper {
   public patchKeywords(
     knowledgeProduct: ResultsKnowledgeProduct,
     dto: ResultsKnowledgeProductDto,
-    upsert: boolean = false,
+    upsert = false,
   ) {
     const incomingKeywords: { keyword: string; agrovoc: boolean }[] = [
       ...(dto.agrovoc_keywords ?? []).map((ag) => {
@@ -843,7 +843,7 @@ export class ResultsKnowledgeProductMapper {
   public patchAuthors(
     knowledgeProduct: ResultsKnowledgeProduct,
     dto: ResultsKnowledgeProductDto,
-    upsert: boolean = false,
+    upsert = false,
   ) {
     const authors = (dto.authors ?? []).map((a) => {
       let author: ResultsKnowledgeProductAuthor;

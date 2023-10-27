@@ -6,11 +6,10 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 
 @Injectable()
 export class ResultsByInstitutionTypesService {
-
   constructor(
     private readonly _resultByIntitutionsTypeRepository: ResultByIntitutionsTypeRepository,
-    private readonly _handlersError: HandlersError
-  ){}
+    private readonly _handlersError: HandlersError,
+  ) {}
 
   create(createResultsByInstitutionTypeDto: CreateResultsByInstitutionTypeDto) {
     return createResultsByInstitutionTypeDto;
@@ -20,10 +19,13 @@ export class ResultsByInstitutionTypesService {
     return `This action returns all resultsByInstitutionTypes`;
   }
 
-  async getGetInstitutionsTypeByResultId(id: number){
+  async getGetInstitutionsTypeByResultId(id: number) {
     try {
-      const intitutionsType =  await this._resultByIntitutionsTypeRepository.getResultByInstitutionTypeFull(id);
-      if(!intitutionsType.length){
+      const intitutionsType =
+        await this._resultByIntitutionsTypeRepository.getResultByInstitutionTypeFull(
+          id,
+        );
+      if (!intitutionsType.length) {
         throw {
           response: {},
           message: 'Institutions Type Not Found',
@@ -40,10 +42,13 @@ export class ResultsByInstitutionTypesService {
     }
   }
 
-  async getGetInstitutionsTypeActorsByResultId(id: number){
+  async getGetInstitutionsTypeActorsByResultId(id: number) {
     try {
-      const intitutionsType =  await this._resultByIntitutionsTypeRepository.getResultByInstitutionTypeActorFull(id);
-      if(!intitutionsType.length){
+      const intitutionsType =
+        await this._resultByIntitutionsTypeRepository.getResultByInstitutionTypeActorFull(
+          id,
+        );
+      if (!intitutionsType.length) {
         throw {
           response: {},
           message: 'Institutions Type Actors Not Found',
@@ -60,10 +65,13 @@ export class ResultsByInstitutionTypesService {
     }
   }
 
-  async getGetInstitutionsTypePartnersByResultId(id: number){
+  async getGetInstitutionsTypePartnersByResultId(id: number) {
     try {
-      const intitutionsType =  await this._resultByIntitutionsTypeRepository.getResultByInstitutionTypePartnersFull(id);
-      if(!intitutionsType.length){
+      const intitutionsType =
+        await this._resultByIntitutionsTypeRepository.getResultByInstitutionTypePartnersFull(
+          id,
+        );
+      if (!intitutionsType.length) {
         throw {
           response: {},
           message: 'Institutions Type Partners Not Found',

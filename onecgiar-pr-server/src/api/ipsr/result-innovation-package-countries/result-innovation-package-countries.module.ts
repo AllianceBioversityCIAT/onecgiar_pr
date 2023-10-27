@@ -4,6 +4,6 @@ import { ResultInnovationPackageCountriesController } from './result-innovation-
 
 @Module({
   controllers: [ResultInnovationPackageCountriesController],
-  providers: [ResultInnovationPackageCountriesService]
+  providers: [ResultInnovationPackageCountriesService],
 })
 export class ResultInnovationPackageCountriesModule {}

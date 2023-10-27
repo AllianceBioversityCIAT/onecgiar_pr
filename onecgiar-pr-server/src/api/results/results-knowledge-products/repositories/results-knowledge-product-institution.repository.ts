@@ -76,7 +76,7 @@ export class ResultsKnowledgeProductInstitutionRepository
         );
         final_data = await this.save(response_edit);
       } else {
-        const queryData: string = `
+        const queryData = `
         INSERT into results_kp_mqap_institutions 
         (
         intitution_name,

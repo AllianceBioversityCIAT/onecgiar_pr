@@ -9,7 +9,6 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { ClarisaInstitutionsType } from '../../clarisa-institutions-type/entities/clarisa-institutions-type.entity';
-import { ClarisaRegion } from '../../clarisa-regions/entities/clarisa-region.entity';
 import { ClarisaCountry } from '../../clarisa-countries/entities/clarisa-country.entity';
 import { ResultsKnowledgeProductInstitution } from '../../../api/results/results-knowledge-products/entities/results-knowledge-product-institution.entity';
 import { ClarisaCenter } from '../../clarisa-centers/entities/clarisa-center.entity';

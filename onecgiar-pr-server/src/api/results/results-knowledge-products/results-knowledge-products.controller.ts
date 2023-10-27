@@ -5,14 +5,11 @@ import {
   Body,
   Patch,
   Param,
-  Delete,
   Query,
   Headers,
   HttpException,
 } from '@nestjs/common';
 import { ResultsKnowledgeProductsService } from './results-knowledge-products.service';
-import { CreateResultsKnowledgeProductFromHandleDto } from './dto/create-results-knowledge-product-from-handle.dto';
-import { UpdateResultsKnowledgeProductDto } from './dto/update-results-knowledge-product.dto';
 import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResultsKnowledgeProductDto } from './dto/results-knowledge-product.dto';

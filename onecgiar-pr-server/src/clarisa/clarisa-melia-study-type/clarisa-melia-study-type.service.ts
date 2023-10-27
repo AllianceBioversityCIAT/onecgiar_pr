@@ -1,8 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { ClarisaMeliaStudyTypeRepository } from './ClariasaMeliasStudyType.repository';
-import { CreateClarisaMeliaStudyTypeDto } from './dto/create-clarisa-melia-study-type.dto';
-import { UpdateClarisaMeliaStudyTypeDto } from './dto/update-clarisa-melia-study-type.dto';
 
 @Injectable()
 export class ClarisaMeliaStudyTypeService {
@@ -10,10 +8,6 @@ export class ClarisaMeliaStudyTypeService {
     private readonly _handlersError: HandlersError,
     private readonly _clarisaMeliaStudyTypeRepository: ClarisaMeliaStudyTypeRepository,
   ) {}
-
-  create(createClarisaMeliaStudyTypeDto: CreateClarisaMeliaStudyTypeDto) {
-    return 'This action adds a new clarisaMeliaStudyType';
-  }
 
   async findAll() {
     try {
@@ -26,20 +20,5 @@ export class ClarisaMeliaStudyTypeService {
     } catch (error) {
       return this._handlersError.returnErrorRes(error);
     }
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} clarisaMeliaStudyType`;
-  }
-
-  update(
-    id: number,
-    updateClarisaMeliaStudyTypeDto: UpdateClarisaMeliaStudyTypeDto,
-  ) {
-    return `This action updates a #${id} clarisaMeliaStudyType`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} clarisaMeliaStudyType`;
   }
 }

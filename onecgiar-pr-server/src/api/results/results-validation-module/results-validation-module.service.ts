@@ -1,10 +1,9 @@
 import { Injectable, HttpStatus, Logger } from '@nestjs/common';
-import { CreateResultsValidationModuleDto } from './dto/create-results-validation-module.dto';
-import { UpdateResultsValidationModuleDto } from './dto/update-results-validation-module.dto';
 import { resultValidationRepository } from './results-validation-module.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultRepository } from '../result.repository';
 import { Validation } from './entities/validation.entity';
+import { GetValidationSectionDto } from './dto/getValidationSection.dto';
 
 @Injectable()
 export class ResultsValidationModuleService {
@@ -17,10 +16,6 @@ export class ResultsValidationModuleService {
     private readonly _handlersError: HandlersError,
   ) {}
 
-  create(createResultsValidationModuleDto: CreateResultsValidationModuleDto) {
-    return 'This action adds a new resultsValidationModule';
-  }
-
   async getGreenchecksByResult1(resultId: number) {
     try {
       const result = await this._resultRepository.getResultById(resultId);
@@ -31,7 +26,7 @@ export class ResultsValidationModuleService {
           status: HttpStatus.NOT_FOUND,
         };
       }
-      let response: GetValidationSectionDto[] = [];
+      const response: GetValidationSectionDto[] = [];
 
       response.push(
         await this._resultValidationRepository.generalInformationValidation(
@@ -132,21 +127,6 @@ export class ResultsValidationModuleService {
     }
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} resultsValidationModule`;
-  }
-
-  update(
-    id: number,
-    updateResultsValidationModuleDto: UpdateResultsValidationModuleDto,
-  ) {
-    return `This action updates a #${id} resultsValidationModule`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} resultsValidationModule`;
-  }
-
   async getGreenchecksByResult(resultId: number) {
     try {
       const result = await this._resultRepository.getResultById(resultId);
@@ -157,7 +137,7 @@ export class ResultsValidationModuleService {
           status: HttpStatus.NOT_FOUND,
         };
       }
-      let response: GetValidationSectionDto[] = [];
+      const response: GetValidationSectionDto[] = [];
       const validation =
         await this._resultValidationRepository.validationResultExist(result.id);
 
@@ -263,13 +243,16 @@ export class ResultsValidationModuleService {
           status: HttpStatus.NOT_FOUND,
         };
       }
-      let response: GetValidationSectionDto[] = [];
+      const response: GetValidationSectionDto[] = [];
       const validation =
         await this._resultValidationRepository.validationResultExist(result.id);
 
       const phase = await this._resultValidationRepository.version();
       if (phase.version != result.version_id) {
-        const previousPhase = await this._resultValidationRepository.oldGreenCheckVersion(result.id)
+        const previousPhase =
+          await this._resultValidationRepository.oldGreenCheckVersion(
+            result.id,
+          );
         return {
           response: {
             green_checks: previousPhase,
@@ -280,7 +263,7 @@ export class ResultsValidationModuleService {
       }
 
       await this._resultValidationRepository.inactiveOldInserts(result.id);
-      let newValidation = new Validation();
+      const newValidation = new Validation();
 
       newValidation.is_active = true;
       const vGeneral =
@@ -426,13 +409,13 @@ export class ResultsValidationModuleService {
         if (!result) {
           continue;
         }
-        let response: GetValidationSectionDto[] = [];
+        const response: GetValidationSectionDto[] = [];
         const validation =
           await this._resultValidationRepository.validationResultExist(
             result.id,
           );
         await this._resultValidationRepository.inactiveOldInserts(result.id);
-        let newValidation = new Validation();
+        const newValidation = new Validation();
 
         if (validation) {
           newValidation.id = validation.id;

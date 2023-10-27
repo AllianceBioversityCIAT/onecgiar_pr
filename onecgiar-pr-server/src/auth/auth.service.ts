@@ -1,6 +1,5 @@
 import { Injectable, HttpStatus, Logger } from '@nestjs/common';
 import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
 import { UserLoginDto } from './dto/login-user.dto';
 import { JwtService } from '@nestjs/jwt';
 import { BcryptPasswordEncoder } from './utils/bcrypt.util';
@@ -11,10 +10,9 @@ import { UserRepository } from './modules/user/repositories/user.repository';
 import { FullUserRequestDto } from './modules/user/dto/full-user-request.dto';
 import { User } from './modules/user/entities/user.entity';
 import { HandlersError } from '../shared/handlers/error.utils';
-import { pusherAuthDot } from './dto/pusher-auth.dto';
-import { TokenDto } from '../shared/globalInterfaces/token.dto';
+import { PusherAuthDot } from './dto/pusher-auth.dto';
 import Pusher from 'pusher';
-
+import ActiveDirectory from 'activedirectory';
 
 @Injectable()
 export class AuthService {
@@ -34,31 +32,15 @@ export class AuthService {
       key: `${env.PUSHER_API_KEY}`,
       secret: `${env.PUSHER_API_SECRET}`,
       cluster: `${env.PUSHER_APP_CLUSTER}`,
-      useTLS: true
+      useTLS: true,
     });
   }
   create(createAuthDto: CreateAuthDto) {
     return createAuthDto;
   }
 
-  findAll() {
-    return `This action returns all auth`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} auth`;
-  }
-
-  update(id: number, updateAuthDto: UpdateAuthDto) {
-    return `This action updates a #${id} auth ${updateAuthDto}`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} auth`;
-  }
-
   async pusherAuth(
-    pusherAuthDot: pusherAuthDot,
+    pusherAuthDot: PusherAuthDot,
     resultId: number,
     userId: number,
   ) {
@@ -105,14 +87,14 @@ export class AuthService {
       const user: User = await this._customUserRepository.findOne({
         where: {
           email: userLogin.email,
-          active: true
+          active: true,
         },
       });
       let valid: any;
       if (user) {
         const { email, first_name, last_name, is_cgiar, id } = <
           FullUserRequestDto
-          >user;
+        >user;
         if (is_cgiar) {
           const { response, message, status }: any = await this.validateAD(
             email,
@@ -134,7 +116,9 @@ export class AuthService {
         }
 
         if (valid) {
-          const userData = await this._userRepository.updateLastLoginUserByEmail(userLogin.email);
+          await this._userRepository.updateLastLoginUserByEmail(
+            userLogin.email,
+          );
           return {
             message: 'Successful login',
             response: {
@@ -175,7 +159,8 @@ export class AuthService {
   }
 
   validateAD(email, password) {
-    const ActiveDirectory = require('activedirectory');
+    //!INFO: this is the original code. remove the import above and uncomment this one to revert to the original code
+    //const ActiveDirectory = require('activedirectory');
     const ad = new ActiveDirectory(config.active_directory);
 
     return new Promise((resolve, reject) => {

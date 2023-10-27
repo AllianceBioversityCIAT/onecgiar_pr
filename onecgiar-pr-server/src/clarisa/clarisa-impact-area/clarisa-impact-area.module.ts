@@ -8,7 +8,11 @@ import { HandlersError } from '../../shared/handlers/error.utils';
 
 @Module({
   controllers: [ClarisaImpactAreaController],
-  providers: [ClarisaImpactAreaService, ClarisaImpactAreaRepository, HandlersError],
+  providers: [
+    ClarisaImpactAreaService,
+    ClarisaImpactAreaRepository,
+    HandlersError,
+  ],
   imports: [RouterModule.register(ClarisaImpactAreaRoutes)],
   exports: [ClarisaImpactAreaRepository],
 })

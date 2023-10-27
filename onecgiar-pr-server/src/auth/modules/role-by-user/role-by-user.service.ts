@@ -1,8 +1,10 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { CreateRoleByUserDto } from './dto/create-role-by-user.dto';
-import { UpdateRoleByUserDto } from './dto/update-role-by-user.dto';
 import { RoleByUserRepository } from './RoleByUser.repository';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import {
+  HandlersError,
+  returnErrorDto,
+} from '../../../shared/handlers/error.utils';
 import { RoleLevelsService } from '../role-levels/role-levels.service';
 import { RoleByUser } from './entities/role-by-user.entity';
 import { resultRolesDto } from './dto/resultRoles.dto';
@@ -10,7 +12,6 @@ import { returnFormatRoleByUser } from './dto/returnFormatRoleByUser.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { UserRepository } from '../user/repositories/user.repository';
 import { User } from '../user/entities/user.entity';
-import { env } from 'process';
 
 @Injectable()
 export class RoleByUserService {
@@ -23,8 +24,8 @@ export class RoleByUserService {
 
   async create(
     createRoleByUserDto: CreateRoleByUserDto,
-    user: TokenDto,
-  ): Promise<returnFormatRoleByUser> {
+    userData: TokenDto,
+  ): Promise<returnFormatRoleByUser | returnErrorDto> {
     try {
       const targetsValues: any[] = Object.values(createRoleByUserDto.target);
       let validCount = false;
@@ -45,7 +46,7 @@ export class RoleByUserService {
       if (targetsValues.length) {
         validCount =
           targetsValues.reduce(
-            (sum, data, initial = 0) => (data ? ++initial : initial),
+            (_sum, data, initial = 0) => (data ? ++initial : initial),
             0,
           ) > 1
             ? true
@@ -73,8 +74,8 @@ export class RoleByUserService {
           status: HttpStatus.CONFLICT,
         };
       }
-      createRoleByUserDto.last_updated_by = user.id;
-      createRoleByUserDto.created_by = user.id;
+      createRoleByUserDto.last_updated_by = userData.id;
+      createRoleByUserDto.created_by = userData.id;
       const roleByUser: RoleByUser = await this._roleByUserRepository.save({
         ...createRoleByUserDto,
         ...createRoleByUserDto.target,
@@ -89,7 +90,9 @@ export class RoleByUserService {
     }
   }
 
-  async allRolesByUser(userId: number): Promise<returnFormatRoleByUser> {
+  async allRolesByUser(
+    userId: number,
+  ): Promise<returnFormatRoleByUser | returnErrorDto> {
     try {
       const { response, message, status } =
         await this._roleLevelsService.findAll();
@@ -150,17 +153,5 @@ export class RoleByUserService {
     });
 
     return role;
-  }
-
-  getAllUsersAndRoles() {
-    return `This action returns a #$} roleByUser`;
-  }
-
-  update(id: number, updateRoleByUserDto: UpdateRoleByUserDto) {
-    return `This action updates a #${id} roleByUser`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} roleByUser`;
   }
 }

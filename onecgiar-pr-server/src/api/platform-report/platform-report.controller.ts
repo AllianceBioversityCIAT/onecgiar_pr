@@ -2,17 +2,12 @@ import {
   Controller,
   Get,
   Param,
-  Header,
-  ParseIntPipe,
   StreamableFile,
   Res,
   Query,
 } from '@nestjs/common';
 import { PlatformReportService } from './platform-report.service';
-import { CreatePlatformReportDto } from './dto/create-platform-report.dto';
-import { UpdatePlatformReportDto } from './dto/update-platform-report.dto';
-import { Response, query } from 'express';
-import { DateFormatter } from '../../shared/utils/date-formatter';
+import { Response } from 'express';
 import { returnErrorDto } from '../../shared/handlers/error.utils';
 import { ReadStream } from 'typeorm/platform/PlatformTools';
 

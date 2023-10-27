@@ -6,6 +6,10 @@ import { ClarisaInnovationUseLevelRepository } from './clarisa-innovation-use-le
 
 @Module({
   controllers: [ClarisaInnovationUseLevelsController],
-  providers: [ClarisaInnovationUseLevelsService, HandlersError, ClarisaInnovationUseLevelRepository]
+  providers: [
+    ClarisaInnovationUseLevelsService,
+    HandlersError,
+    ClarisaInnovationUseLevelRepository,
+  ],
 })
-export class ClarisaInnovationUseLevelsModule { }
+export class ClarisaInnovationUseLevelsModule {}

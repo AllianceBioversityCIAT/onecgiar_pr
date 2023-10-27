@@ -1,4 +1,4 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { ClarisaInitiative } from './entities/clarisa-initiative.entity';
 import { OstTocIdDto } from './dto/ost-toc-id.dto';
@@ -28,7 +28,7 @@ export class ClarisaInitiativesRepository extends Repository<ClarisaInitiative> 
 
   async getAllInitiatives() {
     try {
-      return this.find({where:{active: true}});
+      return this.find({ where: { active: true } });
     } catch (error) {
       throw {
         message: `[${ClarisaInitiativesRepository.name}] => getAllInitiatives error: ${error}`,

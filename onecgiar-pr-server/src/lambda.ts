@@ -5,8 +5,10 @@ import { eventContext } from 'aws-serverless-express/middleware';
 import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
+import express from 'express';
 
-const express = require('express');
+//!INFO: this is the original code. remove the line above and uncomment this one to revert to the original code
+//const express = require('express');
 
 // NOTE: If you get ERR_CONTENT_DECODING_FAILED in your browser, this is likely
 // due to a compressed response (e.g. gzip) which has not been handled correctly
@@ -28,6 +30,7 @@ async function bootstrapServer(): Promise<Server> {
     await nestApp.init();
     cachedServer = createServer(expressApp, undefined, binaryMimeTypes);
   }
+
   return cachedServer;
 }
 

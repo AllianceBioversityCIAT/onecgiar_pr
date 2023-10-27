@@ -9,7 +9,6 @@ import {
 } from 'typeorm';
 import { Result } from '../../entities/result.entity';
 import { ClarisaCountry } from '../../../../clarisa/clarisa-countries/entities/clarisa-country.entity';
-import { Version } from '../../../versioning/entities/version.entity';
 import { OneToMany } from 'typeorm';
 import { ResultCountriesSubNational } from '../../result-countries-sub-national/entities/result-countries-sub-national.entity';
 

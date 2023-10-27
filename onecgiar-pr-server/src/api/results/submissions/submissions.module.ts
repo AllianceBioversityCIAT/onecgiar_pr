@@ -11,13 +11,15 @@ import { ResultsInnovationPackagesValidationModuleModule } from '../../ipsr/resu
 
 @Module({
   controllers: [SubmissionsController],
-  providers: [SubmissionsService, submissionRepository, ResultRepository, resultValidationRepository, RoleByUserRepository, HandlersError],
-  exports: [
-    submissionRepository
+  providers: [
+    SubmissionsService,
+    submissionRepository,
+    ResultRepository,
+    resultValidationRepository,
+    RoleByUserRepository,
+    HandlersError,
   ],
-  imports: [
-    IpsrModule,
-    ResultsInnovationPackagesValidationModuleModule
-  ]
+  exports: [submissionRepository],
+  imports: [IpsrModule, ResultsInnovationPackagesValidationModuleModule],
 })
 export class SubmissionsModule {}

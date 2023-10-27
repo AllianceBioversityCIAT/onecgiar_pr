@@ -1,5 +1,3 @@
-import { Column } from 'typeorm';
-
 export class DepthSearchOne {
   public id: string;
   public title: string;

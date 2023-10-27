@@ -1,4 +1,4 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
 import { env } from 'process';
 import { DataSource, Repository } from 'typeorm';
 import { TocResult } from './entities/toc-result.entity';
@@ -116,7 +116,7 @@ export class TocResultsRepository extends Repository<TocResult> {
       toc_level,
     ]);
 
-    return res.then((data) => data).catch((error) => []);
+    return res.then((data) => data).catch((_error) => []);
   }
 
   async getAllTocResultsByInitiative(initiativeId: number, tocLevel: number) {

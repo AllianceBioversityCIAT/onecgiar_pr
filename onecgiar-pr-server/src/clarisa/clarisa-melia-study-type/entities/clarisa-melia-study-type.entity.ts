@@ -1,5 +1,4 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
-import { Auditable } from '../../../shared/entities/auditableEntity';
 
 @Entity('clarisa_melia_study_type')
 export class ClarisaMeliaStudyType {

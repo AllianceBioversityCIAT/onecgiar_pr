@@ -10,7 +10,8 @@ import { HandlersError } from '../../shared/handlers/error.utils';
   controllers: [ClarisaImpactAreaIndicatorsController],
   providers: [
     ClarisaImpactAreaIndicatorsService,
-    ClarisaImpactAreaInticatorsRepository,HandlersError
+    ClarisaImpactAreaInticatorsRepository,
+    HandlersError,
   ],
   imports: [RouterModule.register(ClarisaImpactAreaIndicatorsRoutes)],
   exports: [ClarisaImpactAreaInticatorsRepository],

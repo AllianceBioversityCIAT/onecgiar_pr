@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, Repository, QueryRunner } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { FilterInitiativesDto } from './dto/filter-initiatives.dto';
-import { FilterResultsDto } from './dto/filter-results.dto';
 import { env } from 'process';
 
 @Injectable()

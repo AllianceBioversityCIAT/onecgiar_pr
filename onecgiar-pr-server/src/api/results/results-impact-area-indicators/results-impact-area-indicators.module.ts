@@ -6,9 +6,11 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 
 @Module({
   controllers: [ResultsImpactAreaIndicatorsController],
-  providers: [ResultsImpactAreaIndicatorsService, ResultsImpactAreaIndicatorRepository, HandlersError],
-  exports: [
-    ResultsImpactAreaIndicatorRepository
-  ]
+  providers: [
+    ResultsImpactAreaIndicatorsService,
+    ResultsImpactAreaIndicatorRepository,
+    HandlersError,
+  ],
+  exports: [ResultsImpactAreaIndicatorRepository],
 })
 export class ResultsImpactAreaIndicatorsModule {}

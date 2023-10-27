@@ -4,6 +4,6 @@ import { PrmsTablesTypesController } from './prms-tables-types.controller';
 
 @Module({
   controllers: [PrmsTablesTypesController],
-  providers: [PrmsTablesTypesService]
+  providers: [PrmsTablesTypesService],
 })
 export class PrmsTablesTypesModule {}

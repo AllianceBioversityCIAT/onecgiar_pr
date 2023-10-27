@@ -1,6 +1,4 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
-import { CreateClarisaInitiativeDto } from './dto/create-clarisa-initiative.dto';
-import { UpdateClarisaInitiativeDto } from './dto/update-clarisa-initiative.dto';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { ClarisaInitiativesRepository } from './ClarisaInitiatives.repository';
 
@@ -10,9 +8,6 @@ export class ClarisaInitiativesService {
     private readonly _handlersError: HandlersError,
     private readonly _clarisaInitiativesRepository: ClarisaInitiativesRepository,
   ) {}
-  create(createClarisaInitiativeDto: CreateClarisaInitiativeDto) {
-    return 'This action adds a new clarisaInitiative';
-  }
 
   async getAllInitiativesWithoutCurrentInitiative(resultId: number) {
     try {
@@ -50,17 +45,5 @@ export class ClarisaInitiativesService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} clarisaInitiative`;
-  }
-
-  update(id: number, updateClarisaInitiativeDto: UpdateClarisaInitiativeDto) {
-    return `This action updates a #${id} clarisaInitiative`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} clarisaInitiative`;
   }
 }

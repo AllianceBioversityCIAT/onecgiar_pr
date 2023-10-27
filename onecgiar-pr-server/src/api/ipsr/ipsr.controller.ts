@@ -3,18 +3,11 @@ import {
   Get,
   Post,
   Body,
-  Patch,
   Param,
-  Delete,
   HttpException,
-  Req,
   UseInterceptors,
 } from '@nestjs/common';
 import { IpsrService } from './ipsr.service';
-import { CreateIpsrDto } from './dto/create-ipsr.dto';
-import { UpdateIpsrDto } from './dto/update-ipsr.dto';
-import { dataSource } from '../../config/orm.config';
-import { Result } from '../results/entities/result.entity';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()

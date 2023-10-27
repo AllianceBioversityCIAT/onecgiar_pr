@@ -9,7 +9,6 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { InstitutionRole } from '../../institution_roles/entities/institution_role.entity';
-import { Version } from '../../../versioning/entities/version.entity';
 import { Result } from '../../entities/result.entity';
 import { ClarisaInstitutionsType } from '../../../../clarisa/clarisa-institutions-type/entities/clarisa-institutions-type.entity';
 

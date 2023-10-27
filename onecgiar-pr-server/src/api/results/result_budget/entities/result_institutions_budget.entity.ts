@@ -7,7 +7,6 @@ import {
 } from 'typeorm';
 import { BaseEntity } from '../../../../shared/entities/base-entity';
 import { ResultsByInstitution } from '../../results_by_institutions/entities/results_by_institution.entity';
-import { Version } from '../../../versioning/entities/version.entity';
 
 @Entity('result_institutions_budget')
 export class ResultInstitutionsBudget extends BaseEntity {

@@ -8,7 +8,6 @@ import {
 } from 'typeorm';
 import { BaseEntity } from '../../../../shared/entities/base-entity';
 import { Expertises } from './expertises.entity';
-import { Version } from '../../../versioning/entities/version.entity';
 import { ClarisaInstitution } from '../../../../clarisa/clarisa-institutions/entities/clarisa-institution.entity';
 import { Result } from '../../../results/entities/result.entity';
 import { ResultIpExpertises } from './result_ip_expertises.entity';

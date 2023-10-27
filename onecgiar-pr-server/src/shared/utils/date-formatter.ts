@@ -41,7 +41,7 @@ export class DateFormatter {
       format: Intl.DateTimeFormatOptions,
       date: Date | number,
     ) {
-      let f = new Intl.DateTimeFormat('en-GB', format);
+      const f = new Intl.DateTimeFormat('en-GB', format);
       return f.format(date);
     }
 

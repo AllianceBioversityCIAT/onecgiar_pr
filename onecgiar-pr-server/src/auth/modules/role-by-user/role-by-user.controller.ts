@@ -3,16 +3,13 @@ import {
   Get,
   Post,
   Body,
-  Patch,
   Param,
-  Delete,
   UseFilters,
   HttpException,
   Headers,
 } from '@nestjs/common';
 import { RoleByUserService } from './role-by-user.service';
 import { CreateRoleByUserDto } from './dto/create-role-by-user.dto';
-import { UpdateRoleByUserDto } from './dto/update-role-by-user.dto';
 import { HttpExceptionFilter } from '../../../shared/handlers/error.exception';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
@@ -42,23 +39,5 @@ export class RoleByUserController {
     const { message, response, status } =
       await this.roleByUserService.allRolesByUser(userId);
     throw new HttpException({ message, response }, status);
-  }
-
-  @Get('all')
-  findOne(@Param('id') id: string) {
-    return this.roleByUserService.getAllUsersAndRoles();
-  }
-
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateRoleByUserDto: UpdateRoleByUserDto,
-  ) {
-    return this.roleByUserService.update(+id, updateRoleByUserDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.roleByUserService.remove(+id);
   }
 }

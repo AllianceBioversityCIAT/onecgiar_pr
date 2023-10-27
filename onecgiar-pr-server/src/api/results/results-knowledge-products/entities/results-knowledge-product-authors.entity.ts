@@ -8,7 +8,6 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../../../../auth/modules/user/entities/user.entity';
-import { Version } from '../../../versioning/entities/version.entity';
 import { ResultsKnowledgeProduct } from './results-knowledge-product.entity';
 
 @Entity('results_kp_authors')

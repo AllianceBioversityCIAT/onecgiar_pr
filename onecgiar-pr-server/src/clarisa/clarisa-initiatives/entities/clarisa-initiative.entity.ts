@@ -45,7 +45,7 @@ export class ClarisaInitiative {
   @Column({
     name: 'toc_id',
     type: 'text',
-    nullable: true
+    nullable: true,
   })
   toc_id!: string;
 }

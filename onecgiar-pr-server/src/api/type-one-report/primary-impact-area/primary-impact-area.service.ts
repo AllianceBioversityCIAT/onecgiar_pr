@@ -1,6 +1,4 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
-import { CreatePrimaryImpactAreaDto } from './dto/create-primary-impact-area.dto';
-import { UpdatePrimaryImpactAreaDto } from './dto/update-primary-impact-area.dto';
 import { HandlersError } from 'src/shared/handlers/error.utils';
 import { PrimaryImpactAreaRepository } from './primary-impact-area.repository';
 import { TokenDto } from 'src/shared/globalInterfaces/token.dto';

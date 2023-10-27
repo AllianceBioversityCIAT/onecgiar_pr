@@ -3,15 +3,11 @@ import {
   Get,
   Post,
   Body,
-  Patch,
   Param,
-  Delete,
   HttpException,
   Headers,
 } from '@nestjs/common';
 import { AdminPanelService } from './admin-panel.service';
-import { CreateAdminPanelDto } from './dto/create-admin-panel.dto';
-import { UpdateAdminPanelDto } from './dto/update-admin-panel.dto';
 import { FilterInitiativesDto } from './dto/filter-initiatives.dto';
 import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
@@ -20,11 +16,6 @@ import { FilterResultsDto } from './dto/filter-results.dto';
 @Controller()
 export class AdminPanelController {
   constructor(private readonly adminPanelService: AdminPanelService) {}
-
-  @Post()
-  create(@Body() createAdminPanelDto: CreateAdminPanelDto) {
-    return this.adminPanelService.create(createAdminPanelDto);
-  }
 
   @Post('report/results/completeness')
   async reportResultCompleteness(

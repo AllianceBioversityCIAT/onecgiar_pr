@@ -26,7 +26,7 @@ export class WorldRegionTree extends Tree<ClarisaRegion> {
 
   public getAllDescendantRegions(
     region: ClarisaRegion,
-    onlyLeafs: boolean = false,
+    onlyLeafs = false,
   ): ClarisaRegion[] {
     const nodeRegion = this.find(region);
     if (!nodeRegion) {

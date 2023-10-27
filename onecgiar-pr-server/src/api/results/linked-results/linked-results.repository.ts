@@ -54,7 +54,7 @@ export class LinkedResultRepository
         const response_edit = <LinkedResult[]>config.f.custonFunction(response);
         final_data = await this.save(response_edit);
       } else {
-        const queryData: string = `
+        const queryData = `
         insert into linked_result (
           is_active,
           created_date,
@@ -320,10 +320,7 @@ export class LinkedResultRepository
 
     try {
       if (results?.length || legacy?.length) {
-        const upDateInactiveResult = await this.query(upDateInactive, [
-          userId,
-          resultId,
-        ]);
+        await this.query(upDateInactive, [userId, resultId]);
 
         return await this.query(upDateActive, [userId, resultId]);
       } else {

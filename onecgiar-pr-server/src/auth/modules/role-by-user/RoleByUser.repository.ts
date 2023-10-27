@@ -54,7 +54,7 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
       .then((data) => {
         return data?.length ? data[0].max_role : null;
       })
-      .catch((error) => null);
+      .catch((_error) => null);
   }
 
   async deleteAllData() {

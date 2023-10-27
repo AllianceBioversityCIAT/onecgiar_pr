@@ -5,10 +5,7 @@ import { ClarisaSdgsRepository } from './clarisa-sdgs.repository';
 
 @Module({
   controllers: [ClarisaSdgsController],
-  providers: [
-    ClarisaSdgsService,
-    ClarisaSdgsRepository
-  ],
-  exports: [ClarisaSdgsRepository]
+  providers: [ClarisaSdgsService, ClarisaSdgsRepository],
+  exports: [ClarisaSdgsRepository],
 })
-export class ClarisaSdgsModule { }
+export class ClarisaSdgsModule {}

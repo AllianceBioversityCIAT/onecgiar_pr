@@ -7,7 +7,12 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 
 @Module({
   controllers: [InnovationPackagingExpertsController],
-  providers: [InnovationPackagingExpertsService, ExpertisesRepository, InnovationPackagingExpertRepository, HandlersError],
-  exports: [ExpertisesRepository, InnovationPackagingExpertRepository]
+  providers: [
+    InnovationPackagingExpertsService,
+    ExpertisesRepository,
+    InnovationPackagingExpertRepository,
+    HandlersError,
+  ],
+  exports: [ExpertisesRepository, InnovationPackagingExpertRepository],
 })
 export class InnovationPackagingExpertsModule {}

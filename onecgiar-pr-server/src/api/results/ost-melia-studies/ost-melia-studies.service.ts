@@ -1,7 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { HandlersError } from '../../../shared/handlers/error.utils';
-import { CreateOstMeliaStudyDto } from './dto/create-ost-melia-study.dto';
-import { UpdateOstMeliaStudyDto } from './dto/update-ost-melia-study.dto';
 import { OstMeliaStudiesRepository } from './ost-melia-studies.repository';
 
 @Injectable()

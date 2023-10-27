@@ -9,8 +9,8 @@ import { HandlersError } from '../../shared/handlers/error.utils';
   providers: [
     ClarisaSdgsTargetsService,
     ClarisaSdgsTargetsRepository,
-    HandlersError
+    HandlersError,
   ],
-  exports: [ClarisaSdgsTargetsRepository]
+  exports: [ClarisaSdgsTargetsRepository],
 })
 export class ClarisaSdgsTargetsModule {}

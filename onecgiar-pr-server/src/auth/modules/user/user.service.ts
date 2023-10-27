@@ -1,6 +1,5 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -8,7 +7,6 @@ import { returnFormatUser } from './dto/return-create-user.dto';
 import { UserRepository } from './repositories/user.repository';
 import { BcryptPasswordEncoder } from '../../utils/bcrypt.util';
 import { RoleByUserRepository } from '../role-by-user/RoleByUser.repository';
-import { RoleByUser } from '../role-by-user/entities/role-by-user.entity';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import {
   HandlersError,
@@ -36,7 +34,7 @@ export class UserService {
     createUserDto: CreateUserDto,
     role: number,
     token: TokenDto,
-  ): Promise<returnFormatUser> {
+  ): Promise<returnFormatUser | returnErrorDto> {
     try {
       createUserDto.is_cgiar =
         createUserDto.email.search(this.cgiarRegex) > -1 ? true : false;
@@ -79,7 +77,7 @@ export class UserService {
       createUserDto.last_updated_by = createdBy ? createdBy.id : null;
 
       const newUser: User = await this._userRepository.save(createUserDto);
-      const newRole: RoleByUser = await this._roleByUserRepository.save({
+      await this._roleByUserRepository.save({
         role: role,
         user: newUser.id,
         created_by: createdBy ? createdBy.id : null,
@@ -91,7 +89,7 @@ export class UserService {
           id: newUser.id,
           first_name: newUser.first_name,
           last_name: newUser.last_name,
-        },
+        } as User,
         message: 'User successfully created',
         status: HttpStatus.CREATED,
       };
@@ -100,7 +98,7 @@ export class UserService {
     }
   }
 
-  async findAll(): Promise<returnFormatUser> {
+  async findAll(): Promise<returnFormatUser | returnErrorDto> {
     try {
       const user: User[] = await this._userRepository.find({
         select: [
@@ -127,7 +125,7 @@ export class UserService {
     }
   }
 
-  async findOne(id: number): Promise<returnFormatUser> {
+  async findOne(id: number): Promise<returnFormatUser | returnErrorDto> {
     try {
       const user: User = await this._userRepository.findOne({
         where: { id: id },
@@ -151,7 +149,9 @@ export class UserService {
     }
   }
 
-  async findOneByEmail(email: string): Promise<returnFormatUser> {
+  async findOneByEmail(
+    email: string,
+  ): Promise<returnFormatUser | returnErrorDto> {
     try {
       const user: User = await this._customUserRespository.findOne({
         where: { email: email },
@@ -187,18 +187,5 @@ export class UserService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
-  }
-
-  async getRolesByUser(userId: number) {
-    try {
-    } catch (error) {}
-  }
-
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} user`;
   }
 }

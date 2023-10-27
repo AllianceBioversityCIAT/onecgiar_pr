@@ -6,7 +6,6 @@ import {
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
-import { VERSIONING } from '../../../../shared/utils/versioning.utils';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
@@ -87,7 +86,7 @@ export class ResultsKnowledgeProductsRepository
         );
         final_data = await this.save(response_edit);
       } else {
-        const queryData: string = `
+        const queryData = `
         insert into results_knowledge_product (
           handle,
           name,

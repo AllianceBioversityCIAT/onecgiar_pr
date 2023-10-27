@@ -43,8 +43,6 @@ import { ResultsTocResultsModule } from './results-toc-results/results-toc-resul
 import { NonPooledProjectsModule } from './non-pooled-projects/non-pooled-projects.module';
 import { ResultsCentersModule } from './results-centers/results-centers.module';
 import { ResultsKnowledgeProductsModule } from './results-knowledge-products/results-knowledge-products.module';
-import { TocResult } from '../../toc/toc-results/entities/toc-result.entity';
-import { TocLevel } from '../../toc/toc-level/entities/toc-level.entity';
 import { SummaryModule } from './summary/summary.module';
 import { UnitsOfMeasureModule } from './units-of-measure/units-of-measure.module';
 import { CapdevsTermsModule } from './capdevs-terms/capdevs-terms.module';
@@ -66,8 +64,6 @@ import { LogRepository } from '../../connection/dynamodb-logs/dynamodb-logs.repo
 import { ResultActorsModule } from './result-actors/result-actors.module';
 import { ResultBudgetModule } from './result_budget/result_budget.module';
 import { ResultCountriesSubNationalModule } from './result-countries-sub-national/result-countries-sub-national.module';
-import { VersioningService } from '../versioning/versioning.service';
-import { ApplicationModulesRepository } from '../versioning/repositories/application-modules.repository';
 import { VersioningModule } from '../versioning/versioning.module';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 import { ResultStatusModule } from './result-status/result-status.module';
@@ -151,7 +147,7 @@ import { ResultInitiativeBudgetRepository } from './result_budget/repositories/r
     ResultQuestionsRepository,
     ResultAnswerRepository,
     ResultsInvestmentDiscontinuedOptionRepository,
-    ResultInitiativeBudgetRepository
+    ResultInitiativeBudgetRepository,
   ],
   exports: [ResultRepository, JwtMiddleware],
 })

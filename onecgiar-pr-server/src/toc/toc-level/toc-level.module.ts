@@ -7,8 +7,6 @@ import { TocLevelRepository } from './toc-level.repository';
 @Module({
   controllers: [TocLevelController],
   providers: [TocLevelService, HandlersError, TocLevelRepository],
-  exports: [
-    TocLevelRepository
-  ]
+  exports: [TocLevelRepository],
 })
 export class TocLevelModule {}

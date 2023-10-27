@@ -4,6 +4,6 @@ import { ResultsByIpInnovationUseMeasuresController } from './results-by-ip-inno
 
 @Module({
   controllers: [ResultsByIpInnovationUseMeasuresController],
-  providers: [ResultsByIpInnovationUseMeasuresService]
+  providers: [ResultsByIpInnovationUseMeasuresService],
 })
 export class ResultsByIpInnovationUseMeasuresModule {}

@@ -11,7 +11,9 @@ describe('DeleteRecoverDataController', () => {
       providers: [DeleteRecoverDataService],
     }).compile();
 
-    controller = module.get<DeleteRecoverDataController>(DeleteRecoverDataController);
+    controller = module.get<DeleteRecoverDataController>(
+      DeleteRecoverDataController,
+    );
   });
 
   it('should be defined', () => {

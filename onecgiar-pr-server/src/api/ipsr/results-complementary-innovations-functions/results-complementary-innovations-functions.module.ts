@@ -7,6 +7,11 @@ import { ResultsComplementaryInnovationsFunctionRepository } from './repositorie
 
 @Module({
   controllers: [ResultsComplementaryInnovationsFunctionsController],
-  providers: [ResultsComplementaryInnovationsFunctionsService, HandlersError, ComplementaryInnovationFunctionsRepository, ResultsComplementaryInnovationsFunctionRepository]
+  providers: [
+    ResultsComplementaryInnovationsFunctionsService,
+    HandlersError,
+    ComplementaryInnovationFunctionsRepository,
+    ResultsComplementaryInnovationsFunctionRepository,
+  ],
 })
 export class ResultsComplementaryInnovationsFunctionsModule {}

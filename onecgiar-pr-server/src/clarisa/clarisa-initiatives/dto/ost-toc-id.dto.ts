@@ -1,5 +1,5 @@
 export class OstTocIdDto {
-    public initiativeId:number;
-    public initvStgId:number;
-    public toc_id:string;
+  public initiativeId: number;
+  public initvStgId: number;
+  public toc_id: string;
 }

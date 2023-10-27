@@ -1,7 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { HandlersError } from 'src/shared/handlers/error.utils';
-import { CreateIpsrDto } from './dto/create-ipsr.dto';
-import { UpdateIpsrDto } from './dto/update-ipsr.dto';
 import { IpsrRepository } from './ipsr.repository';
 import { ReturnResponse } from '../../shared/handlers/error.utils';
 import { env } from 'process';
@@ -13,10 +11,6 @@ export class IpsrService {
     private readonly _returnResponse: ReturnResponse,
     protected readonly _ipsrRespository: IpsrRepository,
   ) {}
-
-  create(createIpsrDto: CreateIpsrDto) {
-    return 'This action adds a new ipsr';
-  }
 
   async findAllInnovations(initiativeId: number[]) {
     try {

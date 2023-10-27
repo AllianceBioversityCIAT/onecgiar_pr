@@ -11,6 +11,4 @@ export class PartnerDeliveryTypeRepository extends Repository<PartnerDeliveryTyp
   ) {
     super(PartnerDeliveryType, dataSource.createEntityManager());
   }
-
-  
 }

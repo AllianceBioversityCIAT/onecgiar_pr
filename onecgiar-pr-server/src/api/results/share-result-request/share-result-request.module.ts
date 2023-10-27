@@ -39,7 +39,7 @@ import { ResultsTocTargetIndicatorRepository } from '../results-toc-results/resu
     ResultsSdgTargetRepository,
     RoleByUserRepository,
     ResultsActionAreaOutcomeRepository,
-    ResultsTocTargetIndicatorRepository
+    ResultsTocTargetIndicatorRepository,
   ],
   exports: [ShareResultRequestRepository],
 })

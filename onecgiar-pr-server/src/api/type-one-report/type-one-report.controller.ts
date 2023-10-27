@@ -17,14 +17,14 @@ export class TypeOneReportController {
   constructor(private readonly typeOneReportService: TypeOneReportService) {}
 
   @Get('fact-sheet/initiative/:initId')
-  async getFactSheetByInit(@Param('initId') initId: number){
+  async getFactSheetByInit(@Param('initId') initId: number) {
     const { message, response, status } =
       await this.typeOneReportService.getFactSheetByInit(initId);
     throw new HttpException({ message, response }, status);
   }
 
   @Get('key-result-story/initiative/:initId')
-  async getKeyResultStoryByInt(@Param('initId') initId: number){
+  async getKeyResultStoryByInt(@Param('initId') initId: number) {
     const { message, response, status } =
       await this.typeOneReportService.getKeyResultStory(initId);
     throw new HttpException({ message, response }, status);

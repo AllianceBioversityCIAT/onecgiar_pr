@@ -63,10 +63,8 @@ export class UserRepository extends Repository<User> {
     	and u.email = ?
     `;
     try {
-      const completeUser: User[] = await this.query(queryData, [
-        email,
-      ]);
-      return completeUser?.length? completeUser[0]: undefined;
+      const completeUser: User[] = await this.query(queryData, [email]);
+      return completeUser?.length ? completeUser[0] : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: UserRepository.name,
@@ -84,9 +82,7 @@ export class UserRepository extends Repository<User> {
     	and active > 0;
     `;
     try {
-      const completeUser: User[] = await this.query(queryData, [
-        email,
-      ]);
+      const completeUser: User[] = await this.query(queryData, [email]);
       return completeUser;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -133,8 +129,10 @@ export class UserRepository extends Repository<User> {
       and u.id = ?
     `;
     try {
-      const completeUser: FullUserRequestDto[] = await this.query(queryData, [userId]);
-      return completeUser?.length?completeUser[0]: undefined;
+      const completeUser: FullUserRequestDto[] = await this.query(queryData, [
+        userId,
+      ]);
+      return completeUser?.length ? completeUser[0] : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: UserRepository.name,
@@ -194,8 +192,11 @@ export class UserRepository extends Repository<User> {
     WHERE u.id = ?;
     `;
     try {
-      const completeUser: UserDataPusherDto[] = await this.query(queryData, [resultId, userId]);
-      return completeUser?.length? completeUser[0]: undefined;
+      const completeUser: UserDataPusherDto[] = await this.query(queryData, [
+        resultId,
+        userId,
+      ]);
+      return completeUser?.length ? completeUser[0] : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: UserRepository.name,
@@ -216,8 +217,15 @@ export class UserRepository extends Repository<User> {
       and u.id = ?
     `;
     try {
-      const completeUser: any[] = await this.query(queryData, [userId, resultId]);
-      return completeUser?.length? (completeUser[0].valid == 1? true: false) : false;
+      const completeUser: any[] = await this.query(queryData, [
+        userId,
+        resultId,
+      ]);
+      return completeUser?.length
+        ? completeUser[0].valid == 1
+          ? true
+          : false
+        : false;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: UserRepository.name,

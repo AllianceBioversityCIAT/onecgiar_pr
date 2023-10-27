@@ -11,11 +11,9 @@ import { Version } from '../../versioning/entities/version.entity';
 import { VersionsService } from '../versions/versions.service';
 import { ResultByInstitutionsByDeliveriesTypeRepository } from '../result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';
 import { ResultByInstitutionsByDeliveriesType } from '../result-by-institutions-by-deliveries-type/entities/result-by-institutions-by-deliveries-type.entity';
-import { Result } from '../entities/result.entity';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 import { ResultsKnowledgeProductsRepository } from '../results-knowledge-products/repositories/results-knowledge-products.repository';
 import { ResultsKnowledgeProductInstitutionRepository } from '../results-knowledge-products/repositories/results-knowledge-product-institution.repository';
-import { IsNull } from 'typeorm';
 import { MQAPInstitutionDto } from './dto/mqap-institutions.dto';
 import { InstitutionRoleEnum } from './entities/institution_role.enum';
 import { ResultInstitutionsBudgetRepository } from '../result_budget/repositories/result_institutions_budget.repository';
@@ -342,7 +340,7 @@ export class ResultsByInstitutionsService {
 
             const delivery = incomingInstitution.deliveries;
             if (delivery) {
-              let InstitutionsDeliveriesArray: ResultByInstitutionsByDeliveriesType[] =
+              const InstitutionsDeliveriesArray: ResultByInstitutionsByDeliveriesType[] =
                 [];
               for (let i = 0; i < delivery.length; i++) {
                 const newInstitutionsDeliveries =
@@ -386,7 +384,7 @@ export class ResultsByInstitutionsService {
               incomingInstitution.deliveries,
               user.id,
             );
-            let InstitutionsDeliveriesArray: ResultByInstitutionsByDeliveriesType[] =
+            const InstitutionsDeliveriesArray: ResultByInstitutionsByDeliveriesType[] =
               [];
             if (delivery) {
               for (let i = 0; i < delivery.length; i++) {

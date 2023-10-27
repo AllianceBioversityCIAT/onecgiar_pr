@@ -12,7 +12,6 @@ import { Result } from '../../entities/result.entity';
 import { User } from '../../../../auth/modules/user/entities/user.entity';
 import { ClarisaInstitution } from '../../../../clarisa/clarisa-institutions/entities/clarisa-institution.entity';
 import { ClarisaCenter } from '../../../../clarisa/clarisa-centers/entities/clarisa-center.entity';
-import { Version } from '../../../versioning/entities/version.entity';
 import { NonPooledProjectBudget } from '../../result_budget/entities/non_pooled_proyect_budget.entity';
 import { NonPooledProjectType } from './non-pooled-project-type.entity';
 

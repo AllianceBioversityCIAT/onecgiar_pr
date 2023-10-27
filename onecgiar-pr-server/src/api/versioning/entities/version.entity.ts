@@ -3,16 +3,8 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
-  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { Ipsr } from '../../ipsr/entities/ipsr.entity';
-import { NonPooledProject } from '../../results/non-pooled-projects/entities/non-pooled-project.entity';
-import { ResultsCenter } from '../../results/results-centers/entities/results-center.entity';
-import { ResultActor } from '../../results/result-actors/entities/result-actor.entity';
-import { ResultIpEoiOutcome } from '../../ipsr/innovation-pathway/entities/result-ip-eoi-outcome.entity';
-import { ResultIpAAOutcome } from '../../ipsr/innovation-pathway/entities/result-ip-action-area-outcome.entity';
-import { ResultsIpActor } from '../../ipsr/results-ip-actors/entities/results-ip-actor.entity';
 import { VersionBaseEntity } from '../../../shared/entities/version-base-entity';
 import { ApplicationModules } from './application-modules.entity';
 

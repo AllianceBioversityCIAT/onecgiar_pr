@@ -2,14 +2,11 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  OneToMany,
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
 import { BaseEntity } from '../../../../shared/entities/base-entity';
 import { ComplementaryInnovationEnablerTypes } from './complementary-innovation-enabler-types.entity';
-import { ResultInnovationPackage } from '../../result-innovation-package/entities/result-innovation-package.entity';
-import { Version } from '../../../versioning/entities/version.entity';
 import { Ipsr } from '../../entities/ipsr.entity';
 
 @Entity('results_innovatio_packages_enabler_type')

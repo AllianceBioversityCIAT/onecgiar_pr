@@ -8,13 +8,13 @@ export class Tree<T> {
   private _root: Node<T>;
   protected readonly _logger: Logger = new Logger(Tree.name);
   constructor(data: T) {
-    let node = new Node(data);
+    const node = new Node(data);
     this._root = node;
   }
 
   public add(data: T, parentData: T): Node<T> {
-    let node = new Node(data);
-    let parent = this.find(parentData);
+    const node = new Node(data);
+    const parent = this.find(parentData);
 
     //if the parent exists, add this node
     if (parent) {
@@ -40,7 +40,7 @@ export class Tree<T> {
     }
 
     //recurse on each child node
-    for (let child of node.children) {
+    for (const child of node.children) {
       //if the data is found in any child node it will be returned here
       const findResult = this.find(data, child);
       if (findResult) {
@@ -54,7 +54,7 @@ export class Tree<T> {
 
   public forEach(callback: (node: Node<T>) => void, node = this._root) {
     //recurse on each child node
-    for (let child of node.children) {
+    for (const child of node.children) {
       //if the data is found in any child node it will be returned here
       this.forEach(callback, child);
     }
@@ -112,7 +112,7 @@ export class Tree<T> {
     let nodeDescendants: Node<T>[] = [];
 
     if (node.hasChildren) {
-      for (let child of node.children) {
+      for (const child of node.children) {
         const descendants = this.getAllDescendants(child);
 
         nodeDescendants = nodeDescendants.concat(

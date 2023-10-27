@@ -1,6 +1,5 @@
 import { ResultInnovationPackage } from '../../result-innovation-package/entities/result-innovation-package.entity';
 import { CreateInnovationPackagingExpertDto } from '../../innovation-packaging-experts/dto/create-innovation-packaging-expert.dto';
-import { ResultByInstitutionsByDeliveriesType } from '../../../results/result-by-institutions-by-deliveries-type/entities/result-by-institutions-by-deliveries-type.entity';
 import { ResultsByInstitutionType } from '../../../results/results_by_institution_types/entities/results_by_institution_type.entity';
 import { ResultActor } from '../../../results/result-actors/entities/result-actor.entity';
 import { ResultIpMeasure } from '../../result-ip-measures/entities/result-ip-measure.entity';

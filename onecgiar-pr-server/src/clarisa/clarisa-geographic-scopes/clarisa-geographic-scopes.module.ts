@@ -6,9 +6,11 @@ import { HandlersError } from '../../shared/handlers/error.utils';
 
 @Module({
   controllers: [ClarisaGeographicScopesController],
-  providers: [ClarisaGeographicScopesService, ClarisaGeographicScopeRepository, HandlersError],
-  exports: [
-    ClarisaGeographicScopeRepository
-  ]
+  providers: [
+    ClarisaGeographicScopesService,
+    ClarisaGeographicScopeRepository,
+    HandlersError,
+  ],
+  exports: [ClarisaGeographicScopeRepository],
 })
 export class ClarisaGeographicScopesModule {}

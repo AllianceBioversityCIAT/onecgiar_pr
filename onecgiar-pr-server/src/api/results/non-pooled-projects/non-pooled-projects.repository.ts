@@ -6,7 +6,6 @@ import {
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
-import { VERSIONING } from '../../../shared/utils/versioning.utils';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
@@ -74,7 +73,7 @@ export class NonPooledProjectRepository
         );
         final_data = await this.save(response_edit);
       } else {
-        const queryData: string = `
+        const queryData = `
         insert into non_pooled_project (
           grant_title,
           center_grant_id,
@@ -319,11 +318,7 @@ export class NonPooledProjectRepository
 
     try {
       if (titles?.length) {
-        const upDateInactiveResult = await this.query(upDateInactive, [
-          userId,
-          resultId,
-          role,
-        ]);
+        await this.query(upDateInactive, [userId, resultId, role]);
 
         return await this.query(upDateActive, [userId, resultId, role]);
       } else {

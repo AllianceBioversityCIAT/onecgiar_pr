@@ -8,7 +8,6 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Version } from '../../../versioning/entities/version.entity';
 import { Result } from '../../entities/result.entity';
 import { EvidenceType } from '../../evidence_types/entities/evidence_type.entity';
 

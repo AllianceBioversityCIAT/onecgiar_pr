@@ -1,16 +1,5 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  HttpException,
-} from '@nestjs/common';
+import { Controller, Get, Param, HttpException } from '@nestjs/common';
 import { OstMeliaStudiesService } from './ost-melia-studies.service';
-import { CreateOstMeliaStudyDto } from './dto/create-ost-melia-study.dto';
-import { UpdateOstMeliaStudyDto } from './dto/update-ost-melia-study.dto';
 
 @Controller()
 export class OstMeliaStudiesController {

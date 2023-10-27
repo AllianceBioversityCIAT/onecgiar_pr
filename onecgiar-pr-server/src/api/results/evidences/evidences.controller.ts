@@ -23,21 +23,21 @@ export class EvidencesController {
   async create(
     @Body() createEvidenceDto: CreateEvidenceDto,
     @Headers() auth: HeadersDto,
-    @Param('resultId') resultId: number
+    @Param('resultId') resultId: number,
   ) {
     createEvidenceDto.result_id = resultId;
     const token: TokenDto = <TokenDto>(
       JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
     );
-    const { message, response, status } =
-      await this.evidencesService.create(createEvidenceDto, token);
+    const { message, response, status } = await this.evidencesService.create(
+      createEvidenceDto,
+      token,
+    );
     throw new HttpException({ message, response }, status);
   }
 
   @Get('get/:resultId')
-  finEvidenceByResult(
-    @Param('resultId') resultId: number
-  ) {
+  finEvidenceByResult(@Param('resultId') resultId: number) {
     return this.evidencesService.findAll(resultId);
   }
 

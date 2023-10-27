@@ -72,7 +72,7 @@ export class LogsModel {
   creatAnyObject(obj: any) {
     if (!obj) return {};
     let temp: any = {};
-    for (let key in obj) {
+    for (const key in obj) {
       if (typeof obj[key] == 'object') {
         temp = { ...temp, ...{ [key]: { M: this.creatAnyObject(obj[key]) } } };
       } else {

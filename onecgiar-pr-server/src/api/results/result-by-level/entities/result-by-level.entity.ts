@@ -1,10 +1,4 @@
-import {
-  Entity,
-  JoinColumn,
-  ManyToMany,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
+import { Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { ResultLevel } from '../../result_levels/entities/result_level.entity';
 import { ResultType } from '../../result_types/entities/result_type.entity';
 

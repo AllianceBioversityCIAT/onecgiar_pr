@@ -39,7 +39,7 @@ export class PlatformReportModule {
     //taken from https://stackoverflow.com/a/30122739
     Handlebars.registerHelper(
       'mathOperator',
-      function (lvalue, operator, rvalue, options) {
+      function (lvalue, operator, rvalue, _options) {
         lvalue = parseFloat(lvalue);
         rvalue = parseFloat(rvalue);
 

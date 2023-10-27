@@ -8,6 +8,11 @@ import { HttpModule } from '@nestjs/axios';
 @Module({
   controllers: [ClarisaFirstOrderAdministrativeDivisionController],
   imports: [HttpModule],
-  providers: [ClarisaFirstOrderAdministrativeDivisionService, ClarisaFirstOrderAdministrativeDivisionRepository, HttpModule, HandlersError]
+  providers: [
+    ClarisaFirstOrderAdministrativeDivisionService,
+    ClarisaFirstOrderAdministrativeDivisionRepository,
+    HttpModule,
+    HandlersError,
+  ],
 })
-export class ClarisaFirstOrderAdministrativeDivisionModule { }
+export class ClarisaFirstOrderAdministrativeDivisionModule {}

@@ -8,8 +8,12 @@ import { TokenBiReport } from './entities/token-bi-reports.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 @Module({
-  imports:[HttpModule, TypeOrmModule.forFeature([TokenBiReport])],
+  imports: [HttpModule, TypeOrmModule.forFeature([TokenBiReport])],
   controllers: [BiReportsController],
-  providers: [BiReportsService,ClarisaCredentialsBiService, BiReportRepository]
+  providers: [
+    BiReportsService,
+    ClarisaCredentialsBiService,
+    BiReportRepository,
+  ],
 })
 export class BiReportsModule {}

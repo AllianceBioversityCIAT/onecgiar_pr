@@ -1,6 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
-import { UpdateSubmissionDto } from './dto/update-submission.dto';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { submissionRepository } from './submissions.repository';
 import { ResultRepository } from '../result.repository';
@@ -8,7 +7,6 @@ import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { Submission } from './entities/submission.entity';
 import { resultValidationRepository } from '../results-validation-module/results-validation-module.repository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
-import { ResultInnovationPackageService } from '../../ipsr/result-innovation-package/result-innovation-package.service';
 import { IpsrService } from '../../ipsr/ipsr.service';
 import { ResultsInnovationPackagesValidationModuleService } from '../../ipsr/results-innovation-packages-validation-module/results-innovation-packages-validation-module.service';
 
@@ -276,25 +274,5 @@ export class SubmissionsService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
-  }
-
-  create(createSubmissionDto: CreateSubmissionDto) {
-    return 'This action adds a new submission';
-  }
-
-  findAll() {
-    return `This action returns all submissions`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} submission`;
-  }
-
-  update(id: number, updateSubmissionDto: UpdateSubmissionDto) {
-    return `This action updates a #${id} submission`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} submission`;
   }
 }

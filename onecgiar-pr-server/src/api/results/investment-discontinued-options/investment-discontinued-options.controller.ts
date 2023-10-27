@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-} from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { InvestmentDiscontinuedOptionsService } from './investment-discontinued-options.service';
 import { UseInterceptors } from '@nestjs/common';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';

@@ -7,10 +7,8 @@ import {
   Param,
   Delete,
   HttpException,
-  UseInterceptors,
 } from '@nestjs/common';
 import { InnovationPathwayStepOneService } from './innovation-pathway-step-one.service';
-import { CreateInnovationPathwayDto } from './dto/create-innovation-pathway.dto';
 import {
   UpdateComplementaryInnovationDto,
   UpdateInnovationPathwayDto,
@@ -18,7 +16,6 @@ import {
 import { CreateComplementaryInnovationDto } from './dto/create-complementary-innovation.dto';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
-import { getInnovationComInterface } from '../ipsr.repository';
 import { InnovationPathwayStepTwoService } from './innovation-pathway-step-two.service';
 import { SaveStepTwoOne } from './dto/save-step-two-one.dto';
 import { InnovationPathwayStepThreeService } from './innovation-pathway-step-three.service';
@@ -29,7 +26,6 @@ import {
   institutionsInterface,
   SaveStepFour,
 } from './dto/save-step-four.dto';
-import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
 export class InnovationPathwayController {
@@ -96,14 +92,14 @@ export class InnovationPathwayController {
   @Post('save/complementary-innovation/:resultId')
   async saveComplementaryInnovation(
     @Param('resultId') resultId: string,
-    @Body() CreateComplementaryInnovationDto: CreateComplementaryInnovationDto,
+    @Body() createComplementaryInnovationDto: CreateComplementaryInnovationDto,
     @UserToken() User: TokenDto,
   ) {
     const { message, response, status } =
       await this._innovationPathwayStepTwoService.saveComplementaryInnovation(
         +resultId,
         User,
-        CreateComplementaryInnovationDto,
+        createComplementaryInnovationDto,
       );
     throw new HttpException({ message, response }, status);
   }

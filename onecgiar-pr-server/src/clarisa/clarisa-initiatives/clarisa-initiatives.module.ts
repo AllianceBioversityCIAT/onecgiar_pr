@@ -6,7 +6,11 @@ import { HandlersError } from '../../shared/handlers/error.utils';
 
 @Module({
   controllers: [ClarisaInitiativesController],
-  providers: [ClarisaInitiativesService, ClarisaInitiativesRepository, HandlersError],
+  providers: [
+    ClarisaInitiativesService,
+    ClarisaInitiativesRepository,
+    HandlersError,
+  ],
   exports: [ClarisaInitiativesRepository],
 })
 export class ClarisaInitiativesModule {}

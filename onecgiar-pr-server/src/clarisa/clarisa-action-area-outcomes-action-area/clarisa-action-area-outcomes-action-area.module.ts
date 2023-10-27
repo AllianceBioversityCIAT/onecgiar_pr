@@ -4,6 +4,6 @@ import { ClarisaActionAreaOutcomesActionAreaController } from './clarisa-action-
 
 @Module({
   controllers: [ClarisaActionAreaOutcomesActionAreaController],
-  providers: [ClarisaActionAreaOutcomesActionAreaService]
+  providers: [ClarisaActionAreaOutcomesActionAreaService],
 })
 export class ClarisaActionAreaOutcomesActionAreaModule {}

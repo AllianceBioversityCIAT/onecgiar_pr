@@ -3,12 +3,10 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
-  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { TocLevel } from '../../toc-level/entities/toc-level.entity';
 import { ClarisaInitiative } from '../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
-import { ResultIpEoiOutcome } from '../../../api/ipsr/innovation-pathway/entities/result-ip-eoi-outcome.entity';
 
 @Entity('toc_result')
 export class TocResult {

@@ -7,8 +7,6 @@ import { LogRepository } from './dynamodb-logs.repository';
 @Module({
   controllers: [DynamodbLogsController],
   providers: [DynamodbLogsService, HandlersError, LogRepository],
-  exports: [
-    LogRepository
-  ]
+  exports: [LogRepository],
 })
 export class DynamodbLogsModule {}

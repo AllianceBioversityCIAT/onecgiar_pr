@@ -1,11 +1,5 @@
-import { HttpStatus, Injectable, OnModuleInit } from '@nestjs/common';
-import {
-  FindOptionsRelations,
-  FindOptionsWhere,
-  In,
-  IsNull,
-  Like,
-} from 'typeorm';
+import { HttpStatus, Injectable } from '@nestjs/common';
+import { FindOptionsRelations, In, Like } from 'typeorm';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import {
   HandlersError,
@@ -26,29 +20,21 @@ import { ResultsKnowledgeProductKeywordRepository } from './repositories/results
 import { ResultsKnowledgeProductMetadataRepository } from './repositories/results-knowledge-product-metadata.repository';
 import { ResultsKnowledgeProductDto } from './dto/results-knowledge-product.dto';
 import { returnFormatResult } from '../dto/return-format-result.dto';
-import { ModuleRef } from '@nestjs/core';
 import { CreateResultDto } from '../dto/create-result.dto';
 import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { ResultByLevelRepository } from '../result-by-level/result-by-level.repository';
 import { ResultLevelRepository } from '../result_levels/resultLevel.repository';
-import { ResultTypesService } from '../result_types/result_types.service';
 import { ResultLevel } from '../result_levels/entities/result_level.entity';
-import { ResultType } from '../result_types/entities/result_type.entity';
-import { Year } from '../years/entities/year.entity';
-import { YearRepository } from '../years/year.repository';
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
 import { ResultTypeRepository } from '../result_types/resultType.repository';
 import { EvidencesRepository } from '../evidences/evidences.repository';
-import { ResultsKnowledgeProductMetadataDto } from './dto/results-knowledge-product-metadata.dto';
 import { ResultsKnowledgeProductSaveDto } from './dto/results-knowledge-product-save.dto';
-import { KnowledgeProductFairBaseline } from '../knowledge_product_fair_baseline/entities/knowledge_product_fair_baseline.entity';
 import { KnowledgeProductFairBaselineRepository } from '../knowledge_product_fair_baseline/knowledge_product_fair_baseline.repository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { ResultRegionRepository } from '../result-regions/result-regions.repository';
 import { ClarisaRegionsRepository } from '../../../clarisa/clarisa-regions/ClariasaRegions.repository';
 import { ClarisaRegion } from '../../../clarisa/clarisa-regions/entities/clarisa-region.entity';
 import { ResultRegion } from '../result-regions/entities/result-region.entity';
-import { CGSpaceCountryMappingsRepository } from './repositories/cgspace-country-mappings.repository';
 import { ResultCountry } from '../result-countries/entities/result-country.entity';
 import { ResultCountryRepository } from '../result-countries/result-countries.repository';
 import { VersioningService } from '../../versioning/versioning.service';
@@ -244,7 +230,7 @@ export class ResultsKnowledgeProductsService {
         };
       }
 
-      let isAdmin: any = await this._roleByUseRepository.isUserAdmin(user.id);
+      const isAdmin: any = await this._roleByUseRepository.isUserAdmin(user.id);
 
       if (isAdmin?.is_admin == false) {
         if (
@@ -385,23 +371,23 @@ export class ResultsKnowledgeProductsService {
   async updateFair(
     knowledgeProduct: ResultsKnowledgeProduct,
     resultsKnowledgeProductDto: ResultsKnowledgeProductDto,
-    upsert: boolean = false,
+    upsert = false,
   ) {
-    let allFairFields: FairField[] = await this._fairFieldRepository.find({
+    const allFairFields: FairField[] = await this._fairFieldRepository.find({
       where: { is_active: true },
       relations: { parent_object: true, children_array: true },
     });
     let updatedFields: ResultsKnowledgeProductFairScore[] = [];
 
     for (const field of Object.values(FairFieldEnum)) {
-      let currentFairFieldIndex: number = (
+      const currentFairFieldIndex: number = (
         knowledgeProduct.result_knowledge_product_fair_score_array ?? []
       ).findIndex(
         (fs) =>
           fs.fair_field_object.short_name == field && fs.is_baseline == false,
       );
 
-      let currentFairFieldObject: ResultsKnowledgeProductFairScore =
+      const currentFairFieldObject: ResultsKnowledgeProductFairScore =
         currentFairFieldIndex < 0
           ? new ResultsKnowledgeProductFairScore()
           : (knowledgeProduct.result_knowledge_product_fair_score_array ?? [])[
@@ -429,7 +415,7 @@ export class ResultsKnowledgeProductsService {
 
       valuePath = `${valuePath ?? ''}.${currentFairField?.short_name}`;
       valuePath = valuePath.indexOf('.') == 0 ? valuePath.slice(1) : valuePath;
-      let pathArray: string[] = valuePath.split('.').reverse();
+      const pathArray: string[] = valuePath.split('.').reverse();
       let value: number;
       let currentObject: FairSpecificData | FullFairData =
         resultsKnowledgeProductDto.fair_data;
@@ -484,7 +470,7 @@ export class ResultsKnowledgeProductsService {
     if (!upsert) {
       const baselineFields: ResultsKnowledgeProductFairScore[] = [];
       updatedFields.forEach((fs) => {
-        let baselineField = new ResultsKnowledgeProductFairScore();
+        const baselineField = new ResultsKnowledgeProductFairScore();
         baselineField.result_knowledge_product_id =
           fs.result_knowledge_product_id;
         baselineField.fair_field_id = fs.fair_field_id;
@@ -504,7 +490,7 @@ export class ResultsKnowledgeProductsService {
   async updateCountries(
     newKnowledgeProduct: ResultsKnowledgeProduct,
     resultsKnowledgeProductDto: ResultsKnowledgeProductDto,
-    upsert: boolean = false,
+    upsert = false,
   ) {
     const allClarisaCountries = await this._clarisaCountriesRepository.find();
 
@@ -523,7 +509,7 @@ export class ResultsKnowledgeProductsService {
         country ??= new ResultCountry();
 
         //searching for country by iso-2
-        let clarisaCountry = allClarisaCountries.find(
+        const clarisaCountry = allClarisaCountries.find(
           (cc) => cc.iso_alpha_2 == mqapIso,
         )?.id;
 
@@ -560,7 +546,7 @@ export class ResultsKnowledgeProductsService {
   async findOnCGSpace(
     handle: string,
     versionCgspaceYear: number,
-    validateExisting: boolean = true,
+    validateExisting = true,
   ) {
     try {
       if (!handle) {
@@ -700,7 +686,7 @@ export class ResultsKnowledgeProductsService {
         };
       }
 
-      let newResultResponse = await this.createOwnerResult(
+      const newResultResponse = await this.createOwnerResult(
         resultsKnowledgeProductDto.result_data,
         user,
       );
@@ -860,10 +846,10 @@ export class ResultsKnowledgeProductsService {
 
   async separateCentersFromCgspacePartners(
     knowledgeProduct: ResultsKnowledgeProduct,
-    upsert: boolean = false,
+    upsert = false,
   ) {
     // we get the centers currently mapped to the result
-    let sectionTwoCenters = await this._resultCenterRepository.find({
+    const sectionTwoCenters = await this._resultCenterRepository.find({
       where: {
         result_id: knowledgeProduct.result_object.id,
         is_active: true,
@@ -971,13 +957,13 @@ export class ResultsKnowledgeProductsService {
     const worldTree = await this._clarisaRegionsRepository.loadWorldTree();
 
     //cleaning regions
-    let resultRegions = (newResult.result_region_array ?? [])
+    const resultRegions = (newResult.result_region_array ?? [])
       .filter((rr) => rr.region_id)
       .map((rr) => {
         rr.region_object = worldTree.findById(rr.region_id)?.data;
         return rr;
       });
-    let regions = resultRegions.map((rr) => rr.region_object);
+    const regions = resultRegions.map((rr) => rr.region_object);
 
     let cleanedCGRegions: ClarisaRegion[] = [];
     for (const region of regions) {
@@ -1012,7 +998,7 @@ export class ResultsKnowledgeProductsService {
       if the region itself is not a root, it should be preserved. 
       if it is, the region children will be used instead.
     */
-    let processedCleanedRegions: ClarisaRegion[] = cleanedCGRegions.flatMap(
+    const processedCleanedRegions: ClarisaRegion[] = cleanedCGRegions.flatMap(
       (crn) => {
         const regionNode = worldTree.find(crn);
         const regionLevel = regionNode.data?.['level'] ?? 0;
@@ -1028,7 +1014,7 @@ export class ResultsKnowledgeProductsService {
       remove it from the processedCleanedRegions and add the mapped region to the
       final cleanedResultRegions. if not, nothing happens
     */
-    let cleanedResultRegions: ResultRegion[] = [];
+    const cleanedResultRegions: ResultRegion[] = [];
     for (const rr of resultRegions) {
       const inProcessed = processedCleanedRegions.findIndex(
         (cr) => rr.region_id == cr.um49Code,

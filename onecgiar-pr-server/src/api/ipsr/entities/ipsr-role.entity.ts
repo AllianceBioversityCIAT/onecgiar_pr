@@ -1,14 +1,4 @@
-import {
-  Column,
-  Entity,
-  PrimaryGeneratedColumn,
-  ManyToOne,
-  JoinColumn,
-  OneToMany,
-} from 'typeorm';
-import { BaseEntity } from '../../../shared/entities/base-entity';
-import { Version } from '../../versioning/entities/version.entity';
-import { Result } from '../../results/entities/result.entity';
+import { Column, Entity, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
 import { Ipsr } from './ipsr.entity';
 
 @Entity('ipsr_role')

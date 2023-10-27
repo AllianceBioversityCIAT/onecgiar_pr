@@ -5,8 +5,6 @@ import {
   JoinColumn,
   Entity,
 } from 'typeorm';
-import { Version } from '../../../versioning/entities/version.entity';
-import { ResultInnovationPackage } from '../../result-innovation-package/entities/result-innovation-package.entity';
 import { Ipsr } from '../../entities/ipsr.entity';
 import { BaseEntity } from '../../../../shared/entities/base-entity';
 

@@ -1,9 +1,6 @@
-import { HttpStatus, Injectable, Type } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { ResultRepository } from '../../results/result.repository';
-import {
-  HandlersError,
-  returnErrorDto,
-} from '../../../shared/handlers/error.utils';
+import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultInnovationPackageRepository } from '../result-innovation-package/repositories/result-innovation-package.repository';
 import { VersionsService } from '../../results/versions/versions.service';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
@@ -18,7 +15,6 @@ import {
 import { ResultByInitiativesRepository } from '../../../api/results/results_by_inititiatives/resultByInitiatives.repository';
 import { Evidence } from '../../../api/results/evidences/entities/evidence.entity';
 import { ResultInitiativeBudgetRepository } from 'src/api/results/result_budget/repositories/result_initiative_budget.repository';
-import { ResultsByInititiative } from '../../../api/results/results_by_inititiatives/entities/results_by_inititiative.entity';
 import { ResultInitiativeBudget } from '../../../api/results/result_budget/entities/result_initiative_budget.entity';
 import { In } from 'typeorm';
 import { NonPooledProjectRepository } from '../../../api/results/non-pooled-projects/non-pooled-projects.repository';
@@ -27,10 +23,8 @@ import { ResultByIntitutionsRepository } from '../../results/results_by_institut
 import { ResultInstitutionsBudgetRepository } from '../../results/result_budget/repositories/result_institutions_budget.repository';
 import { ResultByInstitutionsByDeliveriesTypeRepository } from '../../results/result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';
 import { ResultsByInstitution } from '../../results/results_by_institutions/entities/results_by_institution.entity';
-import { NonPooledProject } from '../../results/non-pooled-projects/entities/non-pooled-project.entity';
 import { ResultByInstitutionsByDeliveriesType } from '../../results/result-by-institutions-by-deliveries-type/entities/result-by-institutions-by-deliveries-type.entity';
 import { ResultInstitutionsBudget } from '../../results/result_budget/entities/result_institutions_budget.entity';
-import { log } from 'console';
 import { VersioningService } from '../../versioning/versioning.service';
 import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
 
@@ -207,26 +201,22 @@ export class InnovationPathwayStepFourService {
         result.id,
         user,
         saveStepFourDto,
-        version,
       );
       const materials = await this.saveMaterials(
         result.id,
         user,
         saveStepFourDto,
-        version,
       );
       // const workshop = await this.saveWorkshop(result.id, user, saveStepFourDto, version);
       const initiativeInvestment = await this.saveInitiativeInvestment(
         result.id,
         user,
         saveStepFourDto,
-        version,
       );
       const billateralInvestment = await this.saveBillateralInvestment(
         result.id,
         user,
         saveStepFourDto,
-        version,
       );
       const partnertInvestment = await this.savePartnertInvestment(
         user,
@@ -273,7 +263,6 @@ export class InnovationPathwayStepFourService {
     resultId: number,
     user: TokenDto,
     saveStepFourDto: SaveStepFour,
-    version: Version,
   ) {
     const id = +resultId;
     try {
@@ -344,7 +333,6 @@ export class InnovationPathwayStepFourService {
     resultId: number,
     user: TokenDto,
     saveStepFourDto: SaveStepFour,
-    version: Version,
   ) {
     const id = +resultId;
     try {
@@ -415,7 +403,6 @@ export class InnovationPathwayStepFourService {
     resultId: number,
     user: TokenDto,
     saveStepFourDto: SaveStepFour,
-    version: Version,
   ) {
     try {
       if (saveStepFourDto?.initiative_expected_investment?.length) {
@@ -432,7 +419,7 @@ export class InnovationPathwayStepFourService {
           });
 
           if (ibr) {
-            let rie: ResultInitiativeBudget =
+            const rie: ResultInitiativeBudget =
               await this._resultInitiativesBudgetRepository.findOne({
                 where: {
                   result_initiative_id: ibr.id,
@@ -475,7 +462,6 @@ export class InnovationPathwayStepFourService {
     resultId: number,
     user: TokenDto,
     saveStepFourDto: SaveStepFour,
-    version: Version,
   ) {
     try {
       if (saveStepFourDto?.bilateral_expected_investment?.length) {
@@ -667,7 +653,7 @@ export class InnovationPathwayStepFourService {
             last_updated_by: user.id,
           });
 
-          const newIbe = await this._resultInstitutionsBudgetRepository.save({
+          await this._resultInstitutionsBudgetRepository.save({
             result_institution_id: rbi.id,
             created_by: user.id,
             last_updated_by: user.id,
@@ -731,7 +717,6 @@ export class InnovationPathwayStepFourService {
   ) {
     try {
       let bilateral_expected_investment: any;
-      let newBie: any;
       let newNpp: any;
       const version = await this._versioningService.$_findActivePhase(
         AppModuleIdEnum.IPSR,
@@ -772,7 +757,7 @@ export class InnovationPathwayStepFourService {
             non_pooled_project_type_id: 2,
           });
 
-          const newBie = await this._resultBilateralBudgetRepository.save({
+          await this._resultBilateralBudgetRepository.save({
             non_pooled_projetct_id: newNpp?.id,
             created_by: user.id,
             last_updated_by: user.id,

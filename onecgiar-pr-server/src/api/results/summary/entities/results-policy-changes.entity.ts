@@ -9,7 +9,6 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { Result } from '../../entities/result.entity';
-import { Version } from '../../../versioning/entities/version.entity';
 import { User } from '../../../../auth/modules/user/entities/user.entity';
 import { ClarisaPolicyStage } from '../../../../clarisa/clarisa-policy-stages/entities/clarisa-policy-stage.entity';
 import { ClarisaPolicyType } from '../../../../clarisa/clarisa-policy-types/entities/clarisa-policy-type.entity';

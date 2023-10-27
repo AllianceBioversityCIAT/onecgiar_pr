@@ -1,17 +1,7 @@
-import {
-  Headers,
-  HttpException,
-  HttpStatus,
-  Injectable,
-  Logger,
-  OnModuleInit,
-} from '@nestjs/common';
-import { CreateAdminPanelDto } from './dto/create-admin-panel.dto';
-import { UpdateAdminPanelDto } from './dto/update-admin-panel.dto';
+import { HttpStatus, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { AdminPanelRepository } from './admin-panel.repository';
 import { FilterInitiativesDto } from './dto/filter-initiatives.dto';
-import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResultsKnowledgeProductsService } from '../results-knowledge-products/results-knowledge-products.service';
 import { ResultsKnowledgeProduct } from '../results-knowledge-products/entities/results-knowledge-product.entity';
@@ -44,10 +34,6 @@ export class AdminPanelService implements OnModuleInit {
     this._resultsKnowledgeProductsService = await this._moduleRef.resolve(
       ResultsKnowledgeProductsService,
     );
-  }
-
-  create(createAdminPanelDto: CreateAdminPanelDto) {
-    return 'This action adds a new adminPanel';
   }
 
   async reportResultCompleteness(filterIntiatives: FilterInitiativesDto) {

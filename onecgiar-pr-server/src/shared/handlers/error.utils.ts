@@ -73,7 +73,7 @@ export class ReturnResponse {
   private readonly _logger = new Logger(ReturnResponse.name);
   public format(
     { message, statusCode, response }: ReturnResponseDto<any>,
-    debug: boolean = false,
+    debug = false,
   ): ReturnResponseDto<any> {
     if (debug) {
       this._logger.debug({ message, statusCode, response });
