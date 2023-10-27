@@ -1,3 +1,3 @@
 export class CreateSubmissionDto {
-    public comment!: string;
+  public comment!: string;
 }

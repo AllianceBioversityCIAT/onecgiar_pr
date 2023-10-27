@@ -206,7 +206,6 @@ export class InnoDevService {
           });
         }
 
-        let saveActor;
         if (actorExists) {
           if (!el?.actor_type_id && el?.is_active !== false) {
             return {
@@ -215,7 +214,7 @@ export class InnoDevService {
               status: HttpStatus.BAD_REQUEST,
             };
           }
-          saveActor = await this._resultActorRepository.update(
+          await this._resultActorRepository.update(
             actorExists.result_actors_id,
             {
               actor_type_id: this.isNullData(el?.actor_type_id),
@@ -243,7 +242,7 @@ export class InnoDevService {
               status: HttpStatus.BAD_REQUEST,
             };
           }
-          saveActor = await this._resultActorRepository.save({
+          await this._resultActorRepository.save({
             actor_type_id: this.isNullData(el?.actor_type_id),
             is_active: el?.is_active,
             has_men: this.isNullData(el?.has_men),
@@ -416,7 +415,7 @@ export class InnoDevService {
           });
 
           if (ibr) {
-            let rie: ResultInitiativeBudget =
+            const rie: ResultInitiativeBudget =
               await this._resultInitiativesBudgetRepository.findOne({
                 where: {
                   result_initiative_id: ibr.id,

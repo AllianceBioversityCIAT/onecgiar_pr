@@ -1,8 +1,7 @@
-export class TokenReportBiDto{
+export class TokenReportBiDto {
+  token_bi: string;
 
-    token_bi: string;
+  expiration_toke_id: Date;
 
-    expiration_toke_id: Date;
-
-    is_active: boolean;
+  is_active: boolean;
 }

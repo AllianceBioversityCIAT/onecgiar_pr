@@ -24,7 +24,7 @@ export class PlatformReportRepository extends Repository<PlatformReport> {
       .split('')
       .join(',');
 
-    const query: string = `select ${procedureName}(${paramString}) as result`;
+    const query = `select ${procedureName}(${paramString}) as result`;
     try {
       return await this.query(query, parameters);
     } catch (error) {

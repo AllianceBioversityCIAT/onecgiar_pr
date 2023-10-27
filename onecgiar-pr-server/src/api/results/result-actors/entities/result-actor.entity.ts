@@ -7,7 +7,6 @@ import {
 } from 'typeorm';
 import { BaseEntity } from '../../../../shared/entities/base-entity';
 import { Result } from '../../entities/result.entity';
-import { Version } from '../../../versioning/entities/version.entity';
 import { ActorType } from './actor-type.entity';
 
 @Entity('result_actors')
@@ -120,5 +119,4 @@ export class ResultActor extends BaseEntity {
     name: 'actor_type_id',
   })
   obj_actor_type: ActorType;
-  
 }

@@ -1,4 +1,4 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { ClarisaGeographicScope } from './entities/clarisa-geographic-scope.entity';
 
@@ -43,8 +43,8 @@ export class ClarisaGeographicScopeRepository extends Repository<ClarisaGeograph
       };
     }
   }
-  async getAllPRMSScopes(dataDefault:number[] = [1,2,3]) {
-    dataDefault?dataDefault:[1,2,3];
+  async getAllPRMSScopes(dataDefault: number[] = [1, 2, 3]) {
+    dataDefault ? dataDefault : [1, 2, 3];
     const queryData = `
     select 
     cgs.id,
@@ -55,11 +55,11 @@ export class ClarisaGeographicScopeRepository extends Repository<ClarisaGeograph
     `;
     try {
       const scopes: ClarisaGeographicScope[] = await this.query(queryData);
-      scopes.map(el => {
-        if(el.id == 3){
+      scopes.map((el) => {
+        if (el.id == 3) {
           el.name = 'Country';
         }
-      })
+      });
       return scopes;
     } catch (error) {
       throw {

@@ -1,14 +1,11 @@
-import { HttpStatus, Injectable, Type } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResultRepository } from '../../results/result.repository';
 import {
   HandlersError,
   ReturnResponse,
 } from '../../../shared/handlers/error.utils';
-import {
-  innovatonUseInterface,
-  UpdateInnovationPathwayDto,
-} from './dto/update-innovation-pathway.dto';
+import { UpdateInnovationPathwayDto } from './dto/update-innovation-pathway.dto';
 import { ResultRegion } from '../../results/result-regions/entities/result-region.entity';
 import { ResultCountry } from '../../results/result-countries/entities/result-country.entity';
 import { ResultRegionRepository } from '../../results/result-regions/result-regions.repository';
@@ -47,12 +44,10 @@ import { ResultByInitiativesRepository } from '../../results/results_by_inititia
 import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
 import { ResultIpExpertisesRepository } from '../innovation-packaging-experts/repositories/result-ip-expertises.repository';
 import { ResultIpExpertises } from '../innovation-packaging-experts/entities/result_ip_expertises.entity';
-import e from 'express';
 import { ResultCountriesSubNationalRepository } from '../../results/result-countries-sub-national/result-countries-sub-national.repository';
 import { ResultCountriesSubNational } from '../../results/result-countries-sub-national/entities/result-countries-sub-national.entity';
 import { VersioningService } from '../../versioning/versioning.service';
 import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
-import { env } from 'process';
 
 @Injectable()
 export class InnovationPathwayStepOneService {
@@ -186,7 +181,7 @@ export class InnovationPathwayStepOneService {
           },
         });
       });
-      let actorsData = await this._resultActorRepository.find({
+      const actorsData = await this._resultActorRepository.find({
         where: { result_id: result.id, is_active: true },
         relations: { obj_actor_type: true },
       });
@@ -272,13 +267,12 @@ export class InnovationPathwayStepOneService {
 
       const scalingText = scalig_ambition['body'];
 
-      const scalingAmbitionBlurb =
-        await this._resultInnovationPackageRepository.update(
-          { result_innovation_package_id: result.id },
-          {
-            scaling_ambition_blurb: scalingText,
-          },
-        );
+      await this._resultInnovationPackageRepository.update(
+        { result_innovation_package_id: result.id },
+        {
+          scaling_ambition_blurb: scalingText,
+        },
+      );
 
       return {
         response: await {
@@ -351,7 +345,7 @@ export class InnovationPathwayStepOneService {
       return '<Data not provided>';
     }
     const lastElement = arrayData.pop();
-    let actors: string = '';
+    let actors = '';
     for (const i of arrayData) {
       actors += `${i?.how_many} ${
         i?.obj_institution_types?.name || `<Institution type not provided>`
@@ -371,7 +365,7 @@ export class InnovationPathwayStepOneService {
       return '<Data not provided>';
     }
     const lastElement = arrayData.pop();
-    let actors: string = '';
+    let actors = '';
     for (const i of arrayData) {
       actors += `${+i?.quantity} ${
         i?.unit_of_measure || `<Unit of measure not provided>`
@@ -399,7 +393,7 @@ export class InnovationPathwayStepOneService {
     r: ResultRegion[],
     c: ResultCountry[],
   ) {
-    let returnData: string = '';
+    let returnData = '';
     if (geoId == 1) {
       return;
     } else if (geoId == 2) {
@@ -419,7 +413,7 @@ export class InnovationPathwayStepOneService {
       return '<Data not provided>';
     }
     const lastElement = arrayData.pop();
-    let actors: string = '';
+    let actors = '';
     for (const i of arrayData) {
       actors += `${
         i?.sex_and_age_disaggregation
@@ -805,8 +799,7 @@ export class InnovationPathwayStepOneService {
   ) {
     const id = result.id;
     try {
-      let saveSdgs: any;
-      let sdgsTargets: ResultIpSdgTargets[] = [];
+      const sdgsTargets: ResultIpSdgTargets[] = [];
       const resultByInnovationPackageId =
         await this._innovationByResultRepository.findOneBy({
           result_innovation_package_id: id,
@@ -839,9 +832,7 @@ export class InnovationPathwayStepOneService {
             sdgsTargets.push(newSdgs);
           }
 
-          saveSdgs = await this._resultIpSdgsTargetsRepository.save(
-            sdgsTargets,
-          );
+          await this._resultIpSdgsTargetsRepository.save(sdgsTargets);
         }
       }
 
@@ -939,7 +930,6 @@ export class InnovationPathwayStepOneService {
           ex.expertises,
           innExp.result_ip_expert_id,
           user,
-          v,
         );
       }
     }
@@ -949,7 +939,6 @@ export class InnovationPathwayStepOneService {
     exps: ResultIpExpertises[],
     result_ip_expert_id: number,
     user: TokenDto,
-    v: Version,
   ) {
     await exps.map(async (el) => {
       let riesEx: ResultIpExpertises = null;

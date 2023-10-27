@@ -1,12 +1,9 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
-import { CreateSummaryDto } from './dto/create-summary.dto';
-import { UpdateSummaryDto } from './dto/update-summary.dto';
 import { InnovationUseDto } from './dto/create-innovation-use.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { VersionsService } from '../versions/versions.service';
-import { Version } from '../../versioning/entities/version.entity';
 import { HandlersError } from '../../../shared/handlers/error.utils';
-import { capdevDto } from './dto/create-capacity-developents.dto';
+import { CapdevDto } from './dto/create-capacity-developents.dto';
 import { ResultsCapacityDevelopmentsRepository } from './repositories/results-capacity-developments.repository';
 import { ResultsCapacityDevelopments } from './entities/results-capacity-developments.entity';
 import { ResultByIntitutionsRepository } from '../results_by_institutions/result_by_intitutions.repository';
@@ -19,19 +16,14 @@ import { PolicyChangesDto } from './dto/create-policy-changes.dto';
 import { ResultsPolicyChanges } from './entities/results-policy-changes.entity';
 import { ResultsPolicyChangesRepository } from './repositories/results-policy-changes.repository';
 import { EvidencesRepository } from '../evidences/evidences.repository';
-import { ResultActor } from '../result-actors/entities/result-actor.entity';
-import { In, IsNull } from 'typeorm';
+import { In } from 'typeorm';
 import { ResultActorRepository } from '../result-actors/repositories/result-actors.repository';
-import { ResultsByInstitutionType } from '../results_by_institution_types/entities/results_by_institution_type.entity';
 import { ResultByIntitutionsTypeRepository } from '../results_by_institution_types/result_by_intitutions_type.repository';
-import { ResultIpMeasure } from '../../ipsr/result-ip-measures/entities/result-ip-measure.entity';
 import { ResultIpMeasureRepository } from '../../ipsr/result-ip-measures/result-ip-measures.repository';
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
-import { ResultInitiativeBudget } from '../result_budget/entities/result_initiative_budget.entity';
 import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/result_initiative_budget.repository';
 import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/non_pooled_proyect_budget.repository';
 import { NonPooledProjectRepository } from '../non-pooled-projects/non-pooled-projects.repository';
-import { ResultInstitutionsBudget } from '../result_budget/entities/result_institutions_budget.entity';
 import { ResultInstitutionsBudgetRepository } from '../result_budget/repositories/result_institutions_budget.repository';
 import { InnoDevService } from './innovation_dev.service';
 import { ResultAnswerRepository } from '../result-questions/repository/result-answers.repository';
@@ -100,7 +92,7 @@ export class SummaryService {
    */
   async getInnovationUse(resultId: number) {
     try {
-      let actorsData = await this._resultActorRepository.find({
+      const actorsData = await this._resultActorRepository.find({
         where: { result_id: resultId, is_active: true },
         relations: { obj_actor_type: true },
       });
@@ -150,13 +142,12 @@ export class SummaryService {
    * @param user
    */
   async saveCapacityDevelopents(
-    capdev: capdevDto,
+    capdev: CapdevDto,
     resultId: number,
     user: TokenDto,
   ) {
     try {
       const {
-        result_capacity_development_id,
         female_using,
         male_using,
         has_unkown_using,
@@ -176,7 +167,6 @@ export class SummaryService {
       if (version.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: version });
       }
-      const vrs: Version = <Version>version.response;
       if (capDevExists) {
         capDevExists.female_using = unkown_using ? 0 : female_using || 0;
         capDevExists.male_using = unkown_using ? 0 : male_using || 0;
@@ -216,7 +206,7 @@ export class SummaryService {
       }
 
       if (institutions?.length) {
-        let institutionsList: ResultsByInstitution[] = [];
+        const institutionsList: ResultsByInstitution[] = [];
         await this._resultByIntitutionsRepository.updateGenericIstitutions(
           resultId,
           institutions,
@@ -317,7 +307,6 @@ export class SummaryService {
       if (version.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: version });
       }
-      const vrs: Version = <Version>version.response;
       const innDevExists =
         await this._resultsInnovationsDevRepository.InnovationDevExists(
           resultId,
@@ -490,7 +479,7 @@ export class SummaryService {
       });
       const result = await this._resultRepository.getResultById(resultId);
 
-      let actorsData = await this._resultActorRepository.find({
+      const actorsData = await this._resultActorRepository.find({
         where: { result_id: resultId, is_active: true },
         relations: { obj_actor_type: true },
       });
@@ -615,7 +604,6 @@ export class SummaryService {
       if (version.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: version });
       }
-      const vrs: Version = <Version>version.response;
       const resultsPolicyChanges =
         await this._resultsPolicyChangesRepository.ResultsPolicyChangesExists(
           resultId,
@@ -659,7 +647,7 @@ export class SummaryService {
       }
 
       if (institutions?.length) {
-        let institutionsList: ResultsByInstitution[] = [];
+        const institutionsList: ResultsByInstitution[] = [];
         await this._resultByIntitutionsRepository.updateGenericIstitutions(
           resultId,
           institutions,

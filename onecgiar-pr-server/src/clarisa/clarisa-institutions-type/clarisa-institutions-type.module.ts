@@ -8,10 +8,12 @@ import { HandlersError } from '../../shared/handlers/error.utils';
 
 @Module({
   controllers: [ClarisaInstitutionsTypeController],
-  providers: [ClarisaInstitutionsTypeService, ClarisaInstitutionsTypeRepository, HandlersError],
+  providers: [
+    ClarisaInstitutionsTypeService,
+    ClarisaInstitutionsTypeRepository,
+    HandlersError,
+  ],
   imports: [RouterModule.register(ClarisaInstitutionsTypeRoutes)],
-  exports: [
-    ClarisaInstitutionsTypeRepository
-  ]
+  exports: [ClarisaInstitutionsTypeRepository],
 })
 export class ClarisaInstitutionsTypeModule {}

@@ -1,5 +1,4 @@
 import { ResultInnovationPackage } from '../entities/result-innovation-package.entity';
-import { CreateInnovationPackagingExpertDto } from '../../innovation-packaging-experts/dto/create-innovation-packaging-expert.dto';
 import { ResultCountriesSubNational } from '../../../results/result-countries-sub-national/entities/result-countries-sub-national.entity';
 export class CreateResultInnovationPackageDto {
   public result_id: number;

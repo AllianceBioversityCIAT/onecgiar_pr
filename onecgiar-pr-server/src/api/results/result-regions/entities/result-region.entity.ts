@@ -9,7 +9,6 @@ import {
 } from 'typeorm';
 import { ClarisaRegion } from '../../../../clarisa/clarisa-regions/entities/clarisa-region.entity';
 import { Result } from '../../entities/result.entity';
-import { Version } from '../../../versioning/entities/version.entity';
 
 @Entity('result_region')
 export class ResultRegion {
