@@ -125,23 +125,23 @@ export class ResultsController {
 
   @Post('map/legacy')
   async mapResultLegacy(
-    @Body() MapLegacy: MapLegacy,
+    @Body() mapLegacy: MapLegacy,
     @UserToken() user: TokenDto,
   ) {
     const { message, response, status } =
-      await this.resultsService.mapResultLegacy(MapLegacy, user);
+      await this.resultsService.mapResultLegacy(mapLegacy, user);
     throw new HttpException({ message, response }, status);
   }
 
   @Patch('create/general-information')
   async createGeneralInformation(
     @Body()
-    CreateGeneralInformationResultDto: CreateGeneralInformationResultDto,
+    createGeneralInformationResultDto: CreateGeneralInformationResultDto,
     @UserToken() user: TokenDto,
   ) {
     const { message, response, status } =
       await this.resultsService.createResultGeneralInformation(
-        CreateGeneralInformationResultDto,
+        createGeneralInformationResultDto,
         user,
       );
     throw new HttpException({ message, response }, status);

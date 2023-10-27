@@ -6,7 +6,6 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { BaseEntity } from '../../../../shared/entities/base-entity';
-import { Version } from '../../../versioning/entities/version.entity';
 import { ResultInnovationPackage } from '../../result-innovation-package/entities/result-innovation-package.entity';
 import { Result } from '../../../results/entities/result.entity';
 
@@ -35,14 +34,14 @@ export class ResultIpMeasure extends BaseEntity {
   @Column({
     name: 'result_id',
     type: 'bigint',
-    nullable: true
+    nullable: true,
   })
   result_id: number;
 
   @Column({
     name: 'result_ip_id',
     type: 'bigint',
-    nullable: true
+    nullable: true,
   })
   result_ip_id: number;
 
@@ -55,10 +54,7 @@ export class ResultIpMeasure extends BaseEntity {
   })
   obj_result_ip_id: ResultInnovationPackage;
 
-  @ManyToOne(
-    () => Result,
-    (r) => r.id,
-  )
+  @ManyToOne(() => Result, (r) => r.id)
   @JoinColumn({
     name: 'result_id',
   })

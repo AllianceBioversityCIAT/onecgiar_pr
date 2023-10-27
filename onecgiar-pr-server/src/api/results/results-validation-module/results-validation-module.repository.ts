@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, Repository, QueryRunner } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { Validation } from './entities/validation.entity';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 import { env } from 'process';
+import { GetValidationSectionDto } from './dto/getValidationSection.dto';
 
 @Injectable()
 export class resultValidationRepository
@@ -104,7 +105,7 @@ export class resultValidationRepository
 				(r.description is not null
 				and r.description <> '')`
           : ``
-      	}
+      }
 			and (
 				r.gender_tag_level_id is not null
 				and r.gender_tag_level_id <> ''

@@ -54,7 +54,6 @@ export class ClarisaImpactAreaIndicator {
   })
   name: string;
 
-
-  @OneToMany(() => ResultIpImpactArea, ria => ria.obj_impact_area_indicator)
+  @OneToMany(() => ResultIpImpactArea, (ria) => ria.obj_impact_area_indicator)
   obj_impact_area_indicator_result_impact_area: ResultIpImpactArea[];
 }

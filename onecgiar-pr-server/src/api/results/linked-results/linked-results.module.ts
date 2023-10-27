@@ -21,7 +21,7 @@ import { ResultsPolicyChangesRepository } from '../summary/repositories/results-
     VersionsService,
     VersionRepository,
     ReturnResponse,
-    ResultsPolicyChangesRepository
+    ResultsPolicyChangesRepository,
   ],
   exports: [LinkedResultRepository],
 })

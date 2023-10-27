@@ -1,18 +1,18 @@
 export class GetValidationSectionInnoPckgDto {
-    public sectionName: string;
-    public validation!: string;
-    public step: string;
+  public sectionName: string;
+  public validation!: string;
+  public step: string;
 }
 
 export class GreenchecksResponse {
-    response: {
-        mainSection: {
-            sectionName: string;
-            validation: number | string;
-        }[];
-        stepSections: GetValidationSectionInnoPckgDto[];
-        validResult: number
-    };
-    message: string;
-    status: number;
+  response: {
+    mainSection: {
+      sectionName: string;
+      validation: number | string;
+    }[];
+    stepSections: GetValidationSectionInnoPckgDto[];
+    validResult: number;
+  };
+  message: string;
+  status: number;
 }
