@@ -19,11 +19,8 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
   outputList = [];
   eoiList = [];
   fullInitiativeToc = null;
-  indicators: any = [];
-  indicatorView = false;
   disabledInput = false;
   testingYesOrNo;
-  showOutcomeLevel = false;
 
   constructor(public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService, public multipleWpsService: MultipleWPsServiceService) {}
 
@@ -43,7 +40,7 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
     this.get_versionDashboard();
     this.GET_outputList();
     this.GET_EOIList();
-    this.valdiateEOI(this.initiative);
+    this.theoryOfChangesServices.validateEOI(this.initiative);
     if (this.initiative?.toc_result_id !== null) {
       this.getIndicator();
     }
@@ -127,28 +124,28 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
     });
   }
 
-  valdiateEOI(initiative) {
-    this.showOutcomeLevel = false;
-    if (this.theoryOfChangesServices?.planned_result === false) initiative.toc_level_id = 3;
-
-    setTimeout(() => {
-      this.showOutcomeLevel = true;
-    }, 100);
+  validateEOI(initiative) {
+    this.theoryOfChangesServices.showOutcomeLevel = false;
 
     if (!this.theoryOfChangesServices?.planned_result) {
-      this.indicatorView = false;
-      this.indicators = [];
+      initiative.toc_level_id = 3;
+      this.theoryOfChangesServices.indicatorView = false;
     }
+
+    setTimeout(() => {
+      this.theoryOfChangesServices.showOutcomeLevel = true;
+    }, 100);
   }
 
   getIndicator() {
-    this.indicators = [];
+    this.theoryOfChangesServices.indicatorView = false;
 
-    this.indicatorView = false;
     this.disabledInput = false;
 
     this.api.resultsSE.Get_indicator(this.initiative?.toc_result_id, this.initiative?.initiative_id).subscribe({
       next: ({ response }) => {
+        this.multipleWpsService.activeTab.indicators = response?.informationIndicator;
+
         this.theoryOfChangesServices.targetsIndicators = response?.informationIndicator;
         this.theoryOfChangesServices.impactAreasTargets = response?.impactAreas;
         this.theoryOfChangesServices.sdgTargest = response?.sdgTargets;
@@ -168,15 +165,9 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
           is_sdg_action_impact: response?.is_sdg_action_impact
         };
 
-        if (this.indicators.length == 1) {
-          this.disabledInput = true;
-        }
-
         setTimeout(() => {
-          this.indicatorView = true;
+          this.theoryOfChangesServices.indicatorView = true;
         }, 100);
-
-        this.indicatorView = true;
       },
       error: err => {
         console.error(err);
@@ -189,7 +180,7 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
     if (this.resultLevelId == 1) {
       narrative = 'output';
     }
-    if (this.showOutcomeLevel && (this.resultLevelId == 1 ? this.theoryOfChangesServices?.planned_result == false : true)) {
+    if (this.theoryOfChangesServices.showOutcomeLevel && (this.resultLevelId == 1 ? this.theoryOfChangesServices?.planned_result == false : true)) {
       narrative = 'outcome';
     }
     if ((this.resultLevelId == 1 ? this.theoryOfChangesServices?.planned_result == false : true) && this.initiative.toc_level_id != 3) {
@@ -199,14 +190,14 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
       narrative = 'outcome';
     }
 
-    return 'Indicator(s) of the ' + narrative + ' selected';
+    return `Indicator(s) of the ${narrative} selected`;
   }
 
   // Change initiative info when change of active initiative
 
   ngOnChanges() {
-    this.valdiateEOI(this?.initiative);
-    if (this.initiative.toc_result_id !== null) {
+    this.theoryOfChangesServices.validateEOI(this?.initiative);
+    if (this.initiative?.toc_result_id !== null && this.initiative?.initiative_id !== null) {
       this.getIndicator();
     }
   }

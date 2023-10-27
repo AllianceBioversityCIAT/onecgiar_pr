@@ -19,7 +19,6 @@ export class TocInitiativeOutComponent implements OnInit {
   eoiList = [];
   fullInitiativeToc = null;
   indicators: any = [];
-  indicatorView = false;
   disabledInput = false;
   testingYesOrNo;
   SDGtestingYesorNo;
@@ -42,7 +41,7 @@ export class TocInitiativeOutComponent implements OnInit {
     this.get_versionDashboard();
     this.GET_outputList();
     this.GET_EOIList();
-    this.valdiateEOI(this.initiative);
+    this.theoryOfChangesServices.validateEOI(this.initiative);
     if (this.initiative.toc_result_id != null) {
       this.getIndicator();
     }
@@ -68,6 +67,15 @@ export class TocInitiativeOutComponent implements OnInit {
     return text;
   }
 
+  clearTocResultId() {
+    // this.initiative.forEach(element => {
+    //   element.toc_level_id = !this.theoryOfChangesServices.planned_result ? 3 : null;
+    // });
+    // this.initiative.forEach(element => {
+    //   element.toc_result_id = null;
+    // });
+  }
+
   GET_outputList() {
     this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.api.dataControlSE.currentNotification?.results_id || this.initiative?.results_id || this.api.dataControlSE?.currentResult?.id, this.initiative.initiative_id, 1).subscribe({
       next: ({ response }) => {
@@ -76,7 +84,7 @@ export class TocInitiativeOutComponent implements OnInit {
       },
       error: err => {
         this.outputList = [];
-        // console.error(err);
+        console.error(err);
       }
     });
   }
@@ -100,21 +108,10 @@ export class TocInitiativeOutComponent implements OnInit {
       },
       error: err => {
         this.eoiList = [];
-        // console.error(err);
+        console.error(err);
       }
     });
   }
-
-  // GET_fullInitiativeTocByinitId() {
-  //   this.api.tocApiSE.GET_fullInitiativeTocByinitId(this.initiative.initiative_id).subscribe(
-  //     ({ response }) => {
-  //       this.fullInitiativeToc = response[0]?.toc_id;
-  //     },
-  //     err => {
-  //       console.error(err);
-  //     }
-  //   );
-  // }
 
   get_versionDashboard() {
     this.api.resultsSE.get_vesrsionDashboard(this.initiative[0].toc_result_id, this.initiative[0].initiative_id).subscribe({
@@ -127,17 +124,17 @@ export class TocInitiativeOutComponent implements OnInit {
     });
   }
 
-  showOutcomeLevel = true;
+  validateEOI(initiative) {
+    this.theoryOfChangesServices.showOutcomeLevel = false;
 
-  valdiateEOI(initiative) {
-    this.showOutcomeLevel = false;
     if (this.theoryOfChangesServices?.planned_result == false) initiative.toc_level_id = 3;
     setTimeout(() => {
-      this.showOutcomeLevel = true;
+      this.theoryOfChangesServices.showOutcomeLevel = true;
     }, 100);
 
     if (!this.theoryOfChangesServices?.planned_result) {
-      this.indicatorView = false;
+      this.theoryOfChangesServices.indicatorView = false;
+
       this.indicators = [];
     }
   }
@@ -145,8 +142,9 @@ export class TocInitiativeOutComponent implements OnInit {
   async getIndicator() {
     this.indicators = [];
 
-    this.indicatorView = false;
+    this.theoryOfChangesServices.indicatorView = false;
     this.disabledInput = false;
+
     await this.api.resultsSE.Get_indicator(this.initiative.toc_result_id, this.initiative.initiative_id).subscribe(({ response }) => {
       this.theoryOfChangesServices.targetsIndicators = response?.informationIndicator;
       this.theoryOfChangesServices.impactAreasTargets = response?.impactAreas;
@@ -170,11 +168,12 @@ export class TocInitiativeOutComponent implements OnInit {
       if (this.indicators.length == 1) {
         this.disabledInput = true;
       }
+
       setTimeout(() => {
-        this.indicatorView = true;
+        this.theoryOfChangesServices.indicatorView = true;
       }, 100);
     });
-    this.indicatorView = true;
+    this.theoryOfChangesServices.indicatorView = true;
   }
 
   narrativeTypeResult() {
@@ -182,7 +181,7 @@ export class TocInitiativeOutComponent implements OnInit {
     if (this.resultLevelId == 1) {
       narrative = 'output';
     }
-    if (this.showOutcomeLevel && (this.resultLevelId == 1 ? this.theoryOfChangesServices?.planned_result == false : true)) {
+    if (this.theoryOfChangesServices.showOutcomeLevel && (this.resultLevelId == 1 ? this.theoryOfChangesServices?.planned_result == false : true)) {
       narrative = 'outcome';
     }
     if ((this.resultLevelId == 1 ? this.theoryOfChangesServices?.planned_result == false : true) && this.initiative.toc_level_id != 3) {

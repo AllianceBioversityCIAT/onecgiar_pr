@@ -1,5 +1,5 @@
 <div class="flex-no-wrap"
-  *ngIf="this.theoryOfChangesServices?.planned_result !== null&& this.multipleWpsService.showMultipleWPsContent">
+  *ngIf="this.theoryOfChangesServices?.planned_result !== null && this.multipleWpsService.showMultipleWPsContent">
   <app-pr-select *ngIf="this.theoryOfChangesServices?.planned_result && resultLevelId == 1" [options]="this.outputList"
     label="Output" optionLabel="extraInformation" optionValue="toc_result_id" [disabled]="!this.editable"
     [editable]="editable" placeholder="Select output" [(ngModel)]="initiative.toc_result_id" [extraInformation]="true"
@@ -7,12 +7,12 @@
   </app-pr-select>
 
   <div style="max-width: 250px;"
-    *ngIf="this.showOutcomeLevel && (resultLevelId == 1 ? this.theoryOfChangesServices?.planned_result === false : true)">
+    *ngIf="this.theoryOfChangesServices?.showOutcomeLevel && (resultLevelId == 1 ? this.theoryOfChangesServices?.planned_result === false : true)">
     <app-pr-select [options]="this.tocInitiativeOutcomeListsSE.outcomeLevelList|outcomeLevelFilter:2"
       label="Outcome level" [editable]="editable"
       [disabled]="(resultLevelId == 1 ? true : this.theoryOfChangesServices?.planned_result == false) || !this.editable"
       optionLabel="name" optionValue="toc_level_id" placeholder="Select outcome level"
-      [(ngModel)]="initiative.toc_level_id" (selectOptionEvent)="indicatorView = false">
+      [(ngModel)]="initiative.toc_level_id" (selectOptionEvent)="this.theoryOfChangesServices.indicatorView = false">
     </app-pr-select>
   </div>
 
@@ -35,7 +35,7 @@
 
 <hr class="divider-20">
 
-<div *ngIf="indicatorView">
+<div *ngIf="this.theoryOfChangesServices.indicatorView">
   <app-alert-status description="The selected ToC element does not have any indicators associated with it."
     *ngIf="!this.theoryOfChangesServices.body[indexYesorNo].targetsIndicators.length"></app-alert-status>
 
@@ -44,8 +44,7 @@
   </app-pr-field-header>
 
   <app-target-indicator [initiative]="indicator" [disabledInputs]="disabledInput"
-    *ngFor="let indicator of this.theoryOfChangesServices.body[indexYesorNo].targetsIndicators"
-    [resultLevelId]="resultLevelId">
+    *ngFor="let indicator of initiative.indicators" [resultLevelId]="resultLevelId">
   </app-target-indicator>
 
   <div *ngIf="isIpsr === false">

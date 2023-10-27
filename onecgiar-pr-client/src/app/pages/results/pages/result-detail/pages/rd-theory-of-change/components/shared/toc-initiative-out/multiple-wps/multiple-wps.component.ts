@@ -32,18 +32,14 @@ export class MultipleWPsComponent implements OnInit {
   @Input() isIpsr: boolean = false;
   @Input() indexYesorNo: number;
 
-  activeTab: any;
-
   constructor(public theoryOfChangesServices: RdTheoryOfChangesServicesService, public multipleWpsService: MultipleWPsServiceService) {}
 
   ngOnInit(): void {
-    this.activeTab = this.initiative[0];
+    this.multipleWpsService.activeTab = this.initiative[0];
 
     this.initiative.forEach((tab: any) => {
       tab.uniqueId = Math.random().toString(36).substring(7);
     });
-
-    console.log('this.initiative', this.initiative);
   }
 
   dynamicTabTitle(tabNumber) {
@@ -72,14 +68,12 @@ export class MultipleWPsComponent implements OnInit {
   }
 
   onActiveTab(tab: any) {
-    this.activeTab = tab;
+    this.multipleWpsService.activeTab = tab;
     this.multipleWpsService.showMultipleWPsContent = false;
 
     setTimeout(() => {
       this.multipleWpsService.showMultipleWPsContent = true;
     }, 20);
-
-    console.log('this.activeTab', this.activeTab);
   }
 
   onDeleteTab(tab: any) {
@@ -90,8 +84,6 @@ export class MultipleWPsComponent implements OnInit {
     this.initiative = this.initiative.filter(t => t.uniqueId !== tab.uniqueId);
     this.theoryOfChangesServices.result_toc_result = this.theoryOfChangesServices.result_toc_result.filter(t => t.uniqueId !== tab.uniqueId);
 
-    this.activeTab = this.initiative[0];
-
-    console.log('borrado', this.initiative);
+    this.multipleWpsService.activeTab = this.initiative[0];
   }
 }

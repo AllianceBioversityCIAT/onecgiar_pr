@@ -16,8 +16,23 @@ export class RdTheoryOfChangesServicesService {
   primarySubmitter: any = null;
   planned_result = null;
   result_toc_result = null;
+  indicatorView = false;
+  showOutcomeLevel = true;
 
   constructor() {}
+
+  validateEOI(initiative) {
+    this.showOutcomeLevel = false;
+
+    if (!this.planned_result) {
+      initiative.toc_level_id = 3;
+    }
+
+    this.indicatorView = false;
+    setTimeout(() => {
+      this.showOutcomeLevel = true;
+    }, 100);
+  }
 }
 
 export class intefacesTheoryOfChanges {
