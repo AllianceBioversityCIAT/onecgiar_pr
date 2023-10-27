@@ -7,7 +7,6 @@ import { PutItemCommand, ScanCommand } from '@aws-sdk/client-dynamodb';
 import { LogsModel } from './entities/dynamodb-log.schema';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { Actions } from './dto/enumAction.const';
-import { Number } from 'aws-sdk/clients/iot';
 import { Result } from '../../api/results/entities/result.entity';
 
 @Injectable()
@@ -57,7 +56,7 @@ export class LogRepository {
     }
   }
 
-  async findByResultCode(resultCode: Number): Promise<LogsSchemaDto[]> {
+  async findByResultCode(resultCode: number): Promise<LogsSchemaDto[]> {
     try {
       const params = {
         TableName: 'reporting_logs_test',
@@ -80,7 +79,7 @@ export class LogRepository {
     }
   }
 
-  async findByUser(userId: Number): Promise<LogsSchemaDto[]> {
+  async findByUser(userId: number): Promise<LogsSchemaDto[]> {
     try {
       const params = {
         TableName: 'reporting_logs_test',

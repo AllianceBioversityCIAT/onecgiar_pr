@@ -19,7 +19,7 @@ import { ClarisaOutcomeIndicatorsModule } from './clarisa-outcome-indicators/cla
 import { ClarisaRegionTypesModule } from './clarisa-region-types/clarisa-region-types.module';
 import { ClarisaTaskService } from './clarisatask.service';
 import { ClarisaInitiativesModule } from './clarisa-initiatives/clarisa-initiatives.module';
-import { HttpModule, HttpService } from '@nestjs/axios';
+import { HttpModule } from '@nestjs/axios';
 import { ClarisaInnovationCharacteristicsModule } from './clarisa-innovation-characteristics/clarisa-innovation-characteristics.module';
 import { ClarisaInnovationTypeModule } from './clarisa-innovation-type/clarisa-innovation-type.module';
 import { ClarisaInnovationReadinessLevelsModule } from './clarisa-innovation-readiness-levels/clarisa-innovation-readiness-levels.module';

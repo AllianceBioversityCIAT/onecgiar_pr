@@ -3,9 +3,15 @@
     max-height: calc(100vh - 127px);
     overflow-y: scroll;
 
+    .dropdown-filters {
+        display: grid;
+        gap: 20px;
+        grid-template-columns: minmax(200px, 250px) 1fr;
+    }
+
     .filter_submission_buttons {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(5, 1fr);
         gap: 10px;
 
         .all {
@@ -50,6 +56,30 @@
 
             }
         }
+
+        .quality-assessed {
+            border: 2px solid #1ba9eb !important;
+            color: #1ba9eb !important;
+
+            &.active {
+                background-color: #1ba9eb;
+                color: white !important;
+
+            }
+        }
+
+        .discontinued {
+            border: 2px solid #eb4c1b !important;
+            color: #eb4c1b !important;
+
+            &.active {
+                background-color: #eb4c1b;
+                color: white !important;
+
+            }
+        }
+
+
 
         .option {
             color: white;

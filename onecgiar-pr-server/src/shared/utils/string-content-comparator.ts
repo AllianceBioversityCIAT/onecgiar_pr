@@ -23,7 +23,7 @@ export class StringContentComparator {
   static contentCompare(
     stringOne: string | null,
     stringTwo: string | null,
-    nullFirst: boolean = false,
+    nullFirst = false,
   ): number {
     if (stringOne == null && stringTwo == null) {
       return 0;

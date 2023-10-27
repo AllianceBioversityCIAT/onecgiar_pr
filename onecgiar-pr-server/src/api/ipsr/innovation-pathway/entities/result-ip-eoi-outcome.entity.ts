@@ -6,9 +6,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Ipsr } from '../../entities/ipsr.entity';
-import { TocResult } from '../../../../toc/toc-results/entities/toc-result.entity';
 import { BaseEntity } from '../../../../shared/entities/base-entity';
-import { Version } from '../../../versioning/entities/version.entity';
 
 @Entity('result_ip_eoi_outcomes')
 export class ResultIpEoiOutcome extends BaseEntity {
@@ -39,10 +37,4 @@ export class ResultIpEoiOutcome extends BaseEntity {
     name: 'result_by_innovation_package_id',
   })
   obj_result_by_innovation_package: Ipsr;
-
-  @ManyToOne(() => TocResult, (tr) => tr.toc_result_id)
-  @JoinColumn({
-    name: 'toc_result_id',
-  })
-  obj_toc_result: TocResult;
 }

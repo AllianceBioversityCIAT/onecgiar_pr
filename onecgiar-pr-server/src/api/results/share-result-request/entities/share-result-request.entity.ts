@@ -8,7 +8,6 @@ import {
 } from 'typeorm';
 import { Result } from '../../entities/result.entity';
 import { ClarisaInitiative } from '../../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
-import { TocResult } from '../../../../toc/toc-results/entities/toc-result.entity';
 import { ClarisaActionAreaOutcome } from '../../../../clarisa/clarisa-action-area-outcome/entities/clarisa-action-area-outcome.entity';
 import { RequestStatus } from './request-status.entity';
 import { User } from '../../../../auth/modules/user/entities/user.entity';

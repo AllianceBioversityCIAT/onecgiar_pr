@@ -9,7 +9,10 @@ import { PrimaryImpactAreaModule } from './primary-impact-area/primary-impact-ar
 
 @Module({
   controllers: [TypeOneReportController],
-  imports: [RouterModule.register(typeOneReportRoutes), PrimaryImpactAreaModule],
-  providers: [TypeOneReportService,HandlersError, TypeOneReportRepository],
+  imports: [
+    RouterModule.register(typeOneReportRoutes),
+    PrimaryImpactAreaModule,
+  ],
+  providers: [TypeOneReportService, HandlersError, TypeOneReportRepository],
 })
 export class TypeOneReportModule {}

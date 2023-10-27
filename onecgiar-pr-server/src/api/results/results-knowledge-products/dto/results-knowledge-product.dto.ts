@@ -1,4 +1,3 @@
-import { BasicInfoDto } from '../../../../shared/globalInterfaces/basic-info.dto';
 import { CreateResultDto } from '../../dto/create-result.dto';
 import { FullFairData } from './fair-data.dto';
 import { ResultsKnowledgeProductAltmetricDto } from './results-knowledge-product-altmetric.dto';

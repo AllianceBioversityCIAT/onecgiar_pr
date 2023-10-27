@@ -11,7 +11,9 @@ describe('ResultQuestionsController', () => {
       providers: [ResultQuestionsService],
     }).compile();
 
-    controller = module.get<ResultQuestionsController>(ResultQuestionsController);
+    controller = module.get<ResultQuestionsController>(
+      ResultQuestionsController,
+    );
   });
 
   it('should be defined', () => {

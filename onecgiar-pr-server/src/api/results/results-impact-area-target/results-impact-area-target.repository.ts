@@ -70,7 +70,7 @@ export class ResultsImpactAreaTargetRepository
         );
         final_data = await this.save(response_edit);
       } else {
-        const queryData: string = `
+        const queryData = `
         insert into results_impact_area_target
         (
         is_active,
@@ -236,11 +236,7 @@ export class ResultsImpactAreaTargetRepository
 
     try {
       if (target?.length) {
-        const upDateInactiveResult = await this.query(upDateInactive, [
-          userId,
-          resultId,
-          impactId,
-        ]);
+        await this.query(upDateInactive, [userId, resultId, impactId]);
 
         return await this.query(upDateActive, [userId, resultId, impactId]);
       } else {
@@ -295,8 +291,8 @@ export class ResultsImpactAreaTargetRepository
       await this.update({ result_id: resultId }, { is_active: false });
 
       if (impactsTarget.length) {
-        for (let impact of impactsTarget) {
-          let targetIndicators = await this.query(queryData, [
+        for (const impact of impactsTarget) {
+          const targetIndicators = await this.query(queryData, [
             resultId,
             impact.targetId,
           ]);

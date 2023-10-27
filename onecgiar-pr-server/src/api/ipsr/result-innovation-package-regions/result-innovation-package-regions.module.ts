@@ -4,6 +4,6 @@ import { ResultInnovationPackageRegionsController } from './result-innovation-pa
 
 @Module({
   controllers: [ResultInnovationPackageRegionsController],
-  providers: [ResultInnovationPackageRegionsService]
+  providers: [ResultInnovationPackageRegionsService],
 })
 export class ResultInnovationPackageRegionsModule {}

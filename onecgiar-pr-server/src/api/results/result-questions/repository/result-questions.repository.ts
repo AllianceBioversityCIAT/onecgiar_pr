@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
-import { ResultQuestionType } from '../entities/result-question-types.entity';
 import { ResultQuestion } from '../entities/result-question.entity';
 
 @Injectable()
@@ -15,7 +14,6 @@ export class ResultQuestionsRepository extends Repository<ResultQuestion> {
 
   async innovationDev() {
     try {
-      
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultQuestionsRepository.name,

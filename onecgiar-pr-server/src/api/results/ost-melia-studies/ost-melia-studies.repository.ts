@@ -10,7 +10,7 @@ export class OstMeliaStudiesRepository {
   async getMeliaStudiesFromResultId(
     initiativeId: number,
   ): Promise<MeliaStudyDto[]> {
-    const query: string = `
+    const query = `
     SELECT
         i.id as initiative_id,
         msa.id as melia_id ,

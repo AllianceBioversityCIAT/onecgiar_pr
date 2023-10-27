@@ -6,19 +6,20 @@ import { TypeOneReportRepository } from './type-one-report.repository';
 
 @Injectable()
 export class TypeOneReportService {
-
   constructor(
     private readonly _handlersError: HandlersError,
-    private readonly _typeOneReportRepository: TypeOneReportRepository
-  ){}
+    private readonly _typeOneReportRepository: TypeOneReportRepository,
+  ) {}
 
   create(createTypeOneReportDto: CreateTypeOneReportDto) {
     return createTypeOneReportDto;
   }
 
-  async getFactSheetByInit(initId: number){
+  async getFactSheetByInit(initId: number) {
     try {
-      const results = await this._typeOneReportRepository.getFactSheetByInit(initId);
+      const results = await this._typeOneReportRepository.getFactSheetByInit(
+        initId,
+      );
       return {
         response: results[0],
         message: 'Successful response',
@@ -29,9 +30,11 @@ export class TypeOneReportService {
     }
   }
 
-  async getKeyResultStory(initId:number){
+  async getKeyResultStory(initId: number) {
     try {
-      const results = await this._typeOneReportRepository.getKeyResultStory(initId);
+      const results = await this._typeOneReportRepository.getKeyResultStory(
+        initId,
+      );
       return {
         response: results,
         message: 'Successful response',
@@ -40,7 +43,6 @@ export class TypeOneReportService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
-    
   }
 
   findAll() {

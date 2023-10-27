@@ -1,4 +1,4 @@
-class GetValidationSectionDto{
-    public section_name: string;
-    public validation: number;
+export class GetValidationSectionDto {
+  public section_name: string;
+  public validation: number;
 }

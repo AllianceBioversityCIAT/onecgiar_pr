@@ -10,6 +10,15 @@
   gap: 10px;
 }
 
+.download_button_container {
+  // center de only one child element to rigth
+  display: flex;
+  justify-content: flex-end;
+  margin-right: 50px;
+  margin-top: -45px;
+
+}
+
 .table {
   padding-bottom: 100px;
   position: relative;

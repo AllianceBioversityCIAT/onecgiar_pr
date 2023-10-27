@@ -73,7 +73,7 @@ export class ResultByIntitutionsTypeRepository
         );
         final_data = await this.save(response_edit);
       } else {
-        const queryData: string = `
+        const queryData = `
         insert into results_by_institution_type 
           (
           is_active,
@@ -383,11 +383,7 @@ export class ResultByIntitutionsTypeRepository
     `;
     try {
       if (institutions.length) {
-        const upDateInactiveResult = await this.query(upDateInactive, [
-          userId,
-          resultId,
-          isActor ? 1 : 2,
-        ]);
+        await this.query(upDateInactive, [userId, resultId, isActor ? 1 : 2]);
 
         return await this.query(upDateActive, [
           userId,
