@@ -1,16 +1,5 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  HttpException,
-} from '@nestjs/common';
+import { Controller, Get, Param, HttpException } from '@nestjs/common';
 import { ResultQuestionsService } from './result-questions.service';
-import { CreateResultQuestionDto } from './dto/create-result-question.dto';
-import { UpdateResultQuestionDto } from './dto/update-result-question.dto';
 
 @Controller()
 export class ResultQuestionsController {

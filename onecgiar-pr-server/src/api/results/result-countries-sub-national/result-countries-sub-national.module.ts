@@ -6,6 +6,10 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 
 @Module({
   controllers: [ResultCountriesSubNationalController],
-  providers: [ResultCountriesSubNationalService, ResultCountriesSubNationalRepository, HandlersError]
+  providers: [
+    ResultCountriesSubNationalService,
+    ResultCountriesSubNationalRepository,
+    HandlersError,
+  ],
 })
-export class ResultCountriesSubNationalModule { }
+export class ResultCountriesSubNationalModule {}

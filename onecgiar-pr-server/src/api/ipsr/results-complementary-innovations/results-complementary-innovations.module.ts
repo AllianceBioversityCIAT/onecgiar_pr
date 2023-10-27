@@ -6,6 +6,10 @@ import { ResultsComplementaryInnovationRepository } from './repositories/results
 
 @Module({
   controllers: [ResultsComplementaryInnovationsController],
-  providers: [ResultsComplementaryInnovationsService, HandlersError, ResultsComplementaryInnovationRepository]
+  providers: [
+    ResultsComplementaryInnovationsService,
+    HandlersError,
+    ResultsComplementaryInnovationRepository,
+  ],
 })
 export class ResultsComplementaryInnovationsModule {}

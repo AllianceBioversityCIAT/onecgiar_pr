@@ -9,7 +9,6 @@ import {
 } from 'typeorm';
 import { Result } from '../../entities/result.entity';
 import { ClarisaGlobalTarget } from '../../../../clarisa/clarisa-global-target/entities/clarisa-global-target.entity';
-import { Version } from '../../../versioning/entities/version.entity';
 import { User } from '../../../../auth/modules/user/entities/user.entity';
 
 @Entity('results_impact_area_target')

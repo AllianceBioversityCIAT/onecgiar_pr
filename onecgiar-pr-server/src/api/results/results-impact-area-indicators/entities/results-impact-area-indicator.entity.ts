@@ -8,7 +8,6 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../../../../auth/modules/user/entities/user.entity';
-import { Version } from '../../../versioning/entities/version.entity';
 import { ClarisaImpactAreaIndicator } from '../../../../clarisa/clarisa-impact-area-indicators/entities/clarisa-impact-area-indicator.entity';
 import { Result } from '../../entities/result.entity';
 

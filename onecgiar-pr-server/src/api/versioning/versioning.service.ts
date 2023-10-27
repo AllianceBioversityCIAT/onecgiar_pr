@@ -36,7 +36,6 @@ import { ResultsKnowledgeProductAuthorRepository } from '../results/results-know
 import { ResultsKnowledgeProductKeywordRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-keywords.repository';
 import { ResultsKnowledgeProductMetadataRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-metadata.repository';
 import { ResultsKnowledgeProductInstitutionRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-institution.repository';
-import { validationAttr } from '../../shared/utils/validation.utils';
 import {
   ActiveEnum,
   AppModuleIdEnum,
@@ -267,7 +266,17 @@ export class VersioningService {
     }
   }
 
-  async $_phaseChangeIPSR(result: Result, phase: Version, user: TokenDto) {}
+  async $_phaseChangeIPSR(result: Result, phase: Version, user: TokenDto) {
+    //TODO to implement once the IPSR replication is defined
+
+    const config = {
+      old_result_id: result.id,
+      phase: phase.id,
+      user: user,
+    };
+
+    return config ? result : { result: result, error: 'error' };
+  }
 
   async $_versionManagement(
     result: Result,
@@ -280,7 +289,7 @@ export class VersioningService {
         return await this.$_phaseChangeReporting(result, phase, user);
         break;
       case 2:
-        await this.$_phaseChangeIPSR(result, phase, user);
+        return await this.$_phaseChangeIPSR(result, phase, user);
         break;
       default:
         break;

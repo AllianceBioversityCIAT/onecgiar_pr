@@ -1,7 +1,6 @@
-import { Injectable, HttpStatus } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
+import { Injectable } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { env } from 'process';
-import { TypeOneReport } from './entities/type-one-report.entity';
 import { HandlersError } from 'src/shared/handlers/error.utils';
 @Injectable()
 export class TypeOneReportRepository {
@@ -10,8 +9,6 @@ export class TypeOneReportRepository {
     private readonly _handlersError: HandlersError,
   ) {}
   async getFactSheetByInit(initId: number) {
-    const date = new Date();
-
     const initiativeGeneralInformationQuery = `
     SELECT
       i.id AS initiative_id,

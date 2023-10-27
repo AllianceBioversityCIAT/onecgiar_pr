@@ -1,6 +1,5 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { CreateResultsTocResultDto } from './dto/create-results-toc-result.dto';
-import { UpdateResultsTocResultDto } from './dto/update-results-toc-result.dto';
 import { ResultsTocResultRepository } from './results-toc-results.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultsTocResult } from './entities/results-toc-result.entity';
@@ -10,21 +9,16 @@ import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
 import { ResultsCenter } from '../results-centers/entities/results-center.entity';
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
-import { ResultsByInititiative } from '../results_by_inititiatives/entities/results_by_inititiative.entity';
 import { VersionsService } from '../versions/versions.service';
-import { Version } from '../../versioning/entities/version.entity';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 import { ResultRepository } from '../result.repository';
 import { TocResultsRepository } from '../../../toc/toc-results/toc-results.repository';
 import { ResultsImpactAreaTargetRepository } from '../results-impact-area-target/results-impact-area-target.repository';
 import { ResultsImpactAreaIndicatorRepository } from '../results-impact-area-indicators/results-impact-area-indicators.repository';
-import { ResultsImpactAreaIndicator } from '../results-impact-area-indicators/entities/results-impact-area-indicator.entity';
-import { ResultsImpactAreaTarget } from '../results-impact-area-target/entities/results-impact-area-target.entity';
 import { ClarisaImpactAreaRepository } from '../../../clarisa/clarisa-impact-area/ClarisaImpactArea.repository';
 import { ShareResultRequestService } from '../share-result-request/share-result-request.service';
 import { CreateTocShareResult } from '../share-result-request/dto/create-toc-share-result.dto';
 import { ShareResultRequestRepository } from '../share-result-request/share-result-request.repository';
-import { log } from 'handlebars';
 import { ResultsTocResultIndicatorsRepository } from './results-toc-results-indicators.repository';
 import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/non_pooled_proyect_budget.repository';
 
@@ -54,13 +48,13 @@ export class ResultsTocResultsService {
     user: TokenDto,
   ) {
     try {
-      let {
+      let { contributors_result_toc_result } = createResultsTocResultDto;
+      const {
         contributing_np_projects,
         result_id,
         contributing_center,
         contributing_initiatives,
-        contributors_result_toc_result,
-        impacts,
+        result_toc_result,
         pending_contributing_initiatives,
         bodyNewTheoryOfChanges,
         impactsTarge,
@@ -78,11 +72,12 @@ export class ResultsTocResultsService {
       let initiativeArrayPnd: number[] = [];
 
       const titleArray = contributing_np_projects.map((el) => el.grant_title);
-      const iniciativeSubmitter =
-        await this._resultByInitiativesRepository.updateIniciativeSubmitter(
-          result_id,
-          initSubmitter.initiative_id,
-        );
+
+      await this._resultByInitiativesRepository.updateIniciativeSubmitter(
+        result_id,
+        initSubmitter.initiative_id,
+      );
+
       if (contributing_center.filter((el) => el.primary == true).length > 1) {
         contributing_center.map((el) => {
           el.primary = false;
@@ -653,14 +648,6 @@ export class ResultsTocResultsService {
     }
   }
 
-  update(id: number, updateResultsTocResultDto: UpdateResultsTocResultDto) {
-    return `This action updates a #${id} resultsTocResult`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} resultsTocResult`;
-  }
-
   async getTocResultIndicatorByResultTocId(
     resultIdToc: number,
     toc_result_id: number,
@@ -790,11 +777,4 @@ export class ResultsTocResultsService {
       return this._handlersError.returnErrorRes({ error });
     }
   }
-}
-
-interface resultToResultInterfaceToc {
-  toc_result_id?: number;
-  results_id: number;
-  action_area_outcome_id?: number;
-  planned_result?: boolean;
 }

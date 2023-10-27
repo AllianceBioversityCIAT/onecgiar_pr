@@ -11,7 +11,6 @@ import {
 } from 'typeorm';
 import { Result } from '../../entities/result.entity';
 import { InitiativeRole } from '../../initiative_roles/entities/initiative_role.entity';
-import { Version } from '../../../versioning/entities/version.entity';
 import { ClarisaInitiative } from '../../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { ResultInitiativeBudget } from '../../result_budget/entities/result_initiative_budget.entity';
 
