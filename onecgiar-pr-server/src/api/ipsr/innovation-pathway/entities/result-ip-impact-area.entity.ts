@@ -7,8 +7,6 @@ import {
 } from 'typeorm';
 import { Ipsr } from '../../entities/ipsr.entity';
 import { BaseEntity } from '../../../../shared/entities/base-entity';
-import { Version } from '../../../versioning/entities/version.entity';
-import { ClarisaImpactAreaIndicator } from '../../../../clarisa/clarisa-impact-area-indicators/entities/clarisa-impact-area-indicator.entity';
 import { ClarisaGlobalTarget } from '../../../../clarisa/clarisa-global-target/entities/clarisa-global-target.entity';
 
 @Entity('result_ip_impact_area_target')

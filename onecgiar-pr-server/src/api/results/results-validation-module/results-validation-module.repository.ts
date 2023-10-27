@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, Repository, QueryRunner } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { Validation } from './entities/validation.entity';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 import { env } from 'process';
+import { GetValidationSectionDto } from './dto/getValidationSection.dto';
 
 @Injectable()
 export class resultValidationRepository
@@ -147,30 +148,8 @@ export class resultValidationRepository
 				r.poverty_tag_level_id is not null
 				and r.poverty_tag_level_id <> ''
 			)
-			and (r.is_krs in (0, 1)) ${
-        resultLevel != 4 && resultLevel != 1
-          ? `and 
-				(((
-				select
-					COUNT(rbi.id)
-				from
-					results_by_institution rbi
-				WHERE
-					rbi.institution_roles_id = 1
-					and rbi.result_id = r.id
-					and rbi.is_active > 0) > 0)
-				or
-				((
-				select
-				COUNT(rbit.id)
-				from
-				results_by_institution_type rbit
-				WHERE
-					rbit.institution_roles_id = 1
-				and rbit.results_id = r.id
-				and rbit.is_active > 0) > 0))`
-          : ``
-      } then true
+			and (r.is_krs in (0, 1)) 
+			then true
 			else false
 		END as validation
 	FROM

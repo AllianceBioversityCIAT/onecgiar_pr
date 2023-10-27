@@ -1,25 +1,23 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { environment } from '../../../../../../../../../../../environments/environment';
 import { ApiService } from 'src/app/shared/services/api/api.service';
-import { Router } from '@angular/router';
 @Component({
   selector: 'app-target-indicator',
   templateUrl: './target-indicator.component.html',
   styleUrls: ['./target-indicator.component.scss']
 })
-export class TargetIndicatorComponent implements OnInit {
+export class TargetIndicatorComponent {
   disabledInput: boolean = false;
   itemReturn = null;
   iscalculated: string = 'width: 12px; height: 12px; border-radius: 100%; background-color: #B9B9B9;margin-top: 20px; margin-left: 7px;';
 
   @Input() initiative: any;
   @Input() disabledInputs: any;
+  @Input() resultLevelId: any;
+  @Input() planned_result: any;
   text = `<span style="color: #6777D8; font-weight: bold;">4. Geographic location</span>`;
-  constructor(public api: ApiService, private router: Router) {}
 
-  ngOnInit(): void {
-    //(this.disabledInputs);
-  }
+  constructor(public api: ApiService) {}
 
   statusIndicator(status) {
     let statusIndicator = '';
@@ -74,6 +72,12 @@ export class TargetIndicatorComponent implements OnInit {
     return 'The type of result (' + item + ') you are reporting does not match the type (' + itemTwo + ') of this indicator, therefore, progress cannot be reported. Please ensure that the indicator category matches the indicator type for accurate reporting.';
   }
 
+  checkAlert() {
+    if (this.initiative.type_value !== 'custom' && this.initiative.number_result_type !== this.initiative?.result.result_type_id) return true;
+
+    return false;
+  }
+
   descriptionWarningYear(item, itemTwo) {
     const year = new Date(item).getFullYear();
     let booleanYear = false;
@@ -85,5 +89,9 @@ export class TargetIndicatorComponent implements OnInit {
       is_alert: booleanYear,
       description: 'You are reporting against an indicator that had a target in a following year. If you feel the TOC Result Framework is outdated please edit it. If the result framework is correct and you are reporting this result in advance, please go ahead.'
     };
+  }
+
+  showOutComeOrOutput() {
+    return `Other results contributing to the indicator of the ${this.planned_result && this.resultLevelId === 1 ? 'output' : 'outcome'}`;
   }
 }

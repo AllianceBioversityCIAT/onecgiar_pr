@@ -90,7 +90,7 @@ export class ResultActorRepository
         );
         final_data = await this.save(response_edit);
       } else {
-        const queryData: string = `
+        const queryData = `
         INSERT INTO result_actors (
           actor_type_id
           ,created_by
@@ -133,7 +133,7 @@ export class ResultActorRepository
           ,ra.women
           ,ra.women_youth
            FROM result_actors ra WHERE ra.result_id = ? and ra.is_active > 0`;
-        const response = await (<Promise<{ insertId }>>(
+        await (<Promise<{ insertId }>>(
           this.query(queryData, [
             config.user.id,
             config.user.id,

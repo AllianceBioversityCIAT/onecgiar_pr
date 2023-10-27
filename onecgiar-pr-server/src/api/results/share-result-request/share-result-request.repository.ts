@@ -275,7 +275,7 @@ export class ShareResultRequestRepository
     }
   }
 
-  async getInitiativeOnlyPendingByResult(userId: number, version: number = 1) {
+  async getInitiativeOnlyPendingByResult(userId: number, version = 1) {
     const queryData = `
     SELECT
     	srr.share_result_request_id,

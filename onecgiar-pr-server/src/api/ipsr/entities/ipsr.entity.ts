@@ -7,7 +7,6 @@ import {
   OneToMany,
 } from 'typeorm';
 import { BaseEntity } from '../../../shared/entities/base-entity';
-import { Version } from '../../versioning/entities/version.entity';
 import { Result } from '../../results/entities/result.entity';
 import { IpsrRole } from './ipsr-role.entity';
 import { ResultInnovationPackage } from '../result-innovation-package/entities/result-innovation-package.entity';

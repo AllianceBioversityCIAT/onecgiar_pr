@@ -1,19 +1,19 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { CreateResultsPackageTocResultDto } from './dto/create-results-package-toc-result.dto';
-import { UpdateResultsPackageTocResultDto } from './dto/update-results-package-toc-result.dto';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import {
+  HandlersError,
+  ReturnResponse,
+} from '../../../shared/handlers/error.utils';
 import { VersionsService } from '../../results/versions/versions.service';
 import { ResultRepository } from '../../results/result.repository';
 import { Version } from '../../versioning/entities/version.entity';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { Result } from '../../results/entities/result.entity';
-import { CreateResultsTocResultDto } from '../../results/results-toc-results/dto/create-results-toc-result.dto';
 import { IpsrRepository } from '../repository/ipsr.repository';
 import { NonPooledProjectRepository } from '../../results/non-pooled-projects/non-pooled-projects.repository';
 import { ResultsCenterRepository } from '../../results/results-centers/results-centers.repository';
 import { ResultByInitiativesRepository } from '../../results/results_by_inititiatives/resultByInitiatives.repository';
 import { ResultsTocResultRepository } from '../../results/results-toc-results/results-toc-results.repository';
-import { resultPackageTocResultDTO } from './dto/result-package-toc-result.dto';
 import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
 import { ResultByInstitutionsByDeliveriesTypeRepository } from '../../results/result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';
 import { ResultsByInstitution } from '../../results/results_by_institutions/entities/results_by_institution.entity';
@@ -22,10 +22,8 @@ import { ShareResultRequestService } from '../../results/share-result-request/sh
 import { ShareResultRequestRepository } from '../../results/share-result-request/share-result-request.repository';
 import { NonPooledProject } from '../../results/non-pooled-projects/entities/non-pooled-project.entity';
 import { ResultIpEoiOutcomeRepository } from '../innovation-pathway/repository/result-ip-eoi-outcomes.repository';
-import { ResultInnovationPackageRepository } from '../result-innovation-package/repositories/result-innovation-package.repository';
 import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
 import { VersioningService } from '../../versioning/versioning.service';
-import { InstitutionRoleEnum } from '../../results/results_by_institutions/entities/institution_role.enum';
 
 @Injectable()
 export class ResultsPackageTocResultService {
@@ -43,6 +41,7 @@ export class ResultsPackageTocResultService {
     private readonly _versionsService: VersionsService,
     private readonly _ipsrRepository: IpsrRepository,
     private readonly _handlersError: HandlersError,
+    private readonly _returnResponse: ReturnResponse,
     private readonly _versioningService: VersioningService,
   ) {}
 
@@ -223,7 +222,7 @@ export class ResultsPackageTocResultService {
       const { result_toc_result, contributors_result_toc_result } = crtr;
 
       // !result_toc_result
-      const saveTocResult = await this.saveResultPackageTocResult(
+      await this.saveResultPackageTocResult(
         rip,
         user,
         version,
@@ -370,8 +369,8 @@ export class ResultsPackageTocResultService {
       });
     } else {
       await this._resultsTocResultRepository.save({
-        results_id: rip.id,
-        initiative_id: owner ? rip.initiative_id : initiative_id,
+        result_id: rip.id,
+        initiative_ids: owner ? rip.initiative_id : initiative_id,
         toc_result_id: toc_result_id,
         planned_result: planned_result,
         last_updated_by: user.id,
@@ -417,7 +416,10 @@ export class ResultsPackageTocResultService {
         },
       });
 
-      if (result_toc_result['toc_level_id'] !== 3) {
+      if (
+        result_toc_result['toc_level_id'] !== 3 &&
+        searchIpEoi?.result_ip_eoi_outcome_id
+      ) {
         await this._resultIpEoiOutcomesRepository.update(
           searchIpEoi?.result_ip_eoi_outcome_id,
           {
@@ -432,6 +434,12 @@ export class ResultsPackageTocResultService {
           message: 'No End of Initiative Outcomes were saved',
           status: HttpStatus.OK,
         };
+      } else {
+        return this._returnResponse.format({
+          message: `The EOI cannot be saved because the Toc level is 3 or the EOI does not have an eoi result ID.`,
+          statusCode: HttpStatus.BAD_REQUEST,
+          response: { valid: false },
+        });
       }
 
       const searchContributingToc =

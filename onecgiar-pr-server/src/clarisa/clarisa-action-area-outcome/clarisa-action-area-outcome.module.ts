@@ -7,12 +7,10 @@ import { HandlersError } from '../../shared/handlers/error.utils';
 @Module({
   controllers: [ClarisaActionAreaOutcomeController],
   providers: [
-    ClarisaActionAreaOutcomeService, 
+    ClarisaActionAreaOutcomeService,
     ClarisaActionAreaOutcomeRepository,
-    HandlersError
+    HandlersError,
   ],
-  exports: [
-    ClarisaActionAreaOutcomeRepository
-  ]
+  exports: [ClarisaActionAreaOutcomeRepository],
 })
 export class ClarisaActionAreaOutcomeModule {}

@@ -1,6 +1,4 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { CreateResultQuestionDto } from './dto/create-result-question.dto';
-import { UpdateResultQuestionDto } from './dto/update-result-question.dto';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultQuestionsRepository } from './repository/result-questions.repository';
 import { ResultAnswerRepository } from './repository/result-answers.repository';

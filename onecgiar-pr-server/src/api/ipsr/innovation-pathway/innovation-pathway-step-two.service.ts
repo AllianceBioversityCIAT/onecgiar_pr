@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable, Type } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { ResultRepository } from '../../results/result.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultRegionRepository } from '../../results/result-regions/result-regions.repository';
@@ -17,10 +17,8 @@ import { ResultActorRepository } from '../../results/result-actors/repositories/
 import { ResultByIntitutionsTypeRepository } from '../../results/results_by_institution_types/result_by_intitutions_type.repository';
 import { ResultIpMeasureRepository } from '../result-ip-measures/result-ip-measures.repository';
 import { ResultIpImpactAreaRepository } from './repository/result-ip-impact-area-targets.repository';
-import { In } from 'typeorm';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { Ipsr } from '../entities/ipsr.entity';
-import { Version } from '../../versioning/entities/version.entity';
 import { ResultsComplementaryInnovationRepository } from '../results-complementary-innovations/repositories/results-complementary-innovation.repository';
 import { ResultsComplementaryInnovationsFunctionRepository } from '../results-complementary-innovations-functions/repositories/results-complementary-innovations-function.repository';
 import { ResultsComplementaryInnovationsFunction } from '../results-complementary-innovations-functions/entities/results-complementary-innovations-function.entity';
@@ -28,11 +26,8 @@ import { Evidence } from '../../../api/results/evidences/entities/evidence.entit
 import { EvidencesRepository } from '../../../api/results/evidences/evidences.repository';
 import { CreateComplementaryInnovationDto } from './dto/create-complementary-innovation.dto';
 import { Result } from '../../../api/results/entities/result.entity';
-import { Year } from '../../../api/results/years/entities/year.entity';
 import { YearRepository } from '../../../api/results/years/year.repository';
 import { ResultByInitiativesRepository } from 'src/api/results/results_by_inititiatives/resultByInitiatives.repository';
-import { ResultInnovationPackage } from '../result-innovation-package/entities/result-innovation-package.entity';
-import { ResultsByInititiative } from 'src/api/results/results_by_inititiatives/entities/results_by_inititiative.entity';
 import { ResultsComplementaryInnovation } from '../results-complementary-innovations/entities/results-complementary-innovation.entity';
 import { ComplementaryInnovationFunctionsRepository } from '../results-complementary-innovations-functions/repositories/complementary-innovation-functions.repository';
 import { UpdateComplementaryInnovationDto } from './dto/update-innovation-pathway.dto';
@@ -297,14 +292,13 @@ export class InnovationPathwayStepTwoService {
 
       const newResult = createResult.id;
 
-      const newInnovationByInitiative: ResultsByInititiative =
-        await this._resultByInitiativeRepository.save({
-          result_id: newResult,
-          initiative_id: CreateComplementaryInnovationDto.initiative_id,
-          initiative_role_id: 1,
-          created_by: User.id,
-          last_updated_by: User.id,
-        });
+      await this._resultByInitiativeRepository.save({
+        result_id: newResult,
+        initiative_id: CreateComplementaryInnovationDto.initiative_id,
+        initiative_role_id: 1,
+        created_by: User.id,
+        last_updated_by: User.id,
+      });
 
       const newResultIpResults: Ipsr =
         await this._innovationByResultRepository.save({

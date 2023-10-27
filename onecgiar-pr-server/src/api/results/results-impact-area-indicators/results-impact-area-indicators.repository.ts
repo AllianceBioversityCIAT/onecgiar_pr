@@ -87,7 +87,7 @@ export class ResultsImpactAreaIndicatorRepository
         );
         final_data = await this.save(response_edit);
       } else {
-        const queryData: string = `
+        const queryData = `
         insert into results_impact_area_indicators 
         (
           is_active,
@@ -256,11 +256,7 @@ export class ResultsImpactAreaIndicatorRepository
 
     try {
       if (indicators?.length) {
-        const upDateInactiveResult = await this.query(upDateInactive, [
-          userId,
-          resultId,
-          impactId,
-        ]);
+        await this.query(upDateInactive, [userId, resultId, impactId]);
 
         return await this.query(upDateActive, [userId, resultId, impactId]);
       } else {

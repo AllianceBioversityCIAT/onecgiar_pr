@@ -6,7 +6,6 @@ import {
   Entity,
 } from 'typeorm';
 import { ClarisaInstitutionsType } from '../../../../clarisa/clarisa-institutions-type/entities/clarisa-institutions-type.entity';
-import { Version } from '../../../versioning/entities/version.entity';
 import { InstitutionRole } from '../../../results/institution_roles/entities/institution_role.entity';
 import { Ipsr } from '../../entities/ipsr.entity';
 import { BaseEntity } from '../../../../shared/entities/base-entity';

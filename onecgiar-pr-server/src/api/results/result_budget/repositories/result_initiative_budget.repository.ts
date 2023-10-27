@@ -103,7 +103,7 @@ export class ResultInitiativeBudgetRepository
         );
         final_data = await this.save(response_edit);
       } else {
-        const queryData: string = `
+        const queryData = `
         INSERT INTO result_initiative_budget (
           created_date
           ,created_by

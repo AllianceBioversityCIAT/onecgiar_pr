@@ -20,7 +20,9 @@ export class ResultCountriesSubNationalRepository extends Repository<ResultCount
         set
           is_active = FALSE
         WHERE
-          result_countries_id in (${result_countries_id?.length ? result_countries_id.toString() : null});
+          result_countries_id in (${
+            result_countries_id?.length ? result_countries_id.toString() : null
+          });
         `;
       await this.query(inactiveQuery);
     } catch (error) {
@@ -31,5 +33,4 @@ export class ResultCountriesSubNationalRepository extends Repository<ResultCount
       });
     }
   }
-
 }

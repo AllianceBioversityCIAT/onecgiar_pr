@@ -73,7 +73,7 @@ export class ResultCountryRepository
         );
         final_data = await this.save(response_edit);
       } else {
-        const queryData: string = `
+        const queryData = `
         insert into result_country (
           is_active,
           result_id,
@@ -116,7 +116,7 @@ export class ResultCountryRepository
     return final_data;
   }
 
-  async getAllResultCountries(version: number = 1) {
+  async getAllResultCountries() {
     const query = `
     select 
     rc.result_country_id,
@@ -231,9 +231,7 @@ export class ResultCountryRepository
 
     try {
       if (Countries?.length) {
-        const upDateInactiveResult = await this.query(upDateInactive, [
-          resultId,
-        ]);
+        await this.query(upDateInactive, [resultId]);
 
         return await this.query(upDateActive, [resultId]);
       } else {

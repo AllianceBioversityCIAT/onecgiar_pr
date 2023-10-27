@@ -16,7 +16,6 @@ import {
 } from '../../shared/globalInterfaces/replicable.interface';
 
 import { LogicalDelete } from '../../shared/globalInterfaces/delete.interface';
-import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { predeterminedDateValidation } from '../../shared/utils/versioning.utils';
 
 @Injectable()
@@ -106,7 +105,7 @@ export class ResultRepository
         );
         final_data = await this.save(response_edit);
       } else {
-        const queryData: string = `
+        const queryData = `
         insert into \`result\` (
           description
           ,is_active
@@ -296,7 +295,7 @@ export class ResultRepository
    */
   async resultsForElasticSearch(
     id?: string,
-    allowDeleted: boolean = false,
+    allowDeleted = false,
   ): Promise<ResultSimpleDto[]> {
     const queryData = `
     select
@@ -438,7 +437,7 @@ export class ResultRepository
    * !reported_year revisar
    * @returns
    */
-  async AllResults(version: number = 1) {
+  async AllResults(version = 1) {
     const queryData = `
     SELECT
     r.id,
@@ -599,6 +598,7 @@ WHERE
     const queryData = `
     SELECT
       r.result_code as \`Result code\`,
+      version.phase_name as \`Reporting phase\`,
     	r.reported_year_id as \`Reporting year\`,
     	r.title as \`Result title\`,
     	CONCAT(rl.name, ' - ', rt.name) as \`Result type\`,
@@ -653,7 +653,8 @@ WHERE
     left join ${env.DB_OST}.work_packages wp on
     	wp.id = tr.work_package_id
     	and wp.active > 0
-    INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
+    INNER JOIN result_status rs ON rs.result_status_id = r.status_id
+    inner join version on version.id = r.version_id 
     WHERE
     	r.created_date >= ?
     	and r.created_date <= ?
@@ -686,7 +687,7 @@ WHERE
     }
   }
 
-  async AllResultsLegacyNewByTitle(title: string, version: number = 1) {
+  async AllResultsLegacyNewByTitle(title: string, version = 1) {
     const queryData = `
     (select 
       lr.legacy_id as id,
@@ -1024,7 +1025,7 @@ WHERE
     }
   }
 
-  async getLastResultCode(version: number = 1): Promise<number> {
+  async getLastResultCode(): Promise<number> {
     const queryData = `
     SELECT max(r.result_code) as last_code from \`result\` r;
     `;
@@ -1092,9 +1093,10 @@ WHERE
   }
 
   async getTypesOfResultByCodes(
-    resultCodes: number[],
-    version: number = 18,
+    resultIdsArray: number[],
+    version = 18,
   ): Promise<ResultTypeDto[]> {
+    const resultIds = (resultIdsArray ?? []).join(',');
     const queryData = `
     select
       r.id as resultId,
@@ -1106,9 +1108,10 @@ WHERE
     where
       r.is_active = 1
       and r.version_id = ?
-      and r.result_code ${resultCodes.length ? `in (${resultCodes})` : '= 0'}
+      and r.id ${resultIdsArray?.length ? `in (${resultIds})` : '= 0'}
     ;
     `;
+
     try {
       const results = await this.query(queryData, [version]);
       return results;
@@ -1123,7 +1126,7 @@ WHERE
 
   async getTypesOfResultByInitiative(
     initiativeId: number,
-    version: number = 1,
+    version = 1,
   ): Promise<ResultTypeDto[]> {
     const queryData = `
     select
@@ -1152,8 +1155,8 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     }
   }
 
-  async getBasicResultDataForReport(resultCodesArray: number[]) {
-    const resultCodes = (resultCodesArray ?? []).join(',');
+  async getBasicResultDataForReport(resultIdsArray: number[]) {
+    const resultIds = (resultIdsArray ?? []).join(',');
     const query = `
     select 
     r.result_code as "Result Code",
@@ -1164,7 +1167,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         version v
       WHERE
         r.version_id = v.id
-    ) AS "Phase",
+    ) AS "Reporting phase",
     CONCAT(
       '${env.FRONT_END_PDF_ENDPOINT}',
       r.result_code,
@@ -1350,7 +1353,9 @@ left join clarisa_countries cc3
     left join results_knowledge_product rkp on rkp.results_id = r.id and rkp.is_active > 0
     INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
   /*  left join evidence e on e.result_id = r.id and e.is_active > 0 */
-    WHERE r.result_code ${resultCodes.length ? `in (${resultCodes})` : '= 0'}
+    WHERE r.id ${
+      resultIds.length ? `in (${resultIds})` : '= 0'
+    } and r.is_active > 0
     GROUP by 
     r.result_code,
     r.id,
@@ -1624,8 +1629,8 @@ left join clarisa_countries cc3
     }
   }
 
-  async getTocDataForReport(resultCodesArray: number[]) {
-    const resultCodes = (resultCodesArray ?? []).join(',');
+  async getTocDataForReport(resultIdsArray: number[]) {
+    const resultIds = (resultIdsArray ?? []).join(',');
     const query = `
     select
       r.id as "Result ID",
@@ -1737,7 +1742,7 @@ left join clarisa_countries cc3
         )
       ) as "SDG(s)"
     from result r
-    WHERE r.result_code ${resultCodes.length ? `in (${resultCodes})` : '= 0'}
+    WHERE r.id ${resultIds.length ? `in (${resultIds})` : '= 0'}
     ;
     `;
 
@@ -1908,8 +1913,8 @@ left join clarisa_countries cc3
     }
   }
 
-  async getResultAgainstToc(resultCodesArray: number[]) {
-    const resultCodes = (resultCodesArray ?? []).join(',');
+  async getResultAgainstToc(resultIdsArray: number[]) {
+    const resultIds = (resultIdsArray ?? []).join(',');
     const query = `
     SELECT
         r.result_code AS 'Result Code',
@@ -1945,7 +1950,7 @@ left join clarisa_countries cc3
         LEFT JOIN Integration_information.work_packages wp ON wp.id = tr.work_packages_id
         LEFT JOIN Integration_information.toc_results_indicators tri ON tr.id = tri.toc_results_id AND tri.toc_result_indicator_id = rtri.toc_results_indicator_id COLLATE utf8mb3_general_ci
     WHERE
-        r.result_code ${resultCodes.length ? `in (${resultCodes})` : '= 0'}
+        r.id ${resultIds.length ? `in (${resultIds})` : '= 0'}
         AND rbi.is_active = 1
         AND rtr.is_active = 1
         AND rtr.planned_result = 1

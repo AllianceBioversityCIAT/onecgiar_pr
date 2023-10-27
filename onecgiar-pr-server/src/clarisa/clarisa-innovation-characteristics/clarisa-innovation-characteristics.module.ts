@@ -9,10 +9,8 @@ import { HandlersError } from '../../shared/handlers/error.utils';
   providers: [
     ClarisaInnovationCharacteristicsService,
     ClarisaInnovationCharacteristicRepository,
-    HandlersError
+    HandlersError,
   ],
-  exports: [
-    ClarisaInnovationCharacteristicRepository
-  ]
+  exports: [ClarisaInnovationCharacteristicRepository],
 })
 export class ClarisaInnovationCharacteristicsModule {}

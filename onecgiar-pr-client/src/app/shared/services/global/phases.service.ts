@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { PhaseList } from '../../interfaces/phasesList.interface';
 import { ResultsApiService } from '../api/results-api.service';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 import { ModuleTypeEnum, StatusPhaseEnum } from '../../enum/api.enum';
 import { ResultsListFilterService } from '../../../pages/results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
 import { IpsrListFilterService } from '../../../pages/ipsr/pages/innovation-package-list-content/pages/innovation-package-list/services/ipsr-list-filter.service';
@@ -15,7 +15,10 @@ export class PhasesService {
     reporting: []
   };
 
+  private phasesSubject = new Subject<any[]>();
+
   constructor(private readonly api: ResultsApiService, private filterService: ResultsListFilterService, private ipsrFilterService: IpsrListFilterService) {
+    console.log('phase service open');
     this.api.GET_versioning(StatusPhaseEnum.ALL, ModuleTypeEnum.ALL).subscribe({
       next: ({ response }) => {
         this.phases.ipsr = response.filter(item => item.app_module_id == 2).map(item => ({ ...item, selected: item.status }));
@@ -30,11 +33,17 @@ export class PhasesService {
           selected: item.status,
           name: `${item.phase_name} - ${item.status ? 'Open' : 'Closed'}`
         }));
+        console.log(this.phases.reporting);
+        this.phasesSubject.next(this.phases.reporting);
       }
     });
   }
 
   get currentlyActivePhaseOnReporting() {
     return this.phases.reporting.find(item => item.status);
+  }
+
+  getPhasesObservable() {
+    return this.phasesSubject.asObservable();
   }
 }
