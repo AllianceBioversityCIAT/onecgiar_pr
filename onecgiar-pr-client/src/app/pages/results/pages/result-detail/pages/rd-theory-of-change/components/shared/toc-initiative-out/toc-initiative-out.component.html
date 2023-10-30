@@ -7,74 +7,11 @@
         [editable]="editable" [hideDescription]="this.theoryOfChangesServices.planned_result === null">
     </app-pr-yes-or-not>
 
-    <a [href]="this.api.dataControlSE.tocUrl+this.fullInitiativeToc" target="_blank" class="toc_button"><span>See
-            ToC</span>
+    <a [href]="this.api.dataControlSE.tocUrl+this.fullInitiativeToc" target="_blank" class="toc_button">
+        <span>See ToC</span>
         <img src="assets/icons/toc_icon.png" alt="">
     </a>
 </div>
 
-<!-- <app-multiple-wps></app-multiple-wps> -->
-
 <app-multiple-wps [editable]="editable" [initiative]="initiative" [resultLevelId]="resultLevelId" [isIpsr]="isIpsr"
     [indexYesorNo]="indexYesorNo" *ngIf="this.theoryOfChangesServices.planned_result !== null"></app-multiple-wps>
-
-<!-- <div class="flex-no-wrap" *ngIf="this.theoryOfChangesServices.planned_result !== null">
-    <app-pr-select *ngIf="this.theoryOfChangesServices?.planned_result && resultLevelId == 1"
-        [options]="this.outputList" label="Output" optionLabel="extraInformation" optionValue="toc_result_id"
-        [disabled]="!this.editable" [editable]="editable" placeholder="Select output"
-        [(ngModel)]="initiative.toc_result_id" [extraInformation]="true"
-        (selectOptionEvent)="getIndicator();this.get_versionDashboard()">
-    </app-pr-select>
-
-    <div style="max-width: 250px;"
-        *ngIf="this.showOutcomeLevel && (resultLevelId == 1 ? this.theoryOfChangesServices?.planned_result == false : true)">
-        <app-pr-select [options]="this.tocInitiativeOutcomeListsSE.outcomeLevelList|outcomeLevelFilter:2"
-            label="Outcome level" [editable]="editable"
-            [disabled]="(resultLevelId == 1 ? true : this.theoryOfChangesServices?.planned_result == false) || !this.editable"
-            optionLabel="name" optionValue="toc_level_id" placeholder="Select outcome level"
-            [(ngModel)]="initiative.toc_level_id" (selectOptionEvent)="indicatorView = false">
-        </app-pr-select>
-    </div>
-
-    <app-pr-select
-        *ngIf="(resultLevelId == 1 ? this.theoryOfChangesServices?.planned_result == false : true) && initiative.toc_level_id != 3"
-        [options]="this.outcomeList" label="Outcome" [editable]="editable" [disabled]="!this.editable"
-        optionLabel="extraInformation" [extraInformation]="true" optionValue="toc_result_id"
-        placeholder="Select outcome" [(ngModel)]="initiative.toc_result_id"
-        (selectOptionEvent)="getIndicator(); this.get_versionDashboard()">
-    </app-pr-select>
-
-    <app-pr-select
-        *ngIf="(resultLevelId == 1 ? this.theoryOfChangesServices?.planned_result == false : true) && initiative.toc_level_id == 3"
-        [options]="this.eoiList" label="Outcome" [editable]="editable" [disabled]="!this.editable" optionLabel="title"
-        optionValue="toc_result_id" placeholder="Select outcome" [(ngModel)]="initiative.toc_result_id"
-        (selectOptionEvent)="getIndicator(); this.get_versionDashboard()">
-    </app-pr-select>
-</div>
-
-<hr class="divider-20">
-
-<div *ngIf="indicatorView">
-    <app-alert-status description="The selected ToC element does not have any indicators associated with it."
-        *ngIf="!this.theoryOfChangesServices.body[indexYesorNo].targetsIndicators.length"></app-alert-status>
-
-    <app-pr-field-header label="{{narrativeTypeResult()}}" [required]="false"
-        *ngIf="this.theoryOfChangesServices.body[indexYesorNo].targetsIndicators.length"></app-pr-field-header>
-
-    <app-target-indicator [initiative]="indicator" [disabledInputs]="disabledInput"
-        *ngFor="let indicator of this.theoryOfChangesServices.body[indexYesorNo].targetsIndicators"
-        [resultLevelId]="resultLevelId"></app-target-indicator>
-    <div *ngIf="isIpsr == false">
-        <app-pr-yes-or-not
-            label="Do you want to review relations with AA Outcomes, IA, SDG and related Targets defined in your TOC for this result?"
-            [(ngModel)]="this.theoryOfChangesServices.body[indexYesorNo].is_sdg_action_impact"></app-pr-yes-or-not>
-        <div *ngIf="this.theoryOfChangesServices.body[indexYesorNo].is_sdg_action_impact">
-            <app-action-area-outcome
-                [body]="this.theoryOfChangesServices.body[indexYesorNo].actionAreaOutcome"></app-action-area-outcome>
-            <app-impact-area-targets [body]="this.theoryOfChangesServices.body[indexYesorNo].impactAreasTargets"
-                [impactAreaRequid]="true"></app-impact-area-targets>
-            <app-sdg-targets [body]="this.theoryOfChangesServices.body[indexYesorNo].sdgTargest"
-                [sdgRequid]="true"></app-sdg-targets>
-        </div>
-    </div>
-</div> -->

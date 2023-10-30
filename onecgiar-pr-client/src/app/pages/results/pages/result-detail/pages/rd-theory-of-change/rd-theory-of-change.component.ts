@@ -21,7 +21,6 @@ export class RdTheoryOfChangeComponent implements OnInit {
   getConsumed = false;
   contributingInitiativeNew = [];
   currentInitOfficialCode = null;
-  // primarySubmitter = null;
 
   constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public centersSE: CentersService, public institutionsSE: InstitutionsService, public greenChecksSE: GreenChecksService, public theoryOfChangesServices: RdTheoryOfChangesServicesService, public dataControlSE: DataControlService) {}
 
@@ -89,7 +88,8 @@ export class RdTheoryOfChangeComponent implements OnInit {
     this.theoryOfChangeBody.planned_result = this.theoryOfChangesServices.planned_result;
     this.theoryOfChangeBody.result_toc_result = this.theoryOfChangesServices.result_toc_result;
 
-    console.log('Send body', this.theoryOfChangeBody);
+    // console.log('Sended body', this.theoryOfChangeBody);
+
     const saveSection = () => {
       this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
         this.getConsumed = false;

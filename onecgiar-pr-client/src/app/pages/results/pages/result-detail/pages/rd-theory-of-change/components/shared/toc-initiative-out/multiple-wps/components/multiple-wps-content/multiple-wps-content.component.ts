@@ -18,9 +18,7 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
   outcomeList = [];
   outputList = [];
   eoiList = [];
-  fullInitiativeToc = null;
   disabledInput = false;
-  testingYesOrNo;
 
   constructor(public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService, public multipleWpsService: MultipleWPsServiceService) {}
 
@@ -37,32 +35,12 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
       is_sdg_action_impact: null
     });
     this.GET_outcomeList();
-    this.get_versionDashboard();
     this.GET_outputList();
     this.GET_EOIList();
     this.theoryOfChangesServices.validateEOI(this.initiative);
     if (this.initiative?.toc_result_id !== null) {
       this.getIndicator();
     }
-  }
-
-  getDescription(official_code, short_name) {
-    const tocText = `<strong>${official_code} ${short_name}</strong> - Does this result match a planned result in your Theory of Change?`;
-    const contributorsText = `Is this result planned in the <strong>${official_code} ${short_name}</strong> ToC?`;
-    return this.isIpsr ? contributorsText : tocText;
-  }
-
-  headerDescription(allText) {
-    let text = '<ul>';
-
-    if (allText) {
-      text += '<li>Specify to which Work Package or End of Initiative outcomes the scaling of the core innovation is expected to contribute to by 2024 in the specific geolocation</li>';
-    } else {
-      text += '<li>Which End of Initiative outcome does it link to most closely?. You will have time during the reflect moment to update your ToC</li> ';
-    }
-
-    text += '</ul>';
-    return text;
   }
 
   GET_outputList() {
@@ -102,57 +80,24 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
     });
   }
 
-  GET_fullInitiativeTocByinitId() {
-    this.api.tocApiSE.GET_fullInitiativeTocByinitId(this.initiative.initiative_id).subscribe({
-      next: ({ response }) => {
-        this.fullInitiativeToc = response[0]?.toc_id;
-      },
-      error: err => {
-        console.error(err);
-      }
-    });
-  }
-
-  get_versionDashboard() {
-    this.api.resultsSE.get_vesrsionDashboard(this.initiative.toc_result_id, this.initiative.initiative_id).subscribe({
-      next: ({ response }) => {
-        this.fullInitiativeToc = response?.version_id;
-      },
-      error: err => {
-        console.error(err);
-      }
-    });
-  }
-
-  validateEOI(initiative) {
-    this.theoryOfChangesServices.showOutcomeLevel = false;
-
-    if (!this.theoryOfChangesServices?.planned_result) {
-      initiative.toc_level_id = 3;
-      this.theoryOfChangesServices.indicatorView = false;
-    }
-
-    setTimeout(() => {
-      this.theoryOfChangesServices.showOutcomeLevel = true;
-    }, 100);
-  }
-
   getIndicator() {
     this.theoryOfChangesServices.indicatorView = false;
 
-    this.disabledInput = false;
-
     this.api.resultsSE.Get_indicator(this.initiative?.toc_result_id, this.initiative?.initiative_id).subscribe({
       next: ({ response }) => {
-        this.multipleWpsService.activeTab.indicators = response?.informationIndicator;
-
         this.theoryOfChangesServices.targetsIndicators = response?.informationIndicator;
-        this.theoryOfChangesServices.impactAreasTargets = response?.impactAreas;
-        this.theoryOfChangesServices.sdgTargest = response?.sdgTargets;
-        this.theoryOfChangesServices.actionAreaOutcome = response?.actionAreaOutcome;
-        this.theoryOfChangesServices.impactAreasTargets.forEach(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
-        this.theoryOfChangesServices.sdgTargest.forEach(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
-        this.theoryOfChangesServices.actionAreaOutcome.forEach(item => (item.full_name = `${item.actionAreaId === 1 ? '<strong>Systems Transformation</strong>' : item.actionAreaId === 2 ? '<strong>Resilient Agrifood Systems</strong>' : '<strong>Genetic Innovation</strong>'} (${item.outcomeSMOcode}) - ${item.outcomeStatement}`));
+        this.theoryOfChangesServices.impactAreasTargets = response?.impactAreas.map(item => ({ full_name: `<strong>${item.name}</strong> - ${item.target}` }));
+        this.theoryOfChangesServices.sdgTargest = response?.sdgTargets.map(item => ({ full_name: `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}` }));
+        this.theoryOfChangesServices.actionAreaOutcome = response?.actionAreaOutcome.map(item => ({
+          full_name: `${item.actionAreaId === 1 ? '<strong>Systems Transformation</strong>' : item.actionAreaId === 2 ? '<strong>Resilient Agrifood Systems</strong>' : '<strong>Genetic Innovation</strong>'} (${item.outcomeSMOcode}) - ${item.outcomeStatement}`
+        }));
+
+        this.multipleWpsService.activeTab.indicators = response?.informationIndicator;
+        this.multipleWpsService.activeTab.impactAreasTargets = this.theoryOfChangesServices.impactAreasTargets;
+        this.multipleWpsService.activeTab.sdgTargest = this.theoryOfChangesServices.sdgTargest;
+        this.multipleWpsService.activeTab.actionAreaOutcome = this.theoryOfChangesServices.actionAreaOutcome;
+        this.multipleWpsService.activeTab.is_sdg_action_impact = response?.is_sdg_action_impact;
+
         this.theoryOfChangesServices.body[this.indexYesorNo] = {
           impactAreasTargets: this.theoryOfChangesServices.impactAreasTargets,
           sdgTargest: this.theoryOfChangesServices.sdgTargest,
@@ -192,8 +137,6 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
 
     return `Indicator(s) of the ${narrative} selected`;
   }
-
-  // Change initiative info when change of active initiative
 
   ngOnChanges() {
     this.theoryOfChangesServices.validateEOI(this?.initiative);

@@ -1,5 +1,4 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { TocInitiativeOutcomeListsService } from '../../toc-initiative-outcome-section/services/toc-initiative-outcome-lists.service';
 import { ApiService } from '../../../../../../../../../shared/services/api/api.service';
 import { RdTheoryOfChangesServicesService } from '../../../rd-theory-of-changes-services.service';
 
@@ -14,16 +13,9 @@ export class TocInitiativeOutComponent implements OnInit {
   @Input() resultLevelId: number | string;
   @Input() isIpsr: boolean = false;
   @Input() indexYesorNo: number;
-  outcomeList = [];
-  outputList = [];
-  eoiList = [];
   fullInitiativeToc = null;
-  indicators: any = [];
-  disabledInput = false;
-  testingYesOrNo;
-  SDGtestingYesorNo;
 
-  constructor(public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {}
+  constructor(public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {}
 
   ngOnInit(): void {
     this.theoryOfChangesServices.body.push({
@@ -37,14 +29,9 @@ export class TocInitiativeOutComponent implements OnInit {
       initiative: null,
       is_sdg_action_impact: null
     });
-    this.GET_outcomeList();
     this.get_versionDashboard();
-    this.GET_outputList();
-    this.GET_EOIList();
     this.theoryOfChangesServices.validateEOI(this.initiative);
-    if (this.initiative.toc_result_id != null) {
-      this.getIndicator();
-    }
+
     console.log('Recived initiative', this.initiative);
   }
 
@@ -76,43 +63,6 @@ export class TocInitiativeOutComponent implements OnInit {
     // });
   }
 
-  GET_outputList() {
-    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.api.dataControlSE.currentNotification?.results_id || this.initiative?.results_id || this.api.dataControlSE?.currentResult?.id, this.initiative.initiative_id, 1).subscribe({
-      next: ({ response }) => {
-        this.outputList = [];
-        this.outputList = response;
-      },
-      error: err => {
-        this.outputList = [];
-        console.error(err);
-      }
-    });
-  }
-
-  GET_outcomeList() {
-    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.api.dataControlSE.currentNotification?.result_id || this.initiative?.results_id || this.api.dataControlSE?.currentResult?.id, this.initiative.initiative_id, 2).subscribe({
-      next: ({ response }) => {
-        this.outcomeList = response;
-      },
-      error: err => {
-        this.outcomeList = [];
-        console.error(err);
-      }
-    });
-  }
-
-  GET_EOIList() {
-    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.api.dataControlSE.currentNotification?.result_id || this.initiative?.results_id || this.api.dataControlSE?.currentResult?.id, this.initiative.initiative_id, 3).subscribe({
-      next: ({ response }) => {
-        this.eoiList = response;
-      },
-      error: err => {
-        this.eoiList = [];
-        console.error(err);
-      }
-    });
-  }
-
   get_versionDashboard() {
     this.api.resultsSE.get_vesrsionDashboard(this.initiative[0].toc_result_id, this.initiative[0].initiative_id).subscribe({
       next: ({ response }) => {
@@ -122,75 +72,5 @@ export class TocInitiativeOutComponent implements OnInit {
         console.error(err);
       }
     });
-  }
-
-  validateEOI(initiative) {
-    this.theoryOfChangesServices.showOutcomeLevel = false;
-
-    if (this.theoryOfChangesServices?.planned_result == false) initiative.toc_level_id = 3;
-    setTimeout(() => {
-      this.theoryOfChangesServices.showOutcomeLevel = true;
-    }, 100);
-
-    if (!this.theoryOfChangesServices?.planned_result) {
-      this.theoryOfChangesServices.indicatorView = false;
-
-      this.indicators = [];
-    }
-  }
-
-  async getIndicator() {
-    this.indicators = [];
-
-    this.theoryOfChangesServices.indicatorView = false;
-    this.disabledInput = false;
-
-    await this.api.resultsSE.Get_indicator(this.initiative.toc_result_id, this.initiative.initiative_id).subscribe(({ response }) => {
-      this.theoryOfChangesServices.targetsIndicators = response?.informationIndicator;
-      this.theoryOfChangesServices.impactAreasTargets = response?.impactAreas;
-      this.theoryOfChangesServices.sdgTargest = response?.sdgTargets;
-      this.theoryOfChangesServices.actionAreaOutcome = response?.actionAreaOutcome;
-      this.theoryOfChangesServices.impactAreasTargets.forEach(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
-      this.theoryOfChangesServices.sdgTargest.forEach(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
-      this.theoryOfChangesServices.actionAreaOutcome.forEach(item => (item.full_name = `${item.actionAreaId === 1 ? '<strong>Systems Transformation</strong>' : item.actionAreaId === 2 ? '<strong>Resilient Agrifood Systems</strong>' : '<strong>Genetic Innovation</strong>'} (${item.outcomeSMOcode}) - ${item.outcomeStatement}`));
-      this.theoryOfChangesServices.body[this.indexYesorNo] = {
-        impactAreasTargets: this.theoryOfChangesServices.impactAreasTargets,
-        sdgTargest: this.theoryOfChangesServices.sdgTargest,
-        targetsIndicators: this.theoryOfChangesServices.targetsIndicators,
-        actionAreaOutcome: this.theoryOfChangesServices.actionAreaOutcome,
-        isSdg: response?.isSdg,
-        isImpactArea: response?.isImpactArea,
-        resultId: response?.resultId,
-        initiative: response?.initiative,
-        is_sdg_action_impact: response?.is_sdg_action_impact
-      };
-
-      if (this.indicators.length == 1) {
-        this.disabledInput = true;
-      }
-
-      setTimeout(() => {
-        this.theoryOfChangesServices.indicatorView = true;
-      }, 100);
-    });
-    this.theoryOfChangesServices.indicatorView = true;
-  }
-
-  narrativeTypeResult() {
-    let narrative = '';
-    if (this.resultLevelId == 1) {
-      narrative = 'output';
-    }
-    if (this.theoryOfChangesServices.showOutcomeLevel && (this.resultLevelId == 1 ? this.theoryOfChangesServices?.planned_result == false : true)) {
-      narrative = 'outcome';
-    }
-    if ((this.resultLevelId == 1 ? this.theoryOfChangesServices?.planned_result == false : true) && this.initiative.toc_level_id != 3) {
-      narrative = 'outcome';
-    }
-    if ((this.resultLevelId == 1 ? this.theoryOfChangesServices?.planned_result == false : true) && this.initiative.toc_level_id == 3) {
-      narrative = 'outcome';
-    }
-
-    return 'Indicator(s) of the ' + narrative + ' selected';
   }
 }

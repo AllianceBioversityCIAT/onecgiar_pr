@@ -40,6 +40,9 @@ export class MultipleWPsComponent implements OnInit {
     this.initiative.forEach((tab: any) => {
       tab.uniqueId = Math.random().toString(36).substring(7);
     });
+
+    // console.log('this.initiative', this.initiative);
+    // console.log(this.theoryOfChangesServices?.primarySubmitter);
   }
 
   dynamicTabTitle(tabNumber) {
@@ -49,19 +52,11 @@ export class MultipleWPsComponent implements OnInit {
   onAddTab() {
     this.initiative.push({
       action_area_outcome_id: null,
-      created_by: null,
-      created_date: null,
       initiative_id: this.theoryOfChangesServices?.primarySubmitter.id,
-      is_active: null,
-      last_updated_by: null,
-      last_updated_date: null,
-      name: null,
-      official_code: null,
+      official_code: this.theoryOfChangesServices?.primarySubmitter.official_code,
       planned_result: null,
-      result_toc_result_id: null,
       results_id: null,
-      short_name: null,
-      toc_level_id: null,
+      short_name: this.theoryOfChangesServices?.primarySubmitter.short_name,
       toc_result_id: null,
       uniqueId: Math.random().toString(36).substring(7)
     });
@@ -74,6 +69,8 @@ export class MultipleWPsComponent implements OnInit {
     setTimeout(() => {
       this.multipleWpsService.showMultipleWPsContent = true;
     }, 20);
+
+    // console.log('this.activeTab', this.multipleWpsService.activeTab);
   }
 
   onDeleteTab(tab: any) {
@@ -85,5 +82,7 @@ export class MultipleWPsComponent implements OnInit {
     this.theoryOfChangesServices.result_toc_result = this.theoryOfChangesServices.result_toc_result.filter(t => t.uniqueId !== tab.uniqueId);
 
     this.multipleWpsService.activeTab = this.initiative[0];
+
+    // console.log('borrado', this.initiative);
   }
 }
