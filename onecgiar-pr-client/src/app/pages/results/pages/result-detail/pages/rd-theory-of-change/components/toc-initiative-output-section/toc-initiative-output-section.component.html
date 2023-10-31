@@ -8,12 +8,14 @@
     </app-toc-initiative-out>
 </div>
 
-<app-pr-field-header label="Other contributors" [required]="false" [simpleStyle]="true"
-    *ngIf="contributors_result_toc_result?.length">
-</app-pr-field-header>
+<div *ngIf="contributors_result_toc_result?.length">
 
-<div *ngFor="let item of contributors_result_toc_result; let i = index;">
-    <app-toc-initiative-out [initiative]="item" [indexYesorNo]="i+1"
-        [editable]="!this.api.rolesSE.platformIsClosed && (this.api.rolesSE.validateInitiative(item?.initiative_id) || this.api.rolesSE.isAdmin)"
+    <app-pr-field-header label="Other contributors" [required]="false" [simpleStyle]="true">
+    </app-pr-field-header>
+
+    <!-- <div *ngFor="let item of contributors_result_toc_result; let i = index;"> -->
+    <!-- [editable]="!this.api.rolesSE.platformIsClosed && (this.api.rolesSE.validateInitiative(item?.initiative_id) || this.api.rolesSE.isAdmin)" -->
+    <app-toc-initiative-out [initiative]="contributors_result_toc_result" [indexYesorNo]="1" [editable]="true"
         [resultLevelId]="1"></app-toc-initiative-out>
+    <!-- </div> -->
 </div>

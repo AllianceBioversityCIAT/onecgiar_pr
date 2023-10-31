@@ -1,10 +1,11 @@
+<!-- this.theoryOfChangesServices.validateEOI(initiative); -->
+
 <div class="editable_field" [ngClass]="{'global-editable': this.editable}">
     <app-pr-yes-or-not
         [label]="getDescription(this.theoryOfChangesServices.primarySubmitter?.official_code,this.theoryOfChangesServices.primarySubmitter?.short_name)"
-        (selectOptionEvent)="this.theoryOfChangesServices.validateEOI(initiative); clearTocResultId();"
-        [(ngModel)]="this.theoryOfChangesServices.planned_result"
-        [description]="this.headerDescription(this.theoryOfChangesServices.planned_result)" [readOnly]="!editable"
-        [editable]="editable" [hideDescription]="this.theoryOfChangesServices.planned_result === null">
+        (selectOptionEvent)="clearTocResultId(); mapPlannedResult()" [(ngModel)]="this.initiative.planned_result"
+        [description]="this.headerDescription(this.initiative.planned_result)" [readOnly]="!editable"
+        [editable]="editable" [hideDescription]="this.initiative.planned_result === null">
     </app-pr-yes-or-not>
 
     <a [href]="this.api.dataControlSE.tocUrl+this.fullInitiativeToc" target="_blank" class="toc_button">
@@ -14,4 +15,5 @@
 </div>
 
 <app-multiple-wps [editable]="editable" [initiative]="initiative" [resultLevelId]="resultLevelId" [isIpsr]="isIpsr"
-    [indexYesorNo]="indexYesorNo" *ngIf="this.theoryOfChangesServices.planned_result !== null"></app-multiple-wps>
+    [indexYesorNo]="indexYesorNo" *ngIf="this.initiative.planned_result !== null"
+    [showMultipleWPsContent]="this.initiative.showMultipleWPsContent"></app-multiple-wps>

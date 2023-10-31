@@ -18,6 +18,7 @@ interface Tab {
   short_name: string | null;
   toc_level_id: number | null;
   toc_result_id: number | null;
+  uniqueId: string | null;
 }
 
 @Component({
@@ -31,22 +32,23 @@ export class MultipleWPsComponent implements OnInit {
   @Input() resultLevelId: number | string;
   @Input() isIpsr: boolean = false;
   @Input() indexYesorNo: number;
+  @Input() showMultipleWPsContent: boolean = true;
+  activeTab: Tab;
 
   constructor(public theoryOfChangesServices: RdTheoryOfChangesServicesService, public multipleWpsService: MultipleWPsServiceService) {}
 
   ngOnInit(): void {
-    this.multipleWpsService.activeTab = this.initiative[0];
+    this.activeTab = this.initiative[0];
 
     this.initiative.forEach((tab: any) => {
       tab.uniqueId = Math.random().toString(36).substring(7);
     });
 
-    // console.log('this.initiative', this.initiative);
     // console.log(this.theoryOfChangesServices?.primarySubmitter);
   }
 
   dynamicTabTitle(tabNumber) {
-    return `TOC-${this.theoryOfChangesServices?.planned_result && this.resultLevelId === 1 ? 'Output' : 'Outcome'} N° ${tabNumber}`;
+    return `TOC-${this.initiative?.planned_result && this.resultLevelId === 1 ? 'Output' : 'Outcome'} N° ${tabNumber}`;
   }
 
   onAddTab() {
@@ -54,7 +56,7 @@ export class MultipleWPsComponent implements OnInit {
       action_area_outcome_id: null,
       initiative_id: this.theoryOfChangesServices?.primarySubmitter.id,
       official_code: this.theoryOfChangesServices?.primarySubmitter.official_code,
-      planned_result: null,
+      planned_result: this.initiative.planned_result,
       results_id: null,
       short_name: this.theoryOfChangesServices?.primarySubmitter.short_name,
       toc_result_id: null,
@@ -63,14 +65,14 @@ export class MultipleWPsComponent implements OnInit {
   }
 
   onActiveTab(tab: any) {
-    this.multipleWpsService.activeTab = tab;
-    this.multipleWpsService.showMultipleWPsContent = false;
+    this.activeTab = tab;
+    this.showMultipleWPsContent = false;
 
     setTimeout(() => {
-      this.multipleWpsService.showMultipleWPsContent = true;
+      this.showMultipleWPsContent = true;
     }, 20);
 
-    // console.log('this.activeTab', this.multipleWpsService.activeTab);
+    // console.log('this.activeTab', this.activeTab);
   }
 
   onDeleteTab(tab: any) {
@@ -79,9 +81,10 @@ export class MultipleWPsComponent implements OnInit {
     }
 
     this.initiative = this.initiative.filter(t => t.uniqueId !== tab.uniqueId);
-    this.theoryOfChangesServices.result_toc_result = this.theoryOfChangesServices.result_toc_result.filter(t => t.uniqueId !== tab.uniqueId);
+    // this.theoryOfChangesServices.result_toc_result = this.theoryOfChangesServices.result_toc_result.filter(t => t.uniqueId !== tab.uniqueId);
+    // this.theoryOfChangesServices.contributors_result_toc_result = this.theoryOfChangesServices.contributors_result_toc_result.filter(t => t.uniqueId !== tab.uniqueId);
 
-    this.multipleWpsService.activeTab = this.initiative[0];
+    this.activeTab = this.initiative[0];
 
     // console.log('borrado', this.initiative);
   }

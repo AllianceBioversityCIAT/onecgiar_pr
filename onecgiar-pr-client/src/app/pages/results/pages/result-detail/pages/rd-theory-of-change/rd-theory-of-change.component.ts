@@ -51,6 +51,12 @@ export class RdTheoryOfChangeComponent implements OnInit {
 
         this.theoryOfChangesServices.theoryOfChangeBody = this.theoryOfChangeBody;
         this.theoryOfChangesServices.result_toc_result = this.theoryOfChangeBody?.result_toc_result;
+        this.theoryOfChangesServices.result_toc_result.planned_result = null;
+        this.theoryOfChangesServices.result_toc_result.showMultipleWPsContent = true;
+
+        this.theoryOfChangesServices.contributors_result_toc_result = this.theoryOfChangeBody?.contributors_result_toc_result;
+        this.theoryOfChangesServices.contributors_result_toc_result.planned_result = null;
+        this.theoryOfChangesServices.contributors_result_toc_result.showMultipleWPsContent = true;
 
         setTimeout(() => {
           this.getConsumed = true;
@@ -87,24 +93,25 @@ export class RdTheoryOfChangeComponent implements OnInit {
     this.theoryOfChangeBody.contributing_initiatives = initiativesAux.filter(init => init.id !== this.theoryOfChangesServices?.primarySubmitter?.id);
     this.theoryOfChangeBody.planned_result = this.theoryOfChangesServices.planned_result;
     this.theoryOfChangeBody.result_toc_result = this.theoryOfChangesServices.result_toc_result;
+    this.theoryOfChangeBody.contributors_result_toc_result = this.theoryOfChangesServices.contributors_result_toc_result;
 
-    // console.log('Sended body', this.theoryOfChangeBody);
+    console.log('Sended body', this.theoryOfChangeBody);
 
-    const saveSection = () => {
-      this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
-        this.getConsumed = false;
-        this.theoryOfChangesServices.body = [];
-        this.currentInitOfficialCode !== newInitOfficialCode ? location.reload() : this.getSectionInformation();
-        this.contributingInitiativeNew = [];
-      });
-    };
-    const newInit = this.theoryOfChangeBody.contributing_and_primary_initiative.find(init => init.id === this.theoryOfChangesServices?.primarySubmitter?.id);
-    const newInitOfficialCode = newInit?.official_code;
-    if (this.currentInitOfficialCode != newInitOfficialCode)
-      return this.api.alertsFe.show({ id: 'primary-submitter', title: 'Change in primary submitter', description: `The <strong>${newInitOfficialCode}</strong> will now be the primary submitter of this result and will have exclusive editing rights for all sections and submission. <strong>${this.currentInitOfficialCode}</strong> will lose editing and submission rights but will remain as a contributing Initiative in this result. <br> <br> Please ensure that the new primary submitter of this result is aware of this change.`, status: 'success', confirmText: 'Proceed' }, () => {
-        saveSection();
-      });
-    return saveSection();
+    // const saveSection = () => {
+    //   this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
+    //     this.getConsumed = false;
+    //     this.theoryOfChangesServices.body = [];
+    //     this.currentInitOfficialCode !== newInitOfficialCode ? location.reload() : this.getSectionInformation();
+    //     this.contributingInitiativeNew = [];
+    //   });
+    // };
+    // const newInit = this.theoryOfChangeBody.contributing_and_primary_initiative.find(init => init.id === this.theoryOfChangesServices?.primarySubmitter?.id);
+    // const newInitOfficialCode = newInit?.official_code;
+    // if (this.currentInitOfficialCode != newInitOfficialCode)
+    //   return this.api.alertsFe.show({ id: 'primary-submitter', title: 'Change in primary submitter', description: `The <strong>${newInitOfficialCode}</strong> will now be the primary submitter of this result and will have exclusive editing rights for all sections and submission. <strong>${this.currentInitOfficialCode}</strong> will lose editing and submission rights but will remain as a contributing Initiative in this result. <br> <br> Please ensure that the new primary submitter of this result is aware of this change.`, status: 'success', confirmText: 'Proceed' }, () => {
+    //     saveSection();
+    //   });
+    // return saveSection();
   }
 
   someEditable() {

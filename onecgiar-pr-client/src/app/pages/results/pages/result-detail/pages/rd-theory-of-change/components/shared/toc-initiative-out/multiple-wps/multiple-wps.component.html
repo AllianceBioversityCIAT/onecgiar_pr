@@ -1,8 +1,7 @@
 <div class=" local_container section_container">
   <div class="tabs" [style]="'grid-template-columns: repeat(' + (initiative.length + 1) + ', 1fr)'">
     <div *ngFor="let tab of initiative; let i = index">
-      <a class="tab" [ngClass]="{'active' : tab.uniqueId === this.multipleWpsService.activeTab.uniqueId}"
-        (click)="onActiveTab(tab)">
+      <a class="tab" [ngClass]="{'active' : tab.uniqueId === this.activeTab.uniqueId}" (click)="onActiveTab(tab)">
         <i class="material-icons-round {{ tab.validation ? 'valid' : 'invalid' }}" style="font-size: 20px;">
           check_circle </i>
         <p class="tab-title">{{dynamicTabTitle(i + 1)}}</p>
@@ -19,8 +18,9 @@
   </div>
 
   <div class="multiple-wps-container">
-    <app-multiple-wps-content [editable]="editable" [initiative]="this.multipleWpsService.activeTab"
-      [resultLevelId]="resultLevelId" [isIpsr]="isIpsr" [indexYesorNo]="indexYesorNo"></app-multiple-wps-content>
+    <app-multiple-wps-content [editable]="editable" [initiative]="this.activeTab" [resultLevelId]="resultLevelId"
+      [isIpsr]="isIpsr" [indexYesorNo]="indexYesorNo"
+      [showMultipleWPsContent]="this.showMultipleWPsContent"></app-multiple-wps-content>
   </div>
 
 </div>

@@ -17,24 +17,10 @@ export class RdTheoryOfChangesServicesService {
   primarySubmitter: any = null;
   planned_result = null;
   result_toc_result = null;
-  indicatorView = false;
-  showOutcomeLevel = true;
+  contributors_result_toc_result = null;
   fullInitiativeToc = null;
 
   constructor(public api: ApiService) {}
-
-  validateEOI(initiative) {
-    this.showOutcomeLevel = false;
-
-    if (!this.planned_result) {
-      initiative.toc_level_id = 3;
-    }
-
-    this.indicatorView = false;
-    setTimeout(() => {
-      this.showOutcomeLevel = true;
-    }, 100);
-  }
 
   get_versionDashboard(initiative) {
     this.api.resultsSE.get_vesrsionDashboard(initiative.toc_result_id, initiative.initiative_id).subscribe({

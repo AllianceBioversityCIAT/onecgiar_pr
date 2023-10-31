@@ -1,23 +1,22 @@
-<div class="flex-no-wrap"
-  *ngIf="this.theoryOfChangesServices?.planned_result !== null && this.multipleWpsService.showMultipleWPsContent">
-  <app-pr-select *ngIf="this.theoryOfChangesServices?.planned_result && resultLevelId == 1" [options]="this.outputList"
+<div class="flex-no-wrap" *ngIf="this.initiative?.planned_result !== null && this.showMultipleWPsContent">
+  <app-pr-select *ngIf="this.initiative?.planned_result && resultLevelId == 1" [options]="this.outputList"
     label="Output" optionLabel="extraInformation" optionValue="toc_result_id" [disabled]="!this.editable"
     [editable]="editable" placeholder="Select output" [(ngModel)]="initiative.toc_result_id" [extraInformation]="true"
     (selectOptionEvent)="getIndicator()">
   </app-pr-select>
 
   <div style="max-width: 250px;"
-    *ngIf="this.theoryOfChangesServices?.showOutcomeLevel && (resultLevelId == 1 ? this.theoryOfChangesServices?.planned_result === false : true)">
+    *ngIf="this.showOutcomeLevel && (resultLevelId == 1 ? this.initiative?.planned_result === false : true)">
     <app-pr-select [options]="this.tocInitiativeOutcomeListsSE.outcomeLevelList|outcomeLevelFilter:2"
       label="Outcome level" [editable]="editable"
-      [disabled]="(resultLevelId == 1 ? true : this.theoryOfChangesServices?.planned_result == false) || !this.editable"
+      [disabled]="(resultLevelId == 1 ? true : this.initiative?.planned_result == false) || !this.editable"
       optionLabel="name" optionValue="toc_level_id" placeholder="Select outcome level"
-      [(ngModel)]="initiative.toc_level_id" (selectOptionEvent)="this.theoryOfChangesServices.indicatorView = false">
+      [(ngModel)]="initiative.toc_level_id" (selectOptionEvent)="this.indicatorView = false">
     </app-pr-select>
   </div>
 
   <app-pr-select
-    *ngIf="(resultLevelId == 1 ? this.theoryOfChangesServices?.planned_result === false : true) && initiative?.toc_level_id != 3"
+    *ngIf="(resultLevelId == 1 ? this.initiative?.planned_result === false : true) && initiative?.toc_level_id != 3"
     [options]="this.outcomeList" label="Outcome" [editable]="editable"
     [disabled]="(resultLevelId == 1 ? false : false) || !this.editable" optionLabel="extraInformation"
     [extraInformation]="true" optionValue="toc_result_id" placeholder="Select outcome"
@@ -25,7 +24,7 @@
   </app-pr-select>
 
   <app-pr-select
-    *ngIf="(resultLevelId == 1 ? this.theoryOfChangesServices?.planned_result === false : true) && initiative?.toc_level_id == 3"
+    *ngIf="(resultLevelId == 1 ? this.initiative?.planned_result === false : true) && initiative?.toc_level_id == 3"
     [options]="this.eoiList" label="Outcome" [editable]="editable"
     [disabled]="(resultLevelId == 1 ? false : false) || !this.editable" optionLabel="title" optionValue="toc_result_id"
     placeholder="Select outcome" [(ngModel)]="initiative.toc_result_id" (selectOptionEvent)="getIndicator()">
@@ -34,7 +33,7 @@
 
 <hr class="divider-20">
 
-<div *ngIf="this.theoryOfChangesServices.indicatorView && this.multipleWpsService.showMultipleWPsContent">
+<div *ngIf="this.indicatorView && this.showMultipleWPsContent">
   <app-alert-status description="The selected ToC element does not have any indicators associated with it."
     *ngIf="initiative?.indicators?.length === 0"></app-alert-status>
 

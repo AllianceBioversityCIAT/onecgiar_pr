@@ -30,7 +30,7 @@ export class TocInitiativeOutComponent implements OnInit {
       is_sdg_action_impact: null
     });
     this.get_versionDashboard();
-    this.theoryOfChangesServices.validateEOI(this.initiative);
+    // this.theoryOfChangesServices.validateEOI(this.initiative);
 
     console.log('Recived initiative', this.initiative);
   }
@@ -55,12 +55,22 @@ export class TocInitiativeOutComponent implements OnInit {
   }
 
   clearTocResultId() {
-    // this.initiative.forEach(element => {
-    //   element.toc_level_id = !this.theoryOfChangesServices.planned_result ? 3 : null;
-    // });
-    // this.initiative.forEach(element => {
-    //   element.toc_result_id = null;
-    // });
+    this.initiative.forEach(element => {
+      element.toc_level_id = !this.initiative.planned_result ? 3 : null;
+    });
+    this.initiative.forEach(element => {
+      element.toc_result_id = null;
+    });
+  }
+
+  mapPlannedResult() {
+    this.initiative.forEach(element => {
+      element.planned_result = this.initiative.planned_result;
+      element.showOutcomeLevel = this.initiative.showOutcomeLevel;
+      element.indicatorView = this.initiative.indicatorView;
+    });
+
+    console.log('this.initiative', this.initiative);
   }
 
   get_versionDashboard() {
