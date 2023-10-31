@@ -104,13 +104,11 @@ export class ResultsTocResultsService {
           planned_result: null,
           toc_result_id: null,
         };
-        console.log('initial');
         await this._shareResultRequestService.resultRequest(
           dataRequst,
           result_id,
           user,
         );
-        console.log('end');
       } else {
         await this._resultByInitiativesRepository.updateResultByInitiative(
           result_id,
