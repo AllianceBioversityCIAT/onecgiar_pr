@@ -11,6 +11,7 @@ import { ResultsKnowledgeProductsRepository } from '../results-knowledge-product
 import { ResultsInnovationsDevRepository } from '../summary/repositories/results-innovations-dev.repository';
 import { Like } from 'typeorm';
 import { Result } from '../entities/result.entity';
+import * as fs from 'fs';
 
 @Injectable()
 export class EvidencesService {
@@ -178,6 +179,26 @@ export class EvidencesService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  async createFilesAndSaveInformation(
+    files: Express.Multer.File[],
+    createEvidenceDto: CreateEvidenceDto,
+  ): Promise<void> {
+    // Aquí puedes manejar los archivos y los datos del formulario según sea necesario
+    if (!fs.existsSync('uploads')) {
+      fs.mkdirSync('uploads');
+    }
+
+    for (const file of files) {
+      const filePath = `uploads/${file.originalname}`;
+      fs.writeFileSync(filePath, file.buffer);
+      console.log(`Archivo guardado en: ${filePath}`);
+    }
+
+    console.log(createEvidenceDto); // Datos JSON enviados con el formulario
+
+    // Agrega tu lógica aquí para manejar los archivos y los datos del formulario
   }
 
   async findAll(resultId: number) {

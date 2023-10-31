@@ -14,3 +14,5 @@ interface evidencesCreateInterface {
   environmental_biodiversity_related?: boolean;
   poverty_related?: boolean;
 }
+
+export class JsonData {}

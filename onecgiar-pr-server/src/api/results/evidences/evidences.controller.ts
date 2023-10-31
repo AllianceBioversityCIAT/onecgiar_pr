@@ -8,24 +8,38 @@ import {
   Delete,
   Headers,
   HttpException,
+  UseInterceptors,
+  UploadedFiles,
 } from '@nestjs/common';
 import { EvidencesService } from './evidences.service';
 import { CreateEvidenceDto } from './dto/create-evidence.dto';
 import { UpdateEvidenceDto } from './dto/update-evidence.dto';
 import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { FormDataJson } from '../../../shared/globalInterfaces/form-data-json.interface';
 
 @Controller()
 export class EvidencesController {
   constructor(private readonly evidencesService: EvidencesService) {}
 
   @Post('create/:resultId')
+  @UseInterceptors(FilesInterceptor('files'))
   async create(
-    @Body() createEvidenceDto: CreateEvidenceDto,
+    @UploadedFiles() files: Express.Multer.File[],
+    @Body() formDataJson: FormDataJson,
     @Headers() auth: HeadersDto,
     @Param('resultId') resultId: number,
   ) {
+    const createEvidenceDto: CreateEvidenceDto = JSON.parse(
+      formDataJson.jsonData,
+    );
+    console.log(createEvidenceDto);
     createEvidenceDto.result_id = resultId;
+
+    // console.log(files);
+    // console.log(createEvidenceDto.jsonData);
+    // createEvidenceDto: CreateEvidenceDto;
     const token: TokenDto = <TokenDto>(
       JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
     );
@@ -33,6 +47,19 @@ export class EvidencesController {
       createEvidenceDto,
       token,
     );
+    // return await this.evidencesService.createWithFiles(
+    //   files,
+    //   createEvidenceDto,
+    // );
+
+    // return createEvidenceDto;
+    console.log(files);
+    if (files?.length)
+      await this.evidencesService.createFilesAndSaveInformation(
+        files,
+        createEvidenceDto,
+      );
+
     throw new HttpException({ message, response }, status);
   }
 

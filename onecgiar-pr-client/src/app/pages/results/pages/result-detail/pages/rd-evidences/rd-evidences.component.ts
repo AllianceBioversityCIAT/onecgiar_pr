@@ -40,6 +40,7 @@ export class RdEvidencesComponent implements OnInit {
   }
 
   onSaveSection() {
+    console.log(this.evidencesBody);
     this.api.resultsSE.POST_evidences(this.evidencesBody).subscribe(resp => {
       this.getSectionInformation();
     });

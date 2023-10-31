@@ -277,7 +277,9 @@ export class ResultsApiService {
   }
 
   POST_evidences(body: EvidencesBody) {
-    return this.http.post<any>(`${this.apiBaseUrl}evidences/create/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+    const formData = new FormData();
+    formData.append('jsonData', JSON.stringify(body));
+    return this.http.post<any>(`${this.apiBaseUrl}evidences/create/${this.currentResultId}`, formData).pipe(this.saveButtonSE.isSavingPipe());
   }
 
   POST_toc(body: TheoryOfChangeBody) {
