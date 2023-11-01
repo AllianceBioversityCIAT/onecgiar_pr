@@ -1428,18 +1428,14 @@ export class resultValidationRepository
 				rcd.unkown_using = 0
 				AND (
 					rcd.female_using IS NULL
-					OR rcd.female_using = 0
 					OR rcd.male_using IS NULL
-					OR rcd.male_using = 0
 					OR non_binary_using IS NULL
-					OR non_binary_using = 0
 				)
 			) THEN FALSE
 			WHEN (
 				rcd.unkown_using = 1
 				AND (
 					rcd.has_unkown_using IS NULL
-					OR rcd.has_unkown_using = 0
 				)
 			) THEN FALSE
 			WHEN (
