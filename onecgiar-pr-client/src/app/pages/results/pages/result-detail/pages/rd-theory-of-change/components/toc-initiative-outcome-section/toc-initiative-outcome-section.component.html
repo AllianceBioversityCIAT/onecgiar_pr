@@ -3,17 +3,20 @@
 
 <div>
     <div class="date"><strong>Updated on:&nbsp;</strong> 6 October, 2022 - 2:00:22 PM - (CET)</div>
-    <app-toc-initiative-out [initiative]="result_toc_result" [indexYesorNo]="0"
+    <app-toc-initiative-out [initiative]="result_toc_result"
         [editable]="!this.rolesSE.platformIsClosed && (this.rolesSE.validateInitiative(this.theoryOfChangesServices?.primarySubmitter) || this.rolesSE.isAdmin)"
         [resultLevelId]="2">
     </app-toc-initiative-out>
 </div>
-<app-pr-field-header label="Other contributors" [required]="false" [simpleStyle]="true"
-    *ngIf="contributors_result_toc_result?.length">
-</app-pr-field-header>
-<div *ngFor="let initiative of contributors_result_toc_result; let i = index;">
-    <app-toc-initiative-out [initiative]="initiative" [indexYesorNo]="i + 1"
-        [editable]="!this.rolesSE.platformIsClosed && (this.rolesSE.validateInitiative(initiative?.initiative_id) || this.rolesSE.isAdmin)"
-        [resultLevelId]="2">
-    </app-toc-initiative-out>
+
+<div *ngIf="contributors_result_toc_result?.length">
+
+    <app-pr-field-header label="Other contributors" [required]="false" [simpleStyle]="true">
+    </app-pr-field-header>
+    
+    <!-- <div *ngFor="let initiative of contributors_result_toc_result; let i = index;"> -->
+        <app-toc-initiative-out [initiative]="contributors_result_toc_result"
+        [editable]="!this.rolesSE.platformIsClosed && (this.rolesSE.validateInitiative(contributors_result_toc_result[0]?.initiative_id) || this.rolesSE.isAdmin)"
+        [resultLevelId]="1"></app-toc-initiative-out>
+    <!-- </div> -->
 </div>

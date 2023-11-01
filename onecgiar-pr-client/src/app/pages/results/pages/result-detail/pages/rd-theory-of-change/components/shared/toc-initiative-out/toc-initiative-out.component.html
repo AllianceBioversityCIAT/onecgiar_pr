@@ -15,5 +15,5 @@
 </div>
 
 <app-multiple-wps [editable]="editable" [initiative]="initiative" [resultLevelId]="resultLevelId" [isIpsr]="isIpsr"
-    [indexYesorNo]="indexYesorNo" *ngIf="this.initiative.planned_result !== null"
+    *ngIf="this.initiative.planned_result !== null"
     [showMultipleWPsContent]="this.initiative.showMultipleWPsContent"></app-multiple-wps>

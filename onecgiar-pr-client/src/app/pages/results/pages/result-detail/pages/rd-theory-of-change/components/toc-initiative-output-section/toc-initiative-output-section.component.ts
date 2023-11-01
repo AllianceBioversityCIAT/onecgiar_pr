@@ -1,9 +1,8 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { resultToResultInterfaceToc } from '../../model/theoryOfChangeBody';
 import { TocInitiativeOutcomeListsService } from '../toc-initiative-outcome-section/services/toc-initiative-outcome-lists.service';
 import { DataControlService } from '../../../../../../../../shared/services/data-control.service';
-import { environment } from '../../../../../../../../../environments/environment';
 import { RdTheoryOfChangesServicesService } from '../../rd-theory-of-changes-services.service';
 
 @Component({

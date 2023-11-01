@@ -2,7 +2,7 @@
 </app-pr-field-header>
 
 <div>
-    <app-toc-initiative-out [initiative]="result_toc_result" [indexYesorNo]="0"
+    <app-toc-initiative-out [initiative]="result_toc_result"
         [editable]="!this.api.rolesSE.platformIsClosed && (this.api.rolesSE.validateInitiative(this.theoryOfChangesServices?.primarySubmitter) || this.api.rolesSE.isAdmin)"
         [resultLevelId]="1">
     </app-toc-initiative-out>
@@ -14,8 +14,8 @@
     </app-pr-field-header>
 
     <!-- <div *ngFor="let item of contributors_result_toc_result; let i = index;"> -->
-    <!-- [editable]="!this.api.rolesSE.platformIsClosed && (this.api.rolesSE.validateInitiative(item?.initiative_id) || this.api.rolesSE.isAdmin)" -->
-    <app-toc-initiative-out [initiative]="contributors_result_toc_result" [indexYesorNo]="1" [editable]="true"
+        <app-toc-initiative-out [initiative]="contributors_result_toc_result"
+        [editable]="!this.api.rolesSE.platformIsClosed && (this.api.rolesSE.validateInitiative(contributors_result_toc_result[0]?.initiative_id) || this.api.rolesSE.isAdmin)"
         [resultLevelId]="1"></app-toc-initiative-out>
     <!-- </div> -->
 </div>

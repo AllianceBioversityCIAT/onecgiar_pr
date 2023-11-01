@@ -12,27 +12,12 @@ export class TocInitiativeOutComponent implements OnInit {
   @Input() initiative: any;
   @Input() resultLevelId: number | string;
   @Input() isIpsr: boolean = false;
-  @Input() indexYesorNo: number;
   fullInitiativeToc = null;
 
   constructor(public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {}
 
   ngOnInit(): void {
-    this.theoryOfChangesServices.body.push({
-      impactAreasTargets: [],
-      sdgTargest: [],
-      targetsIndicators: [],
-      actionAreaOutcome: [],
-      isSdg: null,
-      isImpactArea: null,
-      resultId: null,
-      initiative: null,
-      is_sdg_action_impact: null
-    });
     this.get_versionDashboard();
-    // this.theoryOfChangesServices.validateEOI(this.initiative);
-
-    console.log('Recived initiative', this.initiative);
   }
 
   getDescription(official_code, short_name) {

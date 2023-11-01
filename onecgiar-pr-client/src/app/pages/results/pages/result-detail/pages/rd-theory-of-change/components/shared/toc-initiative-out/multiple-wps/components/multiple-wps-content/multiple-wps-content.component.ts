@@ -14,7 +14,6 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
   @Input() initiative: any;
   @Input() resultLevelId: number | string;
   @Input() isIpsr: boolean = false;
-  @Input() indexYesorNo: number;
   @Input() showMultipleWPsContent: boolean = true;
   outcomeList = [];
   outputList = [];
@@ -26,17 +25,6 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
   constructor(public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService, public multipleWpsService: MultipleWPsServiceService) {}
 
   ngOnInit(): void {
-    this.theoryOfChangesServices.body.push({
-      impactAreasTargets: [],
-      sdgTargest: [],
-      targetsIndicators: [],
-      actionAreaOutcome: [],
-      isSdg: null,
-      isImpactArea: null,
-      resultId: null,
-      initiative: null,
-      is_sdg_action_impact: null
-    });
     this.GET_outcomeList();
     this.GET_outputList();
     this.GET_EOIList();
@@ -113,18 +101,6 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
         this.initiative.sdgTargest = this.theoryOfChangesServices.sdgTargest;
         this.initiative.actionAreaOutcome = this.theoryOfChangesServices.actionAreaOutcome;
         this.initiative.is_sdg_action_impact = response?.is_sdg_action_impact;
-
-        this.theoryOfChangesServices.body[this.indexYesorNo] = {
-          impactAreasTargets: this.theoryOfChangesServices.impactAreasTargets,
-          sdgTargest: this.theoryOfChangesServices.sdgTargest,
-          targetsIndicators: this.theoryOfChangesServices.targetsIndicators,
-          actionAreaOutcome: this.theoryOfChangesServices.actionAreaOutcome,
-          isSdg: response?.isSdg,
-          isImpactArea: response?.isImpactArea,
-          resultId: response?.resultId,
-          initiative: response?.initiative,
-          is_sdg_action_impact: response?.is_sdg_action_impact
-        };
 
         setTimeout(() => {
           this.indicatorView = true;

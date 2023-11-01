@@ -2,41 +2,11 @@
     [required]="false">
 </app-pr-field-header>
 
-<br>
-
 <div *ngFor="let item of this.contributing_initiatives">
-    Is this result planned in the <span [innerHTML]="item?.full_name"></span> SAPLING ToC?: <strong>No</strong>
+    <app-pr-yes-or-not
+        [label]="getLabel(item.full_name)" [(ngModel)]="isFalse" [readOnly]="true" [editable]="false">
+    </app-pr-yes-or-not>
 </div>
 
-<br>
 <app-impact-area-targets [impactAreaRequid]="true" [body]="impacts"></app-impact-area-targets>
 <app-sdg-targets [sdgRequid]="true" [body]="sdg"></app-sdg-targets>
-<!--
-<app-pr-field-header label="Which CGIAR collective global 2030 target(s) and indicator(s) are mapped to this result?"
-    description="At least one impact area should be indicated." [required]="false"></app-pr-field-header>
-
-<div class="impact_areas">
-    <div class="impact_area" *ngFor="let impact of this.impacts">
-        <div class="impact_area_title">
-            <img class="icon" [src]="'assets/impact_areas/'+impact?.id+'.png'" alt="" srcset="">
-            <div class="title">{{impact?.name}}</div>
-        </div>
-
-        <div class="auto_fit_container">
-            <app-pr-multi-select [required]="false" selectedOptionLabel="target"
-                [options]="this.impactAreasSE.globalTarget | filterTargets:impact?.id" label="Target"
-                selectedLabel="target(s) selected" optionLabel="target" optionValue="targetId"
-                placeholder="Select target(s)" [(ngModel)]="impact.target">
-            </app-pr-multi-select>
-            <app-pr-multi-select [required]="false" selectedOptionLabel="indicator_statement"
-                [options]="this.impactAreasSE.impactAreaIndicators | filterIndicators:impact?.id" label="Indicators"
-                selectedLabel="Indicators(s) selected" optionLabel="indicator_statement" optionValue="id"
-                placeholder="Select indicator(s)" [(ngModel)]="impact.indicators">
-            </app-pr-multi-select>
-        </div>
-        <hr class="divider-50">
-    </div>
-
-
-
-</div>-->

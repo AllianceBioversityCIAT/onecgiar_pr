@@ -31,7 +31,6 @@ export class MultipleWPsComponent implements OnInit {
   @Input() initiative: any;
   @Input() resultLevelId: number | string;
   @Input() isIpsr: boolean = false;
-  @Input() indexYesorNo: number;
   @Input() showMultipleWPsContent: boolean = true;
   activeTab: Tab;
 
