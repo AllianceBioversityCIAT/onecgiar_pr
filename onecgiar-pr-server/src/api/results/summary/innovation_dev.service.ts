@@ -127,6 +127,7 @@ export class InnoDevService {
       if (matchingEvidence) {
         existingEvidence.link = matchingEvidence.link;
         existingEvidence.last_updated_by = user;
+        existingEvidence.is_active = 1;
         await this._evidenceRepository.save(existingEvidence);
       } else {
         existingEvidence.is_active = 0;
