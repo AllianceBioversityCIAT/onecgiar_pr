@@ -18,6 +18,7 @@ import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { FormDataJson } from '../../../shared/globalInterfaces/form-data-json.interface';
+import { UserToken } from 'src/shared/decorators/user-token.decorator';
 
 @Controller()
 export class EvidencesController {
@@ -29,31 +30,19 @@ export class EvidencesController {
     @UploadedFiles() files: Express.Multer.File[],
     @Body() formDataJson: FormDataJson,
     @Headers() auth: HeadersDto,
+    @UserToken() user: TokenDto,
     @Param('resultId') resultId: number,
   ) {
     const createEvidenceDto: CreateEvidenceDto = JSON.parse(
       formDataJson.jsonData,
     );
-    console.log(createEvidenceDto);
     createEvidenceDto.result_id = resultId;
 
-    // console.log(files);
-    // console.log(createEvidenceDto.jsonData);
-    // createEvidenceDto: CreateEvidenceDto;
-    const token: TokenDto = <TokenDto>(
-      JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
-    );
     const { message, response, status } = await this.evidencesService.create(
       createEvidenceDto,
-      token,
+      user,
     );
-    // return await this.evidencesService.createWithFiles(
-    //   files,
-    //   createEvidenceDto,
-    // );
 
-    // return createEvidenceDto;
-    console.log(files);
     if (files?.length)
       await this.evidencesService.createFilesAndSaveInformation(
         files,
