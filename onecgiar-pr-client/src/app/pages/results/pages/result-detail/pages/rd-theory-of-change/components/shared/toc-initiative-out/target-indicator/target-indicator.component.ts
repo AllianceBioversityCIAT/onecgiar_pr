@@ -74,7 +74,7 @@ export class TargetIndicatorComponent {
   }
 
   checkAlert() {
-    if (this.initiative.type_value !== 'custom' && this.initiative.number_result_type !== this.initiative?.result.result_type_id) return true;
+    if (this.initiative.type_value !== 'custom' && this.initiative.number_result_type !== this.initiative?.result.result_type_id && (this.initiative?.result.result_type_id != 4 && this.initiative?.result.result_type_id != 8)) return true;
 
     return false;
   }

@@ -258,21 +258,7 @@ export class resultValidationRepository
 	) 
 			${
         resultLevel == 3 || resultLevel == 4
-          ? `AND IF((select count(*)
-		  from  ${env.DB_TOC}.toc_results tr
-			  join ${env.DB_TOC}.toc_results_indicators tri on tri.toc_results_id = tr.id
-			  where tri.id = rtr1.toc_result_id and tr.phase = (select v.toc_pahse_id
-												from result r2
-												join version v on r2.version_id = v.id
-												where r2.id = r.id)) > 0, IF((select SUM(IF(rit.indicator_question IS NOT NULL AND rit.contributing_indicator <> '' AND rit.contributing_indicator IS NOT NULL, 1, 0)) 
-												from results_toc_result rtr 
-												left join results_toc_result_indicators rtri on rtri.results_toc_results_id = rtr.result_toc_result_id 
-																							and rtri.is_active > 0
-												left join result_indicators_targets rit on rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id 
-																							and rit.is_active > 0
-												where rtr.results_id = r.id
-													and rtr.is_active > 0) > 0, TRUE, FALSE), TRUE )
-			AND IF(rtr1.is_sdg_action_impact, IF(
+          ? `AND IF(rtr1.is_sdg_action_impact, IF(
 				(SELECT COUNT(*) 
 				FROM result_toc_impact_area_target rtiat 
 				WHERE rtiat.result_toc_result_id = rtr1.result_toc_result_id 
@@ -1429,18 +1415,14 @@ export class resultValidationRepository
 				rcd.unkown_using = 0
 				AND (
 					rcd.female_using IS NULL
-					OR rcd.female_using = 0
 					OR rcd.male_using IS NULL
-					OR rcd.male_using = 0
 					OR non_binary_using IS NULL
-					OR non_binary_using = 0
 				)
 			) THEN FALSE
 			WHEN (
 				rcd.unkown_using = 1
 				AND (
 					rcd.has_unkown_using IS NULL
-					OR rcd.has_unkown_using = 0
 				)
 			) THEN FALSE
 			WHEN (
