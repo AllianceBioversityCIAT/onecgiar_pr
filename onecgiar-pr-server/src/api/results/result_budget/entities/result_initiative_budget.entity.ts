@@ -6,9 +6,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { BaseEntity } from '../../../../shared/entities/base-entity';
-import { BaseBudget } from './base-budget';
 import { ResultsByInititiative } from '../../results_by_inititiatives/entities/results_by_inititiative.entity';
-import { Version } from '../../../versioning/entities/version.entity';
 
 @Entity('result_initiative_budget')
 export class ResultInitiativeBudget extends BaseEntity {

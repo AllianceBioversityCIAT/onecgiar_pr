@@ -27,7 +27,7 @@ export class EvidencesService {
       const result = await this._resultRepository.getResultById(
         createEvidenceDto.result_id,
       );
-      const vr = await this._versionRepository.getBaseVersion();
+      await this._versionRepository.getBaseVersion();
       if (createEvidenceDto?.evidences) {
         const evidencesArray = createEvidenceDto?.evidences.filter(
           (e) => !!e?.link,

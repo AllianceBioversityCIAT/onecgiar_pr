@@ -87,7 +87,7 @@ export class ResultsTocResultRepository
         );
         final_data = await this.save(response_edit);
       } else {
-        const queryData: string = `
+        const queryData = `
         insert into results_toc_result 
         (
         planned_result,
@@ -713,10 +713,7 @@ export class ResultsTocResultRepository
 
     try {
       if (initiative?.length) {
-        const upDateInactiveResult = await this.query(upDateInactive, [
-          userId,
-          resultId,
-        ]);
+        await this.query(upDateInactive, [userId, resultId]);
 
         return await this.query(upDateActive, [userId, resultId]);
       } else {
@@ -738,7 +735,6 @@ export class ResultsTocResultRepository
   ) {
     try {
       let IndicatorTargetData = [];
-      console.log('entre');
       if (resultId != null && toc_result_id != null && init != null) {
         const resultInfo = await this.query(`select * from result r
                                                join version v on r.version_id = v.id
@@ -765,7 +761,7 @@ export class ResultsTocResultRepository
             toc_result_id,
             resultId,
           ]);
-          for (let itemIndicator of IndicatorTargetData) {
+          for (const itemIndicator of IndicatorTargetData) {
             //Informartion result
 
             itemIndicator.result = resultInfo[0];
@@ -774,7 +770,7 @@ export class ResultsTocResultRepository
               const regions = `select * 
             from clarisa_countries cc WHERE 
               cc.id  in (select trir.clarisa_countries_id  from Integration_information.toc_result_indicator_country trir where trir.toc_result_id =?)`;
-              let region = await this.query(regions, [
+              const region = await this.query(regions, [
                 itemIndicator.toc_results_indicator_id,
               ]);
               let full_region = null;
@@ -791,7 +787,7 @@ export class ResultsTocResultRepository
               const regions = `select * 
                                 from clarisa_regions cr WHERE 
                                       cr.um49Code in (select trir.clarisa_regions_id  from Integration_information.toc_result_indicator_region trir where trir.toc_result_id = ?)`;
-              let region = await this.query(regions, [
+              const region = await this.query(regions, [
                 itemIndicator.toc_results_indicator_id,
               ]);
               let full_region = null;
@@ -864,9 +860,24 @@ export class ResultsTocResultRepository
             //Finish Section to get the type
 
             const queryTargetInfo = `
-            SELECT trit.target_value, trit.target_date, trit.number_target
-              from Integration_information.toc_result_indicator_target trit 
-                WHERE trit.toc_result_indicator_id = ?
+            SELECT
+              trit.target_value,
+              trit.target_date,
+              trit.number_target
+            FROM
+              Integration_information.toc_result_indicator_target trit
+            WHERE
+              trit.toc_result_indicator_id = ?
+              AND YEAR(DATE(trit.target_date)) = (
+                    SELECT
+                      v1.phase_year
+                    FROM
+                        prdb.version v1
+                    WHERE
+                      v1.phase_name LIKE '%Reporting%' 
+                      AND v1.is_active = 1 
+                      AND v1.status = 1
+                );
             `;
             const queryTargetInfoData = await this.query(queryTargetInfo, [
               itemIndicator.toc_results_indicator_id,
@@ -979,14 +990,14 @@ export class ResultsTocResultRepository
             resultId,
           ]);
 
-          for (let itemIndicator of IndicatorTargetData) {
+          for (const itemIndicator of IndicatorTargetData) {
             itemIndicator.result = resultInfo[0];
             //Section get to location
             if (itemIndicator.location == 'country') {
               const regions = `select * 
             from clarisa_countries cc WHERE 
               cc.id  in (select trir.clarisa_countries_id  from Integration_information.toc_result_indicator_country trir where trir.toc_result_id =?)`;
-              let region = await this.query(regions, [
+              const region = await this.query(regions, [
                 itemIndicator.toc_results_indicator_id,
               ]);
               let full_region = null;
@@ -1003,7 +1014,7 @@ export class ResultsTocResultRepository
               const regions = `select * 
                                 from clarisa_regions cr WHERE 
                                       cr.um49Code in (select trir.clarisa_regions_id  from Integration_information.toc_result_indicator_region trir where trir.toc_result_id = ?)`;
-              let region = await this.query(regions, [
+              const region = await this.query(regions, [
                 itemIndicator.toc_results_indicator_id,
               ]);
               let full_region = null;
@@ -1146,8 +1157,8 @@ export class ResultsTocResultRepository
         { is_active: false },
       );
 
-      for (let itemIndicator of targetsIndicator) {
-        let targetIndicators = await this._resultsTocResultIndicator.findOne({
+      for (const itemIndicator of targetsIndicator) {
+        const targetIndicators = await this._resultsTocResultIndicator.findOne({
           where: {
             results_toc_results_id: id_result_toc_result,
             toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
@@ -1163,7 +1174,6 @@ export class ResultsTocResultRepository
             },
             targetIndicators,
           );
-          console.log('llegue aqui');
           await this._resultTocIndicatorTargetRepository.update(
             {
               result_toc_result_indicator_id:
@@ -1172,8 +1182,8 @@ export class ResultsTocResultRepository
             { is_active: false },
           );
 
-          for (let target of itemIndicator.targets) {
-            let targetInfo =
+          for (const target of itemIndicator.targets) {
+            const targetInfo =
               await this._resultTocIndicatorTargetRepository.findOne({
                 where: {
                   result_toc_result_indicator_id:
@@ -1205,13 +1215,13 @@ export class ResultsTocResultRepository
             }
           }
         } else {
-          let resultTocResultIndicator =
+          const resultTocResultIndicator =
             await this._resultsTocResultIndicator.save({
               results_toc_results_id: id_result_toc_result,
               toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
               is_active: true,
             });
-          for (let target of itemIndicator.targets) {
+          for (const target of itemIndicator.targets) {
             await this._resultTocIndicatorTargetRepository.save({
               result_toc_result_indicator_id:
                 resultTocResultIndicator.result_toc_result_indicator_id,
@@ -1249,24 +1259,20 @@ export class ResultsTocResultRepository
 	              											where r.id  = ?)
 	) `;
 
-      console.log(resultId);
-
       const impactAreaTarget = await this.query(
         `select * from results_toc_result where results_id = ${resultId} and is_active = true and initiative_id = ${init};`,
       );
-      let auxImpactAreaTargets = [];
       let returnInfo = [];
       if (
         impactAreaTarget != null &&
         impactAreaTarget[0]?.result_toc_result_id != null
       ) {
-        auxImpactAreaTargets =
-          await this._resultsTocImpactAreaTargetRepository.find({
-            where: {
-              result_toc_result_id: impactAreaTarget[0]?.result_toc_result_id,
-              is_active: true,
-            },
-          });
+        await this._resultsTocImpactAreaTargetRepository.find({
+          where: {
+            result_toc_result_id: impactAreaTarget[0]?.result_toc_result_id,
+            is_active: true,
+          },
+        });
         const queryImpactAreaTargets = `
     select * 
 	  from clarisa_global_targets cgt 
@@ -1290,7 +1296,7 @@ export class ResultsTocResultRepository
         ]);
         return info;
       } else {
-        let innovatonUseInterface = await this.query(queryTocIndicators, [
+        const innovatonUseInterface = await this.query(queryTocIndicators, [
           toc_result_id,
           resultId,
         ]);
@@ -1326,13 +1332,12 @@ export class ResultsTocResultRepository
       const impactAreaTarget = await this.query(
         `select * from results_toc_result where results_id = ${resultId} and is_active = true and initiative_id = ${init};`,
       );
-      let auxImpactAreaTargets = [];
       let returnInfo = [];
       if (
         impactAreaTarget != null &&
         impactAreaTarget[0]?.result_toc_result_id != null
       ) {
-        auxImpactAreaTargets = await this._resultsTocSdgTargetRepository.find({
+        await this._resultsTocSdgTargetRepository.find({
           where: {
             result_toc_result_id: impactAreaTarget[0]?.result_toc_result_id,
           },
@@ -1361,7 +1366,7 @@ export class ResultsTocResultRepository
 
         return infoSdg;
       } else {
-        let innovatonUseInterface = await this.query(queryTocIndicators, [
+        const innovatonUseInterface = await this.query(queryTocIndicators, [
           toc_result_id,
           resultId,
         ]);
@@ -1421,7 +1426,7 @@ export class ResultsTocResultRepository
         ]);
         return info;
       } else {
-        let innovatonUseInterface = await this.query(queryTocIndicators, [
+        const innovatonUseInterface = await this.query(queryTocIndicators, [
           toc_result_id,
           resultId,
         ]);
@@ -1443,8 +1448,8 @@ export class ResultsTocResultRepository
         { is_active: false },
       );
       if (impactAreaTargets.length != 0) {
-        for (let impact of impactAreaTargets) {
-          let targetIndicators =
+        for (const impact of impactAreaTargets) {
+          const targetIndicators =
             await this._resultsTocImpactAreaTargetRepository.findOne({
               where: {
                 result_toc_result_id: id_result_toc_result,
@@ -1510,7 +1515,7 @@ export class ResultsTocResultRepository
             ]);
 
             if (sdgToc != null && sdgToc.length != 0) {
-              for (let info of sdgToc) {
+              for (const info of sdgToc) {
                 await this._resultsTocImpactAreaTargetRepository.save({
                   result_toc_result_id: id_result_toc_result,
                   impact_area_indicator_id: info.targetId,
@@ -1530,15 +1535,15 @@ export class ResultsTocResultRepository
     }
   }
 
-  async saveSdg(id_result_toc_result, sdgTargets, result_id, init) {
+  async saveSdg(id_result_toc_result, sdgTargets, result_id) {
     try {
       await this._resultsTocSdgTargetRepository.update(
         { result_toc_result_id: id_result_toc_result },
         { is_active: false },
       );
       if (sdgTargets.length != 0) {
-        for (let impact of sdgTargets) {
-          let targetIndicators =
+        for (const impact of sdgTargets) {
+          const targetIndicators =
             await this._resultsTocSdgTargetRepository.findOne({
               where: {
                 result_toc_result_id: id_result_toc_result,
@@ -1605,8 +1610,7 @@ select *
             ]);
 
             if (sdgToc != null && sdgToc.length != 0) {
-              console.log(id_result_toc_result);
-              for (let info of sdgToc) {
+              for (const info of sdgToc) {
                 await this._resultsTocSdgTargetRepository.save({
                   result_toc_result_id: id_result_toc_result,
                   clarisa_sdg_target_id: info.id,
@@ -1635,15 +1639,14 @@ select *
       );
 
       if (actionarea.length != 0) {
-        for (let impact of actionarea) {
-          let targetIndicators = await this._resultActionAreaRepository.findOne(
-            {
+        for (const impact of actionarea) {
+          const targetIndicators =
+            await this._resultActionAreaRepository.findOne({
               where: {
                 result_toc_result_id: id_result_toc_result,
                 action_area_outcome: impact.action_area_outcome_id,
               },
-            },
-          );
+            });
 
           if (targetIndicators != null) {
             targetIndicators.is_active = true;
@@ -1701,7 +1704,7 @@ select *
             ]);
 
             if (sdgToc != null && sdgToc.length != 0) {
-              for (let info of sdgToc) {
+              for (const info of sdgToc) {
                 await this._resultActionAreaRepository.save({
                   result_toc_result_id: id_result_toc_result,
                   action_area_outcome: info.action_area_outcome_id,
@@ -1723,7 +1726,7 @@ select *
 
   async saveSectionNewTheoryOfChange(bodyTheoryOfChange) {
     try {
-      for (let toc of bodyTheoryOfChange) {
+      for (const toc of bodyTheoryOfChange) {
         if (toc.resultId != null && toc.resultId != 0) {
           const result = await this.query(`select * 
                                           from results_toc_result rtr where rtr.results_id = ${toc.resultId} and rtr.initiative_id = ${toc.initiative}`);
@@ -1756,7 +1759,6 @@ select *
               result[0].result_toc_result_id,
               toc.sdgTargest,
               toc.resultId,
-              toc.initiative,
             );
 
             await this.saveActionAreaToc(
@@ -1806,15 +1808,14 @@ select *
       );
 
       if (sdgTargets.length > 0) {
-        for (let sdg of sdgTargets) {
-          let sdgTarget = await this._resultsSdgTargetRepository.findOne({
+        for (const sdg of sdgTargets) {
+          const sdgTarget = await this._resultsSdgTargetRepository.findOne({
             where: {
               result_id: resultId,
               clarisa_sdg_target_id: sdg.id,
               clarisa_sdg_usnd_code: sdg.usnd_code,
             },
           });
-          console.log(sdgTarget);
 
           if (sdgTarget != null) {
             await this._resultsSdgTargetRepository.update(
@@ -1888,8 +1889,8 @@ select *
         );
 
         if (actionArea.length != 0) {
-          for (let impact of actionArea) {
-            let targetIndicators =
+          for (const impact of actionArea) {
+            const targetIndicators =
               await this._resultActionAreaRepository.findOne({
                 where: {
                   result_toc_result_id: actionAreas[0]?.result_toc_result_id,
@@ -1924,3 +1925,4 @@ select *
     }
   }
 }
+

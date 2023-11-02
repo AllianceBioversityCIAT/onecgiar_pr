@@ -1,6 +1,4 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
-import { CreateAssessedDuringExpertWorkshopDto } from './dto/create-assessed-during-expert-workshop.dto';
-import { UpdateAssessedDuringExpertWorkshopDto } from './dto/update-assessed-during-expert-workshop.dto';
 import { AssessedDuringExpertWorkshopRepository } from './assessed-during-expert-workshop.repository';
 import {
   HandlersError,
@@ -15,12 +13,6 @@ export class AssessedDuringExpertWorkshopService {
     private readonly _handlersError: HandlersError,
     private readonly _returnResponse: ReturnResponse,
   ) {}
-
-  create(
-    createAssessedDuringExpertWorkshopDto: CreateAssessedDuringExpertWorkshopDto,
-  ) {
-    return 'This action adds a new assessedDuringExpertWorkshop';
-  }
 
   async findAll(): Promise<ReturnResponseDto<any>> {
     try {
@@ -42,20 +34,5 @@ export class AssessedDuringExpertWorkshopService {
     } catch (error) {
       return this._returnResponse.format(error, true);
     }
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} assessedDuringExpertWorkshop`;
-  }
-
-  update(
-    id: number,
-    updateAssessedDuringExpertWorkshopDto: UpdateAssessedDuringExpertWorkshopDto,
-  ) {
-    return `This action updates a #${id} assessedDuringExpertWorkshop`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} assessedDuringExpertWorkshop`;
   }
 }

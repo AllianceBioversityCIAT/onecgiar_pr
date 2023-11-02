@@ -1,6 +1,5 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { CGSpaceCountryMappings } from '../../../api/results/results-knowledge-products/entities/cgspace-country-mappings.entity';
-import { Auditable } from '../../../shared/entities/auditableEntity';
 
 @Entity('clarisa_countries')
 export class ClarisaCountry {

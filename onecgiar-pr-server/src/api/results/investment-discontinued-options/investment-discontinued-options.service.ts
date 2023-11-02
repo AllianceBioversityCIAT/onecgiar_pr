@@ -1,9 +1,6 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
-import { CreateInvestmentDiscontinuedOptionDto } from './dto/create-investment-discontinued-option.dto';
-import { UpdateInvestmentDiscontinuedOptionDto } from './dto/update-investment-discontinued-option.dto';
 import { ReturnResponse } from '../../../shared/handlers/error.utils';
 import { InvestmentDiscontinuedOptionRepository } from './investment-discontinued-options.repository';
-import { PartialType } from '@nestjs/mapped-types';
 import { env } from 'process';
 
 @Injectable()

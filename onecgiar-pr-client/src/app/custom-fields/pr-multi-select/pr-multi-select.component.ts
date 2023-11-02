@@ -47,7 +47,8 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   constructor(public rolesSE: RolesService, private customizedAlertsFeSE: CustomizedAlertsFeService, public dataControlSE: DataControlService) {}
 
   get optionsIntance() {
-    if (!this._optionsIntance?.length || this.currentOptionsLength != this.options?.length) this._optionsIntance = JSON.parse(JSON.stringify(this.options));
+    if (!this.options?.length) return [];
+    if (!this._optionsIntance?.length || this.currentOptionsLength != this.options?.length) this._optionsIntance = [...this.options];
 
     this.currentOptionsLength = this.options?.length;
 
@@ -169,6 +170,7 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   }
 
   removeOption(option) {
+    this.selectAll = null;
     if (this.logicalDeletion && !option.new) {
       option.is_active = false;
     } else {

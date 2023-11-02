@@ -5,10 +5,7 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 
 @Module({
   controllers: [NonPooledPackageProjectsController],
-  providers: [
-    NonPooledPackageProjectsService,
-    HandlersError
-  ],
-  exports: []
+  providers: [NonPooledPackageProjectsService, HandlersError],
+  exports: [],
 })
 export class NonPooledPackageProjectsModule {}

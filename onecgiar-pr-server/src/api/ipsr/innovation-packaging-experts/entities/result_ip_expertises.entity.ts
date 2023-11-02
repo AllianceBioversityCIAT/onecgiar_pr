@@ -6,9 +6,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { BaseEntity } from '../../../../shared/entities/base-entity';
-import { ResultInnovationPackage } from '../../result-innovation-package/entities/result-innovation-package.entity';
 import { Expertises } from './expertises.entity';
-import { Version } from '../../../versioning/entities/version.entity';
 import { InnovationPackagingExpert } from './innovation-packaging-expert.entity';
 
 @Entity('result_ip_expertises')

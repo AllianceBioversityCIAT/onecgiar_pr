@@ -1,12 +1,10 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { ResultRepository } from '../result.repository';
 import { CreateResultCountryDto } from './dto/create-result-country.dto';
-import { UpdateResultCountryDto } from './dto/update-result-country.dto';
 import { Result } from '../entities/result.entity';
 import { ResultCountryRepository } from './result-countries.repository';
 import { ResultCountry } from './entities/result-country.entity';
 import { HandlersError } from '../../../shared/handlers/error.utils';
-import { Version } from '../../versioning/entities/version.entity';
 import { VersionsService } from '../versions/versions.service';
 
 @Injectable()
@@ -42,7 +40,7 @@ export class ResultCountriesService {
       if (vTemp.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: vTemp });
       }
-      const version: Version = <Version>vTemp.response;
+
       const countries = createResultCountryDto.countries;
       if (
         (!createResultCountryDto.has_countries &&
@@ -61,7 +59,7 @@ export class ResultCountriesService {
             createResultCountryDto.countries.map((e) => e.id),
           );
           if (countries?.length) {
-            let resultRegionArray: ResultCountry[] = [];
+            const resultRegionArray: ResultCountry[] = [];
             for (let index = 0; index < countries?.length; index++) {
               const exist =
                 await this._resultCountryRepository.getResultCountrieByIdResultAndCountryId(
@@ -107,21 +105,5 @@ export class ResultCountriesService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
-  }
-
-  findAll() {
-    return `This action returns all resultCountries`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} resultCountry`;
-  }
-
-  update(id: number, updateResultCountryDto: UpdateResultCountryDto) {
-    return `This action updates a #${id} resultCountry`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} resultCountry`;
   }
 }

@@ -3,7 +3,6 @@ import {
   Column,
   CreateDateColumn,
   Entity,
-  Index,
   JoinColumn,
   ManyToOne,
   OneToMany,
@@ -13,7 +12,6 @@ import {
 import { GenderTagLevel } from '../gender_tag_levels/entities/gender_tag_level.entity';
 import { ResultType } from '../result_types/entities/result_type.entity';
 import { Version } from '../../versioning/entities/version.entity';
-import { Year } from '../years/entities/year.entity';
 import { ResultLevel } from '../result_levels/entities/result_level.entity';
 import { LegacyResult } from '../legacy-result/entities/legacy-result.entity';
 import { ClarisaGeographicScope } from '../../../clarisa/clarisa-geographic-scopes/entities/clarisa-geographic-scope.entity';
