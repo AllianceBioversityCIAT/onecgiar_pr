@@ -12,8 +12,13 @@ export class GlobalParameterController {
     return this.globalParameterService.findAll();
   }
 
-  @Get(':categoryId')
+  @Get('category/:categoryId')
   findByCategoryId(@Param('categoryId') categoryId: string) {
     return this.globalParameterService.findByCategoryId(Number(categoryId));
+  }
+
+  @Get('name/:name')
+  findByName(@Param('name') name: string) {
+    return this.globalParameterService.findOneByName(name);
   }
 }

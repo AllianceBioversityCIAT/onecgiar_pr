@@ -204,7 +204,10 @@ export class EvidencesService {
   }
 
   async findAll(resultId: number) {
-    console.log(this._globalParameterCacheService.getDataFromCache('test'));
+    const da = await this._globalParameterCacheService.getDataFromCache(
+      'sp_client_secret_id',
+    );
+    console.log(da);
     try {
       const result: Result = await this._resultRepository.getResultById(
         resultId,
