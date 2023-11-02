@@ -12,7 +12,7 @@ import { ResultsInnovationsDevRepository } from '../summary/repositories/results
 import { Like } from 'typeorm';
 import { Result } from '../entities/result.entity';
 import * as fs from 'fs';
-import { CacheService } from '../../../shared/services/cache/cache.service';
+import { GlobalParameterCacheService } from '../../../shared/services/cache/global-parameter-cache.service';
 
 @Injectable()
 export class EvidencesService {
@@ -23,7 +23,7 @@ export class EvidencesService {
     private readonly _versionRepository: VersionRepository,
     private readonly _resultsKnowledgeProductsRepository: ResultsKnowledgeProductsRepository,
     private readonly _resultsInnovationsDevRepository: ResultsInnovationsDevRepository,
-    private readonly _cacheService: CacheService,
+    private readonly _globalParameterCacheService: GlobalParameterCacheService,
   ) {}
   async create(createEvidenceDto: CreateEvidenceDto, user: TokenDto) {
     try {
@@ -204,7 +204,7 @@ export class EvidencesService {
   }
 
   async findAll(resultId: number) {
-    console.log(this._cacheService.getDataFromCache('test'));
+    console.log(this._globalParameterCacheService.getDataFromCache('test'));
     try {
       const result: Result = await this._resultRepository.getResultById(
         resultId,

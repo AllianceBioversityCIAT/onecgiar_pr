@@ -39,7 +39,6 @@ import { DeleteRecoverDataModule } from './api/delete-recover-data/delete-recove
 import { MulterModule } from '@nestjs/platform-express';
 import * as multer from 'multer';
 import { GlobalParameterModule } from './api/global-parameter/global-parameter.module';
-import { CacheModule } from './shared/services/cache/cache.module';
 
 @Module({
   imports: [
@@ -76,7 +75,6 @@ import { CacheModule } from './shared/services/cache/cache.module';
     GlobalNarrativesModule,
     DeleteRecoverDataModule,
     GlobalParameterModule,
-    CacheModule,
   ],
   controllers: [AppController],
   providers: [

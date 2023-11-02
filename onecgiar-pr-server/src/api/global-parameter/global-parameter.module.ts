@@ -7,5 +7,6 @@ import { HandlersError } from '../../shared/handlers/error.utils';
 @Module({
   controllers: [GlobalParameterController],
   providers: [GlobalParameterService, GlobalParameterRepository, HandlersError],
+  exports: [GlobalParameterService],
 })
 export class GlobalParameterModule {}
