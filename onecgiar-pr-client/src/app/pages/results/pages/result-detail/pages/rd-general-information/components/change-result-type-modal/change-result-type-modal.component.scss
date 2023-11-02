@@ -1,0 +1,76 @@
+.modal_container {
+  padding: 20px 40px 50px 40px;
+  max-width: 85vw !important;
+  width: 100% !important;
+  min-height: 70vh;
+  font-family: 'Poppins', sans-serif !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+
+  @media screen and (max-width: 1000px) {
+    max-width: 90vw !important;
+  }
+}
+
+.modal_header {
+  background-color: var(--pr-color-secondary);
+  width: 100%;
+  padding: 10px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  .modal_title {
+    font-size: 1.3em;
+    font-weight: 600;
+    color: white;
+    margin: 0;
+  }
+
+  .modal_close_icon {
+    cursor: pointer;
+    color: #fff;
+  }
+}
+
+.change_result_buttons {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 3rem;
+}
+
+.chip_disabled {
+  background-color: #f3f3f3;
+  color: #bfbfbf;
+  font-size: 0.8em;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.buttons {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: 0px;
+  padding-bottom: 10px;
+}
+
+.mqap_sync_title {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 20px;
+
+  .sync_button {
+    margin-top: 45px;
+  }
+}

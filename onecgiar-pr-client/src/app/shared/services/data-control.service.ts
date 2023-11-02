@@ -19,6 +19,7 @@ export class DataControlService {
   showShareRequest = false;
   chagePhaseModal = false;
   updateResultModal = false;
+  changeResultTypeModal = false;
   inNotifications = false;
   currentNotification = null;
   green_checks = null;

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Delete, Module } from '@nestjs/common';
 import { ResultsKnowledgeProductsService } from './results-knowledge-products.service';
 import { ResultsKnowledgeProductsController } from './results-knowledge-products.controller';
 import { ResultsKnowledgeProductsRepository } from './repositories/results-knowledge-products.repository';
@@ -35,15 +35,49 @@ import { ResultsKnowledgeProductFairScoreRepository } from './repositories/resul
 import { FairFieldRepository } from './repositories/fair-fields.repository';
 import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
 import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
+import { ResultsService } from '../results.service';
+import { ResultTypesModule } from '../result_types/result_types.module';
+import { ResultsByInititiativesModule } from '../results_by_inititiatives/results_by_inititiatives.module';
+import { ResultsByEvidencesModule } from '../results_by_evidences/results_by_evidences.module';
+import { LegacyResultModule } from '../legacy-result/legacy-result.module';
+import { ClarisaInstitutionsTypeModule } from '../../../clarisa/clarisa-institutions-type/clarisa-institutions-type.module';
+import { ResultRegionsService } from '../result-regions/result-regions.service';
+import { ResultRegionsModule } from '../result-regions/result-regions.module';
+import { ResultCountriesModule } from '../result-countries/result-countries.module';
+import { GenderTagLevelsModule } from '../gender_tag_levels/gender_tag_levels.module';
+import { ResultsValidationModuleModule } from '../results-validation-module/results-validation-module.module';
+import { ElasticModule } from '../../../elastic/elastic.module';
+import { DynamodbLogsModule } from '../../../connection/dynamodb-logs/dynamodb-logs.module';
+import { ResultsInvestmentDiscontinuedOptionsModule } from '../results-investment-discontinued-options/results-investment-discontinued-options.module';
+import { DeleteRecoverDataModule } from '../../delete-recover-data/delete-recover-data.module';
+import { DeleteRecoverDataService } from '../../delete-recover-data/delete-recover-data.service';
 
 @Module({
-  imports: [HttpModule, VersioningModule],
+  imports: [
+    HttpModule,
+    VersioningModule,
+    DeleteRecoverDataModule,
+    //resultsservice imports :(
+    ResultTypesModule,
+    ResultsByInititiativesModule,
+    ResultsByEvidencesModule,
+    LegacyResultModule,
+    ClarisaInstitutionsTypeModule,
+    ResultRegionsModule,
+    ResultCountriesModule,
+    GenderTagLevelsModule,
+    ElasticModule,
+    ResultsValidationModuleModule,
+    DynamodbLogsModule,
+    ResultsInvestmentDiscontinuedOptionsModule,
+  ],
   controllers: [ResultsKnowledgeProductsController],
   providers: [
     ResultsKnowledgeProductsService,
     HandlersError,
     ResultsKnowledgeProductsRepository,
     ResultRepository,
+    ResultsService,
     MQAPService,
     VersionsService,
     ResultsKnowledgeProductMapper,
@@ -71,10 +105,12 @@ import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institut
     ReturnResponse,
     ResultsCenterRepository,
     ClarisaInstitutionsRepository,
+    DeleteRecoverDataService,
   ],
   exports: [
     ResultsKnowledgeProductsRepository,
     ResultRepository,
+    ResultsService,
     MQAPService,
     VersionsService,
     ResultsKnowledgeProductMapper,
@@ -101,6 +137,7 @@ import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institut
     FairFieldRepository,
     ResultsCenterRepository,
     ClarisaInstitutionsRepository,
+    DeleteRecoverDataService,
   ],
 })
 export class ResultsKnowledgeProductsModule {}

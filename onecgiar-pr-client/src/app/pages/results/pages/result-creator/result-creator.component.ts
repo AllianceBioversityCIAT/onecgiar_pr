@@ -146,16 +146,16 @@ export class ResultCreatorComponent implements OnInit {
       );
     } else {
       //({ ...this.mqapJson, result_data: this.resultLevelSE.resultBody });
-      this.api.resultsSE.POST_createWithHandle({ ...this.mqapJson, result_data: this.resultLevelSE.resultBody }).subscribe(
-        (resp: any) => {
+      this.api.resultsSE.POST_createWithHandle({ ...this.mqapJson, result_data: this.resultLevelSE.resultBody }).subscribe({
+        next: (resp: any) => {
           //(resp);
           this.router.navigate([`/result/result-detail/${resp?.response?.result_code}/general-information`], { queryParams: { phase: resp?.response?.version_id } });
           this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
         },
-        err => {
+        error: err => {
           this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
         }
-      );
+      });
     }
   }
 
