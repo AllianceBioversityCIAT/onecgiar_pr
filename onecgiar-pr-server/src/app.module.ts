@@ -37,6 +37,7 @@ import { VersioningModule } from './api/versioning/versioning.module';
 import { GlobalNarrativesModule } from './api/global-narratives/global-narratives.module';
 import { DeleteRecoverDataModule } from './api/delete-recover-data/delete-recover-data.module';
 import { MulterModule } from '@nestjs/platform-express';
+import { CacheService } from './shared/services/cache/cache.service';
 import * as multer from 'multer';
 
 @Module({
@@ -84,6 +85,7 @@ import * as multer from 'multer';
       provide: APP_FILTER,
       useClass: HttpExceptionFilter,
     },
+    CacheService,
   ],
 })
 export class AppModule implements NestModule {
