@@ -39,6 +39,7 @@ import { DeleteRecoverDataModule } from './api/delete-recover-data/delete-recove
 import { MulterModule } from '@nestjs/platform-express';
 import * as multer from 'multer';
 import { GlobalParameterModule } from './api/global-parameter/global-parameter.module';
+import { SharePointModule } from './shared/services/share-point/share-point.module';
 
 @Module({
   imports: [
@@ -75,6 +76,7 @@ import { GlobalParameterModule } from './api/global-parameter/global-parameter.m
     GlobalNarrativesModule,
     DeleteRecoverDataModule,
     GlobalParameterModule,
+    SharePointModule,
   ],
   controllers: [AppController],
   providers: [

@@ -13,7 +13,7 @@ import { ResultRepository } from '../result.repository';
 import { VersionRepository } from '../../versioning/versioning.repository';
 import { ResultsKnowledgeProductsRepository } from '../results-knowledge-products/repositories/results-knowledge-products.repository';
 import { ResultsInnovationsDevRepository } from '../summary/repositories/results-innovations-dev.repository';
-import { GlobalParameterCacheModule } from '../../../shared/services/cache/global-parameter-cache.module';
+import { SharePointModule } from '../../../shared/services/share-point/share-point.module';
 import {
   HandlersError,
   ReturnResponse,
@@ -31,7 +31,7 @@ import {
     ReturnResponse,
     ResultsInnovationsDevRepository,
   ],
-  imports: [AuthModule, GlobalParameterCacheModule],
+  imports: [AuthModule, SharePointModule],
   exports: [EvidencesRepository],
 })
 export class EvidencesModule implements NestModule {
