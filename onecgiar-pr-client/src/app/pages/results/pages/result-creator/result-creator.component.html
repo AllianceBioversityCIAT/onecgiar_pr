@@ -27,11 +27,8 @@
         placeholder="Select Initiative" [(ngModel)]="this.resultLevelSE.resultBody.initiative_id">
       </app-pr-select>
 
-
       <app-result-level-buttons></app-result-level-buttons>
-      <!-- <div class="segment_title segment_title_margin" *ngIf="this.resultLevelSE?.currentResultTypeList?.length">Result
-        type
-      </div> -->
+
       <app-pr-radio-button label="Indicator category" *ngIf="this.resultLevelSE?.currentResultTypeList?.length"
         [options]="this.resultLevelSE.currentResultTypeList" [isStatic]="true" optionLabel="name" optionValue='id'
         [(ngModel)]="this.resultLevelSE.resultBody.result_type_id" (ngModelChange)="clean()">
@@ -67,15 +64,7 @@
       </div>
     </div>
 
-    <!-- <div (click)="onSaveSection()" class="save_and_continue"
-      [ngClass]="{'globalDisabled': (valdiateNormalFields() || exactTitleFound) || this.api.wordCounterSE.counter(this.resultLevelSE.resultBody.result_name) > 30   }">
-      <app-pr-button padding="medium" text="Save and continue" [rotating]="this.isSaving"
-        [icon]="this.isSaving?'loop':'save'" [ngClass]="{'globalDisabled ':this.isSaving}">
-      </app-pr-button>
-    </div> -->
-
-    <app-save-button [editable]="true" (clickSave)="onSaveSection()" text="Save and continue"
-      [disabled]="(valdiateNormalFields() || exactTitleFound) || (isKnowledgeProduct ? false:this.api.wordCounterSE.counter(this.resultLevelSE.resultBody.result_name) > 30)  ">
+    <app-save-button [editable]="true" (clickSave)="onSaveSection()" text="Save and continue">
     </app-save-button>
 
   </div>

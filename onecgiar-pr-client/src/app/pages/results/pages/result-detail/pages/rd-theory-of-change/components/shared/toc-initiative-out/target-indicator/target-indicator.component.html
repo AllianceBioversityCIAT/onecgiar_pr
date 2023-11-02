@@ -43,7 +43,7 @@
     <div class="line"></div>
 
     <div *ngIf="initiative.targets.length == 0">
-        <app-alert-status [description]="'There are no targets for this indicator.'"
+        <app-alert-status [description]="'This indicator has no targets for the current year.'"
             status="warning"></app-alert-status>
     </div>
 
@@ -77,13 +77,13 @@
 
                 </div>
                 <div
-                    *ngIf="initiative.type_value != 'custom' && initiative.number_result_type !=  initiative?.result.result_type_id">
+                    *ngIf="initiative.type_value != 'custom' && initiative.number_result_type != initiative?.result.result_type_id && (initiative?.result.result_type_id != 4 && initiative?.result.result_type_id != 8)">
                     <app-alert-status status="warning"
                         [description]="descriptionWarning(initiative?.result.name, initiative.type)"></app-alert-status>
                 </div>
 
                 <div style="margin-bottom: 10px;"
-                    *ngIf="initiative.type_value == 'custom' || initiative.number_result_type ==  initiative?.result.result_type_id">
+                    *ngIf="initiative.type_value == 'custom' || initiative.number_result_type ==  initiative?.result.result_type_id || (initiative?.result.result_type_id == 4 || initiative?.result.result_type_id == 8)">
                     <app-pr-yes-or-not [label]="'Have you achieved the target of this indicator?'" [required]="true"
                         [(ngModel)]="item.indicator_question"
                         (selectOptionEvent)="item.contributing = item.indicator_question == true ? 1:0 "></app-pr-yes-or-not>
@@ -92,12 +92,12 @@
                 <div class="table-indicator">
                     <table>
                         <tr class="header"
-                            *ngIf="initiative.type_value == 'custom' || initiative.number_result_type ==  initiative?.result.result_type_id">
+                            *ngIf="initiative.type_value == 'custom' || initiative.number_result_type ==  initiative?.result.result_type_id || (initiative?.result.result_type_id == 4 || initiative?.result.result_type_id == 8)">
                             <th id="result_being_reported_is_calculable" class="row-one">Result being reported</th>
                             <th id="target_contribution_is_calculable">Target contribution</th>
                         </tr>
                         <tr
-                            *ngIf="initiative.type_value == 'custom' || initiative.number_result_type ==  initiative?.result.result_type_id">
+                            *ngIf="initiative.type_value == 'custom' || initiative.number_result_type ==  initiative?.result.result_type_id || (initiative?.result.result_type_id == 4 || initiative?.result.result_type_id == 8)">
                             <td><a [routerLink]="'/result/result-detail/' + initiative?.result.result_code"
                                     target="_blank"
                                     [queryParams]="{ phase: initiative?.result.version_id }">{{initiative?.result.result_code}}
@@ -150,13 +150,13 @@
                     </div>
                 </div>
                 <div
-                    *ngIf="initiative.number_result_type ==  initiative?.result.result_type_id || initiative.type_value == 'custom'">
+                    *ngIf="initiative.number_result_type == initiative?.result.result_type_id || initiative.type_value == 'custom'">
                     <app-alert-status status="warning"
                         [description]="'PRMS can only identify planned targets as numerical values. If your result framework has defined a target value with a unit of measurement other than numbers, PRMS will prompt you to indicate the contribution to the quantitative indicator using a text box.'"></app-alert-status>
                 </div>
     
                 <div
-                    *ngIf="initiative.type_value != 'custom' && initiative.number_result_type !=  initiative?.result.result_type_id">
+                    *ngIf="initiative.type_value != 'custom' && initiative.number_result_type !=  initiative?.result.result_type_id && (initiative?.number_result_type == 4 && initiative?.number_result_type== 8)">
                     <app-alert-status status="warning"
                         [description]="descriptionWarning(initiative?.result.name, initiative.type)"></app-alert-status>
                 </div>
@@ -168,7 +168,7 @@
                 </div>
     
                 <div style="margin-bottom: 10px;"
-                    *ngIf="initiative.type_value == 'custom' || initiative.number_result_type ==  initiative?.result.result_type_id">
+                    *ngIf="initiative.type_value == 'custom' || initiative.number_result_type ==  initiative?.result.result_type_id || (initiative?.result.result_type_id == 4 || initiative?.result.result_type_id == 8)">
                     <app-pr-yes-or-not [label]="'Have you achieved the target of this indicator?'" [required]="true"
                         [(ngModel)]="item.indicator_question"
                         (selectOptionEvent)="item.contributing = item.indicator_question == true ? 1:0 "></app-pr-yes-or-not>
@@ -177,12 +177,12 @@
                 <div class="table-indicator">
                     <table>
                         <tr class="header"
-                            *ngIf="initiative.type_value == 'custom' || initiative.number_result_type ==  initiative?.result.result_type_id">
+                            *ngIf="initiative.type_value == 'custom' || initiative.number_result_type ==  initiative?.result.result_type_id || (initiative?.result.result_type_id == 4 || initiative?.result.result_type_id == 8)">
                             <th id="result_being_not_calculable" class="row-one">Result being reported</th>
                             <th id="target_contribution_not_calculable">Target contribution</th>
                         </tr>
                         <tr
-                            *ngIf="initiative.type_value == 'custom' || initiative.number_result_type ==  initiative?.result.result_type_id">
+                            *ngIf="initiative.type_value == 'custom' || initiative.number_result_type ==  initiative?.result.result_type_id || (initiative?.result.result_type_id == 4 || initiative?.result.result_type_id == 8)">
                             <td><a [routerLink]="'/result/result-detail/' + initiative?.result.result_code"
                                     target="_blank"
                                     [queryParams]="{ phase: initiative?.result.version_id }">{{initiative?.result.result_code}}
