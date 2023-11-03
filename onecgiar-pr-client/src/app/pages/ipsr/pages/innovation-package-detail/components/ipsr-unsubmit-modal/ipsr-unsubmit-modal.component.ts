@@ -11,24 +11,24 @@ export class IpsrUnsubmitModalComponent {
   constructor(private api: ApiService, public ipsrDataControlSE: IpsrDataControlService) {}
   requesting = false;
   comment = null;
+
   cleanObject() {
     this.comment = null;
   }
+
   onSubmit() {
     this.requesting = true;
-    this.api.resultsSE.PATCHSubmissionsUnsubmitIpsr(this.comment).subscribe(
-      resp => {
-        //(resp.response.innoPckg.status);
+    this.api.resultsSE.PATCHSubmissionsUnsubmitIpsr(this.comment).subscribe({
+      next: resp => {
         this.ipsrDataControlSE.detailData.status = resp.response?.innoPckg?.status;
-        this.requesting = false;
         this.api.alertsFe.show({ id: 'unsubmodal', title: `Success`, description: `The result has been unsubmitted.`, status: 'success' });
         this.ipsrDataControlSE.modals.unsubmit = false;
-        // this.currentResultSE.GET_resultById();
+        this.requesting = false;
       },
-      err => {
-        console.error(err);
+      error: err => {
+        this.requesting = false;
         this.api.alertsFe.show({ id: 'unsubmodalerror', title: 'Error in unsubmitted', description: '', status: 'error' });
       }
-    );
+    });
   }
 }
