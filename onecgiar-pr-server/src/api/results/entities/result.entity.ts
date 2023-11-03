@@ -154,6 +154,13 @@ export class Result {
   is_active: boolean;
 
   @Column({
+    name: 'in_qa',
+    type: 'tinyint',
+    default: 0,
+  })
+  in_qa: boolean;
+
+  @Column({
     name: 'version_id',
     type: 'bigint',
     nullable: false,

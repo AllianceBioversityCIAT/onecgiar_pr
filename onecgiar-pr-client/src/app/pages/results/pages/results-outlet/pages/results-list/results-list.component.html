@@ -46,8 +46,11 @@
 
               <div class="new_tag" *ngIf="i == 0 && subResult.is_new && !subResult.legacy_id">New</div>
               <div class="new_tag pre" *ngIf="i == 0 && subResult.legacy_id">Pre 2022</div>
-              {{ column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date :
-              'YYYY-MM-dd') }}
+
+              <div [ngClass]="{'center_flex_100':  column.center}" [innerHTML]="column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date :
+              'YYYY-MM-dd')"></div>
+
+
             </a>
             <!-- <div class="transparent_text">
                 {{ result[column.attr] }}
@@ -89,8 +92,9 @@
     *ngIf="!(this.api.dataControlSE.resultsList | resultsListFilter : this.resultsListService.text_to_search :  this.combine:this.api.resultsListFilterSE.filterJoin)?.length">
     There are no results for the selected filters.</div>
 
-  <app-custom-spinner *ngIf="this.resultsListService.showDeletingResultSpinner"
-    text="Deleting result"></app-custom-spinner>
+  <app-custom-spinner
+    *ngIf="this.resultsListService.showDeletingResultSpinner || this.resultsListService.showLoadingResultSpinner"
+    [text]="this.resultsListService.showLoadingResultSpinner?'Loading results':'Deleting result'"></app-custom-spinner>
 
 </div>
 

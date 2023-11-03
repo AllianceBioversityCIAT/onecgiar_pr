@@ -123,14 +123,39 @@ a {
   }
 }
 
-.completeness-state {
+.in-qa-tag {
+  background-color: #FFC84F;
+  color: rgb(61, 61, 61);
+  margin-top: 2px;
+  margin-bottom: 2px;
+  padding: 1px 5px;
+  border-radius: 1px;
+  font-size: 0.9em;
+  font-weight: 700;
+  text-align: center;
+  font-style: normal;
+}
+
+.label-status-styles {
   color: white;
   display: inline;
-  padding: 0px 10px;
-  border-radius: 3px;
-  font-size: 0.8em;
   font-style: italic;
   font-weight: 500;
+  border-radius: 3px;
+
+}
+
+.completeness-state {
+  @extend .label-status-styles;
+  padding: 0px 10px;
+  font-size: 0.8em;
+
+}
+
+.result-list-state {
+  @extend .label-status-styles;
+  font-size: .9rem;
+  padding: 3px 10px;
 }
 
 .completeness-submitted {
