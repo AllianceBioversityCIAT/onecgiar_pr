@@ -4,11 +4,13 @@ import {
   Delete,
   Patch,
   UseInterceptors,
+  Body,
 } from '@nestjs/common';
 import { DeleteRecoverDataService } from './delete-recover-data.service';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { UserToken } from '../../shared/decorators/user-token.decorator';
+import { ChangeResultTypeDto } from './prms-tables-types/dto/change-result-type.dto';
 
 @Controller()
 @UseInterceptors(ResponseInterceptor)
@@ -22,11 +24,21 @@ export class DeleteRecoverDataController {
     return this.deleteRecoverDataService.deleteResult(+id, user);
   }
 
-  @Patch('change/result/:id/type/:type')
+  @Patch('change/result/:id')
   changeResultType(
     @Param('id') result_id: string,
-    @Param('type') new_result_type_id: string,
     @UserToken() user: TokenDto,
-  ) {}
+    @Body() ChangeResultTypeData: ChangeResultTypeDto,
+  ) {
+    return this.deleteRecoverDataService.changeResultType(
+      +result_id,
+      +ChangeResultTypeData?.result_level_id,
+      +ChangeResultTypeData?.result_type_id,
+      ChangeResultTypeData?.justification,
+      user,
+      true,
+      ChangeResultTypeData?.new_name,
+    );
+  }
 }
 

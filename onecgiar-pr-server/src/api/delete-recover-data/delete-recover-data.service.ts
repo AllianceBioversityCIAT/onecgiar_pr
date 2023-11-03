@@ -362,6 +362,8 @@ export class DeleteRecoverDataService {
         },
       });
 
+      const resultAfterbefore = { ...resultToUpdate };
+
       if (!resultToUpdate) {
         throw this._returnResponse.format({
           message: `The result with id ${result_id} was not found`,
@@ -397,7 +399,7 @@ export class DeleteRecoverDataService {
 
       //TODO add validations when the result changes its type
       await this.manageChangedResultTypeData(
-        resultToUpdate,
+        resultAfterbefore,
         result_level_id,
         result_type_id,
         user,
@@ -464,20 +466,6 @@ export class DeleteRecoverDataService {
     user: TokenDto,
   ): Promise<ReturnResponseDto<any>> {
     try {
-      if (
-        !(
-          result.result_level_id == ResultLevelEnum.INITIATIVE_OUTPUT &&
-          new_result_level == ResultLevelEnum.INITIATIVE_OUTPUT &&
-          new_result_type == ResultTypeEnum.KNOWLEDGE_PRODUCT
-        )
-      ) {
-        return this._returnResponse.format({
-          message: `The data of the result with code ${result.id} has not been changed`,
-          response: result.result_code,
-          statusCode: HttpStatus.OK,
-        });
-      }
-
       const returnDelete = await this.deleteDataByNewResultType(
         result.id,
         new_result_type,
@@ -587,12 +575,12 @@ export class DeleteRecoverDataService {
     old_result_level: ResultLevelEnum,
   ) {
     try {
-      await this._resultsTocTargetIndicatorRepository.fisicalDelete(result_id);
       await this._resultsImpactAreaIndicatorRepository.fisicalDelete(result_id);
       await this._resultCountriesSubNationalRepository.fisicalDelete(result_id);
       await this._resultsTocSdgTargetRepository.fisicalDelete(result_id);
       await this._resultsTocImpactAreaTargetRepository.fisicalDelete(result_id);
       await this._resultsTocResultIndicatorsRepository.fisicalDelete(result_id);
+      await this._resultsTocTargetIndicatorRepository.fisicalDelete(result_id);
 
       switch (old_result_type) {
         case ResultTypeEnum.KNOWLEDGE_PRODUCT:
@@ -645,7 +633,7 @@ export class DeleteRecoverDataService {
     }
   }
 
-  async DELETE_knowledge_product(result_id: number) {
+  private async DELETE_knowledge_product(result_id: number) {
     await this._nonPooledProjectBudgetRepository.fisicalDelete(result_id);
     await this._resultActorRepository.fisicalDelete(result_id);
     await this._resultAnswerRepository.fisicalDelete(result_id);
@@ -675,7 +663,7 @@ export class DeleteRecoverDataService {
     );
   }
 
-  async DELETE_impact_contribution(result_id: number) {
+  private async DELETE_impact_contribution(result_id: number) {
     await this._knowledgeProductFairBaselineRepository.fisicalDelete(result_id);
     await this._knowledgeProductFairBaselineRepository.fisicalDeleteLegacy(
       result_id,
@@ -725,7 +713,7 @@ export class DeleteRecoverDataService {
     );
   }
 
-  async DELETE_action_area_outcome(
+  private async DELETE_action_area_outcome(
     result_id: number,
     _result_level: ResultLevelEnum,
   ) {
@@ -752,7 +740,7 @@ export class DeleteRecoverDataService {
     );
   }
 
-  async DELETE_common_kp_data(result_id: number) {
+  private async DELETE_common_kp_data(result_id: number) {
     await this._resultsKnowledgeProductAltmetricRepository.fisicalDelete(
       result_id,
     );
@@ -778,7 +766,7 @@ export class DeleteRecoverDataService {
     await this._resultsKnowledgeProductsRepository.fisicalDelete(result_id);
   }
 
-  async DELETE_other_outcome(
+  private async DELETE_other_outcome(
     result_id: number,
     _result_level: ResultLevelEnum,
   ) {
@@ -809,7 +797,7 @@ export class DeleteRecoverDataService {
     );
   }
 
-  async DELETE_innovation_use(
+  private async DELETE_innovation_use(
     result_id: number,
     _result_level: ResultLevelEnum,
   ) {
