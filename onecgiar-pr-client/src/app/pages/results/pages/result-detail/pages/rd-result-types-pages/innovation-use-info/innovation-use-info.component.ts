@@ -19,53 +19,42 @@ export class InnovationUseInfoComponent implements OnInit {
   }
 
   getSectionInformation() {
-    this.api.resultsSE.GET_innovationUse().subscribe(
-      ({ response }) => {
+    this.api.resultsSE.GET_innovationUse().subscribe({
+      next: ({ response }) => {
         this.innovationUseInfoBody.innovatonUse = response;
         this.convertOrganizations(this.innovationUseInfoBody?.innovatonUse?.organization);
-        //(response);
-        //(response);
-        // //(this.innovationUseInfoBody);
       },
-      err => {
+      error: err => {
         console.error(err);
       }
-    );
+    });
   }
   onSaveSection() {
-    //(this.innovationUseInfoBody);
     this.savingSection = true;
     this.convertOrganizationsTosave();
-    //({ innovatonUse: this.innovationUseInfoBody.innovatonUse });
-    this.api.resultsSE.PATCH_innovationUse({ innovatonUse: this.innovationUseInfoBody.innovatonUse }).subscribe(
-      resp => {
-        //(resp);
-        // setTimeout(() => {
+    this.api.resultsSE.PATCH_innovationUse({ innovatonUse: this.innovationUseInfoBody.innovatonUse }).subscribe({
+      next: resp => {
         this.getSectionInformation();
-        // }, 3000);
         this.savingSection = false;
       },
-      err => {
+      error: err => {
         console.error(err);
         this.savingSection = false;
       }
-    );
+    });
   }
 
   convertOrganizations(organizations) {
-    organizations?.map((item: any) => {
+    organizations?.forEach((item: any) => {
       if (item.parent_institution_type_id) {
         item.institution_sub_type_id = item?.institution_types_id;
         item.institution_types_id = item?.parent_institution_type_id;
-        //(item.institution_sub_type_id);
-        //(item.institution_types_id);
-        //('...');
       }
     });
   }
 
   convertOrganizationsTosave() {
-    this.innovationUseInfoBody.innovatonUse.organization.map((item: any) => {
+    this.innovationUseInfoBody.innovatonUse.organization.forEach((item: any) => {
       if (item.institution_sub_type_id) {
         item.institution_types_id = item.institution_sub_type_id;
       }

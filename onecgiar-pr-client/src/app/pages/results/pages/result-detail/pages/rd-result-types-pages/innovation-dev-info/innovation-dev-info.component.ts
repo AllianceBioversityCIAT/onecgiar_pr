@@ -17,6 +17,7 @@ export class InnovationDevInfoComponent implements OnInit {
   savingSection = false;
   innovationDevelopmentQuestions: InnovationDevelopmentQuestions = new InnovationDevelopmentQuestions();
   innovationDevelopmentLinks: InnovationDevelopmentLinks = new InnovationDevelopmentLinks();
+
   constructor(private api: ApiService, public innovationControlListSE: InnovationControlListService, private innovationDevInfoUtilsSE: InnovationDevInfoUtilsService) {}
 
   ngOnInit(): void {
@@ -39,24 +40,22 @@ export class InnovationDevInfoComponent implements OnInit {
   getSectionInformation() {
     this.savingSection = true;
     this.GET_questionsInnovationDevelopment();
-    this.api.resultsSE.GET_innovationDev().subscribe(
-      ({ response }) => {
-        //(response);
+    this.api.resultsSE.GET_innovationDev().subscribe({
+      next: ({ response }) => {
         this.convertOrganizations(response?.innovatonUse?.organization);
         this.innovationDevInfoBody = response;
         this.innovationDevInfoBody.innovation_user_to_be_determined = Boolean(this.innovationDevInfoBody.innovation_user_to_be_determined);
-        //(response);
         this.savingSection = false;
       },
-      err => {
+      error: err => {
         console.error(err);
         this.savingSection = false;
       }
-    );
+    });
   }
 
   convertOrganizations(organizations) {
-    organizations.map((item: any) => {
+    organizations.forEach((item: any) => {
       if (item.parent_institution_type_id) {
         item.institution_sub_type_id = item?.institution_types_id;
         item.institution_types_id = item?.parent_institution_type_id;
@@ -65,7 +64,7 @@ export class InnovationDevInfoComponent implements OnInit {
   }
 
   convertOrganizationsTosave() {
-    this.innovationDevInfoBody.innovatonUse.organization.map((item: any) => {
+    this.innovationDevInfoBody.innovatonUse.organization.forEach((item: any) => {
       if (item.institution_sub_type_id) {
         item.institution_types_id = item.institution_sub_type_id;
       }
@@ -73,35 +72,38 @@ export class InnovationDevInfoComponent implements OnInit {
   }
 
   onSaveSection() {
-    //({ ...this.innovationDevInfoBody, ...this.innovationDevelopmentQuestions });
     this.convertOrganizationsTosave();
-    // this.PATCH_InnovationDevSummary();
     if (this.innovationDevInfoBody.innovation_nature_id != 12) {
       this.innovationDevInfoBody.number_of_varieties = null;
       this.innovationDevInfoBody.is_new_variety = null;
     }
-    this.api.resultsSE.PATCH_innovationDev({ ...this.innovationDevInfoBody, ...this.innovationDevelopmentQuestions }).subscribe(
-      ({ response }) => {
+    this.api.resultsSE.PATCH_innovationDev({ ...this.innovationDevInfoBody, ...this.innovationDevelopmentQuestions }).subscribe({
+      next: ({ response }) => {
         this.getSectionInformation();
       },
-      err => {
+      error: err => {
         console.error(err);
       }
-    );
+    });
   }
+
   pdfOptions = [
     { name: 'Yes', value: true },
     { name: 'No, not necessary at this stage', value: false }
   ];
+
   pdfDescription() {
     return `Examples of IPSR Innovation Profiles can be found  <a class="open_route" target="_blank" href="https://cgspace.cgiar.org/handle/10568/121923">here</a>.`;
   }
+
   acknowledgementDescription() {
     return `Are there any specific investors or donors – other than the <a class="open_route" target="_blank" href="https://www.cgiar.org/funders/">CGIAR Fund Donors</a> – who provide core/pooled funding – that you wish to acknowledge for their critical contribution to the continued development, testing, and scaling of this innovation? <br> - Please separate donor/investor names by a semicolon. <br> - Donors/investors will be included in the acknowledgment section in the Innovation Profile.`;
   }
+
   alertInfoText() {
     return `Innovations are new, improved, or adapted technologies or products, capacity development tools and services, and policies or institutional arrangements with high potential to contribute to positive impacts when used at scale. Innovations may be at early stages of readiness (ideation or basic research) or at more mature stages of readiness (delivery and scaling)<br><br>The specific number of new or improved lines/ varieties can be specified under Innovation Typology.`;
   }
+
   alertInfoText2() {
     return `Please make sure you provide evidence/documentation that support the current innovation readiness level.<br>
     * Evidence are inputted in the General information section <a class="open_route" target="_blank" href="/result/result-detail/${this.api.resultsSE?.currentResultCode}/general-information?phase=${this.api.resultsSE?.currentResultPhase}">(click here to go there)</a><br>    
@@ -110,6 +112,7 @@ export class InnovationDevInfoComponent implements OnInit {
     <br><br>
     Examples of evidence documentation for different CGIAR innovations and readiness levels can be found <a target="_blank" href="https://drive.google.com/file/d/1rWGC0VfxazlzdZ1htcfBSw1jO7GmVQbq/view" class='open_route alert-event'>here</a>`;
   }
+
   shortTitleDescription() {
     return `<ul>
     <li>Innovations are new, improved, or adapted technologies or products, capacity development tools and services, and policies or institutional arrangements with high potential to contribute to positive impacts when used at scale.</li>
@@ -122,6 +125,7 @@ export class InnovationDevInfoComponent implements OnInit {
     <li>Avoid the use of CGIAR Center, Initiative or organization names in the short title</li>
     </ul>`;
   }
+
   readiness_of_this_innovation_description() {
     return `<ul>
     <li>In case the innovation readiness level differs across countries or regions, we advise to assign the highest current innovation readiness level that can be supported by the evidence provided.</li>

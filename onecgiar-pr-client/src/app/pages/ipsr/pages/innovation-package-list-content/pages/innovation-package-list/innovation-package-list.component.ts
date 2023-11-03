@@ -18,7 +18,7 @@ export class InnovationPackageListComponent implements OnInit, OnDestroy {
   constructor(public api: ApiService, public phaseServices: PhasesService, public ipsrListService: IpsrListService, public ipsrListFilterSE: IpsrListFilterService) {}
 
   ngOnInit(): void {
-    this.api.rolesSE.isAdmin ? this.deselectInits() : null;
+    if (this.api.rolesSE.isAdmin) this.deselectInits();
     this.GETAllInnovationPackages();
     this.phaseServices.phases.ipsr.forEach(item => ({ ...item, selected: item.status }));
   }
@@ -26,7 +26,7 @@ export class InnovationPackageListComponent implements OnInit, OnDestroy {
   GETAllInnovationPackages() {
     this.api.resultsSE.GETAllInnovationPackages().subscribe(({ response }) => {
       this.innovationPackagesList = response;
-      this.innovationPackagesList.map((inno: any) => {
+      this.innovationPackagesList.forEach((inno: any) => {
         inno.full_name = `${inno?.result_code} ${inno?.title} ${inno?.official_code}`;
         inno.result_code = Number(inno.result_code);
       });
@@ -49,10 +49,10 @@ export class InnovationPackageListComponent implements OnInit, OnDestroy {
   }
 
   deselectInits() {
-    this.api.dataControlSE.myInitiativesList.map(item => (item.selected = false));
+    this.api.dataControlSE.myInitiativesList.forEach(item => (item.selected = false));
   }
 
   ngOnDestroy(): void {
-    this.api.dataControlSE?.myInitiativesList.map(item => (item.selected = true));
+    this.api.dataControlSE?.myInitiativesList.forEach(item => (item.selected = true));
   }
 }

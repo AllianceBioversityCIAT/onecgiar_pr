@@ -1,8 +1,6 @@
 .transition-all {
-  transition: all ease-in-out .3s;
+  transition: all ease-in-out 0.3s;
 }
-
-
 
 .section_container,
 .detail_container {
@@ -10,7 +8,6 @@
 }
 
 .fadeIn {
-  -webkit-animation-duration: 1s;
   animation-duration: 1s;
   -webkit-animation-duration: var(--animate-duration);
   animation-duration: var(--animate-duration);
@@ -18,9 +15,7 @@
   animation-fill-mode: both;
 }
 
-
-@media print,
-(prefers-reduced-motion: reduce) {
+@media print, (prefers-reduced-motion: reduce) {
   .fadeIn {
     -webkit-animation-duration: 1ms !important;
     animation-duration: 1ms !important;
@@ -35,7 +30,6 @@
     opacity: 0;
   }
 }
-
 
 @-webkit-keyframes fadeIn {
   from {
@@ -57,13 +51,10 @@
   }
 }
 
-
 .fadeIn {
   -webkit-animation-name: fadeIn;
   animation-name: fadeIn;
 }
-
-
 
 @keyframes rotating {
   from {
@@ -91,10 +82,7 @@
   animation: rotating 2s linear infinite;
 }
 
-//? animate__animated
-
 .animate__animated {
-  -webkit-animation-duration: 1s;
   animation-duration: 1s;
   -webkit-animation-duration: var(--animate-duration);
   animation-duration: var(--animate-duration);
@@ -160,9 +148,7 @@
   @extend .shakeX;
 }
 
-
 @keyframes shakeX {
-
   from,
   to {
     transform: translate3d(0, 0, 0);

@@ -6,27 +6,34 @@ import { ApiService } from '../../../../../../../shared/services/api/api.service
 })
 export class FilterResultNotLinkedPipe implements PipeTransform {
   constructor(private api: ApiService) {}
+
   transform(list: any[], linkedList: any[], combine: boolean, counter: number, text_to_search: string): any {
     if (!list?.length) return [];
+
     list = list.filter(result => result.id != this.api.resultsSE.currentResultId);
-    list.map(result => {
+
+    list.forEach(result => {
       result.selected = false;
     });
-    linkedList.map(result => {
+
+    linkedList.forEach(result => {
       const resultFinded = list.find(linked => linked.id == result.id);
       if (resultFinded) resultFinded.selected = true;
     });
+
     return this.convertList(this.filterByText(list, text_to_search), combine);
   }
 
   filterByText(resultList: any[], word: string) {
     if (!resultList?.length) return [];
-    resultList.map(item => {
+
+    resultList.forEach(item => {
       item.joinAll = '';
-      Object.keys(item).map(attr => {
+      Object.keys(item).forEach(attr => {
         item.joinAll += (item[attr] ? item[attr] : '') + ' ';
       });
     });
+
     return resultList.filter(item => item.joinAll.toUpperCase().indexOf(word?.toUpperCase()) > -1);
   }
 
@@ -35,15 +42,14 @@ export class FilterResultNotLinkedPipe implements PipeTransform {
   }
 
   separateResultInList(results) {
-    results.map(result => {
+    results.forEach(result => {
       result.results = [result];
     });
-    // //(results);
+
     return results;
   }
 
   combineRepeatedResults(results) {
-    // //('combineRepeatedResults');
     const resultMap: Record<number, any> = {};
 
     results.forEach(result => {
@@ -62,12 +68,7 @@ export class FilterResultNotLinkedPipe implements PipeTransform {
     });
 
     const transformedData = Object.values(resultMap);
-    // //(transformedData);
 
     return transformedData;
-
-    // teniendo los resultados anteriores necesito combinar los resultados iguales segun el result_code dejar un objeto con title y result_code pero dentro un array con la demas informacion de los resultados repetidos
   }
 }
-
-// , word: string

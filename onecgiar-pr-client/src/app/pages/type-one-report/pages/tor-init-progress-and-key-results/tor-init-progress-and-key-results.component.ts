@@ -11,18 +11,19 @@ import { ExportTablesService } from '../../../../shared/services/export-tables.s
 export class TorInitProgressAndKeyResultsComponent {
   full_screen = false;
   requesting = false;
+
   constructor(public typeOneReportSE: TypeOneReportService, private api: ApiService, private exportTablesSE: ExportTablesService) {}
 
   exportExcel(initiativeSelected) {
     this.requesting = true;
-    this.api.resultsSE.GET_excelFullReportByInitiativeId(this.typeOneReportSE.getInitiativeID(initiativeSelected)?.id).subscribe(
-      ({ response }) => {
+    this.api.resultsSE.GET_excelFullReportByInitiativeId(this.typeOneReportSE.getInitiativeID(initiativeSelected)?.id).subscribe({
+      next: ({ response }) => {
         this.exportTablesSE.exportExcel(response, 'Initiative-progress-and-key-results');
         this.requesting = false;
       },
-      err => {
+      error: err => {
         this.api.alertsFe.show({ id: 'loginAlert', title: 'Oops!', description: 'There was an error in the system while generating the report. If the issue persists, please contact the technical team.', status: 'error' });
       }
-    );
+    });
   }
 }

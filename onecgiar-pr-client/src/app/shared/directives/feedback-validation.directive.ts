@@ -1,13 +1,15 @@
-import { Directive, Input, ElementRef, Renderer2 } from '@angular/core';
+import { Directive, Input, ElementRef, Renderer2, OnInit, DoCheck } from '@angular/core';
 
 @Directive({
   selector: '[appFeedbackValidation]'
 })
-export class FeedbackValidationDirective {
+export class FeedbackValidationDirective implements OnInit, DoCheck {
   @Input() labelText: string = '';
   @Input() isComplete: boolean = false;
   fieldDiv = null;
+
   constructor(private el: ElementRef, private renderer: Renderer2) {}
+
   ngOnInit() {
     const labelDiv = this.renderer.createElement('div');
     this.renderer.addClass(labelDiv, 'pr_label');
@@ -17,7 +19,7 @@ export class FeedbackValidationDirective {
     this.renderer.addClass(this.fieldDiv, 'pr-field');
     this.renderer.addClass(this.fieldDiv, 'mandatory');
 
-    this.isComplete ? this.renderer.addClass(this.fieldDiv, 'complete') : null;
+    if (this.isComplete) this.renderer.addClass(this.fieldDiv, 'complete');
 
     this.renderer.appendChild(this.el.nativeElement, labelDiv);
     this.renderer.appendChild(this.el.nativeElement, this.fieldDiv);

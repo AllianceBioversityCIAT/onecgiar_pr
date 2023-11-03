@@ -23,16 +23,13 @@ export class ApiService {
 
   updateUserData(callback) {
     if (!this.authSE?.localStorageUser?.id) return;
-    forkJoin([this.authSE.GET_allRolesByUser(), this.authSE.GET_initiativesByUser()]).subscribe(
-      resp => {
+    forkJoin([this.authSE.GET_allRolesByUser(), this.authSE.GET_initiativesByUser()]).subscribe({
+      next: resp => {
         const [GET_allRolesByUser, GET_initiativesByUser] = resp;
-        //? Update role list
-        // this.rolesSE.roles = GET_allRolesByUser.response;
-        //?
         this.dataControlSE.myInitiativesList = GET_initiativesByUser?.response;
         this.dataControlSE.myInitiativesLoaded = true;
         this.qaSE.$qaFirstInitObserver?.next();
-        this.dataControlSE.myInitiativesList.map(myInit => {
+        this.dataControlSE.myInitiativesList.forEach(myInit => {
           myInit.role = GET_allRolesByUser?.response?.initiative?.find(initRole => initRole?.initiative_id == myInit?.initiative_id)?.description;
           myInit.name = myInit.official_code;
           myInit.official_code_short_name = myInit.official_code + ' ' + myInit.short_name;
@@ -41,11 +38,11 @@ export class ApiService {
         this.ipsrListFilterService.updateMyInitiatives(this.dataControlSE.myInitiativesList);
         callback();
       },
-      err => {
+      error: err => {
         this.resultsListFilterSE.updateMyInitiatives(this.dataControlSE.myInitiativesList);
         this.dataControlSE.myInitiativesLoaded = true;
       }
-    );
+    });
   }
 
   clearAll() {
@@ -55,7 +52,6 @@ export class ApiService {
   updateResultsList() {
     this.resultsSE.GET_AllResultsWithUseRole(this.authSE.localStorageUser.id).subscribe(resp => {
       this.dataControlSE.resultsList = resp.response;
-      // //(this.dataControlSE.resultsList);
     });
   }
 
@@ -65,7 +61,6 @@ export class ApiService {
 
       window['Tawk_LoadStart'] = new Date();
 
-      // pass attributes to tawk.to on widget load
       window['Tawk_API'].onLoad = () => {
         ({
           name: this.authSE.localStorageUser.user_name,
@@ -83,12 +78,10 @@ export class ApiService {
       window['Tawk_API'].onChatEnded = function () {
         window['Tawk_API'].hideWidget();
         window['Tawk_API'].minimize();
-        //('ENDING CHAT');
       };
-    } catch (error) {
-      //(error);
-    }
+    } catch (error) {}
   }
+
   setTitle(title) {
     this.titleService.setTitle(title);
   }

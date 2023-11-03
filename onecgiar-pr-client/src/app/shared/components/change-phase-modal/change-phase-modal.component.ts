@@ -14,11 +14,11 @@ export class ChangePhaseModalComponent implements OnInit {
   public version: any = null;
   public requesting: boolean = false;
   public globalDisabled = 'globalDisabled';
+
   ngOnInit(): void {
     this._resultsApiService.GET_versioning(StatusPhaseEnum.OPEN, ModuleTypeEnum.REPORTING).subscribe({
       next: ({ response }) => {
         this.version = response?.length ? response[0] : null;
-        // //('23456', this.version);
       }
     });
   }
@@ -34,13 +34,11 @@ export class ChangePhaseModalComponent implements OnInit {
         this.api.updateResultsList();
         this.api.dataControlSE.chagePhaseModal = false;
         this.api.dataControlSE.updateResultModal = false;
-        // //(response);
         this.router.navigate([`/result/result-detail/${response?.result_code}/general-information`], { queryParams: { phase: response?.version_id } });
       },
       error: error => {
         console.error(error);
         error.status == 409 ? this.api.alertsFe.show({ id: 'noti', title: `Information`, description: `${error.error.message}`, status: 'information' }) : this.api.alertsFe.show({ id: 'noti', title: `Error`, description: `${error.error.message}`, status: 'error' });
-
         this.requesting = false;
       }
     });

@@ -9,7 +9,9 @@ import { ApiService } from '../../../../shared/services/api/api.service';
 export class InnovationPackageListComponent implements OnInit, OnDestroy {
   innovationPackagesList = [];
   searchText = '';
+
   constructor(public api: ApiService) {}
+
   ngOnInit(): void {
     this.api.rolesSE.isAdmin ? this.deselectInits() : null;
     this.GETAllInnovationPackages();
