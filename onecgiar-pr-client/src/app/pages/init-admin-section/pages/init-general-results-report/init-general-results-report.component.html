@@ -36,7 +36,7 @@
 
 
     <app-pr-multi-select [options]="this.resultsList | filterByAttrWithValue:'status_id':valueToFilter" label="Results"
-        [isStatic]="true" *ngIf="this.resultsList?.length" optionLabel="full_name_html" optionValue="id"
+        [isStatic]="true" *ngIf="this.resultsList?.length" optionLabel="full_name_html" optionValue="results_id"
         [showSelectAll]="true" [required]="false" selectedOptionLabel="full_name" [(ngModel)]="this.resultsSelected"
         itemSize="15" placeholder="Select result(s)">
         <div class="filter_submission_buttons" util>
