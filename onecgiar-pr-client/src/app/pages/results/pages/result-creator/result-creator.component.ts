@@ -53,7 +53,9 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
   }
 
   getAllPhases() {
-    this.allPhases = [...this.phasesService?.phases?.reporting, ...this.phasesService?.phases?.ipsr];
+    const reportingPhases = this.phasesService?.phases?.reporting || [];
+    const ipsrPhases = this.phasesService?.phases?.ipsr || [];
+    this.allPhases = [...reportingPhases, ...ipsrPhases];
   }
 
   GET_AllInitiatives() {
