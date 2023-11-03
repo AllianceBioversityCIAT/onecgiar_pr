@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
 import { SubmissionModalService } from './submission-modal.service';
@@ -12,21 +12,26 @@ import { CurrentResultService } from '../../../../../../shared/services/current-
 export class SubmissionModalComponent {
   comment = null;
   requesting = false;
+
   constructor(public api: ApiService, public dataControlSE: DataControlService, public submissionModalSE: SubmissionModalService, private currentResultSE: CurrentResultService) {}
+
   cleanObject() {
     this.comment = null;
   }
+
   onSubmit() {
-    this.api.resultsSE.PATCH_submit(this.comment).subscribe(
-      resp => {
-        //(resp);
+    this.requesting = true;
+    this.api.resultsSE.PATCH_submit(this.comment).subscribe({
+      next: resp => {
         this.api.alertsFe.show({ id: 'submodal', title: `Success`, description: `The result has been submitted.`, status: 'success' });
         this.submissionModalSE.showModal = false;
         this.currentResultSE.GET_resultById();
+        this.requesting = false;
       },
-      err => {
+      error: err => {
+        this.requesting = false;
         this.api.alertsFe.show({ id: 'submodalerror', title: 'Error in submitting', description: err?.error?.message, status: 'error' });
       }
-    );
+    });
   }
 }
