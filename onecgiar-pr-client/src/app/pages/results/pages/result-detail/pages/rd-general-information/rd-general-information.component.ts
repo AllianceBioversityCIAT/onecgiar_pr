@@ -26,6 +26,7 @@ export class RdGeneralInformationComponent implements OnInit {
     this.showAlerts();
     this.getSectionInformation();
   }
+
   get disableOptions() {
     return this.generalInfoBody.institutions;
   }

@@ -21,8 +21,7 @@ export class SimilarResultsComponent {
     this.api.dataControlSE.currentResult.result_level_name = resultLevelFinded?.name;
     this.api.dataControlSE.currentResult.result_type_name = this.getResultTypeName();
     this.api.dataControlSE.currentResult.submitter = result?.crp;
-    this.api.dataControlSE.currentResult.result_level_id = this.api.dataControlSE.currentResult.result_level_id ? this.api.dataControlSE.currentResult.result_level_id : (this.api.dataControlSE.currentResult.result_level_id = this.api.dataControlSE.currentResult.result_level_id ? this.resultLevelSE.resultBody.result_level_id : this.resultLevelSE.resultBody.result_level_id);
-
+    this.api.dataControlSE.currentResult.result_level_id = this.api.dataControlSE.currentResult.result_level_id ? this.api.dataControlSE.currentResult.result_level_id : this.resultLevelSE.resultBody.result_level_id;
     this.retrieveModalSE.retrieveRequestBody.legacy_id = result?.id;
   }
 
