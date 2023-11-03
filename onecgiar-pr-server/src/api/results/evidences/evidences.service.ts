@@ -13,6 +13,7 @@ import { Like } from 'typeorm';
 import { Result } from '../entities/result.entity';
 import * as fs from 'fs';
 import { GlobalParameterCacheService } from '../../../shared/services/cache/global-parameter-cache.service';
+import { SharePointService } from '../../../shared/services/share-point/share-point.service';
 
 @Injectable()
 export class EvidencesService {
@@ -24,6 +25,7 @@ export class EvidencesService {
     private readonly _resultsKnowledgeProductsRepository: ResultsKnowledgeProductsRepository,
     private readonly _resultsInnovationsDevRepository: ResultsInnovationsDevRepository,
     private readonly _globalParameterCacheService: GlobalParameterCacheService,
+    private readonly _sharePointService: SharePointService,
   ) {}
   async create(createEvidenceDto: CreateEvidenceDto, user: TokenDto) {
     try {
@@ -207,7 +209,8 @@ export class EvidencesService {
     const da = await this._globalParameterCacheService.getDataFromCache(
       'sp_client_secret_id',
     );
-    console.log(da);
+    const datae = this._sharePointService.getToken();
+    console.log(datae);
     try {
       const result: Result = await this._resultRepository.getResultById(
         resultId,
