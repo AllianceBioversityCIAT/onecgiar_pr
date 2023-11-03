@@ -28,6 +28,7 @@ import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByU
 import { ResultsActionAreaOutcomeRepository } from './result-toc-action-area.repository';
 import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/non_pooled_proyect_budget.repository';
 import { ResultsTocTargetIndicatorRepository } from './result-toc-result-target-indicator.repository';
+import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 
 @Module({
   controllers: [ResultsTocResultsController],
@@ -60,6 +61,7 @@ import { ResultsTocTargetIndicatorRepository } from './result-toc-result-target-
     ResultsActionAreaOutcomeRepository,
     ResultsActionAreaOutcomeRepository,
     ResultsTocTargetIndicatorRepository,
+    ClarisaInitiativesRepository
   ],
   exports: [ResultsTocResultRepository],
 })
