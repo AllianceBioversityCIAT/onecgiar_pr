@@ -9,6 +9,7 @@ import { RetrieveModalService } from '../../../result-detail/components/retrieve
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 import { Table } from 'primeng/table';
 import { ModuleTypeEnum, StatusPhaseEnum } from 'src/app/shared/enum/api.enum';
+import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
   selector: 'app-results-list',

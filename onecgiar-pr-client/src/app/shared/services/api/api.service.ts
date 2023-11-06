@@ -62,7 +62,8 @@ export class ApiService {
         this.resultsListSE.showLoadingResultSpinner = false;
 
         this.dataControlSE.resultsList.forEach((result: any) => {
-          result.full_status_name_html = `<div class="completeness-${result.status_name.toLowerCase().replace(/\s+/g, '-')} result-list-state">${result.status_name} ${result.inQA ? '<div class="in-qa-tag">In QA</div>' : ''}</div>`;
+          result.full_status_name_html = `<div>${result.status_name} ${result.inQA ? '<div class="in-qa-tag">In QA</div>' : ''}</div>`;
+          // result.full_status_name_html = `<div class="completeness-${result.status_name.toLowerCase().replace(/\s+/g, '-')} result-list-state">${result.status_name} ${result.inQA ? '<div class="in-qa-tag">In QA</div>' : ''}</div>`;
         });
       },
       err => {
