@@ -47,7 +47,8 @@
               <div class="new_tag" *ngIf="i == 0 && subResult.is_new && !subResult.legacy_id">New</div>
               <div class="new_tag pre" *ngIf="i == 0 && subResult.legacy_id">Pre 2022</div>
 
-              <div [ngClass]="{'center_flex_100':  column.center}" [innerHTML]="column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date :
+              <div [pTooltip]="subResult.inQA ? 'This result is being QAed':''"
+                [ngClass]="{'center_flex_100':  column.center}" [innerHTML]="column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date :
               'YYYY-MM-dd')"></div>
 
 
