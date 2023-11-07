@@ -63,6 +63,7 @@ export class ResultsTocResultsService {
         sdgTargets,
         bodyActionArea,
       } = createResultsTocResultDto;
+      console.log("🚀 ~ file: results-toc-results.service.ts:66 ~ ResultsTocResultsService ~ createResultsTocResultDto:", createResultsTocResultDto.result_toc_result)
 
       const initSubmitter = await this._resultByInitiativesRepository.findOne({
         where: { result_id: result_id, initiative_role_id: 1 },
@@ -270,7 +271,7 @@ export class ResultsTocResultsService {
         );
 
         // * Map multiple WPs to the same initiative
-        for (const toc of createResultsTocResultDto?.result_toc_result) {
+        for (const toc of createResultsTocResultDto?.result_toc_result?.result_toc_results) {
           let RtR: ResultsTocResult | null;
           if (toc?.result_toc_result_id) {
             RtR =
@@ -292,7 +293,7 @@ export class ResultsTocResultsService {
             }
             RtR.is_active = true;
             RtR.last_updated_by = user.id;
-            RtR.planned_result = toc.planned_result;
+            RtR.planned_result = createResultsTocResultDto.result_toc_result?.planned_result;
 
             await this._resultsTocResultRepository.update(
               RtR.result_toc_result_id,
@@ -300,7 +301,7 @@ export class ResultsTocResultsService {
                 toc_result_id: toc.toc_result_id,
                 action_area_outcome_id: toc.action_area_outcome_id,
                 last_updated_by: user.id,
-                planned_result: toc.planned_result,
+                planned_result: createResultsTocResultDto.result_toc_result?.planned_result,
                 is_active: true,
               },
             );
@@ -311,7 +312,7 @@ export class ResultsTocResultsService {
             newRtR.created_by = user.id;
             newRtR.last_updated_by = user.id;
             newRtR.results_id = result.id;
-            newRtR.planned_result = toc.planned_result;
+            newRtR.planned_result = createResultsTocResultDto.result_toc_result?.planned_result;
             if (result.result_level_id == 2) {
               newRtR.action_area_outcome_id =
                 toc?.action_area_outcome_id || null;
@@ -337,7 +338,7 @@ export class ResultsTocResultsService {
           where: { result_id },
         });
         for (const rtr of allRtRs) {
-          const tocResultIds = createResultsTocResultDto?.result_toc_result.map(
+          const tocResultIds = createResultsTocResultDto?.result_toc_result?.result_toc_results.map(
             (toc) => toc.toc_result_id,
           );
           if (!tocResultIds.includes(rtr.toc_result_id)) {
@@ -441,7 +442,7 @@ export class ResultsTocResultsService {
 
         if (result.result_level_id > 2) {
           await this._resultsTocResultRepository.saveSectionNewTheoryOfChange(
-            bodyNewTheoryOfChanges,
+            createResultsTocResultDto,
           );
         }
 
@@ -622,12 +623,6 @@ export class ResultsTocResultsService {
           );
       }
 
-      console.clear();
-      console.log(
-        '🚀 ~ file: results-toc-results.service.ts:608 ~ ResultsTocResultsService ~ getTocByResult ~ resTocRes:',
-        resTocRes,
-      );
-
       return {
         response: {
           contributing_initiatives: conInit,
@@ -746,7 +741,6 @@ export class ResultsTocResultsService {
   }
 
   async getVersionId(result_id: number, init: number) {
-    console.log("🚀 ~ file: results-toc-results.service.ts:781 ~ ResultsTocResultsService ~ getVersionId ~ result_id:", result_id)
     try {
       const resultinit = await this._clarisaInitiatives.findOne({
         select: ['toc_id'],

@@ -14,6 +14,7 @@ import { ResultsSdgTargetRepository } from './results-sdg-targets.respository';
 import { ResultsActionAreaOutcomeRepository } from './result-toc-action-area.repository';
 import { ResultsTocTargetIndicatorRepository } from './result-toc-result-target-indicator.repository';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
+import { CreateResultsTocResultDto } from './dto/create-results-toc-result.dto';
 
 @Injectable()
 export class ResultsTocResultRepository
@@ -1723,48 +1724,71 @@ select *
     }
   }
 
-  async saveSectionNewTheoryOfChange(bodyTheoryOfChange) {
+  async saveSectionNewTheoryOfChange(
+    ResultTocResultIndicators: CreateResultsTocResultDto,
+  ) {
+    const { result_toc_result } = ResultTocResultIndicators;
     try {
-      for (const toc of bodyTheoryOfChange) {
-        if (toc.resultId != null && toc.resultId != 0) {
-          const result = await this.query(`select * 
-                                          from results_toc_result rtr where rtr.results_id = ${toc.resultId} and rtr.initiative_id = ${toc.initiative}`);
+      for (const toc of result_toc_result.result_toc_results) {
+        for (const itemIndicator of toc.indicators) {
+          console.log("🚀 ~ file: results-toc-results.repository.ts:1734 ~ itemIndicator:", itemIndicator)
+          if (itemIndicator.resultId != null && itemIndicator.resultId != 0) {
+            // const result = await this.query(`select *
+            //                                 from results_toc_result rtr where rtr.results_id = ${toc.resultId} and rtr.initiative_id = ${toc.initiative}`);
+            const rtrExist = await this.query(`
+            SELECT
+              *
+            FROM
+              results_toc_result rtr
+            WHERE rtr.results_id = ${toc?.results_id}
+              AND rtr.initiative_id = ${toc?.initiative_id}
+              AND rtr.result_toc_result_id = ${toc?.result_toc_result_id}
+              AND rtr.is_active = true;
+          `);
 
-          if (result != null && result.length != 0) {
-            await this.update(
-              { result_toc_result_id: result[0]?.result_toc_result_id },
-              {
-                mapping_impact: toc.isImpactArea,
-                mapping_sdg: toc.isSdg,
-                is_sdg_action_impact: toc.is_sdg_action_impact,
-              },
-            );
-            if (
-              toc.targetsIndicators != null &&
-              toc.targetsIndicators.length != 0
-            ) {
-              await this.saveInditicatorsContributing(
-                result[0].result_toc_result_id,
-                toc.targetsIndicators,
+            if (!rtrExist) {
+              return this._handlersError.returnErrorRepository({
+                className: ResultsTocResultRepository.name,
+                error: `The result toc result id ${toc?.result_toc_result_id} does not exist`,
+                debug: true,
+              });
+            }
+            if (rtrExist != null && rtrExist.length != 0) {
+              console.log('Entra a la validacion');
+              await this.update(
+                { result_toc_result_id: rtrExist[0]?.result_toc_result_id },
+                {
+                  // mapping_impact: itemIndicator.isImpactArea,
+                  // mapping_sdg: itemIndicator.isSdg,
+                  is_sdg_action_impact: itemIndicator.is_sdg_action_impact,
+                },
+              );
+              if (
+                itemIndicator.targetsIndicators != null &&
+                itemIndicator.targetsIndicators.length != 0
+              ) {
+                await this.saveInditicatorsContributing(
+                  rtrExist[0].result_toc_result_id,
+                  itemIndicator.targetsIndicators,
+                );
+              }
+              await this.saveImpact(
+                rtrExist[0].result_toc_result_id,
+                itemIndicator.impactAreasTargets,
+                itemIndicator.resultId,
+                itemIndicator.initiative,
+              );
+              await this.saveSdg(
+                rtrExist[0].result_toc_result_id,
+                itemIndicator.sdgTargest,
+                itemIndicator.resultId,
+              );
+              await this.saveActionAreaToc(
+                rtrExist[0].result_toc_result_id,
+                itemIndicator.actionAreaOutcome,
+                itemIndicator.resultId,
               );
             }
-            await this.saveImpact(
-              result[0].result_toc_result_id,
-              toc.impactAreasTargets,
-              toc.resultId,
-              toc.initiative,
-            );
-            await this.saveSdg(
-              result[0].result_toc_result_id,
-              toc.sdgTargest,
-              toc.resultId,
-            );
-
-            await this.saveActionAreaToc(
-              result[0].result_toc_result_id,
-              toc.actionAreaOutcome,
-              toc.resultId,
-            );
           }
         }
       }
