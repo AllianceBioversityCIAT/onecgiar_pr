@@ -21,6 +21,7 @@ import { CreateTocShareResult } from '../share-result-request/dto/create-toc-sha
 import { ShareResultRequestRepository } from '../share-result-request/share-result-request.repository';
 import { ResultsTocResultIndicatorsRepository } from './results-toc-results-indicators.repository';
 import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/non_pooled_proyect_budget.repository';
+import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 
 @Injectable()
 export class ResultsTocResultsService {
@@ -41,6 +42,7 @@ export class ResultsTocResultsService {
     private readonly _shareResultRequestRepository: ShareResultRequestRepository,
     private readonly _resultsTocResultIndicator: ResultsTocResultIndicatorsRepository,
     private readonly _resultBilateralBudgetRepository: NonPooledProjectBudgetRepository,
+    private readonly _clarisaInitiatives: ClarisaInitiativesRepository,
   ) {}
 
   async create(
@@ -743,27 +745,39 @@ export class ResultsTocResultsService {
     }
   }
 
-  async getVersionId(result_id, init) {
+  async getVersionId(result_id: number, init: number) {
+    console.log("🚀 ~ file: results-toc-results.service.ts:781 ~ ResultsTocResultsService ~ getVersionId ~ result_id:", result_id)
     try {
-      const resultinit = await this._resultsTocResultRepository.query(
-        `SELECT toc_id FROM clarisa_initiatives WHERE id = ?`,
-        [init],
-      );
+      const resultinit = await this._clarisaInitiatives.findOne({
+        select: ['toc_id'],
+        where: { id: init },
+      });
       let version_id = null;
-      if (resultinit.length != 0 && resultinit[0].toc_id != null) {
+      if (resultinit.toc_id) {
         const vesion_id = await this._resultsTocResultRepository.query(
-          `SELECT DISTINCT tr.version_id FROM Integration_information.toc_results tr 
-           WHERE tr.id_toc_initiative = ? AND tr.phase = (
-             SELECT v.toc_pahse_id FROM result r 
-             JOIN version v ON r.version_id = v.id 
-             WHERE r.id = ?
-           )`,
-          [resultinit[0].toc_id, result_id],
+          `SELECT
+            DISTINCT tr.version_id
+          FROM
+            Integration_information.toc_results tr
+          WHERE
+            tr.id_toc_initiative = ?
+            AND tr.phase = (
+              SELECT
+                v.toc_pahse_id
+              FROM
+                result r
+              JOIN version v ON
+                r.version_id = v.id
+              WHERE
+                r.id = ?
+            );
+          `,
+          [resultinit.toc_id, result_id],
         );
-        if (vesion_id.length != 0 && vesion_id[0].version_id != null) {
+        if (!vesion_id.length || vesion_id[0].version_id == null) {
           version_id = vesion_id[0].version_id;
         } else {
-          version_id = resultinit[0].toc_id;
+          version_id = resultinit.toc_id;
         }
       }
       return {
@@ -778,3 +792,4 @@ export class ResultsTocResultsService {
     }
   }
 }
+
