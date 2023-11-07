@@ -6,25 +6,23 @@
   </app-pr-select>
 
   <div style="max-width: 250px;"
-    *ngIf="this.showOutcomeLevel && (resultLevelId == 1 ? this.initiative?.planned_result === false : true)">
+    *ngIf="this.showOutcomeLevel && (resultLevelId == 1 ? !this.initiative?.planned_result : true)">
     <app-pr-select [options]="this.tocInitiativeOutcomeListsSE.outcomeLevelList|outcomeLevelFilter:2"
       label="Outcome level" [editable]="editable"
-      [disabled]="(resultLevelId == 1 ? true : this.initiative?.planned_result == false) || !this.editable"
+      [disabled]="(resultLevelId == 1 ? true : !this.initiative?.planned_result == false) || !this.editable"
       optionLabel="name" optionValue="toc_level_id" placeholder="Select outcome level"
       [(ngModel)]="initiative.toc_level_id" (selectOptionEvent)="this.indicatorView = false">
     </app-pr-select>
   </div>
 
-  <app-pr-select
-    *ngIf="(resultLevelId == 1 ? this.initiative?.planned_result === false : true) && initiative?.toc_level_id != 3"
+  <app-pr-select *ngIf="(resultLevelId == 1 ? !this.initiative?.planned_result : true) && initiative?.toc_level_id != 3"
     [options]="this.outcomeList" label="Outcome" [editable]="editable"
     [disabled]="(resultLevelId == 1 ? false : false) || !this.editable" optionLabel="extraInformation"
     [extraInformation]="true" optionValue="toc_result_id" placeholder="Select outcome"
     [(ngModel)]="initiative.toc_result_id" (selectOptionEvent)="getIndicator()">
   </app-pr-select>
 
-  <app-pr-select
-    *ngIf="(resultLevelId == 1 ? this.initiative?.planned_result === false : true) && initiative?.toc_level_id == 3"
+  <app-pr-select *ngIf="(resultLevelId == 1 ? !this.initiative?.planned_result : true) && initiative?.toc_level_id == 3"
     [options]="this.eoiList" label="Outcome" [editable]="editable"
     [disabled]="(resultLevelId == 1 ? false : false) || !this.editable" optionLabel="title" optionValue="toc_result_id"
     placeholder="Select outcome" [(ngModel)]="initiative.toc_result_id" (selectOptionEvent)="getIndicator()">
@@ -44,7 +42,7 @@
     *ngFor="let indicator of initiative?.indicators" [resultLevelId]="resultLevelId">
   </app-target-indicator>
 
-  <div *ngIf="isIpsr === false">
+  <div *ngIf="!isIpsr">
     <app-pr-yes-or-not
       label="Do you want to review relations with AA Outcomes, IA, SDG and related Targets defined in your TOC for this result?"
       [(ngModel)]="initiative.is_sdg_action_impact">

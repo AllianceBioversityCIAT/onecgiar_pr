@@ -81,7 +81,7 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
     this.indicatorView = false;
     setTimeout(() => {
       this.showOutcomeLevel = true;
-    }, 100);
+    }, 0);
   }
 
   getIndicator() {

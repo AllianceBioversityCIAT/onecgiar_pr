@@ -15,13 +15,14 @@
 <div *ngIf="contributors_result_toc_result?.length">
     <app-pr-field-header label="Other contributors" [required]="false" [simpleStyle]="true">
     </app-pr-field-header>
-    
+
     <!-- <div *ngFor="let initiative of contributors_result_toc_result; let i = index"> -->
-        <app-toc-initiative-aao [initiative]="contributors_result_toc_result" [indexList]="1"
+    <app-toc-initiative-aao [initiative]="contributors_result_toc_result" [indexList]="1"
         [editable]="(this.api.rolesSE.validateInitiative(contributors_result_toc_result[0]?.initiative_id) || this.api.rolesSE.isAdmin)">
     </app-toc-initiative-aao>
     <!-- </div> -->
 </div>
 
-<app-no-data-text *ngIf="this.api.rolesSE.readOnly && !result_toc_result?.action_area_outcome_id && !this.api.rolesSE.validateInitiative(result_toc_result?.initiative_id)"
-title = "No Action Area outcomes selected."></app-no-data-text>
+<app-no-data-text
+    *ngIf="this.api.rolesSE.readOnly && !result_toc_result?.result_toc_results[0]?.action_area_outcome_id && !this.api.rolesSE.validateInitiative(result_toc_result?.result_toc_results[0]?.initiative_id)"
+    title="No Action Area outcomes selected."></app-no-data-text>

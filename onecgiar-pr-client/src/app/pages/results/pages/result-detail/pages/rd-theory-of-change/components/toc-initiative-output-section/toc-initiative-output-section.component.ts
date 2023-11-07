@@ -12,6 +12,7 @@ import { RdTheoryOfChangesServicesService } from '../../rd-theory-of-changes-ser
 })
 export class TocInitiativeOutputSectionComponent {
   @Input() result_toc_result = new resultToResultInterfaceToc();
+
   @Input() contributors_result_toc_result: any;
 
   constructor(public api: ApiService, public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public dataControlSE: DataControlService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {}

@@ -40,26 +40,24 @@ export class TocInitiativeOutComponent implements OnInit {
   }
 
   clearTocResultId() {
-    this.initiative.forEach(element => {
+    this.initiative.result_toc_results.forEach(element => {
       element.toc_level_id = !this.initiative.planned_result ? 3 : null;
     });
-    this.initiative.forEach(element => {
+    this.initiative.result_toc_results.forEach(element => {
       element.toc_result_id = null;
     });
   }
 
   mapPlannedResult() {
-    this.initiative.forEach(element => {
+    this.initiative.result_toc_results.forEach(element => {
       element.planned_result = this.initiative.planned_result;
       element.showOutcomeLevel = this.initiative.showOutcomeLevel;
       element.indicatorView = this.initiative.indicatorView;
     });
-
-    console.log('this.initiative', this.initiative);
   }
 
   get_versionDashboard() {
-    this.api.resultsSE.get_vesrsionDashboard(this.initiative[0].toc_result_id, this.initiative[0].initiative_id).subscribe({
+    this.api.resultsSE.get_vesrsionDashboard(this.initiative.result_toc_results[0].toc_result_id, this.initiative.result_toc_results[0].initiative_id).subscribe({
       next: ({ response }) => {
         this.fullInitiativeToc = response?.version_id;
       },

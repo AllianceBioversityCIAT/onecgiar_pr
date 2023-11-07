@@ -3,8 +3,9 @@ export class TheoryOfChangeBody {
   contributing_initiatives: initiativeInterfaces[] = [];
   contributing_np_projects: donorInterfaceToc[] = [];
   contributing_center: centerInterfacesToc[] = [];
+  // result_toc_result: resultToResultInterfaceToc = new resultToResultInterfaceToc();
   result_toc_result: resultToResultInterfaceToc = new resultToResultInterfaceToc();
-  contributors_result_toc_result: resultToResultInterfaceToc[] = [];
+  contributors_result_toc_result: any = [];
   impacts: ResultTocImpactsInterface[];
   pending_contributing_initiatives: any;
   contributing_and_primary_initiative: any;
@@ -51,6 +52,11 @@ export interface centerInterfacesToc {
 }
 
 export class resultToResultInterfaceToc {
+  planned_result: boolean = null;
+  result_toc_results: resultTocResultsInterface[] = new Array<resultTocResultsInterface>();
+}
+
+export class resultTocResultsInterface {
   result_toc_result_id?: number = null;
   toc_result_id?: number = null;
   action_area_outcome_id?: number = null;

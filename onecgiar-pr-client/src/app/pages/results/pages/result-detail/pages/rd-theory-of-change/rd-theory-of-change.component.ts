@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { TheoryOfChangeBody, donorInterfaceToc, resultToResultInterfaceToc } from './model/theoryOfChangeBody';
+import { resultTocResultsInterface, TheoryOfChangeBody, donorInterfaceToc } from './model/theoryOfChangeBody';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
@@ -39,13 +39,12 @@ export class RdTheoryOfChangeComponent implements OnInit {
 
   disabledCenters() {
     this.cgspaceDisabledList = this.theoryOfChangeBody.contributing_center.filter(center => center.from_cgspace);
-    console.log(this.centersSE.centersList);
   }
 
   async getSectionInformation() {
     await this.centersSE.getCentersList();
     this.theoryOfChangesServices.body = [];
-    await this.api.resultsSE.GET_toc().subscribe({
+    this.api.resultsSE.GET_toc().subscribe({
       next: ({ response }) => {
         this.theoryOfChangeBody = response;
 
@@ -58,9 +57,9 @@ export class RdTheoryOfChangeComponent implements OnInit {
 
         this.theoryOfChangesServices.theoryOfChangeBody = this.theoryOfChangeBody;
 
-        if (this.theoryOfChangeBody?.result_toc_result !== null) {
+        if (this.theoryOfChangeBody?.result_toc_result?.result_toc_results !== null) {
           this.theoryOfChangesServices.result_toc_result = this.theoryOfChangeBody?.result_toc_result;
-          this.theoryOfChangesServices.result_toc_result.planned_result = null;
+          this.theoryOfChangesServices.result_toc_result.planned_result = this.theoryOfChangeBody?.result_toc_result?.result_toc_results[0].planned_result;
           this.theoryOfChangesServices.result_toc_result.showMultipleWPsContent = true;
         }
 
@@ -127,7 +126,7 @@ export class RdTheoryOfChangeComponent implements OnInit {
   onSelectContributingInitiative() {
     this.theoryOfChangeBody?.contributing_initiatives.forEach((resp: any) => {
       const contributorFinded = this.theoryOfChangeBody.contributors_result_toc_result?.find((result: any) => result?.initiative_id == resp.id);
-      const contributorToPush = new resultToResultInterfaceToc();
+      const contributorToPush = new resultTocResultsInterface();
       contributorToPush.initiative_id = resp.id;
       contributorToPush.short_name = resp.short_name;
       contributorToPush.official_code = resp.official_code;
