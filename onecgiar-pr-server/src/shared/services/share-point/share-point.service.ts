@@ -10,8 +10,12 @@ export class SharePointService {
 
   constructor(
     private readonly httpService: HttpService,
-    private readonly _globalParameterCacheService: GlobalParameterCacheService,
+    private readonly GPCacheSE: GlobalParameterCacheService,
   ) {}
+
+  async saveFile() {
+    const token = await this.getToken();
+  }
 
   async getToken() {
     if (this.isTokenExpired() || !this.expiresIn) {
@@ -27,7 +31,6 @@ export class SharePointService {
       console.log(`El token caducará en: ${remainingTimeString}`);
       return this.token;
     }
-    // return await this.validateExpiration();
   }
 
   private isTokenExpired(): boolean {
@@ -45,16 +48,17 @@ export class SharePointService {
   }
 
   async consumeToken() {
-    const grantType = 'client_credentials';
-    const clientId = '4a5dcd8a-9fad-4037-90aa-8e0cdbf01796';
-    const scope = 'https://graph.microsoft.com/.default';
-    const clientSecret = 'Y_j8Q~YJoHIQhCKLLxwdetMxSRMp40E4o_pHWa.u';
-    const url = `https://login.microsoftonline.com/6afa0e00-fa14-40b7-8a2e-22a7f8c357d5/oauth2/v2.0/token`;
+    // Estructure URL
+    const sp_token_url = await this.GPCacheSE.getParam('sp_token_url');
+    const sp_tenant_id = await this.GPCacheSE.getParam('sp_tenant_id');
+    const url = `${sp_token_url}/${sp_tenant_id}/oauth2/v2.0/token`;
+    // ----
     const data = new URLSearchParams();
-    data.append('client_id', clientId);
-    data.append('client_secret', clientSecret);
-    data.append('scope', scope);
-    data.append('grant_type', grantType);
+    const da = (param, value) => data.append(param, value);
+    da('client_id', await this.GPCacheSE.getParam('sp_application_id'));
+    da('client_secret', await this.GPCacheSE.getParam('sp_client_value'));
+    da('scope', await this.GPCacheSE.getParam('sp_scope'));
+    da('grant_type', await this.GPCacheSE.getParam('sp_grant_type'));
     try {
       const response = await this.httpService
         .post(url, data, {
@@ -63,14 +67,10 @@ export class SharePointService {
           },
         })
         .toPromise();
-      const token = response.data.access_token;
-      const expiresIn = response.data.expires_in; // El tiempo de expiración en segundos
-      console.log(expiresIn);
-      // Guardamos el token en caché
-      this.token = token;
-      this.expiresIn = expiresIn;
+      this.token = response.data.access_token;
+      this.expiresIn = response.data.expires_in;
       this.creationTime = new Date().getTime() / 1000;
-      return token;
+      return this.token;
     } catch (error) {
       console.error('Error al obtener el token:', error.message);
       throw new Error('Error al obtener el token');

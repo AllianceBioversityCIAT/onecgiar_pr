@@ -206,11 +206,6 @@ export class EvidencesService {
   }
 
   async findAll(resultId: number) {
-    const da = await this._globalParameterCacheService.getDataFromCache(
-      'sp_client_secret_id',
-    );
-    const datae = await this._sharePointService.getToken();
-    console.log('externo: ', datae);
     try {
       const result: Result = await this._resultRepository.getResultById(
         resultId,

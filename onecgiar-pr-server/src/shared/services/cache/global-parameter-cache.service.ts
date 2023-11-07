@@ -8,9 +8,8 @@ export class GlobalParameterCacheService {
   constructor(private _globalParameterService: GlobalParameterService) {}
   private dataCache: DataCache = {}; // This is where the information will be cached.
 
-  async getDataFromCache(key: string): Promise<any> {
+  async getParam(key: string): Promise<any> {
     await this.loadAllGlobalParamatersByCategory(key);
-    console.log(this.dataCache);
     return this.dataCache[key];
   }
 
@@ -31,9 +30,12 @@ export class GlobalParameterCacheService {
       const globalParameterItem: GlobalParameter =
         await this._globalParameterService.findOneByName(key);
 
+      console.log(key);
+      console.log('globalParameterItem: ', globalParameterItem);
+
       let globalParameterList: any =
         await this._globalParameterService.findByCategoryId(
-          Number(globalParameterItem.categoryId),
+          Number(globalParameterItem?.categoryId),
         );
 
       globalParameterList.forEach((globalParameter: GlobalParameter) => {
@@ -42,4 +44,3 @@ export class GlobalParameterCacheService {
     }
   }
 }
-
