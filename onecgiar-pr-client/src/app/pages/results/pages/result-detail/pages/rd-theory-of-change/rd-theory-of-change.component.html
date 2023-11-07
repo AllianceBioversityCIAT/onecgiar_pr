@@ -86,8 +86,9 @@
                 <app-pr-input label="Center Grant ID" [required]="false" [(ngModel)]="donor.center_grant_id"
                     placeholder="e.g. G184">
                 </app-pr-input>
-                <app-pr-select [options]="this.centersSE.centersList" label="Lead/Contract Center" optionLabel="name"
-                    optionValue="lead_center" placeholder="Select donor" [(ngModel)]="donor.lead_center"
+                <app-pr-select [options]="this.contributingCenterOptions" label="Lead/Contract Center"
+                    optionLabel="name" optionValue="lead_center" placeholder="Select donor"
+                    (selectOptionEvent)="print()" [(ngModel)]="donor.lead_center"
                     placeholder="Lead/Contract Center goes here...">
                 </app-pr-select>
             </div>
