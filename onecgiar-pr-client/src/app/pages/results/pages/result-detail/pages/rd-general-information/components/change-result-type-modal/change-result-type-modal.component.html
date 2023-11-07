@@ -9,7 +9,7 @@
   </div>
 
   <div class="modal_container">
-    <div *ngIf="!this.changeType.showConfirmation">
+    <div *ngIf="this.changeType.showFilters">
       <app-alert-status [description]="alertStatusDesc"></app-alert-status>
 
       <app-pr-input [attr.attribute-you-are-targeting]="'expression'" placeholder="Enter text"
@@ -27,9 +27,9 @@
             <div class="filter_title">{{filter.name}}</div>
             <div class="chips">
               <div class="chip"
-                [ngClass]="{'chip_selected': (option.id === 6) && option.selected, 'chip_disabled' : (option.id !== 6)}"
-                [style.background]="(option.id === 6) && option.selected ? 'var(--pr-color-result-level-'+filter?.id+')' : ''"
-                (click)="option.id === 6 && this.resultsListFilterSE.onSelectChip(option);option.id === 6 && onSelectOneChip(option, filter)"
+                [ngClass]="{'chip_selected': option.id !== this.body.result_type_id && option.id !== 5 && option.id !== 7 &&  option.selected, 'chip_disabled' : option.id === this.body.result_type_id || option.id === 5 || option.id === 7}"
+                [style.background]="option.id !== this.body.result_type_id && option.id !== 5 && option.id !== 7 && option.selected ? 'var(--pr-color-result-level-'+filter?.id+')' : ''"
+                (click)="this.resultsListFilterSE.onSelectChip(option);onSelectOneChip(option, filter)"
                 *ngFor="let option of filter?.options">
                 {{option.name}}
               </div>
@@ -71,7 +71,7 @@
       </app-pr-button>
 
       <app-pr-button padding="medium"
-        [text]="selectedResultType?.id === 6 && this.changeType.step === 1 ? 'Confirm' : 'Continue'"
+        [text]="modalConfirmOrContinueText()"
         [verticalMargin]="0" (clickEvent)="changeResultType()" [rotating]="this.isChagingType"
         [icon]="this.isChagingType ? 'loop' : this.changeType.step === 1 ? 'save' : ''"
         [ngClass]="{'globalDisabled': isContinueButtonDisabled()}"></app-pr-button>

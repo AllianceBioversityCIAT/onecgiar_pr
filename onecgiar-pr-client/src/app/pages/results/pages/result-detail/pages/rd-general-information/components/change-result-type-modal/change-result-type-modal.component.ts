@@ -9,6 +9,7 @@ interface IOption {
   description: string;
   id: number;
   name: string;
+  resultLevelId: number;
   selected: boolean;
 }
 @Component({
@@ -18,7 +19,6 @@ interface IOption {
 })
 export class ChangeResultTypeModalComponent implements OnChanges {
   @Input() body = new GeneralInfoBody();
-
   validating = false;
   cgSpaceHandle = '';
   cgSpaceTitle = '';
@@ -32,20 +32,52 @@ export class ChangeResultTypeModalComponent implements OnChanges {
   <dt>If you need support to modify any of the harvested metadata from CGSpace, contact your Center’s knowledge manager. <strong>And do the sync again.</strong></dt>
 </dl>`;
   isChagingType: boolean = false;
+  IOut = [1, 2, 3, 4, 9];
 
   constructor(public api: ApiService, public resultsListFilterSE: ResultsListFilterService, public changeType: ChangeResultTypeServiceService, private router: Router) {}
 
   ngOnChanges(changes: SimpleChanges): void {
     this.body['result_code'] = this.api.resultsSE.currentResultCode;
     this.body['version_id'] = this.api.resultsSE.currentResultPhase;
+    // console.log('this.body sisas', this.body);
   }
 
   CGSpaceDesc() {
     return `<strong>Disclaimer:</strong> please note that the old title <strong>"${this.body.result_name}"</strong> will be replace by the CGSpace title.`;
   }
 
+  modalConfirmOrContinueText() {
+    if (this.selectedResultType?.id !== 6 || (this.selectedResultType?.id === 6 && this.changeType.step === 1)) {
+      return 'Confirm';
+    }
+
+    return 'Continue';
+  }
+
+  validateOption(option: any) {
+    // if (option.id === this.body.result_type_id) return true;
+
+    switch (this.body.result_type_id) {
+      case 1:
+        if (option.resultLevelId === 1 || option.resultLevelId === 2 || option.resultLevelId === 3) {
+          return false;
+        } else {
+          return true;
+        }
+      case 2:
+        if (option.resultLevelId === 4) {
+          if (option.id !== 8 && option.id !== 7) {
+            return true;
+          }
+        }
+        return false;
+      default:
+        return true;
+    }
+  }
+
   onSelectOneChip(option: any, filter: any) {
-    if (option.id === 6) {
+    if (option.id !== this.body.result_type_id && option.id !== 5 && option.id !== 7) {
       this.resultsListFilterSE.filters.resultLevel.forEach((resultLevelOption: any) => {
         resultLevelOption.options.forEach((resultTypeOption: any) => {
           resultTypeOption.resultLevelId = resultLevelOption.id;
@@ -56,6 +88,14 @@ export class ChangeResultTypeModalComponent implements OnChanges {
       this.selectedResultType = { ...option, selected: true };
 
       this.resultsListFilterSE.filters.resultLevel.find((resultLevelOption: any) => resultLevelOption.id === filter.id).options.find((resultTypeOption: any) => resultTypeOption.id === option.id).selected = true;
+
+      if (this.selectedResultType.id !== 6) {
+        this.changeType.showFilters = true;
+        this.changeType.showConfirmation = true;
+      } else {
+        this.changeType.showFilters = true;
+        this.changeType.showConfirmation = false;
+      }
     }
   }
 
@@ -66,6 +106,7 @@ export class ChangeResultTypeModalComponent implements OnChanges {
     this.cgSpaceTitle = '';
     this.cgSpaceHandle = '';
     this.changeType.showConfirmation = false;
+    this.changeType.showFilters = true;
     this.api.dataControlSE.changeResultTypeModal = false;
     this.resultsListFilterSE.filters.resultLevel.forEach((resultLevelOption: any) => {
       resultLevelOption.options.forEach((resultTypeOption: any) => {
@@ -82,10 +123,14 @@ export class ChangeResultTypeModalComponent implements OnChanges {
 
       if (this.changeType.step === 1) {
         this.changeType.showConfirmation = false;
+        this.changeType.showFilters = true;
         this.changeType.step = 0;
         this.changeType.justification = '';
         this.changeType.otherJustification = '';
       }
+    } else {
+      this.api.dataControlSE.changeResultTypeModal = false;
+      this.changeType.showFilters = true;
     }
   }
 
@@ -120,11 +165,32 @@ export class ChangeResultTypeModalComponent implements OnChanges {
     });
   }
 
+  changeResultTypeOther() {
+    const currentUrl = this.router.url;
+    this.isChagingType = true;
+
+    this.api.resultsSE.PATCH_createWithHandleChangeType({ result_level_id: this.selectedResultType.resultLevelId, result_type_id: this.selectedResultType.id, new_name: this.body.result_name, justification: `${this.changeType.justification}${this.changeType.otherJustification !== '' ? `: ${this.changeType.otherJustification}` : ''}` }, this.body.result_id).subscribe({
+      next: (resp: any) => {
+        this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result type successfully updated', status: 'success', closeIn: 600 });
+        this.onCloseModal();
+        this.router.navigateByUrl(`/result/results-outlet/results-list`).then(() => {
+          this.router.navigateByUrl(currentUrl);
+        });
+        this.isChagingType = false;
+      },
+      error: err => {
+        this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
+        this.isChagingType = false;
+      }
+    });
+  }
+
   changeResultType() {
     if (this.selectedResultType?.id === 6) {
       switch (this.changeType.step) {
         case 0:
           this.changeType.showConfirmation = true;
+          this.changeType.showFilters = false;
           this.changeType.step = 1;
           break;
         case 1:
@@ -134,6 +200,8 @@ export class ChangeResultTypeModalComponent implements OnChanges {
           break;
       }
     } else {
+      this.changeType.showFilters = true;
+      this.changeResultTypeOther();
       console.log('changing result type');
     }
   }

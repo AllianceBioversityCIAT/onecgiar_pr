@@ -302,6 +302,10 @@ export class ResultsApiService {
     return this.http.post<any>(`${this.apiBaseUrl}results-knowledge-products/create`, body).pipe(this.saveButtonSE.isCreatingPipe());
   }
 
+  PATCH_createWithHandleChangeType(body, init_id) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/manage-data/change/result/${init_id}`, body).pipe(this.saveButtonSE.isCreatingPipe());
+  }
+
   GET_toc() {
     return this.http.get<any>(`${this.apiBaseUrl}toc/get/result/${this.currentResultId}`).pipe(
       map(resp => {
