@@ -27,9 +27,9 @@
             <div class="filter_title">{{filter.name}}</div>
             <div class="chips">
               <div class="chip"
-                [ngClass]="{'chip_selected': option.id !== this.body.result_type_id && option.id !== 5 && option.id !== 7 &&  option.selected, 'chip_disabled' : option.id === this.body.result_type_id || option.id === 5 || option.id === 7}"
-                [style.background]="option.id !== this.body.result_type_id && option.id !== 5 && option.id !== 7 && option.selected ? 'var(--pr-color-result-level-'+filter?.id+')' : ''"
-                (click)="this.resultsListFilterSE.onSelectChip(option);onSelectOneChip(option, filter)"
+                [ngClass]="{'chip_selected': !disableOptionValidation(option) && option.selected, 'chip_disabled' : disableOptionValidation(option)}"
+                [style.background]="!disableOptionValidation(option) && option.selected ? 'var(--pr-color-result-level-'+filter?.id+')' : ''"
+                (click)="this.resultsListFilterSE.onSelectChip(option);onSelectOneChip(option)"
                 *ngFor="let option of filter?.options">
                 {{option.name}}
               </div>
@@ -70,9 +70,8 @@
         (clickEvent)="onCancelModal()" [ngClass]="{'globalDisabled': this.isChagingType || this.validating}">
       </app-pr-button>
 
-      <app-pr-button padding="medium"
-        [text]="modalConfirmOrContinueText()"
-        [verticalMargin]="0" (clickEvent)="changeResultType()" [rotating]="this.isChagingType"
+      <app-pr-button padding="medium" [text]="modalConfirmOrContinueText()" [verticalMargin]="0"
+        (clickEvent)="changeResultType()" [rotating]="this.isChagingType"
         [icon]="this.isChagingType ? 'loop' : this.changeType.step === 1 ? 'save' : ''"
         [ngClass]="{'globalDisabled': isContinueButtonDisabled()}"></app-pr-button>
     </div>
