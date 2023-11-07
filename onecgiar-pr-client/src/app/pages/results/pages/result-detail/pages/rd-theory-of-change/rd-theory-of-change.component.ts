@@ -22,6 +22,7 @@ export class RdTheoryOfChangeComponent implements OnInit {
   psub = '';
   contributingInitiativeNew = [];
   currentInitOfficialCode = null;
+  cgspaceDisabledList = [];
 
   constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public centersSE: CentersService, public institutionsSE: InstitutionsService, public greenChecksSE: GreenChecksService, public theoryOfChangesServices: RdTheoryOfChangesServicesService, public dataControlSE: DataControlService) {}
 
@@ -37,7 +38,13 @@ export class RdTheoryOfChangeComponent implements OnInit {
     });
   }
 
+  disabledCenters() {
+    this.cgspaceDisabledList = this.theoryOfChangeBody.contributing_center.filter(center => center.from_cgspace);
+    console.log(this.centersSE.centersList);
+  }
+
   async getSectionInformation() {
+    await this.centersSE.getCentersList();
     this.theoryOfChangesServices.body = [];
     await this.api.resultsSE.GET_toc().subscribe({
       next: ({ response }) => {
@@ -50,16 +57,14 @@ export class RdTheoryOfChangeComponent implements OnInit {
         this.currentInitOfficialCode = this.theoryOfChangeBody.result_toc_result.official_code;
         if (this.theoryOfChangeBody.impactsTarge) this.theoryOfChangeBody?.impactsTarge.forEach(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
         if (this.theoryOfChangeBody.sdgTargets) this.theoryOfChangeBody?.sdgTargets.forEach(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
+        console.log(this.theoryOfChangeBody);
+        this.disabledCenters();
       },
       error: err => {
         this.getConsumed = true;
         console.error(err);
       }
     });
-  }
-
-  get disabledCenters() {
-    return this.theoryOfChangeBody.contributing_center.filter(center => center.from_cgspace);
   }
 
   get validateGranTitle() {

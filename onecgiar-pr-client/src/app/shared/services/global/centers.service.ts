@@ -7,9 +7,25 @@ import { ApiService } from '../api/api.service';
 export class CentersService {
   centersList = [];
   constructor(private api: ApiService) {
-    this.api.resultsSE.GET_AllCLARISACenters().subscribe(({ response }) => {
-      this.centersList = response;
-      //(response);
+    this.getData();
+  }
+  async getCentersList() {
+    if (!this.centersList?.length) await this.getData();
+    return this.centersList;
+  }
+
+  async getData() {
+    return new Promise((resolve, reject) => {
+      this.api.resultsSE.GET_AllCLARISACenters().subscribe(
+        ({ response }) => {
+          this.centersList = response;
+          //(response);
+          resolve(response);
+        },
+        err => {
+          reject(err);
+        }
+      );
     });
   }
 }
