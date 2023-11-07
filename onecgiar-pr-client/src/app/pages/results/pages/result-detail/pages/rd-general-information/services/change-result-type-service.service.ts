@@ -7,6 +7,7 @@ export class ChangeResultTypeServiceService {
   justification = '';
   otherJustification = '';
   showConfirmation = false;
+  showFilters = true;
   step = 0;
 
   constructor() {}

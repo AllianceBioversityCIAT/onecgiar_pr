@@ -51,6 +51,22 @@ export class ResultByIntitutionsRepository
       );
   }
 
+  fisicalDeleteByTypeAndResultId(
+    resultId: number,
+    institution_type: InstitutionRoleEnum[],
+  ) {
+    const queryData = `delete rbi from results_by_institution rbi where rbi.result_id = ? and rbi.institution_roles_id in (?);`;
+    return this.query(queryData, [resultId, institution_type])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          className: ResultByIntitutionsRepository.name,
+          error: err,
+          debug: true,
+        }),
+      );
+  }
+
   fisicalDelete(resultId: number): Promise<any> {
     const queryData = `delete rbi from results_by_institution rbi where rbi.result_id = ?;`;
     return this.query(queryData, [resultId])

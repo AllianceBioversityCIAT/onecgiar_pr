@@ -85,6 +85,8 @@ import { ApplicationModulesRepository } from '../versioning/repositories/applica
 import { PrmsTablesTypesModule } from './prms-tables-types/prms-tables-types.module';
 import { ResultInstitutionsBudgetRepository } from '../results/result_budget/repositories/result_institutions_budget.repository';
 import { NonPooledProjectBudgetRepository } from '../results/result_budget/repositories/non_pooled_proyect_budget.repository';
+import { ResultCountriesSubNationalRepository } from '../results/result-countries-sub-national/result-countries-sub-national.repository';
+import { KnowledgeProductFairBaselineRepository } from '../results/knowledge_product_fair_baseline/knowledge_product_fair_baseline.repository';
 
 @Module({
   controllers: [DeleteRecoverDataController],
@@ -170,10 +172,16 @@ import { NonPooledProjectBudgetRepository } from '../results/result_budget/repos
     ApplicationModulesRepository,
     ResultInstitutionsBudgetRepository,
     NonPooledProjectBudgetRepository,
-    ResultInitiativeBudgetRepository,
+    ResultCountriesSubNationalRepository,
+    KnowledgeProductFairBaselineRepository,
   ],
   imports: [HttpModule, PrmsTablesTypesModule],
   exports: [
+    ResultInstitutionsBudgetRepository,
+    NonPooledProjectBudgetRepository,
+    ResultInitiativeBudgetRepository,
+    ResultCountriesSubNationalRepository,
+    KnowledgeProductFairBaselineRepository,
     DeleteRecoverDataService,
     HandlersError,
     ReturnResponse,
@@ -248,15 +256,11 @@ import { NonPooledProjectBudgetRepository } from '../results/result_budget/repos
     ElasticService,
     LogRepository,
     VersioningService,
-    ResultInitiativeBudgetRepository,
     ResultTypeRepository,
     VersionRepository,
     ClarisaGeographicScopeRepository,
     ApplicationModulesRepository,
     DeleteRecoverDataService,
-    ResultInstitutionsBudgetRepository,
-    NonPooledProjectBudgetRepository,
-    ResultInitiativeBudgetRepository,
   ],
 })
 export class DeleteRecoverDataModule {}

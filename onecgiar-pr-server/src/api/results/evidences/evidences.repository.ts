@@ -11,6 +11,7 @@ import {
   predeterminedDateValidation,
 } from '../../../shared/utils/versioning.utils';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
+import { EvidenceTypeEnum } from '../../../shared/constants/evidence-type.enum';
 
 @Injectable()
 export class EvidencesRepository
@@ -24,6 +25,22 @@ export class EvidencesRepository
     private readonly _handlersError: HandlersError,
   ) {
     super(Evidence, dataSource.createEntityManager());
+  }
+
+  fisicalDeleteByEvidenceIdAndResultId(
+    resultId: number,
+    evidenceId: EvidenceTypeEnum[],
+  ): Promise<any> {
+    const queryData = `delete e from evidence e where e.result_id = ? and e.evidence_type_id in (?);`;
+    return this.query(queryData, [resultId, evidenceId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          className: EvidencesRepository.name,
+          error: err,
+          debug: true,
+        }),
+      );
   }
 
   fisicalDelete(resultId: number): Promise<any> {

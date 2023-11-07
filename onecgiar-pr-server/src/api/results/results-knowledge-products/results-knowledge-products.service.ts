@@ -600,7 +600,7 @@ export class ResultsKnowledgeProductsService {
       let newResult: Result = null;
 
       if (!resultsKnowledgeProductDto.id) {
-        let newResultResponse = await this._resultService.createOwnerResult(
+        const newResultResponse = await this._resultService.createOwnerResult(
           resultsKnowledgeProductDto.result_data,
           user,
         );

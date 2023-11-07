@@ -24,8 +24,9 @@ export class ResultInitiativeBudgetRepository
   }
 
   logicalDelete(resultId: number): Promise<ResultInitiativeBudget> {
-    const queryData = `delete rib from result_initiative_budget rib 
+    const queryData = `update result_initiative_budget rib 
     inner join results_by_inititiative rbi 
+    set rib.is_active = 0
     where rbi.result_id = ?;`;
     return this.query(queryData, [resultId])
       .then((res) => res)
@@ -38,9 +39,9 @@ export class ResultInitiativeBudgetRepository
       );
   }
   fisicalDelete(resultId: number): Promise<any> {
-    const queryData = `update result_initiative_budget rib 
+    const queryData = `
+    delete rib from result_initiative_budget rib 
     inner join results_by_inititiative rbi 
-    set rib.is_active = 0
     where rbi.result_id = ?;`;
     return this.query(queryData, [resultId])
       .then((res) => res)

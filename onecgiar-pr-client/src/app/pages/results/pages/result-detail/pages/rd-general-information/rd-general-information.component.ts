@@ -37,7 +37,7 @@ export class RdGeneralInformationComponent implements OnInit {
       this.generalInfoBody.reporting_year = response['phase_year'];
       this.generalInfoBody.institutions_type = [...this.generalInfoBody.institutions_type, ...this.generalInfoBody.institutions] as any;
       this.GET_investmentDiscontinuedOptions();
-      this.isPhaseOpen = !!this.api?.dataControlSE?.currentResult.is_phase_open;
+      this.isPhaseOpen = !!this.api?.dataControlSE?.currentResult?.is_phase_open;
     });
   }
 

@@ -72,6 +72,9 @@ import { Result } from '../results/entities/result.entity';
 import { ResultLevelEnum } from '../../shared/constants/result-level.enum';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { InstitutionRoleEnum } from '../results/results_by_institutions/entities/institution_role.enum';
+import { ResultCountriesSubNationalRepository } from '../results/result-countries-sub-national/result-countries-sub-national.repository';
+import { KnowledgeProductFairBaselineRepository } from '../results/knowledge_product_fair_baseline/knowledge_product_fair_baseline.repository';
+import { EvidenceTypeEnum } from '../../shared/constants/evidence-type.enum';
 
 @Injectable()
 export class DeleteRecoverDataService {
@@ -135,6 +138,8 @@ export class DeleteRecoverDataService {
     private readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
     private readonly _nonPooledProjectBudgetRepository: NonPooledProjectBudgetRepository,
     private readonly _resultInitiativeBudgetRepository: ResultInitiativeBudgetRepository,
+    private readonly _resultCountriesSubNationalRepository: ResultCountriesSubNationalRepository,
+    private readonly _knowledgeProductFairBaselineRepository: KnowledgeProductFairBaselineRepository,
     private readonly _elasticService: ElasticService,
     private readonly _resultsService: ResultsService,
     private readonly _logRepository: LogRepository,
@@ -328,7 +333,7 @@ export class DeleteRecoverDataService {
     result_type_id: number,
     justification: string,
     user: TokenDto,
-    from_endpoint: boolean = true,
+    from_endpoint = true,
     new_name?: string,
   ) {
     try {
@@ -355,6 +360,8 @@ export class DeleteRecoverDataService {
           is_active: true,
         },
       });
+
+      const resultAfterbefore = { ...resultToUpdate };
 
       if (!resultToUpdate) {
         throw this._returnResponse.format({
@@ -391,7 +398,7 @@ export class DeleteRecoverDataService {
 
       //TODO add validations when the result changes its type
       await this.manageChangedResultTypeData(
-        resultToUpdate,
+        resultAfterbefore,
         result_level_id,
         result_type_id,
         user,
@@ -466,20 +473,6 @@ export class DeleteRecoverDataService {
     user: TokenDto,
   ): Promise<ReturnResponseDto<any>> {
     try {
-      if (
-        !(
-          result.result_level_id == ResultLevelEnum.INITIATIVE_OUTPUT &&
-          new_result_level == ResultLevelEnum.INITIATIVE_OUTPUT &&
-          new_result_type == ResultTypeEnum.KNOWLEDGE_PRODUCT
-        )
-      ) {
-        return this._returnResponse.format({
-          message: `The data of the result with code ${result.id} has not been changed`,
-          response: result.result_code,
-          statusCode: HttpStatus.OK,
-        });
-      }
-
       const returnDelete = await this.deleteDataByNewResultType(
         result.id,
         new_result_type,
@@ -535,20 +528,32 @@ export class DeleteRecoverDataService {
    */
   async migrateDataByNewResultType(
     result_id: number,
-    _new_result_type: ResultTypeEnum,
+    new_result_type: ResultTypeEnum,
     _new_result_level: ResultLevelEnum,
-    _old_result_type: ResultTypeEnum,
+    old_result_type: ResultTypeEnum,
     _old_result_level: ResultLevelEnum,
   ) {
     try {
-      await this._resultByIntitutionsRepository.changePartnersType(
-        result_id,
-        [InstitutionRoleEnum.PARTNER],
-        InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS,
-      );
-      await this._resultRepository.update(result_id, {
-        geographic_scope_id: null,
-      });
+      if (ResultTypeEnum.KNOWLEDGE_PRODUCT == old_result_type) {
+        await this._resultByIntitutionsRepository.changePartnersType(
+          result_id,
+          [InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS],
+          InstitutionRoleEnum.PARTNER,
+        );
+      }
+
+      switch (new_result_type) {
+        case ResultTypeEnum.KNOWLEDGE_PRODUCT:
+          await this._resultByIntitutionsRepository.changePartnersType(
+            result_id,
+            [InstitutionRoleEnum.PARTNER],
+            InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS,
+          );
+          await this._resultRepository.update(result_id, {
+            geographic_scope_id: null,
+          });
+          break;
+      }
       return this._returnResponse.format({
         message: `The result with code ${result_id} has been migrated`,
         response: result_id,
@@ -571,16 +576,59 @@ export class DeleteRecoverDataService {
    */
   async deleteDataByNewResultType(
     result_id: number,
-    _new_result_type: ResultTypeEnum,
-    _new_result_level: ResultLevelEnum,
-    _old_result_type: ResultTypeEnum,
-    _old_result_level: ResultLevelEnum,
+    new_result_type: ResultTypeEnum,
+    new_result_level: ResultLevelEnum,
+    old_result_type: ResultTypeEnum,
+    old_result_level: ResultLevelEnum,
   ) {
     try {
-      await this._evidencesRepository.fisicalDelete(result_id);
-      await this._resultCountryRepository.fisicalDelete(result_id);
-      await this._resultRegionRepository.fisicalDelete(result_id);
-      await this._resultsCenterRepository.fisicalDelete(result_id);
+      await this._resultsImpactAreaIndicatorRepository.fisicalDelete(result_id);
+      await this._resultCountriesSubNationalRepository.fisicalDelete(result_id);
+      await this._resultsTocSdgTargetRepository.fisicalDelete(result_id);
+      await this._resultsTocImpactAreaTargetRepository.fisicalDelete(result_id);
+      await this._resultsTocTargetIndicatorRepository.fisicalDelete(result_id);
+      await this._resultsTocResultIndicatorsRepository.fisicalDelete(result_id);
+      switch (old_result_type) {
+        case ResultTypeEnum.KNOWLEDGE_PRODUCT:
+          await this._resultByIntitutionsRepository.fisicalDeleteByTypeAndResultId(
+            result_id,
+            [InstitutionRoleEnum.PARTNER],
+          );
+          break;
+      }
+
+      if (new_result_level != old_result_level) {
+        await this._resultInitiativeBudgetRepository.fisicalDelete(result_id);
+        await this._resultByInitiativesRepository.fisicalContributorsDelete(
+          result_id,
+        );
+        await this._resultsSdgTargetRepository.fisicalDelete(result_id);
+        await this._resultsActionAreaOutcomeRepository.fisicalDelete(result_id);
+        await this._resultsImpactAreaTargetRepository.fisicalDelete(result_id);
+        await this._resultsTocResultRepository.fisicalDelete(result_id);
+      }
+
+      switch (new_result_type) {
+        case ResultTypeEnum.IMPACT_CONTRIBUTION:
+          this.DELETE_impact_contribution(result_id);
+          break;
+
+        case ResultTypeEnum.POLICY_CHANGE:
+          this.DELETE_action_area_outcome(result_id, new_result_level);
+          break;
+
+        case ResultTypeEnum.INNOVATION_USE:
+          this.DELETE_innovation_use(result_id, new_result_level);
+          break;
+
+        case ResultTypeEnum.OTHER_OUTCOME:
+          this.DELETE_other_outcome(result_id, new_result_level);
+          break;
+
+        case ResultTypeEnum.KNOWLEDGE_PRODUCT:
+          this.DELETE_knowledge_product(result_id);
+          break;
+      }
       return this._returnResponse.format({
         message: `The data of the result with code ${result_id} has been deleted`,
         response: result_id,
@@ -589,5 +637,194 @@ export class DeleteRecoverDataService {
     } catch (error) {
       return this._returnResponse.format(error, !env.IS_PRODUCTION);
     }
+  }
+
+  private async DELETE_knowledge_product(result_id: number) {
+    await this._nonPooledProjectBudgetRepository.fisicalDelete(result_id);
+    await this._resultActorRepository.fisicalDelete(result_id);
+    await this._resultAnswerRepository.fisicalDelete(result_id);
+    await this._resultInitiativeBudgetRepository.fisicalDelete(result_id);
+    await this._resultInstitutionsBudgetRepository.fisicalDelete(result_id);
+    await this._resultsSdgTargetRepository.fisicalDelete(result_id);
+    await this._resultsActionAreaOutcomeRepository.fisicalDelete(result_id);
+    await this._resultByIntitutionsTypeRepository.fisicalDelete(result_id);
+    await this._resultsCapacityDevelopmentsRepository.fisicalDelete(result_id);
+    await this._resultsImpactAreaTargetRepository.fisicalDelete(result_id);
+    await this._resultsInnovationsDevRepository.fisicalDelete(result_id);
+    await this._resultsInnovationsUseMeasuresRepository.fisicalDelete(
+      result_id,
+    );
+    await this._resultsInnovationsUseRepository.fisicalDelete(result_id);
+    await this._resultsPolicyChangesRepository.fisicalDelete(result_id);
+    await this._evidencesRepository.fisicalDelete(result_id);
+    await this._resultCountryRepository.fisicalDelete(result_id);
+    await this._resultRegionRepository.fisicalDelete(result_id);
+    await this._resultsCenterRepository.fisicalDelete(result_id);
+    await this._resultByIntitutionsRepository.fisicalDeleteByTypeAndResultId(
+      result_id,
+      [
+        InstitutionRoleEnum.CAPDEV_TRAINEES_ON_BEHALF,
+        InstitutionRoleEnum.POLICY_OWNER,
+      ],
+    );
+  }
+
+  private async DELETE_impact_contribution(result_id: number) {
+    await this._knowledgeProductFairBaselineRepository.fisicalDelete(result_id);
+    await this._knowledgeProductFairBaselineRepository.fisicalDeleteLegacy(
+      result_id,
+    );
+    await this._nonPooledProjectBudgetRepository.fisicalDelete(result_id);
+    await this._resultActorRepository.fisicalDelete(result_id);
+    await this._resultAnswerRepository.fisicalDelete(result_id);
+    await this._resultInstitutionsBudgetRepository.fisicalDelete(result_id);
+    await this._resultsActionAreaOutcomeRepository.fisicalDelete(result_id);
+    await this._resultByIntitutionsTypeRepository.fisicalDelete(result_id);
+    await this._resultsCapacityDevelopmentsRepository.fisicalDelete(result_id);
+    await this._resultsInnovationsDevRepository.fisicalDelete(result_id);
+    await this._resultsInnovationsUseMeasuresRepository.fisicalDelete(
+      result_id,
+    );
+    await this._resultsInnovationsUseRepository.fisicalDelete(result_id);
+    await this._resultsKnowledgeProductAltmetricRepository.fisicalDelete(
+      result_id,
+    );
+    await this._resultsKnowledgeProductAuthorRepository.fisicalDelete(
+      result_id,
+    );
+    await this._resultsKnowledgeProductKeywordRepository.fisicalDelete(
+      result_id,
+    );
+    await this._resultsKnowledgeProductMetadataRepository.fisicalDelete(
+      result_id,
+    );
+    await this._resultsKnowledgeProductInstitutionRepository.fisicalDelete(
+      result_id,
+    );
+    await this._resultsKnowledgeProductFairScoreRepository.fisicalDelete(
+      result_id,
+    );
+    await this._resultsKnowledgeProductsRepository.fisicalDelete(result_id);
+    await this._resultsPolicyChangesRepository.fisicalDelete(result_id);
+    await this._evidencesRepository.fisicalDeleteByEvidenceIdAndResultId(
+      result_id,
+      [EvidenceTypeEnum.PICTURES, EvidenceTypeEnum.MATERIALS],
+    );
+    await this._resultByIntitutionsRepository.fisicalDeleteByTypeAndResultId(
+      result_id,
+      [
+        InstitutionRoleEnum.CAPDEV_TRAINEES_ON_BEHALF,
+        InstitutionRoleEnum.POLICY_OWNER,
+      ],
+    );
+  }
+
+  private async DELETE_action_area_outcome(
+    result_id: number,
+    _result_level: ResultLevelEnum,
+  ) {
+    await this._nonPooledProjectBudgetRepository.fisicalDelete(result_id);
+    await this._resultActorRepository.fisicalDelete(result_id);
+    await this._resultAnswerRepository.fisicalDelete(result_id);
+    await this._resultInitiativeBudgetRepository.fisicalDelete(result_id);
+    await this._resultInstitutionsBudgetRepository.fisicalDelete(result_id);
+    await this._resultByIntitutionsTypeRepository.fisicalDelete(result_id);
+    await this._resultsCapacityDevelopmentsRepository.fisicalDelete(result_id);
+    await this._resultsInnovationsDevRepository.fisicalDelete(result_id);
+    await this._resultsInnovationsUseMeasuresRepository.fisicalDelete(
+      result_id,
+    );
+    await this._resultsInnovationsUseRepository.fisicalDelete(result_id);
+    await this.DELETE_common_kp_data(result_id);
+    await this._evidencesRepository.fisicalDeleteByEvidenceIdAndResultId(
+      result_id,
+      [EvidenceTypeEnum.PICTURES, EvidenceTypeEnum.MATERIALS],
+    );
+    await this._resultByIntitutionsRepository.fisicalDeleteByTypeAndResultId(
+      result_id,
+      [InstitutionRoleEnum.CAPDEV_TRAINEES_ON_BEHALF],
+    );
+  }
+
+  private async DELETE_common_kp_data(result_id: number) {
+    await this._resultsKnowledgeProductAltmetricRepository.fisicalDelete(
+      result_id,
+    );
+    await this._resultsKnowledgeProductAuthorRepository.fisicalDelete(
+      result_id,
+    );
+    await this._knowledgeProductFairBaselineRepository.fisicalDelete(result_id);
+    await this._knowledgeProductFairBaselineRepository.fisicalDeleteLegacy(
+      result_id,
+    );
+    await this._resultsKnowledgeProductKeywordRepository.fisicalDelete(
+      result_id,
+    );
+    await this._resultsKnowledgeProductMetadataRepository.fisicalDelete(
+      result_id,
+    );
+    await this._resultsKnowledgeProductInstitutionRepository.fisicalDelete(
+      result_id,
+    );
+    await this._resultsKnowledgeProductFairScoreRepository.fisicalDelete(
+      result_id,
+    );
+    await this._resultsKnowledgeProductsRepository.fisicalDelete(result_id);
+  }
+
+  private async DELETE_other_outcome(
+    result_id: number,
+    _result_level: ResultLevelEnum,
+  ) {
+    await this._nonPooledProjectBudgetRepository.fisicalDelete(result_id);
+    await this._resultActorRepository.fisicalDelete(result_id);
+    await this._resultAnswerRepository.fisicalDelete(result_id);
+    await this._resultInitiativeBudgetRepository.fisicalDelete(result_id);
+    await this._resultInstitutionsBudgetRepository.fisicalDelete(result_id);
+    await this._resultByIntitutionsTypeRepository.fisicalDelete(result_id);
+    await this._resultsCapacityDevelopmentsRepository.fisicalDelete(result_id);
+    await this._resultsInnovationsDevRepository.fisicalDelete(result_id);
+    await this._resultsInnovationsUseMeasuresRepository.fisicalDelete(
+      result_id,
+    );
+    await this._resultsInnovationsUseRepository.fisicalDelete(result_id);
+    await this._resultsPolicyChangesRepository.fisicalDelete(result_id);
+    this.DELETE_common_kp_data(result_id);
+    await this._evidencesRepository.fisicalDeleteByEvidenceIdAndResultId(
+      result_id,
+      [EvidenceTypeEnum.PICTURES, EvidenceTypeEnum.MATERIALS],
+    );
+    await this._resultByIntitutionsRepository.fisicalDeleteByTypeAndResultId(
+      result_id,
+      [
+        InstitutionRoleEnum.CAPDEV_TRAINEES_ON_BEHALF,
+        InstitutionRoleEnum.POLICY_OWNER,
+      ],
+    );
+  }
+
+  private async DELETE_innovation_use(
+    result_id: number,
+    _result_level: ResultLevelEnum,
+  ) {
+    await this._nonPooledProjectBudgetRepository.fisicalDelete(result_id);
+    await this._resultAnswerRepository.fisicalDelete(result_id);
+    await this._resultInitiativeBudgetRepository.fisicalDelete(result_id);
+    await this._resultInstitutionsBudgetRepository.fisicalDelete(result_id);
+    await this._resultsCapacityDevelopmentsRepository.fisicalDelete(result_id);
+    await this._resultsInnovationsDevRepository.fisicalDelete(result_id);
+    await this._resultsPolicyChangesRepository.fisicalDelete(result_id);
+    await this.DELETE_common_kp_data(result_id);
+    await this._evidencesRepository.fisicalDeleteByEvidenceIdAndResultId(
+      result_id,
+      [EvidenceTypeEnum.PICTURES, EvidenceTypeEnum.MATERIALS],
+    );
+    await this._resultByIntitutionsRepository.fisicalDeleteByTypeAndResultId(
+      result_id,
+      [
+        InstitutionRoleEnum.CAPDEV_TRAINEES_ON_BEHALF,
+        InstitutionRoleEnum.POLICY_OWNER,
+      ],
+    );
   }
 }
