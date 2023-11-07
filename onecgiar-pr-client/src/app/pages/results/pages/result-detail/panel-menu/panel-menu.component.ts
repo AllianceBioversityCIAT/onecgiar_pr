@@ -8,6 +8,7 @@ import { SubmissionModalService } from '../components/submission-modal/submissio
 import { DataControlService } from '../../../../../shared/services/data-control.service';
 import { UnsubmitModalService } from '../components/unsubmit-modal/unsubmit-modal.service';
 import { RolesService } from '../../../../../shared/services/global/roles.service';
+import { environment } from '../../../../../../environments/environment';
 
 @Component({
   selector: 'app-panel-menu',
@@ -17,6 +18,7 @@ import { RolesService } from '../../../../../shared/services/global/roles.servic
 export class PanelMenuComponent {
   @Output() copyEvent = new EventEmitter();
   navigationOptions: PrRoute[] = resultDetailRouting;
+  platformInQA = environment.platformInQA;
   constructor(public rolesSE: RolesService, public resultLevelSE: ResultLevelService, public resultsListSE: ResultsApiService, public api: ApiService, public greenChecksSE: GreenChecksService, public submissionModalSE: SubmissionModalService, public unsubmitModalSE: UnsubmitModalService, public dataControlSE: DataControlService) {}
 
   hideKP(navOption) {
