@@ -88,13 +88,8 @@ export class ChangeResultTypeModalComponent implements OnChanges {
 
       this.resultsListFilterSE.filters.resultLevel.find((resultLevelOption: any) => resultLevelOption.id === option.resultLevelId).options.find((resultTypeOption: any) => resultTypeOption.id === option.id).selected = true;
 
-      if (this.selectedResultType.id !== 6) {
-        this.changeType.showFilters = true;
-        this.changeType.showConfirmation = true;
-      } else {
-        this.changeType.showFilters = true;
-        this.changeType.showConfirmation = false;
-      }
+      this.changeType.showFilters = true;
+      this.changeType.showConfirmation = this.selectedResultType.id !== 6 ? true : false;
     }
   }
 
@@ -133,13 +128,18 @@ export class ChangeResultTypeModalComponent implements OnChanges {
     }
   }
 
-  isContinueButtonDisabled() {
+  isContinueButtonDisabled(): boolean {
     if (this.isChagingType) return true;
+
     if (!this.selectedResultType) return true;
-    if (this.selectedResultType?.id === 6 && this.changeType.step === 0 && this.cgSpaceTitle === '') return true;
-    if (this.selectedResultType?.id === 6 && this.changeType.step === 1 && this.changeType.justification === '') return true;
-    if (this.selectedResultType?.id !== 6 && this.changeType.justification === '') return true;
-    if (this.selectedResultType?.id !== 6 && this.changeType.justification === 'Other' && this.changeType.otherJustification === '') return true;
+
+    if (this.selectedResultType.id === 6) {
+      if (this.changeType.step === 0 && this.cgSpaceTitle === '') return true;
+      if (this.changeType.step === 1 && this.changeType.justification === '') return true;
+    } else {
+      if (this.changeType.justification === '') return true;
+      if (this.changeType.justification === 'Other' && this.changeType.otherJustification === '') return true;
+    }
 
     return false;
   }
@@ -148,7 +148,7 @@ export class ChangeResultTypeModalComponent implements OnChanges {
     const currentUrl = this.router.url;
     this.isChagingType = true;
 
-    this.api.resultsSE.POST_createWithHandle({ ...this.mqapJson, modification_justification: `${this.changeType.justification}${this.changeType.otherJustification !== '' ? `: ${this.changeType.otherJustification}` : ''}` }).subscribe({
+    this.api.resultsSE.POST_createWithHandle({ ...this.mqapJson, modification_justification: this.changeType.justification === 'Other' ? `${this.changeType.justification}: ${this.changeType.otherJustification}` : this.changeType.justification }).subscribe({
       next: (resp: any) => {
         this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result type successfully updated', status: 'success', closeIn: 600 });
         this.onCloseModal();
@@ -168,7 +168,14 @@ export class ChangeResultTypeModalComponent implements OnChanges {
     const currentUrl = this.router.url;
     this.isChagingType = true;
 
-    this.api.resultsSE.PATCH_createWithHandleChangeType({ result_level_id: this.selectedResultType.resultLevelId, result_type_id: this.selectedResultType.id, new_name: this.body.result_name, justification: `${this.changeType.justification}${this.changeType.otherJustification !== '' ? `: ${this.changeType.otherJustification}` : ''}` }, this.body.result_id).subscribe({
+    const requestBody = {
+      result_level_id: this.selectedResultType.resultLevelId,
+      result_type_id: this.selectedResultType.id,
+      new_name: this.body.result_name,
+      justification: this.changeType.justification === 'Other' ? `${this.changeType.justification}: ${this.changeType.otherJustification}` : this.changeType.justification
+    };
+
+    this.api.resultsSE.PATCH_createWithHandleChangeType(requestBody, this.body.result_id).subscribe({
       next: (resp: any) => {
         this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result type successfully updated', status: 'success', closeIn: 600 });
         this.onCloseModal();
@@ -177,7 +184,7 @@ export class ChangeResultTypeModalComponent implements OnChanges {
         });
         this.isChagingType = false;
       },
-      error: err => {
+      error: (err: any) => {
         this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
         this.isChagingType = false;
       }
@@ -201,7 +208,6 @@ export class ChangeResultTypeModalComponent implements OnChanges {
     } else {
       this.changeType.showFilters = true;
       this.changeResultTypeOther();
-      console.log('changing result type');
     }
   }
 
