@@ -4,8 +4,9 @@ import { GlobalParameterCacheService } from '../cache/global-parameter-cache.ser
 
 @Injectable()
 export class SharePointService {
-  private token;
-  private expiresIn;
+  private token = null;
+  private expiresIn = null;
+  private creationTime = null;
 
   constructor(
     private readonly httpService: HttpService,
@@ -13,7 +14,34 @@ export class SharePointService {
   ) {}
 
   async getToken() {
-    return await this.validateExpiration();
+    if (this.isTokenExpired() || !this.expiresIn) {
+      console.log('El token ha expirado. Renovando el token...');
+      return await this.consumeToken();
+    } else {
+      console.log('El token aún no ha expirado. No se requiere renovación.');
+      const remainingTimeInSeconds =
+        this.creationTime + this.expiresIn - new Date().getTime() / 1000;
+      const remainingTimeString = this.convertSecondsToTime(
+        remainingTimeInSeconds,
+      );
+      console.log(`El token caducará en: ${remainingTimeString}`);
+      return this.token;
+    }
+    // return await this.validateExpiration();
+  }
+
+  private isTokenExpired(): boolean {
+    const currentTime = new Date().getTime() / 1000;
+    const tokenExpirationTime = this.creationTime + this.expiresIn;
+    return currentTime >= tokenExpirationTime;
+  }
+
+  private convertSecondsToTime(seconds: number): string {
+    const totalMinutes = Math.floor(seconds / 60);
+    const totalHours = Math.floor(totalMinutes / 60);
+    const remainingSeconds = seconds % 60;
+    const remainingMinutes = totalMinutes % 60;
+    return `${totalHours} hour(s), ${remainingMinutes} minute(s), and ${remainingSeconds} second(s)`;
   }
 
   async consumeToken() {
@@ -21,9 +49,7 @@ export class SharePointService {
     const clientId = '4a5dcd8a-9fad-4037-90aa-8e0cdbf01796';
     const scope = 'https://graph.microsoft.com/.default';
     const clientSecret = 'Y_j8Q~YJoHIQhCKLLxwdetMxSRMp40E4o_pHWa.u';
-
     const url = `https://login.microsoftonline.com/6afa0e00-fa14-40b7-8a2e-22a7f8c357d5/oauth2/v2.0/token`;
-
     const data = new URLSearchParams();
     data.append('client_id', clientId);
     data.append('client_secret', clientSecret);
@@ -37,52 +63,17 @@ export class SharePointService {
           },
         })
         .toPromise();
-
       const token = response.data.access_token;
       const expiresIn = response.data.expires_in; // El tiempo de expiración en segundos
-
+      console.log(expiresIn);
       // Guardamos el token en caché
       this.token = token;
       this.expiresIn = expiresIn;
+      this.creationTime = new Date().getTime() / 1000;
       return token;
     } catch (error) {
       console.error('Error al obtener el token:', error.message);
       throw new Error('Error al obtener el token');
-    }
-  }
-
-  async validateExpiration() {
-    // The "expires_in" field provides the duration in seconds until the access token expires.
-    // For example, if the value of "expires_in" is 3599, it means that the token will expire in 3599 seconds,
-    // which is approximately 59 minutes and 59 seconds.
-    const currentTime = new Date().getTime() / 1000;
-    const tokenExpirationTime = currentTime + this.expiresIn;
-
-    const seconds = this.expiresIn % 60;
-    const totalMinutes = Math.floor(this.expiresIn / 60);
-    const minutes = totalMinutes % 60;
-    const hours = Math.floor(totalMinutes / 60);
-
-    // Función para comprobar si el token ha expirado
-    function hasTokenExpired(tokenExpirationTime: number): boolean {
-      const currentTime = new Date().getTime() / 1000;
-      console.log('currentTime', currentTime);
-      console.log('tokenExpirationTime', tokenExpirationTime);
-      return currentTime >= tokenExpirationTime;
-    }
-
-    const useTokenInMemory =
-      typeof this.expiresIn == 'number'
-        ? !hasTokenExpired(tokenExpirationTime)
-        : false;
-    console.log(useTokenInMemory);
-    if (useTokenInMemory) {
-      const timeString = `${hours} hour(s), ${minutes} minute(s), and ${seconds} second(s)`;
-      console.log(`El token caducará en: ${timeString}`);
-      return this.token;
-    } else {
-      console.log('consumir token');
-      return await this.consumeToken();
     }
   }
 }
