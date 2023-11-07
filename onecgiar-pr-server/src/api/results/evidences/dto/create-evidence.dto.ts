@@ -13,6 +13,7 @@ interface evidencesCreateInterface {
   nutrition_related?: boolean;
   environmental_biodiversity_related?: boolean;
   poverty_related?: boolean;
+  is_sharepoint?: number;
 }
 
 export class JsonData {}

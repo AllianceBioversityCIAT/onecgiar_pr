@@ -15,11 +15,9 @@ export class EvidenceItemComponent {
   @Input() isOptional: boolean = false;
   @Output() deleteEvent = new EventEmitter();
 
-  eTExample = null;
-
   evidencesType = [
-    { id: 1, name: 'Link' },
-    { id: 2, name: 'Upload file' }
+    { id: 0, name: 'Link' },
+    { id: 1, name: 'Upload file' }
   ];
 
   constructor(public dataControlSE: DataControlService, public api: ApiService) {}

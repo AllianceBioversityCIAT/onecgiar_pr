@@ -3,11 +3,10 @@
     <div class="evidence_fields">
 
         <app-pr-radio-button [options]="this.evidencesType" optionLabel="name" optionValue="id"
-            label="Source of the evidence" [(ngModel)]="this.eTExample">
+            label="Source of the evidence" [(ngModel)]="this.evidence.is_sharepoint">
         </app-pr-radio-button>
 
-
-        <div class="link" *ngIf="this.eTExample == 1;else upload_file">
+        <div class="link" *ngIf="!this.evidence.is_sharepoint;else upload_file">
             <app-pr-input label="Link" [(ngModel)]="this.evidence.link" placeholder="Add link" type="link"
                 [disabled]=" this.dataControlSE.isKnowledgeProduct" [required]="!isOptional"></app-pr-input>
         </div>

@@ -103,6 +103,14 @@ export class Evidence {
   knowledge_product_related!: number;
 
   @Column({
+    name: 'is_sharepoint',
+    type: 'tinyint',
+    nullable: false,
+    default: 0,
+  })
+  is_sharepoint: number;
+
+  @Column({
     name: 'is_active',
     type: 'tinyint',
     nullable: false,

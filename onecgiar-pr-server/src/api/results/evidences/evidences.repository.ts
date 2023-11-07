@@ -374,6 +374,7 @@ export class EvidencesRepository
     e.last_updated_by,
     e.gender_related,
     e.link,
+    e.is_sharepoint,
     e.youth_related,
     e.nutrition_related,
     e.environmental_biodiversity_related,

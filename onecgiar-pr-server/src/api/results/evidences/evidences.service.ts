@@ -71,6 +71,7 @@ export class EvidencesService {
             newEvidence.last_updated_by = user.id;
             newEvidence.description = evidence?.description ?? null;
             newEvidence.gender_related = evidence.gender_related;
+            newEvidence.is_sharepoint = evidence.is_sharepoint;
             newEvidence.youth_related = evidence.youth_related;
             newEvidence.nutrition_related = evidence.nutrition_related;
             newEvidence.environmental_biodiversity_related =
@@ -102,6 +103,7 @@ export class EvidencesService {
           } else {
             eExists.description = evidence?.description ?? null;
             eExists.gender_related = evidence.gender_related;
+            eExists.is_sharepoint = evidence.is_sharepoint;
             eExists.youth_related = evidence.youth_related;
             eExists.nutrition_related = evidence.nutrition_related;
             eExists.environmental_biodiversity_related =
@@ -228,6 +230,7 @@ export class EvidencesService {
         false,
         1,
       );
+
       const supplementary =
         await this._evidencesRepository.getEvidencesByResultId(
           resultId,
@@ -242,6 +245,7 @@ export class EvidencesService {
         e.environmental_biodiversity_related =
           !!e.environmental_biodiversity_related;
         e.poverty_related = !!e.poverty_related;
+        e.is_sharepoint = Number(!!e?.is_sharepoint);
       });
 
       supplementary.map((e) => {
