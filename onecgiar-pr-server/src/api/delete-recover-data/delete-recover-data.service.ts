@@ -579,9 +579,8 @@ export class DeleteRecoverDataService {
       await this._resultCountriesSubNationalRepository.fisicalDelete(result_id);
       await this._resultsTocSdgTargetRepository.fisicalDelete(result_id);
       await this._resultsTocImpactAreaTargetRepository.fisicalDelete(result_id);
-      await this._resultsTocResultIndicatorsRepository.fisicalDelete(result_id);
       await this._resultsTocTargetIndicatorRepository.fisicalDelete(result_id);
-
+      await this._resultsTocResultIndicatorsRepository.fisicalDelete(result_id);
       switch (old_result_type) {
         case ResultTypeEnum.KNOWLEDGE_PRODUCT:
           await this._resultByIntitutionsRepository.fisicalDeleteByTypeAndResultId(

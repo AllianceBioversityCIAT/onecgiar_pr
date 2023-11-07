@@ -17,7 +17,7 @@ export class ResultsTocTargetIndicatorRepository
   }
 
   fisicalDelete(resultId: number): Promise<any> {
-    const queryData = `delete rtr from result_indicators_targets rit
+    const queryData = `delete rit from result_indicators_targets rit
     inner join results_toc_result_indicators rtri on rtri.result_toc_result_indicator_id = rit.result_toc_result_indicator_id
     inner join results_toc_result rtr on rtr.result_toc_result_id = rtri.results_toc_results_id
   where rtr.results_id = ?;`;
