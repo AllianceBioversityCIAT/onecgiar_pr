@@ -4,13 +4,19 @@ import { GlobalParameterCacheService } from '../cache/global-parameter-cache.ser
 
 @Injectable()
 export class SharePointService {
-  // https://login.microsoftonline.com/6afa0e00-fa14-40b7-8a2e-22a7f8c357d5/oauth2/v2.0/token
+  private token;
+  private expiresIn;
+
   constructor(
     private readonly httpService: HttpService,
     private readonly _globalParameterCacheService: GlobalParameterCacheService,
   ) {}
 
   async getToken() {
+    return await this.validateExpiration();
+  }
+
+  async consumeToken() {
     const grantType = 'client_credentials';
     const clientId = '4a5dcd8a-9fad-4037-90aa-8e0cdbf01796';
     const scope = 'https://graph.microsoft.com/.default';
@@ -32,53 +38,51 @@ export class SharePointService {
         })
         .toPromise();
 
-      console.log(response.data);
-      console.log(response.data.access_token);
-      this.validateExp(response);
-
       const token = response.data.access_token;
       const expiresIn = response.data.expires_in; // El tiempo de expiración en segundos
 
-      return { token, expiresIn };
+      // Guardamos el token en caché
+      this.token = token;
+      this.expiresIn = expiresIn;
+      return token;
     } catch (error) {
       console.error('Error al obtener el token:', error.message);
       throw new Error('Error al obtener el token');
     }
   }
 
-  validateExp(response) {
+  async validateExpiration() {
     // The "expires_in" field provides the duration in seconds until the access token expires.
     // For example, if the value of "expires_in" is 3599, it means that the token will expire in 3599 seconds,
     // which is approximately 59 minutes and 59 seconds.
-    const expiresIn = response.data.expires_in; // tiempo en segundos hasta que el token expire
-    const currentTime = new Date().getTime() / 1000; // tiempo actual en segundos
+    const currentTime = new Date().getTime() / 1000;
+    const tokenExpirationTime = currentTime + this.expiresIn;
 
-    const tokenExpirationTime = currentTime + expiresIn;
+    const seconds = this.expiresIn % 60;
+    const totalMinutes = Math.floor(this.expiresIn / 60);
+    const minutes = totalMinutes % 60;
+    const hours = Math.floor(totalMinutes / 60);
 
     // Función para comprobar si el token ha expirado
     function hasTokenExpired(tokenExpirationTime: number): boolean {
       const currentTime = new Date().getTime() / 1000;
+      console.log('currentTime', currentTime);
+      console.log('tokenExpirationTime', tokenExpirationTime);
       return currentTime >= tokenExpirationTime;
     }
 
-    const tokenExpired = hasTokenExpired(tokenExpirationTime);
-    if (tokenExpired) {
-      // Realizar lógica para renovar el token
-      // ...
-      console.log('Vencido');
-    } else {
-      console.log('no vencido');
-      console.log(currentTime);
-      console.log(tokenExpirationTime);
-
-      const seconds = expiresIn % 60;
-      const totalMinutes = Math.floor(expiresIn / 60);
-      const minutes = totalMinutes % 60;
-      const hours = Math.floor(totalMinutes / 60);
-
+    const useTokenInMemory =
+      typeof this.expiresIn == 'number'
+        ? !hasTokenExpired(tokenExpirationTime)
+        : false;
+    console.log(useTokenInMemory);
+    if (useTokenInMemory) {
       const timeString = `${hours} hour(s), ${minutes} minute(s), and ${seconds} second(s)`;
       console.log(`El token caducará en: ${timeString}`);
+      return this.token;
+    } else {
+      console.log('consumir token');
+      return await this.consumeToken();
     }
   }
 }
-

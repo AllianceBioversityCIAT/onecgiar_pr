@@ -209,8 +209,8 @@ export class EvidencesService {
     const da = await this._globalParameterCacheService.getDataFromCache(
       'sp_client_secret_id',
     );
-    const datae = this._sharePointService.getToken();
-    console.log(datae);
+    const datae = await this._sharePointService.getToken();
+    console.log('externo: ', datae);
     try {
       const result: Result = await this._resultRepository.getResultById(
         resultId,
