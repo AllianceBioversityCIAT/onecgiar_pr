@@ -52,7 +52,7 @@ export class RdTheoryOfChangeComponent implements OnInit {
   async getContributingCenterOptions() {
     const list = await this.centersSE.getCentersList();
     this.contributingCenterOptions = [...list];
-    this.contributingCenterOptions.map(center => (center.selected = false));
+    this.contributingCenterOptions.forEach(center => (center.selected = false));
   }
 
   async getSectionInformation() {
