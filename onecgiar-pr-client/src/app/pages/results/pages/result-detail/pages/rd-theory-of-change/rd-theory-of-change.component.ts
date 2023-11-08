@@ -98,7 +98,8 @@ export class RdTheoryOfChangeComponent implements OnInit {
     this.theoryOfChangeBody.bodyActionArea = this.theoryOfChangesServices.resultActionArea;
     const initiativesAux = this.theoryOfChangeBody.contributing_and_primary_initiative.concat(this.contributingInitiativeNew);
     this.theoryOfChangeBody.contributing_initiatives = initiativesAux.filter(init => init.id !== this.theoryOfChangesServices?.primarySubmitter?.id);
-    this.theoryOfChangeBody.result_toc_result = this.theoryOfChangesServices.result_toc_result;
+    // this.theoryOfChangeBody.result_toc_result = this.theoryOfChangesServices.result_toc_result;
+    this.theoryOfChangeBody.result_toc_result = this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result;
     this.theoryOfChangeBody.contributors_result_toc_result = this.theoryOfChangesServices.contributors_result_toc_result;
 
     console.log('Sended body', this.theoryOfChangeBody);

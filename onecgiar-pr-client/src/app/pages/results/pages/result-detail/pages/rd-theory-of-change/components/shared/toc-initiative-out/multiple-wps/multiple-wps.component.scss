@@ -17,16 +17,23 @@
     padding: 1rem;
   }
 
-  .tabs {
-    display: grid;
-    overflow-x: auto;
+  .tabs-container {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
     background-color: var(--pr-color-medium-2);
 
     .active {
       background-color: var(--pr-color-primary) !important;
       color: white !important;
       font-weight: 600;
-      // width: 100%;
+    }
+
+    .tabs {
+      display: grid;
+      overflow-x: auto;
+      max-width: 925px;
     }
 
     .tab {
@@ -58,6 +65,7 @@
       align-items: center;
       cursor: pointer;
       padding: 0.5rem;
+      width: 40px;
 
       .tab-add-button-item {
         padding: 0.5rem;

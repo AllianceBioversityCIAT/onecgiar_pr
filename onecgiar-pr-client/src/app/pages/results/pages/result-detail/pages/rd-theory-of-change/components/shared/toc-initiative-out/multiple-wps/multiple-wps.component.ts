@@ -37,12 +37,13 @@ export class MultipleWPsComponent implements OnInit {
   constructor(public theoryOfChangesServices: RdTheoryOfChangesServicesService, public multipleWpsService: MultipleWPsServiceService) {}
 
   ngOnInit(): void {
-    this.activeTab = this.initiative[0];
+    this.activeTab = this.initiative.result_toc_results[0];
 
-    this.initiative.forEach((tab: any) => {
+    this.initiative.result_toc_results.forEach((tab: any) => {
       tab.uniqueId = Math.random().toString(36).substring(7);
     });
 
+    console.log(this.initiative);
     // console.log(this.theoryOfChangesServices?.primarySubmitter);
   }
 
@@ -51,7 +52,7 @@ export class MultipleWPsComponent implements OnInit {
   }
 
   onAddTab() {
-    this.initiative.push({
+    this.initiative.result_toc_results.push({
       action_area_outcome_id: null,
       initiative_id: this.theoryOfChangesServices?.primarySubmitter.id,
       official_code: this.theoryOfChangesServices?.primarySubmitter.official_code,
@@ -79,12 +80,13 @@ export class MultipleWPsComponent implements OnInit {
       return;
     }
 
-    this.initiative = this.initiative.filter(t => t.uniqueId !== tab.uniqueId);
+    this.initiative.result_toc_results = this.initiative.result_toc_results.filter(t => t.uniqueId !== tab.uniqueId);
+    this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result.result_toc_results = this.initiative.result_toc_results;
     // this.theoryOfChangesServices.result_toc_result = this.theoryOfChangesServices.result_toc_result.filter(t => t.uniqueId !== tab.uniqueId);
     // this.theoryOfChangesServices.contributors_result_toc_result = this.theoryOfChangesServices.contributors_result_toc_result.filter(t => t.uniqueId !== tab.uniqueId);
 
-    this.activeTab = this.initiative[0];
+    this.activeTab = this.initiative?.result_toc_results[0];
 
-    // console.log('borrado', this.initiative);
+    console.log('borrado', this.initiative);
   }
 }
