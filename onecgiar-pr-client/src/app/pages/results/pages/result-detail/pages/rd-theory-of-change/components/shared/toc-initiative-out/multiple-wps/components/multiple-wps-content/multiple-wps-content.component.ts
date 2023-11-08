@@ -91,7 +91,7 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
       next: ({ response }) => {
         this.theoryOfChangesServices.targetsIndicators = response?.informationIndicator;
         this.theoryOfChangesServices.impactAreasTargets = response?.impactAreas.map(item => ({ full_name: `<strong>${item.name}</strong> - ${item.target}` }));
-        this.theoryOfChangesServices.sdgTargest = response?.sdgTargets.map(item => ({ full_name: `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}` }));
+        this.theoryOfChangesServices.sdgTargest = response?.sdgTargets.map(item => ({ ...item, full_name: `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}` }));
         this.theoryOfChangesServices.actionAreaOutcome = response?.actionAreaOutcome.map(item => ({
           full_name: `${item.actionAreaId === 1 ? '<strong>Systems Transformation</strong>' : item.actionAreaId === 2 ? '<strong>Resilient Agrifood Systems</strong>' : '<strong>Genetic Innovation</strong>'} (${item.outcomeSMOcode}) - ${item.outcomeStatement}`
         }));
@@ -102,6 +102,8 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
         this.initiative.actionAreaOutcome = this.theoryOfChangesServices.actionAreaOutcome;
         this.initiative.is_sdg_action_impact = response?.is_sdg_action_impact;
         this.initiative.targetsIndicators = this.theoryOfChangesServices.targetsIndicators;
+
+        console.log('this.initiative', this.initiative?.sdgTargest);
 
         setTimeout(() => {
           this.indicatorView = true;
