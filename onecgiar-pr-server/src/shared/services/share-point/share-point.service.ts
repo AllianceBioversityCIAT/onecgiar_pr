@@ -33,7 +33,6 @@ export class SharePointService {
           },
         })
         .toPromise();
-      console.log(response);
       return response;
     } catch (error) {
       console.log(error);

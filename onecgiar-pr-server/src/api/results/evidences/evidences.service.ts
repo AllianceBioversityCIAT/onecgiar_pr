@@ -43,10 +43,12 @@ export class EvidencesService {
         createEvidenceDto.result_id,
       );
       await this._versionRepository.getBaseVersion();
-      if (createEvidenceDto?.evidences) {
+      if (createEvidenceDto?.evidences?.length) {
+        console.log(createEvidenceDto?.evidences);
         const evidencesArray = createEvidenceDto?.evidences.filter(
-          (e) => !!e?.link,
+          (e) => !!e?.link || e?.is_sharepoint,
         );
+        console.log(evidencesArray);
         const testDuplicate = evidencesArray.map((e) => e.link);
         if (new Set(testDuplicate).size !== testDuplicate.length) {
           throw {
@@ -57,14 +59,14 @@ export class EvidencesService {
         }
         await this._evidencesRepository.updateEvidences(
           createEvidenceDto.result_id,
-          evidencesArray.map((e) => e.link.trim()),
+          evidencesArray.map((e) => e.link?.trim()),
           user.id,
           false,
           1,
         );
         const long: number =
           evidencesArray.length > 6 ? 6 : evidencesArray.length;
-        const newsEvidencesArray: Evidence[] = [];
+        console.log('long ', long);
         for (let index = 0; index < long; index++) {
           const evidence = evidencesArray[index];
           const eExists =
@@ -75,7 +77,6 @@ export class EvidencesService {
               1,
             );
           const newEvidence = new Evidence();
-
           if (!eExists) {
             newEvidence.created_by = user.id;
             newEvidence.last_updated_by = user.id;
@@ -108,8 +109,6 @@ export class EvidencesService {
               newEvidence.knowledge_product_related =
                 knowledgeProduct.result_object.id;
             }
-
-            newsEvidencesArray.push(newEvidence);
           } else {
             eExists.description = evidence?.description ?? null;
             eExists.gender_related = evidence.gender_related;
@@ -132,23 +131,39 @@ export class EvidencesService {
                   knowledgeProduct.result_object.id;
               }
             }
+          }
+          const currentEvidence = eExists ? eExists : newEvidence;
 
-            newsEvidencesArray.push(eExists);
+          let fileSaved: {
+            document_id: string;
+            filePath: string;
+            originalname: string;
+            webUrl: string;
+          } = null;
+          console.log('saveSPFile');
+          if (currentEvidence.is_sharepoint) {
+            fileSaved = await this.saveSPFile(
+              files,
+              evidence,
+              createEvidenceDto,
+            );
+            console.log(fileSaved);
+            currentEvidence.link = fileSaved?.webUrl;
+            console.log('saveSPFile => ejecutado');
           }
 
-          const currentEvidence = eExists ? eExists : newEvidence;
+          console.log('save evidence');
 
           const evidenceSaved = await this._evidencesRepository.save(
             currentEvidence,
           );
+          console.log('save evidence => ejecutado');
 
-          if (currentEvidence.is_sharepoint)
-            await this.saveSPFileAndSaveInformation(
-              files,
-              evidence,
-              createEvidenceDto,
-              evidenceSaved.id,
-            );
+          console.log('saveSPData');
+          console.log(fileSaved);
+          if (fileSaved)
+            await this.saveSPData(evidenceSaved?.id, fileSaved, evidence);
+          console.log('saveSPData => ejecutado');
 
           // const quetu = await this._evidencesRepository.save(
           //   newsEvidencesArray[0],
@@ -215,12 +230,82 @@ export class EvidencesService {
     }
   }
 
-  async saveSPFileAndSaveInformation(
+  // async saveSPFileAndSaveInformation(
+  //   files: Express.Multer.File[],
+  //   evidence: EvidencesCreateInterface,
+  //   createEvidenceDto: CreateEvidenceDto,
+  //   currentEvidenceID: number,
+  // ): Promise<void> {
+  //   await this._sharePointService.getToken();
+
+  //   let filePath = '';
+  //   let originalname = '';
+  //   let file: Express.Multer.File;
+  //   let fileSaved: any;
+  //   if (files?.length) {
+  //     file = files.find((fileItem: Express.Multer.File) =>
+  //       fileItem.originalname.includes(evidence.fileUuid),
+  //     );
+
+  //     if (file) {
+  //       const [pathInformation] =
+  //         await this._evidencesRepository.getResultInformation(
+  //           createEvidenceDto?.result_id,
+  //         );
+
+  //       filePath = `/${pathInformation?.initiative_official_code}/result-${pathInformation?.result_id}/evidences`;
+  //       originalname = file.originalname;
+  //       fileSaved = await this._sharePointService.saveFile(file, filePath);
+
+  //       const updateLinkInEvidence = async () => {
+  //         const evidence = await this._evidencesRepository.findOne({
+  //           where: {
+  //             id: currentEvidenceID,
+  //           },
+  //         });
+  //         if (evidence) {
+  //           evidence.link = fileSaved.data.webUrl;
+  //           await this._evidencesRepository.save(evidence);
+  //         }
+  //       };
+
+  //       await updateLinkInEvidence();
+  //     }
+  //   }
+
+  //   const createOrUpdateEvidenceSharepoint = async (
+  //     evidenceSharepoint: EvidenceSharepoint | undefined,
+  //   ) => {
+  //     if (!evidenceSharepoint) {
+  //       evidenceSharepoint = new EvidenceSharepoint();
+  //     }
+
+  //     evidenceSharepoint.folder_path = filePath;
+  //     evidenceSharepoint.file_name = originalname;
+  //     evidenceSharepoint.is_public_file = evidence.is_public_file;
+  //     evidenceSharepoint.evidence_id = currentEvidenceID;
+  //     evidenceSharepoint.document_id = fileSaved?.data?.id;
+
+  //     await this._evidenceSharepointRepository.save(evidenceSharepoint);
+  //   };
+
+  //   const currentSPId = Number(evidence?.sp_id);
+  //   const existingEvidenceSharepoint = currentSPId
+  //     ? await this._evidenceSharepointRepository.findOne({
+  //         where: {
+  //           id: currentSPId,
+  //         },
+  //       })
+  //     : undefined;
+
+  //   await createOrUpdateEvidenceSharepoint(existingEvidenceSharepoint);
+  // }
+
+  async saveSPFile(
     files: Express.Multer.File[],
     evidence: EvidencesCreateInterface,
     createEvidenceDto: CreateEvidenceDto,
-    currentEvidenceID: number,
-  ): Promise<void> {
+  ) {
     await this._sharePointService.getToken();
 
     let filePath = '';
@@ -239,25 +324,28 @@ export class EvidencesService {
           );
 
         filePath = `/${pathInformation?.initiative_official_code}/result-${pathInformation?.result_id}/evidences`;
-        originalname = file.originalname;
-        fileSaved = await this._sharePointService.saveFile(file, filePath);
-
-        const updateLinkInEvidence = async () => {
-          const evidence = await this._evidencesRepository.findOne({
-            where: {
-              id: currentEvidenceID,
-            },
-          });
-          if (evidence) {
-            evidence.link = fileSaved.data.webUrl;
-            await this._evidencesRepository.save(evidence);
-          }
+        const fileSaved = await this._sharePointService.saveFile(
+          file,
+          filePath,
+        );
+        return {
+          document_id: fileSaved?.data?.id,
+          filePath,
+          originalname: file.originalname,
+          webUrl: fileSaved?.data?.webUrl,
         };
 
-        await updateLinkInEvidence();
+        //TODO fileSaved.data.webUrl
       }
     }
+    return null;
+  }
 
+  async saveSPData(
+    currentEvidenceID: number,
+    { document_id, filePath, originalname },
+    evidence,
+  ) {
     const createOrUpdateEvidenceSharepoint = async (
       evidenceSharepoint: EvidenceSharepoint | undefined,
     ) => {
@@ -269,7 +357,7 @@ export class EvidencesService {
       evidenceSharepoint.file_name = originalname;
       evidenceSharepoint.is_public_file = evidence.is_public_file;
       evidenceSharepoint.evidence_id = currentEvidenceID;
-      evidenceSharepoint.document_id = fileSaved?.data?.id;
+      evidenceSharepoint.document_id = document_id;
 
       await this._evidenceSharepointRepository.save(evidenceSharepoint);
     };
@@ -291,13 +379,10 @@ export class EvidencesService {
     createEvidenceDto: CreateEvidenceDto,
   ): Promise<void> {
     await this._sharePointService.getToken();
-    console.log(createEvidenceDto);
     const [pathInformation] =
       await this._evidencesRepository.getResultInformation(
         createEvidenceDto.result_id,
       );
-    console.log(pathInformation);
-    console.log(files);
     await Promise.all(
       files.map((file) =>
         this._sharePointService.saveFile(file, pathInformation),
